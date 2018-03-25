@@ -340,6 +340,10 @@ zx_status_t FidlDecoder::DecodeMessage() {
                 return WithError("Tried to decode a bad union discriminant");
             }
             const fidl_type_t* member = frame->union_state.types[union_tag];
+            if (!member) {
+                Pop();
+                continue;
+            }
             frame->offset += frame->union_state.data_offset;
             *frame = Frame(member, frame->offset);
             continue;

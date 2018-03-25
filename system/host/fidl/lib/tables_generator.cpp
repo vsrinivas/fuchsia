@@ -228,8 +228,12 @@ void TablesGenerator::Generate(const coded::VectorType& vector_type) {
 }
 
 void TablesGenerator::Generate(const coded::Type* type) {
-    Emit(&tables_file_, "&");
-    Emit(&tables_file_, NameTable(type->coded_name));
+    if (type) {
+        Emit(&tables_file_, "&");
+        Emit(&tables_file_, NameTable(type->coded_name));
+    } else {
+        Emit(&tables_file_, "nullptr");
+    }
 }
 
 void TablesGenerator::Generate(const coded::Field& field) {
@@ -356,47 +360,51 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         }
         // We may need to set the emit-pointer bit on structs and unions now.
         auto coded_type = iter->second.get();
-        if (identifier_type->nullability == types::Nullability::Nullable) {
-            switch (coded_type->kind) {
-            case coded::Type::Kind::kStruct: {
-                // Structs were compiled as part of decl compilation,
-                // but we may now need to generate the StructPointer.
-                auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
-                coded_struct_type->referenced_by_pointer = true;
-                coded_types_.push_back(std::make_unique<coded::StructPointerType>(coded_struct_type->pointer_name, coded_struct_type));
-                return coded_types_.back().get();
-            }
-            case coded::Type::Kind::kUnion: {
-                // Unions were compiled as part of decl compilation,
-                // but we may now need to generate the UnionPointer.
-                auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
-                coded_union_type->referenced_by_pointer = true;
-                coded_types_.push_back(std::make_unique<coded::UnionPointerType>(coded_union_type->pointer_name, coded_union_type));
-                return coded_types_.back().get();
-            }
-            case coded::Type::Kind::kInterface: {
-                auto iter = interface_type_map_.find(identifier_type);
-                if (iter != interface_type_map_.end())
-                    return iter->second;
-                auto name = NameCodedInterfaceHandle(LibraryName(identifier_type->name.library()), NameName(identifier_type->name), identifier_type->nullability);
-                auto coded_interface_type = std::make_unique<coded::InterfaceHandleType>(std::move(name), identifier_type->nullability);
-                interface_type_map_[identifier_type] = coded_interface_type.get();
-                coded_types_.push_back(std::move(coded_interface_type));
-                return coded_types_.back().get();
-            }
-            case coded::Type::Kind::kInterfaceHandle:
-            case coded::Type::Kind::kStructPointer:
-            case coded::Type::Kind::kUnionPointer:
-            case coded::Type::Kind::kMessage:
-            case coded::Type::Kind::kPrimitive:
-            case coded::Type::Kind::kRequestHandle:
-            case coded::Type::Kind::kHandle:
-            case coded::Type::Kind::kArray:
-            case coded::Type::Kind::kVector:
-            case coded::Type::Kind::kString:
-                assert(false && "anonymous type in named type map!");
+        switch (coded_type->kind) {
+        case coded::Type::Kind::kStruct: {
+            // Structs were compiled as part of decl compilation,
+            // but we may now need to generate the StructPointer.
+            if (identifier_type->nullability != types::Nullability::Nullable)
                 break;
-            }
+            auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
+            coded_struct_type->referenced_by_pointer = true;
+            coded_types_.push_back(std::make_unique<coded::StructPointerType>(coded_struct_type->pointer_name, coded_struct_type));
+            return coded_types_.back().get();
+        }
+        case coded::Type::Kind::kUnion: {
+            // Unions were compiled as part of decl compilation,
+            // but we may now need to generate the UnionPointer.
+            if (identifier_type->nullability != types::Nullability::Nullable)
+                break;
+            auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
+            coded_union_type->referenced_by_pointer = true;
+            coded_types_.push_back(std::make_unique<coded::UnionPointerType>(coded_union_type->pointer_name, coded_union_type));
+            return coded_types_.back().get();
+        }
+        case coded::Type::Kind::kInterface: {
+            auto iter = interface_type_map_.find(identifier_type);
+            if (iter != interface_type_map_.end())
+                return iter->second;
+            auto name = NameCodedInterfaceHandle(LibraryName(identifier_type->name.library()), NameName(identifier_type->name), identifier_type->nullability);
+            auto coded_interface_type = std::make_unique<coded::InterfaceHandleType>(std::move(name), identifier_type->nullability);
+            interface_type_map_[identifier_type] = coded_interface_type.get();
+            coded_types_.push_back(std::move(coded_interface_type));
+            return coded_types_.back().get();
+        }
+        case coded::Type::Kind::kPrimitive:
+            // These are from enums. We don't need to do anything with them.
+            break;
+        case coded::Type::Kind::kInterfaceHandle:
+        case coded::Type::Kind::kStructPointer:
+        case coded::Type::Kind::kUnionPointer:
+        case coded::Type::Kind::kMessage:
+        case coded::Type::Kind::kRequestHandle:
+        case coded::Type::Kind::kHandle:
+        case coded::Type::Kind::kArray:
+        case coded::Type::Kind::kVector:
+        case coded::Type::Kind::kString:
+            assert(false && "anonymous type in named type map!");
+            break;
         }
         return coded_type;
     }
@@ -451,8 +459,13 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member : union_decl->members) {
             std::string member_name = union_struct->coded_name + "_" + std::string(member.name.data());
             auto coded_member_type = CompileType(member.type.get());
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
+            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded) {
                 union_members.push_back(coded_member_type);
+            } else {
+                // We need union_members.size() to match union_decl->members.size() because
+                // the coding tables will use the union |tag| to index into the member array.
+                union_members.push_back(nullptr);
+            }
         }
         break;
     }
@@ -507,7 +520,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         std::string union_name = NameCodedUnion(union_decl);
         std::string pointer_name = NamePointer(union_name);
         named_coded_types_.emplace(&decl->name, std::make_unique<coded::UnionType>(std::move(union_name), std::vector<const coded::Type*>(),
-                                                                                   union_decl->fieldshape.Offset(), union_decl->fieldshape.Size(), std::move(pointer_name)));
+                                                                                   union_decl->membershape.Offset(), union_decl->typeshape.Size(), std::move(pointer_name)));
         break;
     }
     }

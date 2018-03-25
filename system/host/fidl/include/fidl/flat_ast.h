@@ -399,7 +399,6 @@ struct Interface : public Decl {
                 : type(std::move(type)), name(std::move(name)) {}
             std::unique_ptr<Type> type;
             SourceLocation name;
-            // TODO(TO-758) Compute these.
             FieldShape fieldshape;
         };
 
@@ -441,7 +440,6 @@ struct Struct : public Decl {
         std::unique_ptr<Type> type;
         SourceLocation name;
         std::unique_ptr<Constant> maybe_default_value;
-        // TODO(TO-758) Compute these.
         FieldShape fieldshape;
     };
 
@@ -458,7 +456,6 @@ struct Union : public Decl {
             : type(std::move(type)), name(std::move(name)) {}
         std::unique_ptr<Type> type;
         SourceLocation name;
-        // TODO(TO-758) Compute these.
         FieldShape fieldshape;
     };
 
@@ -466,9 +463,10 @@ struct Union : public Decl {
         : Decl(Kind::kUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
 
     std::vector<Member> members;
+    TypeShape typeshape;
     // The offset of each of the union members is the same, so store
     // it here as well.
-    FieldShape fieldshape;
+    FieldShape membershape;
 };
 
 class Library {

@@ -437,8 +437,8 @@ void JSONGenerator::Generate(const flat::Union& value) {
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
-        GenerateObjectMember("size", value.fieldshape.Size());
-        GenerateObjectMember("alignment", value.fieldshape.Alignment());
+        GenerateObjectMember("size", value.typeshape.Size());
+        GenerateObjectMember("alignment", value.typeshape.Alignment());
     });
 }
 

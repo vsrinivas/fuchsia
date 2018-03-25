@@ -330,6 +330,10 @@ zx_status_t FidlValidator::ValidateMessage() {
                 return WithError("Tried to validate a bad union discriminant");
             }
             const fidl_type_t* member = frame->union_state.types[union_tag];
+            if (!member) {
+                Pop();
+                continue;
+            }
             frame->offset += frame->union_state.data_offset;
             *frame = Frame(member, frame->offset);
             continue;

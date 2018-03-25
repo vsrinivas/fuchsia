@@ -956,13 +956,13 @@ bool Library::CompileUnion(Union* union_declaration) {
     }
 
     auto tag = FieldShape(kUint32TypeShape);
-    auto members = FieldShape(CUnionTypeShape(union_declaration->members));
-    std::vector<FieldShape*> fidl_union = {&tag, &members};
-    union_declaration->fieldshape = FieldShape(CStructTypeShape(&fidl_union));
+    union_declaration->membershape = FieldShape(CUnionTypeShape(union_declaration->members));
+    std::vector<FieldShape*> fidl_union = {&tag, &union_declaration->membershape};
+    union_declaration->typeshape = CStructTypeShape(&fidl_union);
 
     // This is either 4 or 8, depending on whether any union members
     // have alignment 8.
-    auto offset = members.Offset();
+    auto offset = union_declaration->membershape.Offset();
     for (auto& member : union_declaration->members) {
         member.fieldshape.SetOffset(offset);
     }
@@ -1100,7 +1100,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         if (identifier_type->nullability == types::Nullability::Nullable) {
             typeshape = kPointerTypeShape;
         } else {
-            typeshape = static_cast<const Union*>(named_decl)->fieldshape.Typeshape();
+            typeshape = static_cast<const Union*>(named_decl)->typeshape;
         }
         break;
     }

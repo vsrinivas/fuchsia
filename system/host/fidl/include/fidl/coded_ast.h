@@ -74,22 +74,6 @@ struct Type {
     const CodingNeeded coding_needed;
 };
 
-inline CodingNeeded SomeFieldIsNeeded(const std::vector<Field>& fields) {
-    for (const auto& field : fields) {
-        if (field.type->coding_needed == CodingNeeded::kNeeded)
-            return CodingNeeded::kNeeded;
-    }
-    return CodingNeeded::kNotNeeded;
-}
-
-inline CodingNeeded SomeTypeIsNeeded(const std::vector<const Type*>& types) {
-    for (const auto& type : types) {
-        if (type->coding_needed == CodingNeeded::kNeeded)
-            return CodingNeeded::kNeeded;
-    }
-    return CodingNeeded::kNotNeeded;
-}
-
 struct PrimitiveType : public Type {
     PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
         : Type(Kind::kPrimitive, std::move(name), size, CodingNeeded::kNotNeeded), subtype(subtype) {}
@@ -137,7 +121,7 @@ struct StructPointerType : public Type {
 
 struct UnionType : public Type {
     UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size, std::string pointer_name)
-        : Type(Kind::kUnion, std::move(name), size, SomeTypeIsNeeded(types)),
+        : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kNeeded),
           types(std::move(types)), data_offset(data_offset), pointer_name(std::move(pointer_name)) {}
 
     std::vector<const Type*> types;
