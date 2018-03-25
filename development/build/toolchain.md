@@ -27,20 +27,25 @@ LLVM_SRCDIR=${HOME}/llvm
 ```
 
 Before building the runtime libraries that are built along with the
-compiler, you need a Zircon `sysroot` built.  This comes from the
-Zircon build and sits in the `sysroot` subdirectory of the main Zircon
-build directory.  For example, `.../build-x64/sysroot`.
+compiler, you need a Zircon `sysroot` built.  This comes from the Garnet
+build and sits in the `sysroot` subdirectory of the Garnet SDK build
+directory (e.g. `.../debug-x64/sdks/zircon_sysroot/sysroot`). To build
+it, you need to include the `garnet/packages/sdk/base` package manifest.
 In the following commands, the string `${FUCHSIA_${arch}_SYSROOT}`
 stands in for this absolute directory name.  You can cut & paste these
 commands into a shell after setting the `FUCHSIA_${arch}_SYSROOT`
 variable, e.g.:
 
 ```bash
-make x64
-FUCHSIA_x86_64_SYSROOT=`pwd`/build-x64/sysroot
+./scripts/build-zircon.sh
 
-make arm64
-FUCHSIA_aarch64_SYSROOT=`pwd`/build-arm64/sysroot
+gn gen --args='target_cpu="x64" fuchsia_packages="garnet/packages/sdk/base"' out/x64
+ninja -C out/x64 zircon_sysroot
+FUCHSIA_x86_64_SYSROOT=`pwd`/out/x64/sdks/zircon_sysroot/sysroot
+
+gn gen --args='target_cpu="arm64" fuchsia_packages="garnet/packages/sdk/base"' out/arm64
+ninja -C out/arm64 zircon_sysroot
+FUCHSIA_aarch64_SYSROOT=`pwd`/out/arm64/sdks/zircon_sysroot/sysroot
 ```
 
 You can build a Fuchsia Clang compiler using the following commands.
