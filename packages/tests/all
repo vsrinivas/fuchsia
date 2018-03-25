@@ -27,6 +27,7 @@
         "garnet/packages/tests/pmd",
         "garnet/packages/tests/runtime",
         "garnet/packages/tests/rust_crates",
+        "garnet/packages/tests/scenic",
         "garnet/packages/tests/syslog_cpp",
         "garnet/packages/tests/tracing",
         "garnet/packages/tests/url",
