@@ -557,8 +557,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     debugfn();
     debugbss("[client] [%s] sending Association Response\n", addr_.ToString().c_str());
 
+    size_t body_payload_len = 256;
     fbl::unique_ptr<Packet> packet = nullptr;
-    auto frame = BuildMgmtFrame<AssociationResponse>(&packet);
+    auto frame = BuildMgmtFrame<AssociationResponse>(&packet, body_payload_len);
     if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     auto hdr = frame.hdr;
@@ -573,7 +574,36 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     assoc->cap.set_ess(1);
     assoc->cap.set_short_preamble(1);
 
-    auto status = device_->SendWlan(fbl::move(packet));
+    // Write elements.
+    ElementWriter w(assoc->elements, body_payload_len);
+
+    // Rates (in Mbps): 1 (basic), 2 (basic), 5.5 (basic), 6, 9, 11 (basic), 12, 18
+    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
+    if (!w.write<SupportedRatesElement>(std::move(rates))) {
+        errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
+        return ZX_ERR_IO;
+    }
+
+    // Rates (in Mbps): 24, 36, 48, 54
+    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
+    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
+        errorf("[client] [%s] could not write extended supported rates\n",
+               addr_.ToString().c_str());
+        return ZX_ERR_IO;
+    }
+
+    // Validate the request in debug mode.
+    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
+
+    size_t actual_len = hdr->len() + sizeof(AssociationResponse) + w.size();
+    auto status = packet->set_len(actual_len);
+    if (status != ZX_OK) {
+        errorf("[client] [%s] could not set packet length to %zu: %d\n", addr_.ToString().c_str(),
+               actual_len, status);
+        return status;
+    }
+
+    status = device_->SendWlan(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);

@@ -516,6 +516,8 @@ constexpr uint16_t kAidMask = (1 << 11) - 1;
 struct AssociationResponse {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kAssociationResponse; }
 
+    bool Validate(size_t len);
+
     // 9.4.1.4
     CapabilityInfo cap;
     // 9.4.1.9

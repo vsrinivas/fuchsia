@@ -199,6 +199,42 @@ element_id::ElementId kValidAssociationRequestIds[] = {
     element_id::kVendorSpecific,
 };
 
+// IEEE Std 802.11-2016, 9.3.3.7
+element_id::ElementId kValidAssociationResponseIds[] = {
+    element_id::kSuppRates,
+    element_id::kExtSuppRates,
+    element_id::kEdcaParamSet,
+    element_id::kRcpi,
+    element_id::kRsni,
+    element_id::kRmEnabledCapabilities,
+    element_id::kMobilityDomain,
+    element_id::kFastBssTransition,
+    element_id::kDseRegisteredLocation,
+    element_id::kTimeoutInterval,
+    element_id::kHtCapabilities,
+    element_id::kHtOperation,
+    element_id::k2040BssCoex,
+    element_id::kOverlappingBssScanParams,
+    element_id::kExtCapabilities,
+    element_id::kBssMaxIdlePeriod,
+    element_id::kTimBroadcastResponse,
+    element_id::kQosMap,
+    element_id::kQmfPolicy,
+    element_id::kMultiband,
+    element_id::kDmgCapabilities,
+    element_id::kDmgOperation,
+    element_id::kMultipleMacSublayers,
+    element_id::kNeighborReport,
+    element_id::kVhtCapabilities,
+    element_id::kVhtOperation,
+    element_id::kOperatingModeNotification,
+    element_id::kMultipleMacSublayers,
+    element_id::kVhtCapabilities,
+    element_id::kOperatingModeNotification,
+    element_id::kElementWithExtension,  // Future Channel Guidance
+    element_id::kVendorSpecific,
+};
+
 bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, ElementReader* r) {
     if (!ids || !r) return false;
     size_t idx = 0;
@@ -244,6 +280,12 @@ bool AssociationRequest::Validate(size_t len) {
     ElementReader reader(elements, len);
     constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationRequestIds);
     return ValidateElements(len, kValidAssociationRequestIds, kValidIdSize, &reader);
+}
+
+bool AssociationResponse::Validate(size_t len) {
+    ElementReader reader(elements, len);
+    constexpr size_t kValidIdSize = fbl::count_of(kValidAssociationResponseIds);
+    return ValidateElements(len, kValidAssociationResponseIds, kValidIdSize, &reader);
 }
 
 }  // namespace wlan
