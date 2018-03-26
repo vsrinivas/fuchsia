@@ -110,8 +110,8 @@ func startupDaemon(srvURL *url.URL, store string, keys []*tuf_data.Key,
 		// of up to 50 queries
 		fetcher := &source.TUFSource{
 			Client:   client,
-			Interval: time.Second * 5,
-			Limit:    50,
+			Interval: 0,
+			Limit:    0,
 		}
 		checker.AddSource(fetcher)
 	}()

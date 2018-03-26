@@ -5,6 +5,7 @@
     ],
     "packages": {
         "amber": "//garnet/go/src/amber",
-        "amber_tools": "//garnet/go/src/amber:amber_tools"
+        "amber_tools": "//garnet/go/src/amber:amber_tools",
+        "system_updater": "//garnet/go/src/system_update_package:system_updater"
     }
 }

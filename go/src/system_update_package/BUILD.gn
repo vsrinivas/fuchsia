@@ -1,0 +1,70 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+import("//build/go/toolchain.gni")
+
+go_library("system_update_package_lib") {
+  name = "system_update_package"
+}
+
+go_binary("sys_updater") {
+  output_name = "system_updater"
+  gopackage = "system_update_package/cmd/updater"
+
+  extra_dependencies = [
+    "//garnet/public/lib/amber/fidl($go_toolchain)",
+    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+    "//garnet/go/src/system_update_package:system_update_package_lib",
+  ]
+}
+
+go_test("processor_test") {
+  gopackage = "system_update_package"
+  extra_dependencies = [
+    "//garnet/public/lib/amber/fidl($go_toolchain)",
+    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl/bindings",
+  ]
+}
+
+package("system_updater") {
+  deps = [
+    ":sys_updater"
+  ]
+
+  binary = "system_updater"
+
+  resources = [
+    {
+      path = rebase_path("test_images")
+      dest = "images"
+    },
+    {
+      path = rebase_path("test_packages")
+      dest = "packages"
+    }
+  ]
+}
+
+package("system_updater_tests") {
+  deprecated_system_image = true
+  testonly = true
+
+  deps = [
+    ":processor_test"
+  ]
+
+  tests = [
+    {
+      name = "processor_test"
+    }
+  ]
+}
