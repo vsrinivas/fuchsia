@@ -231,15 +231,15 @@ fn main_wrapper() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    /*
     use super::*;
 
-    use fidl::ClientEnd;
     use fidl_logger::{
         LogProxy,
         LogSinkProxy,
         LogFilterOptions,
         LogListenerImpl,
+        LogListener,
+        LogListenerMarker,
     };
     use logger::fx_log_packet_t;
     use zx::prelude::*;
@@ -289,9 +289,11 @@ mod tests {
         async::spawn(LogListenerImpl {
             state: ll,
             log: |ll, msg, _controller| {
-                assert_ne!(ll.expected.len(), 0, "got extra message: {:?}", msg);
-                let lm = ll.expected.remove(0);
-                assert_eq!(lm, msg);
+                let len = ll.expected.len();
+                assert_ne!(len, 0, "got extra message: {:?}", msg);
+                // we can receive messages out of order
+                ll.expected.retain(|e| e != &msg);
+                assert_eq!(ll.expected.len(), len-1, "expected: {:?},\nmsg: {:?}", ll.expected, msg);
                 if ll.expected.len() == 0 {
                     *ll.done.lock() = true;
                 }
@@ -304,17 +306,14 @@ mod tests {
 
     fn setup_listener(
         ll: LogListenerState,
-        lm: LogProxy,
-        filter_options: Option<Box<LogFilterOptions>>,
+        lp: LogProxy,
+        mut filter_options: Option<Box<LogFilterOptions>>,
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
-        let remote_ptr = ClientEnd::new(remote);
+        let mut remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
         let local = async::Channel::from_channel(local).expect("failed to make async channel");
         spawn_log_listener(ll, local);
-        let f = lm.listen(remote_ptr, filter_options);
-        async::spawn(f.recover(|e| {
-            panic!("test fail {:?}", e);
-        }));
+        lp.listen(&mut remote_ptr, &mut filter_options).expect("failed to register listener");
     }
 
     fn setup_test() -> (async::Executor, LogProxy, LogSinkProxy, zx::Socket, zx::Socket) {
@@ -330,14 +329,16 @@ mod tests {
         };
 
         let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let log_proxy = ClientEnd::new(client_end).into_proxy().expect("unable to create proxy");
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let log_proxy = LogProxy::new(client_end);
         let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
         spawn_log_manager(lm.clone(), server_end);
 
         let (client_end, server_end) = zx::Channel::create().expect("unable to create channel");
-        let log_sink_proxy = ClientEnd::new(client_end).into_proxy().expect("unable to create proxy");
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let log_sink_proxy = LogSinkProxy::new(client_end);
         let server_end = async::Channel::from_channel(server_end).expect("unable to asyncify");
-        spawn_log_manager(lm.clone(), server_end);
+        spawn_log_sink(lm.clone(), server_end);
 
         (executor, log_proxy, log_sink_proxy, sin, sout)
     }
@@ -356,13 +357,10 @@ mod tests {
 
     #[test]
     fn test_log_manager() {
-        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
+        let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
         let mut p = setup_default_packet();
         sin.write(to_u8_slice(&mut p)).unwrap();
-        let f = log_sink_proxy.connect(sout);
-        async::spawn(f.recover(|e| {
-            panic!("test fail {:?}", e);
-        }));
+        log_sink_proxy.connect(&mut sout).expect("unable to connect");
         p.metadata.severity = FX_LOG_INFO;
         sin.write(to_u8_slice(&mut p)).unwrap();
 
@@ -384,7 +382,7 @@ mod tests {
             expected: vec![lm1, lm2, lm3],
             done: done.clone(),
         };
-        setup_listener(ls, lm, None);
+        setup_listener(ls, log_proxy, None);
 
         p.metadata.pid = 2;
         sin.write(to_u8_slice(&mut p)).unwrap();
@@ -405,11 +403,8 @@ mod tests {
         packets: Vec<fx_log_packet_t>,
         filter_options: Option<Box<LogFilterOptions>>,
     ) {
-        let (mut executor, log_proxy, log_sink_proxy, sin, sout) = setup_test();
-        let f = log_sink_proxy.connect(sout);
-        async::spawn(f.recover(|e| {
-            panic!("test fail {:?}", e);
-        }));
+        let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
+        log_sink_proxy.connect(&mut sout).expect("unable to connect");
         let done = Arc::new(Mutex::new(false));
         let ls = LogListenerState {
             expected: expected,
@@ -586,5 +581,4 @@ mod tests {
 
         filter_test_helper(vec![lm1, lm2], vec![p, p2], Some(options));
     }
-    */
 }
