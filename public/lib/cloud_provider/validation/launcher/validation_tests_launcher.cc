@@ -4,6 +4,7 @@
 
 #include "peridot/public/lib/cloud_provider/validation/launcher/validation_tests_launcher.h"
 
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 
 namespace cloud_provider {
@@ -15,10 +16,10 @@ constexpr char kValidationTestsUrl[] =
 
 ValidationTestsLauncher::ValidationTestsLauncher(
     component::ApplicationContext* application_context,
-    std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory)
+    std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory)
     : application_context_(application_context), factory_(std::move(factory)) {
   service_provider_impl_.AddService<cloud_provider::CloudProvider>(
-      [this](f1dl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+      [this](fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
         factory_(std::move(request));
       });
 }
@@ -26,14 +27,14 @@ ValidationTestsLauncher::ValidationTestsLauncher(
 void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
                                   std::function<void(int32_t)> callback) {
   callback_ = std::move(callback);
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = kValidationTestsUrl;
-  auto service_list = component::ServiceList::New();
-  service_list->names.push_back(cloud_provider::CloudProvider::Name_);
-  service_provider_impl_.AddBinding(service_list->provider.NewRequest());
-  launch_info->additional_services = std::move(service_list);
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = kValidationTestsUrl;
+  component::ServiceList service_list;
+  service_list.names.push_back(cloud_provider::CloudProvider::Name_);
+  service_provider_impl_.AddBinding(service_list.provider.NewRequest());
+  launch_info.additional_services = fidl::MakeOptional(std::move(service_list));
   for (const auto& argument : arguments) {
-    launch_info->arguments.push_back(argument);
+    launch_info.arguments.push_back(argument);
   }
 
   application_context_->launcher()->CreateApplication(

@@ -8,10 +8,11 @@
 #include <functional>
 #include <string>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/cloud_provider.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 
 namespace cloud_provider {
 
@@ -23,7 +24,7 @@ class ValidationTestsLauncher {
   // |factory| is called to produce instances of the cloud provider under test.
   ValidationTestsLauncher(
       component::ApplicationContext* application_context,
-      std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory);
+      std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory);
 
   // Starts the tests.
   //
@@ -35,7 +36,7 @@ class ValidationTestsLauncher {
 
  private:
   component::ApplicationContext* const application_context_;
-  std::function<void(f1dl::InterfaceRequest<CloudProvider>)> factory_;
+  std::function<void(fidl::InterfaceRequest<CloudProvider>)> factory_;
   component::ServiceProviderImpl service_provider_impl_;
   component::ApplicationControllerPtr validation_tests_controller_;
   std::function<void(int32_t)> callback_;

@@ -7,15 +7,15 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/vector.h"
 
 namespace cloud_provider {
 
-f1dl::VectorPtr<uint8_t> ToArray(const std::string& val);
+fidl::VectorPtr<uint8_t> ToArray(const std::string& val);
 
-std::string ToString(const f1dl::VectorPtr<uint8_t>& bytes);
+std::string ToString(const fidl::VectorPtr<uint8_t>& bytes);
 
-std::string ToHex(const f1dl::VectorPtr<uint8_t>& bytes);
+std::string ToHex(const fidl::VectorPtr<uint8_t>& bytes);
 
 }  // namespace cloud_provider
 

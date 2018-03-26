@@ -5,9 +5,10 @@
 #ifndef LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
 #define LIB_CLOUD_PROVIDER_VALIDATION_VALIDATION_TEST_H_
 
+#include <fuchsia/cpp/cloud_provider.h>
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/cloud_provider.h>
+
 #include "gtest/gtest.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "peridot/public/lib/cloud_provider/validation/convert.h"
 #include "peridot/public/lib/cloud_provider/validation/validation_test.h"
 
@@ -90,7 +91,7 @@ TEST_F(DeviceSetTest, WatchMisingFingerprint) {
   DeviceSetPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
   Status status = Status::INTERNAL_ERROR;
-  f1dl::Binding<DeviceSetWatcher> binding(this);
+  fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),
@@ -110,7 +111,7 @@ TEST_F(DeviceSetTest, SetAndWatchFingerprint) {
   ASSERT_TRUE(device_set.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::Binding<DeviceSetWatcher> binding(this);
+  fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),
@@ -130,7 +131,7 @@ TEST_F(DeviceSetTest, EraseWhileWatching) {
   ASSERT_TRUE(device_set.WaitForResponse());
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::Binding<DeviceSetWatcher> binding(this);
+  fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
   device_set->SetWatcher(ToArray("bazinga"), std::move(watcher),
