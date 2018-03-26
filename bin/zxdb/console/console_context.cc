@@ -312,7 +312,7 @@ void ConsoleContext::DidDestroyProcess(Target* target, DestroyReason reason,
       msg += "Killed: ";
       break;
   }
-  msg += DescribeTarget(&console->context(), target, false);
+  msg += DescribeTarget(this, target, false);
 
   console->Output(msg);
 }
@@ -371,14 +371,26 @@ void ConsoleContext::WillDestroyThread(Process* process, Thread* thread) {
   }
 }
 
-void ConsoleContext::OnThreadStopped(Thread* thread) {
+void ConsoleContext::OnThreadStopped(Thread* thread,
+                                     debug_ipc::NotifyException::Type type,
+                                     uint64_t address) {
   // Set this process and thread as active.
   SetActiveTarget(thread->GetProcess()->GetTarget());
   SetActiveThreadForTarget(thread);
 
   Console* console = Console::get();
   OutputBuffer out;
-  out.Append(DescribeThread(&console->context(), thread, false));
+  out.Append(fxl::StringPrintf(
+      "Thread stopped on %s exception @ 0x%" PRIx64 "\n",
+      ExceptionTypeToString(type).c_str(), address));
+
+  // Only print out the process when there's more than one.
+  if (id_to_target_.size() > 1) {
+    out.Append(DescribeTarget(this, thread->GetProcess()->GetTarget(), false));
+    out.Append("\n");
+  }
+
+  out.Append(DescribeThread(this, thread, false));
   console->Output(std::move(out));
 }
 

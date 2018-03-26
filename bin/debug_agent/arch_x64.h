@@ -7,12 +7,11 @@
 #pragma once
 
 #include <stdint.h>
+#include <zircon/syscalls/debug.h>
 
 namespace arch {
 
 // The type that is large enough to hold the debug breakpoint CPU instruction.
 using BreakInstructionType = uint8_t;
-
-extern const BreakInstructionType kBreakInstruction;
 
 }  // namespace arch

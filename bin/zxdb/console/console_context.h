@@ -88,7 +88,9 @@ class ConsoleContext
   void WillDestroyThread(Process* process, Thread* thread) override;
 
   // ThreadObserver implementation:
-  void OnThreadStopped(Thread* thread) override;
+  void OnThreadStopped(Thread* thread,
+                       debug_ipc::NotifyException::Type type,
+                       uint64_t address) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.

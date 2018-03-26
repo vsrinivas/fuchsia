@@ -23,13 +23,13 @@ void DebuggedProcess::OnContinue(const debug_ipc::ContinueRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread)
-      thread->Continue();
+      thread->Continue(false);
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
     for (const auto& pair : threads_)
-      pair.second->Continue();
+      pair.second->Continue(false);
   }
 }
 
@@ -157,4 +157,21 @@ void DebuggedProcess::OnException(zx_koid_t thread_koid, uint32_t type) {
             "Exception for thread %" PRIu64 " which we don't know about.\n",
             thread_koid);
   }
+}
+
+ProcessBreakpoint* DebuggedProcess::FindBreakpointForAddr(
+    uint64_t address) {
+  FXL_DCHECK(breakpoints_.size() == address_to_breakpoint_id_.size());
+
+  auto found = address_to_breakpoint_id_.find(address);
+  if (found == address_to_breakpoint_id_.end())
+    return nullptr;
+
+  uint32_t id = found->second;
+  auto found_id = breakpoints_.find(id);
+  if (found_id == breakpoints_.end()) {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+  return found_id->second.get();
 }

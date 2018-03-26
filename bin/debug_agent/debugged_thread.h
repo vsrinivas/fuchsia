@@ -10,6 +10,8 @@
 
 class DebugAgent;
 class DebuggedProcess;
+class ProcessBreakpoint;
+struct zx_thread_state_general_regs;
 
 class DebuggedThread {
  public:
@@ -42,19 +44,24 @@ class DebuggedThread {
 
   zx::thread& thread() { return thread_; }
   zx_koid_t koid() const { return koid_; }
-  SuspendReason suspend_reason() const { return suspend_reason_; }
-
-  // Single steps this thread one instruction. The thread should currently
-  // be in a stopped state. If it's not stopped, the step will be ignored.
-  //void StepInstruction();
 
   void OnException(uint32_t type);
 
   // Continues execution of the thread. The thead should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
-  void Continue();
+  void Continue(bool single_step);
 
  private:
+  enum class AfterBreakpointStep {
+    kContinue,  // Resume execution.
+    kBreak  // Send the client the exception and keep stopped.
+  };
+
+  void UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs);
+
+  // Sets or clears the single step bit on the thread.
+  void SetSingleStep(bool single_step);
+
   DebugAgent* debug_agent_;  // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
   zx::thread thread_;
@@ -66,6 +73,15 @@ class DebuggedThread {
   // suspend_reason_ == kBreakpoint. The other threads will be manually
   // suspended which will be kOther.
   SuspendReason suspend_reason_ = SuspendReason::kNone;
+
+  // This can be set in two cases:
+  // - When suspended after hitting a breakpoint, this will be the breakpoint
+  //   that was hit.
+  // - When single-stepping over a breakpoint, this will be the breakpoint
+  //   being stepped over.
+  ProcessBreakpoint* current_breakpoint_ = nullptr;
+
+  AfterBreakpointStep after_breakpoint_step_ = AfterBreakpointStep::kContinue;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
 };

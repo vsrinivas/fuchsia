@@ -8,6 +8,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/target.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/records.h"
 
 namespace zxdb {
@@ -38,6 +39,8 @@ std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 std::string BreakpointScopeToString(const ConsoleContext* context,
                                     const Breakpoint* breakpoint);
 std::string BreakpointStopToString(debug_ipc::Stop stop);
+
+std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type);
 
 // Returns a string describing the given thing in the given context. If
 // columns is set, there will be extra padding added so that multiple things

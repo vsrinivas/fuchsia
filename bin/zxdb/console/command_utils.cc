@@ -146,6 +146,25 @@ std::string BreakpointStopToString(debug_ipc::Stop stop) {
   return std::string();
 }
 
+std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
+  struct Mapping {
+    debug_ipc::NotifyException::Type type;
+    const char* string;
+  };
+  static const Mapping mappings[] = {
+    { debug_ipc::NotifyException::Type::kGeneral, "General" },
+    { debug_ipc::NotifyException::Type::kHardware, "Hardware" },
+    { debug_ipc::NotifyException::Type::kSoftware, "Software" }
+  };
+  for (const Mapping& mapping : mappings) {
+    if (mapping.type == type)
+      return mapping.string;
+  }
+  FXL_NOTREACHED();
+  return std::string();
+
+}
+
 std::string DescribeTarget(const ConsoleContext* context, const Target* target,
                            bool columns) {
   int id = context->IdForTarget(target);

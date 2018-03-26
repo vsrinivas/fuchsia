@@ -50,6 +50,10 @@ class DebuggedProcess {
   // thread will be in a "suspended on exception" state.
   void OnException(zx_koid_t thread_koid, uint32_t type);
 
+  // Looks for a breakpoint that could have generated a software breakpoint
+  // at the given address. Returns null if none found.
+  ProcessBreakpoint* FindBreakpointForAddr(uint64_t address);
+
  private:
   DebugAgent* debug_agent_;  // Non-owning.
   zx_koid_t koid_;

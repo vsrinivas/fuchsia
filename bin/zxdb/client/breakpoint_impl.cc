@@ -170,9 +170,9 @@ void BreakpointImpl::DidDestroyProcess(Target* target, DestroyReason reason,
   // the addresses will normally change when a process is loaded.
   // TODO(brettw) when we have symbolic breakpoints, exclude them from this
   // behavior.
-  if (address_) {
+  if (address_)
     enabled_ = false;
-  }
+  backend_id_ = 0;
 }
 
 void BreakpointImpl::WillDestroyTarget(Target* target) {
