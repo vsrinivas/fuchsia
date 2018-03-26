@@ -13,6 +13,7 @@ driver_module("ralink_driver") {
     "device.cpp",
     "device.h",
     "driver.cpp",
+    "driver.h",
     "ralink.h",
     "register.h",
   ]
@@ -22,6 +23,8 @@ driver_module("ralink_driver") {
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/mlme",
     "//garnet/lib/wlan/protocol",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/fbl",
