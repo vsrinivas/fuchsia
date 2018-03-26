@@ -536,13 +536,14 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
     WLAN_BIT_FIELD(secondary_chan_offset, 0, 2);
     WLAN_BIT_FIELD(sta_chan_width, 2, 1);
     WLAN_BIT_FIELD(rifs_mode, 3, 1);
-    WLAN_BIT_FIELD(reserved1, 4, 4);
+    WLAN_BIT_FIELD(reserved1, 4, 4);  // Note 802.11n D1.10 implementaions use these.
 
     WLAN_BIT_FIELD(ht_protect, 8, 2);
     WLAN_BIT_FIELD(nongreenfield_present, 10, 1);  // Nongreenfield HT STAs present.
-    WLAN_BIT_FIELD(reserved2, 11, 1);
-    WLAN_BIT_FIELD(obss_non_ht, 12, 1);  // OBSS Non-HT STAs present.
-    WLAN_BIT_FIELD(center_freq_seg2, 13, 11);
+
+    WLAN_BIT_FIELD(reserved2, 11, 1);          // Note 802.11n D1.10 implementaions use these.
+    WLAN_BIT_FIELD(obss_non_ht, 12, 1);        // OBSS Non-HT STAs present.
+    WLAN_BIT_FIELD(center_freq_seg2, 13, 11);  // VHT
     WLAN_BIT_FIELD(reserved3, 21, 2);
 
     WLAN_BIT_FIELD(reserved4, 24, 6);
@@ -570,7 +571,8 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
 };
 
 class HtOpInfoTail : public common::BitField<uint8_t> {
-    constexpr explicit HtOpInfoTail(uint8_t) : common::BitField<uint8_t>() {}
+   public:
+    constexpr explicit HtOpInfoTail(uint8_t val) : common::BitField<uint8_t>(val) {}
     constexpr HtOpInfoTail() = default;
 
     WLAN_BIT_FIELD(stbc_beacon, 0, 1);  // Add 32 for the original bit location.
@@ -581,9 +583,9 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 };
 
 // IEEE Std 802.11-2016, 9.4.2.57
-struct HtOperation : public Element<TimElement, element_id::kHtOperation> {
-    bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan, HtOpInfoHead head,
-                HtOpInfoTail tail, SupportedMcsSet mcs_set);
+struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
+    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan,
+                       HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set);
     static constexpr size_t kMinLen = 22;
     static constexpr size_t kMaxLen = 22;
 
