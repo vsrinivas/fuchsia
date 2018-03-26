@@ -37,7 +37,6 @@ class VirtioInput : public VirtioDevice {
   zx_status_t Start();
 
  protected:
-  fbl::Mutex mutex_;
   virtio_input_config_t config_ __TA_GUARDED(config_mutex_) = {};
 
  private:
