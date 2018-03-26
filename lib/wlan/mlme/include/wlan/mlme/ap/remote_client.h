@@ -23,6 +23,7 @@ class RemoteClient : public RemoteClientInterface {
     enum class StateId : uint8_t {
         kUninitialized,
         kDeauthenticated,
+        kAuthenticating,
         kAuthenticated,
         kAssociated,
     };
@@ -119,6 +120,20 @@ class DeauthenticatedState : public BaseState {
     }
 };
 
+class AuthenticatingState : public BaseState {
+   public:
+    AuthenticatingState(RemoteClient* client, const ImmutableMgmtFrame<Authentication>& frame);
+
+    void OnEnter() override;
+
+    inline RemoteClient::StateId id() const override {
+        return RemoteClient::StateId::kAuthenticating;
+    }
+
+   private:
+    status_code::StatusCode status_code_;
+};
+
 class AuthenticatedState : public BaseState {
    public:
     AuthenticatedState(RemoteClient* client);
@@ -156,6 +171,8 @@ class AssociatedState : public BaseState {
     void HandleTimeout() override;
 
     zx_status_t HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) override;
+    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+                                     const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                          const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;

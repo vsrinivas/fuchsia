@@ -111,11 +111,17 @@ zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authenticati
     // If the client is already known, there is no work to be done here.
     auto& client_addr = frame.hdr->addr2;
     if (clients_.Has(client_addr)) { return ZX_OK; }
+    debugbss("[infra-bss] [%s] new client: %s\n", bssid_.ToString().c_str(),
+             client_addr.ToString().c_str());
 
     // Else, create a new remote client instance.
     fbl::unique_ptr<Timer> timer = nullptr;
     auto status = CreateClientTimer(client_addr, &timer);
-    if (status != ZX_OK) { return status; }
+    if (status != ZX_OK) {
+        errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
+               status);
+        return status;
+    }
 
     auto client = fbl::make_unique<RemoteClient>(device_, fbl::move(timer),
                                                  this,  // bss
@@ -148,13 +154,15 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
 
     ZX_DEBUG_ASSERT(clients_.Has(client));
     if (!clients_.Has(client)) {
-        errorf("[infra-bss] [%s] state change (%hhu, %hhu) reported for unknown client: %s\n",
+        errorf("[infra-bss] [%s] state change %hhu -> %hhu reported for unknown client: %s\n",
                bssid_.ToString().c_str(), from, to, client.ToString().c_str());
         return;
     }
 
     // If client enters deauthenticated state after being authenticated, remove client.
     if (to == RemoteClient::StateId::kDeauthenticated) {
+        debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
+                client.ToString().c_str());
         auto status = clients_.Remove(client);
         if (status != ZX_OK) {
             errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),

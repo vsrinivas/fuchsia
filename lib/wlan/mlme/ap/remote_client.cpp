@@ -28,29 +28,51 @@ zx_status_t DeauthenticatedState::HandleAuthentication(
     const ImmutableMgmtFrame<Authentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
+
+    // Move into Authenticating state which responds to incoming Authentication request.
+    LOG_STATE_TRANSITION(client_->addr(), "Deauthenticated", "Authenticating");
+    MoveToState<AuthenticatingState>(frame);
+    return ZX_ERR_STOP;
+}
+
+// AuthenticatingState implementation.
+
+AuthenticatingState::AuthenticatingState(RemoteClient* client,
+                                         const ImmutableMgmtFrame<Authentication>& frame)
+    : BaseState(client) {
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
     debugbss("[client] [%s] received Authentication request...\n",
              client_->addr().ToString().c_str());
+    status_code_ = status_code::kRefusedReasonUnspecified;
 
     auto auth_alg = frame.body->auth_algorithm_number;
     if (auth_alg != AuthAlgorithm::kOpenSystem) {
         errorf("[client] [%s] received auth attempt with unsupported algorithm: %u\n",
                client_->addr().ToString().c_str(), auth_alg);
-        return client_->SendAuthentication(status_code::kUnsupportedAuthAlgorithm);
+        status_code_ = status_code::kUnsupportedAuthAlgorithm;
+        return;
     }
 
     auto auth_txn_seq_no = frame.body->auth_txn_seq_number;
     if (auth_txn_seq_no != 1) {
         errorf("[client] [%s] received auth attempt with invalid tx seq no: %u\n",
                client_->addr().ToString().c_str(), auth_txn_seq_no);
-        return client_->SendAuthentication(status_code::kRefused);
+        status_code_ = status_code::kRefused;
+        return;
     }
+    status_code_ = status_code::kSuccess;
+}
 
-    auto status = client_->SendAuthentication(status_code::kSuccess);
-    if (status == ZX_OK) {
+void AuthenticatingState::OnEnter() {
+    bool auth_success = status_code_ == status_code::kSuccess;
+    auto status = client_->SendAuthentication(status_code_);
+    if (auth_success && status == ZX_OK) {
+        LOG_STATE_TRANSITION(client_->addr(), "Authenticating", "Authenticated");
         MoveToState<AuthenticatedState>();
-        LOG_STATE_TRANSITION(client_->addr(), "Deauthenticated", "Authenticated");
+    } else {
+        LOG_STATE_TRANSITION(client_->addr(), "Authenticating", "Deauthenticated");
+        MoveToState<DeauthenticatedState>();
     }
-    return status;
 }
 
 // AuthenticatedState implementation.
@@ -79,10 +101,9 @@ zx_status_t AuthenticatedState::HandleAuthentication(
     const ImmutableMgmtFrame<Authentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Authentication request while being authenticated\n",
              client_->addr().ToString().c_str());
-    // Client is already authenticated but seems to not have received the previous Authentication
-    // response which was sent. Hence, let the client know its authentication was successful.
-    // TODO(hahnr): We should process the authentication frame again?
-    return client_->SendAuthentication(status_code::kSuccess);
+    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Authenticating");
+    MoveToState<AuthenticatingState>(frame);
+    return ZX_ERR_STOP;
 }
 
 zx_status_t AuthenticatedState::HandleDeauthentication(
@@ -91,9 +112,10 @@ zx_status_t AuthenticatedState::HandleDeauthentication(
              frame.body->reason_code);
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
-    return ZX_OK;
+    return ZX_ERR_STOP;
 }
 
+// TODO(hahnr): Move into Associating state.
 zx_status_t AuthenticatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
     debugfn();
@@ -123,13 +145,26 @@ zx_status_t AuthenticatedState::HandleAssociationRequest(
     client_->SendAssociationResponse(aid, status_code::kSuccess);
     MoveToState<AssociatedState>(aid);
     LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Associated");
-    return status;
+    return ZX_ERR_STOP;
 }
 
 // AssociatedState implementation.
 
 AssociatedState::AssociatedState(RemoteClient* client, uint16_t aid)
     : BaseState(client), aid_(aid) {}
+
+zx_status_t AssociatedState::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+                                                  const wlan_rx_info_t& rxinfo) {
+    debugbss("[client] [%s] received Authentication request while being associated\n",
+             client_->addr().ToString().c_str());
+    // Client believes it is not yet authenticated. Thus, there is no need to send an explicit
+    // Deauthentication.
+    req_deauth_ = false;
+
+    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Authenticating");
+    MoveToState<AuthenticatingState>(frame);
+    return ZX_ERR_STOP;
+}
 
 zx_status_t AssociatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
@@ -182,7 +217,7 @@ zx_status_t AssociatedState::HandleDeauthentication(
     req_deauth_ = false;
     MoveToState<DeauthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
-    return ZX_OK;
+    return ZX_ERR_STOP;
 }
 
 zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disassociation>& frame,
@@ -191,7 +226,7 @@ zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disas
              client_->addr().ToString().c_str(), frame.body->reason_code);
     MoveToState<AuthenticatedState>();
     LOG_STATE_TRANSITION(client_->addr(), "Associated", "Authenticated");
-    return ZX_OK;
+    return ZX_ERR_STOP;
 }
 
 zx_status_t AssociatedState::HandleCtrlFrame(const FrameControl& fc) {
