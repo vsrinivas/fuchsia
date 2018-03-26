@@ -164,34 +164,6 @@ public:
         test_buffer_passing(buffer[0].get(), buffer[1].get());
     }
 
-    static void BufferFdPassing()
-    {
-        std::vector<std::unique_ptr<magma::PlatformBuffer>> buffer(2);
-
-        buffer[0] = magma::PlatformBuffer::Create(1, "test");
-        ASSERT_NE(buffer[0], nullptr);
-        int fd;
-        ASSERT_TRUE(buffer[0]->GetFd(&fd));
-        buffer[1] = magma::PlatformBuffer::ImportFromFd(fd);
-        ASSERT_NE(buffer[1], nullptr);
-
-        EXPECT_EQ(buffer[0]->size(), buffer[1]->size());
-        EXPECT_EQ(0, close(fd));
-
-        test_buffer_passing(buffer[0].get(), buffer[1].get());
-
-        buffer[0] = std::move(buffer[1]);
-        ASSERT_NE(buffer[0], nullptr);
-        ASSERT_TRUE(buffer[0]->GetFd(&fd));
-        buffer[1] = magma::PlatformBuffer::ImportFromFd(fd);
-        ASSERT_NE(buffer[1], nullptr);
-
-        EXPECT_EQ(buffer[0]->size(), buffer[1]->size());
-
-        test_buffer_passing(buffer[0].get(), buffer[1].get());
-        EXPECT_EQ(0, close(fd));
-    }
-
     // TODO(MA-427) - adapt test to new bus page mappings; AND enable this test
     // static void PinRanges(uint32_t num_pages)
     // {
@@ -344,7 +316,6 @@ TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 TEST(PlatformBuffer, CachePolicy) { TestPlatformBuffer::CachePolicy(); }
 
 TEST(PlatformBuffer, BufferPassing) { TestPlatformBuffer::BufferPassing(); }
-TEST(PlatformBuffer, BufferFdPassing) { TestPlatformBuffer::BufferFdPassing(); }
 
 TEST(PlatformBuffer, Commit)
 {

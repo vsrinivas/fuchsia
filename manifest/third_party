@@ -157,7 +157,7 @@
     <project name="third_party/mesa"
              path="third_party/mesa"
              remote="https://fuchsia.googlesource.com/third_party/mesa"
-             revision="05fb5ab2763459bdcb5405ae8b26cf631ccf0aa0"
+             revision="9394a51bd195b093805c3fcc62139e85f81a8b6b"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/mini_chromium"
              path="third_party/crashpad/third_party/mini_chromium/mini_chromium"

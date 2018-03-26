@@ -49,8 +49,6 @@ public:
         return true;
     }
 
-    bool GetFd(int* fd_out) const override;
-
     // PlatformBuffer implementation
     bool CommitPages(uint32_t start_page_index, uint32_t page_count) const override;
     bool MapCpu(void** addr_out, uintptr_t alignment) override;
@@ -83,19 +81,6 @@ private:
     void* virt_addr_{};
     uint32_t map_count_ = 0;
 };
-
-bool ZirconPlatformBuffer::GetFd(int* fd_out) const
-{
-    zx::vmo duplicate;
-    zx_status_t status = vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
-    if (status < 0)
-        return DRETF(false, "zx_handle_duplicate failed");
-
-    *fd_out = fdio_vmo_fd(duplicate.release(), 0, size());
-    if (!*fd_out)
-        return DRETF(false, "fdio_vmo_fd failed");
-    return true;
-}
 
 // static
 uint64_t PlatformBuffer::MinimumMappableAddress()
@@ -321,15 +306,6 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle)
         return DRETP(nullptr, "attempting to import vmo with invalid size");
 
     return std::unique_ptr<PlatformBuffer>(new ZirconPlatformBuffer(std::move(vmo), size));
-}
-
-std::unique_ptr<PlatformBuffer> PlatformBuffer::ImportFromFd(int fd)
-{
-    zx_handle_t handle;
-    zx_status_t status = fdio_get_exact_vmo(fd, &handle);
-    if (status != ZX_OK)
-        return DRETP(nullptr, "fdio_get_exact_vmo failed");
-    return Import(handle);
 }
 
 } // namespace magma
