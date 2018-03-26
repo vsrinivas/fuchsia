@@ -482,11 +482,15 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
 
     memcpy(resp->mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
 
+    resp->modes->resize(0);
     if (info.mac_modes & WLAN_MAC_MODE_STA) { resp->modes->push_back(wlan_mlme::MacMode::STA); }
     if (info.mac_modes & WLAN_MAC_MODE_AP) { resp->modes->push_back(wlan_mlme::MacMode::AP); }
+
+    resp->bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
         wlan_mlme::BandCapabilities band;
+        band.basic_rates->resize(0);
         for (size_t rate_idx = 0; rate_idx < sizeof(band_info.basic_rates); rate_idx++) {
             if (band_info.basic_rates[rate_idx] != 0) {
                 band.basic_rates->push_back(band_info.basic_rates[rate_idx]);
@@ -494,6 +498,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
         }
         const wlan_chan_list_t& chan_list = band_info.supported_channels;
         band.base_frequency = chan_list.base_freq;
+        band.channels->resize(0);
         for (size_t chan_idx = 0; chan_idx < sizeof(chan_list.channels); chan_idx++) {
             if (chan_list.channels[chan_idx] != 0) {
                 band.channels->push_back(chan_list.channels[chan_idx]);
