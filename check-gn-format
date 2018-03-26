@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly BUILDTOOLS_DIR="${SCRIPT_DIR}/../buildtools"
+readonly GN="${BUILDTOOLS_DIR}/gn"
+
+if [[ $# -gt 1 && "$1" = --fix ]]; then
+  readonly mode=fix
+  shift
+else
+  readonly mode=check
+fi
+
+if [[ $# -eq 0 ]]; then
+  echo >&2 "Usage: $0 [--fix] project..."
+  exit 1
+fi
+
+check_file() {
+  local -r file="$1"
+  "$GN" format --dry-run "$file" && return
+  local -r status=$?
+  if [[ $status -eq 2 ]]; then
+    echo "*** File $file is not formatted correctly."
+    echo "*** To fix, run: gn format $file"
+    echo
+    diff -u "$file" <("$GN" format --stdin < "$file")
+  fi
+  return $status
+}
+
+fix_file() {
+  local -r file="$1"
+  "$GN" format "$file"
+}
+
+handle_files() {
+  local status=0
+  while read file; do
+    ${mode}_file "$project/$file" || status=$?
+  done
+  return $status
+}
+
+set -o pipefail
+status=0
+for project in "$@"; do
+  git -C "$project" ls-files -- '*.gn*' | handle_files || status=$?
+done
+
+if [[ $status -ne 0 ]]; then
+  echo
+  echo "*** For a good time, try git file-format"
+  echo
+fi
+
+exit $status
