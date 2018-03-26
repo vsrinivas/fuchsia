@@ -4,10 +4,10 @@
 
 #include "lib/fidl/cpp/internal/synchronous_proxy.h"
 
-#include <stdio.h>
-
 #include <memory>
 #include <utility>
+
+#include "lib/fidl/cpp/internal/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -25,7 +25,7 @@ zx_status_t SynchronousProxy::Send(const fidl_type_t* type, Message message) {
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_validate: %s\n", error_msg);
+    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
     return status;
   }
   return message.Write(channel_.get(), 0);
@@ -39,7 +39,7 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
   const char* error_msg = nullptr;
   zx_status_t status = request.Validate(request_type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_validate: %s\n", error_msg);
+    FIDL_REPORT_ENCODING_ERROR(request, request_type, error_msg);
     return status;
   }
   status = request.Call(channel_.get(), 0, ZX_TIME_INFINITE, nullptr, response);
@@ -47,7 +47,7 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
     return status;
   status = response->Decode(response_type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
+    FIDL_REPORT_DECODING_ERROR(*response, response_type, error_msg);
     return status;
   }
   return ZX_OK;

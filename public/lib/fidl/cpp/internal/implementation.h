@@ -7,7 +7,6 @@
 
 #include <lib/fidl/internal.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <zircon/assert.h>
 
 #include <limits>
@@ -15,6 +14,7 @@
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/encoder.h"
+#include "lib/fidl/cpp/internal/logging.h"
 #include "lib/fidl/cpp/traits.h"
 
 #endif  // LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_

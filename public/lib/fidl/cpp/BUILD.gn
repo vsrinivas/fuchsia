@@ -22,6 +22,8 @@ source_set("cpp") {
     "interface_request.h",
     "internal/header.h",
     "internal/implementation.h",
+    "internal/logging.cc",
+    "internal/logging.h",
     "internal/message_handler.cc",
     "internal/message_handler.h",
     "internal/message_reader.cc",

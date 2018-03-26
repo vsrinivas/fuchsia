@@ -177,7 +177,7 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
     const char* error_msg = nullptr;
     zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
     if (status != ZX_OK) {
-      fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
       return status;
     }
       {{- if .Response }}
@@ -268,7 +268,7 @@ zx_status_t {{ .StubName }}::Dispatch(
       const char* error_msg = nullptr;
       status = message.Decode(&{{ .RequestTypeName }}, &error_msg);
       if (status != ZX_OK) {
-        fprintf(stderr, "error: fidl_decode: %s\n", error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .RequestTypeName }}, error_msg);
         break;
       }
         {{- if .Request }}

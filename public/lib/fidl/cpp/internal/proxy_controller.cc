@@ -4,9 +4,9 @@
 
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 
-#include <stdio.h>
-
 #include <utility>
+
+#include "lib/fidl/cpp/internal/logging.h"
 
 namespace fidl {
 namespace internal {
@@ -47,7 +47,7 @@ zx_status_t ProxyController::Send(
   const char* error_msg = nullptr;
   zx_status_t status = message.Validate(type, &error_msg);
   if (status != ZX_OK) {
-    fprintf(stderr, "error: fidl_validate: %s\n", error_msg);
+    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
     return status;
   }
   status = message.Write(reader_.channel().get(), 0);
