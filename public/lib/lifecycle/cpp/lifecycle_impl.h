@@ -8,9 +8,10 @@
 #include <functional>
 #include <memory>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/modular.h>
+
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/svc/cpp/service_namespace.h"
 
 namespace modular {
@@ -33,7 +34,7 @@ class LifecycleImpl : Lifecycle {
   void Terminate() override;
 
   Delegate* const delegate_;
-  f1dl::Binding<Lifecycle> binding_;
+  fidl::Binding<Lifecycle> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LifecycleImpl);
 };

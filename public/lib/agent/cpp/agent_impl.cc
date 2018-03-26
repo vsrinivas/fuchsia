@@ -12,7 +12,7 @@ AgentImpl::AgentImpl(component::ServiceNamespace* const service_namespace,
                      Delegate* const delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Agent>(
-      [this](f1dl::InterfaceRequest<Agent> request) {
+      [this](fidl::InterfaceRequest<Agent> request) {
         binding_.Bind(std::move(request));
       });
 }
@@ -30,14 +30,14 @@ AgentImpl::AgentImpl(fbl::RefPtr<fs::PseudoDir> directory,
 
 // |Agent|
 void AgentImpl::Connect(
-    const f1dl::StringPtr& requestor_url,
-    f1dl::InterfaceRequest<component::ServiceProvider> services_request) {
+    fidl::StringPtr requestor_url,
+    fidl::InterfaceRequest<component::ServiceProvider> services_request) {
   delegate_->Connect(std::move(services_request));
 }
 
 // |Agent|
-void AgentImpl::RunTask(const f1dl::StringPtr& task_id,
-                        const RunTaskCallback& callback) {
+void AgentImpl::RunTask(fidl::StringPtr task_id,
+                        RunTaskCallback callback) {
   delegate_->RunTask(task_id, callback);
 }
 

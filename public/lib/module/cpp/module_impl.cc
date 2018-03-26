@@ -10,15 +10,15 @@ ModuleImpl::ModuleImpl(component::ServiceNamespace* service_namespace,
                        Delegate* delegate)
     : delegate_(delegate), binding_(this) {
   service_namespace->AddService<Module>(
-      [this](f1dl::InterfaceRequest<Module> request) {
+      [this](fidl::InterfaceRequest<Module> request) {
         binding_.Bind(std::move(request));
       });
 }
 
 // |Module|
 void ModuleImpl::Initialize(
-    f1dl::InterfaceHandle<ModuleContext> module_context,
-    f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
+    fidl::InterfaceHandle<ModuleContext> module_context,
+    fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
   delegate_->ModuleInit(std::move(module_context),
                         std::move(outgoing_services));
 }

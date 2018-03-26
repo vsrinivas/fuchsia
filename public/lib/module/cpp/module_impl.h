@@ -7,11 +7,11 @@
 
 #include <memory>
 
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include <fuchsia/cpp/modular.h>
+
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/svc/cpp/service_namespace.h"
 
 namespace modular {
@@ -23,8 +23,8 @@ class ModuleImpl : public Module {
   // parameters.
   class Delegate {
    public:
-    virtual void ModuleInit(f1dl::InterfaceHandle<ModuleContext> module_context,
-                            f1dl::InterfaceRequest<component::ServiceProvider>
+    virtual void ModuleInit(fidl::InterfaceHandle<ModuleContext> module_context,
+                            fidl::InterfaceRequest<component::ServiceProvider>
                                 outgoing_services) = 0;
   };
 
@@ -33,12 +33,12 @@ class ModuleImpl : public Module {
 
  private:
   // |Module|
-  void Initialize(f1dl::InterfaceHandle<ModuleContext> module_context,
-                  f1dl::InterfaceRequest<component::ServiceProvider>
+  void Initialize(fidl::InterfaceHandle<ModuleContext> module_context,
+                  fidl::InterfaceRequest<component::ServiceProvider>
                       outgoing_services) override;
 
   Delegate* const delegate_;
-  f1dl::Binding<Module> binding_;
+  fidl::Binding<Module> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleImpl);
 };
