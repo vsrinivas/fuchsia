@@ -61,9 +61,13 @@ std::shared_ptr<MsdArmBuffer> MsdArmAbiBuffer::CloneBuffer()
     return std::shared_ptr<MsdArmBuffer>(MsdArmBuffer::Import(buffer_handle));
 }
 
-bool MsdArmBuffer::SetCommittedPages(uint64_t start, uint64_t page_count)
+bool MsdArmBuffer::SetCommittedPages(uint64_t start_page, uint64_t page_count)
 {
-    start_committed_pages_ = start;
+    if ((start_page + page_count) * PAGE_SIZE > platform_buffer()->size())
+        return DRETF(false, "invalid parameters start_page %lu page_count %lu\n", start_page,
+                     page_count);
+
+    start_committed_pages_ = start_page;
     committed_page_count_ = page_count;
     bool success = true;
     for (auto& mapping : gpu_mappings_) {
