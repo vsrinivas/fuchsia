@@ -157,8 +157,8 @@ void TokenManagerImpl::GetAccessToken(
 
   it->second->GetAppAccessToken(
       fidl::StringPtr(credential), app_client_id, std::move(app_scopes),
-      [this, callback, cache_key, &tokens](AuthProviderStatus status,
-                                           AuthTokenPtr access_token) {
+      [this, callback, cache_key, tokens](AuthProviderStatus status,
+                                          AuthTokenPtr access_token) mutable {
         std::string access_token_val;
         if (access_token) {
           access_token_val = access_token->token;
@@ -210,8 +210,8 @@ void TokenManagerImpl::GetIdToken(
 
   it->second->GetAppIdToken(
       fidl::StringPtr(credential), audience,
-      [this, callback, cache_key, &tokens](AuthProviderStatus status,
-                                           AuthTokenPtr id_token) {
+      [this, callback, cache_key, tokens](AuthProviderStatus status,
+                                          AuthTokenPtr id_token) mutable {
         std::string id_token_val;
         if (id_token) {
           id_token_val = id_token->token;

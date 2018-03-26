@@ -2,6 +2,7 @@
     "imports": [
         "garnet/packages/tests/amber",
         "garnet/packages/tests/asio",
+        "garnet/packages/tests/auth",
         "garnet/packages/tests/bluetooth",
         "garnet/packages/tests/boringssl",
         "garnet/packages/tests/cobalt_client",
