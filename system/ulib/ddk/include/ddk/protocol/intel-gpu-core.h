@@ -23,6 +23,9 @@ typedef struct zx_intel_gpu_core_protocol_ops {
     // Unmaps the given |pci_bar|.
     zx_status_t (*unmap_pci_mmio)(void* ctx, uint32_t pci_bar);
 
+    // Returns a bus transaction initiator.
+    zx_status_t (*get_pci_bti)(void* ctx, uint32_t index, zx_handle_t* bti_out);
+
     // Registers the given |callback| to be invoked with parameter |data| when an interrupt occurs
     // matching |interrupt_mask|.
     zx_status_t (*register_interrupt_callback)(void* ctx,
