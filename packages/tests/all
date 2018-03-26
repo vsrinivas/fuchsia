@@ -8,6 +8,7 @@
         "garnet/packages/tests/debugserver",
         "garnet/packages/tests/device_settings",
         "garnet/packages/tests/escher",
+        "garnet/packages/tests/fidl",
         "garnet/packages/tests/fidl_compatibility_test",
         "garnet/packages/tests/fsl",
         "garnet/packages/tests/fxl",

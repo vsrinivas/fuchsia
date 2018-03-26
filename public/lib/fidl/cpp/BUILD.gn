@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+
 source_set("cpp") {
   sources = [
     "binding_set.h",
@@ -111,4 +113,15 @@ executable("fidl_cpp_unittests") {
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/fbl",
   ]
+}
+
+package("fidl_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [":fidl_cpp_unittests"]
+
+  tests = [{
+    name = "fidl_cpp_unittests"
+  }]
 }
