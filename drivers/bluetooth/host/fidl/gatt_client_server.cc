@@ -6,6 +6,10 @@
 
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
 
+#include "lib/fxl/functional/auto_call.h"
+#include "lib/fxl/functional/make_copyable.h"
+
+#include "gatt_remote_service_server.h"
 #include "helpers.h"
 
 using bluetooth::ErrorCode;
@@ -22,7 +26,8 @@ GattClientServer::GattClientServer(std::string peer_id,
                                    fbl::RefPtr<btlib::gatt::GATT> gatt,
                                    fidl::InterfaceRequest<Client> request)
     : GattServerBase(gatt, this, std::move(request)),
-      peer_id_(std::move(peer_id)) {}
+      peer_id_(std::move(peer_id)),
+      weak_ptr_factory_(this) {}
 
 void GattClientServer::ListServices(
     ::fidl::VectorPtr<::fidl::StringPtr> fidl_uuids,
@@ -71,7 +76,56 @@ void GattClientServer::ListServices(
 void GattClientServer::ConnectToService(
     uint64_t id,
     ::fidl::InterfaceRequest<RemoteService> service) {
-  FXL_NOTIMPLEMENTED();
+  if (connected_services_.count(id)) {
+    FXL_VLOG(1) << "GattClientServer: service already requested";
+    return;
+  }
+
+  // Initialize an entry so that we remember when this request is in progress.
+  connected_services_[id] = nullptr;
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto callback = [self, id,
+                   request = std::move(service)](auto service) mutable {
+    if (!self)
+      return;
+
+    // The operation must be in progress.
+    FXL_DCHECK(self->connected_services_.count(id));
+
+    // Automatically called on failure.
+    auto fail_cleanup =
+        fxl::MakeAutoCall([self, id] { self->connected_services_.erase(id); });
+
+    if (!service) {
+      FXL_VLOG(1) << "GattClientServer: Failed to connect to service";
+      return;
+    }
+
+    // Clean up the server if either the peer device or the FIDL client
+    // disconnects.
+    auto error_cb = [self, id] {
+      FXL_VLOG(1) << "GattClientServer: service disconnected";
+      if (self) {
+        self->connected_services_.erase(id);
+      }
+    };
+
+    if (!service->AddRemovedHandler(error_cb)) {
+      FXL_VLOG(1) << "GattClientServer: failed to assign closed handler";
+      return;
+    }
+
+    fail_cleanup.cancel();
+
+    auto server = std::make_unique<GattRemoteServiceServer>(
+        std::move(service), self->gatt(), std::move(request));
+    server->set_error_handler(std::move(error_cb));
+
+    self->connected_services_[id] = std::move(server);
+  };
+
+  gatt()->FindService(peer_id_, id, std::move(callback));
 }
 
 }  // namespace bthost

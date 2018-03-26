@@ -10,6 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
+#include "garnet/drivers/bluetooth/host/fidl/gatt_remote_service_server.h"
 #include "garnet/drivers/bluetooth/host/fidl/server_base.h"
 
 namespace bthost {
@@ -32,6 +33,13 @@ class GattClientServer : public GattServerBase<bluetooth_gatt::Client> {
 
   // The ID of the peer that this client is attached to.
   std::string peer_id_;
+
+  // Remote GATT services that were connected through this client. The value can
+  // be null while a ConnectToService request is in progress.
+  std::unordered_map<uint64_t, std::unique_ptr<GattRemoteServiceServer>>
+      connected_services_;
+
+  fxl::WeakPtrFactory<GattClientServer> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GattClientServer);
 };
