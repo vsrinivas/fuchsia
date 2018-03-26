@@ -971,6 +971,12 @@ bool Library::CompileUnion(Union* union_declaration) {
 }
 
 bool Library::Compile() {
+    for (const auto& name_and_library : *dependencies_) {
+        const Library* library = name_and_library.second.get();
+        constants_.insert(library->constants_.begin(),
+                          library->constants_.end());
+    }
+
     if (!SortDeclarations()) {
         return false;
     }
