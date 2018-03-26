@@ -125,7 +125,7 @@ static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint
                                    size_t* out_length) {
     zx_status_t status = usb_control(&hid->usb, req_type, request, value, index, data, length,
                                      ZX_TIME_INFINITE, out_length);
-    if (status == ZX_ERR_IO_REFUSED) {
+    if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
         usb_reset_endpoint(&hid->usb, 0);
     }
     return status;

@@ -86,7 +86,7 @@ zx_status_t usb_device_get_string_descriptor(usb_device_t* dev, uint8_t id,
     // read list of supported languages
     zx_status_t result = usb_device_get_descriptor(dev, USB_DT_STRING, 0, 0,
                                                    languages, sizeof(languages));
-    if (result == ZX_ERR_IO_REFUSED) {
+    if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
         // some devices do not support fetching language list
         // in that case assume US English (0x0409)
         usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
@@ -135,7 +135,7 @@ zx_status_t usb_device_get_string_descriptor(usb_device_t* dev, uint8_t id,
             }
             *dest++ = 0;
             return dest - buf;
-        } else if (result == ZX_ERR_IO_REFUSED) {
+        } else if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
             usb_hci_reset_endpoint(&dev->hci, dev->device_id, 0);
         }
     }

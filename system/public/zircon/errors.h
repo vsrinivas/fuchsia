@@ -143,6 +143,10 @@
 // Example: A USB isochronous transfer that failed to complete due to an overrun or underrun.
 #define ZX_ERR_IO_MISSED_DEADLINE (-46)
 
+// ZX_ERR_IO_INVALID: The data in the operation is invalid parameter or is out of range.
+// Example: A USB transfer that failed to complete with TRB Error
+#define ZX_ERR_IO_INVALID (-47)
+
 // ======== Filesystem Errors ========
 // ZX_ERR_BAD_PATH: Path name is too long.
 #define ZX_ERR_BAD_PATH (-50)

@@ -267,7 +267,7 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     for (int i = 0; i < 5; i++) {
         result = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
                                      &device_descriptor, 8);
-        if (result == ZX_ERR_IO_REFUSED) {
+        if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
             xhci_reset_endpoint(xhci, slot_id, 0);
         } else {
             break;

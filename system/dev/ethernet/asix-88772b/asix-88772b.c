@@ -31,6 +31,14 @@
 #define ETH_HEADER_SIZE 4
 #define ETH_MTU 1500
 
+#define ETHMAC_MAX_TRANSMIT_DELAY 100
+#define ETHMAC_MAX_RECV_DELAY 100
+#define ETHMAC_TRANSMIT_DELAY 10
+#define ETHMAC_RECV_DELAY 10
+#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
+#define ETHMAC_INITIAL_RECV_DELAY 0
+
+
 typedef struct {
     zx_device_t* device;
     zx_device_t* usb_device;
@@ -41,6 +49,8 @@ typedef struct {
     uint8_t status[INTR_REQ_SIZE];
     bool online;
     bool dead;
+    uint8_t bulk_in_addr;
+    uint8_t bulk_out_addr;
 
     // pool of free USB requests
     list_node_t free_read_reqs;
@@ -50,6 +60,9 @@ typedef struct {
     // List of netbufs that haven't been copied into a USB transaction yet. Should only contain
     // entries if free_write_reqs is empty.
     list_node_t pending_netbufs;
+
+    uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
+    uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
@@ -200,6 +213,8 @@ static zx_status_t ax88772b_send(ax88772b_t* eth, usb_request_t* request, ethmac
     usb_request_copyto(request, header, ETH_HEADER_SIZE, 0);
     usb_request_copyto(request, netbuf->data, length, ETH_HEADER_SIZE);
     request->header.length = length + ETH_HEADER_SIZE;
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
     usb_request_queue(&eth->usb, request);
     return ZX_OK;
 }
@@ -213,11 +228,22 @@ static void ax88772b_read_complete(usb_request_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
-    if ((request->response.status == ZX_OK) && eth->ifc) {
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
+        zxlogf(TRACE, "ax88772b_read_complete usb_reset_endpoint\n");
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "ax88772b_read_complete Slowing down the requests by %d usec"
+               " and resetting the recv endpoint\n", ETHMAC_RECV_DELAY);
+        if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
+            eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+    } else if ((request->response.status == ZX_OK) && eth->ifc) {
         ax88772b_recv(eth, request);
     }
 
     if (eth->online) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
         usb_request_queue(&eth->usb, request);
     } else {
         list_add_head(&eth->free_read_reqs, &request->node);
@@ -245,6 +271,19 @@ static void ax88772b_write_complete(usb_request_t* request, void* cookie) {
     } else {
         list_add_tail(&eth->free_write_reqs, &request->node);
     }
+
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
+        zxlogf(TRACE, "ax88772b_write_complete usb_reset_endpoint\n");
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "ax88772b_write_complete Slowing down the requests by %d usec"
+               " and resetting the transmit endpoint\n", ETHMAC_TRANSMIT_DELAY);
+        if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
+            eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
+    }
+
     mtx_unlock(&eth->mutex);
 }
 
@@ -614,6 +653,11 @@ static zx_status_t ax88772b_bind(void* ctx, zx_device_t* device) {
     eth->usb_device = device;
     memcpy(&eth->usb, &usb, sizeof(eth->usb));
 
+    eth->bulk_in_addr = bulk_in_addr;
+    eth->bulk_out_addr = bulk_out_addr;
+
+    eth->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
+    eth->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;

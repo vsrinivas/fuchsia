@@ -53,8 +53,8 @@ zx_status_t usb_video_negotiate_probe(usb_protocol_t* usb, uint8_t vs_interface_
     print_controls(out_result);
 
 out:
-    if (status == ZX_ERR_IO_REFUSED) {
-        // clear the stall
+    if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
+        // clear the stall/error
         usb_reset_endpoint(usb, 0);
     }
     return status;
@@ -67,8 +67,8 @@ zx_status_t usb_video_negotiate_commit(usb_protocol_t* usb, uint8_t vs_interface
                                      USB_VIDEO_SET_CUR, USB_VIDEO_VS_COMMIT_CONTROL << 8,
                                      vs_interface_num, ctrls, sizeof(*ctrls), ZX_TIME_INFINITE,
                                      NULL);
-    if (status == ZX_ERR_IO_REFUSED) {
-        // clear the stall
+    if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
+        // clear the stall/error
         usb_reset_endpoint(usb, 0);
     }
     return status;

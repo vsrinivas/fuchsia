@@ -41,8 +41,8 @@ zx_status_t usb_audio_set_sample_rate(usb_protocol_t* usb, uint8_t ep_addr, uint
                                      USB_AUDIO_SET_CUR,
                                      USB_AUDIO_SAMPLING_FREQ_CONTROL << 8,
                                      ep_addr, &buffer, sizeof(buffer), ZX_TIME_INFINITE, NULL);
-    if (result == ZX_ERR_IO_REFUSED) {
-        // clear the stall
+    if (result == ZX_ERR_IO_REFUSED || result == ZX_ERR_IO_INVALID) {
+        // clear the stall/error
         usb_reset_endpoint(usb, 0);
     }
     return result;
@@ -180,8 +180,8 @@ zx_status_t usb_audio_set_volume(usb_protocol_t* usb,
     }
 
 out:
-    if (status == ZX_ERR_IO_REFUSED) {
-        // clear the stall
+    if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
+        // clear the stall/error
         usb_reset_endpoint(usb, 0);
     }
     return status;

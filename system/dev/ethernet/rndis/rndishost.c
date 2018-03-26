@@ -24,6 +24,13 @@
 #define WRITE_REQ_COUNT 4
 #define ETH_HEADER_SIZE 4
 
+#define ETHMAC_MAX_TRANSMIT_DELAY 100
+#define ETHMAC_MAX_RECV_DELAY 100
+#define ETHMAC_TRANSMIT_DELAY 10
+#define ETHMAC_RECV_DELAY 10
+#define ETHMAC_INITIAL_TRANSMIT_DELAY 0
+#define ETHMAC_INITIAL_RECV_DELAY 0
+
 typedef struct {
     zx_device_t* zxdev;
     zx_device_t* usb_zxdev;
@@ -41,6 +48,9 @@ typedef struct {
     list_node_t free_read_reqs;
     list_node_t free_write_reqs;
     list_node_t free_intr_reqs;
+
+    uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
+    uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
     // Interface to the ethernet layer.
     ethmac_ifc_t* ifc;
@@ -115,6 +125,17 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
     }
 
     mtx_lock(&eth->mutex);
+    if (request->response.status == ZX_ERR_IO_REFUSED) {
+        zxlogf(TRACE, "rndis_read_complete usb_reset_endpoint\n");
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "rndis_read_complete Slowing down the requests by %d usec"
+               " and resetting the recv endpoint\n", ETHMAC_RECV_DELAY);
+        if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
+            eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+    }
     if ((request->response.status == ZX_OK) && eth->ifc) {
         size_t len = request->response.actual;
 
@@ -130,6 +151,7 @@ static void rndis_read_complete(usb_request_t* request, void* cookie) {
     }
 
     // TODO: Only usb_request_queue if the device is online.
+    zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
     usb_request_queue(&eth->usb, request);
 
     mtx_unlock(&eth->mutex);
@@ -147,8 +169,16 @@ static void rndis_write_complete(usb_request_t* request, void* cookie) {
     mtx_lock(&eth->mutex);
     if (request->response.status == ZX_ERR_IO_REFUSED) {
         zxlogf(TRACE, "rndishost usb_reset_endpoint\n");
-        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "rndis_write_complete Slowing down the requests by %d usec"
+               " and resetting the transmit endpoint\n", ETHMAC_TRANSMIT_DELAY);
+        if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
+            eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
+
     list_add_tail(&eth->free_write_reqs, &request->node);
     mtx_unlock(&eth->mutex);
 }
@@ -243,6 +273,7 @@ static zx_status_t rndishost_queue_tx(void* ctx, uint32_t options, ethmac_netbuf
         list_add_tail(&eth->free_write_reqs, &req->node);
         goto done;
     }
+    zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
     usb_request_queue(&eth->usb, req);
 
 done:

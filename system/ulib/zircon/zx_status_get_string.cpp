@@ -33,6 +33,7 @@ const char* _zx_status_get_string(zx_status_t status) {
     case ZX_ERR_ACCESS_DENIED: return "ZX_ERR_ACCESS_DENIED";
     case ZX_ERR_IO: return "ZX_ERR_IO";
     case ZX_ERR_IO_REFUSED: return "ZX_ERR_IO_REFUSED";
+    case ZX_ERR_IO_INVALID: return "ZX_ERR_IO_INVALID";
     case ZX_ERR_IO_DATA_INTEGRITY: return "ZX_ERR_IO_DATA_INTEGRITY";
     case ZX_ERR_IO_DATA_LOSS: return "ZX_ERR_IO_DATA_LOSS";
     case ZX_ERR_IO_NOT_PRESENT: return "ZX_ERR_IO_NOT_PRESENT";

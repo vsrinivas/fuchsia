@@ -64,7 +64,7 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
 
     mtx_lock(&ep->lock);
 
-    if (ep->state != EP_STATE_HALTED) {
+    if (ep->state != EP_STATE_HALTED && ep->state != EP_STATE_ERROR) {
         mtx_unlock(&ep->lock);
         return ZX_OK;
     }
@@ -137,8 +137,11 @@ zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_addre
         ep->state = EP_STATE_RUNNING;
         status = ZX_OK;
         break;
-    case EP_CTX_STATE_HALTED:
     case EP_CTX_STATE_ERROR:
+        ep->state = EP_STATE_ERROR;
+        status = ZX_ERR_IO_INVALID;
+        break;
+    case EP_CTX_STATE_HALTED:
         ep->state = EP_STATE_HALTED;
         status = ZX_ERR_IO_REFUSED;
         break;
@@ -488,6 +491,9 @@ zx_status_t xhci_queue_transfer(xhci_t* xhci, usb_request_t* req) {
     case EP_STATE_PAUSED:
         status = ZX_ERR_BAD_STATE;
         break;
+    case EP_STATE_ERROR:
+        status = ZX_ERR_IO_INVALID;
+        break;
     case EP_STATE_HALTED:
         status = ZX_ERR_IO_REFUSED;
         break;
@@ -704,12 +710,25 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_BABBLE_DETECTED_ERROR\n");
             result = ZX_ERR_IO_OVERRUN;
             break;
-        case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_TRB_ERROR:
+            zxlogf(TRACE, "xhci_handle_transfer_event: TRB_CC_TRB_ERROR\n");
+            int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
+            /*
+             * For usb-c ethernet adapters on Intel xhci controller, we receive this error
+             * when a packet fails with NRDY token on the bus.see NET:97 for more details.
+             * Slow down the requests in the client when this error is received.
+             */
+            if (ep_ctx_state == EP_CTX_STATE_ERROR) {
+                result = ZX_ERR_IO_INVALID;
+            } else {
+                result = ZX_ERR_IO;
+            }
+            break;
+        case TRB_CC_USB_TRANSACTION_ERROR:
         case TRB_CC_STALL_ERROR: {
             int ep_ctx_state = xhci_get_ep_ctx_state(slot, ep);
             zxlogf(TRACE, "xhci_handle_transfer_event: cc %d ep_ctx_state %d\n", cc, ep_ctx_state);
-            if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
+            if (ep_ctx_state == EP_CTX_STATE_HALTED) {
                 result = ZX_ERR_IO_REFUSED;
             } else {
                 result = ZX_ERR_IO;
@@ -753,8 +772,10 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
             zxlogf(ERROR, "xhci_handle_transfer_event: unhandled transfer event condition code %d "
                    "ep_ctx_state %d:  %08X %08X %08X %08X\n", cc, ep_ctx_state,
                     ((uint32_t*)trb)[0], ((uint32_t*)trb)[1], ((uint32_t*)trb)[2], ((uint32_t*)trb)[3]);
-            if (ep_ctx_state == EP_CTX_STATE_HALTED || ep_ctx_state == EP_CTX_STATE_ERROR) {
+            if (ep_ctx_state == EP_CTX_STATE_HALTED) {
                 result = ZX_ERR_IO_REFUSED;
+            } else if (ep_ctx_state == EP_CTX_STATE_ERROR) {
+                result = ZX_ERR_IO_INVALID;
             } else {
                 result = ZX_ERR_IO;
             }
@@ -859,6 +880,8 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
 
     if (result == ZX_ERR_IO_REFUSED && ep->state != EP_STATE_DEAD) {
         ep->state = EP_STATE_HALTED;
+    } else if (result == ZX_ERR_IO_INVALID && ep->state != EP_STATE_DEAD) {
+        ep->state = EP_STATE_ERROR;
     } else if (ep->state == EP_STATE_RUNNING) {
         xhci_process_transactions_locked(xhci, slot, ep_index, &completed_reqs);
     }

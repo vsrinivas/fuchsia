@@ -36,6 +36,20 @@
 #define MAX_MULTICAST_FILTER_ADDRS 32
 #define MULTICAST_FILTER_NBYTES 8
 
+/*
+ * The constants are determined based on Pluggable gigabit Ethernet adapter(Model: USBC-E1000),
+ * connected on pixelbook. At times, the device returns NRDY token when it is unable to match the
+ * pace of the client driver but does not recover by sending a ERDY token within the controller's
+ * time limit. ETHMAC_INITIAL_TRANSMIT_DELAY helps us avoids getting into this situation by adding
+ * a delay at the beginning.
+ */
+#define ETHMAC_MAX_TRANSMIT_DELAY 100
+#define ETHMAC_MAX_RECV_DELAY 100
+#define ETHMAC_TRANSMIT_DELAY 10
+#define ETHMAC_RECV_DELAY 10
+#define ETHMAC_INITIAL_TRANSMIT_DELAY 15
+#define ETHMAC_INITIAL_RECV_DELAY 0
+
 typedef struct {
     zx_device_t* device;
     zx_device_t* usb_device;
@@ -68,6 +82,8 @@ typedef struct {
     // entries if all allocated USB transactions are full.
     list_node_t pending_netbuf;
 
+    uint64_t rx_endpoint_delay;    // wait time between 2 recv requests
+    uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
     // callback interface to attached ethernet layer
     ethmac_ifc_t* ifc;
     void* cookie;
@@ -304,11 +320,19 @@ static void ax88179_read_complete(usb_request_t* request, void* cookie) {
     if (request->response.status == ZX_ERR_IO_REFUSED) {
         zxlogf(TRACE, "ax88179_read_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "ax88179_read_complete Slowing down the requests by %d usec"
+               " and resetting the recv endpoint\n", ETHMAC_RECV_DELAY);
+        if (eth->rx_endpoint_delay < ETHMAC_MAX_RECV_DELAY) {
+            eth->rx_endpoint_delay += ETHMAC_RECV_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_in_addr);
     } else if ((request->response.status == ZX_OK) && eth->ifc) {
         ax88179_recv(eth, request);
     }
 
     if (eth->online) {
+        zx_nanosleep(zx_deadline_after(ZX_USEC(eth->rx_endpoint_delay)));
         usb_request_queue(&eth->usb, request);
     } else {
         list_add_head(&eth->free_read_reqs, &request->node);
@@ -364,8 +388,14 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     if (request->response.status == ZX_ERR_IO_REFUSED) {
         zxlogf(TRACE, "ax88179_write_complete usb_reset_endpoint\n");
         usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
+    } else if (request->response.status == ZX_ERR_IO_INVALID) {
+        zxlogf(TRACE, "ax88179_write_complete Slowing down the requests by %d usec"
+               " and resetting the transmit endpoint\n", ETHMAC_TRANSMIT_DELAY);
+        if (eth->tx_endpoint_delay < ETHMAC_MAX_TRANSMIT_DELAY) {
+            eth->tx_endpoint_delay += ETHMAC_TRANSMIT_DELAY;
+        }
+        usb_reset_endpoint(&eth->usb, eth->bulk_out_addr);
     }
-
     usb_request_t* next = list_remove_head_type(&eth->pending_usb_tx, usb_request_t, node);
     if (next == NULL) {
         eth->usb_tx_in_flight--;
@@ -373,6 +403,7 @@ static void ax88179_write_complete(usb_request_t* request, void* cookie) {
     } else {
         zxlogf(DEBUG1, "ax88179: queuing request (%p) of length %lu, %u outstanding\n",
                  next, next->header.length, eth->usb_tx_in_flight);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
         usb_request_queue(&eth->usb, next);
     }
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
@@ -437,6 +468,7 @@ static zx_status_t ax88179_queue_tx(void* ctx, uint32_t options, ethmac_netbuf_t
     mtx_lock(&eth->tx_lock);
     ZX_DEBUG_ASSERT(eth->usb_tx_in_flight <= MAX_TX_IN_FLIGHT);
 
+    zx_nanosleep(zx_deadline_after(ZX_USEC(eth->tx_endpoint_delay)));
     // If we already have entries in our pending_netbuf list we should put this one there, too.
     // Otherwise, we may end up reordering packets.
     if (!list_is_empty(&eth->pending_netbuf)) {
@@ -913,6 +945,8 @@ static zx_status_t ax88179_bind(void* ctx, zx_device_t* device) {
     eth->bulk_in_addr = bulk_in_addr;
     eth->bulk_out_addr = bulk_out_addr;
 
+    eth->rx_endpoint_delay = ETHMAC_INITIAL_RECV_DELAY;
+    eth->tx_endpoint_delay = ETHMAC_INITIAL_TRANSMIT_DELAY;
     zx_status_t status = ZX_OK;
     for (int i = 0; i < READ_REQ_COUNT; i++) {
         usb_request_t* req;
