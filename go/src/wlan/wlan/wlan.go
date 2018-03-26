@@ -244,7 +244,7 @@ func (c *Client) SendMessage(msg bindings.Payload, ordinal uint32) error {
 		Ordinal: ordinal,
 	}
 
-	msgBuf := make([]byte, 16)
+	msgBuf := make([]byte, zx.ChannelMaxMessageBytes)
 	nb, _, err := bindings.MarshalMessage(h, msg, msgBuf, nil)
 	if err != nil {
 		return fmt.Errorf("could not encode message %T: %v", msg, err)
