@@ -33,9 +33,8 @@ typedef struct bochs_vbe_device {
     zx_display_info_t info;
 } bochs_vbe_device_t;
 
-#define bochs_dispi_reg(base, reg) *(volatile uint16_t*)(base + (0x500 + (reg << 1)))
-#define bochs_vbe_dispi_read(base, reg) le16toh(bochs_dispi_reg(base, reg))
-#define bochs_vbe_dispi_write(base, reg, val) bochs_dispi_reg(base, reg) = htole16(val)
+#define bochs_vbe_dispi_read(base, reg) pcie_read16(base + (0x500 + (reg << 1)))
+#define bochs_vbe_dispi_write(base, reg, val) pcie_write16(base + (0x500 + (reg << 1)), val)
 
 #define BOCHS_VBE_DISPI_ID 0x0
 #define BOCHS_VBE_DISPI_XRES 0x1
