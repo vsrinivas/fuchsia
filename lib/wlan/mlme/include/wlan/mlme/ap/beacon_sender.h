@@ -37,6 +37,7 @@ class BeaconSender : public FrameHandler {
     zx_status_t WriteTim(ElementWriter* w, const TrafficIndicationMap& tim);
     zx_status_t WriteExtendedSupportedRates(ElementWriter* w);
     zx_status_t WriteHtCapabilities(ElementWriter* w);
+    zx_status_t WriteHtOperation(ElementWriter* w);
     bool IsStarted();
 
     DeviceInterface* const device_;

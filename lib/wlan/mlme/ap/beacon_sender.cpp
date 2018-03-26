@@ -130,6 +130,9 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
+
+        status = WriteHtOperation(&w);
+        if (status != ZX_OK) { return status; }
     }
 
     // TODO(hahnr): Query from hardware which IEs must be filled out here.
@@ -198,6 +201,9 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
 
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
+        if (status != ZX_OK) { return status; }
+
+        status = WriteHtOperation(&w);
         if (status != ZX_OK) { return status; }
     }
 
@@ -298,6 +304,15 @@ zx_status_t BeaconSender::WriteHtCapabilities(ElementWriter* w) {
         return ZX_ERR_IO;
     }
 
+    return ZX_OK;
+}
+
+zx_status_t BeaconSender::WriteHtOperation(ElementWriter* w) {
+    HtOperation hto = bss_->BuildHtOperation(bss_->Chan());
+    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.mcs_set)) {
+        errorf("[bcn-sender] [%s] could not write HtOperation\n", bss_->bssid().ToString().c_str());
+        return ZX_ERR_IO;
+    }
     return ZX_OK;
 }
 

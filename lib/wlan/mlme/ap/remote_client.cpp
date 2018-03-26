@@ -610,6 +610,9 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
+
+        status = WriteHtOperation(&w);
+        if (status != ZX_OK) { return status; }
     }
 
     body_payload_len = w.size();
@@ -753,6 +756,16 @@ zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
         return ZX_ERR_IO;
     }
 
+    return ZX_OK;
+}
+
+zx_status_t RemoteClient::WriteHtOperation(ElementWriter* w) {
+    auto chan = bss_->Chan();
+    HtOperation hto = bss_->BuildHtOperation(chan);
+    if (!w->write<HtOperation>(hto.primary_chan, hto.head, hto.tail, hto.mcs_set)) {
+        errorf("[client] [%s] could not write HtOperation\n", addr_.ToString().c_str());
+        return ZX_ERR_IO;
+    }
     return ZX_OK;
 }
 

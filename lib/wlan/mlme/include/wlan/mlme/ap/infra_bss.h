@@ -49,6 +49,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     bool IsCbw40RxReady() const override;
     bool IsCbw40TxReady() const override;
     HtCapabilities BuildHtCapabilities() const override;
+    HtOperation BuildHtOperation(const wlan_channel_t& chan) const override;
+
     wlan_channel_t Chan() const override { return chan_; }
 
    private:

@@ -340,4 +340,34 @@ HtCapabilities InfraBss::BuildHtCapabilities() const {
     return htc;  // 28 bytes.
 }
 
+HtOperation InfraBss::BuildHtOperation(const wlan_channel_t& chan) const {
+    // TODO(porce): Query the BSS internal data to fill up the parameters.
+    HtOperation hto;
+
+    hto.primary_chan = chan.primary;
+    HtOpInfoHead& head = hto.head;
+    head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_NONE);  // TODO(porce): CBW
+    head.set_sta_chan_width(HtOpInfoHead::TWENTY);                 // TODO(porce): CBW
+    head.set_rifs_mode(0);
+    head.set_reserved1(0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
+    head.set_ht_protect(HtOpInfoHead::NONE);
+    head.set_nongreenfield_present(1);
+    head.set_reserved2(0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
+    head.set_obss_non_ht(0);
+    head.set_center_freq_seg2(0);
+    head.set_dual_beacon(0);
+    head.set_dual_cts_protect(0);
+
+    HtOpInfoTail& tail = hto.tail;
+    tail.set_stbc_beacon(0);
+    tail.set_lsig_txop_protect(0);
+    tail.set_pco_active(0);
+    tail.set_pco_phase(0);
+
+    SupportedMcsSet& mcs = hto.mcs_set;
+    mcs.rx_mcs_head.set_bitmask(0xff);  // MCS 0-7
+
+    return hto;
+}
+
 }  // namespace wlan

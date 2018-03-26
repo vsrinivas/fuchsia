@@ -49,6 +49,8 @@ class BssInterface {
     virtual bool IsCbw40RxReady() const = 0;
     virtual bool IsCbw40TxReady() const = 0;
     virtual HtCapabilities BuildHtCapabilities() const = 0;
+    virtual HtOperation BuildHtOperation(const wlan_channel_t& chan) const = 0;
+
     virtual wlan_channel_t Chan() const = 0;
 };
 
