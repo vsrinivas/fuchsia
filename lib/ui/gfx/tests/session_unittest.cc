@@ -17,10 +17,10 @@ namespace test {
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   ui::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(
-      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      1, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));
   EXPECT_FALSE(session_->ScheduleUpdate(
-      0, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      0, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(
       "scenic::gfx::Session: Present called with out-of-order presentation "
@@ -30,10 +30,10 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   ui::Session::PresentCallback callback = [](auto) {};
   EXPECT_TRUE(session_->ScheduleUpdate(
-      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      1, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));
   EXPECT_TRUE(session_->ScheduleUpdate(
-      1, ::fidl::VectorPtr<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
+      1, std::vector<::gfx::Command>(), ::fidl::VectorPtr<zx::event>(),
       ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(nullptr);
 }

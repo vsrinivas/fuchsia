@@ -37,20 +37,7 @@ void SessionHandler::SendEvents(::fidl::VectorPtr<ui::Event> events) {
 }
 
 void SessionHandler::Enqueue(::fidl::VectorPtr<ui::Command> commands) {
-  // TODO: Add them all at once instead of iterating.  The problem
-  // is that ::fidl::Array doesn't support this.  Or, at least reserve
-  // enough space.  But ::fidl::Array doesn't support this, either.
-  /*for (auto& command : *commands) {
-    FXL_CHECK(command.Which() == ui::Command::Tag::kGfx);
-    // TODO(mikejurka): does buffered_commands_ have to be
-    // ::fidl::VectorPtr<::gfx::CommandPtr>?
-    buffered_commands_.push_back(std::move(command.gfx()));
-  }*/
-  // TODO(mikejurka): Is there a better way to do this?
-  while (commands->size() > 0) {
-    ui::Command command;
-    std::swap(command, commands->back());
-    commands->pop_back();
+  for (auto& command : commands.take()) {
     buffered_commands_.push_back(std::move(command.gfx()));
   }
 }

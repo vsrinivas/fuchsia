@@ -74,7 +74,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
   bool ScheduleUpdate(uint64_t presentation_time,
-                      ::fidl::VectorPtr<::gfx::Command> commands,
+                      std::vector<::gfx::Command> commands,
                       ::fidl::VectorPtr<zx::event> acquire_fences,
                       ::fidl::VectorPtr<zx::event> release_fences,
                       ui::Session::PresentCallback callback);
@@ -258,7 +258,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   struct Update {
     uint64_t presentation_time;
 
-    ::fidl::VectorPtr<::gfx::Command> commands;
+    std::vector<::gfx::Command> commands;
     std::unique_ptr<escher::FenceSetListener> acquire_fences;
     ::fidl::VectorPtr<zx::event> release_fences;
 
@@ -266,7 +266,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
     // an invocation of |Session.Present()|.
     ui::Session::PresentCallback present_callback;
   };
-  bool ApplyUpdate(Update* update);
+  bool ApplyUpdate(std::vector<::gfx::Command> commands);
   std::queue<Update> scheduled_updates_;
   ::fidl::VectorPtr<zx::event> fences_to_release_on_next_update_;
 

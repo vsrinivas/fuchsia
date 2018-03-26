@@ -75,7 +75,7 @@ class SessionHandler : public TempSessionDelegate, public EventReporter {
   ErrorReporter* const error_reporter_;
   scenic::gfx::SessionPtr session_;
 
-  ::fidl::VectorPtr<::gfx::Command> buffered_commands_;
+  std::vector<::gfx::Command> buffered_commands_;
 };
 
 }  // namespace gfx

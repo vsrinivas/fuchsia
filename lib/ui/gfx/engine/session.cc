@@ -1198,7 +1198,7 @@ bool Session::AssertValueIsOfType(const ::gfx::Value& value,
 }
 
 bool Session::ScheduleUpdate(uint64_t presentation_time,
-                             ::fidl::VectorPtr<::gfx::Command> commands,
+                             std::vector<::gfx::Command> commands,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
                              ::fidl::VectorPtr<zx::event> release_events,
                              ui::Session::PresentCallback callback) {
@@ -1269,7 +1269,7 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= presentation_time &&
          scheduled_updates_.front().acquire_fences->ready()) {
-    if (ApplyUpdate(&scheduled_updates_.front())) {
+    if (ApplyUpdate(std::move(scheduled_updates_.front().commands))) {
       needs_render = true;
       auto info = images::PresentationInfo();
       info.presentation_time = presentation_time;
@@ -1297,6 +1297,8 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
       FXL_LOG(WARNING) << "mozart::Session::ApplyScheduledUpdates(): "
                           "An error was encountered while applying the update. "
                           "Initiating teardown.";
+
+      scheduled_updates_ = {};
 
       BeginTearDown();
 
@@ -1339,17 +1341,11 @@ void Session::FlushEvents() {
   }
 }
 
-bool Session::ApplyUpdate(Session::Update* update) {
+bool Session::ApplyUpdate(std::vector<::gfx::Command> commands) {
   TRACE_DURATION("gfx", "Session::ApplyUpdate");
   if (is_valid()) {
-    // TODO(mikejurka): We should probably be moving the update here, not just
-    // passing a pointer
-    // Also, we'll have an issue with logging an error on a command after we
-    // moved it
-    std::vector<::gfx::Command> commands = update->commands.take();
     for (auto& command : commands) {
-      ::gfx::Command moved_command = std::move(command);
-      if (!ApplyCommand(std::move(moved_command))) {
+      if (!ApplyCommand(std::move(command))) {
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplyCommand() failed to apply Command: "
             << command;
