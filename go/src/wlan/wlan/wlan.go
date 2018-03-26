@@ -323,6 +323,7 @@ func parseResponse(buf []byte) (interface{}, error) {
 	if err := bindings.UnmarshalHeader(buf, &header); err != nil {
 		return nil, fmt.Errorf("could not decode api header: %v", err)
 	}
+	buf = buf[bindings.MessageHeaderSize:]
 	switch header.Ordinal {
 	case uint32(mlme.MethodScanConfirm):
 		var resp mlme.ScanResponse
