@@ -48,25 +48,47 @@ set_default_toolchain(target_toolchain)
 sources_assignment_filter = []
 
 declare_args() {
-  # This should never be set as a build argument.  It exists only to be
-  # set in toolchain_args when defining a toolchain.  These configs
-  # will be appended to the default list common to all target types.
-  toolchain_configs = []
-
-  # This should never be set as a build argument.
-  # It exists only to be set in toolchain_args.
+  # *This should never be set as a build argument.*
+  # It exists only to be set in `toolchain_args`.
   # See //build/toolchain/clang_toolchain.gni for details.
-  is_pic_default = false
+  # This variable is a scope giving details about the current toolchain:
+  #     toolchain_variant.base
+  #         [label] The "base" toolchain for this variant, *often the
+  #         right thing to use in comparisons, not `current_toolchain`.*
+  #         This is the toolchain actually referenced directly in GN
+  #         source code.  If the current toolchain is not
+  #         `shlib_toolchain` or a variant toolchain, this is the same
+  #         as `current_toolchain`.  In one of those derivative
+  #         toolchains, this is the toolchain the GN code probably
+  #         thought it was in.  This is the right thing to use in a test
+  #         like `toolchain_variant.base == target_toolchain`, rather
+  #         rather than comparing against `current_toolchain`.
+  #     toolchain_variant.name
+  #         [string] The name of this variant, as used in `variant` fields in
+  #         `select_variant` clauses.  In the base toolchain and its
+  #         `shlib_toolchain`, this is "".
+  #     toolchain_variant.suffix
+  #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
+  #     toolchain_variant.is_pic_default
+  #         [bool] This is true in `shlib_toolchain`.
+  # The other fields are the variant's effects as defined in `known_variants`.
+  toolchain_variant = {
+    base = target_toolchain  # default toolchain
+  }
+}
 
-  # This should never be set as a build argument.
-  # It exists only to be set in toolchain_args.
-  # See //build/toolchain/clang_toolchain.gni for details.
-  toolchain_variant = []
-
-  # This should never be set as a build argument.
-  # It exists only to be set in toolchain_args.
-  # See //build/toolchain/clang_toolchain.gni for details.
-  current_base_toolchain = target_toolchain
+if (!defined(toolchain_variant.name)) {
+  # Default values describe the "null variant".
+  # All the optional fields (except `toolchain_args`) are canonicalized
+  # to their default/empty values so the code below doesn't need to have
+  # `defined(toolchain_variant.field)` checks all over.
+  toolchain_variant.name = ""
+  toolchain_variant.suffix = ""
+  toolchain_variant.configs = []
+  toolchain_variant.remove_common_configs = []
+  toolchain_variant.remove_shared_configs = []
+  toolchain_variant.deps = []
+  toolchain_variant.is_pic_default = false
 }
 
 is_android = false
@@ -92,10 +114,8 @@ if (current_os == "fuchsia") {
   is_fuchsia = true
 } else if (current_os == "linux") {
   is_linux = true
-  is_fuchsia_host = true
 } else if (current_os == "mac") {
   is_mac = true
-  is_fuchsia_host = true
 }
 
 # Some library targets may be built as different type depending on the target
@@ -106,32 +126,31 @@ if (is_fuchsia) {
   default_library_type = "static_library"
 }
 
-# Each variant toolchain's name is formed by taking the base toolchain
-# name and successively appending "-$name" for each config listed in
-# the variant, where name is `get_label_name(config, "name")`.
-# NOTE: This must match the method used in
-# //build/toolchain/clang_toolchain.gni:clang_toolchain_suite
-current_toolchain_variant = ""
-foreach(subvariant, toolchain_variant) {
-  current_toolchain_variant += "-" + get_label_info(subvariant, "name")
-}
+# TODO(mcgrathr): This variable is obsolete but still used
+# by //topaz/runtime/web_view/BUILD.gn; fix that and then remove it.
+current_toolchain_variant = toolchain_variant.suffix
+
+# TODO(mcgrathr): This variable is obsolete but still used
+# by //garnet/public/lib/fidl/build/*/*.gni; fix that and then remove it.
+current_base_toolchain = toolchain_variant.base
 
 # When we are in a variant of host_toolchain, change the value of
-# host_toolchain so that `if (current_toolchain == host_toolchain)`
-# tests still match, since that is the conventional way to detect being
-# in host context.  This means that any "...($host_toolchain)" label
-# references from inside a variant of host_toolchain will refer to the
-# variant (current_toolchain rather than host_toolchain).  To handle
-# this, the executable() template below will define its target in other
-# variant toolchains as a copy of the real executable.
-if (is_fuchsia_host) {
-  host_toolchain += current_toolchain_variant
-  dart_host_sdk_toolchain += current_toolchain_variant
+# host_toolchain so that `if (current_toolchain == host_toolchain)` tests
+# still match, since that is the conventional way to detect being in host
+# context.  This means that any "...($host_toolchain)" label references
+# from inside a variant of host_toolchain will refer to the variant
+# (current_toolchain rather than host_toolchain).  To handle this, the
+# `executable()` template below will define its target in other variant
+# toolchains as a copy of the real executable.
+if (toolchain_variant.base == host_toolchain) {
+  is_fuchsia_host = true
+  host_toolchain += toolchain_variant.suffix
+  dart_host_sdk_toolchain += toolchain_variant.suffix
 }
 
-# References should use "label($shlib_toolchain)" rather than
-# "label(${target_toolchain}-shared)" or anything else.
-shlib_toolchain = "${current_base_toolchain}${current_toolchain_variant}-shared"
+# References should use `"label($shlib_toolchain)"` rather than
+# `"label(${target_toolchain}-shared)"` or anything else.
+shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 
 # All binary targets will get this list of configs by default.
 default_common_binary_configs = [
@@ -167,29 +186,22 @@ default_common_binary_configs += [
   "//build/config/scudo:default",
 ]
 
-# Add configs set by the toolchain definition.
-default_common_binary_configs += toolchain_configs + toolchain_variant
+# Add and remove configs specified by the variant.
+default_common_binary_configs += toolchain_variant.configs
+default_common_binary_configs -= toolchain_variant.remove_common_configs
 
-default_shared_library_configs =
-    default_common_binary_configs + [ "//build/config:shared_library_config" ]
-
-# On most systems, the sanitizer runtimes are normally linked statically
-# and so -shared links do not include them.  Using -shared --no-undefined
-# with sanitized code will get undefined references for the sanitizer
-# runtime calls generated by the compiler.  Assuming that variants are
-# likely sanitizers prone to this issue, avoid that config for variants.
-# It shouldn't do much harm, since the non-variant builds will catch the
-# real undefined reference bugs.
-if (toolchain_variant == []) {
-  default_shared_library_configs += [ "//build/config:symbol_no_undefined" ]
-}
+default_shared_library_configs = default_common_binary_configs + [
+                                   "//build/config:shared_library_config",
+                                   "//build/config:symbol_no_undefined",
+                                 ]
+default_shared_library_configs -= toolchain_variant.remove_shared_configs
 
 default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
 
-if (is_pic_default) {
+if (toolchain_variant.is_pic_default) {
   default_common_binary_configs += [ "//build/config:shared_library_config" ]
 }
 
@@ -211,7 +223,7 @@ set_defaults("executable") {
 }
 
 if (is_fuchsia) {
-  if (!is_pic_default) {
+  if (!toolchain_variant.is_pic_default) {
     # In the main toolchain, shared_library just redirects to the same
     # target in the -shared toolchain.
     template("shared_library") {
@@ -370,7 +382,7 @@ template("variant_target") {
 
         selected = true
         if (selected && defined(selector.host)) {
-          selected = is_fuchsia_host == selector.host
+          selected = current_toolchain == host_toolchain == selector.host
         }
 
         if (selected && defined(selector.testonly)) {
@@ -438,7 +450,7 @@ template("variant_target") {
     target_variant = ""
   }
 
-  builder_toolchain = current_base_toolchain + target_variant
+  builder_toolchain = toolchain_variant.base + target_variant
   if (invoker._variant_shared) {
     builder_toolchain += "-shared"
   }
@@ -448,10 +460,11 @@ template("variant_target") {
     target(target_type, target_name) {
       deps = []
       forward_variables_from(target_invoker, "*")
-      foreach(variant, toolchain_variant) {
-        # Expand the label so it always has a :name part.
-        variant = get_label_info(variant, "label_no_toolchain")
-        deps += [ "${variant}_deps" ]
+      deps += toolchain_variant.deps
+      foreach(config, toolchain_variant.configs) {
+        # Expand the label so it always has a `:name` part.
+        config = get_label_info(config, "label_no_toolchain")
+        deps += [ "${config}_deps" ]
       }
       if (defined(visibility)) {
         # Other toolchains will define this target as a group or copy

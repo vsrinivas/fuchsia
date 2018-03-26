@@ -8,5 +8,7 @@
 // asan_no_detect_leaks variant.  ASan applies the options here before
 // looking at the ASAN_OPTIONS environment variable.
 const char* __asan_default_options(void) {
-  return "detect_leaks=0";
+  // This macro is defined by BUILD.gn from the `asan_default_options` GN
+  // build argument.
+  return ASAN_DEFAULT_OPTIONS;
 }

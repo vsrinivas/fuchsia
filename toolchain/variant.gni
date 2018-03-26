@@ -2,53 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # List of variants that will form the basis for variant toolchains.
-  #
-  # Normally this is not set as a build argument, but it serves to
-  # document the available set of variants.  Only set this to remove
-  # all the default variants here.  To add more, set `extra_variants`
-  # instead.
-  #
-  # To make use of a variant, set `select_variant` (which see).
-  #
-  # Each element of the list is one variant, which itself is a list of
-  # of configs (labels).  The simple names (not the full label, just the
-  # part after all /s and :s) of these configs will be used in toolchain
-  # names (each prefixed by a "-"), so the list of config names forming
-  # each variant must be unique among the lists in `known_variants +
-  # extra_variants` and it's a good idea to make it something concise
-  # and meaningful when seen as e.g. part of a directory name under
-  # `$root_build_dir`.
-  #
-  # In a given variant, each config label names a config that will be
-  # automatically used by every target built in that variant.  For each
-  # config ${label}, there must also be a target ${label}_deps, which
-  # each target built in the variant will automatically depend on.
-  known_variants = [
-    [ "//build/config/lto" ],
-    [ "//build/config/lto:thinlto" ],
-
-    [ "//build/config/scudo" ],
-
-    [ "//build/config/sanitizers:asan" ],
-    [ "//build/config/sanitizers:asan_no_detect_leaks" ],
-    [ "//build/config/sanitizers:ubsan" ],
-    [
-      "//build/config/sanitizers:asan",
-      "//build/config/sanitizers:sancov",
-    ],
-    [
-      "//build/config/sanitizers:ubsan",
-      "//build/config/sanitizers:sancov",
-    ],
-  ]
-
-  # Additional variant toolchain configs to support.
-  # This is just added to known_variants, which see.
-  extra_variants = []
-}
-
 # Template to define a config for use in the `known_variants` list.
 # `variant` is used just like `config`, but it also accepts two other
 # optional parameters:
@@ -82,6 +35,10 @@ template("variant") {
     }
   }
   group("${target_name}_deps") {
-    forward_variables_from(invoker, [ "deps" ])
+    # Propagate it as public_deps so that targets in deps can have
+    # public_configs that will be applied to variant executables.
+    if (defined(invoker.deps)) {
+      public_deps = invoker.deps
+    }
   }
 }

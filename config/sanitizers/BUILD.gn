@@ -9,12 +9,39 @@ config("frame_pointers") {
   ldflags = cflags
 }
 
+declare_args() {
+  # Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
+  # options (before the `ASAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "asan"
+  # variants in `known_variants` (which see), or overridden in
+  # toolchain_args in one of those variants.  Note that setting this
+  # nonempty may conflict with programs that define their own
+  # `__asan_default_options` C function.
+  asan_default_options = ""
+}
+
 variant("asan") {
   common_flags = [ "-fsanitize=address" ]
 
   # ASan wants frame pointers because it captures stack traces
   # on allocations and such, not just on errors.
   configs = [ ":frame_pointers" ]
+
+  if (asan_default_options != "") {
+    deps = [
+      ":asan_default_options",
+    ]
+  }
+}
+
+if (asan_default_options != "") {
+  source_set("asan_default_options") {
+    visibility = [ ":*" ]
+    sources = [
+      "asan_default_options.c",
+    ]
+    defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+  }
 }
 
 variant("ubsan") {
@@ -27,20 +54,4 @@ variant("fuzzer") {
 
 variant("sancov") {
   common_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
-}
-
-# asan_no_detect_leaks is just asan, but it acts by default as if
-# ASAN_OPTIONS=detect_leaks=0 were in the environment at runtime.
-variant("asan_no_detect_leaks") {
-  configs = [ ":asan" ]
-  deps = [
-    ":no_detect_leaks",
-  ]
-}
-
-source_set("no_detect_leaks") {
-  visibility = [ ":*" ]
-  sources = [
-    "asan_no_detect_leaks.c",
-  ]
 }

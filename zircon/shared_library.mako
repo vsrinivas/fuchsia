@@ -15,7 +15,7 @@ config("${data.name}_config") {
   ]
 }
 
-if (!is_pic_default) {
+if (!toolchain_variant.is_pic_default) {
 
 # In the main toolchain, we just redirect to the same target in the shared
 # toolchain.
@@ -109,7 +109,7 @@ group("${data.name}") {
   ]
 }
 
-}  # !is_pic_default
+}  # !toolchain_variant.is_pic_default
 
 sdk_atom("${data.name}_sdk") {
   domain = "c-pp"
