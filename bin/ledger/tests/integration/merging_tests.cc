@@ -473,7 +473,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   page1->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForResponse());
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
   ASSERT_EQ(2u, change->changed_entries->size());
@@ -485,7 +485,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
@@ -495,8 +495,8 @@ TEST_P(MergingIntegrationTest, Merging) {
   EXPECT_EQ("phone", convert::ToString(change->changed_entries->at(1)->key));
   EXPECT_EQ("0123456789", ToString(change->changed_entries->at(1)->value));
 
-  ASSERT_FALSE(RunLoopWithTimeout());
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
   change = std::move(watcher1.last_page_change_);
@@ -533,7 +533,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
       std::move(resolver_factory_ptr),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(ledger_ptr.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
@@ -583,7 +583,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   page1->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher1.changes_seen);
   ledger::PageChangePtr change = std::move(watcher1.last_page_change_);
@@ -596,7 +596,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   page2->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher2.changes_seen);
   change = std::move(watcher2.last_page_change_);
@@ -618,9 +618,9 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(ledger_ptr.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
+  RunLoop();
 
   // Each change is seen once, and by the correct watcher only.
   EXPECT_EQ(2u, watcher1.changes_seen);
@@ -692,7 +692,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -764,7 +764,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
   // Wait for the watcher to be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, f1dl::VectorPtr<uint8_t>()).take();
@@ -820,7 +820,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   page2->Commit(status_ok_callback);
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -894,7 +894,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -909,7 +909,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   resolver_factory->resolvers.clear();
   EXPECT_EQ(0u, resolver_factory->resolvers.size());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We should ask again for a resolution.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -976,7 +976,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1001,8 +1001,8 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 
   // Two runs of the loop: one for the conflict resolution request, one for the
   // disconnect.
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
 
   // The previous resolver should have been disconnected.
   EXPECT_TRUE(resolver_impl->disconnected);
@@ -1079,7 +1079,7 @@ TEST_P(MergingIntegrationTest,
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1104,8 +1104,8 @@ TEST_P(MergingIntegrationTest,
 
   // Two runs of the loop: one for the conflict resolution request, one for the
   // disconnect.
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
 
   // The previous resolver should have been disconnected.
   EXPECT_TRUE(resolver_impl->disconnected);
@@ -1166,7 +1166,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1216,7 +1216,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
                                                MergeType::MULTIPART));
 
   // Wait for the watcher to be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, f1dl::VectorPtr<uint8_t>()).take();
@@ -1284,7 +1284,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   // We should have seen the first commit at this point.
   EXPECT_EQ(1u, watcher.changes_seen);
 
@@ -1292,7 +1292,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have an automatically-resolved conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1363,7 +1363,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1416,7 +1416,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
   // Wait for the watcher to be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, f1dl::VectorPtr<uint8_t>()).take();
@@ -1473,7 +1473,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1516,7 +1516,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
                                                MergeType::MULTIPART));
 
   // Wait for the watcher to be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, f1dl::VectorPtr<uint8_t>()).take();
@@ -1541,13 +1541,13 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
   // Watch for changes.
@@ -1556,43 +1556,43 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(snapshot1.NewRequest(), nullptr, std::move(watcher_ptr),
                      callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // We should have seen the first commit of page 1.
   EXPECT_EQ(1u, watcher.changes_seen);
 
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Delete(convert::ToArray("name"),
                 callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   // We should have seen the second commit of page 1.
@@ -1600,14 +1600,14 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page2->Commit(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have an automatically-resolved conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1643,35 +1643,35 @@ TEST_P(MergingIntegrationTest, DeleteDuringConflictResolution) {
   ledger::PagePtr page1 = instance->GetTestPage();
   f1dl::VectorPtr<uint8_t> test_page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &test_page_id));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ledger::PagePtr page2 = instance->GetPage(test_page_id, ledger::Status::OK);
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
   page1->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page2->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
   page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
   page1->Commit(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
   page2->Commit(callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1733,7 +1733,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Check that we have a resolver and pending conflict resolution request.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1770,7 +1770,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   merged = true;
 
   // Now conflict_resolved_callback can run.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(conflicts_resolved_callback_called);
   EXPECT_EQ(ledger::ConflictResolutionWaitStatus::CONFLICTS_RESOLVED,
             wait_status);
@@ -1828,7 +1828,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page2.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
@@ -1871,7 +1871,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
   // Wait for the watcher to be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto final_entries =
       SnapshotGetEntries(&watcher.last_snapshot_, f1dl::VectorPtr<uint8_t>()).take();

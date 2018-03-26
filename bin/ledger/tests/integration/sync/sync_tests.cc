@@ -21,7 +21,8 @@ class SyncIntegrationTest : public IntegrationTest {
     ledger::Status status;
     page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                       callback::Capture(MakeQuitTask(), &status));
-    if (RunLoopWithTimeout() || status != ledger::Status::OK) {
+    RunLoop();
+    if (status != ledger::Status::OK) {
       return ::testing::AssertionFailure() << "Unable to retrieve a snapshot";
     }
     entries->resize(0);
@@ -32,7 +33,8 @@ class SyncIntegrationTest : public IntegrationTest {
       snapshot->GetEntries(nullptr, std::move(token),
                            callback::Capture(MakeQuitTask(), &status,
                                              &new_entries, &next_token));
-      if (RunLoopWithTimeout() || status != ledger::Status::OK) {
+      RunLoop();
+      if (status != ledger::Status::OK) {
         return ::testing::AssertionFailure() << "Unable to retrieve entries";
       }
       for (size_t i = 0; i < new_entries->size(); ++i) {
@@ -50,11 +52,11 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   ledger::Status status;
   page->Put(convert::ToArray("Hello"), convert::ToArray("World"),
             callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   f1dl::VectorPtr<uint8_t> page_id;
   page->GetId(callback::Capture(MakeQuitTask(), &page_id));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto instance2 = NewLedgerAppInstance();
   page = instance2->GetPage(page_id, ledger::Status::OK);
@@ -69,12 +71,12 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                     callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   f1dl::VectorPtr<uint8_t> value;
   snapshot->GetInline(convert::ToArray("Hello"),
                       callback::Capture(MakeQuitTask(), &status, &value));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   ASSERT_EQ("World", convert::ToString(value));
 }
@@ -86,13 +88,13 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto page1 = instance1->GetTestPage();
   f1dl::VectorPtr<uint8_t> page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &page_id));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   auto page2 = instance2->GetPage(page_id, ledger::Status::OK);
 
   ledger::Status status;
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
              callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
   EXPECT_TRUE(RunLoopUntil([this, &page2] {
@@ -106,12 +108,12 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   ledger::PageSnapshotPtr snapshot;
   page2->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   f1dl::VectorPtr<uint8_t> value;
   snapshot->GetInline(convert::ToArray("Hello"),
                       callback::Capture(MakeQuitTask(), &status, &value));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
   ASSERT_EQ("World", convert::ToString(value));
 }

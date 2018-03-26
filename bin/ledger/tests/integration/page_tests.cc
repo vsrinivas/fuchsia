@@ -55,7 +55,7 @@ TEST_P(PageIntegrationTest, GetRootPage) {
   ledger::PagePtr page;
   ledger->GetRootPage(page.NewRequest(),
                       callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 }
 

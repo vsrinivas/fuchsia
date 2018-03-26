@@ -79,7 +79,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
@@ -109,14 +109,14 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(1u, watcher->changes_seen);
 
   // Make another change and disconnect the watcher immediately.
   page->Put(convert::ToArray("name"), convert::ToArray("Bob"),
             callback::Capture(MakeQuitTask(), &status));
   watcher.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(ledger::Status::OK, status);
 }
 
@@ -143,7 +143,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   }
   // Page is out of scope now, but watcher is not. Verify that we don't crash
   // and a change notification is still delivered.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(1u, watcher.changes_seen);
 }
 
@@ -169,7 +169,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
     EXPECT_EQ(ledger::Status::OK, status);
   });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
@@ -225,7 +225,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   EXPECT_TRUE(page.WaitForResponse());
 
   // Get the first OnChagne call.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
@@ -238,7 +238,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   }
 
   // Get the second OnChagne call.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(2u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
@@ -285,7 +285,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   EXPECT_TRUE(page.WaitForResponse());
 
   // Get the first OnChagne call.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(watcher.last_result_state_, ledger::ResultState::PARTIAL_STARTED);
   ledger::PageChangePtr change = std::move(watcher.last_page_change_);
@@ -298,7 +298,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   }
 
   // Get the second OnChagne call.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(2u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::PARTIAL_COMPLETED, watcher.last_result_state_);
   change = std::move(watcher.last_page_change_);
@@ -329,7 +329,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
@@ -368,7 +368,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   page->Commit(
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
@@ -520,8 +520,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page1.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
+  RunLoop();
 
   ASSERT_EQ(1u, watcher1.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher1.last_result_state_);
@@ -589,7 +589,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
   EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher.changes.size());
 
@@ -616,7 +616,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 
   watcher.changes[0].callback(nullptr);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(2u, watcher.changes.size());
   EXPECT_FALSE(start_transaction_callback_called);
@@ -630,7 +630,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
 
   watcher.changes[1].callback(nullptr);
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(start_transaction_callback_called);
   EXPECT_EQ(ledger::Status::OK, start_transaction_status);
 }
@@ -664,7 +664,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   page->Commit(callback_statusok);
   EXPECT_TRUE(page.WaitForResponse());
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, watcher.changes_seen);
   EXPECT_EQ(ledger::ResultState::COMPLETED, watcher.last_result_state_);
@@ -696,7 +696,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
     EXPECT_EQ(ledger::Status::OK, status);
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Starting a transaction drains all watcher notifications, so if we were to
   // be called, we would know at this point.
