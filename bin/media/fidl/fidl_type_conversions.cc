@@ -14,29 +14,26 @@ namespace fxl {
 namespace {
 
 bool KnownEncodingsMatch() {
-  return media::StreamType::kAudioEncodingAac == media::kAudioEncodingAac &&
-         media::StreamType::kAudioEncodingAmrNb == media::kAudioEncodingAmrNb &&
-         media::StreamType::kAudioEncodingAmrWb == media::kAudioEncodingAmrWb &&
-         media::StreamType::kAudioEncodingFlac == media::kAudioEncodingFlac &&
-         media::StreamType::kAudioEncodingGsmMs == media::kAudioEncodingGsmMs &&
-         media::StreamType::kAudioEncodingLpcm == media::kAudioEncodingLpcm &&
-         media::StreamType::kAudioEncodingMp3 == media::kAudioEncodingMp3 &&
-         media::StreamType::kAudioEncodingPcmALaw ==
-             media::kAudioEncodingPcmALaw &&
-         media::StreamType::kAudioEncodingPcmMuLaw ==
-             media::kAudioEncodingPcmMuLaw &&
-         media::StreamType::kAudioEncodingVorbis ==
-             media::kAudioEncodingVorbis &&
-         media::StreamType::kVideoEncodingH263 == media::kVideoEncodingH263 &&
-         media::StreamType::kVideoEncodingH264 == media::kVideoEncodingH264 &&
-         media::StreamType::kVideoEncodingMpeg4 == media::kVideoEncodingMpeg4 &&
-         media::StreamType::kVideoEncodingTheora ==
-             media::kVideoEncodingTheora &&
-         media::StreamType::kVideoEncodingUncompressed ==
-             media::kVideoEncodingUncompressed &&
-         media::StreamType::kVideoEncodingVp3 == media::kVideoEncodingVp3 &&
-         media::StreamType::kVideoEncodingVp8 == media::kVideoEncodingVp8 &&
-         media::StreamType::kVideoEncodingVp9 == media::kVideoEncodingVp9;
+  // clang-format off
+  return !strcmp(media::StreamType::kAudioEncodingAac, media::kAudioEncodingAac) &&
+         !strcmp(media::StreamType::kAudioEncodingAmrNb, media::kAudioEncodingAmrNb) &&
+         !strcmp(media::StreamType::kAudioEncodingAmrWb, media::kAudioEncodingAmrWb) &&
+         !strcmp(media::StreamType::kAudioEncodingFlac, media::kAudioEncodingFlac) &&
+         !strcmp(media::StreamType::kAudioEncodingGsmMs, media::kAudioEncodingGsmMs) &&
+         !strcmp(media::StreamType::kAudioEncodingLpcm, media::kAudioEncodingLpcm) &&
+         !strcmp(media::StreamType::kAudioEncodingMp3, media::kAudioEncodingMp3) &&
+         !strcmp(media::StreamType::kAudioEncodingPcmALaw, media::kAudioEncodingPcmALaw) &&
+         !strcmp(media::StreamType::kAudioEncodingPcmMuLaw, media::kAudioEncodingPcmMuLaw) &&
+         !strcmp(media::StreamType::kAudioEncodingVorbis, media::kAudioEncodingVorbis) &&
+         !strcmp(media::StreamType::kVideoEncodingH263, media::kVideoEncodingH263) &&
+         !strcmp(media::StreamType::kVideoEncodingH264, media::kVideoEncodingH264) &&
+         !strcmp(media::StreamType::kVideoEncodingMpeg4, media::kVideoEncodingMpeg4) &&
+         !strcmp(media::StreamType::kVideoEncodingTheora, media::kVideoEncodingTheora) &&
+         !strcmp(media::StreamType::kVideoEncodingUncompressed, media::kVideoEncodingUncompressed) &&
+         !strcmp(media::StreamType::kVideoEncodingVp3, media::kVideoEncodingVp3) &&
+         !strcmp(media::StreamType::kVideoEncodingVp8, media::kVideoEncodingVp8) &&
+         !strcmp(media::StreamType::kVideoEncodingVp9, media::kVideoEncodingVp9);
+  // clang-format on
 }
 
 }  // namespace

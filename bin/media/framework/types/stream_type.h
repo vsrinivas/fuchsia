@@ -25,27 +25,27 @@ class StreamType {
  public:
   enum class Medium { kAudio, kVideo, kText, kSubpicture };
 
-  static const char* kMediaEncodingUnsupported;
+  static const char kMediaEncodingUnsupported[];
 
-  static const char* kAudioEncodingAac;
-  static const char* kAudioEncodingAmrNb;
-  static const char* kAudioEncodingAmrWb;
-  static const char* kAudioEncodingFlac;
-  static const char* kAudioEncodingGsmMs;
-  static const char* kAudioEncodingLpcm;
-  static const char* kAudioEncodingMp3;
-  static const char* kAudioEncodingPcmALaw;
-  static const char* kAudioEncodingPcmMuLaw;
-  static const char* kAudioEncodingVorbis;
+  static const char kAudioEncodingAac[];
+  static const char kAudioEncodingAmrNb[];
+  static const char kAudioEncodingAmrWb[];
+  static const char kAudioEncodingFlac[];
+  static const char kAudioEncodingGsmMs[];
+  static const char kAudioEncodingLpcm[];
+  static const char kAudioEncodingMp3[];
+  static const char kAudioEncodingPcmALaw[];
+  static const char kAudioEncodingPcmMuLaw[];
+  static const char kAudioEncodingVorbis[];
 
-  static const char* kVideoEncodingH263;
-  static const char* kVideoEncodingH264;
-  static const char* kVideoEncodingMpeg4;
-  static const char* kVideoEncodingTheora;
-  static const char* kVideoEncodingUncompressed;
-  static const char* kVideoEncodingVp3;
-  static const char* kVideoEncodingVp8;
-  static const char* kVideoEncodingVp9;
+  static const char kVideoEncodingH263[];
+  static const char kVideoEncodingH264[];
+  static const char kVideoEncodingMpeg4[];
+  static const char kVideoEncodingTheora[];
+  static const char kVideoEncodingUncompressed[];
+  static const char kVideoEncodingVp3[];
+  static const char kVideoEncodingVp8[];
+  static const char kVideoEncodingVp9[];
 
   static std::unique_ptr<StreamType> Create(
       Medium medium,

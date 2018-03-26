@@ -12,27 +12,27 @@ namespace media {
 // These must match the definitions in media_types.fidl. This is verfied by
 // the KnownEncodingsMatch function in fidl/fidl_type_conversion.cc. Changes
 // to this list should be reflected there.
-const char* StreamType::kMediaEncodingUnsupported = "unsupported";
+const char StreamType::kMediaEncodingUnsupported[] = "unsupported";
 
-const char* StreamType::kAudioEncodingAac = "aac";
-const char* StreamType::kAudioEncodingAmrNb = "amrnb";
-const char* StreamType::kAudioEncodingAmrWb = "amrwb";
-const char* StreamType::kAudioEncodingFlac = "flac";
-const char* StreamType::kAudioEncodingGsmMs = "gsmms";
-const char* StreamType::kAudioEncodingLpcm = "lpcm";
-const char* StreamType::kAudioEncodingMp3 = "mp3";
-const char* StreamType::kAudioEncodingPcmALaw = "pcmalaw";
-const char* StreamType::kAudioEncodingPcmMuLaw = "pcmmulaw";
-const char* StreamType::kAudioEncodingVorbis = "vorbis";
+const char StreamType::kAudioEncodingAac[] = "aac";
+const char StreamType::kAudioEncodingAmrNb[] = "amrnb";
+const char StreamType::kAudioEncodingAmrWb[] = "amrwb";
+const char StreamType::kAudioEncodingFlac[] = "flac";
+const char StreamType::kAudioEncodingGsmMs[] = "gsmms";
+const char StreamType::kAudioEncodingLpcm[] = "lpcm";
+const char StreamType::kAudioEncodingMp3[] = "mp3";
+const char StreamType::kAudioEncodingPcmALaw[] = "pcmalaw";
+const char StreamType::kAudioEncodingPcmMuLaw[] = "pcmmulaw";
+const char StreamType::kAudioEncodingVorbis[] = "vorbis";
 
-const char* StreamType::kVideoEncodingH263 = "h263";
-const char* StreamType::kVideoEncodingH264 = "h264";
-const char* StreamType::kVideoEncodingMpeg4 = "mpeg4";
-const char* StreamType::kVideoEncodingTheora = "theora";
-const char* StreamType::kVideoEncodingUncompressed = "uncompressed_video";
-const char* StreamType::kVideoEncodingVp3 = "vp3";
-const char* StreamType::kVideoEncodingVp8 = "vp8";
-const char* StreamType::kVideoEncodingVp9 = "vp9";
+const char StreamType::kVideoEncodingH263[] = "h263";
+const char StreamType::kVideoEncodingH264[] = "h264";
+const char StreamType::kVideoEncodingMpeg4[] = "mpeg4";
+const char StreamType::kVideoEncodingTheora[] = "theora";
+const char StreamType::kVideoEncodingUncompressed[] = "uncompressed_video";
+const char StreamType::kVideoEncodingVp3[] = "vp3";
+const char StreamType::kVideoEncodingVp8[] = "vp8";
+const char StreamType::kVideoEncodingVp9[] = "vp9";
 
 StreamType::StreamType(Medium medium,
                        const std::string& encoding,
