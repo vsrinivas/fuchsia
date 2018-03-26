@@ -35,11 +35,13 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
         .primary = req.channel,
         .cbw = CBW20,
     };
+
     auto status = device_->SetChannel(chan);
     if (status != ZX_OK) {
         errorf("[infra-bss] [%s] requested start on channel %u failed: %d\n",
                bssid_.ToString().c_str(), req.channel, status);
     }
+    chan_ = chan;
 
     debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
     debugbss("    SSID: %s\n", req.ssid->data());

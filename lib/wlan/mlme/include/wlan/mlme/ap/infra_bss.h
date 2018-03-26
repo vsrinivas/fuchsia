@@ -49,6 +49,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     bool IsCbw40RxReady() const override;
     bool IsCbw40TxReady() const override;
     HtCapabilities BuildHtCapabilities() const override;
+    wlan_channel_t Chan() const override { return chan_; }
 
    private:
     // FrameHandler implementation
@@ -74,6 +75,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     BssClientMap clients_;
     Sequence seq_;
     TrafficIndicationMap tim_;
+
+    wlan_channel_t chan_;
 };
 
 }  // namespace wlan
