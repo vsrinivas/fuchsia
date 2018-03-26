@@ -154,7 +154,7 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
             zx_status_t status;
             zx_signals_t signals;
             mtx_unlock(&eth_lock);
-            status = zx_object_wait_one(eth->rx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
+            status = zx_object_wait_one(eth->tx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
                                         ZX_TIME_INFINITE, &signals);
             mtx_lock(&eth_lock);
             if (status < 0) {
