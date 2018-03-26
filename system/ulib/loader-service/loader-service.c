@@ -26,8 +26,17 @@
 
 #define PREFIX_MAX 32
 
+// State of a loader service instance.
+typedef struct instance_state instance_state_t;
+struct instance_state {
+  int root_dir_fd;
+  int data_sink_dir_fd;
+  // NULL-terminated list of paths from which objects will loaded.
+  const char* const* lib_paths;
+};
+
 // This represents an instance of the loader service. Each session in an
-// instance has a loader_service_session_t pointing to this. All sessions in
+// instance has a session_state_t pointing to this. All sessions in
 // the same instance behave the same.
 struct loader_service {
     atomic_int refcount;
@@ -35,12 +44,11 @@ struct loader_service {
 
     const loader_service_ops_t* ops;
     void* ctx;
-    int dirfd; // Used by fd_ops.
 };
 
 // Per-session state of a loader service instance.
-typedef struct loader_service_session loader_service_session_t;
-struct loader_service_session {
+typedef struct session_state session_state_t;
+struct session_state {
     async_wait_t wait; // Must be first.
     char config_prefix[PREFIX_MAX];
     bool config_exclusive;
@@ -59,12 +67,55 @@ static void loader_service_deref(loader_service_t* svc) {
     }
 }
 
-static const char* const libpaths[] = {
-    "/system/lib",
-    "/boot/lib",
-};
+// When loading a library object, search in the locations provided in
+// |lib_paths|, which is required to be NULL-terminated.
+static int open_from_lib_paths(int root_dir_fd, const char* const* lib_paths,
+                               const char* fn) {
+    int fd = -1;
+    for (size_t n = 0; fd < 0 && lib_paths[n]; ++n) {
+        char path[PATH_MAX];
+        if (snprintf(path, sizeof(path), "%s/%s", lib_paths[n], fn) < 0) {
+            return -1;
+        }
+        fd = openat(root_dir_fd, path, O_RDONLY);
+    }
+    return fd;
+}
 
-zx_status_t loader_service_publish_data_sink_fs(const char* sink_name, zx_handle_t vmo) {
+// Always consumes the |fd|.
+static zx_handle_t vmo_from_fd(int fd, const char* fn, zx_handle_t* out) {
+    zx_status_t status = fdio_get_vmo_clone(fd, out);
+    close(fd);
+    if (status == ZX_OK) {
+        zx_object_set_property(*out, ZX_PROP_NAME, fn, strlen(fn));
+    }
+    return status;
+}
+
+static zx_status_t fd_load_object(void* ctx, const char* name, zx_handle_t* out) {
+    int root_dir_fd = ((instance_state_t*)ctx)->root_dir_fd;
+    const char* const* lib_paths = ((instance_state_t*)ctx)->lib_paths;
+
+    int fd = open_from_lib_paths(root_dir_fd, lib_paths, name);
+    if (fd >= 0) {
+        return vmo_from_fd(fd, name, out);
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
+static zx_status_t fd_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
+    int root_dir_fd = ((instance_state_t*)ctx)->root_dir_fd;
+    int fd = openat(root_dir_fd, path, O_RDONLY);
+    if (fd >= 0) {
+        return vmo_from_fd(fd, path, out);
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
+// The default publish_data_sink implementation, which publishes into
+// subdirectories given by |ctx|->data_sink_dir_fd, provided that the filesystem
+// there supports such publishing.
+zx_status_t fd_publish_data_sink(void* ctx, const char* sink_name, zx_handle_t vmo) {
     union {
         vmo_create_config_t header;
         struct {
@@ -87,26 +138,21 @@ zx_status_t loader_service_publish_data_sink_fs(const char* sink_name, zx_handle
                  info.koid);
     }
 
-    int tmp_dir_fd = open("/tmp", O_DIRECTORY);
-    if (tmp_dir_fd < 0) {
-        fprintf(stderr, "dlsvc: cannot open /tmp for data-sink \"%s\": %m\n",
+    int data_sink_dir_fd = ((instance_state_t*)ctx)->data_sink_dir_fd;
+    if (data_sink_dir_fd == -1) {
+        fprintf(stderr, "dlsvc: invalid file descriptor given for data sink.");
+        zx_handle_close(vmo);
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (mkdirat(data_sink_dir_fd, sink_name, 0777) != 0 && errno != EEXIST) {
+        fprintf(stderr, "dlsvc: cannot mkdir \"%s\" for data-sink: %m\n",
                 sink_name);
-        close(tmp_dir_fd);
         zx_handle_close(vmo);
         return ZX_ERR_NOT_FOUND;
     }
-    if (mkdirat(tmp_dir_fd, sink_name, 0777) != 0 && errno != EEXIST) {
-        fprintf(stderr, "dlsvc: cannot mkdir \"/tmp/%s\" for data-sink: %m\n",
-                sink_name);
-        close(tmp_dir_fd);
-        zx_handle_close(vmo);
-        return ZX_ERR_NOT_FOUND;
-    }
-    int sink_dir_fd = openat(tmp_dir_fd, sink_name, O_RDONLY | O_DIRECTORY);
-    close(tmp_dir_fd);
+    int sink_dir_fd = openat(data_sink_dir_fd, sink_name, O_RDONLY | O_DIRECTORY);
     if (sink_dir_fd < 0) {
         fprintf(stderr,
-                "dlsvc: cannot open data-sink directory \"/tmp/%s\": %m\n",
+                "dlsvc: cannot open data-sink directory \"%s\": %m\n",
                 sink_name);
         zx_handle_close(vmo);
         return ZX_ERR_NOT_FOUND;
@@ -128,80 +174,13 @@ zx_status_t loader_service_publish_data_sink_fs(const char* sink_name, zx_handle
     return ZX_OK;
 }
 
-// When loading a library object, search in the hard-coded locations.
-static int open_from_libpath(const char* fn) {
-    int fd = -1;
-    for (size_t n = 0; fd < 0 && n < countof(libpaths); ++n) {
-        char path[PATH_MAX];
-        snprintf(path, sizeof(path), "%s/%s", libpaths[n], fn);
-        fd = open(path, O_RDONLY);
-    }
-    return fd;
-}
-
-// Always consumes the fd.
-static zx_handle_t load_object_fd(int fd, const char* fn, zx_handle_t* out) {
-    zx_status_t status = fdio_get_vmo_clone(fd, out);
-    close(fd);
-    if (status == ZX_OK)
-        zx_object_set_property(*out, ZX_PROP_NAME, fn, strlen(fn));
-    return status;
-}
-
-static zx_status_t fs_load_object(void* ctx, const char* name, zx_handle_t* out) {
-    int fd = open_from_libpath(name);
-    if (fd >= 0)
-        return load_object_fd(fd, name, out);
-    return ZX_ERR_NOT_FOUND;
-}
-
-static zx_status_t fs_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
-    int fd = open(path, O_RDONLY);
-    if (fd >= 0)
-        return load_object_fd(fd, path, out);
-    return ZX_ERR_NOT_FOUND;
-}
-
-// For now, just publish data-sink VMOs as files under /tmp/<sink-name>/.
-// The individual file is named by its VMO's name.
-static zx_status_t fs_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
-    return loader_service_publish_data_sink_fs(name, vmo);
-}
-
-static const loader_service_ops_t fs_ops = {
-    .load_object = fs_load_object,
-    .load_abspath = fs_load_abspath,
-    .publish_data_sink = fs_publish_data_sink,
-};
-
-static zx_status_t fd_load_object(void* ctx, const char* name, zx_handle_t* out) {
-    int dirfd = *(int*)ctx;
-    char path[PATH_MAX];
-    if (snprintf(path, sizeof(path), "lib/%s", name) >= PATH_MAX)
-        return ZX_ERR_BAD_PATH;
-    int fd = openat(dirfd, path, O_RDONLY);
-    if (fd >= 0)
-        return load_object_fd(fd, name, out);
-    return ZX_ERR_NOT_FOUND;
-}
-
-static zx_status_t fd_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
-    int dirfd = *(int*)ctx;
-    int fd = openat(dirfd, path, O_RDONLY);
-    if (fd >= 0)
-        return load_object_fd(fd, path, out);
-    return ZX_ERR_NOT_FOUND;
-}
-
-static zx_status_t fd_publish_data_sink(void* ctx, const char* name, zx_handle_t vmo) {
-    zx_handle_close(vmo);
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-static zx_status_t fd_finalizer(void* ctx) {
-    int dirfd = *(int*)ctx;
-    close(dirfd);
-    return ZX_OK;
+void fd_finalizer(void* ctx) {
+    instance_state_t* instance_state = (instance_state_t*)ctx;
+    int root_dir_fd = instance_state->root_dir_fd;
+    int data_sink_dir_fd = instance_state->data_sink_dir_fd;
+    close(root_dir_fd);
+    close(data_sink_dir_fd);
+    free(instance_state);
 }
 
 static const loader_service_ops_t fd_ops = {
@@ -211,8 +190,8 @@ static const loader_service_ops_t fd_ops = {
     .finalizer = fd_finalizer,
 };
 
-static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_session_t* session) {
-    loader_service_t* svc = session->svc;
+static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_state) {
+    loader_service_t* svc = session_state->svc;
     ldmsg_req_t req;
     uint32_t req_len = sizeof(req);
     zx_handle_t req_handle = ZX_HANDLE_INVALID;
@@ -241,29 +220,29 @@ static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_session_t* s
     switch (req.header.ordinal) {
     case LDMSG_OP_CONFIG: {
         size_t len = strlen(data);
-        if (len < 2 || len >= sizeof(session->config_prefix) - 1 || strchr(data, '/') != NULL) {
+        if (len < 2 || len >= sizeof(session_state->config_prefix) - 1 || strchr(data, '/') != NULL) {
             status = ZX_ERR_INVALID_ARGS;
             break;
         }
-        strncpy(session->config_prefix, data, len + 1);
-        session->config_exclusive = false;
-        if (session->config_prefix[len - 1] == '!') {
+        strncpy(session_state->config_prefix, data, len + 1);
+        session_state->config_exclusive = false;
+        if (session_state->config_prefix[len - 1] == '!') {
             --len;
-            session->config_exclusive = true;
+            session_state->config_exclusive = true;
         }
-        session->config_prefix[len] = '/';
-        session->config_prefix[len + 1] = '\0';
+        session_state->config_prefix[len] = '/';
+        session_state->config_prefix[len + 1] = '\0';
         status = ZX_OK;
         break;
     }
     case LDMSG_OP_LOAD_OBJECT:
         // If a prefix is configured, try loading with that prefix first
-        if (session->config_prefix[0] != '\0') {
+        if (session_state->config_prefix[0] != '\0') {
             size_t maxlen = PREFIX_MAX + strlen(data) + 1;
             char prefixed_name[maxlen];
-            snprintf(prefixed_name, maxlen, "%s%s", session->config_prefix, data);
+            snprintf(prefixed_name, maxlen, "%s%s", session_state->config_prefix, data);
             if (((status = svc->ops->load_object(svc->ctx, prefixed_name, &rsp_handle)) == ZX_OK) ||
-                session->config_exclusive) {
+                session_state->config_exclusive) {
                 // if loading with prefix succeeds, or loading
                 // with prefix is configured to be exclusive of
                 // non-prefix loading, stop here
@@ -372,6 +351,55 @@ zx_status_t loader_service_create(async_t* async,
     return ZX_OK;
 }
 
+// Default library paths for the fd- and fs- loader service implementations.
+static const char* const fd_lib_paths[] = {"lib", NULL};
+static const char* const fs_lib_paths[] = {"system/lib", "boot/lib", NULL};
+
+// Create the default implementation of a loader service for which
+// paths are loaded relative to |root_dir_fd| and among the array of
+// subdirectories given by |lib_paths| (NULL-terminated), with data published
+// in the location given by |data_sink_dir_fd|.
+zx_status_t loader_service_create_default(async_t* async,
+                                          int root_dir_fd,
+                                          int data_sink_dir_fd,
+                                          const char* const* lib_paths,
+                                          loader_service_t** out) {
+    instance_state_t* instance_state = calloc(1, sizeof(loader_service_t));
+    if (instance_state == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    instance_state->root_dir_fd = root_dir_fd;
+    instance_state->data_sink_dir_fd = data_sink_dir_fd;
+    instance_state->lib_paths = lib_paths? lib_paths : fd_lib_paths;
+
+    loader_service_t* svc;
+    zx_status_t status = loader_service_create(async, &fd_ops, NULL, &svc);
+    if (status == ZX_OK) {
+      svc->ctx = instance_state;
+      *out = svc;
+    } else {
+      free(instance_state);
+    }
+    return status;
+}
+
+zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out) {
+    int root_dir_fd = open("/", O_RDONLY | O_DIRECTORY);
+    if (root_dir_fd < 0){
+      return ZX_ERR_NOT_FOUND;
+    }
+    return loader_service_create_default(async, root_dir_fd, -1, fs_lib_paths,
+                                         out);
+}
+
+zx_status_t loader_service_create_fd(async_t* async,
+                                     int root_dir_fd,
+                                     int data_sink_dir_fd,
+                                     loader_service_t** out) {
+    return loader_service_create_default(async, root_dir_fd, data_sink_dir_fd,
+                                         fd_lib_paths, out);
+}
+
 zx_status_t loader_service_release(loader_service_t* svc) {
     // This call to |loader_service_deref| balances the |loader_service_addref|
     // call in |loader_service_create|. This reference prevents the loader
@@ -380,30 +408,14 @@ zx_status_t loader_service_release(loader_service_t* svc) {
     return ZX_OK;
 }
 
-zx_status_t loader_service_create_fs(async_t* async,
-                                     loader_service_t** out) {
-    return loader_service_create(async, &fs_ops, NULL, out);
-}
-
-zx_status_t loader_service_create_fd(async_t* async,
-                                     int dirfd,
-                                     loader_service_t** out) {
-    loader_service_t* svc;
-    zx_status_t status = loader_service_create(async, &fd_ops, NULL, &svc);
-    svc->dirfd = dirfd;
-    svc->ctx = &svc->dirfd;
-    *out = svc;
-    return status;
-}
-
 static void loader_service_handler(async_t* async,
                                    async_wait_t* wait,
                                    zx_status_t status,
                                    const zx_packet_signal_t* signal) {
-    loader_service_session_t* session = (loader_service_session_t*)wait;
+    session_state_t* session_state = (session_state_t*)wait;
     if (status != ZX_OK)
         goto stop;
-    status = loader_service_rpc(wait->object, session);
+    status = loader_service_rpc(wait->object, session_state);
     if (status != ZX_OK)
         goto stop;
     status = async_begin_wait(async, wait);
@@ -412,40 +424,41 @@ static void loader_service_handler(async_t* async,
     return;
 stop:
     zx_handle_close(wait->object);
-    loader_service_t* svc = session->svc;
-    free(session);
+    loader_service_t* svc = session_state->svc;
+    free(session_state);
     loader_service_deref(svc); // Balanced in |loader_service_attach|.
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     zx_status_t status = ZX_OK;
-    loader_service_session_t* session = NULL;
+    session_state_t* session_state = NULL;
 
     if (svc == NULL) {
         status = ZX_ERR_INVALID_ARGS;
         goto done;
     }
 
-    session = calloc(1, sizeof(loader_service_session_t));
-    if (session == NULL) {
+    session_state = calloc(1, sizeof(session_state_t));
+    if (session_state == NULL) {
         status = ZX_ERR_NO_MEMORY;
         goto done;
     }
 
-    session->wait.handler = loader_service_handler;
-    session->wait.object = h;
-    session->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    session->svc = svc;
+    session_state->wait.handler = loader_service_handler;
+    session_state->wait.object = h;
+    session_state->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+    session_state->svc = svc;
 
-    status = async_begin_wait(svc->async, &session->wait);
+    status = async_begin_wait(svc->async, &session_state->wait);
 
-    if (status == ZX_OK)
+    if (status == ZX_OK) {
         loader_service_addref(svc); // Balanced in |loader_service_handler|.
+    }
 
 done:
     if (status != ZX_OK) {
         zx_handle_close(h);
-        free(session);
+        free(session_state);
     }
     return status;
 }

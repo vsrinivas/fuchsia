@@ -36,12 +36,18 @@ typedef struct loader_service loader_service_t;
 // library will create a new thread and listen for requests on that thread.
 zx_status_t loader_service_create_fs(async_t* async, loader_service_t** out);
 
-// Create a new file-descriptor backed loader service capable of handling
-// any number of clients.
+// Create a new file-descriptor backed loader service capable of handling any
+// number of clients.
 //
 // Requests will be processed on the given |async|. If |async| is NULL, this
 // library will create a new thread and listen for requests on that thread.
-zx_status_t loader_service_create_fd(async_t* async, int dirfd, loader_service_t** out);
+// Paths and objects will be loaded relative to |root_dir_fd| and data will be
+// published relative to |data_sink_dir_fd|; the two file descriptors
+// are consumed on success.
+zx_status_t loader_service_create_fd(async_t* async,
+                                     int root_dir_fd,
+                                     int data_sink_dir_fd,
+                                     loader_service_t** out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out);
@@ -63,7 +69,7 @@ typedef struct loader_service_ops {
 
     // finalize the loader service (optional)
     // called shortly before the loader service is destroyed
-    zx_status_t (*finalizer)(void* ctx);
+    void (*finalizer)(void* ctx);
 } loader_service_ops_t;
 
 // Create a loader service backed by custom loader ops.
@@ -81,9 +87,4 @@ zx_status_t loader_service_create(async_t* async,
 // The |finalizer| in |loader_service_ops_t| will be called shortly before |svc|
 // destroys itself.
 zx_status_t loader_service_release(loader_service_t* svc);
-
-// The default publish_data_sink implementation, which publishes
-// into /tmp, provided the fs there supports such publishing.
-zx_status_t loader_service_publish_data_sink_fs(const char* name, zx_handle_t vmo);
-
 __END_CDECLS
