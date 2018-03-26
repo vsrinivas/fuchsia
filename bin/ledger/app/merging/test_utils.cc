@@ -41,12 +41,12 @@ TestWithPageStorage::AddKeyValueToJournal(const std::string& key,
         page_storage()->AddObjectFromLocal(
             storage::DataSource::Create(std::move(value)),
             callback::Capture(MakeQuitTask(), &status, &object_identifier));
-        EXPECT_FALSE(RunLoopWithTimeout());
+        RunLoop();
         EXPECT_EQ(storage::Status::OK, status);
 
         journal->Put(key, object_identifier, storage::KeyPriority::EAGER,
                      callback::Capture(MakeQuitTask(), &status));
-        EXPECT_FALSE(RunLoopWithTimeout());
+        RunLoop();
         EXPECT_EQ(storage::Status::OK, status);
       };
 }
@@ -56,7 +56,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
   return [this, key](storage::Journal* journal) {
     storage::Status status;
     journal->Delete(key, callback::Capture(MakeQuitTask(), &status));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(storage::Status::OK, status);
   };
 }
@@ -69,10 +69,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
   page_storage()->GetObject(
       std::move(object_identifier), storage::PageStorage::Location::LOCAL,
       callback::Capture(MakeQuitTask(), &status, &object));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "PageStorage::GetObject didn't return...";
-  }
+  RunLoop();
   if (status != storage::Status::OK) {
     return ::testing::AssertionFailure()
            << "PageStorage::GetObject returned status: " << status;
@@ -97,10 +94,7 @@ TestWithPageStorage::DeleteKeyFromJournal(const std::string& key) {
           &encryption_service_, tmp_dir_.path(), kRootPageId.ToString());
   storage::Status status;
   local_page_storage->Init(callback::Capture(MakeQuitTask(), &status));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "PageStorageImpl::Init didn't return...";
-  }
+  RunLoop();
 
   if (status != storage::Status::OK) {
     return ::testing::AssertionFailure()

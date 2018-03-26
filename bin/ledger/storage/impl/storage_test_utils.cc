@@ -147,10 +147,7 @@ StorageTest::~StorageTest(){};
   GetStorage()->AddObjectFromLocal(
       DataSource::Create(value),
       callback::Capture(MakeQuitTask(), &status, &object_identifier));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "AddObjectFromLocal callback was not executed. value: " << value;
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal failed with status " << status
@@ -160,11 +157,7 @@ StorageTest::~StorageTest(){};
   std::unique_ptr<const Object> result;
   GetStorage()->GetObject(object_identifier, PageStorage::Location::LOCAL,
                           callback::Capture(MakeQuitTask(), &status, &result));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "GetObject callback was not executed. value: " << value
-           << ", object_identifier: " << object_identifier;
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "GetObject failed with status " << status << ". value: " << value
@@ -231,10 +224,7 @@ StorageTest::~StorageTest(){};
   btree::TreeNode::Empty(
       GetStorage(),
       callback::Capture(MakeQuitTask(), &status, empty_node_identifier));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "TreeNode::Empty callback was not executed.";
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty failed with status " << status;
@@ -250,10 +240,7 @@ StorageTest::~StorageTest(){};
   btree::TreeNode::FromIdentifier(
       GetStorage(), identifier,
       callback::Capture(MakeQuitTask(), &status, &result));
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "TreeNode::FromDigest callback was not executed.";
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromDigest failed with status " << status;
@@ -272,10 +259,7 @@ StorageTest::~StorageTest(){};
       GetStorage(), 0u, entries, children,
       callback::Capture(MakeQuitTask(), &status, &identifier));
 
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "TreeNode::FromEntries callback was not executed.";
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromEntries failed with status " << status;
@@ -295,10 +279,7 @@ StorageTest::~StorageTest(){};
                       callback::Capture(MakeQuitTask(), &status,
                                         new_root_identifier, &new_nodes),
                       &kTestNodeLevelCalculator);
-  if (RunLoopWithTimeout()) {
-    return ::testing::AssertionFailure()
-           << "btree::ApplyChanges callback was not executed.";
-  }
+  RunLoop();
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "btree::ApplyChanges failed with status " << status;

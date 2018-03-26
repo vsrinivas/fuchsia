@@ -103,7 +103,7 @@ TEST_F(DiffTest, ForEachDiff) {
                 return true;
               },
               callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(other_changes.size(), current_change);
 }
@@ -143,7 +143,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
                 return true;
               },
               callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
 
@@ -155,7 +155,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
                 return true;
               },
               callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -189,7 +189,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
                 return true;
               },
               callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -221,7 +221,7 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
                 return true;
               },
               callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, change_count);
   EXPECT_FALSE(actual_change.deleted);
@@ -318,7 +318,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
         return true;
       },
       callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }
@@ -398,7 +398,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
         return true;
       },
       callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }
@@ -463,7 +463,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
                         return true;
                       },
                       callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -535,7 +535,7 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
         return true;
       },
       callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }

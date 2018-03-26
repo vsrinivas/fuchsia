@@ -99,7 +99,7 @@ class BTreeUtilsTest : public StorageTest {
     };
     ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
                  std::move(on_next), std::move(on_done));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     return entries;
   }
 
@@ -146,7 +146,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
       callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                         &new_nodes),
       &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
@@ -176,7 +176,7 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
@@ -207,7 +207,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(4u, new_nodes.size());
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
@@ -236,7 +236,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier2,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(new_root_identifier, new_root_identifier2);
   // The root and the 3rd child have changed.
@@ -280,7 +280,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // The root and the first child have changed.
@@ -332,7 +332,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // Only the root has changed.
@@ -383,7 +383,7 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // The tree nodes are new.
@@ -424,7 +424,7 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_identifier, new_root_identifier);
   // The root and the first child have changed.
@@ -458,7 +458,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // The root and the first 2 children have changed.
@@ -508,7 +508,7 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // The root and one child have changed.
@@ -555,7 +555,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_identifier, new_root_identifier);
   // The root and the first child have changed.
@@ -595,7 +595,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   // The tree nodes are new.
@@ -628,7 +628,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
                callback::Capture(MakeQuitTask(), &status,
                                  &final_node_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(root_identifier, final_node_identifier);
 }
@@ -653,7 +653,7 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
                callback::Capture(MakeQuitTask(), &status, &new_root_identifier,
                                  &new_nodes),
                &kTestNodeLevelCalculator);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_NE(root_identifier, new_root_identifier);
   EXPECT_NE("", new_root_identifier.object_digest);
@@ -670,7 +670,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
   GetObjectIdentifiers(
       &coroutine_service_, &fake_storage_, root_identifier,
       callback::Capture(MakeQuitTask(), &status, &object_identifiers));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, object_identifiers.size());
   EXPECT_TRUE(object_identifiers.find(root_identifier) !=
@@ -687,7 +687,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   GetObjectIdentifiers(
       &coroutine_service_, &fake_storage_, root_identifier,
       callback::Capture(MakeQuitTask(), &status, &object_identifiers));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(6u, object_identifiers.size());
   EXPECT_TRUE(object_identifiers.find(root_identifier) !=
@@ -708,7 +708,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   GetObjectIdentifiers(
       &coroutine_service_, &fake_storage_, root_identifier,
       callback::Capture(MakeQuitTask(), &status, &object_identifiers));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(99u + 12, object_identifiers.size());
   EXPECT_TRUE(object_identifiers.find(root_identifier) !=
@@ -733,7 +733,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // [00, 01, 02]  [04]
   GetObjectsFromSync(&coroutine_service_, &fake_storage_, root_identifier,
                      callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 
   std::vector<ObjectIdentifier> object_requests;
@@ -748,7 +748,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   GetObjectIdentifiers(
       &coroutine_service_, &fake_storage_, root_identifier,
       callback::Capture(MakeQuitTask(), &status, &object_identifiers));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   ASSERT_EQ(3 + 5u, object_identifiers.size());
   for (ObjectIdentifier& identifier : object_requests) {
@@ -774,7 +774,7 @@ TEST_F(BTreeUtilsTest, ForEachEmptyTree) {
   };
   ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
                std::move(on_next), std::move(on_done));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(BTreeUtilsTest, ForEachAllEntries) {
@@ -795,7 +795,7 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
   };
   ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, "",
                on_next, on_done);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
@@ -821,7 +821,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
   };
   ForEachEntry(&coroutine_service_, &fake_storage_, root_identifier, prefix,
                on_next, on_done);
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 }  // namespace

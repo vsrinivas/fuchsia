@@ -66,7 +66,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     manager_->BindPage(page_ptr_.NewRequest(),
                        callback::Capture(MakeQuitTask(), &status));
     EXPECT_EQ(Status::OK, status);
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
   }
 
   void CommitFirstPendingJournal(
@@ -88,7 +88,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     fake_storage_->AddObjectFromLocal(
         storage::DataSource::Create(std::move(value_string)),
         callback::Capture(MakeQuitTask(), &status, &object_identifier));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(storage::Status::OK, status);
     return object_identifier;
   }
@@ -101,7 +101,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     fake_storage_->GetObject(
         object_identifier, storage::PageStorage::Location::LOCAL,
         callback::Capture(MakeQuitTask(), &status, &object));
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     EXPECT_EQ(storage::Status::OK, status);
     return object;
   }
@@ -127,16 +127,16 @@ class PageImplTest : public gtest::TestWithMessageLoop {
       message_loop_.PostQuitTask();
     };
     page_ptr_->StartTransaction(callback_statusok);
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
 
     for (int i = 0; i < entry_count; ++i) {
       page_ptr_->Put(convert::ToArray(GetKey(i, min_key_size)),
                      convert::ToArray(GetValue(i, min_value_size)),
                      callback_statusok);
-      EXPECT_FALSE(RunLoopWithTimeout());
+      RunLoop();
     }
     page_ptr_->Commit(callback_statusok);
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
   }
 
   PageSnapshotPtr GetSnapshot(f1dl::VectorPtr<uint8_t> prefix = nullptr) {
@@ -147,7 +147,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     PageSnapshotPtr snapshot;
     page_ptr_->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
                            callback_getsnapshot);
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
     return snapshot;
   }
 
@@ -168,7 +168,7 @@ TEST_F(PageImplTest, GetId) {
     EXPECT_EQ(page_id1_, convert::ToString(page_id));
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, PutNoTransaction) {
@@ -197,7 +197,7 @@ TEST_F(PageImplTest, PutNoTransaction) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, PutReferenceNoTransaction) {
@@ -210,7 +210,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   page_ptr_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
       callback::Capture(MakeQuitTask(), &status, &reference));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(Status::OK, status);
 
@@ -218,7 +218,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(Status::OK, status);
   auto objects = fake_storage_->GetObjects();
@@ -259,7 +259,7 @@ TEST_F(PageImplTest, PutUnknownReference) {
   };
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY, callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, PutKeyTooLarge) {
@@ -280,7 +280,7 @@ TEST_F(PageImplTest, PutKeyTooLarge) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
@@ -293,7 +293,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   page_ptr_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
       callback::Capture(MakeQuitTask(), &status, &reference));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 
   const size_t key_size = kMaxKeySize + 1;
@@ -302,7 +302,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(Status::KEY_TOO_LARGE, status);
 
@@ -339,7 +339,7 @@ TEST_F(PageImplTest, DeleteNoTransaction) {
     EXPECT_TRUE(entry.deleted);
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, TransactionCommit) {
@@ -358,7 +358,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   page_ptr_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
       callback::Capture(MakeQuitTask(), &status, &reference));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 
   // Sequence of operations:
@@ -368,12 +368,12 @@ TEST_F(PageImplTest, TransactionCommit) {
   //  - Delete
   //  - Commit
   page_ptr_->StartTransaction(callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value),
                  callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   {
     EXPECT_EQ(Status::OK, status);
@@ -409,7 +409,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   {
     EXPECT_EQ(Status::OK, status);
@@ -450,7 +450,7 @@ TEST_F(PageImplTest, TransactionCommit) {
   };
 
   page_ptr_->Delete(convert::ToArray(key2), delete_callback);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page_ptr_->Commit([this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -465,7 +465,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(2u, it->second->GetData().size());
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, TransactionRollback) {
@@ -488,7 +488,7 @@ TEST_F(PageImplTest, TransactionRollback) {
     EXPECT_EQ(0u, it->second->GetData().size());
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, NoTwoTransactions) {
@@ -501,7 +501,7 @@ TEST_F(PageImplTest, NoTwoTransactions) {
     EXPECT_EQ(Status::TRANSACTION_ALREADY_IN_PROGRESS, status);
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, NoTransactionCommit) {
@@ -511,7 +511,7 @@ TEST_F(PageImplTest, NoTransactionCommit) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, NoTransactionRollback) {
@@ -521,7 +521,7 @@ TEST_F(PageImplTest, NoTransactionRollback) {
     EXPECT_EQ(Status::NO_TRANSACTION_IN_PROGRESS, status);
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, CreateReferenceFromSocket) {
@@ -538,7 +538,7 @@ TEST_F(PageImplTest, CreateReferenceFromSocket) {
         reference = std::move(received_reference);
         message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, fake_storage_->GetObjects().size());
   ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
@@ -561,7 +561,7 @@ TEST_F(PageImplTest, CreateReferenceFromVmo) {
         reference = std::move(received_reference);
         message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   ASSERT_EQ(1u, fake_storage_->GetObjects().size());
   ASSERT_EQ(value, fake_storage_->GetObjects().begin()->second);
@@ -580,11 +580,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
   f1dl::VectorPtr<EntryPtr> actual_entries;
@@ -597,7 +597,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
@@ -620,13 +620,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback::Capture(MakeQuitTask(), &status));
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = GetSnapshot();
@@ -636,7 +636,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   snapshot->GetEntriesInline(
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries, &next_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(next_token.is_null());
 
@@ -678,7 +678,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries, &entry_count](
@@ -694,7 +694,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   };
   snapshot->GetEntries(nullptr, std::move(actual_next_token),
                        callback_getentries2);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
@@ -720,7 +720,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::PARTIAL_RESULT, status);
   EXPECT_FALSE(actual_next_token.is_null());
 
@@ -731,7 +731,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
       nullptr, std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token2.is_null());
   for (auto& entry : actual_entries2.take()) {
@@ -774,7 +774,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries,
                         &actual_next_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::PARTIAL_RESULT, status);
   EXPECT_FALSE(actual_next_token.is_null());
 
@@ -785,7 +785,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
       nullptr, std::move(actual_next_token),
       callback::Capture(MakeQuitTask(), &status, &actual_entries2,
                         &actual_next_token2));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_TRUE(actual_next_token2.is_null());
   for (auto& entry : actual_entries2.take()) {
@@ -820,7 +820,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries](
@@ -836,7 +836,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   };
   snapshot->GetEntries(nullptr, std::move(actual_next_token),
                        callback_getentries2);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
@@ -860,13 +860,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   storage::ObjectIdentifier lazy_object_identifier =
       fake_storage_->GetObjects().begin()->first;
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   fake_storage_->DeleteObjectFromLocal(lazy_object_identifier);
 
@@ -882,7 +882,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
@@ -907,11 +907,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
   f1dl::VectorPtr<EntryPtr> actual_entries;
@@ -924,14 +924,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(1u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
@@ -951,11 +951,11 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
 
   page_ptr_->Put(convert::ToArray(eager_key), convert::ToArray(eager_value),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->PutWithPriority(convert::ToArray(lazy_key),
                              convert::ToArray(lazy_value), Priority::LAZY,
                              callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot();
   f1dl::VectorPtr<EntryPtr> actual_entries;
@@ -968,13 +968,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetEntries(convert::ToArray("002"), nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(1u, actual_entries->size());
   EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(0)->key));
 
   snapshot->GetEntries(convert::ToArray("001"), nullptr, callback_getentries);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
   EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
@@ -992,15 +992,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Commit(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
   f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> actual_keys;
@@ -1014,7 +1014,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(2u, actual_keys->size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
@@ -1044,7 +1044,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Call GetKeys with the previous token and receive the remaining results.
   auto callback_getkeys2 = [this, &actual_keys, &key_count](
@@ -1060,7 +1060,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, std::move(actual_next_token), callback_getkeys2);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
@@ -1080,15 +1080,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Commit(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
 
@@ -1103,14 +1103,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithPrefix) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, actual_keys->size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetKeys(nullptr, nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(2u, actual_keys->size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
@@ -1128,15 +1128,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key1), convert::ToArray(value1),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Put(convert::ToArray(key2), convert::ToArray(value2),
                  callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr_->Commit(callback_statusok);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
@@ -1151,14 +1151,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithStart) {
     message_loop_.PostQuitTask();
   };
   snapshot->GetKeys(convert::ToArray("002"), nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(1u, actual_keys->size());
   EXPECT_EQ(key2, convert::ExtendedStringView(actual_keys->at(0)));
 
   snapshot = GetSnapshot();
   snapshot->GetKeys(convert::ToArray("001"), nullptr, callback_getkeys);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(2u, actual_keys->size());
   EXPECT_EQ(key1, convert::ExtendedStringView(actual_keys->at(0)));
@@ -1174,7 +1174,7 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
   fsl::SizedVmoTransportPtr actual_value;
@@ -1185,7 +1185,7 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
     message_loop_.PostQuitTask();
   };
   snapshot->Get(convert::ToArray(key), callback_get);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(value, ToString(actual_value));
 
@@ -1198,7 +1198,7 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   };
 
   snapshot->GetInline(convert::ToArray(key), callback_get_inline);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(value, convert::ToString(actual_inlined_value));
 }
 
@@ -1212,7 +1212,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   page_ptr_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
       callback::Capture(MakeQuitTask(), &status, &reference));
-  ASSERT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   ASSERT_EQ(Status::OK, status);
 
@@ -1220,7 +1220,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
                           Priority::EAGER,
                           callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot = GetSnapshot();
@@ -1228,7 +1228,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   fsl::SizedVmoTransportPtr actual_value;
   snapshot->Get(convert::ExtendedStringView(key).ToArray(),
                 callback::Capture(MakeQuitTask(), &status, &actual_value));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   EXPECT_EQ(value_string, ToString(actual_value));
@@ -1236,7 +1236,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   f1dl::VectorPtr<uint8_t> array_value;
   snapshot->GetInline(convert::ToArray(key),
                       callback::Capture(MakeQuitTask(), &status, &array_value));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
 }
 
@@ -1249,7 +1249,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   page_ptr_->PutWithPriority(convert::ToArray(key), convert::ToArray(value),
                              Priority::LAZY,
                              ::callback::Capture(postquit_callback, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   storage::ObjectIdentifier lazy_object_identifier =
@@ -1261,7 +1261,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   fsl::SizedVmoTransportPtr actual_value;
   snapshot->Get(convert::ToArray(key),
                 ::callback::Capture(postquit_callback, &status, &actual_value));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
 
@@ -1269,7 +1269,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   snapshot->GetInline(
       convert::ToArray(key),
       ::callback::Capture(postquit_callback, &status, &actual_inlined_value));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
 }
@@ -1283,7 +1283,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback_put);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
   Status status;
@@ -1296,7 +1296,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
         buffer = std::move(received_buffer);
         message_loop_.PostQuitTask();
       });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   std::string content;
   EXPECT_TRUE(fsl::StringFromVmo(buffer, &content));
@@ -1308,7 +1308,7 @@ TEST_F(PageImplTest, ParallelPut) {
   PagePtr page_ptr2;
   manager_->BindPage(page_ptr2.NewRequest(),
                      callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 
   std::string key("some_key");
@@ -1323,23 +1323,23 @@ TEST_F(PageImplTest, ParallelPut) {
     message_loop_.PostQuitTask();
   };
   page_ptr_->StartTransaction(callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page_ptr_->Put(convert::ToArray(key), convert::ToArray(value1),
                  callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page_ptr2->StartTransaction(callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page_ptr2->Put(convert::ToArray(key), convert::ToArray(value2),
                  callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page_ptr_->Commit(callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr2->Commit(callback_simple);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   auto callback_getsnapshot = [this](Status status) {
     EXPECT_EQ(Status::OK, status);
@@ -1347,10 +1347,10 @@ TEST_F(PageImplTest, ParallelPut) {
   };
   page_ptr_->GetSnapshot(snapshot1.NewRequest(), nullptr, nullptr,
                          callback_getsnapshot);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   page_ptr2->GetSnapshot(snapshot2.NewRequest(), nullptr, nullptr,
                          callback_getsnapshot);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](
@@ -1361,7 +1361,7 @@ TEST_F(PageImplTest, ParallelPut) {
     message_loop_.PostQuitTask();
   };
   snapshot1->Get(convert::ToArray(key), callback_getvalue1);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](
@@ -1372,7 +1372,7 @@ TEST_F(PageImplTest, ParallelPut) {
     message_loop_.PostQuitTask();
   };
   snapshot2->Get(convert::ToArray(key), callback_getvalue2);
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   // The two snapshots should have different contents.
   EXPECT_EQ(value1, actual_value1);
@@ -1412,12 +1412,12 @@ TEST_F(PageImplTest, SerializedOperations) {
     CommitFirstPendingJournal(fake_storage_->GetJournals());
 
     // The operation can now succeed.
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
   }
 
   // Neither StartTransaction, nor Put in a transaction should be blocked.
   for (size_t i = 0; i < 2; ++i) {
-    EXPECT_FALSE(RunLoopWithTimeout());
+    RunLoop();
   }
 
   // But committing the transaction should still be blocked.
@@ -1426,7 +1426,7 @@ TEST_F(PageImplTest, SerializedOperations) {
   // Unblocking the transaction commit.
   CommitFirstPendingJournal(fake_storage_->GetJournals());
   // The operation can now succeed.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
@@ -1441,7 +1441,7 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
   ConflictResolutionWaitStatus status;
   page_ptr_->WaitForConflictResolution(
       callback::Capture(conflicts_resolved_callback, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_TRUE(callback_called);
   EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
 
@@ -1451,7 +1451,7 @@ TEST_F(PageImplTest, WaitForConflictResolutionNoConflicts) {
   callback_called = false;
   page_ptr_->WaitForConflictResolution(
       callback::Capture(conflicts_resolved_callback, &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_TRUE(callback_called);
   EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, status);
 }

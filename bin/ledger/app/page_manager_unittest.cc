@@ -101,26 +101,26 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   PagePtr page2;
   page_manager.BindPage(page1.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
 
   page_manager.BindPage(page2.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page1.Unbind();
   page2.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
   PagePtr page3;
   page_manager.BindPage(page3.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page3.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(on_empty_called);
 
   on_empty_called = false;
@@ -129,7 +129,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
       std::make_unique<const storage::CommitEmptyImpl>(), snapshot.NewRequest(),
       "");
   snapshot.Unbind();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -144,7 +144,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   PagePtr page;
   page_manager->BindPage(page.NewRequest(),
                          callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   bool page_closed = false;
   page.set_error_handler([this, &page_closed] {
@@ -153,7 +153,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   });
 
   page_manager.reset();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(page_closed);
 }
 
@@ -175,18 +175,18 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   PagePtr page2;
   page_manager.BindPage(page1.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page_manager.BindPage(page2.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page1->Put(convert::ToArray("key1"), convert::ToArray("value1"),
              [this](Status status) {
                EXPECT_EQ(Status::OK, status);
                message_loop_.PostQuitTask();
              });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   PageWatcherPtr watcher;
   f1dl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
@@ -196,7 +196,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
                        EXPECT_EQ(Status::OK, status);
                        message_loop_.PostQuitTask();
                      });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 
   page1.Unbind();
   page2.Unbind();
@@ -205,7 +205,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   EXPECT_FALSE(on_empty_called);
 
   watcher_request.TakeChannel();
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(on_empty_called);
 }
 
@@ -246,9 +246,9 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   fake_page_sync_ptr->on_backlog_downloaded_callback();
 
   // BindPage callback can now be executed.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   // GetId callback should then be called.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(called);
 
   // Check that a second call on the same manager is not delayed.
@@ -256,13 +256,13 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   page.Unbind();
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(called);
 }
 
@@ -290,14 +290,14 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(called);
 }
 
@@ -328,7 +328,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   message_loop_.task_runner()->PostTask(
       [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
 }
 
 TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
@@ -357,14 +357,14 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
   // The page should be bound immediately.
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   ASSERT_EQ(Status::OK, status);
   page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
 
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_TRUE(called);
 }
 
@@ -378,13 +378,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   std::string key1("001-some_key");
@@ -392,13 +392,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
 
   page->Put(convert::ToArray(key1), convert::ToArray(value1),
             callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads1->size());
 
@@ -407,13 +407,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
 
   page->Put(convert::ToArray(key2), convert::ToArray(value2),
             callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
@@ -422,13 +422,13 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   PageSnapshotPtr snapshot1;
   page_debug->GetSnapshot(std::move(heads1->at(0)), snapshot1.NewRequest(),
                           callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageSnapshotPtr snapshot2;
   page_debug->GetSnapshot(std::move(heads2->at(0)), snapshot2.NewRequest(),
                           callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   f1dl::VectorPtr<EntryPtr> expected_entries1;
@@ -436,7 +436,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   snapshot1->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries1, &next_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, expected_entries1->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0)->key));
@@ -446,7 +446,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   snapshot2->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries2, &next_token));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, expected_entries2->size());
   EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0)->key));
@@ -465,13 +465,13 @@ TEST_F(PageManagerTest, GetCommit) {
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   std::string key1("001-some_key");
@@ -479,13 +479,13 @@ TEST_F(PageManagerTest, GetCommit) {
 
   page->Put(convert::ToArray(key1), convert::ToArray(value1),
             callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads1->size());
 
@@ -494,13 +494,13 @@ TEST_F(PageManagerTest, GetCommit) {
 
   page->Put(convert::ToArray(key2), convert::ToArray(value2),
             callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
@@ -509,7 +509,7 @@ TEST_F(PageManagerTest, GetCommit) {
   page_debug->GetCommit(
       std::move(currHeadCommit),
       callback::Capture(MakeQuitTask(), &status, &commit_struct));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(convert::ToString(heads2->at(0)),
             convert::ToString(commit_struct->commit_id));
@@ -529,20 +529,20 @@ TEST_F(PageManagerTest, GetCommitError) {
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
                         callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::OK, status);
 
   ledger::CommitPtr commit_struct = ledger::Commit::New();
   page_debug->GetCommit(
       convert::ToArray("fake_commit_id"),
       callback::Capture(MakeQuitTask(), &status, &commit_struct));
-  EXPECT_FALSE(RunLoopWithTimeout());
+  RunLoop();
   EXPECT_EQ(Status::INVALID_ARGUMENT, status);
 }
 
