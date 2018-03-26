@@ -4,20 +4,22 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_calculator_example.h>
+#include <fuchsia/cpp/images.h>
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "peridot/examples/counter_cpp/calculator.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -34,8 +36,8 @@ class Module1View : public mozart::BaseView {
  public:
   explicit Module1View(
       modular_example::Store* const store,
-      mozart::ViewManagerPtr view_manager,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  kModuleName),
@@ -60,7 +62,7 @@ class Module1View : public mozart::BaseView {
   // https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      ui::PresentationInfoPtr /*presentation_info*/) override {
+      images::PresentationInfo /*presentation_info*/) override {
     if (!has_logical_size()) {
       return;
     }
@@ -93,13 +95,13 @@ class Module1View : public mozart::BaseView {
   FXL_DISALLOW_COPY_AND_ASSIGN(Module1View);
 };
 
-class MultiplierImpl : public modular::examples::Multiplier {
+class MultiplierImpl : public modular_calculator_example::Multiplier {
  public:
   MultiplierImpl() = default;
 
  private:
   // |Multiplier|
-  void Multiply(int32_t a, int32_t b, const MultiplyCallback& result) override {
+  void Multiply(int32_t a, int32_t b, MultiplyCallback result) override {
     result(a * b);
   }
 
@@ -138,19 +140,19 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<Module1View>(
         &store_,
         application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+            ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
   }
 
   // |Module|
-  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-                  f1dl::InterfaceRequest<component::ServiceProvider>
+  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> module_context,
+                  fidl::InterfaceRequest<component::ServiceProvider>
                       outgoing_services) override {
     FXL_CHECK(outgoing_services.is_valid());
 
@@ -161,8 +163,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
     // Provide services to the recipe module.
     outgoing_services_.AddBinding(std::move(outgoing_services));
-    outgoing_services_.AddService<modular::examples::Multiplier>(
-        [this](f1dl::InterfaceRequest<modular::examples::Multiplier> req) {
+    outgoing_services_.AddService<modular_calculator_example::Multiplier>(
+        [this](fidl::InterfaceRequest<modular_calculator_example::Multiplier> req) {
           multiplier_clients_.AddBinding(&multiplier_service_, std::move(req));
         });
 
@@ -200,7 +202,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
 
   // This is a ServiceProvider we expose to our parent (recipe) module, to
   // demonstrate the use of a service exchange.
-  f1dl::BindingSet<modular::examples::Multiplier> multiplier_clients_;
+  fidl::BindingSet<modular_calculator_example::Multiplier> multiplier_clients_;
   MultiplierImpl multiplier_service_;
   component::ServiceNamespace outgoing_services_;
 

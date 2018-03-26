@@ -4,16 +4,18 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/images.h>
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -30,8 +32,8 @@ class Module2View : public mozart::BaseView {
  public:
   explicit Module2View(
       modular_example::Store* const store,
-      mozart::ViewManagerPtr view_manager,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "Module2Impl"),
@@ -56,7 +58,7 @@ class Module2View : public mozart::BaseView {
   // https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc
   // |BaseView|:
   void OnSceneInvalidated(
-      ui::PresentationInfoPtr /*presentation_info*/) override {
+      images::PresentationInfo /*presentation_info*/) override {
     if (!has_logical_size()) {
       return;
     }
@@ -115,20 +117,20 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<Module2View>(
         &store_,
         application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+            ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
   }
 
   // |Module|
   void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     modular::LinkPtr link;
@@ -162,7 +164,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
   }
 
   std::unique_ptr<Module2View> view_;
-  f1dl::InterfacePtr<modular::ModuleContext> module_context_;
+  fidl::InterfacePtr<modular::ModuleContext> module_context_;
   modular_example::Store store_;
 
   // Note: This should remain the last member so it'll be destroyed and

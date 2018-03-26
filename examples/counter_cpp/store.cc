@@ -7,12 +7,14 @@
 #include <iterator>
 #include <utility>
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_examples.h>
+
 #include "lib/fxl/logging.h"
-#include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 
-using f1dl::InterfaceHandle;
-using f1dl::StringPtr;
+using fidl::InterfaceHandle;
+using fidl::StringPtr;
 
 using modular::Link;
 using modular::LinkWatcher;
@@ -85,7 +87,7 @@ void Store::Stop() {
   link_.Unbind();
 }
 
-void Store::Notify(const f1dl::StringPtr& json) {
+void Store::Notify(fidl::StringPtr json) {
   FXL_LOG(INFO) << "Store::Notify() " << module_name_;
   if (!terminating_) {
     ApplyLinkData(json.get());
@@ -160,9 +162,9 @@ void Store::SendIfDirty() {
     FXL_CHECK(link_);
     FXL_CHECK(doc.IsObject());
 
-    std::vector<std::string> segments{modular_example::kJsonSegment,
-                                      modular_example::kDocId};
-    link_->UpdateObject(f1dl::VectorPtr<f1dl::StringPtr>::From(segments),
+    std::vector<fidl::StringPtr> segments{modular_example::kJsonSegment,
+                                          modular_example::kDocId};
+    link_->UpdateObject(fidl::VectorPtr<fidl::StringPtr>(segments),
                         modular::JsonValueToString(doc));
     dirty_ = false;
   }

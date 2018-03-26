@@ -5,29 +5,27 @@
 // A Module that serves as the recipe in the example story, i.e. that
 // creates other Modules in the story.
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_calculator_example.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include <fuchsia/cpp/modular.h>
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "lib/module/fidl/module.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/user/fidl/device_map.fidl.h"
-#include "peridot/examples/counter_cpp/calculator.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
 namespace {
 
-using modular::examples::Adder;
+using modular_calculator_example::Adder;
 using modular::to_array;
 
 // JSON data
@@ -90,7 +88,7 @@ class LinkForwarder : modular::LinkWatcher {
     src_->Watch(src_binding_.NewBinding());
   }
 
-  void Notify(const f1dl::StringPtr& json) override {
+  void Notify(fidl::StringPtr json) override {
     // We receive an initial update when the Link initializes. It's "null"
     // (meaning the value of the json string is the four letters n-u-l-l)
     // if this is a new session, or it has json data if it's a restored session.
@@ -103,7 +101,7 @@ class LinkForwarder : modular::LinkWatcher {
   }
 
  private:
-  f1dl::Binding<modular::LinkWatcher> src_binding_;
+  fidl::Binding<modular::LinkWatcher> src_binding_;
   modular::Link* const src_;
   modular::Link* const dst_;
   bool initial_update_ = true;
@@ -127,7 +125,7 @@ class ModuleMonitor : modular::ModuleWatcher {
   }
 
  private:
-  f1dl::Binding<modular::ModuleWatcher> binding_;
+  fidl::Binding<modular::ModuleWatcher> binding_;
   modular::ModuleContext* const module_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleMonitor);
 };
@@ -135,34 +133,34 @@ class ModuleMonitor : modular::ModuleWatcher {
 class DeviceMapMonitor : modular::DeviceMapWatcher {
  public:
   DeviceMapMonitor(modular::DeviceMap* const device_map,
-                   std::vector<modular::DeviceMapEntryPtr> devices)
+                   std::vector<modular::DeviceMapEntry> devices)
       : binding_(this), devices_(std::move(devices)) {
     device_map->WatchDeviceMap(binding_.NewBinding());
   }
 
-  void OnDeviceMapChange(modular::DeviceMapEntryPtr entry) override {
-    FXL_LOG(INFO) << "OnDeviceMapChange() " << entry->name << " "
-                  << entry->profile;
+  void OnDeviceMapChange(modular::DeviceMapEntry entry) override {
+    FXL_LOG(INFO) << "OnDeviceMapChange() " << entry.name << " "
+                  << entry.profile;
     for (const auto& device : devices_) {
-      if (entry->device_id == device->device_id)
+      if (entry.device_id == device.device_id)
         return;
     }
     FXL_CHECK(false);
   }
 
  private:
-  f1dl::Binding<DeviceMapWatcher> binding_;
-  std::vector<modular::DeviceMapEntryPtr> devices_;
+  fidl::Binding<DeviceMapWatcher> binding_;
+  std::vector<modular::DeviceMapEntry> devices_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapMonitor);
 };
 
-class AdderImpl : public modular::examples::Adder {
+class AdderImpl : public modular_calculator_example::Adder {
  public:
   AdderImpl() = default;
 
  private:
   // |Adder| impl:
-  void Add(int32_t a, int32_t b, const AddCallback& result) override {
+  void Add(int32_t a, int32_t b, AddCallback result) override {
     result(a + b);
   }
 
@@ -182,15 +180,15 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |Module|
   void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     module_context_->GetLink(nullptr, link_.NewRequest());
 
     // Read initial Link data. We expect the shell to tell us what it
     // is.
-    link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
+    link_->Get(nullptr, [this](const fidl::StringPtr& json) {
       rapidjson::Document doc;
       doc.Parse(json);
       if (doc.HasParseError()) {
@@ -208,14 +206,14 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
 
-    auto daisy = modular::Daisy::New();
-    daisy->url = "example_module1";
-    auto noun = modular::Noun::New();
-    noun->set_link_name(kModule1Link);
-    auto noun_entry = modular::NounEntry::New();
-    noun_entry->name = "theOneLink";
-    noun_entry->noun = std::move(noun);
-    daisy->nouns.push_back(std::move(noun_entry));
+    modular::Daisy daisy;
+    daisy.url = "example_module1";
+    modular::Noun noun;
+    noun.set_link_name(kModule1Link);
+    modular::NounEntry noun_entry;
+    noun_entry.name = "theOneLink";
+    noun_entry.noun = std::move(noun);
+    daisy.nouns.push_back(std::move(noun_entry));
     component::ServiceProviderPtr services_from_module1;
     module_context_->StartModule("module1", std::move(daisy),
                                  services_from_module1.NewRequest(),
@@ -224,7 +222,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
     // Consume services from Module 1.
     auto multiplier_service =
-        component::ConnectToService<modular::examples::Multiplier>(
+        component::ConnectToService<modular_calculator_example::Multiplier>(
             services_from_module1.get());
     multiplier_service.set_error_handler([] {
       FXL_CHECK(false)
@@ -238,14 +236,14 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
           FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    daisy = modular::Daisy::New();
-    daisy->url = "example_module2";
-    noun = modular::Noun::New();
-    noun->set_link_name(kModule2Link);
-    noun_entry = modular::NounEntry::New();
-    noun_entry->name = "theOneLink";
-    noun_entry->noun = std::move(noun);
-    daisy->nouns.push_back(std::move(noun_entry));
+    daisy = modular::Daisy();
+    daisy.url = "example_module2";
+    noun = modular::Noun();
+    noun.set_link_name(kModule2Link);
+    noun_entry = modular::NounEntry();
+    noun_entry.name = "theOneLink";
+    noun_entry.noun = std::move(noun);
+    daisy.nouns.push_back(std::move(noun_entry));
     component::ServiceProviderPtr services_from_module2;
     module_context_->StartModule("module2", std::move(daisy), nullptr,
                                  module2_.NewRequest(), nullptr,
@@ -268,17 +266,17 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module_monitors_.emplace_back(
         new ModuleMonitor(module2_.get(), module_context_.get()));
 
-    module1_link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
+    module1_link_->Get(nullptr, [this](const fidl::StringPtr& json) {
       if (json == "null") {
         // This must come last, otherwise LinkConnection gets a
         // notification of our own write because of the "send
         // initial values" code.
-        std::vector<std::string> segments{modular_example::kJsonSegment,
-                                          modular_example::kDocId};
-        module1_link_->Set(f1dl::VectorPtr<f1dl::StringPtr>::From(segments),
+        std::vector<fidl::StringPtr> segments{modular_example::kJsonSegment,
+                                              modular_example::kDocId};
+        module1_link_->Set(fidl::VectorPtr<fidl::StringPtr>(segments),
                            kInitialJson);
       } else {
-        link_->Get(nullptr, [this](const f1dl::StringPtr& json) {
+        link_->Get(nullptr, [this](const fidl::StringPtr& json) {
           // There is a possiblity that on re-inflation we start with a
           // deadlocked state such that neither of the child modules make
           // progress. This can happen because there is no synchronization
@@ -318,7 +316,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
                             if (status == ledger::Status::KEY_NOT_FOUND) {
                               FXL_LOG(INFO) << "No counter in root page. "
                                                "Initializing to 1.";
-                              f1dl::VectorPtr<uint8_t> data;
+                              fidl::VectorPtr<uint8_t> data;
                               data.push_back(1);
                               module_root_page_->Put(
                                   to_array(kLedgerCounterKey), std::move(data),
@@ -329,7 +327,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
                               FXL_CHECK(status == ledger::Status::OK);
                               std::string counter_data;
                               bool conversion =
-                                  fsl::StringFromVmo(value, &counter_data);
+                                  fsl::StringFromVmo(*value, &counter_data);
                               FXL_DCHECK(conversion);
                               FXL_LOG(INFO)
                                   << "Retrieved counter from root page: "
@@ -351,10 +349,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     device_map_ = application_context()
                       ->ConnectToEnvironmentService<modular::DeviceMap>();
 
-    device_map_->Query([this](f1dl::VectorPtr<modular::DeviceMapEntryPtr> devices) {
+    device_map_->Query([this](fidl::VectorPtr<modular::DeviceMapEntry> devices) {
       FXL_LOG(INFO) << "Devices from device_map_->Query():";
-      for (modular::DeviceMapEntryPtr& device : devices.take()) {
-        FXL_LOG(INFO) << " - " << device->name;
+      for (modular::DeviceMapEntry device : devices.take()) {
+        FXL_LOG(INFO) << " - " << device.name;
         device_map_entries_.emplace_back(std::move(device));
       }
 
@@ -369,7 +367,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
   // This is a ServiceProvider we expose to one of our child modules, to
   // demonstrate the use of a service exchange.
-  f1dl::BindingSet<modular::examples::Adder> adder_clients_;
+  fidl::BindingSet<modular_calculator_example::Adder> adder_clients_;
   AdderImpl adder_service_;
   component::ServiceNamespace outgoing_services_;
 
@@ -390,7 +388,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   std::vector<std::unique_ptr<ModuleMonitor>> module_monitors_;
 
   modular::DeviceMapPtr device_map_;
-  std::vector<modular::DeviceMapEntryPtr> device_map_entries_;
+  std::vector<modular::DeviceMapEntry> device_map_entries_;
   std::unique_ptr<DeviceMapMonitor> device_map_monitor_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RecipeApp);

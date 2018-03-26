@@ -23,6 +23,7 @@ executable("example_module1") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
@@ -42,6 +43,7 @@ executable("example_module2") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
@@ -63,6 +65,7 @@ executable("example_recipe") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
+    "//garnet/public/lib/ui/views/fidl:view_token",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
@@ -92,6 +95,8 @@ source_set("store") {
 }
 
 fidl("calculator") {
+  name = "modular_calculator_example"
+
   sources = [
     "calculator.fidl",
   ]

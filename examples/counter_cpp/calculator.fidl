@@ -4,7 +4,7 @@
 
 // Here are some interfaces that are used to demonstrate a service exchange.
 
-library modular.examples;
+library modular_calculator_example;
 
 [ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Adder"]
 interface Adder {

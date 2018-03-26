@@ -10,8 +10,8 @@
 #include <utility>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
