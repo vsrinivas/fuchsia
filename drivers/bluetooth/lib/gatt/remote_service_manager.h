@@ -48,8 +48,7 @@ class RemoteServiceManager final {
 
   // Initiates the Exchange MTU procedure followed by primary service
   // discovery. |callback| is called to notify the result of the procedure.
-  using StatusCallback = std::function<void(att::Status status)>;
-  void Initialize(StatusCallback callback);
+  void Initialize(att::StatusCallback callback);
 
   // Returns a vector containing discovered services that match any of the given
   // |uuids| via |callback|. All services will be returned if |uuids| is empty.

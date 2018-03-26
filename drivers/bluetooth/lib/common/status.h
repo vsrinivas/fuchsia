@@ -20,6 +20,9 @@ enum class HostError : uint8_t {
   // Not found.
   kNotFound,
 
+  // Not ready.
+  kNotReady,
+
   // The time limit for the operation has expired.
   kTimedOut,
 

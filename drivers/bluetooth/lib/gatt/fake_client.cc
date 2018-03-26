@@ -10,10 +10,10 @@ namespace btlib {
 namespace gatt {
 namespace testing {
 
+using att::StatusCallback;
+
 FakeClient::FakeClient(async_t* dispatcher)
-    : dispatcher_(dispatcher),
-      server_mtu_(att::kLEMinMTU),
-      weak_ptr_factory_(this) {
+    : dispatcher_(dispatcher), weak_ptr_factory_(this) {
   FXL_DCHECK(dispatcher_);
 }
 
@@ -41,7 +41,16 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
                                          att::Handle range_end,
                                          CharacteristicCallback chrc_callback,
                                          StatusCallback status_callback) {
-  // TODO(armansito): Do something.
+  last_chrc_discovery_start_handle_ = range_start;
+  last_chrc_discovery_end_handle_ = range_end;
+  chrc_discovery_count_++;
+
+  async::PostTask(dispatcher_, [this, chrc_callback, status_callback] {
+    for (const auto& chrc : chrcs_) {
+      chrc_callback(chrc);
+    }
+    status_callback(chrc_discovery_status_);
+  });
 }
 
 }  // namespace testing

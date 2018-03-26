@@ -15,6 +15,14 @@
 
 namespace btlib {
 namespace gatt {
+
+// This must be in the correct namespace for it to be visible to EXPECT_EQ.
+static bool operator==(const CharacteristicData& chrc1,
+                       const CharacteristicData& chrc2) {
+  return chrc1.properties == chrc2.properties && chrc1.handle == chrc2.handle &&
+         chrc1.value_handle == chrc2.value_handle && chrc1.type == chrc2.type;
+}
+
 namespace internal {
 namespace {
 
@@ -22,6 +30,12 @@ using common::HostError;
 
 constexpr common::UUID kTestServiceUuid1((uint16_t)0xbeef);
 constexpr common::UUID kTestServiceUuid2((uint16_t)0xcafe);
+constexpr common::UUID kTestUuid3((uint16_t)0xfefe);
+constexpr common::UUID kTestUuid4((uint16_t)0xefef);
+
+using common::HostError;
+
+void NopStatusCallback(att::Status) {}
 
 class GATT_RemoteServiceManagerTest : public ::btlib::testing::TestBase {
  public:
@@ -39,6 +53,25 @@ class GATT_RemoteServiceManagerTest : public ::btlib::testing::TestBase {
   }
 
   void TearDown() override { mgr_ = nullptr; }
+
+  // Initializes a RemoteService based on |data|.
+  fbl::RefPtr<RemoteService> SetUpFakeService(const ServiceData& data) {
+    std::vector<ServiceData> fake_services{{data}};
+    fake_client()->set_primary_services(std::move(fake_services));
+
+    mgr()->Initialize(NopStatusCallback);
+
+    ServiceList services;
+    mgr()->ListServices(std::vector<common::UUID>(),
+                        [&services](auto status, ServiceList cb_services) {
+                          services = std::move(cb_services);
+                        });
+
+    RunUntilIdle();
+
+    FXL_DCHECK(services.size() == 1u);
+    return services[0];
+  }
 
   RemoteServiceManager* mgr() const { return mgr_.get(); }
   testing::FakeClient* fake_client() const { return fake_client_; }
@@ -58,7 +91,7 @@ TEST_F(GATT_RemoteServiceManagerTest, InitializeNoServices) {
       [&services](auto svc) { services.push_back(svc); });
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -83,7 +116,7 @@ TEST_F(GATT_RemoteServiceManagerTest, Initialize) {
       [&services](auto svc) { services.push_back(svc); });
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -111,7 +144,7 @@ TEST_F(GATT_RemoteServiceManagerTest, InitializeFailure) {
   ASSERT_TRUE(services.empty());
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -135,7 +168,7 @@ TEST_F(GATT_RemoteServiceManagerTest, ListServicesBeforeInit) {
   EXPECT_TRUE(services.empty());
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -151,7 +184,7 @@ TEST_F(GATT_RemoteServiceManagerTest, ListServicesAfterInit) {
   fake_client()->set_primary_services(std::move(fake_services));
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -187,7 +220,7 @@ TEST_F(GATT_RemoteServiceManagerTest, ListServicesByUuid) {
   ASSERT_TRUE(services.empty());
 
   att::Status status(HostError::kFailed);
-  mgr()->Initialize([this, &status](att::Status cb_res) { status = cb_res; });
+  mgr()->Initialize([this, &status](att::Status val) { status = val; });
 
   RunUntilIdle();
 
@@ -196,6 +229,127 @@ TEST_F(GATT_RemoteServiceManagerTest, ListServicesByUuid) {
   EXPECT_EQ(1u, services.size());
   EXPECT_EQ(svc1.range_start, services[0]->handle());
   EXPECT_EQ(svc1.type, services[0]->uuid());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverCharacteristicsAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  size_t chrcs_size;
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    chrcs_size = chrcs.size();
+  });
+
+  RunUntilIdle();
+  EXPECT_FALSE(status);
+  EXPECT_EQ(HostError::kFailed, status.error());
+  EXPECT_EQ(0u, chrcs_size);
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  EXPECT_FALSE(service->IsDiscovered());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverCharacteristicsSuccess) {
+  ServiceData data(1, 5, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData fake_chrc1(0, 2, 3, kTestUuid3);
+  CharacteristicData fake_chrc2(0, 4, 5, kTestUuid4);
+  std::vector<CharacteristicData> fake_chrcs{{fake_chrc1, fake_chrc2}};
+  fake_client()->set_characteristics(std::move(fake_chrcs));
+
+  att::Status status1(HostError::kFailed);
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status1 = cb_status;
+    EXPECT_EQ(2u, chrcs.size());
+
+    EXPECT_EQ(0u, chrcs[0].id());
+    EXPECT_EQ(1u, chrcs[1].id());
+
+    EXPECT_EQ(fake_chrc1, chrcs[0].info());
+    EXPECT_EQ(fake_chrc2, chrcs[1].info());
+  });
+
+  // Queue a second request.
+  att::Status status2(HostError::kFailed);
+  RemoteCharacteristicList chrcs2;
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status2 = cb_status;
+    EXPECT_EQ(2u, chrcs.size());
+
+    EXPECT_EQ(0u, chrcs[0].id());
+    EXPECT_EQ(1u, chrcs[1].id());
+
+    EXPECT_EQ(fake_chrc1, chrcs[0].info());
+    EXPECT_EQ(fake_chrc2, chrcs[1].info());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  // Only one ATT request should have been made.
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+
+  EXPECT_TRUE(service->IsDiscovered());
+  EXPECT_TRUE(status1);
+  EXPECT_TRUE(status2);
+  EXPECT_EQ(data.range_start,
+            fake_client()->last_chrc_discovery_start_handle());
+  EXPECT_EQ(data.range_end, fake_client()->last_chrc_discovery_end_handle());
+
+  // Request discovery again. This should succeed without an ATT request.
+  status1 = att::Status(HostError::kFailed);
+  service->DiscoverCharacteristics(
+      [&status1](auto cb_status, const auto&) { status1 = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status1);
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+  EXPECT_TRUE(service->IsDiscovered());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverCharacteristicsError) {
+  ServiceData data(1, 5, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chrc1(0, 2, 3, kTestUuid3);
+  CharacteristicData chrc2(0, 4, 5, kTestUuid4);
+  std::vector<CharacteristicData> fake_chrcs{{chrc1, chrc2}};
+  fake_client()->set_characteristics(std::move(fake_chrcs));
+
+  fake_client()->set_characteristic_discovery_status(
+      att::Status(HostError::kNotSupported));
+
+  att::Status status1;
+  RemoteCharacteristicList chrcs1;
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status1 = cb_status;
+    EXPECT_TRUE(chrcs.empty());
+  });
+
+  // Queue a second request.
+  att::Status status2;
+  RemoteCharacteristicList chrcs2;
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status2 = cb_status;
+    EXPECT_TRUE(chrcs.empty());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  // Onle one request should have been made.
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+
+  EXPECT_FALSE(service->IsDiscovered());
+  EXPECT_FALSE(status1);
+  EXPECT_FALSE(status2);
+  EXPECT_EQ(HostError::kNotSupported, status1.error());
+  EXPECT_EQ(HostError::kNotSupported, status2.error());
 }
 
 }  // namespace

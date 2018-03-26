@@ -196,6 +196,21 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
     });
   }
 
+  void FindService(std::string peer_id,
+                   IdType service_id,
+                   RemoteServiceCallback callback) override {
+    PostMessage([this, service_id, peer_id = std::move(peer_id),
+                 callback = std::move(callback)]() mutable {
+      auto iter = connections_.find(peer_id);
+      if (iter == connections_.end()) {
+        // Connection not found.
+        callback(nullptr);
+        return;
+      }
+      callback(iter->second.remote_service_manager()->FindService(service_id));
+    });
+  }
+
  private:
   // Called when a new remote GATT service is discovered.
   void OnServiceAdded(const std::string& peer_id,

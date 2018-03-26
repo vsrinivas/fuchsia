@@ -40,6 +40,9 @@ class FakeLayer final : public GATT {
   void ListServices(std::string peer_id,
                     std::vector<common::UUID> uuids,
                     ServiceListCallback callback) override;
+  void FindService(std::string peer_id,
+                   IdType service_id,
+                   RemoteServiceCallback callback) override;
 
  private:
   friend class fbl::RefPtr<FakeLayer>;

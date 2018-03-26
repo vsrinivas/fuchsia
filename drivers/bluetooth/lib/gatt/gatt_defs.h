@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 namespace btlib {
@@ -62,6 +63,33 @@ enum ExtendedProperty : uint16_t {
   kWritableAuxiliaries = 0x0002,
 };
 using ExtendedProperties = uint16_t;
+
+// An identifier uniquely identifies a service, characteristic, or descriptor.
+using IdType = uint64_t;
+
+// Types representing GATT discovery results.
+
+struct ServiceData {
+  ServiceData() = default;
+  ServiceData(att::Handle start, att::Handle end, const common::UUID& type);
+
+  att::Handle range_start;
+  att::Handle range_end;
+  common::UUID type;
+};
+
+struct CharacteristicData {
+  CharacteristicData() = default;
+  CharacteristicData(Properties props,
+                     att::Handle handle,
+                     att::Handle value_handle,
+                     common::UUID type);
+
+  Properties properties;
+  att::Handle handle;
+  att::Handle value_handle;
+  common::UUID type;
+};
 
 }  // namespace gatt
 }  // namespace btlib

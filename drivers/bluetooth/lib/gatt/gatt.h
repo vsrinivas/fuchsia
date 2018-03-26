@@ -145,6 +145,15 @@ class GATT : public fbl::RefCounted<GATT> {
                             std::vector<common::UUID> uuids,
                             ServiceListCallback callback) = 0;
 
+  // Connects the RemoteService with the given identifier found on the
+  // device with |peer_id|. Returns nullptr if the service is not found.
+  // |callback| will be run on the given task runner.
+  //
+  // TODO(armansito): Change this to ConnectToService().
+  virtual void FindService(std::string peer_id,
+                           IdType service_id,
+                           RemoteServiceCallback callback) = 0;
+
  protected:
   friend class fbl::RefPtr<GATT>;
   GATT() = default;

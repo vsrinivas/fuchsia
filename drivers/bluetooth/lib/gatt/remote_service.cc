@@ -4,6 +4,12 @@
 
 #include "remote_service.h"
 
+#include <lib/async/default.h>
+
+#include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
+
+using btlib::common::HostError;
+
 namespace btlib {
 namespace gatt {
 
@@ -11,33 +17,166 @@ RemoteService::RemoteService(const ServiceData& service_data,
                              fxl::WeakPtr<Client> client,
                              async_t* gatt_dispatcher)
     : service_data_(service_data),
-      client_(client),
       gatt_dispatcher_(gatt_dispatcher),
+      client_(client),
+      characteristics_ready_(false),
       shut_down_(false) {
   FXL_DCHECK(client_);
   FXL_DCHECK(gatt_dispatcher_);
 }
 
 void RemoteService::ShutDown() {
-  std::lock_guard<std::mutex> lock(mtx_);
+  std::vector<PendingClosure> rm_handlers;
 
-  FXL_DCHECK(!shut_down_)
-      << "gatt: RemoteService::ShutDown() called more than once!";
+  {
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (!alive()) {
+      return;
+    }
 
-  shut_down_ = true;
-  if (closed_callback_) {
-    closed_callback_();
+    shut_down_ = true;
+    rm_handlers = std::move(rm_handlers_);
+  }
+
+  for (auto& handler : rm_handlers) {
+    RunOrPost(std::move(handler.callback), handler.dispatcher);
   }
 }
 
-bool RemoteService::SetClosedCallback(fxl::Closure callback) {
+bool RemoteService::AddRemovedHandler(fxl::Closure handler,
+                                      async_t* dispatcher) {
   std::lock_guard<std::mutex> lock(mtx_);
 
-  if (shut_down_)
+  if (!alive())
     return false;
 
-  closed_callback_ = std::move(callback);
+  rm_handlers_.emplace_back(std::move(handler), dispatcher);
   return true;
+}
+
+void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
+                                            async_t* dispatcher) {
+  RunGattTask([this, cb = std::move(callback), dispatcher]() mutable {
+    if (shut_down_) {
+      ReportCharacteristics(att::Status(HostError::kFailed), std::move(cb),
+                            dispatcher);
+      return;
+    }
+
+    // Characteristics already discovered. Return success.
+    if (characteristics_ready_) {
+      ReportCharacteristics(att::Status(), std::move(cb), dispatcher);
+      return;
+    }
+
+    // Queue this request.
+    pending_discov_reqs_.emplace_back(std::move(cb), dispatcher);
+
+    // Nothing to do if a write request is already pending.
+    if (pending_discov_reqs_.size() > 1u)
+      return;
+
+    auto self = fbl::WrapRefPtr(this);
+    auto chrc_cb = [self](const CharacteristicData& chrc) {
+      if (!self->shut_down_) {
+        IdType id = self->characteristics_.size();
+        self->characteristics_.emplace_back(id, chrc);
+      }
+    };
+
+    auto res_cb = [self](att::Status status) mutable {
+      if (self->shut_down_) {
+        status = att::Status(HostError::kFailed);
+      }
+
+      if (!status) {
+        FXL_VLOG(1) << "gatt: characteristic discovery failed "
+                    << status.ToString();
+
+        self->characteristics_.clear();
+      }
+
+      self->characteristics_ready_ = status.is_success();
+
+      FXL_DCHECK(!self->pending_discov_reqs_.empty());
+      auto pending = std::move(self->pending_discov_reqs_);
+
+      // Skip descriptor discovery and end the procedure as no characteristics
+      // were found (or the operation failed).
+      for (auto& req : pending) {
+        self->ReportCharacteristics(status, std::move(req.callback),
+                                    req.dispatcher);
+      }
+    };
+
+    client_->DiscoverCharacteristics(service_data_.range_start,
+                                     service_data_.range_end,
+                                     std::move(chrc_cb), std::move(res_cb));
+  });
+}
+
+bool RemoteService::IsDiscovered() const {
+  FXL_DCHECK(IsOnGattThread());
+  return characteristics_ready_;
+}
+
+void RemoteService::RunOrPost(fbl::Function<void()> task, async_t* dispatcher) {
+  FXL_DCHECK(task);
+
+  if (!dispatcher) {
+    task();
+    return;
+  }
+
+  async::PostTask(dispatcher, std::move(task));
+}
+
+bool RemoteService::IsOnGattThread() const {
+  return async_get_default() == gatt_dispatcher_;
+}
+
+HostError RemoteService::GetCharacteristic(IdType id,
+                                           RemoteCharacteristic** out_char) {
+  FXL_DCHECK(IsOnGattThread());
+  FXL_DCHECK(out_char);
+
+  if (shut_down_)
+    return HostError::kFailed;
+
+  if (!characteristics_ready_)
+    return HostError::kNotReady;
+
+  if (id >= characteristics_.size())
+    return HostError::kNotFound;
+
+  *out_char = &characteristics_[id];
+  return HostError::kNoError;
+}
+
+void RemoteService::RunGattTask(fbl::Closure task) {
+  // Capture a reference to this object to guarantee its lifetime.
+  RunOrPost(
+      [objref = fbl::WrapRefPtr(this), task = std::move(task)] { task(); },
+      gatt_dispatcher_);
+}
+
+void RemoteService::ReportCharacteristics(att::Status status,
+                                          CharacteristicCallback callback,
+                                          async_t* dispatcher) {
+  FXL_DCHECK(IsOnGattThread());
+  RunOrPost(
+      [self = fbl::WrapRefPtr(this), status, cb = std::move(callback)] {
+        // We return a const reference to our |characteristics_| field to avoid
+        // copying its contents into this lambda.
+        //
+        // |characteristics_| is not annotated with __TA_GUARDED() since locking
+        // |mtx_| can cause a deadlock if |dispatcher| == nullptr. We
+        // guarantee the validity of this data by keeping the public
+        // interface of Characteristic small and by never modifying
+        // |characteristics_| following discovery.
+        cb(status, self->characteristics_);
+      },
+      dispatcher);
 }
 
 }  // namespace gatt

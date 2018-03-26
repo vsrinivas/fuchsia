@@ -47,13 +47,19 @@ void FakeLayer::SendNotification(IdType service_id,
 
 void FakeLayer::RegisterRemoteServiceWatcher(RemoteServiceWatcher callback,
                                              async_t* dispatcher) {
-  // Do nothing
+  // TODO: implement
 }
 
 void FakeLayer::ListServices(std::string peer_id,
                              std::vector<common::UUID> uuids,
                              ServiceListCallback callback) {
-  // Do nothing
+  // TODO: implement
+}
+
+void FakeLayer::FindService(std::string peer_id,
+                            IdType service_id,
+                            RemoteServiceCallback callback) {
+  // TODO: implement
 }
 
 }  // namespace testing

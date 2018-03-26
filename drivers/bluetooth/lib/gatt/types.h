@@ -8,13 +8,11 @@
 
 #include "garnet/drivers/bluetooth/lib/att/attribute.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
 namespace gatt {
-
-// An identifier uniquely identifies a service, characteristic, or descriptor.
-using IdType = uint64_t;
 
 // 0 is reserved as an invalid ID.
 constexpr IdType kInvalidId = 0u;

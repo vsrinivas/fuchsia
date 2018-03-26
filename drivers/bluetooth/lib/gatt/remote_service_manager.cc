@@ -59,9 +59,19 @@ RemoteServiceManager::RemoteServiceManager(std::unique_ptr<Client> client,
 RemoteServiceManager::~RemoteServiceManager() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   ClearServices();
+
+  // Resolve all pending requests with an error.
+  att::Status status(common::HostError::kFailed);
+
+  auto pending = std::move(pending_);
+  while (!pending.empty()) {
+    // This copies |services|.
+    pending.front().Complete(status, services_);
+    pending.pop();
+  }
 }
 
-void RemoteServiceManager::Initialize(StatusCallback cb) {
+void RemoteServiceManager::Initialize(att::StatusCallback cb) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   auto self = weak_ptr_factory_.GetWeakPtr();

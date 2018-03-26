@@ -17,23 +17,6 @@
 namespace btlib {
 namespace gatt {
 
-// Types representing GATT procedure results.
-struct ServiceData {
-  ServiceData() = default;
-  ServiceData(att::Handle start, att::Handle end, const common::UUID& type);
-
-  att::Handle range_start;
-  att::Handle range_end;
-  common::UUID type;
-};
-
-struct CharacteristicData {
-  Properties properties;
-  att::Handle handle;
-  att::Handle value_handle;
-  common::UUID type;
-};
-
 // Implements GATT client-role procedures. A client operates over a single ATT
 // data bearer. Client objects are solely used to map GATT procedures to ATT
 // protocol methods and do not maintain service state.
@@ -45,8 +28,6 @@ struct CharacteristicData {
 // bearer is bound to.
 class Client {
  public:
-  using StatusCallback = std::function<void(att::Status status)>;
-
   // Constructs a new Client bearer.
   static std::unique_ptr<Client> Create(fxl::RefPtr<att::Bearer> bearer);
 
@@ -82,7 +63,7 @@ class Client {
   // to clear any cached state in this case.
   using ServiceCallback = std::function<void(const ServiceData&)>;
   virtual void DiscoverPrimaryServices(ServiceCallback svc_callback,
-                                       StatusCallback status_callback) = 0;
+                                       att::StatusCallback status_callback) = 0;
 
   // Performs the "Discover All Characteristics of a Service" procedure defined
   // in v5.0, Vol 3, Part G, 4.6.1.
@@ -90,7 +71,7 @@ class Client {
   virtual void DiscoverCharacteristics(att::Handle range_start,
                                        att::Handle range_end,
                                        CharacteristicCallback chrc_callback,
-                                       StatusCallback status_callback) = 0;
+                                       att::StatusCallback status_callback) = 0;
 };
 
 }  // namespace gatt

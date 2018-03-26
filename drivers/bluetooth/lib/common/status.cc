@@ -13,6 +13,8 @@ std::string HostErrorToString(HostError error) {
       return "success";
     case HostError::kNotFound:
       return "not found";
+    case HostError::kNotReady:
+      return "not ready";
     case HostError::kTimedOut:
       return "timed out";
     case HostError::kInvalidParameters:

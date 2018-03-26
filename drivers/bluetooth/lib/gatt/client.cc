@@ -13,6 +13,7 @@ using btlib::common::HostError;
 
 namespace btlib {
 
+using att::StatusCallback;
 using common::BufferView;
 using common::HostError;
 
@@ -34,6 +35,15 @@ ServiceData::ServiceData(att::Handle start,
                          att::Handle end,
                          const common::UUID& type)
     : range_start(start), range_end(end), type(type) {}
+
+CharacteristicData::CharacteristicData(Properties props,
+                                       att::Handle handle,
+                                       att::Handle value_handle,
+                                       common::UUID type)
+    : properties(props),
+      handle(handle),
+      value_handle(value_handle),
+      type(type) {}
 
 class Impl final : public Client {
  public:

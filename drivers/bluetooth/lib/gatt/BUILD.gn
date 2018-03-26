@@ -13,6 +13,8 @@ static_library("gatt") {
     "gatt_defs.h",
     "local_service_manager.cc",
     "local_service_manager.h",
+    "remote_characteristic.cc",
+    "remote_characteristic.h",
     "remote_service.cc",
     "remote_service.h",
     "remote_service_manager.cc",

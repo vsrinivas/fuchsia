@@ -28,30 +28,55 @@ class FakeClient final : public Client {
     service_discovery_status_ = status;
   }
 
+  void set_characteristics(std::vector<CharacteristicData> chrcs) {
+    chrcs_ = std::move(chrcs);
+  }
+
+  void set_characteristic_discovery_status(att::Status status) {
+    chrc_discovery_status_ = status;
+  }
+
+  att::Handle last_chrc_discovery_start_handle() const {
+    return last_chrc_discovery_start_handle_;
+  }
+
+  att::Handle last_chrc_discovery_end_handle() const {
+    return last_chrc_discovery_end_handle_;
+  }
+
+  size_t chrc_discovery_count() const { return chrc_discovery_count_; }
+
  private:
   // Client overrides:
   fxl::WeakPtr<Client> AsWeakPtr() override;
   void ExchangeMTU(MTUCallback callback) override;
   void DiscoverPrimaryServices(ServiceCallback svc_callback,
-                               StatusCallback status_callback) override;
+                               att::StatusCallback status_callback) override;
   void DiscoverCharacteristics(att::Handle range_start,
                                att::Handle range_end,
                                CharacteristicCallback chrc_callback,
-                               StatusCallback status_callback) override;
+                               att::StatusCallback status_callback) override;
 
   // All callbacks will be posted on this dispatcher to emulate asynchronous
   // behavior.
   async_t* dispatcher_;
 
   // Value to return for MTU exchange.
-  uint16_t server_mtu_;
+  uint16_t server_mtu_ = att::kLEMinMTU;
 
-  // List of services to notify in DiscoverPrimaryServices.
+  // Data used for DiscoveryPrimaryServices().
   std::vector<ServiceData> services_;
 
   // Fake status values to return for GATT procedures.
   att::Status exchange_mtu_status_;
   att::Status service_discovery_status_;
+  att::Status chrc_discovery_status_;
+
+  // Data used for DiscoverCharacteristics().
+  std::vector<CharacteristicData> chrcs_;
+  att::Handle last_chrc_discovery_start_handle_ = 0;
+  att::Handle last_chrc_discovery_end_handle_ = 0;
+  size_t chrc_discovery_count_ = 0;
 
   fxl::WeakPtrFactory<FakeClient> weak_ptr_factory_;
 

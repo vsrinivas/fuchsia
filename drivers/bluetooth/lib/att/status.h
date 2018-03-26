@@ -21,5 +21,8 @@ namespace att {
 
 using Status = common::Status<ErrorCode>;
 
+// Copyable callback for reporting a Status.
+using StatusCallback = std::function<void(att::Status)>;
+
 }  // namespace att
 }  // namespace btlib
