@@ -96,6 +96,8 @@ package("tests") {
 
     {
       name = "media_service_tests"
+      # TODO(fidl2): This test was disabled during the FIDL2 migration.
+      disabled = true
     },
 
     {

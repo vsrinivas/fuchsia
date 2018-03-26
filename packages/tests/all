@@ -25,6 +25,7 @@
         "garnet/packages/tests/log_listener",
         "garnet/packages/tests/logger",
         "garnet/packages/tests/magma_non_hardware",
+        "garnet/packages/tests/media",
         "garnet/packages/tests/netstack",
         "garnet/packages/tests/network",
         "garnet/packages/tests/network_time",
