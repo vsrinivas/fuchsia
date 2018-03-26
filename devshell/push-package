@@ -60,7 +60,7 @@ function main {
       amber_ctl get_up -n \${c};
       manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
       if [ -e \$manifest_path ]; then
-        run push_package_indexer \${c} 0;
+        run module_package_indexer \${c} 0;
       fi
     done
   "
