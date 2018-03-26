@@ -14,6 +14,8 @@ TEST(StringPtr, Control) {
   StringPtr string;
   EXPECT_TRUE(string.is_null());
   EXPECT_FALSE(string);
+  string->append("abc");
+  EXPECT_FALSE(string.is_null());
 
   string.reset("hello, world");
   EXPECT_FALSE(string.is_null());

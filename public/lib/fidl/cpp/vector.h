@@ -102,7 +102,7 @@ class VectorPtr {
   // Whether this VectorPtr is null.
   //
   // The null state is separate from the empty state.
-  bool is_null() const { return is_null_; }
+  bool is_null() const { return is_null_ && vec_.empty(); }
 
   // Tests as true if non-null, false if null.
   explicit operator bool() const { return !is_null_; }
