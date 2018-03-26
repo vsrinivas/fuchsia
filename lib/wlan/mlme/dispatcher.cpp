@@ -40,7 +40,8 @@ Dispatcher::Dispatcher(DeviceInterface* device) : device_(device) {
 Dispatcher::~Dispatcher() {}
 
 template <>
-zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Packet* packet, wlan_mlme::Method method);
+zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Packet* packet,
+                                                                        wlan_mlme::Method method);
 
 zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     debugfn();
@@ -516,12 +517,12 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
 
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
-    // FIXME: serialize this
-    //zx_status_t status = SerializeServiceMsg(packet.get(), Method::DEVICE_QUERY_confirm, resp);
-    //if (status != ZX_OK) {
-    //    errorf("could not serialize DeviceQueryResponse: %d\n", status);
-    //    return status;
-    //}
+    zx_status_t status =
+        SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEVICE_QUERY_confirm, resp.get());
+    if (status != ZX_OK) {
+        errorf("could not serialize DeviceQueryResponse: %d\n", status);
+        return status;
+    }
 
     return device_->SendService(std::move(packet));
 }
