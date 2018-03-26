@@ -121,6 +121,19 @@ class VectorPtr {
   bool is_null_;
 };
 
+template <class T>
+inline bool operator==(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+  if (lhs.is_null() || rhs.is_null()) {
+    return lhs.is_null() == rhs.is_null();
+  }
+  return *lhs == *rhs;
+}
+
+template <class T>
+inline bool operator!=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+  return !(lhs == rhs);
+}
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_VECTOR_H_
