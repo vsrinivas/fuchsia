@@ -11,12 +11,12 @@
 #include <leveldb/db.h>
 #include <rapidjson/document.h>
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace convert {
 
-// Provides conversions between f1dl::VectorPtr, leveldb::Slice and std::string
+// Provides conversions between fidl::VectorPtr, leveldb::Slice and std::string
 // representations of a data object.
 //
 // This class doesn't take ownership of the data used to construct it. The data
@@ -31,7 +31,7 @@ class ExtendedStringView : public fxl::StringView {
   ExtendedStringView(const std::vector<uint8_t>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array.data()),
                         array.size()) {}
-  ExtendedStringView(const f1dl::VectorPtr<uint8_t>& array)  // NOLINT
+  ExtendedStringView(const fidl::VectorPtr<uint8_t>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array->data()),
                         array->size()) {}
   ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
@@ -61,7 +61,7 @@ class ExtendedStringView : public fxl::StringView {
     return leveldb::Slice(data(), size());
   }
 
-  f1dl::VectorPtr<uint8_t> ToArray();
+  fidl::VectorPtr<uint8_t> ToArray();
 
   flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
       flatbuffers::FlatBufferBuilder* builder);
@@ -79,8 +79,8 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) {
   return value;
 }
 
-// Returns the f1dl::VectorPtr representation of the given value.
-f1dl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
+// Returns the fidl::VectorPtr representation of the given value.
+fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
 
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);

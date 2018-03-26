@@ -13,8 +13,8 @@ namespace {
 const char kHexDigits[] = "0123456789ABCDEF";
 }
 
-f1dl::VectorPtr<uint8_t> ExtendedStringView::ToArray() {
-  f1dl::VectorPtr<uint8_t> result = f1dl::VectorPtr<uint8_t>::New(size());
+fidl::VectorPtr<uint8_t> ExtendedStringView::ToArray() {
+  fidl::VectorPtr<uint8_t> result = fidl::VectorPtr<uint8_t>::New(size());
   memcpy(result->data(), data(), size());
   return result;
 }
@@ -36,7 +36,7 @@ std::string ExtendedStringView::ToHex() {
   return result;
 }
 
-f1dl::VectorPtr<uint8_t> ToArray(ExtendedStringView value) {
+fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value) {
   return value.ToArray();
 }
 
