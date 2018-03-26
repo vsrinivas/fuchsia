@@ -23,6 +23,16 @@
 #include <lib/debuglog.h>
 #endif
 
+// The I/O port to write to for QEMU debug exit.
+const uint16_t kQEMUDebugExitPort = 0xf4;
+
+// The return code that we should propagate to QEMU on isa-debug-exit.
+// This number must be non-zero and odd, since QEMU calculates the return
+// code as (val << 1) | 1 where "val" is the value written to 0xf4.
+const uint8_t kQEMUExitCode = 0x1f;
+static_assert(kQEMUExitCode != 0 && kQEMUExitCode % 2 != 0,
+              "QEMU exit code must be non-zero and odd.");
+
 static void reboot(void) {
     // Try legacy reboot path first
     pc_keyboard_reboot();
@@ -89,7 +99,7 @@ void platform_halt(
     switch (suggested_action) {
     case HALT_ACTION_SHUTDOWN:
         if (strcmp("QEMU", manufacturer) == 0) {
-            outp(0xf4, 0x00);
+            outp(kQEMUDebugExitPort, (kQEMUExitCode >> 1));
         }
         printf("Power off failed, halting\n");
         break;
