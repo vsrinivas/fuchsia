@@ -41,18 +41,20 @@ pub fn device_service(devmgr: DevMgrRef, channel: async::Channel)
             c.send(&mut wlan_service::ListIfacesResponse { ifaces: vec![] })
         }),
 
-        create_iface: |state, req, c| catch_and_log_err("create_iface", || {
+        create_iface: |state, req, c| {
             debug!("create_iface req: {:?}", req);
-            // TODO(tkilbourn): have DeviceManager return a future here
-            let resp = state.lock().create_iface(req.phy_id, req.role);
-            match resp {
-                Ok(resp) => c.send(&mut wlan_service::CreateIfaceResponse { iface_id: resp }),
-                Err(e) => {
-                    error!("could not create iface: {:?}", e);
-                    Ok(())
-                }
-            }
-        }),
+            state.lock().create_iface(req.phy_id, req.role)
+                .then(move |res|
+                      match res {
+                          Ok(id) => catch_and_log_err(
+                              "create_iface",
+                              || c.send(&mut wlan_service::CreateIfaceResponse { iface_id: id })),
+                          Err(e) => {
+                              error!("could not create iface: {:?}", e);
+                              future::ok(())
+                          }
+                      })
+        },
 
         destroy_iface: |state, req, _| catch_and_log_err("destroy_iface", || {
             debug!("destroy_iface req: {:?}", req);
