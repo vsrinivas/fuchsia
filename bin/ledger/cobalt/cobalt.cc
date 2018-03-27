@@ -24,8 +24,8 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 }
 
 void ReportEvent(CobaltEvent event) {
-  cobalt::ValuePtr value = cobalt::Value::New();
-  value->set_index_value(static_cast<uint32_t>(event));
+  cobalt::Value value;
+  value.set_index_value(static_cast<uint32_t>(event));
   cobalt::CobaltObservation observation(kCobaltMetricId, kCobaltEncodingId,
                                         std::move(value));
   cobalt::ReportObservation(observation, g_cobalt_context);
