@@ -7,7 +7,7 @@
 #include <list>
 
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 

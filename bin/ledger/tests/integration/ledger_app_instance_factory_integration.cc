@@ -32,9 +32,9 @@ class LedgerAppInstanceImpl final
  public:
   LedgerAppInstanceImpl(
       fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-      f1dl::InterfaceRequest<ledger::LedgerRepositoryFactory>
+      fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
           repository_factory_request,
-      f1dl::InterfacePtr<ledger::LedgerRepositoryFactory>
+      fidl::InterfacePtr<ledger::LedgerRepositoryFactory>
           repository_factory_ptr,
       ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                               ledger::FakeCloudProvider>*
@@ -46,7 +46,7 @@ class LedgerAppInstanceImpl final
    public:
     LedgerRepositoryFactoryContainer(
         fxl::RefPtr<fxl::TaskRunner> task_runner,
-        f1dl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
+        fidl::InterfaceRequest<ledger::LedgerRepositoryFactory> request)
         : environment_(task_runner),
           factory_impl_(&environment_),
           factory_binding_(&factory_impl_, std::move(request)) {}
@@ -55,7 +55,7 @@ class LedgerAppInstanceImpl final
    private:
     ledger::Environment environment_;
     ledger::LedgerRepositoryFactoryImpl factory_impl_;
-    f1dl::Binding<ledger::LedgerRepositoryFactory> factory_binding_;
+    fidl::Binding<ledger::LedgerRepositoryFactory> factory_binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
   };
@@ -73,9 +73,9 @@ class LedgerAppInstanceImpl final
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fxl::RefPtr<fxl::TaskRunner> services_task_runner,
-    f1dl::InterfaceRequest<ledger::LedgerRepositoryFactory>
+    fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
         repository_factory_request,
-    f1dl::InterfacePtr<ledger::LedgerRepositoryFactory> repository_factory_ptr,
+    fidl::InterfacePtr<ledger::LedgerRepositoryFactory> repository_factory_ptr,
     ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                             ledger::FakeCloudProvider>*
         cloud_provider)
@@ -151,7 +151,7 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger::LedgerRepositoryFactoryPtr repository_factory_ptr;
-  f1dl::InterfaceRequest<ledger::LedgerRepositoryFactory>
+  fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
       repository_factory_request = repository_factory_ptr.NewRequest();
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(

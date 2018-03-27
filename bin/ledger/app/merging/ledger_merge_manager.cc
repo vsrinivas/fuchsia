@@ -21,7 +21,7 @@ LedgerMergeManager::LedgerMergeManager(Environment* environment)
 LedgerMergeManager::~LedgerMergeManager() {}
 
 void LedgerMergeManager::SetFactory(
-    f1dl::InterfaceHandle<ConflictResolverFactory> factory) {
+    fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   conflict_resolver_factory_ = factory.Bind();
   for (const auto& item : resolvers_) {
     item.second->SetMergeStrategy(nullptr);

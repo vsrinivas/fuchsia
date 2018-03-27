@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
@@ -65,7 +65,7 @@ PageManager::~PageManager() {
   page_requests_.clear();
 }
 
-void PageManager::BindPage(f1dl::InterfaceRequest<Page> page_request,
+void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
                            std::function<void(Status)> on_done) {
   if (sync_backlog_downloaded_) {
     pages_
@@ -77,7 +77,7 @@ void PageManager::BindPage(f1dl::InterfaceRequest<Page> page_request,
   page_requests_.emplace_back(std::move(page_request), std::move(on_done));
 }
 
-void PageManager::BindPageDebug(f1dl::InterfaceRequest<PageDebug> page_debug,
+void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
                                 std::function<void(Status)> callback) {
   page_debug_bindings_.AddBinding(this, std::move(page_debug));
   callback(Status::OK);
@@ -85,7 +85,7 @@ void PageManager::BindPageDebug(f1dl::InterfaceRequest<PageDebug> page_debug,
 
 void PageManager::BindPageSnapshot(
     std::unique_ptr<const storage::Commit> commit,
-    f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     std::string key_prefix) {
   snapshots_.emplace(std::move(snapshot_request), page_storage_.get(),
                      std::move(commit), std::move(key_prefix));
@@ -142,8 +142,8 @@ void PageManager::OnSyncBacklogDownloaded() {
 void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
   page_storage_->GetHeadCommitIds(
       [callback](storage::Status status, std::vector<storage::CommitId> heads) {
-        f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> result =
-            f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
+        fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
+            fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
         for (const auto& head : heads)
           result.push_back(convert::ToArray(head));
 
@@ -153,8 +153,8 @@ void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
 }
 
 void PageManager::GetSnapshot(
-    f1dl::VectorPtr<uint8_t> commit_id,
-    f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+    fidl::VectorPtr<uint8_t> commit_id,
+    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     const GetSnapshotCallback& callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
@@ -171,7 +171,7 @@ void PageManager::GetSnapshot(
           }));
 }
 
-void PageManager::GetCommit(f1dl::VectorPtr<uint8_t> commit_id,
+void PageManager::GetCommit(fidl::VectorPtr<uint8_t> commit_id,
                             const GetCommitCallback& callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
@@ -184,7 +184,7 @@ void PageManager::GetCommit(f1dl::VectorPtr<uint8_t> commit_id,
               commit_struct = ledger::Commit::New();
               commit_struct->commit_id = convert::ToArray(commit->GetId());
               commit_struct->parents_ids =
-                  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
+                  fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
               for (storage::CommitIdView parent : commit->GetParentIds()) {
                 commit_struct->parents_ids.push_back(convert::ToArray(parent));
               }

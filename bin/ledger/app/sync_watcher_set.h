@@ -7,7 +7,7 @@
 
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 
 namespace ledger {
@@ -18,7 +18,7 @@ class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
   ~SyncWatcherSet() override;
 
   // Adds a new SyncWatcher.
-  void AddSyncWatcher(f1dl::InterfaceHandle<SyncWatcher> watcher);
+  void AddSyncWatcher(fidl::InterfaceHandle<SyncWatcher> watcher);
 
   // Notify the client watchers of a new state.
   void Notify(SyncStateContainer sync_state) override;

@@ -84,7 +84,7 @@ void PageDownload::StartDownload() {
                       << last_commit_ts;
         }
 
-        f1dl::VectorPtr<uint8_t> position_token;
+        fidl::VectorPtr<uint8_t> position_token;
         if (!last_commit_ts.empty()) {
           position_token = convert::ToArray(last_commit_ts);
         }
@@ -93,8 +93,8 @@ void PageDownload::StartDownload() {
             ->GetCommits(
                 std::move(position_token),
                 [this](cloud_provider::Status cloud_status,
-                       f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                       f1dl::VectorPtr<uint8_t> position_token) {
+                       fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                       fidl::VectorPtr<uint8_t> position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.
                     FXL_LOG(WARNING)
@@ -172,7 +172,7 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
           return;
         }
 
-        f1dl::VectorPtr<uint8_t> position_token;
+        fidl::VectorPtr<uint8_t> position_token;
         if (!last_commit_ts.empty()) {
           position_token = convert::ToArray(last_commit_ts);
         }
@@ -196,8 +196,8 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
       }));
 }
 
-void PageDownload::OnNewCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                                f1dl::VectorPtr<uint8_t> position_token,
+void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                                fidl::VectorPtr<uint8_t> position_token,
                                 const OnNewCommitsCallback& callback) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
@@ -213,7 +213,7 @@ void PageDownload::OnNewCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commi
   DownloadBatch(std::move(commits), std::move(position_token), callback);
 }
 
-void PageDownload::OnNewObject(f1dl::VectorPtr<uint8_t> /*id*/,
+void PageDownload::OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
                                fsl::SizedVmoTransportPtr /*data*/,
                                const OnNewObjectCallback& /*callback*/) {
   // No known cloud provider implementations use this method.
@@ -249,8 +249,8 @@ void PageDownload::OnError(cloud_provider::Status status) {
   HandleDownloadCommitError("Received unexpected error from PageCloudWatcher.");
 }
 
-void PageDownload::DownloadBatch(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                                 f1dl::VectorPtr<uint8_t> position_token,
+void PageDownload::DownloadBatch(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                                 fidl::VectorPtr<uint8_t> position_token,
                                  fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
@@ -271,7 +271,7 @@ void PageDownload::DownloadBatch(f1dl::VectorPtr<cloud_provider::CommitPtr> comm
           return;
         }
         auto commits = std::move(commits_to_download_);
-        commits_to_download_ = f1dl::VectorPtr<cloud_provider::CommitPtr>::New(0);
+        commits_to_download_ = fidl::VectorPtr<cloud_provider::CommitPtr>::New(0);
         DownloadBatch(std::move(commits), std::move(position_token_), nullptr);
       },
       [this] {

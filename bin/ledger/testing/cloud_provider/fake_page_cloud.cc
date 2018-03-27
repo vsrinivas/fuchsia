@@ -16,13 +16,13 @@ namespace {
 // configured to inject network errors.
 constexpr size_t kInitialRemainingErrorsToInject = 2;
 
-f1dl::VectorPtr<uint8_t> PositionToToken(size_t position) {
+fidl::VectorPtr<uint8_t> PositionToToken(size_t position) {
   std::string bytes(
       std::string(reinterpret_cast<char*>(&position), sizeof(position)));
   return convert::ToArray(bytes);
 }
 
-bool TokenToPosition(const f1dl::VectorPtr<uint8_t>& token, size_t* result) {
+bool TokenToPosition(const fidl::VectorPtr<uint8_t>& token, size_t* result) {
   if (token.is_null()) {
     *result = 0u;
     return true;
@@ -43,7 +43,7 @@ class FakePageCloud::WatcherContainer {
   WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,
                    size_t next_commit_index);
 
-  void SendCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+  void SendCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
                    size_t next_commit_index,
                    fxl::Closure on_ack);
 
@@ -73,7 +73,7 @@ FakePageCloud::WatcherContainer::WatcherContainer(
     : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
 
 void FakePageCloud::WatcherContainer::SendCommits(
-    f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+    fidl::VectorPtr<cloud_provider::CommitPtr> commits,
     size_t next_commit_index,
     fxl::Closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
@@ -102,7 +102,7 @@ FakePageCloud::FakePageCloud(InjectNetworkError inject_network_error)
 FakePageCloud::~FakePageCloud() {}
 
 void FakePageCloud::Bind(
-    f1dl::InterfaceRequest<cloud_provider::PageCloud> request) {
+    fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -113,7 +113,7 @@ void FakePageCloud::SendPendingCommits() {
       continue;
     }
 
-    f1dl::VectorPtr<cloud_provider::CommitPtr> commits;
+    fidl::VectorPtr<cloud_provider::CommitPtr> commits;
     for (size_t i = container.NextCommitIndex(); i < commits_->size(); i++) {
       commits.push_back(commits_->at(i).Clone());
     }
@@ -137,7 +137,7 @@ bool FakePageCloud::MustReturnError() {
   }
 }
 
-void FakePageCloud::AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+void FakePageCloud::AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
                                const AddCommitsCallback& callback) {
   if (MustReturnError()) {
     callback(cloud_provider::Status::NETWORK_ERROR);
@@ -150,13 +150,13 @@ void FakePageCloud::AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commit
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
+void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                                const GetCommitsCallback& callback) {
   if (MustReturnError()) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
-  f1dl::VectorPtr<cloud_provider::CommitPtr> result;
+  fidl::VectorPtr<cloud_provider::CommitPtr> result;
   size_t start = 0u;
   if (!TokenToPosition(min_position_token, &start)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
@@ -166,7 +166,7 @@ void FakePageCloud::GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
   for (size_t i = start; i < commits_->size(); i++) {
     result.push_back(commits_->at(i).Clone());
   }
-  f1dl::VectorPtr<uint8_t> token;
+  fidl::VectorPtr<uint8_t> token;
   if (!result->empty()) {
     // This will cause the last commit to be delivered again when the token is
     // used for the next GetCommits() call. This is allowed by the FIDL contract
@@ -176,7 +176,7 @@ void FakePageCloud::GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
   callback(cloud_provider::Status::OK, std::move(result), std::move(token));
 }
 
-void FakePageCloud::AddObject(f1dl::VectorPtr<uint8_t> id,
+void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
                               fsl::SizedVmoTransportPtr data,
                               const AddObjectCallback& callback) {
   if (MustReturnError()) {
@@ -193,7 +193,7 @@ void FakePageCloud::AddObject(f1dl::VectorPtr<uint8_t> id,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetObject(f1dl::VectorPtr<uint8_t> id,
+void FakePageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
                               const GetObjectCallback& callback) {
   if (MustReturnError()) {
     callback(cloud_provider::Status::NETWORK_ERROR, 0u, zx::socket());
@@ -210,8 +210,8 @@ void FakePageCloud::GetObject(f1dl::VectorPtr<uint8_t> id,
 }
 
 void FakePageCloud::SetWatcher(
-    f1dl::VectorPtr<uint8_t> min_position_token,
-    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+    fidl::VectorPtr<uint8_t> min_position_token,
+    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     const SetWatcherCallback& callback) {
   // TODO(qsr): Inject errors here when LE-438 is fixed.
   auto watcher_ptr = watcher.Bind();

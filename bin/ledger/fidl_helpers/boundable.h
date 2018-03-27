@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUNDABLE_H_
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUNDABLE_H_
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {
@@ -17,7 +17,7 @@ class Boundable {
   virtual ~Boundable() = default;
 
   // Binds a single interface request to the object.
-  virtual void Bind(f1dl::InterfaceRequest<Interface> request) = 0;
+  virtual void Bind(fidl::InterfaceRequest<Interface> request) = 0;
 };
 
 // SetBoundable represents an object that can be bound to multiple times.
@@ -25,7 +25,7 @@ template <class Interface>
 class SetBoundable {
  public:
   // Adds a binding to the object.
-  virtual void AddBinding(f1dl::InterfaceRequest<Interface> request) = 0;
+  virtual void AddBinding(fidl::InterfaceRequest<Interface> request) = 0;
 };
 }  // namespace fidl_helpers
 }  // namespace ledger

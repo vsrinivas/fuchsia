@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_
 
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"

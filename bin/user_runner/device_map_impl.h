@@ -8,11 +8,11 @@
 #include <map>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "lib/user/fidl/device_map.fidl.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"

@@ -31,13 +31,13 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {}
 
 void LedgerRepositoryImpl::BindRepository(
-    f1dl::InterfaceRequest<LedgerRepository> repository_request) {
+    fidl::InterfaceRequest<LedgerRepository> repository_request) {
   bindings_.AddBinding(this, std::move(repository_request));
 }
 
-std::vector<f1dl::InterfaceRequest<LedgerRepository>>
+std::vector<fidl::InterfaceRequest<LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
-  std::vector<f1dl::InterfaceRequest<LedgerRepository>> handles;
+  std::vector<fidl::InterfaceRequest<LedgerRepository>> handles;
   for (auto& binding : bindings_.bindings()) {
     handles.push_back(binding->Unbind());
   }
@@ -46,8 +46,8 @@ LedgerRepositoryImpl::Unbind() {
 }
 
 void LedgerRepositoryImpl::GetLedger(
-    f1dl::VectorPtr<uint8_t> ledger_name,
-    f1dl::InterfaceRequest<Ledger> ledger_request,
+    fidl::VectorPtr<uint8_t> ledger_name,
+    fidl::InterfaceRequest<Ledger> ledger_request,
     const GetLedgerCallback& callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
@@ -85,14 +85,14 @@ void LedgerRepositoryImpl::GetLedger(
 }
 
 void LedgerRepositoryImpl::Duplicate(
-    f1dl::InterfaceRequest<LedgerRepository> request,
+    fidl::InterfaceRequest<LedgerRepository> request,
     const DuplicateCallback& callback) {
   BindRepository(std::move(request));
   callback(Status::OK);
 }
 
 void LedgerRepositoryImpl::SetSyncStateWatcher(
-    f1dl::InterfaceHandle<SyncWatcher> watcher,
+    fidl::InterfaceHandle<SyncWatcher> watcher,
     const SetSyncStateWatcherCallback& callback) {
   watchers_->AddSyncWatcher(std::move(watcher));
   callback(Status::OK);
@@ -107,7 +107,7 @@ void LedgerRepositoryImpl::CheckEmpty() {
 }
 
 void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
-    f1dl::InterfaceRequest<LedgerRepositoryDebug> request,
+    fidl::InterfaceRequest<LedgerRepositoryDebug> request,
     const GetLedgerRepositoryDebugCallback& callback) {
   ledger_repository_debug_bindings_.AddBinding(this, std::move(request));
   callback(Status::OK);
@@ -115,8 +115,8 @@ void LedgerRepositoryImpl::GetLedgerRepositoryDebug(
 
 void LedgerRepositoryImpl::GetInstancesList(
     const GetInstancesListCallback& callback) {
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> result =
-      f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
+      fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
   for (const auto& key_value : ledger_managers_) {
     result.push_back(convert::ToArray(key_value.first));
   }
@@ -124,8 +124,8 @@ void LedgerRepositoryImpl::GetInstancesList(
 }
 
 void LedgerRepositoryImpl::GetLedgerDebug(
-    f1dl::VectorPtr<uint8_t> ledger_name,
-    f1dl::InterfaceRequest<LedgerDebug> request,
+    fidl::VectorPtr<uint8_t> ledger_name,
+    fidl::InterfaceRequest<LedgerDebug> request,
     const GetLedgerDebugCallback& callback) {
   auto it = ledger_managers_.find(ledger_name);
   if (it == ledger_managers_.end()) {

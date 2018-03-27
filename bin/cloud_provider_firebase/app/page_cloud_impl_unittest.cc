@@ -6,8 +6,8 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"

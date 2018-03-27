@@ -12,7 +12,7 @@
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/user/fidl/focus.fidl.h"

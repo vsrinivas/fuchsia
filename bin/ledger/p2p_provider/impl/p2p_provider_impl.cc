@@ -78,7 +78,7 @@ bool P2PProviderImpl::SendMessage(fxl::StringView destination,
 }
 
 void P2PProviderImpl::StartService() {
-  f1dl::InterfaceHandle<component::ServiceProvider> handle;
+  fidl::InterfaceHandle<component::ServiceProvider> handle;
   // When the service provider is reset and its connection cut, NetConnector
   // stops responding for its services.
   network_service_provider_.AddBinding(handle.NewRequest());
@@ -176,7 +176,7 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
 
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
   net_connector_->GetKnownDeviceNames(
-      version, [this](uint64_t new_version, f1dl::VectorPtr<f1dl::StringPtr> devices) {
+      version, [this](uint64_t new_version, fidl::VectorPtr<fidl::StringPtr> devices) {
         std::vector<std::string> seen_devices;
         for (auto& remote_name : *devices) {
           seen_devices.push_back(remote_name);

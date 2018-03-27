@@ -8,7 +8,7 @@
 #include <list>
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/proposal.fidl.h"

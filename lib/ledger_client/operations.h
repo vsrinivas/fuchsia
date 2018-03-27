@@ -11,9 +11,9 @@
 
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/fidl/cpp/struct_ptr.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"

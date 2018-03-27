@@ -10,12 +10,12 @@
 
 #include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {
@@ -39,9 +39,9 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 // created.
 ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
-                                        f1dl::VectorPtr<uint8_t> requested_id,
+                                        fidl::VectorPtr<uint8_t> requested_id,
                                         ledger::PagePtr* page,
-                                        f1dl::VectorPtr<uint8_t>* page_id);
+                                        fidl::VectorPtr<uint8_t>* page_id);
 
 }  // namespace test
 

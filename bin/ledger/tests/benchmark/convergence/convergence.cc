@@ -58,7 +58,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
   for (auto& device_context : devices_) {
     device_context.storage_directory = files::ScopedTempDir(kStoragePath);
     device_context.page_watcher =
-        std::make_unique<f1dl::Binding<ledger::PageWatcher>>(this);
+        std::make_unique<fidl::Binding<ledger::PageWatcher>>(this);
   }
   page_id_ = generator_.MakePageId();
   cloud_provider_firebase_factory_.Init();
@@ -108,7 +108,7 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   for (int device_id = 0; device_id < device_count_; device_id++) {
-    f1dl::VectorPtr<uint8_t> key =
+    fidl::VectorPtr<uint8_t> key =
         generator_.MakeKey(device_count_ * step + device_id, kKeySize);
     // Insert each key N times, as we will receive N notifications - one for
     // each connection, sender included.
@@ -116,7 +116,7 @@ void ConvergenceBenchmark::Start(int step) {
          receiving_device++) {
       remaining_keys_.insert(convert::ToString(key));
     }
-    f1dl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
+    fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
     devices_[device_id].page_connection->Put(
         std::move(key), std::move(value),
         benchmark::QuitOnErrorCallback("Put"));

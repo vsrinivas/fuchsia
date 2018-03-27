@@ -8,7 +8,7 @@
 #include <functional>
 
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
@@ -57,7 +57,7 @@ void ComputeThreeWayDiff(
     std::string min_key,
     DiffType diff_type,
     std::function<void(Status,
-                       std::pair<f1dl::VectorPtr<DiffEntryPtr>, std::string>)>
+                       std::pair<fidl::VectorPtr<DiffEntryPtr>, std::string>)>
         callback);
 
 }  // namespace diff_utils

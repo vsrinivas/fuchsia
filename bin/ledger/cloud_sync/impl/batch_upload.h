@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"

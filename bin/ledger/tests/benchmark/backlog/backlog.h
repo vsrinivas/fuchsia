@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
@@ -64,10 +64,10 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   void WaitForReaderDownload();
 
   void GetReaderSnapshot();
-  void GetEntriesStep(f1dl::VectorPtr<uint8_t> token, size_t entries_left);
+  void GetEntriesStep(fidl::VectorPtr<uint8_t> token, size_t entries_left);
   void CheckStatusAndGetMore(ledger::Status status,
                              size_t entries_read,
-                             f1dl::VectorPtr<uint8_t> next_token);
+                             fidl::VectorPtr<uint8_t> next_token);
 
   void ShutDown();
 
@@ -75,7 +75,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-  f1dl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
+  fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
   const size_t unique_key_count_;
   const size_t value_size_;
   const size_t commit_count_;
@@ -87,7 +87,7 @@ class BacklogBenchmark : public ledger::SyncWatcher {
   component::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
-  f1dl::VectorPtr<uint8_t> page_id_;
+  fidl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
   ledger::PageSnapshotPtr reader_snapshot_;

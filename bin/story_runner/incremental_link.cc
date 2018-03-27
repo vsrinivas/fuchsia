@@ -5,7 +5,7 @@
 // This file contains functions and Operation classes from LinkImpl that exist
 // solely to implement the history of change operations for Links.
 
-#include "lib/fidl/cpp/bindings/struct_ptr.h"
+#include "lib/fidl/cpp/struct_ptr.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"

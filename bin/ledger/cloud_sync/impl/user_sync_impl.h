@@ -12,8 +12,8 @@
 
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -72,7 +72,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // been checked.
   bool upload_enabled_ = false;
   cloud_provider::DeviceSetPtr device_set_;
-  f1dl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
+  fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   // Fingerprint of the device in the cloud device list.
   std::string fingerprint_;
   std::set<LedgerSyncImpl*> active_ledger_syncs_;

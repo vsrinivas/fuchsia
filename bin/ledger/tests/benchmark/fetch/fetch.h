@@ -10,7 +10,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
@@ -56,7 +56,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   test::benchmark::PageDataGenerator page_data_generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;
-  f1dl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
+  fidl::Binding<ledger::SyncWatcher> sync_watcher_binding_;
   const size_t entry_count_;
   const size_t value_size_;
   const size_t part_size_;
@@ -67,10 +67,10 @@ class FetchBenchmark : public ledger::SyncWatcher {
   component::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
-  f1dl::VectorPtr<uint8_t> page_id_;
+  fidl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
-  std::vector<f1dl::VectorPtr<uint8_t>> keys_;
+  std::vector<fidl::VectorPtr<uint8_t>> keys_;
   std::function<void(ledger::SyncState, ledger::SyncState)>
       on_sync_state_changed_;
   ledger::SyncState previous_state_;

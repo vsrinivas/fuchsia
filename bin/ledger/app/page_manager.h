@@ -56,17 +56,17 @@ class PageManager : public PageDebug {
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
   // request.
-  void BindPage(f1dl::InterfaceRequest<Page> page_request,
+  void BindPage(fidl::InterfaceRequest<Page> page_request,
                 std::function<void(Status)> on_done);
 
   // Binds |page_debug| request and fires |callback| with Status::OK.
-  void BindPageDebug(f1dl::InterfaceRequest<PageDebug> page_debug,
+  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
                      std::function<void(Status)> callback);
 
   // Creates a new PageSnapshotImpl managed by this PageManager, and binds it to
   // the request.
   void BindPageSnapshot(std::unique_ptr<const storage::Commit> commit,
-                        f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+                        fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                         std::string key_prefix);
 
   // Create a new reference for the given object identifier.
@@ -86,11 +86,11 @@ class PageManager : public PageDebug {
 
   void GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) override;
 
-  void GetSnapshot(f1dl::VectorPtr<uint8_t> commit_id,
-                   f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
+  void GetSnapshot(fidl::VectorPtr<uint8_t> commit_id,
+                   fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    const GetSnapshotCallback& callback) override;
 
-  void GetCommit(f1dl::VectorPtr<uint8_t> commit_id,
+  void GetCommit(fidl::VectorPtr<uint8_t> commit_id,
                  const GetCommitCallback& callback) override;
 
   Environment* const environment_;
@@ -106,12 +106,12 @@ class PageManager : public PageDebug {
 
   bool sync_backlog_downloaded_ = false;
   std::vector<
-      std::pair<f1dl::InterfaceRequest<Page>, std::function<void(Status)>>>
+      std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       page_requests_;
 
   SyncWatcherSet watchers_;
 
-  f1dl::BindingSet<PageDebug> page_debug_bindings_;
+  fidl::BindingSet<PageDebug> page_debug_bindings_;
 
   // Registered references.
   std::map<uint64_t, storage::ObjectIdentifier> references_;

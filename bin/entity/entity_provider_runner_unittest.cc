@@ -14,9 +14,6 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"

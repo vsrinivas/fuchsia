@@ -17,7 +17,7 @@
 #include "lib/async/cpp/operation.h"
 #include <fuchsia/cpp/modular_auth.h>
 #include "lib/component/fidl/component_context.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/one_shot_timer.h"

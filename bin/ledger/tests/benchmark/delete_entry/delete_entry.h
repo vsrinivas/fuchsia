@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 
@@ -49,7 +49,7 @@ class DeleteEntryBenchmark {
   const size_t value_size_;
   component::ApplicationControllerPtr application_controller_;
   ledger::PagePtr page_;
-  std::vector<f1dl::VectorPtr<uint8_t>> keys_;
+  std::vector<fidl::VectorPtr<uint8_t>> keys_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };

@@ -283,7 +283,7 @@ void BatchUpload::UploadCommits() {
           on_error_(ErrorType::PERMANENT);
           return;
         }
-        f1dl::VectorPtr<cloud_provider::CommitPtr> commit_array;
+        fidl::VectorPtr<cloud_provider::CommitPtr> commit_array;
         for (auto& commit : commits) {
           commit_array.push_back(std::move(commit));
         }

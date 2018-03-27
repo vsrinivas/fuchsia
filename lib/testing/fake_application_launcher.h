@@ -9,7 +9,7 @@
 #include <string>
 
 #include <fuchsia/cpp/component.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 

@@ -90,9 +90,9 @@ void ComputePageChange(
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
-  context->page_change->changed_entries = f1dl::VectorPtr<EntryPtr>::New(0);
+  context->page_change->changed_entries = fidl::VectorPtr<EntryPtr>::New(0);
   context->page_change->deleted_keys =
-      f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
+      fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
 
   if (min_key < prefix_key) {
     min_key = prefix_key;
@@ -201,11 +201,11 @@ void ComputeThreeWayDiff(
     std::string min_key,
     DiffType diff_type,
     std::function<void(Status,
-                       std::pair<f1dl::VectorPtr<DiffEntryPtr>, std::string>)>
+                       std::pair<fidl::VectorPtr<DiffEntryPtr>, std::string>)>
         callback) {
   struct Context {
     // The array to be returned through the callback.
-    f1dl::VectorPtr<DiffEntryPtr> changes;
+    fidl::VectorPtr<DiffEntryPtr> changes;
     // The serialization size of all entries.
     size_t fidl_size = fidl_serialization::kArrayHeaderSize;
     // The number of handles.

@@ -5,7 +5,7 @@
 #ifndef LIB_SUGGESTION_CPP_FORMATTING_H_
 #define LIB_SUGGESTION_CPP_FORMATTING_H_
 
-#include "lib/fidl/cpp/bindings/formatting.h"
+#include "lib/fidl/cpp/formatting.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
 namespace maxwell {

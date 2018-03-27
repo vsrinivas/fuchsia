@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"

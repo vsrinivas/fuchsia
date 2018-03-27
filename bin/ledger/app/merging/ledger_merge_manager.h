@@ -9,7 +9,7 @@
 #include <memory>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -24,7 +24,7 @@ class LedgerMergeManager {
   explicit LedgerMergeManager(Environment* environment);
   ~LedgerMergeManager();
 
-  void SetFactory(f1dl::InterfaceHandle<ConflictResolverFactory> factory);
+  void SetFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
 
   std::unique_ptr<MergeResolver> GetMergeResolver(
       storage::PageStorage* storage);

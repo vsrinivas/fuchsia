@@ -77,9 +77,9 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 
 ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
                                         ledger::LedgerPtr* ledger,
-                                        f1dl::VectorPtr<uint8_t> requested_id,
+                                        fidl::VectorPtr<uint8_t> requested_id,
                                         ledger::PagePtr* page,
-                                        f1dl::VectorPtr<uint8_t>* page_id) {
+                                        fidl::VectorPtr<uint8_t>* page_id) {
   ledger::Status status;
   (*ledger)->GetPage(std::move(requested_id), page->NewRequest(),
                      callback::Capture([] {}, &status));

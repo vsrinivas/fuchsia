@@ -25,7 +25,7 @@ namespace {
 constexpr fxl::StringView kContentPath = "/content";
 constexpr fxl::StringView kStagingPath = "/staging";
 
-bool GetRepositoryName(const f1dl::StringPtr& repository_path, std::string* name) {
+bool GetRepositoryName(const fidl::StringPtr& repository_path, std::string* name) {
   std::string name_path = repository_path.get() + "/name";
 
   if (files::ReadFileToString(name_path, name)) {
@@ -70,7 +70,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
-  void BindRepository(f1dl::InterfaceRequest<LedgerRepository> request,
+  void BindRepository(fidl::InterfaceRequest<LedgerRepository> request,
                       std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
@@ -127,18 +127,18 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
-  std::vector<std::pair<f1dl::InterfaceRequest<LedgerRepository>,
+  std::vector<std::pair<fidl::InterfaceRequest<LedgerRepository>,
                         std::function<void(Status)>>>
       requests_;
   fxl::Closure on_empty_callback_;
-  std::vector<f1dl::InterfaceRequest<LedgerRepository>> detached_handles_;
+  std::vector<fidl::InterfaceRequest<LedgerRepository>> detached_handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(const f1dl::StringPtr& repository_path)
+  explicit RepositoryInformation(const fidl::StringPtr& repository_path)
       : base_path(files::SimplifyPath(repository_path.get())),
         content_path(fxl::Concatenate({base_path, kContentPath})),
         staging_path(fxl::Concatenate({base_path, kStagingPath})) {}
@@ -161,9 +161,9 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
-    const f1dl::StringPtr& repository_path,
-    f1dl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    f1dl::InterfaceRequest<LedgerRepository> repository_request,
+    const fidl::StringPtr& repository_path,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fidl::InterfaceRequest<LedgerRepository> repository_request,
     const GetRepositoryCallback& callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
   RepositoryInformation repository_information(repository_path);

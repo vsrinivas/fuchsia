@@ -8,10 +8,10 @@
 #include <vector>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_ptr.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_data.fidl.h"

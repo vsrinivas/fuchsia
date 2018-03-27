@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/story/fidl/link.fidl.h"

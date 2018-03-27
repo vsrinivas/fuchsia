@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
@@ -24,20 +24,20 @@ class PageSnapshotImpl : public PageSnapshot {
 
  private:
   // PageSnapshot:
-  void GetEntries(f1dl::VectorPtr<uint8_t> key_start,
-                  f1dl::VectorPtr<uint8_t> token,
+  void GetEntries(fidl::VectorPtr<uint8_t> key_start,
+                  fidl::VectorPtr<uint8_t> token,
                   const GetEntriesCallback& callback) override;
-  void GetEntriesInline(f1dl::VectorPtr<uint8_t> key_start,
-                        f1dl::VectorPtr<uint8_t> token,
+  void GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
+                        fidl::VectorPtr<uint8_t> token,
                         const GetEntriesInlineCallback& callback) override;
-  void GetKeys(f1dl::VectorPtr<uint8_t> key_start,
-               f1dl::VectorPtr<uint8_t> token,
+  void GetKeys(fidl::VectorPtr<uint8_t> key_start,
+               fidl::VectorPtr<uint8_t> token,
                const GetKeysCallback& callback) override;
-  void Get(f1dl::VectorPtr<uint8_t> key, const GetCallback& callback) override;
-  void GetInline(f1dl::VectorPtr<uint8_t> key,
+  void Get(fidl::VectorPtr<uint8_t> key, const GetCallback& callback) override;
+  void GetInline(fidl::VectorPtr<uint8_t> key,
                  const GetInlineCallback& callback) override;
-  void Fetch(f1dl::VectorPtr<uint8_t> key, const FetchCallback& callback) override;
-  void FetchPartial(f1dl::VectorPtr<uint8_t> key,
+  void Fetch(fidl::VectorPtr<uint8_t> key, const FetchCallback& callback) override;
+  void FetchPartial(fidl::VectorPtr<uint8_t> key,
                     int64_t offset,
                     int64_t max_size,
                     const FetchPartialCallback& callback) override;

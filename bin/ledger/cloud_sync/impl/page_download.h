@@ -8,8 +8,8 @@
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/managed_container.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -51,11 +51,11 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
  private:
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                    f1dl::VectorPtr<uint8_t> position_token,
+  void OnNewCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                    fidl::VectorPtr<uint8_t> position_token,
                     const OnNewCommitsCallback& callback) override;
 
-  void OnNewObject(f1dl::VectorPtr<uint8_t> id,
+  void OnNewObject(fidl::VectorPtr<uint8_t> id,
                    fsl::SizedVmoTransportPtr data,
                    const OnNewObjectCallback& callback) override;
 
@@ -68,8 +68,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                     f1dl::VectorPtr<uint8_t> position_token,
+  void DownloadBatch(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                     fidl::VectorPtr<uint8_t> position_token,
                      fxl::Closure on_done);
 
   // storage::PageSyncDelegate:
@@ -116,8 +116,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  f1dl::VectorPtr<cloud_provider::CommitPtr> commits_to_download_;
-  f1dl::VectorPtr<uint8_t> position_token_;
+  fidl::VectorPtr<cloud_provider::CommitPtr> commits_to_download_;
+  fidl::VectorPtr<uint8_t> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;
 
@@ -126,7 +126,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   DownloadSyncState commit_state_ = DOWNLOAD_STOPPED;
   int current_get_object_calls_ = 0;
 
-  f1dl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
+  fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDownload);
 };

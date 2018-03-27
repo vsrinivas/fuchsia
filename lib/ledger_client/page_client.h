@@ -7,10 +7,10 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {

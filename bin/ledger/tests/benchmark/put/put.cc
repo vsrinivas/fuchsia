@@ -61,14 +61,14 @@ void PutBenchmark::Run() {
       &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError(status, "GetLedger");
 
-  f1dl::VectorPtr<uint8_t> id;
+  fidl::VectorPtr<uint8_t> id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "GetPageEnsureInitialized");
 
   InitializeKeys(
       fxl::MakeCopyable([this, ledger = std::move(ledger)](
-                            std::vector<f1dl::VectorPtr<uint8_t>> keys) mutable {
+                            std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
         if (transaction_size_ > 0) {
           page_->StartTransaction(fxl::MakeCopyable(
               [this, keys = std::move(keys)](ledger::Status status) mutable {
@@ -101,10 +101,10 @@ void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
 }
 
 void PutBenchmark::InitializeKeys(
-    std::function<void(std::vector<f1dl::VectorPtr<uint8_t>>)> on_done) {
-  std::vector<f1dl::VectorPtr<uint8_t>> keys =
+    std::function<void(std::vector<fidl::VectorPtr<uint8_t>>)> on_done) {
+  std::vector<fidl::VectorPtr<uint8_t>> keys =
       generator_.MakeKeys(entry_count_, key_size_, entry_count_);
-  std::vector<f1dl::VectorPtr<uint8_t>> keys_cloned;
+  std::vector<fidl::VectorPtr<uint8_t>> keys_cloned;
   for (int i = 0; i < entry_count_; ++i) {
     keys_cloned.push_back(keys[i].Clone());
     if (transaction_size_ == 0 ||
@@ -131,7 +131,7 @@ void PutBenchmark::InitializeKeys(
       }));
 }
 
-void PutBenchmark::BindWatcher(std::vector<f1dl::VectorPtr<uint8_t>> keys) {
+void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(
       snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
@@ -144,13 +144,13 @@ void PutBenchmark::BindWatcher(std::vector<f1dl::VectorPtr<uint8_t>> keys) {
           }));
 }
 
-void PutBenchmark::RunSingle(int i, std::vector<f1dl::VectorPtr<uint8_t>> keys) {
+void PutBenchmark::RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys) {
   if (i == entry_count_) {
     // All sent, waiting for watcher notification before shutting down.
     return;
   }
 
-  f1dl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
+  fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
   size_t key_number = std::stoul(convert::ToString(keys[i]));
   if (transaction_size_ == 0) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
@@ -168,8 +168,8 @@ void PutBenchmark::RunSingle(int i, std::vector<f1dl::VectorPtr<uint8_t>> keys) 
                }));
 }
 
-void PutBenchmark::PutEntry(f1dl::VectorPtr<uint8_t> key,
-                            f1dl::VectorPtr<uint8_t> value,
+void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
+                            fidl::VectorPtr<uint8_t> value,
                             std::function<void()> on_done) {
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
@@ -215,7 +215,7 @@ void PutBenchmark::PutEntry(f1dl::VectorPtr<uint8_t> key,
 
 void PutBenchmark::CommitAndRunNext(int i,
                                     size_t key_number,
-                                    std::vector<f1dl::VectorPtr<uint8_t>> keys) {
+                                    std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](

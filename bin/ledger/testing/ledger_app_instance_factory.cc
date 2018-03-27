@@ -16,7 +16,7 @@
 namespace test {
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
-    f1dl::VectorPtr<uint8_t> test_ledger_name,
+    fidl::VectorPtr<uint8_t> test_ledger_name,
     ledger::LedgerRepositoryFactoryPtr ledger_repository_factory)
     : test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)) {}
@@ -53,7 +53,7 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 }
 
 ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
-  f1dl::InterfaceHandle<ledger::Page> page;
+  fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->GetPage(nullptr, page.NewRequest(),
@@ -65,7 +65,7 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
 }
 
 ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const f1dl::VectorPtr<uint8_t>& page_id,
+    const fidl::VectorPtr<uint8_t>& page_id,
     ledger::Status expected_status) {
   ledger::PagePtr page_ptr;
   ledger::Status status;
@@ -79,9 +79,9 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
 }
 
 void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
-    const f1dl::VectorPtr<uint8_t>& page_id,
+    const fidl::VectorPtr<uint8_t>& page_id,
     ledger::Status expected_status) {
-  f1dl::InterfaceHandle<ledger::Page> page;
+  fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
   ledger->DeletePage(page_id.Clone(),

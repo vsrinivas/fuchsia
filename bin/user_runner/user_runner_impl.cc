@@ -17,7 +17,7 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"

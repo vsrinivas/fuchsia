@@ -9,7 +9,7 @@
 #include <string>
 
 #include "lib/fxl/strings/string_view.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 
 namespace test {
 namespace benchmark {

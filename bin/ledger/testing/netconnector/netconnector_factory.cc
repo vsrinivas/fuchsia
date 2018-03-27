@@ -9,7 +9,7 @@ namespace ledger {
 class NetConnectorFactory::Holder {
  public:
   Holder(FakeNetConnector::Delegate* delegate,
-         f1dl::InterfaceRequest<netconnector::NetConnector> request,
+         fidl::InterfaceRequest<netconnector::NetConnector> request,
          std::string device_name,
          fxl::Closure on_disconnect);
 
@@ -30,7 +30,7 @@ class NetConnectorFactory::Holder {
 
 NetConnectorFactory::Holder::Holder(
     FakeNetConnector::Delegate* delegate,
-    f1dl::InterfaceRequest<netconnector::NetConnector> request,
+    fidl::InterfaceRequest<netconnector::NetConnector> request,
     std::string device_name,
     fxl::Closure on_disconnect)
     : device_name_(device_name),
@@ -62,7 +62,7 @@ NetConnectorFactory::~NetConnectorFactory() {}
 
 void NetConnectorFactory::AddBinding(
     std::string host_name,
-    f1dl::InterfaceRequest<netconnector::NetConnector> request) {
+    fidl::InterfaceRequest<netconnector::NetConnector> request) {
   net_connectors_.emplace(
       std::piecewise_construct, std::forward_as_tuple(host_name),
       std::forward_as_tuple(this, std::move(request), host_name,
@@ -75,7 +75,7 @@ void NetConnectorFactory::UpdatedHostList() {
   if (pending_device_list_callbacks_.empty()) {
     return;
   }
-  f1dl::VectorPtr<f1dl::StringPtr> device_names;
+  fidl::VectorPtr<fidl::StringPtr> device_names;
   for (const auto& holder_pair : net_connectors_) {
     device_names.push_back(holder_pair.first);
   }
@@ -87,7 +87,7 @@ void NetConnectorFactory::UpdatedHostList() {
 
 void NetConnectorFactory::GetDevicesNames(
     uint64_t last_version,
-    std::function<void(uint64_t, f1dl::VectorPtr<f1dl::StringPtr>)> callback) {
+    std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) {
   FXL_CHECK(last_version <= current_version_)
       << "Last seen version (" << last_version
       << ") is more recent than current version (" << current_version_
@@ -96,7 +96,7 @@ void NetConnectorFactory::GetDevicesNames(
     pending_device_list_callbacks_.push_back(std::move(callback));
     return;
   }
-  f1dl::VectorPtr<f1dl::StringPtr> device_names;
+  fidl::VectorPtr<fidl::StringPtr> device_names;
   for (const auto& holder_pair : net_connectors_) {
     device_names.push_back(holder_pair.first);
   }
@@ -106,7 +106,7 @@ void NetConnectorFactory::GetDevicesNames(
 
 void NetConnectorFactory::ConnectToServiceProvider(
     std::string device_name,
-    f1dl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<component::ServiceProvider> request) {
   auto it = net_connectors_.find(device_name);
   if (it == net_connectors_.end()) {
     return;

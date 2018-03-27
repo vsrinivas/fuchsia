@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
 
 #include "garnet/lib/callback/auto_cleanable.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -21,34 +21,34 @@ class FakePageCloud : public cloud_provider::PageCloud {
 
   void set_on_empty(fxl::Closure on_empty) { on_empty_ = std::move(on_empty); }
 
-  void Bind(f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
+  void Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request);
 
  private:
   void SendPendingCommits();
   bool MustReturnError();
 
   // cloud_provider::PageCloud:
-  void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+  void AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
                   const AddCommitsCallback& callback) override;
-  void GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
+  void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                   const GetCommitsCallback& callback) override;
-  void AddObject(f1dl::VectorPtr<uint8_t> id,
+  void AddObject(fidl::VectorPtr<uint8_t> id,
                  fsl::SizedVmoTransportPtr data,
                  const AddObjectCallback& callback) override;
-  void GetObject(f1dl::VectorPtr<uint8_t> id,
+  void GetObject(fidl::VectorPtr<uint8_t> id,
                  const GetObjectCallback& callback) override;
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> min_position_token,
-      f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+      fidl::VectorPtr<uint8_t> min_position_token,
+      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
   InjectNetworkError inject_network_error_;
   size_t remaining_errors_to_inject_;
 
-  f1dl::BindingSet<cloud_provider::PageCloud> bindings_;
+  fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fxl::Closure on_empty_;
 
-  f1dl::VectorPtr<cloud_provider::CommitPtr> commits_;
+  fidl::VectorPtr<cloud_provider::CommitPtr> commits_;
   std::map<std::string, std::string> objects_;
 
   // Watchers set by the client.

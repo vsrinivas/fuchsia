@@ -7,7 +7,7 @@
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"

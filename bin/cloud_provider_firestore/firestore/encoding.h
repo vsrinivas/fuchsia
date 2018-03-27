@@ -9,7 +9,7 @@
 
 #include <google/firestore/v1beta1/document.pb.h>
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/strings/string_view.h"
 

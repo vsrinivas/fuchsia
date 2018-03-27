@@ -10,7 +10,7 @@
 #include <string>
 
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/story/fidl/link.fidl.h"

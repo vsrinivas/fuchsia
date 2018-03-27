@@ -6,7 +6,7 @@
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_engine.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"

@@ -5,8 +5,8 @@
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"

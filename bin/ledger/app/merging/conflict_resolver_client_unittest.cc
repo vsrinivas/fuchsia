@@ -91,23 +91,23 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
 class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
-      f1dl::InterfaceRequest<ConflictResolver> request)
+      fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {
     binding_.set_error_handler([this] { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
 
   struct ResolveRequest {
-    f1dl::InterfaceHandle<PageSnapshot> left_version;
-    f1dl::InterfaceHandle<PageSnapshot> right_version;
-    f1dl::InterfaceHandle<PageSnapshot> common_version;
+    fidl::InterfaceHandle<PageSnapshot> left_version;
+    fidl::InterfaceHandle<PageSnapshot> right_version;
+    fidl::InterfaceHandle<PageSnapshot> common_version;
     MergeResultProviderPtr result_provider_ptr;
     bool result_provider_disconnected = false;
 
-    ResolveRequest(f1dl::InterfaceHandle<PageSnapshot> left_version,
-                   f1dl::InterfaceHandle<PageSnapshot> right_version,
-                   f1dl::InterfaceHandle<PageSnapshot> common_version,
-                   f1dl::InterfaceHandle<MergeResultProvider> result_provider)
+    ResolveRequest(fidl::InterfaceHandle<PageSnapshot> left_version,
+                   fidl::InterfaceHandle<PageSnapshot> right_version,
+                   fidl::InterfaceHandle<PageSnapshot> common_version,
+                   fidl::InterfaceHandle<MergeResultProvider> result_provider)
         : left_version(std::move(left_version)),
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
@@ -123,17 +123,17 @@ class ConflictResolverImpl : public ConflictResolver {
  private:
   // ConflictResolver:
   void Resolve(
-      f1dl::InterfaceHandle<PageSnapshot> left_version,
-      f1dl::InterfaceHandle<PageSnapshot> right_version,
-      f1dl::InterfaceHandle<PageSnapshot> common_version,
-      f1dl::InterfaceHandle<MergeResultProvider> result_provider) override {
+      fidl::InterfaceHandle<PageSnapshot> left_version,
+      fidl::InterfaceHandle<PageSnapshot> right_version,
+      fidl::InterfaceHandle<PageSnapshot> common_version,
+      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
     requests.emplace_back(std::move(left_version), std::move(right_version),
                           std::move(common_version),
                           std::move(result_provider));
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   }
 
-  f1dl::Binding<ConflictResolver> binding_;
+  fidl::Binding<ConflictResolver> binding_;
 };
 
 TEST_F(ConflictResolverClientTest, Error) {
@@ -171,8 +171,8 @@ TEST_F(ConflictResolverClientTest, Error) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   // Create a bogus conflict resolution.
-  f1dl::VectorPtr<MergedValuePtr> merged_values =
-      f1dl::VectorPtr<MergedValuePtr>::New(0);
+  fidl::VectorPtr<MergedValuePtr> merged_values =
+      fidl::VectorPtr<MergedValuePtr>::New(0);
   {
     MergedValuePtr merged_value = MergedValue::New();
     merged_value->key = convert::ToArray("unknown_key");
@@ -293,8 +293,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   Status status;
-  f1dl::VectorPtr<MergedValuePtr> merged_values =
-      f1dl::VectorPtr<MergedValuePtr>::New(0);
+  fidl::VectorPtr<MergedValuePtr> merged_values =
+      fidl::VectorPtr<MergedValuePtr>::New(0);
   {
     MergedValuePtr merged_value = MergedValue::New();
     merged_value->key = convert::ToArray("key1");

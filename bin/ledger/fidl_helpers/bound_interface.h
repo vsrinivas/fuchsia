@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_H_
 #define PERIDOT_BIN_LEDGER_FIDL_HELPERS_BOUND_INTERFACE_H_
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
@@ -16,7 +16,7 @@ template <class Interface, class Impl>
 class BoundInterface : public Boundable<Interface> {
  public:
   template <class... Args>
-  explicit BoundInterface(f1dl::InterfaceRequest<Interface> request,
+  explicit BoundInterface(fidl::InterfaceRequest<Interface> request,
                           Args&&... args)
       : impl_(std::forward<Args>(args)...),
         binding_(&impl_, std::move(request)) {}
@@ -25,7 +25,7 @@ class BoundInterface : public Boundable<Interface> {
   explicit BoundInterface(Args&&... args)
       : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
 
-  void Bind(f1dl::InterfaceRequest<Interface> request) final {
+  void Bind(fidl::InterfaceRequest<Interface> request) final {
     binding_.Bind(std::move(request));
   }
 
@@ -43,7 +43,7 @@ class BoundInterface : public Boundable<Interface> {
 
  private:
   Impl impl_;
-  f1dl::Binding<Interface> binding_;
+  fidl::Binding<Interface> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BoundInterface);
 };

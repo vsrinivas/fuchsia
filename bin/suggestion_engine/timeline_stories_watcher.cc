@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 
-#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fxl/logging.h"
 
 namespace maxwell {

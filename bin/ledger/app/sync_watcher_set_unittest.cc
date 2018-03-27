@@ -9,7 +9,7 @@
 
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
@@ -30,7 +30,7 @@ class SyncWatcherSetTest : public gtest::TestWithMessageLoop {
 
 class SyncWatcherImpl : public SyncWatcher {
  public:
-  explicit SyncWatcherImpl(f1dl::InterfaceRequest<SyncWatcher> request)
+  explicit SyncWatcherImpl(fidl::InterfaceRequest<SyncWatcher> request)
       : binding_(this, std::move(request)) {}
   void SyncStateChanged(SyncState download_status,
                         SyncState upload_status,
@@ -45,7 +45,7 @@ class SyncWatcherImpl : public SyncWatcher {
   std::vector<SyncState> upload_states;
 
  private:
-  f1dl::Binding<SyncWatcher> binding_;
+  fidl::Binding<SyncWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncWatcherImpl);
 };

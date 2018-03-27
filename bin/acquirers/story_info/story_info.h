@@ -10,7 +10,7 @@
 #include <fuchsia/cpp/modular.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/story/fidl/story_controller.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"

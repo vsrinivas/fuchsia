@@ -6,7 +6,7 @@
 
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/module/fidl/module_data.fidl.h"
 #include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"

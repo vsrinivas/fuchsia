@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 
 #include "garnet/lib/callback/auto_cleanable.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_device_set.h"
@@ -44,13 +44,13 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
  private:
   void GetDeviceSet(
-      f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+      fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
       const GetDeviceSetCallback& callback) override;
 
   void GetPageCloud(
-      f1dl::VectorPtr<uint8_t> app_id,
-      f1dl::VectorPtr<uint8_t> page_id,
-      f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+      fidl::VectorPtr<uint8_t> app_id,
+      fidl::VectorPtr<uint8_t> page_id,
+      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       const GetPageCloudCallback& callback) override;
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet>

@@ -31,7 +31,7 @@
 #include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace maxwell {

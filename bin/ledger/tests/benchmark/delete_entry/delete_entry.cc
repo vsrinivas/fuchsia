@@ -65,7 +65,7 @@ void DeleteEntryBenchmark::Run() {
                       nullptr, "delete_entry", tmp_dir_.path(), &ledger);
   QuitOnError(status, "GetLedger");
 
-  f1dl::VectorPtr<uint8_t> id;
+  fidl::VectorPtr<uint8_t> id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "Page initialization");

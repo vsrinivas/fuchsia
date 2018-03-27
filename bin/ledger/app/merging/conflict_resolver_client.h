@@ -12,7 +12,7 @@
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -46,17 +46,17 @@ class ConflictResolverClient : public MergeResultProvider {
 
   // Performs a diff of the given type on the conflict.
   void GetDiff(diff_utils::DiffType type,
-               f1dl::VectorPtr<uint8_t> token,
+               fidl::VectorPtr<uint8_t> token,
                const std::function<void(Status,
-                                        f1dl::VectorPtr<DiffEntryPtr>,
-                                        f1dl::VectorPtr<uint8_t>)>& callback);
+                                        fidl::VectorPtr<DiffEntryPtr>,
+                                        fidl::VectorPtr<uint8_t>)>& callback);
 
   // MergeResultProvider:
-  void GetFullDiff(f1dl::VectorPtr<uint8_t> token,
+  void GetFullDiff(fidl::VectorPtr<uint8_t> token,
                    const GetFullDiffCallback& callback) override;
-  void GetConflictingDiff(f1dl::VectorPtr<uint8_t> token,
+  void GetConflictingDiff(fidl::VectorPtr<uint8_t> token,
                           const GetConflictingDiffCallback& callback) override;
-  void Merge(f1dl::VectorPtr<MergedValuePtr> merged_values,
+  void Merge(fidl::VectorPtr<MergedValuePtr> merged_values,
              const MergeCallback& callback) override;
   void MergeNonConflictingEntries(
       const MergeNonConflictingEntriesCallback& callback) override;
@@ -91,7 +91,7 @@ class ConflictResolverClient : public MergeResultProvider {
   bool cancelled_ = false;
   callback::OperationSerializer operation_serializer_;
 
-  f1dl::Binding<MergeResultProvider> merge_result_provider_binding_;
+  fidl::Binding<MergeResultProvider> merge_result_provider_binding_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<ConflictResolverClient> weak_factory_;

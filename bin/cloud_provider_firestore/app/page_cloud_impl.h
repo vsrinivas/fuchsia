@@ -8,9 +8,9 @@
 #include <memory>
 #include <utility>
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"

@@ -11,7 +11,7 @@
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
 #include "garnet/lib/callback/managed_container.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
@@ -31,9 +31,9 @@ class LedgerRepositoryFactoryImpl : public LedgerRepositoryFactory {
 
   // LedgerRepositoryFactory:
   void GetRepository(
-      const f1dl::StringPtr& repository_path,
-      f1dl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      f1dl::InterfaceRequest<LedgerRepository> repository_request,
+      const fidl::StringPtr& repository_path,
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      fidl::InterfaceRequest<LedgerRepository> repository_request,
       const GetRepositoryCallback& callback) override;
 
   void CreateRepository(LedgerRepositoryContainer* container,

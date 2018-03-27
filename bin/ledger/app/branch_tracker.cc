@@ -116,9 +116,9 @@ class BranchTracker::PageWatcherContainer {
               fidl_serialization::kMaxMessageHandles) {
         changes.push_back(PageChange::New());
         changes.back()->timestamp = timestamp;
-        changes.back()->changed_entries = f1dl::VectorPtr<EntryPtr>::New(0);
+        changes.back()->changed_entries = fidl::VectorPtr<EntryPtr>::New(0);
         changes.back()->deleted_keys =
-            f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>>::New(0);
+            fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
         fidl_size = fidl_serialization::kPageChangeHeaderSize;
         handle_count = 0u;
       }
@@ -144,7 +144,7 @@ class BranchTracker::PageWatcherContainer {
         fxl::MakeCopyable(
             [this, state, new_commit = std::move(new_commit),
              on_done = std::move(on_done)](
-                f1dl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
+                fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
               if (snapshot_request) {
                 manager_->BindPageSnapshot(new_commit->Clone(),
                                            std::move(snapshot_request),

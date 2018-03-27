@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 
@@ -26,7 +26,7 @@ cloud_provider::CommitPtr MakeTestCommit(
 class TestPageCloud : public cloud_provider::PageCloud {
  public:
   explicit TestPageCloud(
-      f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
+      fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~TestPageCloud() override;
 
   void RunPendingCallbacks();
@@ -41,8 +41,8 @@ class TestPageCloud : public cloud_provider::PageCloud {
 
   // GetCommits().
   unsigned int get_commits_calls = 0u;
-  f1dl::VectorPtr<cloud_provider::CommitPtr> commits_to_return;
-  f1dl::VectorPtr<uint8_t> position_token_to_return;
+  fidl::VectorPtr<cloud_provider::CommitPtr> commits_to_return;
+  fidl::VectorPtr<uint8_t> position_token_to_return;
 
   // AddObject().
   unsigned int add_object_calls = 0u;
@@ -61,21 +61,21 @@ class TestPageCloud : public cloud_provider::PageCloud {
 
  private:
   // cloud_provider::PageCloud:
-  void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
+  void AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
                   const AddCommitsCallback& callback) override;
-  void GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
+  void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                   const GetCommitsCallback& callback) override;
-  void AddObject(f1dl::VectorPtr<uint8_t> id,
+  void AddObject(fidl::VectorPtr<uint8_t> id,
                  fsl::SizedVmoTransportPtr data,
                  const AddObjectCallback& callback) override;
-  void GetObject(f1dl::VectorPtr<uint8_t> id,
+  void GetObject(fidl::VectorPtr<uint8_t> id,
                  const GetObjectCallback& callback) override;
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> min_position_token,
-      f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+      fidl::VectorPtr<uint8_t> min_position_token,
+      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
-  f1dl::Binding<cloud_provider::PageCloud> binding_;
+  fidl::Binding<cloud_provider::PageCloud> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloud);
 };

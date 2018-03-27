@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 
 namespace maxwell {

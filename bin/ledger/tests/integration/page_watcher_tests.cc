@@ -7,12 +7,12 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
@@ -34,7 +34,7 @@ class PageWatcherIntegrationTest : public IntegrationTest {
 
 class Watcher : public ledger::PageWatcher {
  public:
-  Watcher(f1dl::InterfaceRequest<PageWatcher> request,
+  Watcher(fidl::InterfaceRequest<PageWatcher> request,
           fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
@@ -58,7 +58,7 @@ class Watcher : public ledger::PageWatcher {
     change_callback_();
   }
 
-  f1dl::Binding<PageWatcher> binding_;
+  fidl::Binding<PageWatcher> binding_;
   fxl::Closure change_callback_;
 };
 
@@ -381,8 +381,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
 TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  f1dl::VectorPtr<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](f1dl::VectorPtr<uint8_t> page_id) {
+  fidl::VectorPtr<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::VectorPtr<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());
@@ -489,8 +489,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
 TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page1 = instance->GetTestPage();
-  f1dl::VectorPtr<uint8_t> test_page_id;
-  page1->GetId([&test_page_id](f1dl::VectorPtr<uint8_t> page_id) {
+  fidl::VectorPtr<uint8_t> test_page_id;
+  page1->GetId([&test_page_id](fidl::VectorPtr<uint8_t> page_id) {
     test_page_id = std::move(page_id);
   });
   EXPECT_TRUE(page1.WaitForResponse());
@@ -540,7 +540,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
 class WaitingWatcher : public ledger::PageWatcher {
  public:
-  WaitingWatcher(f1dl::InterfaceRequest<ledger::PageWatcher> request,
+  WaitingWatcher(fidl::InterfaceRequest<ledger::PageWatcher> request,
                  fxl::Closure change_callback)
       : binding_(this, std::move(request)),
         change_callback_(std::move(change_callback)) {}
@@ -567,7 +567,7 @@ class WaitingWatcher : public ledger::PageWatcher {
     change_callback_();
   }
 
-  f1dl::Binding<ledger::PageWatcher> binding_;
+  fidl::Binding<ledger::PageWatcher> binding_;
   fxl::Closure change_callback_;
 };
 

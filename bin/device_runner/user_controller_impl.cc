@@ -7,7 +7,7 @@
 #include <memory>
 #include <utility>
 
-#include "lib/fidl/cpp/bindings/synchronous_interface_ptr.h"
+#include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/user/fidl/user_runner.fidl-sync.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"

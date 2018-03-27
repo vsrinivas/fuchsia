@@ -189,7 +189,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   RunLoop();
 
   PageWatcherPtr watcher;
-  f1dl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
+  fidl::InterfaceRequest<PageWatcher> watcher_request = watcher.NewRequest();
   PageSnapshotPtr snapshot;
   page1->GetSnapshot(snapshot.NewRequest(), nullptr, std::move(watcher),
                      [this](Status status) {
@@ -235,7 +235,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   // The page shouldn't be bound until sync backlog is downloaded.
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 
-  page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -258,7 +258,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
                         callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -292,7 +292,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
                         callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -359,7 +359,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   // The page should be bound immediately.
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](f1dl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -395,7 +395,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads1;
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
   RunLoop();
@@ -410,7 +410,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads2;
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
   RunLoop();
@@ -431,8 +431,8 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::VectorPtr<EntryPtr> expected_entries1;
-  f1dl::VectorPtr<uint8_t> next_token;
+  fidl::VectorPtr<EntryPtr> expected_entries1;
+  fidl::VectorPtr<uint8_t> next_token;
   snapshot1->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries1, &next_token));
@@ -442,7 +442,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0)->key));
   EXPECT_EQ(value1, ToString(expected_entries1->at(0)->value));
 
-  f1dl::VectorPtr<EntryPtr> expected_entries2;
+  fidl::VectorPtr<EntryPtr> expected_entries2;
   snapshot2->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries2, &next_token));
@@ -482,7 +482,7 @@ TEST_F(PageManagerTest, GetCommit) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads1;
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
   RunLoop();
@@ -497,7 +497,7 @@ TEST_F(PageManagerTest, GetCommit) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> heads2;
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
   RunLoop();
@@ -505,7 +505,7 @@ TEST_F(PageManagerTest, GetCommit) {
   EXPECT_EQ(1u, heads2->size());
 
   ledger::CommitPtr commit_struct = ledger::Commit::New();
-  f1dl::VectorPtr<uint8_t> currHeadCommit = heads2->at(0).Clone();
+  fidl::VectorPtr<uint8_t> currHeadCommit = heads2->at(0).Clone();
   page_debug->GetCommit(
       std::move(currHeadCommit),
       callback::Capture(MakeQuitTask(), &status, &commit_struct));

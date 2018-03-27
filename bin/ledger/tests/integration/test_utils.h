@@ -9,44 +9,44 @@
 #include <vector>
 
 #include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 
 namespace test {
 namespace integration {
 
-f1dl::VectorPtr<uint8_t> RandomArray(size_t size,
+fidl::VectorPtr<uint8_t> RandomArray(size_t size,
                                  const std::vector<uint8_t>& prefix);
 
-f1dl::VectorPtr<uint8_t> RandomArray(int size);
+fidl::VectorPtr<uint8_t> RandomArray(int size);
 
-f1dl::VectorPtr<uint8_t> PageGetId(ledger::PagePtr* page);
+fidl::VectorPtr<uint8_t> PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        f1dl::VectorPtr<uint8_t> prefix = nullptr);
+                                        fidl::VectorPtr<uint8_t> prefix = nullptr);
 
-f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> SnapshotGetKeys(
+fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::VectorPtr<uint8_t> start);
-f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> SnapshotGetKeys(
+    fidl::VectorPtr<uint8_t> start);
+fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::VectorPtr<uint8_t> start,
+    fidl::VectorPtr<uint8_t> start,
     int* num_queries);
 
-f1dl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
+fidl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::VectorPtr<uint8_t> start);
-f1dl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
+    fidl::VectorPtr<uint8_t> start);
+fidl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
-    f1dl::VectorPtr<uint8_t> start,
+    fidl::VectorPtr<uint8_t> start,
     int* num_queries);
 
 std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
-                                 f1dl::VectorPtr<uint8_t> key,
+                                 fidl::VectorPtr<uint8_t> key,
                                  int64_t offset,
                                  int64_t max_size);
 
 std::string ToString(const fsl::SizedVmoTransportPtr& vmo);
-f1dl::VectorPtr<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
+fidl::VectorPtr<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
 
 }  // namespace integration
 }  // namespace test

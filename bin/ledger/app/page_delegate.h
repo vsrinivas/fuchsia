@@ -11,10 +11,10 @@
 #include <vector>
 
 #include "garnet/lib/callback/operation_serializer.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_impl.h"
@@ -41,7 +41,7 @@ class PageDelegate {
                PageManager* manager,
                storage::PageStorage* storage,
                MergeResolver* merge_resolver,
-               f1dl::InterfaceRequest<Page> request,
+               fidl::InterfaceRequest<Page> request,
                SyncWatcherSet* watchers);
   ~PageDelegate();
 
@@ -54,26 +54,26 @@ class PageDelegate {
   // From Page interface, called by PageImpl:
   void GetId(const Page::GetIdCallback& callback);
 
-  void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   f1dl::VectorPtr<uint8_t> key_prefix,
-                   f1dl::InterfaceHandle<PageWatcher> watcher,
+  void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   fidl::VectorPtr<uint8_t> key_prefix,
+                   fidl::InterfaceHandle<PageWatcher> watcher,
                    const Page::GetSnapshotCallback& callback);
 
-  void Put(f1dl::VectorPtr<uint8_t> key,
-           f1dl::VectorPtr<uint8_t> value,
+  void Put(fidl::VectorPtr<uint8_t> key,
+           fidl::VectorPtr<uint8_t> value,
            const Page::PutCallback& callback);
 
-  void PutWithPriority(f1dl::VectorPtr<uint8_t> key,
-                       f1dl::VectorPtr<uint8_t> value,
+  void PutWithPriority(fidl::VectorPtr<uint8_t> key,
+                       fidl::VectorPtr<uint8_t> value,
                        Priority priority,
                        const Page::PutWithPriorityCallback& callback);
 
-  void PutReference(f1dl::VectorPtr<uint8_t> key,
+  void PutReference(fidl::VectorPtr<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const Page::PutReferenceCallback& callback);
 
-  void Delete(f1dl::VectorPtr<uint8_t> key, const Page::DeleteCallback& callback);
+  void Delete(fidl::VectorPtr<uint8_t> key, const Page::DeleteCallback& callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
                        std::function<void(Status, ReferencePtr)> callback);
@@ -84,7 +84,7 @@ class PageDelegate {
 
   void Rollback(const Page::RollbackCallback& callback);
 
-  void SetSyncStateWatcher(f1dl::InterfaceHandle<SyncWatcher> watcher,
+  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            const Page::SetSyncStateWatcherCallback& callback);
 
   void WaitForConflictResolution(
@@ -95,7 +95,7 @@ class PageDelegate {
 
   const storage::CommitId& GetCurrentCommitId();
 
-  void PutInCommit(f1dl::VectorPtr<uint8_t> key,
+  void PutInCommit(fidl::VectorPtr<uint8_t> key,
                    storage::ObjectIdentifier object_identifier,
                    storage::KeyPriority priority,
                    StatusCallback callback);
@@ -120,7 +120,7 @@ class PageDelegate {
   storage::PageStorage* storage_;
   MergeResolver* merge_resolver_;
 
-  f1dl::InterfaceRequest<Page> request_;
+  fidl::InterfaceRequest<Page> request_;
   fidl_helpers::BoundInterface<Page, PageImpl> interface_;
   BranchTracker branch_tracker_;
 

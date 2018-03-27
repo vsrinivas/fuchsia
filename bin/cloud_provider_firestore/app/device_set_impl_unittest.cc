@@ -7,8 +7,8 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"

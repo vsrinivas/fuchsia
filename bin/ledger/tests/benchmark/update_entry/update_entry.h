@@ -10,7 +10,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/data_generator.h"
 
 namespace test {
@@ -31,8 +31,8 @@ class UpdateEntryBenchmark {
   void Run();
 
  private:
-  void RunSingle(int i, f1dl::VectorPtr<uint8_t> key);
-  void CommitAndRunNext(int i, f1dl::VectorPtr<uint8_t> key);
+  void RunSingle(int i, fidl::VectorPtr<uint8_t> key);
+  void CommitAndRunNext(int i, fidl::VectorPtr<uint8_t> key);
 
   void CommitAndShutDown();
   void ShutDown();

@@ -7,7 +7,7 @@
 
 #include "lib/context/fidl/context_engine.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/acquirers/gps.h"
 
 namespace maxwell {

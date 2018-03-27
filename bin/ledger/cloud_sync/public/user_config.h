@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 
 namespace cloud_sync {
 

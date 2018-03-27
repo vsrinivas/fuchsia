@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "lib/fidl/cpp/bindings/interface_handle.h"
+#include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/logging.h"
 #include "lib/story/fidl/create_link.fidl.h"

@@ -7,7 +7,7 @@
 
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/bound_set/bound_set.h"
 

@@ -277,7 +277,7 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
 
   Status status;
 
-  f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> actual_pages_list;
+  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_pages_list;
 
   EXPECT_EQ(0u, actual_pages_list->size());
 

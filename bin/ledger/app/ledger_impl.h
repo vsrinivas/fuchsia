@@ -9,7 +9,7 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/lib/convert/convert.h"
@@ -26,13 +26,13 @@ class LedgerImpl : public Ledger {
     virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id,
-                         f1dl::InterfaceRequest<Page> page_request,
+                         fidl::InterfaceRequest<Page> page_request,
                          std::function<void(Status)> callback) = 0;
 
     virtual Status DeletePage(convert::ExtendedStringView page_id) = 0;
 
     virtual void SetConflictResolverFactory(
-        f1dl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
+        fidl::InterfaceHandle<ConflictResolverFactory> factory) = 0;
 
    private:
     FXL_DISALLOW_COPY_AND_ASSIGN(Delegate);
@@ -44,16 +44,16 @@ class LedgerImpl : public Ledger {
 
  private:
   // Ledger:
-  void GetRootPage(f1dl::InterfaceRequest<Page> page_request,
+  void GetRootPage(fidl::InterfaceRequest<Page> page_request,
                    const GetRootPageCallback& callback) override;
-  void GetPage(f1dl::VectorPtr<uint8_t> id,
-               f1dl::InterfaceRequest<Page> page_request,
+  void GetPage(fidl::VectorPtr<uint8_t> id,
+               fidl::InterfaceRequest<Page> page_request,
                const GetPageCallback& callback) override;
-  void DeletePage(f1dl::VectorPtr<uint8_t> id,
+  void DeletePage(fidl::VectorPtr<uint8_t> id,
                   const DeletePageCallback& callback) override;
 
   void SetConflictResolverFactory(
-      f1dl::InterfaceHandle<ConflictResolverFactory> factory,
+      fidl::InterfaceHandle<ConflictResolverFactory> factory,
       const SetConflictResolverFactoryCallback& callback) override;
 
   Delegate* const delegate_;

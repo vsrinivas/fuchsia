@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_DEVICE_SET_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_TESTING_TEST_DEVICE_SET_H_
 
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fxl/macros.h"
 
@@ -28,15 +28,15 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
 
  private:
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
+  void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                         const CheckFingerprintCallback& callback) override;
 
-  void SetFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
+  void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                       const SetFingerprintCallback& callback) override;
 
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> fingerprint,
-      f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+      fidl::VectorPtr<uint8_t> fingerprint,
+      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
       const SetWatcherCallback& callback) override;
 
   void Erase(const EraseCallback& callback) override;

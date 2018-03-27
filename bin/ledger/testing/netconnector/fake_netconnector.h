@@ -23,12 +23,12 @@ class FakeNetConnector : public netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        std::function<void(uint64_t, f1dl::VectorPtr<f1dl::StringPtr>)> callback) = 0;
+        std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToServiceProvider(
         std::string device_name,
-        f1dl::InterfaceRequest<component::ServiceProvider> request) = 0;
+        fidl::InterfaceRequest<component::ServiceProvider> request) = 0;
   };
 
   explicit FakeNetConnector(Delegate* delegate);
@@ -36,16 +36,16 @@ class FakeNetConnector : public netconnector::NetConnector {
 
   // Connects to the service provider of this (virtual) host
   void ConnectToServiceProvider(
-      f1dl::InterfaceRequest<component::ServiceProvider> request);
+      fidl::InterfaceRequest<component::ServiceProvider> request);
 
  private:
   // NetConnector implementation:
-  void RegisterServiceProvider(const f1dl::StringPtr& name,
-                               f1dl::InterfaceHandle<component::ServiceProvider>
+  void RegisterServiceProvider(const fidl::StringPtr& name,
+                               fidl::InterfaceHandle<component::ServiceProvider>
                                    service_provider) override;
   void GetDeviceServiceProvider(
-      const f1dl::StringPtr& device_name,
-      f1dl::InterfaceRequest<component::ServiceProvider> service_provider)
+      const fidl::StringPtr& device_name,
+      fidl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
   void GetKnownDeviceNames(
       uint64_t version_last_seen,

@@ -9,7 +9,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
@@ -62,12 +62,12 @@ class SyncBenchmark : public ledger::PageWatcher {
   const size_t entries_per_change_;
   const PageDataGenerator::ReferenceStrategy reference_strategy_;
   std::string server_id_;
-  f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   files::ScopedTempDir alpha_tmp_dir_;
   files::ScopedTempDir beta_tmp_dir_;
   component::ApplicationControllerPtr alpha_controller_;
   component::ApplicationControllerPtr beta_controller_;
-  f1dl::VectorPtr<uint8_t> page_id_;
+  fidl::VectorPtr<uint8_t> page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
 

@@ -18,11 +18,11 @@
 #include "lib/async/cpp/operation.h"
 #include <fuchsia/cpp/modular_auth.h>
 #include "lib/entity/fidl/entity_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
 #include "peridot/bin/ledger/fidl/internal.fidl.h"

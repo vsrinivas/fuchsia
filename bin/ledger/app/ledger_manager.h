@@ -41,22 +41,22 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
-  void BindLedger(f1dl::InterfaceRequest<Ledger> ledger_request);
+  void BindLedger(fidl::InterfaceRequest<Ledger> ledger_request);
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id,
-               f1dl::InterfaceRequest<Page> page_request,
+               fidl::InterfaceRequest<Page> page_request,
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
   void SetConflictResolverFactory(
-      f1dl::InterfaceHandle<ConflictResolverFactory> factory) override;
+      fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
     on_empty_callback_ = on_empty_callback;
   }
 
   // Creates a new proxy for the LedgerDebug implemented by this LedgerManager.
-  void BindLedgerDebug(f1dl::InterfaceRequest<LedgerDebug> request);
+  void BindLedgerDebug(fidl::InterfaceRequest<LedgerDebug> request);
 
  private:
   class PageManagerContainer;
@@ -80,8 +80,8 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   // LedgerDebug:
   void GetPagesList(const GetPagesListCallback& callback) override;
 
-  void GetPageDebug(f1dl::VectorPtr<uint8_t> page_id,
-                    f1dl::InterfaceRequest<PageDebug> page_debug,
+  void GetPageDebug(fidl::VectorPtr<uint8_t> page_id,
+                    fidl::InterfaceRequest<PageDebug> page_debug,
                     const GetPageDebugCallback& callback) override;
 
   Environment* const environment_;
@@ -92,7 +92,7 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   // |merge_manager_| must be destructed after |page_managers_| to ensure it
   // outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
-  f1dl::BindingSet<Ledger> bindings_;
+  fidl::BindingSet<Ledger> bindings_;
 
   // Mapping from each page id to the manager of that page.
   callback::AutoCleanableMap<storage::PageId,
@@ -101,7 +101,7 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
       page_managers_;
   fxl::Closure on_empty_callback_;
 
-  f1dl::BindingSet<LedgerDebug> ledger_debug_bindings_;
+  fidl::BindingSet<LedgerDebug> ledger_debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };

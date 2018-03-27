@@ -6,7 +6,7 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 

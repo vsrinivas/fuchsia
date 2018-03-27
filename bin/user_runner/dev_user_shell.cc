@@ -17,7 +17,7 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"

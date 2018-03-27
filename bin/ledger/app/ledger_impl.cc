@@ -13,7 +13,7 @@
 #include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
 
@@ -21,7 +21,7 @@ namespace ledger {
 
 namespace {
 
-void GenerateRandomId(f1dl::VectorPtr<uint8_t>* id) {
+void GenerateRandomId(fidl::VectorPtr<uint8_t>* id) {
   id->resize(kPageIdSize);
   fxl::RandBytes((*id)->data(), kPageIdSize);
 }
@@ -33,7 +33,7 @@ LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
 LedgerImpl::~LedgerImpl() {}
 
 // GetRootPage(Page& page) => (Status status);
-void LedgerImpl::GetRootPage(f1dl::InterfaceRequest<Page> page_request,
+void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              const GetRootPageCallback& callback) {
   delegate_->GetPage(
       kRootPageId, std::move(page_request),
@@ -41,8 +41,8 @@ void LedgerImpl::GetRootPage(f1dl::InterfaceRequest<Page> page_request,
 }
 
 // GetPage(array<uint8, 16>? id, Page& page) => (Status status);
-void LedgerImpl::GetPage(f1dl::VectorPtr<uint8_t> id,
-                         f1dl::InterfaceRequest<Page> page_request,
+void LedgerImpl::GetPage(fidl::VectorPtr<uint8_t> id,
+                         fidl::InterfaceRequest<Page> page_request,
                          const GetPageCallback& callback) {
   if (!id) {
     GenerateRandomId(&id);
@@ -52,7 +52,7 @@ void LedgerImpl::GetPage(f1dl::VectorPtr<uint8_t> id,
 }
 
 // DeletePage(array<uint8> id) => (Status status);
-void LedgerImpl::DeletePage(f1dl::VectorPtr<uint8_t> id,
+void LedgerImpl::DeletePage(fidl::VectorPtr<uint8_t> id,
                             const DeletePageCallback& callback) {
   TRACE_DURATION("ledger", "ledger_delete_page");
 
@@ -62,7 +62,7 @@ void LedgerImpl::DeletePage(f1dl::VectorPtr<uint8_t> id,
 // SetConflictResolverFactory(ConflictResolverFactory? factory)
 //     => (Status status);
 void LedgerImpl::SetConflictResolverFactory(
-    f1dl::InterfaceHandle<ConflictResolverFactory> factory,
+    fidl::InterfaceHandle<ConflictResolverFactory> factory,
     const SetConflictResolverFactoryCallback& callback) {
   TRACE_DURATION("ledger", "ledger_set_conflict_resolver_factory");
 

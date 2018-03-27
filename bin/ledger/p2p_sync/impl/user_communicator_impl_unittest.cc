@@ -12,7 +12,7 @@
 // directly as it is private to the library.
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"

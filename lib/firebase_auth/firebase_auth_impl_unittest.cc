@@ -10,7 +10,7 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 

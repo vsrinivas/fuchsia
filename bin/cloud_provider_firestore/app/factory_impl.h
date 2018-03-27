@@ -8,7 +8,7 @@
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
+#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"

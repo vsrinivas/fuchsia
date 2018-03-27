@@ -11,7 +11,7 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"

@@ -26,8 +26,8 @@ namespace ledger {
 namespace {
 
 template <typename EntryType>
-f1dl::StructPtr<EntryType> CreateEntry(const storage::Entry& entry) {
-  f1dl::StructPtr<EntryType> entry_ptr = EntryType::New();
+fidl::StructPtr<EntryType> CreateEntry(const storage::Entry& entry) {
+  fidl::StructPtr<EntryType> entry_ptr = EntryType::New();
   entry_ptr->key = convert::ToArray(entry.key);
   entry_ptr->priority = entry.priority == storage::KeyPriority::EAGER
                             ? Priority::EAGER
@@ -90,11 +90,11 @@ void FillEntries(
     storage::PageStorage* page_storage,
     const std::string& key_prefix,
     const storage::Commit* commit,
-    f1dl::VectorPtr<uint8_t> key_start,
-    f1dl::VectorPtr<uint8_t> token,
+    fidl::VectorPtr<uint8_t> key_start,
+    fidl::VectorPtr<uint8_t> token,
     const std::function<void(Status,
-                             f1dl::VectorPtr<f1dl::StructPtr<EntryType>>,
-                             f1dl::VectorPtr<uint8_t>)>& callback) {
+                             fidl::VectorPtr<fidl::StructPtr<EntryType>>,
+                             fidl::VectorPtr<uint8_t>)>& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
   // Iteration stops if either all entries were found, or if the estimated
@@ -109,14 +109,14 @@ void FillEntries(
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
-    f1dl::VectorPtr<f1dl::StructPtr<EntryType>> entries;
+    fidl::VectorPtr<fidl::StructPtr<EntryType>> entries;
     // The serialization size of all entries.
     size_t size = fidl_serialization::kArrayHeaderSize;
     // The number of handles used.
     size_t handle_count = 0u;
     // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
     // have the value of the following entry's key.
-    f1dl::VectorPtr<uint8_t> next_token;
+    fidl::VectorPtr<uint8_t> next_token;
   };
   auto timed_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
@@ -184,7 +184,7 @@ void FillEntries(
               size_t real_size = 0;
               size_t i = 0;
               for (; i < results.size(); i++) {
-                f1dl::StructPtr<EntryType>& entry_ptr = context->entries->at(i);
+                fidl::StructPtr<EntryType>& entry_ptr = context->entries->at(i);
                 size_t next_token_size =
                     i + 1 >= results.size()
                         ? 0
@@ -253,29 +253,29 @@ PageSnapshotImpl::PageSnapshotImpl(
 
 PageSnapshotImpl::~PageSnapshotImpl() {}
 
-void PageSnapshotImpl::GetEntries(f1dl::VectorPtr<uint8_t> key_start,
-                                  f1dl::VectorPtr<uint8_t> token,
+void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
+                                  fidl::VectorPtr<uint8_t> token,
                                   const GetEntriesCallback& callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetEntriesInline(
-    f1dl::VectorPtr<uint8_t> key_start,
-    f1dl::VectorPtr<uint8_t> token,
+    fidl::VectorPtr<uint8_t> key_start,
+    fidl::VectorPtr<uint8_t> token,
     const GetEntriesInlineCallback& callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
                             std::move(key_start), std::move(token), callback);
 }
 
-void PageSnapshotImpl::GetKeys(f1dl::VectorPtr<uint8_t> key_start,
-                               f1dl::VectorPtr<uint8_t> token,
+void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
+                               fidl::VectorPtr<uint8_t> token,
                                const GetKeysCallback& callback) {
   // Represents the information that needs to be shared between on_next and
   // on_done callbacks.
   struct Context {
     // The result of GetKeys. New keys from on_next are appended to this array.
-    f1dl::VectorPtr<f1dl::VectorPtr<uint8_t>> keys;
+    fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
     // The total size in number of bytes of the |keys| array.
     size_t size = fidl_serialization::kArrayHeaderSize;
     // If the |keys| array size exceeds the maximum allowed inlined data size,
@@ -321,7 +321,7 @@ void PageSnapshotImpl::GetKeys(f1dl::VectorPtr<uint8_t> key_start,
   }
 }
 
-void PageSnapshotImpl::Get(f1dl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key,
                            const GetCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get");
 
@@ -345,7 +345,7 @@ void PageSnapshotImpl::Get(f1dl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::GetInline(f1dl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
                                  const GetInlineCallback& callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_get_inline");
@@ -376,7 +376,7 @@ void PageSnapshotImpl::GetInline(f1dl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::Fetch(f1dl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
                              const FetchCallback& callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_fetch");
 
@@ -400,7 +400,7 @@ void PageSnapshotImpl::Fetch(f1dl::VectorPtr<uint8_t> key,
       });
 }
 
-void PageSnapshotImpl::FetchPartial(f1dl::VectorPtr<uint8_t> key,
+void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
                                     int64_t offset,
                                     int64_t max_size,
                                     const FetchPartialCallback& callback) {

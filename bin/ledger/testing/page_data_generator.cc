@@ -33,8 +33,8 @@ namespace benchmark {
 PageDataGenerator::PageDataGenerator() : generator_(fxl::RandUint64()){};
 
 void PageDataGenerator::PutEntry(ledger::PagePtr* page,
-                                 f1dl::VectorPtr<uint8_t> key,
-                                 f1dl::VectorPtr<uint8_t> value,
+                                 fidl::VectorPtr<uint8_t> key,
+                                 fidl::VectorPtr<uint8_t> value,
                                  ReferenceStrategy ref_strategy,
                                  ledger::Priority priority,
                                  std::function<void(ledger::Status)> callback) {
@@ -80,7 +80,7 @@ void PageDataGenerator::PutEntry(ledger::PagePtr* page,
 }
 
 void PageDataGenerator::Populate(ledger::PagePtr* page,
-                                 std::vector<f1dl::VectorPtr<uint8_t>> keys,
+                                 std::vector<fidl::VectorPtr<uint8_t>> keys,
                                  size_t value_size,
                                  size_t transaction_size,
                                  ReferenceStrategy ref_strategy,
@@ -97,7 +97,7 @@ void PageDataGenerator::Populate(ledger::PagePtr* page,
 
 void PageDataGenerator::PutInTransaction(
     ledger::PagePtr* page,
-    std::vector<f1dl::VectorPtr<uint8_t>> keys,
+    std::vector<fidl::VectorPtr<uint8_t>> keys,
     size_t current_key_index,
     size_t value_size,
     size_t transaction_size,
@@ -110,7 +110,7 @@ void PageDataGenerator::PutInTransaction(
   }
   size_t this_transaction_size =
       std::min(transaction_size, keys.size() - current_key_index);
-  std::vector<f1dl::VectorPtr<uint8_t>> partial_keys;
+  std::vector<fidl::VectorPtr<uint8_t>> partial_keys;
   std::move(keys.begin() + current_key_index,
             keys.begin() + current_key_index + this_transaction_size,
             std::back_inserter(partial_keys));
@@ -155,7 +155,7 @@ void PageDataGenerator::PutInTransaction(
 
 void PageDataGenerator::PutMultipleEntries(
     ledger::PagePtr* page,
-    std::vector<f1dl::VectorPtr<uint8_t>> keys,
+    std::vector<fidl::VectorPtr<uint8_t>> keys,
     size_t value_size,
     ReferenceStrategy ref_strategy,
     ledger::Priority priority,
@@ -163,7 +163,7 @@ void PageDataGenerator::PutMultipleEntries(
   auto waiter =
       callback::StatusWaiter<ledger::Status>::Create(ledger::Status::OK);
   for (size_t i = 0; i < keys.size(); i++) {
-    f1dl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size);
+    fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size);
     PutEntry(page, std::move(keys[i]), std::move(value), ref_strategy, priority,
              waiter->NewCallback());
   }

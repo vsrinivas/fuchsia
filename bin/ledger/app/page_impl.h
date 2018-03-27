@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 
 namespace ledger {
 class PageDelegate;
@@ -21,26 +21,26 @@ class PageImpl : public Page {
   // Page:
   void GetId(const GetIdCallback& callback) override;
 
-  void GetSnapshot(f1dl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   f1dl::VectorPtr<uint8_t> key_prefix,
-                   f1dl::InterfaceHandle<PageWatcher> watcher,
+  void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                   fidl::VectorPtr<uint8_t> key_prefix,
+                   fidl::InterfaceHandle<PageWatcher> watcher,
                    const GetSnapshotCallback& callback) override;
 
-  void Put(f1dl::VectorPtr<uint8_t> key,
-           f1dl::VectorPtr<uint8_t> value,
+  void Put(fidl::VectorPtr<uint8_t> key,
+           fidl::VectorPtr<uint8_t> value,
            const PutCallback& callback) override;
 
-  void PutWithPriority(f1dl::VectorPtr<uint8_t> key,
-                       f1dl::VectorPtr<uint8_t> value,
+  void PutWithPriority(fidl::VectorPtr<uint8_t> key,
+                       fidl::VectorPtr<uint8_t> value,
                        Priority priority,
                        const PutWithPriorityCallback& callback) override;
 
-  void PutReference(f1dl::VectorPtr<uint8_t> key,
+  void PutReference(fidl::VectorPtr<uint8_t> key,
                     ReferencePtr reference,
                     Priority priority,
                     const PutReferenceCallback& callback) override;
 
-  void Delete(f1dl::VectorPtr<uint8_t> key,
+  void Delete(fidl::VectorPtr<uint8_t> key,
               const DeleteCallback& callback) override;
 
   void CreateReferenceFromSocket(
@@ -59,7 +59,7 @@ class PageImpl : public Page {
   void Rollback(const RollbackCallback& callback) override;
 
   void SetSyncStateWatcher(
-      f1dl::InterfaceHandle<SyncWatcher> watcher,
+      fidl::InterfaceHandle<SyncWatcher> watcher,
       const SetSyncStateWatcherCallback& callback) override;
 
   void WaitForConflictResolution(

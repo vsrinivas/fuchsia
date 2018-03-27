@@ -8,11 +8,11 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
 

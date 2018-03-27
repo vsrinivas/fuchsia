@@ -9,13 +9,13 @@ namespace ledger {
 FakeNetConnector::FakeNetConnector(Delegate* delegate) : delegate_(delegate) {}
 
 void FakeNetConnector::ConnectToServiceProvider(
-    f1dl::InterfaceRequest<component::ServiceProvider> request) {
+    fidl::InterfaceRequest<component::ServiceProvider> request) {
   service_provider_impl_.AddBinding(std::move(request));
 }
 
 void FakeNetConnector::RegisterServiceProvider(
-    const f1dl::StringPtr& name,
-    f1dl::InterfaceHandle<component::ServiceProvider> service_provider) {
+    const fidl::StringPtr& name,
+    fidl::InterfaceHandle<component::ServiceProvider> service_provider) {
   component::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
       fxl::MakeCopyable([name, service_provider_ptr = std::move(
@@ -26,8 +26,8 @@ void FakeNetConnector::RegisterServiceProvider(
 }
 
 void FakeNetConnector::GetDeviceServiceProvider(
-    const f1dl::StringPtr& device_name,
-    f1dl::InterfaceRequest<component::ServiceProvider> service_provider) {
+    const fidl::StringPtr& device_name,
+    fidl::InterfaceRequest<component::ServiceProvider> service_provider) {
   delegate_->ConnectToServiceProvider(device_name, std::move(service_provider));
 }
 

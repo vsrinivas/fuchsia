@@ -7,7 +7,7 @@
 #include <chrono>
 
 #include "lib/fidl/cpp/array.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"

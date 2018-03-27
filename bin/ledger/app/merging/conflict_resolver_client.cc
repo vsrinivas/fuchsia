@@ -161,7 +161,7 @@ void ConflictResolverClient::Finalize(Status status) {
 
 // GetFullDiff(array<uint8>? token)
 //    => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
-void ConflictResolverClient::GetFullDiff(f1dl::VectorPtr<uint8_t> token,
+void ConflictResolverClient::GetFullDiff(fidl::VectorPtr<uint8_t> token,
                                          const GetFullDiffCallback& callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), callback);
 }
@@ -169,24 +169,24 @@ void ConflictResolverClient::GetFullDiff(f1dl::VectorPtr<uint8_t> token,
 //   GetConflictingDiff(array<uint8>? token)
 //      => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 void ConflictResolverClient::GetConflictingDiff(
-    f1dl::VectorPtr<uint8_t> token,
+    fidl::VectorPtr<uint8_t> token,
     const GetConflictingDiffCallback& callback) {
   GetDiff(diff_utils::DiffType::CONFLICTING, std::move(token), callback);
 }
 
 void ConflictResolverClient::GetDiff(
     diff_utils::DiffType type,
-    f1dl::VectorPtr<uint8_t> token,
+    fidl::VectorPtr<uint8_t> token,
     const std::function<void(Status,
-                             f1dl::VectorPtr<DiffEntryPtr>,
-                             f1dl::VectorPtr<uint8_t>)>& callback) {
+                             fidl::VectorPtr<DiffEntryPtr>,
+                             fidl::VectorPtr<uint8_t>)>& callback) {
   diff_utils::ComputeThreeWayDiff(
       storage_, *ancestor_, *left_, *right_, "", convert::ToString(token), type,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, callback](
               Status status,
-              std::pair<f1dl::VectorPtr<DiffEntryPtr>, std::string> page_change) {
+              std::pair<fidl::VectorPtr<DiffEntryPtr>, std::string> page_change) {
             if (cancelled_) {
               callback(Status::INTERNAL_ERROR, nullptr, nullptr);
               Finalize(Status::INTERNAL_ERROR);
@@ -209,7 +209,7 @@ void ConflictResolverClient::GetDiff(
 }
 
 // Merge(array<MergedValue>? merge_changes) => (Status status);
-void ConflictResolverClient::Merge(f1dl::VectorPtr<MergedValuePtr> merged_values,
+void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValuePtr> merged_values,
                                    const MergeCallback& callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(

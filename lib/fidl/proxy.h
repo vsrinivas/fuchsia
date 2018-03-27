@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 

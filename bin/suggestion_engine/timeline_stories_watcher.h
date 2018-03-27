@@ -8,7 +8,7 @@
 #include <map>
 #include <set>
 
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 
 namespace maxwell {

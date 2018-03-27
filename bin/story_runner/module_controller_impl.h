@@ -11,9 +11,9 @@
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_ptr.h"
-#include "lib/fidl/cpp/bindings/interface_ptr_set.h"
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_ptr.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_context.fidl.h"

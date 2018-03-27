@@ -11,7 +11,7 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
+#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
@@ -23,7 +23,7 @@ struct DeviceContext {
   ledger::LedgerPtr ledger;
   files::ScopedTempDir storage_directory;
   ledger::PagePtr page_connection;
-  std::unique_ptr<f1dl::Binding<ledger::PageWatcher>> page_watcher;
+  std::unique_ptr<fidl::Binding<ledger::PageWatcher>> page_watcher;
 };
 
 // Benchmark that measures the time it takes to sync and reconcile concurrent
@@ -65,7 +65,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   const int device_count_;
   std::string server_id_;
   std::vector<DeviceContext> devices_;
-  f1dl::VectorPtr<uint8_t> page_id_;
+  fidl::VectorPtr<uint8_t> page_id_;
   std::multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 
