@@ -2,29 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
-
-go_binary("power_manager_bin") {
-  output_name = "power_manager"
-
-  gopackage = "power_manager"
-
-  go_dependencies = [
-    {
-      package = "power_manager"
-    },
-  ]
-  extra_dependencies = [
-    "//garnet/public/lib/app/fidl($go_toolchain)",
-    "//garnet/public/lib/power_manager/fidl($go_toolchain)",
-    "//garnet/public/lib/syslog/go/src/syslog",
-    "//garnet/public/lib/app/go/src/app",
-    "//garnet/public/lib/fidl/go/src/fidl",
-  ]
-}
 
 go_test("power_manager_test") {
   gopackage = "power_manager"
@@ -35,29 +15,10 @@ go_test("power_manager_test") {
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
-    "//garnet/public/lib/power_manager/fidl($go_toolchain)",
+    "//garnet/public/lib/power_manager/fidl:power_manager($go_toolchain)",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl",
-  ]
-}
-
-package("power_manager") {
-  deps = [
-    ":power_manager_bin",
-  ]
-
-  binary = "power_manager"
-
-  meta = [
-    {
-      path = rebase_path("meta/sandbox")
-      dest = "sandbox"
-    },
-    {
-      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-      dest = "legacy_flat_exported_dir"
-    },
   ]
 }
 

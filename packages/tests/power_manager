@@ -3,6 +3,7 @@
         "garnet/packages/prod/power_manager"
     ],
     "packages": {
+        "power_manager_tests": "//garnet/bin/power_manager:power_manager_tests",
         "power_manager_gotests": "//garnet/go/src/power_manager:power_manager_gotests"
     }
 }

@@ -7,6 +7,7 @@ members =  [
   "bin/device_settings",
   "bin/log_listener",
   "bin/logger",
+  "bin/power_manager",
   "bin/wlancfg",
   "bin/wlanstack",
   "bin/wlantool",

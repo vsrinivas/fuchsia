@@ -1,5 +1,5 @@
 {
     "packages": {
-        "power_manager": "//garnet/go/src/power_manager"
+        "power_manager": "//garnet/bin/power_manager:power_manager"
     }
 }
