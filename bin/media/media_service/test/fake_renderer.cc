@@ -44,7 +44,7 @@ void FakeRenderer::Bind(
 
 void FakeRenderer::GetSupportedMediaTypes(
     GetSupportedMediaTypesCallback callback) {
-  fidl::VectorPtr<MediaTypeSet> supported_types(2);
+  fidl::VectorPtr<MediaTypeSet> supported_types;
 
   {
     AudioMediaTypeSetDetails audio_details;
