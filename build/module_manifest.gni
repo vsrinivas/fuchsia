@@ -3,10 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/package.gni")
 
 module_manifest_schema =
     "//peridot/bin/package_manager/metadata_schemas/module.json"
 module_manifests_out_dir = "$root_build_dir/module_manifests"
+
+# NOTE: Using the module_manifest_package rule below, the fully resolved path
+# will be /system/data/module_manifest_repository
+# This must match that given in bin/module_resolver/module_resolver_main.cc
+initial_manifest_target_dir = "initial_module_manifests"
 
 # This template generates a target that will verify the supplied module
 # manifest.
@@ -49,9 +55,77 @@ template("verify_module_manifest") {
   }
 }
 
+# This is a temporary in-tree Module publishing rule, to be used until there is
+# a better packaging and publishing solution.
+#
+# In order to use this rule:
+#
+# 0) Build your binary as per normal.
+# 1) Include it on the device's bootfs, or deploy it to the cloud.
+# 2) Create a Module manifest file as per //peridot/docs/modular/manifests/module.md
+# 3) Point the 'binary' attribute in your manifest to the *runtime location*
+#    of your binary (being the location on bootfs, or the cloud URL).
+# 4) Include your module_manifest_package() rule in the `packages` section
+#    of your repository's packages file. If you don't, the manifest file will
+#    not be included on the device, and your Module won't be indexed.
+#
+# Example:
+#
+# import("//peridot/build/module_repository/manifest_package.gni")
+#
+# module_manifest_package("manifests") {
+#   sources = [ "my_module_manifest.json" ]
+# }
+template("module_manifest_package") {
+  assert(defined(invoker.sources), "'sources' must be defined for $target_name")
+
+  resources_entries = []
+  verification_targets = []
+  foreach(module_manifest, invoker.sources) {
+    # TODO(thatguy): Add verb semantic validation of the manifest file.
+    # TODO(thatguy): Ensure that the binary(s) referenced by the manifests
+    # appear on the bootfs in the correct place (if possible).
+
+    # Verifies that the manifest is valid.
+    manifest_abspath = get_path_info(module_manifest, "abspath")
+    verification_target_name = "${target_name}_verify_schema_${manifest_abspath}"
+    verify_module_manifest(verification_target_name) {
+      original_target_name = target_name
+      module_manifest = module_manifest
+    }
+    verification_targets += [ ":$verification_target_name" ]
+
+    package_name = target_name
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+
+    resources_entries += [ {
+      path = rebase_path(module_manifest)
+      dest = initial_manifest_target_dir + "/" + package_name
+    } ]
+  }
+
+  package(target_name) {
+    system_image = true
+
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    }
+
+    resources = resources_entries
+
+    deps = verification_targets
+  }
+}
+
 template("copy_module_manifest") {
   assert(defined(invoker.module_manifest), "Must specify module_manifest.")
   assert(defined(invoker.package_name), "Must specify package_name.")
+
+  module_manifest_package("${target_name}_pkg") {
+    sources = [invoker.module_manifest]
+  }
 
   copy(target_name) {
     sources = [
@@ -60,5 +134,6 @@ template("copy_module_manifest") {
     outputs = [
       "$module_manifests_out_dir/${invoker.package_name}",
     ]
+    deps = [":${target_name}_pkg"]
   }
 }
