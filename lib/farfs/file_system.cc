@@ -153,10 +153,9 @@ bool FileSystem::GetFileAsString(fxl::StringView path, std::string* result) {
   }
   std::string data;
   data.resize(entry.data_length);
-  size_t actual;
-  zx_status_t status = zx_vmo_read_old(vmo_, &data[0], entry.data_offset,
-                                       entry.data_length, &actual);
-  if (status != ZX_OK || actual != entry.data_length)
+  zx_status_t status = zx_vmo_read(vmo_, &data[0], entry.data_offset,
+                                       entry.data_length);
+  if (status != ZX_OK)
     return false;
   result->swap(data);
   return true;
