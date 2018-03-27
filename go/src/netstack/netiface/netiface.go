@@ -11,6 +11,7 @@ import (
 type NIC struct {
 	ID         tcpip.NICID
 	Addr       tcpip.Address
+	Name       string
 	Netmask    tcpip.AddressMask
 	Routes     []tcpip.Route
 	DNSServers []tcpip.Address

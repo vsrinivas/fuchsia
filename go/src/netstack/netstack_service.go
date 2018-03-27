@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"app/context"
@@ -65,7 +66,6 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	index := uint32(0)
 	for nicid, ifs := range ns.ifStates {
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
 		broadaddr := []byte(ifs.nic.Addr)
@@ -86,7 +86,7 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 		outif := nsfidl.NetInterface{
 			Id:        uint32(nicid),
 			Flags:     flags,
-			Name:      fmt.Sprintf("en%d", nicid),
+			Name:      ifs.nic.Name,
 			Addr:      toNetAddress(ifs.nic.Addr),
 			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
 			Broadaddr: toNetAddress(tcpip.Address(broadaddr)),
@@ -95,8 +95,10 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 		}
 
 		out = append(out, outif)
-		index++
 	}
+	sort.Slice(out[:], func(i, j int) bool {
+		return out[i].Id < out[j].Id
+	})
 	return out
 }
 

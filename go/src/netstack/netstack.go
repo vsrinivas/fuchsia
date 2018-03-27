@@ -38,6 +38,8 @@ type netstack struct {
 	mu       sync.Mutex
 	nodename string
 	ifStates map[tcpip.NICID]*ifState
+
+	countNIC tcpip.NICID
 }
 
 // Each ifState tracks the state of a network interface.
@@ -261,6 +263,8 @@ func (ns *netstack) addLoopback() error {
 			},
 		},
 	}
+	// features is not used for loopback NIC
+	setNICName(nic, 0)
 
 	ifs := &ifState{
 		ns:     ns,
@@ -277,6 +281,7 @@ func (ns *netstack) addLoopback() error {
 		return fmt.Errorf("loopback: other interfaces already registered")
 	}
 	ns.ifStates[nicid] = ifs
+	ns.countNIC++
 	ns.mu.Unlock()
 
 	linkID := loopback.New()
@@ -337,13 +342,7 @@ func (ns *netstack) addEth(path string) error {
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
 	copy(ifs.nic.Mac[:], ep.LinkAddr)
 
-	var nicid tcpip.NICID
-	for _, ifs := range ns.ifStates {
-		if ifs.nic.ID > nicid {
-			nicid = ifs.nic.ID
-		}
-	}
-	nicid++
+	nicid := ns.countNIC + 1
 	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
 		ns.mu.Unlock()
 		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
@@ -355,8 +354,11 @@ func (ns *netstack) addEth(path string) error {
 		ns.nodename = deviceid.DeviceID(ifs.nic.Mac)
 	}
 	ifs.nic.ID = nicid
+	setNICName(ifs.nic, client.Features)
+
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
 	ns.ifStates[nicid] = ifs
+	ns.countNIC++
 	ns.mu.Unlock()
 
 	log.Printf("NIC %d added using ethernet device %q", nicid, path)
@@ -391,4 +393,13 @@ func (ns *netstack) addEth(path string) error {
 
 	go ifs.dhcp.Run(ifs.ctx)
 	return nil
+}
+func setNICName(nic *netiface.NIC, features uint32) {
+	if nic.ID == 1 {
+		nic.Name = "lo"
+	} else if features&eth.FeatureWlan != 0 {
+		nic.Name = fmt.Sprintf("wlan%d", nic.ID)
+	} else {
+		nic.Name = fmt.Sprintf("en%d", nic.ID)
+	}
 }
