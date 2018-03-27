@@ -28,7 +28,7 @@ bool VmoFromContainer(const Container& container, SizedVmo* sized_vmo_ptr) {
 
   if (num_bytes > 0) {
     size_t actual;
-    status = vmo.write(container.data(), 0, num_bytes, &actual);
+    status = vmo.write_old(container.data(), 0, num_bytes, &actual);
     if (status < 0) {
       FXL_LOG(WARNING) << "zx::vmo::write failed: " << status;
       return false;
@@ -59,7 +59,7 @@ bool ContainerFromVmo(const zx::vmo& buffer,
 
   size_t num_read;
   zx_status_t status =
-      buffer.read(&(*container_ptr)[0], 0, num_bytes, &num_read);
+      buffer.read_old(&(*container_ptr)[0], 0, num_bytes, &num_read);
   if (status < 0) {
     FXL_LOG(WARNING) << "zx::vmo::read failed: " << status;
     return false;

@@ -439,7 +439,7 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       FXL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
       size_t written;
-      result = vmo.write(buffer, done, todo, &written);
+      result = vmo.write_old(buffer, done, todo, &written);
       if (result != ZX_OK) {
         FXL_VLOG(1) << "SendBufferedBody: result=" << result;
         return result;

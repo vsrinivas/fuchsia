@@ -168,7 +168,7 @@ LaunchType Classify(const zx::vmo& data, std::string* runner) {
     return LaunchType::kProcess;
   std::string magic(archive::kMagicLength, '\0');
   size_t count;
-  zx_status_t status = data.read(&magic[0], 0, magic.length(), &count);
+  zx_status_t status = data.read_old(&magic[0], 0, magic.length(), &count);
   if (status != ZX_OK)
     return LaunchType::kProcess;
   if (memcmp(magic.data(), &archive::kMagic, sizeof(archive::kMagic)) == 0)
