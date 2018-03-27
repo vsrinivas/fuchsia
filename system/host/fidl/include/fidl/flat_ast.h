@@ -85,6 +85,21 @@ struct Name {
         return name_.data() < other.name_.data();
     }
 
+    // Returns a fully-qualified representation of the name including information
+    // about the library and the nesting declarations.  This name is appropriate
+    // for use in generated symbol tables.
+    //
+    // When there is a library, looks like this:
+    //   "library/name"
+    //   "library/decl.name"
+    //   "library/decl.decl.name"
+    //
+    // Where there is no library, looks like this:
+    //   "name"
+    //   "decl.name"
+    //   "decl.decl.name"
+    std::string QName() const;
+
 private:
     const Library* library_ = nullptr;
     std::vector<SourceLocation> nested_decls_;
@@ -168,6 +183,10 @@ struct Decl {
 
     Decl(Decl&&) = default;
     Decl& operator=(Decl&&) = default;
+
+    // Gets the fully-qualified name of the declaration.
+    // This name is appropriate for use in generated symbol tables.
+    std::string QName() const { return name.QName(); }
 
     const Kind kind;
 
@@ -428,6 +447,24 @@ struct Interface : public Decl {
     Interface(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Method> methods)
         : Decl(Kind::kInterface, std::move(attributes), std::move(name)), methods(std::move(methods)) {}
 
+    // Gets the fully-qualified name of a method.
+    // This name is appropriate for use in generated symbol tables.
+    //
+    // The name is a combination of the interface's qualified name and the method name.
+    //   "library/interface.method"
+    //   "library/interface.method"
+    //   "library/interface.method"
+    std::string MethodQName(const Method* method) const;
+
+    // Gets the fully-qualified name of a message associated with a method.
+    // This name is appropriate for use in generated symbol tables.
+    //
+    // The name is a combination of the method's qualified name and the message kind.
+    //   "library/interface.method#Request"
+    //   "library/interface.method#Response"
+    //   "library/interface.method#Event"
+    std::string MessageQName(const Method* method, types::MessageKind kind) const;
+
     std::vector<Method> methods;
 };
 
@@ -485,10 +522,10 @@ private:
     bool Fail(StringView message);
     bool Fail(const SourceLocation& location, StringView message);
     bool Fail(const Name& name, StringView message) {
-      return Fail(name.name(), message);
+        return Fail(name.name(), message);
     }
     bool Fail(const Decl& decl, StringView message) {
-      return Fail(decl.name, message);
+        return Fail(decl.name, message);
     }
 
     bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,

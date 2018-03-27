@@ -148,6 +148,20 @@ StringView LibraryName(const Library* library) {
     return library->name();
 }
 
+std::string Name::QName() const {
+    std::string qname;
+    if (library_ != nullptr) {
+        qname += library_->name();
+        qname += '/';
+    }
+    for (const auto& decl : nested_decls_) {
+        qname += decl.data();
+        qname += '.';
+    }
+    qname += name_.data();
+    return qname;
+}
+
 bool Library::Fail(StringView message) {
     auto formatted_message = std::string(message) + "\n";
     error_reporter_->ReportError(std::move(formatted_message));
@@ -156,7 +170,7 @@ bool Library::Fail(StringView message) {
 
 bool Library::Fail(const SourceLocation& location, StringView message) {
     auto formatted_message = location.position() + ": " +
-        std::string(message) + "\n";
+                             std::string(message) + "\n";
     error_reporter_->ReportError(std::move(formatted_message));
     return false;
 }
@@ -753,7 +767,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
         return true;
     };
     switch (decl->kind) {
-    case Decl::Kind::kConst:{
+    case Decl::Kind::kConst: {
         auto const_decl = static_cast<const Const*>(decl);
         if (!maybe_add_constant(const_decl->type.get(), const_decl->value.get()))
             return false;
@@ -819,7 +833,7 @@ bool Library::SortDeclarations() {
         for (Decl* dep : deps) {
             inverse_dependencies[dep].push_back(decl);
         }
-   }
+    }
 
     // Start with all decls that have no incoming edges.
     std::vector<Decl*> decls_without_deps;
@@ -903,7 +917,7 @@ bool Library::CompileInterface(Interface* interface_declaration) {
             return Fail(method.name, "Multiple methods with the same name in an interface");
         if (!ordinal_scope.Insert(method.ordinal.Value()))
             return Fail(method.name, "Mulitple methods with the same ordinal in an interface");
-        auto CreateMessage = [&](Interface::Method::Message* message) -> bool{
+        auto CreateMessage = [&](Interface::Method::Message* message) -> bool {
             Scope<StringView> scope;
             auto header_field_shape = FieldShape(TypeShape(16u, 4u));
             std::vector<FieldShape*> message_struct;
@@ -1165,6 +1179,30 @@ bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
         return CompileIdentifierType(identifier_type, out_typeshape);
     }
     }
+}
+
+std::string Interface::MethodQName(const Method* method) const {
+    std::string qname = QName();
+    qname += ".";
+    qname += method->name.data();
+    return qname;
+}
+
+std::string Interface::MessageQName(const Method* method,
+                                    types::MessageKind kind) const {
+    std::string qname = MethodQName(method);
+    switch (kind) {
+    case types::MessageKind::kRequest:
+        qname += "#Request";
+        break;
+    case types::MessageKind::kResponse:
+        qname += "#Response";
+        break;
+    case types::MessageKind::kEvent:
+        qname += "#Event";
+        break;
+    }
+    return qname;
 }
 
 } // namespace flat

@@ -10,6 +10,40 @@
 extern "C" {
 #endif
 
+extern const fidl_type_t nonnullable_handle;
+extern const fidl_type_t nullable_handle;
+extern const fidl_type_t nullable_channel_handle;
+extern const fidl_type_t nullable_vmo_handle;
+extern const fidl_type_t nonnullable_channel_handle;
+extern const fidl_type_t nonnullable_vmo_handle;
+
+extern const fidl_type_t array_of_two_nonnullable_handles;
+extern const fidl_type_t array_of_four_nonnullable_handles;
+extern const fidl_type_t array_of_five_nullable_handles;
+extern const fidl_type_t array_of_three_arrays_of_four_nonnullable_handles;
+extern const fidl_type_t array_of_two_arrays_of_two_nonnullable_handles;
+
+extern const fidl_type_t unbounded_nonnullable_string;
+extern const fidl_type_t unbounded_nullable_string;
+extern const fidl_type_t bounded_32_nonnullable_string;
+extern const fidl_type_t bounded_32_nullable_string;
+extern const fidl_type_t bounded_4_nonnullable_string;
+extern const fidl_type_t bounded_4_nullable_string;
+
+extern const fidl_type_t unbounded_nonnullable_vector_of_handles;
+extern const fidl_type_t unbounded_nullable_vector_of_handles;
+extern const fidl_type_t bounded_32_nonnullable_vector_of_handles;
+extern const fidl_type_t bounded_32_nullable_vector_of_handles;
+extern const fidl_type_t bounded_2_nonnullable_vector_of_handles;
+extern const fidl_type_t bounded_2_nullable_vector_of_handles;
+
+extern const fidl_type_t unbounded_nonnullable_vector_of_uint32;
+extern const fidl_type_t unbounded_nullable_vector_of_uint32;
+extern const fidl_type_t bounded_32_nonnullable_vector_of_uint32;
+extern const fidl_type_t bounded_32_nullable_vector_of_uint32;
+extern const fidl_type_t bounded_2_nonnullable_vector_of_uint32;
+extern const fidl_type_t bounded_2_nullable_vector_of_uint32;
+
 extern const fidl_type_t nonnullable_handle_message_type;
 extern const fidl_type_t multiple_nonnullable_handles_message_type;
 extern const fidl_type_t nullable_handle_message_type;
@@ -43,12 +77,17 @@ extern const fidl_type_t bounded_32_nullable_vector_of_uint32_message_type;
 extern const fidl_type_t multiple_nonnullable_vectors_of_uint32_message_type;
 extern const fidl_type_t multiple_nullable_vectors_of_uint32_message_type;
 
+extern const fidl_type_t nonnullable_handle_union_type;
 extern const fidl_type_t nonnullable_handle_union_message_type;
 extern const fidl_type_t array_of_nonnullable_handles_union_message_type;
+extern const fidl_type_t nonnullable_handle_union_ptr;
 extern const fidl_type_t nonnullable_handle_union_ptr_message_type;
 extern const fidl_type_t array_of_nonnullable_handles_union_ptr_message_type;
 
+extern const fidl_type_t struct_level_0_struct;
 extern const fidl_type_t nested_structs_message_type;
+
+extern const fidl_type_t struct_ptr_level_0_struct_pointer;
 extern const fidl_type_t nested_struct_ptrs_message_type;
 
 extern const fidl_type_t maybe_recurse_type;

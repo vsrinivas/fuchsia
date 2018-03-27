@@ -37,4 +37,12 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
 zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
                           uint32_t num_handles, const char** error_msg_out);
 
+// Stores the name of a fidl type into the provided buffer.
+// Truncates the name if it is too long to fit into the buffer.
+// Returns the number of characters written into the buffer.
+//
+// Note: This function does not write a trailing NUL.
+size_t fidl_format_type_name(const fidl_type_t* type,
+                             char* buffer, size_t capacity);
+
 __END_CDECLS

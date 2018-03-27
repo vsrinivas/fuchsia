@@ -111,7 +111,9 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
     Emit(&tables_file_, struct_type.fields.size());
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, struct_type.size);
-    Emit(&tables_file_, "));\n\n");
+    Emit(&tables_file_, ", \"");
+    Emit(&tables_file_, struct_type.qname);
+    Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::UnionType& union_type) {
@@ -131,7 +133,9 @@ void TablesGenerator::Generate(const coded::UnionType& union_type) {
     Emit(&tables_file_, union_type.data_offset);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, union_type.size);
-    Emit(&tables_file_, "));\n\n");
+    Emit(&tables_file_, ", \"");
+    Emit(&tables_file_, union_type.qname);
+    Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::MessageType& message_type) {
@@ -153,7 +157,9 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
     Emit(&tables_file_, message_type.fields.size());
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, message_type.size);
-    Emit(&tables_file_, "));\n\n");
+    Emit(&tables_file_, ", \"");
+    Emit(&tables_file_, message_type.qname);
+    Emit(&tables_file_, "\"));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::HandleType& handle_type) {
@@ -495,7 +501,9 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             auto CreateMessage = [&](const flat::Interface::Method::Message& message,
                                      types::MessageKind kind) -> void {
                 std::string message_name = NameMessage(LibraryName(decl->name.library()), method_name, kind);
-                interface_messages.push_back(std::make_unique<coded::MessageType>(std::move(message_name), std::vector<coded::Field>(), message.typeshape.Size()));
+                interface_messages.push_back(std::make_unique<coded::MessageType>(std::move(message_name), std::vector<coded::Field>(),
+                                                                                  message.typeshape.Size(),
+                                                                                  interface_decl->MessageQName(&method, kind)));
             };
             if (method.maybe_request) {
                 CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -512,7 +520,9 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         auto struct_decl = static_cast<const flat::Struct*>(decl);
         std::string struct_name = NameCodedStruct(struct_decl);
         std::string pointer_name = NamePointer(struct_name);
-        named_coded_types_.emplace(&decl->name, std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::Field>(), struct_decl->typeshape.Size(), std::move(pointer_name)));
+        named_coded_types_.emplace(&decl->name, std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::Field>(),
+                                                                                    struct_decl->typeshape.Size(), std::move(pointer_name),
+                                                                                    struct_decl->QName()));
         break;
     }
     case flat::Decl::Kind::kUnion: {
@@ -520,7 +530,8 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         std::string union_name = NameCodedUnion(union_decl);
         std::string pointer_name = NamePointer(union_name);
         named_coded_types_.emplace(&decl->name, std::make_unique<coded::UnionType>(std::move(union_name), std::vector<const coded::Type*>(),
-                                                                                   union_decl->membershape.Offset(), union_decl->typeshape.Size(), std::move(pointer_name)));
+                                                                                   union_decl->membershape.Offset(), union_decl->typeshape.Size(),
+                                                                                   std::move(pointer_name), union_decl->QName()));
         break;
     }
     }

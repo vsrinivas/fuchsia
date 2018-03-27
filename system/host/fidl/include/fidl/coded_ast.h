@@ -104,11 +104,14 @@ struct RequestHandleType : public Type {
 };
 
 struct StructType : public Type {
-    StructType(std::string name, std::vector<Field> fields, uint32_t size, std::string pointer_name)
-        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)), pointer_name(std::move(pointer_name)) {}
+    StructType(std::string name, std::vector<Field> fields, uint32_t size,
+               std::string pointer_name, std::string qname)
+        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)),
+          pointer_name(std::move(pointer_name)), qname(std::move(qname)) {}
 
     std::vector<Field> fields;
     std::string pointer_name;
+    std::string qname;
     bool referenced_by_pointer = false;
 };
 
@@ -120,13 +123,16 @@ struct StructPointerType : public Type {
 };
 
 struct UnionType : public Type {
-    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size, std::string pointer_name)
+    UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size,
+              std::string pointer_name, std::string qname)
         : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kNeeded),
-          types(std::move(types)), data_offset(data_offset), pointer_name(std::move(pointer_name)) {}
+          types(std::move(types)), data_offset(data_offset),
+          pointer_name(std::move(pointer_name)), qname(std::move(qname)) {}
 
     std::vector<const Type*> types;
     const uint32_t data_offset;
     std::string pointer_name;
+    std::string qname;
     bool referenced_by_pointer = false;
 };
 
@@ -138,10 +144,12 @@ struct UnionPointerType : public Type {
 };
 
 struct MessageType : public Type {
-    MessageType(std::string name, std::vector<Field> fields, uint32_t size)
-        : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)) {}
+    MessageType(std::string name, std::vector<Field> fields, uint32_t size, std::string qname)
+        : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kNeeded), fields(std::move(fields)),
+          qname(std::move(qname)) {}
 
     std::vector<Field> fields;
+    std::string qname;
 };
 
 struct InterfaceType : public Type {

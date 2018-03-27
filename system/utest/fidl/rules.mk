@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/decoding_tests.cpp \
     $(LOCAL_DIR)/encoding_tests.cpp \
     $(LOCAL_DIR)/fidl_coded_types.cpp \
+    $(LOCAL_DIR)/formatting_tests.cpp \
     $(LOCAL_DIR)/main.c \
     $(LOCAL_DIR)/message_tests.cpp \
     $(LOCAL_DIR)/validating_tests.cpp \

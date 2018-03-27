@@ -41,7 +41,8 @@ struct FidlField {
     const fidl_type* type;
     uint32_t offset;
 
-    constexpr FidlField(const fidl_type* type, uint32_t offset) : type(type), offset(offset) {}
+    constexpr FidlField(const fidl_type* type, uint32_t offset)
+        : type(type), offset(offset) {}
 };
 
 enum FidlTypeTag : uint32_t {
@@ -62,9 +63,15 @@ struct FidlCodedStruct {
     const FidlField* const fields;
     const uint32_t field_count;
     const uint32_t size;
+    const char* name; // may be nullptr if omitted at compile time
 
+    constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size,
+                              const char* name)
+        : fields(fields), field_count(field_count), size(size), name(name) {}
+
+    // TODO: Remove after propagating dependent changes through other layers.
     constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size)
-        : fields(fields), field_count(field_count), size(size) {}
+        : fields(fields), field_count(field_count), size(size), name("") {}
 };
 
 struct FidlCodedStructPointer {
@@ -84,10 +91,11 @@ struct FidlCodedUnion {
     const uint32_t type_count;
     const uint32_t data_offset;
     const uint32_t size;
+    const char* name; // may be nullptr if omitted at compile time
 
     constexpr FidlCodedUnion(const fidl_type* const* types, uint32_t type_count,
-                             uint32_t data_offset, uint32_t size)
-        : types(types), type_count(type_count), data_offset(data_offset), size(size) {}
+                             uint32_t data_offset, uint32_t size, const char* name)
+        : types(types), type_count(type_count), data_offset(data_offset), size(size), name(name) {}
 };
 
 struct FidlCodedUnionPointer {
