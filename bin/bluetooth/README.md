@@ -96,8 +96,9 @@ TODO(armansito): Describe integration tests
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
 The mapping between environment service names and their handlers is defined in
-[bin/sysmgr/services.config](../../bin/sysmgr/services.config). Add the
-`--verbose` option to the Bluetooth entries to increase verbosity, for example:
+[bin/sysmgr/config/services.config](../../bin/sysmgr/config/services.config).
+Add the `--verbose` option to the Bluetooth entries to increase verbosity, for
+example:
 
 ```
 ...
