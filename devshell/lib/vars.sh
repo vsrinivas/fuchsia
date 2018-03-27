@@ -109,7 +109,10 @@ function fx-command-help {
 #     ...
 #     }
 function fx-standard-switches {
-  declare -g -a FX_ARGV=()
+  # In bash 4, this can be `declare -a -g FX_ARGV=()` to be explicit
+  # about setting a global array.  But bash 3 (shipped on macOS) does
+  # not support the `-g` flag to `declare`.
+  FX_ARGV=()
   while [[ $# -gt 0 ]]; do
     if [[ "$1" = "--help" ]]; then
       fx-print-command-help "$0"
