@@ -20,20 +20,6 @@ package("ledger") {
   ]
 }
 
-package("ledger_tool") {
-  system_image = true
-
-  deps = [
-    "tool",
-  ]
-
-  binaries = [
-    {
-      name = "ledger_tool"
-    },
-  ]
-}
-
 package("ledger_tests") {
   testonly = true
   system_image = true
