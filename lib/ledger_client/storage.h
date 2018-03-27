@@ -9,10 +9,9 @@
 
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/story_data.fidl.h"
 
 namespace modular {
 
@@ -64,10 +63,10 @@ constexpr char kPerDeviceKeyPrefix[] = "PerDevice/";
 //    key. The set of ID values under each key is defined by the arguments of
 //    factory functions for the keys:
 //
-std::string MakeStoryKey(const f1dl::StringPtr& story_id);
-std::string MakeDeviceKey(const f1dl::StringPtr& device_name);
-std::string MakePerDeviceKey(const f1dl::StringPtr& device_name);
-std::string MakeFocusKey(const f1dl::StringPtr& device_name);
+std::string MakeStoryKey(const fidl::StringPtr& story_id);
+std::string MakeDeviceKey(const fidl::StringPtr& device_name);
+std::string MakePerDeviceKey(const fidl::StringPtr& device_name);
+std::string MakeFocusKey(const fidl::StringPtr& device_name);
 std::string MakeMessageQueuesPrefix(const std::string& component_namespace);
 std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
                                      const std::string& component_instance_id,
@@ -75,8 +74,8 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
 std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
-std::string MakeLinkKey(const LinkPathPtr& link_path);
-std::string MakeModuleKey(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+std::string MakeLinkKey(const LinkPath& link_path);
+std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
 // 3. The slash separator is escaped by a backslash inside the ID
 //    values. Backslashes inside the ID values are escaped by backslash too.
@@ -89,7 +88,8 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
-std::string EncodeModulePath(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+std::string EncodeModulePath(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path);
 std::string EncodeLinkPath(const LinkPathPtr& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 

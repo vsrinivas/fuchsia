@@ -6,6 +6,7 @@
 
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
 #include "peridot/bin/acquirers/story_info/modular.h"
@@ -15,7 +16,7 @@
 namespace maxwell {
 
 StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
-                                   ContextWriter* const writer,
+                                   modular::ContextWriter* const writer,
                                    modular::StoryProvider* const story_provider,
                                    const std::string& story_id)
     : owner_(owner),
@@ -40,14 +41,18 @@ StoryWatcherImpl::StoryWatcherImpl(StoryInfoAcquirer* const owner,
   // TODO(thatguy): Add modular.StoryState.
   // TODO(thatguy): Add visible state.
 
-  writer_->CreateValue(context_value_.NewRequest(), ContextValueType::STORY);
-  context_value_->Set(nullptr /* content */, context_metadata_.Clone());
+  writer_->CreateValue(context_value_.NewRequest(),
+                       modular::ContextValueType::STORY);
+  modular::ContextMetadata metadata;
+  fidl::Clone(context_metadata_, &metadata);
+  context_value_->Set(nullptr /* content */,
+                      fidl::MakeOptional(std::move(metadata)));
 
   story_controller_->GetActiveLinks(
       story_links_watcher_binding_.NewBinding(),
-      [this](f1dl::VectorPtr<modular::LinkPathPtr> links) {
-        for (auto& link_path : *links) {
-          WatchLink(link_path);
+      [this](fidl::VectorPtr<modular::LinkPath> links) mutable {
+        for (modular::LinkPath& link_path : *links) {
+          WatchLink(std::move(link_path));
         }
       });
 }
@@ -60,40 +65,45 @@ void StoryWatcherImpl::OnStateChange(modular::StoryState new_state) {
 }
 
 // |StoryWatcher|
-void StoryWatcherImpl::OnModuleAdded(modular::ModuleDataPtr module_data) {
-  ContextValueWriterPtr module_value;
+void StoryWatcherImpl::OnModuleAdded(modular::ModuleData module_data) {
+  modular::ContextValueWriterPtr module_value;
   context_value_->CreateChildValue(module_value.NewRequest(),
-                                   ContextValueType::MODULE);
-  module_value->Set(nullptr /* content */,
-                    ContextMetadataBuilder()
-                        .SetModuleUrl(module_data->module_url)
-                        .SetModulePath(module_data->module_path.Clone())
-                        .Build());
+                                   modular::ContextValueType::MODULE);
+  module_value->Set(
+      nullptr /* content */,
+      fidl::MakeOptional(ContextMetadataBuilder()
+                             .SetModuleUrl(module_data.module_url)
+                             .SetModulePath(module_data.module_path)
+                             .Build()));
 
-  auto path = modular::EncodeModulePath(module_data->module_path);
+  auto path = modular::EncodeModulePath(module_data.module_path);
   module_values_.emplace(path, std::move(module_value));
 }
 
 // |StoryLinksWatcher|
-void StoryWatcherImpl::OnNewLink(modular::LinkPathPtr link_path) {
-  WatchLink(link_path);
+void StoryWatcherImpl::OnNewLink(modular::LinkPath link_path) {
+  WatchLink(std::move(link_path));
 }
 
-void StoryWatcherImpl::WatchLink(const modular::LinkPathPtr& link_path) {
-  links_.emplace(std::make_pair(modular::MakeLinkKey(link_path),
-                                std::make_unique<LinkWatcherImpl>(
-                                    this, story_controller_.get(), story_id_,
-                                    context_value_.get(), link_path)));
+void StoryWatcherImpl::WatchLink(modular::LinkPath link_path) {
+  links_.emplace(std::make_pair(
+      modular::MakeLinkKey(link_path),
+      std::make_unique<LinkWatcherImpl>(this, story_controller_.get(),
+                                        story_id_, context_value_.get(),
+                                        std::move(link_path))));
 }
 
 void StoryWatcherImpl::OnFocusChange(bool focused) {
   context_metadata_ = ContextMetadataBuilder(std::move(context_metadata_))
                           .SetStoryFocused(focused)
                           .Build();
-  context_value_->Set(nullptr /* content */, context_metadata_.Clone());
+  modular::ContextMetadata metadata;
+  fidl::Clone(context_metadata_, &metadata);
+  context_value_->Set(nullptr /* content */,
+                      fidl::MakeOptional(std::move(metadata)));
 }
 
-void StoryWatcherImpl::OnStoryStateChange(modular::StoryInfoPtr info,
+void StoryWatcherImpl::OnStoryStateChange(modular::StoryInfo info,
                                           modular::StoryState state) {
   // TODO(thatguy): Record this state too.
 }

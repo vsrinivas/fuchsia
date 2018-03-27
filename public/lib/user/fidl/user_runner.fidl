@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library modular_private;
 
 // import "peridot/bin/ledger/fidl/internal.fidl";
 // import "lib/auth/fidl/account_provider.fidl";
@@ -18,14 +18,14 @@ library modular;
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
-  1: Initialize(auth.Account? account,
-               AppConfig user_shell,
-               AppConfig story_shell,
-               auth.TokenProviderFactory token_provider_factory,
+  1: Initialize(modular_auth.Account? account,
+               modular.AppConfig user_shell,
+               modular.AppConfig story_shell,
+               modular_auth.TokenProviderFactory token_provider_factory,
                UserContext user_context,
                request<views_v1_token.ViewOwner>? view_owner);
 
-  2: SwapUserShell(AppConfig user_shell) -> ();
+  2: SwapUserShell(modular.AppConfig user_shell) -> ();
 };
 
 // This interface is provided by device runner to |UserRunner|.

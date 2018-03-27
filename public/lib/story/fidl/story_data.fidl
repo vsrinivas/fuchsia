@@ -2,19 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library modular_private;
 
 // import "lib/story/fidl/story_info.fidl";
 
 // Internal data that user runner keeps about stories. Some of them
 // are exposed to the UserShell, which are kept in StoryInfo.
+struct StoryPageId {
+    array<uint8>:16 id;
+};
+
 struct StoryData {
   // Metadata available to the UserShell.
-  StoryInfo story_info;
+  modular.StoryInfo story_info;
 
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.
-  array<uint8, 16>? story_page_id;
+  StoryPageId story_page_id;
 };
 
 struct StoryContextEntry {
@@ -56,8 +60,8 @@ struct StoryContextLog {
 // Events that cause story context to be captured.
 enum StorySignal {
   // Context is captured when the story is created.
-  CREATED = 1,
+  CREATED = 1;
 
   // Context is captured when the story is focused.
-  FOCUSED = 2,
+  FOCUSED = 2;
 };

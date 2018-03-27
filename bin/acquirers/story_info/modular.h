@@ -7,8 +7,8 @@
 
 #include <string>
 
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/story_state.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_private.h>
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace maxwell {

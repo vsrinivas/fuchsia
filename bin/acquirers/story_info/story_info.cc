@@ -6,8 +6,6 @@
 
 #include <sstream>
 
-#include "lib/context/fidl/value.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "peridot/bin/acquirers/story_info/modular.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -23,7 +21,7 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
       story_provider_watcher_binding_(this),
       focus_watcher_binding_(this) {
   // Initialize IntelligenceServices.
-  IntelligenceServicesPtr intelligence_services;
+  modular::IntelligenceServicesPtr intelligence_services;
   agent_host->agent_context()->GetIntelligenceServices(
       intelligence_services.NewRequest());
   intelligence_services->GetContextWriter(context_writer_.NewRequest());
@@ -31,7 +29,7 @@ StoryInfoAcquirer::StoryInfoAcquirer(modular::AgentHost* const agent_host)
 
   // This ServiceProvider is handed out in Connect().
   agent_services_.AddService<StoryInfoInitializer>(
-      [this](f1dl::InterfaceRequest<StoryInfoInitializer> request) {
+      [this](fidl::InterfaceRequest<StoryInfoInitializer> request) {
         FXL_DCHECK(!initializer_binding_.is_bound());
         initializer_binding_.Bind(std::move(request));
       });
@@ -44,12 +42,12 @@ void StoryInfoAcquirer::DropStoryWatcher(const std::string& story_id) {
 }
 
 void StoryInfoAcquirer::Connect(
-    f1dl::InterfaceRequest<component::ServiceProvider> services) {
+    fidl::InterfaceRequest<component::ServiceProvider> services) {
   agent_services_.AddBinding(std::move(services));
 }
 
 void StoryInfoAcquirer::RunTask(
-    const f1dl::StringPtr& task_id,
+    const fidl::StringPtr& task_id,
     const modular::Agent::RunTaskCallback& callback) {
   FXL_LOG(FATAL) << "Not implemented.";
 }
@@ -59,9 +57,9 @@ void StoryInfoAcquirer::Terminate(const std::function<void()>& done) {
 }
 
 void StoryInfoAcquirer::Initialize(
-    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
-    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    f1dl::InterfaceHandle<modular::VisibleStoriesProvider>
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<modular::VisibleStoriesProvider>
         visible_stories_provider) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_.Bind(std::move(focus_provider));
@@ -102,26 +100,27 @@ void StoryInfoAcquirer::OnFocusChange(modular::FocusInfoPtr info) {
   }
 }
 
-void StoryInfoAcquirer::OnVisibleStoriesChange(f1dl::VectorPtr<f1dl::StringPtr> ids) {
+void StoryInfoAcquirer::OnVisibleStoriesChange(
+    fidl::VectorPtr<fidl::StringPtr> ids) {
   // TODO(thatguy)
 }
 
-void StoryInfoAcquirer::OnChange(modular::StoryInfoPtr info,
+void StoryInfoAcquirer::OnChange(modular::StoryInfo info,
                                  modular::StoryState state) {
   // Here we only check if a story is new, and if so create a StoryWatcherImpl.
   // We proxy all future change events to it.
-  auto it = stories_.find(info->id);
+  auto it = stories_.find(info.id);
   if (it == stories_.end()) {
     auto ret = stories_.emplace(std::make_pair(
-        info->id,
+        info.id,
         std::make_unique<StoryWatcherImpl>(this, context_writer_.get(),
-                                           story_provider_.get(), info->id)));
+                                           story_provider_.get(), info.id)));
     it = ret.first;
   }
   it->second->OnStoryStateChange(std::move(info), state);
 }
 
-void StoryInfoAcquirer::OnDelete(const f1dl::StringPtr& story_id) {
+void StoryInfoAcquirer::OnDelete(fidl::StringPtr story_id) {
   const std::string id = story_id.get();
   // TODO(thatguy)
 }

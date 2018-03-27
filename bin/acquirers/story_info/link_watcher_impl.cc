@@ -4,12 +4,15 @@
 
 #include "peridot/bin/acquirers/story_info/link_watcher_impl.h"
 
+#include <set>
 #include <sstream>
 
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -23,13 +26,13 @@ constexpr char kContextProperty[] = "@context";
 constexpr char kSourceProperty[] = "@source";
 
 struct Context {
-  f1dl::StringPtr topic;
+  fidl::StringPtr topic;
 };
 
 struct Source {
-  f1dl::StringPtr story_id;
-  f1dl::VectorPtr<f1dl::StringPtr> module_path;
-  f1dl::StringPtr link_name;
+  fidl::StringPtr story_id;
+  fidl::VectorPtr<fidl::StringPtr> module_path;
+  fidl::StringPtr link_name;
 };
 
 void XdrContext(modular::XdrContext* const xdr, Context* const data) {
@@ -42,7 +45,7 @@ void XdrSource(modular::XdrContext* const xdr, Source* const data) {
   xdr->Field("link_name", &data->link_name);
 }
 
-std::string MakeLinkTopic(const f1dl::StringPtr& base_topic) {
+std::string MakeLinkTopic(const fidl::StringPtr& base_topic) {
   std::stringstream s;
   s << "link/" << base_topic;
   return s.str();
@@ -54,23 +57,26 @@ LinkWatcherImpl::LinkWatcherImpl(
     StoryWatcherImpl* const owner,
     modular::StoryController* const story_controller,
     const std::string& story_id,
-    ContextValueWriter* const story_value,
-    const modular::LinkPathPtr& link_path)
+    modular::ContextValueWriter* const story_value,
+    modular::LinkPath link_path)
     : owner_(owner),
       story_controller_(story_controller),
       story_id_(story_id),
-      link_path_(link_path->Clone()),
+      link_path_(std::move(link_path)),
       link_watcher_binding_(this) {
   modular::LinkPtr link;
-  story_controller_->GetLink(link_path_->module_path.Clone(),
-                             link_path_->link_name, link.NewRequest());
+  fidl::VectorPtr<fidl::StringPtr> module_path;
+  fidl::Clone(link_path_.module_path, &module_path);
+  story_controller_->GetLink(std::move(module_path), link_path_.link_name,
+                             link.NewRequest());
 
   story_value->CreateChildValue(link_node_writer_.NewRequest(),
-                                ContextValueType::LINK);
+                                modular::ContextValueType::LINK);
   link_node_writer_->Set(
-      nullptr, ContextMetadataBuilder()
-                   .SetLinkPath(link_path_->module_path, link_path_->link_name)
-                   .Build());
+      nullptr, fidl::MakeOptional(ContextMetadataBuilder()
+                                      .SetLinkPath(link_path_.module_path,
+                                                   link_path_.link_name)
+                                      .Build()));
 
   link->Watch(link_watcher_binding_.NewBinding());
 
@@ -86,13 +92,13 @@ LinkWatcherImpl::LinkWatcherImpl(
 
 LinkWatcherImpl::~LinkWatcherImpl() = default;
 
-void LinkWatcherImpl::Notify(const f1dl::StringPtr& json) {
+void LinkWatcherImpl::Notify(fidl::StringPtr json) {
   ProcessNewValue(json);
   // TODO(thatguy): Deprecate this method once every Link is a "context link".
   MaybeProcessContextLink(json);
 }
 
-void LinkWatcherImpl::ProcessNewValue(const f1dl::StringPtr& value) {
+void LinkWatcherImpl::ProcessNewValue(const fidl::StringPtr& value) {
   // We are looking for the following |value| structures:
   //
   // 1) |value| contains a JSON-style entity:
@@ -121,7 +127,8 @@ void LinkWatcherImpl::ProcessNewValue(const f1dl::StringPtr& value) {
     entity_node_writers_.clear();
     if (!single_entity_node_writer_.is_bound()) {
       link_node_writer_->CreateChildValue(
-          single_entity_node_writer_.NewRequest(), ContextValueType::ENTITY);
+          single_entity_node_writer_.NewRequest(),
+          modular::ContextValueType::ENTITY);
     }
     // TODO(thatguy): The context engine expects an Entity reference to be
     // written directly as the content, versus the way Links wrap the reference
@@ -148,9 +155,9 @@ void LinkWatcherImpl::ProcessNewValue(const f1dl::StringPtr& value) {
 
       auto value_it = entity_node_writers_.find(it->name.GetString());
       if (value_it == entity_node_writers_.end()) {
-        ContextValueWriterPtr writer;
+        modular::ContextValueWriterPtr writer;
         link_node_writer_->CreateChildValue(writer.NewRequest(),
-                                            ContextValueType::ENTITY);
+                                            modular::ContextValueType::ENTITY);
         value_it = entity_node_writers_
                        .emplace(it->name.GetString(), std::move(writer))
                        .first;
@@ -171,7 +178,7 @@ void LinkWatcherImpl::ProcessNewValue(const f1dl::StringPtr& value) {
   }
 }
 
-void LinkWatcherImpl::MaybeProcessContextLink(const f1dl::StringPtr& value) {
+void LinkWatcherImpl::MaybeProcessContextLink(const fidl::StringPtr& value) {
   modular::JsonDoc doc;
   doc.Parse(value);
   FXL_CHECK(!doc.HasParseError());
@@ -200,8 +207,8 @@ void LinkWatcherImpl::MaybeProcessContextLink(const f1dl::StringPtr& value) {
 
   Source source;
   source.story_id = story_id_;
-  source.module_path = link_path_->module_path.Clone();
-  source.link_name = link_path_->link_name;
+  fidl::Clone(link_path_.module_path, &source.module_path);
+  source.link_name = link_path_.link_name;
 
   modular::JsonDoc source_doc;
   modular::XdrWrite(&source_doc, &source, XdrSource);
@@ -211,16 +218,17 @@ void LinkWatcherImpl::MaybeProcessContextLink(const f1dl::StringPtr& value) {
 
   auto it = topic_node_writers_.find(context.topic);
   if (it == topic_node_writers_.end()) {
-    ContextValueWriterPtr topic_node_writer;
+    modular::ContextValueWriterPtr topic_node_writer;
     link_node_writer_->CreateChildValue(topic_node_writer.NewRequest(),
-                                        ContextValueType::ENTITY);
+                                        modular::ContextValueType::ENTITY);
     it =
         topic_node_writers_.emplace(context.topic, std::move(topic_node_writer))
             .first;
   }
-  it->second->Set(json, ContextMetadataBuilder()
-                            .SetEntityTopic(MakeLinkTopic(context.topic))
-                            .Build());
+  it->second->Set(
+      json, fidl::MakeOptional(ContextMetadataBuilder()
+                                   .SetEntityTopic(MakeLinkTopic(context.topic))
+                                   .Build()));
 }
 
 }  // namespace maxwell

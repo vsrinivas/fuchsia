@@ -12,22 +12,22 @@
 
 namespace modular {
 
-std::string MakeStoryKey(const f1dl::StringPtr& story_id) {
+std::string MakeStoryKey(const fidl::StringPtr& story_id) {
   // Not escaped, because only one component after the prefix.
   return kStoryKeyPrefix + story_id.get();
 }
 
-std::string MakeDeviceKey(const f1dl::StringPtr& device_name) {
+std::string MakeDeviceKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kDeviceKeyPrefix + device_name.get();
 }
 
-std::string MakePerDeviceKey(const f1dl::StringPtr& device_name) {
+std::string MakePerDeviceKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kPerDeviceKeyPrefix + device_name.get();
 }
 
-std::string MakeFocusKey(const f1dl::StringPtr& device_name) {
+std::string MakeFocusKey(const fidl::StringPtr& device_name) {
   // Not escaped, because only one component after the prefix.
   return kFocusKeyPrefix + device_name.get();
 }
@@ -56,7 +56,8 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(const f1dl::VectorPtr<f1dl::StringPtr>& module_path) {
+std::string EncodeModulePath(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path->size());
   for (const auto& module_path_part : *module_path) {
@@ -66,12 +67,12 @@ std::string EncodeModulePath(const f1dl::VectorPtr<f1dl::StringPtr>& module_path
   return fxl::JoinStrings(segments, kSubSeparator);
 }
 
-std::string EncodeLinkPath(const LinkPathPtr& link_path) {
+std::string EncodeLinkPath(const LinkPath& link_path) {
   std::string output;
-  output.append(EncodeModulePath(link_path->module_path));
+  output.append(EncodeModulePath(link_path.module_path));
   output.append(kSeparator);
   output.append(
-      StringEscape(link_path->link_name.get(), kCharsToEscape, kEscaper));
+      StringEscape(link_path.link_name.get(), kCharsToEscape, kEscaper));
   return output;
 }
 
@@ -90,13 +91,13 @@ std::string MakeTriggerKey(const std::string& agent_url,
   return key;
 }
 
-std::string MakeLinkKey(const LinkPathPtr& link_path) {
+std::string MakeLinkKey(const LinkPath& link_path) {
   std::string key{kLinkKeyPrefix};
   key.append(EncodeLinkPath(link_path));
   return key;
 }
 
-std::string MakeModuleKey(const f1dl::VectorPtr<f1dl::StringPtr>& module_path) {
+std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   FXL_DCHECK(!module_path.is_null() && module_path->size() > 0)
       << EncodeModulePath(module_path);
   FXL_DCHECK(module_path->at(0)->size() > 0) << EncodeModulePath(module_path);
