@@ -76,13 +76,13 @@ zx_status_t create_page_table(const PhysMem& phys_mem) {
   uint64_t aspace_off = 0;
   uintptr_t end_off = 0;
   end_off = create_page_table_level(phys_mem, kPml4PageSize, end_off,
-                                     &aspace_off, false, 0);
+                                    &aspace_off, false, 0);
   end_off = create_page_table_level(phys_mem, kPdpPageSize, end_off,
-                                     &aspace_off, true, X86_PTE_PS);
-  end_off = create_page_table_level(phys_mem, kPdPageSize, end_off,
-                                     &aspace_off, true, X86_PTE_PS);
-  end_off = create_page_table_level(phys_mem, kPtPageSize, end_off,
-                                     &aspace_off, true, 0);
+                                    &aspace_off, true, X86_PTE_PS);
+  end_off = create_page_table_level(phys_mem, kPdPageSize, end_off, &aspace_off,
+                                    true, X86_PTE_PS);
+  end_off = create_page_table_level(phys_mem, kPtPageSize, end_off, &aspace_off,
+                                    true, 0);
   return ZX_OK;
 }
 

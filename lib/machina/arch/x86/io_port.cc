@@ -156,7 +156,8 @@ static uint8_t to_bcd(int binary) {
 }
 
 zx_status_t CmosHandler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0,
+                              this);
 }
 
 zx_status_t CmosHandler::Read(uint64_t addr, IoValue* value) const {
@@ -197,7 +198,8 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const {
+zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index,
+                                          uint8_t* value) const {
   time_t now = rtc_time();
   struct tm tm;
   if (localtime_r(&now, &tm) == nullptr)

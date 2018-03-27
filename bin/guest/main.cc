@@ -239,12 +239,10 @@ int main(int argc, char** argv) {
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel()) {
     case Kernel::ZIRCON:
-      status =
-          setup_zircon(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
+      status = setup_zircon(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
       break;
     case Kernel::LINUX:
-      status =
-          setup_linux(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
+      status = setup_linux(cfg, guest.phys_mem(), &guest_ip, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";

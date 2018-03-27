@@ -6,9 +6,8 @@
 
 #include <semaphore.h>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fsl/tasks/message_loop.h"
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1.h>
 
 // For now we expose a fixed size display to the guest. Scenic will scale this
 // buffer to the actual window size on the host.
@@ -47,7 +46,8 @@ void ScenicScanout::CreateView(
     return;
   }
   auto view_manager =
-      application_context_->ConnectToEnvironmentService<views_v1::ViewManager>();
+      application_context_
+          ->ConnectToEnvironmentService<views_v1::ViewManager>();
   view_ = fbl::make_unique<GuestView>(this, input_dispatcher_,
                                       fbl::move(view_manager),
                                       fbl::move(view_owner_request));

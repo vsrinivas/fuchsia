@@ -76,7 +76,8 @@ static zx_status_t load_cmdline(const std::string& cmdline,
 }
 
 static zx_status_t find_mdi(const machina::PhysMem& phys_mem,
-                            const uintptr_t data_off, uint32_t data_len,
+                            const uintptr_t data_off,
+                            uint32_t data_len,
                             mdi_node_ref_t* mdi_root) {
   uintptr_t off = data_off;
   while (off < data_off + data_len) {
@@ -95,7 +96,8 @@ static zx_status_t find_mdi(const machina::PhysMem& phys_mem,
 
 static zx_status_t mdi_find_grandchild(mdi_node_ref_t* node,
                                        uint32_t grandparent_id,
-                                       uint32_t target_id, uint32_t target_type,
+                                       uint32_t target_id,
+                                       uint32_t target_type,
                                        mdi_node_ref_t* result) {
   mdi_node_ref_t parent;
   zx_status_t status = mdi_find_node(node, grandparent_id, &parent);
@@ -147,8 +149,10 @@ static zx_status_t set_cpu_count(mdi_node_ref_t* mdi_root, uint8_t num_cpus) {
   return ZX_OK;
 }
 
-static zx_status_t load_bootfs(const int fd, const machina::PhysMem& phys_mem,
-                               const uintptr_t bootdata_off, uint8_t num_cpus) {
+static zx_status_t load_bootfs(const int fd,
+                               const machina::PhysMem& phys_mem,
+                               const uintptr_t bootdata_off,
+                               uint8_t num_cpus) {
   bootdata_t ramdisk_hdr;
   ssize_t ret = read(fd, &ramdisk_hdr, sizeof(bootdata_t));
   if (ret != sizeof(bootdata_t)) {
@@ -257,7 +261,8 @@ static zx_status_t read_bootdata(const machina::PhysMem& phys_mem,
 }
 
 zx_status_t setup_zircon(const GuestConfig cfg,
-                         const machina::PhysMem& phys_mem, uintptr_t* guest_ip,
+                         const machina::PhysMem& phys_mem,
+                         uintptr_t* guest_ip,
                          uintptr_t* boot_ptr) {
   // Read the kernel image.
   zx_status_t status = load_kernel(cfg.kernel_path(), phys_mem, kKernelOffset);

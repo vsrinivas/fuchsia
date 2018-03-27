@@ -244,7 +244,8 @@ zx_status_t VirtioQueue::PollAsync(async_t* async,
 }
 
 async_wait_result_t VirtioQueue::InvokeAsyncHandler(
-    virtio_queue_poll_fn_t handler, void* ctx) {
+    virtio_queue_poll_fn_t handler,
+    void* ctx) {
   uint16_t head;
   uint32_t used = 0;
   zx_status_t status = NextAvail(&head);

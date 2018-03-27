@@ -202,7 +202,8 @@ static zx_status_t write_boot_params(const machina::PhysMem& phys_mem,
     return ZX_ERR_OUT_OF_RANGE;
   }
   uint32_t cmdline_off = phys_mem.size() - PAGE_SIZE;
-  memcpy(phys_mem.as<void>(cmdline_off, cmdline_len), cmdline.c_str(), cmdline_len);
+  memcpy(phys_mem.as<void>(cmdline_off, cmdline_len), cmdline.c_str(),
+         cmdline_len);
   bp(phys_mem, COMMAND_LINE) = cmdline_off;
 
 #if __aarch64__

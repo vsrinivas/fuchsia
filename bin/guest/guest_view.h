@@ -7,6 +7,7 @@
 
 #include <zircon/types.h>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/lib/machina/gpu_scanout.h"
 #include "garnet/lib/machina/input_dispatcher.h"
 #include "garnet/lib/machina/virtio_gpu.h"
@@ -17,11 +18,11 @@
 #include "lib/ui/scenic/client/host_memory.h"
 #include "lib/ui/scenic/client/resources.h"
 #include "lib/ui/view_framework/base_view.h"
-#include <fuchsia/cpp/views_v1.h>
 
 class GuestView;
 
-class ScenicScanout : public machina::GpuScanout, public views_v1::ViewProvider {
+class ScenicScanout : public machina::GpuScanout,
+                      public views_v1::ViewProvider {
  public:
   static zx_status_t Create(component::ApplicationContext* application_context,
                             machina::InputDispatcher* input_dispatcher,
@@ -34,9 +35,10 @@ class ScenicScanout : public machina::GpuScanout, public views_v1::ViewProvider 
   void InvalidateRegion(const machina::GpuRect& rect) override;
 
   // |ViewProvider|
-  void CreateView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-                  fidl::InterfaceRequest<component::ServiceProvider>
-                      view_services) override;
+  void CreateView(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<component::ServiceProvider> view_services)
+      override;
 
  private:
   machina::InputDispatcher* input_dispatcher_;
@@ -48,10 +50,11 @@ class ScenicScanout : public machina::GpuScanout, public views_v1::ViewProvider 
 
 class GuestView : public mozart::BaseView {
  public:
-  GuestView(machina::GpuScanout* scanout,
-            machina::InputDispatcher* input_dispatcher,
-            views_v1::ViewManagerPtr view_manager,
-            fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
+  GuestView(
+      machina::GpuScanout* scanout,
+      machina::InputDispatcher* input_dispatcher,
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   ~GuestView() override;
 
