@@ -4,8 +4,6 @@
 
 library modular_private;
 
-// import "lib/story/fidl/story_info.fidl";
-
 // Internal data that user runner keeps about stories. Some of them
 // are exposed to the UserShell, which are kept in StoryInfo.
 struct StoryPageId {

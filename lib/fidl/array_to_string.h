@@ -13,6 +13,17 @@
 
 namespace modular {
 
+inline std::string to_string(const fidl::Array<uint8_t, 16>& data) {
+  std::string ret;
+  ret.reserve(data.count());
+
+  for (uint8_t val : data) {
+    ret += static_cast<char>(val);
+  }
+
+  return ret;
+}
+
 inline std::string to_string(const fidl::VectorPtr<uint8_t>& data) {
   std::string ret;
   ret.reserve(data->size());
@@ -21,6 +32,18 @@ inline std::string to_string(const fidl::VectorPtr<uint8_t>& data) {
     ret += static_cast<char>(val);
   }
 
+  return ret;
+}
+
+template<size_t N>
+inline std::string to_hex_string(const std::array<uint8_t, N>& data) {
+  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
+  std::string ret;
+  ret.reserve(data.size() * 2);
+  for (unsigned char i : data) {
+    ret.push_back(kHexadecimalCharacters[i >> 4]);
+    ret.push_back(kHexadecimalCharacters[i & 0xf]);
+  }
   return ret;
 }
 

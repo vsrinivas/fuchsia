@@ -5,13 +5,20 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 
-#include "lib/fidl/cpp/array.h"
+#include <algorithm>
+#include <lib/fidl/cpp/array.h>
+#include <lib/fidl/cpp/vector.h>
 
 namespace modular {
 
 // TODO(mesch): Not sure how useful that is. These types can lie.
-typedef f1dl::VectorPtr<uint8_t> LedgerPageId;
-typedef f1dl::VectorPtr<uint8_t> LedgerPageKey;
+typedef fidl::Array<uint8_t,16> LedgerPageId;
+typedef fidl::Array<uint8_t,16> LedgerPageKey;
+typedef fidl::VectorPtr<uint8_t> LedgerToken;
+
+bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
+  return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend());
+}
 
 }  // namespace modular
 

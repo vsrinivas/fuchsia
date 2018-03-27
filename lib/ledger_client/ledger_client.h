@@ -27,7 +27,7 @@ class PageClient;
 // their page and key prefix.
 class LedgerClient : ledger::ConflictResolverFactory {
  public:
-  LedgerClient(ledger::LedgerRepository* ledger_repository,
+  LedgerClient(ledger_internal::LedgerRepository* ledger_repository,
                const std::string& name,
                std::function<void()> error);
   LedgerClient(ledger::LedgerPtr ledger);
@@ -56,7 +56,7 @@ class LedgerClient : ledger::ConflictResolverFactory {
 
  private:
   // Supports GetLedgerClientPeer().
-  LedgerClient(ledger::LedgerRepository* ledger_repository,
+  LedgerClient(ledger_internal::LedgerRepository* ledger_repository,
                const std::string& name);
 
   friend class PageClient;
@@ -67,30 +67,30 @@ class LedgerClient : ledger::ConflictResolverFactory {
   // the same page share the same ledger::Page connection.
   ledger::Page* GetPage(PageClient* page_client,
                         const std::string& context,
-                        const LedgerPageId& page_id);
+                        const ledger::PageId& page_id);
 
   // PageClient deregisters itself on destrution.
   void DropPageClient(PageClient* page_client);
 
   // |ConflictResolverFactory|
   void GetPolicy(LedgerPageId page_id,
-                 const GetPolicyCallback& callback) override;
+                 GetPolicyCallback callback) override;
 
   // |ConflictResolverFactory|
   void NewConflictResolver(
       LedgerPageId page_id,
-      f1dl::InterfaceRequest<ledger::ConflictResolver> request) override;
+      fidl::InterfaceRequest<ledger::ConflictResolver> request) override;
 
   void ClearConflictResolver(const LedgerPageId& page_id);
 
   // Supports GetLedgerClientPeer().
-  ledger::LedgerRepositoryPtr ledger_repository_;
+  ledger_internal::LedgerRepositoryPtr ledger_repository_;
   const std::string ledger_name_;
 
   // The ledger this is a client of.
   ledger::LedgerPtr ledger_;
 
-  f1dl::BindingSet<ledger::ConflictResolverFactory> bindings_;
+  fidl::BindingSet<ledger::ConflictResolverFactory> bindings_;
   std::vector<std::unique_ptr<ConflictResolverImpl>> resolvers_;
 
   // ledger::Page connections are owned by LedgerClient, and only handed to
@@ -108,19 +108,19 @@ class LedgerClient : ledger::ConflictResolverFactory {
 // appropriate page client that handles that key.
 class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
  public:
-  ConflictResolverImpl(LedgerClient* ledger_client, LedgerPageId page_id);
+  ConflictResolverImpl(LedgerClient* ledger_client, const LedgerPageId& page_id);
   ~ConflictResolverImpl() override;
 
-  void Connect(f1dl::InterfaceRequest<ledger::ConflictResolver> request);
+  void Connect(fidl::InterfaceRequest<ledger::ConflictResolver> request);
 
   const LedgerPageId& page_id() const { return page_id_; }
 
  private:
   // |ConflictResolver|
-  void Resolve(f1dl::InterfaceHandle<ledger::PageSnapshot> left_version,
-               f1dl::InterfaceHandle<ledger::PageSnapshot> right_version,
-               f1dl::InterfaceHandle<ledger::PageSnapshot> common_version,
-               f1dl::InterfaceHandle<ledger::MergeResultProvider>
+  void Resolve(fidl::InterfaceHandle<ledger::PageSnapshot> left_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> right_version,
+               fidl::InterfaceHandle<ledger::PageSnapshot> common_version,
+               fidl::InterfaceHandle<ledger::MergeResultProvider>
                    result_provider) override;
 
   void GetPageClients(std::vector<PageClient*>* page_clients);
@@ -128,9 +128,9 @@ class LedgerClient::ConflictResolverImpl : ledger::ConflictResolver {
   void NotifyWatchers() const;
 
   LedgerClient* const ledger_client_;
-  const LedgerPageId page_id_;
+  LedgerPageId page_id_;
 
-  f1dl::BindingSet<ledger::ConflictResolver> bindings_;
+  fidl::BindingSet<ledger::ConflictResolver> bindings_;
 
   OperationQueue operation_queue_;
   class ResolveCall;

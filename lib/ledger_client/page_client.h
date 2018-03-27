@@ -6,6 +6,7 @@
 #define PERIDOT_LIB_LEDGER_CLIENT_PAGE_CLIENT_H_
 
 #include <string>
+#include <array>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -48,9 +49,19 @@ class PageClient : ledger::PageWatcher {
   // client reference is to receive conflicts from the ledger.
   explicit PageClient(std::string context,
                       LedgerClient* ledger_client,
-                      LedgerPageId page_id,
+                      ledger::PageId page_id,
                       std::string prefix = "");
+  explicit PageClient(std::string context,
+                      LedgerClient* ledger_client,
+                      const LedgerPageId& page_id,
+                      std::string prefix = "")
+      : PageClient(std::move(context),
+                   ledger_client,
+                   MakePageId(page_id),
+                   std::move(prefix)) {}
   ~PageClient() override;
+
+  static ledger::PageId MakePageId(const LedgerPageId& page_id);
 
   // Returns the current page snapshot. It is returned as a shared_ptr, so that
   // it can be used in an asynchronous operation. In that case, the page
@@ -74,7 +85,7 @@ class PageClient : ledger::PageWatcher {
     return page_snapshot_;
   }
 
-  const LedgerPageId& page_id() const { return page_id_; }
+  const ledger::PageId& page_id() const { return page_id_; }
   const std::string& prefix() const { return prefix_; }
   ledger::Page* page() { return page_; }
 
@@ -84,7 +95,7 @@ class PageClient : ledger::PageWatcher {
   // The argument to OnPageConflict(). It's mutated in place so it's easier to
   // extend without having to alter clients.
   struct Conflict {
-    std::string key;
+    std::array<uint8_t, 16> key;
 
     bool has_left{};
     std::string left;
@@ -123,24 +134,24 @@ class PageClient : ledger::PageWatcher {
   virtual void OnPageConflict(Conflict* conflict);
 
   // Replaces the previous page snapshot with a newly requested one.
-  f1dl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
+  fidl::InterfaceRequest<ledger::PageSnapshot> NewRequest();
 
   // Possibly replaces the previous page snapshot with a new one
   // requested through the result callback of a PageWatcher, depending
   // on the continuation code of the watcher notification.
-  f1dl::InterfaceRequest<ledger::PageSnapshot> Update(
+  fidl::InterfaceRequest<ledger::PageSnapshot> Update(
       ledger::ResultState result_state);
 
   // |PageWatcher|
-  void OnChange(ledger::PageChangePtr page,
+  void OnChange(ledger::PageChange page,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+                OnChangeCallback callback) override;
 
-  f1dl::Binding<ledger::PageWatcher> binding_;
+  fidl::Binding<ledger::PageWatcher> binding_;
   const std::string context_;
 
   LedgerClient* const ledger_client_;
-  const LedgerPageId page_id_;
+  const ledger::PageId page_id_;
   ledger::Page* const page_;
   const std::string prefix_;
 
@@ -152,7 +163,7 @@ class PageClient : ledger::PageWatcher {
 // Retrieves all entries from the given snapshot and calls the given callback
 // with the final status.
 void GetEntries(ledger::PageSnapshot* snapshot,
-                std::vector<ledger::EntryPtr>* entries,
+                std::vector<ledger::Entry>* entries,
                 std::function<void(ledger::Status)> callback);
 
 }  // namespace modular

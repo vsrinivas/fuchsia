@@ -11,7 +11,6 @@
 
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
-#include "lib/fidl/cpp/struct_ptr.h"
 #include "lib/fsl/vmo/strings.h"
 #include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/fidl/array_to_string.h"
@@ -21,7 +20,7 @@
 namespace modular {
 
 template <typename Data,
-          typename DataPtr = f1dl::StructPtr<Data>,
+          typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadDataCall : Operation<DataPtr> {
  public:
@@ -80,7 +79,7 @@ class ReadDataCall : Operation<DataPtr> {
           }
 
           std::string value_as_string;
-          if (!fsl::StringFromVmo(value, &value_as_string)) {
+          if (!fsl::StringFromVmo(*value, &value_as_string)) {
             FXL_LOG(ERROR) << this->trace_name() << " " << key_
                            << " Unable to extract data.";
             return;
@@ -106,8 +105,8 @@ class ReadDataCall : Operation<DataPtr> {
 };
 
 template <typename Data,
-          typename DataPtr = f1dl::StructPtr<Data>,
-          typename DataArray = f1dl::VectorPtr<DataPtr>,
+          typename DataPtr = std::unique_ptr<Data>,
+          typename DataArray = fidl::VectorPtr<DataPtr>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadAllDataCall : Operation<DataArray> {
  public:
@@ -190,7 +189,7 @@ class ReadAllDataCall : Operation<DataArray> {
 };
 
 template <typename Data,
-          typename DataPtr = f1dl::StructPtr<Data>,
+          typename DataPtr = std::unique_ptr<Data>,
           typename DataFilter = XdrFilterType<Data>>
 class WriteDataCall : Operation<> {
  public:
@@ -274,10 +273,10 @@ class DumpPageSnapshotCall : Operation<std::string> {
   void Cont2(FlowToken /*flow*/) {
     std::ostringstream stream;
     for (auto& entry : entries_) {
-      stream << "key: " << to_hex_string(entry->key) << std::endl;
+      stream << "key: " << to_hex_string(entry.key) << std::endl;
 
       std::string value_as_string;
-      if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
+      if (!fsl::StringFromVmo(*entry.value, &value_as_string)) {
         FXL_LOG(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
@@ -289,7 +288,7 @@ class DumpPageSnapshotCall : Operation<std::string> {
 
   ledger::Page* page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
+  std::vector<ledger::Entry> entries_;
   std::string dump_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DumpPageSnapshotCall);

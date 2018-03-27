@@ -56,8 +56,7 @@ std::string MakeMessageQueueKey(const std::string& queue_token) {
   return kMessageQueueKeyPrefix + queue_token;
 }
 
-std::string EncodeModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path) {
+std::string EncodeModulePath(const fidl::VectorPtr<fidl::StringPtr>& module_path) {
   std::vector<std::string> segments;
   segments.reserve(module_path->size());
   for (const auto& module_path_part : *module_path) {
@@ -89,6 +88,10 @@ std::string MakeTriggerKey(const std::string& agent_url,
   key.append(kSeparator);
   key.append(StringEscape(task_id, kCharsToEscape, kEscaper));
   return key;
+}
+
+std::string MakeLinkKey(const LinkPathPtr& link_path) {
+  return MakeLinkKey(*link_path);
 }
 
 std::string MakeLinkKey(const LinkPath& link_path) {

@@ -12,6 +12,8 @@
 #include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 
@@ -74,6 +76,7 @@ std::string MakeMessageQueueTokenKey(const std::string& component_namespace,
 std::string MakeMessageQueueKey(const std::string& queue_token);
 std::string MakeTriggerKey(const std::string& agent_url,
                            const std::string& task_id);
+std::string MakeLinkKey(const LinkPathPtr& link_path);
 std::string MakeLinkKey(const LinkPath& link_path);
 std::string MakeModuleKey(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
@@ -88,9 +91,8 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
-std::string EncodeModulePath(
-    const fidl::VectorPtr<fidl::StringPtr>& module_path);
-std::string EncodeLinkPath(const LinkPathPtr& link_path);
+std::string EncodeModulePath(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+std::string EncodeLinkPath(const LinkPath& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 
 // More notes:

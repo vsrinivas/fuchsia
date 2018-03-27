@@ -16,7 +16,7 @@ namespace modular {
 
 PageClient::PageClient(std::string context,
                        LedgerClient* ledger_client,
-                       LedgerPageId page_id,
+                       ledger::PageId page_id,
                        std::string prefix)
     : binding_(this),
       context_(std::move(context)),
@@ -38,7 +38,13 @@ PageClient::~PageClient() {
   ledger_client_->DropPageClient(this);
 }
 
-f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
+ledger::PageId PageClient::MakePageId(const LedgerPageId& page_id) {
+  ledger::PageId p;
+  std::copy(page_id.cbegin(), page_id.cend(), p.id.begin());
+  return p;
+}
+
+fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   page_snapshot_ = std::make_shared<ledger::PageSnapshotPtr>();
   auto ret = (*page_snapshot_).NewRequest();
   (*page_snapshot_).set_error_handler([this] {
@@ -48,7 +54,7 @@ f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {
   return ret;
 }
 
-f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
+fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
     const ledger::ResultState result_state) {
   switch (result_state) {
     case ledger::ResultState::PARTIAL_CONTINUED:
@@ -62,17 +68,17 @@ f1dl::InterfaceRequest<ledger::PageSnapshot> PageClient::Update(
 }
 
 // |PageWatcher|
-void PageClient::OnChange(ledger::PageChangePtr page,
+void PageClient::OnChange(ledger::PageChange page,
                           ledger::ResultState result_state,
-                          const OnChangeCallback& callback) {
+                          OnChangeCallback callback) {
   // According to their fidl spec, neither page nor page->changed_entries
   // should be null.
-  FXL_DCHECK(page && page->changed_entries);
-  for (auto& entry : *page->changed_entries) {
+  FXL_DCHECK(page.changed_entries);
+  for (auto& entry : *page.changed_entries) {
     // Remove prefix maybe?
-    const std::string key = to_string(entry->key);
+    const std::string key = to_string(entry.key);
     std::string value;
-    if (!fsl::StringFromVmo(entry->value, &value)) {
+    if (!fsl::StringFromVmo(*entry.value, &value)) {
       FXL_LOG(ERROR) << "PageClient::OnChange() " << context_ << ": "
                      << "Unable to extract data.";
       continue;
@@ -81,7 +87,7 @@ void PageClient::OnChange(ledger::PageChangePtr page,
     OnPageChange(key, value);
   }
 
-  for (auto& key : *page->deleted_keys) {
+  for (auto& key : *page.deleted_keys) {
     OnPageDelete(to_string(key));
   }
 
@@ -102,15 +108,15 @@ void PageClient::OnPageDelete(const std::string& /*key*/) {}
 
 void PageClient::OnPageConflict(Conflict* const conflict) {
   FXL_LOG(INFO) << "PageClient::OnPageConflict() " << context_ << " "
-                << conflict->key << " " << conflict->left << " "
+                << to_hex_string(conflict->key) << " " << conflict->left << " "
                 << conflict->right;
 };
 
 namespace {
 
 void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
-                         std::vector<ledger::EntryPtr>* const entries,
-                         LedgerPageKey next_token,
+                         std::vector<ledger::Entry>* const entries,
+                         fidl::VectorPtr<uint8_t> next_token,
                          std::function<void(ledger::Status)> callback) {
   snapshot->GetEntries(
       nullptr /* key_start */, std::move(next_token),
@@ -137,7 +143,7 @@ void GetEntriesRecursive(ledger::PageSnapshot* const snapshot,
 }  // namespace
 
 void GetEntries(ledger::PageSnapshot* const snapshot,
-                std::vector<ledger::EntryPtr>* const entries,
+                std::vector<ledger::Entry>* const entries,
                 std::function<void(ledger::Status)> callback) {
   GetEntriesRecursive(snapshot, entries, nullptr /* next_token */,
                       std::move(callback));

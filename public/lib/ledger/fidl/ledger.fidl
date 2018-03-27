@@ -331,11 +331,11 @@ interface PageWatcher {
 // own implementation. This can be decided on a page-by-page basis.
 interface ConflictResolverFactory {
   // Returns the conflict resolution policy for the given page.
-  1: GetPolicy(vector<uint8> page_id) -> (MergePolicy policy);
+  1: GetPolicy(array<uint8>:16 page_id) -> (MergePolicy policy);
   // Returns a |ConflictResolver| to use for the given page. This will only be
   // called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
   // or |CUSTOM|.
-  2: NewConflictResolver(PageId page_id, request<ConflictResolver> resolver);
+  2: NewConflictResolver(array<uint8>:16 page_id, request<ConflictResolver> resolver);
 };
 
 // Strategy to be used when resolving conflicts.
@@ -380,7 +380,7 @@ enum ValueSource {
 // to the new value. If |source| is not |NEW|, |new_value| and |priority| are
 // ignored.
 struct MergedValue {
-  vector<uint8> key;
+  array<uint8>:16 key;
   ValueSource source;
   BytesOrReference? new_value;
   Priority priority;
@@ -392,7 +392,7 @@ struct MergedValue {
 // was not present in the base, left or right (respectively) branch of the
 // page.
 struct DiffEntry {
-  vector<uint8> key;
+  array<uint8>:16 key;
 
   Value? base;
   Value? left;
