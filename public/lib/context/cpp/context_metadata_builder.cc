@@ -4,84 +4,84 @@
 
 #include "lib/context/cpp/context_metadata_builder.h"
 
+#include "lib/fidl/cpp/clone.h"
+
 namespace maxwell {
 
 ContextMetadataBuilder::ContextMetadataBuilder() {}
-ContextMetadataBuilder::ContextMetadataBuilder(ContextMetadataPtr initial_value)
+ContextMetadataBuilder::ContextMetadataBuilder(modular::ContextMetadata initial_value)
     : m_(std::move(initial_value)) {}
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryId(
-    const f1dl::StringPtr& story_id) {
+    const fidl::StringPtr& story_id) {
   StoryMetadata()->id = story_id;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
   auto& story_meta = StoryMetadata();
-  story_meta->focused = FocusedState::New();
-  story_meta->focused->state =
-      focused ? FocusedState::State::FOCUSED : FocusedState::State::NOT_FOCUSED;
+  story_meta->focused = modular::FocusedState::New();
+  story_meta->focused->state = focused ?
+      modular::State::FOCUSED : modular::State::NOT_FOCUSED;
   return *this;
 }
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetModuleUrl(
-    const f1dl::StringPtr& url) {
+    const fidl::StringPtr& url) {
   ModuleMetadata()->url = url;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetModulePath(
-    const f1dl::VectorPtr<f1dl::StringPtr>& path) {
-  ModuleMetadata()->path = path.Clone();
+    const fidl::VectorPtr<fidl::StringPtr>& path) {
+  fidl::Clone(path, &ModuleMetadata()->path);
   return *this;
 }
 
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTopic(
-    const f1dl::StringPtr& topic) {
+    const fidl::StringPtr& topic) {
   EntityMetadata()->topic = topic;
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::AddEntityType(
-    const f1dl::StringPtr& type) {
+    const fidl::StringPtr& type) {
   EntityMetadata()->type.push_back(type);
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetEntityTypes(
-    const f1dl::VectorPtr<f1dl::StringPtr>& types) {
-  EntityMetadata()->type = types.Clone();
+    const fidl::VectorPtr<fidl::StringPtr>& types) {
+  fidl::Clone(types, &EntityMetadata()->type);
   return *this;
 }
 ContextMetadataBuilder& ContextMetadataBuilder::SetLinkPath(
-    const f1dl::VectorPtr<f1dl::StringPtr>& module_path,
-    const f1dl::StringPtr& name) {
-  LinkMetadata()->module_path = module_path.Clone();
+    const fidl::VectorPtr<fidl::StringPtr>& module_path,
+    const fidl::StringPtr& name) {
+  fidl::Clone(module_path, &LinkMetadata()->module_path);
   LinkMetadata()->name = name;
   return *this;
 }
 
-ContextMetadataPtr ContextMetadataBuilder::Build() {
+modular::ContextMetadata ContextMetadataBuilder::Build() {
   return std::move(m_);
 }
 
-#define ENSURE_MEMBER(field, class_name) \
-  if (!m_)                               \
-    m_ = ContextMetadata::New();         \
-  if (!m_->field) {                      \
-    m_->field = class_name::New();       \
-  }                                      \
-  return m_->field;
+#define ENSURE_MEMBER(field, class_name)    \
+  if (!m_.field) {                          \
+    m_.field = modular::class_name::New();  \
+  }                                         \
+  return m_.field;
 
-StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {
+modular::StoryMetadataPtr& ContextMetadataBuilder::StoryMetadata() {
   ENSURE_MEMBER(story, StoryMetadata);
 }
 
-ModuleMetadataPtr& ContextMetadataBuilder::ModuleMetadata() {
+modular::ModuleMetadataPtr& ContextMetadataBuilder::ModuleMetadata() {
   ENSURE_MEMBER(mod, ModuleMetadata);
 }
 
-EntityMetadataPtr& ContextMetadataBuilder::EntityMetadata() {
+modular::EntityMetadataPtr& ContextMetadataBuilder::EntityMetadata() {
   ENSURE_MEMBER(entity, EntityMetadata);
 }
 
-LinkMetadataPtr& ContextMetadataBuilder::LinkMetadata() {
+modular::LinkMetadataPtr& ContextMetadataBuilder::LinkMetadata() {
   ENSURE_MEMBER(link, LinkMetadata);
 }
 

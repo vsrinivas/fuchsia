@@ -6,27 +6,29 @@
 
 namespace maxwell {
 
-std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> TakeContextValue(
-    ContextUpdate* const update, const std::string& key) {
-  for (auto& it: *update->values) {
-    if (it->key == key) {
-      return std::make_pair(true, std::move(it->value));
+std::pair<bool, fidl::VectorPtr<modular::ContextValue>> TakeContextValue(
+    modular::ContextUpdate* const update, const std::string& key) {
+  for (auto& it: update->values.take()) {
+    if (it.key == key) {
+      return std::make_pair(true, std::move(it.value));
     }
   }
-  return std::make_pair(false, f1dl::VectorPtr<ContextValuePtr>());
+  return std::make_pair(false, fidl::VectorPtr<modular::ContextValue>());
 }
 
-void AddToContextQuery(ContextQuery* const query, const std::string& key,
-                       ContextSelectorPtr selector) {
-  auto entry = ContextQueryEntry::New();
-  entry->key = key;
-  entry->value = std::move(selector);
+void AddToContextQuery(modular::ContextQuery* const query,
+                       const std::string& key,
+                       modular::ContextSelector selector) {
+  modular::ContextQueryEntry entry;
+  entry.key = key;
+  entry.value = std::move(selector);
   query->selector.push_back(std::move(entry));
 }
 
-bool HasSelectorKey(ContextQuery* const query, const std::string& key) {
+bool HasSelectorKey(modular::ContextQuery* const query,
+                    const std::string& key) {
   for (auto& it : *query->selector) {
-    if (it->key == key) {
+    if (it.key == key) {
       return true;
     }
   }

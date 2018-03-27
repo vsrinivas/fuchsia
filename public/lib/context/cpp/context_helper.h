@@ -7,18 +7,19 @@
 
 #include <utility>
 
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include <fuchsia/cpp/modular.h>
+
+#include "lib/fidl/cpp/vector.h"
 
 namespace maxwell {
 
-std::pair<bool, f1dl::VectorPtr<ContextValuePtr>> TakeContextValue(
-    ContextUpdate* update, const std::string& key);
+std::pair<bool, fidl::VectorPtr<modular::ContextValue>> TakeContextValue(
+    modular::ContextUpdate* update, const std::string& key);
 
-void AddToContextQuery(ContextQuery* query, const std::string& key,
-                       ContextSelectorPtr selector);
+void AddToContextQuery(modular::ContextQuery* query, const std::string& key,
+                       modular::ContextSelector selector);
 
-bool HasSelectorKey(ContextQuery* const query, const std::string& key);
+bool HasSelectorKey(modular::ContextQuery* const query, const std::string& key);
 
 }  // namespace maxwell
 

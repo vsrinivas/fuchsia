@@ -20,6 +20,7 @@ source_set("context_metadata_builder") {
   ]
 
   deps = [
+    "//garnet/public/lib/fidl/cpp",
     "//peridot/public/lib:fidl",
   ]
 }
