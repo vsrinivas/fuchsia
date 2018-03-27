@@ -7,8 +7,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/modular.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/context_engine_impl.h"
 

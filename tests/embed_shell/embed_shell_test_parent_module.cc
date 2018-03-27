@@ -4,13 +4,13 @@
 
 #include <iostream>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -41,13 +41,13 @@ class ParentApp {
 
  private:
   void ScheduleDone() {
-    auto check = [this,
-                  done = std::make_shared<int>(0)](const f1dl::StringPtr& value) {
-      ++*done;
-      if (*done == 2) {
-        module_host_->module_context()->Done();
-      }
-    };
+    auto check =
+        [this, done = std::make_shared<int>(0)](const f1dl::StringPtr& value) {
+          ++*done;
+          if (*done == 2) {
+            module_host_->module_context()->Done();
+          }
+        };
 
     modular::testing::GetStore()->Get("story_shell_done", check);
     modular::testing::GetStore()->Get("child_module_done", check);

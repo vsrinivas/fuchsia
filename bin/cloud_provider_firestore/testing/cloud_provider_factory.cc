@@ -11,7 +11,7 @@
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "lib/svc/cpp/services.h"
 
 namespace cloud_provider_firestore {

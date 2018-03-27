@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"

@@ -6,8 +6,8 @@
 #include <utility>
 
 #include <fuchsia/cpp/views_v1_token.h>
+#include <fuchsia/cpp/component.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -99,12 +99,13 @@ class StoryModulesWatcherImpl : modular::StoryModulesWatcher {
   // can be watched.
   void Watch(modular::StoryControllerPtr* const story_controller) {
     (*story_controller)
-        ->GetActiveModules(binding_.NewBinding(),
-                           [this](f1dl::VectorPtr<modular::ModuleDataPtr> data) {
-                             FXL_LOG(INFO)
-                                 << "StoryModulesWatcherImpl GetModules(): "
-                                 << data->size() << " modules";
-                           });
+        ->GetActiveModules(
+            binding_.NewBinding(),
+            [this](f1dl::VectorPtr<modular::ModuleDataPtr> data) {
+              FXL_LOG(INFO)
+                  << "StoryModulesWatcherImpl GetModules(): " << data->size()
+                  << " modules";
+            });
   }
 
   // Deregisters itself from the watched story.
@@ -326,15 +327,17 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint previous_stories_{"StoryProvider.PreviousStories()"};
 
   void TestStoryProvider_PreviousStories() {
-    story_provider_->PreviousStories([this](f1dl::VectorPtr<f1dl::StringPtr> stories) {
-      previous_stories_.Pass();
-      TestStoryProvider_GetStoryInfo(std::move(stories));
-    });
+    story_provider_->PreviousStories(
+        [this](f1dl::VectorPtr<f1dl::StringPtr> stories) {
+          previous_stories_.Pass();
+          TestStoryProvider_GetStoryInfo(std::move(stories));
+        });
   }
 
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
-  void TestStoryProvider_GetStoryInfo(f1dl::VectorPtr<f1dl::StringPtr> stories) {
+  void TestStoryProvider_GetStoryInfo(
+      f1dl::VectorPtr<f1dl::StringPtr> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
       TestStory1();
@@ -374,12 +377,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
-    story_provider_->CreateStoryWithInfo(url, nullptr  /* extra_info */,
-                                         modular::JsonValueToString(doc),
-                                         [this](const f1dl::StringPtr& story_id) {
-                                           story1_create_.Pass();
-                                           TestStory1_GetController(story_id);
-                                         });
+    story_provider_->CreateStoryWithInfo(
+        url, nullptr /* extra_info */, modular::JsonValueToString(doc),
+        [this](const f1dl::StringPtr& story_id) {
+          story1_create_.Pass();
+          TestStory1_GetController(story_id);
+        });
   }
 
   TestPoint story1_get_controller_{"Story1 GetController"};
@@ -428,12 +431,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
-    story_provider_->CreateStoryWithInfo(url, nullptr  /* extra_info */,
-                                         modular::JsonValueToString(doc),
-                                         [this](const f1dl::StringPtr& story_id) {
-                                           story2_create_.Pass();
-                                           TestStory2_GetController(story_id);
-                                         });
+    story_provider_->CreateStoryWithInfo(
+        url, nullptr /* extra_info */, modular::JsonValueToString(doc),
+        [this](const f1dl::StringPtr& story_id) {
+          story2_create_.Pass();
+          TestStory2_GetController(story_id);
+        });
   }
 
   TestPoint story2_get_controller_{"Story2 Get Controller"};

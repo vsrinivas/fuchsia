@@ -14,7 +14,7 @@
 #include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "peridot/bin/module_resolver/type_inference.h"

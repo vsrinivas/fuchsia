@@ -6,13 +6,13 @@
 
 #include "lib/action_log/fidl/factory.fidl.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/bluetooth/fidl/low_energy.fidl.h"
 #include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/context/fidl/debug.fidl.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/suggestion/fidl/debug.fidl.h"
 #include "lib/user_intelligence/fidl/scope.fidl.h"

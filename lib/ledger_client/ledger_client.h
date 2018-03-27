@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

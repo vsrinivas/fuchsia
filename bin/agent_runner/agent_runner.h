@@ -11,15 +11,15 @@
 #include <string>
 
 #include "lib/agent/fidl/agent_context.fidl.h"
-#include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/agent/fidl/agent_provider.fidl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/component.h>
 #include "lib/async/cpp/operation.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"

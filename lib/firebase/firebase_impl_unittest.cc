@@ -15,7 +15,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "peridot/lib/socket/socket_pair.h"

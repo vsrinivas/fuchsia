@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "peridot/lib/ledger_client/ledger_client.h"

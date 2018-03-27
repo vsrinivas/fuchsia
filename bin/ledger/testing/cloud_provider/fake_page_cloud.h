@@ -7,8 +7,8 @@
 
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 

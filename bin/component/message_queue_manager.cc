@@ -9,7 +9,7 @@
 #include <utility>
 
 #include "lib/component/fidl/message_queue.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/component/persistent_queue.h"

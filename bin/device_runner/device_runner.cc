@@ -9,22 +9,21 @@
 #include <fs/pseudo-file.h>
 #include <trace-provider/provider.h>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/device/fidl/device_runner_monitor.fidl.h"
 #include "lib/device/fidl/device_shell.fidl.h"
 #include "lib/device/fidl/user_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/interface_handle.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -370,7 +369,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 };
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    Settings& settings, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    Settings& settings,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     component::ApplicationContext* app_context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});

@@ -11,7 +11,7 @@
 #include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/module/fidl/module.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"

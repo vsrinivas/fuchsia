@@ -18,7 +18,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {

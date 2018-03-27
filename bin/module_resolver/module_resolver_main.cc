@@ -6,14 +6,14 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/component/fidl/component_context.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 

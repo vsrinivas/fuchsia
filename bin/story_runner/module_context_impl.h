@@ -9,10 +9,10 @@
 
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/service_provider_impl.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
@@ -59,28 +59,33 @@ class ModuleContextImpl : ModuleContext {
                f1dl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModuleDeprecated(
-      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& name,
+      const f1dl::StringPtr& query,
       const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
   // |ModuleContext|
   void EmbedModule(
-      const f1dl::StringPtr& name, DaisyPtr daisy,
+      const f1dl::StringPtr& name,
+      DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
       const EmbedModuleCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShellDeprecated(
-      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& name,
+      const f1dl::StringPtr& query,
       const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation, bool focus) override;
+      SurfaceRelationPtr surface_relation,
+      bool focus) override;
   // |ModuleContext|
   void StartModule(
-      const f1dl::StringPtr& name, DaisyPtr daisy,
+      const f1dl::StringPtr& name,
+      DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
@@ -94,7 +99,8 @@ class ModuleContextImpl : ModuleContext {
       f1dl::VectorPtr<ContainerNodePtr> nodes) override;
   // |ModuleContext|
   void EmbedModuleDeprecated(
-      const f1dl::StringPtr& name, const f1dl::StringPtr& query,
+      const f1dl::StringPtr& name,
+      const f1dl::StringPtr& query,
       const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,

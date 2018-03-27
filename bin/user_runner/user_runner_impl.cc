@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/network.h>
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/agent/fidl/agent_provider.fidl.h"
 #include "lib/app/cpp/connect.h"
@@ -17,7 +18,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
-#include "lib/network/fidl/network_service.fidl.h"
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
@@ -136,7 +136,8 @@ std::function<void(std::function<void()>)> Teardown(
 }  // namespace
 
 UserRunnerImpl::UserRunnerImpl(
-    component::ApplicationContext* const application_context, const bool test)
+    component::ApplicationContext* const application_context,
+    const bool test)
     : application_context_(application_context),
       test_(test),
       user_shell_context_binding_(this),
@@ -728,9 +729,9 @@ void UserRunnerImpl::GetLink(f1dl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
   link_path->link_name = kUserShellLinkName;
-  user_shell_link_ = std::make_unique<LinkImpl>(ledger_client_.get(),
-                                                f1dl::VectorPtr<uint8_t>::New(16),
-                                                std::move(link_path), nullptr);
+  user_shell_link_ = std::make_unique<LinkImpl>(
+      ledger_client_.get(), f1dl::VectorPtr<uint8_t>::New(16),
+      std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request),
                             LinkImpl::ConnectionType::Secondary);
 }

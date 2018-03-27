@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 #define PERIDOT_LIB_LEDGER_CLIENT_TYPES_H_
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 
 namespace modular {
 

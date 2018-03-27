@@ -4,7 +4,7 @@
 
 #include "peridot/bin/user_runner/focus.h"
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/lib/fidl/array_to_string.h"

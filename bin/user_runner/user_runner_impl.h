@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
-#include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"

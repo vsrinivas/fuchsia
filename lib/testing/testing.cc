@@ -5,7 +5,7 @@
 #include "peridot/lib/testing/testing.h"
 
 #include "lib/fxl/logging.h"
-#include "lib/test_runner/fidl/test_runner.fidl.h"
+#include <fuchsia/cpp/test_runner.h>
 
 namespace modular {
 namespace testing {

@@ -7,7 +7,7 @@
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/module/fidl/module.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/suggestion/fidl/proposal.fidl.h"
 #include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/testing/reporting.h"

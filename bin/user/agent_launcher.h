@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_USER_AGENT_LAUNCHER_H_
 #define PERIDOT_BIN_USER_AGENT_LAUNCHER_H_
 
-#include "lib/app/fidl/application_environment.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include <fuchsia/cpp/component.h>
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 

@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"

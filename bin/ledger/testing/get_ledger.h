@@ -9,7 +9,7 @@
 #include <string>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/ref_ptr.h"

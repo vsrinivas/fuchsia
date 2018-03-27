@@ -10,8 +10,8 @@
 
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"

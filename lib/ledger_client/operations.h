@@ -10,7 +10,7 @@
 #include <string>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/ledger/fidl/ledger.fidl.h"

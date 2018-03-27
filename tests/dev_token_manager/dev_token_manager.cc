@@ -6,10 +6,10 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include <fuchsia/cpp/modular_auth.h>
+#include <fuchsia/cpp/modular_auth.h>
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"

@@ -7,7 +7,7 @@
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/fidl/application_controller.fidl.h"
-#include "lib/app/fidl/application_launcher.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "peridot/lib/fidl/app_client_unittest.fidl.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 

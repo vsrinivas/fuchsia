@@ -8,7 +8,7 @@
 #include <string>
 
 #include "lib/clipboard/fidl/clipboard.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 

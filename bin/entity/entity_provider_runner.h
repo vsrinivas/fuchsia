@@ -10,11 +10,11 @@
 #include "lib/entity/fidl/entity.fidl.h"
 #include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/entity/fidl/entity_reference_factory.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include <fuchsia/cpp/modular.h>
+#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
 namespace modular {

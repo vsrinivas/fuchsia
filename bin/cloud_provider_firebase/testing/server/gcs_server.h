@@ -8,7 +8,7 @@
 #include <functional>
 #include <map>
 
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 
 namespace ledger {

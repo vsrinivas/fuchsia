@@ -8,7 +8,7 @@
 #include <map>
 
 #include "garnet/lib/callback/cancellable.h"
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 
 #include "lib/fxl/macros.h"

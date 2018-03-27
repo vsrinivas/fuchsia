@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"

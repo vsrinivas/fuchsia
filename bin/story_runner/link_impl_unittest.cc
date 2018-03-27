@@ -5,7 +5,7 @@
 #include "peridot/bin/story_runner/link_impl.h"
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link_change.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"

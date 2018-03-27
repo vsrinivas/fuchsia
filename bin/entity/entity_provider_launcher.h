@@ -7,9 +7,9 @@
 
 #include <string>
 
-#include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/entity/fidl/entity_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
 namespace modular {

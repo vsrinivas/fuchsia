@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/module/fidl/module_manifest.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 

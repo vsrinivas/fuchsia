@@ -8,15 +8,15 @@
 
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
-#include "lib/agent/fidl/agent.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/fidl/service_provider.fidl.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/entity/fidl/entity.fidl.h"
 #include "lib/entity/fidl/entity_provider.fidl.h"
 #include "lib/entity/fidl/entity_reference_factory.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"

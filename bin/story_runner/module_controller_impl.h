@@ -7,15 +7,15 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
-#include "lib/app/fidl/application_launcher.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
@@ -34,7 +34,8 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
       component::ApplicationLauncher* application_launcher,
-      AppConfigPtr module_config, const ModuleData* module_data,
+      AppConfigPtr module_config,
+      const ModuleData* module_data,
       component::ServiceListPtr service_list,
       f1dl::InterfaceHandle<ModuleContext> module_context,
       f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,

@@ -5,7 +5,7 @@
 #ifndef PERIDOT_LIB_FIDL_CONTEXT_H_
 #define PERIDOT_LIB_FIDL_CONTEXT_H_
 
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/story/fidl/story_data.fidl.h"
 
 namespace modular {

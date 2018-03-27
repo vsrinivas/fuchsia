@@ -13,7 +13,7 @@
 #include "lib/context/fidl/debug.fidl.h"
 #include "lib/context/fidl/metadata.fidl.h"
 #include "lib/context/fidl/value.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/context_engine/index.h"

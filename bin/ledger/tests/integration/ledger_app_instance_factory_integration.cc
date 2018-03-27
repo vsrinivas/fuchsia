@@ -8,7 +8,7 @@
 
 #include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"

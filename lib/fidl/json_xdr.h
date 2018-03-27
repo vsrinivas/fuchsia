@@ -10,8 +10,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/array.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"

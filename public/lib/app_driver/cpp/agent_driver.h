@@ -8,12 +8,12 @@
 #include <memory>
 
 #include "lib/agent/cpp/agent_impl.h"
-#include "lib/agent/fidl/agent.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/agent/fidl/agent_context.fidl.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/service_provider.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/lifecycle/cpp/lifecycle_impl.h"

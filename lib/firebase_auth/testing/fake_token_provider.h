@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include "lib/auth/fidl/token_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/fxl/macros.h"
 
 namespace firebase_auth {

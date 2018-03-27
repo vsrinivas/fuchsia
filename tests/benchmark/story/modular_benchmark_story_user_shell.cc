@@ -8,9 +8,9 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -38,7 +38,8 @@ class Settings {
     }
 
     module_url = command_line.GetOptionValueWithDefault(
-        "module_url", "file:///system/test/modular_tests/modular_benchmark_story_module");
+        "module_url",
+        "file:///system/test/modular_tests/modular_benchmark_story_module");
   }
 
   int story_count{0};
@@ -112,13 +113,12 @@ class LinkWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::StringPtr& json) override {
-    continue_(json);
-  }
+  void Notify(const f1dl::StringPtr& json) override { continue_(json); }
 
   f1dl::Binding<modular::LinkWatcher> binding_;
 
-  std::function<void(const f1dl::StringPtr&)> continue_{[](const f1dl::StringPtr&) {}};
+  std::function<void(const f1dl::StringPtr&)> continue_{
+      [](const f1dl::StringPtr&) {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
@@ -151,9 +151,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
-    tracing_waiter_.WaitForTracing([this] {
-        Loop();
-      });
+    tracing_waiter_.WaitForTracing([this] { Loop(); });
   }
 
   void Loop() {
@@ -193,19 +191,19 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
     story_controller_->GetLink(nullptr, "root", link_.NewRequest());
     link_watcher_.Watch(&link_);
     link_watcher_.Continue([this](const f1dl::StringPtr& json) {
-        if (json == "") {
-          return;
-        }
+      if (json == "") {
+        return;
+      }
 
-        const int count = fxl::StringToNumber<int>(json.get());
+      const int count = fxl::StringToNumber<int>(json.get());
 
-        // Corresponding TRACE_FLOW_BEGIN() is in the module.
-        TRACE_FLOW_END("benchmark", "link/trans", count);
+      // Corresponding TRACE_FLOW_BEGIN() is in the module.
+      TRACE_FLOW_END("benchmark", "link/trans", count);
 
-        if (count == 100) {
-          StoryStop();
-        }
-      });
+      if (count == 100) {
+        StoryStop();
+      }
+    });
 
     StoryStart();
   }

@@ -7,7 +7,7 @@
 #include <limits.h>
 #include <unistd.h>
 
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/lib/fidl/json_xdr.h"

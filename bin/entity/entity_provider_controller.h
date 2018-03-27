@@ -7,12 +7,12 @@
 
 #include <map>
 
-#include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/entity/fidl/entity.fidl.h"
 #include "lib/entity/fidl/entity_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 
 namespace modular {

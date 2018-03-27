@@ -5,12 +5,12 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/device/fidl/user_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 namespace modular {

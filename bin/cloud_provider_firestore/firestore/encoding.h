@@ -10,7 +10,7 @@
 #include <google/firestore/v1beta1/document.pb.h>
 
 #include "lib/cloud_provider/fidl/cloud_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {

@@ -10,14 +10,14 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/app_driver/cpp/app_driver.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/binding.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -105,9 +105,10 @@ class DevUserShellApp : modular::StoryWatcher,
         std::move(view_owner_request_));
 
     if (settings_.story_id.empty()) {
-      story_provider_->CreateStory(
-          settings_.root_module,
-          [this](const f1dl::StringPtr& story_id) { StartStoryById(story_id); });
+      story_provider_->CreateStory(settings_.root_module,
+                                   [this](const f1dl::StringPtr& story_id) {
+                                     StartStoryById(story_id);
+                                   });
     } else {
       StartStoryById(settings_.story_id);
     }
@@ -157,7 +158,8 @@ class DevUserShellApp : modular::StoryWatcher,
   void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
 
   // |NextListener|
-  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
+  void OnNextResults(
+      f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "

@@ -7,7 +7,7 @@
 
 #include "lib/async/cpp/operation.h"
 #include "lib/entity/fidl/entity.fidl.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
 namespace maxwell {

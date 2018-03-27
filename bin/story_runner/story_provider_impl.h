@@ -9,20 +9,20 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/config/fidl/config.fidl.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_ptr.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/fidl/cpp/bindings/string.h"
+#include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/story/fidl/story_shell.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner.h"

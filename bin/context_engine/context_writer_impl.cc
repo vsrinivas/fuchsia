@@ -6,7 +6,7 @@
 
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
-#include "lib/entity/fidl/entity_resolver.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"

@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "lib/agent/fidl/agent.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"

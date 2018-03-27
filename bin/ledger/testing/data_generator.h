@@ -9,7 +9,7 @@
 #include <random>
 #include <vector>
 
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 
 namespace test {
 

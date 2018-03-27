@@ -9,9 +9,9 @@
 #include <vector>
 
 #include <fuchsia/cpp/views_v1.h>
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/module/fidl/link_path.fidl.h"
@@ -437,9 +437,8 @@ class StoryProviderImpl::StopStoryShellCall : Operation<> {
       // paths. |flow| must go out of scope when either of the paths finishes.
       FlowTokenHolder branch{flow};
       story_provider_impl_->preloaded_story_shell_->story_shell_app->Teardown(
-          kBasicTimeout, [branch] {
-            std::unique_ptr<FlowToken> flow = branch.Continue();
-          });
+          kBasicTimeout,
+          [branch] { std::unique_ptr<FlowToken> flow = branch.Continue(); });
     }
   }
 
@@ -899,10 +898,11 @@ void StoryProviderImpl::NotifyStoryWatchers(const StoryInfo* const story_info,
       });
 }
 
-void StoryProviderImpl::GetLinkPeer(const f1dl::StringPtr& story_id,
-                                    f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                                    const f1dl::StringPtr& link_name,
-                                    f1dl::InterfaceRequest<Link> request) {
+void StoryProviderImpl::GetLinkPeer(
+    const f1dl::StringPtr& story_id,
+    f1dl::VectorPtr<f1dl::StringPtr> module_path,
+    const f1dl::StringPtr& link_name,
+    f1dl::InterfaceRequest<Link> request) {
   new GetLinkPeerCall(&operation_queue_, this, story_id, std::move(module_path),
                       link_name, std::move(request));
 }

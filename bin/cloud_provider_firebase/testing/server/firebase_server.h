@@ -10,7 +10,7 @@
 
 #include <rapidjson/document.h>
 
-#include "lib/network/fidl/network_service.fidl.h"
+#include <fuchsia/cpp/network.h>
 #include "lib/url/gurl.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/server.h"
 #include "peridot/lib/convert/collection_view.h"

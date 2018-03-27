@@ -5,19 +5,19 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
-#include "lib/auth/fidl/account_provider.fidl.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/device/fidl/user_provider.fidl.h"
-#include "lib/fidl/cpp/bindings/array.h"
+#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_ptr_set.h"
-#include "lib/fidl/cpp/bindings/interface_request.h"
+#include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
@@ -40,7 +40,8 @@ class UserControllerImpl : UserController, UserContext {
 
   UserControllerImpl(
       component::ApplicationLauncher* application_launcher,
-      AppConfigPtr user_runner, AppConfigPtr user_shell,
+      AppConfigPtr user_runner,
+      AppConfigPtr user_shell,
       AppConfigPtr story_shell,
       f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
