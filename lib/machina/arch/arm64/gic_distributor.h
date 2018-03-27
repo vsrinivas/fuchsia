@@ -38,6 +38,7 @@ class GicDistributor : public IoHandler {
   uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
   uint8_t cpu_masks_[kNumInterrupts] __TA_GUARDED(mutex_) = {};
   Vcpu* vcpus_[kMaxVcpus] = {};
+  uint8_t num_vcpus_ = 0;
 
   zx_status_t TargetInterrupt(uint32_t global_irq, uint8_t cpu_mask);
 };

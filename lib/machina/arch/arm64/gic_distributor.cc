@@ -35,7 +35,9 @@ enum GicdRegister : uint64_t {
     IPRIORITY0    = 0x400,
     IPRIORITY255  = 0x4fc,
     ITARGETS0     = 0x800,
-    ITARGETS255   = 0x8fc,
+    ITARGETS7     = 0x81c,
+    ITARGETS8     = 0x820,
+    ITARGETS63    = 0x8fc,
     SGI           = 0xf00,
     PID2          = 0xfe8,
 };
@@ -66,6 +68,10 @@ static inline uint32_t typer_it_lines(uint32_t num_interrupts) {
   return set_bits((num_interrupts >> 5) - 1, 4, 0);
 }
 
+static inline uint32_t typer_cpu_number(uint8_t num_cpus) {
+  return set_bits(num_cpus - 1, 7, 5);
+}
+
 static inline uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
@@ -82,8 +88,7 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 
   switch (addr) {
     case GicdRegister::TYPE:
-      // TODO(abdulla): Set the number of VCPUs.
-      value->u32 = typer_it_lines(kNumInterrupts);
+      value->u32 = typer_it_lines(kNumInterrupts) | typer_cpu_number(num_vcpus_);
       return ZX_OK;
     case GicdRegister::ICFG0:
       // SGIs are RAO/WI.
@@ -92,7 +97,14 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
     case GicdRegister::ICFG1... GicdRegister::ICFG31:
       value->u32 = 0;
       return ZX_OK;
-    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS255: {
+    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS7: {
+      // GIC Architecture Spec 4.3.12: Each field of ITARGETS0 to ITARGETS7
+      // returns a mask that corresponds only to the current processor.
+      uint8_t mask = 1u << Vcpu::GetCurrent()->id();
+      value->u32 = mask | mask << 8 | mask << 16 | mask << 24;
+      return ZX_OK;
+    }
+    case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
       fbl::AutoLock lock(&mutex_);
       const uint8_t* cpu_mask = &cpu_masks_[addr - GicdRegister::ITARGETS0];
       // Target registers are read from 4 at a time.
@@ -115,7 +127,13 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   }
 
   switch (addr) {
-    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS255: {
+    case GicdRegister::ITARGETS0... GicdRegister::ITARGETS7: {
+      // GIC Architecture Spec 4.3.12: ITARGETS0 to ITARGETS7 are read only.
+      FXL_LOG(ERROR) << "Write to read-only GIC distributor address 0x"
+                     << std::hex << addr;
+      return ZX_ERR_INVALID_ARGS;
+    }
+    case GicdRegister::ITARGETS8... GicdRegister::ITARGETS63: {
       fbl::AutoLock lock(&mutex_);
       uint8_t* cpu_mask = &cpu_masks_[addr - GicdRegister::ITARGETS0];
       *reinterpret_cast<uint32_t*>(cpu_mask) = value.u32;
@@ -172,6 +190,7 @@ zx_status_t GicDistributor::RegisterVcpu(uint8_t vcpu_num, Vcpu* vcpu) {
     return ZX_ERR_ALREADY_EXISTS;
   }
   vcpus_[vcpu_num] = vcpu;
+  num_vcpus_ += 1;
   // We set the default state of all CPU masks to target every registered VCPU.
   uint8_t default_mask = cpu_masks_[0] | 1u << vcpu_num;
   memset(cpu_masks_, default_mask, sizeof(cpu_masks_));
@@ -200,7 +219,7 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t global_irq,
       return ZX_OK;
     }
   }
-  for (int i = 0; cpu_mask != 0; cpu_mask >>= 1, i++) {
+  for (size_t i = 0; cpu_mask != 0; cpu_mask >>= 1, i++) {
     if (!(cpu_mask & 1) || vcpus_[i] == nullptr) {
       continue;
     }
