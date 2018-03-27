@@ -154,7 +154,9 @@ func (b *BindingSet) Add(s Stub, c zx.Channel) error {
 		Channel: c,
 	}
 	err := binding.Init(func(err error) {
-		log.Println(err)
+		if s, ok := err.(zx.Error); ok && s.Status != zx.ErrPeerClosed {
+			log.Printf("bindings err: %v", err)
+		}
 		b.Remove(binding)
 	})
 	if err != nil {
