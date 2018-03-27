@@ -37,7 +37,6 @@ source_set("mlme") {
     "include/wlan/mlme/device_interface.h",
     "include/wlan/mlme/dispatcher.h",
     "include/wlan/mlme/frame_handler.h",
-    "include/wlan/mlme/fsm.h",
     "include/wlan/mlme/mac_frame.h",
     "include/wlan/mlme/macaddr_map.h",
     "include/wlan/mlme/macaddr_map.h",

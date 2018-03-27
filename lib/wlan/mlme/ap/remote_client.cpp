@@ -471,29 +471,41 @@ RemoteClient::RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer
 }
 
 RemoteClient::~RemoteClient() {
+    // Cleanly terminate the current state.
+    state_->OnExit();
+    state_.reset();
+
     debugbss("[client] [%s] destroyed\n", addr_.ToString().c_str());
 }
 
 void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
-    auto from_id = state() == nullptr ? StateId::kUninitialized : state()->id();
+    ZX_DEBUG_ASSERT(to != nullptr);
+    auto from_id = state_ == nullptr ? StateId::kUninitialized : state_->id();
     if (to == nullptr) {
         errorf("attempt to transition to a nullptr from state: %hhu\n", from_id);
-        ZX_DEBUG_ASSERT(to == nullptr);
         return;
     }
 
+    if (state_ != nullptr) { state_->OnExit(); }
     auto to_id = to->id();
-    fsm::StateMachine<BaseState>::MoveToState(fbl::move(to));
+    state_ = fbl::move(to);
 
+    // Report state change to listener.
     if (listener_ != nullptr) { listener_->HandleClientStateChange(addr_, from_id, to_id); }
+
+    // When the client's owner gets destroyed due to a state change, it will also destroy the state
+    // which we were about to transition into. In that case, terminate.
+    if (state_ != nullptr) {
+        state_->OnEnter();
+    }
 }
 
 void RemoteClient::HandleTimeout() {
-    state()->HandleTimeout();
+    state_->HandleTimeout();
 }
 
 zx_status_t RemoteClient::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
-    ForwardCurrentFrameTo(state());
+    ForwardCurrentFrameTo(state_.get());
     return ZX_OK;
 }
 
@@ -501,7 +513,7 @@ zx_status_t RemoteClient::HandleDataFrame(const DataFrameHeader& hdr) {
     ZX_DEBUG_ASSERT(hdr.addr2 == addr_);
     if (hdr.addr2 != addr_) { return ZX_ERR_STOP; }
 
-    ForwardCurrentFrameTo(state());
+    ForwardCurrentFrameTo(state_.get());
     return ZX_OK;
 }
 
@@ -509,7 +521,7 @@ zx_status_t RemoteClient::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
     ZX_DEBUG_ASSERT(hdr.addr2 == addr_);
     if (hdr.addr2 != addr_) { return ZX_ERR_STOP; }
 
-    ForwardCurrentFrameTo(state());
+    ForwardCurrentFrameTo(state_.get());
     return ZX_OK;
 }
 
@@ -518,7 +530,7 @@ zx_status_t RemoteClient::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame
     ZX_DEBUG_ASSERT(frame.hdr->ta == addr_);
     if (frame.hdr->ta != addr_) { return ZX_ERR_STOP; }
 
-    ForwardCurrentFrameTo(state());
+    ForwardCurrentFrameTo(state_.get());
     return ZX_OK;
 }
 

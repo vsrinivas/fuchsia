@@ -9,7 +9,6 @@
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
-#include <wlan/mlme/fsm.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/timer.h>
 
@@ -19,7 +18,7 @@ namespace wlan {
 
 class BaseState;
 
-class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInterface {
+class RemoteClient : public RemoteClientInterface {
    public:
     enum class StateId : uint8_t {
         kUninitialized,
@@ -37,8 +36,6 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer, BssInterface* bss,
                  Listener* listener, const common::MacAddr& addr);
     ~RemoteClient();
-
-    void MoveToState(fbl::unique_ptr<BaseState> state) override;
 
     // RemoteClientInterface implementation
     void HandleTimeout() override;
@@ -62,6 +59,8 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
     void ReportBuChange(size_t bu_count);
+
+    void MoveToState(fbl::unique_ptr<BaseState> state);
 
     // Note: There can only ever be one timer running at a time.
     // TODO(hahnr): Evolve this to support multiple timeouts at the same time.
@@ -89,13 +88,16 @@ class RemoteClient : public fsm::StateMachine<BaseState>, public RemoteClientInt
     const fbl::unique_ptr<Timer> timer_;
     // Queue which holds buffered `EthernetII` packets while the client is in power saving mode.
     PacketQueue ps_pkt_queue_;
+    fbl::unique_ptr<BaseState> state_;
 };
 
-class BaseState : public fsm::StateInterface, public FrameHandler {
+class BaseState : public FrameHandler {
    public:
     BaseState(RemoteClient* client) : client_(client) {}
     virtual ~BaseState() = default;
 
+    virtual void OnEnter() {}
+    virtual void OnExit() {}
     virtual void HandleTimeout() {}
 
     virtual RemoteClient::StateId id() const = 0;
