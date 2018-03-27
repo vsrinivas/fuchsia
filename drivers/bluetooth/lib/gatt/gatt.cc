@@ -74,7 +74,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   void RemoveConnection(std::string peer_id) override {
     FXL_VLOG(1) << "gatt: Remove connection: " << peer_id;
     PostMessage(
-        [this, peer_id = std::move(peer_id)] { connections_.erase(peer_id); });
+        [this, peer_id = std::move(peer_id)] {
+            local_services_->DisconnectClient(peer_id);
+            connections_.erase(peer_id);
+        });
   }
 
   void RegisterService(ServicePtr service,

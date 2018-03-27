@@ -195,6 +195,19 @@ class LocalServiceManager::ServiceData final {
     return true;
   }
 
+  // Invoke the ClientConfigCallback for each matching client to be removed if
+  // notify or indicate is enabled to signal that they are cleared, then clears
+  // them.
+  void DisconnectClient(const std::string& peer_id) {
+    for (auto& id_config_pair : chrc_configs_) {
+      const uint16_t value = id_config_pair.second.Get(peer_id);
+      id_config_pair.second.Erase(peer_id);
+      if (value != 0) {
+        ccc_callback_(id_, id_config_pair.first, peer_id, false, false);
+      }
+    }
+  }
+
  private:
   class CharacteristicConfig {
    public:
@@ -218,6 +231,10 @@ class LocalServiceManager::ServiceData final {
 
     void Set(const std::string& peer_id, uint16_t value) {
       client_states_[peer_id] = value;
+    }
+
+    void Erase(const std::string& peer_id) {
+      client_states_.erase(peer_id);
     }
 
    private:
@@ -560,6 +577,12 @@ bool LocalServiceManager::GetCharacteristicConfig(
     return false;
 
   return iter->second->GetCharacteristicConfig(chrc_id, peer_id, out_config);
+}
+
+void LocalServiceManager::DisconnectClient(const std::string& peer_id) {
+  for (auto& id_service_pair : services_) {
+    id_service_pair.second->DisconnectClient(peer_id);
+  }
 }
 
 }  // namespace gatt

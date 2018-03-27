@@ -97,6 +97,11 @@ class LocalServiceManager final {
                                const std::string& peer_id,
                                ClientCharacteristicConfig* out_config);
 
+  // Erase any client characteristic configuration associated to a specific
+  // client and invoke its ClientConfigCallback to signal that notifications and
+  // indications are now disabled.
+  void DisconnectClient(const std::string& peer_id);
+
   fxl::RefPtr<att::Database> database() const { return db_; }
 
  private:

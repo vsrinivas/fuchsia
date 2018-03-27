@@ -1083,6 +1083,52 @@ TEST_F(GATT_LocalClientCharacteristicConfigurationTest, EnableIndicate) {
   EXPECT_EQ(1, ccc_callback_count);
 }
 
+TEST_F(GATT_LocalClientCharacteristicConfigurationTest, DisconnectCleanup) {
+  // No security.
+  auto kUpdateReqs = AllowedNoSecurity();
+  constexpr uint8_t kProps = Property::kNotify;
+  BuildService(kProps, kUpdateReqs);
+
+  auto* attr = mgr.database()->FindAttribute(kCCCHandle);
+  ASSERT_TRUE(attr);
+  EXPECT_EQ(types::kClientCharacteristicConfig, attr->type());
+
+  LocalServiceManager::ClientCharacteristicConfig config;
+  EXPECT_FALSE(mgr.GetCharacteristicConfig(last_service_id, kChrcId,
+                                           kTestDeviceId, &config));
+
+  att::ErrorCode ecode;
+  EXPECT_TRUE(WriteCCC(attr, kTestDeviceId, kEnableNot, &ecode));
+  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+
+  // The callback should have been notified.
+  EXPECT_EQ(1, ccc_callback_count);
+  EXPECT_EQ(kTestDeviceId, last_peer_id);
+  EXPECT_TRUE(last_notify);
+  EXPECT_FALSE(last_indicate);
+
+  mgr.DisconnectClient(kTestDeviceId);
+
+  uint16_t ccc_value;
+  // Reads should succeed but notifications should be disabled.
+  EXPECT_TRUE(ReadCCC(attr, kTestDeviceId, &ecode, &ccc_value));
+  EXPECT_EQ(att::ErrorCode::kNoError, ecode);
+  EXPECT_EQ(0x0000, ccc_value);
+
+  // The callback should have been called again to disable notifications.
+  EXPECT_EQ(2, ccc_callback_count);
+  EXPECT_EQ(kTestDeviceId, last_peer_id);
+  EXPECT_FALSE(last_notify);
+  EXPECT_FALSE(last_indicate);
+
+  mgr.DisconnectClient(kTestDeviceId2);
+
+  // The callback should not be called if a device isn't registered for
+  // notifications.
+  EXPECT_EQ(2, ccc_callback_count);
+  EXPECT_EQ(kTestDeviceId, last_peer_id);
+}
+
 }  // namespace
 }  // namespace gatt
 }  // namespace btlib
