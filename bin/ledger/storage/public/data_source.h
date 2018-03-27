@@ -10,7 +10,6 @@
 #include <functional>
 #include <memory>
 
-#include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -48,7 +47,7 @@ class DataSource {
 
   // Factory methods.
   static std::unique_ptr<DataSource> Create(std::string value);
-  static std::unique_ptr<DataSource> Create(f1dl::VectorPtr<uint8_t> value);
+  static std::unique_ptr<DataSource> Create(std::vector<uint8_t> value);
   static std::unique_ptr<DataSource> Create(fsl::SizedVmo vmo);
   static std::unique_ptr<DataSource> Create(zx::socket socket, uint64_t size);
 
