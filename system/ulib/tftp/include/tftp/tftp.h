@@ -93,9 +93,6 @@ typedef enum {
 } tftp_mode;
 
 // These are the default values used when sending a tftp request
-#define TFTP_DEFAULT_CLIENT_BLOCKSZ 1024
-#define TFTP_DEFAULT_CLIENT_TIMEOUT 1
-#define TFTP_DEFAULT_CLIENT_WINSZ 64
 #define TFTP_DEFAULT_CLIENT_MODE MODE_OCTET
 
 typedef struct {
