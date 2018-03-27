@@ -184,9 +184,8 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Use vmo::write here for test simplicity. In a real case the vmo should be
   // mapped into a vmar so we dont need a syscall per write
-  size_t actual_size;
   zx_status_t status =
-      pose_buffer_vmo_.write_old(&pose, 0, sizeof(escher::hmd::Pose), &actual_size);
+      pose_buffer_vmo_.write(&pose, 0, sizeof(escher::hmd::Pose));
   FXL_DCHECK(status == ZX_OK);
 
   // Present

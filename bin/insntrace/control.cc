@@ -539,10 +539,9 @@ static zx_status_t WriteBufferData(const IptConfig& config,
         to_write = buffer_remaining;
       if (to_write > bytes_left)
         to_write = bytes_left;
-      size_t actual;
       // TODO(dje): Mapping into process and reading directly from that
       // left for another day.
-      status = vmo.read_old(buf, offset, to_write, &actual);
+      status = vmo.read(buf, offset, to_write);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << fxl::StringPrintf(
                               "zx_vmo_read: buffer %u, buffer %u, offset %zu: ",

@@ -71,7 +71,17 @@ size_t VmoUploadElementReader::size() {
 
 bool VmoUploadElementReader::ReadAvailable(std::ostream* os) {
   size_t num_bytes = buf_.size();
-  err_ = vmo_.read_old(buf_.data(), offset_, num_bytes, &num_bytes);
+  size_t vmo_size;
+  err_ = vmo_.get_size(&vmo_size);
+  if (err_ != ZX_OK) {
+    FXL_VLOG(1) << "VmoUploadElementReader: result=" << err_;
+    return false;
+  }
+  if (vmo_size < num_bytes) {
+    num_bytes = vmo_size;
+  }
+
+  err_ = vmo_.read(buf_.data(), offset_, num_bytes);
   if (err_ != ZX_OK) {
     FXL_VLOG(1) << "VmoUploadElementReader: result=" << err_;
     return false;

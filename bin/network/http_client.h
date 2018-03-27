@@ -438,18 +438,12 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendBufferedBody() {
       size_t todo = std::min(sizeof(buffer), size - done);
       FXL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
-      size_t written;
-      result = vmo.write_old(buffer, done, todo, &written);
+      result = vmo.write(buffer, done, todo);
       if (result != ZX_OK) {
         FXL_VLOG(1) << "SendBufferedBody: result=" << result;
         return result;
       }
-      if (written < todo) {
-        FXL_VLOG(1) << "zx::vmo::write wrote " << written
-                    << " bytes instead of " << todo << " bytes.";
-      }
-
-      done += written;
+      done += todo;
     } while (done < size);
 
     if (loader_->response_body_mode_ == ResponseBodyMode::BUFFER) {

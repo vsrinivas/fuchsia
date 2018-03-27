@@ -237,13 +237,9 @@ Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {
 
   std::vector<uint8_t> buffer(buffer_vmo_size_);
 
-  size_t actual = 0;
-  if ((buffer_vmo_.read_old(buffer.data(), 0, buffer_vmo_size_, &actual) !=
-       ZX_OK) ||
-      (actual != buffer_vmo_size_)) {
+  if (buffer_vmo_.read(buffer.data(), 0, buffer_vmo_size_) != ZX_OK) {
     FXL_LOG(WARNING) << *bundle_ << ": Failed to read data from buffer_vmo: "
-                     << "actual size=" << actual
-                     << ", expected size=" << buffer_vmo_size_;
+                     << "expected size=" << buffer_vmo_size_;
   }
 
   const uint64_t* start = reinterpret_cast<const uint64_t*>(buffer.data());
