@@ -123,11 +123,13 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     common::MacAddr peer_sta_addr(req.peer_sta_address.data());
     if (bssid_ != peer_sta_addr) {
         errorf("cannot authenticate before joining\n");
-        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_,
+                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kUnjoined) {
         errorf("must join before authenticating\n");
-        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_,
+                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ != WlanState::kUnauthenticated) {
         warnf("already authenticated; sending request anyway\n");
@@ -136,7 +138,8 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
         // TODO(tkilbourn): support other authentication types
         // TODO(tkilbourn): set the auth_alg_ when we support other authentication types
         errorf("only OpenSystem authentication is supported\n");
-        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_,
+                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
 
     debugjoin("authenticating to %s\n", MACSTR(bssid_));
@@ -175,7 +178,8 @@ zx_status_t Station::HandleMlmeAuthReq(const wlan_mlme::AuthenticateRequest& req
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+        service::SendAuthResponse(device_, bssid_,
+                                  wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
         // TODO(tkilbourn): reset the station?
     }
     return status;
@@ -237,11 +241,13 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     common::MacAddr peer_sta_addr(req.peer_sta_address.data());
     if (bssid_ != peer_sta_addr) {
         errorf("bad peer STA address for association\n");
-        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_,
+                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kUnjoined || state_ == WlanState::kUnauthenticated) {
         errorf("must authenticate before associating\n");
-        return service::SendAuthResponse(device_, bssid_, wlan_mlme::AuthenticateResultCodes::REFUSED);
+        return service::SendAuthResponse(device_, bssid_,
+                                         wlan_mlme::AuthenticateResultCodes::REFUSED);
     }
     if (state_ == WlanState::kAssociated) {
         warnf("already authenticated; sending request anyway\n");
@@ -273,7 +279,8 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
                     packet->len() - sizeof(MgmtFrameHeader) - sizeof(AssociationRequest));
     if (!w.write<SsidElement>(bss_->ssid->data())) {
         errorf("could not write ssid \"%s\" to association request\n", bss_->ssid->data());
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
     // TODO(tkilbourn): determine these rates based on hardware and the AP
@@ -281,14 +288,16 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
 
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("could not write supported rates\n");
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
     std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
     if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
         errorf("could not write extended supported rates\n");
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_IO;
     }
 
@@ -302,7 +311,8 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
         if (!w.write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
                                      htc.txbf_cap, htc.asel_cap)) {
             errorf("could not write HtCapabilities\n");
-            service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+            service::SendAssocResponse(device_,
+                                       wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
             return ZX_ERR_IO;
         }
     }
@@ -316,7 +326,8 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     zx_status_t status = packet->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("could not set packet length to %zu: %d\n", frame_len, status);
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
@@ -324,7 +335,8 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     status = device_->SendWlan(std::move(packet));
     if (status != ZX_OK) {
         errorf("could not send assoc packet: %d\n", status);
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return status;
     }
 
@@ -334,7 +346,8 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
     if (status != ZX_OK) {
         errorf("could not set auth timer: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         // TODO(tkilbourn): reset the station?
     }
     return status;
@@ -473,7 +486,8 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     if (assoc->status_code != status_code::kSuccess) {
         errorf("association failed (status code=%u)\n", assoc->status_code);
         // TODO(tkilbourn): map to the correct result code
-        service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
+        service::SendAssocResponse(device_,
+                                   wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
         return ZX_ERR_BAD_STATE;
     }
 
@@ -732,11 +746,12 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     wlan_tx_info_t txinfo = {
         // TODO(porce): Determine PHY and CBW based on the association negotiation.
         .tx_flags = 0x0,
-        .valid_fields = WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH,
+        .valid_fields =
+            WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
         .phy = WLAN_PHY_HT,
         .cbw = CBW20,
         //.date_rate = 0x0,
-        //.mcs = 0x0,
+        .mcs = 0x7,
     };
 
     auto wlan_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
@@ -845,7 +860,8 @@ zx_status_t Station::HandleTimeout() {
         debugjoin("assoc timed out; moving back to authenticated\n");
         assoc_timeout_ = zx::time();
         // TODO(tkilbourn): need a better error code for this
-        return service::SendAssocResponse(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+        return service::SendAssocResponse(device_,
+                                          wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
     }
 
     if (signal_report_timeout_ > zx::time() && now > signal_report_timeout_ &&
