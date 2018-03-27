@@ -94,10 +94,7 @@ void DeviceSetImpl::CheckFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
         firestore_service_->GetDocument(
             std::move(request), std::move(call_credentials),
             [callback](auto status, auto result) {
-              if (!status.ok()) {
-                FXL_LOG(ERROR) << "Server request failed, "
-                               << "error message: " << status.error_message()
-                               << ", error details: " << status.error_details();
+              if (LogGrpcRequestError(status)) {
                 callback(ConvertGrpcStatus(status.error_code()));
                 return;
               }
@@ -125,10 +122,7 @@ void DeviceSetImpl::SetFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
         firestore_service_->CreateDocument(
             std::move(request), std::move(call_credentials),
             [callback](auto status, auto result) {
-              if (!status.ok()) {
-                FXL_LOG(ERROR) << "Server request failed, "
-                               << "error message: " << status.error_message()
-                               << ", error details: " << status.error_details();
+              if (LogGrpcRequestError(status)) {
                 callback(ConvertGrpcStatus(status.error_code()));
                 return;
               }
@@ -165,10 +159,7 @@ void DeviceSetImpl::Erase(const EraseCallback& callback) {
             std::move(request), call_credentials,
             [this, call_credentials, callback = std::move(callback)](
                 auto status, auto result) mutable {
-              if (!status.ok()) {
-                FXL_LOG(ERROR) << "Server request failed, "
-                               << "error message: " << status.error_message()
-                               << ", error details: " << status.error_details();
+              if (LogGrpcRequestError(status)) {
                 callback(ConvertGrpcStatus(status.error_code()));
                 return;
               }
@@ -200,10 +191,7 @@ void DeviceSetImpl::OnGotDocumentsToErase(
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [callback = std::move(callback)](grpc::Status status) {
-        if (!status.ok()) {
-          FXL_LOG(ERROR) << "Server request failed, "
-                         << "error message: " << status.error_message()
-                         << ", error details: " << status.error_details();
+        if (LogGrpcRequestError(status)) {
           callback(ConvertGrpcStatus(status.error_code()));
           return;
         }
@@ -249,9 +237,7 @@ void DeviceSetImpl::OnFinished(grpc::Status status) {
     }
     return;
   }
-  FXL_LOG(ERROR) << "Server unexpectedly closed the watcher connection "
-                 << "with status: " << status.error_message()
-                 << ", error details: " << status.error_details();
+  LogGrpcConnectionError(status);
   watcher_.Unbind();
 }
 

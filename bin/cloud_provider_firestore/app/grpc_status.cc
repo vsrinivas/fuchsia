@@ -4,6 +4,8 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 
+#include "lib/fxl/logging.h"
+
 namespace cloud_provider_firestore {
 
 cloud_provider::Status ConvertGrpcStatus(grpc::StatusCode status) {
@@ -19,6 +21,28 @@ cloud_provider::Status ConvertGrpcStatus(grpc::StatusCode status) {
     default:
       return cloud_provider::Status::SERVER_ERROR;
   }
+}
+
+bool LogGrpcRequestError(const grpc::Status& status) {
+  if (!status.ok()) {
+    FXL_LOG(ERROR) << "Server request failed, "
+                   << "error message: " << status.error_message()
+                   << ", error details: " << status.error_details();
+    return true;
+  }
+
+  return false;
+}
+
+bool LogGrpcConnectionError(const grpc::Status& status) {
+  if (!status.ok()) {
+    FXL_LOG(ERROR) << "Server unexpectedly closed the connection "
+                   << "with status: " << status.error_message()
+                   << ", error details: " << status.error_details();
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace cloud_provider_firestore
