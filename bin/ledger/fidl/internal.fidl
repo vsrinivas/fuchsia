@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="ledger"]
 library ledger_internal;
-
-// import "lib/ledger/fidl/ledger.fidl";
-// import "lib/cloud_provider/fidl/cloud_provider.fidl";
-// import "peridot/bin/ledger/fidl/debug.fidl";
 
 // Entry interface implemented by the Ledger application, intended to be used by
 // the process setting up the user environment to obtain repositories for
@@ -27,8 +22,8 @@ interface LedgerRepositoryFactory {
   //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
   //     repository and disconnects all clients.
   1: GetRepository(string repository_path,
-                  cloud_provider.CloudProvider? cloud_provider,
-                  request<LedgerRepository> repository) -> (Status status);
+                   cloud_provider.CloudProvider? cloud_provider,
+                   request<LedgerRepository> repository) -> (ledger.Status @status);
 };
 
 // Controller interface for the Ledger application lifecycle.
@@ -41,16 +36,17 @@ interface LedgerController {
 interface LedgerRepository {
   // Creates a new Ledger for the given |ledger_name| if it doesn't already
   // exist.
-  1: GetLedger(vector<uint8> ledger_name, request<Ledger> ledger) -> (Status status);
+  1: GetLedger(vector<uint8> ledger_name, request<ledger.Ledger> ledger) -> (ledger.Status @status);
 
   // Binds a new LedgerRepository handle to this repository.
-  2: Duplicate(request<LedgerRepository> request) -> (Status status);
+  2: Duplicate(request<LedgerRepository> ledger_repository) -> (ledger.Status @status);
 
   // Sets a watcher to track the synchronization state of a user's Ledger. The
   // current state is immediately sent to the watcher when this method is
   // called.
-  3: SetSyncStateWatcher(SyncWatcher watcher) -> (Status status);
+  3: SetSyncStateWatcher(ledger.SyncWatcher watcher) -> (ledger.Status @status);
 
   // Returns the debugging interface for this LedgerRepository
-  4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug) -> (Status status);
+  4: GetLedgerRepositoryDebug(request<LedgerRepositoryDebug> ledgerRepositoryDebug)
+      -> (ledger.Status @status);
 };

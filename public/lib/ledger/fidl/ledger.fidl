@@ -29,7 +29,7 @@ enum Status : int32 {
   UNKNOWN_ERROR = -1;
 };
 
-union OptionalPageId {
+struct PageId {
   array<uint8>:16 id;
 };
 
@@ -44,7 +44,7 @@ interface Ledger {
   // |id| the identifier of the page, or |null| to create a new page with a random identifier.
   //
   // Returns OK and binds |page_request| to the page on success.
-  1: GetPage(OptionalPageId? id, request<Page> page_request) -> (Status @status);
+  1: GetPage(PageId? id, request<Page> page_request) -> (Status @status);
 
   // Gets the page with identifier
   // [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].
@@ -53,7 +53,7 @@ interface Ledger {
   2: GetRootPage(request<Page> page_request) -> (Status @status);
 
   // Deletes the page with the given id.
-  3: DeletePage(array<uint8>:16 id) -> (Status @status);
+  3: DeletePage(PageId id) -> (Status @status);
 
   // Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
   // If |factory| is NULL or this method is not called, a global last one wins
@@ -82,7 +82,7 @@ enum ConflictResolutionWaitStatus {
 // A page is the smallest unit of syncable data.
 interface Page {
   // Returns the identifier for the page.
-  1: GetId() -> (array<uint8>:16 id);
+  1: GetId() -> (PageId id);
 
   // Creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page. If |key_prefix| is provided,
@@ -335,7 +335,7 @@ interface ConflictResolverFactory {
   // Returns a |ConflictResolver| to use for the given page. This will only be
   // called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
   // or |CUSTOM|.
-  2: NewConflictResolver(vector<uint8> page_id, request<ConflictResolver> resolver);
+  2: NewConflictResolver(PageId page_id, request<ConflictResolver> resolver);
 };
 
 // Strategy to be used when resolving conflicts.

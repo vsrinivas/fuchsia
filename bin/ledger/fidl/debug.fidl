@@ -2,47 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="ledger"]
 library ledger_internal;
-
-// import "lib/ledger/fidl/ledger.fidl";
 
 [ServiceName="ledger::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
   // Returns the instances list in LedgerRepository.
-  1: GetInstancesList() -> (array<vector<uint8>> result);
+  1: GetInstancesList() -> (vector<vector<uint8>> result);
 
   // Returns the debugging interface for the given |ledger_name|.
-  2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug) -> (Status status);
+  2: GetLedgerDebug(vector<uint8> ledger_name, request<LedgerDebug> ledger_debug)
+      -> (ledger.Status @status);
 };
 
 interface LedgerDebug {
   // Returns the pages list in Ledger.
-  1: GetPagesList() -> (array<vector<uint8>> result);
+  1: GetPagesList() -> (vector<ledger.PageId> result);
 
   // Returns OK and binds the |page_debug| for the given |page_id|.
   // Returns PAGE_NOT_FOUND if |page_id| isn't found.
-  2: GetPageDebug(array<uint8, 16> page_id, request<PageDebug> page_debug) -> (Status status);
+  2: GetPageDebug(ledger.PageId page_id, request<PageDebug> page_debug)
+      -> (ledger.Status @status);
 };
 
 interface PageDebug {
   // Returns OK and a list of the head commits IDs.
-  1: GetHeadCommitsIds() -> (Status status, array<vector<uint8>> result);
+  1: GetHeadCommitsIds() -> (ledger.Status @status, vector<CommitId> result);
 
   // Returns OK and creates a snapshot of the page, allowing the client app to read a
   // consistent view of the content of the page.
-  2: GetSnapshot(vector<uint8> commit_id, request<PageSnapshot> snapshot_request) -> (Status status);
+  2: GetSnapshot(CommitId commit_id, request<ledger.PageSnapshot> snapshot_request)
+      -> (ledger.Status @status);
 
   // Returns OK and the Commit struct filled for the given |commit_id|.
-  3: GetCommit(vector<uint8> commit_id) -> (Status status, Commit? commit);
+  3: GetCommit(CommitId commit_id) -> (ledger.Status @status, Commit? commit);
+};
+
+struct CommitId {
+  vector<uint8> id;
 };
 
 struct Commit {
   // The ID of this commit.
-  vector<uint8> commit_id;
+  CommitId commit_id;
 
   // The IDs of this commit parents.
-  array<vector<uint8>> parents_ids;
+  vector<CommitId> parents_ids;
 
   // The creation timestamp of this commit in nanoseconds since epoch.
   int64 timestamp;

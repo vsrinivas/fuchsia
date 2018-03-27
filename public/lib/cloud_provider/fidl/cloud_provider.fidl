@@ -4,8 +4,6 @@
 
 library cloud_provider;
 
-// import "lib/fsl/fidl/sized_vmo_transport.fidl";
-
 // This file defines a cloud service that can be used by Ledger to power cloud
 // sync.
 

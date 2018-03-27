@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-[DartPackage="cloud_provider_firestore"]
 library cloud_provider_firestore;
-
-// import "lib/ledger/fidl/ledger.fidl";
-// import "lib/cloud_provider/fidl/cloud_provider.fidl";
-// import "lib/auth/fidl/token_provider.fidl";
 
 // Configuration to use when connecting to the Firestore server.
 struct Config {
@@ -28,7 +23,7 @@ interface Factory {
   //     associated with user for whom the cloud provider is running.
   1: GetCloudProvider(
                 Config config,
-                modular.auth.TokenProvider token_provider,
-                cloudrequest<_provider.CloudProvider> cloud_provider)
-      -> (cloud_provider.Status status);
+                modular_auth.TokenProvider token_provider,
+                request<cloud_provider.CloudProvider> cloud_provider)
+      -> (cloud_provider.Status @status);
 };
