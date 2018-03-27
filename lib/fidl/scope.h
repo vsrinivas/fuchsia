@@ -11,7 +11,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 

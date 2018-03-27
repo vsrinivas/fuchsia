@@ -12,7 +12,6 @@
 
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
-#include "lib/fidl/cpp/bindings/struct_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -42,11 +41,6 @@ namespace modular {
 // code size of a pair of serialization/deserialization functions.
 //
 // NOTES:
-//
-// Some complexity is added to the definitions below by support for
-// fidl structs, which are stored in arrays and included in other
-// structs not directly but as pointers, and of two possible types
-// (StructPtr<> vs. InlinedStructPtr<>).
 //
 // XDR is not sync: Although the XDR operation can be applied to an
 // existing instance of the output end (an existing FIDL struct, or an
@@ -211,7 +205,7 @@ class XdrContext {
 
   // A fidl String is mapped to either (i.e., the union type of) JSON
   // null or JSON string.
-  void Value(f1dl::StringPtr* data);
+  void Value(fidl::StringPtr* data);
 
   // An STL string is mapped to a JSON string.
   void Value(std::string* data);
@@ -224,26 +218,10 @@ class XdrContext {
     filter(this, data);
   }
 
-  // A fidl struct is mapped to a JSON Object or JSON null. The JSON
-  // Object case is mapped using a custom filter. There are two
-  // wrapper types for fidl strings, but the code is the same for
-  // both.
-  template <typename S>
-  void Value(f1dl::StructPtr<S>* const data, XdrFilterType<S> const filter) {
-    FidlStructPtr(data, filter);
-  }
-
-  // The second variant of a fidl struct wrapper.
-  template <typename S>
-  void Value(f1dl::InlinedStructPtr<S>* const data,
-             XdrFilterType<S> const filter) {
-    FidlStructPtr(data, filter);
-  }
-
-  // A fidl array is mapped to JSON null and JSON Array with a custom
+  // A fidl vector is mapped to JSON null and JSON Array with a custom
   // filter for the elements.
   template <typename D, typename V>
-  void Value(f1dl::VectorPtr<D>* const data, const XdrFilterType<V> filter) {
+  void Value(fidl::VectorPtr<D>* const data, const XdrFilterType<V> filter) {
     switch (op_) {
       case XdrOp::TO_JSON:
         if (data->is_null()) {
@@ -290,7 +268,7 @@ class XdrContext {
   // A fidl array with a simple element type can infer its element
   // value filter from the type parameters of the array.
   template <typename V>
-  void Value(f1dl::VectorPtr<V>* const data) {
+  void Value(fidl::VectorPtr<V>* const data) {
     Value(data, XdrFilter<V>);
   }
 
@@ -430,45 +408,6 @@ class XdrContext {
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
   XdrContext Element(size_t i);
-
-  // This is factored out of the corresponding Value() methods, because
-  // it needs to work for two different kinds of StructPtr, which
-  // however behave exactly the same: f1dl::StructPtr<DataType> and
-  // f1dl::InlineStructPtr<DataType>. So there is a relationship
-  // between StructPtr and DataType, which however cannot be simply
-  // expressed in template argument expressions (as far as I know). So
-  // instead there are two different template specializations of
-  // Value() which both call this function here. It *is* possible to
-  // invoke the function with an assignment of StructPtr and DataType
-  // that violates the constraint above, but it doesn't happen because
-  // it's private.
-  template <typename StructPtr, typename DataType>
-  void FidlStructPtr(StructPtr* const data,
-                     XdrFilterType<DataType> const filter) {
-    switch (op_) {
-      case XdrOp::TO_JSON:
-        if (data->is_null()) {
-          value_->SetNull();
-        } else {
-          value_->SetObject();
-          filter(this, data->get());
-        }
-        break;
-
-      case XdrOp::FROM_JSON:
-        if (value_->IsNull()) {
-          data->reset();
-        } else {
-          if (!value_->IsObject()) {
-            AddError("Object type expected.");
-            return;
-          }
-
-          *data = DataType::New();
-          filter(this, data->get());
-        }
-    }
-  }
 
   // Error reporting: Recursively requests the error string from the
   // parent, and on the way back appends a description of the current
