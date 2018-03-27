@@ -63,6 +63,7 @@ source_set("magma_system_platform_tests") {
     "test_platform_connection.cc",
     "test_platform_event.cc",
     "test_platform_futex.cc",
+    "test_platform_handle.cc",
     "test_platform_port.cc",
     "test_platform_semaphore.cc",
     "test_platform_thread.cc",
@@ -100,6 +101,7 @@ source_set("magma_platform_hardware_tests") {
   sources = [
     "test_mmio.cc",
     "test_platform_buffer.cc",
+    "test_platform_bus_mapper.cc",
     "test_platform_interrupt.cc",
   ]
 

@@ -22,6 +22,8 @@ public:
 
     void* GetDeviceHandle() override { return zx_device(); }
 
+    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() override;
+
     bool ReadPciConfig16(uint64_t addr, uint16_t* value) override;
 
     std::unique_ptr<PlatformMmio> CpuMapPciMmio(unsigned int pci_bar,

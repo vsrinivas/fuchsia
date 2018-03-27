@@ -18,11 +18,13 @@ source_set("buffer") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
+    ":handle",
     "$magma_build_root/src/magma_util",
   ]
 
   sources = [
     "platform_buffer.h",
+    "platform_bus_mapper.h",
   ]
 
   deps = [
@@ -32,10 +34,29 @@ source_set("buffer") {
   allow_circular_includes_from = [ "zircon:buffer" ]
 }
 
+source_set("handle") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_handle.h",
+  ]
+
+  deps = [
+    "zircon:handle",
+  ]
+
+  allow_circular_includes_from = [ "zircon:handle" ]
+}
+
 source_set("device") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
+    ":handle",
     "$magma_build_root/src/magma_util",
   ]
 

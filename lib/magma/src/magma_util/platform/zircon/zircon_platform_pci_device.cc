@@ -9,6 +9,7 @@
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
+#include "zircon_platform_bus_mapper.h"
 #include "zircon_platform_interrupt.h"
 #include "zircon_platform_mmio.h"
 #include "zircon_platform_pci_device.h"
@@ -46,6 +47,16 @@ bool ZirconPlatformPciDevice::ReadPciConfig16(uint64_t addr, uint16_t* value)
         return DRETF(false, "failed to read config: %d\n", status);
 
     return true;
+}
+
+std::unique_ptr<PlatformHandle> ZirconPlatformPciDevice::GetBusTransactionInitiator()
+{
+    zx_handle_t bti_handle;
+    zx_status_t status = pci_get_bti(&pci(), 0, &bti_handle);
+    if (status != ZX_OK)
+        return DRETP(nullptr, "failed to get bus transaction initiator");
+
+    return std::make_unique<ZirconPlatformHandle>(zx::handle(bti_handle));
 }
 
 std::unique_ptr<PlatformInterrupt> ZirconPlatformPciDevice::RegisterInterrupt()
@@ -91,8 +102,7 @@ std::unique_ptr<PlatformPciDevice> PlatformPciDevice::Create(void* device_handle
     if (status != ZX_OK)
         return DRETP(nullptr, "pci protocol is null, cannot create PlatformPciDevice");
 
-    return std::unique_ptr<PlatformPciDevice>(
-        new ZirconPlatformPciDevice(zx_device, pci));
+    return std::unique_ptr<PlatformPciDevice>(new ZirconPlatformPciDevice(zx_device, pci));
 }
 
 } // namespace

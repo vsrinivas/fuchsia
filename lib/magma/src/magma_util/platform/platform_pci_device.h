@@ -6,6 +6,7 @@
 #define PLATFORM_PCI_DEVICE_H
 
 #include "magma_util/dlog.h"
+#include "platform_handle.h"
 #include "platform_interrupt.h"
 #include "platform_mmio.h"
 #include <memory>
@@ -17,6 +18,12 @@ public:
     virtual ~PlatformPciDevice() { DLOG("PlatformPciDevice dtor"); }
 
     virtual void* GetDeviceHandle() = 0;
+
+    virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator()
+    {
+        DLOG("GetBusTransactionInitiator unimplemented");
+        return nullptr;
+    }
 
     virtual bool ReadPciConfig16(uint64_t addr, uint16_t* value)
     {

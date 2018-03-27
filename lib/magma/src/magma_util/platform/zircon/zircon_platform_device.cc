@@ -10,6 +10,7 @@
 #include "magma_util/macros.h"
 #include "platform_mmio.h"
 #include "zircon_platform_device.h"
+#include "zircon_platform_handle.h"
 #include "zircon_platform_interrupt.h"
 #include "zircon_platform_mmio.h"
 
@@ -45,6 +46,16 @@ std::unique_ptr<PlatformInterrupt> ZirconPlatformDevice::RegisterInterrupt(unsig
         return DRETP(nullptr, "register interrupt failed");
 
     return std::make_unique<ZirconPlatformInterrupt>(zx::handle(interrupt_handle));
+}
+
+std::unique_ptr<PlatformHandle> ZirconPlatformDevice::GetBusTransactionInitiator()
+{
+    zx_handle_t bti_handle;
+    zx_status_t status = pdev_get_bti(&pdev_, 0, &bti_handle);
+    if (status != ZX_OK)
+        return DRETP(nullptr, "failed to get bus transaction initiator");
+
+    return std::make_unique<ZirconPlatformHandle>(zx::handle(bti_handle));
 }
 
 std::unique_ptr<PlatformDevice> PlatformDevice::Create(void* device_handle)

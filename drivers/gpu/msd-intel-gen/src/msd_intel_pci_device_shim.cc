@@ -110,6 +110,15 @@ public:
 
     void* GetDeviceHandle() override { return intel_gpu_core_; }
 
+    std::unique_ptr<magma::PlatformHandle> GetBusTransactionInitiator() override
+    {
+        zx_handle_t bti_handle;
+        zx_status_t status = ops()->get_pci_bti(context(), 0, &bti_handle);
+        if (status != ZX_OK)
+            return DRETP(nullptr, "get_pci_bti failed: %d", status);
+        return magma::PlatformHandle::Create(bti_handle);
+    }
+
     bool ReadPciConfig16(uint64_t addr, uint16_t* value) override
     {
         zx_status_t status = ops()->read_pci_config_16(context(), addr, value);

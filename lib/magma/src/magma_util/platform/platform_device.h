@@ -6,6 +6,7 @@
 #define PLATFORM_DEVICE_H
 
 #include "magma_util/dlog.h"
+#include "platform_handle.h"
 #include "platform_interrupt.h"
 #include "platform_mmio.h"
 #include <memory>
@@ -17,6 +18,8 @@ public:
     virtual ~PlatformDevice() { DLOG("PlatformDevice dtor"); }
 
     virtual void* GetDeviceHandle() = 0;
+
+    virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() = 0;
 
     // Map an MMIO listed at |index| in the MDI for this device.
     virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,

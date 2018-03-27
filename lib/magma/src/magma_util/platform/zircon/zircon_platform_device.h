@@ -21,6 +21,8 @@ public:
 
     void* GetDeviceHandle() override { return zx_device(); }
 
+    std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() override;
+
     std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                              PlatformMmio::CachePolicy cache_policy) override;
 
