@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library examples;
+library hello_world_module;
 
 [ServiceName="examples.Hello"]
 interface Hello {
-  1: Say(string request) -> (string response);
+  1: Say(string @request) -> (string response);
 };

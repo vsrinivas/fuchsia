@@ -7,15 +7,13 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/hello_world_module.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/examples/hello_world_cpp/hello.fidl.h"
-
-using examples::HelloPtr;
 
 namespace {
 
@@ -23,17 +21,17 @@ class HelloAppParent {
  public:
   explicit HelloAppParent(component::ApplicationContext* app_context,
                           fxl::CommandLine command_line) {
-    auto launch_info = component::ApplicationLaunchInfo::New();
+    component::ApplicationLaunchInfo launch_info;
     const std::vector<std::string>& args = command_line.positional_args();
     if (args.empty()) {
-      launch_info->url = "hello_app_child";
+      launch_info.url = "hello_app_child";
     } else {
-      launch_info->url = args[0];
+      launch_info.url = args[0];
       for (size_t i = 1; i < args.size(); ++i) {
-        launch_info->arguments.push_back(args[i]);
+        launch_info.arguments.push_back(args[i]);
       }
     }
-    launch_info->directory_request = child_services_.NewRequest();
+    launch_info.directory_request = child_services_.NewRequest();
     app_context->launcher()->CreateApplication(std::move(launch_info),
                                                child_.NewRequest());
 
@@ -48,14 +46,14 @@ class HelloAppParent {
 
  private:
   void DoIt(const std::string& request) {
-    hello_->Say(request, [request](const f1dl::StringPtr& response) {
+    hello_->Say(request, [request](fidl::StringPtr response) {
       printf("%s --> %s\n", request.c_str(), response.get().c_str());
     });
   }
 
   component::ApplicationControllerPtr child_;
   component::Services child_services_;
-  HelloPtr hello_;
+  hello_world_module::HelloPtr hello_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppParent);
 };

@@ -5,22 +5,20 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/cpp/hello_world_module.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "peridot/examples/hello_world_cpp/hello.fidl.h"
-
-using examples::Hello;
 
 namespace {
 
-class HelloAppChild : public Hello {
+class HelloAppChild : public hello_world_module::Hello {
  public:
   HelloAppChild(component::ApplicationContext* app_context) {
-    app_context->outgoing_services()->AddService<Hello>(
-        [this](f1dl::InterfaceRequest<Hello> request) {
+    app_context->outgoing_services()->AddService<hello_world_module::Hello>(
+        [this](fidl::InterfaceRequest<hello_world_module::Hello> request) {
           hello_binding_.AddBinding(this, std::move(request));
         });
   }
@@ -31,12 +29,12 @@ class HelloAppChild : public Hello {
   void Terminate(const std::function<void()>& done) { done(); }
 
  private:
-  // |examples::Hello| implementation:
-  void Say(const f1dl::StringPtr& request, const SayCallback& callback) override {
+  // |hello_world_module::Hello| implementation:
+  void Say(fidl::StringPtr request, SayCallback callback) override {
     callback((request.get() == "hello") ? "hola!" : "adios!");
   }
 
-  f1dl::BindingSet<Hello> hello_binding_;
+  fidl::BindingSet<hello_world_module::Hello> hello_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HelloAppChild);
 };

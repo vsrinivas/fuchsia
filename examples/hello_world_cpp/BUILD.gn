@@ -38,6 +38,8 @@ executable("hello_app_child") {
 }
 
 fidl("interfaces") {
+  name = "hello_world_module"
+
   sources = [
     "hello.fidl",
   ]
