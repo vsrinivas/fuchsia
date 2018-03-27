@@ -4,18 +4,17 @@
 
 #include <utility>
 
+#include <fuchsia/cpp/component_context_test.h>
+#include <fuchsia/cpp/modular.h>
+
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
-#include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/component_context/component_context_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
@@ -77,8 +76,8 @@ class ParentApp {
 
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] { module_host->module_context()->Done(); }),
         weak_ptr_factory_(this) {
@@ -98,7 +97,7 @@ class ParentApp {
                      one_agent_interface_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "one_agent_connected", [this](const f1dl::StringPtr&) {
+        "one_agent_connected", [this](const fidl::StringPtr&) {
           one_agent_connected_.Pass();
           TestMessageQueue([this] {
             TestAgentController(callback::MakeScoped(
@@ -139,7 +138,7 @@ class ParentApp {
     // MessageQueueManager shouldn't send us anything just yet.
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
-        [this, done_cb, kTestMessage](const f1dl::StringPtr& msg,
+        [this, done_cb, kTestMessage](const fidl::StringPtr& msg,
                                       std::function<void()> ack) {
           ack();
           // We only want one message.
@@ -151,7 +150,7 @@ class ParentApp {
           done_cb();
         });
 
-    msg_queue_->GetToken([this, kTestMessage](const f1dl::StringPtr& token) {
+    msg_queue_->GetToken([this, kTestMessage](const fidl::StringPtr& token) {
       one_agent_interface_->SendToMessageQueue(token, kTestMessage);
     });
   }
@@ -164,7 +163,7 @@ class ParentApp {
     one_agent_controller.Unbind();
 
     modular::testing::GetStore()->Get("one_agent_stopped",
-                                      [this, done_cb](const f1dl::StringPtr&) {
+                                      [this, done_cb](const fidl::StringPtr&) {
                                         one_agent_stopped_.Pass();
                                         done_cb();
                                       });
@@ -193,7 +192,7 @@ class ParentApp {
   CounterTrigger steps_;
 
   modular::AgentControllerPtr one_agent_controller;
-  modular::ComponentContextTestServicePtr one_agent_interface_;
+  component_context_test::ComponentContextTestServicePtr one_agent_interface_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 

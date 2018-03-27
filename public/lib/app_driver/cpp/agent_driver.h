@@ -7,12 +7,12 @@
 
 #include <memory>
 
-#include "lib/agent/cpp/agent_impl.h"
-#include <fuchsia/cpp/modular.h>
-#include "lib/agent/fidl/agent_context.fidl.h"
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/component.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/modular.h>
+
+#include "lib/agent/cpp/agent_impl.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -35,10 +35,10 @@ class AgentHost {
 //   HelloAgent(AgentHost* host) {}
 //
 //   // Called by AgentDriver.
-//   void Connect(f1dl::InterfaceRequest<ServiceProvider> outgoing_services) {}
+//   void Connect(fidl::InterfaceRequest<ServiceProvider> outgoing_services) {}
 //
 //   // Called by AgentDriver.
-//   void RunTask(const f1dl::StringPtr& task_id,
+//   void RunTask(const fidl::StringPtr& task_id,
 //                const std::function<void()>& done) { done(); }
 //
 //   // Called by AgentDriver.
@@ -81,12 +81,12 @@ class AgentDriver : LifecycleImpl::Delegate, AgentImpl::Delegate, AgentHost {
   }
 
   // |AgentImpl::Delegate|
-  void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
+  void Connect(fidl::InterfaceRequest<component::ServiceProvider>
                    outgoing_services_request) override {
     impl_->Connect(std::move(outgoing_services_request));
   };
   // |AgentImpl::Delegate|
-  void RunTask(const f1dl::StringPtr& task_id,
+  void RunTask(const fidl::StringPtr& task_id,
                const std::function<void()>& done) override {
     impl_->RunTask(task_id, done);
   };

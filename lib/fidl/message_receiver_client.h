@@ -7,8 +7,9 @@
 
 #include <functional>
 
-#include "lib/component/fidl/message_queue.fidl.h"
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/modular.h>
+
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/string.h"
 
 namespace modular {
@@ -28,7 +29,7 @@ namespace modular {
 // //    |receiver| goes out of scope, messages will no longer be delivered to
 // //    the callback.
 // auto receiver = make_unique<MessageReceiverAdapator>(message_queue.get(),
-//     [] (f1dl::StringPtr msg, std::function<void> ack){
+//     [] (fidl::StringPtr msg, std::function<void> ack){
 //       ack();  // Acknowledge message receipt. We will continue to have new
 //               // messages delivered to this callback.
 //               // messages to this callback.
@@ -38,7 +39,7 @@ namespace modular {
 class MessageReceiverClient : modular::MessageReader {
  public:
   using MessageReceiverClientCallback =
-      std::function<void(f1dl::StringPtr, const OnReceiveCallback& ack)>;
+      std::function<void(fidl::StringPtr, OnReceiveCallback ack)>;
 
   explicit MessageReceiverClient(modular::MessageQueue* mq,
                                  MessageReceiverClientCallback callback);
@@ -47,11 +48,11 @@ class MessageReceiverClient : modular::MessageReader {
 
  private:
   // |MessageReader|
-  void OnReceive(const f1dl::StringPtr& message,
-                 const OnReceiveCallback& ack) override;
+  void OnReceive(fidl::StringPtr message,
+                 OnReceiveCallback ack) override;
 
   MessageReceiverClientCallback callback_;
-  f1dl::Binding<modular::MessageReader> receiver_;
+  fidl::Binding<modular::MessageReader> receiver_;
 };
 
 }  // namespace modular

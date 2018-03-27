@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/modular.h>
+
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -21,12 +22,12 @@ class TestAgentApp {
 
   // Called by AgentDriver.
   void Connect(
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {
     modular::testing::GetStore()->Put("two_agent_connected", "", [] {});
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::StringPtr& /*task_id*/,
+  void RunTask(fidl::StringPtr /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   TestPoint terminate_called_{"Terminate() called."};

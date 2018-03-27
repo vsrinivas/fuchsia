@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/modular.h>
+
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -26,10 +27,10 @@ class UnstoppableAgentApp {
 
   // Called by AgentDriver.
   void Connect(
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {}
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {}
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::StringPtr& /*task_id*/,
+  void RunTask(fidl::StringPtr /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   TestPoint stopped_{"Unstoppable agent stopped"};

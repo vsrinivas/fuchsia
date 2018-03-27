@@ -78,6 +78,8 @@ executable("component_context_test_unstoppable_agent") {
 }
 
 fidl("component_context_test_service") {
+  name = "component_context_test"
+
   sources = [
     "component_context_test_service.fidl",
   ]
