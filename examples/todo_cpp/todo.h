@@ -7,6 +7,7 @@
 
 #include <random>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/binding.h"
@@ -14,13 +15,12 @@
 #include "lib/fxl/macros.h"
 #include "lib/ledger/fidl/ledger.fidl.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
 #include "peridot/examples/todo_cpp/generator.h"
 
 namespace todo {
 
-using Key = f1dl::VectorPtr<uint8_t>;
+using Key = fidl::VectorPtr<uint8_t>;
 
 class TodoApp : public modular::Module,
                 public ledger::PageWatcher,
@@ -29,8 +29,8 @@ class TodoApp : public modular::Module,
   TodoApp();
 
   // modular::Module:
-  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-                  f1dl::InterfaceRequest<component::ServiceProvider>
+  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> module_context,
+                  fidl::InterfaceRequest<component::ServiceProvider>
                       outgoing_services) override;
 
   // ledger::PageWatcher:
@@ -44,11 +44,11 @@ class TodoApp : public modular::Module,
 
   void List(ledger::PageSnapshotPtr snapshot);
 
-  void GetKeys(std::function<void(f1dl::VectorPtr<Key>)> callback);
+  void GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback);
 
   void AddNew();
 
-  void DeleteOne(f1dl::VectorPtr<Key> keys);
+  void DeleteOne(fidl::VectorPtr<Key> keys);
 
   void Act();
 
@@ -57,11 +57,11 @@ class TodoApp : public modular::Module,
   std::uniform_int_distribution<> delay_distribution_;
   Generator generator_;
   std::unique_ptr<component::ApplicationContext> context_;
-  f1dl::Binding<modular::Module> module_binding_;
-  f1dl::InterfacePtr<modular::ModuleContext> module_context_;
+  fidl::Binding<modular::Module> module_binding_;
+  fidl::InterfacePtr<modular::ModuleContext> module_context_;
   modular::ComponentContextPtr component_context_;
   ledger::LedgerPtr ledger_;
-  f1dl::Binding<ledger::PageWatcher> page_watcher_binding_;
+  fidl::Binding<ledger::PageWatcher> page_watcher_binding_;
   ledger::PagePtr page_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TodoApp);

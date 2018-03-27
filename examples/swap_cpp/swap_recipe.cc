@@ -5,10 +5,10 @@
 #include <array>
 #include <memory>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/module/fidl/module.fidl.h"
 #include "lib/ui/view_framework/base_view.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -51,10 +51,12 @@ class RecipeView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(
-      views_v1::ViewPropertiesPtr /*old_properties*/) override {
+  void OnPropertiesChanged(views_v1::ViewProperties) override {
     if (host_node_) {
-      GetViewContainer()->SetChildProperties(kChildKey, properties()->Clone());
+      auto child_properties = views_v1::ViewProperties::New();
+      fidl::Clone(properties(), child_properties.get());
+      GetViewContainer()->SetChildProperties(kChildKey,
+                                             std::move(child_properties));
     }
   }
 
@@ -72,7 +74,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<RecipeView>(
         application_context()
@@ -83,8 +85,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
   // |Module|
   void Initialize(
-      f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceHandle<modular::ModuleContext> module_context,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       override {
     module_context_.Bind(std::move(module_context));
     SwapModule();
@@ -108,8 +110,8 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     }
 
     // This module is named after its URL.
-    auto daisy = modular::Daisy::New();
-    daisy->url = module_query;
+    modular::Daisy daisy;
+    daisy.url = module_query;
     module_context_->EmbedModule(
         module_query, std::move(daisy), nullptr, module_.NewRequest(),
         module_view_.NewRequest(), [](const modular::StartModuleStatus&) {});

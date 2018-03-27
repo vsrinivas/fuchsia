@@ -25,8 +25,7 @@ ModuleView::ModuleView(
   parent_node().AddChild(background_node_);
 }
 
-void ModuleView::OnPropertiesChanged(
-    views_v1::ViewPropertiesPtr /*old_properties*/) {
+void ModuleView::OnPropertiesChanged(views_v1::ViewProperties) {
   scenic_lib::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
@@ -41,14 +40,15 @@ ModuleApp::ModuleApp(component::ApplicationContext* const application_context,
 
 void ModuleApp::CreateView(
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {
-  view_.reset(create_(
-      application_context()->ConnectToEnvironmentService<views_v1::ViewManager>(),
-      std::move(view_owner_request)));
+    fidl::InterfaceRequest<component::ServiceProvider> /*services*/) {
+  view_.reset(
+      create_(application_context()
+                  ->ConnectToEnvironmentService<views_v1::ViewManager>(),
+              std::move(view_owner_request)));
 }
 
 void ModuleApp::Initialize(
-    f1dl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
-    f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {}
+    fidl::InterfaceHandle<modular::ModuleContext> /*moduleContext*/,
+    fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {}
 
 }  // namespace modular_example

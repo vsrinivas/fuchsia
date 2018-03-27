@@ -37,8 +37,8 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   return ret;
 }
 
-f1dl::VectorPtr<uint8_t> ToArray(const std::string& val) {
-  auto ret = f1dl::VectorPtr<uint8_t>::New(val.size());
+fidl::VectorPtr<uint8_t> ToArray(const std::string& val) {
+  auto ret = fidl::VectorPtr<uint8_t>::New(val.size());
   memcpy(ret->data(), val.data(), val.size());
   return ret;
 }
@@ -58,32 +58,30 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
 
 void GetEntries(ledger::PageSnapshotPtr snapshot,
                 std::vector<ledger::EntryPtr> entries,
-                f1dl::VectorPtr<uint8_t> token,
+                fidl::VectorPtr<uint8_t> token,
                 std::function<void(ledger::Status,
                                    std::vector<ledger::EntryPtr>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
-      nullptr, std::move(token),
-      fxl::MakeCopyable(
-          [snapshot = std::move(snapshot), entries = std::move(entries),
-           callback = std::move(callback)](ledger::Status status,
-                                           auto new_entries,
-                                           auto next_token) mutable {
-            if (status != ledger::Status::OK &&
-                status != ledger::Status::PARTIAL_RESULT) {
-              callback(status, {});
-              return;
-            }
-            for (size_t i = 0; i < new_entries->size(); ++i) {
-              entries.push_back(std::move(new_entries->at(i)));
-            }
-            if (status == ledger::Status::OK) {
-              callback(ledger::Status::OK, std::move(entries));
-              return;
-            }
-            GetEntries(std::move(snapshot), std::move(entries),
-                       std::move(next_token), std::move(callback));
-          }));
+      nullptr, std::move(token), fxl::MakeCopyable([
+        snapshot = std::move(snapshot), entries = std::move(entries),
+        callback = std::move(callback)
+      ](ledger::Status status, auto new_entries, auto next_token) mutable {
+        if (status != ledger::Status::OK &&
+            status != ledger::Status::PARTIAL_RESULT) {
+          callback(status, {});
+          return;
+        }
+        for (size_t i = 0; i < new_entries->size(); ++i) {
+          entries.push_back(std::move(new_entries->at(i)));
+        }
+        if (status == ledger::Status::OK) {
+          callback(ledger::Status::OK, std::move(entries));
+          return;
+        }
+        GetEntries(std::move(snapshot), std::move(entries),
+                   std::move(next_token), std::move(callback));
+      }));
 }
 
 void GetEntries(ledger::PageSnapshotPtr snapshot,
@@ -103,15 +101,15 @@ TodoApp::TodoApp()
       module_binding_(this),
       page_watcher_binding_(this) {
   context_->outgoing_services()->AddService<modular::Module>(
-      [this](f1dl::InterfaceRequest<modular::Module> request) {
+      [this](fidl::InterfaceRequest<modular::Module> request) {
         FXL_DCHECK(!module_binding_.is_bound());
         module_binding_.Bind(std::move(request));
       });
 }
 
 void TodoApp::Initialize(
-    f1dl::InterfaceHandle<modular::ModuleContext> module_context,
-    f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {
+    fidl::InterfaceHandle<modular::ModuleContext> module_context,
+    fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/) {
   module_context_.Bind(std::move(module_context));
   module_context_->GetComponentContext(component_context_.NewRequest());
   component_context_->GetLedger(ledger_.NewRequest(),
@@ -162,32 +160,32 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
   });
 }
 
-void TodoApp::GetKeys(std::function<void(f1dl::VectorPtr<Key>)> callback) {
+void TodoApp::GetKeys(std::function<void(fidl::VectorPtr<Key>)> callback) {
   ledger::PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                      HandleResponse("GetSnapshot"));
 
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
-  snapshot_ptr->GetKeys(
-      nullptr, nullptr,
-      fxl::MakeCopyable([snapshot = std::move(snapshot), callback](
-                            ledger::Status status, auto keys, auto next_token) {
-        callback(std::move(keys));
-      }));
+  snapshot_ptr->GetKeys(nullptr, nullptr, fxl::MakeCopyable([
+                          snapshot = std::move(snapshot), callback
+                        ](ledger::Status status, auto keys, auto next_token) {
+                          callback(std::move(keys));
+                        }));
 }
 
 void TodoApp::AddNew() {
   page_->Put(MakeKey(), ToArray(generator_.Generate()), HandleResponse("Put"));
 }
 
-void TodoApp::DeleteOne(f1dl::VectorPtr<Key> keys) {
+void TodoApp::DeleteOne(fidl::VectorPtr<Key> keys) {
   FXL_DCHECK(keys->size());
   std::uniform_int_distribution<> distribution(0, keys->size() - 1);
-  page_->Delete(std::move(keys->at(distribution(rng_))), HandleResponse("Delete"));
+  page_->Delete(std::move(keys->at(distribution(rng_))),
+                HandleResponse("Delete"));
 }
 
 void TodoApp::Act() {
-  GetKeys([this](f1dl::VectorPtr<Key> keys) {
+  GetKeys([this](fidl::VectorPtr<Key> keys) {
     size_t target_size = std::round(size_distribution_(rng_));
     if (keys->size() > std::max(static_cast<size_t>(0), target_size)) {
       DeleteOne(std::move(keys));

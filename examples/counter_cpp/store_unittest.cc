@@ -23,41 +23,43 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   ~LinkMockBase() override = default;
 
-  void SetSchema(const f1dl::StringPtr& /*json_schema*/) override {
+  void SetSchema(const fidl::StringPtr& /*json_schema*/) override {
     ++counts["SetSchema"];
   }
 
-  void Get(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
+  void Get(fidl::VectorPtr<fidl::StringPtr> /*path*/,
            const GetCallback& /*callback*/) override {
     ++counts["Get"];
   }
 
-  void Set(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
-           const f1dl::StringPtr& /*json*/) override {
+  void Set(fidl::VectorPtr<fidl::StringPtr> /*path*/,
+           const fidl::StringPtr& /*json*/) override {
     ++counts["Set"];
   }
 
-  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> /*path*/,
-                    const f1dl::StringPtr& /*json*/) override {
+  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> /*path*/,
+                    const fidl::StringPtr& /*json*/) override {
     ++counts["UpdateObject"];
   }
 
-  void Erase(f1dl::VectorPtr<f1dl::StringPtr> /*path*/) override { ++counts["Erase"]; }
+  void Erase(fidl::VectorPtr<fidl::StringPtr> /*path*/) override {
+    ++counts["Erase"];
+  }
 
   void GetEntity(const Link::GetEntityCallback& callback) override {
     ++counts["GetEntity"];
     callback("");
   }
 
-  void SetEntity(const f1dl::StringPtr& /*entity_reference*/) override {
+  void SetEntity(const fidl::StringPtr& /*entity_reference*/) override {
     ++counts["SetEntity"];
   }
 
-  void Watch(f1dl::InterfaceHandle<LinkWatcher> /*watcher_handle*/) override {
+  void Watch(fidl::InterfaceHandle<LinkWatcher> /*watcher_handle*/) override {
     ++counts["Watch"];
   }
 
-  void WatchAll(f1dl::InterfaceHandle<LinkWatcher> /*watcher*/) override {
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> /*watcher*/) override {
     ++counts["WatchAll"];
   }
 
@@ -68,25 +70,25 @@ class LinkMock : public LinkMockBase {
  public:
   LinkMock() : binding_(this) {}
 
-  void Bind(f1dl::InterfaceRequest<Link> request) {
+  void Bind(fidl::InterfaceRequest<Link> request) {
     binding_.Bind(std::move(request));
   }
 
-  void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher_handle) override {
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher_handle) override {
     watcher.Bind(std::move(watcher_handle));
     LinkMockBase::Watch(std::move(watcher_handle));
   }
 
-  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
-                    const f1dl::StringPtr& json) override {
+  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
+                    const fidl::StringPtr& json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
     fsl::MessageLoop::GetCurrent()->QuitNow();
   }
 
-  f1dl::InterfacePtr<modular::LinkWatcher> watcher;
+  fidl::InterfacePtr<modular::LinkWatcher> watcher;
 
  private:
-  f1dl::Binding<Link> binding_;
+  fidl::Binding<Link> binding_;
 };
 
 const std::string module_name{"store_unittest"};

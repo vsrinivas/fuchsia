@@ -5,7 +5,7 @@
 #ifndef PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 #define PERIDOT_EXAMPLES_SWAP_CPP_MODULE_H_
 
-#include "lib/module/fidl/module.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/ui/view_framework/base_view.h"
 #include "peridot/lib/fidl/single_service_app.h"
 
@@ -20,7 +20,7 @@ class ModuleView : public mozart::BaseView {
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) override;
+  void OnPropertiesChanged(views_v1::ViewProperties old_properties) override;
 
   scenic_lib::ShapeNode background_node_;
 
@@ -40,11 +40,11 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> services) override;
+      fidl::InterfaceRequest<component::ServiceProvider> services) override;
 
   // |Module|
-  void Initialize(f1dl::InterfaceHandle<modular::ModuleContext> moduleContext,
-                  f1dl::InterfaceRequest<component::ServiceProvider>
+  void Initialize(fidl::InterfaceHandle<modular::ModuleContext> moduleContext,
+                  fidl::InterfaceRequest<component::ServiceProvider>
                       outgoing_services) override;
 
   CreateViewCallback create_;
