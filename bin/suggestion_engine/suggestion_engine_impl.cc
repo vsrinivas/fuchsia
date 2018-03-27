@@ -295,37 +295,53 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
   auto activity = debug_->RegisterOngoingActivity();
   const auto& create_story = action.create_story();
 
-  if (story_provider_) {
-    // TODO(afergan): Make this more robust later. For now, we
-    // always assume that there's extra info and that it's a color.
-    auto extra_info = fidl::VectorPtr<modular::StoryInfoExtraEntry>::New(1);
-    char hex_color[11];
-    snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
-    extra_info->at(0).key = "color";
-    extra_info->at(0).value = hex_color;
-    auto& initial_data = create_story.initial_data;
-    auto& module_id = create_story.module_id;
-    story_provider_->CreateStoryWithInfo(
-        create_story.module_id, std::move(extra_info), std::move(initial_data),
-        [this, activity, module_id](fidl::StringPtr story_id) {
+  if (!story_provider_) {
+    FXL_LOG(WARNING) << "Unable to add module; no story provider";
+    return;
+  }
+
+  if (create_story.daisy) {
+    // If a daisy was provided, create an empty story and add a module to it
+    // with the provided daisy.
+    story_provider_->CreateStory(
+        nullptr,
+        fxl::MakeCopyable([this, daisy = std::move(*create_story.daisy),
+                           activity](const fidl::StringPtr& story_id) mutable {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
-          FXL_LOG(INFO) << "Creating story with module " << module_id;
-
-          story_controller->GetInfo(fxl::MakeCopyable(
-              // TODO(thatguy): We should not be std::move()ing
-              // story_controller *while we're calling it*.
-              [ this, activity, controller = std::move(story_controller) ](
-                  modular::StoryInfo story_info, modular::StoryState state) {
-                FXL_LOG(INFO)
-                    << "Requesting focus for story_id " << story_info.id;
-                focus_provider_ptr_->Request(story_info.id);
-              }));
-        });
-  } else {
-    FXL_LOG(WARNING) << "Unable to add module; no story provider";
+          story_controller->AddModule({}, "", std::move(daisy), nullptr);
+          focus_provider_ptr_->Request(story_id);
+        }));
+    return;
   }
+
+  // TODO(afergan): Make this more robust later. For now, we
+  // always assume that there's extra info and that it's a color.
+  auto extra_info = fidl::VectorPtr<modular::StoryInfoExtraEntry>::New(1);
+  char hex_color[11];
+  snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
+  extra_info->at(0).key = "color";
+  extra_info->at(0).value = hex_color;
+  auto& initial_data = create_story.initial_data;
+  auto& module_id = create_story.module_id;
+  story_provider_->CreateStoryWithInfo(
+      create_story.module_id, std::move(extra_info), std::move(initial_data),
+      [this, activity, module_id](fidl::StringPtr story_id) {
+        modular::StoryControllerPtr story_controller;
+        story_provider_->GetController(story_id, story_controller.NewRequest());
+        FXL_LOG(INFO) << "Creating story with module " << module_id;
+
+        story_controller->GetInfo(fxl::MakeCopyable(
+            // TODO(thatguy): We should not be std::move()ing
+            // story_controller *while we're calling it*.
+            [this, activity, controller = std::move(story_controller)](
+                modular::StoryInfo story_info, modular::StoryState state) {
+              FXL_LOG(INFO)
+                  << "Requesting focus for story_id " << story_info.id;
+              focus_provider_ptr_->Request(story_info.id);
+            }));
+      });
 }
 
 void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {

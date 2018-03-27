@@ -62,12 +62,16 @@ union Action {
 // Creates a new story with the specified module
 struct CreateStory {
   // TODO(alhaad, thatguy): This should be renamed to module_url.
-  string module_id;
+  string? module_id;
 
   // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
   // Link.Set() to set the value in the root link of the new Story's primary
   // module.
   string? initial_data;
+
+  // The daisy used to add the first module to the created story.
+  // If set, the |module_id| and |initial_data| is disregarded.
+  Daisy? daisy;
 };
 
 // Brings an existing story into focus.

@@ -100,7 +100,7 @@ class StoryControllerMock : public StoryController {
                  fidl::StringPtr module_name,
                  Daisy daisy,
                  SurfaceRelationPtr surface_relation) override {
-    FXL_NOTIMPLEMENTED();
+    last_added_module_ = daisy.url;
   }
 
   std::string last_added_module_;

@@ -684,6 +684,28 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   EXPECT_EQ("foo://bar", story_provider()->last_created_story());
 }
 
+TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryDaisy) {
+  Proposinator p(suggestion_engine());
+  StartListening(10);
+
+  auto daisy = std::make_unique<modular::Daisy>();
+  daisy->url = "foo://bar";
+  modular::CreateStory create_story;
+  create_story.daisy = std::move(daisy);
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+  WaitUntilIdle();
+
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+  WaitUntilIdle();
+  EXPECT_EQ("foo://bar",
+            story_provider()->story_controller().last_added_module());
+}
+
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   Proposinator p(suggestion_engine());
   StartListening(10);
