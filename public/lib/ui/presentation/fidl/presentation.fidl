@@ -48,3 +48,13 @@ interface Presentation {
   6: CaptureKeyboardEvent(input.KeyboardEvent event_to_capture,
                           KeyboardCaptureListener listener);
 };
+
+// Screen modes that can be detected via sensor data.
+// N.B. We use accelerometers to measure gravity when at rest, so detection is
+// limited to earth-relative orientations.
+enum PresentationMode {
+  CLOSED = 0;
+  LAPTOP = 1;
+  TABLET = 2;
+  TENT = 3;
+};
