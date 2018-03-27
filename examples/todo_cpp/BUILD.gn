@@ -11,11 +11,11 @@ executable("todo_cpp") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 
   sources = [

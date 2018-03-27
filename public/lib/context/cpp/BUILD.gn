@@ -9,7 +9,7 @@ source_set("context_helper") {
   ]
 
   deps = [
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -20,7 +20,7 @@ source_set("context_metadata_builder") {
   ]
 
   deps = [
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -31,6 +31,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }

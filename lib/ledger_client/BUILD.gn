@@ -80,8 +80,8 @@ source_set("storage") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular_private",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_private",
   ]
 }
 

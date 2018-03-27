@@ -25,9 +25,9 @@ executable("queue_persistence_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -42,9 +42,9 @@ executable("queue_persistence_test_agent") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 

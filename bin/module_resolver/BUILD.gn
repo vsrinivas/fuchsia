@@ -36,12 +36,12 @@ executable("bin") {
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:push_package_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -66,13 +66,13 @@ source_set("module_resolver_impl") {
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 

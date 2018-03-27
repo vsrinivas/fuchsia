@@ -44,7 +44,7 @@ source_set("component_context_fake") {
   public_deps = [
     ":entity_resolver_fake",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -57,7 +57,7 @@ source_set("entity_resolver_fake") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
   ]
 }
@@ -70,8 +70,8 @@ source_set("story_controller_mock") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
   ]
 
@@ -88,7 +88,7 @@ source_set("story_provider_mock") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
   ]
 
@@ -168,7 +168,7 @@ source_set("ledger_repository_for_testing") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 

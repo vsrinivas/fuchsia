@@ -25,7 +25,7 @@ executable("modular_benchmark_story_module") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -42,8 +42,8 @@ executable("modular_benchmark_story_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 
   sources = [

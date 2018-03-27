@@ -9,6 +9,6 @@ source_set("formatting") {
   ]
 
   deps = [
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }

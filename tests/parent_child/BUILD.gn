@@ -22,8 +22,8 @@ executable("parent_child_test_child_module") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -39,7 +39,7 @@ executable("parent_child_test_parent_module") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }

@@ -15,8 +15,8 @@ source_set("clipboard_sources") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -47,7 +47,7 @@ source_set("unittests") {
     ":clipboard_sources",
     "//garnet/lib/gtest",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
   ]
 }

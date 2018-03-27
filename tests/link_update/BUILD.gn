@@ -25,6 +25,6 @@ executable("link_update_test_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }

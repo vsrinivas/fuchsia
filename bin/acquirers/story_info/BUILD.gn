@@ -28,17 +28,17 @@ executable("story_info") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -49,8 +49,8 @@ fidl("initializer") {
   ]
 
   deps = [
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }

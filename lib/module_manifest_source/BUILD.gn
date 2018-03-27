@@ -11,7 +11,7 @@ source_set("module_manifest_source") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 

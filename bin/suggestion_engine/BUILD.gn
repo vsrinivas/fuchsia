@@ -54,11 +54,11 @@ executable("bin") {
     "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -72,7 +72,7 @@ source_set("interruptions") {
     ":models",
     ":ranking",
     ":state",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -99,8 +99,8 @@ source_set("ranking") {
     ":models",
     "//garnet/public/lib/fsl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -116,8 +116,8 @@ source_set("state") {
     ":ranking",
     "//garnet/public/lib/fxl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -134,7 +134,7 @@ source_set("models") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -147,7 +147,7 @@ source_set("timeline_stories_filter") {
   deps = [
     ":timeline_stories_watcher",
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -159,8 +159,8 @@ source_set("timeline_stories_watcher") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -170,7 +170,7 @@ source_set("filter") {
   ]
 
   deps = [
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -185,7 +185,7 @@ source_set("debug") {
     ":state",
     "//garnet/public/lib/fxl",
     "//peridot/lib/util:wait_until_idle",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }

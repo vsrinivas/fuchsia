@@ -30,9 +30,9 @@ executable("link_context_entities_test_user_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:maxwell",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -48,7 +48,7 @@ executable("link_context_entities_test_module") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
   ]
 }

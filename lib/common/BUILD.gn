@@ -32,7 +32,7 @@ source_set("story_provider_watcher_base") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 

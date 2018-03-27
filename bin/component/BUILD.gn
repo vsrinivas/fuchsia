@@ -25,7 +25,7 @@ source_set("component") {
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/ledger_client:types",
     "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
   ]
 }

@@ -18,7 +18,7 @@ executable("demo") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/cloud_provider_firestore/firestore",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
     "//zircon/public/lib/trace-provider",
   ]
 }

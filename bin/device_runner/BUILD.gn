@@ -64,10 +64,10 @@ executable("device_runner_bin") {
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular_private",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_private",
     "//zircon/public/lib/trace-provider",
   ]
 }
@@ -97,10 +97,10 @@ source_set("lib") {
     "//peridot/lib/fidl:scope",
     "//peridot/lib/util:filesystem",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular",
-    "//peridot/public/lib:modular_private",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib:fidl_private",
     "//zircon/public/lib/trace",
   ]
 }
@@ -119,7 +119,7 @@ executable("dev_device_shell_bin") {
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/testing",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:modular",
+    "//peridot/public/lib:fidl",
   ]
 }
 

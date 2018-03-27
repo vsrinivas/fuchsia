@@ -6,17 +6,19 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 group("services") {
   deps = [
-    ":modular",
+    ":fidl",
   ]
 }
 
 group("just_fidl") {
   deps = [
-    ":modular($fidl_toolchain)",
+    ":fidl($fidl_toolchain)",
   ]
 }
 
-fidl("modular") {
+fidl("fidl") {
+  name = "modular"
+
   sources = [
     "action_log/fidl/component.fidl",
     "action_log/fidl/factory.fidl",
@@ -95,39 +97,14 @@ fidl("modular") {
   ]
 }
 
-fidl("modular_private") {
+fidl("fidl_private") {
+  name = "modular_private"
+
   sources = [
     "story/fidl/story_data.fidl",
     "user/fidl/user_runner.fidl",
   ]
   deps = [
-    ":modular",
-  ]
-}
-
-fidl("maxwell") {
-  sources = [
-    "action_log/fidl/component.fidl",
-    "action_log/fidl/factory.fidl",
-    "action_log/fidl/listener.fidl",
-    "action_log/fidl/user.fidl",
-    "context/fidl/context_engine.fidl",
-    "context/fidl/context_reader.fidl",
-    "context/fidl/context_writer.fidl",
-    "context/fidl/debug.fidl",
-    "context/fidl/metadata.fidl",
-    "context/fidl/value.fidl",
-    "context/fidl/value_type.fidl",
-    "suggestion/fidl/debug.fidl",
-    "suggestion/fidl/proposal.fidl",
-    "suggestion/fidl/proposal_publisher.fidl",
-    "suggestion/fidl/query_handler.fidl",
-    "suggestion/fidl/suggestion_display.fidl",
-    "suggestion/fidl/suggestion_engine.fidl",
-    "suggestion/fidl/suggestion_provider.fidl",
-    "suggestion/fidl/user_input.fidl",
-    "user_intelligence/fidl/intelligence_services.fidl",
-    "user_intelligence/fidl/scope.fidl",
-    "user_intelligence/fidl/user_intelligence_provider.fidl",
+    ":fidl",
   ]
 }
