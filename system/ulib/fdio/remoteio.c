@@ -1237,7 +1237,6 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
     case FDIO_PROTOCOL_SOCKET_CONNECTED:
     case FDIO_PROTOCOL_SOCKET: {
         int flags = (info->tag == FDIO_PROTOCOL_SOCKET_CONNECTED) ? IOFLAG_SOCKET_CONNECTED : 0;
-#if WITH_NEW_SOCKET
         if (handle == ZX_HANDLE_INVALID || info->socket.s == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
             break;
@@ -1247,18 +1246,6 @@ zx_status_t fdio_from_handles(zx_handle_t handle, zxrio_object_info_t* info,
             return ZX_ERR_NO_RESOURCES;
         }
         return ZX_OK;
-#else
-        if (handle == ZX_HANDLE_INVALID) {
-            r = ZX_ERR_INVALID_ARGS;
-            break;
-        }
-        io = fdio_socket_create(handle, info->socket.s, flags);
-        if (io == NULL) {
-            return ZX_ERR_NO_RESOURCES;
-        }
-        *out = io;
-        return ZX_OK;
-#endif
     }
     default:
         printf("fdio_from_handles: Not supported\n");

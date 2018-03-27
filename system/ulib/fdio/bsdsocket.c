@@ -45,7 +45,6 @@ int get_netstack(void) {
 }
 
 int socket(int domain, int type, int protocol) {
-
     fdio_t* io = NULL;
     zx_status_t r;
 
@@ -188,13 +187,12 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EBADF);
     }
 
-#if WITH_NEW_SOCKET
     zx_handle_t s2;
     zx_status_t r = zxsio_accept(io, &s2);
+    fdio_release(io);
     if (r == ZX_ERR_SHOULD_WAIT) {
         return ERRNO(EWOULDBLOCK);
     } else if (r != ZX_OK) {
-        fdio_release(io);
         return ERROR(r);
     }
 
@@ -202,36 +200,6 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
     if ((io2 = fdio_socket_create(s2, IOFLAG_SOCKET_CONNECTED)) == NULL) {
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
-#else
-    fdio_t* io2;
-    zx_status_t r;
-    for (;;) {
-        r = io->ops->open(io, ZXRIO_SOCKET_DIR_ACCEPT, ZX_FS_FLAG_DESCRIBE, 0, &io2);
-        if (r == ZX_ERR_SHOULD_WAIT) {
-            if (io->ioflag & IOFLAG_NONBLOCK) {
-                fdio_release(io);
-                return ERRNO(EWOULDBLOCK);
-            }
-            // wait for an incoming connection
-            uint32_t events = POLLIN;
-            zx_handle_t h;
-            zx_signals_t sigs;
-            io->ops->wait_begin(io, events, &h, &sigs);
-            r = zx_object_wait_one(h, sigs, ZX_TIME_INFINITE, &sigs);
-            io->ops->wait_end(io, sigs, &events);
-            if (!(events & POLLIN)) {
-                fdio_release(io);
-                return ERRNO(EIO);
-            }
-            continue;
-        } else if (r == ZX_OK) {
-            break;
-        }
-        fdio_release(io);
-        return ERROR(r);
-    }
-#endif
-    fdio_release(io);
 
     fdio_socket_set_stream_ops(io2);
     io2->ioflag |= IOFLAG_SOCKET_CONNECTED;
