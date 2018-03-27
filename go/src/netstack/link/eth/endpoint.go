@@ -32,11 +32,12 @@ func (ep *linkEndpoint) MTU() uint32                    { return uint32(ep.c.MTU
 func (ep *linkEndpoint) MaxHeaderLength() uint16        { return headerLength }
 func (ep *linkEndpoint) LinkAddress() tcpip.LinkAddress { return ep.LinkAddr }
 
-func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-
+// TODO(stijlist): modified from WritePacket below. These two implementations are the same except for where header and payload
+// are read.
+func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	trace.DebugTrace("eth write")
 
-	ethHdr := hdr.Prepend(headerLength)
+	ethHdr := make([]byte, headerLength)
 	if r.RemoteLinkAddress == "" && r.RemoteAddress == "\xff\xff\xff\xff" {
 		r.RemoteLinkAddress = "\xff\xff\xff\xff\xff\xff"
 	}
@@ -54,7 +55,7 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
 
-	pktlen := len(hdr.UsedBytes()) + len(payload)
+	pktlen := len(ethHdr) + payload.Size()
 	if pktlen < 60 {
 		pktlen = 60
 	}
@@ -65,22 +66,33 @@ func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, pay
 			break
 		}
 		if err := ep.c.WaitSend(); err != nil {
-			trace.DebugDrop("Alloc error: pktlen %d usedbytes %d payload len %d", pktlen, len(hdr.UsedBytes()), len(payload))
+			trace.DebugDrop("Alloc error: pktlen %d payload len %d", pktlen, payload.Size())
 			log.Printf("link: alloc error: %v", err)
 			return tcpip.ErrWouldBlock
 		}
 	}
 	buf = buf[:pktlen]
-	copy(buf, hdr.UsedBytes())
-	copy(buf[len(hdr.UsedBytes()):], payload)
+	copy(buf, ethHdr)
+	used := len(ethHdr)
+	for _, v := range payload.Views() {
+		l := len(v)
+		copy(buf[used:], v)
+		used += l
+	}
 	if err := ep.c.Send(buf); err != nil {
-		trace.DebugDrop("Send error: pktlen %d usedbytes %d payload len %d", pktlen, len(hdr.UsedBytes()), len(payload))
+		trace.DebugDrop("Send error: pktlen %d payload len %d", pktlen, payload.Size())
 		if debug2 {
 			log.Printf("link: send error: %v", err)
 		}
 		return tcpip.ErrWouldBlock
 	}
 	return nil
+}
+
+func (ep *linkEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+	vs := []buffer.View{hdr.UsedBytes(), payload}
+	vv := buffer.NewVectorisedView(hdr.UsedLength()+len(payload), vs)
+	return ep.WriteBuffer(r, &vv, protocol)
 }
 
 func (ep *linkEndpoint) Attach(dispatcher stack.NetworkDispatcher) {

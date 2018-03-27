@@ -365,10 +365,6 @@ func (ns *netstack) addEth(path string) error {
 	copy(ifs.nic.Mac[:], ep.LinkAddr)
 
 	nicid := ns.countNIC + 1
-	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
-		ns.mu.Unlock()
-		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
-	}
 	firstNIC := nicid == 2 && ns.nodename == ""
 	if firstNIC {
 		// This is the first real ethernet device on this host.
@@ -388,6 +384,9 @@ func (ns *netstack) addEth(path string) error {
 	log.Printf("NIC %d added using ethernet device %q", nicid, path)
 	log.Printf("NIC %d: ipv6addr: %v", nicid, lladdr)
 
+	if err := ns.stack.CreateNIC(nicid, linkID); err != nil {
+		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
+	}
 	if err := ns.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 		return fmt.Errorf("NIC %d: adding arp address failed: %v", nicid, err)
 	}

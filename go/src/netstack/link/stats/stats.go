@@ -28,7 +28,6 @@ var debug = false
 type StatsEndpoint struct {
 	dispatcher stack.NetworkDispatcher
 	lower      stack.LinkEndpoint
-
 	// Storage is made of FIDL data structure
 	// enabling conversion-free export and import.
 	Stats nsfidl.NetInterfaceStats
@@ -47,11 +46,9 @@ func (e *StatsEndpoint) Wrap(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 // It performs packet inspection, and extract a rich set of statistics,
 // and stores them to a FIDL data structure.
 func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, remoteLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) {
-
 	e.Stats.Rx.PktsTotal += 1
 	e.Stats.Rx.BytesTotal += uint64(vv.Size())
-	raw := vv.First()
-	e.analyzeTrafficStats(&e.Stats.Rx, protocol, raw, vv.Size())
+	e.analyzeTrafficStats(&e.Stats.Rx, protocol, vv.First(), vv.Size())
 	e.dispatcher.DeliverNetworkPacket(e, remoteLinkAddr, protocol, vv)
 }
 
@@ -74,6 +71,18 @@ func (e *StatsEndpoint) MaxHeaderLength() uint16 {
 // LinkAddress directly uses the lower layer LinkAddress()
 func (e *StatsEndpoint) LinkAddress() tcpip.LinkAddress {
 	return e.lower.LinkAddress()
+}
+
+// WriteBuffer handles outgoing packet from the higher layer.
+// It inspects headers and modifies endpoint statistics.
+func (e *StatsEndpoint) WriteBuffer(r *stack.Route, vv *buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+	if le, ok := e.lower.(stack.BufferWritingLinkEndpoint); ok {
+		e.Stats.Tx.PktsTotal += 1
+		e.Stats.Tx.BytesTotal += uint64(vv.Size())
+		e.analyzeTrafficStats(&e.Stats.Tx, protocol, vv.First(), vv.Size())
+		return le.WriteBuffer(r, vv, protocol)
+	}
+	panic("wrapped link endpoint does not implement WriteBuffer")
 }
 
 // WritePacket handles outgoing packet from the higher layer.
