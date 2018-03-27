@@ -112,6 +112,7 @@ class VectorPtr {
   const std::vector<T>* operator->() const { return &vec_; }
 
   // Provides access to the underlying std::vector.
+  std::vector<T>& operator*() { return vec_; }
   const std::vector<T>& operator*() const { return vec_; }
 
   operator const std::vector<T>&() const { return vec_; }
