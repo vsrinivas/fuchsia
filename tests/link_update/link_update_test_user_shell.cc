@@ -4,12 +4,11 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/modular_private.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -34,17 +33,17 @@ class LinkWatcherImpl : modular::LinkWatcher {
   }
 
   // Sets the function that's called for a notification.
-  void Continue(std::function<void(const f1dl::StringPtr&)> at) { continue_ = at; }
+  void Continue(std::function<void(const fidl::StringPtr&)> at) { continue_ = at; }
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::StringPtr& json) override {
+  void Notify(fidl::StringPtr json) override {
     FXL_LOG(INFO) << "LinkWatcher: " << json;
     continue_(json);
   }
 
-  std::function<void(const f1dl::StringPtr&)> continue_;
-  f1dl::Binding<modular::LinkWatcher> binding_;
+  std::function<void(const fidl::StringPtr&)> continue_;
+  fidl::Binding<modular::LinkWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
@@ -66,7 +65,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story_create_{"Story Create"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -74,13 +73,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::StringPtr& story_id) {
+                                 [this](const fidl::StringPtr& story_id) {
                                    story_create_.Pass();
                                    GetController(story_id);
                                  });
   }
 
-  void GetController(const f1dl::StringPtr& story_id) {
+  void GetController(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
@@ -98,7 +97,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint notify_2_{"Notify() 2"};
 
   void SequentialSet() {
-    link_watcher_.Continue([this](const f1dl::StringPtr& json) {
+    link_watcher_.Continue([this](const fidl::StringPtr& json) {
       if (json == "1") {
         notify_1_.Pass();
       } else if (json == "2") {
@@ -116,7 +115,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint notify_4_{"Notify() 4"};
 
   void PeerSet() {
-    link_watcher_.Continue([this](const f1dl::StringPtr& json) {
+    link_watcher_.Continue([this](const fidl::StringPtr& json) {
       if (json == "4") {
         notify_4_.Pass();
         ConcurrentSet();
@@ -146,7 +145,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void ConcurrentSet() {
     std::shared_ptr<bool> called = std::make_shared<bool>();
-    link_watcher_.Continue([this, called](const f1dl::StringPtr& json) {
+    link_watcher_.Continue([this, called](const fidl::StringPtr& json) {
       if (json == "6") {
         notify_6_.Pass();
         if (!*called) {
