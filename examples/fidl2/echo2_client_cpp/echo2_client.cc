@@ -23,9 +23,9 @@ class EchoClientApp {
   echo2::EchoPtr& echo() { return echo_; }
 
   void Start(std::string server_url, std::string msg) {
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = server_url;
-    launch_info->directory_request = echo_provider_.NewRequest();
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = server_url;
+    launch_info.directory_request = echo_provider_.NewRequest();
     context_->launcher()->CreateApplication(std::move(launch_info),
                                             controller_.NewRequest());
 
