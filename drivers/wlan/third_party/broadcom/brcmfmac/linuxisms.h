@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 The Fuchsia Authors.
+ * Copyright (c) 2018 The Fuchsia Authors.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
-
+#include "device.h"
 
 typedef uint16_t __be16;
 typedef uint32_t __be32;
@@ -225,7 +225,6 @@ LINUX_FUNCVI(add_wait_queue)
 LINUX_FUNCII(set_current_state)
 LINUX_FUNCII(send_sig)
 LINUX_FUNCVI(kthread_stop)
-LINUX_FUNCVV(dev_get_drvdata)
 LINUX_FUNCVI(signal_pending)
 LINUX_FUNCII(schedule_timeout)
 LINUX_FUNCVV(remove_wait_queue)
@@ -306,8 +305,6 @@ LINUX_FUNCVI(request_firmware)
     void* __modexit() { return a; }
 #define module_init(a) \
     void* __modinit() { return a; }
-LINUX_FUNCVV(dev_get_platdata)
-LINUX_FUNCVV(dev_set_drvdata)
 // platform_driver_probe() is checked for return ENODEV / ZX_ERR_IO_NOT_PRESENT (just for logging)
 LINUX_FUNCVI(platform_driver_probe)
 LINUX_FUNCVI(platform_driver_unregister)
@@ -836,11 +833,6 @@ struct firmware {
     void* data;
 };
 
-struct device {
-    void* of_node;
-    void* parent;
-};
-
 struct sg_table {
     void* sgl;
     int orig_nents;
@@ -904,7 +896,7 @@ struct brcmfmac_platform_data {
 };
 
 struct platform_device {
-    void* dev;
+    struct brcmf_device dev;
 };
 
 struct platform_driver {
@@ -1088,7 +1080,7 @@ struct ieee80211_mgmt {
 };
 
 struct pci_dev {
-    struct device dev;
+    struct brcmf_device dev;
     int device;
     int irq;
     struct {
@@ -1156,7 +1148,7 @@ struct sdio_func {
     int cur_blksize;
     int enable_timeout;
     int device;
-    struct device dev;
+    struct brcmf_device dev;
     int num;
     struct {
         struct mmc_host* host;
@@ -1596,7 +1588,7 @@ struct usb_device_id {
 
 struct usb_device {
     int speed;
-    struct device dev;
+    struct brcmf_device dev;
     struct {
         int bNumConfigurations;
         int bDeviceClass;

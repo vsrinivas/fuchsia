@@ -22,7 +22,7 @@
 #include "linuxisms.h"
 #include <string.h>
 
-#include <brcmu_utils.h>
+#include "brcmu_utils.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11n wireless LAN driver utilities.");

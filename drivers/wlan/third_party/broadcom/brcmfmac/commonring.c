@@ -18,8 +18,8 @@
 
 #include "linuxisms.h"
 
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 
 #include "commonring.h"
 #include "core.h"

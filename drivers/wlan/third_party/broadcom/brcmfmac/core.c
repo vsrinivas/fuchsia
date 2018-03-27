@@ -14,9 +14,6 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-
 //#include <linux/etherdevice.h>
 //#include <linux/inetdevice.h>
 //#include <linux/kernel.h>
@@ -26,16 +23,18 @@
 //#include <net/ipv6.h>
 //#include <net/rtnetlink.h>
 
-#include "linuxisms.h"
-
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "cfg80211.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 #include "p2p.h"
 #include "pcie.h"
 #include "pno.h"
@@ -363,7 +362,7 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct sk_buff* skb,
     return ZX_OK;
 }
 
-void brcmf_rx_frame(struct device* dev, struct sk_buff* skb, bool handle_event) {
+void brcmf_rx_frame(struct brcmf_device* dev, struct sk_buff* skb, bool handle_event) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -386,7 +385,7 @@ void brcmf_rx_frame(struct device* dev, struct sk_buff* skb, bool handle_event) 
     }
 }
 
-void brcmf_rx_event(struct device* dev, struct sk_buff* skb) {
+void brcmf_rx_event(struct brcmf_device* dev, struct sk_buff* skb) {
     struct brcmf_if* ifp;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -907,7 +906,7 @@ static int brcmf_inet6addr_changed(struct notifier_block* nb, unsigned long acti
 }
 #endif
 
-zx_status_t brcmf_attach(struct device* dev, struct brcmf_mp_device* settings) {
+zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings) {
     struct brcmf_pub* drvr = NULL;
     zx_status_t ret = ZX_OK;
     int i;
@@ -985,7 +984,7 @@ static zx_status_t brcmf_revinfo_read(struct seq_file* s, void* data) {
     return ZX_OK;
 }
 
-zx_status_t brcmf_bus_started(struct device* dev) {
+zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     zx_status_t ret = ZX_ERR_IO;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -1087,7 +1086,7 @@ fail:
     return ret;
 }
 
-void brcmf_bus_add_txhdrlen(struct device* dev, uint len) {
+void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
@@ -1096,7 +1095,7 @@ void brcmf_bus_add_txhdrlen(struct device* dev, uint len) {
     }
 }
 
-void brcmf_dev_reset(struct device* dev) {
+void brcmf_dev_reset(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
@@ -1109,7 +1108,7 @@ void brcmf_dev_reset(struct device* dev) {
     }
 }
 
-void brcmf_detach(struct device* dev) {
+void brcmf_detach(struct brcmf_device* dev) {
     int32_t i;
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
@@ -1152,7 +1151,7 @@ void brcmf_detach(struct device* dev) {
     kfree(drvr);
 }
 
-zx_status_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len) {
+zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_if* ifp = bus_if->drvr->iflist[0];
 

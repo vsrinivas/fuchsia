@@ -19,13 +19,13 @@
 //#include <linux/module.h>
 //#include <linux/netdevice.h>
 
-#include "linuxisms.h"
-
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
+#include "linuxisms.h"
 #include "fweh.h"
 
 static struct dentry* root_folder;
@@ -76,7 +76,7 @@ void brcmf_debugfs_exit(void) {
 }
 
 zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr) {
-    struct device* dev = drvr->bus_if->dev;
+    struct brcmf_device* dev = drvr->bus_if->dev;
     zx_status_t ret;
 
     if (!root_folder) {

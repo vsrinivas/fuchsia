@@ -16,6 +16,10 @@
 #ifndef BRCMFMAC_USB_H
 #define BRCMFMAC_USB_H
 
+#include <zircon/types.h>
+
+#include "linuxisms.h"
+
 enum brcmf_usb_state {
     BRCMFMAC_USB_STATE_DOWN,
     BRCMFMAC_USB_STATE_DL_FAIL,

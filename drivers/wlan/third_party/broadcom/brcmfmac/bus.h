@@ -75,17 +75,21 @@ struct brcmf_bus_dcmd {
  * will assure there is only one active transaction. Unless
  * indicated otherwise these callbacks are mandatory.
  */
+
+#include "device.h"
+
 struct brcmf_bus_ops {
-    zx_status_t (*preinit)(struct device* dev);
-    void (*stop)(struct device* dev);
-    zx_status_t (*txdata)(struct device* dev, struct sk_buff* skb);
-    zx_status_t (*txctl)(struct device* dev, unsigned char* msg, uint len);
-    zx_status_t (*rxctl)(struct device* dev, unsigned char* msg, uint len, int* rxlen_out);
-    struct pktq* (*gettxq)(struct device* dev);
-    void (*wowl_config)(struct device* dev, bool enabled);
-    size_t (*get_ramsize)(struct device* dev);
-    zx_status_t (*get_memdump)(struct device* dev, void* data, size_t len);
-    zx_status_t (*get_fwname)(struct device* dev, uint chip, uint chiprev, unsigned char* fw_name);
+    zx_status_t (*preinit)(struct brcmf_device* dev);
+    void (*stop)(struct brcmf_device* dev);
+    zx_status_t (*txdata)(struct brcmf_device* dev, struct sk_buff* skb);
+    zx_status_t (*txctl)(struct brcmf_device* dev, unsigned char* msg, uint len);
+    zx_status_t (*rxctl)(struct brcmf_device* dev, unsigned char* msg, uint len, int* rxlen_out);
+    struct pktq* (*gettxq)(struct brcmf_device* dev);
+    void (*wowl_config)(struct brcmf_device* dev, bool enabled);
+    size_t (*get_ramsize)(struct brcmf_device* dev);
+    zx_status_t (*get_memdump)(struct brcmf_device* dev, void* data, size_t len);
+    zx_status_t (*get_fwname)(struct brcmf_device* dev, uint chip, uint chiprev,
+                              unsigned char* fw_name);
 };
 
 /**
@@ -142,7 +146,7 @@ struct brcmf_bus {
         struct brcmf_pciedev* pcie;
     } bus_priv;
     enum brcmf_bus_protocol_type proto_type;
-    struct device* dev;
+    struct brcmf_device* dev;
     struct brcmf_pub* drvr;
     enum brcmf_bus_state state;
     struct brcmf_bus_stats stats;
@@ -228,23 +232,23 @@ static inline zx_status_t brcmf_bus_get_fwname(struct brcmf_bus* bus, uint chip,
  */
 
 /* Receive frame for delivery to OS.  Callee disposes of rxp. */
-void brcmf_rx_frame(struct device* dev, struct sk_buff* rxp, bool handle_event);
+void brcmf_rx_frame(struct brcmf_device* dev, struct sk_buff* rxp, bool handle_event);
 /* Receive async event packet from firmware. Callee disposes of rxp. */
-void brcmf_rx_event(struct device* dev, struct sk_buff* rxp);
+void brcmf_rx_event(struct brcmf_device* dev, struct sk_buff* rxp);
 
 /* Indication from bus module regarding presence/insertion of dongle. */
-zx_status_t brcmf_attach(struct device* dev, struct brcmf_mp_device* settings);
+zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* settings);
 /* Indication from bus module regarding removal/absence of dongle */
-void brcmf_detach(struct device* dev);
+void brcmf_detach(struct brcmf_device* dev);
 /* Indication from bus module that dongle should be reset */
-void brcmf_dev_reset(struct device* dev);
+void brcmf_dev_reset(struct brcmf_device* dev);
 
 /* Configure the "global" bus state used by upper layers */
 void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state);
 
-zx_status_t brcmf_bus_started(struct device* dev);
-zx_status_t brcmf_iovar_data_set(struct device* dev, char* name, void* data, uint32_t len);
-void brcmf_bus_add_txhdrlen(struct device* dev, uint len);
+zx_status_t brcmf_bus_started(struct brcmf_device* dev);
+zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len);
+void brcmf_bus_add_txhdrlen(struct brcmf_device* dev, uint len);
 
 #ifdef CONFIG_BRCMFMAC_SDIO
 void brcmf_sdio_exit(void);

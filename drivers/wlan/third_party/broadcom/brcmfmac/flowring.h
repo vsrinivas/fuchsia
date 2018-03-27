@@ -15,6 +15,7 @@
 #ifndef BRCMFMAC_FLOWRING_H
 #define BRCMFMAC_FLOWRING_H
 
+#include "device.h"
 #include "proto.h"
 
 #define BRCMF_FLOWRING_HASHSIZE 512 /* has to be 2^x */
@@ -42,7 +43,7 @@ struct brcmf_flowring_tdls_entry {
 };
 
 struct brcmf_flowring {
-    struct device* dev;
+    struct brcmf_device* dev;
     struct brcmf_flowring_hash hash[BRCMF_FLOWRING_HASHSIZE];
     struct brcmf_flowring_ring** rings;
     spinlock_t block_lock;
@@ -64,7 +65,7 @@ struct sk_buff* brcmf_flowring_dequeue(struct brcmf_flowring* flow, uint16_t flo
 void brcmf_flowring_reinsert(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb);
 uint32_t brcmf_flowring_qlen(struct brcmf_flowring* flow, uint16_t flowid);
 uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid);
-struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, uint16_t nrofrings);
+struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t nrofrings);
 void brcmf_flowring_detach(struct brcmf_flowring* flow);
 void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
                                         enum proto_addr_mode addr_mode);

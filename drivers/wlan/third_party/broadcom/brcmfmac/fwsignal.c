@@ -27,8 +27,8 @@
 
 #include "linuxisms.h"
 
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bcdc.h"
 #include "bus.h"
 #include "cfg80211.h"

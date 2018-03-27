@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Broadcom Corporation
+ * Copyright (c) 2018 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,18 +14,18 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMF_OF_H
-#define BRCMF_OF_H
-
-#include "common.h"
+#include "debug.h"
 #include "device.h"
 
-#ifdef CONFIG_OF
-void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
-                    struct brcmf_mp_device* settings);
-#else
-static void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
-                           struct brcmf_mp_device* settings) {}
-#endif /* CONFIG_OF */
+struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
+    return dev->drvdata;
+}
 
-#endif /* BRCMF_OF_H */
+struct brcmfmac_platform_data* dev_get_platdata(struct brcmf_device* dev) {
+    brcmf_err("dev_get_platdata was called, but I don't know how to do it.\n");
+    return NULL;
+}
+
+void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* drvdata) {
+    dev->drvdata = drvdata;
+}

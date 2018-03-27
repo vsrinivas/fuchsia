@@ -18,15 +18,16 @@
 //#include <linux/of.h>
 //#include <linux/of_irq.h>
 
-#include "linuxisms.h"
+#include "of.h"
 
-#include <defs.h>
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "of.h"
+#include "defs.h"
+#include "device.h"
+#include "linuxisms.h"
 
-void brcmf_of_probe(struct device* dev, enum brcmf_bus_type bus_type,
+void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
                     struct brcmf_mp_device* settings) {
     struct brcmfmac_sdio_pd* sdio = &settings->bus.sdio;
     struct device_node* np = dev->of_node;

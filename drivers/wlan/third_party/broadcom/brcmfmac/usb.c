@@ -20,18 +20,19 @@
 //#include <linux/usb.h>
 //#include <linux/vmalloc.h>
 
-#include "linuxisms.h"
+#include "usb.h"
 
-#include <brcm_hw_ids.h>
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
 #include "bcdc.h"
+#include "brcm_hw_ids.h"
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "firmware.h"
-#include "usb.h"
+#include "linuxisms.h"
 
 #define IOCTL_RESP_TIMEOUT msecs_to_jiffies(2000)
 
@@ -157,7 +158,7 @@ struct brcmf_usbdev_info {
     int image_len;
 
     struct usb_device* usbdev;
-    struct device* dev;
+    struct brcmf_device* dev;
     struct mutex dev_init_lock;
 
     int ctl_in_pipe, ctl_out_pipe;
@@ -179,12 +180,12 @@ struct brcmf_usbdev_info {
 
 static void brcmf_usb_rx_refill(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req);
 
-static struct brcmf_usbdev* brcmf_usb_get_buspub(struct device* dev) {
+static struct brcmf_usbdev* brcmf_usb_get_buspub(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     return bus_if->bus_priv.usb;
 }
 
-static struct brcmf_usbdev_info* brcmf_usb_get_businfo(struct device* dev) {
+static struct brcmf_usbdev_info* brcmf_usb_get_businfo(struct brcmf_device* dev) {
     return brcmf_usb_get_buspub(dev)->devinfo;
 }
 
@@ -292,7 +293,7 @@ static zx_status_t brcmf_usb_recv_ctl(struct brcmf_usbdev_info* devinfo, uint8_t
     return ret;
 }
 
-static zx_status_t brcmf_usb_tx_ctlpkt(struct device* dev, uint8_t* buf, uint32_t len) {
+static zx_status_t brcmf_usb_tx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, uint32_t len) {
     zx_status_t err = ZX_OK;
     uint32_t time_left = 0;
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
@@ -322,7 +323,7 @@ static zx_status_t brcmf_usb_tx_ctlpkt(struct device* dev, uint8_t* buf, uint32_
     return err;
 }
 
-static zx_status_t brcmf_usb_rx_ctlpkt(struct device* dev, uint8_t* buf, uint32_t len,
+static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, uint32_t len,
                                        int* urb_len_out) {
     zx_status_t err = ZX_OK;
     uint32_t time_left = 0;
@@ -566,7 +567,7 @@ static void brcmf_usb_state_change(struct brcmf_usbdev_info* devinfo, int state)
     }
 }
 
-static zx_status_t brcmf_usb_tx(struct device* dev, struct sk_buff* skb) {
+static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct sk_buff* skb) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
     struct brcmf_usbreq* req;
     zx_status_t ret;
@@ -612,7 +613,7 @@ fail:
     return ret;
 }
 
-static zx_status_t brcmf_usb_up(struct device* dev) {
+static zx_status_t brcmf_usb_up(struct brcmf_device* dev) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
     brcmf_dbg(USB, "Enter\n");
@@ -654,7 +655,7 @@ static void brcmf_cancel_all_urbs(struct brcmf_usbdev_info* devinfo) {
     brcmf_usb_free_q(&devinfo->rx_postq, true);
 }
 
-static void brcmf_usb_down(struct device* dev) {
+static void brcmf_usb_down(struct brcmf_device* dev) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
     brcmf_dbg(USB, "Enter\n");
@@ -1071,7 +1072,7 @@ error:
     return NULL;
 }
 
-static void brcmf_usb_wowl_config(struct device* dev, bool enabled) {
+static void brcmf_usb_wowl_config(struct brcmf_device* dev, bool enabled) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
 
     brcmf_dbg(USB, "Configuring WOWL, enabled=%d\n", enabled);
@@ -1083,7 +1084,7 @@ static void brcmf_usb_wowl_config(struct device* dev, bool enabled) {
     }
 }
 
-static zx_status_t brcmf_usb_get_fwname(struct device* dev, uint32_t chip, uint32_t chiprev,
+static zx_status_t brcmf_usb_get_fwname(struct brcmf_device* dev, uint32_t chip, uint32_t chiprev,
                                         uint8_t* fw_name) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
     zx_status_t ret = ZX_OK;
@@ -1132,8 +1133,8 @@ fail:
     return ret;
 }
 
-static void brcmf_usb_probe_phase2(struct device* dev, zx_status_t ret, const struct firmware* fw,
-                                   void* nvram, uint32_t nvlen) {
+static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
+                                   const struct firmware* fw, void* nvram, uint32_t nvlen) {
     struct brcmf_bus* bus = dev_get_drvdata(dev);
     struct brcmf_usbdev_info* devinfo = bus->bus_priv.usb->devinfo;
 
@@ -1176,7 +1177,7 @@ error:
 static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
     struct brcmf_bus* bus = NULL;
     struct brcmf_usbdev* bus_pub = NULL;
-    struct device* dev = devinfo->dev;
+    struct brcmf_device* dev = devinfo->dev;
     zx_status_t ret;
 
     brcmf_dbg(USB, "Enter\n");
@@ -1461,7 +1462,7 @@ static struct usb_driver brcmf_usbdrvr = {
     .disable_hub_initiated_lpm = 1,
 };
 
-static zx_status_t brcmf_usb_reset_device(struct device* dev, void* notused) {
+static zx_status_t brcmf_usb_reset_device(struct brcmf_device* dev, void* notused) {
     /* device past is the usb interface so we
      * need to use parent here.
      */

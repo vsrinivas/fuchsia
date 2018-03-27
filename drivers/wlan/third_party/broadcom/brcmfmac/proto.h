@@ -16,6 +16,8 @@
 #ifndef BRCMFMAC_PROTO_H
 #define BRCMFMAC_PROTO_H
 
+#include "core.h"
+
 enum proto_addr_mode { ADDR_INDIRECT = 0, ADDR_DIRECT };
 
 struct brcmf_skb_reorder_data {

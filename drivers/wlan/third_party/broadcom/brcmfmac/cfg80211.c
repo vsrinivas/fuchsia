@@ -23,20 +23,20 @@
 //#include <net/cfg80211.h>
 //#include <net/netlink.h>
 
-#include "linuxisms.h"
-
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-#include <defs.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "btcoex.h"
 #include "bus.h"
 #include "cfg80211.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "defs.h"
+#include "device.h"
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 #include "p2p.h"
 #include "pno.h"
 #include "proto.h"
@@ -6625,7 +6625,8 @@ static void brcmf_free_wiphy(struct wiphy* wiphy) {
     wiphy_free(wiphy);
 }
 
-struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr, struct device* busdev,
+struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
+                                                  struct brcmf_device* busdev,
                                                   bool p2pdev_forced) {
     struct net_device* ndev = brcmf_get_ifp(drvr, 0)->ndev;
     struct brcmf_cfg80211_info* cfg;

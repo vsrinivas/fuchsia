@@ -20,7 +20,7 @@
 
 #include "linuxisms.h"
 
-#include <brcmu_wifi.h>
+#include "brcmu_wifi.h"
 #include "bcdc.h"
 #include "bus.h"
 #include "core.h"

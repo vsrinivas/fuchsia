@@ -15,6 +15,9 @@
 #ifndef BRCMFMAC_MSGBUF_H
 #define BRCMFMAC_MSGBUF_H
 
+#include "core.h"
+#include "device.h"
+
 #ifdef CONFIG_BRCMFMAC_PROTO_MSGBUF
 
 #define BRCMF_H2D_MSGRING_CONTROL_SUBMIT_MAX_ITEM 64
@@ -36,7 +39,7 @@ struct msgbuf_buf_addr {
     uint32_t high_addr;
 };
 
-zx_status_t brcmf_proto_msgbuf_rx_trigger(struct device* dev);
+zx_status_t brcmf_proto_msgbuf_rx_trigger(struct brcmf_device* dev);
 void brcmf_msgbuf_delete_flowring(struct brcmf_pub* drvr, uint16_t flowid);
 zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr);
 void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr);

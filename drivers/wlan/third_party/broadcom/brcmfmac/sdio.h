@@ -20,10 +20,10 @@
 //#include <linux/firmware.h>
 //#include <linux/skbuff.h>
 
-#include "linuxisms.h"
-
 #include "defs.h"
+#include "device.h"
 #include "firmware.h"
+#include "linuxisms.h"
 
 #define SDIOD_FBR_SIZE 0x100
 
@@ -175,7 +175,7 @@ struct brcmf_sdio_dev {
     uint32_t sbwad;             /* Save backplane window address */
     struct brcmf_core* cc_core; /* chipcommon core info struct */
     struct brcmf_sdio* bus;
-    struct device* dev;
+    struct brcmf_device* dev;
     struct brcmf_bus* bus_if;
     struct brcmf_mp_device* settings;
     bool oob_irq_requested;
@@ -366,7 +366,7 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus);
 void brcmf_sdio_isr(struct brcmf_sdio* bus);
 
 void brcmf_sdio_wd_timer(struct brcmf_sdio* bus, bool active);
-void brcmf_sdio_wowl_config(struct device* dev, bool enabled);
+void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled);
 zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
 

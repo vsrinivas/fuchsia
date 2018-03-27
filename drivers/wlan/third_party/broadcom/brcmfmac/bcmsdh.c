@@ -35,19 +35,20 @@
 //#include <linux/types.h>
 //#include <net/cfg80211.h>
 
-#include "linuxisms.h"
 
-#include <brcm_hw_ids.h>
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-#include <chipcommon.h>
-#include <defs.h>
-#include <soc.h>
+#include "brcm_hw_ids.h"
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "chip.h"
+#include "chipcommon.h"
+#include "defs.h"
+#include "soc.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
+#include "linuxisms.h"
 #include "sdio.h"
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT 2
@@ -947,7 +948,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 };
 MODULE_DEVICE_TABLE(sdio, brcmf_sdmmc_ids);
 
-static void brcmf_sdiod_acpi_set_power_manageable(struct device* dev, int val) {
+static void brcmf_sdiod_acpi_set_power_manageable(struct brcmf_device* dev, int val) {
 #if IS_ENABLED(CONFIG_ACPI)
     struct acpi_device* adev;
 
@@ -962,7 +963,7 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
     zx_status_t err;
     struct brcmf_sdio_dev* sdiodev;
     struct brcmf_bus* bus_if;
-    struct device* dev;
+    struct brcmf_device* dev;
 
     brcmf_dbg(SDIO, "Enter\n");
     brcmf_dbg(SDIO, "Class=%x\n", func->class);
@@ -1064,7 +1065,7 @@ static void brcmf_ops_sdio_remove(struct sdio_func* func) {
     brcmf_dbg(SDIO, "Exit\n");
 }
 
-void brcmf_sdio_wowl_config(struct device* dev, bool enabled) {
+void brcmf_sdio_wowl_config(struct brcmf_device* dev, bool enabled) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
 
@@ -1073,7 +1074,7 @@ void brcmf_sdio_wowl_config(struct device* dev, bool enabled) {
 }
 
 #ifdef CONFIG_PM_SLEEP
-static zx_status_t brcmf_ops_sdio_suspend(struct device* dev) {
+static zx_status_t brcmf_ops_sdio_suspend(struct brcmf_device* dev) {
     struct sdio_func* func;
     struct brcmf_bus* bus_if;
     struct brcmf_sdio_dev* sdiodev;
@@ -1105,7 +1106,7 @@ static zx_status_t brcmf_ops_sdio_suspend(struct device* dev) {
     return ZX_OK;
 }
 
-static zx_status_t brcmf_ops_sdio_resume(struct device* dev) {
+static zx_status_t brcmf_ops_sdio_resume(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
     struct sdio_func* func = container_of(dev, struct sdio_func, dev);

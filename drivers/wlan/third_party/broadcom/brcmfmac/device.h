@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Broadcom Corporation
+ * Copyright (c) 2018 The Fuchsia Authors
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,18 +14,22 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef BRCMF_OF_H
-#define BRCMF_OF_H
+#ifndef BRCMF_DEVICE_H
+#define BRCMF_DEVICE_H
 
-#include "common.h"
-#include "device.h"
+#include <zircon/types.h>
 
-#ifdef CONFIG_OF
-void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
-                    struct brcmf_mp_device* settings);
-#else
-static void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
-                           struct brcmf_mp_device* settings) {}
-#endif /* CONFIG_OF */
+struct brcmf_device {
+    void* of_node;
+    void* parent;
+    void* drvdata;
+    zx_handle_t bti;
+};
 
-#endif /* BRCMF_OF_H */
+struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev);
+
+void dev_set_drvdata(struct brcmf_device* dev, struct brcmf_bus* bus);
+
+struct brcmfmac_platform_data* dev_get_platdata(struct brcmf_device* dev);
+
+#endif /* BRCMF_DEVICE_H */

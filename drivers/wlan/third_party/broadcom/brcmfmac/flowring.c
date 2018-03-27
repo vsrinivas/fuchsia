@@ -13,19 +13,18 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <brcmu_utils.h>
-
 //#include <linux/etherdevice.h>
 //#include <linux/netdevice.h>
 //#include <linux/types.h>
 
-#include "linuxisms.h"
+#include "flowring.h"
 
+#include "brcmu_utils.h"
 #include "bus.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "flowring.h"
+#include "linuxisms.h"
 #include "msgbuf.h"
 #include "proto.h"
 
@@ -329,7 +328,7 @@ uint8_t brcmf_flowring_ifidx_get(struct brcmf_flowring* flow, uint16_t flowid) {
     return flow->hash[hash_idx].ifidx;
 }
 
-struct brcmf_flowring* brcmf_flowring_attach(struct device* dev, uint16_t nrofrings) {
+struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t nrofrings) {
     struct brcmf_flowring* flow;
     uint32_t i;
 

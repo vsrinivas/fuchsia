@@ -21,12 +21,13 @@
 //#include <linux/module.h>
 //#include <linux/slab.h>
 
-#include "linuxisms.h"
+#include "firmware.h"
 
 #include "common.h"
 #include "core.h"
 #include "debug.h"
-#include "firmware.h"
+#include "device.h"
+#include "linuxisms.h"
 
 #define BRCMF_FW_MAX_NVRAM_SIZE 64000
 #define BRCMF_FW_NVRAM_DEVPATH_LEN 19 /* devpath0=pcie/1/4/ */
@@ -433,14 +434,14 @@ void brcmf_fw_nvram_free(void* nvram) {
 }
 
 struct brcmf_fw {
-    struct device* dev;
+    struct brcmf_device* dev;
     uint16_t flags;
     const struct firmware* code;
     const char* nvram_name;
     uint16_t domain_nr;
     uint16_t bus_nr;
-    void (*done)(struct device* dev, zx_status_t err, const struct firmware* fw, void* nvram_image,
-                 uint32_t nvram_len);
+    void (*done)(struct brcmf_device* dev, zx_status_t err, const struct firmware* fw,
+                 void* nvram_image, uint32_t nvram_len);
 };
 
 static void brcmf_fw_request_nvram_done(const struct firmware* fw, void* ctx) {
@@ -518,9 +519,9 @@ done:
     kfree(fwctx);
 }
 
-zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags, const char* code,
                                         const char* nvram,
-                                        void (*fw_cb)(struct device* dev, zx_status_t err,
+                                        void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
                                                       const struct firmware* fw, void* nvram_image,
                                                       uint32_t nvram_len),
                                         uint16_t domain_nr, uint16_t bus_nr) {
@@ -553,9 +554,9 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, cons
                                    brcmf_fw_request_code_done);
 }
 
-zx_status_t brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, const char* code,
                                    const char* nvram,
-                                   void (*fw_cb)(struct device* dev, zx_status_t err,
+                                   void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
                                                  const struct firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len)) {
     return brcmf_fw_get_firmwares_pcie(dev, flags, code, nvram, fw_cb, 0, 0);

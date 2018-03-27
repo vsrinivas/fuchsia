@@ -19,9 +19,9 @@
 
 #include "linuxisms.h"
 
-#include <brcmu_d11.h>
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
+#include "brcmu_d11.h"
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 
 static uint16_t d11n_sb(enum brcmu_chan_sb sb) {
     switch (sb) {

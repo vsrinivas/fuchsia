@@ -23,11 +23,11 @@
 
 #include "linuxisms.h"
 
-#include <brcm_hw_ids.h>
-#include <brcmu_utils.h>
-#include <chipcommon.h>
-#include <defs.h>
-#include <soc.h>
+#include "brcm_hw_ids.h"
+#include "brcmu_utils.h"
+#include "chipcommon.h"
+#include "defs.h"
+#include "soc.h"
 #include "chip.h"
 #include "debug.h"
 

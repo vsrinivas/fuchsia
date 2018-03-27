@@ -14,25 +14,26 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "common.h"
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-
 //#include <linux/firmware.h>
 //#include <linux/kernel.h>
 //#include <linux/module.h>
 //#include <linux/netdevice.h>
 //#include <linux/string.h>
 
-#include "linuxisms.h"
+#include "common.h"
+
 #include <stdarg.h>
 
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "firmware.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 #include "of.h"
 #include "tracepoint.h"
 
@@ -159,7 +160,7 @@ done:
 }
 
 static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
-    struct device* dev = ifp->drvr->bus_if->dev;
+    struct brcmf_device* dev = ifp->drvr->bus_if->dev;
     struct brcmf_dload_data_le* chunk_buf;
     const struct firmware* clm = NULL;
     uint8_t clm_name[BRCMF_FW_NAME_LEN];
@@ -410,7 +411,8 @@ static void brcmf_mp_attach(void) {
     }
 }
 
-struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
+struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
+                                               enum brcmf_bus_type bus_type,
                                                uint32_t chip, uint32_t chiprev) {
     struct brcmf_mp_device* settings;
     struct brcmfmac_pd_device* device_pd;

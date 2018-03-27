@@ -16,6 +16,9 @@
 #ifndef BRCMFMAC_FIRMWARE_H
 #define BRCMFMAC_FIRMWARE_H
 
+#include "device.h"
+#include "linuxisms.h"
+
 // clang-format off
 
 #define BRCMF_FW_REQUEST         0x000F
@@ -71,15 +74,15 @@ void brcmf_fw_nvram_free(void* nvram);
  * fails it will not use the callback, but call device_release_driver()
  * instead which will call the driver .remove() callback.
  */
-zx_status_t brcmf_fw_get_firmwares_pcie(struct device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags, const char* code,
                                         const char* nvram,
-                                        void (*fw_cb)(struct device* dev, zx_status_t err,
+                                        void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
                                                       const struct firmware* fw, void* nvram_image,
                                                       uint32_t nvram_len),
                                 uint16_t domain_nr, uint16_t bus_nr);
-zx_status_t brcmf_fw_get_firmwares(struct device* dev, uint16_t flags, const char* code,
+zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, const char* code,
                                    const char* nvram,
-                                   void (*fw_cb)(struct device* dev, zx_status_t err,
+                                   void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
                                                  const struct firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len));
 

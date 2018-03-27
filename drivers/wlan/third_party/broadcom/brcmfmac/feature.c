@@ -19,8 +19,8 @@
 
 #include "linuxisms.h"
 
-#include <brcm_hw_ids.h>
-#include <brcmu_wifi.h>
+#include "brcm_hw_ids.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "common.h"
 #include "core.h"

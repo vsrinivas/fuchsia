@@ -19,8 +19,8 @@
  */
 
 #include "fwil.h"
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 
 //#include <linux/kernel.h>
 //#include <linux/netdevice.h>

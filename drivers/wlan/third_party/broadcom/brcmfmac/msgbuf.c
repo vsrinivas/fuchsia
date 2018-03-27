@@ -22,17 +22,17 @@
 //#include <linux/netdevice.h>
 //#include <linux/types.h>
 
-#include "linuxisms.h"
+#include "msgbuf.h"
 
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "commonring.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "flowring.h"
-#include "msgbuf.h"
+#include "linuxisms.h"
 #include "proto.h"
 #include "tracepoint.h"
 
@@ -302,7 +302,8 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
     return pktids;
 }
 
-static zx_status_t brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msgbuf_pktids* pktids,
+static zx_status_t brcmf_msgbuf_alloc_pktid(struct brcmf_device* dev,
+                                            struct brcmf_msgbuf_pktids* pktids,
                                             struct sk_buff* skb, uint16_t data_offset,
                                             dma_addr_t* physaddr, uint32_t* idx) {
     struct brcmf_msgbuf_pktid* array;
@@ -346,7 +347,7 @@ static zx_status_t brcmf_msgbuf_alloc_pktid(struct device* dev, struct brcmf_msg
     return ZX_OK;
 }
 
-static struct sk_buff* brcmf_msgbuf_get_pktid(struct device* dev,
+static struct sk_buff* brcmf_msgbuf_get_pktid(struct brcmf_device* dev,
                                               struct brcmf_msgbuf_pktids* pktids, uint32_t idx) {
     struct brcmf_msgbuf_pktid* pktid;
     struct sk_buff* skb;
@@ -369,7 +370,8 @@ static struct sk_buff* brcmf_msgbuf_get_pktid(struct device* dev,
     return NULL;
 }
 
-static void brcmf_msgbuf_release_array(struct device* dev, struct brcmf_msgbuf_pktids* pktids) {
+static void brcmf_msgbuf_release_array(struct brcmf_device* dev,
+                                       struct brcmf_msgbuf_pktids* pktids) {
     struct brcmf_msgbuf_pktid* array;
     struct brcmf_msgbuf_pktid* pktid;
     uint32_t count;
@@ -1176,7 +1178,7 @@ again:
     }
 }
 
-zx_status_t brcmf_proto_msgbuf_rx_trigger(struct device* dev) {
+zx_status_t brcmf_proto_msgbuf_rx_trigger(struct brcmf_device* dev) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
     struct brcmf_msgbuf* msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;

@@ -22,16 +22,16 @@
 //#include <linux/netdevice.h>
 //#include <linux/types.h>
 
-#include "linuxisms.h"
-
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-
 #include "bcdc.h"
+
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
 #include "bus.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "fwsignal.h"
+#include "linuxisms.h"
 #include "proto.h"
 #include "tracepoint.h"
 
@@ -359,7 +359,7 @@ static int brcmf_proto_bcdc_txdata(struct brcmf_pub* drvr, int ifidx, uint8_t of
     return brcmf_bus_txdata(drvr->bus_if, pktbuf);
 }
 
-void brcmf_proto_bcdc_txflowblock(struct device* dev, bool state) {
+void brcmf_proto_bcdc_txflowblock(struct brcmf_device* dev, bool state) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_pub* drvr = bus_if->drvr;
 
@@ -368,7 +368,7 @@ void brcmf_proto_bcdc_txflowblock(struct device* dev, bool state) {
     brcmf_fws_bus_blocked(drvr, state);
 }
 
-void brcmf_proto_bcdc_txcomplete(struct device* dev, struct sk_buff* txp, bool success) {
+void brcmf_proto_bcdc_txcomplete(struct brcmf_device* dev, struct sk_buff* txp, bool success) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_bcdc* bcdc = bus_if->drvr->proto->pd;
     struct brcmf_if* ifp;

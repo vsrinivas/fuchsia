@@ -18,10 +18,10 @@
 //#include <linux/platform_data/brcmfmac.h>
 //#include <linux/platform_device.h>
 
-#include "linuxisms.h"
-
 #include "core.h"
+#include "device.h"
 #include "fwil_types.h"
+#include "linuxisms.h"
 
 extern const uint8_t ALLFFMAC[ETH_ALEN];
 
@@ -71,7 +71,8 @@ struct brcmf_mp_device {
 
 void brcmf_c_set_joinpref_default(struct brcmf_if* ifp);
 
-struct brcmf_mp_device* brcmf_get_module_param(struct device* dev, enum brcmf_bus_type bus_type,
+struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
+                                               enum brcmf_bus_type bus_type,
                                                uint32_t chip, uint32_t chiprev);
 void brcmf_release_module_param(struct brcmf_mp_device* module_param);
 

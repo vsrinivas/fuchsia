@@ -20,9 +20,9 @@
 
 #include "linuxisms.h"
 
-#include <brcmu_utils.h>
-#include <brcmu_wifi.h>
-#include <defs.h>
+#include "brcmu_utils.h"
+#include "brcmu_wifi.h"
+#include "defs.h"
 #include "btcoex.h"
 #include "cfg80211.h"
 #include "core.h"

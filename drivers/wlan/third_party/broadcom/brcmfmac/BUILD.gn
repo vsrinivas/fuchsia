@@ -19,11 +19,7 @@ import("//build/package.gni")
 driver_module("brcmfmac_driver") {
   output_name = "brcmfmac"
 
-  include_dirs = [ "../include" ]
-
   sources = [
-    "../brcmutil/d11.c",
-    "../brcmutil/utils.c",
     "bcdc.c",
     "bcdc.h",
     "bcmsdh.c",
@@ -41,8 +37,11 @@ driver_module("brcmfmac_driver") {
     "commonring.h",
     "core.c",
     "core.h",
+    "d11.c",
     "debug.c",
     "debug.h",
+    "device.c",
+    "device.h",
     "feature.c",
     "feature.h",
     "firmware.c",
@@ -75,6 +74,7 @@ driver_module("brcmfmac_driver") {
     "tracepoint.h",
     "usb.c",
     "usb.h",
+    "utils.c",
     "vendor.c",
     "vendor.h",
   ]
