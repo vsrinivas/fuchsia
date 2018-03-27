@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include "device.h"
-#include "ralink.h"
 
-#include "garnet/lib/wlan/fidl/iface.fidl.h"
-#include "garnet/lib/wlan/fidl/phy.fidl.h"
+#include "driver.h"
+#include "ralink.h"
 
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
+#include <lib/async/cpp/task.h>
+#include <sync/completion.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
@@ -259,6 +260,8 @@ zx_status_t Device::Bind() {
     gc.set_gpio2_dir(1);
     status = WriteRegister(gc);
     CHECK_WRITE(GPIO_CTRL, status);
+
+    dispatcher_ = std::make_unique<wlan::async::Dispatcher<wlan_device::Phy>>(ralink_async_t());
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
@@ -3259,33 +3262,68 @@ void Device::HandleTxComplete(usb_request_t* request) {
 
 void Device::Unbind() {
     debugfn();
+    completion_reset(&shutdown_completion_);
+    {
+        // Proper shutdown
+        //
+        // We must ensure that no threads attempt to access the Device after it has been released.
+        // Since we use the driver's async_t to serve FIDL requests, we want to ensure that all such
+        // requests have finished before we remove this device. We do this by setting a flag to
+        // indicate that the device is going away, and checking that value in every FIDL handler. We
+        // also queue a task that will run after any already-queued tasks, and which will signal
+        // that it is safe to proceed with device release.
+        //
+        // Note that DDK operations do not typically check dead_ (thereby avoiding taking the lock
+        // unless they modify some shared state). The unbind method will trigger an unbind of the
+        // children of this device, which will then be released before this device is released. If
+        // it becomes important to avoid running any code from a DDK method when dead_ == true,
+        // those methods should take the lock and check before proceeding.
+
+        // Set the flag under the lock to ensure any in-flight operations have a chance to finish.
+        std::lock_guard<std::mutex> guard(lock_);
+        dead_ = true;
+
+        // Reset the dispatcher to release any FIDL bindings and close their channels. This ensures
+        // that no additional requests will be made on this device.
+        dispatcher_.reset();
+
+        // Prepare a task to signal the completion to unblock the Release() method.
+        auto task = new async::Task(zx_clock_get(ZX_CLOCK_MONOTONIC), ASYNC_FLAG_HANDLE_SHUTDOWN);
+        auto f =
+            [cmp = &shutdown_completion_,
+            task](async_t* async, zx_status_t status) -> async_task_result_t {
+            // We don't actually care about status here, since in any case we know that no more
+            // async tasks will run.
+            completion_signal(cmp);
+            delete task;
+            return ASYNC_TASK_FINISHED;
+        };
+        task->set_handler(f);
+        ZX_DEBUG_ASSERT(task->Post(ralink_async_t()) == ZX_OK);
+    }
+
     device_remove(zxdev_);
 }
 
 void Device::Release() {
     debugfn();
+
+    // Wait for the shutdown task to run, proving that all outstanding requests are handled.
+    completion_wait(&shutdown_completion_, ZX_TIME_INFINITE);
+
     delete this;
 }
 
 zx_status_t Device::Ioctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                           size_t out_len, size_t* out_actual) {
     debugfn();
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
     switch (op) {
-    case IOCTL_WLANPHY_QUERY:
-        status = PhyQuery(static_cast<uint8_t*>(out_buf), out_len, out_actual);
-        break;
-    case IOCTL_WLANPHY_CREATE_IFACE:
-        status = CreateIface(in_buf, in_len, out_buf, out_len, out_actual);
-        break;
-    case IOCTL_WLANPHY_DESTROY_IFACE:
-        status = DestroyIface(in_buf, in_len);
-        *out_actual = 0;
-        break;
+    case IOCTL_WLANPHY_CONNECT:
+        return Connect(in_buf, in_len);
     default:
         errorf("ioctl unknown: %0x\n", op);
+        return ZX_ERR_NOT_SUPPORTED;
     }
-    return status;
 }
 
 void Device::MacUnbind() {
@@ -3305,6 +3343,7 @@ void Device::MacRelease() {
 }
 
 zx_status_t Device::AddPhyDevice() {
+    debugfn();
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "ralink";
@@ -3317,6 +3356,7 @@ zx_status_t Device::AddPhyDevice() {
 }
 
 zx_status_t Device::AddMacDevice() {
+    debugfn();
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "ralink-wlanmac";
@@ -3328,125 +3368,157 @@ zx_status_t Device::AddMacDevice() {
     return device_add(zxdev_, &args, &wlanmac_dev_);
 }
 
-zx_status_t Device::PhyQuery(uint8_t* buf, size_t len, size_t* actual) const {
+zx_status_t Device::Connect(const void* buf, size_t len) {
     debugfn();
-    auto info = wlan::phy::WlanPhyInfo::New();
-    info->driver_features.resize(0);
-
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::DSSS);
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::CCK);
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::OFDM);
-    info->supported_phys.push_back(wlan::phy::SupportedPhy::HT);
-
-    info->mac_roles.push_back(wlan::phy::MacRole::CLIENT);
-
-    info->caps.push_back(wlan::phy::Capability::SHORT_PREAMBLE);
-    info->caps.push_back(wlan::phy::Capability::SHORT_SLOT_TIME);
-
-    auto band24 = wlan::phy::BandInfo::New();
-    band24->ht_caps = wlan::phy::HtCapabilities::New();
-    band24->supported_channels = wlan::phy::ChannelList::New();
-    band24->description = "2.4 GHz";
-    band24->ht_caps->ht_capability_info = 0x01fe;
-    band24->ht_caps->supported_mcs_set.reset(std::vector<uint8_t>{
-        // clang-format off
-        0xff, static_cast<uint8_t>(rt_type_ == RT5592 ? 0xff : 0x00), 0x00, 0x80, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00
-        // clang-format on
-    });
-    band24->basic_rates.reset(std::vector<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108});
-    band24->supported_channels->base_freq = 2417;
-    band24->supported_channels->channels.reset(
-        std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
-
-    info->bands.push_back(std::move(band24));
-
-    if (rt_type_ == RT5592) {
-        auto band5 = wlan::phy::BandInfo::New();
-        band5->ht_caps = wlan::phy::HtCapabilities::New();
-        band5->supported_channels = wlan::phy::ChannelList::New();
-        band5->description = "5 GHz";
-        band5->ht_caps->ht_capability_info = 0x01fe;
-        band5->ht_caps->supported_mcs_set.reset(
-            std::vector<uint8_t>{0xff, 0xff, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x10, 0x00, 0x00, 0x00});
-        band5->basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
-        band5->supported_channels->base_freq = 5000;
-        band5->supported_channels->channels.reset(std::vector<uint8_t>{
-            // clang-format off
-            36,  38,  40,  42,  44,  46,  48,  50,
-            52,  54,  56,  58,  60,  62,  64,  100,
-            102, 104, 106, 108, 110, 112, 114, 116,
-            118, 120, 122, 124, 126, 128, 130, 132,
-            134, 136, 138, 140, 149, 151, 153, 155,
-            157, 159, 161, 165, 184, 188, 192, 196,
-            // clang-format on
-        });
-
-        info->bands.push_back(std::move(band5));
+    if (buf == nullptr || len < sizeof(zx_handle_t)) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    if (len < info->GetSerializedSize()) { return ZX_ERR_BUFFER_TOO_SMALL; }
-    if (!info->Serialize(buf, info->GetSerializedSize(), actual)) { return ZX_ERR_IO; }
+    zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
+    zx::channel chan(hnd);
+
+    std::lock_guard<std::mutex> guard(lock_);
+    if (dead_) {
+        return ZX_ERR_PEER_CLOSED;
+    }
+
+    zx_status_t status = dispatcher_->AddBinding(std::move(chan), this);
+    if (status != ZX_OK) { return status; }
     return ZX_OK;
 }
 
-zx_status_t Device::CreateIface(const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
-                                size_t* out_actual) {
+void Device::Query(QueryCallback callback) {
     debugfn();
-    auto req = wlan::phy::CreateIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
+    wlan_device::PhyInfo info;
+
+    info.supported_phys->push_back(wlan_device::SupportedPhy::DSSS);
+    info.supported_phys->push_back(wlan_device::SupportedPhy::CCK);
+    info.supported_phys->push_back(wlan_device::SupportedPhy::OFDM);
+    info.supported_phys->push_back(wlan_device::SupportedPhy::HT);
+
+    info.driver_features.resize(0);
+
+    info.mac_roles->push_back(wlan_device::MacRole::CLIENT);
+
+    info.caps->push_back(wlan_device::Capability::SHORT_PREAMBLE);
+    info.caps->push_back(wlan_device::Capability::SHORT_SLOT_TIME);
+
+    wlan_device::BandInfo band24;
+    band24.description = "2.4 GHz";
+    band24.ht_caps.ht_capability_info = 0x01fe;
+    auto& band24mcs = band24.ht_caps.supported_mcs_set;
+    std::fill(band24mcs.begin(), band24mcs.end(), 0);
+    band24mcs[0] = 0xff;                              // mcs 0-7
+    band24mcs[1] = rt_type_ == RT5592 ? 0xff : 0x00;  // mcs 8-15 for RT5592
+    band24mcs[3] = 0x80;                              // mcs 32
+    band24mcs[12] = 0x01;                             // Tx MCS defined, same as Rx MCS
+    // Basic rates are given in units of 0.5Mbps
+    band24.basic_rates.reset(std::vector<uint8_t>{2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108});
+    band24.supported_channels.base_freq = 2407;
+    band24.supported_channels.channels.reset(
+        std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14});
+
+    info.bands->push_back(std::move(band24));
+
+    if (rt_type_ == RT5592) {
+        wlan_device::BandInfo band5;
+        band5.description = "5 GHz";
+        band5.ht_caps.ht_capability_info = 0x01fe;
+        auto& band5mcs = band5.ht_caps.supported_mcs_set;
+        std::fill(band5mcs.begin(), band5mcs.end(), 0);
+        band5mcs[0] = 0xff;   // mcs 0-7
+        band5mcs[1] = 0xff;   // mcs 8-15 for RT5592
+        band5mcs[3] = 0x80;   // mcs 32
+        band5mcs[12] = 0x01;  // Tx MCS defined, same as Rx MCS
+        // Basic rates are given in units of 0.5Mbps
+        band5.basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
+        band5.supported_channels.base_freq = 5000;
+        band5.supported_channels.channels.reset(
+                std::vector<uint8_t>{
+                    // clang-format off
+                    36,  38,  40,  42,  44,  46,  48,  50,
+                    52,  54,  56,  58,  60,  62,  64,  100,
+                    102, 104, 106, 108, 110, 112, 114, 116,
+                    118, 120, 122, 124, 126, 128, 130, 132,
+                    134, 136, 138, 140, 149, 151, 153, 155,
+                    157, 159, 161, 165, 184, 188, 192, 196,
+                    // clang-format on
+                });
+
+        info.bands->push_back(std::move(band5));
+    }
+
+    wlan_device::QueryResponse resp;
+    resp.info = std::move(info);
+    callback(std::move(resp));
+}
+
+void Device::CreateIface(wlan_device::CreateIfaceRequest req,
+                         CreateIfaceCallback callback) {
+    debugfn();
+    wlan_device::CreateIfaceResponse resp;
 
     std::lock_guard<std::mutex> guard(lock_);
+    if (dead_) {
+        resp.status = ZX_ERR_PEER_CLOSED;
+        callback(std::move(resp));
+        return;
+    }
+
     if (wlanmac_dev_ != nullptr) {
         // Only one interface supported for now.
-        return ZX_ERR_ALREADY_BOUND;
+        resp.status = ZX_ERR_ALREADY_BOUND;
+        callback(std::move(resp));
+        return;
     }
 
-    if (req->role != wlan::phy::MacRole::CLIENT) {
+    if (req.role != wlan_device::MacRole::CLIENT) {
         errorf("Only CLIENT role is supported right now\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        resp.status = ZX_ERR_NOT_SUPPORTED;
+        callback(std::move(resp));
+        return;
     }
-
-    // Build the response now, so if the return buffer is too small, we find out before we create
-    // the device.
-    auto info = wlan::iface::WlanIfaceInfo::New();
-    info->id = iface_id_;
-    if (out_len < info->GetSerializedSize()) { return ZX_ERR_BUFFER_TOO_SMALL; }
-    if (!info->Serialize(out_buf, info->GetSerializedSize(), out_actual)) { return ZX_ERR_IO; }
 
     zx_status_t status = AddMacDevice();
     if (status != ZX_OK) {
         errorf("could not add iface device err=%d\n", status);
-        // Make sure the output buffer isn't misinterpreted by setting the actual size to 0 and
-        // clearing the first few bytes of the buffer.
-        *out_actual = 0;
-        memset(out_buf, 0, std::min<size_t>(out_len, 64));
+        resp.status = status;
     } else {
         infof("iface added\n");
+        resp.status = ZX_OK;
     }
-
-    return status;
+    callback(std::move(resp));
 }
 
-zx_status_t Device::DestroyIface(const void* in_buf, size_t in_len) {
+void Device::DestroyIface(wlan_device::DestroyIfaceRequest req,
+                          DestroyIfaceCallback callback) {
     debugfn();
-    auto req = wlan::phy::DestroyIfaceRequest::New();
-    if (!req->Deserialize(const_cast<void*>(in_buf), in_len)) { return ZX_ERR_IO; }
+    wlan_device::DestroyIfaceResponse resp;
 
     std::lock_guard<std::mutex> guard(lock_);
-    if (wlanmac_dev_ == nullptr) {
-        errorf("calling destroy iface when no iface exists\n");
-        return ZX_ERR_BAD_STATE;
+    if (dead_) {
+        resp.status = ZX_ERR_PEER_CLOSED;
+        callback(std::move(resp));
+        return;
     }
 
-    if (req->id != iface_id_) {
-        errorf("unknown iface id: %u (expected: %u)\n", req->id, iface_id_);
-        return ZX_ERR_INVALID_ARGS;
+    if (wlanmac_dev_ == nullptr) {
+        errorf("calling destroy iface when no iface exists\n");
+        resp.status = ZX_ERR_BAD_STATE;
+        callback(std::move(resp));
+        return;
+    }
+
+    if (req.id != iface_id_) {
+        errorf("unknown iface id in destroy request: %u (expected: %u)\n", req.id, iface_id_);
+        resp.status = ZX_ERR_INVALID_ARGS;
+        callback(std::move(resp));
+        return;
     }
 
     device_remove(wlanmac_dev_);
-    return ZX_OK;
+    resp.status = ZX_OK;
+    callback(std::move(resp));
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
@@ -3586,6 +3658,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
 
+    if (dead_) { return ZX_ERR_PEER_CLOSED; }
     if (wlanmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
 
     zx_status_t status = LoadFirmware();
@@ -3700,6 +3773,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
 void Device::WlanmacStop() {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
+    // This is safe even if we're already unbound.
     wlanmac_proxy_.reset();
 
     // TODO(tkilbourn) disable radios, stop queues, etc.

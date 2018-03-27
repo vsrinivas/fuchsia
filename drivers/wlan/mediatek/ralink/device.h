@@ -8,9 +8,13 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
+#include <sync/completion.h>
+#include <wlan/async/dispatcher.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
 #include <zx/time.h>
+
+#include <fuchsia/cpp/wlan_device.h>
 
 #include <array>
 #include <cstddef>
@@ -47,7 +51,7 @@ class WlanmacIfcProxy {
     void* cookie_;
 };
 
-class Device {
+class Device : public wlan_device::Phy {
    public:
     Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
            std::vector<uint8_t>&& bulk_out);
@@ -72,6 +76,12 @@ class Device {
     zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config);
     zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
+
+    virtual void Query(QueryCallback callback) override;
+    virtual void CreateIface(wlan_device::CreateIfaceRequest req,
+                             CreateIfaceCallback callback) override;
+    virtual void DestroyIface(wlan_device::DestroyIfaceRequest req,
+                              DestroyIfaceCallback callback) override;
 
    private:
     struct TxCalibrationValues {
@@ -116,10 +126,7 @@ class Device {
     zx_status_t AddPhyDevice();
     zx_status_t AddMacDevice();
 
-    zx_status_t PhyQuery(uint8_t* buf, size_t len, size_t* actual) const;
-    zx_status_t CreateIface(const void* in_buf, size_t in_len, void* out_buf, size_t out_len,
-                            size_t* out_actual);
-    zx_status_t DestroyIface(const void* in_buf, size_t in_len);
+    zx_status_t Connect(const void* buf, size_t len);
 
     // read and write general registers
     zx_status_t ReadRegister(uint16_t offset, uint32_t* value);
@@ -222,12 +229,16 @@ class Device {
     zx_device_t* parent_;
     zx_device_t* zxdev_;
     zx_device_t* wlanmac_dev_;
-
     usb_protocol_t usb_;
-    fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
 
     uint8_t rx_endpt_ = 0;
     std::vector<uint8_t> tx_endpts_;
+
+    std::mutex lock_;
+    bool dead_ __TA_GUARDED(lock_) = false;
+    completion_t shutdown_completion_;
+    fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
+    std::unique_ptr<wlan::async::Dispatcher<wlan_device::Phy>> dispatcher_;
 
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};
@@ -263,7 +274,6 @@ class Device {
     uint8_t bg_rssi_offset_[3] = {};
     uint8_t bssid_[6];
 
-    std::mutex lock_;
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
     uint16_t iface_id_ = 0;
 };

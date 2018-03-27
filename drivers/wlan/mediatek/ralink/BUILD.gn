@@ -19,6 +19,7 @@ driver_module("ralink_driver") {
   ]
 
   deps = [
+    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/mlme",
