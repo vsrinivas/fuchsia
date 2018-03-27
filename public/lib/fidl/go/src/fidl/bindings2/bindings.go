@@ -105,7 +105,7 @@ func (b *Binding) dispatch() (bool, error) {
 		if ok && zxErr.Status == zx.ErrShouldWait {
 			return true, nil
 		}
-		return false, nil
+		return false, err
 	}
 	var header MessageHeader
 	if err := UnmarshalHeader(respb[:], &header); err != nil {
@@ -134,7 +134,15 @@ func (b *Binding) dispatch() (bool, error) {
 // closes the bound Channel.
 func (b *Binding) Close() error {
 	if err := d.CancelWait(*b.id); err != nil {
-		return err
+		zxErr, ok := err.(*zx.Error)
+		// If it just says that the ID isn't found, there are cases where this is
+		// a reasonable error (particularly when we're in the middle of handling
+		// a signal from the dispatcher).
+		if !ok || zxErr.Status != zx.ErrNotFound {
+			// Attempt to close the channel if we hit a more serious error.
+			b.Channel.Close()
+			return err
+		}
 	}
 	b.id = nil
 	return b.Channel.Close()
@@ -154,10 +162,12 @@ func (b *BindingSet) Add(s Stub, c zx.Channel) error {
 		Channel: c,
 	}
 	err := binding.Init(func(err error) {
-		if s, ok := err.(zx.Error); ok && s.Status != zx.ErrPeerClosed {
-			log.Printf("bindings err: %v", err)
+		if s, ok := err.(zx.Error); !ok || s.Status != zx.ErrPeerClosed {
+			log.Printf("encountered in handling: %v", err)
 		}
-		b.Remove(binding)
+		if err := b.Remove(binding); err != nil {
+			log.Printf("failed to remove binding: %v", err)
+		}
 	})
 	if err != nil {
 		return err
