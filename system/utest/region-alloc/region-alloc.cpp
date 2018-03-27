@@ -5,6 +5,7 @@
 #include <region-alloc/region-alloc.h>
 #include <stdio.h>
 #include <unittest/unittest.h>
+#include <inttypes.h>
 
 #include "common.h"
 
@@ -235,6 +236,62 @@ static bool ralloc_subtract_test() {
     END_TEST;
 }
 
+static bool ralloc_alloc_walk_test() {
+    BEGIN_TEST;
+
+    const ralloc_region_t test_regions[] = {
+        { .base = 0x00000000, .size = 1 << 20 },
+        { .base = 0x10000000, .size = 1 << 20 },
+        { .base = 0x20000000, .size = 1 << 20 },
+        { .base = 0x30000000, .size = 1 << 20 },
+        { .base = 0x40000000, .size = 1 << 20 },
+        { .base = 0x50000000, .size = 1 << 20 },
+        { .base = 0x60000000, .size = 1 << 20 },
+        { .base = 0x70000000, .size = 1 << 20 },
+        { .base = 0x80000000, .size = 1 << 20 },
+        { .base = 0x90000000, .size = 1 << 20 },
+    };
+    constexpr size_t r_cnt = countof(test_regions);
+
+    RegionAllocator alloc(RegionAllocator::RegionPool::Create(REGION_POOL_MAX_SIZE));
+    EXPECT_EQ(ZX_OK, alloc.AddRegion({ .base = 0, .size = UINT64_MAX}));
+
+    // Pull each region defined above out of the allocator and stash their UPtrs
+    // for the time being.  Then the lambda can walk the allocated regions and
+    // verify that they are in-order and match the expected values.
+    RegionAllocator::Region::UPtr r[r_cnt];
+    for (unsigned i = 0; i < r_cnt; i++) {
+        EXPECT_EQ(ZX_OK, alloc.GetRegion(test_regions[i], r[i]));
+    }
+
+    uint8_t pos = 0;
+    uint64_t end = 0;
+    auto f = [&](const ralloc_region_t* r) -> bool {
+        ASSERT_EQ(r->base, test_regions[pos].base);
+        ASSERT_EQ(r->size, test_regions[pos].size);
+        pos++;
+
+        // attempt to exit early if end is set to a value > 0
+        return (end) ? (pos != end) : true;
+    };
+
+    alloc.WalkAllocatedRegions(f);
+    ASSERT_EQ(r_cnt, pos);
+
+    // Test that exiting early works, no matter where we are in the region list.
+    // Every time the function is called we increment the counter and then at
+    // the end ensure we've only been called as many times as expected, within
+    // the bounds of [1, r_cnt].
+    for (size_t cnt = 0; cnt < 1024; cnt++) {
+        pos = 0;
+        end = (rand() % r_cnt) + 1;
+        alloc.WalkAllocatedRegions(f);
+        ASSERT_EQ(pos, end);
+    }
+
+    END_TEST;
+}
+
 } //namespace
 
 BEGIN_TEST_CASE(ralloc_tests)
@@ -243,4 +300,5 @@ RUN_NAMED_TEST("Alloc by size",  ralloc_by_size_test)
 RUN_NAMED_TEST("Alloc specific", ralloc_specific_test)
 RUN_NAMED_TEST("Add/Overlap",    ralloc_add_overlap_test)
 RUN_NAMED_TEST("Subtract",       ralloc_subtract_test)
+RUN_NAMED_TEST("Allocated Walk", ralloc_alloc_walk_test)
 END_TEST_CASE(ralloc_tests)

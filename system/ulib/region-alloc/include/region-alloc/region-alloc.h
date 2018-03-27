@@ -218,6 +218,10 @@ static inline const ralloc_region_t* ralloc_get_specific_region(
 size_t ralloc_get_allocated_region_count(const ralloc_allocator_t* allocator);
 size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator);
 
+// Walk the allocated region list and call region_walk_cb for each region found
+typedef bool (*region_walk_cb)(const ralloc_region_t*, void*);
+zx_status_t ralloc_walk_allocated_regions(const ralloc_allocator_t*, region_walk_cb, void*);
+
 // RegionAllocator::Region interface.  In addition to the base/size members
 // which may be used to determine the location of the allocation,  valid
 // operations are...
@@ -476,6 +480,25 @@ public:
         fbl::AutoLock alloc_lock(&alloc_lock_);
         return avail_regions_by_base_.size();
     }
+
+    // Walk the allocated regions and call the user provided callback for each
+    // entry. Stop when out of entries or the callback returns false.
+    //
+    // *** It is absolutely required that the user callback not call into any other
+    // RegionAllocator public APIs, and should likely not acquire any locks of any
+    // kind. This method cannot protect against deadlocks and lock inversions that
+    // are possible by acquriring the allocation lock before calling the user provided
+    // callback.
+    template<typename WalkCallback>
+    void WalkAllocatedRegions(WalkCallback&& cb) const
+        __TA_EXCLUDES(alloc_lock_) {
+        fbl::AutoLock alloc_lock(&alloc_lock_);
+        for (const auto& region : allocated_regions_by_base_) {
+            if (!fbl::forward<WalkCallback>(cb)(&region)) {
+                break;
+            }
+        }
+}
 
 private:
     zx_status_t AddSubtractSanityCheckLocked(const ralloc_region_t& region)

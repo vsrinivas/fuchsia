@@ -316,9 +316,83 @@ static bool ralloc_subtract_c_api_test(void) {
     END_TEST;
 }
 
+static bool ralloc_walk_cb(const ralloc_region_t* r, void* ctx) {
+    ralloc_walk_test_ctx_t* ctx_ = (ralloc_walk_test_ctx_t*)ctx;
+    ASSERT_EQ(r->base, ctx_->regions[ctx_->i].base, "");
+    ASSERT_EQ(r->size, ctx_->regions[ctx_->i].size, "");
+    ctx_->i++;
+
+    // attempt to exit early if end is set to a value >= 0
+    return (ctx_->end == -1) ? true : (ctx_->i != ctx_->end);
+}
+
+static bool ralloc_alloc_walk_c_api_test(void) {
+    BEGIN_TEST;
+
+    const ralloc_region_t test_regions[] = {
+        { .base = 0x00000000, .size = 1 << 20 },
+        { .base = 0x10000000, .size = 1 << 20 },
+        { .base = 0x20000000, .size = 1 << 20 },
+        { .base = 0x30000000, .size = 1 << 20 },
+        { .base = 0x40000000, .size = 1 << 20 },
+        { .base = 0x50000000, .size = 1 << 20 },
+        { .base = 0x60000000, .size = 1 << 20 },
+        { .base = 0x70000000, .size = 1 << 20 },
+        { .base = 0x80000000, .size = 1 << 20 },
+        { .base = 0x90000000, .size = 1 << 20 },
+    };
+    const size_t r_cnt = countof(test_regions);
+
+    // Create the pool for our allocator
+    ralloc_pool_t* pool;
+    ASSERT_EQ(ZX_OK, ralloc_create_pool(REGION_POOL_MAX_SIZE, &pool), "");
+    ASSERT_NONNULL(pool, "");
+
+    // Create an allocator and add our region pool to it.
+    ralloc_allocator_t* alloc;
+    ASSERT_EQ(ZX_OK, ralloc_create_allocator(&alloc), "");
+    ASSERT_NONNULL(alloc, "");
+    ASSERT_EQ(ZX_OK, ralloc_set_region_pool(alloc, pool), "");
+    ralloc_region_t full_region = { .base = 0, .size = UINT64_MAX };
+    ASSERT_EQ(ZX_OK, ralloc_add_region(alloc, &full_region, false), "");
+
+    // Pull each region defined above out of the allocator and stash their UPtrs
+    // for the time being.  Then the lambda can walk the allocated regions and
+    // verify that they are in-order and match the expected values.
+    const ralloc_region_t* tmp_regions[r_cnt];
+    for (unsigned i = 0; i < r_cnt; i++) {
+        tmp_regions[i] = ralloc_get_specific_region(alloc, &test_regions[i]);
+    }
+
+    ralloc_walk_test_ctx_t ctx = { 0, -1, test_regions };
+    ralloc_walk_allocated_regions(alloc, ralloc_walk_cb, (void*)&ctx);
+    EXPECT_EQ(r_cnt, (size_t)ctx.i, "");
+
+    // Test that exiting early works, no matter where we are in the region list.
+    // Every time the function is called we increment the counter and then at
+    // the end ensure we've only been called as many times as expected, within
+    // the bounds of [1, r_cnt].
+    for (size_t cnt = 0; cnt < 1024; cnt++) {
+        ctx.i = 0;
+        ctx.end = (int)(rand() % r_cnt) + 1;
+        ralloc_walk_allocated_regions(alloc, ralloc_walk_cb, (void*)&ctx);
+        ASSERT_EQ(ctx.i, ctx.end, "");
+    }
+
+    // Clean up the allocated regions, pool, then allocator
+    for (size_t i = 0; i < r_cnt; i++) {
+        ralloc_put_region(tmp_regions[i]);
+    }
+    ralloc_release_pool(pool);
+    ralloc_destroy_allocator(alloc);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ralloc_c_api_tests)
 RUN_NAMED_TEST("Region Pools (C-API)",   ralloc_pools_c_api_test)
 RUN_NAMED_TEST("Alloc by size (C-API)",  ralloc_by_size_c_api_test)
 RUN_NAMED_TEST("Alloc specific (C-API)", ralloc_specific_c_api_test)
 RUN_NAMED_TEST("Subtract (C-API)",       ralloc_subtract_c_api_test)
+RUN_NAMED_TEST("Allocated Walk (C-API)", ralloc_alloc_walk_c_api_test)
 END_TEST_CASE(ralloc_c_api_tests)

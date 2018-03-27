@@ -429,3 +429,11 @@ static const alloc_subtract_test_t SUBTRACT_TESTS[] = {
 };
 
 #undef REG
+
+// context structure for region allocator walk tests
+typedef struct ralloc_walk_test_ctx {
+    int i;
+    int end;
+    const ralloc_region_t* regions;
+} ralloc_walk_test_ctx_t;
+

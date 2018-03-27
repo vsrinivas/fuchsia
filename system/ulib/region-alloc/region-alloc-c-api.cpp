@@ -167,4 +167,20 @@ void ralloc_put_region(const ralloc_region_t* region) {
     RegionAllocator::Region::UPtr release_me(raw_region);
 }
 
+zx_status_t ralloc_walk_allocated_regions(const ralloc_allocator_t* allocator,
+                                          region_walk_cb cb,
+                                          void* ctx) {
+    ZX_DEBUG_ASSERT(allocator != nullptr);
+    if (cb == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    const RegionAllocator& alloc = *(reinterpret_cast<const RegionAllocator*>(allocator));
+    alloc.WalkAllocatedRegions([cb, ctx](const ralloc_region_t* r) -> bool {
+        return cb(r, ctx);
+    });
+
+    return ZX_OK;
+}
+
 }   // extern "C"
