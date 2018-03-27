@@ -38,4 +38,5 @@ static const fidl::FidlField unbounded_nonnullable_string_fields[] = {
 const fidl_type_t unbounded_nonnullable_string_message_type = fidl_type_t(
     fidl::FidlCodedStruct(unbounded_nonnullable_string_fields,
                           ArrayCount(unbounded_nonnullable_string_fields),
-                          sizeof(unbounded_nonnullable_string_inline_data)));
+                          sizeof(unbounded_nonnullable_string_inline_data),
+                          "unbounded_nonnullable_string_message"));
