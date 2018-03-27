@@ -13,14 +13,14 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/entity/fidl/entity.fidl.h"
-#include "lib/entity/fidl/entity_provider.fidl.h"
-#include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include <fuchsia/cpp/modular.h>
-#include "lib/fidl/cpp/bindings/binding.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_launcher.h"
@@ -74,8 +74,8 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request)
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request)
       override {
     agent_runner_->ConnectToEntityProvider(agent_url,
                                            std::move(entity_provider_request),
@@ -102,7 +102,7 @@ class MyEntityProvider : AgentImpl::Delegate,
  public:
   MyEntityProvider(
       component::ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<component::ApplicationController> ctrl)
+      fidl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         app_controller_(this, std::move(ctrl)),
@@ -142,31 +142,31 @@ class MyEntityProvider : AgentImpl::Delegate,
   // |ApplicationController|
   void Detach() override { ++counts["Detach"]; }
   // |ApplicationController|
-  void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
+  void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |AgentImpl::Delegate|
-  void Connect(f1dl::InterfaceRequest<component::ServiceProvider>
+  void Connect(fidl::InterfaceRequest<component::ServiceProvider>
                    outgoing_services) override {
     ++counts["Connect"];
   }
   // |AgentImpl::Delegate|
-  void RunTask(const f1dl::StringPtr& task_id,
+  void RunTask(const fidl::StringPtr& task_id,
                const std::function<void()>& done) override {
     ++counts["RunTask"];
     done();
   }
 
   // |EntityProvider|
-  void GetTypes(const f1dl::StringPtr& cookie,
-                const GetTypesCallback& callback) override {
+  void GetTypes(const fidl::StringPtr& cookie,
+                GetTypesCallback callback) override {
     callback(
-        f1dl::VectorPtr<f1dl::StringPtr>::From(std::vector<std::string>{"MyType"}));
+        fidl::VectorPtr<fidl::StringPtr>::From(std::vector<std::string>{"MyType"}));
   }
 
   // |EntityProvider|
-  void GetData(const f1dl::StringPtr& cookie,
-               const f1dl::StringPtr& type,
-               const GetDataCallback& callback) override {
+  void GetData(const fidl::StringPtr& cookie,
+               const fidl::StringPtr& type,
+               GetDataCallback callback) override {
     callback(type.get() + ":MyData");
   }
 
@@ -176,8 +176,8 @@ class MyEntityProvider : AgentImpl::Delegate,
   AgentContextPtr agent_context_;
   std::unique_ptr<AgentImpl> agent_impl_;
   EntityResolverPtr entity_resolver_;
-  f1dl::Binding<component::ApplicationController> app_controller_;
-  f1dl::Binding<modular::EntityProvider> entity_provider_binding_;
+  fidl::Binding<component::ApplicationController> app_controller_;
+  fidl::Binding<modular::EntityProvider> entity_provider_binding_;
   component::ApplicationLaunchInfoPtr launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
@@ -190,7 +190,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
       kMyAgentUrl,
       [&dummy_agent](
           component::ApplicationLaunchInfoPtr launch_info,
-          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
       });
@@ -213,10 +213,10 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   // references.
   EntityReferenceFactoryPtr factory;
   dummy_agent->agent_context()->GetEntityReferenceFactory(factory.NewRequest());
-  f1dl::StringPtr entity_ref;
+  fidl::StringPtr entity_ref;
   factory->CreateReference(
       "my_cookie",
-      [&entity_ref](const f1dl::StringPtr& retval) { entity_ref = retval; });
+      [&entity_ref](const fidl::StringPtr& retval) { entity_ref = retval; });
 
   RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
@@ -228,12 +228,12 @@ TEST_F(EntityProviderRunnerTest, Basic) {
                                                 entity.NewRequest());
 
   std::map<std::string, uint32_t> counts;
-  entity->GetTypes([&counts](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
+  entity->GetTypes([&counts](const fidl::VectorPtr<fidl::StringPtr>& types) {
     EXPECT_EQ(1u, types->size());
     EXPECT_EQ("MyType", types->at(0));
     counts["GetTypes"]++;
   });
-  entity->GetData("MyType", [&counts](const f1dl::StringPtr& data) {
+  entity->GetData("MyType", [&counts](const fidl::StringPtr& data) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
@@ -254,8 +254,8 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EntityPtr entity;
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
-  f1dl::VectorPtr<f1dl::StringPtr> output_types;
-  entity->GetTypes([&output_types](f1dl::VectorPtr<f1dl::StringPtr> result) {
+  fidl::VectorPtr<fidl::StringPtr> output_types;
+  entity->GetTypes([&output_types](fidl::VectorPtr<fidl::StringPtr> result) {
     output_types = std::move(result);
   });
   RunLoopUntilWithTimeout([&output_types] { return !output_types.is_null(); });
@@ -263,9 +263,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EXPECT_EQ(data.size(), output_types->size());
   EXPECT_EQ("type1", output_types->at(0));
 
-  f1dl::StringPtr output_data;
+  fidl::StringPtr output_data;
   entity->GetData(
-      "type1", [&output_data](f1dl::StringPtr result) { output_data = result; });
+      "type1", [&output_data](fidl::StringPtr result) { output_data = result; });
   RunLoopUntilWithTimeout([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }

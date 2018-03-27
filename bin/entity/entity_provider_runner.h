@@ -7,9 +7,9 @@
 
 #include <map>
 
-#include "lib/entity/fidl/entity.fidl.h"
-#include "lib/entity/fidl/entity_provider.fidl.h"
-#include "lib/entity/fidl/entity_reference_factory.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -34,8 +34,8 @@ class EntityProviderRunner : EntityResolver {
 
   void ConnectEntityReferenceFactory(
       const std::string& agent_url,
-      f1dl::InterfaceRequest<EntityReferenceFactory> request);
-  void ConnectEntityResolver(f1dl::InterfaceRequest<EntityResolver> request);
+      fidl::InterfaceRequest<EntityReferenceFactory> request);
+  void ConnectEntityResolver(fidl::InterfaceRequest<EntityResolver> request);
 
   // Called by an EntityProviderController when the entity provider for a
   // component ID doesn't need to live anymore.
@@ -60,22 +60,22 @@ class EntityProviderRunner : EntityResolver {
   // Called by |EntityReferenceFactoryImpl|.
   void CreateReference(
       const std::string& agent_url,
-      const f1dl::StringPtr& cookie,
-      const EntityReferenceFactory::CreateReferenceCallback& callback);
+      fidl::StringPtr cookie,
+      EntityReferenceFactory::CreateReferenceCallback callback);
 
   // |EntityResolver|
-  void ResolveEntity(const f1dl::StringPtr& entity_reference,
-                     f1dl::InterfaceRequest<Entity> entity_request) override;
+  void ResolveEntity(fidl::StringPtr entity_reference,
+                     fidl::InterfaceRequest<Entity> entity_request) override;
 
-  void ResolveDataEntity(const f1dl::StringPtr& entity_reference,
-                         f1dl::InterfaceRequest<Entity> entity_request);
+  void ResolveDataEntity(fidl::StringPtr entity_reference,
+                         fidl::InterfaceRequest<Entity> entity_request);
 
   EntityProviderLauncher* const entity_provider_launcher_;
 
   // component id -> EntityReferenceFactory
   std::map<std::string, std::unique_ptr<EntityReferenceFactoryImpl>>
       entity_reference_factory_bindings_;
-  f1dl::BindingSet<EntityResolver> entity_resolver_bindings_;
+  fidl::BindingSet<EntityResolver> entity_resolver_bindings_;
 
   // These are the running entity providers.
   // component id -> EntityProviderController.

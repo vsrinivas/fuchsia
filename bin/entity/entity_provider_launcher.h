@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/cpp/modular.h>
-#include "lib/entity/fidl/entity_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 
@@ -20,8 +20,8 @@ class EntityProviderLauncher {
  public:
   virtual void ConnectToEntityProvider(
       const std::string& agent_url,
-      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request) = 0;
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request) = 0;
 
  protected:
   virtual ~EntityProviderLauncher();

@@ -8,8 +8,10 @@
 
 #include <utility>
 
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/type_converter.h"
 #include "peridot/bin/entity/entity_provider_controller.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/util/string_escape.h"
@@ -23,7 +25,7 @@ constexpr size_t kDataEntityMaxByteSize = 1024 * 16;
 
 // Given an agent_url and a cookie, encodes it into an entity reference.
 std::string EncodeEntityReference(const std::string& agent_url,
-                                  const f1dl::StringPtr& cookie) {
+                                  fidl::StringPtr cookie) {
   std::vector<std::string> parts(3);
   parts[0] = kEntityReferencePrefix;
   parts[1] = StringEscape(agent_url, "/");
@@ -79,7 +81,7 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
       : agent_url_(agent_url),
         entity_provider_runner_(entity_provider_runner) {}
 
-  void AddBinding(f1dl::InterfaceRequest<EntityReferenceFactory> request) {
+  void AddBinding(fidl::InterfaceRequest<EntityReferenceFactory> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
@@ -89,14 +91,14 @@ class EntityProviderRunner::EntityReferenceFactoryImpl
 
  private:
   // |EntityReferenceFactory|
-  void CreateReference(const f1dl::StringPtr& cookie,
-                       const CreateReferenceCallback& callback) override {
+  void CreateReference(fidl::StringPtr cookie,
+                       CreateReferenceCallback callback) override {
     entity_provider_runner_->CreateReference(agent_url_, cookie, callback);
   }
 
   const std::string agent_url_;
   EntityProviderRunner* const entity_provider_runner_;
-  f1dl::BindingSet<EntityReferenceFactory> bindings_;
+  fidl::BindingSet<EntityReferenceFactory> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityReferenceFactoryImpl);
 };
@@ -118,17 +120,17 @@ class EntityProviderRunner::DataEntity : Entity {
     });
   };
 
-  void AddBinding(f1dl::InterfaceRequest<Entity> request) {
+  void AddBinding(fidl::InterfaceRequest<Entity> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
  private:
   // |Entity|
-  void GetTypes(const GetTypesCallback& result) {
-    result(f1dl::VectorPtr<f1dl::StringPtr>::From<>(types_));
+  void GetTypes(GetTypesCallback result) {
+    result(fxl::To<fidl::VectorPtr<fidl::StringPtr>>(types_));
   }
   // |Entity|
-  void GetData(const f1dl::StringPtr& type, const GetDataCallback& result) {
+  void GetData(fidl::StringPtr type, GetDataCallback result) {
     auto it = data_.find(type);
     if (it != data_.end()) {
       result(it->second);
@@ -139,7 +141,7 @@ class EntityProviderRunner::DataEntity : Entity {
 
   std::vector<std::string> types_;
   std::map<std::string, std::string> data_;
-  f1dl::BindingSet<Entity> bindings_;
+  fidl::BindingSet<Entity> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DataEntity);
 };
@@ -152,7 +154,7 @@ EntityProviderRunner::~EntityProviderRunner() = default;
 
 void EntityProviderRunner::ConnectEntityReferenceFactory(
     const std::string& agent_url,
-    f1dl::InterfaceRequest<EntityReferenceFactory> request) {
+    fidl::InterfaceRequest<EntityReferenceFactory> request) {
   auto it = entity_reference_factory_bindings_.find(agent_url);
   if (it == entity_reference_factory_bindings_.end()) {
     bool inserted;
@@ -168,7 +170,7 @@ void EntityProviderRunner::ConnectEntityReferenceFactory(
 }
 
 void EntityProviderRunner::ConnectEntityResolver(
-    f1dl::InterfaceRequest<EntityResolver> request) {
+    fidl::InterfaceRequest<EntityResolver> request) {
   entity_resolver_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -194,15 +196,15 @@ std::string EntityProviderRunner::CreateReferenceFromData(
 
 void EntityProviderRunner::CreateReference(
     const std::string& agent_url,
-    const f1dl::StringPtr& cookie,
-    const EntityReferenceFactory::CreateReferenceCallback& callback) {
+    fidl::StringPtr cookie,
+    EntityReferenceFactory::CreateReferenceCallback callback) {
   auto entity_ref = EncodeEntityReference(agent_url, cookie);
   callback(entity_ref);
 }
 
 void EntityProviderRunner::ResolveDataEntity(
-    const f1dl::StringPtr& entity_reference,
-    f1dl::InterfaceRequest<Entity> entity_request) {
+    fidl::StringPtr entity_reference,
+    fidl::InterfaceRequest<Entity> entity_request) {
   std::map<std::string, std::string> entity_data;
   if (!DecodeEntityDataReference(entity_reference, &entity_data)) {
     FXL_LOG(INFO) << "Could not decode entity reference: " << entity_reference;
@@ -226,8 +228,8 @@ void EntityProviderRunner::OnDataEntityFinished(
 }
 
 void EntityProviderRunner::ResolveEntity(
-    const f1dl::StringPtr& entity_reference,
-    f1dl::InterfaceRequest<Entity> entity_request) {
+    fidl::StringPtr entity_reference,
+    fidl::InterfaceRequest<Entity> entity_request) {
   if (entity_reference.get().find(kEntityDataReferencePrefix) == 0ul) {
     ResolveDataEntity(entity_reference, std::move(entity_request));
     return;

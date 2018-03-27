@@ -26,26 +26,26 @@ class EntityProviderController::EntityImpl : Entity {
 
   // Serves this |Entity| for the cookie this |EntityImpl| was instantiated
   // for.
-  void ProvideEntity(f1dl::InterfaceRequest<Entity> request) {
+  void ProvideEntity(fidl::InterfaceRequest<Entity> request) {
     entity_bindings_.AddBinding(this, std::move(request));
   }
 
  private:
   // |Entity|
-  void GetTypes(const GetTypesCallback& callback) override {
+  void GetTypes(GetTypesCallback callback) override {
     entity_provider_->GetTypes(cookie_, callback);
   }
 
   // |Entity|
-  void GetData(const f1dl::StringPtr& type,
-               const GetDataCallback& callback) override {
+  void GetData(fidl::StringPtr type,
+               GetDataCallback callback) override {
     entity_provider_->GetData(cookie_, type, callback);
   }
 
   EntityProviderController* const entity_provider_controller_;
   EntityProvider* const entity_provider_;
   const std::string cookie_;
-  f1dl::BindingSet<Entity> entity_bindings_;
+  fidl::BindingSet<Entity> entity_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityImpl);
 };
@@ -69,7 +69,7 @@ EntityProviderController::~EntityProviderController() = default;
 
 void EntityProviderController::ProvideEntity(
     const std::string& cookie,
-    f1dl::InterfaceRequest<Entity> request) {
+    fidl::InterfaceRequest<Entity> request) {
   auto it = entity_impls_.find(cookie);
   if (it == entity_impls_.end()) {
     bool inserted;

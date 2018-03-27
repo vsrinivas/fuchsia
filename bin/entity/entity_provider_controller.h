@@ -8,8 +8,8 @@
 #include <map>
 
 #include <fuchsia/cpp/modular.h>
-#include "lib/entity/fidl/entity.fidl.h"
-#include "lib/entity/fidl/entity_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
@@ -33,7 +33,7 @@ class EntityProviderController {
   // Called by |EntityProviderRunner| when an |Entity| needs to be provided,
   // usually when an entity reference is being resolved to an |Entity|.
   void ProvideEntity(const std::string& cookie,
-                     f1dl::InterfaceRequest<Entity> request);
+                     fidl::InterfaceRequest<Entity> request);
 
  private:
   // This class manages the lifetime of all |Entity|s for a given cookie.
