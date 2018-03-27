@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-s912-gpio.c \
+    $(LOCAL_DIR)/aml-gxl-gpio.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
