@@ -115,10 +115,6 @@ package("ledger_tests") {
       # Marking it as disabled puts the binary in /system/test/disabled/.
       disabled = true
     },
-    {
-      name = "run_ledger_benchmarks.sh"
-      disabled = true
-    },
   ]
 
   resources = [
