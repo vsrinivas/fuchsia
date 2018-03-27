@@ -24,6 +24,7 @@ type ControlSrvr struct {
 }
 
 func NewControlSrvr(d *daemon.Daemon) *ControlSrvr {
+	go bindings2.Serve()
 	return &ControlSrvr{daemon: d}
 }
 
@@ -95,6 +96,6 @@ func (c *ControlSrvr) Quit() {
 }
 
 func (c *ControlSrvr) Bind(ch zx.Channel) error {
-	s := amber.ControlStub{Impl: &ControlSrvr{}}
+	s := amber.ControlStub{Impl: c}
 	return c.bs.Add(&s, ch)
 }

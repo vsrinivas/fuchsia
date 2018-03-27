@@ -22,6 +22,8 @@ import (
 	"amber/pkg"
 	"amber/source"
 
+	amber_fidl "fuchsia/go/amber"
+
 	"application/lib/app/context"
 	"syscall/zx"
 
@@ -82,7 +84,7 @@ func main() {
 func startFIDLSvr(d *daemon.Daemon) {
 	cxt := context.CreateFromStartupInfo()
 	apiSrvr := ipcserver.NewControlSrvr(d)
-	cxt.OutgoingService.AddService("amber", func(c zx.Channel) error {
+	cxt.OutgoingService.AddService(amber_fidl.ControlName, func(c zx.Channel) error {
 		return apiSrvr.Bind(c)
 	})
 	cxt.Serve()
