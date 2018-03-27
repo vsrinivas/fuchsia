@@ -18,13 +18,7 @@
   cpus {
     #address-cells = <1>;
     #size-cells = <0>;
-
-    cpu@0 {
-      device_type = "cpu";
-      compatible = "arm,cortex-a53", "arm,armv8";
-      reg = <0>;
-      enable-method = "psci";
-    };
+    // CPU list will be populated at run-time.
   };
 
   memory@0 {
@@ -40,6 +34,7 @@
   psci {
     compatible = "arm,psci";
     method = "smc";
+    cpu_on = <0xc4000003>;
   };
 
   timer {
