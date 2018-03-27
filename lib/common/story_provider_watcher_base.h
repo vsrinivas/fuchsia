@@ -5,9 +5,9 @@
 #ifndef APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_
 #define APPS_MODULAR_LIB_COMMON_STORY_PROVIDER_WATCHER_BASE_
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
-#include "lib/story/fidl/story_provider.fidl.h"
 
 namespace modular {
 
@@ -36,13 +36,13 @@ class StoryProviderWatcherBase : modular::StoryProviderWatcher {
 
  private:
   // |StoryProviderWatcher|
-  void OnDelete(const ::f1dl::StringPtr& story_id) override;
+  void OnDelete(::fidl::StringPtr story_id) override;
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr story_info,
+  void OnChange(modular::StoryInfo story_info,
                 modular::StoryState story_state) override;
 
-  f1dl::Binding<modular::StoryProviderWatcher> binding_;
+  fidl::Binding<modular::StoryProviderWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderWatcherBase);
 };
 

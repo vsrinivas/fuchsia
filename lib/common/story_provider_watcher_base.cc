@@ -27,9 +27,9 @@ void StoryProviderWatcherBase::Reset() {
   binding_.Unbind();
 }
 
-void StoryProviderWatcherBase::OnDelete(const ::f1dl::StringPtr& /*story_id*/) {}
+void StoryProviderWatcherBase::OnDelete(::fidl::StringPtr /*story_id*/) {}
 
-void StoryProviderWatcherBase::OnChange(modular::StoryInfoPtr /*story_info*/,
+void StoryProviderWatcherBase::OnChange(modular::StoryInfo /*story_info*/,
                                         modular::StoryState /*story_state*/) {
   continue_();
 }
