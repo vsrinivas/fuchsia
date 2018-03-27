@@ -10,14 +10,26 @@ integration tests).
 ## Instructions
 
 #### Prerequisites
-- An instance of zircon running (on QEMU or real device), configured with
-  networking. For example, see [networking configuration
-  doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
-  For QEMU, see also the warning below.
+- Create a Fuchsia image for testing. For example, run these commands on your
+  host build machine:
+    ```sh
+    $ fx set x64 --packages peridot/packages/products/test_modular
+    $ fx full-build
+    ```
+    The `test_modular` package makes the following changes compared to the
+    default build image:
+    - Disables `device_runner` and the GUI shell at startup. Runs
+      `test_runner` instead.
+    - Includes the files from the Peridot layer that comprise the tests.
 
-- A build configuration that runs `test_runner` at startup. For example:
-  `fx set x64 --packages peridot/packages/products/test_modular`. Alternatively,
-   you can run `test_runner` from the shell.
+    Note: Before 2018, it was possible to run the Peridot test suite by running
+    `test_runner` from the standard Fuchsia image. This no longer works because
+    the Peridot tests in `/system/test` are no longer part of the default image.
+
+- Boot your Fuchsia image on a QEMU or real device configured with networking.
+  For example, see
+  [networking configuration doc](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Enabling-Network).
+  For QEMU, also see the warning below.
 
 *** note
 **QEMU**: `test_runner` doesn't currently work with the default networking
@@ -28,27 +40,33 @@ e1000,netdev=net0 -netdev user,id=net0,hostfwd=tcp::8342-:8342` and then run
 
 #### Running the tests
 
-The script will automatically search for a Zircon device on the local
-subnet and use it. This discovery is performed using ipv6. This process
-works for both QEMU and for real hardware, but not for the
-[Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
+The `run_test` script is run from the host. It automatically searches for a
+Fuchsia device on the local subnet and uses it. This discovery is performed
+using ipv6. This process works for both QEMU and for real hardware, but not for
+the [Fuchsia test infrastructure](#Fuchsia-test-infrastructure).
 
-Run a test using `//garnet/bin/test_runner/run_test`. For example:
+The device must already be running `test_runner` as described above under
+Prerequisites.
 
-```sh
-$ fx exec garnet/bin/test_runner/run_test "device_runner --ledger_repository_for_testing --device_shell=dummy_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/agent_trigger_test"
-```
-
-This will return when it has completed (either by succeeding or crashing). You
-can watch the QEMU console to see any console output written by test. In case of
-a crash, this console output will also be dumped by `run_test`.
-
-You can also run a series of tests by supplying a JSON file describing the
-tests to run:
+`run_test` is most commonly used to run a series of tests by supplying a JSON
+file describing those tests:
 
 ```sh
 $ fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json
 ```
+
+This will return when the tests have completed, either by succeeding or
+crashing. You can watch the QEMU console to see any console output written by
+test. In case of a crash, this console output will also be dumped by `run_test`.
+
+To run a single test from the test suite in the JSON file:
+
+```sh
+$ fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json --test_name trigger
+```
+
+Note that the `--sync` parameter for run_test is currently broken because the
+system image is read-only to prepare for pkgfs.
 
 #### Selecting between multiple devices
 
@@ -80,22 +98,7 @@ ipv4 address for the `--server` parameter. However, there are caveats:
 
 ## Test Config Description
 
-You can control the testing configuration by passing `run_test` the name of a
-JSON file with the `--test_file` parameter. For example:
-
-```
-fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json
-```
-
-You can select a particular test to run by passing `run_test` the --test_name
-parameter in addition to the name of a JSON file with the `--test_file`
-parameter. For example:
-
-```
-fx exec garnet/bin/test_runner/run_test --test_file=peridot/tests/modular_tests.json --test_name=parent_child
-```
-
-The JSON file looks similar to this:
+The JSON file specified by `--test_file` parameter looks similar to this:
 
 ```
 {
