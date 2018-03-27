@@ -26,6 +26,7 @@ public:
     static int CmdPciUnplug(int argc, const cmd_args *argv, uint32_t flags);
     static int CmdPciReset(int argc, const cmd_args *argv, uint32_t flags);
     static int CmdPciRescan(int argc, const cmd_args *argv, uint32_t flags);
+    static int CmdPciRegionDump(int argc, const cmd_args *argv, uint32_t flags);
 };
 
 /* Class code/Subclass code definitions taken from
@@ -740,6 +741,23 @@ int PcieDebugConsole::CmdPciRescan(int argc, const cmd_args *argv, uint32_t flag
     return bus_drv->RescanDevices();
 }
 
+int PcieDebugConsole::CmdPciRegionDump(int argc, const cmd_args *argv, uint32_t flags) {
+    auto walk_cb = [](const ralloc_region_t* r) -> bool {
+        printf("\tregion { base = %" PRIxPTR ", size = %#lx }\n", r->base, r->size);
+        return true;
+    };
+
+    auto bus_drv = PcieBusDriver::GetDriver();
+    printf("mmio_low:\n");
+    bus_drv->mmio_lo_regions_.WalkAllocatedRegions(walk_cb);
+    printf("mmio_high:\n");
+    bus_drv->mmio_hi_regions_.WalkAllocatedRegions(walk_cb);
+    printf("pio:\n");
+    bus_drv->pio_regions_.WalkAllocatedRegions(walk_cb);
+
+    return ZX_OK;
+}
+
 STATIC_COMMAND_START
 STATIC_COMMAND("lspci",
                "Enumerate the devices detected in PCIe ECAM space",
@@ -754,6 +772,9 @@ STATIC_COMMAND("pcirescan",
                "Force a rescan of the PCIe configuration space, matching drivers to unclaimed "
                "devices as we go.  Then attempt to start all newly claimed devices.",
                &PcieDebugConsole::CmdPciRescan)
+STATIC_COMMAND("pciregions",
+               "Dump information on present PCI address region allocations",
+               &PcieDebugConsole::CmdPciRegionDump)
 STATIC_COMMAND_END(pcie);
 
 #endif  // WITH_LIB_CONSOLE
