@@ -37,7 +37,6 @@ interface ModuleContext {
   // Providing a |surface_relation| will advise the StoryShell how to layout
   // surfaces that the new module creates. If |surface_relation|
   // is null then a default relation is used.
-  // TODO(thatguy): Rename to StartModuleDeprecated().
   2: StartModule(string name, Daisy daisy,
                 request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
@@ -58,19 +57,18 @@ interface ModuleContext {
   // interact by exchanging ServiceProviders. The new Module
   // instance may implement |incoming_services|, if an interface
   // request is supplied.
-  // TODO(thatguy): Rename to EmbedModule().
   3: EmbedModule(string name, Daisy daisy,
                 request<component.ServiceProvider>? incoming_services,
                 request<ModuleController> module_controller,
                 request<views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
 
-  // DEPRECATED: Use EmbedDaisy().
+  // DEPRECATED: Use EmbedModule().
   4: StartModuleDeprecated(string name, string module_url, string? link_name,
                           request<component.ServiceProvider>? incoming_services,
                           request<ModuleController> module_controller,
                           request<views_v1_token.ViewOwner> view_owner);
 
-  // DEPRECATED: Use StartDaisy().
+  // DEPRECATED: Use StartModule().
   5: StartModuleInShellDeprecated(string name, string module_url, string? link_name,
                                  request<component.ServiceProvider>? incoming_services,
                                  request<ModuleController> module_controller,
@@ -104,11 +102,7 @@ interface ModuleContext {
   // The EmbedModuleWatcher may be null, then EmbedModule() does exactly the
   // same as StartModuleDeprecated().
   //
-  // TODO(mesch): There is no Daisy variant of this call yet. Specifying a
-  // desired module by URL should just be expressible as a Daisy too, and then
-  // the URL and Daisy variants of these calls should be merged.
-  // TODO(thatguy): This doesn't appear to be used outside peridot tests.
-  // Consider removing it if it's not in fact used.
+  // DEPRECATED: This is going to be removed.
   6: EmbedModuleDeprecated(string name, string module_url, string? link_name,
                           request<component.ServiceProvider>? incoming_services,
                           request<ModuleController> module_controller,
