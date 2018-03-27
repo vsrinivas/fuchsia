@@ -15,6 +15,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_utils.h"
+#include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {
@@ -126,11 +127,11 @@ LedgerManager::LedgerManager(
     Environment* environment,
     std::unique_ptr<encryption::EncryptionService> encryption_service,
     std::unique_ptr<storage::LedgerStorage> storage,
-    std::unique_ptr<cloud_sync::LedgerSync> sync)
+    std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync)
     : environment_(environment),
       encryption_service_(std::move(encryption_service)),
       storage_(std::move(storage)),
-      sync_(std::move(sync)),
+      ledger_sync_(std::move(ledger_sync)),
       ledger_impl_(this),
       merge_manager_(environment_) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
@@ -228,10 +229,10 @@ LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
 std::unique_ptr<PageManager> LedgerManager::NewPageManager(
     std::unique_ptr<storage::PageStorage> page_storage,
     PageManager::PageStorageState state) {
-  std::unique_ptr<cloud_sync::PageSync> page_sync;
-  if (sync_) {
-    page_sync =
-        sync_->CreatePageSync(page_storage.get(), page_storage.get(), [] {
+  std::unique_ptr<sync_coordinator::PageSync> page_sync;
+  if (ledger_sync_) {
+    page_sync = ledger_sync_->CreatePageSync(
+        page_storage.get(), page_storage.get(), [] {
           // TODO(ppi): reinitialize the sync?
           FXL_LOG(ERROR) << "Page Sync stopped due to unrecoverable error.";
         });

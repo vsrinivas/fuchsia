@@ -21,6 +21,7 @@
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/public/types.h"
+#include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -38,7 +39,7 @@ class LedgerManager : public LedgerImpl::Delegate,
       Environment* environment,
       std::unique_ptr<encryption::EncryptionService> encryption_service,
       std::unique_ptr<storage::LedgerStorage> storage,
-      std::unique_ptr<cloud_sync::LedgerSync> sync);
+      std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync);
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -91,7 +92,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   Environment* const environment_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
   std::unique_ptr<storage::LedgerStorage> storage_;
-  std::unique_ptr<cloud_sync::LedgerSync> sync_;
+  std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync_;
   LedgerImpl ledger_impl_;
   // |merge_manager_| must be destructed after |page_managers_| to ensure it
   // outlives any page-specific merge resolver.

@@ -17,7 +17,7 @@ namespace ledger {
 
 PageManager::PageManager(Environment* environment,
                          std::unique_ptr<storage::PageStorage> page_storage,
-                         std::unique_ptr<cloud_sync::PageSync> page_sync,
+                         std::unique_ptr<sync_coordinator::PageSync> page_sync,
                          std::unique_ptr<MergeResolver> merge_resolver,
                          PageManager::PageStorageState state,
                          fxl::TimeDelta sync_timeout)

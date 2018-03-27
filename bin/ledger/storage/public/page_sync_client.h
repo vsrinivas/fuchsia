@@ -17,8 +17,8 @@ class PageSyncClient {
   PageSyncClient() {}
   virtual ~PageSyncClient() {}
 
-  // Sets the PageSyncDelegate for this page. A nullptr can be passed to
-  // unset a previously set value.
+  // Sets the PageSyncDelegate for this page. A nullptr can be passed to unset a
+  // previously set value.
   virtual void SetSyncDelegate(PageSyncDelegate* page_sync) = 0;
 
  private:

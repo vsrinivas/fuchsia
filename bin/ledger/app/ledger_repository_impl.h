@@ -7,16 +7,17 @@
 
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/ledger_internal.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
-#include "peridot/bin/ledger/cloud_sync/public/user_config.h"
-#include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
+#include "peridot/bin/ledger/p2p_sync/public/user_communicator.h"
+#include "peridot/bin/ledger/sync_coordinator/public/user_sync.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -27,7 +28,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   LedgerRepositoryImpl(std::string base_storage_dir,
                        Environment* environment,
                        std::unique_ptr<SyncWatcherSet> watchers,
-                       std::unique_ptr<cloud_sync::UserSync> user_sync);
+                       std::unique_ptr<sync_coordinator::UserSync> user_sync);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
@@ -69,7 +70,7 @@ class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
   Environment* const environment_;
   encryption::EncryptionServiceFactoryImpl encryption_service_factory_;
   std::unique_ptr<SyncWatcherSet> watchers_;
-  std::unique_ptr<cloud_sync::UserSync> user_sync_;
+  std::unique_ptr<sync_coordinator::UserSync> user_sync_;
   callback::AutoCleanableMap<std::string,
                              LedgerManager,
                              convert::StringViewComparator>

@@ -8,11 +8,11 @@
 #include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
-#include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
+#include "peridot/bin/ledger/sync_coordinator/public/sync_state_watcher.h"
 
 namespace ledger {
 
-class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
+class SyncWatcherSet : public sync_coordinator::SyncStateWatcher {
  public:
   SyncWatcherSet();
   ~SyncWatcherSet() override;
@@ -22,8 +22,6 @@ class SyncWatcherSet : public cloud_sync::SyncStateWatcher {
 
   // Notify the client watchers of a new state.
   void Notify(SyncStateContainer sync_state) override;
-
-  using cloud_sync::SyncStateWatcher::Notify;
 
  private:
   class SyncWatcherContainer;

@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 
 #include <trace/event.h>
+#include <unistd.h>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fxl/files/directory.h"
@@ -17,6 +18,10 @@
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/cloud_sync/impl/user_sync_impl.h"
+#include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
+#include "peridot/bin/ledger/p2p_provider/impl/user_id_provider_impl.h"
+#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
+#include "peridot/bin/ledger/sync_coordinator/impl/user_sync_impl.h"
 
 namespace ledger {
 
@@ -158,8 +163,11 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    ledger::Environment* environment)
-    : environment_(environment) {}
+    ledger::Environment* environment,
+    std::unique_ptr<p2p_sync::UserCommunicatorFactory>
+        user_communicator_factory)
+    : environment_(environment),
+      user_communicator_factory_(std::move(user_communicator_factory)) {}
 
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
@@ -231,16 +239,32 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   fxl::Closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
-  auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
+  auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
       std::make_unique<backoff::ExponentialBackoff>(),
       std::move(on_version_mismatch));
-  user_sync->SetSyncWatcher(watchers.get());
+  std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync =
+      CreateP2PSync(repository_information);
+
+  auto user_sync = std::make_unique<sync_coordinator::UserSyncImpl>(
+      std::move(cloud_sync), std::move(p2p_sync));
+  user_sync->SetWatcher(watchers.get());
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
       std::move(user_sync));
   container->SetRepository(Status::OK, std::move(repository));
+}
+
+std::unique_ptr<p2p_sync::UserCommunicator>
+LedgerRepositoryFactoryImpl::CreateP2PSync(
+    const RepositoryInformation& repository_information) {
+  if (!user_communicator_factory_) {
+    return nullptr;
+  }
+
+  return user_communicator_factory_->GetDefaultUserCommunicator(
+      repository_information.content_path);
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(

@@ -19,11 +19,11 @@
 #include "peridot/bin/ledger/app/page_delegate.h"
 #include "peridot/bin/ledger/app/page_snapshot_impl.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
-#include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
+#include "peridot/bin/ledger/sync_coordinator/public/page_sync.h"
 
 namespace ledger {
 // Manages a ledger page.
@@ -49,7 +49,7 @@ class PageManager : public ledger_internal::PageDebug {
   // deleted when it goes away.
   PageManager(Environment* environment,
               std::unique_ptr<storage::PageStorage> page_storage,
-              std::unique_ptr<cloud_sync::PageSync> page_sync,
+              std::unique_ptr<sync_coordinator::PageSync> page_sync,
               std::unique_ptr<MergeResolver> merge_resolver,
               PageManager::PageStorageState state,
               fxl::TimeDelta sync_timeout = fxl::TimeDelta::FromSeconds(5));
@@ -96,7 +96,7 @@ class PageManager : public ledger_internal::PageDebug {
 
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;
-  std::unique_ptr<cloud_sync::PageSync> page_sync_;
+  std::unique_ptr<sync_coordinator::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const fxl::TimeDelta sync_timeout_;
   callback::AutoCleanableSet<

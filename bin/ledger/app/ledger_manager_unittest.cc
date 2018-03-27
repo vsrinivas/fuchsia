@@ -24,6 +24,7 @@
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
+#include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -87,12 +88,12 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
 
-class FakeLedgerSync : public cloud_sync::LedgerSync {
+class FakeLedgerSync : public sync_coordinator::LedgerSync {
  public:
   FakeLedgerSync() {}
   ~FakeLedgerSync() override {}
 
-  std::unique_ptr<cloud_sync::PageSync> CreatePageSync(
+  std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
       storage::PageStorage* /*page_storage*/,
       storage::PageSyncClient* /*page_sync_client*/,
       fxl::Closure /*error_callback*/) override {

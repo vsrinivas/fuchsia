@@ -18,14 +18,14 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
-#include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
-#include "peridot/bin/ledger/cloud_sync/testing/page_sync_empty_impl.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/storage/testing/commit_empty_impl.h"
+#include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
+#include "peridot/bin/ledger/sync_coordinator/testing/page_sync_empty_impl.h"
 
 namespace ledger {
 namespace {
@@ -45,7 +45,7 @@ std::string ToString(const mem::BufferPtr& vmo) {
   return value;
 }
 
-class FakePageSync : public cloud_sync::PageSyncEmptyImpl {
+class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
  public:
   void Start() override { start_called = true; }
 
@@ -57,12 +57,12 @@ class FakePageSync : public cloud_sync::PageSyncEmptyImpl {
 
   void SetOnIdle(fxl::Closure on_idle) override { this->on_idle = on_idle; }
 
-  void SetSyncWatcher(cloud_sync::SyncStateWatcher* watcher) override {
+  void SetSyncWatcher(sync_coordinator::SyncStateWatcher* watcher) override {
     this->watcher = watcher;
   }
 
   bool start_called = false;
-  cloud_sync::SyncStateWatcher* watcher = nullptr;
+  sync_coordinator::SyncStateWatcher* watcher = nullptr;
   fxl::Closure on_backlog_downloaded_callback;
   fxl::Closure on_idle;
 };

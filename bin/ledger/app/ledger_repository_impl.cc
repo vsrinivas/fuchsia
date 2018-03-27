@@ -7,7 +7,9 @@
 #include <trace/event.h>
 
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
+#include "peridot/bin/ledger/p2p_sync/public/ledger_communicator.h"
 #include "peridot/bin/ledger/storage/impl/ledger_storage_impl.h"
+#include "peridot/bin/ledger/sync_coordinator/public/ledger_sync.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
@@ -16,7 +18,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::string base_storage_dir,
     Environment* environment,
     std::unique_ptr<SyncWatcherSet> watchers,
-    std::unique_ptr<cloud_sync::UserSync> user_sync)
+    std::unique_ptr<sync_coordinator::UserSync> user_sync)
     : base_storage_dir_(std::move(base_storage_dir)),
       environment_(environment),
       encryption_service_factory_(environment->main_runner()),
@@ -67,7 +69,7 @@ void LedgerRepositoryImpl::GetLedger(
         std::make_unique<storage::LedgerStorageImpl>(
             environment_->main_runner(), environment_->coroutine_service(),
             encryption_service.get(), base_storage_dir_, name_as_string);
-    std::unique_ptr<cloud_sync::LedgerSync> ledger_sync;
+    std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
     if (user_sync_) {
       ledger_sync = user_sync_->CreateLedgerSync(name_as_string,
                                                  encryption_service.get());
