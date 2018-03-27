@@ -196,9 +196,9 @@ void PageDownload::SetRemoteWatcher(bool is_retry) {
       }));
 }
 
-void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                                 fidl::VectorPtr<uint8_t> position_token,
-                                const OnNewCommitsCallback& callback) {
+                                OnNewCommitsCallback callback) {
   if (batch_download_) {
     // If there is already a commit batch being downloaded, save the new commits
     // to be downloaded when it is done.
@@ -214,8 +214,8 @@ void PageDownload::OnNewCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commi
 }
 
 void PageDownload::OnNewObject(fidl::VectorPtr<uint8_t> /*id*/,
-                               fsl::SizedVmoTransportPtr /*data*/,
-                               const OnNewObjectCallback& /*callback*/) {
+                               fsl::SizedVmoTransport /*data*/,
+                               OnNewObjectCallback /*callback*/) {
   // No known cloud provider implementations use this method.
   // TODO(ppi): implement this method when we have such cloud provider
   // implementations.
@@ -249,9 +249,10 @@ void PageDownload::OnError(cloud_provider::Status status) {
   HandleDownloadCommitError("Received unexpected error from PageCloudWatcher.");
 }
 
-void PageDownload::DownloadBatch(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
-                                 fidl::VectorPtr<uint8_t> position_token,
-                                 fxl::Closure on_done) {
+void PageDownload::DownloadBatch(
+    fidl::VectorPtr<cloud_provider::Commit> commits,
+    fidl::VectorPtr<uint8_t> position_token,
+    fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, encryption_service_, std::move(commits),
@@ -271,7 +272,7 @@ void PageDownload::DownloadBatch(fidl::VectorPtr<cloud_provider::CommitPtr> comm
           return;
         }
         auto commits = std::move(commits_to_download_);
-        commits_to_download_ = fidl::VectorPtr<cloud_provider::CommitPtr>::New(0);
+        commits_to_download_ = fidl::VectorPtr<cloud_provider::Commit>::New(0);
         DownloadBatch(std::move(commits), std::move(position_token_), nullptr);
       },
       [this] {

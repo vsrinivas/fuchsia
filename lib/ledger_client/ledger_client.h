@@ -15,7 +15,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {

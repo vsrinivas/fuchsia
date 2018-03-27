@@ -76,7 +76,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
             case MergePolicy::AUTOMATIC_WITH_FALLBACK: {
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
-                  convert::ToArray(page_id), conflict_resolver.NewRequest());
+                  page_id, conflict_resolver.NewRequest());
               std::unique_ptr<AutoMergeStrategy> auto_merge_strategy =
                   std::make_unique<AutoMergeStrategy>(
                       std::move(conflict_resolver));
@@ -88,7 +88,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
             case MergePolicy::CUSTOM: {
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
-                  convert::ToArray(page_id), conflict_resolver.NewRequest());
+                  page_id, conflict_resolver.NewRequest());
               std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
                   std::make_unique<CustomMergeStrategy>(
                       std::move(conflict_resolver));

@@ -18,7 +18,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/time/time_delta.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

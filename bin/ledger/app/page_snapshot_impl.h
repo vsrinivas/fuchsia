@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "lib/fxl/tasks/task_runner.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
@@ -26,21 +26,21 @@ class PageSnapshotImpl : public PageSnapshot {
   // PageSnapshot:
   void GetEntries(fidl::VectorPtr<uint8_t> key_start,
                   fidl::VectorPtr<uint8_t> token,
-                  const GetEntriesCallback& callback) override;
+                  GetEntriesCallback callback) override;
   void GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
                         fidl::VectorPtr<uint8_t> token,
-                        const GetEntriesInlineCallback& callback) override;
+                        GetEntriesInlineCallback callback) override;
   void GetKeys(fidl::VectorPtr<uint8_t> key_start,
                fidl::VectorPtr<uint8_t> token,
-               const GetKeysCallback& callback) override;
-  void Get(fidl::VectorPtr<uint8_t> key, const GetCallback& callback) override;
+               GetKeysCallback callback) override;
+  void Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) override;
   void GetInline(fidl::VectorPtr<uint8_t> key,
-                 const GetInlineCallback& callback) override;
-  void Fetch(fidl::VectorPtr<uint8_t> key, const FetchCallback& callback) override;
+                 GetInlineCallback callback) override;
+  void Fetch(fidl::VectorPtr<uint8_t> key, FetchCallback callback) override;
   void FetchPartial(fidl::VectorPtr<uint8_t> key,
                     int64_t offset,
                     int64_t max_size,
-                    const FetchPartialCallback& callback) override;
+                    FetchPartialCallback callback) override;
 
   storage::PageStorage* page_storage_;
   std::unique_ptr<const storage::Commit> commit_;

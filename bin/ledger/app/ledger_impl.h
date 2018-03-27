@@ -7,9 +7,9 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
 #include "peridot/lib/convert/convert.h"
@@ -45,16 +45,15 @@ class LedgerImpl : public Ledger {
  private:
   // Ledger:
   void GetRootPage(fidl::InterfaceRequest<Page> page_request,
-                   const GetRootPageCallback& callback) override;
-  void GetPage(fidl::VectorPtr<uint8_t> id,
+                   GetRootPageCallback callback) override;
+  void GetPage(PageIdPtr id,
                fidl::InterfaceRequest<Page> page_request,
-               const GetPageCallback& callback) override;
-  void DeletePage(fidl::VectorPtr<uint8_t> id,
-                  const DeletePageCallback& callback) override;
+               GetPageCallback callback) override;
+  void DeletePage(PageId id, DeletePageCallback callback) override;
 
   void SetConflictResolverFactory(
       fidl::InterfaceHandle<ConflictResolverFactory> factory,
-      const SetConflictResolverFactoryCallback& callback) override;
+      SetConflictResolverFactoryCallback callback) override;
 
   Delegate* const delegate_;
 

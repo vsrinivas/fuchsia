@@ -28,7 +28,7 @@
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
-#include "peridot/bin/ledger/fidl/debug.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"

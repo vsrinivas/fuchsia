@@ -11,7 +11,7 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/convert/convert.h"

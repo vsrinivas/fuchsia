@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -20,7 +21,6 @@
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/cloud_sync/public/ledger_sync.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
@@ -35,7 +35,7 @@ namespace ledger {
 //
 // When the set of PageImpls becomes empty, client is notified through
 // |on_empty_callback|.
-class PageManager : public PageDebug {
+class PageManager : public ledger_internal::PageDebug {
  public:
   // Whether the page storage was just created (|NEW|) or already present
   // locally (|EXISTING|).
@@ -84,14 +84,14 @@ class PageManager : public PageDebug {
   void CheckEmpty();
   void OnSyncBacklogDownloaded();
 
-  void GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) override;
+  void GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) override;
 
   void GetSnapshot(fidl::VectorPtr<uint8_t> commit_id,
                    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-                   const GetSnapshotCallback& callback) override;
+                   GetSnapshotCallback callback) override;
 
   void GetCommit(fidl::VectorPtr<uint8_t> commit_id,
-                 const GetCommitCallback& callback) override;
+                 GetCommitCallback callback) override;
 
   Environment* const environment_;
   std::unique_ptr<storage::PageStorage> page_storage_;

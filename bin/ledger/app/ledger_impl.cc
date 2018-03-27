@@ -10,10 +10,10 @@
 
 #include <trace/event.h>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
 
@@ -26,6 +26,10 @@ void GenerateRandomId(fidl::VectorPtr<uint8_t>* id) {
   fxl::RandBytes((*id)->data(), kPageIdSize);
 }
 
+void GenerateRandomId(::fidl::Array<uint8_t, kPageIdSize>* id) {
+  fxl::RandBytes(id.mutable_data(), kPageIdSize);
+}
+
 }  // namespace
 
 LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
@@ -34,26 +38,26 @@ LedgerImpl::~LedgerImpl() {}
 
 // GetRootPage(Page& page) => (Status status);
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
-                             const GetRootPageCallback& callback) {
+                             GetRootPageCallback callback) {
   delegate_->GetPage(
       kRootPageId, std::move(page_request),
       TRACE_CALLBACK(callback, "ledger", "ledger_get_root_page"));
 }
 
 // GetPage(array<uint8, 16>? id, Page& page) => (Status status);
-void LedgerImpl::GetPage(fidl::VectorPtr<uint8_t> id,
+void LedgerImpl::GetPage(PageIdPtr id,
                          fidl::InterfaceRequest<Page> page_request,
-                         const GetPageCallback& callback) {
+                         GetPageCallback callback) {
   if (!id) {
-    GenerateRandomId(&id);
+    id = fidl::MakeOptional(PageId());
+    GenerateRandomId(&id->id);
   }
-  delegate_->GetPage(id, std::move(page_request),
+  delegate_->GetPage(id->id, std::move(page_request),
                      TRACE_CALLBACK(callback, "ledger", "ledger_get_page"));
 }
 
 // DeletePage(array<uint8> id) => (Status status);
-void LedgerImpl::DeletePage(fidl::VectorPtr<uint8_t> id,
-                            const DeletePageCallback& callback) {
+void LedgerImpl::DeletePage(PageId id, DeletePageCallback callback) {
   TRACE_DURATION("ledger", "ledger_delete_page");
 
   callback(delegate_->DeletePage(id));
@@ -63,7 +67,7 @@ void LedgerImpl::DeletePage(fidl::VectorPtr<uint8_t> id,
 //     => (Status status);
 void LedgerImpl::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory,
-    const SetConflictResolverFactoryCallback& callback) {
+    SetConflictResolverFactoryCallback callback) {
   TRACE_DURATION("ledger", "ledger_set_conflict_resolver_factory");
 
   delegate_->SetConflictResolverFactory(std::move(factory));

@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_BATCH_DOWNLOAD_H_
 
-#include "garnet/public/lib/fidl/cpp/bindings/array.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/array.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"

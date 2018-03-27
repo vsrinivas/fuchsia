@@ -209,7 +209,7 @@ void ConflictResolverClient::GetDiff(
 }
 
 // Merge(array<MergedValue>? merge_changes) => (Status status);
-void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValuePtr> merged_values,
+void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                                    const MergeCallback& callback) {
   has_merged_values_ = true;
   operation_serializer_.Serialize<Status>(
@@ -264,7 +264,7 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValuePtr> merged_values
 
 // MergeNonConflictingEntries() => (Status status);
 void ConflictResolverClient::MergeNonConflictingEntries(
-    const MergeNonConflictingEntriesCallback& callback) {
+    MergeNonConflictingEntriesCallback callback) {
   auto waiter =
       callback::StatusWaiter<storage::Status>::Create(storage::Status::OK);
 

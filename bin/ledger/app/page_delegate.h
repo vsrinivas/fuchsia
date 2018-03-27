@@ -10,11 +10,11 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/operation_serializer.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/branch_tracker.h"
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/app/page_impl.h"
@@ -52,43 +52,43 @@ class PageDelegate {
   }
 
   // From Page interface, called by PageImpl:
-  void GetId(const Page::GetIdCallback& callback);
+  void GetId(Page::GetIdCallback callback);
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    fidl::VectorPtr<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
-                   const Page::GetSnapshotCallback& callback);
+                   Page::GetSnapshotCallback callback);
 
   void Put(fidl::VectorPtr<uint8_t> key,
            fidl::VectorPtr<uint8_t> value,
-           const Page::PutCallback& callback);
+           Page::PutCallback callback);
 
   void PutWithPriority(fidl::VectorPtr<uint8_t> key,
                        fidl::VectorPtr<uint8_t> value,
                        Priority priority,
-                       const Page::PutWithPriorityCallback& callback);
+                       Page::PutWithPriorityCallback callback);
 
   void PutReference(fidl::VectorPtr<uint8_t> key,
-                    ReferencePtr reference,
+                    Reference reference,
                     Priority priority,
-                    const Page::PutReferenceCallback& callback);
+                    Page::PutReferenceCallback callback);
 
-  void Delete(fidl::VectorPtr<uint8_t> key, const Page::DeleteCallback& callback);
+  void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
-                       std::function<void(Status, ReferencePtr)> callback);
+                       std::function<void(Status, Reference)> callback);
 
-  void StartTransaction(const Page::StartTransactionCallback& callback);
+  void StartTransaction(Page::StartTransactionCallback callback);
 
-  void Commit(const Page::CommitCallback& callback);
+  void Commit(Page::CommitCallback callback);
 
-  void Rollback(const Page::RollbackCallback& callback);
+  void Rollback(Page::RollbackCallback callback);
 
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
-                           const Page::SetSyncStateWatcherCallback& callback);
+                           Page::SetSyncStateWatcherCallback callback);
 
   void WaitForConflictResolution(
-      const Page::WaitForConflictResolutionCallback& callback);
+      Page::WaitForConflictResolutionCallback callback);
 
  private:
   using StatusCallback = std::function<void(Status)>;

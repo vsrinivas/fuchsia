@@ -55,8 +55,9 @@ class LedgerManager::PageManagerContainer {
 
   // Keeps track of |page_debug| and |callback|. Binds |page_debug| and fires
   // |callback| when a PageManager is available or an error occurs.
-  void BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
-                     std::function<void(Status)> callback) {
+  void BindPageDebug(
+      fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
+      std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
       return;
@@ -109,8 +110,8 @@ class LedgerManager::PageManagerContainer {
   std::vector<
       std::pair<fidl::InterfaceRequest<Page>, std::function<void(Status)>>>
       requests_;
-  std::vector<
-      std::pair<fidl::InterfaceRequest<PageDebug>, std::function<void(Status)>>>
+  std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::PageDebug>,
+                        std::function<void(Status)>>>
       debug_requests_;
   fxl::Closure on_empty_callback_;
 
@@ -258,9 +259,10 @@ void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
   callback(std::move(result));
 }
 
-void LedgerManager::GetPageDebug(fidl::VectorPtr<uint8_t> page_id,
-                                 fidl::InterfaceRequest<PageDebug> page_debug,
-                                 const GetPageDebugCallback& callback) {
+void LedgerManager::GetPageDebug(
+    fidl::VectorPtr<uint8_t> page_id,
+    fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
+    GetPageDebugCallback callback) {
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {
     it->second.BindPageDebug(std::move(page_debug), callback);

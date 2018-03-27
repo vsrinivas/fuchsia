@@ -25,7 +25,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 
 namespace ledger {
 

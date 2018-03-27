@@ -11,7 +11,7 @@
 
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 
-#include "garnet/public/lib/fidl/cpp/bindings/binding_set.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include <fuchsia/cpp/modular.h>

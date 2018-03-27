@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 namespace test {

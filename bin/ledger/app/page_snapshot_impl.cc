@@ -12,6 +12,7 @@
 
 #include "garnet/lib/callback/trace_callback.h"
 #include "garnet/lib/callback/waiter.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -68,7 +69,7 @@ storage::Status FillSingleEntry(const storage::Object& object,
   if (status != storage::Status::OK) {
     return status;
   }
-  (*entry)->value = std::move(vmo).ToTransport();
+  (*entry)->value = fidl::MakeOptional(std::move(vmo).ToTransport());
   return storage::Status::OK;
 }
 
@@ -255,22 +256,21 @@ PageSnapshotImpl::~PageSnapshotImpl() {}
 
 void PageSnapshotImpl::GetEntries(fidl::VectorPtr<uint8_t> key_start,
                                   fidl::VectorPtr<uint8_t> token,
-                                  const GetEntriesCallback& callback) {
+                                  GetEntriesCallback callback) {
   FillEntries<Entry>(page_storage_, key_prefix_, commit_.get(),
                      std::move(key_start), std::move(token), callback);
 }
 
-void PageSnapshotImpl::GetEntriesInline(
-    fidl::VectorPtr<uint8_t> key_start,
-    fidl::VectorPtr<uint8_t> token,
-    const GetEntriesInlineCallback& callback) {
+void PageSnapshotImpl::GetEntriesInline(fidl::VectorPtr<uint8_t> key_start,
+                                        fidl::VectorPtr<uint8_t> token,
+                                        GetEntriesInlineCallback callback) {
   FillEntries<InlinedEntry>(page_storage_, key_prefix_, commit_.get(),
                             std::move(key_start), std::move(token), callback);
 }
 
 void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
                                fidl::VectorPtr<uint8_t> token,
-                               const GetKeysCallback& callback) {
+                               GetKeysCallback callback) {
   // Represents the information that needs to be shared between on_next and
   // on_done callbacks.
   struct Context {
@@ -321,8 +321,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
   }
 }
 
-void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key,
-                           const GetCallback& callback) {
+void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_get");
 
   page_storage_->GetEntryFromCommit(
@@ -346,7 +345,7 @@ void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key,
 }
 
 void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
-                                 const GetInlineCallback& callback) {
+                                 GetInlineCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_get_inline");
 
@@ -377,7 +376,7 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
 }
 
 void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
-                             const FetchCallback& callback) {
+                             FetchCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "snapshot_fetch");
 
   page_storage_->GetEntryFromCommit(
@@ -403,7 +402,7 @@ void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
 void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
                                     int64_t offset,
                                     int64_t max_size,
-                                    const FetchPartialCallback& callback) {
+                                    FetchPartialCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "snapshot_fetch_partial");
 

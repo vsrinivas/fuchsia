@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include <fuchsia/cpp/ledger.h>
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {

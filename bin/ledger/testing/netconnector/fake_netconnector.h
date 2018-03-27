@@ -40,11 +40,11 @@ class FakeNetConnector : public netconnector::NetConnector {
 
  private:
   // NetConnector implementation:
-  void RegisterServiceProvider(const fidl::StringPtr& name,
+  void RegisterServiceProvider(fidl::StringPtr name,
                                fidl::InterfaceHandle<component::ServiceProvider>
                                    service_provider) override;
   void GetDeviceServiceProvider(
-      const fidl::StringPtr& device_name,
+      fidl::StringPtr device_name,
       fidl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
   void GetKnownDeviceNames(

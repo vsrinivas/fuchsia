@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
@@ -139,7 +139,7 @@ void PageManager::OnSyncBacklogDownloaded() {
   page_requests_.clear();
 }
 
-void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
+void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
   page_storage_->GetHeadCommitIds(
       [callback](storage::Status status, std::vector<storage::CommitId> heads) {
         fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
@@ -155,7 +155,7 @@ void PageManager::GetHeadCommitsIds(const GetHeadCommitsIdsCallback& callback) {
 void PageManager::GetSnapshot(
     fidl::VectorPtr<uint8_t> commit_id,
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    const GetSnapshotCallback& callback) {
+    GetSnapshotCallback callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
       fxl::MakeCopyable(
@@ -172,7 +172,7 @@ void PageManager::GetSnapshot(
 }
 
 void PageManager::GetCommit(fidl::VectorPtr<uint8_t> commit_id,
-                            const GetCommitCallback& callback) {
+                            GetCommitCallback callback) {
   page_storage_->GetCommit(
       convert::ToStringView(commit_id),
       fxl::MakeCopyable(

@@ -5,25 +5,24 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_LEDGER_REPOSITORY_IMPL_H_
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/ledger_manager.h"
 #include "peridot/bin/ledger/app/sync_watcher_set.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_sync.h"
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/fidl/debug.fidl.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
 
-class LedgerRepositoryImpl : public LedgerRepository,
-                             public LedgerRepositoryDebug {
+class LedgerRepositoryImpl : public ledger_internal::LedgerRepository,
+                             public ledger_internal::LedgerRepositoryDebug {
  public:
   LedgerRepositoryImpl(std::string base_storage_dir,
                        Environment* environment,
@@ -35,8 +34,8 @@ class LedgerRepositoryImpl : public LedgerRepository,
     on_empty_callback_ = on_empty_callback;
   }
 
-  void BindRepository(
-      fidl::InterfaceRequest<LedgerRepository> repository_request);
+  void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository>
+                          repository_request);
 
   // Releases all handles bound to this repository impl.
   std::vector<fidl::InterfaceRequest<LedgerRepository>> Unbind();
@@ -45,25 +44,26 @@ class LedgerRepositoryImpl : public LedgerRepository,
   // LedgerRepository:
   void GetLedger(fidl::VectorPtr<uint8_t> ledger_name,
                  fidl::InterfaceRequest<Ledger> ledger_request,
-                 const GetLedgerCallback& callback) override;
-  void Duplicate(fidl::InterfaceRequest<LedgerRepository> request,
-                 const DuplicateCallback& callback) override;
-  void SetSyncStateWatcher(
-      fidl::InterfaceHandle<SyncWatcher> watcher,
-      const SetSyncStateWatcherCallback& callback) override;
+                 GetLedgerCallback callback) override;
+  void Duplicate(
+      fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
+      DuplicateCallback callback) override;
+  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+                           SetSyncStateWatcherCallback callback) override;
 
   void GetLedgerRepositoryDebug(
-      fidl::InterfaceRequest<LedgerRepositoryDebug> request,
-      const GetLedgerRepositoryDebugCallback& callback) override;
+      fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request,
+      GetLedgerRepositoryDebugCallback callback) override;
 
   void CheckEmpty();
 
   // LedgerRepositoryDebug:
-  void GetInstancesList(const GetInstancesListCallback& callback) override;
+  void GetInstancesList(GetInstancesListCallback callback) override;
 
-  void GetLedgerDebug(fidl::VectorPtr<uint8_t> ledger_name,
-                      fidl::InterfaceRequest<LedgerDebug> request,
-                      const GetLedgerDebugCallback& callback) override;
+  void GetLedgerDebug(
+      fidl::VectorPtr<uint8_t> ledger_name,
+      fidl::InterfaceRequest<ledger_internal::LedgerDebug> request,
+      GetLedgerDebugCallback callback) override;
 
   const std::string base_storage_dir_;
   Environment* const environment_;
@@ -74,10 +74,11 @@ class LedgerRepositoryImpl : public LedgerRepository,
                              LedgerManager,
                              convert::StringViewComparator>
       ledger_managers_;
-  fidl::BindingSet<LedgerRepository> bindings_;
+  fidl::BindingSet<ledger_internal::LedgerRepository> bindings_;
   fxl::Closure on_empty_callback_;
 
-  fidl::BindingSet<LedgerRepositoryDebug> ledger_repository_debug_bindings_;
+  fidl::BindingSet<ledger_internal::LedgerRepositoryDebug>
+      ledger_repository_debug_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImpl);
 };

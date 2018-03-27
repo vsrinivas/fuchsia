@@ -20,7 +20,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"

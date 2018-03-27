@@ -15,7 +15,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

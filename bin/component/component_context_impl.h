@@ -13,7 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 
 namespace modular {
 

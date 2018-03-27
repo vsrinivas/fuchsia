@@ -17,7 +17,7 @@ PageImpl::PageImpl(PageDelegate* delegate) : delegate_(delegate) {}
 PageImpl::~PageImpl() {}
 
 // GetId() => (array<uint8> id);
-void PageImpl::GetId(const GetIdCallback& callback) {
+void PageImpl::GetId(GetIdCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_get_id");
   delegate_->GetId(std::move(timed_callback));
 }
@@ -27,7 +27,7 @@ void PageImpl::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     fidl::VectorPtr<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
-    const GetSnapshotCallback& callback) {
+    GetSnapshotCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_get_snapshot");
   delegate_->GetSnapshot(std::move(snapshot_request), std::move(key_prefix),
                          std::move(watcher), std::move(timed_callback));
@@ -36,7 +36,7 @@ void PageImpl::GetSnapshot(
 // Put(array<uint8> key, array<uint8> value) => (Status status);
 void PageImpl::Put(fidl::VectorPtr<uint8_t> key,
                    fidl::VectorPtr<uint8_t> value,
-                   const PutCallback& callback) {
+                   PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
@@ -45,7 +45,7 @@ void PageImpl::Put(fidl::VectorPtr<uint8_t> key,
 void PageImpl::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                fidl::VectorPtr<uint8_t> value,
                                Priority priority,
-                               const PutWithPriorityCallback& callback) {
+                               PutWithPriorityCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_put_with_priority");
   delegate_->PutWithPriority(std::move(key), std::move(value), priority,
@@ -55,9 +55,9 @@ void PageImpl::PutWithPriority(fidl::VectorPtr<uint8_t> key,
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
 void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key,
-                            ReferencePtr reference,
+                            Reference reference,
                             Priority priority,
-                            const PutReferenceCallback& callback) {
+                            const PutReferenceCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_put_reference");
   delegate_->PutReference(std::move(key), std::move(reference), priority,
@@ -65,8 +65,7 @@ void PageImpl::PutReference(fidl::VectorPtr<uint8_t> key,
 }
 
 // Delete(array<uint8> key) => (Status status);
-void PageImpl::Delete(fidl::VectorPtr<uint8_t> key,
-                      const DeleteCallback& callback) {
+void PageImpl::Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_delete");
   delegate_->Delete(std::move(key), std::move(timed_callback));
 }
@@ -76,7 +75,7 @@ void PageImpl::Delete(fidl::VectorPtr<uint8_t> key,
 void PageImpl::CreateReferenceFromSocket(
     uint64_t size,
     zx::socket data,
-    const CreateReferenceFromSocketCallback& callback) {
+    CreateReferenceFromSocketCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_socket");
   delegate_->CreateReference(storage::DataSource::Create(std::move(data), size),
@@ -86,8 +85,8 @@ void PageImpl::CreateReferenceFromSocket(
 // CreateReferenceFromVmo(SizedVmoTransport data)
 //   => (Status status, Reference reference);
 void PageImpl::CreateReferenceFromVmo(
-    fsl::SizedVmoTransportPtr data,
-    const CreateReferenceFromSocketCallback& callback) {
+    fsl::SizedVmoTransport data,
+    CreateReferenceFromSocketCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_vmo");
   fsl::SizedVmo vmo;
@@ -100,34 +99,33 @@ void PageImpl::CreateReferenceFromVmo(
 }
 
 // StartTransaction() => (Status status);
-void PageImpl::StartTransaction(const StartTransactionCallback& callback) {
+void PageImpl::StartTransaction(StartTransactionCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_start_transaction");
   delegate_->StartTransaction(std::move(timed_callback));
 }
 
 // Commit() => (Status status);
-void PageImpl::Commit(const CommitCallback& callback) {
+void PageImpl::Commit(CommitCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_commit");
   delegate_->Commit(std::move(timed_callback));
 }
 
 // Rollback() => (Status status);
-void PageImpl::Rollback(const RollbackCallback& callback) {
+void PageImpl::Rollback(RollbackCallback callback) {
   auto timed_callback = TRACE_CALLBACK(callback, "ledger", "page_rollback");
   delegate_->Rollback(std::move(timed_callback));
 }
 
 // SetSyncStateWatcher(SyncWatcher watcher) => (Status status);
-void PageImpl::SetSyncStateWatcher(
-    fidl::InterfaceHandle<SyncWatcher> watcher,
-    const SetSyncStateWatcherCallback& callback) {
+void PageImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+                                   const SetSyncStateWatcherCallback callback) {
   delegate_->SetSyncStateWatcher(std::move(watcher), callback);
 }
 
 // WaitForConflictResolution() => ();
 void PageImpl::WaitForConflictResolution(
-    const WaitForConflictResolutionCallback& callback) {
+    const WaitForConflictResolutionCallback callback) {
   delegate_->WaitForConflictResolution(callback);
 }
 

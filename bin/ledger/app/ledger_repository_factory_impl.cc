@@ -25,7 +25,7 @@ namespace {
 constexpr fxl::StringView kContentPath = "/content";
 constexpr fxl::StringView kStagingPath = "/staging";
 
-bool GetRepositoryName(const fidl::StringPtr& repository_path, std::string* name) {
+bool GetRepositoryName(fidl::StringPtr repository_path, std::string* name) {
   std::string name_path = repository_path.get() + "/name";
 
   if (files::ReadFileToString(name_path, name)) {
@@ -138,7 +138,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(const fidl::StringPtr& repository_path)
+  explicit RepositoryInformation(fidl::StringPtr repository_path)
       : base_path(files::SimplifyPath(repository_path.get())),
         content_path(fxl::Concatenate({base_path, kContentPath})),
         staging_path(fxl::Concatenate({base_path, kStagingPath})) {}
@@ -161,10 +161,10 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
 LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
-    const fidl::StringPtr& repository_path,
+    fidl::StringPtr repository_path,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     fidl::InterfaceRequest<LedgerRepository> repository_request,
-    const GetRepositoryCallback& callback) {
+    GetRepositoryCallback callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
   RepositoryInformation repository_information(repository_path);
   if (!repository_information.Init()) {

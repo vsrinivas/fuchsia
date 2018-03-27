@@ -8,11 +8,11 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/operation_serializer.h"
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/diff_utils.h"
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
@@ -53,14 +53,14 @@ class ConflictResolverClient : public MergeResultProvider {
 
   // MergeResultProvider:
   void GetFullDiff(fidl::VectorPtr<uint8_t> token,
-                   const GetFullDiffCallback& callback) override;
+                   GetFullDiffCallback callback) override;
   void GetConflictingDiff(fidl::VectorPtr<uint8_t> token,
-                          const GetConflictingDiffCallback& callback) override;
-  void Merge(fidl::VectorPtr<MergedValuePtr> merged_values,
-             const MergeCallback& callback) override;
+                          GetConflictingDiffCallback callback) override;
+  void Merge(fidl::VectorPtr<MergedValue> merged_values,
+             MergeCallback callback) override;
   void MergeNonConflictingEntries(
-      const MergeNonConflictingEntriesCallback& callback) override;
-  void Done(const DoneCallback& callback) override;
+      MergeNonConflictingEntriesCallback callback) override;
+  void Done(DoneCallback callback) override;
 
   // Checks whether this ConflictResolverClient is not cancelled and the storage
   // returned status is ok. If not, calls the given |callback| and |Finalize|

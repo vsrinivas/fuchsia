@@ -62,7 +62,7 @@ void PageDelegate::Init(std::function<void(Status)> on_done) {
 }
 
 // GetId() => (array<uint8> id);
-void PageDelegate::GetId(const Page::GetIdCallback& callback) {
+void PageDelegate::GetId(Page::GetIdCallback callback) {
   callback(convert::ToArray(storage_->GetId()));
 }
 
@@ -71,7 +71,7 @@ void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     fidl::VectorPtr<uint8_t> key_prefix,
     fidl::InterfaceHandle<PageWatcher> watcher,
-    const Page::GetSnapshotCallback& callback) {
+    Page::GetSnapshotCallback callback) {
   // TODO(qsr): Update this so that only |GetCurrentCommitId| is done in a the
   // operation serializer.
   operation_serializer_.Serialize<Status>(
@@ -110,7 +110,7 @@ void PageDelegate::GetSnapshot(
 // Put(array<uint8> key, array<uint8> value) => (Status status);
 void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
                        fidl::VectorPtr<uint8_t> value,
-                       const Page::PutCallback& callback) {
+                       Page::PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
@@ -162,9 +162,9 @@ void PageDelegate::PutWithPriority(
 // PutReference(array<uint8> key, Reference? reference, Priority priority)
 //   => (Status status);
 void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
-                                ReferencePtr reference,
+                                Reference reference,
                                 Priority priority,
-                                const Page::PutReferenceCallback& callback) {
+                                Page::PutReferenceCallback callback) {
   if (key->size() > kMaxKeySize) {
     FXL_VLOG(1) << "Key too large: " << key->size()
                 << " bytes long, which is more than the maximum allowed size ("
@@ -216,7 +216,7 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
 
 // Delete(array<uint8> key) => (Status status);
 void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
-                          const Page::DeleteCallback& callback) {
+                          Page::DeleteCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, fxl::MakeCopyable([this, key = std::move(key)](
                                       Page::DeleteCallback callback) mutable {
@@ -306,7 +306,7 @@ void PageDelegate::Commit(const Page::CommitCallback& callback) {
 }
 
 // Rollback() => (Status status);
-void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
+void PageDelegate::Rollback(Page::RollbackCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
         if (!journal_) {
@@ -328,7 +328,7 @@ void PageDelegate::Rollback(const Page::RollbackCallback& callback) {
 
 void PageDelegate::SetSyncStateWatcher(
     fidl::InterfaceHandle<SyncWatcher> watcher,
-    const Page::SetSyncStateWatcherCallback& callback) {
+    Page::SetSyncStateWatcherCallback callback) {
   SyncWatcherPtr watcher_ptr = watcher.Bind();
   watcher_set_->AddSyncWatcher(std::move(watcher_ptr));
   callback(Status::OK);

@@ -25,7 +25,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
+#include <fuchsia/cpp/ledger_internal.h>
 
 namespace modular {
 

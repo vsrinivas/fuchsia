@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 #define PERIDOT_BIN_LEDGER_APP_PAGE_IMPL_H_
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 class PageDelegate;
@@ -19,51 +19,48 @@ class PageImpl : public Page {
 
  private:
   // Page:
-  void GetId(const GetIdCallback& callback) override;
+  void GetId(GetIdCallback callback) override;
 
   void GetSnapshot(fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    fidl::VectorPtr<uint8_t> key_prefix,
                    fidl::InterfaceHandle<PageWatcher> watcher,
-                   const GetSnapshotCallback& callback) override;
+                   GetSnapshotCallback callback) override;
 
   void Put(fidl::VectorPtr<uint8_t> key,
            fidl::VectorPtr<uint8_t> value,
-           const PutCallback& callback) override;
+           PutCallback callback) override;
 
   void PutWithPriority(fidl::VectorPtr<uint8_t> key,
                        fidl::VectorPtr<uint8_t> value,
                        Priority priority,
-                       const PutWithPriorityCallback& callback) override;
+                       PutWithPriorityCallback callback) override;
 
   void PutReference(fidl::VectorPtr<uint8_t> key,
-                    ReferencePtr reference,
+                    Reference reference,
                     Priority priority,
-                    const PutReferenceCallback& callback) override;
+                    PutReferenceCallback callback) override;
 
-  void Delete(fidl::VectorPtr<uint8_t> key,
-              const DeleteCallback& callback) override;
+  void Delete(fidl::VectorPtr<uint8_t> key, DeleteCallback callback) override;
 
   void CreateReferenceFromSocket(
       uint64_t size,
       zx::socket data,
-      const CreateReferenceFromSocketCallback& callback) override;
+      CreateReferenceFromSocketCallback callback) override;
 
-  void CreateReferenceFromVmo(
-      fsl::SizedVmoTransportPtr data,
-      const CreateReferenceFromVmoCallback& callback) override;
+  void CreateReferenceFromVmo(fsl::SizedVmoTransport data,
+                              CreateReferenceFromVmoCallback callback) override;
 
-  void StartTransaction(const StartTransactionCallback& callback) override;
+  void StartTransaction(StartTransactionCallback callback) override;
 
-  void Commit(const CommitCallback& callback) override;
+  void Commit(CommitCallback callback) override;
 
-  void Rollback(const RollbackCallback& callback) override;
+  void Rollback(RollbackCallback callback) override;
 
-  void SetSyncStateWatcher(
-      fidl::InterfaceHandle<SyncWatcher> watcher,
-      const SetSyncStateWatcherCallback& callback) override;
+  void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+                           SetSyncStateWatcherCallback callback) override;
 
   void WaitForConflictResolution(
-      const WaitForConflictResolutionCallback& callback) override;
+      WaitForConflictResolutionCallback callback) override;
 
   PageDelegate* delegate_;
 

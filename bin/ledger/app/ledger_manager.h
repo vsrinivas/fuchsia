@@ -10,6 +10,7 @@
 #include <memory>
 #include <type_traits>
 
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -19,7 +20,6 @@
 #include "peridot/bin/ledger/app/page_manager.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/fidl/debug.fidl.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -31,7 +31,8 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
+class LedgerManager : public LedgerImpl::Delegate,
+                      public ledger_internal::LedgerDebug {
  public:
   LedgerManager(
       Environment* environment,
@@ -78,11 +79,12 @@ class LedgerManager : public LedgerImpl::Delegate, public LedgerDebug {
   void CheckEmpty();
 
   // LedgerDebug:
-  void GetPagesList(const GetPagesListCallback& callback) override;
+  void GetPagesList(GetPagesListCallback callback) override;
 
-  void GetPageDebug(fidl::VectorPtr<uint8_t> page_id,
-                    fidl::InterfaceRequest<PageDebug> page_debug,
-                    const GetPageDebugCallback& callback) override;
+  void GetPageDebug(
+      ledger::PageId page_id,
+      fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
+      GetPageDebugCallback callback) override;
 
   Environment* const environment_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;

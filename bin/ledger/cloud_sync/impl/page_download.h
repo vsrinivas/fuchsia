@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 #define PERIDOT_BIN_LEDGER_CLOUD_SYNC_IMPL_PAGE_DOWNLOAD_H_
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/managed_container.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -51,13 +51,13 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
  private:
   // cloud_provider::PageCloudWatcher:
-  void OnNewCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+  void OnNewCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                     fidl::VectorPtr<uint8_t> position_token,
-                    const OnNewCommitsCallback& callback) override;
+                    OnNewCommitsCallback callback) override;
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id,
-                   fsl::SizedVmoTransportPtr data,
-                   const OnNewObjectCallback& callback) override;
+                   fsl::SizedVmoTransport data,
+                   OnNewObjectCallback callback) override;
 
   void OnError(cloud_provider::Status status) override;
 
@@ -68,7 +68,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   void SetRemoteWatcher(bool is_retry);
 
   // Downloads the given batch of commits.
-  void DownloadBatch(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+  void DownloadBatch(fidl::VectorPtr<cloud_provider::Commit> commits,
                      fidl::VectorPtr<uint8_t> position_token,
                      fxl::Closure on_done);
 
