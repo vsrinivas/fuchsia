@@ -10,7 +10,7 @@
 
 #include <fuchsia/cpp/geometry.h>
 #include <fuchsia/cpp/media.h>
-#include "garnet/bin/media/util/timeline_control_point.h"
+#include "garnet/bin/media/fidl/timeline_control_point.h"
 #include "garnet/bin/media/video/video_converter.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"

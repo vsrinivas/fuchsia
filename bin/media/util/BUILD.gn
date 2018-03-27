@@ -12,8 +12,6 @@ source_set("util") {
     "file_channel.h",
     "multiproc_task_runner.cc",
     "multiproc_task_runner.h",
-    "timeline_control_point.cc",
-    "timeline_control_point.h",
   ]
 
   public_deps = [
@@ -24,8 +22,6 @@ source_set("util") {
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/media/timeline",
   ]
 }
 

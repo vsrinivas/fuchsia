@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/util/timeline_control_point.h"
+#include "garnet/bin/media/fidl/timeline_control_point.h"
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"

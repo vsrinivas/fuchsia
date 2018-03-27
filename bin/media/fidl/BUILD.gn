@@ -17,6 +17,8 @@ source_set("fidl") {
     "fidl_reader.h",
     "fidl_type_conversions.cc",
     "fidl_type_conversions.h",
+    "timeline_control_point.cc",
+    "timeline_control_point.h",
   ]
 
   deps = [
@@ -26,6 +28,7 @@ source_set("fidl") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
     "//garnet/public/lib/network/fidl",
   ]
