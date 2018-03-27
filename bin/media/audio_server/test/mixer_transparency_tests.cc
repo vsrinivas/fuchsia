@@ -142,26 +142,19 @@ TEST(PassThru, Source_16) {
 
 // Does NoOp mixer behave as expected? (not update offsets, nor touch buffers)
 TEST(PassThru, NoOp) {
-  AudioMediaTypeDetails src_details;
-  src_details.sample_format = AudioSampleFormat::SIGNED_16;
-  src_details.channels = 1;
-  src_details.frames_per_second = 48000;
-
   MixerPtr no_op_mixer = MixerPtr(new mixers::NoOp());
   EXPECT_NE(nullptr, no_op_mixer);
-
-  uint32_t dst_frames = 2, dst_offset = 0;
-  uint32_t src_frames = dst_frames << kPtsFractionalBits;
-  int32_t frac_src_offset = 0;
-  uint32_t step_size = Mixer::FRAC_ONE;
-  Gain::AScale scale = Gain::kUnityScale;
 
   int16_t source[] = {32767, -32768};
   int32_t accum[] = {-1, 42};
 
-  bool mix_result =
-      no_op_mixer->Mix(accum, dst_frames, &dst_offset, source, src_frames,
-                       &frac_src_offset, step_size, scale, false);
+  uint32_t dst_offset = 0;
+  int32_t frac_src_offset = 0;
+
+  bool mix_result = no_op_mixer->Mix(
+      accum, fbl::count_of(accum), &dst_offset, source,
+      fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
+      Mixer::FRAC_ONE, Gain::kUnityScale, false);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(0u, dst_offset);
@@ -299,8 +292,7 @@ TEST(PassThru, Output_16_Silence) {
                                     (fbl::count_of(dest) - 1) / 3);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<int16_t>(0),
                                  fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1],
-            7890);  // this previous value should survive
+  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7890);  // should survive
 }
 
 }  // namespace test
