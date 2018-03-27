@@ -380,6 +380,54 @@ class Impl final : public Client {
     att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
   }
 
+  void WriteRequest(att::Handle handle,
+                    const common::ByteBuffer& value,
+                    StatusCallback callback) override {
+    const size_t payload_size = sizeof(att::WriteRequestParams) + value.size();
+    if (sizeof(att::OpCode) + payload_size > att_->mtu()) {
+      FXL_VLOG(2) << "gatt: write request payload exceeds MTU";
+      callback(att::Status(HostError::kPacketMalformed));
+      return;
+    }
+
+    auto pdu = NewPDU(payload_size);
+    if (!pdu) {
+      callback(att::Status(HostError::kOutOfMemory));
+      return;
+    }
+
+    att::PacketWriter writer(att::kWriteRequest, pdu.get());
+    auto params = writer.mutable_payload<att::WriteRequestParams>();
+    params->handle = htole16(handle);
+
+    auto value_view =
+        writer.mutable_payload_data().mutable_view(sizeof(att::Handle));
+    value.Copy(&value_view);
+
+    auto rsp_cb = BindCallback([this, callback](const att::PacketReader& rsp) {
+      FXL_DCHECK(rsp.opcode() == att::kWriteResponse);
+
+      if (rsp.payload_size()) {
+        att_->ShutDown();
+        callback(att::Status(HostError::kPacketMalformed));
+        return;
+      }
+
+      callback(att::Status());
+    });
+
+    auto error_cb = BindErrorCallback(
+        [this, callback](att::Status status, att::Handle handle) {
+          FXL_VLOG(1) << "gatt: Write request failed: " << status.ToString()
+                      << ", handle: " << handle;
+          callback(status);
+        });
+
+    if (!att_->StartTransaction(std::move(pdu), rsp_cb, error_cb)) {
+      callback(att::Status(HostError::kPacketMalformed));
+    }
+  }
+
   // Wraps |callback| in a TransactionCallback that only runs if this Client is
   // still alive.
   att::Bearer::TransactionCallback BindCallback(

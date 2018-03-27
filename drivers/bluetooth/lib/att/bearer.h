@@ -108,8 +108,8 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // timeout), |error_callback| will be called instead of |callback| if
   // provided.
   //
-  // Returns false if |pdu| is malformed or does not correspond to a request or
-  // indication.
+  // Returns false if |pdu| is empty, exceeds the current MTU, or does not
+  // correspond to a request or indication.
   using TransactionCallback = std::function<void(const PacketReader& packet)>;
   using ErrorCallback = std::function<void(Status, Handle attr_in_error)>;
   bool StartTransaction(common::ByteBufferPtr pdu,

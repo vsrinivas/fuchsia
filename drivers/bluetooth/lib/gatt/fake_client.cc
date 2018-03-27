@@ -53,6 +53,12 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
   });
 }
 
+void FakeClient::WriteRequest(att::Handle handle,
+                              const common::ByteBuffer& value,
+                              StatusCallback callback) {
+  // TODO(armansito): Do something.
+}
+
 }  // namespace testing
 }  // namespace gatt
 }  // namespace btlib

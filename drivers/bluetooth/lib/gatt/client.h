@@ -72,6 +72,17 @@ class Client {
                                        att::Handle range_end,
                                        CharacteristicCallback chrc_callback,
                                        att::StatusCallback status_callback) = 0;
+
+  // Sends an ATT Write Request with the requested attribute |handle| and
+  // |value|. This can be used to send a write request to any attribute.
+  // (Vol 3, Part F, 3.4.5.1).
+  //
+  // Reports the status of the procedure in |callback|.
+  // HostError::kPacketMalformed is returned if |value| is too large to write in
+  // a single ATT request.
+  virtual void WriteRequest(att::Handle handle,
+                            const common::ByteBuffer& value,
+                            att::StatusCallback callback) = 0;
 };
 
 }  // namespace gatt

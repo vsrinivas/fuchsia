@@ -1175,6 +1175,130 @@ TEST_F(GATT_ClientTest, CharacteristicDiscoveryValueNotContiguous) {
   EXPECT_TRUE(chrcs.empty());
 }
 
+TEST_F(GATT_ClientTest, WriteRequestMalformedResponse) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x12,          // opcode: write request
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+
+  att::Status status;
+  auto cb = [&status](att::Status cb_status) {
+    status = cb_status;
+  };
+
+  // Initiate the request in a message loop task, as Expect() below blocks on
+  // the message loop.
+  async::PostTask(
+      dispatcher(),
+      [&, this] { client()->WriteRequest(kHandle, kValue, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+  ASSERT_FALSE(fake_chan()->link_error());
+
+  // Respond back with a malformed PDU. This should result in a link error.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x013,  // opcode: write response
+      0       // One byte payload. The write request has no parameters.
+  ));
+
+  RunUntilIdle();
+  EXPECT_FALSE(status);
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+  EXPECT_TRUE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, WriteRequestExceedsMtu) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  constexpr att::Handle kHandle = 0x0001;
+  constexpr size_t kMtu = 5;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x12,          // opcode: write request
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+  ASSERT_EQ(kMtu + 1, kExpectedRequest.size());
+
+  att()->set_mtu(kMtu);
+
+  att::Status status;
+  auto cb = [&status](att::Status cb_status) {
+    status = cb_status;
+  };
+
+  client()->WriteRequest(kHandle, kValue, cb);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, WriteRequestError) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x12,          // opcode: write request
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+
+  att::Status status;
+  auto cb = [&status](att::Status cb_status) {
+    status = cb_status;
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(
+      dispatcher(),
+      [&, this] { client()->WriteRequest(kHandle, kValue, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x12,        // request: write request
+      0x01, 0x00,  // handle: 0x0001
+      0x06         // error: Request Not Supported
+  ));
+
+  RunUntilIdle();
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, WriteRequestSuccess) {
+  const auto kValue = common::CreateStaticByteBuffer('f', 'o', 'o');
+  const auto kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x12,          // opcode: write request
+      0x01, 0x00,    // handle: 0x0001
+      'f', 'o', 'o'  // value: "foo"
+  );
+
+  att::Status status;
+  auto cb = [&status](att::Status cb_status) {
+    status = cb_status;
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(
+      dispatcher(),
+      [&, this] { client()->WriteRequest(kHandle, kValue, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x13  // opcode: write response
+  ));
+
+  RunUntilIdle();
+  EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
 }  // namespace
 }  // namespace gatt
 }  // namespace btlib
