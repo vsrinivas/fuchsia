@@ -19,11 +19,10 @@ namespace firebase {
 
 namespace {
 
-std::function<network::URLRequestPtr()> MakeRequest(
-    const std::string& url,
-    const std::string& method,
-    const std::string& message,
-    bool stream_request = false) {
+std::function<network::URLRequest()> MakeRequest(const std::string& url,
+                                                 const std::string& method,
+                                                 const std::string& message,
+                                                 bool stream_request = false) {
   fsl::SizedVmo body;
   if (!message.empty()) {
     if (!fsl::VmoFromString(message, &body)) {
@@ -34,26 +33,26 @@ std::function<network::URLRequestPtr()> MakeRequest(
 
   return fxl::MakeCopyable([url, method, body = std::move(body),
                             stream_request]() {
-    network::URLRequestPtr request(network::URLRequest::New());
-    request->url = url;
-    request->method = method;
-    request->auto_follow_redirects = true;
+    network::URLRequest request;
+    request.url = url;
+    request.method = method;
+    request.auto_follow_redirects = true;
     if (body) {
       fsl::SizedVmo duplicated_body;
       zx_status_t status =
           body.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicated_body);
       if (status != ZX_OK) {
         FXL_LOG(WARNING) << "Unable to duplicate a vmo. Status: " << status;
-        return network::URLRequestPtr();
+        return network::URLRequest();
       }
-      request->body = network::URLBody::New();
-      request->body->set_sized_buffer(std::move(duplicated_body).ToTransport());
+      request.body = network::URLBody::New();
+      request.body->set_sized_buffer(std::move(duplicated_body).ToTransport());
     }
     if (stream_request) {
-      auto accept_header = network::HttpHeader::New();
-      accept_header->name = "Accept";
-      accept_header->value = "text/event-stream";
-      request->headers.push_back(std::move(accept_header));
+      network::HttpHeader accept_header;
+      accept_header.name = "Accept";
+      accept_header.value = "text/event-stream";
+      request.headers.push_back(std::move(accept_header));
     }
     return request;
   });
@@ -148,7 +147,7 @@ void FirebaseImpl::Watch(const std::string& key,
   watch_data_[watch_client] = std::make_unique<WatchData>();
   watch_data_[watch_client]->request.Reset(network_wrapper_->Request(
       MakeRequest(BuildRequestUrl(key, query_params), "GET", "", true),
-      [this, watch_client](network::URLResponsePtr response) {
+      [this, watch_client](network::URLResponse response) {
         OnStream(watch_client, std::move(response));
       }));
 }
@@ -192,27 +191,26 @@ void FirebaseImpl::Request(
     const std::function<void(Status status, std::string response)>& callback) {
   requests_.emplace(network_wrapper_->Request(
       MakeRequest(url, method, message),
-      [this, callback](network::URLResponsePtr response) {
+      [this, callback](network::URLResponse response) {
         OnResponse(callback, std::move(response));
       }));
 }
 
 void FirebaseImpl::OnResponse(
     const std::function<void(Status status, std::string response)>& callback,
-    network::URLResponsePtr response) {
-  if (response->error) {
-    FXL_LOG(ERROR) << response->url << " error "
-                   << response->error->description;
+    network::URLResponse response) {
+  if (response.error) {
+    FXL_LOG(ERROR) << response.url << " error " << response.error->description;
     callback(Status::NETWORK_ERROR, "");
     return;
   }
 
-  if (response->status_code != 200 && response->status_code != 204) {
-    const std::string& url = response->url;
-    const std::string& status_line = response->status_line;
-    FXL_DCHECK(response->body->is_stream());
+  if (response.status_code != 200 && response.status_code != 204) {
+    const std::string& url = response.url;
+    const std::string& status_line = response.status_line;
+    FXL_DCHECK(response.body->is_stream());
     auto& drainer = drainers_.emplace();
-    drainer.Start(std::move(response->body->get_stream()),
+    drainer.Start(std::move(response.body->stream()),
                   [callback, url, status_line](const std::string& body) {
                     FXL_LOG(ERROR)
                         << url << " error " << status_line << ":" << std::endl
@@ -222,32 +220,31 @@ void FirebaseImpl::OnResponse(
     return;
   }
 
-  FXL_DCHECK(response->body->is_stream());
+  FXL_DCHECK(response.body->is_stream());
   auto& drainer = drainers_.emplace();
   drainer.Start(
-      std::move(response->body->get_stream()),
+      std::move(response.body->stream()),
       [callback](const std::string& body) { callback(Status::OK, body); });
 }
 
 void FirebaseImpl::OnStream(WatchClient* watch_client,
-                            network::URLResponsePtr response) {
-  if (response->error) {
-    FXL_LOG(ERROR) << response->url << " error "
-                   << response->error->description;
+                            network::URLResponse response) {
+  if (response.error) {
+    FXL_LOG(ERROR) << response.url << " error " << response.error->description;
     watch_client->OnConnectionError();
     watch_data_.erase(watch_client);
     return;
   }
 
-  FXL_DCHECK(response->body->is_stream());
+  FXL_DCHECK(response.body->is_stream());
 
-  if (response->status_code != 200 && response->status_code != 204) {
-    const std::string& url = response->url;
-    const std::string& status_line = response->status_line;
+  if (response.status_code != 200 && response.status_code != 204) {
+    const std::string& url = response.url;
+    const std::string& status_line = response.status_line;
     watch_data_[watch_client]->drainer =
         std::make_unique<socket::SocketDrainerClient>();
     watch_data_[watch_client]->drainer->Start(
-        std::move(response->body->get_stream()),
+        std::move(response.body->stream()),
         [this, watch_client, url, status_line](const std::string& body) {
           FXL_LOG(ERROR) << url << " error " << status_line << ":" << std::endl
                          << body;
@@ -259,7 +256,7 @@ void FirebaseImpl::OnStream(WatchClient* watch_client,
 
   watch_data_[watch_client]->event_stream = std::make_unique<EventStream>();
   watch_data_[watch_client]->event_stream->Start(
-      std::move(response->body->get_stream()),
+      std::move(response.body->stream()),
       [this, watch_client](Status status, const std::string& event,
                            const std::string& data) {
         OnStreamEvent(watch_client, status, event, data);

@@ -12,11 +12,11 @@
 
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "peridot/lib/firebase/event_stream.h"
 #include "peridot/lib/firebase/firebase.h"
 #include "peridot/lib/firebase/status.h"
 #include "peridot/lib/firebase/watch_client.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "peridot/lib/socket/socket_drainer_client.h"
 
 #include <rapidjson/document.h>
@@ -75,9 +75,9 @@ class FirebaseImpl : public Firebase {
 
   void OnResponse(
       const std::function<void(Status status, std::string response)>& callback,
-      network::URLResponsePtr response);
+      network::URLResponse response);
 
-  void OnStream(WatchClient* watch_client, network::URLResponsePtr response);
+  void OnStream(WatchClient* watch_client, network::URLResponse response);
 
   void OnStreamComplete(WatchClient* watch_client);
 
