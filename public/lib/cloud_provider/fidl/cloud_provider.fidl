@@ -130,6 +130,8 @@ interface PageCloud {
   // The size of the object is passed to the callback along with the socket
   // handle, so that the client can verify that all data was streamed when
   // draining the socket.
+  //
+  // TODO(ppi): return a VMO instead of a socket, see LE-442.
   4: GetObject(vector<uint8> id)
       -> (Status @status, uint64 size, handle<socket>? stream);
 

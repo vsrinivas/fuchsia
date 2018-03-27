@@ -13,12 +13,17 @@
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 
 namespace cloud_provider_firestore {
 
 class PageCloudImpl : public cloud_provider::PageCloud {
  public:
   explicit PageCloudImpl(
+      std::string page_path,
+      CredentialsProvider* credentials_provider,
+      FirestoreService* firestore_service,
       f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
@@ -39,6 +44,10 @@ class PageCloudImpl : public cloud_provider::PageCloud {
       f1dl::VectorPtr<uint8_t> min_position_token,
       f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
       const SetWatcherCallback& callback) override;
+
+  const std::string page_path_;
+  CredentialsProvider* const credentials_provider_;
+  FirestoreService* const firestore_service_;
 
   f1dl::Binding<cloud_provider::PageCloud> binding_;
   fxl::Closure on_empty_;

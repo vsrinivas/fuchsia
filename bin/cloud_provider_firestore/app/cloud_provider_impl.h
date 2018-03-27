@@ -10,6 +10,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/device_set_impl.h"
+#include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 #include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
@@ -55,6 +56,7 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   fxl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;
+  callback::AutoCleanableSet<PageCloudImpl> page_clouds_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CloudProviderImpl);
 };

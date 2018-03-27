@@ -12,17 +12,34 @@
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider_impl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/ledger/storage/public/constants.h"
+#include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 
 constexpr char kSeparator[] = "/";
 constexpr char kUsersCollection[] = "users";
+constexpr char kPageCollection[] = "pages";
+constexpr char kNamespaceCollection[] = "namespaces";
 constexpr char kDefaultDocument[] = "default_document";
 
 std::string GetUserPath(fxl::StringView root_path, fxl::StringView user_id) {
   return fxl::Concatenate({root_path, kSeparator, kUsersCollection, kSeparator,
                            user_id, kSeparator, storage::kSerializationVersion,
                            kSeparator, kDefaultDocument});
+}
+
+std::string GetNamespacePath(fxl::StringView user_path,
+                             fxl::StringView namespace_id) {
+  std::string encoded_namespace_id = EncodeKey(namespace_id);
+  return fxl::Concatenate({user_path, kSeparator, kNamespaceCollection,
+                           kSeparator, encoded_namespace_id});
+}
+
+std::string GetPagePath(fxl::StringView namespace_path,
+                        fxl::StringView page_id) {
+  std::string encoded_page_id = EncodeKey(page_id);
+  return fxl::Concatenate({namespace_path, kSeparator, kPageCollection,
+                           kSeparator, encoded_page_id});
 }
 
 CloudProviderImpl::CloudProviderImpl(
@@ -67,12 +84,19 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    f1dl::VectorPtr<uint8_t> /*app_id*/,
-    f1dl::VectorPtr<uint8_t> /*page_id*/,
-    f1dl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
+    f1dl::VectorPtr<uint8_t> app_id,
+    f1dl::VectorPtr<uint8_t> page_id,
+    f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
     const GetPageCloudCallback& callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+  const std::string user_path =
+      GetUserPath(firestore_service_->GetRootPath(), user_id_);
+  const std::string namespace_path =
+      GetNamespacePath(user_path, convert::ToString(app_id));
+  std::string page_path =
+      GetPagePath(namespace_path, convert::ToString(page_id));
+  page_clouds_.emplace(std::move(page_path), credentials_provider_.get(),
+                       firestore_service_.get(), std::move(page_cloud));
+  callback(cloud_provider::Status::OK);
 }
 
 }  // namespace cloud_provider_firestore
