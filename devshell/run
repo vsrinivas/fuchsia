@@ -29,6 +29,7 @@ trap 'rm "${qimg}" && rmdir "${qcowdir}"' EXIT
   -o "${ZIRCON_BUILD_DIR}" \
   -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
+  -G 3 \
   -x "${FUCHSIA_BUILD_DIR}/${ramdisk_bin}" \
   -d \
   -D "${qimg}" \
