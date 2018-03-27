@@ -17,10 +17,12 @@ namespace modular {
 
 UserControllerImpl::UserControllerImpl(
     component::ApplicationLauncher* const application_launcher,
-    AppConfigPtr user_runner, AppConfigPtr user_shell, AppConfigPtr story_shell,
+    AppConfigPtr user_runner,
+    AppConfigPtr user_shell,
+    AppConfigPtr story_shell,
     f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
     f1dl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
@@ -95,7 +97,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
 
 // |UserContext|
 void UserControllerImpl::GetPresentation(
-    f1dl::InterfaceRequest<mozart::Presentation> presentation) {
+    f1dl::InterfaceRequest<presentation::Presentation> presentation) {
   if (device_shell_services_) {
     device_shell_services_->ConnectToService("mozart.Presentation",
                                              presentation.TakeChannel());

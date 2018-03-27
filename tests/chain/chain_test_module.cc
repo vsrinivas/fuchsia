@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -9,7 +11,6 @@
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -25,7 +26,7 @@ class TestApp : public ModuleWatcher {
  public:
   TestApp(
       ModuleHost* module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()),
         module_watcher_binding_(this) {
@@ -123,7 +124,7 @@ class TestApp : public ModuleWatcher {
   ComponentContextPtr component_context_;
   ModuleContext* module_context_;
   ModuleControllerPtr child_module_;
-  mozart::ViewOwnerPtr child_view_;
+  views_v1_token::ViewOwnerPtr child_view_;
 
   f1dl::StringPtr entity_one_reference_;
   DaisyPtr daisy_;

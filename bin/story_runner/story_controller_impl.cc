@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
@@ -24,7 +25,6 @@
 #include "lib/story/fidl/create_link.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/story/fidl/story_marker.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/bin/story_runner/link_impl.h"
@@ -286,7 +286,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       ResultCall result_call)
       : Operation("StoryControllerImpl::GetLedgerNotificationCall", container,
                   std::move(result_call)),
@@ -346,8 +346,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     auto module_config = AppConfig::New();
     module_config->url = module_data_->module_url;
 
-    mozart::ViewProviderPtr view_provider;
-    f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request =
+    views_v1::ViewProviderPtr view_provider;
+    f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request =
         view_provider.NewRequest();
     view_provider->CreateView(std::move(view_owner_request_), nullptr);
 
@@ -424,7 +424,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
   f1dl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
   f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   const zx_time_t start_time_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleCall);
@@ -670,7 +670,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       DaisyPtr daisy,
       ResultCall result_call)
 
@@ -793,7 +793,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   f1dl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
   f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher_;
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   DaisyPtr daisy_;
 
   LinkPathPtr link_path_;
@@ -933,7 +933,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   DaisyPtr daisy_;
 
   ModuleControllerPtr module_controller_;
-  mozart::ViewOwnerPtr view_owner_;
+  views_v1_token::ViewOwnerPtr view_owner_;
 
   OperationQueue operation_queue_;
 
@@ -1329,7 +1329,7 @@ class StoryControllerImpl::StartCall : Operation<> {
  public:
   StartCall(OperationContainer* const container,
             StoryControllerImpl* const story_controller_impl,
-            f1dl::InterfaceRequest<mozart::ViewOwner> request)
+            fidl::InterfaceRequest<views_v1_token::ViewOwner> request)
       : Operation("StoryControllerImpl::StartCall", container, [] {}),
         story_controller_impl_(story_controller_impl),
         request_(std::move(request)) {
@@ -1377,7 +1377,7 @@ class StoryControllerImpl::StartCall : Operation<> {
   };
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  f1dl::InterfaceRequest<mozart::ViewOwner> request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> request_;
 
   OperationQueue operation_queue_;
 
@@ -1707,7 +1707,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       // We just run the first module in story shell.
       // TODO(alhaad/thatguy): Revisit the assumption.
       const auto& module_result = result->modules->at(0);
-      mozart::ViewOwnerPtr view_owner;
+      views_v1_token::ViewOwnerPtr view_owner;
       node_views_[nodes_->at(i)->node_name] = std::move(view_owner);
       f1dl::VectorPtr<f1dl::StringPtr> module_path = parent_module_path_.Clone();
       // module_path.push_back(container_name_);
@@ -1765,7 +1765,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
   size_t nodes_done_{};
 
   // map of node_name to view_owners
-  std::map<f1dl::StringPtr, mozart::ViewOwnerPtr> node_views_;
+  std::map<f1dl::StringPtr, views_v1_token::ViewOwnerPtr> node_views_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
 };
@@ -1783,9 +1783,11 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
-      const ModuleSource module_source, ResultCall result_call)
-      : Operation("StoryControllerImpl::AddDaisyCall", container,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
+      const ModuleSource module_source,
+      ResultCall result_call)
+      : Operation("StoryControllerImpl::AddDaisyCall",
+                  container,
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         requesting_module_path_(std::move(requesting_module_path)),
@@ -1851,7 +1853,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
   f1dl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   f1dl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   const ModuleSource module_source_;
 
   StartModuleStatus result_{StartModuleStatus::NO_MODULES_FOUND};
@@ -2011,7 +2013,7 @@ void StoryControllerImpl::StartModuleDeprecated(
     CreateChainInfoPtr create_chain_info,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     const ModuleSource module_source) {
   auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
@@ -2047,7 +2049,7 @@ void StoryControllerImpl::EmbedModule(
     const f1dl::StringPtr& module_name, DaisyPtr daisy,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
   new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
@@ -2093,7 +2095,7 @@ void StoryControllerImpl::EmbedModuleDeprecated(
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller_request,
     f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   f1dl::VectorPtr<f1dl::StringPtr> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleCall(
@@ -2213,7 +2215,7 @@ void StoryControllerImpl::SetInfoExtra(const f1dl::StringPtr& name,
 
 // |StoryController|
 void StoryControllerImpl::Start(
-    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
   new StartCall(&operation_queue_, this, std::move(request));
 }
 
@@ -2358,7 +2360,7 @@ void StoryControllerImpl::AddModule(
 }
 
 void StoryControllerImpl::StartStoryShell(
-    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
   story_shell_app_ = story_provider_impl_->StartStoryShell(std::move(request));
   story_shell_app_->services().ConnectToService(story_shell_.NewRequest());
   story_shell_->Initialize(story_context_binding_.NewBinding());

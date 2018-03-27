@@ -8,6 +8,8 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -30,7 +32,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
@@ -45,7 +47,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+  void ConnectView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
                    const f1dl::StringPtr& /*view_id*/,
                    const f1dl::StringPtr& /*parent_id*/,
                    modular::SurfaceRelationPtr /*surface_relation*/,
@@ -80,7 +82,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
     if (story_context_.is_bound() && view_owner_request_) {
       view_ = std::make_unique<modular::ViewHost>(
           application_context()
-              ->ConnectToEnvironmentService<mozart::ViewManager>(),
+              ->ConnectToEnvironmentService<views_v1::ViewManager>(),
           std::move(view_owner_request_));
 
       for (auto& view_owner : child_views_) {
@@ -92,9 +94,9 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   std::unique_ptr<modular::ViewHost> view_;
-  std::vector<f1dl::InterfaceHandle<mozart::ViewOwner>> child_views_;
+  std::vector<fidl::InterfaceRequest<views_v1_token::ViewOwner>> child_views_;
 
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(DevStoryShellApp);
 };

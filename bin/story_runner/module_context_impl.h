@@ -7,6 +7,7 @@
 
 #include <string>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -17,7 +18,6 @@
 #include "lib/module/fidl/module_data.fidl.h"
 #include "lib/module_resolver/fidl/module_resolver.fidl.h"
 #include "lib/surface/fidl/surface.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
@@ -63,13 +63,13 @@ class ModuleContextImpl : ModuleContext {
       const f1dl::StringPtr& link_name,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
   // |ModuleContext|
   void EmbedModule(
       const f1dl::StringPtr& name, DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
       const EmbedModuleCallback& callback) override;
   // |ModuleContext|
   void StartModuleInShellDeprecated(
@@ -99,7 +99,7 @@ class ModuleContextImpl : ModuleContext {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) override;
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
   // |ModuleContext|
   void GetComponentContext(
       f1dl::InterfaceRequest<ComponentContext> context_request) override;

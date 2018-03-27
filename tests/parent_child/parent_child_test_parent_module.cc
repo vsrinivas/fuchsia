@@ -4,12 +4,12 @@
 
 #include <iostream>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -27,7 +27,7 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);

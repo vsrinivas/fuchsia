@@ -9,7 +9,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/story/fidl/link.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"

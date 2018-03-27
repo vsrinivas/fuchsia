@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -217,7 +218,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
     story_watcher_.Watch(&story_controller_);
 
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

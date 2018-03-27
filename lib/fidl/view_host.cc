@@ -7,7 +7,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/view_framework/base_view.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 
 namespace modular {
 
@@ -17,8 +16,9 @@ struct ViewHost::ViewData {
   scenic_lib::EntityNode host_node;
 };
 
-ViewHost::ViewHost(mozart::ViewManagerPtr view_manager,
-                   f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+ViewHost::ViewHost(
+    views_v1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
                "ViewHost"),
@@ -29,7 +29,7 @@ ViewHost::ViewHost(mozart::ViewManagerPtr view_manager,
 ViewHost::~ViewHost() = default;
 
 void ViewHost::ConnectView(
-    f1dl::InterfaceHandle<mozart::ViewOwner> view_owner) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
   const uint32_t child_key = next_child_key_++;
 
   auto view_data = std::make_unique<ViewData>(session());
@@ -45,7 +45,7 @@ void ViewHost::ConnectView(
 }
 
 void ViewHost::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr /*old_properties*/) {
+    views_v1::ViewPropertiesPtr /*old_properties*/) {
   UpdateScene();
 }
 
@@ -83,19 +83,19 @@ void ViewHost::UpdateScene() {
       excess--;
     }
 
-    mozart::RectF layout_bounds;
+    geometry::RectF layout_bounds;
     layout_bounds.x = offset;
     layout_bounds.y = 0;
     layout_bounds.width = extent;
     layout_bounds.height = logical_size().height;
     offset += extent;
 
-    auto view_properties = mozart::ViewProperties::New();
-    view_properties->view_layout = mozart::ViewLayout::New();
-    view_properties->view_layout->size = mozart::SizeF::New();
+    auto view_properties = views_v1::ViewProperties::New();
+    view_properties->view_layout = views_v1::ViewLayout::New();
+    view_properties->view_layout->size = geometry::SizeF::New();
     view_properties->view_layout->size->width = layout_bounds.width;
     view_properties->view_layout->size->height = layout_bounds.height;
-    view_properties->view_layout->inset = mozart::InsetF::New();
+    view_properties->view_layout->inset = geometry::InsetF::New();
     GetViewContainer()->SetChildProperties(it->first,
                                            std::move(view_properties));
 

@@ -10,6 +10,8 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app/fidl/service_provider.fidl.h"
@@ -23,8 +25,6 @@
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
@@ -63,7 +63,7 @@ class DevUserShellApp : modular::StoryWatcher,
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
@@ -101,7 +101,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
     view_ = std::make_unique<modular::ViewHost>(
         application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+            ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request_));
 
     if (settings_.story_id.empty()) {
@@ -123,7 +123,7 @@ class DevUserShellApp : modular::StoryWatcher,
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
     FXL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
-    f1dl::InterfaceHandle<mozart::ViewOwner> root_module_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
     focus_controller_->Set(story_id);
@@ -179,7 +179,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   const Settings settings_;
 
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   std::unique_ptr<modular::ViewHost> view_;
 
   modular::UserShellContextPtr user_shell_context_;

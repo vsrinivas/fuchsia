@@ -5,6 +5,8 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_environment.fidl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
@@ -18,7 +20,6 @@
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fxl/macros.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
@@ -43,7 +44,7 @@ class UserControllerImpl : UserController, UserContext {
       AppConfigPtr story_shell,
       f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
       f1dl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
@@ -67,7 +68,7 @@ class UserControllerImpl : UserController, UserContext {
 
   // |UserContext|
   void GetPresentation(
-      f1dl::InterfaceRequest<mozart::Presentation> presentation) override;
+      f1dl::InterfaceRequest<presentation::Presentation> presentation) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;

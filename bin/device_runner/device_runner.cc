@@ -9,6 +9,9 @@
 #include <fs/pseudo-file.h>
 #include <trace-provider/provider.h>
 
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/app/fidl/service_provider.fidl.h"
@@ -27,9 +30,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/device_runner/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
@@ -264,19 +264,19 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
         app_context_->launcher().get(), settings_.device_shell.Clone());
     device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
 
-    mozart::ViewProviderPtr device_shell_view_provider;
+    views_v1::ViewProviderPtr device_shell_view_provider;
     device_shell_app_->services().ConnectToService(
         device_shell_view_provider.NewRequest());
 
     // We still need to pass a request for root view to device shell since
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
-    f1dl::InterfaceHandle<mozart::ViewOwner> root_view;
-    mozart::PresentationPtr presentation;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> root_view;
+    presentation::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {
-      app_context_->ConnectToEnvironmentService<mozart::Presenter>()->Present(
-          std::move(root_view), presentation.NewRequest());
+      app_context_->ConnectToEnvironmentService<presentation::Presenter>()
+          ->Present(std::move(root_view), presentation.NewRequest());
     }
 
     // Populate parameters and initialize the device shell.

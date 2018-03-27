@@ -11,8 +11,8 @@
 namespace modular_example {
 
 ModuleView::ModuleView(
-    mozart::ViewManagerPtr view_manager,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    views_v1::ViewManagerPtr view_manager,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     uint32_t color)
     : BaseView(std::move(view_manager),
                std::move(view_owner_request),
@@ -26,7 +26,7 @@ ModuleView::ModuleView(
 }
 
 void ModuleView::OnPropertiesChanged(
-    mozart::ViewPropertiesPtr /*old_properties*/) {
+    views_v1::ViewPropertiesPtr /*old_properties*/) {
   scenic_lib::Rectangle background_shape(session(), logical_size().width,
                                          logical_size().height);
   background_node_.SetShape(background_shape);
@@ -40,10 +40,10 @@ ModuleApp::ModuleApp(component::ApplicationContext* const application_context,
     : SingleServiceApp(application_context), create_(std::move(create)) {}
 
 void ModuleApp::CreateView(
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     f1dl::InterfaceRequest<component::ServiceProvider> /*services*/) {
   view_.reset(create_(
-      application_context()->ConnectToEnvironmentService<mozart::ViewManager>(),
+      application_context()->ConnectToEnvironmentService<views_v1::ViewManager>(),
       std::move(view_owner_request)));
 }
 

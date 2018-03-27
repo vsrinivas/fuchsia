@@ -77,7 +77,7 @@ class ParentApp {
 
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : steps_(kTotalSimultaneousTests,
                [this, module_host] { module_host->module_context()->Done(); }),

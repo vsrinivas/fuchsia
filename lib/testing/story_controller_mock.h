@@ -52,7 +52,7 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void Start(f1dl::InterfaceRequest<mozart::ViewOwner> request) override {
+  void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override {
     FXL_NOTIMPLEMENTED();
   }
 

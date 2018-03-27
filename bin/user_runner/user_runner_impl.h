@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/agent/fidl/agent_controller/agent_controller.fidl.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/auth/fidl/account/account.fidl.h"
@@ -25,8 +27,6 @@
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 #include "lib/ui/input/fidl/input_events.fidl.h"
-#include "lib/ui/presentation/fidl/presentation.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
@@ -76,7 +76,7 @@ class UserRunnerImpl : UserRunner,
       AppConfigPtr story_shell,
       f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       f1dl::InterfaceHandle<UserContext> user_context,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) override;
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   // |UserRunner|
   void SwapUserShell(AppConfigPtr user_shell,
@@ -97,7 +97,7 @@ class UserRunnerImpl : UserRunner,
                          AppConfigPtr story_shell);
   void InitializeUserShell(
       AppConfigPtr user_shell,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   void RunUserShell(AppConfigPtr user_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also
@@ -117,7 +117,7 @@ class UserRunnerImpl : UserRunner,
       f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
   void GetLink(f1dl::InterfaceRequest<Link> request) override;
   void GetPresentation(
-      f1dl::InterfaceRequest<mozart::Presentation> request) override;
+      f1dl::InterfaceRequest<presentation::Presentation> request) override;
   void GetSpeechToText(
       f1dl::InterfaceRequest<speech::SpeechToText> request) override;
   void GetStoryProvider(f1dl::InterfaceRequest<StoryProvider> request) override;

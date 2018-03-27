@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -15,8 +16,6 @@
 #include "lib/fxl/time/time_delta.h"
 #include "lib/story/fidl/link.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -281,7 +280,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> /*view_owner_request*/,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> /*view_owner_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     create_view_.Pass();
@@ -415,7 +414,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_links_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 
@@ -495,7 +494,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         });
 
     // Start and show the new story.
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     story_controller_->GetInfo([this](modular::StoryInfoPtr info,

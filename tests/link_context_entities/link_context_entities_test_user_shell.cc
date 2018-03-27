@@ -6,16 +6,15 @@
 #include <sstream>
 #include <string>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/context/cpp/formatting.h"
 #include "lib/context/cpp/context_helper.h"
+#include "lib/context/cpp/formatting.h"
 #include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -137,7 +136,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
     // Start and show the new story.
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     start_story_exit_.Pass();

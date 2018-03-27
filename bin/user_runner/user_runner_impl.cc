@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/agent/fidl/agent_provider.fidl.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/clipboard/fidl/clipboard.fidl.h"
@@ -20,8 +21,6 @@
 #include "lib/resolver/fidl/resolver.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/user_runner.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
@@ -164,7 +163,7 @@ void UserRunnerImpl::Initialize(
     AppConfigPtr story_shell,
     f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     f1dl::InterfaceHandle<UserContext> user_context,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
   InitializeLedger();
@@ -577,10 +576,11 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
 
 void UserRunnerImpl::InitializeUserShell(
     AppConfigPtr user_shell,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   // We setup our own view and make the UserShell a child of it.
   user_shell_view_host_ = std::make_unique<ViewHost>(
-      application_context_->ConnectToEnvironmentService<mozart::ViewManager>(),
+      application_context_
+          ->ConnectToEnvironmentService<views_v1::ViewManager>(),
       std::move(view_owner_request));
   RunUserShell(std::move(user_shell));
   AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
@@ -601,8 +601,8 @@ void UserRunnerImpl::RunUserShell(AppConfigPtr user_shell) {
     Logout();
   });
 
-  mozart::ViewOwnerPtr view_owner;
-  mozart::ViewProviderPtr view_provider;
+  views_v1_token::ViewOwnerPtr view_owner;
+  views_v1::ViewProviderPtr view_provider;
   user_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   user_shell_view_host_->ConnectView(std::move(view_owner));
@@ -736,7 +736,7 @@ void UserRunnerImpl::GetLink(f1dl::InterfaceRequest<Link> request) {
 }
 
 void UserRunnerImpl::GetPresentation(
-    f1dl::InterfaceRequest<mozart::Presentation> request) {
+    f1dl::InterfaceRequest<presentation::Presentation> request) {
   user_context_->GetPresentation(std::move(request));
 }
 

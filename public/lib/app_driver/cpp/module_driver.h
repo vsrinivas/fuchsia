@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/fidl/service_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding.h"
@@ -17,7 +18,6 @@
 #include "lib/module/cpp/module_impl.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 
 namespace modular {
 
@@ -38,7 +38,7 @@ class ModuleHost {
 //      // A constructor with the following signature:
 //      Constructor(
 //           modular::ModuleHost* module_host,
-//           f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+//           f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
 //           f1dl::InterfaceRequest<component::ServiceProvider>
 //           outgoing_services);
 //
@@ -55,7 +55,7 @@ class ModuleHost {
 //  public:
 //   HelloWorldModule(
 //      modular::ModuleHost* module_host,
-//      f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+//      f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
 //      f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {}
 //
 //   // Called by ModuleDriver.
@@ -84,8 +84,8 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     // There is no guarantee that |ViewProvider| will be requested from us
     // before ModuleHost.set_view_provider_handler() is called from |Impl|, so
     // we buffer both events until they are both satisfied.
-    app_context_->outgoing_services()->AddService<mozart::ViewProvider>(
-        [this](f1dl::InterfaceRequest<mozart::ViewProvider> request) {
+    app_context_->outgoing_services()->AddService<views_v1::ViewProvider>(
+        [this](f1dl::InterfaceRequest<views_v1::ViewProvider> request) {
           view_provider_request_ = std::move(request);
           MaybeInstantiateImpl();
         });
@@ -147,7 +147,7 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
   ModuleContextPtr module_context_;
 
   // The following are only valid until |impl_| is instantiated.
-  f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request_;
+  f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request_;
   f1dl::InterfaceRequest<component::ServiceProvider> outgoing_module_services_;
 
   std::unique_ptr<Impl> impl_;

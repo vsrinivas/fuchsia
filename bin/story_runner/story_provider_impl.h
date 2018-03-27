@@ -9,6 +9,7 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/config/fidl/config.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
@@ -22,7 +23,6 @@
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/story/fidl/story_provider.fidl.h"
 #include "lib/story/fidl/story_shell.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user/fidl/focus.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
@@ -89,7 +89,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Returns an AppClient rather than taking an interface request
   // as an argument because the application is preloaded.
   std::unique_ptr<AppClient<Lifecycle>> StartStoryShell(
-      f1dl::InterfaceRequest<mozart::ViewOwner> request);
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Called by StoryControllerImpl.
   void SetStoryInfoExtra(const f1dl::StringPtr& story_id,
@@ -184,7 +184,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   AppConfigPtr story_shell_;
   struct StoryShellConnection {
     std::unique_ptr<AppClient<Lifecycle>> story_shell_app;
-    mozart::ViewOwnerPtr story_shell_view;
+    views_v1_token::ViewOwnerPtr story_shell_view;
   };
   std::unique_ptr<StoryShellConnection> preloaded_story_shell_;
 

@@ -4,13 +4,14 @@
 
 #include <iostream>
 
+#include <fuchsia/cpp/views_v1.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/module/fidl/module.fidl.h"
 #include "lib/module/fidl/module_context.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -26,7 +27,7 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
@@ -63,7 +64,7 @@ class ParentApp {
 
   modular::ModuleHost* const module_host_;
   modular::ModuleControllerPtr child_module_;
-  mozart::ViewOwnerPtr child_view_;
+  views_v1_token::ViewOwnerPtr child_view_;
 };
 
 }  // namespace

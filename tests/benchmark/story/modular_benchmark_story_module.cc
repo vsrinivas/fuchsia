@@ -7,11 +7,11 @@
 #include <trace/observer.h>
 #include <string>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/story/fidl/link.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/tests/benchmark/story/tracing_waiter.h"
 
 namespace {
@@ -22,7 +22,7 @@ class NullModule : modular::LinkWatcher {
  public:
   NullModule(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     module_host_->module_context()->Ready();

@@ -11,7 +11,6 @@
 #include "lib/device/fidl/user_provider.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
 namespace modular {

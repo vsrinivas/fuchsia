@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/clipboard/fidl/clipboard.fidl.h"
@@ -24,7 +25,7 @@ class ClipboardTestApp {
 
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<mozart::ViewProvider> /*view_provider_request*/,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
       f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);

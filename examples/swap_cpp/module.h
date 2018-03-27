@@ -14,13 +14,13 @@ namespace modular_example {
 class ModuleView : public mozart::BaseView {
  public:
   explicit ModuleView(
-      mozart::ViewManagerPtr view_manager,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       uint32_t color);
 
  private:
   // |BaseView|:
-  void OnPropertiesChanged(mozart::ViewPropertiesPtr old_properties) override;
+  void OnPropertiesChanged(views_v1::ViewPropertiesPtr old_properties) override;
 
   scenic_lib::ShapeNode background_node_;
 
@@ -30,8 +30,8 @@ class ModuleView : public mozart::BaseView {
 class ModuleApp : public modular::SingleServiceApp<modular::Module> {
  public:
   using CreateViewCallback = std::function<mozart::BaseView*(
-      mozart::ViewManagerPtr,
-      f1dl::InterfaceRequest<mozart::ViewOwner>)>;
+      views_v1::ViewManagerPtr,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner>)>;
 
   explicit ModuleApp(component::ApplicationContext* const application_context,
                      CreateViewCallback create);
@@ -39,7 +39,7 @@ class ModuleApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceRequest<component::ServiceProvider> services) override;
 
   // |Module|

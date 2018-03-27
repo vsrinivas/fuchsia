@@ -98,7 +98,7 @@ class TestApp : modular::StoryWatcher,
   // |NextListener|
   void OnProcessingChange(bool processing) override {}
 
-  mozart::ViewOwnerPtr view_owner_;
+  views_v1_token::ViewOwnerPtr view_owner_;
 
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;

@@ -40,7 +40,7 @@ ModuleControllerImpl::ModuleControllerImpl(
     AppConfigPtr module_config, const ModuleData* const module_data,
     component::ServiceListPtr service_list,
     f1dl::InterfaceHandle<ModuleContext> module_context,
-    f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+    f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(

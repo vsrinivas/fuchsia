@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/device/fidl/device_shell.fidl.h"
@@ -17,7 +18,6 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/ui/presentation/fidl/presenter.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -70,7 +70,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
@@ -151,7 +151,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   const Settings settings_;
   f1dl::Binding<modular::UserWatcher> user_watcher_binding_;
-  f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request_;
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;
   modular::UserProviderPtr user_provider_;

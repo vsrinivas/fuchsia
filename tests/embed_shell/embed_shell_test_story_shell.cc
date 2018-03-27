@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -41,7 +42,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   TestPoint connect_view_{"ConnectView root:child:child root"};
 
   // |StoryShell|
-  void ConnectView(f1dl::InterfaceHandle<mozart::ViewOwner> view_owner,
+  void ConnectView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
                    const f1dl::StringPtr& view_id,
                    const f1dl::StringPtr& anchor_id,
                    modular::SurfaceRelationPtr /*surface_relation*/,

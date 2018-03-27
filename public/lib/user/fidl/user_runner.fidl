@@ -23,7 +23,7 @@ interface UserRunner {
                AppConfig story_shell,
                auth.TokenProviderFactory token_provider_factory,
                UserContext user_context,
-               request<mozart.ViewOwner>? view_owner);
+               request<views_v1_token.ViewOwner>? view_owner);
 
   2: SwapUserShell(AppConfig user_shell) -> ();
 };
@@ -33,7 +33,7 @@ interface UserContext {
   // See detailed comments in UserShellContext.Logout().
   1: Logout();
 
-  2: GetPresentation(request<mozart.Presentation> presentation);
+  2: GetPresentation(request<presentation.Presentation> presentation);
 };
 
 // For development purposes only.

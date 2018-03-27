@@ -63,7 +63,7 @@ void ModuleContextImpl::StartModuleDeprecated(
     const f1dl::StringPtr& link_name,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
   story_controller_impl_->StartModuleDeprecated(
       module_data_->module_path, name, query, link_name,
       nullptr /* module_manifest */, nullptr /* create_chain_info */,
@@ -75,7 +75,7 @@ void ModuleContextImpl::EmbedModule(
     const f1dl::StringPtr& name, DaisyPtr daisy,
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner,
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
     const EmbedModuleCallback& callback) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, std::move(daisy),
@@ -124,7 +124,7 @@ void ModuleContextImpl::EmbedModuleDeprecated(
     f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
     f1dl::InterfaceRequest<ModuleController> module_controller,
     f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-    f1dl::InterfaceRequest<mozart::ViewOwner> view_owner) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
   story_controller_impl_->EmbedModuleDeprecated(
       module_data_->module_path, name, query, link_name,
       nullptr /* create_chain_info */, std::move(incoming_services),

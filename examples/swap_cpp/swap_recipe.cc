@@ -22,15 +22,15 @@ constexpr std::array<const char*, 2> kModuleQueries{
 class RecipeView : public mozart::BaseView {
  public:
   explicit RecipeView(
-      mozart::ViewManagerPtr view_manager,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request)
+      views_v1::ViewManagerPtr view_manager,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
       : BaseView(std::move(view_manager),
                  std::move(view_owner_request),
                  "RecipeView") {}
 
   ~RecipeView() override = default;
 
-  void SetChild(mozart::ViewOwnerPtr view_owner) {
+  void SetChild(views_v1_token::ViewOwnerPtr view_owner) {
     if (host_node_) {
       GetViewContainer()->RemoveChild(kChildKey, nullptr);
       host_node_->Detach();
@@ -52,7 +52,7 @@ class RecipeView : public mozart::BaseView {
  private:
   // |BaseView|:
   void OnPropertiesChanged(
-      mozart::ViewPropertiesPtr /*old_properties*/) override {
+      views_v1::ViewPropertiesPtr /*old_properties*/) override {
     if (host_node_) {
       GetViewContainer()->SetChildProperties(kChildKey, properties()->Clone());
     }
@@ -71,12 +71,12 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
  private:
   // |SingleServiceApp|
   void CreateView(
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_ = std::make_unique<RecipeView>(
         application_context()
-            ->ConnectToEnvironmentService<mozart::ViewManager>(),
+            ->ConnectToEnvironmentService<views_v1::ViewManager>(),
         std::move(view_owner_request));
     SetChild();
   }
@@ -124,7 +124,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
 
   modular::ModuleContextPtr module_context_;
   modular::ModuleControllerPtr module_;
-  mozart::ViewOwnerPtr module_view_;
+  views_v1_token::ViewOwnerPtr module_view_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;

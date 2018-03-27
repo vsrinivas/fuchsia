@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/fidl/application_controller.fidl.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/component/fidl/component_context.fidl.h"
@@ -40,7 +41,6 @@
 #include "lib/story/fidl/story_data.fidl.h"
 #include "lib/story/fidl/story_shell.fidl.h"
 #include "lib/surface/fidl/surface.fidl.h"
-#include "lib/ui/views/fidl/view_token.fidl.h"
 #include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
@@ -149,7 +149,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       CreateChainInfoPtr create_chain_info,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl and AddModule.
@@ -171,7 +171,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       const f1dl::StringPtr& module_name, DaisyPtr daisy,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request,
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
 
@@ -195,7 +195,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
       f1dl::InterfaceRequest<ModuleController> module_controller_request,
       f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
-      f1dl::InterfaceRequest<mozart::ViewOwner> view_owner_request);
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Called by ModuleContextImpl.
   void StartContainerInShell(
@@ -217,7 +217,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void SetInfoExtra(const f1dl::StringPtr& name,
                     const f1dl::StringPtr& value,
                     const SetInfoExtraCallback& callback) override;
-  void Start(f1dl::InterfaceRequest<mozart::ViewOwner> request) override;
+  void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
   void Stop(const StopCallback& done) override;
   void Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) override;
   void AddModuleDeprecated(f1dl::VectorPtr<f1dl::StringPtr> module_path,
@@ -242,7 +242,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                  SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
-  void StartStoryShell(f1dl::InterfaceRequest<mozart::ViewOwner> request);
+  void StartStoryShell(fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Misc internal helpers.
   void NotifyStateChange();
@@ -298,7 +298,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
   std::map<f1dl::StringPtr,
-           std::pair<f1dl::VectorPtr<f1dl::StringPtr>, mozart::ViewOwnerPtr>>
+           std::pair<f1dl::VectorPtr<f1dl::StringPtr>, views_v1_token::ViewOwnerPtr>>
       pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,

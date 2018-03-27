@@ -5,13 +5,13 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/bindings/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/story/fidl/link.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
@@ -253,7 +253,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

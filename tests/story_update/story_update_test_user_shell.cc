@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/daisy/fidl/daisy.fidl.h"
@@ -11,7 +12,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/module/fidl/module.fidl.h"
-#include "lib/ui/views/fidl/view_manager.fidl.h"
 #include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -90,7 +90,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    f1dl::InterfaceHandle<mozart::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     f1dl::VectorPtr<f1dl::StringPtr> module_path;

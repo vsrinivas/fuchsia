@@ -8,13 +8,13 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/fidl/cpp/bindings/array.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
 #include "lib/fidl/cpp/bindings/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/module/fidl/link_path.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
@@ -656,7 +656,7 @@ void StoryProviderImpl::Duplicate(
 }
 
 std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
-    f1dl::InterfaceRequest<mozart::ViewOwner> request) {
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> request) {
   MaybeLoadStoryShell();
 
   auto preloaded_story_shell = std::move(preloaded_story_shell_);
@@ -699,10 +699,10 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
 
   // CreateView must be called in order to get the Flutter application to run
 
-  mozart::ViewProviderPtr view_provider;
+  views_v1::ViewProviderPtr view_provider;
   story_shell_app->services().ConnectToService(view_provider.NewRequest());
 
-  mozart::ViewOwnerPtr story_shell_view;
+  views_v1_token::ViewOwnerPtr story_shell_view;
   view_provider->CreateView(story_shell_view.NewRequest(), nullptr);
 
   preloaded_story_shell_ =

@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/views_v1.h>
 #include "lib/app/fidl/application_launcher.fidl.h"
 #include "lib/fidl/cpp/bindings/binding_set.h"
 #include "lib/fidl/cpp/bindings/interface_handle.h"
@@ -18,7 +19,6 @@
 #include "lib/module/fidl/module_context.fidl.h"
 #include "lib/module/fidl/module_controller.fidl.h"
 #include "lib/module/fidl/module_data.fidl.h"
-#include "lib/ui/views/fidl/view_provider.fidl.h"
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {
@@ -37,7 +37,7 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
       AppConfigPtr module_config, const ModuleData* module_data,
       component::ServiceListPtr service_list,
       f1dl::InterfaceHandle<ModuleContext> module_context,
-      f1dl::InterfaceRequest<mozart::ViewProvider> view_provider_request,
+      f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
       f1dl::InterfaceRequest<component::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;
