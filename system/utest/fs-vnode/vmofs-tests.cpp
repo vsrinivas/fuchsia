@@ -16,7 +16,7 @@ bool test_vmofs_file() {
     EXPECT_EQ(ZX_OK, status);
 
     size_t actual = 0;
-    status = vmo.write("abcdefghijklmnop", 0, 16, &actual);
+    status = vmo.write_old("abcdefghijklmnop", 0, 16, &actual);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(16, actual);
 
@@ -67,7 +67,7 @@ bool test_vmofs_dir() {
     EXPECT_EQ(ZX_OK, status);
 
     size_t actual = 0;
-    status = vmo.write("abcdefghijklmnop", 0, 16, &actual);
+    status = vmo.write_old("abcdefghijklmnop", 0, 16, &actual);
     EXPECT_EQ(ZX_OK, status);
     EXPECT_EQ(16, actual);
 

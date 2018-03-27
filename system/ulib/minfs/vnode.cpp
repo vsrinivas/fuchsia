@@ -46,7 +46,7 @@ namespace minfs {
 #ifdef __Fuchsia__
 zx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) const {
     size_t actual;
-    zx_status_t status = vmo_.read(data, offset, len, &actual);
+    zx_status_t status = vmo_.read_old(data, offset, len, &actual);
     if (status != ZX_OK) {
         return status;
     } else if (actual != len) {
@@ -57,7 +57,7 @@ zx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) co
 
 zx_status_t VnodeMinfs::VmoWriteExact(const void* data, uint64_t offset, size_t len) {
     size_t actual;
-    zx_status_t status = vmo_.write(data, offset, len, &actual);
+    zx_status_t status = vmo_.write_old(data, offset, len, &actual);
     if (status != ZX_OK) {
         return status;
     } else if (actual != len) {
@@ -1166,7 +1166,7 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 #ifdef __Fuchsia__
     if ((status = InitVmo()) != ZX_OK) {
         return status;
-    } else if ((status = vmo_.read(data, off, len, actual)) != ZX_OK) {
+    } else if ((status = vmo_.read_old(data, off, len, actual)) != ZX_OK) {
         return status;
     }
 #else

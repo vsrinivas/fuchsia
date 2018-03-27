@@ -120,7 +120,8 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
     block->cookie = &completion;
 
     size_t actual;
-    if (cmd == BLOCK_OP_WRITE && (rc = vmo.write(buf, 0, len, &actual)) != ZX_OK) {
+    if (cmd == BLOCK_OP_WRITE
+            && (rc = vmo.write_old(buf, 0, len, &actual)) != ZX_OK) {
         xprintf("zx::vmo::write failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -134,7 +135,8 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
         return rc;
     }
 
-    if (cmd == BLOCK_OP_READ && (rc = vmo.read(buf, 0, len, &actual)) != ZX_OK) {
+    if (cmd == BLOCK_OP_READ
+            && (rc = vmo.read_old(buf, 0, len, &actual)) != ZX_OK) {
         xprintf("zx::vmo::read failed: %s\n", zx_status_get_string(rc));
         return rc;
     }

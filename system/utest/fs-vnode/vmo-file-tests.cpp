@@ -40,7 +40,7 @@ bool FillVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t byte) {
     memset(data, byte, length);
 
     size_t actual = 0u;
-    zx_status_t status = vmo.write(data, offset, length, &actual);
+    zx_status_t status = vmo.write_old(data, offset, length, &actual);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(length, actual);
 
@@ -53,7 +53,7 @@ bool CheckVmo(const zx::vmo& vmo, size_t offset, size_t length, uint8_t expected
     uint8_t data[length];
 
     size_t actual = 0u;
-    zx_status_t status = vmo.read(data, offset, length, &actual);
+    zx_status_t status = vmo.read_old(data, offset, length, &actual);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(length, actual);
 

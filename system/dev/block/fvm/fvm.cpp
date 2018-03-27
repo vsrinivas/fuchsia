@@ -167,7 +167,7 @@ zx_status_t VPartitionManager::Load() {
 
     fvm_t sb;
     size_t actual;
-    zx_status_t status = vmo.read(&sb, 0, sizeof(sb), &actual);
+    zx_status_t status = vmo.read_old(&sb, 0, sizeof(sb), &actual);
     if (status != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
