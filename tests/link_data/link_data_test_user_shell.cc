@@ -6,13 +6,12 @@
 #include <utility>
 
 #include <fuchsia/cpp/views_v1_token.h>
+#include <fuchsia/cpp/modular_private.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/examples/counter_cpp/store.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -75,7 +74,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::StringPtr& json) override {
+  void Notify(fidl::StringPtr json) override {
     modular_example::Counter counter =
         modular_example::Store::ParseCounterJson(json.get(), "test_link_data");
 
@@ -89,7 +88,7 @@ class LinkChangeCountWatcherImpl : modular::LinkWatcher {
 
   int last_continue_count_{};
   std::function<void()> continue_;
-  f1dl::Binding<modular::LinkWatcher> binding_;
+  fidl::Binding<modular::LinkWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkChangeCountWatcherImpl);
 };
@@ -134,15 +133,15 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {
-    FXL_LOG(INFO) << "OnModuleAdded: " << module_data->module_url;
+  void OnModuleAdded(modular::ModuleData module_data) override {
+    FXL_LOG(INFO) << "OnModuleAdded: " << module_data.module_url;
     if (!on_module_added_called_) {
       on_module_added_.Pass();
       on_module_added_called_ = true;
     }
   }
 
-  f1dl::Binding<modular::StoryWatcher> binding_;
+  fidl::Binding<modular::StoryWatcher> binding_;
   std::vector<std::function<void()>> continue_;
   modular::testing::TestPoint on_module_added_{"OnModuleAdded"};
   bool on_module_added_called_{};
@@ -175,7 +174,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -197,7 +196,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     story_provider_->CreateStoryWithInfo(url, nullptr  /* info_entra */,
                                          modular::JsonValueToString(doc),
-                                         [this](const f1dl::StringPtr& story_id) {
+                                         [this](const fidl::StringPtr& story_id) {
                                            story1_create_.Pass();
                                            TestStory1_GetController(story_id);
                                          });
@@ -205,10 +204,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   TestPoint story1_get_controller_{"Story1 GetController"};
 
-  void TestStory1_GetController(const f1dl::StringPtr& story_id) {
+  void TestStory1_GetController(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_->GetInfo(
-        [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
+        [this](modular::StoryInfo story_info, modular::StoryState state) {
           story1_get_controller_.Pass();
           story_info_ = std::move(story_info);
           TestStory1_SetRootLink();
@@ -220,8 +219,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void TestStory1_SetRootLink() {
     story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
 
-    std::vector<std::string> segments{kUserShell};
-    root_link_->Set(f1dl::VectorPtr<f1dl::StringPtr>::From(segments),
+    fidl::VectorPtr<fidl::StringPtr> segments;
+    segments->emplace_back(kUserShell);
+    root_link_->Set(std::move(segments),
                     modular::JsonValueToString(modular::JsonValue(kTestApp)));
 
     TestStory1_Run(0);
@@ -231,7 +231,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStory1_Run(const int round) {
     if (!story_controller_) {
-      story_provider_->GetController(story_info_->id,
+      story_provider_->GetController(story_info_.id,
                                      story_controller_.NewRequest());
       story_controller_->GetLink(nullptr, "root", root_link_.NewRequest());
     }
@@ -254,7 +254,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     // Start and show the new story.
     fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->Start(std::move(story_view));
   }
 
   TestPoint story1_cycle1_{"Story1 Cycle 1"};
@@ -275,24 +275,23 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Continue(modular::StoryState::STOPPED, [this, round] {
       story_state_watcher_.Continue(modular::StoryState::STOPPED, nullptr);
       story_provider_->GetStoryInfo(
-          story_info_->id, [this, round](modular::StoryInfoPtr story_info) {
+          story_info_.id, [this, round](modular::StoryInfoPtr story_info) {
             FXL_CHECK(story_info);
 
             // Can't use the StoryController here because we closed it
             // in TeardownStoryController().
             story_provider_->RunningStories(
-                [this, round](f1dl::VectorPtr<f1dl::StringPtr> story_ids) {
+                [this, round](fidl::VectorPtr<fidl::StringPtr> story_ids) {
                   auto n = count(story_ids->begin(), story_ids->end(),
-                                 story_info_->id);
+                                 story_info_.id);
                   FXL_CHECK(n == 0);
                   TestStory1_Run(round + 1);
                 });
           });
     });
 
-    story_controller_->GetInfo([this, round](modular::StoryInfoPtr story_info,
+    story_controller_->GetInfo([this, round](modular::StoryInfo story_info,
                                              modular::StoryState state) {
-      FXL_CHECK(!story_info.is_null());
       FXL_CHECK(IsRunning(state));
 
       story_controller_->Stop([this, round] { TeardownStoryController(); });
@@ -315,7 +314,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
   modular::LinkPtr root_link_;
-  modular::StoryInfoPtr story_info_;
+  modular::StoryInfo story_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
