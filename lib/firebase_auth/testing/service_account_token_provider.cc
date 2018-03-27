@@ -75,9 +75,9 @@ std::string GetHeader() {
       fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
-modular::auth::AuthErrPtr GetError(modular::auth::Status status,
+modular_auth::AuthErrPtr GetError(modular_auth::Status status,
                                    std::string message) {
-  auto error = modular::auth::AuthErr::New();
+  auto error = modular_auth::AuthErr::New();
   error->status = status;
   error->message = message;
   return error;
@@ -130,7 +130,7 @@ ServiceAccountTokenProvider::~ServiceAccountTokenProvider() {
   for (const auto& pair : in_progress_callbacks_) {
     ResolveCallbacks(
         pair.first, nullptr,
-        GetError(modular::auth::Status::INTERNAL_ERROR,
+        GetError(modular_auth::Status::INTERNAL_ERROR,
                  "Account provider deleted with requests in flight."));
   }
 }
@@ -179,14 +179,14 @@ void ServiceAccountTokenProvider::GetAccessToken(
     const GetAccessTokenCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
-           GetError(modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
+           GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetIdToken(
     const GetIdTokenCallback& callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
-           GetError(modular::auth::Status::INTERNAL_ERROR, "Not implemented."));
+           GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
@@ -204,7 +204,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
     auto& cached_token = cached_tokens_[firebase_api_key];
     if (time(nullptr) < cached_token->expiration_time) {
       callback(GetFirebaseToken(cached_token->id_token),
-               GetError(modular::auth::Status::OK, "OK"));
+               GetError(modular_auth::Status::OK, "OK"));
       return;
     }
 
@@ -216,7 +216,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
   std::string custom_token;
   if (!GetCustomToken(&custom_token)) {
     callback(GetFirebaseToken(nullptr),
-             GetError(modular::auth::Status::INTERNAL_ERROR,
+             GetError(modular_auth::Status::INTERNAL_ERROR,
                       "Unable to compute custom authentication token."));
   }
 
@@ -308,9 +308,9 @@ bool ServiceAccountTokenProvider::GetCustomToken(std::string* custom_token) {
   return true;
 }
 
-modular::auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
+modular_auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
     const std::string& id_token) {
-  auto token = modular::auth::FirebaseToken::New();
+  auto token = modular_auth::FirebaseToken::New();
   token->id_token = id_token;
   token->local_id = user_id_;
   token->email = user_id_ + "@example.com";
@@ -375,7 +375,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     network::URLResponsePtr response) {
   if (!response->error.is_null()) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular::auth::Status::NETWORK_ERROR,
+                     GetError(modular_auth::Status::NETWORK_ERROR,
                               response->error->description));
     return;
   }
@@ -386,7 +386,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     if (!fsl::StringFromVmo(response->body->get_sized_buffer(),
                             &response_body)) {
       ResolveCallbacks(api_key, nullptr,
-                       GetError(modular::auth::Status::INTERNAL_ERROR,
+                       GetError(modular_auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));
       return;
     }
@@ -395,7 +395,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   if (response->status_code != 200) {
     ResolveCallbacks(
         api_key, nullptr,
-        GetError(modular::auth::Status::OAUTH_SERVER_ERROR, response_body));
+        GetError(modular_auth::Status::OAUTH_SERVER_ERROR, response_body));
     return;
   }
 
@@ -403,14 +403,14 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   document.Parse(response_body.c_str(), response_body.size());
   if (document.HasParseError() || !document.IsObject()) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular::auth::Status::BAD_RESPONSE,
+                     GetError(modular_auth::Status::BAD_RESPONSE,
                               "Unable to parse response: " + response_body));
     return;
   }
 
   if (!ValidateSchema(document, *credentials_->response_schema)) {
     ResolveCallbacks(api_key, nullptr,
-                     GetError(modular::auth::Status::BAD_RESPONSE,
+                     GetError(modular_auth::Status::BAD_RESPONSE,
                               "Malformed response: " + response_body));
     return;
   }
@@ -425,13 +425,13 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
   const auto& id_token = cached_token->id_token;
   cached_tokens_[api_key] = std::move(cached_token);
   ResolveCallbacks(api_key, GetFirebaseToken(id_token),
-                   GetError(modular::auth::Status::OK, "OK"));
+                   GetError(modular_auth::Status::OK, "OK"));
 }
 
 void ServiceAccountTokenProvider::ResolveCallbacks(
     const std::string& api_key,
-    modular::auth::FirebaseTokenPtr token,
-    modular::auth::AuthErrPtr error) {
+    modular_auth::FirebaseTokenPtr token,
+    modular_auth::AuthErrPtr error) {
   auto callbacks = std::move(in_progress_callbacks_[api_key]);
   in_progress_callbacks_[api_key].clear();
   for (const auto& callback : callbacks) {

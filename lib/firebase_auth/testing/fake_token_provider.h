@@ -18,7 +18,7 @@ namespace firebase_auth {
 // construction time.
 //
 // Other token values are set to dummy const values.
-class FakeTokenProvider : public modular::auth::TokenProvider {
+class FakeTokenProvider : public modular_auth::TokenProvider {
  public:
   FakeTokenProvider();
   ~FakeTokenProvider() override {}

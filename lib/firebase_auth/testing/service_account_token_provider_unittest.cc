@@ -108,8 +108,8 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
   }
 
   bool GetToken(std::string api_key,
-                modular::auth::FirebaseTokenPtr* token,
-                modular::auth::AuthErrPtr* error) {
+                modular_auth::FirebaseTokenPtr* token,
+                modular_auth::AuthErrPtr* error) {
     token_provider_.GetFirebaseAuthToken(
         api_key, callback::Capture([this] { message_loop_.PostQuitTask(); },
                                    token, error));
@@ -127,10 +127,10 @@ TEST_F(ServiceAccountTokenProviderTest, GetToken) {
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  ASSERT_EQ(modular::auth::Status::OK, error->status) << error->message;
+  ASSERT_EQ(modular_auth::Status::OK, error->status) << error->message;
   ASSERT_EQ("token", token->id_token);
 }
 
@@ -140,11 +140,11 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 3600)));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
+  EXPECT_EQ(modular_auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
@@ -153,7 +153,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenFromCache) {
       GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 3600)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
+  EXPECT_EQ(modular_auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
   EXPECT_FALSE(network_wrapper_.GetRequest());
 }
@@ -164,11 +164,11 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
   network_wrapper_.SetResponse(
       GetResponse(nullptr, 200, GetSuccessResponseBody("token", 0)));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
+  EXPECT_EQ(modular_auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token", token->id_token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
@@ -176,7 +176,7 @@ TEST_F(ServiceAccountTokenProviderTest, GetTokenNoCacheCache) {
       GetResponse(nullptr, 200, GetSuccessResponseBody("token2", 0)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::OK, error->status) << error->message;
+  EXPECT_EQ(modular_auth::Status::OK, error->status) << error->message;
   EXPECT_EQ("token2", token->id_token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -196,11 +196,11 @@ TEST_F(ServiceAccountTokenProviderTest, NetworkError) {
 
   network_wrapper_.SetResponse(GetResponse(std::move(network_error), 0, ""));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::NETWORK_ERROR, error->status);
+  EXPECT_EQ(modular_auth::Status::NETWORK_ERROR, error->status);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -210,11 +210,11 @@ TEST_F(ServiceAccountTokenProviderTest, AuthenticationError) {
 
   network_wrapper_.SetResponse(GetResponse(nullptr, 401, "Unauthorized"));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::OAUTH_SERVER_ERROR, error->status);
+  EXPECT_EQ(modular_auth::Status::OAUTH_SERVER_ERROR, error->status);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }
@@ -224,11 +224,11 @@ TEST_F(ServiceAccountTokenProviderTest, ResponseFormatError) {
 
   network_wrapper_.SetResponse(GetResponse(nullptr, 200, ""));
 
-  modular::auth::FirebaseTokenPtr token;
-  modular::auth::AuthErrPtr error;
+  modular_auth::FirebaseTokenPtr token;
+  modular_auth::AuthErrPtr error;
 
   ASSERT_TRUE(GetToken("api_key", &token, &error));
-  EXPECT_EQ(modular::auth::Status::BAD_RESPONSE, error->status);
+  EXPECT_EQ(modular_auth::Status::BAD_RESPONSE, error->status);
   EXPECT_FALSE(token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 }

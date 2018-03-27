@@ -14,13 +14,13 @@
 
 namespace firebase_auth {
 
-class TestTokenProvider : public modular::auth::TokenProvider {
+class TestTokenProvider : public modular_auth::TokenProvider {
  public:
   explicit TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   ~TestTokenProvider() override;
 
-  // modular::auth::TokenProvider:
+  // modular_auth::TokenProvider:
   void GetAccessToken(const GetAccessTokenCallback& callback) override;
 
   void GetIdToken(const GetIdTokenCallback& callback) override;
@@ -35,8 +35,8 @@ class TestTokenProvider : public modular::auth::TokenProvider {
 
   void SetNull();
 
-  modular::auth::FirebaseTokenPtr token_to_return;
-  modular::auth::AuthErrPtr error_to_return;
+  modular_auth::FirebaseTokenPtr token_to_return;
+  modular_auth::AuthErrPtr error_to_return;
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

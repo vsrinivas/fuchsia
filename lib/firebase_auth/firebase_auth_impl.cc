@@ -14,7 +14,7 @@ namespace firebase_auth {
 FirebaseAuthImpl::FirebaseAuthImpl(
     fxl::RefPtr<fxl::TaskRunner> task_runner,
     std::string api_key,
-    modular::auth::TokenProviderPtr token_provider,
+    modular_auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
     : api_key_(std::move(api_key)),
       token_provider_(std::move(token_provider)),
@@ -47,20 +47,20 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
 
 void FirebaseAuthImpl::GetToken(
     std::function<void(firebase_auth::AuthStatus,
-                       modular::auth::FirebaseTokenPtr)> callback) {
+                       modular_auth::FirebaseTokenPtr)> callback) {
   token_provider_->GetFirebaseAuthToken(
       api_key_, [this, callback = std::move(callback)](
-                    modular::auth::FirebaseTokenPtr token,
-                    modular::auth::AuthErrPtr error) mutable {
-        if (!token || error->status != modular::auth::Status::OK) {
-          if (!token && error->status == modular::auth::Status::OK) {
+                    modular_auth::FirebaseTokenPtr token,
+                    modular_auth::AuthErr error) mutable {
+        if (!token || error.status != modular_auth::Status::OK) {
+          if (!token && error.status == modular_auth::Status::OK) {
             FXL_LOG(ERROR)
                 << "null Firebase token returned from token provider with no "
                 << "error reported. This should never happen. Retrying.";
           } else {
             FXL_LOG(ERROR)
                 << "Error retrieving the Firebase token from token provider: "
-                << error->status << ", '" << error->message << "', retrying.";
+                << error.status << ", '" << error.message << "', retrying.";
           }
 
           task_runner_.PostDelayedTask(

@@ -32,7 +32,7 @@ class FirebaseAuthImpl : public FirebaseAuth {
  public:
   FirebaseAuthImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                    std::string api_key,
-                   modular::auth::TokenProviderPtr token_provider,
+                   modular_auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);
 
   // FirebaseAuth:
@@ -50,10 +50,10 @@ class FirebaseAuthImpl : public FirebaseAuth {
   // Retrieves the Firebase token from the token provider, transparently
   // retrying the request until success.
   void GetToken(std::function<void(firebase_auth::AuthStatus,
-                                   modular::auth::FirebaseTokenPtr)> callback);
+                                   modular_auth::FirebaseTokenPtr)> callback);
 
   const std::string api_key_;
-  modular::auth::TokenProviderPtr token_provider_;
+  modular_auth::TokenProviderPtr token_provider_;
   const std::unique_ptr<backoff::Backoff> backoff_;
 
   // Must be the last member field.

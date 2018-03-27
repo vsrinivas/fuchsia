@@ -26,7 +26,7 @@ namespace service_account {
 // Console and click on the 'Generate new private key' button. This JSON file
 // must be available on the device, and its path must be passed to the
 // LoadCredentials() method to initialize this class.
-class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
+class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
  public:
   ServiceAccountTokenProvider(network_wrapper::NetworkWrapper* network_wrapper,
                               std::string user_id);
@@ -39,7 +39,7 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
   // the firebase admin console (see the class-level comment).
   bool LoadCredentials(const std::string& json_file);
 
-  // modular::auth::TokenProvider:
+  // modular_auth::TokenProvider:
   void GetAccessToken(const GetAccessTokenCallback& callback) override;
   void GetIdToken(const GetIdTokenCallback& callback) override;
   void GetFirebaseAuthToken(
@@ -53,15 +53,15 @@ class ServiceAccountTokenProvider : public modular::auth::TokenProvider {
 
   std::string GetClaims();
   bool GetCustomToken(std::string* custom_token);
-  modular::auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
+  modular_auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
   network::URLRequestPtr GetIdentityRequest(const std::string& api_key,
                                             const std::string& custom_token);
   std::string GetIdentityRequestBody(const std::string& custom_token);
   void HandleIdentityResponse(const std::string& api_key,
                               network::URLResponsePtr response);
   void ResolveCallbacks(const std::string& api_key,
-                        modular::auth::FirebaseTokenPtr token,
-                        modular::auth::AuthErrPtr error);
+                        modular_auth::FirebaseTokenPtr token,
+                        modular_auth::AuthErrPtr error);
 
   network_wrapper::NetworkWrapper* network_wrapper_;
   const std::string user_id_;
