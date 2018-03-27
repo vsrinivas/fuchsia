@@ -5,8 +5,8 @@
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
+
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -26,8 +26,8 @@ class TestApp : public ModuleWatcher {
  public:
   TestApp(
       ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()),
         module_watcher_binding_(this) {
     module_context_->GetComponentContext(component_context_.NewRequest());
@@ -38,12 +38,12 @@ class TestApp : public ModuleWatcher {
     // the resolution process to choose a compatible Module.
     // TODO(thatguy): We should be specifying type constraints when we create
     // the Link.
-    auto entity_data = f1dl::VectorPtr<TypeToDataEntryPtr>::New(1);
-    entity_data->at(0) = TypeToDataEntry::New();
-    entity_data->at(0)->type = "myType";
-    entity_data->at(0)->data = "1337";
+    auto entity_data = fidl::VectorPtr<TypeToDataEntry>::New(1);
+    entity_data->at(0) = TypeToDataEntry();
+    entity_data->at(0).type = "myType";
+    entity_data->at(0).data = "1337";
     component_context_->CreateEntityWithData(
-        std::move(entity_data), [this](const f1dl::StringPtr& reference) {
+        std::move(entity_data), [this](fidl::StringPtr reference) {
           entity_one_reference_ = reference;
           EmbedModule();
         });
@@ -57,9 +57,9 @@ class TestApp : public ModuleWatcher {
 
  private:
   void EmbedModule() {
-    daisy_ = Daisy::New();
-    daisy_->url = kChildModuleUrl;
-    daisy_->nouns.resize(3);
+    Daisy daisy_;
+    daisy_.url = kChildModuleUrl;
+    daisy_.nouns.resize(3);
 
     // We'll put three nouns "one", "two" and "three" on the Daisy. The first
     // is used to match the Module, because we know that it expectes a noun
@@ -72,29 +72,29 @@ class TestApp : public ModuleWatcher {
     // the Framework. We don't get access to that Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
-    auto noun = Noun::New();
-    noun->set_link_name("foo");
-    daisy_->nouns->at(0) = NounEntry::New();
-    daisy_->nouns->at(0)->name = "one";
-    daisy_->nouns->at(0)->noun = std::move(noun);
+    Noun noun;
+    noun.set_link_name("foo");
+    daisy_.nouns->at(0) = NounEntry();
+    daisy_.nouns->at(0).name = "one";
+    daisy_.nouns->at(0).noun = std::move(noun);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
-    noun = Noun::New();
-    noun->set_link_name("bar");
-    daisy_->nouns->at(1) = NounEntry::New();
-    daisy_->nouns->at(1)->name = "two";
-    daisy_->nouns->at(1)->noun = std::move(noun);
+    noun = Noun();
+    noun.set_link_name("bar");
+    daisy_.nouns->at(1) = NounEntry();
+    daisy_.nouns->at(1).name = "two";
+    daisy_.nouns->at(1).noun = std::move(noun);
 
-    noun = Noun::New();
-    noun->set_json("67890");
-    daisy_->nouns->at(2) = NounEntry::New();
-    daisy_->nouns->at(2)->name = "three";
-    daisy_->nouns->at(2)->noun = std::move(noun);
+    noun = Noun();
+    noun.set_json("67890");
+    daisy_.nouns->at(2) = NounEntry();
+    daisy_.nouns->at(2).name = "three";
+    daisy_.nouns->at(2).noun = std::move(noun);
 
     // Sync to avoid race conditions between writing
-    link_one_->Sync([this] {
-      link_two_->Sync([this] {
+    link_one_->Sync([this, &daisy_] {
+      link_two_->Sync([this, &daisy_] {
         module_context_->EmbedModule(
             "my child", std::move(daisy_), nullptr, child_module_.NewRequest(),
             child_view_.NewRequest(), [this](StartModuleStatus status) {
@@ -126,13 +126,13 @@ class TestApp : public ModuleWatcher {
   ModuleControllerPtr child_module_;
   views_v1_token::ViewOwnerPtr child_view_;
 
-  f1dl::StringPtr entity_one_reference_;
+  fidl::StringPtr entity_one_reference_;
   DaisyPtr daisy_;
 
   LinkPtr link_one_;
   LinkPtr link_two_;
 
-  f1dl::Binding<ModuleWatcher> module_watcher_binding_;
+  fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
   TestPoint start_daisy_{"Started child Daisy"};
   TestPoint child_module_stopped_{"Child module observed to have stopped"};

@@ -8,15 +8,12 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/formatting.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -51,7 +48,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
 
   // |UserShell|
   void Initialize(
-      f1dl::InterfaceHandle<UserShellContext> user_shell_context) override {
+      fidl::InterfaceHandle<UserShellContext> user_shell_context) override {
     initialize_.Pass();
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -75,14 +72,14 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(ModuleDataPtr module_data) override {}
+  void OnModuleAdded(ModuleData module_data) override {}
 
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
     // Create an empty Story. Once it has been created, add our first Module.
     story_provider_->CreateStory(
-        nullptr /* module_url */, [this](const f1dl::StringPtr& story_id) {
+        nullptr /* module_url */, [this](const fidl::StringPtr& story_id) {
           create_story_.Pass();
           story_id_ = story_id;
           story_provider_->GetController(story_id_,
@@ -92,18 +89,18 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   void AddRootModule() {
-    auto daisy = Daisy::New();
-    daisy->url = kModuleUrl;
+    Daisy daisy;
+    daisy.url = kModuleUrl;
 
-    auto noun = Noun::New();
-    noun->set_json(R"("initial data for the story")");
-    auto entry = NounEntry::New();
-    entry->name = "rootModuleNoun1";
-    entry->noun = std::move(noun);
-    daisy->nouns.push_back(std::move(entry));
+    Noun noun;
+    noun.set_json(R"("initial data for the story")");
+    NounEntry entry;
+    entry.name = "rootModuleNoun1";
+    entry.noun = std::move(noun);
+    daisy.nouns.push_back(std::move(entry));
     story_controller_->AddModule({}, "rootMod", std::move(daisy),
                                  nullptr /* surface_relation */);
-    f1dl::VectorPtr<f1dl::StringPtr> path;
+    fidl::VectorPtr<fidl::StringPtr> path;
     path.reset({"rootMod"});
     story_controller_->GetModuleController(std::move(path),
                                            child_module_.NewRequest());
@@ -117,7 +114,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
   void StartStory() {
     // Start and show the new story.
     fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
-    story_controller_->Start(story_view.NewRequest());
+    story_controller_->Start(std::move(story_view));
 
     StoryWatcherPtr watcher;
     story_watcher_binding_.Bind(watcher.NewRequest());
@@ -129,13 +126,13 @@ class TestApp : public testing::ComponentBase<UserShell>,
   UserShellContextPtr user_shell_context_;
   StoryProviderPtr story_provider_;
 
-  f1dl::StringPtr story_id_;
+  fidl::StringPtr story_id_;
   StoryControllerPtr story_controller_;
 
   ModuleControllerPtr child_module_;
 
-  f1dl::Binding<StoryWatcher> story_watcher_binding_;
-  f1dl::Binding<ModuleWatcher> module_watcher_binding_;
+  fidl::Binding<StoryWatcher> story_watcher_binding_;
+  fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };

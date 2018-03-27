@@ -5,8 +5,8 @@
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
+
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/entity/fidl/entity_reference_factory.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/tasks/task_runner.h"
@@ -23,8 +23,8 @@ class TestApp {
  public:
   TestApp(
       ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_context_(module_host->module_context()) {
     module_context_->GetComponentContext(component_context_.NewRequest());
     component_context_->GetEntityResolver(entity_resolver_.NewRequest());
@@ -47,7 +47,7 @@ class TestApp {
   TestPoint link_one_correct_{"Link one value is correct."};
   void VerifyLinkOne() {
     module_context_->GetLink("one", link_one_.NewRequest());
-    link_one_->GetEntity([this](const f1dl::StringPtr& entity_reference) {
+    link_one_->GetEntity([this](const fidl::StringPtr& entity_reference) {
       if (!entity_reference) {
         VerifyLinkTwo();
         return;
@@ -56,7 +56,7 @@ class TestApp {
       entity_resolver_->ResolveEntity(entity_reference, entity.NewRequest());
       entity->GetData("myType",
                       fxl::MakeCopyable([this, entity = std::move(entity)](
-                                            const f1dl::StringPtr& content) {
+                                            fidl::StringPtr content) {
                         if (content == "1337") {
                           link_one_correct_.Pass();
                         }
@@ -69,7 +69,7 @@ class TestApp {
   TestPoint link_two_correct_{"Link two value is correct."};
   void VerifyLinkTwo() {
     module_context_->GetLink("two", link_two_.NewRequest());
-    link_two_->Get(nullptr, [this](const f1dl::StringPtr& content) {
+    link_two_->Get(nullptr, [this](fidl::StringPtr content) {
       if (content == "12345") {
         link_two_correct_.Pass();
       }
@@ -81,7 +81,7 @@ class TestApp {
   TestPoint link_three_correct_{"Link three value is correct."};
   void VerifyLinkThree() {
     module_context_->GetLink("three", link_three_.NewRequest());
-    link_three_->Get(nullptr, [this](const f1dl::StringPtr& content) {
+    link_three_->Get(nullptr, [this](fidl::StringPtr content) {
       if (content == "67890") {
         link_three_correct_.Pass();
       }
@@ -100,7 +100,7 @@ class TestApp {
   LinkPtr link_two_;
   LinkPtr link_three_;
 
-  f1dl::StringPtr entity_one_reference_;
+  fidl::StringPtr entity_one_reference_;
 
   TestPoint initialized_{"Child module initialized"};
   TestPoint stopped_{"Child module stopped"};

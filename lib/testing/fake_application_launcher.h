@@ -9,6 +9,7 @@
 #include <string>
 
 #include <fuchsia/cpp/component.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
@@ -19,8 +20,8 @@ namespace testing {
 class FakeApplicationLauncher : public component::ApplicationLauncher {
  public:
   using ApplicationConnectorFn = std::function<void(
-      component::ApplicationLaunchInfoPtr,
-      f1dl::InterfaceRequest<component::ApplicationController>)>;
+      component::ApplicationLaunchInfo,
+      fidl::InterfaceRequest<component::ApplicationController>)>;
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
@@ -36,8 +37,8 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
   // this call is dropped.
   // |ApplicationLauncher|
   void CreateApplication(
-      component::ApplicationLaunchInfoPtr launch_info,
-      f1dl::InterfaceRequest<component::ApplicationController> controller)
+      component::ApplicationLaunchInfo launch_info,
+      fidl::InterfaceRequest<component::ApplicationController> controller)
       override;
 
   std::map<std::string, ApplicationConnectorFn> connectors_;

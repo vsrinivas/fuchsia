@@ -13,48 +13,48 @@ ComponentContextFake::ComponentContextFake() {}
 ComponentContextFake::~ComponentContextFake() = default;
 
 void ComponentContextFake::Connect(
-    f1dl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<ComponentContext> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void ComponentContextFake::GetLedger(
-    f1dl::InterfaceRequest<ledger::Ledger> request,
-    const GetLedgerCallback& result) {
+    fidl::InterfaceRequest<ledger::Ledger> request,
+    GetLedgerCallback result) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ConnectToAgent(
-    const f1dl::StringPtr& url,
-    f1dl::InterfaceRequest<component::ServiceProvider>
+    fidl::StringPtr url,
+    fidl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::ObtainMessageQueue(
-    const f1dl::StringPtr& name,
-    f1dl::InterfaceRequest<MessageQueue> request) {
+    fidl::StringPtr name,
+    fidl::InterfaceRequest<MessageQueue> request) {
   FXL_NOTIMPLEMENTED();
 }
 
-void ComponentContextFake::DeleteMessageQueue(const f1dl::StringPtr& name) {
+void ComponentContextFake::DeleteMessageQueue(fidl::StringPtr name) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetMessageSender(
-    const f1dl::StringPtr& queue_token,
-    f1dl::InterfaceRequest<MessageSender> request) {
+    fidl::StringPtr queue_token,
+    fidl::InterfaceRequest<MessageSender> request) {
   FXL_NOTIMPLEMENTED();
 }
 
 void ComponentContextFake::GetEntityResolver(
-    f1dl::InterfaceRequest<EntityResolver> request) {
+    fidl::InterfaceRequest<EntityResolver> request) {
   entity_resolver_.Connect(std::move(request));
 }
 
 void ComponentContextFake::CreateEntityWithData(
-    f1dl::VectorPtr<TypeToDataEntryPtr> type_to_data,
-    const CreateEntityWithDataCallback& result) {
+    fidl::VectorPtr<TypeToDataEntry> type_to_data,
+    CreateEntityWithDataCallback result) {
   FXL_NOTIMPLEMENTED();
 }
 

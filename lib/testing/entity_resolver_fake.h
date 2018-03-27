@@ -10,6 +10,7 @@
 #include <string>
 
 #include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
@@ -22,21 +23,21 @@ class EntityResolverFake : public EntityResolver {
   EntityResolverFake();
   ~EntityResolverFake() override;
 
-  void Connect(f1dl::InterfaceRequest<EntityResolver> request);
+  void Connect(fidl::InterfaceRequest<EntityResolver> request);
 
   // Returns an Entity reference that will resolve to an Entity.
   // |types_and_data| is a map of data type to data bytes.
-  f1dl::StringPtr AddEntity(std::map<std::string, std::string> types_and_data);
+  fidl::StringPtr AddEntity(std::map<std::string, std::string> types_and_data);
 
  private:
   class EntityImpl;
 
-  void ResolveEntity(const f1dl::StringPtr& entity_reference,
-                     f1dl::InterfaceRequest<Entity> entity_request) override;
+  void ResolveEntity(fidl::StringPtr entity_reference,
+                     fidl::InterfaceRequest<Entity> entity_request) override;
 
   int next_entity_id_{0};
   std::map<std::string, std::unique_ptr<EntityImpl>> entities_;
-  f1dl::BindingSet<EntityResolver> bindings_;
+  fidl::BindingSet<EntityResolver> bindings_;
 };
 
 }  // namespace modular
