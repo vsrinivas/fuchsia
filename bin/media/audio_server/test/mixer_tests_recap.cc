@@ -23,17 +23,17 @@ TEST(Recap, NoiseFloor) {
   printf("\n Best-case noise-floor");
   printf("\n   (in dB, with prior results)");
 
-  printf("\n\n     Sources");
-  printf("\n           8-bit           16-bit");
-  printf("\n       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
-         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
+  printf("\n\n   Sources");
+  printf("\n\t     8-bit           16-bit");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorSource8,
+         AudioResult::kPrevFloorSource8, AudioResult::FloorSource16,
+         AudioResult::kPrevFloorSource16);
 
-  printf("\n\n     Outputs");
-  printf("\n           8-bit           16-bit");
-  printf("\n       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
-         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
+  printf("\n\n   Outputs");
+  printf("\n\t     8-bit           16-bit");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorOutput8,
+         AudioResult::kPrevFloorOutput8, AudioResult::FloorOutput16,
+         AudioResult::kPrevFloorOutput16);
 
   printf("\n\n\n");
 }
@@ -43,9 +43,9 @@ TEST(Recap, FreqResp) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Point resampler");
-  printf("\n\t\t       No SRC                  96k->48k");
+  printf("\n\t\t        No SRC                  96k->48k");
   for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
-    printf("\n   %8u Hz  %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
+    printf("\n   %8u Hz   %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
            FrequencySet::kSummaryFreqsTranslated[freq],
            AudioResult::FreqRespPointUnity[freq],
            AudioResult::kPrevFreqRespPointUnity[freq],
@@ -54,9 +54,9 @@ TEST(Recap, FreqResp) {
   }
 
   printf("\n\n   Linear resampler");
-  printf("\n\t\t     88.2k->48k               44.1k->48k");
+  printf("\n\t\t      88.2k->48k               44.1k->48k");
   for (uint32_t freq = 0; freq < FrequencySet::kNumSummaryFreqs; ++freq) {
-    printf("\n   %8u Hz  %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
+    printf("\n   %8u Hz   %9.6lf  (%9.6lf)   %9.6lf  (%9.6lf)",
            FrequencySet::kSummaryFreqsTranslated[freq],
            AudioResult::FreqRespLinearDown[freq],
            AudioResult::kPrevFreqRespLinearDown[freq],
@@ -70,17 +70,18 @@ TEST(Recap, FreqResp) {
 TEST(Recap, SINAD) {
   printf("\n Signal-to-Noise-and-Distortion (SINAD)");
   printf("\n   (in dB, with prior results)");
-  printf("\n   1kHz tone @ 0dBFS");
 
-  printf("\n\n     Point resampler");
-  printf("\n\t          No SRC          96k->48k");
-  printf("\n\t       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+  printf("\n\n   Point resampler");
+  printf("\n\t\t     No SRC          96k->48k");
+  printf("\n   %8u Hz    %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin],
          AudioResult::SinadPointUnity, AudioResult::kPrevSinadPointUnity,
          AudioResult::SinadPointDown, AudioResult::kPrevSinadPointDown);
 
-  printf("\n\n     Linear resampler");
-  printf("\n\t        88.2k->48k       44.1k->48k");
-  printf("\n\t       %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+  printf("\n\n   Linear resampler");
+  printf("\n\t\t   88.2k->48k       44.1k->48k");
+  printf("\n   %8u Hz    %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         FrequencySet::kSummaryFreqsTranslated[FrequencySet::kRefFreqBin],
          AudioResult::SinadLinearDown, AudioResult::kPrevSinadLinearDown,
          AudioResult::SinadLinearUp, AudioResult::kPrevSinadLinearUp);
 
@@ -91,11 +92,11 @@ TEST(Recap, DynamicRange) {
   printf("\n Dynamic Range");
   printf("\n   (in dB, with prior results)");
 
-  printf("\n\n           Input        Mixed Result          Usable Range\n");
-  printf("\n     -0.00000003   %10.6lf (%10.6lf)   %5.2lf (%5.2lf)",
+  printf("\n\n      Input Gain       Mixed Result       Usable Range\n");
+  printf("\n     -0.00000003   %8.4lf (%8.4lf)   %5.2lf (%5.2lf)",
          AudioResult::LevelDownEpsilon, AudioResult::kPrevLevelDownEpsilon,
          AudioResult::SinadDownEpsilon, AudioResult::kPrevSinadDownEpsilon);
-  printf("\n    -60.000000     %10.6lf (%10.6lf)   %5.2lf (%5.2lf)",
+  printf("\n    -60.0000       %8.4lf (%8.4lf)   %5.2lf (%5.2lf)",
          AudioResult::LevelDown60, -60.0 - AudioResult::kPrevDynRangeTolerance,
          AudioResult::SinadDown60, AudioResult::kPrevSinadDown60);
   printf("\n\n");
