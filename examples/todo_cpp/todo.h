@@ -7,15 +7,12 @@
 
 #include <random>
 
+#include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/macros.h"
-#include "lib/ledger/fidl/ledger.fidl.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "peridot/examples/todo_cpp/generator.h"
 
 namespace todo {
@@ -34,9 +31,9 @@ class TodoApp : public modular::Module,
                       outgoing_services) override;
 
   // ledger::PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+                OnChangeCallback callback) override;
 
  private:
   // |modular.Lifecycle|

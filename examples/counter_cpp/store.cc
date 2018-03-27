@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular_examples.h>
+#include <fuchsia/cpp/modular_calculator_example.h>
 
 #include "lib/fxl/logging.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

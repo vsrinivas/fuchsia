@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include <fuchsia/cpp/ledger_internal.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -18,7 +19,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include "peridot/bin/ledger/fidl/internal.fidl.h"
 
 namespace todo {
 
@@ -29,7 +29,7 @@ const double kListSizeStdDev = 2.0;
 const int kMinDelaySeconds = 1;
 const int kMaxDelaySeconds = 5;
 
-std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
+std::string ToString(const fsl::SizedVmoTransport& vmo) {
   std::string ret;
   if (!fsl::StringFromVmo(vmo, &ret)) {
     FXL_DCHECK(false);
@@ -56,11 +56,11 @@ std::function<void(ledger::Status)> HandleResponse(std::string description) {
   };
 }
 
-void GetEntries(ledger::PageSnapshotPtr snapshot,
-                std::vector<ledger::EntryPtr> entries,
-                fidl::VectorPtr<uint8_t> token,
-                std::function<void(ledger::Status,
-                                   std::vector<ledger::EntryPtr>)> callback) {
+void GetEntries(
+    ledger::PageSnapshotPtr snapshot,
+    std::vector<ledger::Entry> entries,
+    fidl::VectorPtr<uint8_t> token,
+    std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
   ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetEntries(
       nullptr, std::move(token), fxl::MakeCopyable([
@@ -84,9 +84,9 @@ void GetEntries(ledger::PageSnapshotPtr snapshot,
       }));
 }
 
-void GetEntries(ledger::PageSnapshotPtr snapshot,
-                std::function<void(ledger::Status,
-                                   std::vector<ledger::EntryPtr>)> callback) {
+void GetEntries(
+    ledger::PageSnapshotPtr snapshot,
+    std::function<void(ledger::Status, std::vector<ledger::Entry>)> callback) {
   GetEntries(std::move(snapshot), {}, nullptr, std::move(callback));
 }
 
@@ -129,9 +129,9 @@ void TodoApp::Terminate() {
   fsl::MessageLoop::GetCurrent()->QuitNow();
 }
 
-void TodoApp::OnChange(ledger::PageChangePtr /*page_change*/,
+void TodoApp::OnChange(ledger::PageChange /*page_change*/,
                        ledger::ResultState result_state,
-                       const OnChangeCallback& callback) {
+                       OnChangeCallback callback) {
   if (result_state != ledger::ResultState::PARTIAL_STARTED &&
       result_state != ledger::ResultState::COMPLETED) {
     // Only request the entries list once, on the first OnChange call.
@@ -154,7 +154,8 @@ void TodoApp::List(ledger::PageSnapshotPtr snapshot) {
 
     std::cout << "--- To Do ---" << std::endl;
     for (auto& entry : entries) {
-      std::cout << ToString(entry->value) << std::endl;
+      std::cout << (entry.value ? ToString(*entry.value) : "<empty>")
+                << std::endl;
     }
     std::cout << "---" << std::endl;
   });
