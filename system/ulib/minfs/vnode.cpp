@@ -43,30 +43,6 @@ zx_time_t minfs_gettime_utc() {
 
 namespace minfs {
 
-#ifdef __Fuchsia__
-zx_status_t VnodeMinfs::VmoReadExact(void* data, uint64_t offset, size_t len) const {
-    size_t actual;
-    zx_status_t status = vmo_.read_old(data, offset, len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    } else if (actual != len) {
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
-zx_status_t VnodeMinfs::VmoWriteExact(const void* data, uint64_t offset, size_t len) {
-    size_t actual;
-    zx_status_t status = vmo_.write_old(data, offset, len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    } else if (actual != len) {
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-#endif
-
 void VnodeMinfs::SetIno(ino_t ino) {
     ZX_DEBUG_ASSERT(ino_ == 0);
     ino_ = ino;
@@ -1166,8 +1142,10 @@ zx_status_t VnodeMinfs::ReadInternal(void* data, size_t len, size_t off, size_t*
 #ifdef __Fuchsia__
     if ((status = InitVmo()) != ZX_OK) {
         return status;
-    } else if ((status = vmo_.read_old(data, off, len, actual)) != ZX_OK) {
+    } else if ((status = vmo_.read(data, off, len)) != ZX_OK) {
         return status;
+    } else {
+        *actual = len;
     }
 #else
     void* start = data;
@@ -1279,7 +1257,7 @@ zx_status_t VnodeMinfs::WriteInternal(WriteTxn* txn, const void* data,
         }
 
         // Update this block of the in-memory VMO
-        if ((status = VmoWriteExact(data, xfer_off, xfer)) != ZX_OK) {
+        if ((status = vmo_.write(data, xfer_off, xfer)) != ZX_OK) {
             goto done;
         }
 
@@ -1738,12 +1716,12 @@ zx_status_t VnodeMinfs::TruncateInternal(WriteTxn* txn, size_t len) {
             if (bno != 0) {
                 size_t adjust = len % kMinfsBlockSize;
 #ifdef __Fuchsia__
-                if ((r = VmoReadExact(bdata, len - adjust, adjust)) != ZX_OK) {
+                if ((r = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
                     return ZX_ERR_IO;
                 }
                 memset(bdata + adjust, 0, kMinfsBlockSize - adjust);
 
-                if ((r = VmoWriteExact(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
+                if ((r = vmo_.write(bdata, len - adjust, kMinfsBlockSize)) != ZX_OK) {
                     return ZX_ERR_IO;
                 }
                 txn->Enqueue(vmo_.get(), rel_bno, bno + fs_->info_.dat_block, 1);

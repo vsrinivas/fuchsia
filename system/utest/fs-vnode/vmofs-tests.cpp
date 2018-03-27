@@ -15,10 +15,8 @@ bool test_vmofs_file() {
     zx_status_t status = zx::vmo::create(64, 0, &vmo);
     EXPECT_EQ(ZX_OK, status);
 
-    size_t actual = 0;
-    status = vmo.write_old("abcdefghijklmnop", 0, 16, &actual);
+    status = vmo.write("abcdefghijklmnop", 0, 16);
     EXPECT_EQ(ZX_OK, status);
-    EXPECT_EQ(16, actual);
 
     auto file = fbl::AdoptRef(new vmofs::VnodeFile(vmo.get(), 0, 3));
 
@@ -32,7 +30,7 @@ bool test_vmofs_file() {
 
     // read
     char buffer[1024];
-    actual = 0;
+    size_t actual = 0;
     EXPECT_EQ(ZX_OK, file->Read(buffer, 1024, 1, &actual));
     EXPECT_EQ(2, actual);
     EXPECT_EQ('b', buffer[0]);
@@ -66,10 +64,8 @@ bool test_vmofs_dir() {
     zx_status_t status = zx::vmo::create(64, 0, &vmo);
     EXPECT_EQ(ZX_OK, status);
 
-    size_t actual = 0;
-    status = vmo.write_old("abcdefghijklmnop", 0, 16, &actual);
+    status = vmo.write("abcdefghijklmnop", 0, 16);
     EXPECT_EQ(ZX_OK, status);
-    EXPECT_EQ(16, actual);
 
     fbl::Array<fbl::StringPiece> names(new fbl::StringPiece[3], 3);
     names[0] = "alpha";
@@ -105,7 +101,7 @@ bool test_vmofs_dir() {
 
     EXPECT_EQ(ZX_OK, dir->Lookup(&found, "alpha"));
     char buffer[1024];
-    actual = 0;
+    size_t actual = 0;
     EXPECT_EQ(ZX_OK, found->Read(buffer, 1024, 0, &actual));
     EXPECT_EQ(8, actual);
     EXPECT_EQ(0, memcmp(buffer, "abcdefgh", 8));

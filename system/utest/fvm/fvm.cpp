@@ -329,9 +329,7 @@ bool VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t 
         vbuf->buf_[i + buf_off] = static_cast<uint8_t>(rand());
 
     // Write to the registered VMO
-    size_t actual;
-    ASSERT_EQ(vbuf->vmo_.write_old(&vbuf->buf_[buf_off], buf_off, len, &actual), ZX_OK);
-    ASSERT_EQ(len, actual);
+    ASSERT_EQ(vbuf->vmo_.write(&vbuf->buf_[buf_off], buf_off, len), ZX_OK);
 
     // Write to the block device
     block_fifo_request_t request;
@@ -371,9 +369,7 @@ bool VmoClient::CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t l
     ASSERT_TRUE(Txn(&request, 1));
 
     // Read from the registered VMO
-    size_t actual;
-    ASSERT_EQ(vbuf->vmo_.read_old(out.get(), buf_off, len, &actual), ZX_OK);
-    ASSERT_EQ(len, actual);
+    ASSERT_EQ(vbuf->vmo_.read(out.get(), buf_off, len), ZX_OK);
 
     ASSERT_EQ(memcmp(&vbuf->buf_[buf_off], out.get(), len), 0);
     END_HELPER;

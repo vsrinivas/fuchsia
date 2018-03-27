@@ -82,12 +82,10 @@ public:
     // These methods mirror the syscall API, except that the VMO and buffers are provided
     // automatically. |off| and |len| are in bytes.
     zx_status_t vmo_read(zx_off_t off, size_t len) {
-        size_t ignored;
-        return vmo_.read_old(as_read_.get() + off, 0, len, &ignored);
+        return vmo_.read(as_read_.get() + off, 0, len);
     }
     zx_status_t vmo_write(uint64_t off, uint64_t len) {
-        size_t ignored;
-        return vmo_.write_old(to_write_.get() + off, 0, len, &ignored);
+        return vmo_.write(to_write_.get() + off, 0, len);
     }
 
     // Sends a request over the block fifo to read or write the blocks given by |off| and |len|,
