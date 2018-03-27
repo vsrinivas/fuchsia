@@ -45,7 +45,7 @@ void ViewHost::ConnectView(
 }
 
 void ViewHost::OnPropertiesChanged(
-    views_v1::ViewPropertiesPtr /*old_properties*/) {
+    views_v1::ViewProperties /*old_properties*/) {
   UpdateScene();
 }
 
@@ -63,7 +63,8 @@ void ViewHost::OnChildUnavailable(uint32_t child_key) {
 }
 
 void ViewHost::UpdateScene() {
-  if (!properties() || views_.empty()) {
+  if ((!properties().display_metrics && !properties().view_layout) ||
+      views_.empty()) {
     return;
   }
 
@@ -92,10 +93,10 @@ void ViewHost::UpdateScene() {
 
     auto view_properties = views_v1::ViewProperties::New();
     view_properties->view_layout = views_v1::ViewLayout::New();
-    view_properties->view_layout->size = geometry::SizeF::New();
-    view_properties->view_layout->size->width = layout_bounds.width;
-    view_properties->view_layout->size->height = layout_bounds.height;
-    view_properties->view_layout->inset = geometry::InsetF::New();
+    view_properties->view_layout->size = geometry::SizeF();
+    view_properties->view_layout->size.width = layout_bounds.width;
+    view_properties->view_layout->size.height = layout_bounds.height;
+    view_properties->view_layout->inset = geometry::InsetF();
     GetViewContainer()->SetChildProperties(it->first,
                                            std::move(view_properties));
 
