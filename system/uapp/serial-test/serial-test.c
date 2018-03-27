@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         }
 
         snprintf(path, sizeof(path), "%s/%s", DEV_SERIAL, de->d_name);
-        int fd = open(path, O_RDWR);
+        fd = open(path, O_RDWR);
         if (fd < 0) {
             continue;
         }
