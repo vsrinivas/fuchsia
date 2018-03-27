@@ -216,9 +216,12 @@ void MediaPlayerImpl::PrepareStream(Stream* stream,
         source_->GetPacketProducer(index, producer.NewRequest());
 
         // Capture producer so it survives through the callback.
-        producer->Connect(consumer.Bind(), fxl::MakeCopyable([
-                            this, callback, producer = std::move(producer)
-                          ]() { callback(); }));
+        auto producer_ptr =
+            std::make_unique<MediaPacketProducerPtr>(std::move(producer));
+        (*producer_ptr)->Connect(consumer.Bind(), fxl::MakeCopyable([
+                                   this, callback,
+                                   producer_ptr = std::move(producer_ptr)
+                                 ]() { callback(); }));
       });
 }
 

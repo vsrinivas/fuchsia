@@ -366,9 +366,12 @@ void Builder::Succeed() {
 
       callback_joiner->Spawn();
       // Capture producer to keep it alive through the callback.
-      producer->Connect(std::move(consumer), fxl::MakeCopyable([
-                          callback_joiner, producer = std::move(producer)
-                        ]() { callback_joiner->Complete(); }));
+      auto producer_ptr =
+          std::make_unique<MediaPacketProducerPtr>(std::move(producer));
+      (*producer_ptr)->Connect(std::move(consumer), fxl::MakeCopyable([
+                                 callback_joiner,
+                                 producer_ptr = std::move(producer_ptr)
+                               ]() { callback_joiner->Complete(); }));
     }
 
     if (converter.get() != converters_.back().get() || consumer_getter_) {
@@ -387,9 +390,12 @@ void Builder::Succeed() {
 
     callback_joiner->Spawn();
     // Capture producer to keep it alive through the callback.
-    producer->Connect(std::move(consumer), fxl::MakeCopyable([
-                        callback_joiner, producer = std::move(producer)
-                      ]() { callback_joiner->Complete(); }));
+    auto producer_ptr =
+        std::make_unique<MediaPacketProducerPtr>(std::move(producer));
+    (*producer_ptr)->Connect(std::move(consumer), fxl::MakeCopyable([
+                               callback_joiner,
+                               producer_ptr = std::move(producer_ptr)
+                             ]() { callback_joiner->Complete(); }));
   }
 
   callback_joiner->WhenJoined([this]() {
