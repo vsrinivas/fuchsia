@@ -4,8 +4,11 @@
 
 #include "peridot/lib/testing/testing.h"
 
-#include "lib/fxl/logging.h"
+#include <set>
+
 #include <fuchsia/cpp/test_runner.h>
+
+#include "lib/fxl/logging.h"
 
 namespace modular {
 namespace testing {

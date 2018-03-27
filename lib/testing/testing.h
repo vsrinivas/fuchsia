@@ -7,8 +7,9 @@
 
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/test_runner.h>
+
+#include "lib/app/cpp/application_context.h"
 
 namespace modular {
 namespace testing {

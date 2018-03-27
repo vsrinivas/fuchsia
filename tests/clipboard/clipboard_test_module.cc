@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
+
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/clipboard/fidl/clipboard.fidl.h"
-#include "lib/component/fidl/component_context.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -25,8 +25,8 @@ class ClipboardTestApp {
 
   ClipboardTestApp(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -35,7 +35,7 @@ class ClipboardTestApp {
 
     const std::string expected_value = "hello there";
     clipboard_->Push(expected_value);
-    clipboard_->Peek([this, expected_value](const f1dl::StringPtr& text) {
+    clipboard_->Peek([this, expected_value](fidl::StringPtr text) {
       if (expected_value == text) {
         successful_peek_.Pass();
       }

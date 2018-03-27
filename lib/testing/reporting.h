@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <fuchsia/cpp/test_runner.h>
+
 #include "peridot/lib/testing/testing.h"
 
 #define TEST_PASS(label) std::cerr << "[TEST] PASS: " << (label) << std::endl
