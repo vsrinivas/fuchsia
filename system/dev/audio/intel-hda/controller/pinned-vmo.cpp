@@ -67,6 +67,7 @@ zx_status_t PinnedVmo::Pin(const zx::vmo& vmo,
         if (addrs[i] != (last + PAGE_SIZE)) {
             ++region_count_;
         }
+        last = addrs[i];
     }
 
     // Allocate storage for our regions.
