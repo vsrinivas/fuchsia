@@ -31,28 +31,6 @@ using digest::MerkleTree;
 namespace blobfs {
 namespace {
 
-zx_status_t vmo_read_exact(zx_handle_t h, void* data, uint64_t offset, size_t len) {
-    size_t actual;
-    zx_status_t status = zx_vmo_read_old(h, data, offset, len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    } else if (actual != len) {
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
-zx_status_t vmo_write_exact(zx_handle_t h, const void* data, uint64_t offset, size_t len) {
-    size_t actual;
-    zx_status_t status = zx_vmo_write_old(h, data, offset, len, &actual);
-    if (status != ZX_OK) {
-        return status;
-    } else if (actual != len) {
-        return ZX_ERR_IO;
-    }
-    return ZX_OK;
-}
-
 zx_status_t CheckFvmConsistency(const blobfs_info_t* info, int block_fd) {
     if ((info->flags & kBlobFlagFVM) == 0) {
         return ZX_OK;
@@ -330,7 +308,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
     if (GetState() == kBlobStateDataWrite) {
         size_t to_write = fbl::min(len, inode->blob_size - bytes_written_);
         size_t offset = bytes_written_ + data_start;
-        zx_status_t status = vmo_write_exact(blob_->GetVmo(), data, offset, to_write);
+        zx_status_t status = zx_vmo_write(blob_->GetVmo(), data, offset, to_write);
         if (status != ZX_OK) {
             return status;
         }
@@ -495,7 +473,11 @@ zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* 
     }
 
     const size_t data_start = MerkleTreeBlocks(*inode) * kBlobfsBlockSize;
-    return zx_vmo_read_old(blob_->GetVmo(), data, data_start + off, len, actual);
+    status = zx_vmo_read(blob_->GetVmo(), data, data_start + off, len);
+    if (status == ZX_OK) {
+        *actual = len;
+    }
+    return status;
 }
 
 void VnodeBlob::QueueUnlink() {

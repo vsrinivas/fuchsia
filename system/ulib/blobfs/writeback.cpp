@@ -217,16 +217,13 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
 
         void* ptr = (void*)((uintptr_t)(buffer_->GetData()) +
                             (uintptr_t)(wb_offset * kBlobfsBlockSize));
-        size_t actual;
         zx_status_t status;
         ZX_DEBUG_ASSERT((start_ <= wb_offset) ?
                         (start_ < wb_offset + wb_len) :
                         (wb_offset + wb_len <= start_)); // Wraparound
-        ZX_ASSERT_MSG((status = zx_vmo_read_old(vmo, ptr, vmo_offset * kBlobfsBlockSize,
-                      wb_len * kBlobfsBlockSize, &actual)) == ZX_OK, "VMO Read Fail: %d", status);
+        ZX_ASSERT_MSG((status = zx_vmo_read(vmo, ptr, vmo_offset * kBlobfsBlockSize,
+                      wb_len * kBlobfsBlockSize)) == ZX_OK, "VMO Read Fail: %d", status);
 
-        ZX_ASSERT_MSG(actual == wb_len * kBlobfsBlockSize, "Only read %zu of %zu",
-                      actual, wb_len * kBlobfsBlockSize);
         len_ += wb_len;
 
         // Update the write_request to transfer from the writeback buffer out to disk, rather than
@@ -242,11 +239,9 @@ void WritebackBuffer::CopyToBufferLocked(WriteTxn* txn) {
             wb_len = vmo_len - wb_len;
             ptr = buffer_->GetData();
             ZX_DEBUG_ASSERT((start_ == 0) ? (start_ < wb_len) : (wb_len <= start_)); // Wraparound
-            ZX_ASSERT(zx_vmo_read_old(vmo, ptr, vmo_offset * kBlobfsBlockSize,
-                                  wb_len * kBlobfsBlockSize, &actual) == ZX_OK);
+            ZX_ASSERT(zx_vmo_read(vmo, ptr, vmo_offset * kBlobfsBlockSize,
+                                  wb_len * kBlobfsBlockSize) == ZX_OK);
 
-            ZX_ASSERT_MSG(actual == wb_len * kBlobfsBlockSize, "Only read %zu of %zu",
-                          actual, wb_len * kBlobfsBlockSize);
             len_ += wb_len;
 
             // Shift down all following write requests

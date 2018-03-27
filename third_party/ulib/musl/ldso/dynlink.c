@@ -696,7 +696,10 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
     size_t i;
 
     size_t l;
-    zx_status_t status = _zx_vmo_read_old(vmo, &buf, 0, sizeof(buf), &l);
+    zx_status_t status = _zx_vmo_get_size(vmo, &l);
+    if (status != ZX_OK)
+        return status;
+    status = _zx_vmo_read(vmo, &buf, 0, sizeof(buf) < l ? sizeof(buf) : l);
     if (status != ZX_OK)
         return status;
     // We cannot support ET_EXEC in the general case, because its fixed
@@ -710,11 +713,9 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
     if (phsize > sizeof(buf.phdrs))
         goto noexec;
     if (eh->e_phoff + phsize > l) {
-        status = _zx_vmo_read_old(vmo, buf.phdrs, eh->e_phoff, phsize, &l);
+        status = _zx_vmo_read(vmo, buf.phdrs, eh->e_phoff, phsize);
         if (status != ZX_OK)
             goto error;
-        if (l != phsize)
-            goto noexec;
         ph = ph0 = buf.phdrs;
     } else {
         ph = ph0 = (void*)((char*)&buf + eh->e_phoff);

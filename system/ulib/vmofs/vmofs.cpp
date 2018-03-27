@@ -71,7 +71,11 @@ zx_status_t VnodeFile::Read(void* data, size_t length, size_t offset, size_t* ou
     if (length > remaining_length) {
         length = remaining_length;
     }
-    return zx_vmo_read_old(vmo_, data, offset_ + offset, length, out_actual);
+    zx_status_t status = zx_vmo_read(vmo_, data, offset_ + offset, length);
+    if (status == ZX_OK) {
+        *out_actual = length;
+    }
+    return status;
 }
 
 constexpr uint64_t kVmofsBlksize = PAGE_SIZE;

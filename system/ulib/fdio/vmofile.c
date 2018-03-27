@@ -40,7 +40,7 @@ static ssize_t vmofile_read(fdio_t* io, void* data, size_t len) {
     vf->ptr += len;
     mtx_unlock(&vf->lock);
 
-    zx_status_t status = zx_vmo_read_old(vf->vmo, data, at, len, &len);
+    zx_status_t status = zx_vmo_read(vf->vmo, data, at, len);
     if (status < 0) {
         return status;
     } else {
@@ -64,7 +64,7 @@ static ssize_t vmofile_read_at(fdio_t* io, void* data, size_t len, off_t at) {
         len = vf->end - at;
     }
 
-    zx_status_t status = zx_vmo_read_old(vf->vmo, data, at, len, &len);
+    zx_status_t status = zx_vmo_read(vf->vmo, data, at, len);
     if (status < 0) {
         return status;
     } else {

@@ -53,7 +53,11 @@ zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actu
         len = length_ - off;
     }
 
-    return zx_vmo_read_old(vmo_, data, off, len, out_actual);
+    zx_status_t status = zx_vmo_read(vmo_, data, off, len);
+    if (status == ZX_OK) {
+        *out_actual = len;
+    }
+    return status;
 }
 
 zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
@@ -75,9 +79,10 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
         }
     }
 
-    if ((status = zx_vmo_write_old(vmo_, data, offset, len, out_actual)) != ZX_OK) {
+    if ((status = zx_vmo_write(vmo_, data, offset, len)) != ZX_OK) {
         return status;
     }
+    *out_actual = len;
 
     if (newlen > length_) {
         length_ = newlen;

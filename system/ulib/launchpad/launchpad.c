@@ -670,18 +670,25 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
     lp->num_script_args = 0;
 
     size_t script_nest_level = 0;
-    zx_status_t status;
+
     char first_line[LP_MAX_INTERP_LINE_LEN + 1];
-    size_t chars_read;
+    size_t to_read = sizeof(first_line);
+    size_t vmo_size;
+    zx_status_t status = zx_vmo_get_size(vmo, &vmo_size);
+    if (status != ZX_OK) {
+        return lp_error(lp, status, "file_load: zx_vmo_get_size() failed");
+    }
+    if (to_read > vmo_size) {
+        to_read = vmo_size;
+    }
 
     while (1) {
         // Read enough to get the interpreter specification of a script
-        status = zx_vmo_read_old(vmo, first_line, 0, sizeof(first_line),
-                             &chars_read);
+        status = zx_vmo_read(vmo, first_line, 0, to_read);
 
         // This is not a script -- load as an ELF file
         if ((status == ZX_OK)
-            && (chars_read < 2 || first_line[0] != '#' || first_line[1] != '!'))
+            && (to_read < 2 || first_line[0] != '#' || first_line[1] != '!'))
             break;
 
         zx_handle_close(vmo);
@@ -697,14 +704,14 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
                             "file_load: too many levels of script indirection");
 
         // Normalize the line so that it is NULL-terminated
-        char* newline_pos = memchr(first_line, '\n', chars_read);
+        char* newline_pos = memchr(first_line, '\n', to_read);
         if (newline_pos)
             *newline_pos = '\0';
-        else if (chars_read == sizeof(first_line))
+        else if (to_read == sizeof(first_line))
             return lp_error(lp, ZX_ERR_OUT_OF_RANGE,
                             "file_load: first line of script too long");
         else
-            first_line[chars_read] = '\0';
+            first_line[to_read] = '\0';
 
         char* interp_start;
         size_t interp_len;
@@ -755,7 +762,7 @@ zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
     }
 
     // Finally, load the interpreter itself
-    status = launchpad_elf_load_body(lp, first_line, chars_read, vmo);
+    status = launchpad_elf_load_body(lp, first_line, to_read, vmo);
 
     if (status != ZX_OK)
         lp_error(lp, status, "file_load: failed to load ELF file");

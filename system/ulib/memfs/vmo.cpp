@@ -92,9 +92,14 @@ zx_status_t VnodeVmo::Read(void* data, size_t len, size_t off, size_t* out_actua
         return ZX_OK;
     }
     size_t rlen = length_ - off;
-    if (len > rlen)
+    if (len > rlen) {
         len = rlen;
-    return zx_vmo_read_old(vmo_, data, offset_ + off, len, out_actual);
+    }
+    zx_status_t status = zx_vmo_read(vmo_, data, offset_ + off, len);
+    if (status == ZX_OK) {
+        *out_actual = len;
+    }
+    return status;
 }
 
 zx_status_t VnodeVmo::Getattr(vnattr_t* attr) {
