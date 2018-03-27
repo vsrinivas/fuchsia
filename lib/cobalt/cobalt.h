@@ -5,9 +5,12 @@
 #ifndef PERIDOT_LIB_COBALT_COBALT_H_
 #define PERIDOT_LIB_COBALT_COBALT_H_
 
+#include <set>
+
+#include <fuchsia/cpp/cobalt.h>
+
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
-#include "lib/cobalt/fidl/cobalt.fidl.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
@@ -18,16 +21,17 @@ namespace cobalt {
 
 class CobaltObservation {
  public:
-  CobaltObservation(uint32_t metric_id, uint32_t encoding_id, ValuePtr value);
+  CobaltObservation(uint32_t metric_id, uint32_t encoding_id, Value value);
   CobaltObservation(uint32_t metric_id,
-                    f1dl::VectorPtr<cobalt::ObservationValuePtr> parts);
+                    fidl::VectorPtr<cobalt::ObservationValue> parts);
   CobaltObservation(const CobaltObservation&);
   CobaltObservation(CobaltObservation&&);
   ~CobaltObservation();
   std::string ValueRepr();
 
   uint32_t metric_id() const { return metric_id_; }
-  void Report(CobaltEncoderPtr& encoder, std::function<void(Status)> callback);
+  void Report(CobaltEncoderPtr& encoder,
+              std::function<void(Status)> callback) &&;
 
   CobaltObservation& operator=(const CobaltObservation&);
   CobaltObservation& operator=(CobaltObservation&&);
@@ -35,10 +39,10 @@ class CobaltObservation {
 
  private:
   bool CompareObservationValueLess(
-      const ObservationValuePtr& observationValue,
-      const ObservationValuePtr& rhsObservationValue) const;
+      const ObservationValue& observationValue,
+      const ObservationValue& rhsObservationValue) const;
   uint32_t metric_id_;
-  f1dl::VectorPtr<cobalt::ObservationValuePtr> parts_;
+  fidl::VectorPtr<cobalt::ObservationValue> parts_;
 };
 
 class CobaltContext {
@@ -81,7 +85,7 @@ void ReportObservation(CobaltObservation observation,
 
 // Report a multipart observation to Cobalt.
 void ReportMultipartObservation(uint32_t metric_id,
-                                f1dl::VectorPtr<cobalt::ObservationValuePtr> parts,
+                                fidl::VectorPtr<cobalt::ObservationValue> parts,
                                 CobaltContext* cobalt_context);
 
 };  // namespace cobalt
