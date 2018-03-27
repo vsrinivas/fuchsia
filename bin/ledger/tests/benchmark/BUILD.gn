@@ -8,7 +8,6 @@ group("benchmark") {
   testonly = true
 
   public_deps = [
-    ":launch_benchmark",
     ":run_ledger_benchmarks",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/tests/benchmark/backlog",
@@ -20,28 +19,6 @@ group("benchmark") {
     "//peridot/bin/ledger/tests/benchmark/sync",
     "//peridot/bin/ledger/tests/benchmark/update_entry",
   ]
-}
-
-executable("launch_benchmark") {
-  testonly = true
-
-  sources = [
-    "launch_benchmark.cc",
-    "launch_benchmark.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/fidl",
-    "//peridot/bin/ledger/testing:lib",
-    "//peridot/bin/ledger/tests/benchmark/put:lib",
-    "//peridot/public/lib/ledger/fidl",
-  ]
-
-  configs += [ "//peridot/bin/ledger:ledger_config" ]
 }
 
 copy("run_ledger_benchmarks") {

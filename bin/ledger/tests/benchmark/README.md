@@ -43,13 +43,4 @@ like for example:
 trace record --spec-file=/system/data/ledger/benchmark/entry_count.tspec
 ```
 
-or by tracing it directly. For example:
-
-```
-trace record --categories=benchmark,ledger launch_benchmark \
-  --app=ledger_benchmark_put --test-arg=entry-count \
-  --min-value=10 --max-value=100 --step=10
-  --append-args="--transaction-size=1,--key-size=64,--value-size=1000,--refs=off"
-```
-
 [configured]: /docs/ledger/user_guide.md

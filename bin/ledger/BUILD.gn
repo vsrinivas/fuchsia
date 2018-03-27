@@ -37,10 +37,6 @@ package("ledger_tests") {
 
   binaries = [
     {
-      name = "launch_benchmark"
-    },
-
-    {
       name = "ledger_benchmark_backlog"
     },
 
