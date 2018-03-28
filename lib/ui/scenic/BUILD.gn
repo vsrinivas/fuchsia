@@ -3,15 +3,13 @@
 # found in the LICENSE file.
 
 source_set("scenic") {
-  # TODO(TO-887): remove me.
-  check_includes = false
-
   sources = [
     "clock.cc",
     "clock.h",
     "command_dispatcher.cc",
     "command_dispatcher.h",
     "event_reporter.h",
+    "forward_declarations.h",
     "scenic.cc",
     "scenic.h",
     "session.cc",

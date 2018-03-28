@@ -3,23 +3,27 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
+#include "garnet/lib/ui/scenic/session.h"
 
 namespace scenic {
 
 CommandDispatcherContext::CommandDispatcherContext(Scenic* scenic,
                                                    Session* session)
-    : scenic_(scenic), session_(session) {
+    : scenic_(scenic), session_(session), session_id_(session->id()) {
   FXL_DCHECK(scenic_);
   FXL_DCHECK(session_);
+  FXL_DCHECK(session_id_);
 }
 
 CommandDispatcherContext::CommandDispatcherContext(
     CommandDispatcherContext&& context)
-    : scenic_(context.scenic_), session_(context.session_) {
-  FXL_DCHECK(scenic_);
-  FXL_DCHECK(session_);
-  context.scenic_ = nullptr;
-  context.session_ = nullptr;
+    : CommandDispatcherContext(context.scenic_, context.session_) {
+  auto& other_scenic = const_cast<Scenic*&>(context.scenic_);
+  auto& other_session = const_cast<Session*&>(context.session_);
+  auto& other_session_id = const_cast<SessionId&>(context.session_id_);
+  other_scenic = nullptr;
+  other_session = nullptr;
+  other_session_id = 0;
 }
 
 CommandDispatcher::CommandDispatcher(CommandDispatcherContext context)

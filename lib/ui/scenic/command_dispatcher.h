@@ -6,13 +6,11 @@
 #define GARNET_LIB_UI_SCENIC_COMMAND_DISPATCHER_H_
 
 #include <fuchsia/cpp/ui.h>
+#include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace scenic {
-
-class Scenic;
-class Session;
 
 // Provides the capabilities that a CommandDispatcher needs to do its job,
 // without directly exposing the Session.
@@ -23,10 +21,12 @@ class CommandDispatcherContext final {
 
   Scenic* scenic() { return scenic_; }
   Session* session() { return session_; }
+  SessionId session_id() { return session_id_; }
 
  private:
-  Scenic* scenic_;
-  Session* session_;
+  Scenic* const scenic_;
+  Session* const session_;
+  const SessionId session_id_;
 };
 
 class CommandDispatcher {

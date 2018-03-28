@@ -19,7 +19,7 @@
 namespace scenic {
 namespace gfx {
 
-using SessionId = uint64_t;
+using SessionId = ::scenic::SessionId;
 
 class Image;
 using ImagePtr = ::fxl::RefPtr<Image>;

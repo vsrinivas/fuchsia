@@ -18,7 +18,7 @@ class ErrorReporter;
 namespace scenic {
 namespace gfx {
 
-using SessionId = uint64_t;
+using SessionId = ::scenic::SessionId;
 
 class SessionHandler;
 class Session;

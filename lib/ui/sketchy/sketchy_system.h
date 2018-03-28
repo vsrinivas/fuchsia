@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_
-#define GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_
+#ifndef GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_
+#define GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_
 
 #include "garnet/lib/ui/gfx/scenic_system.h"
 #include "garnet/lib/ui/scenic/system.h"
@@ -11,12 +11,12 @@
 namespace scenic {
 
 // TODO(MZ-552): document.
-class ViewSystem : public System {
+class SketchySystem : public System {
  public:
-  static constexpr TypeId kTypeId = kViews;
+  static constexpr TypeId kTypeId = kSketchy;
 
-  ViewSystem(SystemContext context, gfx::ScenicSystem* scenic);
-  ~ViewSystem() override;
+  SketchySystem(SystemContext context, gfx::ScenicSystem* scenic);
+  ~SketchySystem() override;
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
@@ -26,11 +26,11 @@ class ViewSystem : public System {
 };
 
 // TODO(MZ-552): document.
-class ViewCommandDispatcher : public CommandDispatcher {
+class SketchyCommandDispatcher : public CommandDispatcher {
  public:
-  ViewCommandDispatcher(CommandDispatcherContext context,
-                        gfx::ScenicSystem* scenic_system);
-  ~ViewCommandDispatcher() override;
+  SketchyCommandDispatcher(CommandDispatcherContext context,
+                           gfx::ScenicSystem* scenic);
+  ~SketchyCommandDispatcher() override;
 
   bool ApplyCommand(const ui::Command& command) override;
 
@@ -40,4 +40,4 @@ class ViewCommandDispatcher : public CommandDispatcher {
 
 }  // namespace scenic
 
-#endif  // GARNET_LIB_UI_VIEWS_VIEW_SYSTEM_H_
+#endif  // GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_

@@ -39,9 +39,9 @@ class SystemContext final {
   Clock* clock() const { return clock_; }
 
  private:
-  component::ApplicationContext* app_context_;
-  fxl::TaskRunner* task_runner_;
-  Clock* clock_;
+  component::ApplicationContext* const app_context_;
+  fxl::TaskRunner* const task_runner_;
+  Clock* const clock_;
 };
 
 // Systems are a composable way to add functionality to Scenic. A System creates
@@ -57,8 +57,9 @@ class System {
   enum TypeId {
     kGfx = 0,
     kViews = 1,
-    kDummySystem = 2,
-    kMaxSystems = 3,
+    kSketchy = 2,
+    kDummySystem = 3,
+    kMaxSystems = 4,
   };
 
   using OnInitializedCallback = std::function<void(System* system)>;

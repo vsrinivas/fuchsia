@@ -10,6 +10,7 @@
 
 #include <fuchsia/cpp/gfx.h>
 #include "garnet/lib/ui/scenic/event_reporter.h"
+#include "garnet/lib/ui/scenic/forward_declarations.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
