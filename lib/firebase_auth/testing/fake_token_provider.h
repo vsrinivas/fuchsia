@@ -24,12 +24,11 @@ class FakeTokenProvider : public modular_auth::TokenProvider {
   ~FakeTokenProvider() override {}
 
  private:
-  void GetAccessToken(const GetAccessTokenCallback& callback) override;
-  void GetIdToken(const GetIdTokenCallback& callback) override;
-  void GetFirebaseAuthToken(
-      const f1dl::StringPtr& firebase_api_key,
-      const GetFirebaseAuthTokenCallback& callback) override;
-  void GetClientId(const GetClientIdCallback& callback) override;
+  void GetAccessToken(GetAccessTokenCallback callback) override;
+  void GetIdToken(GetIdTokenCallback callback) override;
+  void GetFirebaseAuthToken(fidl::StringPtr firebase_api_key,
+                            GetFirebaseAuthTokenCallback callback) override;
+  void GetClientId(GetClientIdCallback callback) override;
 
   std::string firebase_id_token_;
   std::string firebase_local_id_;

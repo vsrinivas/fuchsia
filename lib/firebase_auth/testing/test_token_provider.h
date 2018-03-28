@@ -21,22 +21,21 @@ class TestTokenProvider : public modular_auth::TokenProvider {
   ~TestTokenProvider() override;
 
   // modular_auth::TokenProvider:
-  void GetAccessToken(const GetAccessTokenCallback& callback) override;
+  void GetAccessToken(GetAccessTokenCallback callback) override;
 
-  void GetIdToken(const GetIdTokenCallback& callback) override;
+  void GetIdToken(GetIdTokenCallback callback) override;
 
-  void GetFirebaseAuthToken(
-      const f1dl::StringPtr& firebase_api_key,
-      const GetFirebaseAuthTokenCallback& callback) override;
+  void GetFirebaseAuthToken(fidl::StringPtr firebase_api_key,
+                            GetFirebaseAuthTokenCallback callback) override;
 
-  void GetClientId(const GetClientIdCallback& /*callback*/) override;
+  void GetClientId(GetClientIdCallback /*callback*/) override;
 
   void Set(std::string id_token, std::string local_id, std::string email);
 
   void SetNull();
 
   modular_auth::FirebaseTokenPtr token_to_return;
-  modular_auth::AuthErrPtr error_to_return;
+  modular_auth::AuthErr error_to_return;
 
  private:
   fxl::RefPtr<fxl::TaskRunner> task_runner_;

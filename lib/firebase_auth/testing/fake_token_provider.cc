@@ -15,28 +15,28 @@ FakeTokenProvider::FakeTokenProvider()
       email_("dummy@example.com"),
       client_id_("client_id") {}
 
-void FakeTokenProvider::GetAccessToken(const GetAccessTokenCallback& callback) {
-  modular_auth::AuthErrPtr error = modular_auth::AuthErr::New();
-  error->status = modular_auth::Status::OK;
-  error->message = "";
+void FakeTokenProvider::GetAccessToken(GetAccessTokenCallback callback) {
+  modular_auth::AuthErr error;
+  error.status = modular_auth::Status::OK;
+  error.message = "";
   FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetAccessToken not implemented";
   callback(nullptr, std::move(error));
 }
 
-void FakeTokenProvider::GetIdToken(const GetIdTokenCallback& callback) {
-  modular_auth::AuthErrPtr error = modular_auth::AuthErr::New();
-  error->status = modular_auth::Status::OK;
-  error->message = "";
+void FakeTokenProvider::GetIdToken(GetIdTokenCallback callback) {
+  modular_auth::AuthErr error;
+  error.status = modular_auth::Status::OK;
+  error.message = "";
   FXL_NOTIMPLEMENTED() << "FakeTokenProvider::GetIdToken not implemented";
   callback(nullptr, std::move(error));
 }
 
 void FakeTokenProvider::GetFirebaseAuthToken(
-    const f1dl::StringPtr& /*firebase_api_key*/,
-    const GetFirebaseAuthTokenCallback& callback) {
-  modular_auth::AuthErrPtr error = modular_auth::AuthErr::New();
-  error->status = modular_auth::Status::OK;
-  error->message = "";
+    fidl::StringPtr /*firebase_api_key*/,
+    GetFirebaseAuthTokenCallback callback) {
+  modular_auth::AuthErr error;
+  error.status = modular_auth::Status::OK;
+  error.message = "";
   if (firebase_local_id_.empty()) {
     callback(nullptr, std::move(error));
     return;
@@ -48,7 +48,7 @@ void FakeTokenProvider::GetFirebaseAuthToken(
   callback(std::move(token), std::move(error));
 }
 
-void FakeTokenProvider::GetClientId(const GetClientIdCallback& callback) {
+void FakeTokenProvider::GetClientId(GetClientIdCallback callback) {
   if (client_id_.empty()) {
     callback(nullptr);
   } else {
