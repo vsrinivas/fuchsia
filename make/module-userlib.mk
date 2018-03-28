@@ -192,8 +192,8 @@ MODULE_PKG_TAG := "[lib]"
 ifneq ($(filter shared,$(MODULE_PACKAGE)),)
 ifneq ($(MODULE_SO_NAME),)
 MODULE_PKG_SRCS += lib/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.abi
-MODULE_PKG_SRCS += package/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.strip
-MODULE_PKG_SRCS += lib/debug/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so
+MODULE_PKG_SRCS += dist/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so.strip
+MODULE_PKG_SRCS += debug/lib$(MODULE_SO_NAME).so=BUILD/$(patsubst $(BUILDDIR)/%,%,$(MODULE_LIBNAME)).so
 endif
 endif
 
@@ -225,7 +225,7 @@ MODULE_PKG_SRCS += lib/Scrt1.o=$(patsubst $(BUILDDIR)/%,BUILD/%,$(USER_SCRT1_OBJ
 
 # libzircon
 MODULE_PKG_SRCS += lib/libzircon.so=BUILD/system/ulib/zircon/libzircon.so.abi
-MODULE_PKG_SRCS += lib/debug/libzircon.so=BUILD/system/ulib/zircon/libzircon.so
+MODULE_PKG_SRCS += debug/libzircon.so=BUILD/system/ulib/zircon/libzircon.so
 
 # global headers
 GLOBAL_HEADERS := $(shell find system/public -name \*\.h -o -name \*\.inc -o -name \*\.modulemap)
@@ -298,7 +298,7 @@ GENERATED += $(MODULE_TEMP_NAME)
 # These files live on the development host, not the target.
 # There's no point in saving separate debug info here (at least not yet),
 # we just make a copy of the unstripped file.
-MODULE_TEMP_NAME := $(BUILDSYSROOT)/debug-info/lib$(MODULE_SO_NAME).so
+MODULE_TEMP_NAME := $(BUILDSYSROOT)/debug/lib$(MODULE_SO_NAME).so
 $(call copy-dst-src,$(MODULE_TEMP_NAME),$(MODULE_LIBNAME).so)
 SYSROOT_DEPS += $(MODULE_TEMP_NAME)
 GENERATED += $(MODULE_TEMP_NAME)
