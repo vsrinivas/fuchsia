@@ -11,7 +11,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -48,7 +47,7 @@ class ModuleWatcherImpl : modular::ModuleWatcher {
   }
 
   std::function<void(modular::ModuleState)> continue_;
-  f1dl::Binding<modular::ModuleWatcher> binding_;
+  fidl::Binding<modular::ModuleWatcher> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleWatcherImpl);
 };
@@ -70,29 +69,28 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story_create_{"Story Create"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::StringPtr& story_id) {
-                                   story_create_.Pass();
-                                   GetController(story_id);
-                                 });
+    story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
+      story_create_.Pass();
+      GetController(story_id);
+    });
   }
 
   TestPoint root_running_{"Root Module RUNNING"};
 
-  void GetController(const f1dl::StringPtr& story_id) {
+  void GetController(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    f1dl::VectorPtr<f1dl::StringPtr> module_path;
+    fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("root");
     story_controller_->GetModuleController(std::move(module_path),
                                            module0_controller_.NewRequest());
@@ -127,13 +125,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observability of the state transitions.
     //
     // The observability of the STOPPED state, however, is guaranteed.
-    auto daisy = modular::Daisy::New();
-    daisy->url = kModuleUrl;
+    modular::Daisy daisy;
+    daisy.url = kModuleUrl;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
                                  std::move(daisy),
                                  nullptr /* surface_relation */);
 
-    f1dl::VectorPtr<f1dl::StringPtr> module_path;
+    fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("module1");
     story_controller_->GetModuleController(std::move(module_path),
                                            module1_controller_.NewRequest());
@@ -150,7 +148,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetActiveModules1() {
     story_controller_->GetActiveModules(
-        nullptr, [this](f1dl::VectorPtr<modular::ModuleDataPtr> modules) {
+        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
           if (modules->size() == 1) {
             module1_gone_.Pass();
           }
@@ -186,13 +184,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // the story runner handling the Done() request from the module. Instead,
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
-    auto daisy = modular::Daisy::New();
-    daisy->url = kModuleUrl;
+    modular::Daisy daisy;
+    daisy.url = kModuleUrl;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
                                  std::move(daisy),
                                  nullptr /* surface_relation */);
 
-    f1dl::VectorPtr<f1dl::StringPtr> module_path;
+    fidl::VectorPtr<fidl::StringPtr> module_path;
     module_path.push_back("module2");
     story_controller_->GetModuleController(std::move(module_path),
                                            module2_controller_.NewRequest());
@@ -211,7 +209,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void GetActiveModules2() {
     story_controller_->GetActiveModules(
-        nullptr, [this](f1dl::VectorPtr<modular::ModuleDataPtr> modules) {
+        nullptr, [this](fidl::VectorPtr<modular::ModuleData> modules) {
           if (modules->size() == 1) {
             module2_gone_.Pass();
           }
