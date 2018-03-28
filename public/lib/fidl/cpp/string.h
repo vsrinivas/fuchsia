@@ -87,15 +87,24 @@ class StringPtr {
 };
 
 inline bool operator==(const StringPtr& a, const StringPtr& b) {
-  return a.is_null() == b.is_null() && a.get() == b.get();
+  if (a.is_null()) {
+    return b.is_null();
+  }
+  return !b.is_null() && a.get() == b.get();
 }
 
 inline bool operator==(const char* a, const StringPtr& b) {
+  if (a == nullptr) {
+    return b.is_null();
+  }
   return !b.is_null() && a == b.get();
 }
 
 inline bool operator==(const StringPtr& a, const char* b) {
-  return !a.is_null() && a.get() == b;
+  if (a.is_null()) {
+    return b == nullptr;
+  }
+  return b != nullptr && a.get() == b;
 }
 
 inline bool operator!=(const StringPtr& a, const StringPtr& b) {
