@@ -8,30 +8,24 @@
 #include <map>
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/async/cpp/future_value.h"
-#include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/context/fidl/value.fidl.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
-#include "peridot/public/lib/entity/fidl/entity.fidl.h"
 
 namespace modular {
-class EntityResolver;
-}
-
-namespace maxwell {
 
 class ContextRepository;
 class ContextValueWriterImpl;
+class EntityResolver;
 
 class ContextWriterImpl : ContextWriter {
  public:
-  ContextWriterImpl(const ComponentScopePtr& client_info,
+  ContextWriterImpl(const ComponentScope& client_info,
                     ContextRepository* repository,
                     modular::EntityResolver* entity_resolver,
-                    f1dl::InterfaceRequest<ContextWriter> request);
+                    fidl::InterfaceRequest<ContextWriter> request);
   ~ContextWriterImpl() override;
 
   // Takes ownership of |ptr|. Used by ContextWriterImpl and
@@ -47,26 +41,26 @@ class ContextWriterImpl : ContextWriter {
 
   // Used by ContextValueWriterImpl.
   void GetEntityTypesFromEntityReference(
-      const f1dl::StringPtr& reference,
-      std::function<void(const f1dl::VectorPtr<f1dl::StringPtr>&)> done);
+      const fidl::StringPtr& reference,
+      std::function<void(const fidl::VectorPtr<fidl::StringPtr>&)> done);
 
  private:
   // |ContextWriter|
-  void CreateValue(f1dl::InterfaceRequest<ContextValueWriter> request,
+  void CreateValue(fidl::InterfaceRequest<ContextValueWriter> request,
                    ContextValueType type) override;
 
   // |ContextWriter|
-  void WriteEntityTopic(const f1dl::StringPtr& topic,
-                        const f1dl::StringPtr& value) override;
+  void WriteEntityTopic(fidl::StringPtr topic,
+                        fidl::StringPtr value) override;
 
-  f1dl::Binding<ContextWriter> binding_;
+  fidl::Binding<ContextWriter> binding_;
 
   ContextSelectorPtr parent_value_selector_;
   ContextRepository* const repository_;
   modular::EntityResolver* const entity_resolver_;
 
   // Supports WriteEntityTopic.
-  std::map<f1dl::StringPtr, ContextRepository::Id> topic_value_ids_;
+  std::map<fidl::StringPtr, ContextRepository::Id> topic_value_ids_;
 
   // Supports CreateValue().
   std::vector<std::unique_ptr<ContextValueWriterImpl>> value_writer_storage_;
@@ -75,7 +69,7 @@ class ContextWriterImpl : ContextWriter {
   //
   // TODO(rosswang): consider adding removal capability to |InterfacePtrSet|
   // instead.
-  maxwell::BoundPtrSet<modular::Entity> entities_;
+  BoundPtrSet<modular::Entity> entities_;
 
   fxl::WeakPtrFactory<ContextWriterImpl> weak_factory_;
 
@@ -94,19 +88,19 @@ class ContextValueWriterImpl : ContextValueWriter {
   ContextValueWriterImpl(ContextWriterImpl* writer,
                          const ContextRepository::Id& parent_id,
                          ContextValueType type,
-                         f1dl::InterfaceRequest<ContextValueWriter> request);
+                         fidl::InterfaceRequest<ContextValueWriter> request);
   ~ContextValueWriterImpl() override;
 
  private:
   // |ContextValueWriter|
-  void CreateChildValue(f1dl::InterfaceRequest<ContextValueWriter> request,
+  void CreateChildValue(fidl::InterfaceRequest<ContextValueWriter> request,
                         ContextValueType type) override;
 
   // |ContextValueWriter|
-  void Set(const f1dl::StringPtr& content,
+  void Set(fidl::StringPtr content,
            ContextMetadataPtr metadata) override;
 
-  f1dl::Binding<ContextValueWriter> binding_;
+  fidl::Binding<ContextValueWriter> binding_;
 
   ContextWriterImpl* const writer_;
   const ContextRepository::Id parent_id_;
@@ -118,6 +112,6 @@ class ContextValueWriterImpl : ContextValueWriter {
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextValueWriterImpl);
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_

@@ -13,7 +13,7 @@
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "garnet/public/lib/fxl/macros.h"
 
-namespace maxwell {
+namespace modular {
 
 // Supports asynchronous computation by queueing tasks that depend on a value
 // that is to be produced at an unspecified time in the future.
@@ -92,6 +92,6 @@ class FutureValue {
   FXL_DISALLOW_COPY_AND_ASSIGN(FutureValue);
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // LIB_ASYNC_CPP_FUTURE_VALUE_H_

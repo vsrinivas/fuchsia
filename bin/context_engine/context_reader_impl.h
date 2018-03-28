@@ -6,38 +6,37 @@
 
 #include <list>
 
-#include "lib/context/fidl/context_reader.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/user_intelligence/fidl/scope.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
-namespace maxwell {
+namespace modular {
 
 class ContextReaderImpl : ContextReader {
  public:
-  ContextReaderImpl(ComponentScopePtr client,
+  ContextReaderImpl(ComponentScope client,
                     ContextRepository* repository,
-                    f1dl::InterfaceRequest<ContextReader> request);
+                    fidl::InterfaceRequest<ContextReader> request);
   ~ContextReaderImpl() override;
 
  private:
   // |ContextReader|
-  void Subscribe(ContextQueryPtr query,
-                 f1dl::InterfaceHandle<ContextListener> listener) override;
+  void Subscribe(ContextQuery query,
+                 fidl::InterfaceHandle<ContextListener> listener) override;
 
   // |ContextReader|
   void Get(
-      ContextQueryPtr query,
-      const ContextReader::GetCallback& callback) override;
+      ContextQuery query,
+      ContextReader::GetCallback callback) override;
 
-  f1dl::Binding<ContextReader> binding_;
+  fidl::Binding<ContextReader> binding_;
 
-  SubscriptionDebugInfoPtr debug_;
+  SubscriptionDebugInfo debug_;
   ContextRepository* const repository_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextReaderImpl);
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_READER_IMPL_H_

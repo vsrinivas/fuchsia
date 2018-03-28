@@ -9,7 +9,7 @@
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextEngineImpl::ContextEngineImpl(
     modular::EntityResolver* const entity_resolver)
@@ -21,28 +21,28 @@ fxl::WeakPtr<ContextDebugImpl> ContextEngineImpl::debug() {
 }
 
 void ContextEngineImpl::AddBinding(
-    f1dl::InterfaceRequest<ContextEngine> request) {
+    fidl::InterfaceRequest<ContextEngine> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void ContextEngineImpl::GetWriter(
-    ComponentScopePtr client_info,
-    f1dl::InterfaceRequest<ContextWriter> request) {
+    ComponentScope client_info,
+    fidl::InterfaceRequest<ContextWriter> request) {
   writers_.emplace_back(std::make_unique<ContextWriterImpl>(
       std::move(client_info), &repository_, entity_resolver_,
       std::move(request)));
 }
 
 void ContextEngineImpl::GetReader(
-    ComponentScopePtr client_info,
-    f1dl::InterfaceRequest<ContextReader> request) {
+    ComponentScope client_info,
+    fidl::InterfaceRequest<ContextReader> request) {
   readers_.emplace_back(std::make_unique<ContextReaderImpl>(
       std::move(client_info), &repository_, std::move(request)));
 }
 
 void ContextEngineImpl::GetContextDebug(
-    f1dl::InterfaceRequest<ContextDebug> request) {
+    fidl::InterfaceRequest<ContextDebug> request) {
   repository_.AddDebugBinding(std::move(request));
 }
 
-}  // namespace maxwell
+}  // namespace modular

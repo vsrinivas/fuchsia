@@ -4,35 +4,36 @@
 
 #include "peridot/bin/context_engine/context_reader_impl.h"
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/context/cpp/formatting.h"
-#include "lib/context/fidl/debug.fidl.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextReaderImpl::ContextReaderImpl(
-    ComponentScopePtr client_info,
+    ComponentScope client_info,
     ContextRepository* repository,
-    f1dl::InterfaceRequest<ContextReader> request)
+    fidl::InterfaceRequest<ContextReader> request)
     : binding_(this, std::move(request)), repository_(repository) {
-  debug_ = SubscriptionDebugInfo::New();
-  debug_->client_info = std::move(client_info);
+  debug_.client_info = std::move(client_info);
 }
 
 ContextReaderImpl::~ContextReaderImpl() = default;
 
 void ContextReaderImpl::Subscribe(
-    ContextQueryPtr query,
-    f1dl::InterfaceHandle<ContextListener> listener) {
+    ContextQuery query,
+    fidl::InterfaceHandle<ContextListener> listener) {
   auto listener_ptr = listener.Bind();
+  SubscriptionDebugInfo debug_info;
+  fidl::Clone(debug_, &debug_info);
   repository_->AddSubscription(std::move(query), std::move(listener_ptr),
-                               debug_.Clone());
+                               std::move(debug_info));
 }
 
 void ContextReaderImpl::Get(
-    ContextQueryPtr query,
-    const GetCallback& callback) {
+    ContextQuery query,
+    GetCallback callback) {
   callback(repository_->Query(query));
 }
 
-}  // namespace maxwell
+}  // namespace modular

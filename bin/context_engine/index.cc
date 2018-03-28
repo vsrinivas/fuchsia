@@ -8,7 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "peridot/bin/context_engine/index.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextIndex::ContextIndex() = default;
 ContextIndex::~ContextIndex() = default;
@@ -45,7 +45,7 @@ std::set<std::string> EncodeMetadataAndType(
       if (metadata->story->focused) {
         std::ostringstream str;
         str << kStoryFocusedKey;
-        if (metadata->story->focused->state == FocusedState::State::FOCUSED) {
+        if (metadata->story->focused->state == State::FOCUSED) {
           str << "1";
         } else {
           str << "0";
@@ -138,4 +138,4 @@ void ContextIndex::Query(ContextValueType type,
   out->insert(ret.begin(), ret.end());
 }
 
-}  // namespace maxwell
+}  // namespace modular

@@ -13,13 +13,13 @@
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextWriterImpl::ContextWriterImpl(
-    const ComponentScopePtr& client_info,
+    const ComponentScope& client_info,
     ContextRepository* const repository,
-    modular::EntityResolver* const entity_resolver,
-    f1dl::InterfaceRequest<ContextWriter> request)
+    EntityResolver* const entity_resolver,
+    fidl::InterfaceRequest<ContextWriter> request)
     : binding_(this, std::move(request)),
       repository_(repository),
       entity_resolver_(entity_resolver),
@@ -27,7 +27,7 @@ ContextWriterImpl::ContextWriterImpl(
   FXL_DCHECK(repository != nullptr);
 
   // Set up a query to the repository to get our parent id.
-  if (client_info->is_module_scope()) {
+  if (client_infod.>is_module_scope()) {
     auto selector = ContextSelector::New();
     selector->type = ContextValueType::MODULE;
     selector->meta = ContextMetadata::New();
@@ -35,7 +35,7 @@ ContextWriterImpl::ContextWriterImpl(
     selector->meta->story->id = client_info->get_module_scope()->story_id;
     selector->meta->mod = ModuleMetadata::New();
     selector->meta->mod->path =
-        client_info->get_module_scope()->module_path.Clone();
+        client_info.get_module_scope()->module_path.Clone();
 
     parent_value_selector_ = std::move(selector);
   }
@@ -45,22 +45,22 @@ ContextWriterImpl::~ContextWriterImpl() {}
 
 namespace {
 
-f1dl::VectorPtr<f1dl::StringPtr> Deprecated_GetTypesFromJsonEntity(
-    const f1dl::StringPtr& content) {
+fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
+    const fidl::StringPtr& content) {
   // If the content has the @type attribute, take its contents and populate the
   // EntityMetadata appropriately, overriding whatever is there.
   std::vector<std::string> types;
-  if (!modular::ExtractEntityTypesFromJson(content, &types)) {
+  if (!ExtractEntityTypesFromJson(content, &types)) {
     FXL_LOG(WARNING) << "Invalid entity metadata in JSON value: " << content;
     return {};
   }
   if (types.empty())
     return {};
 
-  return f1dl::VectorPtr<f1dl::StringPtr>::From(types);
+  return fidl::VectorPtr<fidl::StringPtr>::From(types);
 }
 
-void MaybeFillEntityTypeMetadata(const f1dl::VectorPtr<f1dl::StringPtr>& types,
+void MaybeFillEntityTypeMetadata(const fidl::VectorPtr<fidl::StringPtr>& types,
                                  ContextValuePtr* value_ptr) {
   auto& value = *value_ptr;
   if (value->type != ContextValueType::ENTITY || !types)
@@ -102,7 +102,7 @@ bool MaybeFindParentValueId(ContextRepository* repository,
 }  // namespace
 
 void ContextWriterImpl::CreateValue(
-    f1dl::InterfaceRequest<ContextValueWriter> request,
+    fidl::InterfaceRequest<ContextValueWriter> request,
     ContextValueType type) {
   ContextRepository::Id parent_id;
   // We ignore the return value - if it returns false |parent_id| will stay
@@ -126,8 +126,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
   value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
-void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
-                                         const f1dl::StringPtr& value) {
+void ContextWriterImpl::WriteEntityTopic(const fidl::StringPtr& topic,
+                                         const fidl::StringPtr& value) {
   auto activity = repository_->debug()->RegisterOngoingActivity();
 
   if (!value) {
@@ -141,7 +141,7 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
 
   GetEntityTypesFromEntityReference(
       value, [this, activity, topic,
-              value](const f1dl::VectorPtr<f1dl::StringPtr>& types) {
+              value](const fidl::VectorPtr<fidl::StringPtr>& types) {
         auto value_ptr = ContextValue::New();
         value_ptr->type = ContextValueType::ENTITY;
         value_ptr->content = value;
@@ -168,13 +168,13 @@ void ContextWriterImpl::WriteEntityTopic(const f1dl::StringPtr& topic,
 }
 
 void ContextWriterImpl::GetEntityTypesFromEntityReference(
-    const f1dl::StringPtr& reference,
-    std::function<void(const f1dl::VectorPtr<f1dl::StringPtr>&)> done) {
+    const fidl::StringPtr& reference,
+    std::function<void(const fidl::VectorPtr<fidl::StringPtr>&)> done) {
   auto activity = repository_->debug()->RegisterOngoingActivity();
 
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // somewhere other places can reach it.
-  modular::EntityPtr entity;
+  EntityPtr entity;
   entity_resolver_->ResolveEntity(reference, entity.NewRequest());
 
   auto fallback = fxl::MakeAutoCall([done, reference] {
@@ -186,7 +186,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
   entity->GetTypes(fxl::MakeCopyable(
       [this, activity, id = entities_.GetId(&entity), done = std::move(done),
        fallback = std::move(fallback)](
-          const f1dl::VectorPtr<f1dl::StringPtr>& types) mutable {
+          const fidl::VectorPtr<fidl::StringPtr>& types) mutable {
         done(types);
         fallback.cancel();
         entities_.erase(id);
@@ -199,7 +199,7 @@ ContextValueWriterImpl::ContextValueWriterImpl(
     ContextWriterImpl* writer,
     const ContextRepository::Id& parent_id,
     ContextValueType type,
-    f1dl::InterfaceRequest<ContextValueWriter> request)
+    fidl::InterfaceRequest<ContextValueWriter> request)
     : binding_(this, std::move(request)),
       writer_(writer),
       parent_id_(parent_id),
@@ -218,7 +218,7 @@ ContextValueWriterImpl::~ContextValueWriterImpl() {
 }
 
 void ContextValueWriterImpl::CreateChildValue(
-    f1dl::InterfaceRequest<ContextValueWriter> request,
+    fidl::InterfaceRequest<ContextValueWriter> request,
     ContextValueType type) {
   // We can't create a child value until this value has an ID.
   value_id_.OnValue(
@@ -230,14 +230,14 @@ void ContextValueWriterImpl::CreateChildValue(
       }));
 }
 
-void ContextValueWriterImpl::Set(const f1dl::StringPtr& content,
+void ContextValueWriterImpl::Set(const fidl::StringPtr& content,
                                  ContextMetadataPtr metadata) {
   auto activity = writer_->repository()->debug()->RegisterOngoingActivity();
 
   auto done_getting_types =
       [weak_this = weak_factory_.GetWeakPtr(), activity, content,
        metadata = std::move(metadata)](
-          const f1dl::VectorPtr<f1dl::StringPtr>& entity_types) mutable {
+          const fidl::VectorPtr<fidl::StringPtr>& entity_types) mutable {
         if (!weak_this)
           return;
 
@@ -288,4 +288,4 @@ void ContextValueWriterImpl::Set(const f1dl::StringPtr& content,
   }
 }
 
-}  // namespace maxwell
+}  // namespace modular

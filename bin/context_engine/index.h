@@ -13,10 +13,9 @@
 #include <set>
 #include <string>
 
-#include "lib/context/fidl/metadata.fidl.h"
-#include "lib/context/fidl/value.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 namespace internal {
 
@@ -49,6 +48,6 @@ class ContextIndex {
   std::map<std::string, std::set<Id>> index_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_CONTEXT_ENGINE_INDEX_H_
