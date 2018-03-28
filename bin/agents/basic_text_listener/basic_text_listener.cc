@@ -5,10 +5,9 @@
 #include <regex>
 #include <vector>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
@@ -17,7 +16,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace maxwell {
+namespace modular {
 
 const std::string kEmailRegex = "[^\\s]+@[^\\s]+";
 
@@ -30,14 +29,14 @@ class BasicTextListener : ContextListener {
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    selector->meta = ContextMetadata::New();
-    selector->meta->entity = EntityMetadata::New();
-    selector->meta->entity->topic = kRawTextTopic;
+    ContextSelector selector;
+    selector.type = ContextValueType::ENTITY;
+    selector.meta = ContextMetadata::New();
+    selector.meta->entity = EntityMetadata::New();
+    selector.meta->entity->topic = kRawTextTopic;
 
-    auto query = ContextQuery::New();
-    AddToContextQuery(query.get(), kRawTextTopic, std::move(selector));
+    ContextQuery query;
+    AddToContextQuery(&query, kRawTextTopic, std::move(selector));
 
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
@@ -70,15 +69,15 @@ class BasicTextListener : ContextListener {
   }
 
   // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr result) override {
-    auto r = TakeContextValue(result.get(), kRawTextTopic);
+  void OnContextUpdate(ContextUpdate result) override {
+    auto r = TakeContextValue(&result, kRawTextTopic);
     if (!r.first || r.second->empty())
       return;
     rapidjson::Document text_doc;
     // TODO(thatguy): This is only taking the first raw_text entry. We should be
     // keeping track of each one, and writing N new context values out for
     // Entities we extracted.
-    text_doc.Parse(r.second->at(0)->content);
+    text_doc.Parse(r.second->at(0).content);
     // TODO(travismart): What to do if there are multiple topics, or if
     // topics_[0] has more than one entry?
     if (!text_doc.HasMember("text") || !text_doc["text"].IsString()) {
@@ -94,14 +93,14 @@ class BasicTextListener : ContextListener {
   std::unique_ptr<component::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
-  f1dl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListener> binding_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  maxwell::BasicTextListener app;
+  modular::BasicTextListener app;
   loop.Run();
   return 0;
 }

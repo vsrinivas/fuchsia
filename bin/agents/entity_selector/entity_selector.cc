@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
@@ -14,7 +13,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace maxwell {
+namespace modular {
 
 // Subscribe to entities and selection in the Context Engine, and Publish any
 // selected entities back to the Context Engine.
@@ -25,15 +24,15 @@ class SelectedEntityFinder : ContextListener {
         reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
         writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
         binding_(this) {
-    auto query = ContextQuery::New();
+    ContextQuery query;
     for (const std::string& topic :
          {kFocalEntitiesTopic, kRawTextSelectionTopic}) {
-      auto selector = ContextSelector::New();
-      selector->type = ContextValueType::ENTITY;
-      selector->meta = ContextMetadata::New();
-      selector->meta->entity = EntityMetadata::New();
-      selector->meta->entity->topic = topic;
-      AddToContextQuery(query.get(), topic, std::move(selector));
+      ContextSelector selector;
+      selector.type = ContextValueType::ENTITY;
+      selector.meta = ContextMetadata::New();
+      selector.meta->entity = EntityMetadata::New();
+      selector.meta->entity->topic = topic;
+      AddToContextQuery(&query, topic, std::move(selector));
     }
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
@@ -83,17 +82,17 @@ class SelectedEntityFinder : ContextListener {
   }
 
   // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr result) override {
-    auto focal_entities = TakeContextValue(result.get(), kFocalEntitiesTopic);
-    auto text_selection = TakeContextValue(result.get(), kRawTextSelectionTopic);
+  void OnContextUpdate(ContextUpdate result) override {
+    auto focal_entities = TakeContextValue(&result, kFocalEntitiesTopic);
+    auto text_selection = TakeContextValue(&result, kRawTextSelectionTopic);
     if (!focal_entities.first || !text_selection.first ||
         focal_entities.second->empty() || text_selection.second->empty()) {
       return;
     }
     const std::vector<EntitySpan> entities =
         EntitySpan::FromContextValues(focal_entities.second);
-    const std::pair<int, int> start_and_end = GetSelectionFromJson(
-        text_selection.second->at(0)->content);
+    const std::pair<int, int> start_and_end =
+        GetSelectionFromJson(text_selection.second->at(0).content);
     writer_->WriteEntityTopic(kSelectedEntitiesTopic,
                               GetSelectedEntities(entities, start_and_end.first,
                                                   start_and_end.second));
@@ -102,14 +101,14 @@ class SelectedEntityFinder : ContextListener {
   std::unique_ptr<component::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ContextWriterPtr writer_;
-  f1dl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListener> binding_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  maxwell::SelectedEntityFinder app;
+  modular::SelectedEntityFinder app;
   loop.Run();
   return 0;
 }

@@ -10,7 +10,7 @@
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace maxwell {
+namespace modular {
 
 EntitySpan::EntitySpan(const std::string& content,
                        const std::string& type,
@@ -20,7 +20,6 @@ EntitySpan::EntitySpan(const std::string& content,
 }
 
 EntitySpan::~EntitySpan() = default;
-
 
 EntitySpan EntitySpan::FromJson(const std::string& json_string) {
   rapidjson::Document e;
@@ -37,7 +36,7 @@ EntitySpan EntitySpan::FromJson(const std::string& json_string) {
 }
 
 // Get Entities from a Json array. This will be replaced when entities are
-// input as a f1dl::VectorPtr to FromContextValues.
+// input as a fidl::VectorPtr to FromContextValues.
 std::vector<EntitySpan> EntitiesFromJson(const std::string& json_string) {
   // Validate and parse the string.
   if (json_string.empty()) {
@@ -66,9 +65,9 @@ std::vector<EntitySpan> EntitiesFromJson(const std::string& json_string) {
 }
 
 std::vector<EntitySpan> EntitySpan::FromContextValues(
-    const f1dl::VectorPtr<ContextValuePtr>& values) {
+    const fidl::VectorPtr<ContextValue>& values) {
   // TODO(travismart): Pass entities as a fidl Array, not a Json array.
-  return EntitiesFromJson(values->at(0)->content);
+  return EntitiesFromJson(values->at(0).content);
 }
 
 void EntitySpan::Init(const std::string& content,
@@ -90,4 +89,4 @@ void EntitySpan::Init(const std::string& content,
   json_string_ = modular::JsonValueToString(entity);
 }
 
-}  // namespace maxwell
+}  // namespace modular

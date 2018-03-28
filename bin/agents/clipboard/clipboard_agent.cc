@@ -32,17 +32,17 @@ class ClipboardAgent {
     clipboard_.reset(new ClipboardImpl(ledger_client_.get()));
 
     services_.AddService<Clipboard>(
-        [this](f1dl::InterfaceRequest<Clipboard> request) {
+        [this](fidl::InterfaceRequest<Clipboard> request) {
           clipboard_->Connect(std::move(request));
         });
   }
 
   void Connect(
-      f1dl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
+      fidl::InterfaceRequest<component::ServiceProvider> outgoing_services) {
     services_.AddBinding(std::move(outgoing_services));
   }
 
-  void RunTask(const f1dl::StringPtr& task_id, const std::function<void()>& done) {
+  void RunTask(const fidl::StringPtr& task_id, const std::function<void()>& done) {
     done();
   }
 

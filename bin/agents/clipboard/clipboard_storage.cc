@@ -9,8 +9,8 @@
 namespace modular {
 namespace {
 
-f1dl::VectorPtr<uint8_t> ToArray(const std::string& str) {
-  auto array = f1dl::VectorPtr<uint8_t>::New(str.size());
+fidl::VectorPtr<uint8_t> ToArray(const std::string& str) {
+  auto array = fidl::VectorPtr<uint8_t>::New(str.size());
   memcpy(array->data(), str.data(), str.size());
   return array;
 }
@@ -49,12 +49,12 @@ ClipboardStorage::ClipboardStorage(LedgerClient* ledger_client,
 
 ClipboardStorage::~ClipboardStorage() = default;
 
-void ClipboardStorage::Push(const f1dl::StringPtr& text) {
+void ClipboardStorage::Push(const fidl::StringPtr& text) {
   page()->Put(ToArray(kCurrentValueKey), ToArray(text),
               LedgerErrorReportingCallback("Failed to put text."));
 }
 
-void ClipboardStorage::Peek(const std::function<void(f1dl::StringPtr)>& callback) {
+void ClipboardStorage::Peek(const std::function<void(fidl::StringPtr)>& callback) {
   ledger::PageSnapshotPtr snapshot;
   page()->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
                       LedgerErrorReportingCallback(

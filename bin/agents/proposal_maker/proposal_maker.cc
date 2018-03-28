@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/bin/agents/entity_utils/entity_span.h"
 #include "peridot/bin/agents/entity_utils/entity_utils.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace maxwell {
+namespace modular {
 
 constexpr char kWebViewUrl[] = "web_view";
 // TODO(travismart): This url breaks in web_view because it's running an
@@ -19,24 +18,24 @@ constexpr char kWebViewUrl[] = "web_view";
 const std::string kGmailUrlPrefix =
     "https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=";
 
-ProposalPtr MkUrlProposal(const std::string& query) {
-  auto p = Proposal::New();
-  p->id = "launch web_view";
-  auto create_story = CreateStory::New();
-  create_story->module_id = kWebViewUrl;
+Proposal MkUrlProposal(const std::string& query) {
+  Proposal p;
+  p.id = "launch web_view";
+  CreateStory create_story;
+  create_story.module_id = kWebViewUrl;
 
-  create_story->initial_data =
+  create_story.initial_data =
       "{\"view\": {\"uri\": \"" + kGmailUrlPrefix + query + "\" } }";
 
-  auto action = Action::New();
-  action->set_create_story(std::move(create_story));
-  p->on_selected.push_back(std::move(action));
+  Action action;
+  action.set_create_story(std::move(create_story));
+  p.on_selected.push_back(std::move(action));
 
-  auto d = SuggestionDisplay::New();
-  d->headline = "Compose email to: " + query;
-  d->color = 0xff4285f4;
+  SuggestionDisplay d;
+  d.headline = "Compose email to: " + query;
+  d.color = 0xff4285f4;
 
-  p->display = std::move(d);
+  p.display = std::move(d);
   return p;
 }
 
@@ -50,20 +49,20 @@ class ProposalMaker : ContextListener {
         proposal_out_(
             app_context_->ConnectToEnvironmentService<ProposalPublisher>()),
         binding_(this) {
-    auto query = ContextQuery::New();
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    selector->meta = ContextMetadata::New();
-    selector->meta->entity = EntityMetadata::New();
-    selector->meta->entity->topic = kSelectedEntitiesTopic;
-    AddToContextQuery(query.get(), kSelectedEntitiesTopic, std::move(selector));
+    ContextQuery query;
+    ContextSelector selector;
+    selector.type = ContextValueType::ENTITY;
+    selector.meta = ContextMetadata::New();
+    selector.meta->entity = EntityMetadata::New();
+    selector.meta->entity->topic = kSelectedEntitiesTopic;
+    AddToContextQuery(&query, kSelectedEntitiesTopic, std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr result) override {
-    auto p = TakeContextValue(result.get(), kSelectedEntitiesTopic);
+  void OnContextUpdate(ContextUpdate result) override {
+    auto p = TakeContextValue(&result, kSelectedEntitiesTopic);
     if (!p.first || p.second->empty())
       return;
     const std::vector<EntitySpan> entities =
@@ -83,14 +82,14 @@ class ProposalMaker : ContextListener {
   std::unique_ptr<component::ApplicationContext> app_context_;
   ContextReaderPtr reader_;
   ProposalPublisherPtr proposal_out_;
-  f1dl::Binding<ContextListener> binding_;
+  fidl::Binding<ContextListener> binding_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
-  maxwell::ProposalMaker app;
+  modular::ProposalMaker app;
   loop.Run();
   return 0;
 }

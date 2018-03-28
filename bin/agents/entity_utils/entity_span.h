@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "lib/context/fidl/value.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 // An entity and its location in the Context Engine, under topic: "raw/text".
 // For example, this could be an email address from the basic_text_reporter
@@ -36,7 +36,7 @@ class EntitySpan {
   static EntitySpan FromJson(const std::string& json_string);
 
   static std::vector<EntitySpan> FromContextValues(
-      const f1dl::VectorPtr<ContextValuePtr>& values);
+      const fidl::VectorPtr<ContextValue>& values);
 
   std::string GetContent() const { return content_; }
   std::string GetType() const { return type_; }
@@ -60,6 +60,6 @@ class EntitySpan {
   std::string json_string_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_SPAN_H_

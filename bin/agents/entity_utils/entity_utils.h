@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace maxwell {
+namespace modular {
 
 // The EntitySpan type field for email entities.
 const std::string kEmailType = "email";
@@ -24,6 +24,6 @@ const std::string kFocalEntitiesTopic = "inferred/focal_entities";
 // Context Engine topic for selected entities from SelectedEntityFinder.
 const std::string kSelectedEntitiesTopic = "inferred/selected_entities";
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_AGENTS_ENTITY_UTILS_ENTITY_UTILS_H_
