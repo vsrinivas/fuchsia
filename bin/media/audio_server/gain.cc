@@ -29,11 +29,9 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
 
   // Update the internal gains, clamping in the process.
   db_current_rend_gain_ = fbl::clamp(db_target_rend_gain, kMinGain, kMaxGain);
-  // TODO(mpuryear): MTWN-71 clamp output_db_gain to 0, instead of kMaxGain?
-  db_current_output_gain_ = fbl::clamp(output_db_gain, kMinGain, kMaxGain);
+  db_current_output_gain_ = fbl::clamp(output_db_gain, kMinGain, 0.0f);
 
-  float effective_gain = fbl::clamp(
-      db_current_rend_gain_ + db_current_output_gain_, kMinGain, kMaxGain);
+  float effective_gain = db_current_rend_gain_ + db_current_output_gain_;
 
   // If either the renderer, output, or combined gain is at the force mute
   // point, just zero out the amplitude scale and return that.

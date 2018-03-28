@@ -86,8 +86,8 @@ TEST(Gain, Caching) {
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 }
 
-// System independently limits RendererGain and OutputGain to kMaxGain (+24.0
-// dB), intending for their sum to fit into a fixed-point (4.28) container.
+// System independently limits RendererGain to kMaxGain (24 dB) and OutputGain
+// to 0, intending for their sum to fit into a fixed-point (4.28) container.
 // MTWN-70 relates to Gain's statefulness. Does it need this complexity?
 TEST(Gain, MaxClamp) {
   Gain gain, expect_gain;
@@ -105,20 +105,16 @@ TEST(Gain, MaxClamp) {
   // A gain_scale value of 0x10270AC represents -24.0dB.
   EXPECT_EQ(0x10270ACu, amplitude_scale);
 
-  // Today system allows OutputGain > 0, which can produce a [Renderer+Output]
-  // gain that exceeds 4.28. This is always clamped back down to kMaxGain.
-  // TODO(mpuryear): if we limit OutputGain to 0.0 (MTWN-71), change the below
-  //
-  // This combination (24.05 dB) even fits into 4.24, but clamps to 24.0
+  // This combination (24.05 dB) would even fit into 4.24, but clamps to 24.0dB.
   gain.SetRendererGain(Gain::kMaxGain);
   amplitude_scale = gain.GetGainScale(0.05f);
   EXPECT_EQ(Gain::kMaxScale, amplitude_scale);
 
-  // System limits OutputGain to kMaxGain, independent of renderer gain.
-  // RendGain = -kMaxGain, OutGain = 1.5*kMaxGain (limited to Max). Expect 0
+  // System limits OutputGain to 0, independent of renderer gain.
+  // RendGain = -kMaxGain, OutGain = 1.0 (limited to 0). Expect -kMaxGain.
   gain.SetRendererGain(-Gain::kMaxGain);
-  amplitude_scale = gain.GetGainScale(Gain::kMaxGain * 1.5);
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
+  amplitude_scale = gain.GetGainScale(1.0);
+  EXPECT_EQ(0x10270ACu, amplitude_scale);
 }
 
 // System independently limits RendererGain and OutputGain to kMinGain (-160dB).
@@ -134,7 +130,6 @@ TEST(Gain, MinMute) {
 
   // if RendererGain <= kMinGain, scale must be 0, regardless of OutputGain
   gain.SetRendererGain(Gain::kMinGain);
-  // TODO(mpuryear): if we fix MTWN-71, setting Output > 0 will cause DCHECK.
   amplitude_scale = gain.GetGainScale(Gain::kMaxGain * 1.2);
   EXPECT_EQ(0u, amplitude_scale);
 
@@ -164,8 +159,8 @@ TEST(Gain, Precision) {
   EXPECT_EQ(0x0F1ADF93u, amplitude_scale);  // (future)
   // TODO(mpuryear): when MTWN-73 is fixed, ...F93.8 should round to ...F94
 
-  gain.SetRendererGain(0.0f);
-  amplitude_scale = gain.GetGainScale(Gain::kMaxGain);
+  gain.SetRendererGain(Gain::kMaxGain);
+  amplitude_scale = gain.GetGainScale(0.0f);
   EXPECT_EQ(0xFD9539A4u, amplitude_scale);  // FD9539A4.4 correctly rounds down
 }
 

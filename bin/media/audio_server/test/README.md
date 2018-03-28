@@ -204,21 +204,6 @@ fractional bits -- will require changes to all stages, including Interpolation.
 
 **Gain**
 
-*   MTWN-71
-
-    The Gain object clamps provided Output gains to a maximum of 24.0 dB,
-treating Output and Renderer gains identically. This differs from documented
-limits for Master (Output) gain: via the SetMasterGain API, this has a maximum
-value of 0.0 dB.
-
-*   MTWN-72
-
-    Related to MTWN-71, if we DO allow the master gain to exceed 0.0 dB, then
-we need to consistently limit the combined gain to only what will fit into our
-AScale container (or even more correctly, limit it to kMaxGain, which is
-exactly 24.0 dB). If we choose to address MTWN-71, then MTWN-72 will require
-no additional fix.
-
 *   MTWN-70
 
     The Gain object contains two functions, through which clients can provide
