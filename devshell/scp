@@ -5,7 +5,23 @@
 
 ### invoke scp with the build ssh config
 
+## usage: fx scp <arguments to scp>
+##
+## This command invokes scp (SSH's file copy tool) with Fuchsia's SSH
+## configuration.  Run "scp -h" to see the options that scp accepts.
+##
+## Example usage:
+##
+##   fx scp [$(fx netaddr --fuchsia)]:source_file dest_file
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+esac
 
 SSH_AUTH_SOCK="" scp -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"

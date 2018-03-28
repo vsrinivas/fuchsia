@@ -5,7 +5,24 @@
 
 ### invoke sftp with the build ssh config
 
+## usage: fx sftp <arguments to sftp>
+##
+## This command invokes sftp (one of SSH's file copy tools) with
+## Fuchsia's SSH configuration.  Run "sftp -h" to see the options that
+## sftp accepts.
+##
+## Example usage:
+##
+##   fx sftp [$(fx netaddr --fuchsia)]:source_file dest_file
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+esac
 
 SSH_AUTH_SOCK="" sftp -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"
