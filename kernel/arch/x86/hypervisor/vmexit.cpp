@@ -529,6 +529,7 @@ static zx_status_t handle_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     // checking capabilities.
     case X86_MSR_IA32_MCG_CAP:
     case X86_MSR_IA32_MCG_STATUS:
+    case X86_MSR_IA32_TEMPERATURE_TARGET:
         next_rip(exit_info, vmcs);
         guest_state->rax = 0;
         guest_state->rdx = 0;
