@@ -8,7 +8,7 @@
 
 #include "lib/fidl/cpp/vector.h"
 
-namespace maxwell {
+namespace modular {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
@@ -77,8 +77,7 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         const modular::ContextQuery& query) {
+std::ostream& operator<<(std::ostream& os, const modular::ContextQuery& query) {
   os << "{" << std::endl;
   for (auto it = query.selector->begin(); it != query.selector->end(); ++it) {
     os << "  " << (*it).key << ": " << (*it).value;
@@ -87,4 +86,4 @@ std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-}  // namespace maxwell
+}  // namespace modular

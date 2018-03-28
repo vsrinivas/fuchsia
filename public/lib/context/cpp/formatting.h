@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 std::ostream& operator<<(std::ostream& os, const modular::FocusedState& state);
 std::ostream& operator<<(std::ostream& os, const modular::StoryMetadata& meta);
@@ -25,6 +25,6 @@ std::ostream& operator<<(std::ostream& os,
                          const modular::ContextUpdate& update);
 std::ostream& operator<<(std::ostream& os, const modular::ContextQuery& query);
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // LIB_CONTEXT_CPP_FORMATTING_H_

@@ -11,16 +11,18 @@
 
 #include "lib/fidl/cpp/vector.h"
 
-namespace maxwell {
+namespace modular {
 
 std::pair<bool, fidl::VectorPtr<modular::ContextValue>> TakeContextValue(
-    modular::ContextUpdate* update, const std::string& key);
+    modular::ContextUpdate* update,
+    const std::string& key);
 
-void AddToContextQuery(modular::ContextQuery* query, const std::string& key,
+void AddToContextQuery(modular::ContextQuery* query,
+                       const std::string& key,
                        modular::ContextSelector selector);
 
 bool HasSelectorKey(modular::ContextQuery* const query, const std::string& key);
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // LIB_CONTEXT_CPP_CONTEXT_HELPER_H_

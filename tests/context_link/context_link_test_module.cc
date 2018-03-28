@@ -8,7 +8,6 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/story/fidl/link.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -22,8 +21,8 @@ class TestApp {
  public:
   TestApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<
           component::ServiceProvider> /*outgoing_services*/) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();

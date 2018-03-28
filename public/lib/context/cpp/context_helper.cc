@@ -4,7 +4,7 @@
 
 #include "lib/context/cpp/context_helper.h"
 
-namespace maxwell {
+namespace modular {
 
 std::pair<bool, fidl::VectorPtr<modular::ContextValue>> TakeContextValue(
     modular::ContextUpdate* const update, const std::string& key) {
@@ -35,4 +35,4 @@ bool HasSelectorKey(modular::ContextQuery* const query,
   return false;
 }
 
-}  // namespace maxwell
+}  // namespace modular
