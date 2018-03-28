@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/golang/glog"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -82,6 +83,7 @@ func (c *TargetConnection) RunCommand(command string) error {
 	session.Stdin = os.Stdin
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
+	glog.Info("Running: ", command)
 	return session.Run(command)
 }
 
