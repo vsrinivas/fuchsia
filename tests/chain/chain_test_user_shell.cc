@@ -113,7 +113,7 @@ class TestApp : public testing::ComponentBase<UserShell>,
 
   void StartStory() {
     // Start and show the new story.
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(std::move(story_view));
 
     StoryWatcherPtr watcher;

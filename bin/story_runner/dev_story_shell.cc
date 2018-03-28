@@ -94,7 +94,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   std::unique_ptr<modular::ViewHost> view_;
-  std::vector<fidl::InterfaceRequest<views_v1_token::ViewOwner>> child_views_;
+  std::vector<fidl::InterfaceHandle<views_v1_token::ViewOwner>> child_views_;
 
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   modular::StoryContextPtr story_context_;

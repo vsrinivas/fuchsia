@@ -89,7 +89,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void GetController(const f1dl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     f1dl::VectorPtr<f1dl::StringPtr> module_path;

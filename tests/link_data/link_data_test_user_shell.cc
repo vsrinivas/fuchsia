@@ -5,8 +5,8 @@
 #include <memory>
 #include <utility>
 
-#include <fuchsia/cpp/views_v1_token.h>
 #include <fuchsia/cpp/modular_private.h>
+#include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -253,7 +253,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(std::move(story_view));
   }
 

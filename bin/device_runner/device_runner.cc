@@ -270,7 +270,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // We still need to pass a request for root view to device shell since
     // dev_device_shell (which mimics flutter behavior) blocks until it receives
     // the root view request.
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> root_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> root_view;
     presentation::PresentationPtr presentation;
     device_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
     if (!settings_.test) {

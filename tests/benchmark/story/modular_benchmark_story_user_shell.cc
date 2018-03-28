@@ -216,7 +216,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
     story_watcher_.Watch(&story_controller_);
 
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
   }
 

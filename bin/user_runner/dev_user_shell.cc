@@ -16,8 +16,8 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -124,7 +124,7 @@ class DevUserShellApp : modular::StoryWatcher,
     story_controller_->Watch(story_watcher_binding_.NewBinding());
 
     FXL_LOG(INFO) << "DevUserShell Starting story with id: " << story_id;
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> root_module_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> root_module_view;
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
     focus_controller_->Set(story_id);

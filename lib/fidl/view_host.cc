@@ -29,7 +29,7 @@ ViewHost::ViewHost(
 ViewHost::~ViewHost() = default;
 
 void ViewHost::ConnectView(
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner) {
   const uint32_t child_key = next_child_key_++;
 
   auto view_data = std::make_unique<ViewData>(session());

@@ -42,7 +42,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   TestPoint connect_view_{"ConnectView root:child:child root"};
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
+  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
                    const f1dl::StringPtr& view_id,
                    const f1dl::StringPtr& anchor_id,
                    modular::SurfaceRelationPtr /*surface_relation*/,

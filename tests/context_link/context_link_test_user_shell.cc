@@ -138,7 +138,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_provider_->GetController(story_id_, story_controller_.NewRequest());
 
     // Start and show the new story.
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
     start_story_exit_.Pass();

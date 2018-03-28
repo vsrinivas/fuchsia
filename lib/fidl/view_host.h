@@ -31,8 +31,7 @@ class ViewHost : public mozart::BaseView {
   // multiple views and lays them out horizontally next to each other.
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
-  void ConnectView(
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner);
+  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner);
 
  private:
   struct ViewData;
