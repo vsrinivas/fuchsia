@@ -9,20 +9,6 @@
 namespace mdns {
 namespace {
 
-template <typename T, size_t N>
-bool operator==(const fidl::Array<T, N>& array_a, const fidl::Array<T, N>& array_b) {
-  for (size_t i = 0; i < N; ++i) {
-    if (array_a[i] != array_b[i])
-      return false;
-  }
-  return true;
-}
-
-template <typename T, size_t N>
-bool operator!=(const fidl::Array<T, N>& array_a, const fidl::Array<T, N>& array_b) {
-  return !(array_a == array_b);
-}
-
 bool operator==(const netstack::Ipv4AddressPtr& addr_a,
                 const netstack::Ipv4AddressPtr& addr_b) {
   if (!addr_a || !addr_b)
