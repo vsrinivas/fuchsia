@@ -12,9 +12,13 @@ Command::Command(component::ApplicationContext* context) : context_(context) {}
 
 Command::~Command() = default;
 
-component::ApplicationContext* Command::context() { return context_; }
+component::ApplicationContext* Command::context() {
+  return context_;
+}
 
-component::ApplicationContext* Command::context() const { return context_; }
+component::ApplicationContext* Command::context() const {
+  return context_;
+}
 
 std::istream& Command::in() {
   return std::cin;
@@ -30,11 +34,34 @@ std::ostream& Command::err() {
   return std::cerr;
 }
 
+void Command::Run(const fxl::CommandLine& command_line,
+                  OnDoneCallback on_done) {
+  if (return_code_ >= 0) {
+    on_done(return_code_);
+  } else {
+    on_done_ = std::move(on_done);
+    Start(command_line);
+  }
+}
+
+void Command::Done(int32_t return_code) {
+  return_code_ = return_code;
+  if (on_done_) {
+    on_done_(return_code_);
+    on_done_ = nullptr;
+  }
+}
+
 CommandWithTraceController::CommandWithTraceController(
     component::ApplicationContext* context)
     : Command(context),
       trace_controller_(
-          context->ConnectToEnvironmentService<TraceController>()) {}
+          context->ConnectToEnvironmentService<TraceController>()) {
+  trace_controller_.set_error_handler([this] {
+    err() << "Trace controller disconnected unexpectedly.";
+    Done(1);
+  });
+}
 
 TraceControllerPtr& CommandWithTraceController::trace_controller() {
   return trace_controller_;

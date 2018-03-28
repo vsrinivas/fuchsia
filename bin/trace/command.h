@@ -37,8 +37,7 @@ class Command {
 
   virtual ~Command();
 
-  virtual void Run(const fxl::CommandLine& command_line,
-                   OnDoneCallback on_done) = 0;
+  void Run(const fxl::CommandLine& command_line, OnDoneCallback on_done);
 
  protected:
   static std::istream& in();
@@ -50,8 +49,16 @@ class Command {
   component::ApplicationContext* context();
   component::ApplicationContext* context() const;
 
+  // Starts running the command.
+  // The command must invoke Done() when finished.
+  virtual void Start(const fxl::CommandLine& command_line) = 0;
+  void Done(int32_t return_code);
+
  private:
   component::ApplicationContext* context_;
+  OnDoneCallback on_done_;
+  int32_t return_code_ = -1;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 

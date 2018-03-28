@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/component.h>
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
@@ -16,8 +17,6 @@
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
 #include "garnet/lib/trace_converters/chromium_exporter.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/time/time_delta.h"
 
@@ -44,12 +43,13 @@ class Record : public CommandWithTraceController {
   static Info Describe();
 
   explicit Record(component::ApplicationContext* context);
-  void Run(const fxl::CommandLine& command_line,
-           OnDoneCallback on_done) override;
+
+ protected:
+  void Start(const fxl::CommandLine& command_line) override;
 
  private:
   void StopTrace(int32_t return_code);
-  void ProcessMeasurements(fxl::Closure on_done);
+  void ProcessMeasurements();
   void DoneTrace();
   void LaunchApp();
   void LaunchTool();
@@ -70,7 +70,6 @@ class Record : public CommandWithTraceController {
   bool tracing_ = false;
   int32_t return_code_ = 0;
   Options options_;
-  OnDoneCallback on_done_;
 
   fxl::WeakPtrFactory<Record> weak_ptr_factory_;
 };

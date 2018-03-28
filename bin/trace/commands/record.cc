@@ -234,10 +234,10 @@ Command::Info Record::Describe() {
 Record::Record(component::ApplicationContext* context)
     : CommandWithTraceController(context), weak_ptr_factory_(this) {}
 
-void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
+void Record::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
     err() << "Error parsing options from command line - aborting" << std::endl;
-    on_done(1);
+    Done(1);
     return;
   }
 
@@ -246,11 +246,10 @@ void Record::Run(const fxl::CommandLine& command_line, OnDoneCallback on_done) {
   if (!out_file.is_open()) {
     err() << "Failed to open " << options_.output_file_name << " for writing"
           << std::endl;
-    on_done(1);
+    Done(1);
     return;
   }
 
-  on_done_ = std::move(on_done);
   exporter_.reset(new ChromiumExporter(std::move(out_file)));
   tracer_.reset(new Tracer(trace_controller().get()));
   if (!options_.measurements.duration.empty()) {
@@ -299,7 +298,7 @@ void Record::StopTrace(int32_t return_code) {
   }
 }
 
-void Record::ProcessMeasurements(fxl::Closure on_done) {
+void Record::ProcessMeasurements() {
   if (!events_.empty()) {
     std::sort(std::begin(events_), std::end(events_),
               [](const trace::Record& e1, const trace::Record& e2) {
@@ -345,7 +344,7 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
   if (errored) {
     err() << "One or more measurements had empty results. Quitting."
           << std::endl;
-    on_done_(1);
+    Done(1);
     return;
   }
 
@@ -353,13 +352,13 @@ void Record::ProcessMeasurements(fxl::Closure on_done) {
     if (!ExportResults(options_.benchmark_results_file, results)) {
       err() << "Failed to write benchmark results to "
             << options_.benchmark_results_file;
-      on_done_(1);
+      Done(1);
       return;
     }
     out() << "Benchmark results written to " << options_.benchmark_results_file;
   }
 
-  on_done();
+  Done(return_code_);
 }
 
 void Record::DoneTrace() {
@@ -369,9 +368,9 @@ void Record::DoneTrace() {
   out() << "Trace file written to " << options_.output_file_name << std::endl;
 
   if (measure_duration_ || measure_time_between_) {
-    ProcessMeasurements([this] { on_done_(return_code_); });
+    ProcessMeasurements();
   } else {
-    on_done_(return_code_);
+    Done(return_code_);
   }
 }
 

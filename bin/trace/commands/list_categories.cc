@@ -22,24 +22,24 @@ Command::Info ListCategories::Describe() {
 ListCategories::ListCategories(component::ApplicationContext* context)
     : CommandWithTraceController(context) {}
 
-void ListCategories::Run(const fxl::CommandLine& command_line,
-                         OnDoneCallback on_done) {
+void ListCategories::Start(const fxl::CommandLine& command_line) {
   if (!(command_line.options().empty() &&
         command_line.positional_args().empty())) {
     err() << "We encountered unknown options, please check your "
           << "command invocation" << std::endl;
+    Done(1);
+    return;
   }
 
-  trace_controller()->GetKnownCategories([on_done = std::move(on_done)](
-      fidl::VectorPtr<KnownCategory> known_categories) {
-    out() << "Known categories" << std::endl;
-    for (const auto& it : *known_categories) {
-      out() << "  " << it.name.get() << ": " << it.description.get()
-            << std::endl;
-    }
-
-    on_done(0);
-  });
+  trace_controller()->GetKnownCategories(
+      [this](fidl::VectorPtr<KnownCategory> known_categories) {
+        out() << "Known categories" << std::endl;
+        for (const auto& it : *known_categories) {
+          out() << "  " << it.name.get() << ": " << it.description.get()
+                << std::endl;
+        }
+        Done(0);
+      });
 }
 
 }  // namespace tracing
