@@ -6,6 +6,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <unordered_set>
 
 #include "garnet/bin/trace/commands/record.h"
@@ -92,7 +93,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0) {
-      err() << "Unknown option: " << option.name << std::endl;
+      FXL_LOG(ERROR) << "Unknown option: " << option.name;
       return false;
     }
   }
@@ -104,19 +105,19 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
   if (command_line.HasOption(kSpecFile, &index)) {
     std::string spec_file_path = command_line.options()[index].value;
     if (!files::IsFile(spec_file_path)) {
-      err() << spec_file_path << " is not a file" << std::endl;
+      FXL_LOG(ERROR) << spec_file_path << " is not a file";
       return false;
     }
 
     std::string content;
     if (!files::ReadFileToString(spec_file_path, &content)) {
-      err() << "Can't read " << spec_file_path << std::endl;
+      FXL_LOG(ERROR) << "Can't read " << spec_file_path;
       return false;
     }
 
     Spec spec;
     if (!DecodeSpec(content, &spec)) {
-      err() << "Can't decode " << spec_file_path << std::endl;
+      FXL_LOG(ERROR) << "Can't decode " << spec_file_path;
       return false;
     }
     app = std::move(spec.app);
@@ -152,8 +153,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     uint64_t seconds;
     if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &seconds)) {
-      err() << "Failed to parse command-line option duration: "
-            << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option duration: "
+                     << command_line.options()[index].value;
       return false;
     }
     duration = fxl::TimeDelta::FromSeconds(seconds);
@@ -173,8 +174,8 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
     uint32_t megabytes;
     if (!fxl::StringToNumberWithError(command_line.options()[index].value,
                                       &megabytes)) {
-      err() << "Failed to parse command-line option buffer-size: "
-            << command_line.options()[index].value;
+      FXL_LOG(ERROR) << "Failed to parse command-line option buffer-size: "
+                     << command_line.options()[index].value;
       return false;
     }
     buffer_size_megabytes_hint = megabytes;
@@ -236,7 +237,7 @@ Record::Record(component::ApplicationContext* context)
 
 void Record::Start(const fxl::CommandLine& command_line) {
   if (!options_.Setup(command_line)) {
-    err() << "Error parsing options from command line - aborting" << std::endl;
+    FXL_LOG(ERROR) << "Error parsing options from command line - aborting";
     Done(1);
     return;
   }
@@ -244,8 +245,8 @@ void Record::Start(const fxl::CommandLine& command_line) {
   std::ofstream out_file(options_.output_file_name,
                          std::ios_base::out | std::ios_base::trunc);
   if (!out_file.is_open()) {
-    err() << "Failed to open " << options_.output_file_name << " for writing"
-          << std::endl;
+    FXL_LOG(ERROR) << "Failed to open " << options_.output_file_name
+                   << " for writing";
     Done(1);
     return;
   }
@@ -280,7 +281,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
           events_.push_back(fbl::move(record));
         }
       },
-      [](fbl::String error) { err() << error.c_str() << std::endl; },
+      [](fbl::String error) { FXL_LOG(ERROR) << error.c_str(); },
       [this] {
         if (!options_.app.empty())
           options_.launchpad ? LaunchTool() : LaunchApp();
@@ -335,27 +336,27 @@ void Record::ProcessMeasurements() {
   bool errored = false;
   for (auto& result : results) {
     if (result.samples.empty()) {
-      err() << "No results for measurement \"" << result.label << "\"."
-            << std::endl;
+      FXL_LOG(ERROR) << "No results for measurement \"" << result.label
+                     << "\".";
       errored = true;
     }
   }
   OutputResults(out(), results);
   if (errored) {
-    err() << "One or more measurements had empty results. Quitting."
-          << std::endl;
+    FXL_LOG(ERROR) << "One or more measurements had empty results. Quitting.";
     Done(1);
     return;
   }
 
   if (!options_.benchmark_results_file.empty()) {
     if (!ExportResults(options_.benchmark_results_file, results)) {
-      err() << "Failed to write benchmark results to "
-            << options_.benchmark_results_file;
+      FXL_LOG(ERROR) << "Failed to write benchmark results to "
+                     << options_.benchmark_results_file;
       Done(1);
       return;
     }
-    out() << "Benchmark results written to " << options_.benchmark_results_file;
+    out() << "Benchmark results written to "
+          << options_.benchmark_results_file << std::endl;
   }
 
   Done(return_code_);
@@ -403,17 +404,29 @@ void Record::LaunchApp() {
 void Record::LaunchTool() {
   std::vector<std::string> all_args = {options_.app};
   all_args.insert(all_args.end(), options_.args.begin(), options_.args.end());
+
+  if (FXL_VLOG_IS_ON(1)) {
+    std::stringstream command;
+    for (size_t i = 0; i < all_args.size(); ++i) {
+      if (i > 0)
+        command << " ";
+      command << all_args[i];
+    }
+    FXL_VLOG(1) << "Launching: " << command.str();
+  } else {
+    out() << "Launching: " << options_.app << std::endl;
+  }
+
   zx_handle_t process = Launch(all_args);
   if (process == ZX_HANDLE_INVALID) {
     StopTrace(-1);
-    out() << "Unable to launch " << options_.app << std::endl;
+    FXL_LOG(ERROR) << "Unable to launch " << options_.app;
     return;
   }
-  out() << "Launching " << options_.app << std::endl;
 
   int exit_code = -1;
   if (!WaitForExit(process, &exit_code))
-    out() << "Unable to get return code" << std::endl;
+    FXL_LOG(ERROR) << "Unable to get return code";
 
   out() << "Application exited with return code " << exit_code << std::endl;
   if (!options_.decouple)

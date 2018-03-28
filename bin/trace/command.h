@@ -40,9 +40,7 @@ class Command {
   void Run(const fxl::CommandLine& command_line, OnDoneCallback on_done);
 
  protected:
-  static std::istream& in();
   static std::ostream& out();
-  static std::ostream& err();
 
   explicit Command(component::ApplicationContext* context);
 

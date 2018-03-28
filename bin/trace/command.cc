@@ -20,17 +20,9 @@ component::ApplicationContext* Command::context() const {
   return context_;
 }
 
-std::istream& Command::in() {
-  return std::cin;
-}
-
 std::ostream& Command::out() {
   // Returning std::cerr on purpose. std::cout is redirected and consumed
   // by the enclosing context.
-  return std::cerr;
-}
-
-std::ostream& Command::err() {
   return std::cerr;
 }
 
@@ -58,7 +50,7 @@ CommandWithTraceController::CommandWithTraceController(
       trace_controller_(
           context->ConnectToEnvironmentService<TraceController>()) {
   trace_controller_.set_error_handler([this] {
-    err() << "Trace controller disconnected unexpectedly.";
+    FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
     Done(1);
   });
 }

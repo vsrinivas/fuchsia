@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <ostream>
-
 #include "garnet/bin/trace/app.h"
 
 #include "garnet/bin/trace/commands/list_categories.h"
 #include "garnet/bin/trace/commands/record.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 
@@ -29,7 +27,7 @@ void App::Start(const fxl::CommandLine& command_line) {
   const auto& positional_args = command_line.positional_args();
 
   if (positional_args.empty()) {
-    err() << "Command missing - aborting" << std::endl;
+    FXL_LOG(ERROR) << "Command missing - aborting";
     PrintHelp();
     Done(1);
     return;
@@ -37,15 +35,15 @@ void App::Start(const fxl::CommandLine& command_line) {
 
   auto it = known_commands_.find(positional_args.front());
   if (it == known_commands_.end()) {
-    err() << "Unknown command '" << positional_args.front() << "' - aborting"
-          << std::endl;
+    FXL_LOG(ERROR) << "Unknown command '" << positional_args.front()
+                   << "' - aborting";
     PrintHelp();
     Done(1);
     return;
   }
 
   if (!context()->has_environment_services()) {
-    err() << "Cannot access application environment services" << std::endl;
+    FXL_LOG(ERROR) << "Cannot access application environment services";
     Done(1);
     return;
   }

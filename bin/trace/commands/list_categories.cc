@@ -7,6 +7,7 @@
 #include "garnet/bin/trace/commands/list_categories.h"
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace tracing {
 
@@ -25,8 +26,8 @@ ListCategories::ListCategories(component::ApplicationContext* context)
 void ListCategories::Start(const fxl::CommandLine& command_line) {
   if (!(command_line.options().empty() &&
         command_line.positional_args().empty())) {
-    err() << "We encountered unknown options, please check your "
-          << "command invocation" << std::endl;
+    FXL_LOG(ERROR) << "We encountered unknown options, please check your "
+                   << "command invocation";
     Done(1);
     return;
   }
