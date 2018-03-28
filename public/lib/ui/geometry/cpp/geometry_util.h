@@ -9,59 +9,6 @@
 
 namespace geometry {
 
-inline bool operator==(const geometry::Rect& lhs, const geometry::Rect& rhs) {
-  return lhs.x == rhs.x && lhs.y == rhs.y && lhs.width == rhs.width &&
-         lhs.height == rhs.height;
-}
-
-inline bool operator!=(const geometry::Rect& lhs, const geometry::Rect& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const geometry::SizeF& lhs, const geometry::SizeF& rhs) {
-  return lhs.width == rhs.width && lhs.height == rhs.height;
-}
-
-inline bool operator!=(const geometry::SizeF& lhs, const geometry::SizeF& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const geometry::Size& lhs, const geometry::Size& rhs) {
-  return lhs.width == rhs.width && lhs.height == rhs.height;
-}
-
-inline bool operator!=(const geometry::Size& lhs, const geometry::Size& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const geometry::Point& lhs, const geometry::Point& rhs) {
-  return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-inline bool operator!=(const geometry::Point& lhs, const geometry::Point& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const geometry::Inset& lhs, const geometry::Inset& rhs) {
-  return lhs.top == rhs.top && lhs.right == rhs.right &&
-         lhs.bottom == rhs.bottom && lhs.left == rhs.left;
-}
-
-inline bool operator!=(const geometry::Inset& lhs, const geometry::Inset& rhs) {
-  return !(lhs == rhs);
-}
-
-inline bool operator==(const geometry::InsetF& lhs,
-                       const geometry::InsetF& rhs) {
-  return lhs.top == rhs.top && lhs.right == rhs.right &&
-         lhs.bottom == rhs.bottom && lhs.left == rhs.left;
-}
-
-inline bool operator!=(const geometry::InsetF& lhs,
-                       const geometry::InsetF& rhs) {
-  return !(lhs == rhs);
-}
-
 void SetIdentityTransform(geometry::Transform* transform);
 void SetTranslationTransform(geometry::Transform* transform,
                              float x,

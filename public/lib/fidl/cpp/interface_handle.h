@@ -139,6 +139,16 @@ class InterfaceHandle {
   zx::channel channel_;
 };
 
+// Equality.
+template <typename T>
+bool operator==(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
+  return lhs.channel() == rhs.channel();
+}
+template <typename T>
+bool operator!=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
+  return !(lhs == rhs);
+}
+
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>
     : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {};

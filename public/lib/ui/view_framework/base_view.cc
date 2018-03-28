@@ -10,7 +10,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
-#include "lib/ui/gfx/cpp/compare.h"
 
 namespace mozart {
 namespace {

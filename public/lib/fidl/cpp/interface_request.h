@@ -110,6 +110,16 @@ class InterfaceRequest {
   zx::channel channel_;
 };
 
+// Equality.
+template <typename T>
+bool operator==(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+  return lhs.channel() == rhs.channel();
+}
+template <typename T>
+bool operator!=(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+  return !(lhs == rhs);
+}
+
 template <typename T>
 struct CodingTraits<InterfaceRequest<T>>
     : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {};

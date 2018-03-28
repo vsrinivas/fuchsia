@@ -24,6 +24,11 @@ class {{ .Name }}  {
   zx_status_t Clone({{ .Name }}* result) const;
 };
 
+bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
+inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+  return !(lhs == rhs);
+}
+
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
@@ -52,6 +57,15 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   {{- end }}
   return ZX_OK;
 }
+
+bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+  {{- range $index, $member := .Members }}
+  if (lhs.{{ .Name }} != rhs.{{ .Name }}) {
+    return false;
+  }
+  {{- end }}
+  return true;
+}
 {{- end }}
 
 {{- define "StructTraits" }}
@@ -61,7 +75,7 @@ struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
-return value.Clone(result);
+  return value.Clone(result);
 }
 {{- end }}
 `

@@ -14,7 +14,6 @@ source_set("view_framework") {
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/gfx/cpp",
     "//garnet/public/lib/ui/gfx/fidl",
     "//garnet/public/lib/ui/input/fidl",
     "//garnet/public/lib/ui/scenic:client",

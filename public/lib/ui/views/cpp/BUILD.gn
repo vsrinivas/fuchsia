@@ -6,7 +6,6 @@ source_set("cpp") {
   sources = [
     "formatting.cc",
     "formatting.h",
-    "views_util.h",
   ]
 
   public_deps = [

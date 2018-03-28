@@ -11,7 +11,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
-#include "lib/ui/views/cpp/views_util.h"
 
 namespace examples {
 

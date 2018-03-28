@@ -7,36 +7,6 @@
 #include "lib/fxl/logging.h"
 
 namespace mdns {
-namespace {
-
-bool operator==(const netstack::Ipv4AddressPtr& addr_a,
-                const netstack::Ipv4AddressPtr& addr_b) {
-  if (!addr_a || !addr_b)
-    return !addr_a && !addr_b;
-  return addr_a->addr == addr_b->addr;
-}
-
-bool operator==(const netstack::NetAddress& addr_a,
-                const netstack::NetAddress& addr_b) {
-  return addr_a.family == addr_b.family &&
-         addr_a.ipv4 == addr_b.ipv4 &&
-         addr_a.ipv6 == addr_b.ipv6;
-}
-
-bool operator==(const netstack::SocketAddressPtr& addr_a,
-                const netstack::SocketAddressPtr& addr_b) {
-  if (addr_a.get() == addr_b.get())
-    return true;
-  if (!addr_a || !addr_b)
-    return !addr_a && !addr_b;
-  return addr_a->port == addr_b->port && addr_a->addr == addr_b->addr;
-}
-
-bool operator!=(const netstack::SocketAddressPtr& addr_a,
-                const netstack::SocketAddressPtr& addr_b) {
-  return !(addr_a == addr_b);
-}
-}  // namespace
 
 ServiceSubscriber::ServiceSubscriber() {}
 

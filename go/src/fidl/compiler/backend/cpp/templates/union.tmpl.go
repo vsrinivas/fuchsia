@@ -44,6 +44,7 @@ class {{ .Name }} {
   Tag Which() const { return Tag(tag_); }
 
  private:
+  friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
   void Destroy();
 
   ::fidl_union_tag_t tag_;
@@ -53,6 +54,11 @@ class {{ .Name }} {
   {{- end }}
   };
 };
+
+bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
+inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+  return !(lhs == rhs);
+}
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
@@ -142,6 +148,20 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     {{- end }}
      default:
       return ZX_ERR_INVALID_ARGS;
+  }
+}
+
+bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+  if (lhs.tag_ != rhs.tag_) {
+    return false;
+  }
+  switch (lhs.tag_) {
+    {{- range $index, $member := .Members }}
+     case {{ $index }}:
+      return lhs.{{ .StorageName }} == rhs.{{ .StorageName }};
+    {{- end }}
+     default:
+      return false;
   }
 }
 
