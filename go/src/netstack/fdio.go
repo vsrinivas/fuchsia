@@ -606,6 +606,9 @@ func (s *socketServer) newIostate(h zx.Handle, iosOrig *iostate, netProto tcpip.
 		ro.SetOp(fdio.OpOnOpen)
 		ro.Info.Socket().Handle = peerS
 		ro.Write(h, 0)
+		if withNewSocket {
+			h.Close()
+		}
 	}
 
 	if ep != nil {
