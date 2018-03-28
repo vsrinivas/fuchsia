@@ -36,4 +36,19 @@ private:
     T data_[N];
 };
 
+template <typename T, size_t N>
+bool operator==(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+    for (size_t i = 0; i < N; ++i) {
+        if (lhs.data_[i] != rhs.data_[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <typename T, size_t N>
+bool operator!=(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+    return !(lhs == rhs);
+}
+
 } // namespace fidl
