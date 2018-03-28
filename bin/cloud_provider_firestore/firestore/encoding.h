@@ -10,7 +10,7 @@
 #include <google/firestore/v1beta1/document.pb.h>
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {
@@ -29,12 +29,12 @@ bool DecodeKey(fxl::StringView input, std::string* output);
 
 // Encodes a batch of commits in the cloud provider FIDL format as a Firestore
 // document.
-bool EncodeCommitBatch(const f1dl::Array<cloud_provider::CommitPtr>& commits,
+bool EncodeCommitBatch(const fidl::VectorPtr<cloud_provider::Commit>& commits,
                        google::firestore::v1beta1::Document* document);
 
 // Decodes a Firestore document representing a commit batch.
 bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
-                       f1dl::Array<cloud_provider::CommitPtr>* commits,
+                       fidl::VectorPtr<cloud_provider::Commit>* commits,
                        std::string* timestamp);
 
 }  // namespace cloud_provider_firestore

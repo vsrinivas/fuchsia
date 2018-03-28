@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
@@ -27,25 +27,25 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   DeviceSetImpl(std::string user_path,
                 CredentialsProvider* credentials_provider,
                 FirestoreService* firestore_service,
-                f1dl::InterfaceRequest<cloud_provider::DeviceSet> request);
+                fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   // cloud_provider::DeviceSet:
-  void CheckFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
-                        const CheckFingerprintCallback& callback) override;
+  void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+                        CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(f1dl::VectorPtr<uint8_t> fingerprint,
-                      const SetFingerprintCallback& callback) override;
+  void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
+                      SetFingerprintCallback callback) override;
 
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> fingerprint,
-      f1dl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      fidl::VectorPtr<uint8_t> fingerprint,
+      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+      SetWatcherCallback callback) override;
 
-  void Erase(const EraseCallback& callback) override;
+  void Erase(EraseCallback callback) override;
 
   void OnGotDocumentsToErase(
       std::shared_ptr<grpc::CallCredentials> call_credentials,
@@ -63,7 +63,7 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   CredentialsProvider* const credentials_provider_;
   FirestoreService* const firestore_service_;
 
-  f1dl::Binding<cloud_provider::DeviceSet> binding_;
+  fidl::Binding<cloud_provider::DeviceSet> binding_;
   fxl::Closure on_empty_;
 
   // Watcher set by the client.

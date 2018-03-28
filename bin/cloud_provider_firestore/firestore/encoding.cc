@@ -29,7 +29,7 @@ bool DecodeKey(fxl::StringView input, std::string* output) {
   return base64url::Base64UrlDecode(input, output);
 }
 
-bool EncodeCommitBatch(const f1dl::Array<cloud_provider::CommitPtr>& commits,
+bool EncodeCommitBatch(const fidl::VectorPtr<cloud_provider::Commit>& commits,
                        google::firestore::v1beta1::Document* document) {
   FXL_DCHECK(document);
   // TODO(ppi): fail and return false if the resulting batch exceeds max
@@ -41,9 +41,9 @@ bool EncodeCommitBatch(const f1dl::Array<cloud_provider::CommitPtr>& commits,
     google::firestore::v1beta1::MapValue* commit_value =
         commit_array->add_values()->mutable_map_value();
     *((*commit_value->mutable_fields())[kIdKey].mutable_bytes_value()) =
-        convert::ToString(commit->id);
+        convert::ToString(commit.id);
     *((*commit_value->mutable_fields())[kDataKey].mutable_bytes_value()) =
-        convert::ToString(commit->data);
+        convert::ToString(commit.data);
   }
 
   document->Swap(&result);
@@ -51,12 +51,12 @@ bool EncodeCommitBatch(const f1dl::Array<cloud_provider::CommitPtr>& commits,
 }
 
 bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
-                       f1dl::Array<cloud_provider::CommitPtr>* commits,
+                       fidl::VectorPtr<cloud_provider::Commit>* commits,
                        std::string* timestamp) {
   FXL_DCHECK(commits);
   FXL_DCHECK(timestamp);
 
-  f1dl::Array<cloud_provider::CommitPtr> result;
+  fidl::VectorPtr<cloud_provider::Commit> result;
   if (document.fields().count(kCommitsKey) != 1) {
     return false;
   }
@@ -76,16 +76,16 @@ bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
 
     const google::firestore::v1beta1::MapValue& commit_map_value =
         commit_value.map_value();
-    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
+    cloud_provider::Commit commit;
     if (commit_map_value.fields().count(kIdKey) != 1) {
       return false;
     }
-    commit->id =
+    commit.id =
         convert::ToArray(commit_map_value.fields().at(kIdKey).bytes_value());
     if (commit_map_value.fields().count(kDataKey) != 1) {
       return false;
     }
-    commit->data =
+    commit.data =
         convert::ToArray(commit_map_value.fields().at(kDataKey).bytes_value());
     result.push_back(std::move(commit));
   }

@@ -6,12 +6,12 @@
 
 #include <utility>
 
+#include <fuchsia/cpp/network.h>
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/random/uuid.h"
-#include <fuchsia/cpp/network.h>
 #include "lib/svc/cpp/services.h"
 
 namespace cloud_provider_firestore {
@@ -23,8 +23,9 @@ class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
       component::ApplicationContext* application_context,
-      fxl::RefPtr<fxl::TaskRunner> task_runner, std::string credentials_path,
-      f1dl::InterfaceRequest<modular::auth::TokenProvider> request)
+      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      std::string credentials_path,
+      fidl::InterfaceRequest<modular_auth::TokenProvider> request)
       : application_context_(application_context),
         network_wrapper_(
             std::move(task_runner),
@@ -49,7 +50,7 @@ class CloudProviderFactory::TokenProviderContainer {
   component::ApplicationContext* const application_context_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
   service_account::ServiceAccountTokenProvider token_provider_;
-  f1dl::Binding<modular::auth::TokenProvider> binding_;
+  fidl::Binding<modular_auth::TokenProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TokenProviderContainer);
 };
@@ -80,12 +81,12 @@ void CloudProviderFactory::Init() {
 void CloudProviderFactory::MakeCloudProvider(
     std::string server_id,
     std::string api_key,
-    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request) {
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   if (api_key.empty()) {
     FXL_LOG(WARNING) << "Empty Firebase API key - this can possibly work "
                      << "only with unauthenticated server instances.";
   }
-  modular::auth::TokenProviderPtr token_provider;
+  modular_auth::TokenProviderPtr token_provider;
   services_task_runner_->PostTask(fxl::MakeCopyable(
       [this, request = token_provider.NewRequest()]() mutable {
         token_providers_.emplace(application_context_, services_task_runner_,

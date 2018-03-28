@@ -4,12 +4,12 @@
 
 #include <trace-provider/provider.h>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
 namespace cloud_provider_firestore {
@@ -27,11 +27,11 @@ class App : public modular::Lifecycle {
 
   void Run() {
     application_context_->outgoing_services()->AddService<modular::Lifecycle>(
-        [this](f1dl::InterfaceRequest<modular::Lifecycle> request) {
+        [this](fidl::InterfaceRequest<modular::Lifecycle> request) {
           lifecycle_bindings_.AddBinding(this, std::move(request));
         });
     application_context_->outgoing_services()->AddService<Factory>(
-        [this](f1dl::InterfaceRequest<Factory> request) {
+        [this](fidl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });
     loop_.Run();
@@ -47,8 +47,8 @@ class App : public modular::Lifecycle {
   trace::TraceProvider trace_provider_;
 
   FactoryImpl factory_impl_;
-  f1dl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
-  f1dl::BindingSet<Factory> factory_bindings_;
+  fidl::BindingSet<modular::Lifecycle> lifecycle_bindings_;
+  fidl::BindingSet<Factory> factory_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

@@ -46,7 +46,7 @@ CloudProviderImpl::CloudProviderImpl(
     std::string user_id,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     std::unique_ptr<FirestoreService> firestore_service,
-    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request)
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : user_id_(std::move(user_id)),
       firestore_service_(std::move(firestore_service)),
       binding_(this, std::move(request)) {
@@ -74,8 +74,8 @@ void CloudProviderImpl::ShutDownAndReportEmpty() {
 }
 
 void CloudProviderImpl::GetDeviceSet(
-    f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-    const GetDeviceSetCallback& callback) {
+    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+    GetDeviceSetCallback callback) {
   std::string user_path =
       GetUserPath(firestore_service_->GetRootPath(), user_id_);
   device_sets_.emplace(std::move(user_path), credentials_provider_.get(),
@@ -84,10 +84,10 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    f1dl::VectorPtr<uint8_t> app_id,
-    f1dl::VectorPtr<uint8_t> page_id,
-    f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-    const GetPageCloudCallback& callback) {
+    fidl::VectorPtr<uint8_t> app_id,
+    fidl::VectorPtr<uint8_t> page_id,
+    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+    GetPageCloudCallback callback) {
   const std::string user_path =
       GetUserPath(firestore_service_->GetRootPath(), user_id_);
   const std::string namespace_path =

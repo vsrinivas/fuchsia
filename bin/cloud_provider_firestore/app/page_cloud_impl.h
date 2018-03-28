@@ -9,8 +9,8 @@
 #include <utility>
 
 #include <fuchsia/cpp/cloud_provider.h>
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
@@ -24,32 +24,32 @@ class PageCloudImpl : public cloud_provider::PageCloud {
       std::string page_path,
       CredentialsProvider* credentials_provider,
       FirestoreService* firestore_service,
-      f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
+      fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   // cloud_provider::PageCloud:
-  void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                  const AddCommitsCallback& callback) override;
-  void GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
-                  const GetCommitsCallback& callback) override;
-  void AddObject(f1dl::VectorPtr<uint8_t> id,
-                 fsl::SizedVmoTransportPtr data,
-                 const AddObjectCallback& callback) override;
-  void GetObject(f1dl::VectorPtr<uint8_t> id,
-                 const GetObjectCallback& callback) override;
+  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                  AddCommitsCallback callback) override;
+  void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
+                  GetCommitsCallback callback) override;
+  void AddObject(fidl::VectorPtr<uint8_t> id,
+                 fsl::SizedVmoTransport data,
+                 AddObjectCallback callback) override;
+  void GetObject(fidl::VectorPtr<uint8_t> id,
+                 GetObjectCallback callback) override;
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> min_position_token,
-      f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      fidl::VectorPtr<uint8_t> min_position_token,
+      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+      SetWatcherCallback callback) override;
 
   const std::string page_path_;
   CredentialsProvider* const credentials_provider_;
   FirestoreService* const firestore_service_;
 
-  f1dl::Binding<cloud_provider::PageCloud> binding_;
+  fidl::Binding<cloud_provider::PageCloud> binding_;
   fxl::Closure on_empty_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImpl);

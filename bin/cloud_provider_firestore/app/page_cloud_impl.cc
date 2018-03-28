@@ -37,7 +37,7 @@ PageCloudImpl::PageCloudImpl(
     std::string page_path,
     CredentialsProvider* credentials_provider,
     FirestoreService* firestore_service,
-    f1dl::InterfaceRequest<cloud_provider::PageCloud> request)
+    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : page_path_(std::move(page_path)),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
@@ -53,21 +53,21 @@ PageCloudImpl::PageCloudImpl(
 PageCloudImpl::~PageCloudImpl() {}
 
 void PageCloudImpl::AddCommits(
-    f1dl::VectorPtr<cloud_provider::CommitPtr> /*commits*/,
-    const AddCommitsCallback& callback) {
+    fidl::VectorPtr<cloud_provider::Commit> /*commits*/,
+    AddCommitsCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }
 
-void PageCloudImpl::GetCommits(f1dl::VectorPtr<uint8_t> /*min_position_token*/,
-                               const GetCommitsCallback& callback) {
+void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,
+                               GetCommitsCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
 }
 
-void PageCloudImpl::AddObject(f1dl::VectorPtr<uint8_t> id,
-                              fsl::SizedVmoTransportPtr data,
-                              const AddObjectCallback& callback) {
+void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
+                              fsl::SizedVmoTransport data,
+                              AddObjectCallback callback) {
   std::string data_str;
   fsl::SizedVmo vmo;
   if (!fsl::StringFromVmo(data, &data_str) ||
@@ -99,8 +99,8 @@ void PageCloudImpl::AddObject(f1dl::VectorPtr<uint8_t> id,
       });
 }
 
-void PageCloudImpl::GetObject(f1dl::VectorPtr<uint8_t> id,
-                              const GetObjectCallback& callback) {
+void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
+                              GetObjectCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(GetObjectPath(page_path_, convert::ToString(id)));
 
@@ -129,9 +129,9 @@ void PageCloudImpl::GetObject(f1dl::VectorPtr<uint8_t> id,
 }
 
 void PageCloudImpl::SetWatcher(
-    f1dl::VectorPtr<uint8_t> /*min_position_token*/,
-    f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
-    const SetWatcherCallback& callback) {
+    fidl::VectorPtr<uint8_t> /*min_position_token*/,
+    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> /*watcher*/,
+    SetWatcherCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(cloud_provider::Status::INTERNAL_ERROR);
 }

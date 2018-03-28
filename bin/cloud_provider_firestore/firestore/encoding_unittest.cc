@@ -43,34 +43,34 @@ INSTANTIATE_TEST_CASE_P(ExampleData,
                                           "bazinga\0\0\0"_s));
 
 TEST(BatchEncodingTest, Empty) {
-  f1dl::Array<cloud_provider::CommitPtr> empty(static_cast<size_t>(0u));
+  fidl::VectorPtr<cloud_provider::Commit> empty(static_cast<size_t>(0u));
   google::firestore::v1beta1::Document document;
   EncodeCommitBatch(empty, &document);
 
-  f1dl::Array<cloud_provider::CommitPtr> result;
+  fidl::VectorPtr<cloud_provider::Commit> result;
   std::string timestamp;
   EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
   EXPECT_EQ(0u, result->size());
 }
 
 TEST(BatchEncodingTest, TwoCommits) {
-  f1dl::Array<cloud_provider::CommitPtr> original;
+  fidl::VectorPtr<cloud_provider::Commit> original;
   {
-    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
-    commit->id = convert::ToArray("id0");
-    commit->data = convert::ToArray("data0");
+    cloud_provider::Commit commit;
+    commit.id = convert::ToArray("id0");
+    commit.data = convert::ToArray("data0");
     original.push_back(std::move(commit));
   }
   {
-    cloud_provider::CommitPtr commit = cloud_provider::Commit::New();
-    commit->id = convert::ToArray("id1");
-    commit->data = convert::ToArray("data1");
+    cloud_provider::Commit commit;
+    commit.id = convert::ToArray("id1");
+    commit.data = convert::ToArray("data1");
     original.push_back(std::move(commit));
   }
   google::firestore::v1beta1::Document document;
   EncodeCommitBatch(original, &document);
 
-  f1dl::Array<cloud_provider::CommitPtr> result;
+  fidl::VectorPtr<cloud_provider::Commit> result;
   std::string timestamp;
   EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
   EXPECT_EQ(2u, result->size());
@@ -81,7 +81,7 @@ TEST(BatchEncodingTest, TwoCommits) {
 }
 
 TEST(BatchEncodingTest, DecodingErrors) {
-  f1dl::Array<cloud_provider::CommitPtr> result;
+  fidl::VectorPtr<cloud_provider::Commit> result;
   std::string timestamp;
 
   {

@@ -39,14 +39,14 @@ void FactoryImpl::ShutDown(fxl::Closure callback) {
 }
 
 void FactoryImpl::GetCloudProvider(
-    ConfigPtr config,
-    f1dl::InterfaceHandle<modular::auth::TokenProvider> token_provider,
-    f1dl::InterfaceRequest<cloud_provider::CloudProvider>
+    Config config,
+    fidl::InterfaceHandle<modular_auth::TokenProvider> token_provider,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider>
         cloud_provider_request,
-    const GetCloudProviderCallback& callback) {
+    GetCloudProviderCallback callback) {
   auto token_provider_ptr = token_provider.Bind();
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      main_runner_, config->api_key, std::move(token_provider_ptr),
+      main_runner_, config.api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto token_request =
@@ -64,7 +64,7 @@ void FactoryImpl::GetCloudProvider(
             }
 
             auto firestore_service = std::make_unique<FirestoreServiceImpl>(
-                config->server_id, main_runner_, MakeChannel());
+                config.server_id, main_runner_, MakeChannel());
 
             providers_.emplace(user_id, std::move(firebase_auth),
                                std::move(firestore_service),
