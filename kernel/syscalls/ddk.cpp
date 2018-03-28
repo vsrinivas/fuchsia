@@ -415,13 +415,6 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
     return out->make(fbl::move(dispatcher), rights);
 }
 
-// TODO(teisenbe): Remove this once all callsites use bti_pin instead
-zx_status_t sys_bti_pin_new(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                            uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
-                            user_out_handle* pmt) {
-    return sys_bti_pin(bti, options, vmo, offset, size, addrs, addrs_count, pmt);
-}
-
 zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
                         uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
                         user_out_handle* pmt) {

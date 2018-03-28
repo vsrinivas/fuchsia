@@ -630,11 +630,6 @@ syscall bti_pin
         addrs: zx_paddr_t[addrs_count] OUT, addrs_count: size_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-syscall bti_pin_new
-    (bti: zx_handle_t, options: uint32_t, vmo: zx_handle_t, offset: uint64_t, size: uint64_t,
-        addrs: zx_paddr_t[addrs_count] OUT, addrs_count: size_t)
-    returns (zx_status_t, out: zx_handle_t handle_acquire);
-
 syscall pmt_unpin
     (pmt: zx_handle_t handle_release)
     returns (zx_status_t);
