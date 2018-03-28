@@ -53,6 +53,10 @@ declare_args() {
   # bootdata image used for booting.
   kernel_cmdline_file = ""
 
+  # File containing kernel command line arguments to roll into the
+  # bootdata image used for zedboot.
+  zedboot_cmdline_file = ""
+
   # The package key to use for signing the system package. New keys can be
   # generated with the `pm` host command.
   system_package_key = "//build/development.key"

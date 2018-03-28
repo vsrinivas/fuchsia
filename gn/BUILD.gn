@@ -754,6 +754,17 @@ bootdata_cmdline("zedboot_cmdline") {
   ]
 }
 
+# Let the build configuration choose some extra fixed command-line arguments
+# for zedboot.
+if (zedboot_cmdline_file != "") {
+  bootdata_cmdline("extra_zedboot_cmdline") {
+    visibility = [ ":*" ]
+    inputs = [
+      zedboot_cmdline_file,
+    ]
+  }
+}
+
 # Construct a minimal manifest containing only the few user binaries
 # that constitute zedboot, and the libraries they depend on.
 # TODO(mcgrathr): This could be made smaller by constraining the drivers
@@ -837,6 +848,9 @@ foreach(board, zircon_boards) {
       ":zedboot_cmdline",
       ":zedboot_manifest",
     ]
+    if (zedboot_cmdline_file != "") {
+      deps += [ ":extra_zedboot_cmdline" ]
+    }
     inputs = [
       "${zircon_build_dir}/${board}-kernel-bootdata.bin",
     ]
