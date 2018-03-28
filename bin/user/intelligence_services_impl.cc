@@ -4,41 +4,44 @@
 
 #include "peridot/bin/user/intelligence_services_impl.h"
 
-#include "lib/action_log/fidl/component.fidl.h"
-#include "lib/action_log/fidl/user.fidl.h"
-#include "lib/context/fidl/context_engine.fidl.h"
-#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 namespace maxwell {
 
 IntelligenceServicesImpl::IntelligenceServicesImpl(
-    ComponentScopePtr scope,
-    ContextEngine* context_engine,
-    SuggestionEngine* suggestion_engine,
-    UserActionLog* user_action_log)
+    modular::ComponentScope scope,
+    modular::ContextEngine* context_engine,
+    modular::SuggestionEngine* suggestion_engine,
+    modular::UserActionLog* user_action_log)
     : scope_(std::move(scope)),
       context_engine_(context_engine),
       suggestion_engine_(suggestion_engine),
       user_action_log_(user_action_log) {}
 
+modular::ComponentScope IntelligenceServicesImpl::CloneScope() {
+  modular::ComponentScope scope;
+  fidl::Clone(scope_, &scope);
+  return scope;
+}
+
 void IntelligenceServicesImpl::GetContextReader(
-    f1dl::InterfaceRequest<ContextReader> request) {
-  context_engine_->GetReader(scope_.Clone(), std::move(request));
+    fidl::InterfaceRequest<modular::ContextReader> request) {
+  context_engine_->GetReader(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetContextWriter(
-    f1dl::InterfaceRequest<ContextWriter> request) {
-  context_engine_->GetWriter(scope_.Clone(), std::move(request));
+    fidl::InterfaceRequest<modular::ContextWriter> request) {
+  context_engine_->GetWriter(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::GetProposalPublisher(
-    f1dl::InterfaceRequest<ProposalPublisher> request) {
-  f1dl::StringPtr component_id;
-  if (scope_->is_agent_scope()) {
-    component_id = scope_->get_agent_scope()->url;
-  } else if (scope_->is_module_scope()) {
-    component_id = scope_->get_module_scope()->url;
-  } else {  // scope_->is_global_scope()
+    fidl::InterfaceRequest<modular::ProposalPublisher> request) {
+  fidl::StringPtr component_id;
+  if (scope_.is_agent_scope()) {
+    component_id = scope_.agent_scope().url;
+  } else if (scope_.is_module_scope()) {
+    component_id = scope_.module_scope().url;
+  } else {  // scope_.is_global_scope()
     component_id = "global";
   }
 
@@ -49,18 +52,18 @@ void IntelligenceServicesImpl::GetProposalPublisher(
 }
 
 void IntelligenceServicesImpl::GetActionLog(
-    f1dl::InterfaceRequest<ComponentActionLog> request) {
-  user_action_log_->GetComponentActionLog(scope_.Clone(), std::move(request));
+    fidl::InterfaceRequest<modular::ComponentActionLog> request) {
+  user_action_log_->GetComponentActionLog(CloneScope(), std::move(request));
 }
 
 void IntelligenceServicesImpl::RegisterQueryHandler(
-    f1dl::InterfaceHandle<QueryHandler> query_handler) {
-  f1dl::StringPtr component_id;
-  if (scope_->is_agent_scope()) {
-    component_id = scope_->get_agent_scope()->url;
-  } else if (scope_->is_module_scope()) {
-    component_id = scope_->get_module_scope()->url;
-  } else {  // scope_->is_global_scope()
+    fidl::InterfaceHandle<modular::QueryHandler> query_handler) {
+  fidl::StringPtr component_id;
+  if (scope_.is_agent_scope()) {
+    component_id = scope_.agent_scope().url;
+  } else if (scope_.is_module_scope()) {
+    component_id = scope_.module_scope().url;
+  } else {  // scope_.is_global_scope()
     component_id = "global";
   }
 
