@@ -16,6 +16,7 @@ enum Status {
   DNS_ERROR = 2;
   PARSE_ERROR = 3;
   IPV4_ONLY = 4;
+  UNKNOWN_INTERFACE = 5;
 };
 
 struct NetErr {
@@ -142,4 +143,6 @@ interface Netstack {
   // TODO: prefix length is 64-bit to work around TO-830.
   // Change the argument type once FIDL2 migration is complete.
   11: SetInterfaceAddress(uint32 nicid, NetAddress addr, uint64 prefixLen) -> (NetErr result);
+
+  12: SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 };

@@ -279,6 +279,7 @@ func (ni *netstackImpl) GetStats(nicid uint32) (stats nsfidl.NetInterfaceStats, 
 	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
 
 	if !ok {
+		// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
 		return nsfidl.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
 	}
 
@@ -289,7 +290,7 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err erro
 	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
 
 	if !ok {
-		// TODO(mpcomplete): This will close the FIDL channel. Should fail more gracefully.
+		// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
 		return fmt.Errorf("no such interface id: %d", nicid)
 	}
 
@@ -300,6 +301,15 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err erro
 	}
 
 	return nil
+}
+
+func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result nsfidl.NetErr, err error) {
+	ifState, ok := ns.ifStates[tcpip.NICID(nicid)]
+	if !ok {
+		return nsfidl.NetErr{nsfidl.StatusUnknownInterface, "unknown interface"}, nil
+	}
+	ifState.setDHCPStatus(enabled)
+	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
 func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {

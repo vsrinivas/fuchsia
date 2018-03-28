@@ -42,14 +42,21 @@ type netstack struct {
 	countNIC tcpip.NICID
 }
 
+type dhcpState struct {
+	client  *dhcp.Client
+	ctx     context.Context
+	cancel  context.CancelFunc
+	enabled bool
+}
+
 // Each ifState tracks the state of a network interface.
 type ifState struct {
 	ns     *netstack
 	ctx    context.Context
 	cancel context.CancelFunc
 	eth    *eth.Client
-	dhcp   *dhcp.Client
 	state  eth.State
+	dhcpState
 
 	// guarded by ns.mu
 	// NIC is defined in //garnet/go/src/netstack/netiface/netiface.go
@@ -155,6 +162,19 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	OnInterfacesChanged()
 }
 
+func (ifs *ifState) setDHCPStatus(enabled bool) {
+	ifs.ns.mu.Lock()
+	defer ifs.ns.mu.Unlock()
+	d := ifs.dhcpState
+	if enabled {
+		d.ctx, d.cancel = context.WithCancel(ifs.ctx)
+		d.client.Run(d.ctx)
+	} else {
+		d.cancel()
+	}
+	d.enabled = enabled
+}
+
 func (ifs *ifState) stateChange(s eth.State) {
 	switch s {
 	case eth.StateClosed, eth.StateDown:
@@ -178,8 +198,7 @@ func (ifs *ifState) restart() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-
-	go ifs.dhcp.Run(ifs.ctx)
+	ifs.setDHCPStatus(ifs.dhcpState.enabled)
 }
 
 func (ifs *ifState) stop() {
@@ -347,7 +366,8 @@ func (ns *netstack) addEth(path string) error {
 		ns.mu.Unlock()
 		return fmt.Errorf("NIC %d: could not create NIC for %q: %v", nicid, path, err)
 	}
-	if nicid == 2 && ns.nodename == "" {
+	firstNIC := nicid == 2 && ns.nodename == ""
+	if firstNIC {
 		// This is the first real ethernet device on this host.
 		// No nodename has been configured for the network stack,
 		// so derive it from the MAC address.
@@ -375,11 +395,13 @@ func (ns *netstack) addEth(path string) error {
 		return fmt.Errorf("NIC %d: adding solicited-node IPv6 failed: %v", nicid, err)
 	}
 
-	// TODO(): Start DHCP Client after
-	// (1) link is on
-	// (2) its IP address is not to be statically configured
-	// (3) Use of DHCP is explicitly configured
-	ifs.dhcp = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
+	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
+	ifs.dhcpState.ctx, ifs.dhcpState.cancel = context.WithCancel(ifs.ctx)
+	// TODO(stijlist): remove default DHCP policy for first NIC once policy manager
+	// sets DHCP status.
+	if firstNIC {
+		ifs.setDHCPStatus(true)
+	}
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
@@ -391,7 +413,6 @@ func (ns *netstack) addEth(path string) error {
 		return nil
 	}
 
-	go ifs.dhcp.Run(ifs.ctx)
 	return nil
 }
 func setNICName(nic *netiface.NIC, features uint32) {

@@ -143,6 +143,17 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	return a.netstack.SetRouteTable(append(rs, r))
 }
 
+func (a *netstackClientApp) setDHCP(iface netstack.NetInterface, startStop string) {
+	switch startStop {
+	case "start":
+		a.netstack.SetDhcpClientStatus(iface.Id, true)
+	case "stop":
+		a.netstack.SetDhcpClientStatus(iface.Id, false)
+	default:
+		usage()
+	}
+}
+
 func hwAddrToString(hwaddr []uint8) string {
 	str := ""
 	for i := 0; i < len(hwaddr); i++ {
@@ -223,6 +234,7 @@ func usage() {
 	fmt.Printf("  %s [<interface>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
+	fmt.Printf("  %s [<interface>] dhcp [start|stop]", os.Args[0])
 	os.Exit(1)
 }
 
@@ -286,6 +298,8 @@ func main() {
 		case "del":
 			fmt.Printf("Deleting addresses from an interface is not yet supported.\n")
 			usage()
+		case "dhcp":
+			a.setDHCP(*iface, os.Args[3])
 		default:
 			usage()
 		}
