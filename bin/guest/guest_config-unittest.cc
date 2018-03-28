@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #include "garnet/bin/guest/guest_config.h"
 #include "gtest/gtest.h"
@@ -28,7 +29,7 @@ TEST(GuestConfigParserTest, DefaultValues) {
   ASSERT_EQ(Kernel::ZIRCON, config.kernel());
   ASSERT_TRUE(config.kernel_path().empty());
   ASSERT_TRUE(config.ramdisk_path().empty());
-  ASSERT_EQ(1, config.num_cpus());
+  ASSERT_EQ(zx_system_get_num_cpus(), config.num_cpus());
   ASSERT_TRUE(config.block_devices().empty());
   ASSERT_TRUE(config.cmdline().empty());
   ASSERT_EQ(0, config.balloon_interval());

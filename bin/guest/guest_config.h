@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <zircon/device/block.h>
+#include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/block_dispatcher.h"
@@ -66,7 +67,7 @@ class GuestConfig {
   std::string ramdisk_path_;
   std::vector<BlockSpec> block_specs_;
   std::string cmdline_;
-  uint8_t num_cpus_ = 1;
+  uint8_t num_cpus_ = zx_system_get_num_cpus();
   size_t memory_ = 1 << 30;
   uint32_t balloon_interval_seconds_ = 0;
   uint32_t balloon_pages_threshold_ = 0;
