@@ -201,3 +201,18 @@ struct BoundingBox {
   vec3 min;
   vec3 max;
 };
+
+// Represents an axis-aligned bounding box which is nested inside of another
+// axis-aligned box.  Extents specifies the minimum and maximum points of
+// the child bounding box.  Inset specifies the size of the "gaps" between the
+// parent and child bounding boxes.
+//
+// Thus, the parent bounding box' extents can be defined as:
+//    { extents.min - inset_from_min, extents.max + inset_from_max }
+// TODO(SCN-590): Ensure InsetBoundingBox+Metrics is workable for the Space
+// API, according to the comments on the design doc.
+struct InsetBoundingBox {
+  BoundingBox extents;
+  vec3 inset_from_min;
+  vec3 inset_from_max;
+};

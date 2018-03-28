@@ -15,14 +15,44 @@ library gfx;
 // implementations of the API.
 // - has_transform:
 // - has_children:
+// - has_parent:
 // - has_parts:
 // - has_clip:
 // - is_clip:
 // - has_shape:
 // - has_material:
 
+// A transform space which can serve as a container for Nodes.  Each Space is
+// linked to a paired SpaceHolder via a shared token.
+//
+// Usually the Space and SpaceHolder exist in separate processes, allowing a
+// distributed scene graph.
+//
+// Characteristics
+// - has_transform
+// - has_children
+struct SpaceArgs {
+  handle<eventpair> token;
+  string? debug_name;
+};
+
+// A container which is created to manage each transform Space.  Each
+// SpaceHolder is linked to a paired Space via a shared token.
+//
+// Usually the SpaceHolder and Space exist in separate processes, allowing a
+// distributed scene graph.
+//
+// Characteristics
+// - has_transform
+// - has_parent
+struct SpaceHolderArgs {
+  handle<eventpair> token;
+  string? debug_name;
+};
+
 // Characteristics:
 // - has_transform
+// - has_parent
 // - is_clip
 // - has_parts
 struct ClipNodeArgs {
@@ -32,6 +62,7 @@ struct ClipNodeArgs {
 // Characteristics:
 // - has_transform
 // - has_children
+// - has_parent
 // - has_parts
 // - has_clip
 struct EntityNodeArgs {
@@ -40,6 +71,7 @@ struct EntityNodeArgs {
 
 // Characteristics:
 // - has_transform
+// - has_parent
 // - has_shape
 // - has_material
 struct ShapeNodeArgs {

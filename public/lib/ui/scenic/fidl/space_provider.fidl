@@ -1,0 +1,40 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ui;
+
+// import "lib/app/fidl/service_provider.fidl";
+
+// Provides transform spaces for 3D content upon request.
+[ServiceName="ui::SpaceProvider"]
+interface SpaceProvider {
+  // Creates a new transform space under the control of the SpaceProvider.
+  // The new Space is bound to a paired SpaceHolder via a shared token, and
+  // they share a lifetime.
+  //
+  // Typically SpaceProvider clients and SpaceProvider implementations reside
+  // in separate processes (although this is not strictly required). Newly
+  // created Spaces remain internal to their SpaceProvider, while the new
+  // SpaceHolder is provided to the requesting client.
+  //
+  // A client can embed a SpaceHolder (and thus the paired Space) into its
+  // scene graph by using |Node.AddChild()|.  The SpaceHolder cannot itself
+  // have any children. A SpaceProvider implementation can parent scene graphs
+  // to its Space by using |Space.AddChild()|.  The Space itself cannot be
+  // parented to anything.
+  //
+  // A client can provide services to the created ServiceProvider
+  // implementation via the |services_for_space| ServiceProvider. The client
+  // can also request services from the SpaceProvider implementation via the
+  // |services_from_space| ServiceProvider.
+  //
+  // Modules can use these mechanisms to establish a distributed, inter-process
+  // scene graph.
+  //
+  // Implementors of this interface are responsible for managing their created
+  // Spaces and properly responding to Space-related events.
+  1: CreateSpace(handle<eventpair> token,
+                 request<component.ServiceProvider>? services_from_space,
+                 component.ServiceProvider services_for_space);
+};
