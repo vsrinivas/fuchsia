@@ -28,6 +28,10 @@ go_binary("power_manager_bin") {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
     },
+    {
+      package = "syslog"
+      source = "//garnet/public/lib/syslog/go/src/syslog"
+    },
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
@@ -37,7 +41,6 @@ go_binary("power_manager_bin") {
 
 go_test("power_manager_test") {
   gopackage = "power_manager"
-
   go_dependencies = [
     {
       package = "power_manager"
@@ -54,6 +57,10 @@ go_test("power_manager_test") {
       package = "svc"
       source = "//garnet/public/lib/svc/go/src/svc"
     },
+    {
+      package = "syslog"
+      source = "//garnet/public/lib/syslog/go/src/syslog"
+    },
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
@@ -68,13 +75,16 @@ package("power_manager") {
 
   binary = "power_manager"
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      }, {
-        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-        dest = "legacy_flat_exported_dir"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+  ]
 }
 
 package("power_manager_gotests") {
@@ -84,7 +94,9 @@ package("power_manager_gotests") {
   deps = [
     ":power_manager_test",
   ]
-  tests = [ {
-        name = "power_manager_test"
-      } ]
+  tests = [
+    {
+      name = "power_manager_test"
+    },
+  ]
 }
