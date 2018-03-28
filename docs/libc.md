@@ -8,8 +8,7 @@ TODO(ZX-1598) Type more here.
 
 Fuchsia's libc supports most of the [C11][c11std] standard. This
 in particular includes the atomic and threading portions of the
-standard library. A detailed list of C11 supported functions can
-be found [here](c11.md).
+standard library.
 
 ### POSIX
 
