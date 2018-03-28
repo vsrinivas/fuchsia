@@ -259,13 +259,14 @@ TEST(Gain, Scaling_Precision) {
 
   //
   // At this gain, even -32768 is reduced to -.49... thus rounds in to 0.
+  // Therefore, nothing should change in the accumulator buffer.
   gain_scale = AudioResult::kMinScaleNonZero - 1;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+  DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
         gain_scale);
 
-  EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
+  EXPECT_TRUE(CompareBuffers(accum, expect4, fbl::count_of(accum)));
 }
 
 //
@@ -299,8 +300,7 @@ TEST(Gain, Accumulator) {
 // How does our accumulator behave at its limits? Does it clamp or rollover?
 TEST(Gain, Accumulator_Clamp) {
   int16_t source[] = {32767, -32768};
-  // if we add these vals, accum SHOULD clamp to int32::max and int32::min
-  // Today, our accumulator actually rolls over. Fix the test when it clamps.
+  // If we add these vals, accum SHOULD clamp to int32::max and int32::min.
   int32_t accum[] = {std::numeric_limits<int32_t>::max() - 32767 + 2,
                      std::numeric_limits<int32_t>::min() + 32768 - 2};
 
@@ -311,6 +311,45 @@ TEST(Gain, Accumulator_Clamp) {
   // TODO(mpuryear): when MTWN-83 is fixed, expect max and min respectively.
   int32_t expect[] = {std::numeric_limits<int32_t>::min() + 1,
                       std::numeric_limits<int32_t>::max() - 1};
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+}
+
+// Our mixer contains an optimization in which it skips mixing operations if it
+// detects that gain is below a certain threshold (regardless of "accumulate").
+TEST(Gain, Accumulator_Clear) {
+  int16_t source[] = {-32768, 32767};
+  int32_t accum[] = {-32768, 32767};
+  int32_t expect[] = {-32768, 32767};
+
+  // We will test both SampleAndHold and LinearInterpolation interpolators.
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                               Resampler::SampleAndHold);
+  // Use the gain guaranteed to silence all signals: Gain::MuteThreshold.
+  DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
+        Gain::MuteThreshold(15));
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+
+  // Try with the other sampler.
+  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::LinearInterpolation);
+  DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
+        Gain::MuteThreshold(15));
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+
+  //
+  // When accumulate = false, this is overridden: it behaves identically.
+  //
+  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        Gain::MuteThreshold(15));
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+
+  // Ensure that both samplers behave identically in this regard.
+  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::LinearInterpolation);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        Gain::MuteThreshold(15));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 

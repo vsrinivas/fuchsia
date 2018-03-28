@@ -101,6 +101,8 @@ class NxNLinearSamplerImpl : public LinearSampler {
   std::unique_ptr<int32_t[]> filter_data_u_;
 };
 
+// If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE.
+// They guarantee new buffers are cleared before usage; we optimize accordingly.
 template <size_t DChCount, typename SType, size_t SChCount>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
@@ -112,6 +114,10 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     int32_t* frac_src_offset,
     uint32_t frac_step_size,
     Gain::AScale amplitude_scale) {
+  static_assert(
+      ScaleType != ScalerType::MUTED || DoAccumulate == true,
+      "Mixing muted streams without accumulation is explicitly unsupported");
+
   using SR = SrcReader<SType, SChCount, DChCount>;
   using DM = DstMixer<ScaleType, DoAccumulate>;
   const SType* src = static_cast<const SType*>(src_void);
@@ -180,10 +186,6 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
 
       doff += avail;
       soff += avail * frac_step_size;
-      // Note: if "accumulate" is NOT set, we should have cleared the buffer
-      // (but didn't). This likely isn't worth the effort to address, because
-      // StandardOutputBase::Process zeroes buffers before using them to mix.
-      // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
 
@@ -248,10 +250,10 @@ bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
                       : Mix<ScalerType::EQ_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale);
-  } else if (amplitude_scale < Gain::MuteThreshold(15)) {
-    return Mix<ScalerType::MUTED, false>(dst, dst_frames, dst_offset, src,
-                                         frac_src_frames, frac_src_offset,
-                                         frac_step_size, amplitude_scale);
+  } else if (amplitude_scale <= Gain::MuteThreshold(15)) {
+    return Mix<ScalerType::MUTED, true>(dst, dst_frames, dst_offset, src,
+                                        frac_src_frames, frac_src_offset,
+                                        frac_step_size, amplitude_scale);
   } else {
     return accumulate ? Mix<ScalerType::NE_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
@@ -262,6 +264,8 @@ bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   }
 }
 
+// If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE.
+// They guarantee new buffers are cleared before usage; we optimize accordingly.
 template <typename SType>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
@@ -273,6 +277,10 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
                                              uint32_t frac_step_size,
                                              Gain::AScale amplitude_scale,
                                              size_t chan_count) {
+  static_assert(
+      ScaleType != ScalerType::MUTED || DoAccumulate == true,
+      "Mixing muted streams without accumulation is explicitly unsupported");
+
   using DM = DstMixer<ScaleType, DoAccumulate>;
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
@@ -340,10 +348,6 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
 
       soff += avail * frac_step_size;
       doff += avail;
-      // Note: if "accumulate" is NOT set, we should have cleared the buffer
-      // (but didn't). This likely isn't worth the effort to address, because
-      // StandardOutputBase::Process zeroes buffers before using them to mix.
-      // TODO(mpuryear): MTWN-76 zero the buff, or doc it as expected behavior
     }
   }
 
@@ -409,8 +413,8 @@ bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale,
                             chan_count_);
-  } else if (amplitude_scale < Gain::MuteThreshold(15)) {
-    return Mix<ScalerType::MUTED, false>(
+  } else if (amplitude_scale <= Gain::MuteThreshold(15)) {
+    return Mix<ScalerType::MUTED, true>(
         dst, dst_frames, dst_offset, src, frac_src_frames, frac_src_offset,
         frac_step_size, amplitude_scale, chan_count_);
   } else {

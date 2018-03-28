@@ -873,10 +873,12 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // Figure out the fixed point gain scalar we will apply to this mix
     // operation by composing our gain with the link gain state.  The link's
     // gain helper class will re-compose the source/dest gain combination if
-    // needed.  If the gain scale is literally zero, the just skip this source.
-    // It will contribute nothing to this pass.
+    // needed.  If the gain scale is at or below our mute threshold, skip this
+    // source, as it will contribute nothing to this pass.
     Gain::AScale amplitude_scale = link->gain().GetGainScale(capture_gain);
-    if (amplitude_scale == 0) {
+    // At this time, our internal accumulator format is still 16-bit signed.
+    // As we address that, we will refactor the below argument appropriately.
+    if (amplitude_scale <= Gain::MuteThreshold(15)) {
       continue;
     }
 

@@ -208,16 +208,6 @@ overflow, given a sufficient number of incoming streams. This limit is
 admittedly beyond any foreseeable scenario (65,000 streams), but this should be
 documented even if the code does not explicitly clamp.
 
-*   MTWN-76
-
-    Gain is applied to audio data during the interpolation-and-accumulation
-process. As an optimization, if gain is lower than 160 dB for a given stream,
-we skip any mixing and simply advance the positions accordingly. In the case
-where the 'accumulate' flag is NOT set, we should also zero-out the destination
-buffer. The proper fix for this might simply be to document this behavior,
-since the OutputBase object does zero-out a mix buffer before providing it to
-the Mixer object.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether
