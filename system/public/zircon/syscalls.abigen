@@ -569,6 +569,30 @@ syscall interrupt_signal
     (handle: zx_handle_t, slot: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 
+syscall irq_create
+    (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
+    returns (zx_status_t, out_handle: zx_handle_t);
+
+syscall irq_bind
+    (inth: zx_handle_t, porth: zx_handle_t, key: uint64_t, options: uint32_t)
+    returns (zx_status_t);
+
+syscall irq_wait blocking
+    (handle: zx_handle_t)
+    returns (zx_status_t, out_timestamp: zx_time_t);
+
+syscall irq_destroy
+    (handle: zx_handle_t)
+    returns (zx_status_t);
+
+syscall irq_ack
+    (handle: zx_handle_t)
+    returns (zx_status_t);
+
+syscall irq_trigger
+    (handle: zx_handle_t, options: uint32_t, timestamp: zx_time_t)
+    returns (zx_status_t);
+
 # DDK Syscalls: MMIO and Ports
 
 syscall mmap_device_io

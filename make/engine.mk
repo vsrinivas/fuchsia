@@ -154,6 +154,9 @@ GLOBAL_COMPILEFLAGS += -Wno-nonnull-compare
 endif
 GLOBAL_CFLAGS := -std=c11 -Werror-implicit-function-declaration -Wstrict-prototypes -Wwrite-strings
 GLOBAL_CPPFLAGS := -std=c++14 -fno-exceptions -fno-rtti -fno-threadsafe-statics -Wconversion -Wno-sign-conversion
+ifeq ($(call TOBOOL,$(ENABLE_NEW_IRQ_API)),true)
+GLOBAL_COMPILEFLAGS += -DENABLE_NEW_IRQ_API=1
+endif
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS :=
 GLOBAL_LDFLAGS := -nostdlib --build-id
