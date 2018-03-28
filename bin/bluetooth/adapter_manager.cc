@@ -121,7 +121,9 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
   FXL_DCHECK(handle.is_valid());
 
   // Bind the channel to a host interface pointer.
-  auto host = handle.Bind();
+  // Wrap in a unique_ptr so we can rely on the location of the HostPtr when it
+  // is moved into the callback.
+  auto host = std::make_unique<bluetooth_host::HostPtr>(handle.Bind());
 
   // We create and store an Adapter for |host| only when GetInfo() succeeds.
   // Ownership of |host| is passed to |callback| only when we receive a response
@@ -135,10 +137,10 @@ void AdapterManager::OnDeviceFound(int dir_fd, std::string filename) {
   auto callback = fxl::MakeCopyable(
       [self, host = std::move(host)](auto adapter_info) mutable {
         if (self)
-          self->CreateAdapter(std::move(host), std::move(adapter_info));
+          self->CreateAdapter(std::move(*host), std::move(adapter_info));
       });
 
-  host_raw->GetInfo(callback);
+  (*host_raw)->GetInfo(callback);
 }
 
 void AdapterManager::CreateAdapter(bluetooth_host::HostPtr host,
