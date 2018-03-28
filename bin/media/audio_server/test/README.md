@@ -282,13 +282,6 @@ fractional bits -- will require changes to all stages, including Accumulation.
 
 **Denormalize (Output)**
 
-*   MTWN-84
-
-    When a final mix is "encoded" from our internal representation into an
-output buffer that has a format of unsigned-8-bit, we floor instead of round,
-leading to results that for certain inputs are "expected-1". This also leads to
-a slight negative DC bias for this output format.
-
 *   MTWN-54
 
     As a future enhancement, the audio mixer should output its mixed audio data

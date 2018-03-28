@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/audio_server/platform/generic/output_formatter.h"
 
+#include <fbl/algorithm.h>
 #include <limits>
 #include <type_traits>
 
@@ -33,10 +34,10 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
-    // TODO(mpuryear): MTWN-84: Round upon conversion; don't floor/truncate.
-    // For now, reverting a previous fix (round by adding 8080, not 8000),
-    // until mechanisms are in place to quantify the effect of the improvement.
-    return static_cast<DType>((sample + 0x8000) >> 8);
+    // Before we right-shift, add an effective "0.5" so that values 'round'.
+    // But -0.5 must round *away from* zero: add just a bit less, if negative.
+    sample += (sample >= 0 ? 0x8080 : 0x807F);
+    return static_cast<DType>((fbl::clamp(sample, 0, 0xFFFF)) >> 8);
   }
 };
 
@@ -119,7 +120,8 @@ OutputFormatterPtr OutputFormatter::Select(
     case AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
     default:
-      FXL_LOG(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
+      FXL_LOG(ERROR) << "Unsupported output format "
+                     << (uint32_t)format->sample_format;
       return nullptr;
   }
 }

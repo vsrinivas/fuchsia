@@ -206,7 +206,7 @@ TEST(PassThru, StereoToMono_Round) {
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
-// Do we obey the 'accumulate' flag if mixing into existing accumulated data
+// Do we obey the 'accumulate' flag if mixing into existing accumulated data?
 TEST(PassThru, Accumulate) {
   int16_t source[] = {-4321, 2345, 6789, -8765};
   int32_t accum[] = {22222, 11111, -5555, 9630};
@@ -224,9 +224,7 @@ TEST(PassThru, Accumulate) {
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
-// Are all valid data values passed correctly to 8-bit outputs
-// Important: OutputFormatter<uint8> truncates (not rounds).
-// TODO(mpuryear): Change expectations to correct vals when we fix MTWN-84.
+// Are all valid data values rounded correctly to 8-bit outputs?
 TEST(PassThru, Output_8) {
   int32_t accum[] = {-32896, -32768, -16512, -1, 0, 16512, 32767, 32768};
   // hex vals:       -x8080  -x8000  -x4080  -1  0  x4080  x7FFF  x8000
@@ -235,7 +233,7 @@ TEST(PassThru, Output_8) {
   uint8_t dest[] = {12, 23, 34, 45, 56, 67, 78, 89, 42};
   // Dest completely overwritten, except for last value: we only mix(8)
 
-  uint8_t expect[] = {0x0, 0x0, 0x3F, 0x7F, 0x80, 0xC0, 0xFF, 0xFF, 42};
+  uint8_t expect[] = {0x0, 0x0, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF, 42};
 
   OutputFormatterPtr output_formatter =
       SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
@@ -245,7 +243,7 @@ TEST(PassThru, Output_8) {
   EXPECT_TRUE(CompareBuffers(dest, expect, fbl::count_of(dest)));
 }
 
-// Are all valid data values passed correctly to 16-bit outputs
+// Are all valid data values passed correctly to 16-bit outputs?
 TEST(PassThru, Output_16) {
   int32_t accum[] = {-32896, -32768, -16512, -1, 0, 16512, 32767, 32768};
   // hex vals:       -x8080  -x8000  -x4080  -1  0  x4080  x7FFF  x8000
