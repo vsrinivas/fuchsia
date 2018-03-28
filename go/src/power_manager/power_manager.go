@@ -212,12 +212,13 @@ func main() {
 	}
 
 	c := context.CreateFromStartupInfo()
-	c.OutgoingService.AddService("power_manager", func(c zx.Channel) error {
+	c.OutgoingService.AddService(power_manager.PowerManagerName, func(c zx.Channel) error {
 		return pm.bs.Add(&power_manager.PowerManagerStub{
 			Impl: pm,
 		}, c)
 	})
 	c.Serve()
+	go bindings2.Serve()
 
 	adapterDeviceFound := false
 	batteryDeviceFound := false
