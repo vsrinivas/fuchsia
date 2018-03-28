@@ -165,13 +165,18 @@ void MeasureFreqRespSinad(MixerPtr mixer,
   std::vector<int32_t> accum(kFreqTestBufSize);
 
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kNumReferenceFreqs
-                           : FrequencySet::kNumSummaryIdxs;
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
   // Measure frequency reseponse for each summary frequency
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq_idx = idx;
     if (FrequencySet::UseFullFrequencySet == false) {
       freq_idx = FrequencySet::kSummaryIdxs[idx];
+    }
+
+    // If frequency is too high to be characterized in this buffer, skip it
+    if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > src_buf_size) {
+      continue;
     }
 
     // Populate source buffer; mix it (pass-thru) to accumulation buffer
@@ -211,12 +216,12 @@ TEST(FrequencyResponse, Point_Unity) {
   constexpr uint32_t step_size = Mixer::FRAC_ONE;  // 48k->48k
 
   MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespPointUnity,
-                       AudioResult::SinadPointUnity);
+                       AudioResult::FreqRespPointUnity.data(),
+                       AudioResult::SinadPointUnity.data());
 
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kNumReferenceFreqs
-                           : FrequencySet::kNumSummaryIdxs;
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx
@@ -242,12 +247,12 @@ TEST(FrequencyResponse, Point_DownSamp) {
   constexpr uint32_t step_size = Mixer::FRAC_ONE << 1;  // 96k -> 48k
 
   MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespPointDown,
-                       AudioResult::SinadPointDown);
+                       AudioResult::FreqRespPointDown.data(),
+                       AudioResult::SinadPointDown.data());
 
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kNumReferenceFreqs
-                           : FrequencySet::kNumSummaryIdxs;
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx
@@ -272,12 +277,12 @@ TEST(FrequencyResponse, Linear_DownSamp) {
   constexpr uint32_t step_size = 0x1D67;  // 88.2k -> 48k
 
   MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespLinearDown,
-                       AudioResult::SinadLinearDown);
+                       AudioResult::FreqRespLinearDown.data(),
+                       AudioResult::SinadLinearDown.data());
 
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kNumReferenceFreqs
-                           : FrequencySet::kNumSummaryIdxs;
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx
@@ -302,12 +307,12 @@ TEST(FrequencyResponse, Linear_UpSamp) {
   constexpr uint32_t step_size = 0x0EB3;  // 44.1k -> 48k
 
   MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespLinearUp,
-                       AudioResult::SinadLinearUp);
+                       AudioResult::FreqRespLinearUp.data(),
+                       AudioResult::SinadLinearUp.data());
 
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kNumReferenceFreqs
-                           : FrequencySet::kNumSummaryIdxs;
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
     uint32_t freq = FrequencySet::UseFullFrequencySet
                         ? idx

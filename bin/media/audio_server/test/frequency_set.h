@@ -6,6 +6,7 @@
 
 #include <fbl/algorithm.h>
 #include <zircon/types.h>
+#include <array>
 
 namespace media {
 namespace audio {
@@ -45,40 +46,24 @@ class FrequencySet {
  public:
   static bool UseFullFrequencySet;
 
-  //
-  // The summary audio analysis tests use a small set of standard frequencies.
-  //
-  // clang-format off
-  static constexpr uint32_t kReferenceFreqs[] = {
-          0,    18,    23,    27,    34,    41,    53,    67,    85,    109,
-        137,   169,   221,   271,   341,   431,   541,   683,   859,   1091,
-       1363,  1703,  2183,  2729,  3413,  4301,  5461,  6827,  8603,  10921,
-      13651, 16381, 21841, 26623, 27307, 27989, 28673, 30103, 31949,  32768,
-      34133, 43007, 54613, 60073, 60209, 64853, 65535};
-  // clang-format on
-  static constexpr uint32_t kNumReferenceFreqs = fbl::count_of(kReferenceFreqs);
+  // The full-spectrum audio tests use a broad set of standard frequencies.
+  static constexpr uint32_t kNumReferenceFreqs = 47;
+  // Summary audio tests use a small frequency set taken from the full list.
+  static constexpr uint32_t kNumSummaryIdxs = 3;
 
-  static constexpr uint32_t kSummaryIdxs[] = {6, 20, 31};
-  static constexpr uint32_t kNumSummaryIdxs = fbl::count_of(kSummaryIdxs);
+  // Each val represents a standard frequency within the broad set.
+  static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFreqs;
+  // Each val is a kReferenceFreqs index, pointing to a summary freq.
+  static const std::array<uint32_t, kNumSummaryIdxs> kSummaryIdxs;
 
-  //
-  // Because of translation between power-of-two-sized buffers and eventual
-  // sample rate, the above array represents the following actual frequencies:
-  //
-  // clang-format off
-  static constexpr uint32_t kRefFreqsTranslated[] = {
-          0,    13,    17,    20,    25,    30,    39,    49,    62,    80,
-        100,   124,   162,   198,   250,   316,   396,   500,   630,   799,
-        998,  1247,  1599,  1999,  2500,  3150,  4000,  5000,  6301,  7999,
-       9998, 11998, 15997, 19499, 20000, 20500, 21001, 22049, 23400, 24000,
-      25000, 31500, 40000, 44000, 44100, 47500, 47999};
-  // clang-format on
+  // Because of translation between power-of-two-sized buffers and sample rate,
+  // values in kReferenceFreqs translate into the following actual frequencies:
+  static const std::array<uint32_t, kNumReferenceFreqs> kRefFreqsTranslated;
 
-  //
   // Certain tests (such as noise floor and sinad) are evaluated with a
   // sinusoidal input at a single reference frequency (usually close to 1 kHz).
   static constexpr uint32_t kRefFreqIdx = 20;  // 1kHz reference tone
-  static constexpr uint32_t kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
+  static const uint32_t kReferenceFreq;
 
   // class is static only - prevent attempts to instantiate it
   FrequencySet() = delete;

@@ -138,9 +138,9 @@ void GenerateCosine(T* buffer,
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FXL_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
-  if (freq * 2.0 > buf_size) {
-    return;
-  }
+  // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
+  FXL_DCHECK(freq * 2.0 <= buf_size)
+      << "Buffer too short--requested frequency will be aliased";
 
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / buf_size * freq;
