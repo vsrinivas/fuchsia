@@ -4,10 +4,9 @@
 
 #include <trace-provider/provider.h>
 
+#include <fuchsia/cpp/modular_auth.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular_auth.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -19,29 +18,30 @@
 namespace modular {
 namespace auth {
 
-class AccountProviderImpl : AccountProvider {
+class AccountProviderImpl : modular_auth::AccountProvider {
  public:
   AccountProviderImpl();
 
  private:
   // |AccountProvider| implementation:
-  void Initialize(
-      f1dl::InterfaceHandle<AccountProviderContext> provider) override;
+  void Initialize(fidl::InterfaceHandle<modular_auth::AccountProviderContext>
+                      provider) override;
   void Terminate() override;
-  void AddAccount(IdentityProvider identity_provider,
-                  const AddAccountCallback& callback) override;
-  void RemoveAccount(AccountPtr account,
+  void AddAccount(modular_auth::IdentityProvider identity_provider,
+                  AddAccountCallback callback) override;
+  void RemoveAccount(modular_auth::Account account,
                      bool revoke_all,
-                     const RemoveAccountCallback& callback) override;
+                     RemoveAccountCallback callback) override;
   void GetTokenProviderFactory(
-      const f1dl::StringPtr& account_id,
-      f1dl::InterfaceRequest<TokenProviderFactory> request) override;
+      fidl::StringPtr account_id,
+      fidl::InterfaceRequest<modular_auth::TokenProviderFactory> request)
+      override;
 
   std::string GenerateAccountId();
 
   std::shared_ptr<component::ApplicationContext> application_context_;
-  AccountProviderContextPtr account_provider_context_;
-  f1dl::Binding<AccountProvider> binding_;
+  modular_auth::AccountProviderContextPtr account_provider_context_;
+  fidl::Binding<AccountProvider> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AccountProviderImpl);
 };
@@ -51,13 +51,13 @@ AccountProviderImpl::AccountProviderImpl()
           component::ApplicationContext::CreateFromStartupInfo()),
       binding_(this) {
   application_context_->outgoing_services()->AddService<AccountProvider>(
-      [this](f1dl::InterfaceRequest<AccountProvider> request) {
+      [this](fidl::InterfaceRequest<AccountProvider> request) {
         binding_.Bind(std::move(request));
       });
 }
 
 void AccountProviderImpl::Initialize(
-    f1dl::InterfaceHandle<AccountProviderContext> provider) {
+    fidl::InterfaceHandle<modular_auth::AccountProviderContext> provider) {
   account_provider_context_.Bind(std::move(provider));
 }
 
@@ -75,9 +75,10 @@ std::string AccountProviderImpl::GenerateAccountId() {
   return std::to_string(random_number);
 }
 
-void AccountProviderImpl::AddAccount(IdentityProvider identity_provider,
-                                     const AddAccountCallback& callback) {
-  auto account = auth::Account::New();
+void AccountProviderImpl::AddAccount(
+    modular_auth::IdentityProvider identity_provider,
+    AddAccountCallback callback) {
+  auto account = modular_auth::Account::New();
   account->id = GenerateAccountId();
   account->identity_provider = identity_provider;
   account->display_name = "";
@@ -85,7 +86,7 @@ void AccountProviderImpl::AddAccount(IdentityProvider identity_provider,
   account->image_url = "";
 
   switch (identity_provider) {
-    case IdentityProvider::DEV:
+    case modular_auth::IdentityProvider::DEV:
       callback(std::move(account), nullptr);
       return;
     default:
@@ -93,14 +94,13 @@ void AccountProviderImpl::AddAccount(IdentityProvider identity_provider,
   }
 }
 
-void AccountProviderImpl::RemoveAccount(AccountPtr account,
+void AccountProviderImpl::RemoveAccount(modular_auth::Account account,
                                         bool revoke_all,
-                                        const RemoveAccountCallback& callback) {
-}
+                                        RemoveAccountCallback callback) {}
 
 void AccountProviderImpl::GetTokenProviderFactory(
-    const f1dl::StringPtr& account_id,
-    f1dl::InterfaceRequest<TokenProviderFactory> request) {}
+    fidl::StringPtr account_id,
+    fidl::InterfaceRequest<modular_auth::TokenProviderFactory> request) {}
 
 }  // namespace auth
 }  // namespace modular
