@@ -9,6 +9,7 @@
 #include <utility>
 
 #include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -17,8 +18,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
@@ -80,9 +79,9 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr module_data) override {}
+  void OnModuleAdded(modular::ModuleData module_data) override {}
 
-  f1dl::Binding<modular::StoryWatcher> binding_;
+  fidl::Binding<modular::StoryWatcher> binding_;
 
   modular::StoryState continue_state_{modular::StoryState::DONE};
   std::function<void()> continue_{[] {}};
@@ -107,18 +106,15 @@ class LinkWatcherImpl : modular::LinkWatcher {
   void Reset() { binding_.Unbind(); }
 
   // Sets the function where to continue when the story is observed to be done.
-  void Continue(std::function<void(const f1dl::StringPtr&)> at) {
-    continue_ = at;
-  }
+  void Continue(std::function<void(fidl::StringPtr)> at) { continue_ = at; }
 
  private:
   // |LinkWatcher|
-  void Notify(const f1dl::StringPtr& json) override { continue_(json); }
+  void Notify(fidl::StringPtr json) override { continue_(json); }
 
-  f1dl::Binding<modular::LinkWatcher> binding_;
+  fidl::Binding<modular::LinkWatcher> binding_;
 
-  std::function<void(const f1dl::StringPtr&)> continue_{
-      [](const f1dl::StringPtr&) {}};
+  std::function<void(fidl::StringPtr)> continue_{[](fidl::StringPtr) {}};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
@@ -147,7 +143,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
 
  private:
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -170,18 +166,18 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void StoryCreate() {
     TRACE_ASYNC_BEGIN("benchmark", "story/create", 0);
     story_provider_->CreateStory(
-        settings_.module_url, [this](const f1dl::StringPtr& story_id) {
+        settings_.module_url, [this](fidl::StringPtr story_id) {
           TRACE_ASYNC_END("benchmark", "story/create", 0);
           StoryInfo(story_id);
         });
   }
 
-  void StoryInfo(const f1dl::StringPtr& story_id) {
+  void StoryInfo(fidl::StringPtr story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
     TRACE_ASYNC_BEGIN("benchmark", "story/info", 0);
     story_controller_->GetInfo(
-        [this](modular::StoryInfoPtr story_info, modular::StoryState state) {
+        [this](modular::StoryInfo story_info, modular::StoryState state) {
           TRACE_ASYNC_END("benchmark", "story/info", 0);
           Link();
         });
@@ -190,7 +186,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
   void Link() {
     story_controller_->GetLink(nullptr, "root", link_.NewRequest());
     link_watcher_.Watch(&link_);
-    link_watcher_.Continue([this](const f1dl::StringPtr& json) {
+    link_watcher_.Continue([this](fidl::StringPtr json) {
       if (json == "") {
         return;
       }

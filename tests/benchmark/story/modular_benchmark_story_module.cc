@@ -7,11 +7,11 @@
 #include <trace/observer.h>
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/story/fidl/link.fidl.h"
 #include "peridot/tests/benchmark/story/tracing_waiter.h"
 
 namespace {
@@ -22,8 +22,8 @@ class NullModule : modular::LinkWatcher {
  public:
   NullModule(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), link_watcher_binding_(this) {
     module_host_->module_context()->Ready();
     module_host_->module_context()->GetLink(nullptr, link_.NewRequest());
@@ -33,9 +33,7 @@ class NullModule : modular::LinkWatcher {
   }
 
   // Called by ModuleDriver.
-  void Terminate(const std::function<void()>& done) {
-    done();
-  }
+  void Terminate(const std::function<void()>& done) { done(); }
 
  private:
   void Set() {
@@ -48,7 +46,7 @@ class NullModule : modular::LinkWatcher {
   }
 
   // |LinkWatcher|
-  void Notify(const f1dl::StringPtr& json) override {
+  void Notify(fidl::StringPtr json) override {
     // First invocation is from WatchAll(); next from Set().
     if (count_ == -1) {
       count_ = 0;
@@ -65,7 +63,7 @@ class NullModule : modular::LinkWatcher {
   modular::ModuleHost* const module_host_;
   modular::TracingWaiter tracing_waiter_;
   modular::LinkPtr link_;
-  f1dl::Binding<modular::LinkWatcher> link_watcher_binding_;
+  fidl::Binding<modular::LinkWatcher> link_watcher_binding_;
 
   int count_{-1};
 };
