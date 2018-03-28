@@ -616,7 +616,7 @@ static zx_status_t brcmf_p2p_escan(struct brcmf_p2p_info* p2p, uint32_t num_chan
     struct brcmf_scan_params_le* sparams;
 
     memsize += num_chans * sizeof(uint16_t);
-    memblk = kzalloc(memsize, GFP_KERNEL);
+    memblk = calloc(1, memsize);
     if (!memblk) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1017,7 +1017,7 @@ static zx_status_t brcmf_p2p_act_frm_search(struct brcmf_p2p_info* p2p, uint16_t
     } else {
         channel_cnt = SOCIAL_CHAN_CNT;
     }
-    default_chan_list = kzalloc(channel_cnt * sizeof(*default_chan_list), GFP_KERNEL);
+    default_chan_list = calloc(1, channel_cnt * sizeof(*default_chan_list));
     if (default_chan_list == NULL) {
         brcmf_err("channel list allocation failed\n");
         err = ZX_ERR_NO_MEMORY;
@@ -1344,7 +1344,7 @@ zx_status_t brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct 
         brcmf_p2p_stop_wait_next_action_frame(cfg);
     }
 
-    mgmt_frame = kzalloc(offsetof(struct ieee80211_mgmt, u) + mgmt_frame_len, GFP_KERNEL);
+    mgmt_frame = calloc(1, offsetof(struct ieee80211_mgmt, u) + mgmt_frame_len);
     if (!mgmt_frame) {
         brcmf_err("No memory available for action frame\n");
         return ZX_ERR_NO_MEMORY;
@@ -1823,7 +1823,7 @@ static void brcmf_p2p_get_current_chanspec(struct brcmf_p2p_info* p2p, uint16_t*
     ifp = p2p->bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
 
     if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSSID, mac_addr, ETH_ALEN) == ZX_OK) {
-        buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
+        buf = calloc(1, WL_BSS_INFO_MAX);
         if (buf != NULL) {
             *(uint32_t*)buf = WL_BSS_INFO_MAX;
             if (brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX) == ZX_OK) {

@@ -363,11 +363,11 @@ static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t pre
     /* put in reset */
     ci->ops->write32(ci->ctx, core->wrapbase + BCMA_RESET_CTL, BCMA_RESET_CTL_RESET);
     usleep_range(10, 20);
-
+    brcmf_dbg(TEMP, "About to wait");
     /* wait till reset is 1 */
     SPINWAIT(ci->ops->read32(ci->ctx, core->wrapbase + BCMA_RESET_CTL) != BCMA_RESET_CTL_RESET,
              300);
-
+    brcmf_dbg(TEMP, "Survived wait");
 in_reset_configure:
     /* in-reset configure */
     ci->ops->write32(ci->ctx, core->wrapbase + BCMA_IOCTL, reset | BCMA_IOCTL_FGC | BCMA_IOCTL_CLK);
@@ -457,7 +457,7 @@ static zx_status_t brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t core
                                        uint32_t wrapbase, struct brcmf_core** core_out) {
     struct brcmf_core_priv* core;
 
-    core = kzalloc(sizeof(*core), GFP_KERNEL);
+    core = calloc(1, sizeof(*core));
     if (!core) {
         if (core_out) {
             *core_out = NULL;
@@ -933,29 +933,44 @@ static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
         ci->coredisable = brcmf_chip_ai_coredisable;
         ci->resetcore = brcmf_chip_ai_resetcore;
 
+        brcmf_dbg(TEMP, "about to erom_scan in SOCI_AI");
         brcmf_chip_dmp_erom_scan(ci);
+        brcmf_dbg(TEMP, "Survived erom scan");
     } else {
         brcmf_err("chip backplane type %u is not supported\n", socitype);
         return ZX_ERR_WRONG_TYPE;
     }
 
     ret = brcmf_chip_cores_check(ci);
+    brcmf_dbg(TEMP, "Survived cores_check");
     if (ret != ZX_OK) {
         return ret;
     }
 
     /* assure chip is passive for core access */
     brcmf_chip_set_passive(&ci->pub);
+    brcmf_dbg(TEMP, "Survived set_passive");
+    PAUSE;
 
     /* Call bus specific reset function now. Cores have been determined
      * but further access may require a chip specific reset at this point.
      */
     if (ci->ops->reset) {
+        brcmf_dbg(TEMP, "Trying reset");
+
         ci->ops->reset(ci->ctx, &ci->pub);
+        brcmf_dbg(TEMP, "Survived reset");
+        PAUSE;
         brcmf_chip_set_passive(&ci->pub);
+        brcmf_dbg(TEMP, "Survived passive");
+        PAUSE;
     }
 
-    return brcmf_chip_get_raminfo(ci);
+    //return brcmf_chip_get_raminfo(ci);
+    ret = brcmf_chip_get_raminfo(ci);
+    brcmf_dbg(TEMP, "chip_get_raminfo returned %d", ret);
+    PAUSE;
+    return ret;
 }
 
 static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, uint16_t id) {
@@ -979,6 +994,7 @@ static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, uint16_t id) {
         /* clear all IOCTL bits except HALT bit */
         val = chip->ops->read32(chip->ctx, cpu->wrapbase + BCMA_IOCTL);
         val &= ARMCR4_BCMA_IOCTL_CPUHALT;
+        brcmf_dbg(TEMP, "About to resetcore, id %d, val %d, CPUHALT", id, val);
         brcmf_chip_resetcore(core, val, ARMCR4_BCMA_IOCTL_CPUHALT, ARMCR4_BCMA_IOCTL_CPUHALT);
         break;
     default:
@@ -1046,7 +1062,7 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    chip = kzalloc(sizeof(*chip), GFP_KERNEL);
+    chip = calloc(1, sizeof(*chip));
     if (!chip) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1062,11 +1078,13 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
     }
 
     err = brcmf_chip_recognition(chip);
+    brcmf_dbg(TEMP, "survived chip_recognition, err %d", err);
     if (err != ZX_OK) {
         goto fail;
     }
 
     err = brcmf_chip_setup(chip);
+    brcmf_dbg(TEMP, "survived chip_setup, err %d", err);
     if (err != ZX_OK) {
         goto fail;
     }
@@ -1078,19 +1096,21 @@ zx_status_t brcmf_chip_attach(void* ctx, const struct brcmf_buscore_ops* ops,
 
 fail:
     brcmf_chip_detach(&chip->pub);
+    brcmf_dbg(TEMP, "survived fail-detach");
     return err;
 }
 
 void brcmf_chip_detach(struct brcmf_chip* pub) {
     struct brcmf_chip_priv* chip;
-    struct brcmf_core_priv* core;
+    //struct brcmf_core_priv* core;
     //struct brcmf_core_priv* tmp; //unused
 
     chip = container_of(pub, struct brcmf_chip_priv, pub);
-    list_for_each_entry_safe(core, tmp, &chip->cores, list) {
+    brcmf_err("Need to free the core list!!!"); // TODO(cphoenix): Re-enable this code ASAP.
+/*    list_for_each_entry_safe(core, tmp, &chip->cores, list) {
         list_del(&core->list);
         kfree(core);
-    }
+    }*/
     kfree(chip);
 }
 
@@ -1099,8 +1119,10 @@ struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* pub, uint16_t coreid) 
     struct brcmf_core_priv* core;
 
     chip = container_of(pub, struct brcmf_chip_priv, pub);
-    list_for_each_entry(core, &chip->cores, list) if (core->pub.id == coreid) {
-        return &core->pub;
+    list_for_each_entry(core, &chip->cores, list) {
+        if (core->pub.id == coreid) {
+            return &core->pub;
+        }
     }
 
     return NULL;
@@ -1159,19 +1181,25 @@ static void brcmf_chip_cm3_set_passive(struct brcmf_chip_priv* chip) {
     struct brcmf_core* core;
     struct brcmf_core_priv* sr;
 
+    brcmf_dbg(TEMP, "cm3");
     brcmf_chip_disable_arm(chip, BCMA_CORE_ARM_CM3);
     core = brcmf_chip_get_core(&chip->pub, BCMA_CORE_80211);
+    brcmf_dbg(TEMP, "cm3->resetcore");
     brcmf_chip_resetcore(core, D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN,
                          D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
+    brcmf_dbg(TEMP, "cm3<-resetcore->get_core");
     core = brcmf_chip_get_core(&chip->pub, BCMA_CORE_INTERNAL_MEM);
+    brcmf_dbg(TEMP, "get_core->reset");
     brcmf_chip_resetcore(core, 0, 0, 0);
 
     /* disable bank #3 remap for this device */
     if (chip->pub.chip == BRCM_CC_43430_CHIP_ID) {
+        brcmf_dbg(TEMP, "cm3 43430");
         sr = container_of(core, struct brcmf_core_priv, pub);
         brcmf_chip_core_write32(sr, SOCRAMREGOFFS(bankidx), 3);
         brcmf_chip_core_write32(sr, SOCRAMREGOFFS(bankpda), 0);
     }
+    brcmf_dbg(TEMP, "cm3 survived");
 }
 
 static bool brcmf_chip_cm3_set_active(struct brcmf_chip_priv* chip) {
@@ -1193,12 +1221,19 @@ static bool brcmf_chip_cm3_set_active(struct brcmf_chip_priv* chip) {
 
 static inline void brcmf_chip_cr4_set_passive(struct brcmf_chip_priv* chip) {
     struct brcmf_core* core;
+    brcmf_dbg(TEMP, "1");
 
     brcmf_chip_disable_arm(chip, BCMA_CORE_ARM_CR4);
+    brcmf_dbg(TEMP, "2");
 
     core = brcmf_chip_get_core(&chip->pub, BCMA_CORE_80211);
+    brcmf_dbg(TEMP, "resetcore, id %d, val %d, PHYCLOCKEN", BCMA_CORE_80211,
+              D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN);
+    PAUSE;
     brcmf_chip_resetcore(core, D11_BCMA_IOCTL_PHYRESET | D11_BCMA_IOCTL_PHYCLOCKEN,
                          D11_BCMA_IOCTL_PHYCLOCKEN, D11_BCMA_IOCTL_PHYCLOCKEN);
+    brcmf_dbg(TEMP, "4");
+    PAUSE;
 }
 
 static bool brcmf_chip_cr4_set_active(struct brcmf_chip_priv* chip, uint32_t rstvec) {
@@ -1239,22 +1274,26 @@ void brcmf_chip_set_passive(struct brcmf_chip* pub) {
     struct brcmf_chip_priv* chip;
     struct brcmf_core* arm;
 
-    brcmf_dbg(TRACE, "Enter\n");
+    brcmf_dbg(TEMP, "Enter");
 
     chip = container_of(pub, struct brcmf_chip_priv, pub);
     arm = brcmf_chip_get_core(pub, BCMA_CORE_ARM_CR4);
+    brcmf_dbg(TEMP, "cr4 arm %p", arm);
     if (arm) {
         brcmf_chip_cr4_set_passive(chip);
         return;
     }
     arm = brcmf_chip_get_core(pub, BCMA_CORE_ARM_CA7);
+    brcmf_dbg(TEMP, "ca7 arm %p", arm);
     if (arm) {
         brcmf_chip_ca7_set_passive(chip);
         return;
     }
     arm = brcmf_chip_get_core(pub, BCMA_CORE_ARM_CM3);
+    brcmf_dbg(TEMP, "cm3 arm %p", arm);
     if (arm) {
         brcmf_chip_cm3_set_passive(chip);
+        brcmf_dbg(TEMP, "Survived cm3_set_passive");
         return;
     }
 }

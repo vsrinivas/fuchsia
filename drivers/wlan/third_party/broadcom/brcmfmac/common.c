@@ -56,8 +56,8 @@ module_param_named(txglomsz, brcmf_sdiod_txglomsz, int, 0);
 MODULE_PARM_DESC(txglomsz, "Maximum tx packet chain size [SDIO]");
 
 /* Debug level configuration. See debug.h for bits, sysfs modifiable */
-int brcmf_msg_level;
-module_param_named(debug, brcmf_msg_level, int, S_IRUSR | S_IWUSR);
+int brcmf_msg_filter;
+module_param_named(debug, brcmf_msg_filter, int, S_IRUSR | S_IWUSR);
 MODULE_PARM_DESC(debug, "Level of debug output");
 
 static int brcmf_p2p_enable;
@@ -162,7 +162,7 @@ done:
 static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     struct brcmf_device* dev = ifp->drvr->bus_if->dev;
     struct brcmf_dload_data_le* chunk_buf;
-    const struct firmware* clm = NULL;
+    const struct brcmf_firmware* clm = NULL;
     uint8_t clm_name[BRCMF_FW_NAME_LEN];
     uint32_t chunk_len;
     uint32_t datalen;
@@ -187,7 +187,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
         return ZX_OK;
     }
 
-    chunk_buf = kzalloc(sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1, GFP_KERNEL);
+    chunk_buf = calloc(1, sizeof(*chunk_buf) + MAX_CHUNK_LEN - 1);
     if (!chunk_buf) {
         err = ZX_ERR_NO_MEMORY;
         goto done;
@@ -381,20 +381,22 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 #endif
 
 #if defined(CONFIG_BRCM_TRACING) || defined(CONFIG_BRCMDBG)
-void __brcmf_dbg(uint32_t level, const char* func, const char* fmt, ...) {
-    struct va_format vaf = {
-        .fmt = fmt,
-    };
+void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
     va_list args;
 
-    va_start(args, fmt);
-    vaf.va = &args;
-    if (brcmf_msg_level & level) {
-        // TODO(cphoenix): Change this to DEBUG after bringup
-        zxlogf(INFO, "brcmfmac: %s %pV", func, &vaf);
+    if (true || brcmf_msg_filter & filter) {
+        // TODO(cphoenix): After bringup: Re-enable filter check
+        char msg[512]; // Same value hard-coded throughout devhost.c
+        va_start(args, fmt);
+        int n_printed = vsnprintf(msg, 512, fmt, args);
+        va_end(args);
+        if (n_printed < 0) {
+            snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
+        } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
+            msg[--n_printed] = 0;
+        }
+        zxlogf(INFO, "brcmfmac (%s): '%s'\n", func, msg);
     }
-    trace_brcmf_dbg(level, func, &vaf);
-    va_end(args);
 }
 #endif
 
@@ -415,12 +417,14 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
                                                enum brcmf_bus_type bus_type,
                                                uint32_t chip, uint32_t chiprev) {
     struct brcmf_mp_device* settings;
+#ifdef USE_PLATFORM_DATA
     struct brcmfmac_pd_device* device_pd;
     bool found;
     int i;
+#endif /* USE_PLATFORM_DATA */
 
-    brcmf_dbg(INFO, "Enter, bus=%d, chip=%d, rev=%d\n", bus_type, chip, chiprev);
-    settings = kzalloc(sizeof(*settings), GFP_ATOMIC);
+    brcmf_dbg(TEMP, "Enter, bus=%d, chip=%d, rev=%d\n", bus_type, chip, chiprev);
+    settings = calloc(1, sizeof(*settings));
     if (!settings) {
         return NULL;
     }
@@ -437,7 +441,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
     if (bus_type == BRCMF_BUSTYPE_SDIO) {
         settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;
     }
-
+#ifdef USE_PLATFORM_DATA
     /* See if there is any device specific platform data configured */
     found = false;
     if (brcmfmac_pdata) {
@@ -459,6 +463,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
         /* No platform data for this device, try OF (Open Firwmare) */
         brcmf_of_probe(dev, bus_type, settings);
     }
+#endif /* USE_PLATFORM_DATA */
     return settings;
 }
 
@@ -467,7 +472,7 @@ void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
 }
 
 static zx_status_t brcmf_common_pd_probe(struct platform_device* pdev) {
-    brcmf_dbg(INFO, "Enter\n");
+    brcmf_dbg(TEMP, "Enter");
 
     brcmfmac_pdata = dev_get_platdata(&pdev->dev);
 
@@ -479,7 +484,7 @@ static zx_status_t brcmf_common_pd_probe(struct platform_device* pdev) {
 }
 
 static zx_status_t brcmf_common_pd_remove(struct platform_device* pdev) {
-    brcmf_dbg(INFO, "Enter\n");
+    brcmf_dbg(TEMP, "Enter");
 
     if (brcmfmac_pdata->power_off) {
         brcmfmac_pdata->power_off();
@@ -511,7 +516,7 @@ static zx_status_t brcmfmac_module_init(void) {
     brcmf_mp_attach();
 
     /* Continue the initialization by registering the different busses */
-    err = brcmf_core_init();
+    err = brcmf_core_init(NULL);
     if (err != ZX_OK) {
         brcmf_debugfs_exit();
         if (brcmfmac_pdata) {

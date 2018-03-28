@@ -17,6 +17,8 @@
 #ifndef BRCMFMAC_BUS_H
 #define BRCMFMAC_BUS_H
 
+#include <ddk/protocol/usb.h>
+
 #include "debug.h"
 
 // clang-format off
@@ -256,7 +258,7 @@ void brcmf_sdio_register(void);
 #endif
 #ifdef CONFIG_BRCMFMAC_USB
 void brcmf_usb_exit(void);
-void brcmf_usb_register(void);
+zx_status_t brcmf_usb_register(zx_device_t* device, usb_protocol_t* usb_proto);
 #endif
 
 #endif /* BRCMFMAC_BUS_H */

@@ -3139,7 +3139,7 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 #endif /* DEBUG */
 
 static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus,
-                                                 const struct firmware* fw) {
+                                                 const struct brcmf_firmware* fw) {
     zx_status_t err;
 
     brcmf_dbg(TRACE, "Enter\n");
@@ -3173,7 +3173,8 @@ static zx_status_t brcmf_sdio_download_nvram(struct brcmf_sdio* bus, void* vars,
     return err;
 }
 
-static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus, const struct firmware* fw,
+static zx_status_t brcmf_sdio_download_firmware(struct brcmf_sdio* bus,
+                                                const struct brcmf_firmware* fw,
                                                 void* nvram, uint32_t nvlen) {
     zx_status_t bcmerror;
     uint32_t rstvec;
@@ -3784,7 +3785,7 @@ static bool brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
     brcmu_pktq_init(&bus->txq, (PRIOMASK + 1), TXQLEN);
 
     /* allocate header buffer */
-    bus->hdrbuf = kzalloc(MAX_HDR_READ + bus->head_align, GFP_KERNEL);
+    bus->hdrbuf = calloc(1, MAX_HDR_READ + bus->head_align);
     if (!bus->hdrbuf) {
         return false;
     }
@@ -3873,7 +3874,7 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
 };
 
 static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t err,
-                                         const struct firmware* code,
+                                         const struct brcmf_firmware* code,
                                          void* nvram, uint32_t nvram_len) {
     struct brcmf_bus* bus_if = dev_get_drvdata(dev);
     struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;

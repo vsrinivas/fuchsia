@@ -2249,7 +2249,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
         *fws_out = NULL;
     }
 
-    fws = kzalloc(sizeof(*fws), GFP_KERNEL);
+    fws = calloc(1, sizeof(*fws));
     if (!fws) {
         rc = ZX_ERR_NO_MEMORY;
         goto fail;

@@ -30,7 +30,7 @@
 
 #define BRCMF_FW_NAME_LEN 320
 
-#define BRCMF_FW_DEFAULT_PATH "brcm/"
+#define BRCMF_FW_DEFAULT_PATH ""
 
 /**
  * struct brcmf_firmware_mapping - Used to map chipid/revmask to firmware
@@ -77,13 +77,14 @@ void brcmf_fw_nvram_free(void* nvram);
 zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags, const char* code,
                                         const char* nvram,
                                         void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
-                                                      const struct firmware* fw, void* nvram_image,
+                                                      const struct brcmf_firmware* fw,
+                                                      void* nvram_image,
                                                       uint32_t nvram_len),
                                 uint16_t domain_nr, uint16_t bus_nr);
 zx_status_t brcmf_fw_get_firmwares(struct brcmf_device* dev, uint16_t flags, const char* code,
                                    const char* nvram,
                                    void (*fw_cb)(struct brcmf_device* dev, zx_status_t err,
-                                                 const struct firmware* fw, void* nvram_image,
+                                                 const struct brcmf_firmware* fw, void* nvram_image,
                                                  uint32_t nvram_len));
 
 #endif /* BRCMFMAC_FIRMWARE_H */

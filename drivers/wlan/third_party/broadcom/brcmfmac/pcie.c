@@ -26,6 +26,8 @@
 
 #include "pcie.h"
 
+#include <ddk/driver.h>
+
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -235,11 +237,13 @@ struct brcmf_pcie_core_info {
 struct brcmf_pciedev_info {
     enum brcmf_pcie_state state;
     bool in_irq;
-    struct pci_dev* pdev;
+    struct brcmf_pci_device* pdev;
     char fw_name[BRCMF_FW_NAME_LEN];
     char nvram_name[BRCMF_FW_NAME_LEN];
     void __iomem* regs;
+    zx_handle_t regs_handle;
     void __iomem* tcm;
+    zx_handle_t tcm_handle;
     uint32_t ram_base;
     uint32_t ram_size;
     struct brcmf_chip* ci;
@@ -383,8 +387,11 @@ static void brcmf_pcie_copy_mem_todev(struct brcmf_pciedev_info* devinfo, uint32
     uint16_t* src16;
     uint8_t* src8;
 
-    if (((ulong)address & 4) || ((ulong)srcaddr & 4) || (len & 4)) {
-        if (((ulong)address & 2) || ((ulong)srcaddr & 2) || (len & 2)) {
+    brcmf_dbg(TEMP, "address: 0x%p, offset 0x%x, tcm 0x%p, src 0x%p, len 0x%x", address, mem_offset,
+              devinfo->tcm, srcaddr, len);
+    // TODO(cphoenix): This logic looks very wrong - shouldn't it be &3, &1?
+    if (((ulong)address & 3) || ((ulong)srcaddr & 3) || (len & 3)) {
+        if (((ulong)address & 1) || ((ulong)srcaddr & 1) || (len & 1)) {
             src8 = (uint8_t*)srcaddr;
             while (len) {
                 iowrite8(*src8, address);
@@ -455,7 +462,7 @@ static void brcmf_pcie_copy_dev_tomem(struct brcmf_pciedev_info* devinfo, uint32
 #define WRITECC32(devinfo, reg, value) brcmf_pcie_write_reg32(devinfo, CHIPCREGOFFS(reg), value)
 
 static void brcmf_pcie_select_core(struct brcmf_pciedev_info* devinfo, uint16_t coreid) {
-    const struct pci_dev* pdev = devinfo->pdev;
+    struct brcmf_pci_device* pdev = devinfo->pdev;
     struct brcmf_core* core;
     uint32_t bar0_win;
 
@@ -723,7 +730,7 @@ static irqreturn_t brcmf_pcie_isr_thread(int irq, void* arg) {
 }
 
 static zx_status_t brcmf_pcie_request_irq(struct brcmf_pciedev_info* devinfo) {
-    struct pci_dev* pdev;
+    struct brcmf_pci_device* pdev;
 
     pdev = devinfo->pdev;
 
@@ -743,7 +750,7 @@ static zx_status_t brcmf_pcie_request_irq(struct brcmf_pciedev_info* devinfo) {
 }
 
 static void brcmf_pcie_release_irq(struct brcmf_pciedev_info* devinfo) {
-    struct pci_dev* pdev;
+    struct brcmf_pci_device* pdev;
     uint32_t status;
     uint32_t count;
 
@@ -892,7 +899,7 @@ static struct brcmf_pcie_ringbuf* brcmf_pcie_alloc_dma_and_ring(struct brcmf_pci
     addr = tcm_ring_phys_addr + BRCMF_RING_LEN_ITEMS_OFFSET;
     brcmf_pcie_write_tcm16(devinfo, addr, brcmf_ring_itemsize[ring_id]);
 
-    ring = kzalloc(sizeof(*ring), GFP_KERNEL);
+    ring = calloc(1, sizeof(*ring));
     if (!ring) {
         dma_free_coherent(&devinfo->pdev->dev, size, dma_buf, dma_handle);
         return NULL;
@@ -1276,7 +1283,7 @@ static zx_status_t brcmf_pcie_init_share_ram_info(struct brcmf_pciedev_info* dev
 }
 
 static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devinfo,
-                                                const struct firmware* fw, void* nvram,
+                                                const struct brcmf_firmware* fw, void* nvram,
                                                 uint32_t nvram_len) {
     uint32_t sharedram_addr;
     uint32_t sharedram_addr_written;
@@ -1293,6 +1300,7 @@ static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devin
 
     brcmf_dbg(PCIE, "Download FW %s\n", devinfo->fw_name);
     brcmf_pcie_copy_mem_todev(devinfo, devinfo->ci->rambase, (void*)fw->data, fw->size);
+    brcmf_dbg(TEMP, "Survived copy_mem_todev");
 
     resetintr = get_unaligned_le32(fw->data);
     release_firmware(fw);
@@ -1336,57 +1344,75 @@ static zx_status_t brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info* devin
 }
 
 static zx_status_t brcmf_pcie_get_resource(struct brcmf_pciedev_info* devinfo) {
-    struct pci_dev* pdev;
+    struct brcmf_pci_device* pdev;
     zx_status_t err;
-    phys_addr_t bar0_addr, bar1_addr;
+    zx_pci_bar_t bar0_info, bar1_info;
     ulong bar1_size;
 
     pdev = devinfo->pdev;
 
-    err = pci_enable_device(pdev);
-    if (err != ZX_OK) {
-        brcmf_err("pci_enable_device failed err=%d\n", err);
-        return err;
-    }
-
-    pci_set_master(pdev);
+    pci_enable_bus_master(&pdev->pci_proto, true);
 
     /* Bar-0 mapped address */
-    bar0_addr = pci_resource_start(pdev, 0);
+    err = pci_get_bar(&pdev->pci_proto, 0, &bar0_info);
+    if (err != ZX_OK) {
+        return err;
+    }
     /* Bar-1 mapped address */
-    bar1_addr = pci_resource_start(pdev, 2);
+    err = pci_get_bar(&pdev->pci_proto, 2, &bar1_info);
+    if (err != ZX_OK) {
+        return err;
+    }
     /* read Bar-1 mapped memory range */
-    bar1_size = pci_resource_len(pdev, 2);
-    if ((bar1_size == 0) || (bar1_addr == 0)) {
-        brcmf_err("BAR1 Not enabled, device size=%ld, addr=%#016llx\n", bar1_size,
-                  (unsigned long long)bar1_addr);
+    bar1_size = bar1_info.size;
+    if ((bar1_size == 0) || (bar1_info.handle == 0)) {
+        brcmf_err("BAR1 Not enabled, device size=%ld, handle=%d\n", bar1_size, bar1_info.handle);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    devinfo->regs = ioremap_nocache(bar0_addr, BRCMF_PCIE_REG_MAP_SIZE);
-    devinfo->tcm = ioremap_nocache(bar1_addr, bar1_size);
+    size_t size;
+    err = pci_map_bar(&pdev->pci_proto, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &devinfo->regs, &size,
+                      &devinfo->regs_handle);
+    if (err != ZX_OK) {
+        return err;
+    }
+    if (size != BRCMF_PCIE_REG_MAP_SIZE) {
+        brcmf_err("BAR 0 size was %ld - expected %d\n", size, BRCMF_PCIE_REG_MAP_SIZE);
+    }
+    brcmf_dbg(TEMP, "About to map tcm (pre-map garbage): 0x%p", devinfo->tcm);
+    err = pci_map_bar(&pdev->pci_proto, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &devinfo->tcm, &size,
+                      &devinfo->tcm_handle);
+    if (err != ZX_OK) {
+        zx_handle_close(devinfo->regs_handle);
+        return err;
+    }
+    brcmf_dbg(TEMP, "Mapped tcm: 0x%p", devinfo->tcm);
 
     if (!devinfo->regs || !devinfo->tcm) {
         brcmf_err("ioremap() failed (%p,%p)\n", devinfo->regs, devinfo->tcm);
+        if (devinfo->regs_handle) {
+            zx_handle_close(devinfo->regs_handle);
+        }
+        if (devinfo->tcm_handle) {
+            zx_handle_close(devinfo->tcm_handle);
+        }
         return ZX_ERR_NO_RESOURCES;
     }
-    brcmf_dbg(PCIE, "Phys addr : reg space = %p base addr %#016llx\n", devinfo->regs,
-              (unsigned long long)bar0_addr);
-    brcmf_dbg(PCIE, "Phys addr : mem space = %p base addr %#016llx size 0x%x\n", devinfo->tcm,
-              (unsigned long long)bar1_addr, (unsigned int)bar1_size);
+    brcmf_dbg(PCIE, "Phys addr : reg space = %p\n", devinfo->regs);
+    brcmf_dbg(PCIE, "Phys addr : mem space = %p size 0x%lx\n", devinfo->tcm, size);
 
     return ZX_OK;
 }
 
 static void brcmf_pcie_release_resource(struct brcmf_pciedev_info* devinfo) {
-    if (devinfo->tcm) {
-        iounmap(devinfo->tcm);
+    if (devinfo->regs_handle) {
+        zx_handle_close(devinfo->regs_handle);
     }
-    if (devinfo->regs) {
-        iounmap(devinfo->regs);
+    if (devinfo->tcm_handle) {
+        zx_handle_close(devinfo->tcm_handle);
     }
 
-    pci_disable_device(devinfo->pdev);
+    pci_enable_bus_master(&devinfo->pdev->pci_proto, false);
 }
 
 static zx_status_t brcmf_pcie_attach_bus(struct brcmf_pciedev_info* devinfo) {
@@ -1406,7 +1432,7 @@ static zx_status_t brcmf_pcie_attach_bus(struct brcmf_pciedev_info* devinfo) {
     return ret;
 }
 
-static uint32_t brcmf_pcie_buscore_prep_addr(const struct pci_dev* pdev, uint32_t addr) {
+static uint32_t brcmf_pcie_buscore_prep_addr(struct brcmf_pci_device* pdev, uint32_t addr) {
     uint32_t ret_addr;
 
     ret_addr = addr & (BRCMF_PCIE_BAR0_REG_SIZE - 1);
@@ -1463,7 +1489,8 @@ static const struct brcmf_buscore_ops brcmf_pcie_buscore_ops = {
     .write32 = brcmf_pcie_buscore_write32,
 };
 
-static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret, const struct firmware* fw,
+static void brcmf_pcie_setup(struct brcmf_device* dev, zx_status_t ret,
+                             const struct brcmf_firmware* fw,
                              void* nvram, uint32_t nvram_len) {
     struct brcmf_bus* bus;
     struct brcmf_pciedev* pcie_bus_dev;
@@ -1543,7 +1570,7 @@ fail:
     device_release_driver(dev);
 }
 
-static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_device_id* id) {
+static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     zx_status_t ret;
     struct brcmf_pciedev_info* devinfo;
     struct brcmf_pciedev* pcie_bus_dev;
@@ -1551,12 +1578,12 @@ static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_devic
     uint16_t domain_nr;
     uint16_t bus_nr;
 
-    domain_nr = pci_domain_nr(pdev->bus) + 1;
-    bus_nr = pdev->bus->number;
+    domain_nr = pdev->domain + 1;
+    bus_nr = pdev->bus_number;
     brcmf_dbg(PCIE, "Enter %x:%x (%d/%d)\n", pdev->vendor, pdev->device, domain_nr, bus_nr);
 
     ret = ZX_ERR_NO_MEMORY;
-    devinfo = kzalloc(sizeof(*devinfo), GFP_KERNEL);
+    devinfo = calloc(1, sizeof(*devinfo));
     if (devinfo == NULL) {
         return ret;
     }
@@ -1564,12 +1591,13 @@ static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_devic
     devinfo->pdev = pdev;
     pcie_bus_dev = NULL;
     ret = brcmf_chip_attach(devinfo, &brcmf_pcie_buscore_ops, &devinfo->ci);
+    brcmf_dbg(TEMP, "chip_attach ret %d", ret);
     if (ret != ZX_OK) {
         devinfo->ci = NULL;
         goto fail;
     }
 
-    pcie_bus_dev = kzalloc(sizeof(*pcie_bus_dev), GFP_KERNEL);
+    pcie_bus_dev = calloc(1, sizeof(*pcie_bus_dev));
     if (pcie_bus_dev == NULL) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
@@ -1577,17 +1605,18 @@ static zx_status_t brcmf_pcie_probe(struct pci_dev* pdev, const struct pci_devic
 
     devinfo->settings = brcmf_get_module_param(&devinfo->pdev->dev, BRCMF_BUSTYPE_PCIE,
                                                devinfo->ci->chip, devinfo->ci->chiprev);
+    brcmf_dbg(TEMP, "get_param ret 0x%p", devinfo->settings);
     if (!devinfo->settings) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
 
-    bus = kzalloc(sizeof(*bus), GFP_KERNEL);
+    bus = calloc(1, sizeof(*bus));
     if (!bus) {
         ret = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    bus->msgbuf = kzalloc(sizeof(*bus->msgbuf), GFP_KERNEL);
+    bus->msgbuf = calloc(1, sizeof(*bus->msgbuf));
     if (!bus->msgbuf) {
         ret = ZX_ERR_NO_MEMORY;
         kfree(bus);
@@ -1635,7 +1664,7 @@ fail:
     return ret;
 }
 
-static void brcmf_pcie_remove(struct pci_dev* pdev) {
+static void brcmf_pcie_remove(struct brcmf_pci_device* pdev) {
     struct brcmf_pciedev_info* devinfo;
     struct brcmf_bus* bus;
 
@@ -1709,7 +1738,7 @@ static zx_status_t brcmf_pcie_pm_enter_D3(struct brcmf_device* dev) {
 static zx_status_t brcmf_pcie_pm_leave_D3(struct brcmf_device* dev) {
     struct brcmf_pciedev_info* devinfo;
     struct brcmf_bus* bus;
-    struct pci_dev* pdev;
+    struct brcmf_pci_device* pdev;
     zx_status_t err;
 
     brcmf_dbg(PCIE, "Enter\n");
@@ -1738,7 +1767,7 @@ cleanup:
     pdev = devinfo->pdev;
     brcmf_pcie_remove(pdev);
 
-    err = brcmf_pcie_probe(pdev, NULL);
+    err = brcmf_pcie_probe(pdev);
     if (err != ZX_OK) {
         brcmf_err("probe after resume failed, err=%d\n", err);
     }
@@ -1755,28 +1784,39 @@ static const struct dev_pm_ops brcmf_pciedrvr_pm = {
 
 #endif /* CONFIG_PM */
 
-static struct pci_driver brcmf_pciedrvr = {
-    .node = {},
-    .name = KBUILD_MODNAME,
-    //    .id_table = brcmf_pcie_devid_table,
-    .probe = brcmf_pcie_probe,
-    .remove = brcmf_pcie_remove,
-#ifdef CONFIG_PM
-    .driver.pm = &brcmf_pciedrvr_pm,
-#endif
-};
+zx_status_t brcmf_pcie_register(zx_device_t* device, pci_protocol_t* pci_proto) {
+    zx_pcie_device_info_t zx_info;
+    zx_status_t result;
+    struct brcmf_pci_device* pdev;
 
-void brcmf_pcie_register(void) {
-    int err;
+    brcmf_dbg(PCIE, "Enter");
 
-    brcmf_dbg(PCIE, "Enter\n");
-    err = pci_register_driver(&brcmf_pciedrvr);
-    if (err != ZX_OK) {
-        brcmf_err("PCIE driver registration failed, err=%d\n", err);
+    result = pci_get_device_info(pci_proto, &zx_info);
+    brcmf_dbg(PCIE, "pci_get_device_info returned %d", result);
+    if (result != ZX_OK) {
+        return result;
     }
+    pdev = calloc(1, sizeof(*pdev));
+    if (pdev == NULL) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    pdev->vendor = zx_info.vendor_id;
+    pdev->device = zx_info.device_id;
+    pdev->bus_number = zx_info.bus_id;
+    pdev->domain = 0; // per cja@
+    memcpy(&pdev->pci_proto, pci_proto, sizeof(*pci_proto));
+    // TODO(cphoenix): Is this the parent device, or the device that got added?
+    // Revisit when we hook up bind.
+    pdev->dev.zxdev = device;
+    result = brcmf_pcie_probe(pdev);
+    if (result != ZX_OK) {
+        free(pdev);
+    }
+    return result;
 }
 
 void brcmf_pcie_exit(void) {
     brcmf_dbg(PCIE, "Enter\n");
-    pci_unregister_driver(&brcmf_pciedrvr);
+    // TODO(cphoenix): Figure out driver unloading.
+    brcmf_pcie_remove(NULL);
 }

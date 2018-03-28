@@ -24,12 +24,34 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
 
+// TODO(cphoenix): Clean up the list stuff (Note: it has to be early for the #define to work)
+#define list_add_tail zx_list_add_tail
+#include <zircon/listnode.h>
+#undef list_add_tail
+#define list_add_tail(item, list) zx_list_add_tail(list, item)
+#define list_head list_node // for struct list_head
+#define INIT_LIST_HEAD(head) list_initialize(head)
+#define list_empty(list) list_is_empty(list)
+#define list_del(item) list_delete(item)
+#define list_first_entry(list, type, element) list_peek_head_type(list, type, element)
+#define list_entry(list, type, element) containerof(list, type, element)
+#define list_del_init(item) list_delete(item)
+#define list_for_each_entry(cursor, list, field)  \
+    list_for_every_entry(list, cursor, __typeof__(*cursor), field)
+#define list_for_each_entry_safe(cursor, temp, list, field) \
+    list_for_every_entry_safe(list, cursor, temp, __typeof__(*cursor), field)
+#define container_of containerof
+
 #include <ddk/debug.h>
+#include <ddk/device.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include "device.h"
 
@@ -100,13 +122,36 @@ typedef struct {
 
 #define ioread32(addr) (*(volatile uint32_t*)(uintptr_t)(addr))
 
+#define iowrite16(value, addr)                              \
+    do {                                                    \
+        (*(volatile uint16_t*)(uintptr_t)(addr)) = (value); \
+    } while (0)
+
+#define ioread16(addr) (*(volatile uint16_t*)(uintptr_t)(addr))
+
+#define iowrite8(value, addr)                              \
+    do {                                                    \
+        (*(volatile uint8_t*)(uintptr_t)(addr)) = (value); \
+    } while (0)
+
+#define ioread8(addr) (*(volatile uint8_t*)(uintptr_t)(addr))
+
 #define lockdep_assert_held(mtx) ZX_ASSERT(mtx_trylock(mtx) != thrd_success)
 
+// TODO(cphoenix): Use zx_nanosleep instead of busy-wait?
 #define mdelay(msecs)                                                                \
     do {                                                                             \
         zx_time_t busy_loop_end = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(msecs); \
         while (zx_clock_get(ZX_CLOCK_MONOTONIC) < busy_loop_end) {}                  \
     } while (0)
+
+#define udelay(msecs)                                                                \
+    do {                                                                             \
+        zx_time_t busy_loop_end = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_USEC(msecs); \
+        while (zx_clock_get(ZX_CLOCK_MONOTONIC) < busy_loop_end) {}                  \
+    } while (0)
+
+#define usleep_range(early, late) udelay(early)
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define min_t(t, a, b) (((t)(a) < (t)(b)) ? (t)(a) : (t)(b))
@@ -127,16 +172,28 @@ typedef uint32_t gfp_t;
 
 #define LINUX_FUNC(name, paramtype, rettype)                                                   \
     static inline rettype name(paramtype foo, ...) {                                           \
-        zxlogf(ERROR, "brcmfmac: You called linux function %s at line %d of file %s\n", #name, \
-               __LINE__, __FILE__);                                                            \
+        zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);            \
         return (rettype)0;                                                                     \
     }
 #define LINUX_FUNCX(name)                                                                      \
     static inline int name() {                                                                 \
-        zxlogf(ERROR, "brcmfmac: You called linux function %s at line %d of file %s\n", #name, \
-               __LINE__, __FILE__);                                                            \
+        zxlogf(ERROR, "brcmfmac: * * ERROR * * Called linux function %s\n", #name);            \
         return 0;                                                                              \
     }
+
+#define BCMA_CORE_ARM_CM3      0x82a
+#define BCMA_CORE_INTERNAL_MEM 0x80e
+#define BCMA_CORE_ARM_CR4      0x83e
+#define BCMA_CORE_ARM_CA7      0x847
+#define BCMA_CORE_80211        0x812
+#define BCMA_CORE_PCIE2        0x83c
+#define BCMA_CORE_SDIO_DEV     0x829
+#define BCMA_CORE_CHIPCOMMON   0x800
+#define BCMA_CORE_SYS_MEM      0x849
+#define BCMA_CORE_PMU          0x827
+
+#define PAUSE zx_nanosleep(zx_deadline_after(ZX_MSEC(50)))
+
 // clang-format off
 #define LINUX_FUNCII(name) LINUX_FUNC(name, int, int)
 #define LINUX_FUNCIV(name) LINUX_FUNC(name, int, void*)
@@ -165,12 +222,10 @@ LINUX_FUNCVI(skb_queue_len)
 LINUX_FUNCVI(skb_pull)
 LINUX_FUNCVI(__skb_trim)
 LINUX_FUNCVI(brfcmf_dbg)
-LINUX_FUNCII(usleep_range)
 LINUX_FUNCII(time_after)
 LINUX_FUNCII(msecs_to_jiffies)
 LINUX_FUNCII(jiffies_to_msecs)
-LINUX_FUNCII(udelay)
-LINUX_FUNCX(net_ratelimit)
+#define net_ratelimit() (true)
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 LINUX_FUNCVI(sdio_readb)
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
@@ -201,7 +256,6 @@ LINUX_FUNCVV(netdev_priv)
 LINUX_FUNCVI(free_netdev)
 LINUX_FUNCcVI(is_zero_ether_addr)
 LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
-LINUX_FUNCII(trace_brcmf_dbg)
 LINUX_FUNCVI(atomic_inc)
 LINUX_FUNCVI(atomic_set)
 LINUX_FUNCVI(atomic_read)
@@ -216,7 +270,11 @@ LINUX_FUNCVU(__get_unaligned_be16)
 LINUX_FUNCVU(get_unaligned_be16)
 LINUX_FUNCVU(get_unaligned_be32)
 LINUX_FUNCVU(get_unaligned_le16)
-LINUX_FUNCVU(get_unaligned_le32)
+static inline uint32_t get_unaligned_le32(void* addr) {
+    uint32_t value;
+    memcpy(&value, addr, sizeof(uint32_t));
+    return value;
+}
 LINUX_FUNCUU(put_unaligned_le32)
 LINUX_FUNCVI(brcmf_dbg_hex_dump)
 LINUX_FUNCVI(trace_brcmf_hexdump)
@@ -235,8 +293,10 @@ LINUX_FUNCIV(vzalloc)
 LINUX_FUNCIV(kzalloc)
 //LINUX_FUNCIV(valloc)
 LINUX_FUNCVV(vfree)
-LINUX_FUNCVV(kfree)
-LINUX_FUNCII(msleep)
+// TODO(cphoenix): Replace these functions in code rather than using #defines
+// and others e.g. pci_write_config_dword()
+#define kfree free
+#define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
 LINUX_FUNCVI(pr_warn)
 LINUX_FUNCVV(spin_unlock_bh)
 LINUX_FUNCVV(spin_lock_bh)
@@ -248,12 +308,11 @@ LINUX_FUNCVI(spin_lock_init)
 LINUX_FUNCVI(spin_unlock_irqrestore)
 LINUX_FUNCX(wmb)
 LINUX_FUNCX(rmb)
-#define list_add_tail bc_list_add_tail // name conflict with zircon/listnode.h
-LINUX_FUNCVI(bc_list_add_tail)
-LINUX_FUNCVI(list_empty)
-LINUX_FUNCVI(list_del)
-LINUX_FUNCVI(INIT_LIST_HEAD)
-LINUX_FUNC(release_firmware, const void*, int)
+
+// TODO(cphoenix): Make sure we free everything we've gotten.
+static inline void release_firmware(const struct brcmf_firmware* firmware) {
+    return;
+}
 #define spin_lock_irqsave(a, b) {b=0;}
 LINUX_FUNCII(enable_irq)
 LINUX_FUNCVV(wiphy_priv)
@@ -266,7 +325,6 @@ LINUX_FUNCVI(wiphy_read_of_freq_limits)
 LINUX_FUNCVI(wiphy_apply_custom_regulatory)
 LINUX_FUNCVV(wdev_priv)
 LINUX_FUNCVI(set_wiphy_dev)
-LINUX_FUNCVV(list_first_entry)
 LINUX_FUNCVI(cfg80211_unregister_wdev)
 LINUX_FUNCVI(cfg80211_sched_scan_stopped)
 typedef struct wait_queue_head {
@@ -291,7 +349,9 @@ LINUX_FUNCVI(timer_pending)
 LINUX_FUNCII(__ffs)
 LINUX_FUNCVI(init_completion)
 LINUX_FUNCVS(kthread_run)
-LINUX_FUNCVV(dev_name)
+static inline const char* dev_name(void* dev) {
+    return device_get_name(dev);
+}
 LINUX_FUNCVI(init_waitqueue_head)
 LINUX_FUNCVI(device_release_driver)
 LINUX_FUNCVI(destroy_workqueue)
@@ -334,23 +394,25 @@ LINUX_FUNCVI(mutex_init)
 LINUX_FUNCVI(mutex_destroy)
 LINUX_FUNCX(rtnl_lock)
 LINUX_FUNCX(rtnl_unlock)
-LINUX_FUNCVI(ioread8)
-LINUX_FUNCVI(ioread16)
-LINUX_FUNCII(iowrite8)
-LINUX_FUNCII(iowrite16)
-LINUX_FUNCcVI(pci_write_config_dword)
-LINUX_FUNCcVI(pci_read_config_dword)
+#define pci_write_config_dword(pdev, offset, value) \
+    pci_config_write32(&pdev->pci_proto, offset, value)
+#define pci_read_config_dword(pdev, offset, value) \
+    pci_config_read32(&pdev->pci_proto, offset, value)
 LINUX_FUNCcVI(pci_enable_msi)
 LINUX_FUNCcVI(pci_disable_msi)
-LINUX_FUNCcVS(pci_enable_device)
-LINUX_FUNCcVI(pci_disable_device)
-LINUX_FUNCcVI(pci_set_master)
 LINUX_FUNCcVI(pci_resource_start)
 LINUX_FUNCcVI(pci_resource_len)
 LINUX_FUNCcVS(pci_register_driver)
 LINUX_FUNCcVI(pci_unregister_driver)
-LINUX_FUNCcVI(pci_pme_capable)
-LINUX_FUNCVI(device_wakeup_enable)
+
+// TODO(cphoenix): Check with cja@ for when we support power management.
+static inline bool pci_pme_capable(struct brcmf_pci_device* pdev, int level) {
+    return false;
+}
+static inline void device_wakeup_enable(struct brcmf_device* dev) {
+    return;
+}
+
 LINUX_FUNCVI(wake_up)
 LINUX_FUNCII(request_threaded_irq)
 LINUX_FUNCII(free_irq)
@@ -360,9 +422,6 @@ LINUX_FUNCVI(memcpy_fromio)
 LINUX_FUNCVS(memcpy_toio)
 LINUX_FUNCVI(sdio_memcpy_toio)
 LINUX_FUNCVV(dma_zalloc_coherent)
-LINUX_FUNCIV(ioremap_nocache)
-LINUX_FUNCVV(iounmap)
-LINUX_FUNCVI(pci_domain_nr)
 LINUX_FUNCVI(cfg80211_check_combinations)
 LINUX_FUNCVI(cfg80211_scan_done)
 LINUX_FUNCVI(cfg80211_disconnected)
@@ -419,7 +478,6 @@ LINUX_FUNCII(irqd_get_trigger_type)
 LINUX_FUNCII(irq_get_irq_data)
 LINUX_FUNCVV(bcm47xx_nvram_get_contents)
 LINUX_FUNCVI(bcm47xx_nvram_release_contents)
-LINUX_FUNCVS(request_firmware_nowait)
 LINUX_FUNCVI(dma_map_single)
 LINUX_FUNCVI(dma_mapping_error)
 LINUX_FUNCVI(atomic_cmpxchg)
@@ -437,8 +495,6 @@ LINUX_FUNCVI(sdio_claim_irq)
 LINUX_FUNCVI(is_valid_ether_addr)
 LINUX_FUNCVV(create_singlethread_workqueue)
 LINUX_FUNCVI(test_and_set_bit)
-#define list_entry(ptr,type,field) ((type*)0)
-LINUX_FUNCVI(list_del_init)
 LINUX_FUNCII(disable_irq_nosync)
 LINUX_FUNCII(request_irq)
 LINUX_FUNCII(enable_irq_wake)
@@ -459,7 +515,6 @@ LINUX_FUNCVV(skb_queue_prev)
 LINUX_FUNCII(BITS_TO_LONGS)
 LINUX_FUNCVV(cfg80211_vendor_cmd_alloc_reply_skb)
 LINUX_FUNCVI(cfg80211_vendor_cmd_reply)
-LINUX_FUNCcVI(trace_brcmf_err)
 LINUX_FUNCIV(dev_alloc_skb)
 LINUX_FUNCVI(usb_fill_bulk_urb)
 LINUX_FUNCIV(usb_alloc_urb)
@@ -495,11 +550,8 @@ LINUX_FUNCVI(usb_register)
 LINUX_FUNCVV(skb_dequeue_tail)
 LINUX_FUNCVI(print_hex_dump_bytes)
 
-#define list_for_each_entry(a, b, c) for (a = (void*)0;;)
-#define list_for_each_entry_safe(a, b, c, d) for (a = (void*)0;;)
 #define netdev_for_each_mc_addr(a, b) for (a = (void*)0;;)
 #define for_each_set_bit(a, b, c) for (a = 0;;)
-#define list_first_entry(a, b, c) ((b*)0)
 
 typedef uint64_t phys_addr_t;
 typedef uint64_t pm_message_t;
@@ -510,7 +562,6 @@ typedef void* usb_complete_t;
 #define CONFIG_BRCMFMAC_PROTO_BCDC    // Needed to see func defs in bcdc.h
 #define DECLARE_WAITQUEUE(name, b) struct linuxwait name
 #define DECLARE_WORK(name, b) struct linuxwait name = {b};
-#define container_of(a, b, c) ((b*)0)
 #define READ_ONCE(a) (a)
 #define BUG_ON(a)
 
@@ -519,11 +570,7 @@ struct linuxwait {
 };
 #define WQ_MEM_RECLAIM (17)
 
-#define KBUILD_MODNAME "hi world"
-#define THIS_MODULE ((void*)0)
-#define BCMA_CORE_PCIE2 444
-#define BCMA_CORE_ARM_CR4 445
-#define BCMA_CORE_INTERNAL_MEM 446
+#define KBUILD_MODNAME "brcmfmac"
 #define IEEE80211_P2P_ATTR_DEVICE_INFO 2
 #define IEEE80211_P2P_ATTR_DEVICE_ID 3
 #define IEEE80211_STYPE_ACTION 0
@@ -534,11 +581,8 @@ struct linuxwait {
 #define SDIO_CCCR_INTx (1)
 #define SDIO_DEVICE_ID_BROADCOM_4339 (2)
 #define SDIO_DEVICE_ID_BROADCOM_4335_4339 (3)
-#define BCMA_CORE_SDIO_DEV (4)
-#define BCMA_CORE_CHIPCOMMON (5)
 #define BCMA_CC_PMU_CTL_RES_RELOAD (6)
 #define BCMA_CC_PMU_CTL_RES_SHIFT (6)
-#define BRCMF_BUSTYPE_SDIO (6)
 #define SIGTERM (55)
 #define TASK_INTERRUPTIBLE (0)
 #define TASK_RUNNING (1)
@@ -563,7 +607,6 @@ enum {
     BRCMF_D2H_MSGRING_CONTROL_COMPLETE_ITEMSIZE,
     BRCMF_D2H_MSGRING_TX_COMPLETE_ITEMSIZE,
     BRCMF_D2H_MSGRING_RX_COMPLETE_ITEMSIZE,
-    BRCMF_BUSTYPE_PCIE,
     IRQF_SHARED,
     IEEE80211_RATE_SHORT_PREAMBLE,
     WLAN_CIPHER_SUITE_AES_CMAC,
@@ -707,12 +750,7 @@ enum {
     SSB_TMSHIGH_SERR,
     SSB_IMSTATE_IBE,
     SSB_IMSTATE_TO,
-    BCMA_CORE_ARM_CM3,
-    BCMA_CORE_ARM_CA7,
-    BCMA_CORE_SYS_MEM,
-    BCMA_CORE_80211,
     BCMA_CC_CAP_EXT_AOB_PRESENT,
-    BCMA_CORE_PMU,
     PAGE_SIZE,
     SSB_TMSLOW_FGC,
     MMC_RSP_SPI_R5,
@@ -750,10 +788,7 @@ enum {
     USB_CLASS_VENDOR_SPEC,
     USB_CLASS_MISC,
     USB_CLASS_WIRELESS_CONTROLLER,
-    BRCMF_BUSTYPE_USB,
     USB_SPEED_SUPER_PLUS,
-    USB_SPEED_SUPER,
-    USB_SPEED_HIGH,
     DUMP_PREFIX_OFFSET,
 };
 
@@ -809,7 +844,7 @@ enum nl80211_band {
 #define CONFIG_BRCMDBG 0
 #define CONFIG_BRCM_TRACING 0
 
-enum brcmf_bus_type { FOO2 };
+enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE };
 
 extern uint64_t jiffies;
 
@@ -827,11 +862,6 @@ extern uint64_t jiffies;
 #define __iomem            // May want it later
 #define IS_ENABLED(a) (a)  // not in compiler.h
 #define HZ (60)
-
-struct firmware {
-    size_t size;
-    void* data;
-};
 
 struct sg_table {
     void* sgl;
@@ -1050,6 +1080,7 @@ struct cfg80211_scan_request {
     int n_ssids;
     int n_channels;
     void* ie;
+    void* wdev;
     int ie_len;
     struct ieee80211_channel* channels[555];
     struct cfg80211_ssid* ssids;
@@ -1079,16 +1110,6 @@ struct ieee80211_mgmt {
     uint16_t frame_control;
 };
 
-struct pci_dev {
-    struct brcmf_device dev;
-    int device;
-    int irq;
-    struct {
-        int number;
-    } * bus;
-    int vendor;
-};
-
 struct ethhdr {
     uint32_t h_proto;
     void* h_dest;
@@ -1097,10 +1118,6 @@ struct ethhdr {
 
 struct work_struct {
     int foo;
-};
-
-struct list_head {
-    void* next;
 };
 
 struct mutex {
@@ -1167,8 +1184,8 @@ struct pci_driver {
     struct pci_device_id node;
     char* name;
     const void* id_table;
-    zx_status_t (*probe)(struct pci_dev* pdev, const struct pci_device_id* id);
-    void (*remove)(struct pci_dev* pdev);
+    zx_status_t (*probe)(struct brcmf_pci_device* pdev, const struct pci_device_id* id);
+    void (*remove)(struct brcmf_pci_device* pdev);
 };
 
 struct ieee80211_regdomain {
@@ -1605,7 +1622,6 @@ struct sdio_driver {
     char* name;
     const void* id_table;
     struct {
-        void* owner;
         void* pm;
     } drv;
 };
@@ -1632,7 +1648,7 @@ struct dentry {
     void* foo;
 };
 
-zx_status_t debugfs_create_dir(char *name, struct dentry* parent,
+zx_status_t debugfs_create_dir(const char *name, struct dentry* parent,
                                struct dentry** new_folder_out);
 
 zx_status_t debugfs_create_devm_seqfile(void* dev, const char* fn, struct dentry* parent,

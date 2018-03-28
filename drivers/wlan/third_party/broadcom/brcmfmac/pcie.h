@@ -15,12 +15,16 @@
 #ifndef BRCMFMAC_PCIE_H
 #define BRCMFMAC_PCIE_H
 
+#include <zircon/types.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/pci.h>
+
 struct brcmf_pciedev {
     struct brcmf_bus* bus;
     struct brcmf_pciedev_info* devinfo;
 };
 
 void brcmf_pcie_exit(void);
-void brcmf_pcie_register(void);
+zx_status_t brcmf_pcie_register(zx_device_t* device, pci_protocol_t* pdev);
 
 #endif /* BRCMFMAC_PCIE_H */

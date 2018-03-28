@@ -23,12 +23,17 @@
 //#include <net/ipv6.h>
 //#include <net/rtnetlink.h>
 
+#include "core.h"
+
+#include <ddk/device.h>
+#include <ddk/protocol/pci.h>
+#include <ddk/protocol/usb.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
 #include "cfg80211.h"
 #include "common.h"
-#include "core.h"
 #include "debug.h"
 #include "device.h"
 #include "feature.h"
@@ -650,7 +655,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     if (!drvr->settings->p2p_enable && is_p2pdev) {
         /* this is P2P_DEVICE interface */
         brcmf_dbg(INFO, "allocate non-netdev interface\n");
-        ifp = kzalloc(sizeof(*ifp), GFP_KERNEL);
+        ifp = calloc(1, sizeof(*ifp));
         if (!ifp) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -1195,29 +1200,34 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
     }
 }
 
-static void brcmf_driver_register(struct work_struct* work) {
-#ifdef CONFIG_BRCMFMAC_SDIO
-    brcmf_sdio_register();
-#endif
-#ifdef CONFIG_BRCMFMAC_USB
-    brcmf_usb_register();
-#endif
-#ifdef CONFIG_BRCMFMAC_PCIE
-    brcmf_pcie_register();
-#endif
-}
-static DECLARE_WORK(brcmf_driver_work, brcmf_driver_register);
+zx_status_t brcmf_core_init(zx_device_t* device) {
+    zx_status_t result;
 
-zx_status_t brcmf_core_init(void) {
-    if (!schedule_work(&brcmf_driver_work)) {
-        return ZX_ERR_UNAVAILABLE;
+    zxlogf(INFO, "brcmfmac: core_init was called\n");
+
+    pci_protocol_t pdev;
+    result = device_get_protocol(device, ZX_PROTOCOL_PCI, &pdev);
+    if (result == ZX_OK) {
+        result = brcmf_pcie_register(device, &pdev);
+        if (result != ZX_OK) {
+            brcmf_err("PCIE driver registration failed, err=%d\n", result);
+        }
+        return result;
     }
-
-    return ZX_OK;
+    usb_protocol_t udev;
+    result = device_get_protocol(device, ZX_PROTOCOL_USB, &udev);
+    if (result == ZX_OK) {
+        result = brcmf_usb_register(device, &udev);
+        if (result != ZX_OK) {
+            brcmf_err("USB driver registration failed, err=%d\n", result);
+        }
+        return result;
+    }
+    // TODO(cphoenix): Add SDIO when it's avaialble
+    return ZX_ERR_INTERNAL;
 }
 
 void brcmf_core_exit(void) {
-    cancel_work_sync(&brcmf_driver_work);
 
 #ifdef CONFIG_BRCMFMAC_SDIO
     brcmf_sdio_exit();

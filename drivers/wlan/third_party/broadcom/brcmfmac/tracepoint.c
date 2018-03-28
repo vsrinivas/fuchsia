@@ -24,16 +24,18 @@
 #include "tracepoint.h"
 
 void __brcmf_err(const char* func, const char* fmt, ...) {
-    struct va_format vaf = {
-        .fmt = fmt,
-    };
+    char msg[512]; // Same value hard-coded throughout devhost.c
     va_list args;
 
     va_start(args, fmt);
-    vaf.va = &args;
-    zxlogf(ERROR, "brcmfmac: %s: %pV", func, &vaf);
-    trace_brcmf_err(func, &vaf);
+    int n_printed = vsnprintf(msg, 512, fmt, args);
     va_end(args);
+    if (n_printed < 0) {
+        snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
+    } else if (msg[n_printed] == '\n') {
+        msg[n_printed--] = 0;
+    }
+    zxlogf(ERROR, "brcmfmac ERROR(%s): '%s'\n", func, msg);
 }
 
 #endif

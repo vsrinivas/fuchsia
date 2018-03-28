@@ -22,6 +22,8 @@
 
 #include "usb.h"
 
+#include <ddk/protocol/usb.h>
+
 #include "bcdc.h"
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -428,7 +430,7 @@ fail:
 
 static void brcmf_usb_free_q(struct list_head* q, bool pending) {
     struct brcmf_usbreq* req;
-    // struct brcmf_usbreq* next; // unused
+    struct brcmf_usbreq* next;
     int i = 0;
     list_for_each_entry_safe(req, next, q, list) {
         if (!req->urb) {
@@ -1134,7 +1136,7 @@ fail:
 }
 
 static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
-                                   const struct firmware* fw, void* nvram, uint32_t nvlen) {
+                                   const struct brcmf_firmware* fw, void* nvram, uint32_t nvlen) {
     struct brcmf_bus* bus = dev_get_drvdata(dev);
     struct brcmf_usbdev_info* devinfo = bus->bus_priv.usb->devinfo;
 
@@ -1336,10 +1338,12 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
 
     devinfo->ifnum = desc->bInterfaceNumber;
 
+    /* voyandoff@ says ZX USB doesn't distinguish between SUPER and SUPER_PLUS.
     if (usb->speed == USB_SPEED_SUPER_PLUS) {
         brcmf_dbg(USB, "Broadcom super speed plus USB WLAN interface detected\n");
-    } else if (usb->speed == USB_SPEED_SUPER) {
-        brcmf_dbg(USB, "Broadcom super speed USB WLAN interface detected\n");
+    } else*/
+    if (usb->speed == USB_SPEED_SUPER) {
+        brcmf_dbg(USB, "Broadcom super speed or super speed plus USB WLAN interface detected\n");
     } else if (usb->speed == USB_SPEED_HIGH) {
         brcmf_dbg(USB, "Broadcom high speed USB WLAN interface detected\n");
     } else {
@@ -1479,7 +1483,7 @@ void brcmf_usb_exit(void) {
     usb_deregister(&brcmf_usbdrvr);
 }
 
-void brcmf_usb_register(void) {
+zx_status_t brcmf_usb_register(zx_device_t* device, usb_protocol_t* usb_proto) {
     brcmf_dbg(USB, "Enter\n");
-    usb_register(&brcmf_usbdrvr);
+    return usb_register(&brcmf_usbdrvr);
 }

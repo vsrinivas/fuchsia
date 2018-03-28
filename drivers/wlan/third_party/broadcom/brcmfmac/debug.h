@@ -24,6 +24,7 @@
 // clang-format off
 
 /* message levels */
+#define BRCMF_TEMP_VAL    0x00000001
 #define BRCMF_TRACE_VAL   0x00000002
 #define BRCMF_INFO_VAL    0x00000004
 #define BRCMF_DATA_VAL    0x00000008
@@ -66,23 +67,23 @@ __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
 /* For debug/tracing purposes treat info messages as errors */
 #define brcmf_info brcmf_err
 
-__PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t level, const char* func, const char* fmt, ...);
-#define brcmf_dbg(level, fmt, ...)                                      \
+__PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...);
+#define brcmf_dbg(filter, fmt, ...)                                      \
     do {                                                                \
-        __brcmf_dbg(BRCMF_##level##_VAL, __func__, fmt, ##__VA_ARGS__); \
+        __brcmf_dbg(BRCMF_##filter##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
 
 // clang-format off
 
-#define BRCMF_DATA_ON()  (brcmf_msg_level & BRCMF_DATA_VAL)
-#define BRCMF_CTL_ON()   (brcmf_msg_level & BRCMF_CTL_VAL)
-#define BRCMF_HDRS_ON()  (brcmf_msg_level & BRCMF_HDRS_VAL)
-#define BRCMF_BYTES_ON() (brcmf_msg_level & BRCMF_BYTES_VAL)
-#define BRCMF_GLOM_ON()  (brcmf_msg_level & BRCMF_GLOM_VAL)
-#define BRCMF_EVENT_ON() (brcmf_msg_level & BRCMF_EVENT_VAL)
-#define BRCMF_FIL_ON()   (brcmf_msg_level & BRCMF_FIL_VAL)
-#define BRCMF_FWCON_ON() (brcmf_msg_level & BRCMF_FWCON_VAL)
-#define BRCMF_SCAN_ON()  (brcmf_msg_level & BRCMF_SCAN_VAL)
+#define BRCMF_DATA_ON()  (brcmf_msg_filter & BRCMF_DATA_VAL)
+#define BRCMF_CTL_ON()   (brcmf_msg_filter & BRCMF_CTL_VAL)
+#define BRCMF_HDRS_ON()  (brcmf_msg_filter & BRCMF_HDRS_VAL)
+#define BRCMF_BYTES_ON() (brcmf_msg_filter & BRCMF_BYTES_VAL)
+#define BRCMF_GLOM_ON()  (brcmf_msg_filter & BRCMF_GLOM_VAL)
+#define BRCMF_EVENT_ON() (brcmf_msg_filter & BRCMF_EVENT_VAL)
+#define BRCMF_FIL_ON()   (brcmf_msg_filter & BRCMF_FIL_VAL)
+#define BRCMF_FWCON_ON() (brcmf_msg_filter & BRCMF_FWCON_VAL)
+#define BRCMF_SCAN_ON()  (brcmf_msg_filter & BRCMF_SCAN_VAL)
 
 #else /* defined(DEBUG) || defined(CONFIG_BRCM_TRACING) */
 
@@ -113,7 +114,7 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t level, const char* func, const char
         if (test) brcmu_dbg_hex_dump(data, len, fmt, ##__VA_ARGS__); \
     } while (0)
 
-extern int brcmf_msg_level;
+extern int brcmf_msg_filter;
 
 struct brcmf_bus;
 struct brcmf_pub;

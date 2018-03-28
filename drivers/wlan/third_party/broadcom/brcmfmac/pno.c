@@ -414,7 +414,7 @@ static zx_status_t brcmf_pno_config_sched_scans(struct brcmf_if* ifp) {
     }
 
     gsz = sizeof(*gscan_cfg) + (n_buckets - 1) * sizeof(*buckets);
-    gscan_cfg = kzalloc(gsz, GFP_KERNEL);
+    gscan_cfg = calloc(1, gsz);
     if (!gscan_cfg) {
         err = ZX_ERR_NO_MEMORY;
         goto free_buckets;
@@ -526,7 +526,7 @@ zx_status_t brcmf_pno_attach(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_pno_info* pi;
 
     brcmf_dbg(TRACE, "enter\n");
-    pi = kzalloc(sizeof(*pi), GFP_KERNEL);
+    pi = calloc(1, sizeof(*pi));
     if (!pi) {
         return ZX_ERR_NO_MEMORY;
     }

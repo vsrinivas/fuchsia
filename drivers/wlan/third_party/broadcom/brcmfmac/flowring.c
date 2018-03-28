@@ -332,7 +332,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
     struct brcmf_flowring* flow;
     uint32_t i;
 
-    flow = kzalloc(sizeof(*flow), GFP_KERNEL);
+    flow = calloc(1, sizeof(*flow));
     if (flow) {
         flow->dev = dev;
         flow->nrofrings = nrofrings;

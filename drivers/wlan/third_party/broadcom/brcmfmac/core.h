@@ -216,7 +216,7 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
 void brcmf_txfinalize(struct brcmf_if* ifp, struct sk_buff* txp, bool success);
 void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb);
 void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on);
-zx_status_t brcmf_core_init(void);
+zx_status_t brcmf_core_init(zx_device_t* dev);
 void brcmf_core_exit(void);
 
 #endif /* BRCMFMAC_CORE_H */

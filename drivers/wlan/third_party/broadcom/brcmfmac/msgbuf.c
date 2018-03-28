@@ -291,7 +291,7 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
         return NULL;
     }
 
-    pktids = kzalloc(sizeof(*pktids), GFP_KERNEL);
+    pktids = calloc(1, sizeof(*pktids));
     if (!pktids) {
         kfree(array);
         return NULL;
@@ -1314,7 +1314,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
         if_msgbuf->max_flowrings = BRCMF_FLOWRING_HASHSIZE - 1;
     }
 
-    msgbuf = kzalloc(sizeof(*msgbuf), GFP_KERNEL);
+    msgbuf = calloc(1, sizeof(*msgbuf));
     if (!msgbuf) {
         goto fail;
     }
@@ -1327,12 +1327,12 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     INIT_WORK(&msgbuf->txflow_work, brcmf_msgbuf_txflow_worker);
     count = BITS_TO_LONGS(if_msgbuf->max_flowrings);
     count = count * sizeof(unsigned long);
-    msgbuf->flow_map = kzalloc(count, GFP_KERNEL);
+    msgbuf->flow_map = calloc(1, count);
     if (!msgbuf->flow_map) {
         goto fail;
     }
 
-    msgbuf->txstatus_done_map = kzalloc(count, GFP_KERNEL);
+    msgbuf->txstatus_done_map = calloc(1, count);
     if (!msgbuf->txstatus_done_map) {
         goto fail;
     }
@@ -1363,7 +1363,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     msgbuf->flowrings = (struct brcmf_commonring**)if_msgbuf->flowrings;
     msgbuf->max_flowrings = if_msgbuf->max_flowrings;
     msgbuf->flowring_dma_handle =
-        kzalloc(msgbuf->max_flowrings * sizeof(*msgbuf->flowring_dma_handle), GFP_KERNEL);
+        calloc(1, msgbuf->max_flowrings * sizeof(*msgbuf->flowring_dma_handle));
     if (!msgbuf->flowring_dma_handle) {
         goto fail;
     }

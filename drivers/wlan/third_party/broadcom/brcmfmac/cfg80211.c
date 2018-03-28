@@ -1012,7 +1012,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
         params_size += sizeof(struct brcmf_ssid_le) * request->n_ssids;
     }
 
-    params = kzalloc(params_size, GFP_KERNEL);
+    params = calloc(1, params_size);
     if (!params) {
         err = ZX_ERR_NO_MEMORY;
         goto exit;
@@ -1948,7 +1948,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
     if (cfg->channel) {
         join_params_size += sizeof(uint16_t);
     }
-    ext_join_params = kzalloc(join_params_size, GFP_KERNEL);
+    ext_join_params = calloc(1, join_params_size);
     if (ext_join_params == NULL) {
         err = ZX_ERR_NO_MEMORY;
         goto done;
@@ -2447,7 +2447,7 @@ static void brcmf_fill_bss_param(struct brcmf_if* ifp, struct station_info* si) 
     uint16_t capability;
     zx_status_t err;
 
-    buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
+    buf = calloc(1, WL_BSS_INFO_MAX);
     if (!buf) {
         return;
     }
@@ -2804,7 +2804,7 @@ static zx_status_t brcmf_inform_ibss(struct brcmf_cfg80211_info* cfg, struct net
 
     brcmf_dbg(TRACE, "Enter\n");
 
-    buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
+    buf = calloc(1, WL_BSS_INFO_MAX);
     if (buf == NULL) {
         err = ZX_ERR_NO_MEMORY;
         goto CleanUp;
@@ -3103,7 +3103,7 @@ static struct cfg80211_scan_request* brcmf_alloc_internal_escan_request(struct w
     req_size =
         sizeof(*req) + n_netinfo * sizeof(req->channels[0]) + n_netinfo * sizeof(*req->ssids);
 
-    req = kzalloc(req_size, GFP_KERNEL);
+    req = calloc(1, req_size);
     if (req) {
         req->wiphy = wiphy;
         req->ssids = (void*)(&req->channels[0]) + n_netinfo * sizeof(req->channels[0]);
@@ -3350,7 +3350,7 @@ static zx_status_t brcmf_config_wowl_pattern(struct brcmf_if* ifp, uint8_t cmd[4
     patternoffset = sizeof(*filter) - sizeof(filter->cmd) + masksize;
 
     bufsize = sizeof(*filter) + patternsize + masksize;
-    buf = kzalloc(bufsize, GFP_KERNEL);
+    buf = calloc(1, bufsize);
     if (!buf) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -4113,7 +4113,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     saved_ie = &vif->saved_ie;
 
     brcmf_dbg(TRACE, "bsscfgidx %d, pktflag : 0x%02X\n", ifp->bsscfgidx, pktflag);
-    iovar_ie_buf = kzalloc(WL_EXTRA_BUF_MAX, GFP_KERNEL);
+    iovar_ie_buf = calloc(1, WL_EXTRA_BUF_MAX);
     if (!iovar_ie_buf) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -4700,7 +4700,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
             err = ZX_ERR_INVALID_ARGS;
             goto exit;
         }
-        af_params = kzalloc(sizeof(*af_params), GFP_KERNEL);
+        af_params = calloc(1, sizeof(*af_params));
         if (af_params == NULL) {
             brcmf_err("unable to allocate frame\n");
             err = ZX_ERR_NO_MEMORY;
@@ -5049,7 +5049,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
     bool mbss;
 
     brcmf_dbg(TRACE, "allocating virtual interface (size=%zu)\n", sizeof(*vif));
-    vif = kzalloc(sizeof(*vif), GFP_KERNEL);
+    vif = calloc(1, sizeof(*vif));
     if (!vif) {
         if (vif_out) {
             *vif_out = NULL;
@@ -5238,7 +5238,7 @@ static zx_status_t brcmf_bss_roaming_done(struct brcmf_cfg80211_info* cfg, struc
     memcpy(profile->bssid, e->addr, ETH_ALEN);
     brcmf_update_bss_info(cfg, ifp);
 
-    buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
+    buf = calloc(1, WL_BSS_INFO_MAX);
     if (buf == NULL) {
         err = ZX_ERR_NO_MEMORY;
         goto done;
@@ -5532,24 +5532,24 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
 }
 
 static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
-    cfg->conf = kzalloc(sizeof(*cfg->conf), GFP_KERNEL);
+    cfg->conf = calloc(1, sizeof(*cfg->conf));
     if (!cfg->conf) {
         goto init_priv_mem_out;
     }
-    cfg->extra_buf = kzalloc(WL_EXTRA_BUF_MAX, GFP_KERNEL);
+    cfg->extra_buf = calloc(1, WL_EXTRA_BUF_MAX);
     if (!cfg->extra_buf) {
         goto init_priv_mem_out;
     }
-    cfg->wowl.nd = kzalloc(sizeof(*cfg->wowl.nd) + sizeof(uint32_t), GFP_KERNEL);
+    cfg->wowl.nd = calloc(1, sizeof(*cfg->wowl.nd) + sizeof(uint32_t));
     if (!cfg->wowl.nd) {
         goto init_priv_mem_out;
     }
     cfg->wowl.nd_info =
-        kzalloc(sizeof(*cfg->wowl.nd_info) + sizeof(struct cfg80211_wowlan_nd_match*), GFP_KERNEL);
+        calloc(1, sizeof(*cfg->wowl.nd_info) + sizeof(struct cfg80211_wowlan_nd_match*));
     if (!cfg->wowl.nd_info) {
         goto init_priv_mem_out;
     }
-    cfg->escan_info.escan_buf = kzalloc(BRCMF_ESCAN_BUF_SIZE, GFP_KERNEL);
+    cfg->escan_info.escan_buf = calloc(1, BRCMF_ESCAN_BUF_SIZE);
     if (!cfg->escan_info.escan_buf) {
         goto init_priv_mem_out;
     }
@@ -5700,7 +5700,7 @@ static zx_status_t brcmf_construct_chaninfo(struct brcmf_cfg80211_info* cfg, uin
     uint32_t total;
     uint32_t chaninfo;
 
-    pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
+    pbuf = calloc(1, BRCMF_DCMD_MEDLEN);
 
     if (pbuf == NULL) {
         return ZX_ERR_NO_MEMORY;
@@ -5830,7 +5830,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
 
     if (err == ZX_OK) {
         /* update channel info in 2G band */
-        pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
+        pbuf = calloc(1, BRCMF_DCMD_MEDLEN);
 
         if (pbuf == NULL) {
             return ZX_ERR_NO_MEMORY;

@@ -19,6 +19,12 @@ import("//build/package.gni")
 driver_module("brcmfmac_driver") {
   output_name = "brcmfmac"
 
+  defines = [
+    "CONFIG_BRCMFMAC_USB",
+    "CONFIG_BRCMFMAC_SDIO",
+    "CONFIG_BRCMFMAC_PCIE"
+  ]
+
   sources = [
     "bcdc.c",
     "bcdc.h",
@@ -89,11 +95,38 @@ driver_module("brcmfmac_driver") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
+# To run the driver, put the firmware files from
+# https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/brcm
+# in the TQ root directory, and uncomment these lines and the related ones lower in this file.
+#copy("brcmfmac-firmware-txt") {
+#  sources = [
+#    "../../../../../../brcmfmac4356-pcie.txt",
+#  ]
+#  outputs = [
+#    "$root_out_dir/firmware/brcmfmac4356-pcie.txt",
+#  ]
+#}
+#
+#copy("brcmfmac-firmware-bin") {
+#  sources = [
+#    "../../../../../../brcmfmac4356-pcie.bin",
+#  ]
+#  outputs = [
+#    "$root_out_dir/firmware/brcmfmac4356-pcie.bin",
+#  ]
+#}
+
 package("brcmfmac") {
   deprecated_system_image = true
 
   deps = [
     ":brcmfmac_driver",
+
+    # The copy step has to be in the shared-library toolchain to use the
+    # expected output directory, since we treat firmware blobs as if they
+    # were libraries which always use the shared-library toolchain to build.
+#    ":brcmfmac-firmware-txt($shlib_toolchain)",
+#    ":brcmfmac-firmware-bin($shlib_toolchain)",
   ]
 
   drivers = [
@@ -101,4 +134,13 @@ package("brcmfmac") {
       name = "brcmfmac.so"
     },
   ]
+
+#  libraries = [
+#    {
+#        name = "firmware/brcmfmac4356-pcie.bin"
+#    },
+#    {
+#        name = "firmware/brcmfmac4356-pcie.txt"
+#    },
+#  ]
 }

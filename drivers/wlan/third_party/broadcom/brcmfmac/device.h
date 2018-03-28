@@ -17,13 +17,31 @@
 #ifndef BRCMF_DEVICE_H
 #define BRCMF_DEVICE_H
 
+#include <ddk/driver.h>
+#include <ddk/protocol/pci.h>
 #include <zircon/types.h>
 
 struct brcmf_device {
     void* of_node;
     void* parent;
     void* drvdata;
+    zx_device_t* zxdev;
+};
+
+struct brcmf_pci_device {
+    struct brcmf_device dev;
+    int vendor;
+    int device;
+    int irq;
+    int bus_number;
+    int domain;
     zx_handle_t bti;
+    pci_protocol_t pci_proto;
+};
+
+struct brcmf_firmware {
+    size_t size;
+    void* data;
 };
 
 struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev);

@@ -771,7 +771,7 @@ void brcmf_sdiod_sgtable_alloc(struct brcmf_sdio_dev* sdiodev) {
 
 #ifdef CONFIG_PM_SLEEP
 static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
-    sdiodev->freezer = kzalloc(sizeof(*sdiodev->freezer), GFP_KERNEL);
+    sdiodev->freezer = calloc(1, sizeof(*sdiodev->freezer));
     if (!sdiodev->freezer) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -989,11 +989,11 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
         return ZX_ERR_IO_NOT_PRESENT;
     }
 
-    bus_if = kzalloc(sizeof(struct brcmf_bus), GFP_KERNEL);
+    bus_if = calloc(1, sizeof(struct brcmf_bus));
     if (!bus_if) {
         return ZX_ERR_NO_MEMORY;
     }
-    sdiodev = kzalloc(sizeof(struct brcmf_sdio_dev), GFP_KERNEL);
+    sdiodev = calloc(1, sizeof(struct brcmf_sdio_dev));
     if (!sdiodev) {
         kfree(bus_if);
         return ZX_ERR_NO_MEMORY;
@@ -1132,7 +1132,6 @@ static struct sdio_driver brcmf_sdmmc_driver = {
     .name = KBUILD_MODNAME,
     .id_table = brcmf_sdmmc_ids,
     .drv = {
-        .owner = THIS_MODULE,
 #ifdef CONFIG_PM_SLEEP
         .pm = &brcmf_sdio_pm_ops,
 #endif /* CONFIG_PM_SLEEP */
