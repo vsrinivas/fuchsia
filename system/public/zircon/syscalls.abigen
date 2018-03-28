@@ -385,19 +385,9 @@ syscall vmo_read
     (handle: zx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
     returns (zx_status_t);
 
-# TODO(ZX-1802): delete
-syscall vmo_read_old
-    (handle: zx_handle_t, data: any[len] OUT, offset: uint64_t, len: size_t)
-    returns (zx_status_t, actual: size_t);
-
 syscall vmo_write
     (handle: zx_handle_t, data: any[len] IN, offset: uint64_t, len: size_t)
     returns (zx_status_t);
-
-# TODO(ZX-1802): delete
-syscall vmo_write_old
-    (handle: zx_handle_t, data: any[len] IN, offset: uint64_t, len: size_t)
-    returns (zx_status_t, actual: size_t);
 
 syscall vmo_get_size
     (handle: zx_handle_t)
