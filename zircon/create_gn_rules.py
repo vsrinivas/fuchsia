@@ -206,7 +206,7 @@ def generate_compiled_library(package, context):
         is_shared = True
         for name, path in libs.iteritems():
             (file, _) = extract_file(name, path, context)
-            if '/debug/' in name:
+            if 'debug/' in name:
                 data.debug_prebuilt = '//%s' % file
                 data.lib_name = os.path.basename(file)
             elif '.so.strip' in file:
