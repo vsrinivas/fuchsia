@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_test_trigger.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/trigger/trigger_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
@@ -33,8 +32,8 @@ class ParentApp {
 
   ParentApp(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -49,39 +48,36 @@ class ParentApp {
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
     modular::testing::GetStore()->Get(
-        "trigger_test_agent_connected", [this](const f1dl::StringPtr&) {
+        "trigger_test_agent_connected", [this](fidl::StringPtr) {
           agent_connected_.Pass();
-          agent_service_->GetMessageQueueToken(
-              [this](const f1dl::StringPtr& token) {
-                received_trigger_token_.Pass();
+          agent_service_->GetMessageQueueToken([this](fidl::StringPtr token) {
+            received_trigger_token_.Pass();
 
-                // Stop the agent.
-                agent_controller_.Unbind();
-                modular::testing::GetStore()->Get(
-                    "trigger_test_agent_stopped",
-                    [this, token](const f1dl::StringPtr&) {
-                      agent_stopped_.Pass();
+            // Stop the agent.
+            agent_controller_.Unbind();
+            modular::testing::GetStore()->Get(
+                "trigger_test_agent_stopped", [this, token](fidl::StringPtr) {
+                  agent_stopped_.Pass();
 
-                      // Send a message to the stopped agent which should
-                      // trigger it.
-                      modular::MessageSenderPtr message_sender;
-                      component_context_->GetMessageSender(
-                          token, message_sender.NewRequest());
-                      message_sender->Send("Time to wake up...");
+                  // Send a message to the stopped agent which should
+                  // trigger it.
+                  modular::MessageSenderPtr message_sender;
+                  component_context_->GetMessageSender(
+                      token, message_sender.NewRequest());
+                  message_sender->Send("Time to wake up...");
 
-                      modular::testing::GetStore()->Get(
-                          "trigger_test_agent_run_task",
-                          [this](const f1dl::StringPtr&) {
-                            task_triggered_.Pass();
+                  modular::testing::GetStore()->Get(
+                      "trigger_test_agent_run_task", [this](fidl::StringPtr) {
+                        task_triggered_.Pass();
 
-                            modular::testing::GetStore()->Get(
-                                "trigger_test_agent_stopped",
-                                [this](const f1dl::StringPtr&) {
-                                  module_host_->module_context()->Done();
-                                });
-                          });
-                    });
-              });
+                        modular::testing::GetStore()->Get(
+                            "trigger_test_agent_stopped",
+                            [this](fidl::StringPtr) {
+                              module_host_->module_context()->Done();
+                            });
+                      });
+                });
+          });
         });
 
     // Start a timer to quit in case another test component misbehaves and we
@@ -104,7 +100,7 @@ class ParentApp {
  private:
   modular::ModuleHost* const module_host_;
   modular::AgentControllerPtr agent_controller_;
-  modular::TriggerTestServicePtr agent_service_;
+  modular_test_trigger::TriggerTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
   fxl::WeakPtrFactory<ParentApp> weak_ptr_factory_;

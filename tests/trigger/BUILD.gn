@@ -48,6 +48,8 @@ executable("trigger_test_agent") {
 }
 
 fidl("trigger_test_service") {
+  name = "modular_test_trigger"
+
   sources = [
     "trigger_test_service.fidl",
   ]

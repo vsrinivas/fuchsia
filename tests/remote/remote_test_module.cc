@@ -2,19 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include <fuchsia/cpp/modular.h>
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/remote/fidl/remote_invoker.fidl.h"
-#include "lib/user/fidl/device_map.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -36,8 +32,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -58,7 +54,7 @@ class ParentApp {
     module_host_->module_context()->Ready();
 
     remote_invoker_->StartOnDevice(
-        "test1", "test2", [this](f1dl::StringPtr page_id) {
+        "test1", "test2", [this](fidl::StringPtr page_id) {
           if (page_id.get().empty()) {
             FXL_LOG(INFO) << "Failed to send rehydrate";
           } else {

@@ -3,19 +3,18 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_test_trigger.h>
 #include "lib/app_driver/cpp/agent_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/trigger/trigger_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::TriggerTestService {
+class TestAgentApp : modular_test_trigger::TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};
 
@@ -28,16 +27,15 @@ class TestAgentApp : modular::TriggerTestService {
     // message on it.
     component_context_->ObtainMessageQueue("Trigger Queue",
                                            msg_queue_.NewRequest());
-    auto task_info = modular::TaskInfo::New();
-    task_info->task_id = "task_id";
-    auto trigger_condition = modular::TriggerCondition::New();
-    trigger_condition->set_queue_name("Trigger Queue");
-    task_info->trigger_condition = std::move(trigger_condition);
-    task_info->persistent = true;
+    modular::TaskInfo task_info;
+    task_info.task_id = "task_id";
+    task_info.trigger_condition.set_queue_name("Trigger Queue");
+    task_info.persistent = true;
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
-    agent_services_.AddService<modular::TriggerTestService>(
-        [this](f1dl::InterfaceRequest<modular::TriggerTestService> request) {
+    agent_services_.AddService<modular_test_trigger::TriggerTestService>(
+        [this](fidl::InterfaceRequest<modular_test_trigger::TriggerTestService>
+                   request) {
           service_bindings_.AddBinding(this, std::move(request));
         });
 
@@ -45,14 +43,14 @@ class TestAgentApp : modular::TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services) {
+  void Connect(fidl::InterfaceRequest<component::ServiceProvider> services) {
     agent_services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("trigger_test_agent_connected", "",
                                       [] {});
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::StringPtr& /*task_id*/,
+  void RunTask(fidl::StringPtr /*task_id*/,
                const std::function<void()>& callback) {
     modular::testing::GetStore()->Put("trigger_test_agent_run_task", "",
                                       callback);
@@ -66,10 +64,9 @@ class TestAgentApp : modular::TriggerTestService {
 
  private:
   // |TriggerTestService|
-  void GetMessageQueueToken(
-      const GetMessageQueueTokenCallback& callback) override {
+  void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
     msg_queue_->GetToken(
-        [callback](const f1dl::StringPtr& token) { callback(token); });
+        [callback](fidl::StringPtr token) { callback(token); });
   }
 
   component::ServiceNamespace agent_services_;
@@ -77,7 +74,7 @@ class TestAgentApp : modular::TriggerTestService {
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
-  f1dl::BindingSet<modular::TriggerTestService> service_bindings_;
+  fidl::BindingSet<modular_test_trigger::TriggerTestService> service_bindings_;
 };
 
 }  // namespace

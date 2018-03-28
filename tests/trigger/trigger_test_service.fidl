@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-module modular;
+library modular_test_trigger;
 
-[ServiceName="modular.TriggerTestService"]
+[ServiceName="modular_test_trigger.TriggerTestService"]
 interface TriggerTestService {
-  GetMessageQueueToken@0() => (string message_queue_token);
+  1: GetMessageQueueToken() -> (string message_queue_token);
 };
