@@ -74,10 +74,10 @@ TEST(BatchEncodingTest, TwoCommits) {
   std::string timestamp;
   EXPECT_TRUE(DecodeCommitBatch(document, &result, &timestamp));
   EXPECT_EQ(2u, result->size());
-  EXPECT_EQ("id0", convert::ToString(result.get()[0]->id));
-  EXPECT_EQ("data0", convert::ToString(result.get()[0]->data));
-  EXPECT_EQ("id1", convert::ToString(result.get()[1]->id));
-  EXPECT_EQ("data1", convert::ToString(result.get()[1]->data));
+  EXPECT_EQ("id0", convert::ToString(result.get()[0].id));
+  EXPECT_EQ("data0", convert::ToString(result.get()[0].data));
+  EXPECT_EQ("id1", convert::ToString(result.get()[1].id));
+  EXPECT_EQ("data1", convert::ToString(result.get()[1].data));
 }
 
 TEST(BatchEncodingTest, DecodingErrors) {

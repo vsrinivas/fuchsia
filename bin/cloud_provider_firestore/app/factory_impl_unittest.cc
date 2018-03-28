@@ -4,10 +4,10 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/factory_impl.h"
 
+#include <fuchsia/cpp/cloud_provider_firestore.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fidl/cpp/binding.h"
-#include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
 namespace cloud_provider_firestore {
@@ -38,9 +38,9 @@ TEST_F(FactoryImplTest, GetCloudProvider) {
 
   cloud_provider::Status status = cloud_provider::Status::INTERNAL_ERROR;
   cloud_provider::CloudProviderPtr cloud_provider;
-  auto config = Config::New();
-  config->server_id = "some server id";
-  config->api_key = "some api key";
+  Config config;
+  config.server_id = "some server id";
+  config.api_key = "some api key";
   factory_->GetCloudProvider(
       std::move(config), token_provider_binding_.NewBinding(),
       cloud_provider.NewRequest(), callback::Capture([] {}, &status));
