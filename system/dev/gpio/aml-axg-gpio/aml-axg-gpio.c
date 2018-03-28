@@ -18,15 +18,17 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <soc/aml-a113/a113-hw.h>
+#define ALT_FUNCTION_MAX 15
 
 typedef struct {
     uint32_t start_pin;
     uint32_t pin_block;
     uint32_t pin_count;
     uint32_t mux_offset;
-    uint32_t ctrl_offset;
-    void* ctrl_block_base_virt;
+    uint32_t oen_offset;
+    uint32_t input_offset;
+    uint32_t output_offset;
+    uint32_t output_shift;  // Used for GPIOAO block
     uint32_t mmio_index;
     mtx_t lock;
 } aml_gpio_block_t;
@@ -36,155 +38,18 @@ typedef struct {
     gpio_protocol_t gpio;
     zx_device_t* zxdev;
     pdev_vmo_buffer_t mmios[2];    // separate MMIO for AO domain
+    aml_gpio_block_t* gpio_blocks;
+    size_t block_count;
 } aml_gpio_t;
 
-static aml_gpio_block_t gpio_blocks[] = {
-    // GPIO X Block
-    {
-        .start_pin = (A113_GPIOX_START + 0),
-        .pin_block = A113_GPIOX_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_4,
-        .ctrl_offset = GPIO_REG2_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOX_START + 8),
-        .pin_block = A113_GPIOX_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_5,
-        .ctrl_offset = GPIO_REG2_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOX_START + 16),
-        .pin_block = A113_GPIOX_START,
-        .pin_count = 7,
-        .mux_offset = PERIPHS_PIN_MUX_6,
-        .ctrl_offset = GPIO_REG2_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-
-    // GPIO A Block
-    {
-        .start_pin = (A113_GPIOA_START + 0),
-        .pin_block = A113_GPIOA_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_B,
-        .ctrl_offset = GPIO_REG0_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOA_START + 8),
-        .pin_block = A113_GPIOA_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_C,
-        .ctrl_offset = GPIO_REG0_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOA_START + 16),
-        .pin_block = A113_GPIOA_START,
-        .pin_count = 5,
-        .mux_offset = PERIPHS_PIN_MUX_D,
-        .ctrl_offset = GPIO_REG0_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-
-    // GPIO Boot Block
-    {
-        .start_pin = (A113_GPIOB_START + 0),
-        .pin_block = A113_GPIOB_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_0,
-        .ctrl_offset = GPIO_REG4_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOB_START + 8),
-        .pin_block = A113_GPIOB_START,
-        .pin_count = 7,
-        .mux_offset = PERIPHS_PIN_MUX_1,
-        .ctrl_offset = GPIO_REG4_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-
-    // GPIO Y Block
-    {
-        .start_pin = (A113_GPIOY_START + 0),
-        .pin_block = A113_GPIOY_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_8,
-        .ctrl_offset = GPIO_REG1_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOY_START + 8),
-        .pin_block = A113_GPIOY_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_9,
-        .ctrl_offset = GPIO_REG1_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-
-    // GPIO Z Block
-    {
-        .start_pin = (A113_GPIOZ_START + 0),
-        .pin_block = A113_GPIOZ_START,
-        .pin_count = 8,
-        .mux_offset = PERIPHS_PIN_MUX_2,
-        .ctrl_offset = GPIO_REG3_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOZ_START + 8),
-        .pin_block = A113_GPIOZ_START,
-        .pin_count = 3,
-        .mux_offset = PERIPHS_PIN_MUX_3,
-        .ctrl_offset = GPIO_REG3_EN_N,
-        .mmio_index = 0,
-        .lock = MTX_INIT,
-    },
-
-    // GPIO AO Block
-    // NOTE: The GPIO AO block has a seperate control block than the other
-    //       GPIO blocks.
-    {
-        .start_pin = (A113_GPIOAO_START + 0),
-        .pin_block = A113_GPIOAO_START,
-        .pin_count = 8,
-        .mux_offset = AO_RTI_PIN_MUX_REG0,
-        .ctrl_offset = AO_GPIO_O_EN_N,
-        .mmio_index = 1,
-        .lock = MTX_INIT,
-    },
-    {
-        .start_pin = (A113_GPIOAO_START + 8),
-        .pin_block = A113_GPIOAO_START,
-        .pin_count = 6,
-        .mux_offset = AO_RTI_PIN_MUX_REG1,
-        .ctrl_offset = AO_GPIO_O_EN_N,
-        .mmio_index = 1,
-        .lock = MTX_INIT,
-    },
-};
+#include "a113-blocks.h"
+#include "s905d2-blocks.h"
 
 static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pinid, aml_gpio_block_t** result) {
     ZX_DEBUG_ASSERT(result);
 
-    for (size_t i = 0; i < countof(gpio_blocks); i++) {
-        aml_gpio_block_t* gpio_block = &gpio_blocks[i];
+    for (size_t i = 0; i < gpio->block_count; i++) {
+        aml_gpio_block_t* gpio_block = &gpio->gpio_blocks[i];
         const uint32_t end_pin = gpio_block->start_pin + gpio_block->pin_count;
         if (pinid >= gpio_block->start_pin && pinid < end_pin) {
             *result = gpio_block;
@@ -195,16 +60,22 @@ static zx_status_t aml_pin_to_block(aml_gpio_t* gpio, const uint32_t pinid, aml_
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t aml_gpio_set_direction(aml_gpio_block_t* block,
-                                           const uint32_t index,
-                                           const uint32_t flags) {
+static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
+    aml_gpio_t* gpio = ctx;
+    zx_status_t status;
+
+    aml_gpio_block_t* block;
+    if ((status = aml_pin_to_block(gpio, index, &block)) != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_config: pin not found %u\n", index);
+        return status;
+    }
 
     const uint32_t pinid = index - block->pin_block;
 
     mtx_lock(&block->lock);
 
-    volatile uint32_t* reg = (volatile uint32_t*)(block->ctrl_block_base_virt);
-    reg += block->ctrl_offset;
+    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    reg += block->oen_offset;
     uint32_t regval = readl(reg);
     const uint32_t pinmask = 1 << pinid;
 
@@ -221,30 +92,11 @@ static zx_status_t aml_gpio_set_direction(aml_gpio_block_t* block,
     return ZX_OK;
 }
 
-static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
-    aml_gpio_t* gpio = ctx;
-    zx_status_t status;
-
-    aml_gpio_block_t* block;
-    if ((status = aml_pin_to_block(gpio, index, &block)) != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_config: pin not found %u\n", index);
-        return status;
-    }
-
-    if ((status = aml_gpio_set_direction(block, index, flags)) != ZX_OK) {
-        zxlogf(ERROR, "aml_gpio_config: failed to set pin(%u) direction, rc = %d\n",
-               index, status);
-        return status;
-    }
-
-    return ZX_OK;
-}
-
 // Configure a pin for an alternate function specified by fn
 static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, const uint32_t fn) {
     aml_gpio_t* gpio = ctx;
 
-    if (fn > A113_PINMUX_ALT_FN_MAX) {
+    if (fn > ALT_FUNCTION_MAX) {
         zxlogf(ERROR, "aml_config_pinmux: pin mux alt config out of range"
                 " %u\n", fn);
         return ZX_ERR_OUT_OF_RANGE;
@@ -259,7 +111,7 @@ static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, cons
     }
 
     // Points to the control register.
-    volatile uint32_t* reg = (volatile uint32_t*)(block->ctrl_block_base_virt);
+    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
     reg += block->mux_offset;
 
     // Sanity Check: pin_to_block must return a block that contains `pin`
@@ -298,14 +150,8 @@ static zx_status_t aml_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) 
     const uint32_t pinindex = index - block->pin_block;
     const uint32_t readmask = 1 << pinindex;
 
-    volatile uint32_t* reg = (volatile uint32_t*)(block->ctrl_block_base_virt);
-    reg += block->ctrl_offset;
-
-    if (block->pin_block == A113_GPIOAO_START) {
-        reg += GPIOAO_INPUT_OFFSET;
-    } else {
-        reg += GPIO_INPUT_OFFSET;
-    }
+    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    reg += block->input_offset;
 
     mtx_lock(&block->lock);
 
@@ -334,16 +180,9 @@ static zx_status_t aml_gpio_write(void* ctx, uint32_t index, uint8_t value) {
 
     uint32_t pinindex = index - block->pin_block;
 
-    volatile uint32_t* reg = (volatile uint32_t*)(block->ctrl_block_base_virt);
-    reg += block->ctrl_offset;
-
-    if (block->pin_block == A113_GPIOAO_START) {
-        // Output pins are shifted by 16 bits for GPIOAO block
-        pinindex += 16;
-    } else {
-        // Output register is offset for regular GPIOs
-        reg += GPIO_OUTPUT_OFFSET;
-    }
+    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    reg += block->output_offset;
+    pinindex += block->output_shift;
 
     mtx_lock(&block->lock);
 
@@ -411,10 +250,25 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         }
     }
 
-    // Initialize each of the GPIO Pin blocks.
-    for (size_t i = 0; i < countof(gpio_blocks); i++) {
-        aml_gpio_block_t* block = &gpio_blocks[i];
-        block->ctrl_block_base_virt = gpio->mmios[block->mmio_index].vaddr;
+    pdev_device_info_t info;
+    status = pdev_get_device_info(&gpio->pdev, &info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "aml_gpio_bind: pdev_get_device_info failed\n");
+        goto fail;
+    }
+
+    switch (info.pid) {
+    case PDEV_PID_AMLOGIC_A113:
+        gpio->gpio_blocks = a113_gpio_blocks;
+        gpio->block_count = countof(a113_gpio_blocks);
+        break;
+    case PDEV_PID_AMLOGIC_S905D2:
+        gpio->gpio_blocks = s905d2_gpio_blocks;
+        gpio->block_count = countof(s905d2_gpio_blocks);
+        break;
+    default:
+        zxlogf(ERROR, "aml_gpio_bind: unsupported SOC PID %u\n", info.pid);
+        goto fail;
     }
 
     device_add_args_t args = {
@@ -447,9 +301,11 @@ static zx_driver_ops_t aml_gpio_driver_ops = {
     .bind = aml_gpio_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(aml_gpio, aml_gpio_driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_DEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GPIO),
+    // we support multiple SOC variants
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A113),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
 ZIRCON_DRIVER_END(aml_gpio)

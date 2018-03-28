@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <soc/aml-a113/a113-hw.h>
+#include <soc/aml-a113/a113-gpio.h>
 
 // pins for I2C A and B
 #define I2C_SCK_A A113_GPIOZ(6)
