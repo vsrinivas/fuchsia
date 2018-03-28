@@ -15,6 +15,7 @@
 #include <ddk/protocol/platform-device.h>
 #include <ddk/protocol/usb-mode-switch.h>
 #include <sync/completion.h>
+#include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
 
 typedef struct pdev_req pdev_req_t;
@@ -31,11 +32,9 @@ typedef struct {
     clk_protocol_t clk;
     iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
-    uint32_t vid;
-    uint32_t pid;
+    bootdata_platform_id_t platform_id;
 
     list_node_t devices;    // list of platform_dev_t
-    char board_name[ZX_DEVICE_NAME_MAX + 1];
 
     platform_i2c_bus_t* i2c_buses;
     uint32_t i2c_bus_count;

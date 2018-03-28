@@ -743,10 +743,13 @@ static zx_status_t publish_acpi_devices(zx_device_t* parent) {
 }
 
 static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* name,
-                                   const char* _args, zx_handle_t rpc_channel) {
+                                   const char* _args, zx_handle_t bootdata_vmo) {
     // ACPI is the root driver for its devhost so run init in the bind thread.
     zxlogf(TRACE, "acpi-bus: bind to %s %p\n", device_get_name(parent), parent);
     root_resource_handle = get_root_resource();
+
+    // We don't need bootdata VMO handle.
+    zx_handle_close(bootdata_vmo);
 
     if (init() != ZX_OK) {
         zxlogf(ERROR, "acpi-bus: failed to initialize ACPI\n");
