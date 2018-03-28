@@ -23,14 +23,16 @@
 #define lr x30
 #define elr1 DW_REG_ELR_mode
 
-// offset where sp,elr,spsr,lr goes in the iframe
+// offset where sp,elr,spsr,lr,mdscr goes in the iframe
 #define regsave_special_reg_offset (30 * 8)
 
 // offset where x20-x29 goes in the iframe
 #define regsave_high_reg_offset (20 * 8)
 
 .macro regsave_long
-sub_from_sp (4*8)
+// There are 5 regs @ regsave_special_reg_offset, plus one unused space = 6 to
+// maintain 16-byte padding.
+sub_from_sp (6*8)
 push_regs x28, x29
 push_regs x26, x27
 push_regs x24, x25
@@ -51,16 +53,19 @@ mrs  x9, sp_el0
 // x10 (containing elr_el1) is used in syscall handler
 mrs  x10, elr_el1
 mrs  x11, spsr_el1
+mrs  x12, mdscr_el1
 stp  lr, x9, [sp, #regsave_special_reg_offset]
 .cfi_rel_offset lr, (regsave_special_reg_offset)
 .cfi_rel_offset sp, (regsave_special_reg_offset + 8)
 stp  x10, x11, [sp, #regsave_special_reg_offset + 16]
 .cfi_rel_offset elr1, (regsave_special_reg_offset + 16)
+str x12, [sp, #regsave_special_reg_offset + 32]
 .endm
 
 .macro regsave_short
-sub_from_sp ((4*8) + (10*8))
-// skip 10 words so that the structure is the same as a long iframe
+// Align the same as the long version above. The 10 extra words correspond to
+// x20 through x29 which are not saved here.
+sub_from_sp ((6*8) + (10*8))
 push_regs x18, x19
 push_regs x16, x17
 push_regs x14, x15
@@ -89,6 +94,8 @@ stp  x22, x23, [sp, #regsave_high_reg_offset + 0x10]
 stp  x24, x25, [sp, #regsave_high_reg_offset + 0x20]
 stp  x26, x27, [sp, #regsave_high_reg_offset + 0x30]
 stp  x28, x29, [sp, #regsave_high_reg_offset + 0x40]
+mrs  x12, mdscr_el1
+str  x12, [sp, #regsave_special_reg_offset + 32]
 .endm
 
 // Once we pop the stack past the saved sp_el0, elr_el1 the userspace values
@@ -106,9 +113,11 @@ cfi_register_is_zero DW_REG_ELR_mode
 ldp  lr, x9, [sp, #regsave_special_reg_offset]
 .cfi_same_value lr
 ldp  x10, x11, [sp, #regsave_special_reg_offset + 16]
+ldr  x12, [sp, #regsave_special_reg_offset + 32]
 msr  sp_el0, x9
 msr  elr_el1, x10
 msr  spsr_el1, x11
+msr  mdscr_el1, x12
 pop_regs x0, x1
 pop_regs x2, x3
 pop_regs x4, x5
@@ -124,7 +133,7 @@ pop_regs x22, x23
 pop_regs x24, x25
 pop_regs x26, x27
 pop_regs x28, x29
-add_to_sp (4*8)
+add_to_sp (6*8)
 mark_lr_sp_inaccessible
 .endm
 
@@ -146,7 +155,7 @@ pop_regs x12, x13
 pop_regs x14, x15
 pop_regs x16, x17
 pop_regs x18, x19
-add_to_sp ((4*8) + (10*8))
+add_to_sp ((6*8) + (10*8))
 mark_lr_sp_inaccessible
 .endm
 

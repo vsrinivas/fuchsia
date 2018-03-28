@@ -157,3 +157,53 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
 
     return ZX_OK;
 }
+
+zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
+    // TODO(dje): Punt if, for example, suspended in channel call.
+    // Can be removed when ZX-747 done.
+    if (thread->arch.suspended_general_regs.gregs == nullptr)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    uint64_t* flags = nullptr;
+    switch (thread->arch.general_regs_source) {
+    case X86_GENERAL_REGS_SYSCALL:
+        flags = &thread->arch.suspended_general_regs.syscall->rflags;
+        break;
+    case X86_GENERAL_REGS_IFRAME:
+        flags = &thread->arch.suspended_general_regs.iframe->flags;
+        break;
+    default:
+        DEBUG_ASSERT(false);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    *single_step = !!(*flags & X86_FLAGS_TF);
+    return ZX_OK;
+}
+
+zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
+    // TODO(dje): Punt if, for example, suspended in channel call.
+    // Can be removed when ZX-747 done.
+    if (thread->arch.suspended_general_regs.gregs == nullptr)
+        return ZX_ERR_NOT_SUPPORTED;
+
+    uint64_t* flags = nullptr;
+    switch (thread->arch.general_regs_source) {
+    case X86_GENERAL_REGS_SYSCALL:
+        flags = &thread->arch.suspended_general_regs.syscall->rflags;
+        break;
+    case X86_GENERAL_REGS_IFRAME:
+        flags = &thread->arch.suspended_general_regs.iframe->flags;
+        break;
+    default:
+        DEBUG_ASSERT(false);
+        return ZX_ERR_BAD_STATE;
+    }
+
+    if (single_step) {
+        *flags |= X86_FLAGS_TF;
+    } else {
+        *flags &= ~X86_FLAGS_TF;
+    }
+    return ZX_OK;
+}

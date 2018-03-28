@@ -905,8 +905,12 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
     case ZX_THREAD_STATE_SINGLE_STEP: {
         if (buffer_len != sizeof(zx_thread_state_single_step_t))
             return ZX_ERR_INVALID_ARGS;
+        bool single_step;
+        zx_status_t status = arch_get_single_step(&thread_, &single_step);
+        if (status != ZX_OK)
+            return status;
         *static_cast<zx_thread_state_single_step_t*>(buffer) =
-                static_cast<zx_thread_state_single_step_t>(thread_.single_step);
+              static_cast<zx_thread_state_single_step_t>(single_step);
         return ZX_OK;
     }
     default:
@@ -943,8 +947,7 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
                 static_cast<const zx_thread_state_single_step_t*>(buffer);
         if (*single_step != 0 && *single_step != 1)
             return ZX_ERR_INVALID_ARGS;
-        thread_.single_step = *single_step == 1;
-        return ZX_OK;
+        return arch_set_single_step(&thread_, !!*single_step);
     }
     default:
         return ZX_ERR_INVALID_ARGS;

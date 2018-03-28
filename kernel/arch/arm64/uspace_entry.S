@@ -6,12 +6,13 @@
 
 #include <asm.h>
 
-// void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t pc, uintptr_t sp, vaddr_t kstack, uint32_t spsr) __NO_RETURN;
+// void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2, uintptr_t pc, uintptr_t sp, vaddr_t kstack, uint32_t spsr, uint32_t mdscr) __NO_RETURN;
 FUNCTION(arm64_uspace_entry)
     mov sp, x4
     msr sp_el0, x3
     msr elr_el1, x2
     msr spsr_el1, x5
+    msr mdscr_el1, x6
 
     mov x2, xzr
     mov x3, xzr

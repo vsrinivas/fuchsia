@@ -32,8 +32,12 @@
 static constexpr uint64_t CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER = 1 << 1;
 
 // Monitor Debug System Control Register, EL1.
-static constexpr uint64_t MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS = 1 << 13;
-static constexpr uint64_t MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS = 1 << 15;
+static constexpr uint32_t MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS = 1 << 13;
+static constexpr uint32_t MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS = 1 << 15;
+
+// Initial value for MSDCR_EL1 when starting userspace.
+static constexpr uint32_t MSDCR_EL1_INITIAL_VALUE =
+    MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS | MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS;
 
 // Performance Monitors Count Enable Set, EL0.
 static constexpr uint64_t PMCNTENSET_EL0_ENABLE = 1UL << 31;  // Enable cycle count register.
@@ -139,8 +143,7 @@ static void arm64_cpu_early_init() {
     // Enable user space access to virtual counter (CNTVCT_EL0).
     ARM64_WRITE_SYSREG(cntkctl_el1, CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER);
 
-    ARM64_WRITE_SYSREG(mdscr_el1,
-                       MDSCR_EL1_ENABLE_DEBUG_EXCEPTIONS | MDSCR_EL1_ENABLE_DEBUG_BREAKPOINTS);
+    ARM64_WRITE_SYSREG(mdscr_el1, MSDCR_EL1_INITIAL_VALUE);
 
     arch_enable_fiqs();
 }
@@ -203,7 +206,7 @@ void arch_enter_uspace(uintptr_t pc, uintptr_t sp, uintptr_t arg1, uintptr_t arg
     LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#x, %#" PRIxPTR
             ", %#" PRIxPTR ", 0, %#" PRIxPTR ")\n",
             arg1, arg2, spsr, ct->stack_top, sp, pc);
-    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack_top, spsr);
+    arm64_uspace_entry(arg1, arg2, pc, sp, ct->stack_top, spsr, MSDCR_EL1_INITIAL_VALUE);
     __UNREACHABLE;
 }
 

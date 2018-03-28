@@ -21,4 +21,7 @@ struct thread;
 zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs* out);
 zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs* in);
 
+zx_status_t arch_get_single_step(struct thread* thread, bool* single_step);
+zx_status_t arch_set_single_step(struct thread* thread, bool single_step);
+
 __END_CDECLS

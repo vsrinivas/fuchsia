@@ -157,9 +157,6 @@ typedef struct thread {
     thread_start_routine entry;
     void* arg;
 
-    /* Indicates whether a debugger is single stepping this thread. */
-    bool single_step;
-
     /* return code */
     int retcode;
     struct wait_queue retcode_wait_queue;

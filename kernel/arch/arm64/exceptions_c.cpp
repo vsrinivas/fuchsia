@@ -54,20 +54,6 @@ KCOUNTER(exceptions_unhandled, "kernel.exceptions.unhandled");
 KCOUNTER(exceptions_user, "kernel.exceptions.user");
 KCOUNTER(exceptions_unknown, "kernel.exceptions.unknown");
 
-static void set_single_step_state(const thread_t* thread) {
-    // The value of MDSCR_EL1 register (Machine Debug State Control Register), SS bit (Single Step)
-    // controls how the program stat's SS bit it set upon interrupt return. The SS bit is the low
-    // order bit in MDSCR_EL1.
-    constexpr uint64_t kSSMask = 1;  // SS (="Single Step") is bit 0 in MDSCR_EL1.
-    uint64_t mdscr = ARM64_READ_SYSREG(mdscr_el1);
-    if (unlikely(thread->single_step)) {
-        mdscr |= kSSMask;
-    } else {
-        mdscr &= ~kSSMask;
-    }
-    ARM64_WRITE_SYSREG(mdscr_el1, mdscr);
-}
-
 static zx_status_t try_dispatch_user_data_fault_exception(
     zx_excp_type_t type, struct arm64_iframe_long* iframe,
     uint32_t esr, uint64_t far) {
@@ -84,8 +70,6 @@ static zx_status_t try_dispatch_user_data_fault_exception(
     zx_status_t status = dispatch_user_exception(type, &context);
     thread->arch.suspended_general_regs = nullptr;
     arch_disable_ints();
-
-    set_single_step_state(thread);
     return status;
 }
 

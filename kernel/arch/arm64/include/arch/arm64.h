@@ -51,7 +51,8 @@ __BEGIN_CDECLS
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 void arm64_uspace_entry(uintptr_t arg1, uintptr_t arg2,
                         uintptr_t pc, uintptr_t sp,
-                        vaddr_t kstack, uint32_t spsr) __NO_RETURN;
+                        vaddr_t kstack, uint32_t spsr,
+                        uint32_t mdscr) __NO_RETURN;
 
 typedef struct {
     uint8_t ctype;
@@ -80,6 +81,8 @@ struct arm64_iframe_long {
     uint64_t usp;
     uint64_t elr;
     uint64_t spsr;
+    uint64_t mdscr;
+    uint64_t pad2[1];  // Keep structure multiple of 16-bytes for stack alignment.
 };
 
 struct arm64_iframe_short {
@@ -90,6 +93,7 @@ struct arm64_iframe_short {
     uint64_t usp;
     uint64_t elr;
     uint64_t spsr;
+    uint64_t pad2[2];
 };
 
 static_assert(sizeof(struct arm64_iframe_long) == sizeof(struct arm64_iframe_short), "");
