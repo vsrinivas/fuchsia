@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/modular.h>
-#include "lib/suggestion/fidl/proposal.fidl.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -27,44 +25,44 @@ class SuggestionApp {
  public:
   SuggestionApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host_->application_context(), __FILE__);
     initialized_.Pass();
 
-    maxwell::IntelligenceServicesPtr intelligence_services;
+    modular::IntelligenceServicesPtr intelligence_services;
     module_host_->module_context()->GetIntelligenceServices(
         intelligence_services.NewRequest());
     intelligence_services->GetProposalPublisher(
         proposal_publisher_.NewRequest());
 
     module_host_->module_context()->GetStoryId(
-        [this](const f1dl::StringPtr& story_id) {
+        [this](const fidl::StringPtr& story_id) {
           received_story_id_.Pass();
 
-          auto focus_story = maxwell::FocusStory::New();
-          focus_story->story_id = story_id;
+          modular::FocusStory focus_story;
+          focus_story.story_id = story_id;
 
-          auto action = maxwell::Action::New();
-          action->set_focus_story(std::move(focus_story));
+          modular::Action action;
+          action.set_focus_story(std::move(focus_story));
 
           // Craft a minimal suggestion proposal.
-          auto suggestion_display = maxwell::SuggestionDisplay::New();
-          suggestion_display->headline = "foo";
-          suggestion_display->subheadline = "bar";
-          suggestion_display->details = "baz";
-          suggestion_display->color = 0xffff0000;
+          modular::SuggestionDisplay suggestion_display;
+          suggestion_display.headline = "foo";
+          suggestion_display.subheadline = "bar";
+          suggestion_display.details = "baz";
+          suggestion_display.color = 0xffff0000;
 
-          auto proposal = maxwell::Proposal::New();
-          proposal->id = kProposalId;
-          proposal->display = std::move(suggestion_display);
-          proposal->on_selected.push_back(std::move(action));
+          modular::Proposal proposal;
+          proposal.id = kProposalId;
+          proposal.display = std::move(suggestion_display);
+          proposal.on_selected.push_back(std::move(action));
 
           proposal_publisher_->Propose(std::move(proposal));
 
           modular::testing::GetStore()->Get(
-              "suggestion_proposal_received", [this](const f1dl::StringPtr&) {
+              "suggestion_proposal_received", [this](const fidl::StringPtr&) {
                 module_host_->module_context()->Done();
               });
         });
@@ -87,7 +85,7 @@ class SuggestionApp {
  private:
   modular::ModuleHost* const module_host_;
   modular::ModuleContextPtr module_context_;
-  maxwell::ProposalPublisherPtr proposal_publisher_;
+  modular::ProposalPublisherPtr proposal_publisher_;
 
   TestPoint initialized_{"Root module initialized"};
   TestPoint received_story_id_{"Root module received story id"};

@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
@@ -17,7 +16,7 @@
 namespace {
 
 class TestApp : modular::StoryWatcher,
-                maxwell::NextListener,
+                modular::NextListener,
                 public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
@@ -33,7 +32,7 @@ class TestApp : modular::StoryWatcher,
   TestPoint initialized_{"SuggestionTestUserShell initialized"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
 
@@ -47,11 +46,11 @@ class TestApp : modular::StoryWatcher,
 
     story_provider_->CreateStory(
         "file:///system/test/modular_tests/suggestion_test_module",
-        [this](const f1dl::StringPtr& story_id) { StartStoryById(story_id); });
+        [this](const fidl::StringPtr& story_id) { StartStoryById(story_id); });
     initialized_.Pass();
   }
 
-  void StartStoryById(const f1dl::StringPtr& story_id) {
+  void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
@@ -77,16 +76,17 @@ class TestApp : modular::StoryWatcher,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
+  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
 
   TestPoint received_suggestion_{"SuggestionTestUserShell received suggestion"};
 
   // |NextListener|
-  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
+  void OnNextResults(
+      fidl::VectorPtr<modular::Suggestion> suggestions) override {
     for (auto& suggestion : *suggestions) {
-      auto& display = suggestion->display;
-      if (display->headline == "foo" && display->subheadline == "bar" &&
-          display->details == "baz") {
+      auto& display = suggestion.display;
+      if (display.headline == "foo" && display.subheadline == "bar" &&
+          display.details == "baz") {
         modular::testing::GetStore()->Put("suggestion_proposal_received", "",
                                           [] {});
         received_suggestion_.Pass();
@@ -103,10 +103,10 @@ class TestApp : modular::StoryWatcher,
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
   modular::StoryControllerPtr story_controller_;
-  f1dl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
-  maxwell::SuggestionProviderPtr suggestion_provider_;
-  f1dl::BindingSet<maxwell::NextListener> suggestion_listener_bindings_;
+  modular::SuggestionProviderPtr suggestion_provider_;
+  fidl::BindingSet<modular::NextListener> suggestion_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
 };
