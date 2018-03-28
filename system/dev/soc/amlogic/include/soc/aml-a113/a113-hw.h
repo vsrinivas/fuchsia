@@ -12,6 +12,10 @@
 #define DWC3_IRQ            62
 #define USB_PHY_IRQ         48
 
+// PCIe Resources
+#define DW_PCIE_IRQ0        177
+#define DW_PCIE_IRQ1        179
+
 // Clock Control
 #define AXG_HIU_BASE_PHYS 0xff63c000
 

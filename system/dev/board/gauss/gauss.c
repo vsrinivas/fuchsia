@@ -173,6 +173,10 @@ static int gauss_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = gauss_pcie_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "gauss_pcie_init failed: %d\n", status);
+        goto fail;
+    }
     if ((status = gauss_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "gauss_usb_init failed: %d\n", status);
         goto fail;

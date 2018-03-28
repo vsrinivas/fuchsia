@@ -60,3 +60,6 @@ zx_status_t gauss_usb_set_mode(gauss_bus_t* bus, usb_mode_t mode);
 
 // gauss-clk.c
 zx_status_t gauss_clk_init(gauss_bus_t* bus);
+
+// gauss-pcie.c
+zx_status_t gauss_pcie_init(gauss_bus_t* bus);
