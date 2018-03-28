@@ -62,41 +62,11 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
                                                offset, size, perms, pmt, pmt_rights);
 }
 
-zx_status_t BusTransactionInitiatorDispatcher::Unpin(const dev_vaddr_t base_addr) {
-    fbl::AutoLock guard(&lock_);
-
-    if (zero_handles_) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    for (auto& pmt : legacy_pinned_memory_) {
-        const fbl::Array<dev_vaddr_t>& pmt_addrs = pmt.mapped_addrs();
-        if (pmt_addrs[0] == base_addr) {
-            // The PMT dtor will take care of the actual unpinning.
-            auto ptr = legacy_pinned_memory_.erase(pmt);
-            // When |ptr| goes out of scope, its dtor will be run.  Drop the
-            // lock since the dtor will call RemovePmo, which takes the lock.
-            guard.release();
-            return ZX_OK;
-        }
-    }
-
-    return ZX_ERR_INVALID_ARGS;
-}
-
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
-    // We need to drop the lock before letting PMT dtors run, since the
-    // PMT dtor calls RemovePmo, which takes the lock again.
-    LegacyPmoList tmp;
-    {
-        fbl::AutoLock guard(&lock_);
-        // Prevent new pinning from happening.  The Dispatcher will stick around
-        // until all of the PMTs are closed.
-        zero_handles_ = true;
-
-        legacy_pinned_memory_.swap(tmp);
-    }
-
+    fbl::AutoLock guard(&lock_);
+    // Prevent new pinning from happening.  The Dispatcher will stick around
+    // until all of the PMTs are closed.
+    zero_handles_ = true;
 }
 
 void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) {
@@ -108,11 +78,4 @@ void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* p
     fbl::AutoLock guard(&lock_);
     DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
     pinned_memory_.erase(*pmt);
-}
-
-void BusTransactionInitiatorDispatcher::ConvertToLegacy(
-        fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
-    fbl::AutoLock guard(&lock_);
-
-    legacy_pinned_memory_.push_back(fbl::move(pmt));
 }

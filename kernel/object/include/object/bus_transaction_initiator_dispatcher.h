@@ -42,17 +42,6 @@ public:
     zx_status_t Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
                     fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* rights);
 
-    // Unpins the region previously created by Pin() that starts with |base_addr|.
-    // Returns an error if |base_addr| does not correspond to something returned
-    // by a previous call to Pin().
-    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
-    zx_status_t Unpin(dev_vaddr_t base_addr);
-
-    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
-    // Mark this PMT as legacy (i.e., usermode does not have a handle to it, and
-    // will try to unpin it using the unpin syscall).
-    void ConvertToLegacy(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt);
-
     void on_zero_handles() final;
 
     fbl::RefPtr<Iommu> iommu() const { return iommu_; }
@@ -87,11 +76,6 @@ private:
     using PmoList = fbl::DoublyLinkedList<PinnedMemoryTokenDispatcher*,
           PinnedMemoryTokenDispatcher::PinnedMemoryTokenListTraits>;
     PmoList pinned_memory_ TA_GUARDED(lock_);
-
-    // TODO(teisenbe): Remove this once the bti_unpin syscall is gone
-    using LegacyPmoList = fbl::DoublyLinkedList<fbl::RefPtr<PinnedMemoryTokenDispatcher>,
-          PinnedMemoryTokenDispatcher::LegacyPinnedMemoryTokenListTraits>;
-    LegacyPmoList legacy_pinned_memory_ TA_GUARDED(lock_);
 
     bool zero_handles_ TA_GUARDED(lock_);
 };

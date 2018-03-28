@@ -36,14 +36,6 @@ public:
             return obj.dll_pmt_;
         }
     };
-    // Traits to belong in the BTI's legacy list.
-    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
-    struct LegacyPinnedMemoryTokenListTraits {
-        static fbl::DoublyLinkedListNodeState<fbl::RefPtr<PinnedMemoryTokenDispatcher>>& node_state(
-            PinnedMemoryTokenDispatcher& obj) {
-            return obj.dll_pmt_legacy_;
-        }
-    };
 
     // Mark this PMT as unpinned.  When on_zero_handles() runs, this PMT will
     // be removed from its BTI rather than moved to the quarantine.
@@ -69,10 +61,6 @@ protected:
                               size_t size, uint32_t perms,
                               fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
-
-    // Returns an array of the addrs usable by the given device
-    // TODO(teisenbe): Remove this once zx_bti_unpin is gone
-    const fbl::Array<dev_vaddr_t>& mapped_addrs() const { return mapped_addrs_; }
 private:
     PinnedMemoryTokenDispatcher(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                                  fbl::RefPtr<VmObject> vmo, size_t offset, size_t size,
@@ -88,8 +76,6 @@ private:
     fbl::Canary<fbl::magic("PMT_")> canary_;
     // The containing BTI holds a list of all its PMTs.
     fbl::DoublyLinkedListNodeState<PinnedMemoryTokenDispatcher*> dll_pmt_;
-    // TODO(teisenbe): Remove this once bti_unpin syscall is gone
-    fbl::DoublyLinkedListNodeState<fbl::RefPtr<PinnedMemoryTokenDispatcher>> dll_pmt_legacy_;
 
     const fbl::RefPtr<VmObject> vmo_;
     const uint64_t offset_;

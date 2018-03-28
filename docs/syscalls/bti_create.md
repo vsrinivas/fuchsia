@@ -46,4 +46,4 @@ is returned.
 ## SEE ALSO
 
 [bti_pin](bti_pin.md),
-[bti_unpin](bti_unpin.md).
+[pmt_unpin](pmt_unpin.md).

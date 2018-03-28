@@ -14,7 +14,7 @@ zx_status_t zx_pmt_unpin(zx_handle_t pmt);
 
 ## DESCRIPTION
 
-**pmt_unpin**() unpins pages that were previously pinned by **bti_pin_new**(),
+**pmt_unpin**() unpins pages that were previously pinned by **bti_pin**(),
 and revokes the access that was granted by the pin call.
 
 On success, this syscall consumes the handle *pmt*.  It is invalid to use
@@ -34,4 +34,4 @@ In the event of failure, a negative error value is returned.
 ## SEE ALSO
 
 [bti_create](bti_create.md),
-[bti_pin_new](bti_pin_new.md).
+[bti_pin](bti_pin.md).

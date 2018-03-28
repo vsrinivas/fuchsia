@@ -415,11 +415,22 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
     return out->make(fbl::move(dispatcher), rights);
 }
 
-static zx_status_t bti_pin_impl(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher,
-                                uint32_t options, zx_handle_t vmo, uint64_t offset,
-                                uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
-                                fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* pmt_rights) {
+// TODO(teisenbe): Remove this once all callsites use bti_pin instead
+zx_status_t sys_bti_pin_new(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                            uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
+                            user_out_handle* pmt) {
+    return sys_bti_pin(bti, options, vmo, offset, size, addrs, addrs_count, pmt);
+}
+
+zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
+                        user_out_handle* pmt) {
     auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
+    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(size)) {
         return ZX_ERR_INVALID_ARGS;
@@ -427,7 +438,7 @@ static zx_status_t bti_pin_impl(fbl::RefPtr<BusTransactionInitiatorDispatcher> b
 
     fbl::RefPtr<VmObjectDispatcher> vmo_dispatcher;
     zx_rights_t vmo_rights;
-    zx_status_t status = up->GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
+    status = up->GetDispatcherAndRights(vmo, &vmo_dispatcher, &vmo_rights);
     if (status != ZX_OK) {
         return status;
     }
@@ -493,62 +504,7 @@ static zx_status_t bti_pin_impl(fbl::RefPtr<BusTransactionInitiatorDispatcher> b
         return status;
     }
 
-    *pmt = fbl::move(new_pmt);
-    *pmt_rights = new_pmt_rights;
-    return ZX_OK;
-}
-
-zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                        uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    fbl::RefPtr<Dispatcher> new_pmt;
-    zx_rights_t rights;
-    status = bti_pin_impl(bti_dispatcher, options, vmo, offset, size, addrs, addrs_count,
-                          &new_pmt, &rights);
-    if (status != ZX_OK) {
-        return status;
-    }
-    bti_dispatcher->ConvertToLegacy(DownCastDispatcher<PinnedMemoryTokenDispatcher>(&new_pmt));
-    return ZX_OK;
-}
-
-zx_status_t sys_bti_pin_new(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                            uint64_t size, user_out_ptr<zx_paddr_t> addrs, size_t addrs_count,
-                            user_out_handle* pmt) {
-    auto up = ProcessDispatcher::GetCurrent();
-    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    fbl::RefPtr<Dispatcher> new_pmt;
-    zx_rights_t rights;
-    status = bti_pin_impl(fbl::move(bti_dispatcher), options, vmo, offset, size,
-                          addrs, addrs_count, &new_pmt, &rights);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    return pmt->make(fbl::move(new_pmt), rights);
-}
-
-zx_status_t sys_bti_unpin(zx_handle_t bti, zx_paddr_t base_addr) {
-    auto up = ProcessDispatcher::GetCurrent();
-
-    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    return bti_dispatcher->Unpin(base_addr);
+    return pmt->make(fbl::move(new_pmt), new_pmt_rights);
 }
 
 // Having a single-purpose syscall like this is a bit of an anti-pattern in our

@@ -11,7 +11,7 @@ for performing DMA.
 
 ## DESCRIPTION
 
-PMTs are obtained by [pinning memory with a BTI object](../syscalls/bti_pin_new.md).
+PMTs are obtained by [pinning memory with a BTI object](../syscalls/bti_pin.md).
 It is valid for the device associated with the BTI to access the memory represented
 by the PMT for as long as the PMT object is around.  When the PMT object is
 destroyed, either via **zx_handle_close**(), **zx_pmt_unpin**(), or process
@@ -26,5 +26,5 @@ TODO(teisenbe): Describe quarantining
 
 ## SYSCALLS
 
-+ [bti_pin_new](../syscalls/bti_pin_new.md) - pin memory and grant access to it to the BTI
++ [bti_pin](../syscalls/bti_pin.md) - pin memory and grant access to it to the BTI
 + [pmt_unpin](../syscalls/pmt_unpin.md) - revoke access and unpin memory

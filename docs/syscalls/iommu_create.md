@@ -59,5 +59,5 @@ supported on this system.
 ## SEE ALSO
 
 [bti_create](bti_create.md),
-[bti_pin](bti_unpin.md),
-[bti_unpin](bti_unpin.md).
+[bti_pin](bti_pin.md),
+[pmt_unpin](pmt_unpin.md).
