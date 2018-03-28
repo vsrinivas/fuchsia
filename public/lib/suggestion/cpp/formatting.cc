@@ -4,15 +4,15 @@
 
 #include "lib/suggestion/cpp/formatting.h"
 
-namespace maxwell {
+namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o) {
+std::ostream& operator<<(std::ostream& os, const modular::SuggestionDisplay& o) {
   return os << "{ headline: " << o.headline
             << ", subheadline: " << o.subheadline << ", details: " << o.details
             << "}";
 }
 
-std::ostream& operator<<(std::ostream& os, const Suggestion& o) {
+std::ostream& operator<<(std::ostream& os, const modular::Suggestion& o) {
   return os << "{ uuid: " << o.uuid << ", confidence: " << o.confidence
             << ", display: " << o.display << "}";
 }

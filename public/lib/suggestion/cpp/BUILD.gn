@@ -9,6 +9,7 @@ source_set("formatting") {
   ]
 
   deps = [
+    "//garnet/public/lib/fidl/cpp",
     "//peridot/public/lib:fidl",
   ]
 }

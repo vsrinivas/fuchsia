@@ -6,51 +6,65 @@
 
 #include "lib/suggestion/cpp/formatting.h"
 
-bool suggestion_less(const maxwell::Suggestion* a,
-                     const maxwell::Suggestion* b) {
+bool suggestion_less(const modular::Suggestion* a,
+                     const modular::Suggestion* b) {
   return a->confidence > b->confidence;
 }
 
-void TestSuggestionListener::OnInterrupt(maxwell::SuggestionPtr suggestion) {
-  FXL_LOG(INFO) << "OnInterrupt(" << suggestion->uuid << ")";
+namespace modular {
+
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
+  os << "[ ";
+  for (const T& element : *value) {
+    os << element << " ";
+  }
+  return os << "]";
+}
+
+void TestSuggestionListener::OnInterrupt(modular::Suggestion suggestion) {
+  FXL_LOG(INFO) << "OnInterrupt(" << suggestion.uuid << ")";
 
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();
   insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
-                                 suggestion.get(), suggestion_less);
-  insert_head = ordered_suggestions_.emplace(insert_head, suggestion.get()) + 1;
-  suggestions_by_id_[suggestion->uuid] = std::move(suggestion);
+                                 &suggestion, suggestion_less);
+  suggestions_by_id_[suggestion.uuid] = modular::Suggestion();
+  fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
+  insert_head =
+      ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
 
   EXPECT_EQ((signed)ordered_suggestions_.size(),
             (signed)suggestions_by_id_.size());
 }
 
 void TestSuggestionListener::OnNextResults(
-    f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) {
+    fidl::VectorPtr<modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnNextResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnQueryResults(
-    f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) {
+    fidl::VectorPtr<modular::Suggestion> suggestions) {
   FXL_LOG(INFO) << "OnQueryResults(" << suggestions << ")";
 
   OnAnyResults(suggestions);
 }
 
 void TestSuggestionListener::OnAnyResults(
-    f1dl::VectorPtr<maxwell::SuggestionPtr>& suggestions) {
+    fidl::VectorPtr<modular::Suggestion>& suggestions) {
   ClearSuggestions();
 
   auto insert_head = ordered_suggestions_.begin();
-  for (auto& suggestion : suggestions.take()) {
+  for (auto& suggestion : *suggestions) {
     insert_head = std::upper_bound(insert_head, ordered_suggestions_.end(),
-                                   suggestion.get(), suggestion_less);
+                                   &suggestion, suggestion_less);
+    suggestions_by_id_[suggestion.uuid] = modular::Suggestion();
+    fidl::Clone(suggestion, &suggestions_by_id_[suggestion.uuid]);
     insert_head =
-        ordered_suggestions_.emplace(insert_head, suggestion.get()) + 1;
-    suggestions_by_id_[suggestion->uuid] = std::move(suggestion);
+        ordered_suggestions_.insert(insert_head, &suggestions_by_id_[suggestion.uuid]) + 1;
   }
 
   EXPECT_EQ((signed)ordered_suggestions_.size(),
@@ -70,3 +84,5 @@ void TestSuggestionListener::OnProcessingChange(bool processing) {
 void TestSuggestionListener::OnQueryComplete() {
   FXL_LOG(INFO) << "OnQueryComplete";
 }
+
+}  // namespace modular

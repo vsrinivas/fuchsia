@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/acquirers/gps.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -15,34 +15,34 @@ constexpr char maxwell::acquirers::GpsAcquirer::kLabel[];
 namespace maxwell {
 namespace {
 
-class CarmenSandiegoApp : public ContextListener {
+class CarmenSandiegoApp : public modular::ContextListener {
  public:
   CarmenSandiegoApp()
       : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        writer_(app_context_->ConnectToEnvironmentService<ContextWriter>()),
-        reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
+        writer_(app_context_->ConnectToEnvironmentService<modular::ContextWriter>()),
+        reader_(app_context_->ConnectToEnvironmentService<modular::ContextReader>()),
         binding_(this) {
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    selector->meta = ContextMetadata::New();
-    selector->meta->entity = EntityMetadata::New();
-    selector->meta->entity->topic = acquirers::GpsAcquirer::kLabel;
-    auto query = ContextQuery::New();
-    AddToContextQuery(query.get(), "gps", std::move(selector));
+    modular::ContextSelector selector;
+    selector.type = modular::ContextValueType::ENTITY;
+    selector.meta = modular::ContextMetadata::New();
+    selector.meta->entity = modular::EntityMetadata::New();
+    selector.meta->entity->topic = acquirers::GpsAcquirer::kLabel;
+    modular::ContextQuery query;
+    AddToContextQuery(&query, "gps", std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
  private:
   // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr update) override {
-    auto p = TakeContextValue(update.get(), "gps");
+  void OnContextUpdate(modular::ContextUpdate update) override {
+    auto p = TakeContextValue(&update, "gps");
     if (!p.first)
       return;
 
     std::string hlloc = "somewhere";
 
     rapidjson::Document d;
-    d.Parse(p.second->at(0)->content);
+    d.Parse(p.second->at(0).content);
 
     if (d.IsObject()) {
       const float latitude = d["lat"].GetFloat(),
@@ -66,9 +66,9 @@ class CarmenSandiegoApp : public ContextListener {
 
   std::unique_ptr<component::ApplicationContext> app_context_;
 
-  ContextWriterPtr writer_;
-  ContextReaderPtr reader_;
-  f1dl::Binding<ContextListener> binding_;
+  modular::ContextWriterPtr writer_;
+  modular::ContextReaderPtr reader_;
+  fidl::Binding<modular::ContextListener> binding_;
 };
 
 }  // namespace

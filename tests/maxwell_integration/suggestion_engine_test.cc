@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
+
 #include "gtest/gtest.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_engine.fidl.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/suggestion/fidl/debug.fidl.h"
-#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/acquirers/mock/mock_gps.h"
 #include "peridot/bin/agents/ideas.h"
@@ -32,39 +30,39 @@ namespace {
 // context agent that publishes an int n
 class NWriter {
  public:
-  NWriter(ContextEngine* context_engine) {
-    auto scope = ComponentScope::New();
-    scope->set_global_scope(GlobalScope::New());
+  NWriter(modular::ContextEngine* context_engine) {
+    modular::ComponentScope scope;
+    scope.set_global_scope(modular::GlobalScope());
     context_engine->GetWriter(std::move(scope), pub_.NewRequest());
   }
 
   void Publish(int n) { pub_->WriteEntityTopic("n", std::to_string(n)); }
 
  private:
-  ContextWriterPtr pub_;
+  modular::ContextWriterPtr pub_;
 };
 
-ProposalPtr CreateProposal(const std::string& id,
-                           const std::string& headline,
-                           f1dl::VectorPtr<ActionPtr> actions,
-                           maxwell::AnnoyanceType annoyance) {
-  auto p = Proposal::New();
-  p->id = id;
-  p->on_selected = std::move(actions);
-  auto d = SuggestionDisplay::New();
+modular::Proposal CreateProposal(const std::string& id,
+                        const std::string& headline,
+                        fidl::VectorPtr<modular::Action> actions,
+                        modular::AnnoyanceType annoyance) {
+  modular::Proposal p;
+  p.id = id;
+  p.on_selected = std::move(actions);
+  modular::SuggestionDisplay d;
 
-  d->headline = headline;
-  d->color = 0x00aa00aa;  // argb purple
-  d->annoyance = annoyance;
+  d.headline = headline;
+  d.color = 0x00aa00aa;  // argb purple
+  d.annoyance = annoyance;
 
-  p->display = std::move(d);
+  p.display = std::move(d);
   return p;
 }
 
 class Proposinator {
  public:
-  Proposinator(SuggestionEngine* suggestion_engine,
-               const f1dl::StringPtr& url = "Proposinator") {
+  Proposinator(modular::SuggestionEngine* suggestion_engine,
+               fidl::StringPtr url = "Proposinator") {
     suggestion_engine->RegisterProposalPublisher("Proposinator",
                                                  out_.NewRequest());
   }
@@ -73,15 +71,15 @@ class Proposinator {
 
   void Propose(
       const std::string& id,
-      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
-    Propose(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
+      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
+    Propose(id, id, modular::AnnoyanceType::NONE, std::move(actions));
   }
 
   void Propose(
       const std::string& id,
       const std::string& headline,
-      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
+      modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
+      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
@@ -90,21 +88,22 @@ class Proposinator {
   void KillPublisher() { out_.Unbind(); }
 
  protected:
-  ProposalPublisherPtr out_;
+  modular::ProposalPublisherPtr out_;
 };
 
-class AskProposinator : public Proposinator, public QueryHandler {
+class AskProposinator : public Proposinator, public modular::QueryHandler {
  public:
-  AskProposinator(SuggestionEngine* suggestion_engine,
-                  const f1dl::StringPtr& url = "AskProposinator")
+  AskProposinator(modular::SuggestionEngine* suggestion_engine,
+                  fidl::StringPtr url = "AskProposinator")
       : Proposinator(suggestion_engine, url), ask_binding_(this) {
-    f1dl::InterfaceHandle<QueryHandler> query_handle;
+    fidl::InterfaceHandle<QueryHandler> query_handle;
     ask_binding_.Bind(query_handle.NewRequest());
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
 
-  void OnQuery(UserInputPtr query, const OnQueryCallback& callback) override {
-    query_ = std::move(query);
+  void OnQuery(modular::UserInput query,
+               OnQueryCallback callback) override {
+    query_ = fidl::MakeOptional(query);
     query_callback_ = callback;
     query_proposals_.resize(0);
 
@@ -120,60 +119,60 @@ class AskProposinator : public Proposinator, public QueryHandler {
   }
 
   void Commit() {
-    auto response = QueryResponse::New();
-    response->proposals = std::move(query_proposals_);
+    modular::QueryResponse response;
+    response.proposals = std::move(query_proposals_);
     query_callback_(std::move(response));
   }
 
-  f1dl::StringPtr query() const { return query_ ? query_->text : nullptr; }
+  fidl::StringPtr query() const { return query_ ? query_->text : nullptr; }
 
   void ProposeForAsk(const std::string& id) {
-    auto actions = f1dl::VectorPtr<ActionPtr>::New(0);
-    ProposeForAsk(id, id, maxwell::AnnoyanceType::NONE, std::move(actions));
+    auto actions = fidl::VectorPtr<modular::Action>::New(0);
+    ProposeForAsk(id, id, modular::AnnoyanceType::NONE, std::move(actions));
   }
 
   void ProposeForAsk(
       const std::string& id,
       const std::string& headline,
-      maxwell::AnnoyanceType annoyance = maxwell::AnnoyanceType::NONE,
-      f1dl::VectorPtr<ActionPtr> actions = f1dl::VectorPtr<ActionPtr>::New(0)) {
+      modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
+      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
  private:
-  f1dl::Binding<QueryHandler> ask_binding_;
-  UserInputPtr query_;
-  f1dl::VectorPtr<ProposalPtr> query_proposals_;
+  fidl::Binding<QueryHandler> ask_binding_;
+  modular::UserInputPtr query_;
+  fidl::VectorPtr<modular::Proposal> query_proposals_;
   OnQueryCallback query_callback_;
   bool waiting_for_query_ = false;
 };
 
 // maintains the number of proposals specified by the context field "n"
-class NProposals : public Proposinator, public ContextListener {
+class NProposals : public Proposinator, public modular::ContextListener {
  public:
-  NProposals(ContextEngine* context_engine, SuggestionEngine* suggestion_engine)
+  NProposals(modular::ContextEngine* context_engine, modular::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
-    auto scope = ComponentScope::New();
-    scope->set_global_scope(GlobalScope::New());
+    modular::ComponentScope scope;
+    scope.set_global_scope(modular::GlobalScope());
     context_engine->GetReader(std::move(scope), reader_.NewRequest());
 
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    selector->meta = ContextMetadata::New();
-    selector->meta->entity = EntityMetadata::New();
-    selector->meta->entity->topic = "n";
-    auto query = ContextQuery::New();
-    AddToContextQuery(query.get(), "n", std::move(selector));
+    modular::ContextSelector selector;
+    selector.type = modular::ContextValueType::ENTITY;
+    selector.meta = modular::ContextMetadata::New();
+    selector.meta->entity = modular::EntityMetadata::New();
+    selector.meta->entity->topic = "n";
+    modular::ContextQuery query;
+    AddToContextQuery(&query, "n", std::move(selector));
     reader_->Subscribe(std::move(query), listener_binding_.NewBinding());
   }
 
-  void OnContextUpdate(ContextUpdatePtr update) override {
-    auto r = TakeContextValue(update.get(), "n");
+  void OnContextUpdate(modular::ContextUpdate update) override {
+    auto r = TakeContextValue(&update, "n");
     ASSERT_TRUE(r.first) << "Expect an update key for every query key.";
     if (r.second->empty())
       return;
-    int n = std::stoi(r.second->at(0)->content);
+    int n = std::stoi(r.second->at(0).content);
 
     for (int i = n_; i < n; i++)
       Propose(std::to_string(i));
@@ -184,8 +183,8 @@ class NProposals : public Proposinator, public ContextListener {
   }
 
  private:
-  ContextReaderPtr reader_;
-  f1dl::Binding<ContextListener> listener_binding_;
+  modular::ContextReaderPtr reader_;
+  fidl::Binding<ContextListener> listener_binding_;
 
   int n_ = 0;
 };
@@ -200,24 +199,26 @@ class SuggestionEngineTest : public ContextEngineTestBase {
     component::Services suggestion_services =
         StartServices("suggestion_engine");
     suggestion_engine_ =
-        suggestion_services.ConnectToService<SuggestionEngine>();
+        suggestion_services.ConnectToService<modular::SuggestionEngine>();
     suggestion_provider_ =
-        suggestion_services.ConnectToService<SuggestionProvider>();
-    suggestion_debug_ = suggestion_services.ConnectToService<SuggestionDebug>();
+        suggestion_services.ConnectToService<modular::SuggestionProvider>();
+    suggestion_debug_ = suggestion_services.ConnectToService<modular::SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
-    f1dl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
     story_provider_binding_.Bind(story_provider_handle.NewRequest());
 
     // Hack to get an unbound FocusController for Initialize().
-    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
+    fidl::InterfaceHandle<modular::FocusProvider> focus_provider_handle;
     focus_provider_handle.NewRequest();
 
-    f1dl::InterfaceHandle<maxwell::ContextWriter> context_writer_handle;
-    f1dl::InterfaceHandle<maxwell::ContextReader> context_reader_handle;
-    auto scope = ComponentScope::New();
-    scope->set_global_scope(GlobalScope::New());
-    context_engine()->GetWriter(scope->Clone(),
+    fidl::InterfaceHandle<modular::ContextWriter> context_writer_handle;
+    fidl::InterfaceHandle<modular::ContextReader> context_reader_handle;
+    modular::ComponentScope scope;
+    scope.set_global_scope(modular::GlobalScope());
+    modular::ComponentScope scope_clone;
+    fidl::Clone(scope, &scope_clone);
+    context_engine()->GetWriter(std::move(scope_clone),
                                 context_writer_handle.NewRequest());
     context_engine()->GetReader(std::move(scope),
                                 context_reader_handle.NewRequest());
@@ -228,29 +229,29 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
  protected:
-  SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
+  modular::SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
 
-  SuggestionProvider* suggestion_provider() {
+  modular::SuggestionProvider* suggestion_provider() {
     return suggestion_provider_.get();
   }
 
-  SuggestionDebug* suggestion_debug() { return suggestion_debug_.get(); }
+  modular::SuggestionDebug* suggestion_debug() { return suggestion_debug_.get(); }
 
   StoryProviderMock* story_provider() { return &story_provider_; }
 
   void StartSuggestionAgent(const std::string& url) {
     auto agent_bridge =
         std::make_unique<MaxwellServiceProviderBridge>(root_environment());
-    agent_bridge->AddService<ContextReader>(
-        [this, url](f1dl::InterfaceRequest<ContextReader> request) {
-          auto scope = ComponentScope::New();
-          auto agent_scope = AgentScope::New();
-          agent_scope->url = url;
-          scope->set_agent_scope(std::move(agent_scope));
+    agent_bridge->AddService<modular::ContextReader>(
+        [this, url](fidl::InterfaceRequest<modular::ContextReader> request) {
+          modular::ComponentScope scope;
+          modular::AgentScope agent_scope;
+          agent_scope.url = url;
+          scope.set_agent_scope(std::move(agent_scope));
           context_engine()->GetReader(std::move(scope), std::move(request));
         });
-    agent_bridge->AddService<ProposalPublisher>(
-        [this, url](f1dl::InterfaceRequest<ProposalPublisher> request) {
+    agent_bridge->AddService<modular::ProposalPublisher>(
+        [this, url](fidl::InterfaceRequest<modular::ProposalPublisher> request) {
           suggestion_engine_->RegisterProposalPublisher(url,
                                                         std::move(request));
         });
@@ -258,11 +259,11 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
   void AcceptSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, InteractionType::SELECTED);
+    Interact(suggestion_id, modular::InteractionType::SELECTED);
   }
 
   void DismissSuggestion(const std::string& suggestion_id) {
-    Interact(suggestion_id, InteractionType::DISMISSED);
+    Interact(suggestion_id, modular::InteractionType::DISMISSED);
   }
 
   void WaitUntilIdle() {
@@ -272,19 +273,19 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
  private:
   void Interact(const std::string& suggestion_id,
-                InteractionType interaction_type) {
-    auto interaction = Interaction::New();
-    interaction->type = interaction_type;
+                modular::InteractionType interaction_type) {
+    modular::Interaction interaction;
+    interaction.type = interaction_type;
     suggestion_provider_->NotifyInteraction(suggestion_id,
                                             std::move(interaction));
   }
 
-  SuggestionEnginePtr suggestion_engine_;
-  SuggestionDebugPtr suggestion_debug_;
-  SuggestionProviderPtr suggestion_provider_;
+  modular::SuggestionEnginePtr suggestion_engine_;
+  modular::SuggestionDebugPtr suggestion_debug_;
+  modular::SuggestionProviderPtr suggestion_provider_;
 
   StoryProviderMock story_provider_;
-  f1dl::Binding<modular::StoryProvider> story_provider_binding_;
+  fidl::Binding<modular::StoryProvider> story_provider_binding_;
 };
 
 class AskTest : public virtual SuggestionEngineTest {
@@ -308,16 +309,16 @@ class AskTest : public virtual SuggestionEngineTest {
 
   void Query(const std::string& query, int count = 10) {
     CloseAndResetListener();
-    auto input = UserInput::New();
-    input->type = InputType::TEXT;
-    input->text = query;
+    modular::UserInput input;
+    input.type = modular::InputType::TEXT;
+    input.text = query;
     suggestion_provider()->Query(listener_binding_.NewBinding(),
                                  std::move(input), count);
   }
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
-  TestSuggestionListener* listener() { return &listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void EnsureDebugMatches() {
@@ -327,18 +328,17 @@ class AskTest : public virtual SuggestionEngineTest {
     for (size_t i = 0; i < subscriberAsks.size(); i++) {
       auto& suggestion = subscriberAsks[i];
       auto& proposal = debugAsks[i];
-      EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
-      EXPECT_EQ(suggestion->display->subheadline,
-                proposal->display->subheadline);
-      EXPECT_EQ(suggestion->display->details, proposal->display->details);
+      EXPECT_EQ(suggestion->display.headline, proposal.display.headline);
+      EXPECT_EQ(suggestion->display.subheadline, proposal.display.subheadline);
+      EXPECT_EQ(suggestion->display.details, proposal.display.details);
     }
   }
 
  private:
-  TestSuggestionListener listener_;
-  TestDebugAskListener debug_listener_;
-  f1dl::Binding<QueryListener> listener_binding_;
-  f1dl::Binding<AskProposalListener> debug_listener_binding_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugAskListener debug_listener_;
+  fidl::Binding<modular::QueryListener> listener_binding_;
+  fidl::Binding<modular::AskProposalListener> debug_listener_binding_;
 };
 
 class InterruptionTest : public virtual SuggestionEngineTest {
@@ -359,8 +359,8 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     WaitUntilIdle();
   }
 
-  TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
-  TestSuggestionListener* listener() { return &listener_; }
+  modular::TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   int suggestion_count() const { return listener_.suggestion_count(); }
@@ -370,19 +370,19 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     auto lastInterruption = debug_listener_.get_interrupt_proposal();
     ASSERT_GE(subscriberNexts.size(), 1u);
     auto& suggestion = subscriberNexts[0];
-    EXPECT_EQ(suggestion->display->headline,
-              lastInterruption->display->headline);
-    EXPECT_EQ(suggestion->display->subheadline,
-              lastInterruption->display->subheadline);
-    EXPECT_EQ(suggestion->display->details, lastInterruption->display->details);
+    EXPECT_EQ(suggestion->display.headline,
+              lastInterruption.display.headline);
+    EXPECT_EQ(suggestion->display.subheadline,
+              lastInterruption.display.subheadline);
+    EXPECT_EQ(suggestion->display.details, lastInterruption.display.details);
   }
 
  private:
-  TestSuggestionListener listener_;
-  TestDebugInterruptionListener debug_listener_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugInterruptionListener debug_listener_;
 
-  f1dl::Binding<InterruptionListener> listener_binding_;
-  f1dl::Binding<InterruptionProposalListener> debug_listener_binding_;
+  fidl::Binding<modular::InterruptionListener> listener_binding_;
+  fidl::Binding<modular::InterruptionProposalListener> debug_listener_binding_;
 };
 
 class NextTest : public virtual SuggestionEngineTest {
@@ -398,8 +398,8 @@ class NextTest : public virtual SuggestionEngineTest {
         debug_listener_binding_.NewBinding());
   }
 
-  TestDebugNextListener* debugListener() { return &debug_listener_; }
-  TestSuggestionListener* listener() { return &listener_; }
+  modular::TestDebugNextListener* debugListener() { return &debug_listener_; }
+  modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
   void StartListening(int count) {
@@ -420,7 +420,7 @@ class NextTest : public virtual SuggestionEngineTest {
 
   int suggestion_count() const { return listener_.suggestion_count(); }
 
-  const Suggestion* GetOnlySuggestion() const {
+  const modular::Suggestion* GetOnlySuggestion() const {
     return listener_.GetOnlySuggestion();
   }
 
@@ -431,19 +431,19 @@ class NextTest : public virtual SuggestionEngineTest {
     for (size_t i = 0; i < subscriberNexts.size(); i++) {
       auto& suggestion = subscriberNexts[i];
       auto& proposal = debugNexts[i];
-      EXPECT_EQ(suggestion->display->headline, proposal->display->headline);
-      EXPECT_EQ(suggestion->display->subheadline,
-                proposal->display->subheadline);
-      EXPECT_EQ(suggestion->display->details, proposal->display->details);
+      EXPECT_EQ(suggestion->display.headline, proposal.display.headline);
+      EXPECT_EQ(suggestion->display.subheadline,
+                proposal.display.subheadline);
+      EXPECT_EQ(suggestion->display.details, proposal.display.details);
     }
   }
 
  private:
-  TestSuggestionListener listener_;
-  TestDebugNextListener debug_listener_;
+  modular::TestSuggestionListener listener_;
+  modular::TestDebugNextListener debug_listener_;
 
-  f1dl::Binding<NextListener> listener_binding_;
-  f1dl::Binding<NextProposalListener> debug_listener_binding_;
+  fidl::Binding<modular::NextListener> listener_binding_;
+  fidl::Binding<modular::NextProposalListener> debug_listener_binding_;
 };
 
 class ResultCountTest : public NextTest {
@@ -611,7 +611,7 @@ TEST_F(NextTest, Fifo) {
   EXPECT_EQ(1, suggestion_count());
   auto suggestion = GetOnlySuggestion();
   EXPECT_NE(uuid_1, suggestion->uuid);
-  EXPECT_EQ("2", suggestion->display->headline);
+  EXPECT_EQ("2", suggestion->display.headline);
 }
 
 // Tests the removal of earlier suggestions while capped.
@@ -636,7 +636,7 @@ TEST_F(NextTest, CappedFifo) {
   ASSERT_EQ(1, suggestion_count());
   EXPECT_NE(uuid1, GetOnlySuggestion()->uuid);
 
-  EXPECT_EQ("2", GetOnlySuggestion()->display->headline);
+  EXPECT_EQ("2", GetOnlySuggestion()->display.headline);
 }
 
 TEST_F(NextTest, RemoveBeforeSubscribe) {
@@ -668,11 +668,11 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto create_story = CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = Action::New();
-  action->set_create_story(std::move(create_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -688,16 +688,16 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto create_story = CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = Action::New();
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action;
 
   rapidjson::Document doc;
   rapidjson::Pointer("/foo/bar").Set(doc, "some_data");
-  create_story->initial_data = modular::JsonValueToString(doc);
+  create_story.initial_data = modular::JsonValueToString(doc);
 
-  action->set_create_story(std::move(create_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -715,17 +715,17 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 
   auto module_id = "foo://bar1";
 
-  auto add_module_to_story = AddModuleToStory::New();
-  add_module_to_story->story_id = "foo://bar";
-  add_module_to_story->module_name = module_id;
-  add_module_to_story->module_url = module_id;
-  add_module_to_story->module_path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
-  add_module_to_story->link_name = "";
-  add_module_to_story->surface_relation = modular::SurfaceRelation::New();
+  modular::AddModuleToStory add_module_to_story;
+  add_module_to_story.story_id = "foo://bar";
+  add_module_to_story.module_name = module_id;
+  add_module_to_story.module_url = module_id;
+  add_module_to_story.module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  add_module_to_story.link_name = "";
+  add_module_to_story.surface_relation = modular::SurfaceRelation();
 
-  auto action = Action::New();
-  action->set_add_module_to_story(std::move(add_module_to_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  modular::Action action;
+  action.set_add_module_to_story(std::move(add_module_to_story));
+  fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -915,11 +915,11 @@ TEST_F(SuggestionFilteringTest, Baseline) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto create_story = CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = Action::New();
-  action->set_create_story(std::move(create_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -934,17 +934,17 @@ TEST_F(SuggestionFilteringTest, Baseline_FilterDoesntMatch) {
 
   // First notify watchers of the StoryProvider that a story
   // already exists.
-  auto story_info = modular::StoryInfo::New();
-  story_info->url = "foo://bazzle_dazzle";
-  story_info->id = "";
+  modular::StoryInfo story_info;
+  story_info.url = "foo://bazzle_dazzle";
+  story_info.id = "";
   story_provider()->NotifyStoryChanged(std::move(story_info),
                                        modular::StoryState::INITIAL);
 
-  auto create_story = CreateStory::New();
-  create_story->module_id = "foo://bar";
-  auto action = Action::New();
-  action->set_create_story(std::move(create_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action;
+  action.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   WaitUntilIdle();
@@ -973,7 +973,7 @@ TEST_F(SuggestionFilteringTest, FilterOnPropose) {
   create_story->module_id = "foo://bar";
   auto action = Action::New();
   action->set_create_story(std::move(create_story));
-  f1dl::VectorPtr<ActionPtr> actions;
+  fidl::VectorPtr<ActionPtr> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
   p.Propose("2");
@@ -997,7 +997,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
     create_story->module_id = "foo://bar";
     auto action = Action::New();
     action->set_create_story(std::move(create_story));
-    f1dl::VectorPtr<ActionPtr> actions;
+    fidl::VectorPtr<ActionPtr> actions;
     actions.push_back(std::move(action));
 
     p.Propose("1", std::move(actions));
@@ -1014,7 +1014,7 @@ TEST_F(SuggestionFilteringTest, ChangeFiltered) {
 TEST_F(InterruptionTest, SingleInterruption) {
   Proposinator p(suggestion_engine());
 
-  p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
+  p.Propose("1", "2", modular::AnnoyanceType::INTERRUPT);
 
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());
@@ -1024,7 +1024,7 @@ TEST_F(InterruptionTest, SingleInterruption) {
 TEST_F(InterruptionTest, RemovedInterruption) {
   Proposinator p(suggestion_engine());
 
-  p.Propose("1", "2", maxwell::AnnoyanceType::INTERRUPT);
+  p.Propose("1", "2", modular::AnnoyanceType::INTERRUPT);
 
   WaitUntilIdle();
   EXPECT_EQ(1, suggestion_count());

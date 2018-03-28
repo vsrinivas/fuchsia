@@ -29,7 +29,7 @@ class MaxwellTestBase : public gtest::TestWithMessageLoop {
   component::Services StartServices(const std::string& url);
 
   template <typename Interface>
-  f1dl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
+  fidl::InterfacePtr<Interface> ConnectToService(const std::string& url) {
     auto services = StartServices(url);
     return services.ConnectToService<Interface>();
   }

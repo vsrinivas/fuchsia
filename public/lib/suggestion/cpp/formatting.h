@@ -5,14 +5,13 @@
 #ifndef LIB_SUGGESTION_CPP_FORMATTING_H_
 #define LIB_SUGGESTION_CPP_FORMATTING_H_
 
-#include "lib/fidl/cpp/formatting.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const SuggestionDisplay& o);
-std::ostream& operator<<(std::ostream& os, const Suggestion& o);
+std::ostream& operator<<(std::ostream& os, const modular::SuggestionDisplay& o);
+std::ostream& operator<<(std::ostream& os, const modular::Suggestion& o);
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // LIB_SUGGESTION_CPP_FORMATTING_H_

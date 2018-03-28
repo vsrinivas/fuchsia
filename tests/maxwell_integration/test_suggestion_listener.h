@@ -7,26 +7,28 @@
 
 #include <map>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
-#include "lib/suggestion/fidl/debug.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
-class TestSuggestionListener : public maxwell::NextListener,
-                               public maxwell::QueryListener,
-                               public maxwell::InterruptionListener {
+namespace modular {
+
+class TestSuggestionListener : public modular::NextListener,
+                               public modular::QueryListener,
+                               public modular::InterruptionListener {
  public:
   // |InterruptionListener|
-  void OnInterrupt(maxwell::SuggestionPtr suggestion) override;
+  void OnInterrupt(modular::Suggestion suggestion) override;
 
   // |NextListener|
-  void OnNextResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override;
+  void OnNextResults(fidl::VectorPtr<modular::Suggestion> suggestions) override;
 
   // |NextListener|
   void OnProcessingChange(bool processing) override;
 
   // |QueryListener|
-  void OnQueryResults(f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override;
+  void OnQueryResults(fidl::VectorPtr<modular::Suggestion> suggestions) override;
 
   // |QueryListener|
   void OnQueryComplete() override;
@@ -37,99 +39,103 @@ class TestSuggestionListener : public maxwell::NextListener,
 
   // Exposes a pointer to the only suggestion in this listener. Retains
   // ownership of the pointer.
-  const maxwell::Suggestion* GetOnlySuggestion() const {
+  const modular::Suggestion* GetOnlySuggestion() const {
     EXPECT_EQ(1, suggestion_count());
     return GetTopSuggestion();
   }
 
   // Exposes a pointer to the top suggestion in this listener. Retains
   // ownership of the pointer.
-  const maxwell::Suggestion* GetTopSuggestion() const {
+  const modular::Suggestion* GetTopSuggestion() const {
     EXPECT_GE(suggestion_count(), 1);
     return ordered_suggestions_.front();
   }
 
-  const maxwell::Suggestion* operator[](int index) const {
+  const modular::Suggestion* operator[](int index) const {
     return ordered_suggestions_[index];
   }
 
-  const maxwell::Suggestion* operator[](const std::string& id) const {
+  const modular::Suggestion* operator[](const std::string& id) const {
     auto it = suggestions_by_id_.find(id);
-    return it == suggestions_by_id_.end() ? NULL : it->second.get();
+    return it == suggestions_by_id_.end() ? NULL : &it->second;
   }
 
-  const std::vector<maxwell::Suggestion*>& GetSuggestions() {
+  const std::vector<modular::Suggestion*>& GetSuggestions() {
     return ordered_suggestions_;
   }
 
  private:
-  void OnAnyResults(f1dl::VectorPtr<maxwell::SuggestionPtr>& suggestions);
+  void OnAnyResults(fidl::VectorPtr<modular::Suggestion>& suggestions);
 
-  std::map<std::string, maxwell::SuggestionPtr> suggestions_by_id_;
-  std::vector<maxwell::Suggestion*> ordered_suggestions_;
+  std::map<std::string, modular::Suggestion> suggestions_by_id_;
+  std::vector<modular::Suggestion*> ordered_suggestions_;
 };
 
 class TestProposalListener {
  public:
-  const std::vector<maxwell::ProposalSummaryPtr>& GetProposals() {
+  const std::vector<modular::ProposalSummary>& GetProposals() {
     return proposals_;
   }
   int proposal_count() const { return proposals_.size(); }
 
  protected:
-  void UpdateProposals(f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) {
+  void UpdateProposals(fidl::VectorPtr<modular::ProposalSummary> proposals) {
     proposals_.clear();
     for (size_t i = 0; i < proposals->size(); ++i) {
       proposals_.push_back(std::move(proposals->at(i)));
     }
   }
-  std::vector<maxwell::ProposalSummaryPtr> proposals_;
+  std::vector<modular::ProposalSummary> proposals_;
 };
 
-class TestDebugNextListener : public maxwell::NextProposalListener,
+class TestDebugNextListener : public modular::NextProposalListener,
                               public TestProposalListener {
  public:
   void OnNextUpdate(
-      f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) override {
+      fidl::VectorPtr<modular::ProposalSummary> proposals) override {
     FXL_LOG(INFO) << "In OnNextUpdate debug";
     UpdateProposals(std::move(proposals));
   }
 };
 
-class TestDebugAskListener : public maxwell::AskProposalListener,
+class TestDebugAskListener : public modular::AskProposalListener,
                              public TestProposalListener {
  public:
-  void OnAskStart(const f1dl::StringPtr& query,
-                  f1dl::VectorPtr<maxwell::ProposalSummaryPtr> proposals) override {
+  void OnAskStart(fidl::StringPtr query,
+                  fidl::VectorPtr<modular::ProposalSummary> proposals) override {
     UpdateProposals(std::move(proposals));
     query_ = query.get();
   }
   void OnProposalSelected(
-      maxwell::ProposalSummaryPtr selectedProposal) override {
+      modular::ProposalSummaryPtr selectedProposal) override {
     selected_proposal_ = selectedProposal.get();
   }
   const std::string get_query() { return query_; }
-  maxwell::ProposalSummary* get_selected_proposal() {
+  modular::ProposalSummary* get_selected_proposal() {
     return selected_proposal_;
   }
 
  private:
   std::string query_;
-  maxwell::ProposalSummary* selected_proposal_;
+  modular::ProposalSummary* selected_proposal_;
 };
 
 class TestDebugInterruptionListener
-    : public maxwell::InterruptionProposalListener {
+    : public modular::InterruptionProposalListener {
  public:
-  void OnInterrupt(maxwell::ProposalSummaryPtr interruptionProposal) override {
+  void OnInterrupt(modular::ProposalSummary interruptionProposal) override {
     interrupt_proposal_ = std::move(interruptionProposal);
   }
-  maxwell::ProposalSummaryPtr get_interrupt_proposal() {
-    return interrupt_proposal_.Clone();
+  modular::ProposalSummary get_interrupt_proposal() {
+    modular::ProposalSummary result;
+    fidl::Clone(interrupt_proposal_, &result);
+    return result;
   }
 
  private:
-  maxwell::ProposalSummaryPtr interrupt_proposal_;
+  modular::ProposalSummary interrupt_proposal_;
 };
+
+}  // namespace modular
 
 #endif  // PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_SUGGESTION_LISTENER_H_

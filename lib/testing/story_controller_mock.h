@@ -7,10 +7,10 @@
 
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/story/fidl/story_controller.fidl.h"
-#include "lib/surface/fidl/surface.fidl.h"
 
 namespace modular {
 
@@ -21,32 +21,32 @@ class StoryControllerMock : public StoryController {
   std::string last_added_module() const { return last_added_module_; }
 
   struct GetLinkCall {
-    f1dl::VectorPtr<f1dl::StringPtr> module_path;
-    f1dl::StringPtr name;
+    fidl::VectorPtr<fidl::StringPtr> module_path;
+    fidl::StringPtr name;
   };
   std::vector<GetLinkCall> get_link_calls;
 
  private:
   // |StoryController|
-  void GetInfo(const GetInfoCallback& callback) override {
-    auto info = StoryInfo::New();
-    info->id = "wow";
-    info->url = "wow";
+  void GetInfo(GetInfoCallback callback) override {
+    StoryInfo info;
+    info.id = "wow";
+    info.url = "wow";
     callback(std::move(info), modular::StoryState::INITIAL);
   }
 
   // |StoryController|
-  void SetInfoExtra(const f1dl::StringPtr& name,
-                    const f1dl::StringPtr& value,
-                    const SetInfoExtraCallback& callback) override {
+  void SetInfoExtra(fidl::StringPtr name,
+                    fidl::StringPtr value,
+                    SetInfoExtraCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
-  void AddModuleDeprecated(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                           const f1dl::StringPtr& module_name,
-                           const f1dl::StringPtr& module_url,
-                           const f1dl::StringPtr& link_name,
+  void AddModuleDeprecated(fidl::VectorPtr<fidl::StringPtr> module_path,
+                           fidl::StringPtr module_name,
+                           fidl::StringPtr module_url,
+                           fidl::StringPtr link_name,
                            SurfaceRelationPtr surface_relation) override {
     last_added_module_ = module_url;
   }
@@ -57,48 +57,48 @@ class StoryControllerMock : public StoryController {
   }
 
   // |StoryController|
-  void Stop(const StopCallback& done) override { FXL_NOTIMPLEMENTED(); }
+  void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
 
   // |StoryController|
-  void Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) override {
+  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
-  void GetActiveModules(f1dl::InterfaceHandle<StoryModulesWatcher> watcher,
-                        const GetActiveModulesCallback& callback) override {
+  void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+                        GetActiveModulesCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
-  void GetModules(const GetModulesCallback& callback) override {
+  void GetModules(GetModulesCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
   void GetModuleController(
-      f1dl::VectorPtr<f1dl::StringPtr> module_path,
-      f1dl::InterfaceRequest<ModuleController> request) override {
+      fidl::VectorPtr<fidl::StringPtr> module_path,
+      fidl::InterfaceRequest<ModuleController> request) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
-  void GetActiveLinks(f1dl::InterfaceHandle<StoryLinksWatcher> watcher,
-                      const GetActiveLinksCallback& callback) override {
+  void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+                      GetActiveLinksCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
   // |StoryController|
-  void GetLink(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-               const f1dl::StringPtr& name,
-               f1dl::InterfaceRequest<Link> request) override {
+  void GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
+               fidl::StringPtr name,
+               fidl::InterfaceRequest<Link> request) override {
     GetLinkCall call{std::move(module_path), name};
     get_link_calls.push_back(std::move(call));
   }
 
-  void AddModule(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                 const f1dl::StringPtr& module_name,
-                 DaisyPtr daisy,
+  void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
+                 fidl::StringPtr module_name,
+                 Daisy daisy,
                  SurfaceRelationPtr surface_relation) override {
     FXL_NOTIMPLEMENTED();
   }

@@ -14,21 +14,21 @@ MaxwellTestBase::MaxwellTestBase() {
   agent_launcher_ = std::make_unique<maxwell::AgentLauncher>(root_environment);
 
   child_app_services_.AddService<modular::ComponentContext>(
-      [this](f1dl::InterfaceRequest<modular::ComponentContext> request) {
+      [this](fidl::InterfaceRequest<modular::ComponentContext> request) {
         child_component_context_.Connect(std::move(request));
       });
 }
 
 component::Services MaxwellTestBase::StartServices(const std::string& url) {
   component::Services services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = url;
-  launch_info->directory_request = services.NewRequest();
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = url;
+  launch_info.directory_request = services.NewRequest();
 
   auto service_list = component::ServiceList::New();
   service_list->names.push_back(modular::ComponentContext::Name_);
   child_app_services_.AddBinding(service_list->provider.NewRequest());
-  launch_info->additional_services = std::move(service_list);
+  launch_info.additional_services = std::move(service_list);
 
   startup_context_->launcher()->CreateApplication(std::move(launch_info),
                                                   nullptr);

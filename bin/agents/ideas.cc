@@ -6,11 +6,11 @@
 
 #include <rapidjson/document.h>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
-#include "lib/context/fidl/context_reader.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 
 constexpr char maxwell::agents::IdeasAgent::kIdeaId[];
 
@@ -26,29 +26,30 @@ namespace {
 
 const char kLocationTopic[] = "location/region";
 
-class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
+class IdeasAgentApp : public agents::IdeasAgent,
+                      public modular::ContextListener {
  public:
   IdeasAgentApp()
       : app_context_(component::ApplicationContext::CreateFromStartupInfo()),
-        reader_(app_context_->ConnectToEnvironmentService<ContextReader>()),
+        reader_(app_context_->ConnectToEnvironmentService<modular::ContextReader>()),
         binding_(this),
-        out_(app_context_->ConnectToEnvironmentService<ProposalPublisher>()) {
-    auto query = ContextQuery::New();
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    selector->meta = ContextMetadata::New();
-    selector->meta->entity = EntityMetadata::New();
-    selector->meta->entity->topic = kLocationTopic;
-    AddToContextQuery(query.get(), kLocationTopic, std::move(selector));
+        out_(app_context_->ConnectToEnvironmentService<modular::ProposalPublisher>()) {
+    modular::ContextQuery query;
+    modular::ContextSelector selector;
+    selector.type = modular::ContextValueType::ENTITY;
+    selector.meta = modular::ContextMetadata::New();
+    selector.meta->entity = modular::EntityMetadata::New();
+    selector.meta->entity->topic = kLocationTopic;
+    AddToContextQuery(&query, kLocationTopic, std::move(selector));
     reader_->Subscribe(std::move(query), binding_.NewBinding());
   }
 
-  void OnContextUpdate(ContextUpdatePtr update) override {
-    auto r = TakeContextValue(update.get(), kLocationTopic);
+  void OnContextUpdate(modular::ContextUpdate update) override {
+    auto r = TakeContextValue(&update, kLocationTopic);
     if (!r.first)
       return;
     rapidjson::Document d;
-    d.Parse(r.second->at(0)->content->data());
+    d.Parse(r.second->at(0).content->data());
 
     if (d.IsString()) {
       const std::string region = d.GetString();
@@ -65,15 +66,15 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
       if (idea.empty()) {
         out_->Remove(kIdeaId);
       } else {
-        auto p = Proposal::New();
-        p->id = kIdeaId;
-        p->on_selected = f1dl::VectorPtr<ActionPtr>::New(0);
-        auto d = SuggestionDisplay::New();
+        modular::Proposal p;
+        p.id = kIdeaId;
+        p.on_selected = fidl::VectorPtr<modular::Action>::New(0);
+        modular::SuggestionDisplay d;
 
-        d->headline = idea;
-        d->color = 0x00aaaa00;  // argb yellow
+        d.headline = idea;
+        d.color = 0x00aaaa00;  // argb yellow
 
-        p->display = std::move(d);
+        p.display = std::move(d);
 
         out_->Propose(std::move(p));
       }
@@ -83,9 +84,9 @@ class IdeasAgentApp : public agents::IdeasAgent, public ContextListener {
  private:
   std::unique_ptr<component::ApplicationContext> app_context_;
 
-  ContextReaderPtr reader_;
-  f1dl::Binding<ContextListener> binding_;
-  ProposalPublisherPtr out_;
+  modular::ContextReaderPtr reader_;
+  fidl::Binding<modular::ContextListener> binding_;
+  modular::ProposalPublisherPtr out_;
 };
 
 }  // namespace

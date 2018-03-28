@@ -7,9 +7,11 @@
 
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/story/fidl/story_provider.fidl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
 namespace modular {
@@ -17,12 +19,13 @@ namespace modular {
 class StoryProviderMock : public StoryProvider {
  public:
   // Allows notification of watchers.
-  void NotifyStoryChanged(modular::StoryInfoPtr story_info,
+  void NotifyStoryChanged(modular::StoryInfo story_info,
                           modular::StoryState story_state) {
-    watchers_.ForAllPtrs(
-        [&story_info, story_state](modular::StoryProviderWatcher* watcher) {
-          watcher->OnChange(story_info->Clone(), story_state);
-        });
+    for (const auto& watcher : watchers_.ptrs()) {
+      modular::StoryInfo story_info_clone;
+      fidl::Clone(story_info, &story_info_clone);
+      (*watcher)->OnChange(std::move(story_info_clone), story_state);
+    }
   }
 
   const modular::StoryControllerMock& story_controller() const {
@@ -32,74 +35,74 @@ class StoryProviderMock : public StoryProvider {
 
  private:
   // |StoryProvider|
-  void CreateStory(const f1dl::StringPtr& url,
-                   const CreateStoryCallback& callback) override {
+  void CreateStory(fidl::StringPtr url,
+                   CreateStoryCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const f1dl::StringPtr& url,
-      f1dl::VectorPtr<StoryInfoExtraEntryPtr> extra_info,
-      const f1dl::StringPtr& json,
-      const CreateStoryWithInfoCallback& callback) override {
+      fidl::StringPtr url,
+      fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
+      fidl::StringPtr json,
+      CreateStoryWithInfoCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }
 
   // |StoryProvider|
   void Watch(
-      f1dl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
+      fidl::InterfaceHandle<modular::StoryProviderWatcher> watcher) override {
     watchers_.AddInterfacePtr(watcher.Bind());
   }
 
   // |StoryProvider|
-  void DeleteStory(const f1dl::StringPtr& story_id,
-                   const DeleteStoryCallback& callback) override {
+  void DeleteStory(fidl::StringPtr story_id,
+                   DeleteStoryCallback callback) override {
     callback();
   }
 
   // |StoryProvider|
-  void GetStoryInfo(const f1dl::StringPtr& story_id,
-                    const GetStoryInfoCallback& callback) override {
+  void GetStoryInfo(fidl::StringPtr story_id,
+                    GetStoryInfoCallback callback) override {
     callback(nullptr);
   }
 
   // |StoryProvider|
   void GetController(
-      const f1dl::StringPtr& story_id,
-      f1dl::InterfaceRequest<modular::StoryController> story) override {
+      fidl::StringPtr story_id,
+      fidl::InterfaceRequest<modular::StoryController> story) override {
     binding_set_.AddBinding(&controller_mock_, std::move(story));
   }
 
   // |StoryProvider|
-  void PreviousStories(const PreviousStoriesCallback& callback) override {
-    callback(f1dl::VectorPtr<f1dl::StringPtr>::New(0));
+  void PreviousStories(PreviousStoriesCallback callback) override {
+    callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
   }
 
   // |StoryProvider|
-  void RunningStories(const RunningStoriesCallback& callback) override {
-    callback(f1dl::VectorPtr<f1dl::StringPtr>::New(0));
+  void RunningStories(RunningStoriesCallback callback) override {
+    callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
   }
 
   // |StoryProvider|
-  void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override {
+  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::Duplicate() not implemented.";
   }
 
   // |StoryProvider|
-  void GetLinkPeer(const f1dl::StringPtr& story_id,
-                   f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                   const f1dl::StringPtr& link_path,
-                   f1dl::InterfaceRequest<Link> request) override {
+  void GetLinkPeer(fidl::StringPtr story_id,
+                   fidl::VectorPtr<fidl::StringPtr> module_path,
+                   fidl::StringPtr link_path,
+                   fidl::InterfaceRequest<Link> request) override {
     FXL_LOG(FATAL) << "StoryProviderMock::GetLinkPeer() not implemented.";
   }
 
   std::string last_created_story_;
   modular::StoryControllerMock controller_mock_;
-  f1dl::BindingSet<modular::StoryController> binding_set_;
-  f1dl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
+  fidl::BindingSet<modular::StoryController> binding_set_;
+  fidl::InterfacePtrSet<modular::StoryProviderWatcher> watchers_;
 };
 
 }  // namespace modular

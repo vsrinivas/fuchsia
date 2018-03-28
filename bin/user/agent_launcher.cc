@@ -25,10 +25,10 @@ component::Services AgentLauncher::StartAgent(
   component::ApplicationLauncherPtr agent_launcher;
   agent_env->GetApplicationLauncher(agent_launcher.NewRequest());
 
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = url;
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = url;
   component::Services services;
-  launch_info->directory_request = services.NewRequest();
+  launch_info.directory_request = services.NewRequest();
   FXL_LOG(INFO) << "Starting Maxwell agent " << url;
   agent_launcher->CreateApplication(std::move(launch_info), NULL);
   return services;
