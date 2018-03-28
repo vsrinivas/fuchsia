@@ -99,6 +99,16 @@ class VectorPtr {
     swap(is_null_, other.is_null_);
   }
 
+  // Returns a copy of this VectorPtr.
+  //
+  // Unlike fidl::Clone, this function can never fail. However, this function
+  // works only if T is copiable.
+  VectorPtr Clone() const {
+    if (is_null_)
+      return VectorPtr();
+    return VectorPtr(vec_);
+  }
+
   // Whether this VectorPtr is null.
   //
   // The null state is separate from the empty state.
