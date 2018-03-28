@@ -199,7 +199,7 @@ void GenerateCosine(T* buffer,
 // Classic DSP texts by Oppenheim, Schaffer, Rabiner, or the Cooley-Tukey paper
 // itself, are serviceable references for these concepts.
 //
-// TODO: Consider using std::complex<double> instead of dual real/imag arrays.
+// TODO(mpuryear): Consider std::complex<double> instead of real/imag arrays.
 void FFT(double* reals, double* imags, uint32_t buf_size) {
   FXL_DCHECK(fbl::is_pow2(buf_size));
   const uint32_t buf_sz_2 = buf_size >> 1;
