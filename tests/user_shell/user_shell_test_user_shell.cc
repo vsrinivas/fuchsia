@@ -349,7 +349,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
                      max = stories->size()](modular::StoryInfoPtr story_info) {
             ++*count;
 
-            if (!story_info) {
+            if (story_info) {
               FXL_LOG(INFO) << "Previous story " << *count << " of " << max
                             << " " << story_id << " " << story_info->url;
             } else {
