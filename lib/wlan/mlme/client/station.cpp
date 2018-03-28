@@ -21,8 +21,8 @@ namespace wlan {
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-static constexpr zx_duration_t kAssocTimeoutTu = 20;
-static constexpr zx_duration_t kSignalReportTimeoutTu = 10;
+static constexpr zx_duration_t kAssocTimeoutTu = ZX_NSEC(20);
+static constexpr zx_duration_t kSignalReportTimeoutTu = ZX_NSEC(10);
 
 Station::Station(DeviceInterface* device, fbl::unique_ptr<Timer> timer)
     : device_(device), timer_(std::move(timer)) {

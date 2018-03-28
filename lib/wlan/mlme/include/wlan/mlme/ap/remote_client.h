@@ -157,7 +157,7 @@ class AuthenticatedState : public BaseState {
 
  private:
   // TODO(hahnr): Use WLAN_MIN_TU once defined.
-  static constexpr zx_duration_t kAuthenticationTimeoutTu = 1800000;  // 30min
+  static constexpr zx_duration_t kAuthenticationTimeoutTu = ZX_MIN(30);
 
   zx::time auth_timeout_;
 };
@@ -208,7 +208,7 @@ class AssociatedState : public BaseState {
 
    private:
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
-    static constexpr zx_duration_t kInactivityTimeoutTu = 300000;  // 5min
+    static constexpr zx_duration_t kInactivityTimeoutTu = ZX_MIN(5);
     zx_status_t SendNextBu();
     void UpdatePowerSaveMode(const FrameControl& fc);
 

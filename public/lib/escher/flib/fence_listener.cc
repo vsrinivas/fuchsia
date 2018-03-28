@@ -29,7 +29,7 @@ bool FenceListener::WaitReady(fxl::TimeDelta timeout) {
   else if (timeout == fxl::TimeDelta::Max())
     zx_deadline = zx::time::infinite();
   else
-    zx_deadline = zx::deadline_after(zx::duration(timeout.ToNanoseconds()));
+    zx_deadline = zx::deadline_after(zx::nsec(timeout.ToNanoseconds()));
 
   zx_signals_t pending = 0u;
   while (!ready_) {

@@ -317,7 +317,7 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
 
   // We use a 5 second timeout for each event.
   zx::duration evt_timeout = zx::sec(5);
-  timeout.set(zx::deadline_after(evt_timeout), zx::duration());
+  timeout.set(zx::deadline_after(evt_timeout), zx::nsec(0));
 
   while (!failed && events.size() > 0) {
     size_t remaining_evt_count = events.size();
@@ -328,7 +328,7 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
       // one for the next event.
       timeout.cancel();
       if (events.size() > 0u) {
-        timeout.set(zx::deadline_after(evt_timeout), zx::duration());
+        timeout.set(zx::deadline_after(evt_timeout), zx::nsec(0));
       }
       continue;
     }

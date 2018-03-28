@@ -62,7 +62,7 @@ zx::duration GetCurrentThreadTotalRuntime() {
   zx_status_t status =
       zx_object_get_info(zx_thread_self(), ZX_INFO_THREAD_STATS, &info,
                          sizeof(info), nullptr, nullptr);
-  return status == ZX_OK ? zx::duration(info.total_runtime) : zx::duration();
+  return status == ZX_OK ? zx::nsec(info.total_runtime) : zx::nsec(0);
 }
 
 size_t GetCurrentProcessMemoryMappedBytes() {

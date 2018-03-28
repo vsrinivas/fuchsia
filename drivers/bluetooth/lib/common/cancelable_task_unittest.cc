@@ -18,7 +18,7 @@ TEST(CancelableTaskTest, IsPosted) {
   CancelableTask task;
   EXPECT_FALSE(task.posted());
 
-  EXPECT_TRUE(task.Post([] {}, zx::duration(100)));
+  EXPECT_TRUE(task.Post([] {}, zx::nsec(100)));
   EXPECT_TRUE(task.posted());
 
   task.Cancel();

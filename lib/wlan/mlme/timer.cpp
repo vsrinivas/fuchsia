@@ -26,7 +26,7 @@ SystemTimer::SystemTimer(uint64_t id, zx::timer timer) : Timer(id), timer_(std::
 
 zx_status_t SystemTimer::SetTimerImpl(zx::time deadline) {
     if (!timer_) { return ZX_ERR_BAD_STATE; }
-    return timer_.set(deadline, zx::duration());
+    return timer_.set(deadline, zx::nsec(0));
 }
 
 zx_status_t SystemTimer::CancelTimerImpl() {
