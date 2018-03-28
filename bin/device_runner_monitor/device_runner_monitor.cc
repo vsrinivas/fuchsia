@@ -4,8 +4,8 @@
 
 #include <memory>
 
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/modular.h>
+#include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
@@ -19,19 +19,19 @@ class DeviceRunnerMonitorApp : DeviceRunnerMonitor {
       : app_context_(
             component::ApplicationContext::CreateFromStartupInfoNotChecked()) {
     app_context_->outgoing_services()->AddService<DeviceRunnerMonitor>(
-        [this](f1dl::InterfaceRequest<DeviceRunnerMonitor> request) {
+        [this](fidl::InterfaceRequest<DeviceRunnerMonitor> request) {
           bindings_.AddBinding(this, std::move(request));
         });
   }
 
  private:
   // |DeviceRunnerMonitor|
-  void GetConnectionCount(const GetConnectionCountCallback& callback) override {
+  void GetConnectionCount(GetConnectionCountCallback callback) override {
     callback(bindings_.size());
   }
 
   std::unique_ptr<component::ApplicationContext> app_context_;
-  f1dl::BindingSet<DeviceRunnerMonitor> bindings_;
+  fidl::BindingSet<DeviceRunnerMonitor> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceRunnerMonitorApp);
 };
