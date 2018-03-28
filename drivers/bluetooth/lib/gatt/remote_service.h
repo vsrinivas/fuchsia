@@ -74,6 +74,15 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // guarantee discovery.
   bool IsDiscovered() const;
 
+  // Sends a write request to the characteristic with the given identifier.
+  // This operation fails if characteristics have not been discovered.
+  //
+  // TODO(armansito): Add a ByteBuffer version.
+  void WriteCharacteristic(IdType id,
+                           std::vector<uint8_t> value,
+                           att::StatusCallback callback,
+                           async_t* dispatcher = nullptr);
+
  private:
   friend class fbl::RefPtr<RemoteService>;
   friend class internal::RemoteServiceManager;
@@ -113,9 +122,6 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // this method. This guarantees that this object's will live for the duration
   // of |task|.
   void RunGattTask(fbl::Closure task) __TA_EXCLUDES(mtx_);
-
-  // Executes |task|. Posts it on |dispatcher| if dispatcher is not null.
-  void RunOrPost(fbl::Function<void()> task, async_t* dispatcher);
 
   // Used to complete a characteristic discovery request.
   void ReportCharacteristics(att::Status status,

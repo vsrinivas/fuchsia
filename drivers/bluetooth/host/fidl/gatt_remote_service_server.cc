@@ -61,4 +61,18 @@ void GattRemoteServiceServer::DiscoverCharacteristics(
   service_->DiscoverCharacteristics(std::move(res_cb));
 }
 
+void GattRemoteServiceServer::WriteCharacteristic(
+    uint64_t id,
+    uint16_t offset,
+    ::fidl::VectorPtr<uint8_t> value,
+    WriteCharacteristicCallback callback) {
+  auto res_cb = [callback](btlib::att::Status status) {
+    callback(fidl_helpers::StatusToFidl(status, ""));
+  };
+
+  // TODO(armansito): Use |offset| when gatt::RemoteService supports the long
+  // write procedure.
+  service_->WriteCharacteristic(id, value.take(), std::move(res_cb));
+}
+
 }  // namespace bthost

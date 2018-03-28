@@ -8,10 +8,34 @@
 
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
-using btlib::common::HostError;
-
 namespace btlib {
 namespace gatt {
+
+using att::Status;
+using att::StatusCallback;
+using common::HostError;
+
+namespace {
+
+// Executes |task|. Posts it on |dispatcher| if dispatcher is not null.
+void RunOrPost(fbl::Function<void()> task, async_t* dispatcher) {
+  FXL_DCHECK(task);
+
+  if (!dispatcher) {
+    task();
+    return;
+  }
+
+  async::PostTask(dispatcher, std::move(task));
+}
+
+void ReportStatus(Status status,
+                  StatusCallback callback,
+                  async_t* dispatcher) {
+  RunOrPost([status, cb = std::move(callback)] { cb(status); }, dispatcher);
+}
+
+}  // namespace
 
 RemoteService::RemoteService(const ServiceData& service_data,
                              fxl::WeakPtr<Client> client,
@@ -58,14 +82,14 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
                                             async_t* dispatcher) {
   RunGattTask([this, cb = std::move(callback), dispatcher]() mutable {
     if (shut_down_) {
-      ReportCharacteristics(att::Status(HostError::kFailed), std::move(cb),
+      ReportCharacteristics(Status(HostError::kFailed), std::move(cb),
                             dispatcher);
       return;
     }
 
     // Characteristics already discovered. Return success.
     if (characteristics_ready_) {
-      ReportCharacteristics(att::Status(), std::move(cb), dispatcher);
+      ReportCharacteristics(Status(), std::move(cb), dispatcher);
       return;
     }
 
@@ -84,9 +108,9 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
       }
     };
 
-    auto res_cb = [self](att::Status status) mutable {
+    auto res_cb = [self](Status status) mutable {
       if (self->shut_down_) {
-        status = att::Status(HostError::kFailed);
+        status = Status(HostError::kFailed);
       }
 
       if (!status) {
@@ -120,23 +144,43 @@ bool RemoteService::IsDiscovered() const {
   return characteristics_ready_;
 }
 
-void RemoteService::RunOrPost(fbl::Function<void()> task, async_t* dispatcher) {
-  FXL_DCHECK(task);
+void RemoteService::WriteCharacteristic(IdType id,
+                                        std::vector<uint8_t> value,
+                                        StatusCallback cb,
+                                        async_t* dispatcher) {
+  RunGattTask([this, id, value = std::move(value), cb = std::move(cb),
+               dispatcher]() mutable {
+    RemoteCharacteristic* chrc;
+    Status status = Status(GetCharacteristic(id, &chrc));
+    if (!status) {
+      ReportStatus(status, std::move(cb), dispatcher);
+      return;
+    }
 
-  if (!dispatcher) {
-    task();
-    return;
-  }
+    // TODO(armansito): Use the "long write" procedure when supported.
+    if (!(chrc->info().properties & Property::kWrite)) {
+      FXL_VLOG(1) << "gatt: Characteristic does not support \"write\"";
+      ReportStatus(Status(HostError::kNotSupported), std::move(cb), dispatcher);
+      return;
+    }
 
-  async::PostTask(dispatcher, std::move(task));
+    FXL_DCHECK(chrc);
+
+    auto res_cb = [cb = std::move(cb), dispatcher](Status status) mutable {
+      ReportStatus(status, std::move(cb), dispatcher);
+    };
+
+    client_->WriteRequest(chrc->info().value_handle,
+                          common::BufferView(value.data(), value.size()),
+                          std::move(res_cb));
+  });
 }
 
 bool RemoteService::IsOnGattThread() const {
   return async_get_default() == gatt_dispatcher_;
 }
 
-HostError RemoteService::GetCharacteristic(IdType id,
-                                           RemoteCharacteristic** out_char) {
+HostError RemoteService::GetCharacteristic(IdType id, RemoteCharacteristic** out_char) {
   FXL_DCHECK(IsOnGattThread());
   FXL_DCHECK(out_char);
 
@@ -160,7 +204,7 @@ void RemoteService::RunGattTask(fbl::Closure task) {
       gatt_dispatcher_);
 }
 
-void RemoteService::ReportCharacteristics(att::Status status,
+void RemoteService::ReportCharacteristics(Status status,
                                           CharacteristicCallback callback,
                                           async_t* dispatcher) {
   FXL_DCHECK(IsOnGattThread());

@@ -212,7 +212,19 @@ interface RemoteService {
   // this service.
   2: DiscoverCharacteristics() -> (bluetooth.Status @status, vector<Characteristic> characteristics);
 
-  // TODO(armansito): Define service API
+  // Writes |value| to the characteristic with |id|. The ATT protocol method is
+  // selected based on the input parameters and properties of the
+  // characteristic:
+  //
+  //   a. If |value| fits within a single ATT request (based on the current MTU)
+  //      and |offset| is 0, the "Write Characteristic Value" procedure will be
+  //      used.
+  //   b. If |value| is value cannot fit within a single ATT request or a
+  //      non-zero |offset| is requested, the "Write Long Characteristic Value"
+  //      procedure will be used.
+  //   c. If the characteristic does not claim to support the selected
+  //      procedure, the request will fail with ErrorCode.NotSupported.
+  3: WriteCharacteristic(uint64 id, uint16 offset, vector<uint8> value) -> (bluetooth.Status @status);
 };
 
 interface Client {

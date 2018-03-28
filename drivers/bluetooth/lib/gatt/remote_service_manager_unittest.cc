@@ -73,6 +73,20 @@ class GATT_RemoteServiceManagerTest : public ::btlib::testing::TestBase {
     return services[0];
   }
 
+  // Discover the characteristics of |service| based on the given |fake_data|.
+  void SetupCharacteristics(fbl::RefPtr<RemoteService> service,
+                            std::vector<CharacteristicData> fake_data) {
+    FXL_DCHECK(service);
+
+    fake_client()->set_characteristics(std::move(fake_data));
+    fake_client()->set_characteristic_discovery_status(att::Status());
+
+    RemoteCharacteristicList characteristics;
+    service->DiscoverCharacteristics([](auto, const auto&) {});
+
+    RunUntilIdle();
+  }
+
   RemoteServiceManager* mgr() const { return mgr_.get(); }
   testing::FakeClient* fake_client() const { return fake_client_; }
 
@@ -350,6 +364,94 @@ TEST_F(GATT_RemoteServiceManagerTest, DiscoverCharacteristicsError) {
   EXPECT_FALSE(status2);
   EXPECT_EQ(HostError::kNotSupported, status1.error());
   EXPECT_EQ(HostError::kNotSupported, status2.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteCharAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  service->WriteCharacteristic(0, std::vector<uint8_t>(),
+                               [&](auto cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kFailed, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteCharWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->WriteCharacteristic(0, std::vector<uint8_t>(),
+                               [&](auto cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteCharNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->WriteCharacteristic(0, std::vector<uint8_t>(),
+                               [&](auto cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteCharNotSupported) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // No "write" property set.
+  CharacteristicData chr(0, 2, 3, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  att::Status status;
+  service->WriteCharacteristic(0, std::vector<uint8_t>(),
+                               [&](auto cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, WriteCharSendsWriteRequest) {
+  constexpr att::Handle kValueHandle = 0x00fe;
+  const std::vector<uint8_t> kValue{{'t', 'e', 's', 't'}};
+  constexpr att::Status kStatus(att::ErrorCode::kWriteNotPermitted);
+
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kWrite, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  fake_client()->set_write_request_callback(
+      [&](att::Handle handle, const auto& value, auto status_callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        EXPECT_TRUE(std::equal(kValue.begin(), kValue.end(), value.begin(),
+                               value.end()));
+        status_callback(kStatus);
+      });
+
+  att::Status status;
+  service->WriteCharacteristic(0, kValue,
+                               [&](auto cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(kStatus, status);
 }
 
 }  // namespace

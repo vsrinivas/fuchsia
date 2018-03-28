@@ -31,6 +31,10 @@ class GattRemoteServiceServer
                        delegate) override {}
   void DiscoverCharacteristics(
       DiscoverCharacteristicsCallback callback) override;
+  void WriteCharacteristic(uint64_t characteristic_id,
+                           uint16_t offset,
+                           ::fidl::VectorPtr<uint8_t> value,
+                           WriteCharacteristicCallback callback) override;
 
   // The remote GATT service that backs this service.
   fbl::RefPtr<btlib::gatt::RemoteService> service_;

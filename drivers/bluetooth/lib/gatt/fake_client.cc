@@ -56,7 +56,9 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
 void FakeClient::WriteRequest(att::Handle handle,
                               const common::ByteBuffer& value,
                               StatusCallback callback) {
-  // TODO(armansito): Do something.
+  if (write_request_callback_) {
+    write_request_callback_(handle, value, std::move(callback));
+  }
 }
 
 }  // namespace testing

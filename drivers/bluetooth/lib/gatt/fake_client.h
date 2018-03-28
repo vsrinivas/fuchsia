@@ -46,6 +46,13 @@ class FakeClient final : public Client {
 
   size_t chrc_discovery_count() const { return chrc_discovery_count_; }
 
+  // Sets a callback which will run when WriteRequest gets called.
+  using WriteRequestCallback = std::function<
+      void(att::Handle, const common::ByteBuffer&, att::StatusCallback)>;
+  void set_write_request_callback(WriteRequestCallback callback) {
+    write_request_callback_ = std::move(callback);
+  }
+
  private:
   // Client overrides:
   fxl::WeakPtr<Client> AsWeakPtr() override;
@@ -80,6 +87,9 @@ class FakeClient final : public Client {
   att::Handle last_chrc_discovery_start_handle_ = 0;
   att::Handle last_chrc_discovery_end_handle_ = 0;
   size_t chrc_discovery_count_ = 0;
+
+  // Called by WriteRequest().
+  WriteRequestCallback write_request_callback_;
 
   fxl::WeakPtrFactory<FakeClient> weak_ptr_factory_;
 
