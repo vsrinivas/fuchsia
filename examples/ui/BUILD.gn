@@ -8,6 +8,7 @@ group("ui") {
   public_deps = [
     "hello_pose_buffer",
     "hello_scenic",
+    "hello_spaces",
     "shadertoy/client",
     "shadertoy/service",
     "shapes",
@@ -27,6 +28,20 @@ package("hello_scenic") {
   binaries = [
     {
       name = "hello_scenic"
+    },
+  ]
+}
+
+package("hello_spaces") {
+  system_image = true
+
+  deps = [
+    "hello_spaces",
+  ]
+
+  binaries = [
+    {
+      name = "hello_spaces"
     },
   ]
 }
