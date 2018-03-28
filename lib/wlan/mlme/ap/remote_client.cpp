@@ -115,37 +115,56 @@ zx_status_t AuthenticatedState::HandleDeauthentication(
     return ZX_ERR_STOP;
 }
 
-// TODO(hahnr): Move into Associating state.
 zx_status_t AuthenticatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
-    debugfn();
-    ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
-    debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
 
     // Received request which we've been waiting for. Timer can get canceled.
     client_->CancelTimer();
     auth_timeout_ = zx::time();
 
+    // Move into Associating state state which responds to incoming Association requests.
+    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Associating");
+    MoveToState<AssociatingState>(frame);
+    return ZX_ERR_STOP;
+}
+
+// AssociatingState implementation.
+
+AssociatingState::AssociatingState(RemoteClient* client,
+                                   const ImmutableMgmtFrame<AssociationRequest>& frame)
+    : BaseState(client), status_code_(status_code::kRefusedReasonUnspecified), aid_(0) {
+    debugfn();
+    ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
+    debugbss("[client] [%s] received Assocation Request\n", client_->addr().ToString().c_str());
+
     aid_t aid;
     auto status = client_->bss()->AssignAid(client_->addr(), &aid);
     if (status == ZX_ERR_NO_RESOURCES) {
         debugbss("[client] [%s] no more AIDs available \n", client_->addr().ToString().c_str());
-        client_->SendAssociationResponse(0, status_code::kDeniedNoMoreStas);
-        // TODO(hahnr): Unclear whether we should deauth the client or not. Check existing AP
-        // implementations for their behavior. For now, let the client stay authenticated.
-        return ZX_OK;
+        status_code_ = status_code::kDeniedNoMoreStas;
+        return;
     } else if (status != ZX_OK) {
         errorf("[client] [%s] couldn't assign AID to client: %d\n",
                client_->addr().ToString().c_str(), status);
-        return ZX_OK;
+        return;
     }
 
+    status_code_ = status_code::kSuccess;
+    aid_ = aid;
+}
+
+void AssociatingState::OnEnter() {
     // TODO(hahnr): Send MLME-Authenticate.indication and wait for response.
     // For now simply send association response.
-    client_->SendAssociationResponse(aid, status_code::kSuccess);
-    MoveToState<AssociatedState>(aid);
-    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Associated");
-    return ZX_ERR_STOP;
+    bool assoc_success = (status_code_ == status_code::kSuccess);
+    auto status = client_->SendAssociationResponse(aid_, status_code_);
+    if (assoc_success && status == ZX_OK) {
+        LOG_STATE_TRANSITION(client_->addr(), "AssociatingState", "Associated");
+        MoveToState<AssociatedState>(aid_);
+    } else {
+        LOG_STATE_TRANSITION(client_->addr(), "AssociatingState", "Deauthenticated");
+        MoveToState<DeauthenticatedState>();
+    }
 }
 
 // AssociatedState implementation.
@@ -172,11 +191,13 @@ zx_status_t AssociatedState::HandleAssociationRequest(
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
     debugbss("[client] [%s] received Assocation Request while being associated\n",
              client_->addr().ToString().c_str());
+    // Client believes it is not yet associated. Thus, there is no need to send an explicit
+    // Deauthentication.
+    req_deauth_ = false;
 
-    // Even though the client is already associated, Association requests should still be answered.
-    // This can happen when the client for some reasons did not receive the previous
-    // AssociationResponse the BSS sent and keeps sending Association requests.
-    return client_->SendAssociationResponse(aid_, status_code::kSuccess);
+    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Associating");
+    MoveToState<AssociatingState>(frame);
+    return ZX_ERR_STOP;
 }
 
 void AssociatedState::OnEnter() {

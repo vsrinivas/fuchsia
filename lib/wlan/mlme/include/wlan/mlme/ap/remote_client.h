@@ -25,6 +25,7 @@ class RemoteClient : public RemoteClientInterface {
         kDeauthenticated,
         kAuthenticating,
         kAuthenticated,
+        kAssociating,
         kAssociated,
     };
 
@@ -135,30 +136,45 @@ class AuthenticatingState : public BaseState {
 };
 
 class AuthenticatedState : public BaseState {
-   public:
-    AuthenticatedState(RemoteClient* client);
+ public:
+  AuthenticatedState(RemoteClient* client);
 
-    void OnEnter() override;
-    void OnExit() override;
+  void OnEnter() override;
+  void OnExit() override;
 
-    void HandleTimeout() override;
+  void HandleTimeout() override;
 
-    zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
-                                     const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
-                                         const wlan_rx_info_t& rxinfo) override;
-    zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+  zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
+                                   const wlan_rx_info_t& rxinfo) override;
+  zx_status_t HandleAssociationRequest(const ImmutableMgmtFrame<AssociationRequest>& frame,
                                        const wlan_rx_info_t& rxinfo) override;
+  zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
+                                     const wlan_rx_info_t& rxinfo) override;
 
-    inline RemoteClient::StateId id() const override {
-        return RemoteClient::StateId::kAuthenticated;
-    }
+  inline RemoteClient::StateId id() const override {
+      return RemoteClient::StateId::kAuthenticated;
+  }
 
-   private:
-    // TODO(hahnr): Use WLAN_MIN_TU once defined.
-    static constexpr zx_duration_t kAuthenticationTimeoutTu = 1800000;  // 30min
+ private:
+  // TODO(hahnr): Use WLAN_MIN_TU once defined.
+  static constexpr zx_duration_t kAuthenticationTimeoutTu = 1800000;  // 30min
 
-    zx::time auth_timeout_;
+  zx::time auth_timeout_;
+};
+
+class AssociatingState : public BaseState {
+ public:
+  AssociatingState(RemoteClient* client, const ImmutableMgmtFrame<AssociationRequest>& frame);
+
+  void OnEnter() override;
+
+  inline RemoteClient::StateId id() const override {
+      return RemoteClient::StateId::kAssociating;
+  }
+
+ private:
+  status_code::StatusCode status_code_;
+  uint16_t aid_;
 };
 
 class AssociatedState : public BaseState {
