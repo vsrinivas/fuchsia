@@ -248,8 +248,14 @@ void PinnedMemoryTokenDispatcher::on_zero_handles() {
     zx_status_t status = UnmapFromIommuLocked();
     ASSERT(status == ZX_OK);
 
-    // TODO(teisenbe): Add to quarantine list here if not marked as
-    // explcitly_unpinned
+    if (explicitly_unpinned_) {
+        // The cleanup will happen when the reference that on_zero_handles()
+        // was called on goes away.
+    } else {
+        // Add to the quarantine list to prevent the underlying VMO from being
+        // unpinned.
+        bti_->Quarantine(fbl::WrapRefPtr(this));
+    }
 }
 
 PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {

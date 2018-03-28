@@ -67,6 +67,16 @@ void BusTransactionInitiatorDispatcher::on_zero_handles() {
     // Prevent new pinning from happening.  The Dispatcher will stick around
     // until all of the PMTs are closed.
     zero_handles_ = true;
+
+    // Do not clear out the quarantine list.  PMTs hold a reference to the BTI
+    // and the BTI holds a reference to each quarantined PMT.  We intentionally
+    // leak the BTI, all quarantined PMTs, and their underlying VMOs.  We could
+    // get away with freeing the BTI and the PMTs, but for safety we must leak
+    // at least the pinned parts of the VMOs, since we have no assurance that
+    // hardware is not still reading/writing to it.
+    if (!quarantine_.is_empty()) {
+        PrintQuarantineWarningLocked();
+    }
 }
 
 void BusTransactionInitiatorDispatcher::AddPmoLocked(PinnedMemoryTokenDispatcher* pmt) {
@@ -78,4 +88,28 @@ void BusTransactionInitiatorDispatcher::RemovePmo(PinnedMemoryTokenDispatcher* p
     fbl::AutoLock guard(&lock_);
     DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
     pinned_memory_.erase(*pmt);
+}
+
+void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) {
+    fbl::AutoLock guard(&lock_);
+
+    DEBUG_ASSERT(pmt->dll_pmt_.InContainer());
+    quarantine_.push_back(fbl::move(pmt));
+
+    if (zero_handles_) {
+        // If we quarantine when at zero handles, this PMT will be leaked.  See
+        // the comment in on_zero_handles().
+        PrintQuarantineWarningLocked();
+    }
+}
+
+void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
+    uint64_t leaked_pages = 0;
+    size_t num_entries = 0;
+    for (const auto& pmt : quarantine_) {
+        leaked_pages += pmt.size() / PAGE_SIZE;
+        num_entries++;
+    }
+    printf("Bus Transaction Initiator 0x%lx has leaked %" PRIu64 " pages in %zu VMOs\n",
+           bti_id_, leaked_pages, num_entries);
 }
