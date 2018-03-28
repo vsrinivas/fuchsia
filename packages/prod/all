@@ -6,7 +6,6 @@
         "garnet/packages/prod/auth",
         "garnet/packages/prod/bluetooth",
         "garnet/packages/prod/boringssl",
-        "garnet/packages/prod/boringssl_libcrypto",
         "garnet/packages/prod/boringssl_libssl",
         "garnet/packages/prod/broadcom",
         "garnet/packages/prod/build_info",
