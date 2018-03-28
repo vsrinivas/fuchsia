@@ -93,6 +93,8 @@ static inline time get(uint32_t clock_id) {
 
 } // namespace clock
 
+constexpr inline duration nsec(uint64_t n) { return duration(ZX_NSEC(n)); }
+
 constexpr inline duration usec(uint64_t n) { return duration(ZX_USEC(n)); }
 
 constexpr inline duration msec(uint64_t n) { return duration(ZX_MSEC(n)); }

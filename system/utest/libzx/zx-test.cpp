@@ -245,6 +245,7 @@ static bool time_test() {
     ASSERT_EQ(zx::duration().get(), 0);
     ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
 
+    ASSERT_EQ(zx::nsec(10).get(), ZX_NSEC(10));
     ASSERT_EQ(zx::usec(10).get(), ZX_USEC(10));
     ASSERT_EQ(zx::msec(10).get(), ZX_MSEC(10));
     ASSERT_EQ(zx::sec(10).get(), ZX_SEC(10));
