@@ -6,17 +6,14 @@
 #include <sstream>
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/context/cpp/formatting.h"
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"
@@ -29,23 +26,23 @@ constexpr char kModuleUrl[] =
     "file:///system/test/modular_tests/link_context_entities_test_module";
 
 // A context reader watcher implementation.
-class ContextListenerImpl : maxwell::ContextListener {
+class ContextListenerImpl : modular::ContextListener {
  public:
   ContextListenerImpl() : binding_(this) {
-    handler_ = [](const maxwell::ContextValuePtr&) {};
+    handler_ = [](const modular::ContextValue&) {};
   }
 
   ~ContextListenerImpl() override = default;
 
   // Registers itself a watcher on the given story provider. Only one story
   // provider can be watched at a time.
-  void Listen(maxwell::ContextReader* const context_reader) {
+  void Listen(modular::ContextReader* const context_reader) {
     // Subscribe to all entity values.
-    auto selector = maxwell::ContextSelector::New();
-    selector->type = maxwell::ContextValueType::ENTITY;
+    modular::ContextSelector selector;
+    selector.type = modular::ContextValueType::ENTITY;
 
-    auto query = maxwell::ContextQuery::New();
-    AddToContextQuery(query.get(), "all", std::move(selector));
+    modular::ContextQuery query;
+    AddToContextQuery(&query, "all", std::move(selector));
 
     context_reader->Subscribe(std::move(query), binding_.NewBinding());
     binding_.set_error_handler([] {
@@ -53,7 +50,7 @@ class ContextListenerImpl : maxwell::ContextListener {
     });
   }
 
-  using Handler = std::function<void(const maxwell::ContextValuePtr&)>;
+  using Handler = std::function<void(const modular::ContextValue&)>;
 
   void Handle(const Handler& handler) { handler_ = handler; }
 
@@ -62,16 +59,16 @@ class ContextListenerImpl : maxwell::ContextListener {
 
  private:
   // |ContextListener|
-  void OnContextUpdate(maxwell::ContextUpdatePtr update) override {
+  void OnContextUpdate(modular::ContextUpdate update) override {
     FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate()";
-    const auto& values = TakeContextValue(update.get(), "all");
+    const auto& values = TakeContextValue(&update, "all");
     for (const auto& value : *values.second) {
       FXL_LOG(INFO) << "ContextListenerImpl::OnUpdate() " << value;
       handler_(value);
     }
   }
 
-  f1dl::Binding<maxwell::ContextListener> binding_;
+  fidl::Binding<modular::ContextListener> binding_;
   Handler handler_;
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
@@ -93,7 +90,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -101,7 +98,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    maxwell::IntelligenceServicesPtr intelligence_services;
+    modular::IntelligenceServicesPtr intelligence_services;
     user_shell_context_->GetIntelligenceServices(
         intelligence_services.NewRequest());
     intelligence_services->GetContextReader(context_reader_.NewRequest());
@@ -115,12 +112,11 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint create_story_{"CreateStory()"};
 
   void CreateStory() {
-    story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::StringPtr& story_id) {
-                                   story_id_ = story_id;
-                                   create_story_.Pass();
-                                   StartStory();
-                                 });
+    story_provider_->CreateStory(kModuleUrl, [this](fidl::StringPtr story_id) {
+      story_id_ = story_id;
+      create_story_.Pass();
+      StartStory();
+    });
   }
 
   TestPoint start_story_enter_{"StartStory() Enter"};
@@ -129,7 +125,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   void StartStory() {
     start_story_enter_.Pass();
 
-    context_listener_.Handle([this](const maxwell::ContextValuePtr& value) {
+    context_listener_.Handle([this](const modular::ContextValue& value) {
       ProcessContextValue(value);
     });
 
@@ -147,24 +143,23 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_context_topic_2_{"GetContextTopic() value=2"};
   int get_context_topic_2_called_{};
 
-  void ProcessContextValue(const maxwell::ContextValuePtr& value) {
+  void ProcessContextValue(const modular::ContextValue& value) {
     // The context value has metadata that is derived from the story id in
     // which it was published.
-    if (!value->meta || !value->meta->story || !value->meta->link ||
-        !value->meta->entity) {
+    if (!value.meta.story || !value.meta.link || !value.meta.entity) {
       FXL_LOG(ERROR) << "ContextValue missing metadata: " << value;
       return;
     }
 
-    if (value->meta->story->id != story_id_ ||
-        value->meta->entity->type.is_null() ||
-        value->meta->entity->type->size() != 1) {
+    if (value.meta.story->id != story_id_ ||
+        value.meta.entity->type.is_null() ||
+        value.meta.entity->type->size() != 1) {
       FXL_LOG(ERROR) << "ContextValue metadata is incorrect: " << value;
       return;
     }
 
     modular::JsonDoc doc;
-    doc.Parse(value->content);
+    doc.Parse(value.content);
 
     if (doc.HasParseError()) {
       FXL_LOG(ERROR) << "JSON Parse Error";
@@ -185,7 +180,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     }
 
     const std::string value_property{doc["value"].GetString()};
-    const std::string type{value->meta->entity->type->at(0)};
+    const std::string type{value.meta.entity->type->at(0)};
     if (value_property != "value1" && value_property != "value2") {
       FXL_LOG(ERROR) << "JSON 'value' property (set by module) wrong: "
                      << value_property;
@@ -194,12 +189,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     }
 
     if (value_property == "value1" && type == "type1" &&
-        value->meta->link->name == "link1") {
+        value.meta.link->name == "link1") {
       if (++get_context_topic_1_called_ == 1) {
         get_context_topic_1_.Pass();
       }
     } else if (value_property == "value2" && type == "type2" &&
-               value->meta->link->name == "link2") {
+               value.meta.link->name == "link2") {
       if (++get_context_topic_2_called_ == 1) {
         get_context_topic_2_.Pass();
       }
@@ -207,7 +202,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
     if (get_context_topic_1_called_ > 0 && get_context_topic_2_called_ > 0) {
       context_listener_.Reset();
-      context_listener_.Handle([this](const maxwell::ContextValuePtr&) {});
+      context_listener_.Handle([this](const modular::ContextValue&) {});
       Logout();
     }
   }
@@ -217,10 +212,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::UserShellContextPtr user_shell_context_;
   modular::StoryProviderPtr story_provider_;
 
-  f1dl::StringPtr story_id_;
+  fidl::StringPtr story_id_;
   modular::StoryControllerPtr story_controller_;
 
-  maxwell::ContextReaderPtr context_reader_;
+  modular::ContextReaderPtr context_reader_;
   ContextListenerImpl context_listener_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);
