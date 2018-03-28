@@ -20,7 +20,7 @@ bool VmoFromFd(fxl::UniqueFD fd, SizedVmo* handle_ptr) {
   if (fstat(fd.get(), &stat_struct) == -1)
     return false;
   zx_handle_t result = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_get_vmo(fd.get(), &result);
+  zx_status_t status = fdio_get_vmo_copy(fd.get(), &result);
   if (status != ZX_OK)
     return false;
   *handle_ptr = SizedVmo(zx::vmo(result), stat_struct.st_size);
