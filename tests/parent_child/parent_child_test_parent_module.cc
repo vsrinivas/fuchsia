@@ -27,8 +27,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -52,13 +52,13 @@ class ParentApp {
 
  private:
   void StartChildModuleTwice() {
-    auto daisy = modular::Daisy::New();
-    daisy->url = kChildModuleUrl;
-    auto noun_entry = modular::NounEntry::New();
-    noun_entry->name = "link";
-    noun_entry->noun = modular::Noun::New();
-    noun_entry->noun->set_link_name("module1link");
-    daisy->nouns.push_back(std::move(noun_entry));
+    modular::Daisy daisy;
+    daisy.url = kChildModuleUrl;
+    modular::NounEntry noun_entry;
+    noun_entry.name = "link";
+    noun_entry.noun = modular::Noun();
+    noun_entry.noun.set_link_name("module1link");
+    daisy.nouns.push_back(std::move(noun_entry));
     module_host_->module_context()->StartModule(
         kChildModuleName, std::move(daisy), nullptr, child_module_.NewRequest(),
         nullptr, [](const modular::StartModuleStatus) {});
@@ -67,16 +67,16 @@ class ParentApp {
     // link mapping. This stops the previous module instance and starts a new
     // one.
     modular::testing::GetStore()->Get(
-        "child_module_init", [this](const f1dl::StringPtr&) {
+        "child_module_init", [this](const fidl::StringPtr&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-          auto daisy = modular::Daisy::New();
-          daisy->url = kChildModuleUrl;
-          auto noun_entry = modular::NounEntry::New();
-          noun_entry->name = "link";
-          noun_entry->noun = modular::Noun::New();
-          noun_entry->noun->set_link_name("module2link");
-          daisy->nouns.push_back(std::move(noun_entry));
+          modular::Daisy daisy;
+          daisy.url = kChildModuleUrl;
+          modular::NounEntry noun_entry;
+          noun_entry.name = "link";
+          noun_entry.noun = modular::Noun();
+          noun_entry.noun.set_link_name("module2link");
+          daisy.nouns.push_back(std::move(noun_entry));
           module_host_->module_context()->StartModule(
               kChildModuleName, std::move(daisy), nullptr,
               child_module2_.NewRequest(), nullptr,
@@ -92,7 +92,7 @@ class ParentApp {
     // Confirm that the first module instance stopped, and then stop the second
     // module instance.
     modular::testing::GetStore()->Get(
-        "child_module_stop", [this](const f1dl::StringPtr&) {
+        "child_module_stop", [this](const fidl::StringPtr&) {
           child_module2_->Stop([this] { OnChildModule2Stopped(); });
         });
   }
