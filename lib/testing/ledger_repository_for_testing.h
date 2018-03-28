@@ -7,13 +7,13 @@
 
 #include <string>
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {
@@ -35,8 +35,8 @@ class LedgerRepositoryForTesting {
   std::unique_ptr<component::ApplicationContext> application_context_;
   files::ScopedTempDir tmp_dir_;
   std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
-  ledger::LedgerRepositoryFactoryPtr ledger_repo_factory_;
-  ledger::LedgerRepositoryPtr ledger_repo_;
+  ledger_internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
+  ledger_internal::LedgerRepositoryPtr ledger_repo_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryForTesting);
 };

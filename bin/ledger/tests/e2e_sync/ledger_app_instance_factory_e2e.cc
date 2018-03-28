@@ -6,6 +6,7 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
+#include <fuchsia/cpp/cloud_provider_firebase.h>
 #include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
@@ -15,7 +16,6 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/lib/convert/convert.h"
@@ -30,7 +30,7 @@ class LedgerAppInstanceImpl final
  public:
   LedgerAppInstanceImpl(
       component::ApplicationControllerPtr controller,
-      ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
+      ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
       CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
       std::string server_id);
 
@@ -44,11 +44,12 @@ class LedgerAppInstanceImpl final
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     component::ApplicationControllerPtr controller,
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory,
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
     CloudProviderFirebaseFactory* cloud_provider_firebase_factory,
     std::string server_id)
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
-          convert::ToArray(kLedgerName), std::move(ledger_repository_factory)),
+          convert::ToArray(kLedgerName),
+          std::move(ledger_repository_factory)),
       controller_(std::move(controller)),
       cloud_provider_firebase_factory_(cloud_provider_firebase_factory),
       server_id_(std::move(server_id)) {}
@@ -93,7 +94,7 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   component::ApplicationControllerPtr controller;
-  ledger::LedgerRepositoryFactoryPtr repository_factory;
+  ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   component::Services child_services;
   auto launch_info = component::ApplicationLaunchInfo::New();
   launch_info->url = "ledger";

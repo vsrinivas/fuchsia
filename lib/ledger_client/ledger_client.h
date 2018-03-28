@@ -9,13 +9,13 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/ledger_client/types.h"
 
 namespace modular {

@@ -4,9 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/device_set/testing/test_cloud_device_set.h"
@@ -53,7 +53,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
   cloud_provider::DeviceSetPtr device_set_;
   DeviceSetImpl device_set_impl_;
 
-  f1dl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
+  fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
   int on_cloud_erased_calls_ = 0;
   int on_network_error_calls_ = 0;
 

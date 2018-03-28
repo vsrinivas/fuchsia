@@ -8,8 +8,8 @@
 #include <memory>
 #include <utility>
 
-#include "garnet/lib/callback/cancellable.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include "garnet/lib/callback/cancellable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -27,7 +27,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
                 std::unique_ptr<firebase::Firebase> firebase,
                 std::unique_ptr<gcs::CloudStorage> cloud_storage,
                 std::unique_ptr<PageCloudHandler> handler,
-                f1dl::InterfaceRequest<cloud_provider::PageCloud> request);
+                fidl::InterfaceRequest<cloud_provider::PageCloud> request);
   ~PageCloudImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
@@ -45,19 +45,18 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   void SendRemoteCommits();
 
   // cloud_provider::PageCloud:
-  void AddCommits(f1dl::VectorPtr<cloud_provider::CommitPtr> commits,
-                  const AddCommitsCallback& callback) override;
-  void GetCommits(f1dl::VectorPtr<uint8_t> min_position_token,
-                  const GetCommitsCallback& callback) override;
-  void AddObject(f1dl::VectorPtr<uint8_t> id,
-                 fsl::SizedVmoTransportPtr data,
-                 const AddObjectCallback& callback) override;
-  void GetObject(f1dl::VectorPtr<uint8_t> id,
-                 const GetObjectCallback& callback) override;
+  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                  AddCommitsCallback callback) override;
+  void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
+                  GetCommitsCallback callback) override;
+  void AddObject(fidl::VectorPtr<uint8_t> id,
+                 fsl::SizedVmoTransport data,
+                 AddObjectCallback callback) override;
+  void GetObject(fidl::VectorPtr<uint8_t> id, GetObjectCallback) override;
   void SetWatcher(
-      f1dl::VectorPtr<uint8_t> min_position_token,
-      f1dl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      fidl::VectorPtr<uint8_t> min_position_token,
+      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+      SetWatcherCallback callback) override;
 
   void Unregister();
 
@@ -65,7 +64,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, CommitWatcher {
   std::unique_ptr<firebase::Firebase> firebase_;
   std::unique_ptr<gcs::CloudStorage> cloud_storage_;
   std::unique_ptr<PageCloudHandler> handler_;
-  f1dl::Binding<cloud_provider::PageCloud> binding_;
+  fidl::Binding<cloud_provider::PageCloud> binding_;
   fxl::Closure on_empty_;
 
   // Remote commits accumulated until the client confirms receiving the previous

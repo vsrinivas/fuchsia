@@ -8,8 +8,10 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/cpp/network.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -18,18 +20,18 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include <fuchsia/cpp/network.h>
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace gcs {
 namespace {
 
 network::HttpHeaderPtr GetHeader(
-    const f1dl::VectorPtr<network::HttpHeaderPtr>& headers,
+    const fidl::VectorPtr<network::HttpHeader>& headers,
     const std::string& header_name) {
   for (const auto& header : *headers) {
     if (header->name == header_name) {
-      return header.Clone();
+      auto result = network::HttpHeader::New();
+      fidl::Clone(header, result.get());
+      return result;
     }
   }
   return nullptr;
@@ -49,16 +51,16 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
   void SetResponse(const std::string& body,
                    int64_t content_length,
                    uint32_t status_code) {
-    network::URLResponsePtr server_response = network::URLResponse::New();
-    server_response->body = network::URLBody::New();
-    server_response->body->set_stream(fsl::WriteStringToSocket(body));
-    server_response->status_code = status_code;
+    network::URLResponse server_response;
+    server_response.body = network::URLBody::New();
+    server_response.body->set_stream(fsl::WriteStringToSocket(body));
+    server_response.status_code = status_code;
 
-    network::HttpHeaderPtr content_length_header = network::HttpHeader::New();
-    content_length_header->name = "content-length";
-    content_length_header->value = fxl::NumberToString(content_length);
+    network::HttpHeader content_length_header;
+    content_length_header.name = "content-length";
+    content_length_header.value = fxl::NumberToString(content_length);
 
-    server_response->headers.push_back(std::move(content_length_header));
+    server_response.headers.push_back(std::move(content_length_header));
 
     fake_network_wrapper_.SetResponse(std::move(server_response));
   }

@@ -7,8 +7,8 @@
 
 #include <map>
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/network.h>
+#include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/firebase_server.h"
 #include "peridot/bin/cloud_provider_firebase/testing/server/gcs_server.h"
 
@@ -22,10 +22,9 @@ class FakeCloudURLLoader : public network::URLLoader {
   ~FakeCloudURLLoader() override;
 
   // URLLoader
-  void Start(network::URLRequestPtr request,
-             const StartCallback& callback) override;
-  void FollowRedirect(const FollowRedirectCallback& callback) override;
-  void QueryStatus(const QueryStatusCallback& callback) override;
+  void Start(network::URLRequest request, StartCallback callback) override;
+  void FollowRedirect(FollowRedirectCallback callback) override;
+  void QueryStatus(QueryStatusCallback callback) override;
 
  private:
   std::map<std::string, FirebaseServer> firebase_servers_;

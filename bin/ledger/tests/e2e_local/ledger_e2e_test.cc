@@ -4,11 +4,13 @@
 
 #include <string.h>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -17,10 +19,8 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/ledger/fidl/ledger.fidl-sync.h"
-#include <fuchsia/cpp/ledger.h>
 #include "lib/svc/cpp/services.h"
 #include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"
@@ -79,7 +79,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
   }
 
   ::testing::AssertionResult GetRootPage(
-      ledger::LedgerRepositoryPtr* ledger_repository,
+      ledger_internal::LedgerRepositoryPtr* ledger_repository,
       fidl::VectorPtr<uint8_t> ledger_name,
       ledger::PagePtr* page) {
     ledger::Status status;
@@ -138,7 +138,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
   std::unique_ptr<component::ApplicationContext> application_context_;
 
  protected:
-  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
   fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
 };
@@ -197,7 +197,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   ledger::Status status;
-  ledger::LedgerRepositoryPtr ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   files::ScopedTempDir tmp_dir;
   const std::string content_path = tmp_dir.path() + "/content";
   const std::string deletion_sentinel_path = content_path + "/sentinel";
@@ -256,7 +256,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   ledger::Status status;
-  ledger::LedgerRepositoryPtr ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   files::ScopedTempDir tmp_dir;
   const std::string content_path = tmp_dir.path() + "/content";
   const std::string deletion_sentinel_path = content_path + "/sentinel";
@@ -306,7 +306,7 @@ TEST_F(LedgerEndToEndTest, ShutDownWhenCloudProviderDisconnects) {
   files::ScopedTempDir tmp_dir;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  ledger::LedgerRepositoryPtr ledger_repository;
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());

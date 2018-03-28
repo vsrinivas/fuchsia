@@ -8,14 +8,14 @@
 
 #include <utility>
 
+#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/synchronous_task.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/lib/convert/convert.h"
 
 namespace test {
@@ -30,18 +30,18 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
                          std::string ledger_name,
                          std::string ledger_repository_path,
                          ledger::LedgerPtr* ledger_ptr) {
-  ledger::LedgerRepositoryFactoryPtr repository_factory;
+  ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   component::Services child_services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = "ledger";
-  launch_info->directory_request = child_services.NewRequest();
-  launch_info->arguments.push_back("--no_minfs_wait");
-  launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = "ledger";
+  launch_info.directory_request = child_services.NewRequest();
+  launch_info.arguments.push_back("--no_minfs_wait");
+  launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
 
   context->launcher()->CreateApplication(std::move(launch_info),
                                          controller->NewRequest());
   child_services.ConnectToService(repository_factory.NewRequest());
-  ledger::LedgerRepositoryPtr repository;
+  ledger_internal::LedgerRepositoryPtr repository;
 
   ledger::Status status = ledger::Status::UNKNOWN_ERROR;
 

@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_TESTING_SERVER_FAKE_CLOUD_NETWORK_SERVICE_H_
 
+#include <fuchsia/cpp/netstack.h>
+#include <fuchsia/cpp/network.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/netstack/fidl/net_address.fidl.h"
-#include <fuchsia/cpp/network.h>
 #include "peridot/bin/cloud_provider_firebase/testing/server/fake_cloud_url_loader.h"
 
 namespace ledger {
@@ -22,16 +22,16 @@ class FakeCloudNetworkService : public network::NetworkService {
 
   // network::NetworkService
   void CreateURLLoader(
-      ::f1dl::InterfaceRequest<network::URLLoader> loader) override;
+      ::fidl::InterfaceRequest<network::URLLoader> loader) override;
   void GetCookieStore(zx::channel cookie_store) override;
   void CreateWebSocket(zx::channel socket) override;
   // Bind a new request to this implementation.
-  void AddBinding(f1dl::InterfaceRequest<network::NetworkService> request);
+  void AddBinding(fidl::InterfaceRequest<network::NetworkService> request);
 
  private:
   FakeCloudURLLoader url_loader_;
-  f1dl::BindingSet<network::URLLoader> loader_bindings_;
-  f1dl::BindingSet<network::NetworkService> bindings_;
+  fidl::BindingSet<network::URLLoader> loader_bindings_;
+  fidl::BindingSet<network::NetworkService> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeCloudNetworkService);
 };

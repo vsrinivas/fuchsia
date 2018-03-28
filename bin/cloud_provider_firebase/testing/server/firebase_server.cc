@@ -365,34 +365,34 @@ FirebaseServer::FirebaseServer() : listeners_(std::make_unique<Listeners>()) {
 FirebaseServer::~FirebaseServer() {}
 
 void FirebaseServer::HandleGet(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
-  url::GURL url(request->url);
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk,
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
+  url::GURL url(request.url);
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          GetSerializedValueForURL(url)));
 }
 
 void FirebaseServer::HandleGetStream(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
-  url::GURL url(request->url);
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
+  url::GURL url(request.url);
   auto path = GetPath(url);
   socket::SocketPair sockets;
   listeners_->AddListener(path, ExtractFilter(url), std::move(sockets.socket1),
                           GetValueAtPath(path));
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk,
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          std::move(sockets.socket2), {}));
 }
 
 void FirebaseServer::HandlePatch(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
   std::string body;
-  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 
-  url::GURL url(request->url);
+  url::GURL url(request.url);
   auto path = GetPath(url);
   rapidjson::Value* value = GetValueAtPath(path, true);
 
@@ -405,7 +405,7 @@ void FirebaseServer::HandlePatch(
   for (auto it = new_value.MemberBegin(); it != new_value.MemberEnd(); ++it) {
     if (value->HasMember(it->name.GetString())) {
       // Ledger database is configured to prevent data overwritting.
-      callback(BuildResponse(request->url, Server::ResponseCode::kUnauthorized,
+      callback(BuildResponse(request.url, Server::ResponseCode::kUnauthorized,
                              "Data already exists"));
       return;
     }
@@ -417,21 +417,21 @@ void FirebaseServer::HandlePatch(
     value->AddMember(key, copied_value, document_.GetAllocator());
   }
 
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk,
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          Serialize(&new_value, nullptr)));
 
   listeners_->SendEvent("patch", path, &new_value);
 }
 
 void FirebaseServer::HandlePut(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
   std::string body;
-  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &body)) {
+  if (!fsl::StringFromVmo(request.body->sized_buffer(), &body)) {
     FXL_NOTREACHED();
   }
 
-  url::GURL url(request->url);
+  url::GURL url(request.url);
   auto path = GetPath(url);
   FXL_DCHECK(!path.empty());
   auto sub_path = PathView(path, path.begin(), path.end() - 1);
@@ -439,7 +439,7 @@ void FirebaseServer::HandlePut(
 
   if (value->HasMember(path.back())) {
     // Ledger database is configured to prevent data overwritting.
-    callback(BuildResponse(request->url, Server::ResponseCode::kUnauthorized,
+    callback(BuildResponse(request.url, Server::ResponseCode::kUnauthorized,
                            "Data already exists"));
     return;
   }
@@ -453,7 +453,7 @@ void FirebaseServer::HandlePut(
   rapidjson::Value copied_value(new_value, document_.GetAllocator());
   value->AddMember(key, copied_value, document_.GetAllocator());
 
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk,
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk,
                          Serialize(&new_value, nullptr)));
   listeners_->SendEvent("put", path, &new_value);
 }

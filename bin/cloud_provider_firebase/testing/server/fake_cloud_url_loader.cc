@@ -33,9 +33,9 @@ FakeCloudURLLoader::FakeCloudURLLoader() {}
 
 FakeCloudURLLoader::~FakeCloudURLLoader() {}
 
-void FakeCloudURLLoader::Start(network::URLRequestPtr request,
-                               const StartCallback& callback) {
-  url::GURL url(request->url);
+void FakeCloudURLLoader::Start(network::URLRequest request,
+                               StartCallback callback) {
+  url::GURL url(request.url);
   FXL_DCHECK(url.is_valid());
 
   if (StringEndsWith(url.host(), kFirebaseHosts)) {
@@ -58,12 +58,11 @@ void FakeCloudURLLoader::Start(network::URLRequestPtr request,
   FXL_NOTREACHED() << "Unknown URL: " << url.spec();
 }
 
-void FakeCloudURLLoader::FollowRedirect(
-    const FollowRedirectCallback& /*callback*/) {
+void FakeCloudURLLoader::FollowRedirect(FollowRedirectCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeCloudURLLoader::QueryStatus(const QueryStatusCallback& /*callback*/) {
+void FakeCloudURLLoader::QueryStatus(QueryStatusCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 

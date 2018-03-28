@@ -22,12 +22,10 @@ class GcsServer : public Server {
   ~GcsServer() override;
 
  private:
-  void HandleGet(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
-  void HandlePost(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
+  void HandleGet(network::URLRequest request,
+                 std::function<void(network::URLResponse)> callback) override;
+  void HandlePost(network::URLRequest request,
+                  std::function<void(network::URLResponse)> callback) override;
 
   std::map<std::string, std::string> data_;
 };

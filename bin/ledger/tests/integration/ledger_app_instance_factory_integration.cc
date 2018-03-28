@@ -150,7 +150,7 @@ void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
-  ledger::LedgerRepositoryFactoryPtr repository_factory_ptr;
+  ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger::LedgerRepositoryFactory>
       repository_factory_request = repository_factory_ptr.NewRequest();
 

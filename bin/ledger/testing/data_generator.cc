@@ -8,6 +8,7 @@
 #include <functional>
 #include <string>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -54,7 +55,7 @@ std::vector<fidl::VectorPtr<uint8_t>> DataGenerator::MakeKeys(
     keys[i] = MakeKey(i, key_size);
   }
   for (size_t i = unique_key_count; i < key_count; i++) {
-    keys[i] = keys[i - unique_key_count].Clone();
+    fidl::Clone(keys[i - unique_key_count], &keys[i]);
   }
   return keys;
 }

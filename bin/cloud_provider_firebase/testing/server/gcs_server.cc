@@ -18,35 +18,35 @@ GcsServer::GcsServer() {}
 GcsServer::~GcsServer() {}
 
 void GcsServer::HandleGet(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
-  url::GURL url(request->url);
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
+  url::GURL url(request.url);
 
   auto path = url.path();
   if (!data_.count(path)) {
-    callback(BuildResponse(request->url, Server::ResponseCode::kNotFound,
+    callback(BuildResponse(request.url, Server::ResponseCode::kNotFound,
                            "No such document."));
     return;
   }
 
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk, data_[path]));
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk, data_[path]));
 }
 
 void GcsServer::HandlePost(
-    network::URLRequestPtr request,
-    const std::function<void(network::URLResponsePtr)> callback) {
-  url::GURL url(request->url);
+    network::URLRequest request,
+    const std::function<void(network::URLResponse)> callback) {
+  url::GURL url(request.url);
 
   auto path = url.path();
   // Do not verify whether the object already exists - the real Firebase Storage
   // doesn't do that either.
 
   std::string content;
-  if (!fsl::StringFromVmo(request->body->get_sized_buffer(), &content)) {
+  if (!fsl::StringFromVmo(request.body->sized_buffer(), &content)) {
     FXL_NOTREACHED() << "Unable to read vmo.";
   }
   data_[std::move(path)] = std::move(content);
-  callback(BuildResponse(request->url, Server::ResponseCode::kOk, "Ok"));
+  callback(BuildResponse(request.url, Server::ResponseCode::kOk, "Ok"));
 }
 
 }  // namespace ledger

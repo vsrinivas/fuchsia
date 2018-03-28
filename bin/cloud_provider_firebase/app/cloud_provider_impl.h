@@ -5,20 +5,20 @@
 #ifndef PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_CLOUD_PROVIDER_FIREBASE_APP_CLOUD_PROVIDER_IMPL_H_
 
+#include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/cloud_provider.h>
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/lib/firebase/firebase_impl.h"
 #include "peridot/lib/firebase_auth/firebase_auth_impl.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
 
 namespace cloud_provider_firebase {
 
@@ -32,30 +32,30 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fxl::RefPtr<fxl::TaskRunner> main_runner,
       network_wrapper::NetworkWrapper* network_wrapper,
       std::string user_id,
-      ConfigPtr config,
+      Config config,
       std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
-      f1dl::InterfaceRequest<cloud_provider::CloudProvider> request);
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
   void GetDeviceSet(
-      f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-      const GetDeviceSetCallback& callback) override;
+      fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+      GetDeviceSetCallback callback) override;
 
   void GetPageCloud(
-      f1dl::VectorPtr<uint8_t> app_id,
-      f1dl::VectorPtr<uint8_t> page_id,
-      f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      const GetPageCloudCallback& callback) override;
+      fidl::VectorPtr<uint8_t> app_id,
+      fidl::VectorPtr<uint8_t> page_id,
+      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+      GetPageCloudCallback callback) override;
 
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
   network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string user_id_;
   const std::string server_id_;
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;
-  f1dl::Binding<cloud_provider::CloudProvider> binding_;
+  fidl::Binding<cloud_provider::CloudProvider> binding_;
   fxl::Closure on_empty_;
 
   callback::AutoCleanableSet<DeviceSetImpl> device_sets_;

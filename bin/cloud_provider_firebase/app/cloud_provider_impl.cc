@@ -20,13 +20,13 @@ CloudProviderImpl::CloudProviderImpl(
     fxl::RefPtr<fxl::TaskRunner> main_runner,
     network_wrapper::NetworkWrapper* network_wrapper,
     std::string user_id,
-    ConfigPtr config,
+    Config config,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
-    f1dl::InterfaceRequest<cloud_provider::CloudProvider> request)
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : main_runner_(std::move(main_runner)),
       network_wrapper_(network_wrapper),
       user_id_(std::move(user_id)),
-      server_id_(config->server_id),
+      server_id_(config.server_id),
       firebase_auth_(std::move(firebase_auth)),
       binding_(this, std::move(request)) {
   // The class shuts down when the client connection is disconnected.
@@ -48,8 +48,8 @@ CloudProviderImpl::CloudProviderImpl(
 CloudProviderImpl::~CloudProviderImpl() {}
 
 void CloudProviderImpl::GetDeviceSet(
-    f1dl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-    const GetDeviceSetCallback& callback) {
+    fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+    GetDeviceSetCallback callback) {
   auto user_firebase = std::make_unique<firebase::FirebaseImpl>(
       network_wrapper_, server_id_, GetFirebasePathForUser(user_id_));
   auto cloud_device_set =
@@ -60,10 +60,10 @@ void CloudProviderImpl::GetDeviceSet(
 }
 
 void CloudProviderImpl::GetPageCloud(
-    f1dl::VectorPtr<uint8_t> app_id,
-    f1dl::VectorPtr<uint8_t> page_id,
-    f1dl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-    const GetPageCloudCallback& callback) {
+    fidl::VectorPtr<uint8_t> app_id,
+    fidl::VectorPtr<uint8_t> page_id,
+    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+    GetPageCloudCallback callback) {
   std::string app_id_str = convert::ToString(app_id);
   std::string page_id_str = convert::ToString(page_id);
 

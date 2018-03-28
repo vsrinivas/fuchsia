@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
 #include "peridot/lib/convert/convert.h"
@@ -33,10 +33,11 @@ TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   auto instance = NewLedgerAppInstance();
 
   files::ScopedTempDir tmp_dir;
-  ledger::LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
+  ledger_internal::LedgerRepositoryPtr repository =
+      instance->GetTestLedgerRepository();
 
   ledger::Status status;
-  ledger::LedgerRepositoryPtr duplicated_repository;
+  ledger_internal::LedgerRepositoryPtr duplicated_repository;
   repository->Duplicate(duplicated_repository.NewRequest(),
                         [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(repository.WaitForResponse());

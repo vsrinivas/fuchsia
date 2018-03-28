@@ -38,18 +38,15 @@ class FirebaseServer : public Server {
   class Listeners;
 
   // Server implementation.
-  void HandleGet(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
-  void HandlePatch(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
-  void HandlePut(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
+  void HandleGet(network::URLRequest request,
+                 std::function<void(network::URLResponse)> callback) override;
+  void HandlePatch(network::URLRequest request,
+                   std::function<void(network::URLResponse)> callback) override;
+  void HandlePut(network::URLRequest request,
+                 std::function<void(network::URLResponse)> callback) override;
   void HandleGetStream(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback) override;
+      network::URLRequest request,
+      std::function<void(network::URLResponse)> callback) override;
 
   // Returns the serialized json string pointed by |url|.
   std::string GetSerializedValueForURL(const url::GURL& url);

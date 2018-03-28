@@ -13,7 +13,7 @@ FakeCloudNetworkService::FakeCloudNetworkService() {}
 FakeCloudNetworkService::~FakeCloudNetworkService() {}
 
 void FakeCloudNetworkService::CreateURLLoader(
-    ::f1dl::InterfaceRequest<network::URLLoader> loader) {
+    ::fidl::InterfaceRequest<network::URLLoader> loader) {
   loader_bindings_.AddBinding(&url_loader_, std::move(loader));
 }
 
@@ -26,7 +26,7 @@ void FakeCloudNetworkService::CreateWebSocket(zx::channel /*socket*/) {
 }
 
 void FakeCloudNetworkService::AddBinding(
-    f1dl::InterfaceRequest<network::NetworkService> request) {
+    fidl::InterfaceRequest<network::NetworkService> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 

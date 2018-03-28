@@ -18,7 +18,7 @@ class UserIdProviderImpl : public UserIdProvider {
  public:
   UserIdProviderImpl(ledger::Environment* environment,
                      std::string user_directory,
-                     modular::auth::TokenProviderPtr token_provider_ptr);
+                     modular_auth::TokenProviderPtr token_provider_ptr);
 
   void GetUserId(std::function<void(Status, std::string)> callback) override;
 

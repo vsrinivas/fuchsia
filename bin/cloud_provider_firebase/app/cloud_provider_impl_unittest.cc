@@ -4,21 +4,22 @@
 
 #include "peridot/bin/cloud_provider_firebase/app/cloud_provider_impl.h"
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 #include "peridot/lib/firebase_auth/testing/test_firebase_auth.h"
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace cloud_provider_firebase {
 
 namespace {
-ConfigPtr GetFirebaseConfig() {
-  auto config = Config::New();
-  config->server_id = "abc";
-  config->api_key = "xyz";
+
+Config GetFirebaseConfig() {
+  Config config;
+  config.server_id = "abc";
+  config.api_key = "xyz";
   return config;
 }
 

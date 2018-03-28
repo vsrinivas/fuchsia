@@ -7,11 +7,11 @@
 
 #include <thread>
 
-#include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include "lib/app/cpp/application_context.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/lib/firebase_auth/testing/fake_token_provider.h"
 
@@ -41,7 +41,7 @@ class CloudProviderFirebaseFactory {
   std::thread services_thread_;
   fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
 
-  ledger::fidl_helpers::BoundInterfaceSet<modular::auth::TokenProvider,
+  ledger::fidl_helpers::BoundInterfaceSet<modular_auth::TokenProvider,
                                           firebase_auth::FakeTokenProvider>
       token_provider_;
 

@@ -7,8 +7,8 @@
 
 #include <map>
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/network.h>
+#include "lib/fxl/macros.h"
 
 namespace ledger {
 
@@ -19,35 +19,33 @@ class Server {
   virtual ~Server();
 
   // Serves the given request.
-  void Serve(network::URLRequestPtr request,
-             std::function<void(network::URLResponsePtr)> callback);
+  void Serve(network::URLRequest request,
+             std::function<void(network::URLResponse)> callback);
 
  protected:
   enum class ResponseCode { kOk = 200, kUnauthorized = 401, kNotFound = 404 };
 
-  virtual void HandleGet(network::URLRequestPtr request,
-                         std::function<void(network::URLResponsePtr)> callback);
+  virtual void HandleGet(network::URLRequest request,
+                         std::function<void(network::URLResponse)> callback);
   virtual void HandleGetStream(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback);
-  virtual void HandlePatch(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback);
-  virtual void HandlePost(
-      network::URLRequestPtr request,
-      std::function<void(network::URLResponsePtr)> callback);
-  virtual void HandlePut(network::URLRequestPtr request,
-                         std::function<void(network::URLResponsePtr)> callback);
+      network::URLRequest request,
+      std::function<void(network::URLResponse)> callback);
+  virtual void HandlePatch(network::URLRequest request,
+                           std::function<void(network::URLResponse)> callback);
+  virtual void HandlePost(network::URLRequest request,
+                          std::function<void(network::URLResponse)> callback);
+  virtual void HandlePut(network::URLRequest request,
+                         std::function<void(network::URLResponse)> callback);
 
-  network::URLResponsePtr BuildResponse(
+  network::URLResponse BuildResponse(
       const std::string& url,
       ResponseCode code,
       zx::socket body,
       const std::map<std::string, std::string>& headers);
 
-  network::URLResponsePtr BuildResponse(const std::string& url,
-                                        ResponseCode code,
-                                        std::string body);
+  network::URLResponse BuildResponse(const std::string& url,
+                                     ResponseCode code,
+                                     std::string body);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Server);

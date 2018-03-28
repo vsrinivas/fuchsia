@@ -15,7 +15,7 @@ namespace p2p_provider {
 UserIdProviderImpl::UserIdProviderImpl(
     ledger::Environment* environment,
     std::string user_directory,
-    modular::auth::TokenProviderPtr token_provider_ptr)
+    modular_auth::TokenProviderPtr token_provider_ptr)
     : user_directory_(std::move(user_directory)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
       environment->main_runner(), modular::kFirebaseApiKey,

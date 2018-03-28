@@ -114,7 +114,7 @@ int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   trace::TraceProvider trace_provider(loop.async());
 
-  modular::auth::AccountProviderImpl app;
+  modular_auth::AccountProviderImpl app;
   loop.Run();
   return 0;
 }

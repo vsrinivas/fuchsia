@@ -17,7 +17,7 @@ namespace test {
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     fidl::VectorPtr<uint8_t> test_ledger_name,
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory)
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory)
     : test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)) {}
 
@@ -28,9 +28,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {
   return ledger_repository_factory_.get();
 }
 
-ledger::LedgerRepositoryPtr
+ledger_internal::LedgerRepositoryPtr
 LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
-  ledger::LedgerRepositoryPtr repository;
+  ledger_internal::LedgerRepositoryPtr repository;
   ledger::Status status;
   ledger_repository_factory_->GetRepository(
       dir_.path(), MakeCloudProvider(), repository.NewRequest(),
@@ -43,7 +43,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
 ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
   ledger::LedgerPtr ledger;
 
-  ledger::LedgerRepositoryPtr repository = GetTestLedgerRepository();
+  ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
   ledger::Status status;
   repository->GetLedger(test_ledger_name_.Clone(), ledger.NewRequest(),
                         [&status](ledger::Status s) { status = s; });

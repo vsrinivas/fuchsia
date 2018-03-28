@@ -29,9 +29,9 @@ CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
 void CloudProviderFirebaseFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
   component::Services child_services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = kCloudProviderFirebaseAppUrl;
-  launch_info->directory_request = child_services.NewRequest();
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = kCloudProviderFirebaseAppUrl;
+  launch_info.directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
@@ -41,15 +41,14 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
     std::string server_id,
     std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
-  modular::auth::TokenProviderPtr token_provider;
-  services_task_runner_->PostTask(fxl::MakeCopyable(
-      [this, request = token_provider.NewRequest()]() mutable {
-        token_provider_.AddBinding(std::move(request));
-      }));
+  modular_auth::TokenProviderPtr token_provider;
+  services_task_runner_->PostTask(fxl::MakeCopyable([
+    this, request = token_provider.NewRequest()
+  ]() mutable { token_provider_.AddBinding(std::move(request)); }));
 
-  auto firebase_config = cloud_provider_firebase::Config::New();
-  firebase_config->server_id = server_id;
-  firebase_config->api_key = api_key;
+  cloud_provider_firebase::Config firebase_config;
+  firebase_config.server_id = server_id;
+  firebase_config.api_key = api_key;
 
   cloud_provider_factory_->GetCloudProvider(
       std::move(firebase_config), std::move(token_provider), std::move(request),

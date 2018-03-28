@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "garnet/lib/callback/cancellable.h"
+#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/gcs/cloud_storage.h"
-#include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "zx/socket.h"
 #include "zx/vmo.h"
 
@@ -44,19 +44,18 @@ class CloudStorageImpl : public CloudStorage {
 
   std::string GetUploadUrl(fxl::StringView key);
 
-  void Request(std::function<network::URLRequestPtr()> request_factory,
-               std::function<void(Status status,
-                                  network::URLResponsePtr response)> callback);
-  void OnResponse(
-      std::function<void(Status status, network::URLResponsePtr response)>
-          callback,
-      network::URLResponsePtr response);
+  void Request(std::function<network::URLRequest()> request_factory,
+               std::function<void(Status status, network::URLResponse response)>
+                   callback);
+  void OnResponse(std::function<void(Status status,
+                                     network::URLResponse response)> callback,
+                  network::URLResponse response);
 
   void OnDownloadResponseReceived(
       std::function<void(Status status, uint64_t size, zx::socket data)>
           callback,
       Status status,
-      network::URLResponsePtr response);
+      network::URLResponse response);
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   network_wrapper::NetworkWrapper* const network_wrapper_;

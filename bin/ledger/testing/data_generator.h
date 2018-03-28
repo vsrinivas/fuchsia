@@ -9,7 +9,7 @@
 #include <random>
 #include <vector>
 
-#include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/vector.h"
 
 namespace test {
 
@@ -35,8 +35,8 @@ class DataGenerator {
   // Builds a vector of length |key_count| containing keys of size |key_size|,
   // |unique_key_count| of which are unique.
   std::vector<fidl::VectorPtr<uint8_t>> MakeKeys(size_t key_count,
-                                             size_t key_size,
-                                             size_t unique_key_count);
+                                                 size_t key_size,
+                                                 size_t unique_key_count);
 
  private:
   std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>

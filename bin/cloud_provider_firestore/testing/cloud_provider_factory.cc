@@ -70,9 +70,9 @@ CloudProviderFactory::~CloudProviderFactory() {
 void CloudProviderFactory::Init() {
   services_thread_ = fsl::CreateThread(&services_task_runner_);
   component::Services child_services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = kAppUrl;
-  launch_info->directory_request = child_services.NewRequest();
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = kAppUrl;
+  launch_info.directory_request = child_services.NewRequest();
   application_context_->launcher()->CreateApplication(
       std::move(launch_info), cloud_provider_controller_.NewRequest());
   child_services.ConnectToService(cloud_provider_factory_.NewRequest());
@@ -88,14 +88,14 @@ void CloudProviderFactory::MakeCloudProvider(
   }
   modular_auth::TokenProviderPtr token_provider;
   services_task_runner_->PostTask(fxl::MakeCopyable(
-      [this, request = token_provider.NewRequest()]() mutable {
+      [ this, request = token_provider.NewRequest() ]() mutable {
         token_providers_.emplace(application_context_, services_task_runner_,
                                  credentials_path_, std::move(request));
       }));
 
-  auto firebase_config = cloud_provider_firestore::Config::New();
-  firebase_config->server_id = server_id;
-  firebase_config->api_key = api_key;
+  cloud_provider_firestore::Config firebase_config;
+  firebase_config.server_id = server_id;
+  firebase_config.api_key = api_key;
 
   cloud_provider_factory_->GetCloudProvider(
       std::move(firebase_config), std::move(token_provider), std::move(request),

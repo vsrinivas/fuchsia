@@ -9,12 +9,12 @@
 #include <memory>
 
 #include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/ledger_internal.h>
 
 namespace test {
 
@@ -29,7 +29,7 @@ class LedgerAppInstanceFactory {
    public:
     LedgerAppInstance(
         fidl::VectorPtr<uint8_t> test_ledger_name,
-        ledger::LedgerRepositoryFactoryPtr ledger_repository_factory);
+        ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -37,7 +37,7 @@ class LedgerAppInstanceFactory {
     ledger::LedgerRepositoryFactory* ledger_repository_factory();
     // Builds and returns a new connection to the default LedgerRepository
     // object.
-    ledger::LedgerRepositoryPtr GetTestLedgerRepository();
+    ledger_internal::LedgerRepositoryPtr GetTestLedgerRepository();
     // Builds and returns a new connection to the default Ledger object.
     ledger::LedgerPtr GetTestLedger();
     // Builds and returns a new connection to a new random page on the default
@@ -54,7 +54,7 @@ class LedgerAppInstanceFactory {
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
 
     fidl::VectorPtr<uint8_t> test_ledger_name_;
-    ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
 
     files::ScopedTempDir dir_;
 
