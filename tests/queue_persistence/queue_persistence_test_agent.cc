@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/queue_persistence_test_service.h>
 #include "lib/app_driver/cpp/agent_driver.h"
-#include "lib/component/fidl/message_queue.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "peridot/lib/fidl/message_receiver_client.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/queue_persistence/queue_persistence_test_service.fidl.h"
 
 using modular::testing::TestPoint;
 
 namespace {
 
-class TestAgentApp : modular::QueuePersistenceTestService {
+class TestAgentApp
+    : queue_persistence_test_service::QueuePersistenceTestService {
  public:
   TestAgentApp(modular::AgentHost* agent_host) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
@@ -29,14 +29,16 @@ class TestAgentApp : modular::QueuePersistenceTestService {
                                            msg_queue_.NewRequest());
     msg_receiver_ = std::make_unique<modular::MessageReceiverClient>(
         msg_queue_.get(),
-        [this](const f1dl::StringPtr& message, std::function<void()> ack) {
+        [this](const fidl::StringPtr& message, std::function<void()> ack) {
           ack();
           modular::testing::GetStore()->Put(
               "queue_persistence_test_agent_received_message", "", [] {});
         });
 
-    services_.AddService<modular::QueuePersistenceTestService>(
-        [this](f1dl::InterfaceRequest<modular::QueuePersistenceTestService>
+    services_.AddService<
+        queue_persistence_test_service::QueuePersistenceTestService>(
+        [this](fidl::InterfaceRequest<
+               queue_persistence_test_service::QueuePersistenceTestService>
                    request) {
           services_bindings_.AddBinding(this, std::move(request));
         });
@@ -45,14 +47,14 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   }
 
   // Called by AgentDriver.
-  void Connect(f1dl::InterfaceRequest<component::ServiceProvider> services) {
+  void Connect(fidl::InterfaceRequest<component::ServiceProvider> services) {
     services_.AddBinding(std::move(services));
     modular::testing::GetStore()->Put("queue_persistence_test_agent_connected",
                                       "", [] {});
   }
 
   // Called by AgentDriver.
-  void RunTask(const f1dl::StringPtr& /*task_id*/,
+  void RunTask(const fidl::StringPtr& /*task_id*/,
                const std::function<void()>& /*callback*/) {}
 
   // Called by AgentDriver.
@@ -68,10 +70,9 @@ class TestAgentApp : modular::QueuePersistenceTestService {
 
  private:
   // |QueuePersistenceTestService|
-  void GetMessageQueueToken(
-      const GetMessageQueueTokenCallback& callback) override {
+  void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
     msg_queue_->GetToken(
-        [callback](const f1dl::StringPtr& token) { callback(token); });
+        [callback](const fidl::StringPtr& token) { callback(token); });
   }
 
   TestPoint initialized_{"Queue persistence test agent initialized"};
@@ -82,7 +83,8 @@ class TestAgentApp : modular::QueuePersistenceTestService {
   std::unique_ptr<modular::MessageReceiverClient> msg_receiver_;
 
   component::ServiceNamespace services_;
-  f1dl::BindingSet<modular::QueuePersistenceTestService> services_bindings_;
+  fidl::BindingSet<queue_persistence_test_service::QueuePersistenceTestService>
+      services_bindings_;
 };
 
 }  // namespace

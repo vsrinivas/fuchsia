@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/queue_persistence_test_service.h>
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
-#include "peridot/tests/queue_persistence/queue_persistence_test_service.fidl.h"
 
 namespace {
 
@@ -25,8 +24,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host), weak_ptr_factory_(this) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     initialized_.Pass();
@@ -41,7 +40,7 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const f1dl::StringPtr&) { AgentConnected(); });
+        [this](const fidl::StringPtr&) { AgentConnected(); });
 
     // Start a timer to call Story.Done() in case the test agent misbehaves and
     // we time out. If that happens, the module will exit normally through
@@ -64,10 +63,10 @@ class ParentApp {
   void AgentConnected() {
     agent_connected_.Pass();
     agent_service_->GetMessageQueueToken(
-        [this](const f1dl::StringPtr& token) { ReceivedQueueToken(token); });
+        [this](const fidl::StringPtr& token) { ReceivedQueueToken(token); });
   }
 
-  void ReceivedQueueToken(const f1dl::StringPtr& token) {
+  void ReceivedQueueToken(const fidl::StringPtr& token) {
     queue_token_ = token;
     received_queue_persistence_token_.Pass();
 
@@ -76,7 +75,7 @@ class ParentApp {
     agent_service_.Unbind();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_stopped",
-        [this](const f1dl::StringPtr&) { AgentStopped(); });
+        [this](const fidl::StringPtr&) { AgentStopped(); });
   }
 
   void AgentStopped() {
@@ -97,14 +96,14 @@ class ParentApp {
 
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_connected",
-        [this](const f1dl::StringPtr&) { AgentConnectedAgain(); });
+        [this](const fidl::StringPtr&) { AgentConnectedAgain(); });
   }
 
   void AgentConnectedAgain() {
     agent_connected_again_.Pass();
     modular::testing::GetStore()->Get(
         "queue_persistence_test_agent_received_message",
-        [this](const f1dl::StringPtr&) { AgentReceivedMessage(); });
+        [this](const fidl::StringPtr&) { AgentReceivedMessage(); });
   }
 
   void AgentReceivedMessage() {
@@ -114,14 +113,14 @@ class ParentApp {
     agent_controller_.Unbind();
     agent_service_.Unbind();
     modular::testing::GetStore()->Get("queue_persistence_test_agent_stopped",
-                                      [this](const f1dl::StringPtr&) {
+                                      [this](const fidl::StringPtr&) {
                                         module_host_->module_context()->Done();
                                       });
   }
 
   modular::ModuleHost* module_host_;
   modular::AgentControllerPtr agent_controller_;
-  modular::QueuePersistenceTestServicePtr agent_service_;
+  queue_persistence_test_service::QueuePersistenceTestServicePtr agent_service_;
   modular::ComponentContextPtr component_context_;
   modular::MessageQueuePtr msg_queue_;
 
