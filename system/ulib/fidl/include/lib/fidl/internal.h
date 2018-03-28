@@ -68,10 +68,6 @@ struct FidlCodedStruct {
     constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size,
                               const char* name)
         : fields(fields), field_count(field_count), size(size), name(name) {}
-
-    // TODO: Remove after propagating dependent changes through other layers.
-    constexpr FidlCodedStruct(const FidlField* fields, uint32_t field_count, uint32_t size)
-        : fields(fields), field_count(field_count), size(size), name("") {}
 };
 
 struct FidlCodedStructPointer {
