@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <future>
+
 #include "address_manager.h"
 #include "mock/mock_mmio.h"
 #include "platform_mmio.h"
@@ -132,9 +134,17 @@ TEST(AddressManager, ReuseSlot)
     connections.push_back(MsdArmConnection::Create(0, &connection_owner));
     atoms.push_back(
         std::make_unique<MsdArmAtom>(connections.back(), 0, 0, 0, magma_arm_mali_user_data()));
+    // Reduce timeout to make test faster.
+    address_manager.set_acquire_slot_timeout_seconds(1);
     EXPECT_FALSE(address_manager.AssignAddressSpace(atoms.back().get()));
+    address_manager.set_acquire_slot_timeout_seconds(10);
 
-    address_manager.AtomFinished(atoms[2].get());
+    auto future = std::async(std::launch::async, [&]() {
+        // Sleep to try to ensure AssignAddressSpace is currently running.
+        usleep(10000);
+        address_manager.AtomFinished(atoms[2].get());
+    });
+
     EXPECT_TRUE(address_manager.AssignAddressSpace(atoms.back().get()));
 
     uint64_t new_translation_table_entry =

@@ -55,6 +55,7 @@ void AddressManager::AtomFinished(MsdArmAtom* atom)
     if (!atom->address_slot_mapping())
         return;
     atom->set_address_slot_mapping(nullptr);
+    address_slot_free_.notify_one();
 }
 
 std::shared_ptr<AddressSlotMapping> AddressManager::GetMappingForSlot(uint32_t slot_number)
@@ -106,6 +107,8 @@ void AddressManager::FlushAddressMappingRange(AddressSpace* address_space, uint6
     // The mapping will be released before the hardware lock, so that we
     // can be sure that the mapping will be expired after ReleaseSpaceMappings
     // acquires the hardware lock.
+    mapping.reset();
+    address_slot_free_.notify_one();
     slot->lock.unlock();
 }
 
@@ -130,32 +133,47 @@ void AddressManager::UnlockAddressSpace(AddressSpace* address_space)
     // The mapping will be released before the hardware lock, so that we
     // can be sure that the mapping will be expired after ReleaseSpaceMappings
     // acquires the hardware lock.
+    mapping.reset();
+    address_slot_free_.notify_one();
     slot->lock.unlock();
 }
 
-std::shared_ptr<AddressSlotMapping>
-AddressManager::AllocateMappingForAddressSpace(std::shared_ptr<MsdArmConnection> connection)
+// Disable thread safety analysis because it doesn't understand unique_lock.
+std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpace(
+    std::shared_ptr<MsdArmConnection> connection) FXL_NO_THREAD_SAFETY_ANALYSIS
 {
-    std::lock_guard<std::mutex> lock(address_slot_lock_);
-    std::shared_ptr<AddressSlotMapping> mapping =
-        GetMappingForAddressSpaceUnlocked(connection->const_address_space());
-    if (mapping)
-        return mapping;
+    std::unique_lock<std::mutex> lock(address_slot_lock_);
+    while (true) {
+        std::shared_ptr<AddressSlotMapping> mapping =
+            GetMappingForAddressSpaceUnlocked(connection->const_address_space());
+        if (mapping)
+            return mapping;
 
-    // Allocate new mapping (trying to avoid evicting).
-    for (size_t i = 0; i < address_slots_.size(); ++i) {
-        if (!address_slots_[i].address_space)
-            return AssignToSlot(connection, i);
+        // Allocate new mapping (trying to avoid evicting).
+        for (size_t i = 0; i < address_slots_.size(); ++i) {
+            if (!address_slots_[i].address_space)
+                return AssignToSlot(connection, i);
+        }
+
+        // TODO(MA-386): Evict the LRU slot.
+        for (size_t i = 0; i < address_slots_.size(); ++i) {
+            if (address_slots_[i].mapping.expired())
+                return AssignToSlot(connection, i);
+        }
+
+        // There are normally 8 hardware address slots but only 6 jobs can be running in hardware at
+        // a time (and also the profiler can use an address slot). So the only way we can be
+        // completely out of address slots is that a connection thread is flushing the MMU. Because
+        // of that there's no deadlock if we block the device thread, because the connection can
+        // finish flushing and release its mapping without the device thread. Starvation is still
+        // possible, though.
+        if (address_slot_free_.wait_for(lock,
+                                        std::chrono::seconds(acquire_slot_timeout_seconds_)) ==
+            std::cv_status::timeout) {
+            magma::log(magma::LOG_WARNING, "Timeout waiting for address slot");
+            return DRETP(nullptr, "Timeout waiting for address slot");
+        }
     }
-
-    // TODO(MA-386): Evict the LRU slot.
-    for (size_t i = 0; i < address_slots_.size(); ++i) {
-        if (address_slots_[i].mapping.expired())
-            return AssignToSlot(connection, i);
-    }
-
-    // TODO(MA-386): Wait until an address space is free.
-    return DRETP(nullptr, "All address slots in use");
 }
 
 std::shared_ptr<AddressSlotMapping>

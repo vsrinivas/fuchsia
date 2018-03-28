@@ -5,6 +5,7 @@
 #ifndef ADDRESS_MANAGER_H_
 #define ADDRESS_MANAGER_H_
 
+#include <condition_variable>
 #include <mutex>
 #include <vector>
 
@@ -41,6 +42,11 @@ public:
 
     void UnlockAddressSpace(AddressSpace*) override;
 
+    void set_acquire_slot_timeout_seconds(uint32_t timeout)
+    {
+        acquire_slot_timeout_seconds_ = timeout;
+    }
+
 private:
     struct AddressSlot {
         std::weak_ptr<AddressSlotMapping> mapping;
@@ -76,8 +82,10 @@ private:
         FXL_EXCLUSIVE_LOCKS_REQUIRED(address_slot_lock_);
 
     Owner* owner_;
+    uint32_t acquire_slot_timeout_seconds_ = 10;
     std::mutex address_slot_lock_;
     FXL_GUARDED_BY(address_slot_lock_) std::vector<AddressSlot> address_slots_;
+    std::condition_variable address_slot_free_;
 
     // Before a slot is modified, the corresponding lock should be taken.
     // It should only be taken while address_slot_lock_ is
