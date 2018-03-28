@@ -5,13 +5,12 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
 #include "peridot/lib/common/story_provider_watcher_base.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/testing.h"
@@ -38,10 +37,10 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
       "StoryInfo::last_focus_time increased after focus"};
 
   // |StoryProviderWatcher|
-  void OnChange(modular::StoryInfoPtr story_info,
+  void OnChange(modular::StoryInfo story_info,
                 modular::StoryState story_state) override {
-    FXL_CHECK(story_info->last_focus_time >= last_focus_time_);
-    if (story_info->last_focus_time <= last_focus_time_) {
+    FXL_CHECK(story_info.last_focus_time >= last_focus_time_);
+    if (story_info.last_focus_time <= last_focus_time_) {
       return;
     }
 
@@ -63,7 +62,7 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
         break;
     }
 
-    last_focus_time_ = story_info->last_focus_time;
+    last_focus_time_ = story_info.last_focus_time;
     continue_();
   }
 
@@ -101,9 +100,9 @@ class StoryWatcherImpl : modular::StoryWatcher {
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
+  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
 
-  f1dl::Binding<modular::StoryWatcher> binding_;
+  fidl::Binding<modular::StoryWatcher> binding_;
   std::function<void()> continue_;
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryWatcherImpl);
 };
@@ -129,7 +128,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
     FXL_LOG(INFO) << "OnFocusChange() " << info->focused_story_id;
   }
 
-  f1dl::Binding<modular::FocusWatcher> binding_;
+  fidl::Binding<modular::FocusWatcher> binding_;
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
@@ -149,7 +148,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint initialize_{"Initialize()"};
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     initialize_.Pass();
 
@@ -168,7 +167,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void CreateStory() {
     story_provider_->CreateStory(kModuleUrl,
-                                 [this](const f1dl::StringPtr& story_id) {
+                                 [this](const fidl::StringPtr& story_id) {
                                    create_story_.Pass();
                                    story_id_ = story_id;
                                    StartStory();
@@ -212,7 +211,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   modular::StoryProviderPtr story_provider_;
   StoryProviderWatcherImpl story_provider_watcher_;
 
-  f1dl::StringPtr story_id_;
+  fidl::StringPtr story_id_;
   modular::StoryControllerPtr story_controller_;
   StoryWatcherImpl story_watcher_;
 
