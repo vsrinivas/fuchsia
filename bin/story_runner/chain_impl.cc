@@ -5,6 +5,7 @@
 #include "peridot/bin/story_runner/chain_impl.h"
 
 #include "peridot/bin/story_runner/story_controller_impl.h"
+#include "peridot/lib/fidl/clone.h"
 
 namespace modular {
 
@@ -18,12 +19,12 @@ ChainImpl::~ChainImpl() = default;
 
 LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::StringPtr& key) {
   auto it = std::find_if(
-      chain_data_->key_to_link_map->begin(), chain_data_->key_to_link_map->end(),
-      [&key](const ChainKeyToLinkDataPtr& data) { return data->key == key; });
-  if (it == chain_data_->key_to_link_map->end())
+      chain_data_.key_to_link_map->begin(), chain_data_.key_to_link_map->end(),
+      [&key](const ChainKeyToLinkData& data) { return data.key == key; });
+  if (it == chain_data_.key_to_link_map->end())
     return nullptr;
 
-  return (*it)->link_path.Clone();
+  return CloneOptional(it->link_path);
 }
 
 }  // namespace modular

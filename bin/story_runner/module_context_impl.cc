@@ -12,6 +12,7 @@
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/lib/ledger_client/storage.h"
+#include "peridot/lib/fidl/clone.h"
 
 namespace modular {
 
@@ -47,12 +48,12 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
         module_data_->module_path, name);
     if (!link_path) {
       link_path = LinkPath::New();
-      link_path->module_path = module_data_->module_path.Clone();
+      link_path->module_path = CloneStringVector(module_data_->module_path);
       link_path->link_name = name;
       connection_type = LinkImpl::ConnectionType::Primary;
     }
   } else {
-    link_path = module_data_->link_path.Clone();
+    link_path = CloneOptional(module_data_->link_path);
   }
   story_controller_impl_->ConnectLinkPath(std::move(link_path), connection_type,
                                           std::move(request));
@@ -78,7 +79,7 @@ void ModuleContextImpl::EmbedModule(
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
   story_controller_impl_->EmbedModule(
-      module_data_->module_path, name, std::move(daisy),
+      module_data_->module_path, name, fidl::MakeOptional(std::move(daisy)),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL, callback);
 }
@@ -102,7 +103,7 @@ void ModuleContextImpl::StartModule(
     fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation, StartModuleCallback callback) {
   story_controller_impl_->StartModule(
-      module_data_->module_path, name, std::move(daisy),
+      module_data_->module_path, name, fidl::MakeOptional(std::move(daisy)),
       std::move(incoming_services), std::move(module_controller),
       std::move(surface_relation), ModuleSource::INTERNAL, callback);
 }
@@ -113,9 +114,14 @@ void ModuleContextImpl::StartContainerInShell(
     fidl::VectorPtr<ContainerLayout> layout,
     fidl::VectorPtr<ContainerRelationEntry> relationships,
     fidl::VectorPtr<ContainerNode> nodes) {
+  fidl::VectorPtr<ContainerNodePtr> node_ptrs;
+  node_ptrs->reserve(nodes->size());
+  for (auto& i : *nodes) {
+    node_ptrs.push_back(fidl::MakeOptional(std::move(i)));
+  }
   story_controller_impl_->StartContainerInShell(
-      module_data_->module_path, name, std::move(parent_relation),
-      std::move(layout), std::move(relationships), std::move(nodes));
+      module_data_->module_path, name, fidl::MakeOptional(std::move(parent_relation)),
+      std::move(layout), std::move(relationships), std::move(node_ptrs));
 }
 
 void ModuleContextImpl::EmbedModuleDeprecated(
@@ -138,16 +144,16 @@ void ModuleContextImpl::GetComponentContext(
 }
 
 void ModuleContextImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-  auto module_scope = maxwell::ModuleScope::New();
-  module_scope->module_path = module_data_->module_path.Clone();
+    fidl::InterfaceRequest<IntelligenceServices> request) {
+  auto module_scope = ModuleScope::New();
+  module_scope->module_path = CloneStringVector(module_data_->module_path);
   module_scope->url = module_data_->module_url;
   module_scope->story_id = story_controller_impl_->GetStoryId();
 
-  auto scope = maxwell::ComponentScope::New();
-  scope->set_module_scope(std::move(module_scope));
+  auto scope = ComponentScope::New();
+  scope->set_module_scope(std::move(*module_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
-      std::move(scope), std::move(request));
+      std::move(*scope), std::move(request));
 }
 
 void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {

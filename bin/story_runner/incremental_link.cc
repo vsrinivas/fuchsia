@@ -10,6 +10,7 @@
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -138,8 +139,8 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
       }
 
       data_->key = impl_->key_generator_.Create();
-      impl_->pending_ops_.push_back(data_.Clone());
-      new IncrementalWriteCall(&operation_queue_, impl_, data_.Clone(),
+      impl_->pending_ops_.push_back(CloneOptional(data_));
+      new IncrementalWriteCall(&operation_queue_, impl_, CloneOptional(data_),
                                [flow] {});
     }
 
@@ -193,7 +194,7 @@ void LinkImpl::ReloadCall::Run() {
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
       XdrLinkChange, [this, flow](fidl::VectorPtr<LinkChangePtr> changes) {
         if (changes->empty()) {
-          if (!impl_->create_link_info_.is_null() &&
+          if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&
               !impl_->create_link_info_->initial_data->empty()) {
             LinkChangePtr data = LinkChange::New();

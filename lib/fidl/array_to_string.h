@@ -62,6 +62,13 @@ inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
   return ret;
 }
 
+inline void to_array(const std::string& val, fidl::Array<uint8_t, 16>* array) {
+  size_t i = 0;
+  for (char c : val) {
+    (*array)[i++] = c;
+  }
+}
+
 inline fidl::VectorPtr<fidl::StringPtr> to_array(const std::vector<std::string>& val) {
   fidl::VectorPtr<fidl::StringPtr> ret;
   ret.resize(0);  // mark as not null

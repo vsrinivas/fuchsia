@@ -8,6 +8,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/time/time_point.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -26,7 +27,7 @@ void XdrFocusInfo(XdrContext* const xdr, FocusInfo* const data) {
 
 }  // namespace
 
-FocusHandler::FocusHandler(const fidl::StringPtr& device_id,
+FocusHandler::FocusHandler(fidl::StringPtr device_id,
                            LedgerClient* const ledger_client,
                            LedgerPageId page_id)
     : PageClient("FocusHandler",
@@ -49,8 +50,15 @@ void FocusHandler::AddControllerBinding(
 
 // |FocusProvider|
 void FocusHandler::Query(QueryCallback callback) {
-  new ReadAllDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
-      &operation_queue_, page(), kFocusKeyPrefix, XdrFocusInfo, callback);
+  new ReadAllDataCall<FocusInfo>(
+      &operation_queue_, page(), kFocusKeyPrefix, XdrFocusInfo, [callback](fidl::VectorPtr<FocusInfoPtr> infos) {
+        fidl::VectorPtr<FocusInfo> vector;
+        vector->reserve(infos->size());
+        for (const auto& i : *infos) {
+          vector.push_back((*i));
+        }
+        callback(std::move(vector));
+      });
 }
 
 // |FocusProvider|
@@ -59,7 +67,7 @@ void FocusHandler::Watch(fidl::InterfaceHandle<FocusWatcher> watcher) {
 }
 
 // |FocusProvider|
-void FocusHandler::Request(const fidl::StringPtr& story_id) {
+void FocusHandler::Request(fidl::StringPtr story_id) {
   for (const auto& watcher : request_watchers_) {
     watcher->OnFocusRequest(story_id);
   }
@@ -71,13 +79,13 @@ void FocusHandler::Duplicate(fidl::InterfaceRequest<FocusProvider> request) {
 }
 
 // |FocusController|
-void FocusHandler::Set(const fidl::StringPtr& story_id) {
+void FocusHandler::Set(fidl::StringPtr story_id) {
   FocusInfoPtr data = FocusInfo::New();
   data->device_id = device_id_;
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
-  new WriteDataCall<FocusInfo, fidl::InlinedStructPtr<FocusInfo>>(
+  new WriteDataCall<FocusInfo>(
       &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,
       std::move(data), [] {});
 }
@@ -97,7 +105,7 @@ void FocusHandler::OnPageChange(const std::string& /*key*/,
   }
 
   for (const auto& watcher : change_watchers_) {
-    watcher->OnFocusChange(focus_info.Clone());
+    watcher->OnFocusChange(CloneOptional(focus_info));
   }
 }
 
@@ -117,7 +125,7 @@ void VisibleStoriesHandler::AddControllerBinding(
 }
 
 void VisibleStoriesHandler::Query(QueryCallback callback) {
-  callback(visible_stories_.Clone());
+  callback(CloneStringVector(visible_stories_));
 }
 
 void VisibleStoriesHandler::Watch(
@@ -133,7 +141,7 @@ void VisibleStoriesHandler::Duplicate(
 void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {
   visible_stories_ = std::move(story_ids);
   for (const auto& watcher : change_watchers_) {
-    watcher->OnVisibleStoriesChange(visible_stories_.Clone());
+    watcher->OnVisibleStoriesChange(CloneStringVector(visible_stories_));
   }
 }
 

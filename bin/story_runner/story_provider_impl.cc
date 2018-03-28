@@ -50,8 +50,29 @@ void XdrStoryInfo(XdrContext* const xdr, StoryInfo* const data) {
 }
 
 void XdrStoryData(XdrContext* const xdr, modular_private::StoryData* const data) {
+  static constexpr char kStoryPageId[] = "story_page_id";
   xdr->Field("story_info", &data->story_info, XdrStoryInfo);
-  xdr->Field("story_page_id", &data->story_page_id);
+  switch (xdr->op()) {
+    case XdrOp::FROM_JSON: {
+      std::string page_id;
+      xdr->Field(kStoryPageId, &page_id);
+      if (page_id.empty()) {
+        data->story_page_id = nullptr;
+      } else {
+        data->story_page_id = ledger::PageId::New();
+        to_array(page_id, &data->story_page_id->id);
+      }
+      break;
+    }
+    case XdrOp::TO_JSON: {
+      std::string page_id;
+      if (data->story_page_id) {
+        page_id = to_string(data->story_page_id->id);
+      }
+      xdr->Field(kStoryPageId, &page_id);
+      break;
+    }
+  }
 }
 
 void MakeGetStoryDataCall(OperationContainer* const container,
