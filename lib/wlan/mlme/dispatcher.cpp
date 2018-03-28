@@ -379,13 +379,12 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
     debugfn();
 
     const uint8_t* bytes = packet->data();
-    auto hdr = FromBytes<ServiceHeader>(bytes, packet->len());
+    auto hdr = FromBytes<fidl_message_header_t>(bytes, packet->len());
     if (hdr == nullptr) {
         errorf("short service packet len=%zu\n", packet->len());
         return ZX_OK;
     }
-    debughdr("service packet txn_id=%u flags=%u ordinal=%u\n", hdr->txn_id, hdr->flags,
-             hdr->ordinal);
+    debughdr("service packet txid=%u flags=%u ordinal=%u\n", hdr->txid, hdr->flags, hdr->ordinal);
 
     auto method = static_cast<wlan_mlme::Method>(hdr->ordinal);
 
@@ -511,7 +510,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
     // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
     // everyone.
     size_t buf_len = 4096;
-    //size_t buf_len = sizeof(ServiceHeader) + resp->GetSerializedSize();
+    //size_t buf_len = sizeof(fidl_message_header_t) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
