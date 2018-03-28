@@ -9,16 +9,13 @@
 #include <string>
 #include <vector>
 
-#include "lib/action_log/fidl/component.fidl.h"
-#include "lib/action_log/fidl/listener.fidl.h"
-#include "lib/action_log/fidl/user.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
 #include "peridot/bin/action_log/action_log_data.h"
 
-namespace maxwell {
+namespace modular {
 
 class UserActionLogImpl : public UserActionLog {
  public:
@@ -27,13 +24,13 @@ class UserActionLogImpl : public UserActionLog {
 
  private:
   void GetComponentActionLog(
-      maxwell::ComponentScopePtr scope,
-      f1dl::InterfaceRequest<ComponentActionLog> action_log_request) override;
+      ComponentScope scope,
+      fidl::InterfaceRequest<ComponentActionLog> action_log_request) override;
 
   void Subscribe(
-      f1dl::InterfaceHandle<ActionLogListener> listener_handle) override;
+      fidl::InterfaceHandle<ActionLogListener> listener_handle) override;
 
-  void Duplicate(f1dl::InterfaceRequest<UserActionLog> request) override;
+  void Duplicate(fidl::InterfaceRequest<UserActionLog> request) override;
 
   void BroadcastToSubscribers(const ActionData& action_data);
 
@@ -43,10 +40,10 @@ class UserActionLogImpl : public UserActionLog {
 
   ActionLogData action_log_;
   ProposalPublisherPtr proposal_publisher_;
-  f1dl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
+  fidl::BindingSet<ComponentActionLog, std::unique_ptr<ComponentActionLog>>
       action_log_bindings_;
-  f1dl::InterfacePtrSet<ActionLogListener> subscribers_;
-  f1dl::BindingSet<UserActionLog> bindings_;
+  fidl::InterfacePtrSet<ActionLogListener> subscribers_;
+  fidl::BindingSet<UserActionLog> bindings_;
   std::string last_email_rcpt_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(UserActionLogImpl);
@@ -57,14 +54,13 @@ class ComponentActionLogImpl : public ComponentActionLog {
   ComponentActionLogImpl(ActionLogger log_action);
   ~ComponentActionLogImpl() override;
 
-  void LogAction(const f1dl::StringPtr& method,
-                 const f1dl::StringPtr& params) override;
+  void LogAction(fidl::StringPtr method, fidl::StringPtr params) override;
 
  private:
   const ActionLogger log_action_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentActionLogImpl);
 };
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_IMPL_H_

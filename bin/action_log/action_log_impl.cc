@@ -4,21 +4,18 @@
 
 #include "peridot/bin/action_log/action_log_impl.h"
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
-
-#include "lib/suggestion/fidl/proposal.fidl.h"
-#include "lib/suggestion/fidl/suggestion_display.fidl.h"
-#include "lib/surface/fidl/surface.fidl.h"
 #include "peridot/bin/action_log/action_log_data.h"
-
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/pointer.h"
 #include "third_party/rapidjson/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/writer.h"
 
-namespace maxwell {
+namespace modular {
 
 UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
     : action_log_([this](const ActionData& action_data) {
@@ -31,134 +28,136 @@ UserActionLogImpl::UserActionLogImpl(ProposalPublisherPtr proposal_publisher)
 UserActionLogImpl::~UserActionLogImpl() = default;
 
 void UserActionLogImpl::BroadcastToSubscribers(const ActionData& action_data) {
-  UserActionPtr action(UserAction::New());
-  action->component_url = action_data.component_url;
-  action->method = action_data.method;
-  action->parameters = action_data.params;
-  subscribers_.ForAllPtrs(
-      [action = std::move(action)](ActionLogListener* listener) {
-        listener->OnAction(action.Clone());
-      });
+  UserAction action;
+  action.component_url = action_data.component_url;
+  action.method = action_data.method;
+  action.parameters = action_data.params;
+  for (auto& listener : subscribers_.ptrs()) {
+    UserAction copy;
+    fidl::Clone(action, &copy);
+    (*listener)->OnAction(std::move(copy));
+  };
 }
 
 void UserActionLogImpl::MaybeProposeSharingVideo(
     const ActionData& action_data) {
-/* TODO: Either remove this code altogether or refactor it to use a vmo for the
-        suggestion image.
-  if (action_data.story_id.empty() || action_data.module_path.empty()) {
-    return;
-  }
-  if (action_data.method.compare("ViewVideo") != 0) {
-    return;
-  }
-
-  rapidjson::Document doc_params;
-  if (doc_params.Parse(action_data.params).HasParseError()) {
-    return;
-  }
-  rapidjson::Value* vid_value =
-      rapidjson::Pointer("/youtube-doc/youtube-video-id").Get(doc_params);
-  rapidjson::Value* title_value =
-      rapidjson::Pointer("/youtube-doc/youtube-video-title").Get(doc_params);
-
-  if (vid_value == nullptr || !vid_value->IsString()) {
-    return;
-  }
-  std::string video_id = vid_value->GetString();
-  std::string proposal_id = "Share Video " + action_data.story_id;
-
-  bool has_title = title_value != nullptr && title_value->IsString();
-  std::string video_title;
-  if (has_title) {
-    video_title = title_value->GetString();
-  }
-
-  ProposalPtr proposal(Proposal::New());
-  proposal->id = proposal_id;
-
-  auto add_module = AddModuleToStory::New();
-  add_module->story_id = action_data.story_id;
-  add_module->module_url = "email_composer";
-  add_module->module_name = video_id;
-
-  for (auto segment = action_data.module_path.begin();
-       segment != action_data.module_path.end(); segment++) {
-    add_module->module_path.push_back(*segment);
-  }
-
-  // HACK(alhaad): There is an issue that the root youtube module (A) actually
-  // embeds 2 other modules (B and C) and it's an embeded module (B) that
-  // produces this action log.
-  // Story shell freaks out when we try to add a new module (D) parented at (B)
-  // because it does not know about it (B). So instead we use some domain
-  // specific information to parent new module (D) at (A) instead.
-  size_t module_path_size = add_module->module_path.size();
-  if (module_path_size > 0) {
-    add_module->module_path.resize(module_path_size - 1);
-  }
-
-  add_module->link_name = "email-composer-link";
-  // TODO(azani): Do something sane.
-  std::string initial_data = "{\"email-composer\": {\"message\": {";
-  if (!last_email_rcpt_.empty()) {
-    initial_data += "\"to\": [{\"email\": \"" + last_email_rcpt_ + "\"}],";
-  }
-  if (has_title) {
-    // TODO(youngseokyoon): The video_title should be correctly escaped here.
-    initial_data +=
-        "\"subject\": \"Watch \\\"" + video_title + "\\\" on YouTube\",";
-  } else {
-    initial_data += "\"subject\": \"Watch this video on YouTube\",";
-  }
-  initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
-  initial_data += video_id + "\"}}}";
-  add_module->initial_data = initial_data;
-
-  // We start compose module in a copresent, dependent configuration that takes
-  // 30% emphasis.
-  add_module->surface_relation = modular::SurfaceRelation::New();
-  add_module->surface_relation->arrangement =
-      modular::SurfaceArrangement::COPRESENT;
-  add_module->surface_relation->dependency =
-      modular::SurfaceDependency::DEPENDENT;
-  add_module->surface_relation->emphasis = 0.5;
-
-  ActionPtr action(Action::New());
-  action->set_add_module_to_story(std::move(add_module));
-  proposal->on_selected.push_back(std::move(action));
-
-  action->set_add_module_to_story(std::move(add_module));
-  proposal->on_selected.push_back(std::move(action));
-
-  SuggestionDisplayImagePtr displayImage(SuggestionDisplayImage::New());
-  displayImage->url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
-  displayImage->image_type = SuggestionImageType::OTHER;
-
-  SuggestionDisplayPtr display(SuggestionDisplay::New());
-  if (has_title) {
-    display->headline = "Share \"" + video_title + "\" Video via email";
-  } else {
-    display->headline = "Share Video via email";
-  }
-  display->color = 0xff42ebf4;
-  display->image = std::move(displayImage);
-  // If there is an email recipient already available, set an interrupt
-  // suggestion.
-  if (!last_email_rcpt_.empty()) {
-    display->annoyance = AnnoyanceType::INTERRUPT;
-    if (has_title) {
-      display->headline =
-          "Share \"" + video_title + "\" Video with " + last_email_rcpt_;
-    } else {
-      display->headline = "Share Video with " + last_email_rcpt_;
+  /* TODO: Either remove this code altogether or refactor it to use a vmo for
+    the suggestion image. if (action_data.story_id.empty() ||
+    action_data.module_path.empty()) { return;
     }
-  }
-  proposal->display = std::move(display);
+    if (action_data.method.compare("ViewVideo") != 0) {
+      return;
+    }
 
-  // We clear any existing proposal for this story.
-  proposal_publisher_->Remove(proposal_id);
-  proposal_publisher_->Propose(std::move(proposal));
-*/
+    rapidjson::Document doc_params;
+    if (doc_params.Parse(action_data.params).HasParseError()) {
+      return;
+    }
+    rapidjson::Value* vid_value =
+        rapidjson::Pointer("/youtube-doc/youtube-video-id").Get(doc_params);
+    rapidjson::Value* title_value =
+        rapidjson::Pointer("/youtube-doc/youtube-video-title").Get(doc_params);
+
+    if (vid_value == nullptr || !vid_value->IsString()) {
+      return;
+    }
+    std::string video_id = vid_value->GetString();
+    std::string proposal_id = "Share Video " + action_data.story_id;
+
+    bool has_title = title_value != nullptr && title_value->IsString();
+    std::string video_title;
+    if (has_title) {
+      video_title = title_value->GetString();
+    }
+
+    ProposalPtr proposal(Proposal::New());
+    proposal->id = proposal_id;
+
+    auto add_module = AddModuleToStory::New();
+    add_module->story_id = action_data.story_id;
+    add_module->module_url = "email_composer";
+    add_module->module_name = video_id;
+
+    for (auto segment = action_data.module_path.begin();
+         segment != action_data.module_path.end(); segment++) {
+      add_module->module_path.push_back(*segment);
+    }
+
+    // HACK(alhaad): There is an issue that the root youtube module (A) actually
+    // embeds 2 other modules (B and C) and it's an embeded module (B) that
+    // produces this action log.
+    // Story shell freaks out when we try to add a new module (D) parented at
+    (B)
+    // because it does not know about it (B). So instead we use some domain
+    // specific information to parent new module (D) at (A) instead.
+    size_t module_path_size = add_module->module_path.size();
+    if (module_path_size > 0) {
+      add_module->module_path.resize(module_path_size - 1);
+    }
+
+    add_module->link_name = "email-composer-link";
+    // TODO(azani): Do something sane.
+    std::string initial_data = "{\"email-composer\": {\"message\": {";
+    if (!last_email_rcpt_.empty()) {
+      initial_data += "\"to\": [{\"email\": \"" + last_email_rcpt_ + "\"}],";
+    }
+    if (has_title) {
+      // TODO(youngseokyoon): The video_title should be correctly escaped here.
+      initial_data +=
+          "\"subject\": \"Watch \\\"" + video_title + "\\\" on YouTube\",";
+    } else {
+      initial_data += "\"subject\": \"Watch this video on YouTube\",";
+    }
+    initial_data += "\"text\": \"http://www.youtube.com/watch?v=";
+    initial_data += video_id + "\"}}}";
+    add_module->initial_data = initial_data;
+
+    // We start compose module in a copresent, dependent configuration that
+    takes
+    // 30% emphasis.
+    add_module->surface_relation = modular::SurfaceRelation::New();
+    add_module->surface_relation->arrangement =
+        modular::SurfaceArrangement::COPRESENT;
+    add_module->surface_relation->dependency =
+        modular::SurfaceDependency::DEPENDENT;
+    add_module->surface_relation->emphasis = 0.5;
+
+    ActionPtr action(Action::New());
+    action->set_add_module_to_story(std::move(add_module));
+    proposal->on_selected.push_back(std::move(action));
+
+    action->set_add_module_to_story(std::move(add_module));
+    proposal->on_selected.push_back(std::move(action));
+
+    SuggestionDisplayImagePtr displayImage(SuggestionDisplayImage::New());
+    displayImage->url = "http://img.youtube.com/vi/" + video_id + "/0.jpg";
+    displayImage->image_type = SuggestionImageType::OTHER;
+
+    SuggestionDisplayPtr display(SuggestionDisplay::New());
+    if (has_title) {
+      display->headline = "Share \"" + video_title + "\" Video via email";
+    } else {
+      display->headline = "Share Video via email";
+    }
+    display->color = 0xff42ebf4;
+    display->image = std::move(displayImage);
+    // If there is an email recipient already available, set an interrupt
+    // suggestion.
+    if (!last_email_rcpt_.empty()) {
+      display->annoyance = AnnoyanceType::INTERRUPT;
+      if (has_title) {
+        display->headline =
+            "Share \"" + video_title + "\" Video with " + last_email_rcpt_;
+      } else {
+        display->headline = "Share Video with " + last_email_rcpt_;
+      }
+    }
+    proposal->display = std::move(display);
+
+    // We clear any existing proposal for this story.
+    proposal_publisher_->Remove(proposal_id);
+    proposal_publisher_->Propose(std::move(proposal));
+  */
 }
 
 void UserActionLogImpl::MaybeRecordEmailRecipient(
@@ -181,8 +180,8 @@ void UserActionLogImpl::MaybeRecordEmailRecipient(
 }
 
 void UserActionLogImpl::GetComponentActionLog(
-    ComponentScopePtr scope,
-    f1dl::InterfaceRequest<ComponentActionLog> action_log_request) {
+    ComponentScope scope,
+    fidl::InterfaceRequest<ComponentActionLog> action_log_request) {
   std::unique_ptr<ComponentActionLogImpl> module_action_log_impl(
       new ComponentActionLogImpl(
           action_log_.GetActionLogger(std::move(scope))));
@@ -192,22 +191,23 @@ void UserActionLogImpl::GetComponentActionLog(
 }
 
 void UserActionLogImpl::Duplicate(
-    f1dl::InterfaceRequest<UserActionLog> request) {
+    fidl::InterfaceRequest<UserActionLog> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void UserActionLogImpl::Subscribe(
-    f1dl::InterfaceHandle<ActionLogListener> listener_handle) {
+    fidl::InterfaceHandle<ActionLogListener> listener_handle) {
   ActionLogListenerPtr listener = listener_handle.Bind();
   subscribers_.AddInterfacePtr(std::move(listener));
 }
 
-ComponentActionLogImpl::ComponentActionLogImpl(ActionLogger log_action) : log_action_(log_action) {}
+ComponentActionLogImpl::ComponentActionLogImpl(ActionLogger log_action)
+    : log_action_(log_action) {}
 
 ComponentActionLogImpl::~ComponentActionLogImpl() = default;
 
-void ComponentActionLogImpl::LogAction(const f1dl::StringPtr& method,
-                                       const f1dl::StringPtr& json_params) {
+void ComponentActionLogImpl::LogAction(fidl::StringPtr method,
+                                       fidl::StringPtr json_params) {
   rapidjson::Document params;
   if (params.Parse(json_params.get().c_str()).HasParseError()) {
     FXL_LOG(WARNING) << "Parse error.";
@@ -217,4 +217,4 @@ void ComponentActionLogImpl::LogAction(const f1dl::StringPtr& method,
   log_action_(method, json_params);
 }
 
-}  // namespace maxwell
+}  // namespace modular

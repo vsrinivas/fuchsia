@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "lib/user_intelligence/fidl/scope.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 struct ActionData {
   const std::string story_id;
@@ -32,7 +32,7 @@ class ActionLogData {
   ActionLogData(ActionListener listener);
   ~ActionLogData();
 
-  ActionLogger GetActionLogger(ComponentScopePtr scope);
+  ActionLogger GetActionLogger(ComponentScope scope);
   // TODO(azani): Make the log readable somehow.
 
   void Append(const ActionData& action_data);
@@ -42,6 +42,6 @@ class ActionLogData {
   ActionListener listener_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_ACTION_LOG_ACTION_LOG_DATA_H_
