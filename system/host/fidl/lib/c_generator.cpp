@@ -217,7 +217,7 @@ void CGenerator::GenerateStructTypedef(StringView name) {
 
 void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Member>& members) {
     header_file_ << "struct " << name << " {\n";
-    header_file_ << kIndent << "alignas(FIDL_ALIGNMENT)\n";
+    header_file_ << kIndent << "FIDL_ALIGNDECL\n";
     for (const auto& member : members) {
         header_file_ << kIndent << member.type << " " << member.name;
         for (uint32_t array_count : member.array_counts) {
@@ -231,7 +231,8 @@ void CGenerator::GenerateStructDeclaration(StringView name, const std::vector<Me
 void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
                                                 const std::vector<Member>& members) {
     header_file_ << "struct " << name << " {\n";
-    header_file_ << kIndent << "alignas(FIDL_ALIGNMENT) fidl_union_tag_t tag;\n";
+    header_file_ << kIndent << "FIDL_ALIGNDECL\n";
+    header_file_ << kIndent << "fidl_union_tag_t tag;\n";
     header_file_ << kIndent << "union {\n";
     for (const auto& member : members) {
         header_file_ << kIndent << kIndent << member.type << " " << member.name;

@@ -39,6 +39,7 @@ extern const fidl_type_t _RegistryRegisterTraceProviderRequestTable;
 // Declarations
 
 struct ProviderStartRequest {
+    FIDL_ALIGNDECL
     fidl_message_header_t hdr;
     zx_handle_t buffer;
     zx_handle_t fence;
@@ -46,10 +47,12 @@ struct ProviderStartRequest {
 };
 
 struct ProviderStopRequest {
+    FIDL_ALIGNDECL
     fidl_message_header_t hdr;
 };
 
 struct RegistryRegisterTraceProviderRequest {
+    FIDL_ALIGNDECL
     fidl_message_header_t hdr;
     zx_handle_t provider;
 };

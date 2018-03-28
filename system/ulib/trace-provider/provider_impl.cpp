@@ -78,7 +78,7 @@ async_wait_result_t TraceProviderImpl::Connection::Handle(
 }
 
 bool TraceProviderImpl::Connection::ReadMessage() {
-    alignas(FIDL_ALIGNMENT) uint8_t buffer[16 * 1024];
+    FIDL_ALIGNDECL uint8_t buffer[16 * 1024];
     uint32_t num_bytes = 0u;
     zx_handle_t handles[2];
     uint32_t num_handles = 0u;

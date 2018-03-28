@@ -100,9 +100,6 @@ __BEGIN_CDECLS
 #define ZXFIDL_RENAME     0x83000006
 #define ZXFIDL_LINK       0x83000007
 
-#define FIDL_ROUNDUP(n, a) (((n) + ((a) - 1)) & ~((a) - 1))
-#define FIDL_ALIGN(a) FIDL_ROUNDUP((a), FIDL_ALIGNMENT)
-
 #define ZXRIO_FIDL_MSG(n)  ((n) & ZXRIO_FIDL_ORD)
 #define ZXRIO_OP(n)        (n) // opcode
 #define ZXRIO_HC(n)        (((n) >> 8) & 3) // handle count

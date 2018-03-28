@@ -55,6 +55,8 @@ __BEGIN_CDECLS
 
 // Out of line allocations are all 8 byte aligned.
 #define FIDL_ALIGNMENT ((size_t)8)
+#define FIDL_ALIGN(a) (((a) + 7) & ~7)
+#define FIDL_ALIGNDECL alignas(FIDL_ALIGNMENT)
 
 // Primitive types.
 
