@@ -5,9 +5,8 @@
 // This file contains functions and Operation classes from LinkImpl that exist
 // solely to implement the history of change operations for Links.
 
-#include "lib/fidl/cpp/struct_ptr.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/story/fidl/link_change.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
@@ -28,7 +27,7 @@ void XdrLinkChange(XdrContext* const xdr, LinkChange* const data) {
 
 namespace {
 
-std::string MakeSequencedLinkKey(const LinkPathPtr& link_path,
+std::string MakeSequencedLinkKey(const LinkPath& link_path,
                                  const std::string& sequence_key) {
   // |sequence_key| uses characters that never require escaping
   return MakeLinkKey(link_path) + kSeparator + sequence_key;
@@ -192,7 +191,7 @@ void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<LinkChange>(
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
-      XdrLinkChange, [this, flow](f1dl::VectorPtr<LinkChangePtr> changes) {
+      XdrLinkChange, [this, flow](fidl::VectorPtr<LinkChangePtr> changes) {
         if (changes->empty()) {
           if (!impl_->create_link_info_.is_null() &&
               !impl_->create_link_info_->initial_data.is_null() &&
@@ -200,7 +199,7 @@ void LinkImpl::ReloadCall::Run() {
             LinkChangePtr data = LinkChange::New();
             // Leave data->key null to signify a new entry
             data->op = LinkChangeOp::SET;
-            data->pointer = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+            data->pointer = fidl::VectorPtr<fidl::StringPtr>::New(0);
             data->json = std::move(impl_->create_link_info_->initial_data);
             new IncrementalChangeCall(&operation_queue_, impl_, std::move(data),
                                       kWatchAllConnectionId, [flow] {});
@@ -211,7 +210,7 @@ void LinkImpl::ReloadCall::Run() {
       });
 }
 
-void LinkImpl::Replay(f1dl::VectorPtr<LinkChangePtr> changes) {
+void LinkImpl::Replay(fidl::VectorPtr<LinkChangePtr> changes) {
   doc_ = CrtJsonDoc();
   auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();

@@ -7,7 +7,7 @@
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/module/fidl/module_data.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/lib/testing/story_controller_mock.h"
 
@@ -16,18 +16,18 @@ namespace {
 
 class ChainImplTest : public gtest::TestWithMessageLoop {
  public:
-  void Reset(std::vector<f1dl::StringPtr> path,
+  void Reset(std::vector<fidl::StringPtr> path,
              std::map<std::string, std::vector<std::string>> link_map) {
     auto chain_data = ChainData::New();
     for (const auto& entry : link_map) {
       auto link_path = LinkPath::New();
-      link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::From(entry.second);
+      link_path->module_path = fidl::VectorPtr<fidl::StringPtr>::From(entry.second);
       auto key_link_data = ChainKeyToLinkData::New();
       key_link_data->key = entry.first;
       key_link_data->link_path = std::move(link_path);
       chain_data->key_to_link_map.push_back(std::move(key_link_data));
     }
-    f1dl::VectorPtr<f1dl::StringPtr> tmp_path(std::move(path));
+    fidl::VectorPtr<fidl::StringPtr> tmp_path(std::move(path));
     impl_.reset(new ChainImpl(std::move(tmp_path), std::move(chain_data)));
   }
 
@@ -56,7 +56,7 @@ TEST_F(ChainImplTest, GetLinkPath) {
 
   auto path = impl_->GetLinkPathForKey("key1");
   ASSERT_TRUE(path);
-  f1dl::VectorPtr<f1dl::StringPtr> expected;
+  fidl::VectorPtr<fidl::StringPtr> expected;
   expected.reset({"link", "path1"});
   EXPECT_TRUE(path->module_path.Equals(expected));
 

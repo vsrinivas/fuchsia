@@ -34,17 +34,6 @@ source_set("array_to_string") {
   ]
 }
 
-source_set("context") {
-  sources = [
-    "context.h",
-  ]
-
-  public_deps = [
-    "//garnet/public/lib/fidl/cpp",
-    "//peridot/public/lib:fidl_private",
-  ]
-}
-
 source_set("json_xdr") {
   sources = [
     "json_xdr.cc",
@@ -71,6 +60,17 @@ source_set("proxy") {
     "//garnet/public/lib/fxl",
   ]
 }
+
+source_set("clone") {
+  sources = [
+    "clone.h",
+  ]
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 
 source_set("scope") {
   sources = [

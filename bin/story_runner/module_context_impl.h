@@ -14,12 +14,12 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include "lib/surface/fidl/surface.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/component/component_context_impl.h"
 
 namespace modular {
@@ -31,7 +31,7 @@ class StoryControllerImpl;
 struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
-  maxwell::UserIntelligenceProvider* const user_intelligence_provider;
+  modular::UserIntelligenceProvider* const user_intelligence_provider;
   ModuleResolver* const module_resolver;
 };
 
@@ -48,72 +48,72 @@ class ModuleContextImpl : ModuleContext {
   ModuleContextImpl(const ModuleContextInfo& info,
                     const ModuleData* module_data,
                     ModuleControllerImpl* module_controller_impl,
-                    f1dl::InterfaceRequest<component::ServiceProvider>
+                    fidl::InterfaceRequest<component::ServiceProvider>
                         service_provider_request);
 
   ~ModuleContextImpl() override;
 
  private:
   // |ModuleContext|
-  void GetLink(const f1dl::StringPtr& name,
-               f1dl::InterfaceRequest<Link> request) override;
+  void GetLink(fidl::StringPtr name,
+               fidl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
   void StartModuleDeprecated(
-      const f1dl::StringPtr& name,
-      const f1dl::StringPtr& query,
-      const f1dl::StringPtr& link_name,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller,
+      fidl::StringPtr name,
+      fidl::StringPtr query,
+      fidl::StringPtr link_name,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
   // |ModuleContext|
   void EmbedModule(
-      const f1dl::StringPtr& name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller,
+      fidl::StringPtr name,
+      Daisy daisy,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
-      const EmbedModuleCallback& callback) override;
+      EmbedModuleCallback callback) override;
   // |ModuleContext|
   void StartModuleInShellDeprecated(
-      const f1dl::StringPtr& name,
-      const f1dl::StringPtr& query,
-      const f1dl::StringPtr& link_name,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller,
+      fidl::StringPtr name,
+      fidl::StringPtr query,
+      fidl::StringPtr link_name,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
       bool focus) override;
   // |ModuleContext|
   void StartModule(
-      const f1dl::StringPtr& name,
-      DaisyPtr daisy,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller,
+      fidl::StringPtr name,
+      Daisy daisy,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
       SurfaceRelationPtr surface_relation,
-      const StartModuleCallback& callback) override;
+      StartModuleCallback callback) override;
   // |ModuleContext|
   void StartContainerInShell(
-      const f1dl::StringPtr& name,
-      SurfaceRelationPtr parent_relation,
-      f1dl::VectorPtr<ContainerLayoutPtr> layout,
-      f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
-      f1dl::VectorPtr<ContainerNodePtr> nodes) override;
+      fidl::StringPtr name,
+      SurfaceRelation parent_relation,
+      fidl::VectorPtr<ContainerLayout> layout,
+      fidl::VectorPtr<ContainerRelationEntry> relationships,
+      fidl::VectorPtr<ContainerNode> nodes) override;
   // |ModuleContext|
   void EmbedModuleDeprecated(
-      const f1dl::StringPtr& name,
-      const f1dl::StringPtr& query,
-      const f1dl::StringPtr& link_name,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller,
-      f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      fidl::StringPtr name,
+      fidl::StringPtr query,
+      fidl::StringPtr link_name,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller,
+      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
   // |ModuleContext|
   void GetComponentContext(
-      f1dl::InterfaceRequest<ComponentContext> context_request) override;
+      fidl::InterfaceRequest<ComponentContext> context_request) override;
   // |ModuleContext|
   void GetIntelligenceServices(
-      f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+      fidl::InterfaceRequest<modular::IntelligenceServices> request) override;
   // |ModuleContext|
-  void GetStoryId(const GetStoryIdCallback& callback) override;
+  void GetStoryId(GetStoryIdCallback callback) override;
   // |ModuleContext|
   void RequestFocus() override;
   // |ModuleContext|
@@ -134,10 +134,10 @@ class ModuleContextImpl : ModuleContext {
 
   ComponentContextImpl component_context_impl_;
 
-  maxwell::UserIntelligenceProvider* const
+  modular::UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned
 
-  f1dl::BindingSet<ModuleContext> bindings_;
+  fidl::BindingSet<ModuleContext> bindings_;
 
   // A service provider that represents the services to be added into an
   // application's namespace.

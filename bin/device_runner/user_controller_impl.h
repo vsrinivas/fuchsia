@@ -10,17 +10,17 @@
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/auth/fidl/account/account.fidl.h"
-#include "lib/config/fidl/config.fidl.h"
-#include "lib/device/fidl/user_provider.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/user/fidl/user_runner.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
 
@@ -43,11 +43,11 @@ class UserControllerImpl : UserController, UserContext {
       AppConfigPtr user_runner,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
-      f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
-      f1dl::InterfaceRequest<UserController> user_controller_request,
+      fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
+      fidl::InterfaceRequest<UserController> user_controller_request,
       DoneCallback done);
 
   std::string DumpState();
@@ -59,26 +59,26 @@ class UserControllerImpl : UserController, UserContext {
  private:
   // |UserController|
   void SwapUserShell(AppConfigPtr user_shell,
-                     const SwapUserShellCallback& callback) override;
+                     SwapUserShellCallback callback) override;
 
   // |UserController|
-  void Watch(f1dl::InterfaceHandle<UserWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<UserWatcher> watcher) override;
 
   // |UserContext|
   void Logout() override;
 
   // |UserContext|
   void GetPresentation(
-      f1dl::InterfaceRequest<presentation::Presentation> presentation) override;
+      fidl::InterfaceRequest<presentation::Presentation> presentation) override;
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;
   UserRunnerPtr user_runner_;
 
-  f1dl::Binding<UserContext> user_context_binding_;
-  f1dl::Binding<UserController> user_controller_binding_;
+  fidl::Binding<UserContext> user_context_binding_;
+  fidl::Binding<UserController> user_controller_binding_;
 
-  f1dl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
+  fidl::InterfacePtrSet<modular::UserWatcher> user_watchers_;
 
   std::vector<LogoutCallback> logout_response_callbacks_;
 

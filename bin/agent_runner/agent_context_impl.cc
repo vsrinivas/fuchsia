@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "lib/entity/fidl/entity_reference_factory.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
@@ -62,11 +62,11 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
     agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
         agent_context_impl_->url_,
-        [this, flow](component::ServiceListPtr maxwell_service_list) {
+        [this, flow](component::ServiceList maxwell_service_list) {
           auto service_list = component::ServiceList::New();
-          service_list->names = std::move(maxwell_service_list->names);
+          service_list->names = std::move(maxwell_service_list.names);
           agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
-              maxwell_service_list->provider.Bind());
+              maxwell_service_list.provider.Bind());
           Continue(std::move(service_list), flow);
         });
   }
@@ -180,7 +180,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
           info.component_context_info.entity_provider_runner),
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<AgentContext>(
-      [this](f1dl::InterfaceRequest<AgentContext> request) {
+      [this](fidl::InterfaceRequest<AgentContext> request) {
         agent_context_bindings_.AddBinding(this, std::move(request));
       });
   new InitializeCall(&operation_queue_, this, info.app_launcher,
@@ -191,9 +191,9 @@ AgentContextImpl::~AgentContextImpl() = default;
 
 void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
-    f1dl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
   new SyncCall(
       &operation_queue_,
@@ -214,8 +214,8 @@ void AgentContextImpl::NewAgentConnection(
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
-    f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   new SyncCall(
       &operation_queue_,
       fxl::MakeCopyable(
@@ -244,36 +244,36 @@ void AgentContextImpl::NewTask(const std::string& task_id) {
 }
 
 void AgentContextImpl::GetComponentContext(
-    f1dl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<ComponentContext> request) {
   component_context_impl_.Connect(std::move(request));
 }
 
 void AgentContextImpl::GetTokenProvider(
-    f1dl::InterfaceRequest<auth::TokenProvider> request) {
+    fidl::InterfaceRequest<modular_auth::TokenProvider> request) {
   token_provider_factory_->GetTokenProvider(url_, std::move(request));
 }
 
 void AgentContextImpl::GetIntelligenceServices(
-    f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-  auto agent_scope = maxwell::AgentScope::New();
-  agent_scope->url = url_;
-  auto scope = maxwell::ComponentScope::New();
-  scope->set_agent_scope(std::move(agent_scope));
+    fidl::InterfaceRequest<IntelligenceServices> request) {
+  AgentScope agent_scope;
+  agent_scope.url = url_;
+  ComponentScope scope;
+  scope.set_agent_scope(std::move(agent_scope));
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(scope), std::move(request));
 }
 
 void AgentContextImpl::GetEntityReferenceFactory(
-    f1dl::InterfaceRequest<EntityReferenceFactory> request) {
+    fidl::InterfaceRequest<EntityReferenceFactory> request) {
   entity_provider_runner_->ConnectEntityReferenceFactory(url_,
                                                          std::move(request));
 }
 
-void AgentContextImpl::ScheduleTask(TaskInfoPtr task_info) {
+void AgentContextImpl::ScheduleTask(TaskInfo task_info) {
   agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
-void AgentContextImpl::DeleteTask(const f1dl::StringPtr& task_id) {
+void AgentContextImpl::DeleteTask(fidl::StringPtr task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }
 

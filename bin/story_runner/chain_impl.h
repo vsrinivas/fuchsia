@@ -9,24 +9,24 @@
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/story/fidl/story_controller.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 
 class ChainImpl {
  public:
-  ChainImpl(f1dl::VectorPtr<f1dl::StringPtr> path, ChainDataPtr chain_data);
+  ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path, const ChainData& chain_data);
   ~ChainImpl();
 
-  const f1dl::VectorPtr<f1dl::StringPtr>& chain_path() const { return path_; }
+  const fidl::VectorPtr<fidl::StringPtr>& chain_path() const { return path_; }
 
-  LinkPathPtr GetLinkPathForKey(const f1dl::StringPtr& key);
+  LinkPathPtr GetLinkPathForKey(const fidl::StringPtr& key);
 
  private:
-  const f1dl::VectorPtr<f1dl::StringPtr> path_;
-  const ChainDataPtr chain_data_;
+  fidl::VectorPtr<fidl::StringPtr> path_;
+  ChainData chain_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChainImpl);
 };

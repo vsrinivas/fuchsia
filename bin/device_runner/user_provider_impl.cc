@@ -85,7 +85,7 @@ UserProviderImpl::UserProviderImpl(
   }
 }
 
-void UserProviderImpl::Connect(f1dl::InterfaceRequest<UserProvider> request) {
+void UserProviderImpl::Connect(fidl::InterfaceRequest<UserProvider> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -161,9 +161,9 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   LoginInternal(Convert(found_user), std::move(params));
 }
 
-void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
-  f1dl::VectorPtr<auth::AccountPtr> accounts =
-      f1dl::VectorPtr<auth::AccountPtr>::New(0);
+void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
+  fidl::VectorPtr<auth::AccountPtr> accounts =
+      fidl::VectorPtr<auth::AccountPtr>::New(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       accounts.push_back(Convert(user));
@@ -173,11 +173,11 @@ void UserProviderImpl::PreviousUsers(const PreviousUsersCallback& callback) {
 }
 
 void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
-                               const AddUserCallback& callback) {
+                               AddUserCallback callback) {
   account_provider_->AddAccount(
       identity_provider,
       [this, identity_provider, callback](auth::AccountPtr account,
-                                          const f1dl::StringPtr& error_code) {
+                                          const fidl::StringPtr& error_code) {
         if (account.is_null()) {
           callback(nullptr, error_code);
           return;
@@ -234,8 +234,8 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
       });
 }
 
-void UserProviderImpl::RemoveUser(const f1dl::StringPtr& account_id,
-                                  const RemoveUserCallback& callback) {
+void UserProviderImpl::RemoveUser(const fidl::StringPtr& account_id,
+                                  RemoveUserCallback callback) {
   auth::AccountPtr account;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {

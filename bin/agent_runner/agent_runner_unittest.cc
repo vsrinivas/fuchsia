@@ -14,7 +14,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
@@ -77,7 +77,7 @@ class MyDummyAgent : Agent,
                      public testing::MockBase {
  public:
   MyDummyAgent(zx::channel directory_request,
-               f1dl::InterfaceRequest<component::ApplicationController> ctrl)
+               fidl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         app_controller_(this, std::move(ctrl)),
@@ -101,17 +101,17 @@ class MyDummyAgent : Agent,
   // |ApplicationController|
   void Detach() override { ++counts["Detach"]; }
   // |ApplicationController|
-  void Wait(const WaitCallback& callback) override { ++counts["Wait"]; }
+  void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Connect(const f1dl::StringPtr& /*requestor_url*/,
-               f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+  void Connect(const fidl::StringPtr& /*requestor_url*/,
+               fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }
 
   // |Agent|
-  void RunTask(const f1dl::StringPtr& /*task_id*/,
+  void RunTask(const fidl::StringPtr& /*task_id*/,
                const RunTaskCallback& /*callback*/) override {
     ++counts["RunTask"];
   }
@@ -119,8 +119,8 @@ class MyDummyAgent : Agent,
  private:
   fs::ManagedVfs vfs_;
   fbl::RefPtr<fs::PseudoDir> outgoing_directory_;
-  f1dl::Binding<component::ApplicationController> app_controller_;
-  f1dl::Binding<modular::Agent> agent_binding_;
+  fidl::Binding<component::ApplicationController> app_controller_;
+  fidl::Binding<modular::Agent> agent_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyDummyAgent);
 };
@@ -135,7 +135,7 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
           component::ApplicationLaunchInfoPtr launch_info,
-          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->directory_request), std::move(ctrl));
         ++agent_launch_count;
@@ -181,7 +181,7 @@ TEST_F(AgentRunnerTest, AgentController) {
       kMyAgentUrl,
       [&dummy_agent](
           component::ApplicationLaunchInfoPtr launch_info,
-          f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
+          fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
             std::move(launch_info->directory_request), std::move(ctrl));
       });

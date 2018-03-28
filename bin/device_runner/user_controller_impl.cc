@@ -20,11 +20,11 @@ UserControllerImpl::UserControllerImpl(
     AppConfigPtr user_runner,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
-    f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    f1dl::InterfaceHandle<component::ServiceProvider> device_shell_services,
-    f1dl::InterfaceRequest<UserController> user_controller_request,
+    fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
+    fidl::InterfaceRequest<UserController> user_controller_request,
     DoneCallback done)
     : user_context_binding_(this),
       user_controller_binding_(this, std::move(user_controller_request)),
@@ -64,8 +64,8 @@ UserControllerImpl::UserControllerImpl(
 std::string UserControllerImpl::DumpState() {
   UserRunnerDebugSyncPtr debug;
   user_runner_app_->services().ConnectToService(
-      f1dl::GetSynchronousProxy(&debug));
-  f1dl::StringPtr output;
+      fidl::GetSynchronousProxy(&debug));
+  fidl::StringPtr output;
   debug->DumpState(&output);
   return output;
 }
@@ -97,7 +97,7 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
 
 // |UserContext|
 void UserControllerImpl::GetPresentation(
-    f1dl::InterfaceRequest<presentation::Presentation> presentation) {
+    fidl::InterfaceRequest<presentation::Presentation> presentation) {
   if (device_shell_services_) {
     device_shell_services_->ConnectToService("mozart.Presentation",
                                              presentation.TakeChannel());
@@ -106,12 +106,12 @@ void UserControllerImpl::GetPresentation(
 
 // |UserController|
 void UserControllerImpl::SwapUserShell(AppConfigPtr user_shell,
-                                       const SwapUserShellCallback& callback) {
+                                       SwapUserShellCallback callback) {
   user_runner_->SwapUserShell(std::move(user_shell), callback);
 }
 
 // |UserController|
-void UserControllerImpl::Watch(f1dl::InterfaceHandle<UserWatcher> watcher) {
+void UserControllerImpl::Watch(fidl::InterfaceHandle<UserWatcher> watcher) {
   user_watchers_.AddInterfacePtr(watcher.Bind());
 }
 

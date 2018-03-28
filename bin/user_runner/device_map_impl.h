@@ -13,7 +13,7 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/user/fidl/device_map.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -34,20 +34,20 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   const std::string& current_device_id() const { return current_device_id_; }
 
-  void Connect(f1dl::InterfaceRequest<DeviceMap> request);
+  void Connect(fidl::InterfaceRequest<DeviceMap> request);
 
  private:
   // |DeviceMap|
-  void Query(const QueryCallback& callback) override;
+  void Query(QueryCallback callback) override;
 
   // |DeviceMap|
-  void GetCurrentDevice(const GetCurrentDeviceCallback& callback) override;
+  void GetCurrentDevice(GetCurrentDeviceCallback callback) override;
 
   // |DeviceMap|
-  void SetCurrentDeviceProfile(const ::f1dl::StringPtr& profile) override;
+  void SetCurrentDeviceProfile(const ::fidl::StringPtr& profile) override;
 
   // |DeviceMap|
-  void WatchDeviceMap(f1dl::InterfaceHandle<DeviceMapWatcher> watcher) override;
+  void WatchDeviceMap(fidl::InterfaceHandle<DeviceMapWatcher> watcher) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -62,7 +62,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void Notify(const std::string& device_id);
 
   // Clients that have connected to this service.
-  f1dl::BindingSet<DeviceMap> bindings_;
+  fidl::BindingSet<DeviceMap> bindings_;
 
   // All known devices from the Ledger page.
   std::map<std::string, DeviceMapEntryPtr> devices_;
@@ -72,7 +72,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
 
   OperationQueue operation_queue_;
 
-  f1dl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
+  fidl::InterfacePtrSet<modular::DeviceMapWatcher> change_watchers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceMapImpl);
 };

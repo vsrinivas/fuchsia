@@ -12,8 +12,8 @@
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/device/fidl/device_shell.fidl.h"
-#include "lib/device/fidl/user_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -71,7 +71,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -79,7 +79,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void Initialize(
-      f1dl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
+      fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
       modular::DeviceShellParamsPtr device_shell_params) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
@@ -89,8 +89,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void GetAuthenticationContext(
-      const f1dl::StringPtr& /*username*/,
-      f1dl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
+      const fidl::StringPtr& /*username*/,
+      fidl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
       override {
     FXL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
@@ -120,7 +120,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](f1dl::VectorPtr<modular::auth::AccountPtr> accounts) {
+          [this](fidl::VectorPtr<modular::auth::AccountPtr> accounts) {
             FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
@@ -141,7 +141,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
               user_provider_->AddUser(
                   modular::auth::IdentityProvider::DEV,
                   [this](modular::auth::AccountPtr account,
-                         const f1dl::StringPtr& status) { Login(account->id); });
+                         const fidl::StringPtr& status) { Login(account->id); });
             } else {
               Login(account_id);
             }
@@ -150,7 +150,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   const Settings settings_;
-  f1dl::Binding<modular::UserWatcher> user_watcher_binding_;
+  fidl::Binding<modular::UserWatcher> user_watcher_binding_;
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   modular::DeviceShellContextPtr device_shell_context_;
   modular::UserControllerPtr user_controller_;

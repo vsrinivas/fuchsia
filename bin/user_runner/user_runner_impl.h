@@ -13,23 +13,23 @@
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/auth/fidl/account/account.fidl.h"
+#include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/cloud_provider.h>
-#include "lib/config/fidl/config.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include "lib/resolver/fidl/resolver.fidl.h"
-#include "lib/speech/fidl/speech_to_text.fidl.h"
-#include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/ui/input/fidl/input_events.fidl.h"
-#include "lib/user/fidl/user_runner.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/resolver.h>
+#include <fuchsia/cpp/speech.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/ui.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/entity/entity_provider_launcher.h"
@@ -74,26 +74,26 @@ class UserRunnerImpl : UserRunner,
       auth::AccountPtr account,
       AppConfigPtr user_shell,
       AppConfigPtr story_shell,
-      f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      f1dl::InterfaceHandle<UserContext> user_context,
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      fidl::InterfaceHandle<UserContext> user_context,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
 
   // |UserRunner|
   void SwapUserShell(AppConfigPtr user_shell,
-                     const SwapUserShellCallback& callback) override;
+                     SwapUserShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
       auth::AccountPtr account,
-      f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      f1dl::InterfaceHandle<UserContext> user_context);
+      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+      fidl::InterfaceHandle<UserContext> user_context);
   void InitializeLedger();
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
   void InitializeClipboard();
   void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
-  void InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
+  void InitializeMaxwell(const fidl::StringPtr& user_shell_url,
                          AppConfigPtr story_shell);
   void InitializeUserShell(
       AppConfigPtr user_shell,
@@ -105,37 +105,37 @@ class UserRunnerImpl : UserRunner,
   void TerminateUserShell(const std::function<void()>& done);
 
   // |UserShellContext|
-  void GetAccount(const GetAccountCallback& callback) override;
-  void GetAgentProvider(f1dl::InterfaceRequest<AgentProvider> request) override;
+  void GetAccount(GetAccountCallback callback) override;
+  void GetAgentProvider(fidl::InterfaceRequest<AgentProvider> request) override;
   void GetComponentContext(
-      f1dl::InterfaceRequest<ComponentContext> request) override;
-  void GetDeviceName(const GetDeviceNameCallback& callback) override;
+      fidl::InterfaceRequest<ComponentContext> request) override;
+  void GetDeviceName(GetDeviceNameCallback callback) override;
   void GetFocusController(
-      f1dl::InterfaceRequest<FocusController> request) override;
-  void GetFocusProvider(f1dl::InterfaceRequest<FocusProvider> request) override;
+      fidl::InterfaceRequest<FocusController> request) override;
+  void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
   void GetIntelligenceServices(
-      f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
-  void GetLink(f1dl::InterfaceRequest<Link> request) override;
+      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+  void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetPresentation(
-      f1dl::InterfaceRequest<presentation::Presentation> request) override;
+      fidl::InterfaceRequest<presentation::Presentation> request) override;
   void GetSpeechToText(
-      f1dl::InterfaceRequest<speech::SpeechToText> request) override;
-  void GetStoryProvider(f1dl::InterfaceRequest<StoryProvider> request) override;
+      fidl::InterfaceRequest<speech::SpeechToText> request) override;
+  void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
-      f1dl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
+      fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
   void GetVisibleStoriesController(
-      f1dl::InterfaceRequest<VisibleStoriesController> request) override;
+      fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void Logout() override;
 
   // |EntityProviderLauncher|
   void ConnectToEntityProvider(
       const std::string& component_id,
-      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request)
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request)
       override;
 
   // |UserRunnerDebug|
-  void DumpState(const DumpStateCallback& callback) override;
+  void DumpState(DumpStateCallback callback) override;
 
   component::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
   component::ServiceProviderPtr GetServiceProvider(const std::string& url);
@@ -169,9 +169,9 @@ class UserRunnerImpl : UserRunner,
   component::ApplicationContext* const application_context_;
   const bool test_;
 
-  f1dl::BindingSet<UserRunner> bindings_;
-  f1dl::BindingSet<UserRunnerDebug> user_runner_debug_bindings_;
-  f1dl::Binding<UserShellContext> user_shell_context_binding_;
+  fidl::BindingSet<UserRunner> bindings_;
+  fidl::BindingSet<UserRunnerDebug> user_runner_debug_bindings_;
+  fidl::Binding<UserShellContext> user_shell_context_binding_;
 
   auth::TokenProviderFactoryPtr token_provider_factory_;
   UserContextPtr user_context_;
@@ -214,14 +214,14 @@ class UserRunnerImpl : UserRunner,
   // - |context_engine_app_| so it can resolve entity references
   // - |modular resolver_service_| so it can resolve entity references
   std::unique_ptr<
-      f1dl::BindingSet<ComponentContext, std::unique_ptr<ComponentContextImpl>>>
+      fidl::BindingSet<ComponentContext, std::unique_ptr<ComponentContextImpl>>>
       maxwell_component_context_bindings_;
 
   // Service provider interfaces for maxwell services. They are created with
   // the component context above as parameters.
-  f1dl::InterfacePtr<maxwell::UserIntelligenceProvider>
+  fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
       user_intelligence_provider_;
-  f1dl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
+  fidl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
   component::ServiceProviderImpl module_resolver_ns_services_;

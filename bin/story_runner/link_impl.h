@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
 
 #include <vector>
+#include <set>
 
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
@@ -14,10 +15,10 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/create_link.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/story/fidl/link_change.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/key_generator.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -93,9 +94,18 @@ class LinkImpl : PageClient {
   // If |create_link_info| is null, then this is a request to connect to an
   // existing link.
   LinkImpl(LedgerClient* ledger_client,
-           LedgerPageId page_id,
-           LinkPathPtr link_path,
+           ledger::PageId page_id,
+           const LinkPath& link_path,
            CreateLinkInfoPtr create_link_info);
+
+  LinkImpl(LedgerClient* ledger_client,
+           const LedgerPageId& page_id,
+           const LinkPath& link_path,
+           CreateLinkInfoPtr create_link_info)
+      : LinkImpl(ledger_client,
+                 PageClient::MakePageId(page_id),
+                 link_path,
+                 std::move(create_link_info)) {}
 
   ~LinkImpl() override;
 
@@ -111,27 +121,27 @@ class LinkImpl : PageClient {
   // Creates a new LinkConnection for the given request. LinkConnection
   // instances are deleted when their connections close, and they are all
   // deleted and close their connections when LinkImpl is destroyed.
-  void Connect(f1dl::InterfaceRequest<Link> request,
+  void Connect(fidl::InterfaceRequest<Link> request,
                ConnectionType connection_type);
 
   // Used by LinkConnection.
-  void SetSchema(const f1dl::StringPtr& json_schema);
-  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
-                    const f1dl::StringPtr& json,
+  void SetSchema(fidl::StringPtr json_schema);
+  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
+                    fidl::StringPtr json,
                     uint32_t src);
-  void Set(f1dl::VectorPtr<f1dl::StringPtr> path,
-           const f1dl::StringPtr& json,
+  void Set(fidl::VectorPtr<fidl::StringPtr> path,
+           fidl::StringPtr json,
            uint32_t src);
-  void Get(f1dl::VectorPtr<f1dl::StringPtr> path,
-           const std::function<void(f1dl::StringPtr)>& callback);
+  void Get(fidl::VectorPtr<fidl::StringPtr> path,
+           const std::function<void(fidl::StringPtr)>& callback);
   void GetEntity(const Link::GetEntityCallback& callback);
-  void SetEntity(const f1dl::StringPtr& entity_reference, const uint32_t src);
-  void Erase(f1dl::VectorPtr<f1dl::StringPtr> path, uint32_t src);
+  void SetEntity(fidl::StringPtr entity_reference, const uint32_t src);
+  void Erase(fidl::VectorPtr<fidl::StringPtr> path, uint32_t src);
   void AddConnection(LinkConnection* connection);
   void RemoveConnection(LinkConnection* connection);
   void Sync(const std::function<void()>& callback);
-  void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher, uint32_t conn);
-  void WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher);
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher, uint32_t conn);
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher);
 
   // Used by LinkWatcherConnection.
   void RemoveConnection(LinkWatcherConnection* connection);
@@ -140,7 +150,7 @@ class LinkImpl : PageClient {
   bool IsClientReadOnly(uint32_t src);
 
   // Used by StoryControllerImpl.
-  const LinkPathPtr& link_path() const { return link_path_; }
+  const LinkPath& link_path() const { return link_path_; }
   void set_orphaned_handler(const std::function<void()>& fn) {
     orphaned_handler_ = fn;
   }
@@ -152,7 +162,7 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(f1dl::VectorPtr<LinkChangePtr> changes);
+  void Replay(fidl::VectorPtr<LinkChangePtr> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
   bool ApplyChange(LinkChange* change);
@@ -162,8 +172,8 @@ class LinkImpl : PageClient {
   void MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done);
   void MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src);
 
-  bool ApplySetOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json);
-  bool ApplyUpdateOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json);
+  bool ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
+  bool ApplyUpdateOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
   bool ApplyEraseOp(const CrtJsonPointer& ptr);
 
   static bool MergeObject(CrtJsonValue& target,
@@ -192,7 +202,7 @@ class LinkImpl : PageClient {
   // We can only accept connection requests once the instance is fully
   // initialized. So we queue connections on |requests_| until |ready_| is true.
   bool ready_{};
-  std::vector<f1dl::InterfaceRequest<Link>> requests_;
+  std::vector<fidl::InterfaceRequest<Link>> requests_;
 
   // Indices within |requests_| of primary connections. There is no default
   // primary connection. These values are translated to connection IDs by the
@@ -219,7 +229,7 @@ class LinkImpl : PageClient {
   std::vector<std::unique_ptr<LinkWatcherConnection>> watchers_;
 
   // The hierarchical identifier of this Link instance within its Story.
-  const LinkPathPtr link_path_;
+  LinkPath link_path_;
 
   // The attributes passed by the link creator to initialize the link.
   const CreateLinkInfoPtr create_link_info_;
@@ -278,7 +288,7 @@ class LinkConnection : Link {
   // constructor is therefore private and only accessible from here.
   static void New(LinkImpl* const impl,
                   const uint32_t id,
-                  f1dl::InterfaceRequest<Link> request) {
+                  fidl::InterfaceRequest<Link> request) {
     new LinkConnection(impl, id, std::move(request));
   }
 
@@ -286,24 +296,24 @@ class LinkConnection : Link {
   // Private so it cannot be created on the stack.
   LinkConnection(LinkImpl* impl,
                  uint32_t id,
-                 f1dl::InterfaceRequest<Link> link_request);
+                 fidl::InterfaceRequest<Link> link_request);
 
   // |Link|
-  void SetSchema(const f1dl::StringPtr& json_schema) override;
-  void UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
-                    const f1dl::StringPtr& json) override;
-  void Set(f1dl::VectorPtr<f1dl::StringPtr> path, const f1dl::StringPtr& json) override;
-  void Get(f1dl::VectorPtr<f1dl::StringPtr> path,
-           const GetCallback& callback) override;
-  void Erase(f1dl::VectorPtr<f1dl::StringPtr> path) override;
-  void GetEntity(const GetEntityCallback& callback) override;
-  void SetEntity(const f1dl::StringPtr& entity_reference) override;
-  void Watch(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
-  void WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) override;
-  void Sync(const SyncCallback& callback) override;
+  void SetSchema(fidl::StringPtr json_schema) override;
+  void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
+                    fidl::StringPtr json) override;
+  void Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json) override;
+  void Get(fidl::VectorPtr<fidl::StringPtr> path,
+           GetCallback callback) override;
+  void Erase(fidl::VectorPtr<fidl::StringPtr> path) override;
+  void GetEntity(GetEntityCallback callback) override;
+  void SetEntity(fidl::StringPtr entity_reference) override;
+  void Watch(fidl::InterfaceHandle<LinkWatcher> watcher) override;
+  void WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) override;
+  void Sync(SyncCallback callback) override;
 
   LinkImpl* const impl_;
-  f1dl::Binding<Link> binding_;
+  fidl::Binding<Link> binding_;
 
   // The ID is used to identify a LinkConnection during notifications of
   // LinkWatchers about value changes, if a LinkWatcher requests to be notified
@@ -325,7 +335,7 @@ class LinkWatcherConnection {
 
   // Notifies the LinkWatcher in this connection, unless src is the
   // LinkConnection this Watcher was registered on.
-  void Notify(const f1dl::StringPtr& value, uint32_t src);
+  void Notify(fidl::StringPtr value, uint32_t src);
 
  private:
   // The LinkImpl this instance belongs to.

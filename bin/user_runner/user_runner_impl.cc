@@ -9,21 +9,21 @@
 
 #include <fuchsia/cpp/network.h>
 #include <fuchsia/cpp/views_v1.h>
-#include "lib/agent/fidl/agent_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/connect.h"
-#include "lib/clipboard/fidl/clipboard.fidl.h"
-#include "lib/config/fidl/config.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/resolver/fidl/resolver.fidl.h"
-#include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/user/fidl/user_runner.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/resolver.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
@@ -98,7 +98,7 @@ std::function<void(std::function<void()>)> Reset(
 
 template <typename X>
 std::function<void(std::function<void()>)> Reset(
-    f1dl::StructPtr<X>* const field) {
+    fidl::StructPtr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
     cont();
@@ -107,7 +107,7 @@ std::function<void(std::function<void()>)> Reset(
 
 template <typename X>
 std::function<void(std::function<void()>)> Reset(
-    f1dl::InterfacePtr<X>* const field) {
+    fidl::InterfacePtr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->Unbind();
     cont();
@@ -144,14 +144,14 @@ UserRunnerImpl::UserRunnerImpl(
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner") {
   application_context_->outgoing_services()->AddService<UserRunner>(
-      [this](f1dl::InterfaceRequest<UserRunner> request) {
+      [this](fidl::InterfaceRequest<UserRunner> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
   // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
   // to filesystem instead of this indirection.
   application_context_->outgoing_services()->AddService<UserRunnerDebug>(
-      [this](f1dl::InterfaceRequest<UserRunnerDebug> request) {
+      [this](fidl::InterfaceRequest<UserRunnerDebug> request) {
         user_runner_debug_bindings_.AddBinding(this, std::move(request));
       });
 }
@@ -162,8 +162,8 @@ void UserRunnerImpl::Initialize(
     auth::AccountPtr account,
     AppConfigPtr user_shell,
     AppConfigPtr story_shell,
-    f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    f1dl::InterfaceHandle<UserContext> user_context,
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    fidl::InterfaceHandle<UserContext> user_context,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
@@ -181,8 +181,8 @@ void UserRunnerImpl::Initialize(
 
 void UserRunnerImpl::InitializeUser(
     auth::AccountPtr account,
-    f1dl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    f1dl::InterfaceHandle<UserContext> user_context) {
+    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
+    fidl::InterfaceHandle<UserContext> user_context) {
   token_provider_factory_ = token_provider_factory.Bind();
   AtEnd(Reset(&token_provider_factory_));
 
@@ -208,7 +208,7 @@ void UserRunnerImpl::InitializeLedger() {
     service_list = component::ServiceList::New();
     service_list->names.push_back(auth::TokenProvider::Name_);
     ledger_service_provider_.AddService<auth::TokenProvider>(
-        [this](f1dl::InterfaceRequest<auth::TokenProvider> request) {
+        [this](fidl::InterfaceRequest<auth::TokenProvider> request) {
           token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                                     std::move(request));
         });
@@ -231,7 +231,7 @@ void UserRunnerImpl::InitializeLedger() {
     // for syncing.
     AppConfigPtr cloud_provider_config = AppConfig::New();
     cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
-    cloud_provider_config->args = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+    cloud_provider_config->args = fidl::VectorPtr<fidl::StringPtr>::New(0);
     cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(cloud_provider_config));
     cloud_provider_app_->services().ConnectToService(
@@ -281,7 +281,7 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
   AtEnd(Reset(&ledger_dashboard_scope_));
 
   ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
-      [this](f1dl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
+      [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(
               std::move(request), [](ledger::Status status) {
@@ -316,9 +316,9 @@ void UserRunnerImpl::InitializeDeviceMap() {
 
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
       device_name_, device_id, device_profile, ledger_client_.get(),
-      f1dl::VectorPtr<uint8_t>::New(16));
+      fidl::VectorPtr<uint8_t>::New(16));
   user_scope_->AddService<DeviceMap>(
-      [this](f1dl::InterfaceRequest<DeviceMap> request) {
+      [this](fidl::InterfaceRequest<DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
@@ -332,7 +332,7 @@ void UserRunnerImpl::InitializeClipboard() {
                                 services_from_clipboard_agent_.NewRequest(),
                                 clipboard_agent_controller_.NewRequest());
   user_scope_->AddService<Clipboard>(
-      [this](f1dl::InterfaceRequest<Clipboard> request) {
+      [this](fidl::InterfaceRequest<Clipboard> request) {
         services_from_clipboard_agent_->ConnectToService(Clipboard::Name_,
                                                          request.TakeChannel());
       });
@@ -344,7 +344,7 @@ void UserRunnerImpl::InitializeRemoteInvoker() {
   remote_invoker_impl_ =
       std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
   user_scope_->AddService<RemoteInvoker>(
-      [this](f1dl::InterfaceRequest<RemoteInvoker> request) {
+      [this](fidl::InterfaceRequest<RemoteInvoker> request) {
         // remote_invoker_impl_ may be reset before user_scope_.
         if (remote_invoker_impl_) {
           remote_invoker_impl_->Connect(std::move(request));
@@ -366,7 +366,7 @@ void UserRunnerImpl::InitializeMessageQueueManager() {
   AtEnd(Reset(&message_queue_manager_));
 }
 
-void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
+void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
                                        AppConfigPtr story_shell) {
   // NOTE: There is an awkward service exchange here between
   // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
@@ -391,16 +391,16 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
-  f1dl::InterfaceHandle<maxwell::ContextEngine> context_engine;
+  fidl::InterfaceHandle<maxwell::ContextEngine> context_engine;
   auto context_engine_request = context_engine.NewRequest();
 
-  f1dl::InterfaceHandle<StoryProvider> story_provider;
+  fidl::InterfaceHandle<StoryProvider> story_provider;
   auto story_provider_request = story_provider.NewRequest();
 
-  f1dl::InterfaceHandle<FocusProvider> focus_provider_maxwell;
+  fidl::InterfaceHandle<FocusProvider> focus_provider_maxwell;
   auto focus_provider_request_maxwell = focus_provider_maxwell.NewRequest();
 
-  f1dl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
+  fidl::InterfaceHandle<VisibleStoriesProvider> visible_stories_provider;
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   // Start kMaxwellUrl
@@ -436,7 +436,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
       entity_provider_runner_.get()));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
-  maxwell_component_context_bindings_ = std::make_unique<f1dl::BindingSet<
+  maxwell_component_context_bindings_ = std::make_unique<fidl::BindingSet<
       ComponentContext, std::unique_ptr<ComponentContextImpl>>>();
   AtEnd(Reset(&maxwell_component_context_bindings_));
 
@@ -447,7 +447,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
   {
     context_engine_ns_services_.AddService<ComponentContext>(
         [this, component_context_info](
-            f1dl::InterfaceRequest<ComponentContext> request) {
+            fidl::InterfaceRequest<ComponentContext> request) {
           maxwell_component_context_bindings_->AddBinding(
               std::make_unique<ComponentContextImpl>(
                   component_context_info, kContextEngineComponentNamespace,
@@ -479,7 +479,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
       std::move(maxwell_app_component_context));
 
   user_scope_->AddService<resolver::Resolver>(
-      [this](f1dl::InterfaceRequest<resolver::Resolver> request) {
+      [this](fidl::InterfaceRequest<resolver::Resolver> request) {
         if (user_intelligence_provider_) {
           user_intelligence_provider_->GetResolver(std::move(request));
         }
@@ -488,10 +488,10 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
   // Setup for kModuleResolverUrl
   {
     module_resolver_ns_services_.AddService<maxwell::IntelligenceServices>(
-        [this](f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+        [this](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
           auto component_scope = maxwell::ComponentScope::New();
           component_scope->set_global_scope(maxwell::GlobalScope::New());
-          f1dl::InterfaceHandle<maxwell::IntelligenceServices>
+          fidl::InterfaceHandle<maxwell::IntelligenceServices>
               intelligence_services;
           if (user_intelligence_provider_) {
             user_intelligence_provider_->GetComponentIntelligenceServices(
@@ -500,7 +500,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
         });
     module_resolver_ns_services_.AddService<modular::ComponentContext>(
         [this, component_context_info](
-            f1dl::InterfaceRequest<modular::ComponentContext> request) {
+            fidl::InterfaceRequest<modular::ComponentContext> request) {
           maxwell_component_context_bindings_->AddBinding(
               std::make_unique<ComponentContextImpl>(
                   component_context_info, kMaxwellComponentNamespace,
@@ -539,7 +539,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
 
   AtEnd(Reset(&user_shell_component_context_impl_));
 
-  f1dl::InterfacePtr<FocusProvider> focus_provider_story_provider;
+  fidl::InterfacePtr<FocusProvider> focus_provider_story_provider;
   auto focus_provider_request_story_provider =
       focus_provider_story_provider.NewRequest();
 
@@ -550,7 +550,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
   // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
-      ledger_client_.get(), f1dl::VectorPtr<uint8_t>::New(16),
+      ledger_client_.get(), fidl::VectorPtr<uint8_t>::New(16),
       std::move(story_shell), component_context_info,
       std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
@@ -562,7 +562,7 @@ void UserRunnerImpl::InitializeMaxwell(const f1dl::StringPtr& user_shell_url,
 
   focus_handler_ = std::make_unique<FocusHandler>(
       device_map_impl_->current_device_id(), ledger_client_.get(),
-      f1dl::VectorPtr<uint8_t>::New(16));
+      fidl::VectorPtr<uint8_t>::New(16));
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -653,7 +653,7 @@ class UserRunnerImpl::SwapUserShellOperation : Operation<> {
 };
 
 void UserRunnerImpl::SwapUserShell(AppConfigPtr user_shell_config,
-                                   const SwapUserShellCallback& callback) {
+                                   SwapUserShellCallback callback) {
   new SwapUserShellOperation(&operation_queue_, this,
                              std::move(user_shell_config), callback);
 }
@@ -665,7 +665,7 @@ void UserRunnerImpl::Terminate(std::function<void()> done) {
   TerminateRecurse(at_end_.size() - 1);
 }
 
-void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
+void UserRunnerImpl::DumpState(DumpStateCallback callback) {
   std::ostringstream output;
   output << "=================Begin user info====================" << std::endl;
 
@@ -683,43 +683,43 @@ void UserRunnerImpl::DumpState(const DumpStateCallback& callback) {
   // TODO(alhaad): Add debug info about agents, device map, etc.
 }
 
-void UserRunnerImpl::GetAccount(const GetAccountCallback& callback) {
+void UserRunnerImpl::GetAccount(GetAccountCallback callback) {
   callback(account_.Clone());
 }
 
 void UserRunnerImpl::GetAgentProvider(
-    f1dl::InterfaceRequest<AgentProvider> request) {
+    fidl::InterfaceRequest<AgentProvider> request) {
   agent_runner_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetComponentContext(
-    f1dl::InterfaceRequest<ComponentContext> request) {
+    fidl::InterfaceRequest<ComponentContext> request) {
   user_shell_component_context_impl_->Connect(std::move(request));
 }
 
-void UserRunnerImpl::GetDeviceName(const GetDeviceNameCallback& callback) {
+void UserRunnerImpl::GetDeviceName(GetDeviceNameCallback callback) {
   callback(device_name_);
 }
 
 void UserRunnerImpl::GetFocusController(
-    f1dl::InterfaceRequest<FocusController> request) {
+    fidl::InterfaceRequest<FocusController> request) {
   focus_handler_->AddControllerBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetFocusProvider(
-    f1dl::InterfaceRequest<FocusProvider> request) {
+    fidl::InterfaceRequest<FocusProvider> request) {
   focus_handler_->AddProviderBinding(std::move(request));
 }
 
 void UserRunnerImpl::GetIntelligenceServices(
-    f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
   auto component_scope = maxwell::ComponentScope::New();
   component_scope->set_global_scope(maxwell::GlobalScope::New());
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(component_scope), std::move(request));
 }
 
-void UserRunnerImpl::GetLink(f1dl::InterfaceRequest<Link> request) {
+void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   if (user_shell_link_) {
     user_shell_link_->Connect(std::move(request),
                               LinkImpl::ConnectionType::Primary);
@@ -727,37 +727,37 @@ void UserRunnerImpl::GetLink(f1dl::InterfaceRequest<Link> request) {
   }
 
   LinkPathPtr link_path = LinkPath::New();
-  link_path->module_path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+  link_path->module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
   link_path->link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(
-      ledger_client_.get(), f1dl::VectorPtr<uint8_t>::New(16),
+      ledger_client_.get(), fidl::VectorPtr<uint8_t>::New(16),
       std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request),
                             LinkImpl::ConnectionType::Secondary);
 }
 
 void UserRunnerImpl::GetPresentation(
-    f1dl::InterfaceRequest<presentation::Presentation> request) {
+    fidl::InterfaceRequest<presentation::Presentation> request) {
   user_context_->GetPresentation(std::move(request));
 }
 
 void UserRunnerImpl::GetSpeechToText(
-    f1dl::InterfaceRequest<speech::SpeechToText> request) {
+    fidl::InterfaceRequest<speech::SpeechToText> request) {
   user_intelligence_provider_->GetSpeechToText(std::move(request));
 }
 
 void UserRunnerImpl::GetStoryProvider(
-    f1dl::InterfaceRequest<StoryProvider> request) {
+    fidl::InterfaceRequest<StoryProvider> request) {
   story_provider_impl_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetSuggestionProvider(
-    f1dl::InterfaceRequest<maxwell::SuggestionProvider> request) {
+    fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
   user_intelligence_provider_->GetSuggestionProvider(std::move(request));
 }
 
 void UserRunnerImpl::GetVisibleStoriesController(
-    f1dl::InterfaceRequest<VisibleStoriesController> request) {
+    fidl::InterfaceRequest<VisibleStoriesController> request) {
   visible_stories_handler_->AddControllerBinding(std::move(request));
 }
 
@@ -768,8 +768,8 @@ void UserRunnerImpl::Logout() {
 // |EntityProviderLauncher|
 void UserRunnerImpl::ConnectToEntityProvider(
     const std::string& agent_url,
-    f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   FXL_DCHECK(agent_runner_.get());
   agent_runner_->ConnectToEntityProvider(agent_url,
                                          std::move(entity_provider_request),
@@ -778,7 +778,7 @@ void UserRunnerImpl::ConnectToEntityProvider(
 
 cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
-  f1dl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
+  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();

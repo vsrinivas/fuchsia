@@ -8,9 +8,10 @@
 
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
-#include "lib/story/fidl/create_link.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -20,11 +21,11 @@
 
 namespace modular {
 
-class LinkImpl::ReadLinkDataCall : Operation<f1dl::StringPtr> {
+class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
  public:
   ReadLinkDataCall(OperationContainer* const container,
                    ledger::Page* const page,
-                   const LinkPathPtr& link_path,
+                   const LinkPath& link_path,
                    ResultCall result_call)
       : Operation("LinkImpl::ReadLinkDataCall",
                   container,
@@ -67,7 +68,7 @@ class LinkImpl::ReadLinkDataCall : Operation<f1dl::StringPtr> {
 
           std::string value_as_string;
           if (value) {
-            if (!fsl::StringFromVmo(value, &value_as_string)) {
+            if (!fsl::StringFromVmo(*value, &value_as_string)) {
               FXL_LOG(ERROR) << trace_name() << " " << link_key_ << " "
                              << "VMO could not be copied.";
               return;
@@ -81,7 +82,7 @@ class LinkImpl::ReadLinkDataCall : Operation<f1dl::StringPtr> {
   ledger::Page* const page_;  // not owned
   ledger::PageSnapshotPtr page_snapshot_;
   const std::string link_key_;
-  f1dl::StringPtr result_;
+  fidl::StringPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadLinkDataCall);
 };
@@ -91,7 +92,7 @@ class LinkImpl::WriteLinkDataCall : Operation<> {
   WriteLinkDataCall(OperationContainer* const container,
                     ledger::Page* const page,
                     const LinkPathPtr& link_path,
-                    f1dl::StringPtr data,
+                    fidl::StringPtr data,
                     ResultCall result_call)
       : Operation("LinkImpl::WriteLinkDataCall",
                   container,
@@ -117,7 +118,7 @@ class LinkImpl::WriteLinkDataCall : Operation<> {
 
   ledger::Page* const page_;  // not owned
   const std::string link_key_;
-  f1dl::StringPtr data_;
+  fidl::StringPtr data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteLinkDataCall);
 };
@@ -180,7 +181,7 @@ class LinkImpl::ReadCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
     new ReadLinkDataCall(&operation_queue_, impl_->page(), impl_->link_path_,
-                         [this, flow](const f1dl::StringPtr& json) {
+                         [this, flow](fidl::StringPtr json) {
                            if (!json.is_null()) {
                              impl_->doc_.Parse(json.get());
                            }
@@ -208,7 +209,7 @@ class LinkImpl::WriteCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    new WriteLinkDataCall(&operation_queue_, impl_->page(), impl_->link_path_,
+    new WriteLinkDataCall(&operation_queue_, impl_->page(), fidl::MakeOptional(std::move(impl_->link_path_)),
                           JsonValueToString(impl_->doc_),
                           [this, flow] { Cont1(flow); });
   }
@@ -231,7 +232,7 @@ class LinkImpl::SetSchemaCall : Operation<> {
  public:
   SetSchemaCall(OperationContainer* const container,
                 LinkImpl* const impl,
-                const f1dl::StringPtr& json_schema)
+                fidl::StringPtr json_schema)
       : Operation("LinkImpl::SetSchemaCall", container, [] {}),
         impl_(impl),
         json_schema_(json_schema) {
@@ -256,16 +257,16 @@ class LinkImpl::SetSchemaCall : Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::StringPtr json_schema_;
+  const fidl::StringPtr json_schema_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SetSchemaCall);
 };
 
-class LinkImpl::GetCall : Operation<f1dl::StringPtr> {
+class LinkImpl::GetCall : Operation<fidl::StringPtr> {
  public:
   GetCall(OperationContainer* const container,
           LinkImpl* const impl,
-          f1dl::VectorPtr<f1dl::StringPtr> path,
+          fidl::VectorPtr<fidl::StringPtr> path,
           ResultCall result_call)
       : Operation("LinkImpl::GetCall", container, std::move(result_call)),
         impl_(impl),
@@ -280,13 +281,13 @@ class LinkImpl::GetCall : Operation<f1dl::StringPtr> {
     auto p = CreatePointer(impl_->doc_, *path_).Get(impl_->doc_);
 
     if (p != nullptr) {
-      result_ = f1dl::StringPtr(JsonValueToString(*p));
+      result_ = fidl::StringPtr(JsonValueToString(*p));
     }
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::VectorPtr<f1dl::StringPtr> path_;
-  f1dl::StringPtr result_;
+  const fidl::VectorPtr<fidl::StringPtr> path_;
+  fidl::StringPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetCall);
 };
@@ -295,8 +296,8 @@ class LinkImpl::SetCall : Operation<> {
  public:
   SetCall(OperationContainer* const container,
           LinkImpl* const impl,
-          f1dl::VectorPtr<f1dl::StringPtr> path,
-          const f1dl::StringPtr& json,
+          fidl::VectorPtr<fidl::StringPtr> path,
+          fidl::StringPtr json,
           const uint32_t src)
       : Operation("LinkImpl::SetCall", container, [] {}),
         impl_(impl),
@@ -327,8 +328,8 @@ class LinkImpl::SetCall : Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::VectorPtr<f1dl::StringPtr> path_;
-  const f1dl::StringPtr json_;
+  const fidl::VectorPtr<fidl::StringPtr> path_;
+  const fidl::StringPtr json_;
   const uint32_t src_;
 
   // WriteCall is executed here.
@@ -341,8 +342,8 @@ class LinkImpl::UpdateObjectCall : Operation<> {
  public:
   UpdateObjectCall(OperationContainer* const container,
                    LinkImpl* const impl,
-                   f1dl::VectorPtr<f1dl::StringPtr> path,
-                   const f1dl::StringPtr& json,
+                   fidl::VectorPtr<fidl::StringPtr> path,
+                   fidl::StringPtr json,
                    const uint32_t src)
       : Operation("LinkImpl::UpdateObjectCall", container, [] {}),
         impl_(impl),
@@ -373,8 +374,8 @@ class LinkImpl::UpdateObjectCall : Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::VectorPtr<f1dl::StringPtr> path_;
-  const f1dl::StringPtr json_;
+  const fidl::VectorPtr<fidl::StringPtr> path_;
+  const fidl::StringPtr json_;
   const uint32_t src_;
 
   // WriteCall is executed here.
@@ -387,7 +388,7 @@ class LinkImpl::EraseCall : Operation<> {
  public:
   EraseCall(OperationContainer* const container,
             LinkImpl* const impl,
-            f1dl::VectorPtr<f1dl::StringPtr> path,
+            fidl::VectorPtr<fidl::StringPtr> path,
             const uint32_t src)
       : Operation("LinkImpl::EraseCall", container, [] {}),
         impl_(impl),
@@ -417,7 +418,7 @@ class LinkImpl::EraseCall : Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::VectorPtr<f1dl::StringPtr> path_;
+  const fidl::VectorPtr<fidl::StringPtr> path_;
   const uint32_t src_;
 
   // WriteCall is executed here.
@@ -426,7 +427,7 @@ class LinkImpl::EraseCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(EraseCall);
 };
 
-class LinkImpl::GetEntityCall : Operation<f1dl::StringPtr> {
+class LinkImpl::GetEntityCall : Operation<fidl::StringPtr> {
  public:
   GetEntityCall(OperationContainer* const container,
                 LinkImpl* const impl,
@@ -439,13 +440,13 @@ class LinkImpl::GetEntityCall : Operation<f1dl::StringPtr> {
  private:
   void Run() override {
     FlowToken flow{this, &result_};
-    new GetCall(&operation_queue_, impl_, f1dl::VectorPtr<f1dl::StringPtr>::New(0),
-                [this, flow](const f1dl::StringPtr& value) {
+    new GetCall(&operation_queue_, impl_, fidl::VectorPtr<fidl::StringPtr>::New(0),
+                [this, flow](fidl::StringPtr value) {
                   Cont(std::move(flow), value);
                 });
   }
 
-  void Cont(FlowToken flow, const f1dl::StringPtr& json) {
+  void Cont(FlowToken flow, fidl::StringPtr json) {
     std::string entity_reference;
     result_.reset();
     if (EntityReferenceFromJson(json, &entity_reference)) {
@@ -454,7 +455,7 @@ class LinkImpl::GetEntityCall : Operation<f1dl::StringPtr> {
   }
 
   LinkImpl* const impl_;  // not owned
-  f1dl::StringPtr result_;
+  fidl::StringPtr result_;
 
   // GetCall is executed here.
   OperationQueue operation_queue_;
@@ -466,7 +467,7 @@ class LinkImpl::WatchCall : Operation<> {
  public:
   WatchCall(OperationContainer* const container,
             LinkImpl* const impl,
-            f1dl::InterfaceHandle<LinkWatcher> watcher,
+            fidl::InterfaceHandle<LinkWatcher> watcher,
             const uint32_t conn)
       : Operation("LinkImpl::WatchCall", container, [] {}),
         impl_(impl),
@@ -504,7 +505,7 @@ class LinkImpl::ChangeCall : Operation<> {
  public:
   ChangeCall(OperationContainer* const container,
              LinkImpl* const impl,
-             const f1dl::StringPtr& json)
+             fidl::StringPtr json)
       : Operation("LinkImpl::ChangeCall", container, [] {}),
         impl_(impl),
         json_(json) {
@@ -535,21 +536,21 @@ class LinkImpl::ChangeCall : Operation<> {
   }
 
   LinkImpl* const impl_;  // not owned
-  const f1dl::StringPtr json_;
+  const fidl::StringPtr json_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChangeCall);
 };
 
 LinkImpl::LinkImpl(LedgerClient* const ledger_client,
-                   LedgerPageId page_id,
-                   LinkPathPtr link_path,
+                   ledger::PageId page_id,
+                   const LinkPath& link_path,
                    CreateLinkInfoPtr create_link_info)
     : PageClient(MakeLinkKey(link_path),
                  ledger_client,
                  std::move(page_id),
                  MakeLinkKey(link_path)),
-      link_path_(std::move(link_path)),
       create_link_info_(std::move(create_link_info)) {
+  link_path.Clone(&link_path_);
   MakeReloadCall([this] {
     // Convert the indices of the pending primary handles into connection IDs
     // and store the connection IDs in a set<> that's quickly searchable.
@@ -567,7 +568,7 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client,
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Connect(f1dl::InterfaceRequest<Link> request,
+void LinkImpl::Connect(fidl::InterfaceRequest<Link> request,
                        ConnectionType connection_type) {
   if (ready_) {
     if (connection_type == ConnectionType::Primary) {
@@ -582,14 +583,14 @@ void LinkImpl::Connect(f1dl::InterfaceRequest<Link> request,
   }
 }
 
-void LinkImpl::SetSchema(const f1dl::StringPtr& json_schema) {
+void LinkImpl::SetSchema(fidl::StringPtr json_schema) {
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
   new SetSchemaCall(&operation_queue_, this, json_schema);
 }
 
-void LinkImpl::Get(f1dl::VectorPtr<f1dl::StringPtr> path,
-                   const std::function<void(f1dl::StringPtr)>& callback) {
+void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
+                   const std::function<void(fidl::StringPtr)>& callback) {
   new GetCall(&operation_queue_, this, std::move(path), callback);
 }
 
@@ -602,8 +603,8 @@ void LinkImpl::Get(f1dl::VectorPtr<f1dl::StringPtr> path,
 // LinkWatcher receives the value that was just Set(). This should not be
 // surprising, and clients should register their watchers first before setting
 // the link value.
-void LinkImpl::Set(f1dl::VectorPtr<f1dl::StringPtr> path,
-                   const f1dl::StringPtr& json,
+void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
+                   fidl::StringPtr json,
                    const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status, otherwise clients
   // have no way to know they sent bogus data.
@@ -620,8 +621,8 @@ void LinkImpl::Set(f1dl::VectorPtr<f1dl::StringPtr> path,
   }
 }
 
-void LinkImpl::UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
-                            const f1dl::StringPtr& json,
+void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
+                            fidl::StringPtr json,
                             const uint32_t src) {
   // TODO(jimbe, mesch): This method needs a success status,
   // otherwise clients have no way to know they sent bogus data.
@@ -638,7 +639,7 @@ void LinkImpl::UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
   }
 }
 
-void LinkImpl::Erase(f1dl::VectorPtr<f1dl::StringPtr> path, const uint32_t src) {
+void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path, const uint32_t src) {
   if (kEnableIncrementalLinks) {
     LinkChangePtr data = LinkChange::New();
     // Leave data->key empty to signify a new entry
@@ -656,10 +657,10 @@ void LinkImpl::GetEntity(const Link::GetEntityCallback& callback) {
   new GetEntityCall(&operation_queue_, this, callback);
 }
 
-void LinkImpl::SetEntity(const f1dl::StringPtr& entity_reference,
+void LinkImpl::SetEntity(fidl::StringPtr entity_reference,
                          const uint32_t src) {
   // SetEntity() is just a variation on Set(), so delegate to Set().
-  Set(f1dl::VectorPtr<f1dl::StringPtr>::New(0),
+  Set(fidl::VectorPtr<fidl::StringPtr>::New(0),
       EntityReferenceToJson(entity_reference), src);
 }
 
@@ -667,7 +668,7 @@ void LinkImpl::Sync(const std::function<void()>& callback) {
   new SyncCall(&operation_queue_, callback);
 }
 
-bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json) {
+bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -683,7 +684,7 @@ bool LinkImpl::ApplySetOp(const CrtJsonPointer& ptr, const f1dl::StringPtr& json
 }
 
 bool LinkImpl::ApplyUpdateOp(const CrtJsonPointer& ptr,
-                             const f1dl::StringPtr& json) {
+                             fidl::StringPtr json) {
   CrtJsonDoc new_value;
   new_value.Parse(json);
   if (new_value.HasParseError()) {
@@ -778,7 +779,7 @@ bool LinkImpl::IsClientReadOnly(uint32_t src) {
 //   after PageChange event is received from the Ledger.
 // - Change is received from another device in OnChange().
 void LinkImpl::NotifyWatchers(const uint32_t src) {
-  const f1dl::StringPtr value = JsonValueToString(doc_);
+  const fidl::StringPtr value = JsonValueToString(doc_);
   for (auto& dst : watchers_) {
     dst->Notify(value, src);
   }
@@ -824,18 +825,18 @@ void LinkImpl::RemoveConnection(LinkWatcherConnection* const connection) {
   watchers_.erase(i, watchers_.end());
 }
 
-void LinkImpl::Watch(f1dl::InterfaceHandle<LinkWatcher> watcher,
+void LinkImpl::Watch(fidl::InterfaceHandle<LinkWatcher> watcher,
                      const uint32_t conn) {
   new WatchCall(&operation_queue_, this, std::move(watcher), conn);
 }
 
-void LinkImpl::WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkImpl::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
   Watch(std::move(watcher), kWatchAllConnectionId);
 }
 
 LinkConnection::LinkConnection(LinkImpl* const impl,
                                const uint32_t id,
-                               f1dl::InterfaceRequest<Link> link_request)
+                               fidl::InterfaceRequest<Link> link_request)
     : impl_(impl), binding_(this, std::move(link_request)), id_(id) {
   impl_->AddConnection(this);
   binding_.set_error_handler([this] { impl_->RemoveConnection(this); });
@@ -843,14 +844,14 @@ LinkConnection::LinkConnection(LinkImpl* const impl,
 
 LinkConnection::~LinkConnection() = default;
 
-void LinkConnection::Watch(f1dl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::Watch(fidl::InterfaceHandle<LinkWatcher> watcher) {
   // This watcher stays associated with the connection it was registered
   // through. The ID is used to block notifications for updates that originate
   // at the same connection.
   impl_->Watch(std::move(watcher), id_);
 }
 
-void LinkConnection::WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) {
+void LinkConnection::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
   // This watcher is not associated with the connection it was registered
   // through. The connection is recorded as 0, which never identifies any
   // connection that originates an update, so no update notification is ever
@@ -858,38 +859,38 @@ void LinkConnection::WatchAll(f1dl::InterfaceHandle<LinkWatcher> watcher) {
   impl_->WatchAll(std::move(watcher));
 }
 
-void LinkConnection::Sync(const SyncCallback& callback) {
+void LinkConnection::Sync(SyncCallback callback) {
   impl_->Sync(callback);
 }
 
-void LinkConnection::SetSchema(const f1dl::StringPtr& json_schema) {
+void LinkConnection::SetSchema(fidl::StringPtr json_schema) {
   impl_->SetSchema(json_schema);
 }
 
-void LinkConnection::UpdateObject(f1dl::VectorPtr<f1dl::StringPtr> path,
-                                  const f1dl::StringPtr& json) {
+void LinkConnection::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
+                                  fidl::StringPtr json) {
   impl_->UpdateObject(std::move(path), json, id_);
 }
 
-void LinkConnection::Set(f1dl::VectorPtr<f1dl::StringPtr> path,
-                         const f1dl::StringPtr& json) {
+void LinkConnection::Set(fidl::VectorPtr<fidl::StringPtr> path,
+                         fidl::StringPtr json) {
   impl_->Set(std::move(path), json, id_);
 }
 
-void LinkConnection::Erase(f1dl::VectorPtr<f1dl::StringPtr> path) {
+void LinkConnection::Erase(fidl::VectorPtr<fidl::StringPtr> path) {
   impl_->Erase(std::move(path), id_);
 }
 
-void LinkConnection::GetEntity(const GetEntityCallback& callback) {
+void LinkConnection::GetEntity(GetEntityCallback callback) {
   impl_->GetEntity(std::move(callback));
 }
 
-void LinkConnection::SetEntity(const f1dl::StringPtr& entity_reference) {
+void LinkConnection::SetEntity(fidl::StringPtr entity_reference) {
   impl_->SetEntity(entity_reference, id_);
 }
 
-void LinkConnection::Get(f1dl::VectorPtr<f1dl::StringPtr> path,
-                         const GetCallback& callback) {
+void LinkConnection::Get(fidl::VectorPtr<fidl::StringPtr> path,
+                         GetCallback callback) {
   impl_->Get(std::move(path), callback);
 }
 
@@ -902,7 +903,7 @@ LinkWatcherConnection::LinkWatcherConnection(LinkImpl* const impl,
 
 LinkWatcherConnection::~LinkWatcherConnection() = default;
 
-void LinkWatcherConnection::Notify(const f1dl::StringPtr& value,
+void LinkWatcherConnection::Notify(fidl::StringPtr value,
                                    const uint32_t src) {
   if (conn_ != src) {
     watcher_->Notify(value);

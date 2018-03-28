@@ -22,11 +22,11 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/story/fidl/link.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user/fidl/user_shell.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 
@@ -64,14 +64,14 @@ class DevUserShellApp : modular::StoryWatcher,
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services*/)
+      fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
   }
 
   // |UserShell|
-  void Initialize(f1dl::InterfaceHandle<modular::UserShellContext>
+  void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
                       user_shell_context) override {
     user_shell_context_.Bind(std::move(user_shell_context));
     user_shell_context_->GetStoryProvider(story_provider_.NewRequest());
@@ -106,7 +106,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
     if (settings_.story_id.empty()) {
       story_provider_->CreateStory(settings_.root_module,
-                                   [this](const f1dl::StringPtr& story_id) {
+                                   [this](const fidl::StringPtr& story_id) {
                                      StartStoryById(story_id);
                                    });
     } else {
@@ -114,7 +114,7 @@ class DevUserShellApp : modular::StoryWatcher,
     }
   }
 
-  void StartStoryById(const f1dl::StringPtr& story_id) {
+  void StartStoryById(const fidl::StringPtr& story_id) {
     story_provider_->GetController(story_id, story_controller_.NewRequest());
     story_controller_.set_error_handler([this, story_id] {
       FXL_LOG(ERROR) << "Story controller for story " << story_id
@@ -128,7 +128,7 @@ class DevUserShellApp : modular::StoryWatcher,
     story_controller_->Start(root_module_view.NewRequest());
     view_->ConnectView(std::move(root_module_view));
     focus_controller_->Set(story_id);
-    auto visible_stories = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+    auto visible_stories = fidl::VectorPtr<fidl::StringPtr>::New(0);
     visible_stories.push_back(story_id);
     visible_stories_controller_->Set(std::move(visible_stories));
 
@@ -159,7 +159,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |NextListener|
   void OnNextResults(
-      f1dl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
+      fidl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "
@@ -190,12 +190,12 @@ class DevUserShellApp : modular::StoryWatcher,
   modular::FocusControllerPtr focus_controller_;
   modular::VisibleStoriesControllerPtr visible_stories_controller_;
 
-  f1dl::Binding<modular::StoryWatcher> story_watcher_binding_;
+  fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
   maxwell::SuggestionProviderPtr suggestion_provider_;
-  f1dl::BindingSet<maxwell::InterruptionListener>
+  fidl::BindingSet<maxwell::InterruptionListener>
       interruption_listener_bindings_;
-  f1dl::BindingSet<maxwell::NextListener> next_listener_bindings_;
+  fidl::BindingSet<maxwell::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };

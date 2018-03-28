@@ -18,7 +18,7 @@ namespace modular {
 ModuleContextImpl::ModuleContextImpl(
     const ModuleContextInfo& info, const ModuleData* const module_data,
     ModuleControllerImpl* const module_controller_impl,
-    f1dl::InterfaceRequest<component::ServiceProvider> service_provider_request)
+    fidl::InterfaceRequest<component::ServiceProvider> service_provider_request)
     : module_data_(module_data),
       story_controller_impl_(info.story_controller_impl),
       module_controller_impl_(module_controller_impl),
@@ -29,7 +29,7 @@ ModuleContextImpl::ModuleContextImpl(
                               module_data_->module_url),
       user_intelligence_provider_(info.user_intelligence_provider) {
   service_provider_impl_.AddService<ModuleContext>(
-      [this](f1dl::InterfaceRequest<ModuleContext> request) {
+      [this](fidl::InterfaceRequest<ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
@@ -37,8 +37,8 @@ ModuleContextImpl::ModuleContextImpl(
 
 ModuleContextImpl::~ModuleContextImpl() {}
 
-void ModuleContextImpl::GetLink(const f1dl::StringPtr& name,
-                                f1dl::InterfaceRequest<Link> request) {
+void ModuleContextImpl::GetLink(fidl::StringPtr name,
+                                fidl::InterfaceRequest<Link> request) {
   LinkPathPtr link_path;
   LinkImpl::ConnectionType connection_type{LinkImpl::ConnectionType::Secondary};
   if (name) {
@@ -59,10 +59,10 @@ void ModuleContextImpl::GetLink(const f1dl::StringPtr& name,
 }
 
 void ModuleContextImpl::StartModuleDeprecated(
-    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
-    const f1dl::StringPtr& link_name,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    f1dl::InterfaceRequest<ModuleController> module_controller,
+    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr link_name,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
   story_controller_impl_->StartModuleDeprecated(
       module_data_->module_path, name, query, link_name,
@@ -72,11 +72,11 @@ void ModuleContextImpl::StartModuleDeprecated(
 }
 
 void ModuleContextImpl::EmbedModule(
-    const f1dl::StringPtr& name, DaisyPtr daisy,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    f1dl::InterfaceRequest<ModuleController> module_controller,
+    fidl::StringPtr name, Daisy daisy,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
-    const EmbedModuleCallback& callback) {
+    EmbedModuleCallback callback) {
   story_controller_impl_->EmbedModule(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
@@ -84,10 +84,10 @@ void ModuleContextImpl::EmbedModule(
 }
 
 void ModuleContextImpl::StartModuleInShellDeprecated(
-    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
-    const f1dl::StringPtr& link_name,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    f1dl::InterfaceRequest<ModuleController> module_controller,
+    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr link_name,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
     SurfaceRelationPtr surface_relation, const bool focus) {
   story_controller_impl_->StartModuleInShellDeprecated(
       module_data_->module_path, name, query, link_name,
@@ -97,10 +97,10 @@ void ModuleContextImpl::StartModuleInShellDeprecated(
 }
 
 void ModuleContextImpl::StartModule(
-    const f1dl::StringPtr& name, DaisyPtr daisy,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    f1dl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation, const StartModuleCallback& callback) {
+    fidl::StringPtr name, Daisy daisy,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    SurfaceRelationPtr surface_relation, StartModuleCallback callback) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, std::move(daisy),
       std::move(incoming_services), std::move(module_controller),
@@ -108,22 +108,22 @@ void ModuleContextImpl::StartModule(
 }
 
 void ModuleContextImpl::StartContainerInShell(
-    const f1dl::StringPtr& name,
-    SurfaceRelationPtr parent_relation,
-    f1dl::VectorPtr<ContainerLayoutPtr> layout,
-    f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
-    f1dl::VectorPtr<ContainerNodePtr> nodes) {
+    fidl::StringPtr name,
+    SurfaceRelation parent_relation,
+    fidl::VectorPtr<ContainerLayout> layout,
+    fidl::VectorPtr<ContainerRelationEntry> relationships,
+    fidl::VectorPtr<ContainerNode> nodes) {
   story_controller_impl_->StartContainerInShell(
       module_data_->module_path, name, std::move(parent_relation),
       std::move(layout), std::move(relationships), std::move(nodes));
 }
 
 void ModuleContextImpl::EmbedModuleDeprecated(
-    const f1dl::StringPtr& name, const f1dl::StringPtr& query,
-    const f1dl::StringPtr& link_name,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    f1dl::InterfaceRequest<ModuleController> module_controller,
-    f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr link_name,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+    fidl::InterfaceRequest<ModuleController> module_controller,
+    fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
   story_controller_impl_->EmbedModuleDeprecated(
       module_data_->module_path, name, query, link_name,
@@ -133,12 +133,12 @@ void ModuleContextImpl::EmbedModuleDeprecated(
 }
 
 void ModuleContextImpl::GetComponentContext(
-    f1dl::InterfaceRequest<ComponentContext> context_request) {
+    fidl::InterfaceRequest<ComponentContext> context_request) {
   component_context_impl_.Connect(std::move(context_request));
 }
 
 void ModuleContextImpl::GetIntelligenceServices(
-    f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) {
+    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
   auto module_scope = maxwell::ModuleScope::New();
   module_scope->module_path = module_data_->module_path.Clone();
   module_scope->url = module_data_->module_url;
@@ -150,7 +150,7 @@ void ModuleContextImpl::GetIntelligenceServices(
       std::move(scope), std::move(request));
 }
 
-void ModuleContextImpl::GetStoryId(const GetStoryIdCallback& callback) {
+void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {
   callback(story_controller_impl_->GetStoryId());
 }
 

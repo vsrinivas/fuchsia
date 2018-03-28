@@ -13,7 +13,7 @@
 #include <utility>
 
 #include "lib/async/cpp/operation.h"
-#include "lib/component/fidl/message_queue.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
@@ -36,14 +36,14 @@ class XdrContext;
 class MessageQueueManager : PageClient {
  public:
   MessageQueueManager(LedgerClient* ledger_client,
-                      LedgerPageId page_id,
+                      ledger::PageId page_id,
                       std::string local_path);
   ~MessageQueueManager();
 
   void ObtainMessageQueue(const std::string& component_namespace,
                           const std::string& component_instance_id,
                           const std::string& queue_name,
-                          f1dl::InterfaceRequest<MessageQueue> request);
+                          fidl::InterfaceRequest<MessageQueue> request);
 
   void DeleteMessageQueue(const std::string& component_namespace,
                           const std::string& component_instance_id,
@@ -53,7 +53,7 @@ class MessageQueueManager : PageClient {
                        std::function<void()> done);
 
   void GetMessageSender(const std::string& queue_token,
-                        f1dl::InterfaceRequest<MessageSender> request);
+                        fidl::InterfaceRequest<MessageSender> request);
 
   // Used by AgentRunner to look for new messages on queues which have
   // a trigger associated with it. If a queue corresponding to

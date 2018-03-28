@@ -6,8 +6,8 @@
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
-#include "lib/story/fidl/create_link.fidl.h"
-#include "lib/story/fidl/link_change.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
@@ -154,7 +154,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   void ClearCalls() { operations_.clear(); }
 
-  void Notify(const f1dl::StringPtr& json) override {
+  void Notify(const fidl::StringPtr& json) override {
     step_++;
     last_json_notify_ = json;
     continue_();
@@ -166,7 +166,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
   std::unique_ptr<LedgerClient> ledger_client_peer_;
   std::unique_ptr<PageClientPeer> page_client_peer_;
 
-  f1dl::Binding<modular::LinkWatcher> watcher_binding_;
+  fidl::Binding<modular::LinkWatcher> watcher_binding_;
   int step_{};
   std::string last_json_notify_;
   std::function<void()> continue_;
@@ -296,7 +296,7 @@ TEST_F(LinkImplTest, Erase) {
   link_->Set(nullptr, "{ \"value\": 4 }");
 
   std::vector<std::string> segments{"value"};
-  link_->Erase(f1dl::VectorPtr<f1dl::StringPtr>::From(segments));
+  link_->Erase(fidl::VectorPtr<fidl::StringPtr>::From(segments));
 
   bool synced{};
   link_->Sync([&synced] { synced = true; });
@@ -338,7 +338,7 @@ TEST_F(LinkImplTest, SetEntity) {
   EXPECT_EQ(entity_ref_json, last_json_notify_);
 
   bool done{};
-  link_->GetEntity([entity_ref, &done](const f1dl::StringPtr value) {
+  link_->GetEntity([entity_ref, &done](const fidl::StringPtr value) {
     EXPECT_EQ(entity_ref, value);
     done = true;
   });

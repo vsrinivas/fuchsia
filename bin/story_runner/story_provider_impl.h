@@ -12,7 +12,7 @@
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/async/cpp/operation.h"
-#include "lib/config/fidl/config.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
@@ -20,11 +20,11 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include "lib/story/fidl/story_data.fidl.h"
-#include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/user/fidl/focus.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
@@ -49,13 +49,13 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       AppConfigPtr story_shell,
       const ComponentContextInfo& component_context_info,
       FocusProviderPtr focus_provider,
-      maxwell::UserIntelligenceProvider* user_intelligence_provider,
+      UserIntelligenceProvider* user_intelligence_provider,
       ModuleResolver* module_resolver,
       bool test);
 
   ~StoryProviderImpl() override;
 
-  void Connect(f1dl::InterfaceRequest<StoryProvider> request);
+  void Connect(fidl::InterfaceRequest<StoryProvider> request);
 
   void StopAllStories(const std::function<void()>& callback);
 
@@ -74,7 +74,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   }
 
   // Called by StoryControllerImpl.
-  maxwell::UserIntelligenceProvider* user_intelligence_provider() {
+  UserIntelligenceProvider* user_intelligence_provider() {
     return user_intelligence_provider_;
   }
 
@@ -92,61 +92,61 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Called by StoryControllerImpl.
-  void SetStoryInfoExtra(const f1dl::StringPtr& story_id,
-                         const f1dl::StringPtr& name,
-                         const f1dl::StringPtr& value,
+  void SetStoryInfoExtra(fidl::StringPtr story_id,
+                         fidl::StringPtr name,
+                         fidl::StringPtr value,
                          const std::function<void()>& done);
 
   // |StoryProvider|, also used by StoryControllerImpl.
-  void GetStoryInfo(const f1dl::StringPtr& story_id,
-                    const GetStoryInfoCallback& callback) override;
+  void GetStoryInfo(fidl::StringPtr story_id,
+                    GetStoryInfoCallback callback) override;
 
   // Called by StoryControllerImpl. Sends request to FocusProvider
-  void RequestStoryFocus(const f1dl::StringPtr& story_id);
+  void RequestStoryFocus(fidl::StringPtr story_id);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(const f1dl::StringPtr& story_id,
+  void NotifyStoryStateChange(fidl::StringPtr story_id,
                               StoryState story_state);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 
  private:
   // |StoryProvider|
-  void CreateStory(const f1dl::StringPtr& module_url,
-                   const CreateStoryCallback& callback) override;
+  void CreateStory(fidl::StringPtr module_url,
+                   CreateStoryCallback callback) override;
 
   // |StoryProvider|
   void CreateStoryWithInfo(
-      const f1dl::StringPtr& module_url,
-      f1dl::VectorPtr<StoryInfoExtraEntryPtr> extra_info,
-      const f1dl::StringPtr& root_json,
-      const CreateStoryWithInfoCallback& callback) override;
+      fidl::StringPtr module_url,
+      fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
+      fidl::StringPtr root_json,
+      CreateStoryWithInfoCallback callback) override;
 
   // |StoryProvider|
-  void DeleteStory(const f1dl::StringPtr& story_id,
-                   const DeleteStoryCallback& callback) override;
+  void DeleteStory(fidl::StringPtr story_id,
+                   DeleteStoryCallback callback) override;
 
   // |StoryProvider|
-  void GetController(const f1dl::StringPtr& story_id,
-                     f1dl::InterfaceRequest<StoryController> request) override;
+  void GetController(fidl::StringPtr story_id,
+                     fidl::InterfaceRequest<StoryController> request) override;
 
   // |StoryProvider|
-  void PreviousStories(const PreviousStoriesCallback& callback) override;
+  void PreviousStories(PreviousStoriesCallback callback) override;
 
   // |StoryProvider|
-  void RunningStories(const RunningStoriesCallback& callback) override;
+  void RunningStories(RunningStoriesCallback callback) override;
 
   // |StoryProvider|
-  void Watch(f1dl::InterfaceHandle<StoryProviderWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<StoryProviderWatcher> watcher) override;
 
   // |StoryProvider|
-  void Duplicate(f1dl::InterfaceRequest<StoryProvider> request) override;
+  void Duplicate(fidl::InterfaceRequest<StoryProvider> request) override;
 
   // |StoryProvider|
-  void GetLinkPeer(const f1dl::StringPtr& story_id,
-                   f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                   const f1dl::StringPtr& link_name,
-                   f1dl::InterfaceRequest<Link> request) override;
+  void GetLinkPeer(fidl::StringPtr story_id,
+                   fidl::VectorPtr<fidl::StringPtr> module_path,
+                   fidl::StringPtr link_name,
+                   fidl::InterfaceRequest<Link> request) override;
 
   // |PageClient|
   void OnPageChange(const std::string& key, const std::string& value) override;
@@ -178,7 +178,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   LedgerClient* const ledger_client_;
 
   // The bindings for this instance.
-  f1dl::BindingSet<StoryProvider> bindings_;
+  fidl::BindingSet<StoryProvider> bindings_;
 
   // Used to preload story shell before it is requested.
   AppConfigPtr story_shell_;
@@ -195,7 +195,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // Holds the story shell view proxies for running story shells.
   ProxySet proxies_;
 
-  f1dl::InterfacePtrSet<StoryProviderWatcher> watchers_;
+  fidl::InterfacePtrSet<StoryProviderWatcher> watchers_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.
@@ -214,7 +214,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   const ComponentContextInfo component_context_info_;
 
-  maxwell::UserIntelligenceProvider* const
+  UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 
   ModuleResolver* const module_resolver_;  // Not owned.
@@ -224,7 +224,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   // context and the focus. This serves to compute relative importance of
   // stories in the timeline, as determined by the current context.
   FocusProviderPtr focus_provider_;
-  f1dl::Binding<FocusWatcher> focus_watcher_binding_;
+  fidl::Binding<FocusWatcher> focus_watcher_binding_;
 
   // Machinery to support StoryProvider.GetLinkPeer().
   struct LinkPeer;

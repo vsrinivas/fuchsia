@@ -19,7 +19,7 @@ namespace modular {
 class AgentRunnerStorageImpl : public AgentRunnerStorage, PageClient {
  public:
   explicit AgentRunnerStorageImpl(LedgerClient* ledger_client,
-                                  LedgerPageId page_id);
+                                  ledger::PageId page_id);
   ~AgentRunnerStorageImpl() override;
 
  private:

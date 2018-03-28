@@ -4,9 +4,9 @@
 
 // Interface(s) used by AppClient's unittest.
 
-module modular.test;
+library modular.test;
 
 [ServiceName="https://fuchsia.googlesource.com/modular/+/master/lib/fidl/app_client_unittest.fidl#TerminateService"]
 interface TerminateService {
-  Terminate@0();
+  1: Terminate();
 };

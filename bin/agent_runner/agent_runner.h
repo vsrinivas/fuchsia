@@ -10,20 +10,20 @@
 #include <memory>
 #include <string>
 
-#include "lib/agent/fidl/agent_context.fidl.h"
 #include <fuchsia/cpp/modular.h>
-#include "lib/agent/fidl/agent_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/component.h>
 #include "lib/async/cpp/operation.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/entity/fidl/entity_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner_storage.h"
 #include <fuchsia/cpp/ledger_internal.h>
 
@@ -44,14 +44,14 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
  public:
   AgentRunner(component::ApplicationLauncher* application_launcher,
               MessageQueueManager* message_queue_manager,
-              ledger::LedgerRepository* ledger_repository,
+              ledger_internal::LedgerRepository* ledger_repository,
               AgentRunnerStorage* agent_runner_storage,
-              auth::TokenProviderFactory* token_provider_factory,
-              maxwell::UserIntelligenceProvider* user_intelligence_provider,
+              modular_auth::TokenProviderFactory* token_provider_factory,
+              UserIntelligenceProvider* user_intelligence_provider,
               EntityProviderRunner* const entity_provider_runner);
   ~AgentRunner() override;
 
-  void Connect(f1dl::InterfaceRequest<AgentProvider> request);
+  void Connect(fidl::InterfaceRequest<AgentProvider> request);
 
   // |callback| is called after - (1) all agents have been shutdown and (2)
   // no new tasks are scheduled to run.
@@ -61,16 +61,16 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // |Agent.Connect|. Called using ComponentContext.
   void ConnectToAgent(
       const std::string& requestor_url, const std::string& agent_url,
-      f1dl::InterfaceRequest<component::ServiceProvider>
+      fidl::InterfaceRequest<component::ServiceProvider>
           incoming_services_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request);
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Connects to an agent (and starts it up if it doesn't exist) through its
   // |EntityProvider| service.
   void ConnectToEntityProvider(
       const std::string& agent_url,
-      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request);
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Removes an agent. Called by AgentContextImpl when it is done.
   // NOTE: This should NOT take a const reference, since |agent_url| will die
@@ -82,7 +82,7 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // trigger condition specified in |task_info| is satisfied. The trigger
   // condition is also replicated to the ledger and the task my get scheduled on
   // other user devices too.
-  void ScheduleTask(const std::string& agent_url, TaskInfoPtr task_info);
+  void ScheduleTask(const std::string& agent_url, TaskInfo task_info);
 
   // Deletes a task for |agent_url| that is identified by agent provided
   // |task_id|. The trigger condition is removed from the ledger.
@@ -117,13 +117,13 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
                        const std::string& task_id);
 
   // A set of all agents that are either running or scheduled to be run.
-  f1dl::VectorPtr<f1dl::StringPtr> GetAllAgents();
+  fidl::VectorPtr<fidl::StringPtr> GetAllAgents();
 
   // |UpdateWatchers| will not notify watchers if we are tearing down.
   void UpdateWatchers();
 
   // |AgentProvider|
-  void Watch(f1dl::InterfaceHandle<AgentProviderWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) override;
 
   // |AgentRunnerStorage::Delegate|
   void AddedTask(const std::string& key,
@@ -143,9 +143,9 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // agent is in a terminating state.
   struct PendingAgentConnectionEntry {
     const std::string requestor_url;
-    f1dl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request;
-    f1dl::InterfaceRequest<AgentController> agent_controller_request;
+    fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
   std::map<std::string, std::vector<struct PendingAgentConnectionEntry>>
       pending_agent_connections_;
@@ -154,8 +154,8 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   // This map holds connections to an agents' EntityProvider that we hold onto
   // while the existing agent is in a terminating state.
   struct PendingEntityProviderConnectionEntry {
-    f1dl::InterfaceRequest<EntityProvider> entity_provider_request;
-    f1dl::InterfaceRequest<AgentController> agent_controller_request;
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request;
+    fidl::InterfaceRequest<AgentController> agent_controller_request;
   };
   std::map<std::string, struct PendingEntityProviderConnectionEntry>
       pending_entity_provider_connections_;
@@ -181,15 +181,15 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
 
   component::ApplicationLauncher* const application_launcher_;
   MessageQueueManager* const message_queue_manager_;
-  ledger::LedgerRepository* const ledger_repository_;
+  ledger_internal::LedgerRepository* const ledger_repository_;
   // |agent_runner_storage_| must outlive this class.
   AgentRunnerStorage* const agent_runner_storage_;
-  auth::TokenProviderFactory* const token_provider_factory_;
-  maxwell::UserIntelligenceProvider* const user_intelligence_provider_;
+  modular_auth::TokenProviderFactory* const token_provider_factory_;
+  UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;
 
-  f1dl::BindingSet<AgentProvider> agent_provider_bindings_;
-  f1dl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
+  fidl::BindingSet<AgentProvider> agent_provider_bindings_;
+  fidl::InterfacePtrSet<AgentProviderWatcher> agent_provider_watchers_;
 
   // When this is marked true, no new new tasks will be scheduled.
   std::shared_ptr<bool> terminating_;

@@ -4,19 +4,13 @@
 
 library modular_private;
 
-// Internal data that user runner keeps about stories. Some of them
-// are exposed to the UserShell, which are kept in StoryInfo.
-struct StoryPageId {
-    array<uint8>:16 id;
-};
-
 struct StoryData {
   // Metadata available to the UserShell.
   modular.StoryInfo story_info;
 
   // Page id on the user's ledger which stores story information. It
   // might be NULL until the story is being started.
-  StoryPageId story_page_id;
+  ledger.PageId? story_page_id;
 };
 
 struct StoryContextEntry {

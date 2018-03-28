@@ -9,14 +9,14 @@
 #include <string>
 
 #include <fuchsia/cpp/component.h>
-#include "lib/config/fidl/config.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
@@ -85,7 +85,7 @@ class AppClient : public AppClientBase {
 
   ~AppClient() override = default;
 
-  f1dl::InterfacePtr<Service>& primary_service() { return service_; }
+  fidl::InterfacePtr<Service>& primary_service() { return service_; }
 
  private:
   void ServiceTerminate(const std::function<void()>& done) override {
@@ -97,7 +97,7 @@ class AppClient : public AppClientBase {
 
   void ServiceUnbind() override { service_.Unbind(); }
 
-  f1dl::InterfacePtr<Service> service_;
+  fidl::InterfacePtr<Service> service_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AppClient);
 };
 

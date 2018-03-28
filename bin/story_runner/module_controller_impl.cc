@@ -13,6 +13,7 @@
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/teardown.h"
+#include "peridot/lib/fidl/clone.h"
 
 namespace modular {
 
@@ -39,12 +40,12 @@ ModuleControllerImpl::ModuleControllerImpl(
     component::ApplicationLauncher* const application_launcher,
     AppConfigPtr module_config, const ModuleData* const module_data,
     component::ServiceListPtr service_list,
-    f1dl::InterfaceHandle<ModuleContext> module_context,
-    f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-    f1dl::InterfaceRequest<component::ServiceProvider> incoming_services)
+    fidl::InterfaceHandle<ModuleContext> module_context,
+    fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
+    fidl::InterfaceRequest<component::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(
-          application_launcher, module_config.Clone(),
+          application_launcher, CloneOptional(module_config),
           std::string(kAppStoragePath) + HashModuleUrl(module_config->url),
           std::move(service_list)),
       module_data_(module_data) {
@@ -68,7 +69,7 @@ ModuleControllerImpl::ModuleControllerImpl(
 ModuleControllerImpl::~ModuleControllerImpl() {}
 
 void ModuleControllerImpl::Connect(
-    f1dl::InterfaceRequest<ModuleController> request) {
+    fidl::InterfaceRequest<ModuleController> request) {
   module_controller_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -92,8 +93,9 @@ void ModuleControllerImpl::SetState(const ModuleState new_state) {
   }
 
   state_ = new_state;
-  watchers_.ForAllPtrs(
-      [this](ModuleWatcher* const watcher) { watcher->OnStateChange(state_); });
+  for (const auto& i : watchers_.ptrs()) {
+    (*i)->OnStateChange(state_);
+  }
 
   story_controller_impl_->OnModuleStateChange(module_data_->module_path,
                                               state_);
@@ -144,7 +146,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   }
 }
 
-void ModuleControllerImpl::Watch(f1dl::InterfaceHandle<ModuleWatcher> watcher) {
+void ModuleControllerImpl::Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) {
   auto ptr = watcher.Bind();
   ptr->OnStateChange(state_);
   watchers_.AddInterfacePtr(std::move(ptr));
@@ -158,7 +160,7 @@ void ModuleControllerImpl::Defocus() {
   story_controller_impl_->DefocusModule(module_data_->module_path);
 }
 
-void ModuleControllerImpl::Stop(const StopCallback& done) {
+void ModuleControllerImpl::Stop(StopCallback done) {
   story_controller_impl_->StopModule(module_data_->module_path, done);
 }
 

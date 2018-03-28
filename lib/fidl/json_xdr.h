@@ -218,6 +218,11 @@ class XdrContext {
     filter(this, data);
   }
 
+  template <typename S>
+  void Value(std::unique_ptr<S>* data, XdrFilterType<S> filter) {
+    filter(this, data->operator->());
+  }
+
   // A fidl vector is mapped to JSON null and JSON Array with a custom
   // filter for the elements.
   template <typename D, typename V>

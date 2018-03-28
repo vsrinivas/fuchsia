@@ -16,9 +16,9 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module_controller.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {
@@ -37,13 +37,13 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
       AppConfigPtr module_config,
       const ModuleData* module_data,
       component::ServiceListPtr service_list,
-      f1dl::InterfaceHandle<ModuleContext> module_context,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services);
+      fidl::InterfaceHandle<ModuleContext> module_context,
+      fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services);
 
   ~ModuleControllerImpl() override;
 
-  void Connect(f1dl::InterfaceRequest<ModuleController> request);
+  void Connect(fidl::InterfaceRequest<ModuleController> request);
 
   EmbedModuleControllerPtr NewEmbedModuleController();
 
@@ -59,7 +59,7 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
 
  private:
   // |ModuleController|
-  void Watch(f1dl::InterfaceHandle<ModuleWatcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<ModuleWatcher> watcher) override;
 
   // |ModuleController| and |EmbedModuleController|
   void Focus() override;
@@ -68,7 +68,7 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   void Defocus() override;
 
   // |ModuleController|
-  void Stop(const StopCallback& done) override;
+  void Stop(StopCallback done) override;
 
   // Used as connection error handler on the Module connection.
   void OnConnectionError();
@@ -83,11 +83,11 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   const ModuleData* const module_data_;
 
   // The service provided here.
-  f1dl::BindingSet<ModuleController> module_controller_bindings_;
-  f1dl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
+  fidl::BindingSet<ModuleController> module_controller_bindings_;
+  fidl::BindingSet<EmbedModuleController> embed_module_controller_bindings_;
 
   // Watchers of this Module instance.
-  f1dl::InterfacePtrSet<ModuleWatcher> watchers_;
+  fidl::InterfacePtrSet<ModuleWatcher> watchers_;
 
   // The state of this Module instance, stored here to initialize
   // watchers registered in the future to the current state.

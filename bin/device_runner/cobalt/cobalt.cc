@@ -4,7 +4,7 @@
 
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 
-#include "lib/cobalt/fidl/cobalt.fidl.h"
+#include <fuchsia/cpp/cobalt.h>
 #include "peridot/lib/cobalt/cobalt.h"
 
 namespace modular {
@@ -24,8 +24,8 @@ fxl::AutoCall<fxl::Closure> InitializeCobalt(
 }
 
 void ReportEvent(ModularEvent event) {
-  cobalt::ValuePtr value = cobalt::Value::New();
-  value->set_index_value(static_cast<uint32_t>(event));
+  cobalt::Value value;
+  value.set_index_value(static_cast<uint32_t>(event));
   cobalt::CobaltObservation observation(
       static_cast<uint32_t>(CobaltMetric::MODULAR_EVENTS),
       kCobaltNoOpEncodingId, std::move(value));
@@ -33,20 +33,16 @@ void ReportEvent(ModularEvent event) {
 }
 
 void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
- auto parts = f1dl::VectorPtr<cobalt::ObservationValuePtr>::New(2);
+ auto parts = fidl::VectorPtr<cobalt::ObservationValue>::New(2);
  const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
 
- parts->at(0) = cobalt::ObservationValue::New();
- parts->at(0)->name = "module_url";
- parts->at(0)->encoding_id = kCobaltNoOpEncodingId;
- parts->at(0)->value = cobalt::Value::New();
- parts->at(0)->value->set_string_value(module_url);
+ parts->at(0).name = "module_url";
+ parts->at(0).encoding_id = kCobaltNoOpEncodingId;
+ parts->at(0).value.set_string_value(module_url);
 
- parts->at(1) = cobalt::ObservationValue::New();
- parts->at(1)->name = "launch_time_micros";
- parts->at(1)->encoding_id = kCobaltNoOpEncodingId;
- parts->at(1)->value = cobalt::Value::New();
- parts->at(1)->value->set_int_value(time_micros);
+ parts->at(1).name = "launch_time_micros";
+ parts->at(1).encoding_id = kCobaltNoOpEncodingId;
+ parts->at(1).value.set_int_value(time_micros);
 
  cobalt::CobaltObservation observation(
      static_cast<uint32_t>(CobaltMetric::MODULE_LAUNCH_LATENCY), std::move(parts));
@@ -55,8 +51,8 @@ void ReportModuleLaunchTime(std::string module_url, zx_time_t time_nanos) {
 
 void ReportStoryLaunchTime(zx_time_t time_nanos) {
   const int64_t time_micros = static_cast<int64_t>(time_nanos / ZX_USEC(1));
-  cobalt::ValuePtr value = cobalt::Value::New();
-  value->set_int_value(time_micros);
+  cobalt::Value value;
+  value.set_int_value(time_micros);
   cobalt::CobaltObservation observation(
       static_cast<uint32_t>(CobaltMetric::STORY_LAUNCH_LATENCY),
       kCobaltNoOpEncodingId, std::move(value));

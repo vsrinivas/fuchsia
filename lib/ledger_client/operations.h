@@ -90,7 +90,7 @@ class ReadDataCall : Operation<DataPtr> {
             return;
           }
 
-          FXL_DCHECK(!result_.is_null());
+          FXL_DCHECK(result_);
         });
   }
 
@@ -161,7 +161,7 @@ class ReadAllDataCall : Operation<DataArray> {
   void Cont2(FlowToken /*flow*/) {
     for (auto& entry : entries_) {
       std::string value_as_string;
-      if (!fsl::StringFromVmo(entry->value, &value_as_string)) {
+      if (!fsl::StringFromVmo(*entry.value, &value_as_string)) {
         FXL_LOG(ERROR) << this->trace_name() << " "
                        << "Unable to extract data.";
         continue;
@@ -172,7 +172,7 @@ class ReadAllDataCall : Operation<DataArray> {
         continue;
       }
 
-      FXL_DCHECK(!data.is_null());
+      FXL_DCHECK(data);
 
       data_.push_back(std::move(data));
     }
@@ -182,7 +182,7 @@ class ReadAllDataCall : Operation<DataArray> {
   ledger::PageSnapshotPtr page_snapshot_;
   const std::string prefix_;
   DataFilter const filter_;
-  std::vector<ledger::EntryPtr> entries_;
+  std::vector<ledger::Entry> entries_;
   DataArray data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ReadAllDataCall);

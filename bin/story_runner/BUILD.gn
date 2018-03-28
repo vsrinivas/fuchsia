@@ -51,7 +51,6 @@ source_set("story_runner") {
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/fidl:context",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:proxy",
     "//peridot/lib/fidl:scope",
@@ -78,6 +77,7 @@ source_set("story_runner") {
 
   deps = [
     "//peridot/public/lib:fidl",
+    "//peridot/lib/fidl:clone",
   ]
 }
 

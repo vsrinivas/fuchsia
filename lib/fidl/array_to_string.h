@@ -14,37 +14,33 @@
 namespace modular {
 
 inline std::string to_string(const fidl::Array<uint8_t, 16>& data) {
-  std::string ret;
-  ret.reserve(data.count());
-
-  for (uint8_t val : data) {
-    ret += static_cast<char>(val);
-  }
-
-  return ret;
+  return std::string(reinterpret_cast<const char*>(data.data()), data.count());
 }
 
 inline std::string to_string(const fidl::VectorPtr<uint8_t>& data) {
+  return std::string(reinterpret_cast<const char*>(data->data()), data->size());
+}
+
+inline std::string to_hex_string(const uint8_t* data, size_t size) {
+  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
   std::string ret;
-  ret.reserve(data->size());
-
-  for (uint8_t val : *data) {
-    ret += static_cast<char>(val);
+  ret.reserve(size * 2);
+  for (size_t i = 0; i < size; i++) {
+    unsigned char c = data[i];
+    ret.push_back(kHexadecimalCharacters[c >> 4]);
+    ret.push_back(kHexadecimalCharacters[c & 0xf]);
   }
-
   return ret;
 }
 
 template<size_t N>
+inline std::string to_hex_string(const fidl::Array<uint8_t, N>& data) {
+  return to_hex_string(data.data(), N);
+}
+
+template<size_t N>
 inline std::string to_hex_string(const std::array<uint8_t, N>& data) {
-  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
-  std::string ret;
-  ret.reserve(data.size() * 2);
-  for (unsigned char i : data) {
-    ret.push_back(kHexadecimalCharacters[i >> 4]);
-    ret.push_back(kHexadecimalCharacters[i & 0xf]);
-  }
-  return ret;
+  return to_hex_string(data.data(), N);
 }
 
 inline std::string to_hex_string(const fidl::VectorPtr<uint8_t>& data) {

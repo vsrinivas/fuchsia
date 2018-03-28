@@ -24,10 +24,10 @@ constexpr fxl::TimeDelta kTeardownTimeout = fxl::TimeDelta::FromSeconds(3);
 AgentRunner::AgentRunner(
     component::ApplicationLauncher* const application_launcher,
     MessageQueueManager* const message_queue_manager,
-    ledger::LedgerRepository* const ledger_repository,
+    ledger_internal::LedgerRepository* const ledger_repository,
     AgentRunnerStorage* const agent_runner_storage,
-    auth::TokenProviderFactory* const token_provider_factory,
-    maxwell::UserIntelligenceProvider* const user_intelligence_provider,
+    modular_auth::TokenProviderFactory* const token_provider_factory,
+    UserIntelligenceProvider* const user_intelligence_provider,
     EntityProviderRunner* const entity_provider_runner)
     : application_launcher_(application_launcher),
       message_queue_manager_(message_queue_manager),
@@ -42,7 +42,7 @@ AgentRunner::AgentRunner(
 
 AgentRunner::~AgentRunner() = default;
 
-void AgentRunner::Connect(f1dl::InterfaceRequest<AgentProvider> request) {
+void AgentRunner::Connect(fidl::InterfaceRequest<AgentProvider> request) {
   agent_provider_bindings_.AddBinding(this, std::move(request));
 }
 
@@ -137,9 +137,9 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 
 void AgentRunner::ConnectToAgent(
     const std::string& requestor_url, const std::string& agent_url,
-    f1dl::InterfaceRequest<component::ServiceProvider>
+    fidl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -158,8 +158,8 @@ void AgentRunner::ConnectToAgent(
 
 void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
-    f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-    f1dl::InterfaceRequest<AgentController> agent_controller_request) {
+    fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+    fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Drop all new requests if AgentRunner is terminating.
   if (*terminating_) {
     return;
@@ -212,24 +212,24 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
-                               TaskInfoPtr task_info) {
+                               TaskInfo task_info) {
   AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
-  data.task_id = task_info->task_id.get();
+  data.task_id = task_info.task_id.get();
 
-  if (task_info->trigger_condition->is_queue_name()) {
+  if (task_info.trigger_condition.is_queue_name()) {
     data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE;
-    data.queue_name = task_info->trigger_condition->get_queue_name().get();
-  } else if (task_info->trigger_condition->is_alarm_in_seconds()) {
+    data.queue_name = task_info.trigger_condition.queue_name().get();
+  } else if (task_info.trigger_condition.is_alarm_in_seconds()) {
     data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_ALARM;
     data.alarm_in_seconds =
-        task_info->trigger_condition->get_alarm_in_seconds();
+        task_info.trigger_condition.alarm_in_seconds();
   } else {
     // Not a defined trigger condition.
     FXL_NOTREACHED();
   }
 
-  if (task_info->persistent) {
+  if (task_info.persistent) {
     // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()| after
     // this trigger information has been added to the ledger via a ledger page
     // watching mechanism.
@@ -404,7 +404,7 @@ void AgentRunner::DeleteTask(const std::string& agent_url,
   agent_runner_storage_->DeleteTask(agent_url, task_id, [](bool) {});
 }
 
-f1dl::VectorPtr<f1dl::StringPtr> AgentRunner::GetAllAgents() {
+fidl::VectorPtr<fidl::StringPtr> AgentRunner::GetAllAgents() {
   // A set of all agents that are either running or scheduled to be run.
   std::set<std::string> agents;
   for (auto const& it : running_agents_) {
@@ -417,7 +417,7 @@ f1dl::VectorPtr<f1dl::StringPtr> AgentRunner::GetAllAgents() {
     agents.insert(it.first);
   }
 
-  f1dl::VectorPtr<f1dl::StringPtr> agent_urls;
+  fidl::VectorPtr<fidl::StringPtr> agent_urls;
   // Initialize the size to force non-null.
   agent_urls.resize(0);
   for (auto const& it : agents) {
@@ -432,13 +432,12 @@ void AgentRunner::UpdateWatchers() {
     return;
   }
 
-  agent_provider_watchers_.ForAllPtrs(
-      [agent_urls = GetAllAgents()](AgentProviderWatcher* watcher) {
-        watcher->OnUpdate(agent_urls.Clone());
-      });
+  for (auto& watcher : agent_provider_watchers_.ptrs()) {
+    (*watcher)->OnUpdate(GetAllAgents());
+  }
 }
 
-void AgentRunner::Watch(f1dl::InterfaceHandle<AgentProviderWatcher> watcher) {
+void AgentRunner::Watch(fidl::InterfaceHandle<AgentProviderWatcher> watcher) {
   auto ptr = watcher.Bind();
   // 1. Send this watcher the current list of agents.
   ptr->OnUpdate(GetAllAgents());

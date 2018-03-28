@@ -8,22 +8,22 @@
 #include <string>
 
 #include <fuchsia/cpp/modular.h>
-#include "lib/agent/fidl/agent_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/service_provider_impl.h"
-#include "lib/app/fidl/application_controller.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/component.h>
 #include "lib/async/cpp/operation.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/component/fidl/component_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 
@@ -35,8 +35,8 @@ class AgentRunner;
 struct AgentContextInfo {
   const ComponentContextInfo component_context_info;
   component::ApplicationLauncher* const app_launcher;
-  auth::TokenProviderFactory* const token_provider_factory;
-  maxwell::UserIntelligenceProvider* const user_intelligence_provider;
+  modular_auth::TokenProviderFactory* const token_provider_factory;
+  UserIntelligenceProvider* const user_intelligence_provider;
 };
 
 // This class manages an agent and its life cycle. AgentRunner owns this class,
@@ -59,16 +59,16 @@ class AgentContextImpl : AgentContext, AgentController {
   // point all connections will be forwarded to the agent.
   void NewAgentConnection(
       const std::string& requestor_url,
-      f1dl::InterfaceRequest<component::ServiceProvider>
+      fidl::InterfaceRequest<component::ServiceProvider>
           incoming_services_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request);
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when the framework wants to talk to the
   // |EntityProvider| service from this agent. Similar to NewAgentConnection(),
   // this operation will pend until the entity provider agent is initialized.
   void NewEntityProviderConnection(
-      f1dl::InterfaceRequest<EntityProvider> entity_provider_request,
-      f1dl::InterfaceRequest<AgentController> agent_controller_request);
+      fidl::InterfaceRequest<EntityProvider> entity_provider_request,
+      fidl::InterfaceRequest<AgentController> agent_controller_request);
 
   // Called by AgentRunner when a new task has been scheduled.
   void NewTask(const std::string& task_id);
@@ -79,22 +79,22 @@ class AgentContextImpl : AgentContext, AgentController {
  private:
   // |AgentContext|
   void GetComponentContext(
-      f1dl::InterfaceRequest<ComponentContext> request) override;
+      fidl::InterfaceRequest<ComponentContext> request) override;
   // |AgentContext|
   void GetTokenProvider(
-      f1dl::InterfaceRequest<auth::TokenProvider> request) override;
+      fidl::InterfaceRequest<modular_auth::TokenProvider> request) override;
   // |AgentContext|
-  void ScheduleTask(TaskInfoPtr task_info) override;
+  void ScheduleTask(TaskInfo task_info) override;
   // |AgentContext|
-  void DeleteTask(const f1dl::StringPtr& task_id) override;
+  void DeleteTask(fidl::StringPtr task_id) override;
   // |AgentContext|
   void Done() override;
   // |AgentContext|
   void GetIntelligenceServices(
-      f1dl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+      fidl::InterfaceRequest<IntelligenceServices> request) override;
   // |AgentContext|
   void GetEntityReferenceFactory(
-      f1dl::InterfaceRequest<EntityReferenceFactory> request) override;
+      fidl::InterfaceRequest<EntityReferenceFactory> request) override;
 
   // Adds an operation on |operation_queue_|. This operation is immediately
   // Done() if this agent is not |ready_|. Else if there are no active
@@ -106,8 +106,8 @@ class AgentContextImpl : AgentContext, AgentController {
 
   std::unique_ptr<AppClient<Lifecycle>> app_client_;
   AgentPtr agent_;
-  f1dl::BindingSet<AgentContext> agent_context_bindings_;
-  f1dl::BindingSet<AgentController> agent_controller_bindings_;
+  fidl::BindingSet<AgentContext> agent_context_bindings_;
+  fidl::BindingSet<AgentController> agent_controller_bindings_;
 
   AgentRunner* const agent_runner_;
 
@@ -117,9 +117,9 @@ class AgentContextImpl : AgentContext, AgentController {
   // application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
 
-  auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
+  modular_auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
   EntityProviderRunner* const entity_provider_runner_;        // Not owned.
-  maxwell::UserIntelligenceProvider* const
+  UserIntelligenceProvider* const
       user_intelligence_provider_;  // Not owned.
 
   State state_ = State::INITIALIZING;

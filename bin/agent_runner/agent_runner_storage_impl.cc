@@ -72,10 +72,10 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
     }
 
     for (const auto& entry : entries_) {
-      std::string key(reinterpret_cast<const char*>(entry->key->data()),
-                      entry->key->size());
+      std::string key(reinterpret_cast<const char*>(entry.key->data()),
+                      entry.key->size());
       std::string value;
-      if (!fsl::StringFromVmo(entry->value, &value)) {
+      if (!fsl::StringFromVmo(*entry.value, &value)) {
         FXL_LOG(ERROR) << trace_name() << " " << key << " "
                        << "VMO could nt be copied.";
         continue;
@@ -91,7 +91,7 @@ class AgentRunnerStorageImpl::InitializeCall : Operation<> {
 
   NotificationDelegate* const delegate_;
   std::shared_ptr<ledger::PageSnapshotPtr> snapshot_;
-  std::vector<ledger::EntryPtr> entries_;
+  std::vector<ledger::Entry> entries_;
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
@@ -180,7 +180,7 @@ class AgentRunnerStorageImpl::DeleteTaskCall : Operation<bool> {
 };
 
 AgentRunnerStorageImpl::AgentRunnerStorageImpl(LedgerClient* ledger_client,
-                                               LedgerPageId page_id)
+                                               ledger::PageId page_id)
     : PageClient("AgentRunnerStorageImpl", ledger_client, std::move(page_id)) {}
 
 AgentRunnerStorageImpl::~AgentRunnerStorageImpl() = default;

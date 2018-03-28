@@ -18,31 +18,20 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
-#include "lib/app/fidl/application_controller.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/async/cpp/operation.h"
-#include "lib/component/fidl/component_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fidl/cpp/struct_ptr.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/module/fidl/module_context.fidl.h"
-#include "lib/module/fidl/module_controller.fidl.h"
-#include "lib/module/fidl/module_data.fidl.h"
-#include "lib/story/fidl/create_chain.fidl.h"
-#include "lib/story/fidl/create_link.fidl.h"
-#include "lib/story/fidl/per_device_story_info.fidl.h"
-#include "lib/story/fidl/story_controller.fidl.h"
-#include "lib/story/fidl/story_data.fidl.h"
-#include "lib/surface/fidl/surface.fidl.h"
-#include "lib/user_intelligence/fidl/user_intelligence_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/context.h"
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -63,14 +52,14 @@ constexpr char kRootModuleName[] = "root";
 // clients control over the story.
 class StoryControllerImpl : PageClient, StoryController, StoryContext {
  public:
-  StoryControllerImpl(const f1dl::StringPtr& story_id,
+  StoryControllerImpl(fidl::StringPtr story_id,
                       LedgerClient* ledger_client,
                       LedgerPageId story_page_id,
                       StoryProviderImpl* story_provider_impl);
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
-  void Connect(f1dl::InterfaceRequest<StoryController> request);
+  void Connect(fidl::InterfaceRequest<StoryController> request);
 
   // Called by StoryProviderImpl.
   bool IsRunning();
@@ -92,9 +81,9 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void StopForTeardown(const std::function<void()>& done);
 
   // Called by StoryProviderImpl.
-  void AddForCreate(const f1dl::StringPtr& module_name,
-                    const f1dl::StringPtr& module_url,
-                    const f1dl::StringPtr& link_name,
+  void AddForCreate(fidl::StringPtr module_name,
+                    fidl::StringPtr module_url,
+                    fidl::StringPtr link_name,
                     CreateLinkInfoPtr create_link_info,
                     const std::function<void()>& done);
 
@@ -103,17 +92,17 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void Sync(const std::function<void()>& done);
 
   // Called by ModuleControllerImpl and ModuleContextImpl.
-  void FocusModule(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+  void FocusModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // Called by ModuleControllerImpl.
-  void DefocusModule(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+  void DefocusModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // Called by ModuleControllerImpl.
-  void StopModule(const f1dl::VectorPtr<f1dl::StringPtr>& module_path,
+  void StopModule(const fidl::VectorPtr<fidl::StringPtr>& module_path,
                   const std::function<void()>& done);
 
   // Called by ModuleControllerImpl.
-  void OnModuleStateChange(const f1dl::VectorPtr<f1dl::StringPtr>& module_path,
+  void OnModuleStateChange(const fidl::VectorPtr<fidl::StringPtr>& module_path,
                            ModuleState state);
 
   // Called by ModuleControllerImpl.
@@ -122,7 +111,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void ReleaseModule(ModuleControllerImpl* module_controller_impl);
 
   // Called by ModuleContextImpl.
-  const f1dl::StringPtr& GetStoryId() const;
+  fidl::StringPtr GetStoryId() const;
 
   // Called by ModuleContextImpl.
   void RequestStoryFocus();
@@ -130,25 +119,25 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Called by ModuleContextImpl.
   void ConnectLinkPath(LinkPathPtr link_path,
                        LinkImpl::ConnectionType connection_type,
-                       f1dl::InterfaceRequest<Link> request);
+                       fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.
   LinkPathPtr GetLinkPathForChainKey(
-      const f1dl::VectorPtr<f1dl::StringPtr>& module_path,
-      const f1dl::StringPtr& key);
+      const fidl::VectorPtr<fidl::StringPtr>& module_path,
+      fidl::StringPtr key);
 
   // Called by ModuleContextImpl.
   // TODO(thatguy): Remove this entirely once all Modules use StartModule.
   // MI4-739
   void StartModuleDeprecated(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& module_name,
-      const f1dl::StringPtr& module_url,
-      const f1dl::StringPtr& link_name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr module_name,
+      fidl::StringPtr module_url,
+      fidl::StringPtr link_name,
       const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       ModuleSource module_source);
 
@@ -156,36 +145,36 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // TODO(thatguy): Remove this entirely once all Modules use StartModule.
   // MI4-739
   void StartModuleInShellDeprecated(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& module_name,
-      const f1dl::StringPtr& module_url,
-      const f1dl::StringPtr& link_name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr module_name,
+      fidl::StringPtr module_url,
+      fidl::StringPtr link_name,
       const modular::ModuleManifestPtr manifest,
       CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       bool focus,
       ModuleSource module_source);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& module_name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr module_name,
       DaisyPtr daisy,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
   void StartModule(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& module_name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr module_name,
       DaisyPtr daisy,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       ModuleSource module_source,
       std::function<void(StartModuleStatus)> callback);
@@ -195,24 +184,24 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // TODO(thatguy): Remove |link_name| once no Modules use root Links.
   // MI4-739
   void EmbedModuleDeprecated(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& module_name,
-      const f1dl::StringPtr& module_url,
-      const f1dl::StringPtr& link_name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr module_name,
+      fidl::StringPtr module_url,
+      fidl::StringPtr link_name,
       CreateChainInfoPtr create_chain_info,
-      f1dl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      f1dl::InterfaceRequest<ModuleController> module_controller_request,
-      f1dl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
+      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
+      fidl::InterfaceRequest<ModuleController> module_controller_request,
+      fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
   // Called by ModuleContextImpl.
   void StartContainerInShell(
-      const f1dl::VectorPtr<f1dl::StringPtr>& parent_module_path,
-      const f1dl::StringPtr& name,
+      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
+      fidl::StringPtr name,
       SurfaceRelationPtr parent_relation,
-      f1dl::VectorPtr<ContainerLayoutPtr> layout,
-      f1dl::VectorPtr<ContainerRelationEntryPtr> relationships,
-      f1dl::VectorPtr<ContainerNodePtr> nodes);
+      fidl::VectorPtr<ContainerLayout> layout,
+      fidl::VectorPtr<ContainerRelationEntry> relationships,
+      fidl::VectorPtr<ContainerNodePtr> nodes);
 
  private:
   class ModuleWatcherImpl;
@@ -221,32 +210,32 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void OnPageChange(const std::string& key, const std::string& value) override;
 
   // |StoryController|
-  void GetInfo(const GetInfoCallback& callback) override;
-  void SetInfoExtra(const f1dl::StringPtr& name,
-                    const f1dl::StringPtr& value,
-                    const SetInfoExtraCallback& callback) override;
+  void GetInfo(GetInfoCallback callback) override;
+  void SetInfoExtra(fidl::StringPtr name,
+                    fidl::StringPtr value,
+                    SetInfoExtraCallback callback) override;
   void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
-  void Stop(const StopCallback& done) override;
-  void Watch(f1dl::InterfaceHandle<StoryWatcher> watcher) override;
-  void AddModuleDeprecated(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                           const f1dl::StringPtr& module_name,
-                           const f1dl::StringPtr& module_url,
-                           const f1dl::StringPtr& link_name,
+  void Stop(StopCallback done) override;
+  void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
+  void AddModuleDeprecated(fidl::VectorPtr<fidl::StringPtr> module_path,
+                           fidl::StringPtr module_name,
+                           fidl::StringPtr module_url,
+                           fidl::StringPtr link_name,
                            SurfaceRelationPtr surface_relation) override;
-  void GetActiveModules(f1dl::InterfaceHandle<StoryModulesWatcher> watcher,
-                        const GetActiveModulesCallback& callback) override;
-  void GetModules(const GetModulesCallback& callback) override;
+  void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
+                        GetActiveModulesCallback callback) override;
+  void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
-      f1dl::VectorPtr<f1dl::StringPtr> module_path,
-      f1dl::InterfaceRequest<ModuleController> request) override;
-  void GetActiveLinks(f1dl::InterfaceHandle<StoryLinksWatcher> watcher,
-                      const GetActiveLinksCallback& callback) override;
-  void GetLink(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-               const f1dl::StringPtr& name,
-               f1dl::InterfaceRequest<Link> request) override;
-  void AddModule(f1dl::VectorPtr<f1dl::StringPtr> module_path,
-                 const f1dl::StringPtr& module_name,
-                 DaisyPtr daisy,
+      fidl::VectorPtr<fidl::StringPtr> module_path,
+      fidl::InterfaceRequest<ModuleController> request) override;
+  void GetActiveLinks(fidl::InterfaceHandle<StoryLinksWatcher> watcher,
+                      GetActiveLinksCallback callback) override;
+  void GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
+               fidl::StringPtr name,
+               fidl::InterfaceRequest<Link> request) override;
+  void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
+                 fidl::StringPtr module_name,
+                 Daisy daisy,
                  SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
@@ -256,15 +245,15 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void NotifyStateChange();
   void DisposeLink(LinkImpl* link);
   void AddModuleWatcher(ModuleControllerPtr module_controller,
-                        const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+                        const fidl::VectorPtr<fidl::StringPtr>& module_path);
   void UpdateStoryState(ModuleState state);
   void ProcessPendingViews();
 
-  bool IsExternalModule(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+  bool IsExternalModule(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // The ID of the story, its state and the context to obtain it from and
   // persist it to.
-  const f1dl::StringPtr story_id_;
+  const fidl::StringPtr story_id_;
 
   // This is the canonical source for state. The value in the ledger is just a
   // write-behind copy of this value.
@@ -284,35 +273,35 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   Scope story_scope_;
 
   // Implements the primary service provided here: StoryController.
-  f1dl::BindingSet<StoryController> bindings_;
+  fidl::BindingSet<StoryController> bindings_;
 
   // Watcher for various aspects of the story.
-  f1dl::InterfacePtrSet<StoryWatcher> watchers_;
-  f1dl::InterfacePtrSet<StoryModulesWatcher> modules_watchers_;
-  f1dl::InterfacePtrSet<StoryLinksWatcher> links_watchers_;
+  fidl::InterfacePtrSet<StoryWatcher> watchers_;
+  fidl::InterfacePtrSet<StoryModulesWatcher> modules_watchers_;
+  fidl::InterfacePtrSet<StoryLinksWatcher> links_watchers_;
 
   // Everything for the story shell. Relationships between modules are conveyed
   // to the story shell using their instance IDs.
   std::unique_ptr<AppClient<Lifecycle>> story_shell_app_;
   StoryShellPtr story_shell_;
-  f1dl::Binding<StoryContext> story_context_binding_;
+  fidl::Binding<StoryContext> story_context_binding_;
 
   // The module instances (identified by their serialized module paths) already
   // known to story shell. Does not include modules whose views are pending and
   // not yet sent to story shell.
-  std::set<f1dl::StringPtr> connected_views_;
+  std::set<fidl::StringPtr> connected_views_;
 
   // Holds the view of a non-embedded running module (identified by its
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
-  std::map<f1dl::StringPtr,
-           std::pair<f1dl::VectorPtr<f1dl::StringPtr>, views_v1_token::ViewOwnerPtr>>
+  std::map<fidl::StringPtr,
+           std::pair<fidl::VectorPtr<fidl::StringPtr>, views_v1_token::ViewOwnerPtr>>
       pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
   struct Connection {
-    ModuleDataPtr module_data;
+    ModuleData module_data;
     EmbedModuleWatcherPtr embed_module_watcher;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
@@ -323,7 +312,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // return nullptr if the module at the path is not running, regardless of
   // whether a module at that path is known to the story.
   Connection* FindConnection(
-      const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+      const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // Finds the active connection for the story shell anchor of a module with the
   // given connection. The anchor is the closest ancestor module of the given
@@ -337,7 +326,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Finds the connection of the closest embedder of a module at the given
   // module path. May return null if there is no module running that is
   // embedding the module at module_path.
-  Connection* FindEmbedder(const f1dl::VectorPtr<f1dl::StringPtr>& module_path);
+  Connection* FindEmbedder(const fidl::VectorPtr<fidl::StringPtr>& module_path);
 
   // The magic ingredient of a story: Chains. They group Links.
   std::vector<std::unique_ptr<ChainImpl>> chains_;
@@ -348,7 +337,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Module state is used to inform Story state (see OnModuleStateChange() and
   // MaybeUpdateStoryState()). We keep track of the first Module to start in
   // this Story as a proxy 'root' Module.
-  f1dl::VectorPtr<f1dl::StringPtr> first_module_path_;
+  fidl::VectorPtr<fidl::StringPtr> first_module_path_;
 
   // A dummy service that allows applications that can run both as modules in a
   // story and standalone from the shell to determine whether they are in a
@@ -358,7 +347,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // A collection of services, scoped to this Story, for use by intelligent
   // Modules.
-  maxwell::IntelligenceServicesPtr intelligence_services_;
+  IntelligenceServicesPtr intelligence_services_;
 
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
@@ -386,7 +375,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.
-  std::vector<std::pair<ModuleDataPtr, BlockingModuleDataWriteCall*>>
+  std::vector<std::pair<ModuleData, BlockingModuleDataWriteCall*>>
       blocked_operations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);

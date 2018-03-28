@@ -7,8 +7,8 @@
 
 #include <fuchsia/cpp/modular_auth.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/config/fidl/config.fidl.h"
-#include "lib/device/fidl/user_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
@@ -25,7 +25,7 @@ class UserProviderImpl : UserProvider {
                    const AppConfig& story_shell,
                    auth::AccountProvider* account_provider);
 
-  void Connect(f1dl::InterfaceRequest<UserProvider> request);
+  void Connect(fidl::InterfaceRequest<UserProvider> request);
 
   void Teardown(const std::function<void()>& callback);
 
@@ -36,22 +36,22 @@ class UserProviderImpl : UserProvider {
   void Login(UserLoginParamsPtr params) override;
 
   // |UserProvider|
-  void PreviousUsers(const PreviousUsersCallback& callback) override;
+  void PreviousUsers(PreviousUsersCallback callback) override;
 
   // |UserProvider|
   void AddUser(auth::IdentityProvider identity_provider,
-               const AddUserCallback& callback) override;
+               AddUserCallback callback) override;
 
   // |UserProvider|
-  void RemoveUser(const f1dl::StringPtr& account_id,
-                  const RemoveUserCallback& callback) override;
+  void RemoveUser(const fidl::StringPtr& account_id,
+                  RemoveUserCallback callback) override;
 
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
   void LoginInternal(auth::AccountPtr account, UserLoginParamsPtr params);
 
-  f1dl::BindingSet<UserProvider> bindings_;
+  fidl::BindingSet<UserProvider> bindings_;
 
   std::shared_ptr<component::ApplicationContext> app_context_;
   const AppConfig& user_runner_;         // Neither owned nor copied.

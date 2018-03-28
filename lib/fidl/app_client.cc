@@ -10,7 +10,7 @@
 
 #include <fcntl.h>
 
-#include "lib/app/fidl/flat_namespace.fidl.h"
+#include <fuchsia/cpp/component.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/unique_fd.h"
 
@@ -47,18 +47,22 @@ AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
                              AppConfigPtr config, std::string data_origin,
                              component::ServiceListPtr additional_services)
     : AsyncHolderBase(config->url) {
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->directory_request = services_.NewRequest();
-  launch_info->url = config->url;
-  launch_info->arguments = config->args.Clone();
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.directory_request = services_.NewRequest();
+  launch_info.url = config->url;
+  fidl::VectorPtr<fidl::StringPtr> args;
+  for (const auto& arg : *config->args) {
+    args.push_back(arg);
+  }
+  launch_info.arguments = std::move(args);
 
   if (!data_origin.empty()) {
     if (!files::CreateDirectory(data_origin)) {
       FXL_LOG(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
-    launch_info->flat_namespace = component::FlatNamespace::New();
-    launch_info->flat_namespace->paths.push_back("/data");
+    launch_info.flat_namespace = component::FlatNamespace::New();
+    launch_info.flat_namespace->paths.push_back("/data");
 
     fxl::UniqueFD dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
     if (!dir.is_valid()) {
@@ -67,15 +71,15 @@ AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
       return;
     }
 
-    launch_info->flat_namespace->directories.push_back(CloneChannel(dir.get()));
-    if (!launch_info->flat_namespace->directories->at(0)) {
+    launch_info.flat_namespace->directories.push_back(CloneChannel(dir.get()));
+    if (!launch_info.flat_namespace->directories->at(0)) {
       FXL_LOG(ERROR) << "Unable create a handle from  " << data_origin;
       return;
     }
   }
 
-  if (!additional_services.is_null()) {
-    launch_info->additional_services = std::move(additional_services);
+  if (additional_services) {
+    launch_info.additional_services = std::move(additional_services);
   }
   launcher->CreateApplication(std::move(launch_info), app_.NewRequest());
 }

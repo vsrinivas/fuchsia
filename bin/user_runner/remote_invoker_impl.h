@@ -9,7 +9,7 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include <fuchsia/cpp/ledger.h>
-#include "lib/remote/fidl/remote_invoker.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 
@@ -21,15 +21,15 @@ class RemoteInvokerImpl : RemoteInvoker {
   explicit RemoteInvokerImpl(ledger::Ledger* ledger);
   ~RemoteInvokerImpl() override;
 
-  void Connect(f1dl::InterfaceRequest<RemoteInvoker> request);
+  void Connect(fidl::InterfaceRequest<RemoteInvoker> request);
 
  private:
   // |RemoteInvoker|
-  void StartOnDevice(const f1dl::StringPtr& device_id,
-                     const f1dl::StringPtr& story_id,
-                     const StartOnDeviceCallback& callback) override;
+  void StartOnDevice(const fidl::StringPtr& device_id,
+                     const fidl::StringPtr& story_id,
+                     StartOnDeviceCallback callback) override;
 
-  f1dl::BindingSet<RemoteInvoker> bindings_;
+  fidl::BindingSet<RemoteInvoker> bindings_;
   OperationQueue operation_queue_;
   ledger::Ledger* const ledger_;
 

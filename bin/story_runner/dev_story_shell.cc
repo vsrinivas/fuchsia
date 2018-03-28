@@ -33,7 +33,7 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   // |SingleServiceApp|
   void CreateView(
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
+      fidl::InterfaceRequest<component::ServiceProvider> /*services_request*/)
       override {
     view_owner_request_ = std::move(view_owner_request);
     Connect();
@@ -41,15 +41,15 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
 
   // |StoryShell|
   void Initialize(
-      f1dl::InterfaceHandle<modular::StoryContext> story_context) override {
+      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
     Connect();
   }
 
   // |StoryShell|
   void ConnectView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
-                   const f1dl::StringPtr& /*view_id*/,
-                   const f1dl::StringPtr& /*parent_id*/,
+                   const fidl::StringPtr& /*view_id*/,
+                   const fidl::StringPtr& /*parent_id*/,
                    modular::SurfaceRelationPtr /*surface_relation*/,
                    modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_) {
@@ -60,23 +60,23 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void FocusView(const f1dl::StringPtr& /*view_id*/,
-                 const f1dl::StringPtr& /*relative_view_id*/) override {}
+  void FocusView(const fidl::StringPtr& /*view_id*/,
+                 const fidl::StringPtr& /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const f1dl::StringPtr& /*view_id*/,
-                   const DefocusViewCallback& callback) override {
+  void DefocusView(const fidl::StringPtr& /*view_id*/,
+                   DefocusViewCallback callback) override {
     callback();
   }
 
   // |StoryShell|
   void AddContainer(
-      const f1dl::StringPtr& /*container_name*/,
-      const f1dl::StringPtr& /*parent_id*/,
+      const fidl::StringPtr& /*container_name*/,
+      const fidl::StringPtr& /*parent_id*/,
       modular::SurfaceRelationPtr /* relation */,
-      f1dl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
-      f1dl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
-      f1dl::VectorPtr<modular::ContainerViewPtr> /* views */) override {}
+      fidl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
+      fidl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
+      fidl::VectorPtr<modular::ContainerViewPtr> /* views */) override {}
 
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {

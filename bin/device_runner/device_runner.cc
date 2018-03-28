@@ -16,9 +16,9 @@
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include "lib/config/fidl/config.fidl.h"
-#include "lib/device/fidl/device_shell.fidl.h"
-#include "lib/device/fidl/user_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -28,7 +28,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/device_runner/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
@@ -133,7 +133,7 @@ class Settings {
 
  private:
   void ParseShellArgs(const std::string& value,
-                      f1dl::VectorPtr<f1dl::StringPtr>* args) {
+                      fidl::VectorPtr<fidl::StringPtr>* args) {
     bool escape = false;
     std::string arg;
     for (char i : value) {
@@ -165,8 +165,8 @@ class Settings {
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
-      const f1dl::StringPtr& user_shell,
-      const f1dl::VectorPtr<f1dl::StringPtr>& user_shell_args) {
+      const fidl::StringPtr& user_shell,
+      const fidl::VectorPtr<fidl::StringPtr>& user_shell_args) {
     const std::string kRootModule = "--root_module";
     std::string result = user_shell;
 
@@ -310,7 +310,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   }
 
   // |DeviceShellContext|
-  void GetUserProvider(f1dl::InterfaceRequest<UserProvider> request) override {
+  void GetUserProvider(fidl::InterfaceRequest<UserProvider> request) override {
     user_provider_impl_->Connect(std::move(request));
   }
 
@@ -346,8 +346,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
   // |AccountProviderContext|
   void GetAuthenticationContext(
-      const f1dl::StringPtr& account_id,
-      f1dl::InterfaceRequest<AuthenticationContext> request) override {
+      const fidl::StringPtr& account_id,
+      fidl::InterfaceRequest<AuthenticationContext> request) override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
@@ -358,8 +358,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   DeviceRunnerMonitorPtr monitor_;
   std::function<void()> on_shutdown_;
 
-  f1dl::Binding<DeviceShellContext> device_shell_context_binding_;
-  f1dl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
+  fidl::Binding<DeviceShellContext> device_shell_context_binding_;
+  fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
 
   std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<Lifecycle>> device_shell_app_;

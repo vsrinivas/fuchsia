@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/component/fidl/component_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
@@ -23,7 +23,7 @@ class AgentRunner;
 struct ComponentContextInfo {
   MessageQueueManager* const message_queue_manager;
   AgentRunner* const agent_runner;
-  ledger::LedgerRepository* const ledger_repository;
+  ledger_internal::LedgerRepository* const ledger_repository;
   EntityProviderRunner* const entity_provider_runner;
 };
 
@@ -50,52 +50,52 @@ class ComponentContextImpl : public ComponentContext {
 
   const std::string& component_instance_id() { return component_instance_id_; }
 
-  void Connect(f1dl::InterfaceRequest<ComponentContext> request);
+  void Connect(fidl::InterfaceRequest<ComponentContext> request);
   ComponentContextPtr NewBinding();
 
  private:
   // |ComponentContext|
-  void GetLedger(f1dl::InterfaceRequest<ledger::Ledger> request,
-                 const GetLedgerCallback& result) override;
+  void GetLedger(fidl::InterfaceRequest<ledger::Ledger> request,
+                 GetLedgerCallback result) override;
 
   // |ComponentContext|
-  void ConnectToAgent(const f1dl::StringPtr& url,
-                      f1dl::InterfaceRequest<component::ServiceProvider>
+  void ConnectToAgent(fidl::StringPtr url,
+                      fidl::InterfaceRequest<component::ServiceProvider>
                           incoming_services_request,
-                      f1dl::InterfaceRequest<AgentController>
+                      fidl::InterfaceRequest<AgentController>
                           agent_controller_request) override;
 
   // |ComponentContext|
   void ObtainMessageQueue(
-      const f1dl::StringPtr& name,
-      f1dl::InterfaceRequest<MessageQueue> request) override;
+      fidl::StringPtr name,
+      fidl::InterfaceRequest<MessageQueue> request) override;
 
   // |ComponentContext|
-  void DeleteMessageQueue(const f1dl::StringPtr& name) override;
+  void DeleteMessageQueue(fidl::StringPtr name) override;
 
   // |ComponentContext|
-  void GetMessageSender(const f1dl::StringPtr& queue_token,
-                        f1dl::InterfaceRequest<MessageSender> request) override;
+  void GetMessageSender(fidl::StringPtr queue_token,
+                        fidl::InterfaceRequest<MessageSender> request) override;
 
   // |ComponentContext|
   void GetEntityResolver(
-      f1dl::InterfaceRequest<EntityResolver> request) override;
+      fidl::InterfaceRequest<EntityResolver> request) override;
 
   // |ComponentContext|
   void CreateEntityWithData(
-      f1dl::VectorPtr<TypeToDataEntryPtr> type_to_data,
-      const CreateEntityWithDataCallback& result) override;
+      fidl::VectorPtr<TypeToDataEntry> type_to_data,
+      CreateEntityWithDataCallback result) override;
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;
-  ledger::LedgerRepository* const ledger_repository_;
+  ledger_internal::LedgerRepository* const ledger_repository_;
   EntityProviderRunner* const entity_provider_runner_;
 
   const std::string component_namespace_;
   const std::string component_instance_id_;
   const std::string component_url_;
 
-  f1dl::BindingSet<ComponentContext> bindings_;
+  fidl::BindingSet<ComponentContext> bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentContextImpl);
 };

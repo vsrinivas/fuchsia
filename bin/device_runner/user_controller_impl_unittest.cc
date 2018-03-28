@@ -28,7 +28,7 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   launcher.RegisterApplication(
       url, [&callback_called](
                component::ApplicationLaunchInfoPtr launch_info,
-               f1dl::InterfaceRequest<component::ApplicationController> ctrl) {
+               fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         callback_called = true;
       });
 
