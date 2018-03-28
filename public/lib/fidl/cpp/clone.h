@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_CLONE_H_
 
 #include <lib/fidl/cpp/array.h>
+#include <zircon/assert.h>
 
 #include <memory>
 
@@ -17,6 +18,27 @@
 
 namespace fidl {
 
+// Returns a deep copy of |value|.
+// This operation also attempts to duplicate any handles the value contains.
+//
+// Crashes the program if the value could not be cloned, perhaps because a
+// handle was not duplicable.
+template <typename T>
+inline T Clone(const T& value) {
+  T clone;
+  zx_status_t status = Clone(value, &clone);
+  ZX_ASSERT(status == ZX_OK);
+  return clone;
+}
+
+// Deep copies the contents of |value| into |result|.
+// This operation also attempts to duplicate any handles the value contains.
+//
+// Returns an error if the value could not be cloned, perhaps because a
+// handle was not duplicable.
+//
+// There are many overloads of this function with the following signature:
+//   zx_status_t Clone(const T& value, T* result);
 template <typename T>
 inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
     const T& value,
