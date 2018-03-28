@@ -35,7 +35,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void Initialize(
-      f1dl::InterfaceHandle<modular::StoryContext> story_context) override {
+      fidl::InterfaceHandle<modular::StoryContext> story_context) override {
     story_context_.Bind(std::move(story_context));
   }
 
@@ -43,8 +43,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
 
   // |StoryShell|
   void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
-                   const f1dl::StringPtr& view_id,
-                   const f1dl::StringPtr& anchor_id,
+                   fidl::StringPtr view_id,
+                   fidl::StringPtr anchor_id,
                    modular::SurfaceRelationPtr /*surface_relation*/,
                    modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_id == "root:child:child" && anchor_id == "root") {
@@ -56,23 +56,23 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void FocusView(const f1dl::StringPtr& /*view_id*/,
-                 const f1dl::StringPtr& /*relative_view_id*/) override {}
+  void FocusView(fidl::StringPtr /*view_id*/,
+                 fidl::StringPtr /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const f1dl::StringPtr& /*view_id*/,
-                   const DefocusViewCallback& callback) override {
+  void DefocusView(fidl::StringPtr /*view_id*/,
+                   DefocusViewCallback callback) override {
     callback();
   }
 
   // |StoryShell|
   void AddContainer(
-      const f1dl::StringPtr& /*container_name*/,
-      const f1dl::StringPtr& /*parent_id*/,
-      modular::SurfaceRelationPtr /*relation*/,
-      f1dl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
-      f1dl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
-      f1dl::VectorPtr<modular::ContainerViewPtr> /* views */) override {}
+      fidl::StringPtr /*container_name*/,
+      fidl::StringPtr /*parent_id*/,
+      modular::SurfaceRelation /*relation*/,
+      fidl::VectorPtr<modular::ContainerLayout> /*layout*/,
+      fidl::VectorPtr<modular::ContainerRelationEntry> /* relationships */,
+      fidl::VectorPtr<modular::ContainerView> /* views */) override {}
 
   modular::StoryContextPtr story_context_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestApp);

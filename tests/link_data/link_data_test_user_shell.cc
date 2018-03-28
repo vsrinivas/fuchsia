@@ -194,12 +194,12 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     modular::CreatePointer(doc, segments.begin(), segments.end())
         .Set(doc, true);
 
-    story_provider_->CreateStoryWithInfo(url, nullptr  /* info_entra */,
-                                         modular::JsonValueToString(doc),
-                                         [this](const fidl::StringPtr& story_id) {
-                                           story1_create_.Pass();
-                                           TestStory1_GetController(story_id);
-                                         });
+    story_provider_->CreateStoryWithInfo(
+        url, nullptr /* info_entra */, modular::JsonValueToString(doc),
+        [this](const fidl::StringPtr& story_id) {
+          story1_create_.Pass();
+          TestStory1_GetController(story_id);
+        });
   }
 
   TestPoint story1_get_controller_{"Story1 GetController"};

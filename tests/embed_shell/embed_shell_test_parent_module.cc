@@ -11,7 +11,6 @@
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/module/fidl/module_context.fidl.h"
 #include "peridot/lib/testing/reporting.h"
 #include "peridot/lib/testing/testing.h"
 
@@ -27,8 +26,8 @@ class ParentApp {
  public:
   ParentApp(
       modular::ModuleHost* const module_host,
-      f1dl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
-      f1dl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
+      fidl::InterfaceRequest<views_v1::ViewProvider> /*view_provider_request*/,
+      fidl::InterfaceRequest<component::ServiceProvider> /*outgoing_services*/)
       : module_host_(module_host) {
     modular::testing::Init(module_host->application_context(), __FILE__);
     ScheduleDone();
@@ -41,21 +40,21 @@ class ParentApp {
 
  private:
   void ScheduleDone() {
-    auto check =
-        [this, done = std::make_shared<int>(0)](const f1dl::StringPtr& value) {
-          ++*done;
-          if (*done == 2) {
-            module_host_->module_context()->Done();
-          }
-        };
+    auto check = [this,
+                  done = std::make_shared<int>(0)](fidl::StringPtr value) {
+      ++*done;
+      if (*done == 2) {
+        module_host_->module_context()->Done();
+      }
+    };
 
     modular::testing::GetStore()->Get("story_shell_done", check);
     modular::testing::GetStore()->Get("child_module_done", check);
   }
 
   void StartChildModule() {
-    auto daisy = modular::Daisy::New();
-    daisy->url = kChildModuleUrl;
+    modular::Daisy daisy;
+    daisy.url = kChildModuleUrl;
     module_host_->module_context()->EmbedModule(
         kChildModuleName, std::move(daisy), nullptr /* incoming_services */,
         child_module_.NewRequest(), child_view_.NewRequest(),
