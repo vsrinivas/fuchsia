@@ -15,8 +15,8 @@ source_set("impl") {
     "ledger_communicator_impl.h",
     "page_communicator_impl.cc",
     "page_communicator_impl.h",
-    "user_communicator_factory.cc",
-    "user_communicator_factory.h",
+    "user_communicator_factory_impl.cc",
+    "user_communicator_factory_impl.h",
     "user_communicator_impl.cc",
     "user_communicator_impl.h",
   ]
@@ -57,6 +57,7 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/p2p_provider/impl",
+    "//peridot/bin/ledger/storage/fake:lib",
     "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/netconnector",

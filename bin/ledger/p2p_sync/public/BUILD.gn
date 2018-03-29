@@ -11,6 +11,7 @@ source_set("public") {
     "ledger_communicator.h",
     "page_communicator.h",
     "user_communicator.h",
+    "user_communicator_factory.h",
   ]
 
   public_deps = [

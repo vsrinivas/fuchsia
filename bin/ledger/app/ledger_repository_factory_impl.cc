@@ -262,7 +262,7 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
     return nullptr;
   }
 
-  return user_communicator_factory_->GetDefaultUserCommunicator(
+  return user_communicator_factory_->GetUserCommunicator(
       repository_information.content_path);
 }
 

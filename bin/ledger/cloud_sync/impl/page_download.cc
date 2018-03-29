@@ -54,9 +54,7 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner,
           {"Page ", convert::ToHex(storage->GetId()), " download sync: "})),
       watcher_binding_(this) {}
 
-PageDownload::~PageDownload() {
-  sync_client_->SetSyncDelegate(nullptr);
-}
+PageDownload::~PageDownload() { sync_client_->SetSyncDelegate(nullptr); }
 
 void PageDownload::StartDownload() {
   SetCommitState(DOWNLOAD_BACKLOG);
@@ -154,9 +152,7 @@ bool PageDownload::IsIdle() {
   }
 }
 
-void PageDownload::BacklogDownloaded() {
-  SetRemoteWatcher(false);
-}
+void PageDownload::BacklogDownloaded() { SetRemoteWatcher(false); }
 
 void PageDownload::SetRemoteWatcher(bool is_retry) {
   FXL_DCHECK(commit_state_ == DOWNLOAD_BACKLOG ||
@@ -254,8 +250,7 @@ void PageDownload::OnError(cloud_provider::Status status) {
 
 void PageDownload::DownloadBatch(
     fidl::VectorPtr<cloud_provider::Commit> commits,
-    fidl::VectorPtr<uint8_t> position_token,
-    fxl::Closure on_done) {
+    fidl::VectorPtr<uint8_t> position_token, fxl::Closure on_done) {
   FXL_DCHECK(!batch_download_);
   batch_download_ = std::make_unique<BatchDownload>(
       storage_, encryption_service_, std::move(commits),
@@ -291,6 +286,7 @@ void PageDownload::GetObject(
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   current_get_object_calls_++;
+  UpdateDownloadState();
   encryption_service_->GetObjectName(
       object_identifier,
       task_runner_->MakeScoped(
@@ -357,13 +353,13 @@ void PageDownload::DecryptObject(
                   storage::Status::OK,
                   storage::DataSource::DataChunk::Create(std::move(content)));
               current_get_object_calls_--;
+              UpdateDownloadState();
             });
       });
 }
 
 void PageDownload::HandleGetObjectError(
-    storage::ObjectIdentifier object_identifier,
-    bool is_permanent,
+    storage::ObjectIdentifier object_identifier, bool is_permanent,
     const char error_name[],
     std::function<void(storage::Status,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
@@ -374,11 +370,13 @@ void PageDownload::HandleGetObjectError(
                      << error_name << " error";
     callback(storage::Status::IO_ERROR, nullptr);
     current_get_object_calls_--;
+    UpdateDownloadState();
     return;
   }
   FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a "
                    << error_name << " error, retrying";
   current_get_object_calls_--;
+  UpdateDownloadState();
   RetryWithBackoff([this, object_identifier = std::move(object_identifier),
                     callback = std::move(callback)] {
     GetObject(object_identifier, callback);
@@ -398,11 +396,18 @@ void PageDownload::SetCommitState(DownloadSyncState new_state) {
   if (new_state == commit_state_) {
     return;
   }
-  // Notify only if the externally visible state changed.
-  bool notify = GetMergedState(commit_state_, current_get_object_calls_) !=
-                GetMergedState(new_state, current_get_object_calls_);
+
   commit_state_ = new_state;
-  if (notify) {
+  UpdateDownloadState();
+}
+
+void PageDownload::UpdateDownloadState() {
+  DownloadSyncState new_state =
+      GetMergedState(commit_state_, current_get_object_calls_);
+
+  // Notify only if the externally visible state changed.
+  if (new_state != merged_state_) {
+    merged_state_ = new_state;
     delegate_->SetDownloadState(
         GetMergedState(commit_state_, current_get_object_calls_));
   }

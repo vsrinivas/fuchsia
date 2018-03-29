@@ -24,7 +24,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory.h"
+#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
 namespace ledger {
 
@@ -78,7 +78,7 @@ class App : public ledger_internal::LedgerController {
     environment_ = std::make_unique<Environment>(
         EnvironmentBuilder().SetAsync(loop_.async()).Build());
     auto user_communicator_factory =
-        std::make_unique<p2p_sync::UserCommunicatorFactory>(
+        std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
             environment_.get(), application_context_.get());
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(

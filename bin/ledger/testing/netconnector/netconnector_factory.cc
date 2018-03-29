@@ -34,7 +34,7 @@ NetConnectorFactory::Holder::Holder(
     fidl::InterfaceRequest<netconnector::NetConnector> request,
     std::string device_name,
     fxl::Closure on_disconnect)
-    : device_name_(device_name),
+    : device_name_(std::move(device_name)),
       interface_(std::move(request), delegate),
       on_disconnect_(std::move(on_disconnect)) {
   interface_.set_on_empty([this] { OnEmpty(); });
@@ -85,7 +85,7 @@ void NetConnectorFactory::UpdatedHostList() {
   for (const auto& holder_pair : net_connectors_) {
     device_names.push_back(holder_pair.first);
   }
-  for (auto callback : pending_device_list_callbacks_) {
+  for (const auto& callback : pending_device_list_callbacks_) {
     callback(current_version_, fidl::Clone(device_names));
   }
   pending_device_list_callbacks_.clear();
@@ -107,7 +107,6 @@ void NetConnectorFactory::GetDevicesNames(
     device_names.push_back(holder_pair.first);
   }
   callback(current_version_, std::move(device_names));
-  return;
 }
 
 void NetConnectorFactory::ConnectToServiceProvider(

@@ -323,6 +323,8 @@ TEST_F(PageDownloadTest, GetObject) {
   bool called;
   storage::Status status;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
+  RunLoopUntilIdle();
+  states_.clear();
   storage_.page_sync_delegate_->GetObject(
       object_identifier, callback::Capture(callback::SetWhenCalled(&called),
                                            &status, &data_chunk));
@@ -331,6 +333,9 @@ TEST_F(PageDownloadTest, GetObject) {
   EXPECT_TRUE(called);
   EXPECT_EQ(storage::Status::OK, status);
   EXPECT_EQ("content", data_chunk->Get().ToString());
+  EXPECT_EQ(2u, states_.size());
+  EXPECT_EQ(DOWNLOAD_IN_PROGRESS, states_[0]);
+  EXPECT_EQ(DOWNLOAD_IDLE, states_[1]);
 }
 
 // Verifies that sync retries GetObject() attempts upon connection error.

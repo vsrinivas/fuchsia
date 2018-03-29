@@ -54,7 +54,9 @@ table CommitResponse {
 }
 
 table ObjectId {
-  id: [ubyte];
+  key_index: uint;
+  deletion_scope_id: uint;
+  digest: [ubyte];
 }
 
 // Request some objects.

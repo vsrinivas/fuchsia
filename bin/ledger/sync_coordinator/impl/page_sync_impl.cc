@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/sync_coordinator/impl/page_sync_impl.h"
 
+#include "lib/callback/waiter.h"
+
 namespace sync_coordinator {
 namespace {
 // Holder for a synchronization provider (cloud or peer-to-peer).
@@ -168,7 +170,9 @@ void PageSyncImpl::SetOnBacklogDownloaded(fxl::Closure on_backlog_downloaded) {
 
 void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   watcher_ = std::make_unique<SyncWatcherConverter>(watcher);
-  cloud_sync_->GetCloudSync()->SetSyncWatcher(watcher_.get());
+  if (cloud_sync_) {
+    cloud_sync_->GetCloudSync()->SetSyncWatcher(watcher_.get());
+  }
 }
 
 void PageSyncImpl::GetObject(
@@ -176,7 +180,21 @@ void PageSyncImpl::GetObject(
     std::function<void(storage::Status status,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  cloud_sync_->GetObject(std::move(object_identifier), std::move(callback));
+  // AnyWaiter returns the first successful value to its Finalize callback. For
+  // example, if P2P returns before cloud with a NOT_FOUND status, then we will
+  // wait for Cloud to return; if P2P returns with an OK status, we will pass
+  // the P2P-returned value immediately.
+  auto waiter =
+      callback::AnyWaiter<storage::Status,
+                          std::unique_ptr<storage::DataSource::DataChunk>>::
+          Create(storage::Status::OK, storage::Status::NOT_FOUND, nullptr);
+  if (cloud_sync_) {
+    cloud_sync_->GetObject(object_identifier, waiter->NewCallback());
+  }
+  if (p2p_sync_) {
+    p2p_sync_->GetObject(std::move(object_identifier), waiter->NewCallback());
+  }
+  waiter->Finalize(std::move(callback));
 }
 
 }  // namespace sync_coordinator

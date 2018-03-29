@@ -7,18 +7,26 @@
 
 #include <flatbuffers/flatbuffers.h>
 
+#include "lib/callback/auto_cleanable.h"
+#include "lib/callback/cancellable.h"
+#include "lib/callback/waiter.h"
 #include "lib/fxl/functional/closure.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/p2p_provider/public/types.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
+#include "peridot/bin/ledger/storage/public/commit_watcher.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
+#include "peridot/bin/ledger/storage/public/page_sync_client.h"
+#include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;
 
-class PageCommunicatorImpl : public PageCommunicator {
+class PageCommunicatorImpl : public PageCommunicator,
+                             public storage::PageSyncDelegate {
  public:
   PageCommunicatorImpl(storage::PageStorage* storage,
                        storage::PageSyncClient* sync_client,
@@ -42,12 +50,35 @@ class PageCommunicatorImpl : public PageCommunicator {
   // PageCommunicator:
   void Start() override;
 
+  // PageSyncDelegate:
+  void GetObject(
+      storage::ObjectIdentifier object_identifier,
+      std::function<void(storage::Status status,
+                         std::unique_ptr<storage::DataSource::DataChunk>)>
+          callback) override;
+
  private:
   friend class PageCommunicatorImplInspectorForTest;
+  class PendingObjectRequestHolder;
 
-  void CreateWatchStart(flatbuffers::FlatBufferBuilder* buffer);
-  void CreateWatchStop(flatbuffers::FlatBufferBuilder* buffer);
+  // These methods build the flatbuffer message corresponding to their name.
+  void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer);
+  void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer);
+  void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                                storage::ObjectIdentifier object_identifier);
+  void BuildObjectResponseBuffer(
+      flatbuffers::FlatBufferBuilder* buffer,
+      std::vector<std::pair<storage::ObjectIdentifier,
+                            std::unique_ptr<const storage::Object>>> results);
 
+  // Processes an incoming ObjectRequest object.
+  void ProcessObjectRequest(fxl::StringView source,
+                            const ObjectRequest* request);
+  // Map of pending requests for objects.
+  callback::AutoCleanableMap<storage::ObjectIdentifier,
+                             PendingObjectRequestHolder>
+      pending_object_requests_;
+  // List of devices we know are interested in this page.
   std::set<std::string, convert::StringViewComparator> interested_devices_;
   // List of devices we know are not interested in this page.
   std::set<std::string, convert::StringViewComparator> not_interested_devices_;
@@ -58,6 +89,13 @@ class PageCommunicatorImpl : public PageCommunicator {
   const std::string namespace_id_;
   const std::string page_id_;
   DeviceMesh* const mesh_;
+  storage::PageStorage* const storage_;
+  storage::PageSyncClient* const sync_client_;
+
+  // This must be the last member of the class.
+  fxl::WeakPtrFactory<PageCommunicatorImpl> weak_factory_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(PageCommunicatorImpl);
 };
 
 }  // namespace p2p_sync

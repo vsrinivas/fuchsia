@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory.h"
+#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory_impl.h"
 
 #include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/netconnector.h>
@@ -12,14 +12,15 @@
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
 
 namespace p2p_sync {
-UserCommunicatorFactory::UserCommunicatorFactory(
+UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
     ledger::Environment* environment,
     component::ApplicationContext* application_context)
     : environment_(environment), application_context_(application_context) {}
 
+UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
+
 std::unique_ptr<UserCommunicator>
-UserCommunicatorFactory::GetDefaultUserCommunicator(
-    std::string user_directory) {
+UserCommunicatorFactoryImpl::GetUserCommunicator(std::string user_directory) {
   char host_name_buffer[HOST_NAME_MAX + 1];
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
   if (result < 0) {

@@ -36,8 +36,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                storage::PageStorage* storage,
                storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
-               cloud_provider::PageCloudPtr* page_cloud,
-               Delegate* delegate,
+               cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                std::unique_ptr<backoff::Backoff> backoff);
 
   ~PageDownload() override;
@@ -55,8 +54,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
                     fidl::VectorPtr<uint8_t> position_token,
                     OnNewCommitsCallback callback) override;
 
-  void OnNewObject(fidl::VectorPtr<uint8_t> id,
-                   mem::Buffer data,
+  void OnNewObject(fidl::VectorPtr<uint8_t> id, mem::Buffer data,
                    OnNewObjectCallback callback) override;
 
   void OnError(cloud_provider::Status status) override;
@@ -87,8 +85,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
           callback);
 
   void HandleGetObjectError(
-      storage::ObjectIdentifier object_identifier,
-      bool is_permanent,
+      storage::ObjectIdentifier object_identifier, bool is_permanent,
       const char error_name[],
       std::function<void(storage::Status,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
@@ -98,6 +95,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   // Sets the state for commit download.
   void SetCommitState(DownloadSyncState new_state);
+  void UpdateDownloadState();
 
   void RetryWithBackoff(fxl::Closure callable);
 
@@ -126,6 +124,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // Commit download state.
   DownloadSyncState commit_state_ = DOWNLOAD_STOPPED;
   int current_get_object_calls_ = 0;
+  // Merged state of commit and object download.
+  DownloadSyncState merged_state_ = DOWNLOAD_STOPPED;
 
   fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 

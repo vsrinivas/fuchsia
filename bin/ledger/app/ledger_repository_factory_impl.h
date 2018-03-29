@@ -19,7 +19,7 @@
 #include "peridot/bin/ledger/app/ledger_repository_impl.h"
 #include "peridot/bin/ledger/cloud_sync/public/user_config.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include "peridot/bin/ledger/p2p_sync/impl/user_communicator_factory.h"
+#include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
 
 namespace ledger {
 
