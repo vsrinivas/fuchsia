@@ -73,10 +73,10 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   void AddContainer(
       fidl::StringPtr /*container_name*/,
       fidl::StringPtr /*parent_id*/,
-      modular::SurfaceRelationPtr /* relation */,
-      fidl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
-      fidl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
-      fidl::VectorPtr<modular::ContainerViewPtr> /* views */) override {}
+      modular::SurfaceRelation /* relation */,
+      fidl::VectorPtr<modular::ContainerLayout> /*layout*/,
+      fidl::VectorPtr<modular::ContainerRelationEntry> /* relationships */,
+      fidl::VectorPtr<modular::ContainerView> /* views */) override {}
 
   void Connect() {
     if (story_context_.is_bound() && view_owner_request_) {
