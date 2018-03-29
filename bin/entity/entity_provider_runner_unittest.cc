@@ -23,6 +23,7 @@
 #include "peridot/bin/entity/entity_provider_launcher.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
@@ -40,7 +41,7 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
     TestWithLedger::SetUp();
 
     mqm_.reset(new MessageQueueManager(
-        ledger_client(), to_array("0123456789123456"), "/tmp/test_mq_data"));
+        ledger_client(), MakePageId("0123456789123456"), "/tmp/test_mq_data"));
     entity_provider_runner_.reset(
         new EntityProviderRunner(static_cast<EntityProviderLauncher*>(this)));
     agent_runner_.reset(
@@ -86,8 +87,8 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
 
-  auth::TokenProviderFactoryPtr token_provider_factory_;
-  maxwell::UserIntelligenceProviderPtr ui_provider_;
+  modular_auth::TokenProviderFactoryPtr token_provider_factory_;
+  modular::UserIntelligenceProviderPtr ui_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunnerTest);
 };
@@ -98,14 +99,13 @@ class MyEntityProvider : AgentImpl::Delegate,
                          public testing::MockBase {
  public:
   MyEntityProvider(
-      component::ApplicationLaunchInfoPtr launch_info,
+      component::ApplicationLaunchInfo launch_info,
       fidl::InterfaceRequest<component::ApplicationController> ctrl)
       : vfs_(async_get_default()),
         outgoing_directory_(fbl::AdoptRef(new fs::PseudoDir())),
         app_controller_(this, std::move(ctrl)),
         entity_provider_binding_(this),
         launch_info_(std::move(launch_info)) {
-    FXL_CHECK(!launch_info_.is_null());
     outgoing_directory_->AddEntry(
         EntityProvider::Name_,
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -113,15 +113,15 @@ class MyEntityProvider : AgentImpl::Delegate,
           return ZX_OK;
         })));
     vfs_.ServeDirectory(outgoing_directory_,
-                        std::move(launch_info_->directory_request));
+                        std::move(launch_info_.directory_request));
     agent_impl_ = std::make_unique<AgentImpl>(
         outgoing_directory_, static_cast<AgentImpl::Delegate*>(this));
 
     // Get |agent_context_| and |entity_resolver_| from incoming namespace.
-    FXL_CHECK(!launch_info_->additional_services.is_null());
-    FXL_CHECK(launch_info_->additional_services->provider.is_valid());
+    FXL_CHECK(launch_info_.additional_services);
+    FXL_CHECK(launch_info_.additional_services->provider.is_valid());
     auto additional_services =
-        launch_info_->additional_services->provider.Bind();
+        launch_info_.additional_services->provider.Bind();
     component::ConnectToService(additional_services.get(),
                                 agent_context_.NewRequest());
     ComponentContextPtr component_context;
@@ -154,15 +154,16 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
   // |EntityProvider|
-  void GetTypes(const fidl::StringPtr& cookie,
+  void GetTypes(fidl::StringPtr cookie,
                 GetTypesCallback callback) override {
-    callback(
-        fidl::VectorPtr<fidl::StringPtr>::From(std::vector<std::string>{"MyType"}));
+    fidl::VectorPtr<fidl::StringPtr> types;
+    types.push_back("MyType");
+    callback(std::move(types));
   }
 
   // |EntityProvider|
-  void GetData(const fidl::StringPtr& cookie,
-               const fidl::StringPtr& type,
+  void GetData(fidl::StringPtr cookie,
+               fidl::StringPtr type,
                GetDataCallback callback) override {
     callback(type.get() + ":MyData");
   }
@@ -175,7 +176,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   EntityResolverPtr entity_resolver_;
   fidl::Binding<component::ApplicationController> app_controller_;
   fidl::Binding<modular::EntityProvider> entity_provider_binding_;
-  component::ApplicationLaunchInfoPtr launch_info_;
+  component::ApplicationLaunchInfo launch_info_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MyEntityProvider);
 };
@@ -186,7 +187,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyEntityProvider>(std::move(launch_info),
                                                          std::move(ctrl));
@@ -213,7 +214,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
   fidl::StringPtr entity_ref;
   factory->CreateReference(
       "my_cookie",
-      [&entity_ref](const fidl::StringPtr& retval) { entity_ref = retval; });
+      [&entity_ref](fidl::StringPtr retval) { entity_ref = retval; });
 
   RunLoopUntilWithTimeout([&entity_ref] { return !entity_ref.is_null(); });
   EXPECT_FALSE(entity_ref.is_null());
@@ -230,7 +231,7 @@ TEST_F(EntityProviderRunnerTest, Basic) {
     EXPECT_EQ("MyType", types->at(0));
     counts["GetTypes"]++;
   });
-  entity->GetData("MyType", [&counts](const fidl::StringPtr& data) {
+  entity->GetData("MyType", [&counts](fidl::StringPtr data) {
     EXPECT_EQ("MyType:MyData", data.get());
     counts["GetData"]++;
   });
