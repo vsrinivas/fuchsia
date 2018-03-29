@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_HANDLER_RECORD_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_HANDLER_RECORD_H_
 
-#include "lib/suggestion/fidl/query_handler.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 struct QueryHandlerRecord {
   QueryHandlerRecord(QueryHandlerPtr handler, std::string url)
@@ -17,6 +17,6 @@ struct QueryHandlerRecord {
   std::string url;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_HANDLER_RECORD_H_

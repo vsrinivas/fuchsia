@@ -24,17 +24,13 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/context/fidl/context_writer.fidl.h"
-#include "lib/media/fidl/audio_server.fidl.h"
-#include "lib/story/fidl/story_provider.fidl.h"
-#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
-#include "lib/user/fidl/focus.fidl.h"
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/media.h>
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
-namespace maxwell {
+namespace modular {
 
 class ProposalPublisherImpl;
 
@@ -88,7 +84,7 @@ class SuggestionEngineImpl : public ContextListener,
   }
 
   // Should only be called from ProposalPublisherImpl.
-  void AddNextProposal(ProposalPublisherImpl* source, ProposalPtr proposal);
+  void AddNextProposal(ProposalPublisherImpl* source, Proposal proposal);
 
   // Should only be called from ProposalPublisherImpl.
   void RemoveNextProposal(const std::string& component_url,
@@ -96,26 +92,26 @@ class SuggestionEngineImpl : public ContextListener,
 
   // |SuggestionProvider|
   void SubscribeToInterruptions(
-      f1dl::InterfaceHandle<InterruptionListener> listener) override;
+      fidl::InterfaceHandle<InterruptionListener> listener) override;
 
   // |SuggestionProvider|
-  void SubscribeToNext(f1dl::InterfaceHandle<NextListener> listener,
+  void SubscribeToNext(fidl::InterfaceHandle<NextListener> listener,
                        int count) override;
 
   // |SuggestionProvider|
-  void Query(f1dl::InterfaceHandle<QueryListener> listener,
-             UserInputPtr input,
+  void Query(fidl::InterfaceHandle<QueryListener> listener,
+             UserInput input,
              int count) override;
 
   // |SuggestionProvider|
   void RegisterFeedbackListener(
-      f1dl::InterfaceHandle<FeedbackListener> speech_listener) override;
+      fidl::InterfaceHandle<FeedbackListener> speech_listener) override;
 
   // When a user interacts with a Suggestion, the suggestion engine will be
   // notified of consumed suggestion's ID. With this, we will do two things:
   //
   // 1) Perform the Action contained in the Suggestion
-  //    (suggestion->proposal->on_selected)
+  //    (suggestion->proposal.on_selected)
   //
   //    Action handling should be extracted into separate classes to simplify
   //    SuggestionEngineImpl (i.e. an ActionManager which delegates action
@@ -126,24 +122,24 @@ class SuggestionEngineImpl : public ContextListener,
   //    it came from there.
   //
   // |SuggestionProvider|
-  void NotifyInteraction(const f1dl::StringPtr& suggestion_uuid,
-                         InteractionPtr interaction) override;
+  void NotifyInteraction(fidl::StringPtr suggestion_uuid,
+                         Interaction interaction) override;
 
   // |SuggestionEngine|
   void RegisterProposalPublisher(
-      const f1dl::StringPtr& url,
-      f1dl::InterfaceRequest<ProposalPublisher> publisher) override;
+      fidl::StringPtr url,
+      fidl::InterfaceRequest<ProposalPublisher> publisher) override;
 
   // |SuggestionEngine|
   void RegisterQueryHandler(
-      const f1dl::StringPtr& url,
-      f1dl::InterfaceHandle<QueryHandler> query_handler) override;
+      fidl::StringPtr url,
+      fidl::InterfaceHandle<QueryHandler> query_handler) override;
 
   // |SuggestionEngine|
-  void Initialize(f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
-                  f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
-                  f1dl::InterfaceHandle<ContextWriter> context_writer,
-                  f1dl::InterfaceHandle<ContextReader> context_reader) override;
+  void Initialize(fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+                  fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+                  fidl::InterfaceHandle<ContextWriter> context_writer,
+                  fidl::InterfaceHandle<ContextReader> context_reader) override;
 
   // re-ranks dirty channels and dispatches updates
   void UpdateRanking();
@@ -170,7 +166,7 @@ class SuggestionEngineImpl : public ContextListener,
   // Creates a suggestion prototype owned by the given |SuggestionPrototypeMap|.
   SuggestionPrototype* CreateSuggestionPrototype(SuggestionPrototypeMap* owner,
                                                  const std::string& source_url,
-                                                 ProposalPtr proposal);
+                                                 Proposal proposal);
 
   std::string RandomUuid() {
     static uint64_t id = 0;
@@ -182,21 +178,21 @@ class SuggestionEngineImpl : public ContextListener,
   // interface that's passed to the SuggestionEngineImpl.
   // |source_url| is the url of the source of the proposal containing the
   // provided actions.
-  void PerformActions(const f1dl::VectorPtr<maxwell::ActionPtr>& actions,
+  void PerformActions(fidl::VectorPtr<Action> actions,
                       const std::string& source_url,
                       uint32_t story_color);
 
-  void PerformCreateStoryAction(const ActionPtr& action, uint32_t story_color);
+  void PerformCreateStoryAction(const Action& action, uint32_t story_color);
 
-  void PerformFocusStoryAction(const ActionPtr& action);
+  void PerformFocusStoryAction(const Action& action);
 
   // This call is deprecated, as the AddModuleToStory proposal action is
   // replaced by the AddModule action.
-  void PerformAddModuleToStoryAction(const ActionPtr& action);
+  void PerformAddModuleToStoryAction(const Action& action);
 
-  void PerformAddModuleAction(const ActionPtr& action);
+  void PerformAddModuleAction(const Action& action);
 
-  void PerformCustomAction(const ActionPtr& action,
+  void PerformCustomAction(Action* action,
                            const std::string& source_url,
                            uint32_t story_color);
 
@@ -207,11 +203,11 @@ class SuggestionEngineImpl : public ContextListener,
                           media::MediaTimelineControlPointStatusPtr status);
 
   // |ContextListener|
-  void OnContextUpdate(ContextUpdatePtr update) override;
+  void OnContextUpdate(ContextUpdate update) override;
 
-  f1dl::BindingSet<SuggestionEngine> bindings_;
-  f1dl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
-  f1dl::BindingSet<SuggestionDebug> debug_bindings_;
+  fidl::BindingSet<SuggestionEngine> bindings_;
+  fidl::BindingSet<SuggestionProvider> suggestion_provider_bindings_;
+  fidl::BindingSet<SuggestionDebug> debug_bindings_;
 
   // Both story_provider_ and focus_provider_ptr are used exclusively during
   // Action execution (in the PerformActions call inside NotifyInteraction).
@@ -219,7 +215,7 @@ class SuggestionEngineImpl : public ContextListener,
   // These are required to create new Stories and interact with the current
   // Story.
   modular::StoryProviderPtr story_provider_;
-  f1dl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
+  fidl::InterfacePtr<modular::FocusProvider> focus_provider_ptr_;
 
   // Watches for changes in StoryInfo from the StoryProvider, acts as a filter
   // for Proposals on all channels, and notifies when there are changes so that
@@ -261,7 +257,7 @@ class SuggestionEngineImpl : public ContextListener,
   // The context reader that is used to rank suggestions using the current
   // context.
   ContextReaderPtr context_reader_;
-  f1dl::Binding<ContextListener> context_listener_binding_;
+  fidl::Binding<ContextListener> context_listener_binding_;
 
   // Latest context update received.
   ContextUpdatePtr latest_context_update_;
@@ -274,7 +270,7 @@ class SuggestionEngineImpl : public ContextListener,
   media::MediaTimelineControlPointPtr time_lord_;
   media::TimelineConsumerPtr media_timeline_consumer_;
 
-  f1dl::InterfacePtrSet<FeedbackListener> speech_listeners_;
+  fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
 
   // The debugging interface for all Suggestions.
   SuggestionDebugImpl debug_;
@@ -282,6 +278,6 @@ class SuggestionEngineImpl : public ContextListener,
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_

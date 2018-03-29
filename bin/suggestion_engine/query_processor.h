@@ -7,13 +7,12 @@
 
 #include <set>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
-#include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/lib/util/wait_until_idle.h"
 
-namespace maxwell {
+namespace modular {
 
 class SuggestionEngineImpl;
 
@@ -23,17 +22,17 @@ class SuggestionEngineImpl;
 class QueryProcessor {
  public:
   QueryProcessor(SuggestionEngineImpl* engine,
-                 f1dl::InterfaceHandle<QueryListener> listener,
-                 UserInputPtr input,
+                 fidl::InterfaceHandle<QueryListener> listener,
+                 UserInput input,
                  size_t max_results);
   ~QueryProcessor();
 
-  void AddProposal(const std::string& source_url, ProposalPtr proposal);
+  void AddProposal(const std::string& source_url, Proposal proposal);
 
  private:
   void DispatchQuery(const QueryHandlerRecord& handler_record);
   void HandlerCallback(const std::string& handler_url,
-                       QueryResponsePtr response);
+                       QueryResponse response);
   void EndRequest();
   void TimeOut();
   void NotifyOfResults();
@@ -42,7 +41,7 @@ class QueryProcessor {
 
   SuggestionEngineImpl* const engine_;
   QueryListenerPtr listener_;
-  const UserInputPtr input_;
+  const UserInput input_;
   const size_t max_results_;
   bool dirty_;
 
@@ -57,6 +56,6 @@ class QueryProcessor {
   fxl::WeakPtrFactory<QueryProcessor> weak_ptr_factory_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_QUERY_PROCESSOR_H_

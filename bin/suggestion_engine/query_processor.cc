@@ -7,7 +7,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace maxwell {
+namespace modular {
 
 namespace {
 
@@ -19,8 +19,8 @@ constexpr fxl::TimeDelta kQueryTimeout = fxl::TimeDelta::FromSeconds(9);
 }  // namespace
 
 QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
-                               f1dl::InterfaceHandle<QueryListener> listener,
-                               maxwell::UserInputPtr input,
+                               fidl::InterfaceHandle<QueryListener> listener,
+                               UserInput input,
                                size_t max_results)
     : engine_(engine),
       listener_(listener.Bind()),
@@ -56,8 +56,8 @@ QueryProcessor::~QueryProcessor() {
 }
 
 void QueryProcessor::AddProposal(const std::string& source_url,
-                                 ProposalPtr proposal) {
-  if (engine_->query_suggestions_.RemoveProposal(source_url, proposal->id)) {
+                                 Proposal proposal) {
+  if (engine_->query_suggestions_.RemoveProposal(source_url, proposal.id)) {
     dirty_ = true;
   }
 
@@ -70,18 +70,18 @@ void QueryProcessor::AddProposal(const std::string& source_url,
 void QueryProcessor::DispatchQuery(const QueryHandlerRecord& handler_record) {
   outstanding_handlers_.insert(handler_record.url);
   handler_record.handler->OnQuery(
-      input_.Clone(),
+      input_,
       [w = weak_ptr_factory_.GetWeakPtr(),
-       handler_url = handler_record.url](QueryResponsePtr response) {
+       handler_url = handler_record.url](QueryResponse response) {
         if (w)
           w->HandlerCallback(handler_url, std::move(response));
       });
 }
 
 void QueryProcessor::HandlerCallback(const std::string& handler_url,
-                                     QueryResponsePtr response) {
+                                     QueryResponse response) {
   // TODO(rosswang): defer selection of "I don't know" responses
-  if (!has_media_response_ && response->media_response) {
+  if (!has_media_response_ && response.media_response) {
     has_media_response_ = true;
 
     // TODO(rosswang): Wait for other potential voice responses so that we
@@ -90,22 +90,22 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 
     // TODO(rosswang): allow falling back on natural language text response
     // without a spoken response
-    f1dl::StringPtr text_response =
-        std::move(response->natural_language_response);
+    fidl::StringPtr text_response =
+        std::move(response.natural_language_response);
     if (!text_response)
       text_response = "";
-    engine_->speech_listeners_.ForAllPtrs([&](FeedbackListener* listener) {
-      listener->OnTextResponse(text_response);
-    });
+    for (auto& listener : engine_->speech_listeners_.ptrs()) {
+      (*listener)->OnTextResponse(text_response);
+    }
 
-    engine_->PlayMediaResponse(std::move(response->media_response));
+    engine_->PlayMediaResponse(std::move(response.media_response));
   }
 
   // Ranking currently happens as each set of proposals are added.
-  for (size_t i = 0; i < response->proposals->size(); ++i) {
-    AddProposal(handler_url, std::move(response->proposals->at(i)));
+  for (size_t i = 0; i < response.proposals->size(); ++i) {
+    AddProposal(handler_url, std::move(response.proposals->at(i)));
   }
-  engine_->query_suggestions_.Rank(*input_);
+  engine_->query_suggestions_.Rank(input_);
   // Rank includes an invalidate dispatch
   dirty_ = false;
 
@@ -113,7 +113,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   NotifyOfResults();
 
   // Update the suggestion engine debug interface
-  engine_->debug_.OnAskStart(input_->text, &engine_->query_suggestions_);
+  engine_->debug_.OnAskStart(input_.text, &engine_->query_suggestions_);
 
   FXL_VLOG(1) << "Handler " << handler_url << " complete";
 
@@ -127,14 +127,14 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 void QueryProcessor::EndRequest() {
   FXL_DCHECK(!request_ended_);
 
-  engine_->debug_.OnAskStart(input_->text, &engine_->query_suggestions_);
+  engine_->debug_.OnAskStart(input_.text, &engine_->query_suggestions_);
   listener_->OnQueryComplete();
 
   if (!has_media_response_) {
     // there was no media response for this query, so idle immediately
-    engine_->speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-      listener->OnStatusChanged(SpeechStatus::IDLE);
-    });
+    for (auto& listener : engine_->speech_listeners_.ptrs()) {
+      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
+    }
   }
 
   weak_ptr_factory_.InvalidateWeakPtrs();
@@ -156,7 +156,7 @@ void QueryProcessor::TimeOut() {
 void QueryProcessor::NotifyOfResults() {
   const auto& suggestion_vector = engine_->query_suggestions_.Get();
 
-  f1dl::VectorPtr<SuggestionPtr> window;
+  fidl::VectorPtr<Suggestion> window;
   for (size_t i = 0; i < max_results_ && i < suggestion_vector.size(); i++) {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
@@ -165,4 +165,4 @@ void QueryProcessor::NotifyOfResults() {
     listener_->OnQueryResults(std::move(window));
 }
 
-}  // namespace maxwell
+}  // namespace modular

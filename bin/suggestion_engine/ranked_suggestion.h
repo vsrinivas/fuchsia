@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_
 
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace maxwell {
+namespace modular {
 
 // |rank| and |adjusted_confidence| should satisfy the invariant that for any
 // sorted set of ranked suggestions, |rank| is increasing and
@@ -18,8 +18,8 @@ struct RankedSuggestion {
   double confidence;
 };
 
-SuggestionPtr CreateSuggestion(const RankedSuggestion& suggestion_data);
+Suggestion CreateSuggestion(const RankedSuggestion& suggestion_data);
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTION_H_

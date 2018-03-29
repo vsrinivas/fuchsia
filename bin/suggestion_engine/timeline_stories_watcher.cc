@@ -7,30 +7,30 @@
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fxl/logging.h"
 
-namespace maxwell {
+namespace modular {
 
 TimelineStoriesWatcher::TimelineStoriesWatcher(
     modular::StoryProviderPtr* story_provider)
     : binding_(this) {
   // Add ourselves as a watcher to the StoryProvider.
-  f1dl::InterfaceHandle<modular::StoryProviderWatcher> handle;
+  fidl::InterfaceHandle<modular::StoryProviderWatcher> handle;
   binding_.Bind(handle.NewRequest());
   (*story_provider)->Watch(std::move(handle));
 }
 
 TimelineStoriesWatcher::~TimelineStoriesWatcher() = default;
 
-void TimelineStoriesWatcher::OnChange(modular::StoryInfoPtr story_info,
+void TimelineStoriesWatcher::OnChange(modular::StoryInfo story_info,
                                       modular::StoryState state) {
-  id_to_url_.emplace(story_info->id.get(), story_info->url.get());
+  id_to_url_.emplace(story_info.id.get(), story_info.url.get());
 
-  if (story_urls_.insert(story_info->url.get()).second) {
+  if (story_urls_.insert(story_info.url.get()).second) {
     if (watcher_)
       watcher_();
   }
 }
 
-void TimelineStoriesWatcher::OnDelete(const f1dl::StringPtr& story_id) {
+void TimelineStoriesWatcher::OnDelete(fidl::StringPtr story_id) {
   auto it = id_to_url_.find(story_id.get());
   if (it != id_to_url_.end()) {
     // TODO(rosswang): use a multiset for story_urls (for stories with duplicate
@@ -43,4 +43,4 @@ void TimelineStoriesWatcher::OnDelete(const f1dl::StringPtr& story_id) {
   }
 }
 
-}  // namespace maxwell
+}  // namespace modular

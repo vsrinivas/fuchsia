@@ -10,13 +10,13 @@
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
 
-namespace maxwell {
+namespace modular {
 
 MatchPredicate GetSuggestionMatcher(const std::string& component_url,
                                     const std::string& proposal_id) {
   return [component_url,
           proposal_id](const std::unique_ptr<RankedSuggestion>& suggestion) {
-    return (suggestion->prototype->proposal->id == proposal_id) &&
+    return (suggestion->prototype->proposal.id == proposal_id) &&
            (suggestion->prototype->source_url == component_url);
   };
 }
@@ -75,8 +75,8 @@ void RankedSuggestionsList::Rank(const UserInput& query) {
     FXL_CHECK(normalization_factor_ > 0.0);
     suggestion->confidence = std::max(confidence, 0.0) / normalization_factor_;
     FXL_VLOG(1) << "Proposal "
-                << suggestion->prototype->proposal->display->headline
-                << " confidence " << suggestion->prototype->proposal->confidence
+                << suggestion->prototype->proposal.display.headline
+                << " confidence " << suggestion->prototype->proposal.confidence
                 << " => " << suggestion->confidence;
   }
   DoStableSort();
@@ -123,4 +123,4 @@ void RankedSuggestionsList::DoStableSort() {
 
 // End of private sorting methods.
 
-}  // namespace maxwell
+}  // namespace modular

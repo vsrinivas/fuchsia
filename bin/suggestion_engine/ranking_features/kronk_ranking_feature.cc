@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 KronkRankingFeature::KronkRankingFeature() = default;
 
@@ -19,4 +19,4 @@ double KronkRankingFeature::ComputeFeatureInternal(
   }
 }
 
-}  // namespace maxwell
+}  // namespace modular

@@ -8,10 +8,10 @@
 #include <map>
 #include <set>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/story/fidl/story_provider.fidl.h"
 
-namespace maxwell {
+namespace modular {
 
 // Watches a modular::StoryProvider for changes in the list of a user's
 // Stories and makes the URLs of the Stories available to clients.
@@ -26,11 +26,11 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
   void SetWatcher(std::function<void()> watcher) { watcher_ = watcher; }
 
  private:
-  void OnChange(modular::StoryInfoPtr story_info,
+  void OnChange(modular::StoryInfo story_info,
                 modular::StoryState state) override;
-  void OnDelete(const f1dl::StringPtr& story_id) override;
+  void OnDelete(fidl::StringPtr story_id) override;
 
-  f1dl::Binding<StoryProviderWatcher> binding_;
+  fidl::Binding<StoryProviderWatcher> binding_;
 
   std::set<std::string> story_urls_;
   std::map<std::string, std::string> id_to_url_;
@@ -38,6 +38,6 @@ class TimelineStoriesWatcher : public modular::StoryProviderWatcher {
   std::function<void()> watcher_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_TIMELINE_STORIES_WATCHER_H_

@@ -8,16 +8,14 @@
 #include <list>
 #include <vector>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/suggestion/fidl/debug.fidl.h"
-#include "lib/suggestion/fidl/proposal.fidl.h"
-#include "lib/suggestion/fidl/user_input.fidl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/lib/util/wait_until_idle.h"
 
-namespace maxwell {
+namespace modular {
 
 // Provides a debug interface that is accessible through the MI dashboard.
 class SuggestionDebugImpl : public SuggestionDebug {
@@ -40,28 +38,28 @@ class SuggestionDebugImpl : public SuggestionDebug {
  private:
   // |SuggestionDebug|
   void WatchAskProposals(
-      f1dl::InterfaceHandle<AskProposalListener> listener) override;
+      fidl::InterfaceHandle<AskProposalListener> listener) override;
   // |SuggestionDebug|
   void WatchInterruptionProposals(
-      f1dl::InterfaceHandle<InterruptionProposalListener> listener) override;
+      fidl::InterfaceHandle<InterruptionProposalListener> listener) override;
   // |SuggestionDebug|
   void WatchNextProposals(
-      f1dl::InterfaceHandle<NextProposalListener> listener) override;
+      fidl::InterfaceHandle<NextProposalListener> listener) override;
   // |SuggestionDebug|
-  void WaitUntilIdle(const WaitUntilIdleCallback& callback) override;
+  void WaitUntilIdle(WaitUntilIdleCallback callback) override;
 
-  f1dl::InterfacePtrSet<AskProposalListener> ask_proposal_listeners_;
-  f1dl::InterfacePtrSet<InterruptionProposalListener>
+  fidl::InterfacePtrSet<AskProposalListener> ask_proposal_listeners_;
+  fidl::InterfacePtrSet<InterruptionProposalListener>
       interruption_proposal_listeners_;
-  f1dl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
+  fidl::InterfacePtrSet<NextProposalListener> next_proposal_listeners_;
 
   // The cached set of next proposals.
-  f1dl::VectorPtr<ProposalSummaryPtr> cached_next_proposals_;
+  fidl::VectorPtr<ProposalSummary> cached_next_proposals_;
 
   util::IdleWaiter wait_until_idle_;
   fxl::WeakPtrFactory<SuggestionDebugImpl> weak_ptr_factory_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_DEBUG_H_

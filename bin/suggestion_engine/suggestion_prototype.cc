@@ -4,30 +4,34 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace maxwell {
+#include <sstream>
+
+#include "lib/fidl/cpp/clone.h"
+
+namespace modular {
 
 std::string short_proposal_str(const SuggestionPrototype& prototype) {
   std::ostringstream str;
-  str << "proposal " << prototype.proposal->id << " from "
+  str << "proposal " << prototype.proposal.id << " from "
       << prototype.source_url;
   return str.str();
 }
 
-SuggestionPtr CreateSuggestion(const SuggestionPrototype& prototype) {
-  auto suggestion = Suggestion::New();
-  suggestion->uuid = prototype.suggestion_id;
-  suggestion->display = prototype.proposal->display->Clone();
-  if (!prototype.proposal->on_selected->empty()) {
+Suggestion CreateSuggestion(const SuggestionPrototype& prototype) {
+  Suggestion suggestion;
+  suggestion.uuid = prototype.suggestion_id;
+  fidl::Clone(prototype.proposal.display, &suggestion.display);
+  if (!prototype.proposal.on_selected->empty()) {
     // TODO(thatguy): Proposal.on_select should be single Action, not an array
     // https://fuchsia.atlassian.net/browse/MW-118
-    const auto& selected_action = prototype.proposal->on_selected->at(0);
-    switch (selected_action->which()) {
-      case Action::Tag::FOCUS_STORY:
-        suggestion->story_id = selected_action->get_focus_story()->story_id;
+    const auto& selected_action = prototype.proposal.on_selected->at(0);
+    switch (selected_action.Which()) {
+      case Action::Tag::kFocusStory:
+        suggestion.story_id = selected_action.focus_story().story_id;
         break;
-      case Action::Tag::ADD_MODULE_TO_STORY:
-        suggestion->story_id =
-            selected_action->get_add_module_to_story()->story_id;
+      case Action::Tag::kAddModuleToStory:
+        suggestion.story_id =
+            selected_action.add_module_to_story().story_id;
         break;
       default:
         break;
@@ -36,4 +40,4 @@ SuggestionPtr CreateSuggestion(const SuggestionPrototype& prototype) {
   return suggestion;
 }
 
-}  // namespace maxwell
+}  // namespace modular

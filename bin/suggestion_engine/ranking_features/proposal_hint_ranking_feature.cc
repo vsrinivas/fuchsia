@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/proposal_hint_ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 ProposalHintRankingFeature::ProposalHintRankingFeature() = default;
 
@@ -12,7 +12,7 @@ ProposalHintRankingFeature::~ProposalHintRankingFeature() = default;
 
 double ProposalHintRankingFeature::ComputeFeatureInternal(
     const UserInput& query, const RankedSuggestion& suggestion) {
-  return suggestion.prototype->proposal->confidence;
+  return suggestion.prototype->proposal.confidence;
 }
 
-}  // namespace maxwell
+}  // namespace modular

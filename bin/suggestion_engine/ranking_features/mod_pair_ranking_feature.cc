@@ -8,7 +8,7 @@
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
-namespace maxwell {
+namespace modular {
 
 namespace {
 constexpr char kDataFilePath[] = "/pkg/data/ranking_data/mod_pairs.json";
@@ -46,24 +46,24 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     const RankedSuggestion& suggestion) {
   double prob = 0.0;
 
-  for (auto& action : *suggestion.prototype->proposal->on_selected) {
-    f1dl::StringPtr module_url;
-    switch (action->which()) {
-      case Action::Tag::CREATE_STORY: {
-        module_url = action->get_create_story()->module_id;
+  for (auto& action : *suggestion.prototype->proposal.on_selected) {
+    fidl::StringPtr module_url;
+    switch (action.Which()) {
+      case Action::Tag::kCreateStory: {
+        module_url = action.create_story().module_id;
         break;
       }
-      case Action::Tag::ADD_MODULE_TO_STORY: {
-        module_url = action->get_add_module_to_story()->module_url;
+      case Action::Tag::kAddModuleToStory: {
+        module_url = action.add_module_to_story().module_url;
         break;
       }
-      case Action::Tag::ADD_MODULE: {
-        module_url = action->get_add_module()->daisy->url;
+      case Action::Tag::kAddModule: {
+        module_url = action.add_module().daisy.url;
         break;
       }
-      case Action::Tag::CUSTOM_ACTION:
-      case Action::Tag::FOCUS_STORY:
-      case Action::Tag::__UNKNOWN__:
+      case Action::Tag::kCustomAction:
+      case Action::Tag::kFocusStory:
+      case Action::Tag::Invalid:
         continue;
     }
     if (module_url.is_null() || module_url->empty()) {
@@ -72,7 +72,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     // Currently computing: max{P(m|mi) for mi in modules_in_source_story}
     // TODO(miguelfrde): compute P(module_url | modules in source story)
     for (auto& context_value : *ContextValues()) {
-      std::string existing_mod_url = context_value->meta->mod->url;
+      std::string existing_mod_url = context_value.meta.mod->url;
       if (module_pairs_.count(existing_mod_url) &&
           module_pairs_[existing_mod_url].count(module_url)) {
         prob = std::max(prob, module_pairs_[existing_mod_url][module_url]);
@@ -88,8 +88,8 @@ ContextSelectorPtr ModPairRankingFeature::CreateContextSelectorInternal() {
   selector->meta = ContextMetadata::New();
   selector->meta->story = StoryMetadata::New();
   selector->meta->story->focused = FocusedState::New();
-  selector->meta->story->focused->state = FocusedState::State::FOCUSED;
+  selector->meta->story->focused->state = State::FOCUSED;
   return selector;
 }
 
-}  // namespace maxwell
+}  // namespace modular

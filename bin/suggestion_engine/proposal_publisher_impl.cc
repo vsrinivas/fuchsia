@@ -6,7 +6,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace maxwell {
+namespace modular {
 
 ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
                                              const std::string& component_url)
@@ -18,17 +18,17 @@ ProposalPublisherImpl::ProposalPublisherImpl(SuggestionEngineImpl* engine,
 ProposalPublisherImpl::~ProposalPublisherImpl() = default;
 
 void ProposalPublisherImpl::AddBinding(
-    f1dl::InterfaceRequest<ProposalPublisher> request) {
+    fidl::InterfaceRequest<ProposalPublisher> request) {
   bindings_.emplace(
-      new f1dl::Binding<ProposalPublisher>(this, std::move(request)));
+      new fidl::Binding<ProposalPublisher>(this, std::move(request)));
 }
 
-void ProposalPublisherImpl::Propose(ProposalPtr proposal) {
+void ProposalPublisherImpl::Propose(Proposal proposal) {
   engine_->AddNextProposal(this, std::move(proposal));
   engine_->UpdateRanking();
 }
 
-void ProposalPublisherImpl::Remove(const f1dl::StringPtr& proposal_id) {
+void ProposalPublisherImpl::Remove(fidl::StringPtr proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
   engine_->UpdateRanking();
 }
@@ -39,8 +39,8 @@ ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)
 ProposalPublisherImpl::BindingSet::~BindingSet() = default;
 
 void ProposalPublisherImpl::BindingSet::OnConnectionError(
-    f1dl::Binding<ProposalPublisher>* binding) {
-  maxwell::BindingSet<ProposalPublisher>::OnConnectionError(binding);
+    fidl::Binding<ProposalPublisher>* binding) {
+  modular::BindingSet<ProposalPublisher>::OnConnectionError(binding);
 
   if (impl_->ShouldEraseSelf())
     impl_->EraseSelf();
@@ -54,4 +54,4 @@ void ProposalPublisherImpl::EraseSelf() {
   engine_->RemoveSourceClient(component_url_);
 }
 
-}  // namespace maxwell
+}  // namespace modular

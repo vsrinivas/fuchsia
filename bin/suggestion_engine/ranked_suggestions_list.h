@@ -8,13 +8,12 @@
 #include <functional>
 #include <vector>
 
-#include "lib/context/fidl/context_reader.fidl.h"
-#include "lib/suggestion/fidl/user_input.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace maxwell {
+namespace modular {
 using MatchPredicate =
     std::function<bool(const std::unique_ptr<RankedSuggestion>& suggestion)>;
 
@@ -68,6 +67,6 @@ class RankedSuggestionsList {
   double normalization_factor_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKED_SUGGESTIONS_LIST_H_

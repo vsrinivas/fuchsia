@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_
 
-#include "lib/suggestion/fidl/proposal_publisher.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
-namespace maxwell {
+namespace modular {
 
 class SuggestionEngineImpl;
 
@@ -30,21 +30,21 @@ class ProposalPublisherImpl : public ProposalPublisher {
 
   ~ProposalPublisherImpl() override;
 
-  void AddBinding(f1dl::InterfaceRequest<ProposalPublisher> request);
+  void AddBinding(fidl::InterfaceRequest<ProposalPublisher> request);
 
-  void Propose(ProposalPtr proposal) override;
-  void Remove(const f1dl::StringPtr& proposal_id) override;
+  void Propose(Proposal proposal) override;
+  void Remove(fidl::StringPtr proposal_id) override;
 
   const std::string component_url() { return component_url_; }
 
  private:
-  class BindingSet : public maxwell::BindingSet<ProposalPublisher> {
+  class BindingSet : public modular::BindingSet<ProposalPublisher> {
    public:
     BindingSet(ProposalPublisherImpl* impl);
     ~BindingSet() override;
 
    protected:
-    void OnConnectionError(f1dl::Binding<ProposalPublisher>* binding) override;
+    void OnConnectionError(fidl::Binding<ProposalPublisher>* binding) override;
 
    private:
     ProposalPublisherImpl* const impl_;
@@ -60,6 +60,6 @@ class ProposalPublisherImpl : public ProposalPublisher {
   fxl::WeakPtrFactory<ProposalPublisherImpl> weak_ptr_factory_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_PROPOSAL_PUBLISHER_IMPL_H_

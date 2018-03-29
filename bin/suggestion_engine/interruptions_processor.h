@@ -6,11 +6,11 @@
 #define PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace maxwell {
+namespace modular {
 
 // The InterruptionProcessor determines whether a proposal should interrupt
 // the user. If the decision to interrupt is made, this processor also
@@ -23,7 +23,7 @@ class InterruptionsProcessor {
   InterruptionsProcessor();
   ~InterruptionsProcessor();
 
-  void RegisterListener(f1dl::InterfaceHandle<InterruptionListener> listener);
+  void RegisterListener(fidl::InterfaceHandle<InterruptionListener> listener);
   bool ConsiderSuggestion(const SuggestionPrototype& prototype);
 
  private:
@@ -31,9 +31,9 @@ class InterruptionsProcessor {
   void DispatchInterruption(InterruptionListener* const listener,
                             const SuggestionPrototype& prototype);
 
-  f1dl::InterfacePtrSet<InterruptionListener> listeners_;
+  fidl::InterfacePtrSet<InterruptionListener> listeners_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_INTERRUPTIONS_PROCESSOR_H_

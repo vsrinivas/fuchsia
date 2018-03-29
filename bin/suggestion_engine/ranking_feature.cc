@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/suggestion_engine/ranking_feature.h"
+
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/schema.h"
 #include "rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 
-namespace maxwell {
+namespace modular {
 
 int RankingFeature::instances_ = 0;
 
@@ -32,8 +34,8 @@ ContextSelectorPtr RankingFeature::CreateContextSelector() {
 }
 
 void RankingFeature::UpdateContext(
-    const f1dl::Array<ContextValuePtr>& context_update_values) {
-  context_values_ = context_update_values.Clone();
+    const fidl::VectorPtr<ContextValue>& context_update_values) {
+  fidl::Clone(context_update_values, &context_values_);
 }
 
 ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
@@ -43,7 +45,7 @@ ContextSelectorPtr RankingFeature::CreateContextSelectorInternal() {
   return nullptr;
 }
 
-f1dl::Array<ContextValuePtr>& RankingFeature::ContextValues() {
+fidl::VectorPtr<ContextValue>& RankingFeature::ContextValues() {
   return context_values_;
 }
 
@@ -70,4 +72,4 @@ std::pair<bool, rapidjson::Document> RankingFeature::FetchJsonObject(
   return std::make_pair(true, std::move(data_doc));
 }
 
-}  // namespace maxwell
+}  // namespace modular

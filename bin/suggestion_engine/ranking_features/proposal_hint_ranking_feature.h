@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_PROPOSAL_HINT_RANKING_FEATURE_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_PROPOSAL_HINT_RANKING_FEATURE_H_
 
-#include "lib/context/fidl/context_reader.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 class ProposalHintRankingFeature : public RankingFeature {
  public:
@@ -21,6 +21,6 @@ class ProposalHintRankingFeature : public RankingFeature {
       const UserInput& query, const RankedSuggestion& suggestion) override;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_PROPOSAL_HINT_RANKING_FEATURE_H_

@@ -7,16 +7,16 @@
 
 #include <vector>
 
-#include "lib/context/fidl/context_reader.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
-namespace maxwell {
+namespace modular {
 
 class ProposalPublisherImpl;
 class SuggestionEngineImpl;
@@ -28,11 +28,11 @@ class NextProcessor {
   NextProcessor(SuggestionEngineImpl* engine);
   virtual ~NextProcessor();
 
-  void RegisterListener(f1dl::InterfaceHandle<NextListener> listener,
+  void RegisterListener(fidl::InterfaceHandle<NextListener> listener,
                         size_t max_results);
 
   // Add and remove proposals
-  void AddProposal(const std::string& component_url, ProposalPtr proposal);
+  void AddProposal(const std::string& component_url, Proposal proposal);
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
 
@@ -55,6 +55,6 @@ class NextProcessor {
   std::vector<std::pair<NextListenerPtr, size_t>> listeners_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_NEXT_PROCESSOR_H_

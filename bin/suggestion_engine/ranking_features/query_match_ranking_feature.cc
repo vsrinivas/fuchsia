@@ -4,7 +4,7 @@
 
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 QueryMatchRankingFeature::QueryMatchRankingFeature() = default;
 
@@ -12,7 +12,7 @@ QueryMatchRankingFeature::~QueryMatchRankingFeature() = default;
 
 double QueryMatchRankingFeature::ComputeFeatureInternal(
     const UserInput& query, const RankedSuggestion& suggestion) {
-  std::string text = suggestion.prototype->proposal->display->headline;
+  std::string text = suggestion.prototype->proposal.display.headline;
   std::string norm_query = query.text;
 
   std::transform(text.begin(), text.end(), text.begin(), ::tolower);
@@ -28,4 +28,4 @@ double QueryMatchRankingFeature::ComputeFeatureInternal(
          static_cast<double>(text.size());
 }
 
-}  // namespace maxwell
+}  // namespace modular

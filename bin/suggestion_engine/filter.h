@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_FILTER_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_FILTER_H_
 
-#include "lib/suggestion/fidl/proposal.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
-namespace maxwell {
+namespace modular {
 
 // Should return true if the given Proposal should be included.
 typedef std::function<bool(const Proposal&)> ProposalFilter;
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_FILTER_H_

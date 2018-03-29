@@ -6,13 +6,13 @@
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 InterruptionsProcessor::InterruptionsProcessor() = default;
 InterruptionsProcessor::~InterruptionsProcessor() = default;
 
 void InterruptionsProcessor::RegisterListener(
-    f1dl::InterfaceHandle<InterruptionListener> listener) {
+    fidl::InterfaceHandle<InterruptionListener> listener) {
   listeners_.AddInterfacePtr(listener.Bind());
 }
 
@@ -20,9 +20,9 @@ bool InterruptionsProcessor::ConsiderSuggestion(
     const SuggestionPrototype& prototype) {
   // TODO(jwnichols): Implement a real interruption pipeline here
   if (IsInterruption(prototype)) {
-    listeners_.ForAllPtrs([this, &prototype](InterruptionListener* listener) {
-      DispatchInterruption(listener, prototype);
-    });
+    for (auto& listener : listeners_.ptrs()) {
+      DispatchInterruption(listener->get(), prototype);
+    }
     return true;
   }
   return false;
@@ -30,16 +30,15 @@ bool InterruptionsProcessor::ConsiderSuggestion(
 
 bool InterruptionsProcessor::IsInterruption(
     const SuggestionPrototype& prototype) {
-  return prototype.proposal->display &&
-         prototype.proposal->display->annoyance != AnnoyanceType::NONE;
+  return prototype.proposal.display.annoyance != AnnoyanceType::NONE;
 }
 
 void InterruptionsProcessor::DispatchInterruption(
     InterruptionListener* const listener,
     const SuggestionPrototype& prototype) {
-  SuggestionPtr suggestion = CreateSuggestion(prototype);
-  suggestion->confidence = kMaxConfidence;
+  Suggestion suggestion = CreateSuggestion(prototype);
+  suggestion.confidence = kMaxConfidence;
   listener->OnInterrupt(std::move(suggestion));
 }
 
-}  // namespace maxwell
+}  // namespace modular

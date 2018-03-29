@@ -7,11 +7,11 @@
 
 #include <unordered_map>
 
-#include "lib/context/fidl/context_reader.fidl.h"
+#include <fuchsia/cpp/modular.h>
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 
-namespace maxwell {
+namespace modular {
 
 class ModPairRankingFeature : public RankingFeature {
  public:
@@ -32,6 +32,6 @@ class ModPairRankingFeature : public RankingFeature {
       module_pairs_;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_RANKING_FEATURES_MOD_PAIR_RANKING_FEATURE_H_

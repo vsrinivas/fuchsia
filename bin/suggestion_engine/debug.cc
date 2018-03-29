@@ -4,9 +4,10 @@
 
 #include <functional>
 
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/suggestion_engine/debug.h"
 
-namespace maxwell {
+namespace modular {
 
 SuggestionDebugImpl::SuggestionDebugImpl() : weak_ptr_factory_(this){};
 SuggestionDebugImpl::~SuggestionDebugImpl() = default;
@@ -16,16 +17,16 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionDebugImpl::GetWeakPtr() {
 }
 
 void makeProposalSummary(const SuggestionPrototype* suggestion,
-                         ProposalSummaryPtr* summary) {
-  (*summary)->id = suggestion->proposal->id;
-  (*summary)->publisher_url = suggestion->source_url;
-  (*summary)->display = suggestion->proposal->display.Clone();
+                         ProposalSummary* summary) {
+  summary->id = suggestion->proposal.id;
+  summary->publisher_url = suggestion->source_url;
+  fidl::Clone(suggestion->proposal.display, &summary->display);
 }
 
 void makeProposalSummaries(const RankedSuggestionsList* suggestions,
-                           f1dl::VectorPtr<ProposalSummaryPtr>* summaries) {
+                           fidl::VectorPtr<ProposalSummary>* summaries) {
   for (const auto& suggestion : suggestions->Get()) {
-    ProposalSummaryPtr summary = ProposalSummary::New();
+    ProposalSummary summary;
     makeProposalSummary(suggestion->prototype, &summary);
     summaries->push_back(std::move(summary));
   }
@@ -33,47 +34,43 @@ void makeProposalSummaries(const RankedSuggestionsList* suggestions,
 
 void SuggestionDebugImpl::OnAskStart(std::string query,
                                      const RankedSuggestionsList* suggestions) {
-  ask_proposal_listeners_.ForAllPtrs(
-      [query, suggestions](AskProposalListener* listener) {
-        auto proposals = f1dl::VectorPtr<ProposalSummaryPtr>::New(0);
-        makeProposalSummaries(suggestions, &proposals);
-        listener->OnAskStart(query, std::move(proposals));
-      });
+  for (auto& listener : ask_proposal_listeners_.ptrs()) {
+    fidl::VectorPtr<ProposalSummary> proposals;
+    makeProposalSummaries(suggestions, &proposals);
+    (*listener)->OnAskStart(query, std::move(proposals));
+  }
 }
 
 void SuggestionDebugImpl::OnSuggestionSelected(
     const SuggestionPrototype* selected_suggestion) {
-  ask_proposal_listeners_.ForAllPtrs(
-      [selected_suggestion](AskProposalListener* listener) {
-        if (selected_suggestion) {
-          ProposalSummaryPtr summary = ProposalSummary::New();
-          makeProposalSummary(selected_suggestion, &summary);
-          listener->OnProposalSelected(std::move(summary));
-        } else {
-          listener->OnProposalSelected(nullptr);
-        }
-      });
+  for (auto& listener : ask_proposal_listeners_.ptrs()) {
+    if (selected_suggestion) {
+      auto summary = ProposalSummary::New();
+      makeProposalSummary(selected_suggestion, summary.get());
+      (*listener)->OnProposalSelected(std::move(summary));
+    } else {
+      (*listener)->OnProposalSelected(nullptr);
+    }
+  }
 }
 
 void SuggestionDebugImpl::OnInterrupt(
     const SuggestionPrototype* interrupt_suggestion) {
-  interruption_proposal_listeners_.ForAllPtrs(
-      [interrupt_suggestion](InterruptionProposalListener* listener) {
-        ProposalSummaryPtr summary = ProposalSummary::New();
-        makeProposalSummary(interrupt_suggestion, &summary);
-        listener->OnInterrupt(std::move(summary));
-      });
+  for (auto& listener : interruption_proposal_listeners_.ptrs()) {
+    ProposalSummary summary;
+    makeProposalSummary(interrupt_suggestion, &summary);
+    (*listener)->OnInterrupt(std::move(summary));
+  }
 }
 
 void SuggestionDebugImpl::OnNextUpdate(
     const RankedSuggestionsList* suggestions) {
-  next_proposal_listeners_.ForAllPtrs(
-      [this, suggestions](NextProposalListener* listener) {
-        auto proposals = f1dl::VectorPtr<ProposalSummaryPtr>::New(0);
-        makeProposalSummaries(suggestions, &proposals);
-        listener->OnNextUpdate(std::move(proposals));
-        cached_next_proposals_ = std::move(proposals);
-      });
+  for (auto& listener : next_proposal_listeners_.ptrs()) {
+    fidl::VectorPtr<ProposalSummary> proposals;
+    makeProposalSummaries(suggestions, &proposals);
+    (*listener)->OnNextUpdate(std::move(proposals));
+    cached_next_proposals_ = std::move(proposals);
+  }
 }
 
 util::IdleWaiter::ActivityToken SuggestionDebugImpl::RegisterOngoingActivity() {
@@ -85,19 +82,19 @@ bool SuggestionDebugImpl::FinishIdleCheck() {
 }
 
 void SuggestionDebugImpl::WatchAskProposals(
-    f1dl::InterfaceHandle<AskProposalListener> listener) {
+    fidl::InterfaceHandle<AskProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   ask_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchInterruptionProposals(
-    f1dl::InterfaceHandle<InterruptionProposalListener> listener) {
+    fidl::InterfaceHandle<InterruptionProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   interruption_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
 void SuggestionDebugImpl::WatchNextProposals(
-    f1dl::InterfaceHandle<NextProposalListener> listener) {
+    fidl::InterfaceHandle<NextProposalListener> listener) {
   auto listener_ptr = listener.Bind();
   next_proposal_listeners_.AddInterfacePtr(std::move(listener_ptr));
   if (cached_next_proposals_) {
@@ -105,8 +102,8 @@ void SuggestionDebugImpl::WatchNextProposals(
   }
 }
 
-void SuggestionDebugImpl::WaitUntilIdle(const WaitUntilIdleCallback& callback) {
+void SuggestionDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
   wait_until_idle_.WaitUntilIdle(callback);
 }
 
-}  // namespace maxwell
+}  // namespace modular

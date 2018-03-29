@@ -7,24 +7,23 @@
 
 #include <strstream>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/time/time_point.h"
-#include "lib/suggestion/fidl/proposal.fidl.h"
-#include "lib/suggestion/fidl/suggestion_provider.fidl.h"
 
-namespace maxwell {
+namespace modular {
 
 struct SuggestionPrototype {
   std::string suggestion_id;
   std::string source_url;
   fxl::TimePoint timestamp;
-  ProposalPtr proposal;
+  Proposal proposal;
 };
 
 std::string short_proposal_str(const SuggestionPrototype& prototype);
 
 // Creates a partial suggestion from a prototype. Confidence will not be set.
-SuggestionPtr CreateSuggestion(const SuggestionPrototype& prototype);
+Suggestion CreateSuggestion(const SuggestionPrototype& prototype);
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_PROTOTYPE_H_

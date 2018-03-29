@@ -6,7 +6,7 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
-namespace maxwell {
+namespace modular {
 
 NextProcessor::NextProcessor(SuggestionEngineImpl* engine)
     : engine_(engine), dirty_(false), processing_(false) {}
@@ -14,7 +14,7 @@ NextProcessor::NextProcessor(SuggestionEngineImpl* engine)
 NextProcessor::~NextProcessor() = default;
 
 void NextProcessor::RegisterListener(
-    f1dl::InterfaceHandle<NextListener> listener,
+    fidl::InterfaceHandle<NextListener> listener,
     const size_t max_results) {
   auto listenerPtr = listener.Bind();
 
@@ -38,11 +38,11 @@ void NextProcessor::RegisterListener(
 }
 
 void NextProcessor::AddProposal(const std::string& component_url,
-                                ProposalPtr proposal) {
+                                Proposal proposal) {
   NotifyOfProcessingChange(true);
   // The component_url and proposal ID form a unique identifier for a proposal.
   // If one already exists, remove it before adding the new one.
-  RemoveProposal(component_url, proposal->id);
+  RemoveProposal(component_url, proposal.id);
 
   auto suggestion = engine_->CreateSuggestionPrototype(
       &engine_->next_prototypes_, component_url, std::move(proposal));
@@ -97,7 +97,7 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
                                     const size_t max_results) {
   const auto& suggestion_vector = engine_->next_suggestions_.Get();
 
-  f1dl::VectorPtr<SuggestionPtr> window;
+  fidl::VectorPtr<Suggestion> window;
   // Prefer to return an array of size 0 vs. null
   window.resize(0);
   for (size_t i = 0; i < max_results && i < suggestion_vector.size(); i++) {
@@ -107,4 +107,4 @@ void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
   listener->OnNextResults(std::move(window));
 }
 
-}  // namespace maxwell
+}  // namespace modular

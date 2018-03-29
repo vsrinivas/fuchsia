@@ -9,7 +9,7 @@
 
 #include "peridot/bin/suggestion_engine/ranked_suggestion.h"
 
-namespace maxwell {
+namespace modular {
 
 class SuggestionFilter {
  public:
@@ -18,6 +18,6 @@ class SuggestionFilter {
   virtual void Filter(std::vector<RankedSuggestion>* suggestions) = 0;
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_FILTER_H_

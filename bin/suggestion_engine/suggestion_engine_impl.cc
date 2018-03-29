@@ -6,17 +6,17 @@
 
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/context/cpp/context_helper.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
-#include "lib/suggestion/fidl/suggestion_engine.fidl.h"
-#include "lib/suggestion/fidl/user_input.fidl.h"
 
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
@@ -25,21 +25,21 @@
 #include "peridot/bin/suggestion_engine/ranking_features/query_match_ranking_feature.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
-namespace maxwell {
+namespace modular {
 
 SuggestionEngineImpl::SuggestionEngineImpl(
     component::ApplicationContext* app_context)
     : next_processor_(this), context_listener_binding_(this) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
-      [this](f1dl::InterfaceRequest<SuggestionEngine> request) {
+      [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
       });
   app_context->outgoing_services()->AddService<SuggestionProvider>(
-      [this](f1dl::InterfaceRequest<SuggestionProvider> request) {
+      [this](fidl::InterfaceRequest<SuggestionProvider> request) {
         suggestion_provider_bindings_.AddBinding(this, std::move(request));
       });
   app_context->outgoing_services()->AddService<SuggestionDebug>(
-      [this](f1dl::InterfaceRequest<SuggestionDebug> request) {
+      [this](fidl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(&debug_, std::move(request));
       });
 
@@ -59,7 +59,7 @@ fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
-                                           ProposalPtr proposal) {
+                                           Proposal proposal) {
   next_processor_.AddProposal(source->component_url(), std::move(proposal));
 }
 
@@ -76,13 +76,13 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
 }
 
 // |SuggestionProvider|
-void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
-                                 UserInputPtr input,
+void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
+                                 UserInput input,
                                  int count) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
-  speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-    listener->OnStatusChanged(SpeechStatus::PROCESSING);
-  });
+  for (auto& listener : speech_listeners_.ptrs()) {
+    (*listener)->OnStatusChanged(SpeechStatus::PROCESSING);
+  }
 
   // Process:
   //   1. Close out and clean up any existing query process
@@ -96,7 +96,7 @@ void SuggestionEngineImpl::Query(f1dl::InterfaceHandle<QueryListener> listener,
   CleanUpPreviousQuery();
 
   // Step 2
-  std::string query = input->text;
+  std::string query = input.text;
   if (!query.empty()) {
     // Update context engine
     std::string formattedQuery;
@@ -118,27 +118,27 @@ void SuggestionEngineImpl::UpdateRanking() {
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
-    f1dl::InterfaceHandle<InterruptionListener> listener) {
+    fidl::InterfaceHandle<InterruptionListener> listener) {
   interruptions_processor_.RegisterListener(std::move(listener));
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToNext(
-    f1dl::InterfaceHandle<NextListener> listener,
+    fidl::InterfaceHandle<NextListener> listener,
     int count) {
   next_processor_.RegisterListener(std::move(listener), count);
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::RegisterFeedbackListener(
-    f1dl::InterfaceHandle<FeedbackListener> speech_listener) {
+    fidl::InterfaceHandle<FeedbackListener> speech_listener) {
   speech_listeners_.AddInterfacePtr(speech_listener.Bind());
 }
 
 // |SuggestionProvider|
 void SuggestionEngineImpl::NotifyInteraction(
-    const f1dl::StringPtr& suggestion_uuid,
-    InteractionPtr interaction) {
+    fidl::StringPtr suggestion_uuid,
+    Interaction interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
   RankedSuggestion* suggestion =
@@ -154,7 +154,7 @@ void SuggestionEngineImpl::NotifyInteraction(
                                  ? short_proposal_str(*suggestion->prototype)
                                  : "invalid";
 
-    FXL_LOG(INFO) << (interaction->type == InteractionType::SELECTED
+    FXL_LOG(INFO) << (interaction.type == InteractionType::SELECTED
                           ? "Accepted"
                           : "Dismissed")
                   << " suggestion " << suggestion_uuid << " (" << log_detail
@@ -163,15 +163,15 @@ void SuggestionEngineImpl::NotifyInteraction(
     debug_.OnSuggestionSelected(suggestion->prototype);
 
     auto& proposal = suggestion->prototype->proposal;
-    if (interaction->type == InteractionType::SELECTED) {
-      PerformActions(proposal->on_selected, suggestion->prototype->source_url,
-                     proposal->display->color);
+    if (interaction.type == InteractionType::SELECTED) {
+      PerformActions(std::move(proposal.on_selected), suggestion->prototype->source_url,
+                     proposal.display.color);
     }
 
     if (suggestion_in_ask) {
       CleanUpPreviousQuery();
     } else {
-      RemoveNextProposal(suggestion->prototype->source_url, proposal->id);
+      RemoveNextProposal(suggestion->prototype->source_url, proposal.id);
     }
 
     UpdateRanking();
@@ -183,8 +183,8 @@ void SuggestionEngineImpl::NotifyInteraction(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterProposalPublisher(
-    const f1dl::StringPtr& url,
-    f1dl::InterfaceRequest<ProposalPublisher> publisher) {
+    fidl::StringPtr url,
+    fidl::InterfaceRequest<ProposalPublisher> publisher) {
   // Check to see if a ProposalPublisher has already been created for the
   // component with this url. If not, create one.
   std::unique_ptr<ProposalPublisherImpl>& source = proposal_publishers_[url];
@@ -197,18 +197,18 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::RegisterQueryHandler(
-    const f1dl::StringPtr& url,
-    f1dl::InterfaceHandle<QueryHandler> query_handler_handle) {
+    fidl::StringPtr url,
+    fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
 }
 
 // |SuggestionEngine|
 void SuggestionEngineImpl::Initialize(
-    f1dl::InterfaceHandle<modular::StoryProvider> story_provider,
-    f1dl::InterfaceHandle<modular::FocusProvider> focus_provider,
-    f1dl::InterfaceHandle<ContextWriter> context_writer,
-    f1dl::InterfaceHandle<ContextReader> context_reader) {
+    fidl::InterfaceHandle<modular::StoryProvider> story_provider,
+    fidl::InterfaceHandle<modular::FocusProvider> focus_provider,
+    fidl::InterfaceHandle<ContextWriter> context_writer,
+    fidl::InterfaceHandle<ContextReader> context_reader) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
   context_writer_.Bind(std::move(context_writer));
@@ -230,11 +230,11 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
 
   // Get context updates every time a story is focused to rerank suggestions
   // based on the story that is focused at the moment.
-  auto query = ContextQuery::New();
+  ContextQuery query;
   for (auto const& it : ranking_features) {
     ContextSelectorPtr selector = it.second->CreateContextSelector();
-    if (!selector.is_null()) {
-      AddToContextQuery(query.get(), it.first, std::move(selector));
+    if (selector) {
+      AddToContextQuery(&query, it.first, std::move(*selector));
     }
   }
   context_reader_->Subscribe(std::move(query),
@@ -266,8 +266,8 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
 SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
     SuggestionPrototypeMap* owner,
     const std::string& source_url,
-    ProposalPtr proposal) {
-  auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal->id),
+    Proposal proposal) {
+  auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
                                        std::make_unique<SuggestionPrototype>());
   auto suggestion_prototype = prototype_pair.first->second.get();
   suggestion_prototype->suggestion_id = RandomUuid();
@@ -279,59 +279,58 @@ SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
 }
 
 void SuggestionEngineImpl::PerformActions(
-    const f1dl::VectorPtr<maxwell::ActionPtr>& actions,
+    fidl::VectorPtr<Action> actions,
     const std::string& source_url,
     uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
   // to receive a StoryController anyway (not optional atm.).
-  for (const auto& action : *actions) {
-    switch (action->which()) {
-      case Action::Tag::CREATE_STORY: {
+  for (auto& action : *actions) {
+    switch (action.Which()) {
+      case Action::Tag::kCreateStory: {
         PerformCreateStoryAction(action, story_color);
         break;
       }
-      case Action::Tag::FOCUS_STORY: {
+      case Action::Tag::kFocusStory: {
         PerformFocusStoryAction(action);
         break;
       }
-      case Action::Tag::ADD_MODULE_TO_STORY: {
+      case Action::Tag::kAddModuleToStory: {
         PerformAddModuleToStoryAction(action);
         break;
       }
-      case Action::Tag::ADD_MODULE: {
+      case Action::Tag::kAddModule: {
         PerformAddModuleAction(action);
         break;
       }
-      case Action::Tag::CUSTOM_ACTION: {
-        PerformCustomAction(action, source_url, story_color);
+      case Action::Tag::kCustomAction: {
+        PerformCustomAction(&action, source_url, story_color);
         break;
       }
       default:
-        FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action->which();
+        FXL_LOG(WARNING) << "Unknown action tag " << (uint32_t)action.Which();
     }
   }
 }
 
-void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
+void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
                                                     uint32_t story_color) {
   auto activity = debug_.RegisterOngoingActivity();
-  const auto& create_story = action->get_create_story();
+  const auto& create_story = action.create_story();
 
   if (story_provider_) {
     // TODO(afergan): Make this more robust later. For now, we
     // always assume that there's extra info and that it's a color.
-    auto extra_info = f1dl::VectorPtr<modular::StoryInfoExtraEntryPtr>::New(1);
+    auto extra_info = fidl::VectorPtr<modular::StoryInfoExtraEntry>::New(1);
     char hex_color[11];
     snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
-    extra_info->at(0) = modular::StoryInfoExtraEntry::New();
-    extra_info->at(0)->key = "color";
-    extra_info->at(0)->value = hex_color;
-    auto& initial_data = create_story->initial_data;
-    auto& module_id = create_story->module_id;
+    extra_info->at(0).key = "color";
+    extra_info->at(0).value = hex_color;
+    auto& initial_data = create_story.initial_data;
+    auto& module_id = create_story.module_id;
     story_provider_->CreateStoryWithInfo(
-        create_story->module_id, std::move(extra_info), std::move(initial_data),
-        [this, activity, module_id](const f1dl::StringPtr& story_id) {
+        create_story.module_id, std::move(extra_info), std::move(initial_data),
+        [this, activity, module_id](fidl::StringPtr story_id) {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
@@ -340,11 +339,11 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
           story_controller->GetInfo(fxl::MakeCopyable(
               // TODO(thatguy): We should not be std::move()ing
               // story_controller *while we're calling it*.
-              [this, activity, controller = std::move(story_controller)](
-                  modular::StoryInfoPtr story_info, modular::StoryState state) {
+              [ this, activity, controller = std::move(story_controller) ](
+                  modular::StoryInfo story_info, modular::StoryState state) {
                 FXL_LOG(INFO)
-                    << "Requesting focus for story_id " << story_info->id;
-                focus_provider_ptr_->Request(story_info->id);
+                    << "Requesting focus for story_id " << story_info.id;
+                focus_provider_ptr_->Request(story_info.id);
               }));
         });
   } else {
@@ -352,67 +351,76 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const ActionPtr& action,
   }
 }
 
-void SuggestionEngineImpl::PerformFocusStoryAction(const ActionPtr& action) {
-  const auto& focus_story = action->get_focus_story();
-  FXL_LOG(INFO) << "Requesting focus for story_id " << focus_story->story_id;
-  focus_provider_ptr_->Request(focus_story->story_id);
+void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
+  const auto& focus_story = action.focus_story();
+  FXL_LOG(INFO) << "Requesting focus for story_id " << focus_story.story_id;
+  focus_provider_ptr_->Request(focus_story.story_id);
 }
 
 void SuggestionEngineImpl::PerformAddModuleToStoryAction(
-    const ActionPtr& action) {
+    const Action& action) {
   if (story_provider_) {
-    const auto& add_module_to_story = action->get_add_module_to_story();
-    const auto& story_id = add_module_to_story->story_id;
-    const auto& module_name = add_module_to_story->module_name;
-    const auto& module_url = add_module_to_story->module_url;
-    const auto& link_name = add_module_to_story->link_name;
-    const auto& module_path = add_module_to_story->module_path;
-    const auto& surface_relation = add_module_to_story->surface_relation;
+    const auto& add_module_to_story = action.add_module_to_story();
+    const auto& story_id = add_module_to_story.story_id;
+    const auto& module_name = add_module_to_story.module_name;
+    const auto& module_url = add_module_to_story.module_url;
+    const auto& link_name = add_module_to_story.link_name;
+    const auto& module_path = add_module_to_story.module_path;
+    const auto& surface_relation = add_module_to_story.surface_relation;
 
     FXL_LOG(INFO) << "Adding module " << module_url << " to story " << story_id;
 
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    if (!add_module_to_story->initial_data.is_null()) {
+    if (!add_module_to_story.initial_data.is_null()) {
       modular::LinkPtr link;
       story_controller->GetLink(module_path.Clone(), link_name,
                                 link.NewRequest());
-      link->Set(nullptr /* json_path */, add_module_to_story->initial_data);
+      link->Set(nullptr /* json_path */, add_module_to_story.initial_data);
     }
 
     story_controller->AddModuleDeprecated(module_path.Clone(), module_name,
                                           module_url, link_name,
-                                          surface_relation.Clone());
+                                          fidl::MakeOptional(surface_relation));
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }
 }
 
-void SuggestionEngineImpl::PerformAddModuleAction(const ActionPtr& action) {
+void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
   if (story_provider_) {
-    const auto& add_module = action->get_add_module();
-    const auto& module_name = add_module->module_name;
-    const auto& story_id = add_module->story_id;
+    const auto& add_module = action.add_module();
+    const auto& module_name = add_module.module_name;
+    const auto& story_id = add_module.story_id;
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    story_controller->AddModule({}, module_name, add_module->daisy.Clone(),
-                                add_module->surface_relation.Clone());
+    modular::Daisy daisy;
+    fidl::Clone(add_module.daisy, &daisy);
+    story_controller->AddModule({}, module_name, std::move(daisy),
+                                fidl::MakeOptional(add_module.surface_relation));
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }
 }
 
-void SuggestionEngineImpl::PerformCustomAction(const ActionPtr& action,
+void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
   auto activity = debug_.RegisterOngoingActivity();
-  auto custom_action = action->get_custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable(
-      [this, activity, custom_action = std::move(custom_action), source_url,
-       story_color](f1dl::VectorPtr<maxwell::ActionPtr> actions) {
-        if (actions)
-          PerformActions(std::move(actions), source_url, story_color);
-      }));
+  auto custom_action = action->custom_action().Bind();
+  custom_action->Execute(fxl::MakeCopyable([
+    this, activity, custom_action = std::move(custom_action), source_url,
+    story_color
+  ](fidl::VectorPtr<ActionPtr> actions) {
+    if (actions) {
+      fidl::VectorPtr<Action> non_null_actions;
+      for (auto& action : *actions) {
+        if (action)
+          non_null_actions.push_back(std::move(*action));
+      }
+      PerformActions(std::move(non_null_actions), source_url, story_color);
+    }
+  }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
@@ -436,21 +444,20 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
     time_lord_.Unbind();
     media_timeline_consumer_.Unbind();
 
-    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-      listener->OnStatusChanged(SpeechStatus::RESPONDING);
-    });
+    for (auto& listener : speech_listeners_.ptrs()) {
+      (*listener)->OnStatusChanged(SpeechStatus::RESPONDING);
+    }
 
     media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
     time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
     time_lord_->Prime([this, activity] {
-      auto tt = media::TimelineTransform::New();
-      tt->reference_time =
+      media::TimelineTransform tt;
+      tt.reference_time =
           media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
-      tt->subject_time = media::kUnspecifiedTime;
-      tt->reference_delta = tt->subject_delta = 1;
+      tt.subject_time = media::kUnspecifiedTime;
+      tt.reference_delta = tt.subject_delta = 1;
 
-      HandleMediaUpdates(media::MediaTimelineControlPoint::kInitialStatus,
-                         nullptr);
+      HandleMediaUpdates(media::kInitialStatus, nullptr);
 
       media_timeline_consumer_->SetTimelineTransform(
           std::move(tt), [activity](bool completed) {});
@@ -458,9 +465,9 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   });
 
   media_packet_producer_.set_error_handler([this] {
-    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-      listener->OnStatusChanged(SpeechStatus::IDLE);
-    });
+    for (auto& listener : speech_listeners_.ptrs()) {
+      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
+    }
   });
 }
 
@@ -470,24 +477,24 @@ void SuggestionEngineImpl::HandleMediaUpdates(
   auto activity = debug_.RegisterOngoingActivity();
 
   if (status && status->end_of_stream) {
-    speech_listeners_.ForAllPtrs([](FeedbackListener* listener) {
-      listener->OnStatusChanged(SpeechStatus::IDLE);
-    });
+    for (auto& listener : speech_listeners_.ptrs()) {
+      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
+    }
     media_packet_producer_ = nullptr;
     media_renderer_ = nullptr;
   } else {
     time_lord_->GetStatus(
         version, [this, activity](
                      uint64_t next_version,
-                     media::MediaTimelineControlPointStatusPtr next_status) {
-          HandleMediaUpdates(next_version, std::move(next_status));
+                     media::MediaTimelineControlPointStatus next_status) {
+          HandleMediaUpdates(next_version, fidl::MakeOptional(std::move(next_status)));
         });
   }
 }
 
-void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
+void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
   for (auto const& it : ranking_features) {
-    auto result = TakeContextValue(update.get(), it.first);
+    auto result = TakeContextValue(&update, it.first);
     if (result.first) {
       it.second->UpdateContext(result.second);
     }
@@ -495,15 +502,15 @@ void SuggestionEngineImpl::OnContextUpdate(ContextUpdatePtr update) {
   UpdateRanking();
 }
 
-}  // namespace maxwell
+}  // namespace modular
 
 int main(int argc, const char** argv) {
   fsl::MessageLoop loop;
   auto app_context = component::ApplicationContext::CreateFromStartupInfo();
   auto suggestion_engine =
-      std::make_unique<maxwell::SuggestionEngineImpl>(app_context.get());
-  fxl::WeakPtr<maxwell::SuggestionDebugImpl> debug = suggestion_engine->debug();
-  modular::AppDriver<maxwell::SuggestionEngineImpl> driver(
+      std::make_unique<modular::SuggestionEngineImpl>(app_context.get());
+  fxl::WeakPtr<modular::SuggestionDebugImpl> debug = suggestion_engine->debug();
+  modular::AppDriver<modular::SuggestionEngineImpl> driver(
       app_context->outgoing_services(), std::move(suggestion_engine),
       [&loop] { loop.QuitNow(); });
 
