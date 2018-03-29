@@ -6,10 +6,10 @@
 
 #include <utility>
 
+#include <fuchsia/cpp/modular_auth.h>
 #include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include <fuchsia/cpp/modular_auth.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
@@ -37,7 +37,7 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
   }
 
   TestTokenProvider token_provider_;
-  f1dl::Binding<modular_auth::TokenProvider> token_provider_binding_;
+  fidl::Binding<modular_auth::TokenProvider> token_provider_binding_;
   FirebaseAuthImpl firebase_auth_;
   backoff::TestBackoff* backoff_;
 
@@ -62,8 +62,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
 
   AuthStatus auth_status;
   std::string firebase_token;
-  token_provider_.error_to_return->status =
-      modular_auth::Status::NETWORK_ERROR;
+  token_provider_.error_to_return.status = modular_auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseToken(
@@ -78,7 +77,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(0, backoff_->reset_count);
 
-  token_provider_.error_to_return->status = modular_auth::Status::OK;
+  token_provider_.error_to_return.status = modular_auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -104,8 +103,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
 
   AuthStatus auth_status;
   std::string firebase_id;
-  token_provider_.error_to_return->status =
-      modular_auth::Status::NETWORK_ERROR;
+  token_provider_.error_to_return.status = modular_auth::Status::NETWORK_ERROR;
   backoff_->SetOnGetNext(MakeQuitTask());
   bool called = false;
   firebase_auth_.GetFirebaseUserId(
@@ -120,7 +118,7 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   EXPECT_EQ(1, backoff_->get_next_count);
   EXPECT_EQ(0, backoff_->reset_count);
 
-  token_provider_.error_to_return->status = modular_auth::Status::OK;
+  token_provider_.error_to_return.status = modular_auth::Status::OK;
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
