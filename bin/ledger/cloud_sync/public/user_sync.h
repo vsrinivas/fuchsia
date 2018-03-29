@@ -23,6 +23,14 @@ class UserSync {
   UserSync() {}
   virtual ~UserSync() {}
 
+  // Sets a synchronization state watcher for this user.
+  //
+  // Set the watcher to nullptr to unregister a previously set watcher.
+  virtual void SetSyncWatcher(SyncStateWatcher* watcher) = 0;
+
+  // Starts the user synchronization.
+  virtual void Start() = 0;
+
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
       fxl::StringView app_id,
       encryption::EncryptionService* encryption_service) = 0;

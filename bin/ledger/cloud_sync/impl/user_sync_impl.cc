@@ -23,20 +23,22 @@ constexpr size_t kFingerprintSize = 16;
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
                            UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           SyncStateWatcher* watcher,
                            fxl::Closure on_version_mismatch)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
       watcher_binding_(this),
-      aggregator_(watcher),
       task_runner_(environment_->main_runner()) {
   FXL_DCHECK(on_version_mismatch_);
 }
 
 UserSyncImpl::~UserSyncImpl() {
   FXL_DCHECK(active_ledger_syncs_.empty());
+}
+
+void UserSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
+  aggregator_.SetBaseWatcher(watcher);
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(

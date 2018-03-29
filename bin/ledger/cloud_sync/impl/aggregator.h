@@ -18,9 +18,11 @@ namespace cloud_sync {
 // the constructor.
 class Aggregator {
  public:
-  // Sets the base watcher that will receive the aggregated notification stream.
-  explicit Aggregator(cloud_sync::SyncStateWatcher* base_watcher);
+  Aggregator();
   ~Aggregator();
+
+  // Sets the base watcher that will receive the aggregated notification stream.
+  void SetBaseWatcher(cloud_sync::SyncStateWatcher* base_watcher);
 
   // Generates a new source of notifications for this aggregator. Note that
   // std::unique_ptr<SyncStateWatcher> should remain alive as long as the
@@ -36,7 +38,7 @@ class Aggregator {
   SyncStateWatcher::SyncStateContainer state_;
 
   std::set<Listener*> listeners_;
-  SyncStateWatcher* base_watcher_;
+  SyncStateWatcher* base_watcher_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Aggregator);
 };

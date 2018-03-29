@@ -21,9 +21,9 @@ LedgerSyncImpl::LedgerSyncImpl(
       user_config_(user_config),
       encryption_service_(encryption_service),
       app_id_(app_id.ToString()),
-      user_watcher_(std::move(watcher)),
-      aggregator_(user_watcher_.get()) {
+      user_watcher_(std::move(watcher)) {
   FXL_DCHECK(user_config_->cloud_provider);
+  aggregator_.SetBaseWatcher(user_watcher_.get());
 }
 
 LedgerSyncImpl::~LedgerSyncImpl() {

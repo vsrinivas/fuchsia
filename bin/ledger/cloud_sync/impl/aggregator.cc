@@ -43,15 +43,18 @@ SyncStateWatcher::SyncStateContainer Aggregator::Listener::GetCurrentState() {
   return state_;
 }
 
-Aggregator::Aggregator(SyncStateWatcher* base_watcher)
-    : base_watcher_(base_watcher) {
-  FXL_DCHECK(base_watcher_);
-  base_watcher_->Notify(state_);
-}
+Aggregator::Aggregator() {}
 
 Aggregator::~Aggregator() {
   // There should be no listener left when destroying this object.
   FXL_DCHECK(listeners_.empty());
+}
+
+void Aggregator::SetBaseWatcher(SyncStateWatcher* base_watcher) {
+  base_watcher_ = base_watcher;
+  if (base_watcher_) {
+    base_watcher_->Notify(state_);
+  }
 }
 
 std::unique_ptr<SyncStateWatcher> Aggregator::GetNewStateWatcher() {

@@ -22,8 +22,8 @@ class LedgerSync {
   LedgerSync() {}
   virtual ~LedgerSync() {}
 
-  // Creates a new page sync along with its context for the given page. The page
-  // could already have data synced to the cloud or not.
+  // Creates a new page sync for the given page. The page could already have
+  // data synced to the cloud or not.
   //
   // The provided |error_callback| is called when sync is stopped due to an
   // unrecoverable error.

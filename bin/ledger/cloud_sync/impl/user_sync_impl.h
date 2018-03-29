@@ -10,9 +10,9 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/binding.h"
 #include "peridot/bin/ledger/cloud_sync/impl/aggregator.h"
 #include "peridot/bin/ledger/cloud_sync/impl/ledger_sync_impl.h"
@@ -28,17 +28,15 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   UserSyncImpl(ledger::Environment* environment,
                UserConfig user_config,
                std::unique_ptr<backoff::Backoff> backoff,
-               SyncStateWatcher* watcher,
                fxl::Closure on_version_mismatch);
   ~UserSyncImpl() override;
 
   // UserSync:
+  void SetSyncWatcher(SyncStateWatcher* watcher) override;
+  void Start() override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(
       fxl::StringView app_id,
       encryption::EncryptionService* encryption_service) override;
-
-  // Starts UserSyncImpl. This method must be called before any other method.
-  void Start();
 
   // Returns the path where the device fingerprint is stored.
   std::string GetFingerprintPath();

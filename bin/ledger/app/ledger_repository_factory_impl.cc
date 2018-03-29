@@ -70,8 +70,9 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
-  void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-                      std::function<void(Status)> callback) {
+  void BindRepository(
+      fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
+      std::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
       return;
@@ -127,11 +128,13 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  private:
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
-  std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
-                        std::function<void(Status)>>>
+  std::vector<
+      std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
+                std::function<void(Status)>>>
       requests_;
   fxl::Closure on_empty_callback_;
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> detached_handles_;
+  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
+      detached_handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
@@ -163,7 +166,8 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::StringPtr repository_path,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
+        repository_request,
     GetRepositoryCallback callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
   RepositoryInformation repository_information(repository_path);
@@ -229,8 +233,9 @@ void LedgerRepositoryFactoryImpl::CreateRepository(
   };
   auto user_sync = std::make_unique<cloud_sync::UserSyncImpl>(
       environment_, std::move(user_config),
-      std::make_unique<backoff::ExponentialBackoff>(), watchers.get(),
+      std::make_unique<backoff::ExponentialBackoff>(),
       std::move(on_version_mismatch));
+  user_sync->SetSyncWatcher(watchers.get());
   user_sync->Start();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.content_path, environment_, std::move(watchers),
