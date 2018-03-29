@@ -18,9 +18,7 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/ledger/fidl/ledger.fidl-sync.h"
 #include "lib/svc/cpp/services.h"
-#include "peridot/bin/ledger/fidl/internal.fidl-sync.h"
 #include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
 #include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/e2e/e2e_test.h"
@@ -53,13 +51,13 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  protected:
   void Init(std::vector<std::string> additional_args) {
     component::Services child_services;
-    auto launch_info = component::ApplicationLaunchInfo::New();
-    launch_info->url = "ledger";
-    launch_info->directory_request = child_services.NewRequest();
-    launch_info->arguments.push_back("--no_minfs_wait");
-    launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
+    component::ApplicationLaunchInfo launch_info;
+    launch_info.url = "ledger";
+    launch_info.directory_request = child_services.NewRequest();
+    launch_info.arguments.push_back("--no_minfs_wait");
+    launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
     for (auto& additional_arg : additional_args) {
-      launch_info->arguments.push_back(additional_arg);
+      launch_info.arguments.push_back(additional_arg);
     }
     application_context()->launcher()->CreateApplication(
         std::move(launch_info), ledger_controller_.NewRequest());
@@ -71,7 +69,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
     });
 
     child_services.ConnectToService(ledger_repository_factory_.NewRequest());
-    child_services.ConnectToService(fidl::GetSynchronousProxy(&controller_));
+    child_services.ConnectToService(controller_.NewRequest());
   }
 
   void RegisterShutdownCallback(std::function<void()> callback) {
@@ -114,7 +112,7 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
       return ::testing::AssertionFailure()
              << "GetSnapshot failed with status " << status;
     }
-    fidl::VectorPtr<ledger::InlinedEntryPtr> entries;
+    fidl::VectorPtr<ledger::InlinedEntry> entries;
     fidl::VectorPtr<uint8_t> next_token;
     snapshot->GetEntriesInline(
         nullptr, nullptr,
@@ -140,37 +138,37 @@ class LedgerEndToEndTest : public gtest::TestWithMessageLoop {
  protected:
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fidl::SynchronousInterfacePtr<ledger::Ledger> ledger_;
-  fidl::SynchronousInterfacePtr<ledger::LedgerController> controller_;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerController> controller_;
 };
 
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
   ledger::Status status;
-  fidl::SynchronousInterfacePtr<ledger::LedgerRepository> ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
+      ledger_repository;
   files::ScopedTempDir tmp_dir;
   ledger_repository_factory_->GetRepository(
-      tmp_dir.path(), nullptr, fidl::GetSynchronousProxy(&ledger_repository),
+      tmp_dir.path(), nullptr, ledger_repository.NewRequest(),
       callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
 
-  ledger_repository->GetLedger(TestArray(), fidl::GetSynchronousProxy(&ledger_),
-                               &status);
+  ledger_repository->GetLedger(TestArray(), ledger_.NewRequest(), &status);
   ASSERT_EQ(ledger::Status::OK, status);
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
-  ledger_->GetRootPage(fidl::GetSynchronousProxy(&page), &status);
+  ledger_->GetRootPage(page.NewRequest(), &status);
   ASSERT_EQ(ledger::Status::OK, status);
   page->Put(TestArray(), TestArray(), &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(GetSynchronousProxy(&snapshot), nullptr, nullptr, &status);
+  page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr, &status);
   EXPECT_EQ(ledger::Status::OK, status);
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(ledger::Status::OK, status);
   std::string value_as_string;
-  EXPECT_TRUE(fsl::StringFromVmo(value, &value_as_string));
+  EXPECT_TRUE(fsl::StringFromVmo(*value, &value_as_string));
   EXPECT_TRUE(Equals(TestArray(), value_as_string));
 }
 
