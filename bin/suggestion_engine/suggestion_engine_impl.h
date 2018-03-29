@@ -163,17 +163,6 @@ class SuggestionEngineImpl : public ContextListener,
   // Searches for a SuggestionPrototype in the Next and Ask lists.
   SuggestionPrototype* FindSuggestion(std::string suggestion_id);
 
-  // Creates a suggestion prototype owned by the given |SuggestionPrototypeMap|.
-  SuggestionPrototype* CreateSuggestionPrototype(SuggestionPrototypeMap* owner,
-                                                 const std::string& source_url,
-                                                 Proposal proposal);
-
-  std::string RandomUuid() {
-    static uint64_t id = 0;
-    // TODO(rosswang): real UUIDs
-    return std::to_string(id++);
-  }
-
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
   // |source_url| is the url of the source of the proposal containing the
@@ -224,6 +213,9 @@ class SuggestionEngineImpl : public ContextListener,
   // Initialized late in Initialize().
   std::unique_ptr<TimelineStoriesWatcher> timeline_stories_watcher_;
 
+  // The debugging interface for all Suggestions.
+  std::shared_ptr<SuggestionDebugImpl> debug_;
+
   // TODO(thatguy): All Channels also get a ReevaluateFilters method, which
   // would remove Suggestions that are now filtered or add
   // new ones that are no longer filtered.
@@ -232,10 +224,7 @@ class SuggestionEngineImpl : public ContextListener,
   RankedSuggestionsList query_suggestions_;
 
   // next and interruptions share the same backing
-  SuggestionPrototypeMap next_prototypes_;
-  RankedSuggestionsList next_suggestions_;
   NextProcessor next_processor_;
-  InterruptionsProcessor interruptions_processor_;
 
   // The set of all QueryHandlers that have been registered mapped to their
   // URLs (stored as strings).
@@ -271,9 +260,6 @@ class SuggestionEngineImpl : public ContextListener,
   media::TimelineConsumerPtr media_timeline_consumer_;
 
   fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
-
-  // The debugging interface for all Suggestions.
-  SuggestionDebugImpl debug_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };

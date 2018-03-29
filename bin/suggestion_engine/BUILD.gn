@@ -31,6 +31,8 @@ executable("bin") {
     "query_handler_record.h",
     "query_processor.cc",
     "query_processor.h",
+    "suggestion_engine_helper.cc",
+    "suggestion_engine_helper.h",
     "suggestion_engine_impl.cc",
     "suggestion_engine_impl.h",
   ]

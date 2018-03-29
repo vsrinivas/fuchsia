@@ -4,12 +4,12 @@
 
 #include "peridot/bin/suggestion_engine/next_processor.h"
 
-#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
+#include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 
 namespace modular {
 
-NextProcessor::NextProcessor(SuggestionEngineImpl* engine)
-    : engine_(engine), dirty_(false), processing_(false) {}
+NextProcessor::NextProcessor(std::shared_ptr<SuggestionDebugImpl> debug)
+    : debug_(debug), dirty_(false), processing_(false) {}
 
 NextProcessor::~NextProcessor() = default;
 
@@ -37,6 +37,12 @@ void NextProcessor::RegisterListener(
   });
 }
 
+void NextProcessor::RegisterInterruptionListener(
+    fidl::InterfaceHandle<InterruptionListener> listener) {
+  interruptions_processor_.RegisterListener(std::move(listener));
+}
+
+
 void NextProcessor::AddProposal(const std::string& component_url,
                                 Proposal proposal) {
   NotifyOfProcessingChange(true);
@@ -44,32 +50,54 @@ void NextProcessor::AddProposal(const std::string& component_url,
   // If one already exists, remove it before adding the new one.
   RemoveProposal(component_url, proposal.id);
 
-  auto suggestion = engine_->CreateSuggestionPrototype(
-      &engine_->next_prototypes_, component_url, std::move(proposal));
+  auto suggestion = CreateSuggestionPrototype(
+      &prototypes_, component_url, std::move(proposal));
 
   // TODO(jwnichols): Think more deeply about the intersection between the
   // interruption and next pipelines
-  if (engine_->interruptions_processor_.ConsiderSuggestion(*suggestion)) {
-    engine_->debug_.OnInterrupt(suggestion);
+  if (interruptions_processor_.ConsiderSuggestion(*suggestion)) {
+    debug_->OnInterrupt(suggestion);
   }
 
-  engine_->next_suggestions_.AddSuggestion(suggestion);
+  suggestions_.AddSuggestion(suggestion);
   dirty_ = true;
 }
 
 void NextProcessor::RemoveProposal(const std::string& component_url,
                                    const std::string& proposal_id) {
+  const auto key = std::make_pair(component_url, proposal_id);
+  auto toRemove = prototypes_.find(key);
+  if (toRemove != prototypes_.end()) {
+    // can't erase right off the bat because the prototype must remain valid
+    // until removed from the ranked list
+    RemoveProposalFromList(component_url, proposal_id);
+    prototypes_.erase(toRemove);
+  }
+}
+
+void NextProcessor::RemoveProposalFromList(const std::string& component_url,
+                                           const std::string& proposal_id) {
   NotifyOfProcessingChange(true);
-  if (engine_->next_suggestions_.RemoveProposal(component_url, proposal_id)) {
+  if (suggestions_.RemoveProposal(component_url, proposal_id)) {
     dirty_ = true;
   }
 }
 
+void NextProcessor::AddRankingFeature(
+    double weight, std::shared_ptr<RankingFeature> ranking_feature) {
+  suggestions_.AddRankingFeature(weight, ranking_feature);
+}
+
+RankedSuggestion* NextProcessor::GetSuggestion(
+    const std::string& suggestion_id) const {
+  return suggestions_.GetSuggestion(suggestion_id);
+}
+
 void NextProcessor::UpdateRanking() {
   if (dirty_) {
-    engine_->next_suggestions_.Rank(UserInput());
+    suggestions_.Rank(UserInput());
     NotifyAllOfResults();
-    engine_->debug_.OnNextUpdate(&engine_->next_suggestions_);
+    debug_->OnNextUpdate(&suggestions_);
     NotifyOfProcessingChange(false);
     dirty_ = false;
   }
@@ -95,7 +123,7 @@ void NextProcessor::NotifyOfProcessingChange(const bool processing) {
 
 void NextProcessor::NotifyOfResults(const NextListenerPtr& listener,
                                     const size_t max_results) {
-  const auto& suggestion_vector = engine_->next_suggestions_.Get();
+  const auto& suggestion_vector = suggestions_.Get();
 
   fidl::VectorPtr<Suggestion> window;
   // Prefer to return an array of size 0 vs. null

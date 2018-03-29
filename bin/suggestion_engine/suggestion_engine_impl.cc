@@ -29,7 +29,9 @@ namespace modular {
 
 SuggestionEngineImpl::SuggestionEngineImpl(
     component::ApplicationContext* app_context)
-    : next_processor_(this), context_listener_binding_(this) {
+    : debug_(std::make_shared<SuggestionDebugImpl>()),
+      next_processor_(debug_), context_listener_binding_(this) {
+
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -40,7 +42,7 @@ SuggestionEngineImpl::SuggestionEngineImpl(
       });
   app_context->outgoing_services()->AddService<SuggestionDebug>(
       [this](fidl::InterfaceRequest<SuggestionDebug> request) {
-        debug_bindings_.AddBinding(&debug_, std::move(request));
+        debug_bindings_.AddBinding(debug_.get(), std::move(request));
       });
 
   audio_server_ =
@@ -55,7 +57,7 @@ SuggestionEngineImpl::SuggestionEngineImpl(
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
 
 fxl::WeakPtr<SuggestionDebugImpl> SuggestionEngineImpl::debug() {
-  return debug_.GetWeakPtr();
+  return debug_->GetWeakPtr();
 }
 
 void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
@@ -65,14 +67,7 @@ void SuggestionEngineImpl::AddNextProposal(ProposalPublisherImpl* source,
 
 void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
                                               const std::string& proposal_id) {
-  const auto key = std::make_pair(component_url, proposal_id);
-  auto toRemove = next_prototypes_.find(key);
-  if (toRemove != next_prototypes_.end()) {
-    // can't erase right off the bat because the prototype must remain valid
-    // until removed from the ranked list
-    next_processor_.RemoveProposal(component_url, proposal_id);
-    next_prototypes_.erase(toRemove);
-  }
+  next_processor_.RemoveProposal(component_url, proposal_id);
 }
 
 // |SuggestionProvider|
@@ -104,7 +99,7 @@ void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
     context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
 
     // Update suggestion engine debug interface
-    debug_.OnAskStart(query, &query_suggestions_);
+    debug_->OnAskStart(query, &query_suggestions_);
   }
 
   // Steps 3 - 6
@@ -119,7 +114,7 @@ void SuggestionEngineImpl::UpdateRanking() {
 // |SuggestionProvider|
 void SuggestionEngineImpl::SubscribeToInterruptions(
     fidl::InterfaceHandle<InterruptionListener> listener) {
-  interruptions_processor_.RegisterListener(std::move(listener));
+  next_processor_.RegisterInterruptionListener(std::move(listener));
 }
 
 // |SuggestionProvider|
@@ -141,8 +136,7 @@ void SuggestionEngineImpl::NotifyInteraction(
     Interaction interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
-  RankedSuggestion* suggestion =
-      next_suggestions_.GetSuggestion(suggestion_uuid);
+  RankedSuggestion* suggestion = next_processor_.GetSuggestion(suggestion_uuid);
   if (!suggestion) {
     suggestion = query_suggestions_.GetSuggestion(suggestion_uuid);
     suggestion_in_ask = true;
@@ -160,7 +154,7 @@ void SuggestionEngineImpl::NotifyInteraction(
                   << " suggestion " << suggestion_uuid << " (" << log_detail
                   << ")";
 
-    debug_.OnSuggestionSelected(suggestion->prototype);
+    debug_->OnSuggestionSelected(suggestion->prototype);
 
     auto& proposal = suggestion->prototype->proposal;
     if (interaction.type == InteractionType::SELECTED) {
@@ -244,10 +238,9 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   // with a configuration file
 
   // Set up the next ranking features
-  next_suggestions_.AddRankingFeature(1.0,
-                                      ranking_features["proposal_hint_rf"]);
-  next_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
-  next_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  next_processor_.AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
+  next_processor_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  next_processor_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
 
   // Set up the query ranking features
   query_suggestions_.AddRankingFeature(1.0,
@@ -261,21 +254,6 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
   active_query_.reset();
   query_prototypes_.clear();
   query_suggestions_.RemoveAllSuggestions();
-}
-
-SuggestionPrototype* SuggestionEngineImpl::CreateSuggestionPrototype(
-    SuggestionPrototypeMap* owner,
-    const std::string& source_url,
-    Proposal proposal) {
-  auto prototype_pair = owner->emplace(std::make_pair(source_url, proposal.id),
-                                       std::make_unique<SuggestionPrototype>());
-  auto suggestion_prototype = prototype_pair.first->second.get();
-  suggestion_prototype->suggestion_id = RandomUuid();
-  suggestion_prototype->source_url = source_url;
-  suggestion_prototype->timestamp = fxl::TimePoint::Now();
-  suggestion_prototype->proposal = std::move(proposal);
-
-  return suggestion_prototype;
 }
 
 void SuggestionEngineImpl::PerformActions(
@@ -315,7 +293,7 @@ void SuggestionEngineImpl::PerformActions(
 
 void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
                                                     uint32_t story_color) {
-  auto activity = debug_.RegisterOngoingActivity();
+  auto activity = debug_->RegisterOngoingActivity();
   const auto& create_story = action.create_story();
 
   if (story_provider_) {
@@ -406,7 +384,7 @@ void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
 void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                const std::string& source_url,
                                                uint32_t story_color) {
-  auto activity = debug_.RegisterOngoingActivity();
+  auto activity = debug_->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
   custom_action->Execute(fxl::MakeCopyable([
     this, activity, custom_action = std::move(custom_action), source_url,
@@ -427,7 +405,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
   if (!audio_server_)
     return;
 
-  auto activity = debug_.RegisterOngoingActivity();
+  auto activity = debug_->RegisterOngoingActivity();
 
   media_renderer_.Unbind();
 
@@ -474,7 +452,7 @@ void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
 void SuggestionEngineImpl::HandleMediaUpdates(
     uint64_t version,
     media::MediaTimelineControlPointStatusPtr status) {
-  auto activity = debug_.RegisterOngoingActivity();
+  auto activity = debug_->RegisterOngoingActivity();
 
   if (status && status->end_of_stream) {
     for (auto& listener : speech_listeners_.ptrs()) {

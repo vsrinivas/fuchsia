@@ -5,6 +5,7 @@
 #include "peridot/bin/suggestion_engine/query_processor.h"
 
 #include "lib/fsl/tasks/message_loop.h"
+#include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
 namespace modular {
@@ -61,7 +62,7 @@ void QueryProcessor::AddProposal(const std::string& source_url,
     dirty_ = true;
   }
 
-  auto suggestion = engine_->CreateSuggestionPrototype(
+  auto suggestion = CreateSuggestionPrototype(
       &engine_->query_prototypes_, source_url, std::move(proposal));
   engine_->query_suggestions_.AddSuggestion(std::move(suggestion));
   dirty_ = true;
@@ -113,7 +114,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
   NotifyOfResults();
 
   // Update the suggestion engine debug interface
-  engine_->debug_.OnAskStart(input_.text, &engine_->query_suggestions_);
+  engine_->debug_->OnAskStart(input_.text, &engine_->query_suggestions_);
 
   FXL_VLOG(1) << "Handler " << handler_url << " complete";
 
@@ -127,7 +128,7 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
 void QueryProcessor::EndRequest() {
   FXL_DCHECK(!request_ended_);
 
-  engine_->debug_.OnAskStart(input_.text, &engine_->query_suggestions_);
+  engine_->debug_->OnAskStart(input_.text, &engine_->query_suggestions_);
   listener_->OnQueryComplete();
 
   if (!has_media_response_) {
