@@ -26,7 +26,7 @@ class BatchDownload {
  public:
   BatchDownload(storage::PageStorage* storage,
                 encryption::EncryptionService* encryption_service,
-                fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                fidl::VectorPtr<cloud_provider::Commit> commits,
                 fidl::VectorPtr<uint8_t> position_token,
                 fxl::Closure on_done,
                 fxl::Closure on_error);
@@ -40,7 +40,7 @@ class BatchDownload {
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
-  fidl::VectorPtr<cloud_provider::CommitPtr> commits_;
+  fidl::VectorPtr<cloud_provider::Commit> commits_;
   fidl::VectorPtr<uint8_t> position_token_;
   fxl::Closure on_done_;
   fxl::Closure on_error_;

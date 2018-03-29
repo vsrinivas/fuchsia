@@ -16,7 +16,7 @@ namespace cloud_sync {
 
 BatchDownload::BatchDownload(storage::PageStorage* storage,
                              encryption::EncryptionService* encryption_service,
-                             fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                             fidl::VectorPtr<cloud_provider::Commit> commits,
                              fidl::VectorPtr<uint8_t> position_token,
                              fxl::Closure on_done,
                              fxl::Closure on_error)
@@ -45,8 +45,8 @@ void BatchDownload::Start() {
       storage::PageStorage::CommitIdAndBytes>::Create(encryption::Status::OK);
   for (auto& commit : *commits_) {
     encryption_service_->DecryptCommit(
-        convert::ToString(commit->data),
-        [id = convert::ToString(commit->id), callback = waiter->NewCallback()](
+        convert::ToString(commit.data),
+        [id = convert::ToString(commit.id), callback = waiter->NewCallback()](
             encryption::Status status, std::string content) mutable {
           callback(status, storage::PageStorage::CommitIdAndBytes(
                                std::move(id), std::move(content)));

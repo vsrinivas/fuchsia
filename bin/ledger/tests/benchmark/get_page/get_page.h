@@ -37,7 +37,7 @@ class GetPageBenchmark {
   const bool reuse_;
   component::ApplicationControllerPtr application_controller_;
   ledger::LedgerPtr ledger_;
-  fidl::VectorPtr<uint8_t> page_id_;
+  ledger::PageIdPtr page_id_;
   std::vector<ledger::PagePtr> pages_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);

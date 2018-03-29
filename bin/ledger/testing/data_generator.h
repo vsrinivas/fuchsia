@@ -9,6 +9,8 @@
 #include <random>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
+
 #include "lib/fidl/cpp/vector.h"
 
 namespace test {
@@ -27,7 +29,7 @@ class DataGenerator {
   fidl::VectorPtr<uint8_t> MakeKey(int i, size_t size);
 
   // Builds a random value that can be used as a page id.
-  fidl::VectorPtr<uint8_t> MakePageId();
+  ledger::PageId MakePageId();
 
   // Builds a random value of the given length.
   fidl::VectorPtr<uint8_t> MakeValue(size_t size);

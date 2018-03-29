@@ -44,9 +44,9 @@ class SyncBenchmark : public ledger::PageWatcher {
   void Run();
 
   // ledger::PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+                OnChangeCallback callback) override;
 
  private:
   void RunSingleChange(size_t i);
@@ -67,7 +67,7 @@ class SyncBenchmark : public ledger::PageWatcher {
   files::ScopedTempDir beta_tmp_dir_;
   component::ApplicationControllerPtr alpha_controller_;
   component::ApplicationControllerPtr beta_controller_;
-  fidl::VectorPtr<uint8_t> page_id_;
+  ledger::PageId page_id_;
   ledger::PagePtr alpha_page_;
   ledger::PagePtr beta_page_;
 

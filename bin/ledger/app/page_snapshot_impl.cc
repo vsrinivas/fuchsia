@@ -27,13 +27,13 @@ namespace ledger {
 namespace {
 
 template <typename EntryType>
-fidl::StructPtr<EntryType> CreateEntry(const storage::Entry& entry) {
-  fidl::StructPtr<EntryType> entry_ptr = EntryType::New();
-  entry_ptr->key = convert::ToArray(entry.key);
-  entry_ptr->priority = entry.priority == storage::KeyPriority::EAGER
+EntryType CreateEntry(const storage::Entry& entry) {
+  EntryType result;
+  result.key = convert::ToArray(entry.key);
+  result.priority = entry.priority == storage::KeyPriority::EAGER
                             ? Priority::EAGER
                             : Priority::LAZY;
-  return entry_ptr;
+  return result;
 }
 
 // Returns the number of handles used by an entry of the given type. Specialized
@@ -52,33 +52,33 @@ size_t HandleUsed<InlinedEntry>() {
 }
 
 // Computes the size of an Entry.
-size_t ComputeEntrySize(const EntryPtr& entry) {
-  return fidl_serialization::GetEntrySize(entry->key->size());
+size_t ComputeEntrySize(const Entry& entry) {
+  return fidl_serialization::GetEntrySize(entry.key->size());
 }
 
 // Computes the size of an InlinedEntry.
-size_t ComputeEntrySize(const InlinedEntryPtr& entry) {
+size_t ComputeEntrySize(const InlinedEntry& entry) {
   return fidl_serialization::GetInlinedEntrySize(entry);
 }
 
 // Fills an Entry from the content of object.
 storage::Status FillSingleEntry(const storage::Object& object,
-                                EntryPtr* entry) {
+                                Entry* entry) {
   fsl::SizedVmo vmo;
   storage::Status status = object.GetVmo(&vmo);
   if (status != storage::Status::OK) {
     return status;
   }
-  (*entry)->value = fidl::MakeOptional(std::move(vmo).ToTransport());
+  entry->value = fidl::MakeOptional(std::move(vmo).ToTransport());
   return storage::Status::OK;
 }
 
 // Fills an InlinedEntry from the content of object.
 storage::Status FillSingleEntry(const storage::Object& object,
-                                InlinedEntryPtr* entry) {
+                                InlinedEntry* entry) {
   fxl::StringView data;
   storage::Status status = object.GetData(&data);
-  (*entry)->value = convert::ToArray(data);
+  entry->value = convert::ToArray(data);
   return status;
 }
 
@@ -94,7 +94,7 @@ void FillEntries(
     fidl::VectorPtr<uint8_t> key_start,
     fidl::VectorPtr<uint8_t> token,
     const std::function<void(Status,
-                             fidl::VectorPtr<fidl::StructPtr<EntryType>>,
+                             fidl::VectorPtr<EntryType>,
                              fidl::VectorPtr<uint8_t>)>& callback) {
   // |token| represents the first key to be returned in the list of entries.
   // Initially, all entries starting from |token| are requested from storage.
@@ -110,7 +110,7 @@ void FillEntries(
 
   // Represents information shared between on_next and on_done callbacks.
   struct Context {
-    fidl::VectorPtr<fidl::StructPtr<EntryType>> entries;
+    fidl::VectorPtr<EntryType> entries;
     // The serialization size of all entries.
     size_t size = fidl_serialization::kArrayHeaderSize;
     // The number of handles used.
@@ -185,14 +185,14 @@ void FillEntries(
               size_t real_size = 0;
               size_t i = 0;
               for (; i < results.size(); i++) {
-                fidl::StructPtr<EntryType>& entry_ptr = context->entries->at(i);
+                EntryType& entry = context->entries->at(i);
                 size_t next_token_size =
                     i + 1 >= results.size()
                         ? 0
                         : fidl_serialization::GetByteArraySize(
-                              context->entries->at(i + 1)->key->size());
+                              context->entries->at(i + 1).key->size());
                 if (!results[i]) {
-                  size_t entry_size = ComputeEntrySize(entry_ptr);
+                  size_t entry_size = ComputeEntrySize(entry);
                   if (real_size + entry_size + next_token_size >
                       fidl_serialization::kMaxInlineDataSize) {
                     break;
@@ -207,8 +207,8 @@ void FillEntries(
                 }
 
                 storage::Status read_status =
-                    FillSingleEntry(*results[i], &entry_ptr);
-                size_t entry_size = ComputeEntrySize(entry_ptr);
+                    FillSingleEntry(*results[i], &entry);
+                size_t entry_size = ComputeEntrySize(entry);
                 if (real_size + entry_size + next_token_size >
                     fidl_serialization::kMaxInlineDataSize) {
                   break;
@@ -227,7 +227,7 @@ void FillEntries(
                 }
                 // We had to bail out early because the result would be too big
                 // otherwise.
-                context->next_token = std::move(context->entries->at(i)->key);
+                context->next_token = std::move(context->entries->at(i).key);
                 context->entries.resize(i);
               }
               if (!context->next_token->empty()) {
@@ -339,7 +339,7 @@ void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, std::move(data).ToTransport());
+              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
             });
       });
 }
@@ -394,7 +394,7 @@ void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, std::move(data).ToTransport());
+              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
             });
       });
 }
@@ -421,7 +421,7 @@ void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, std::move(data).ToTransport());
+              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
             });
       });
 }

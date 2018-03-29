@@ -14,6 +14,7 @@
 #include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
 
@@ -21,13 +22,8 @@ namespace ledger {
 
 namespace {
 
-void GenerateRandomId(fidl::VectorPtr<uint8_t>* id) {
-  id->resize(kPageIdSize);
-  fxl::RandBytes((*id)->data(), kPageIdSize);
-}
-
 void GenerateRandomId(::fidl::Array<uint8_t, kPageIdSize>* id) {
-  fxl::RandBytes(id.mutable_data(), kPageIdSize);
+  fxl::RandBytes(id->mutable_data(), kPageIdSize);
 }
 
 }  // namespace
@@ -60,7 +56,7 @@ void LedgerImpl::GetPage(PageIdPtr id,
 void LedgerImpl::DeletePage(PageId id, DeletePageCallback callback) {
   TRACE_DURATION("ledger", "ledger_delete_page");
 
-  callback(delegate_->DeletePage(id));
+  callback(delegate_->DeletePage(id.id));
 }
 
 // SetConflictResolverFactory(ConflictResolverFactory? factory)

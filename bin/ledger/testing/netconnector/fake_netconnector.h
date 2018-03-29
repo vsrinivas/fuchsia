@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 #define PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_FAKE_NETCONNECTOR_H_
 
+#include <fuchsia/cpp/netconnector.h>
+
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fxl/macros.h"
-#include "lib/netconnector/fidl/netconnector.fidl.h"
 
 namespace ledger {
 
@@ -23,7 +24,8 @@ class FakeNetConnector : public netconnector::NetConnector {
     // for more details.
     virtual void GetDevicesNames(
         uint64_t last_version,
-        std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback) = 0;
+        std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>
+            callback) = 0;
 
     // Connects to the ServiceProvider from host |device_name|.
     virtual void ConnectToServiceProvider(
@@ -47,9 +49,8 @@ class FakeNetConnector : public netconnector::NetConnector {
       fidl::StringPtr device_name,
       fidl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
-  void GetKnownDeviceNames(
-      uint64_t version_last_seen,
-      const GetKnownDeviceNamesCallback& callback) override;
+  void GetKnownDeviceNames(uint64_t version_last_seen,
+                           GetKnownDeviceNamesCallback callback) override;
 
   component::ServiceProviderImpl service_provider_impl_;
   Delegate* const delegate_;

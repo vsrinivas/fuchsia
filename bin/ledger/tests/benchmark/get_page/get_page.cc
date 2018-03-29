@@ -9,6 +9,8 @@
 
 #include <iostream>
 
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -46,7 +48,7 @@ void GetPageBenchmark::Run() {
       fsl::MessageLoop::GetCurrent(), application_context_.get(),
       &application_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
   QuitOnError(status, "GetLedger");
-  page_id_ = generator_.MakePageId();
+  page_id_ = fidl::MakeOptional(generator_.MakePageId());
   RunSingle(requests_count_);
 }
 
@@ -58,7 +60,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
   TRACE_ASYNC_BEGIN("benchmark", "get page", requests_count_ - request_number);
   ledger::PagePtr page;
-  ledger_->GetPage(reuse_ ? page_id_.Clone() : nullptr, page.NewRequest(),
+  ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
                    [this, request_number](ledger::Status status) {
                      if (benchmark::QuitOnError(status, "Ledger::GetPage")) {
                        return;

@@ -76,7 +76,7 @@ class PageDelegate {
   void Delete(fidl::VectorPtr<uint8_t> key, Page::DeleteCallback callback);
 
   void CreateReference(std::unique_ptr<storage::DataSource> data,
-                       std::function<void(Status, Reference)> callback);
+                       std::function<void(Status, ReferencePtr)> callback);
 
   void StartTransaction(Page::StartTransactionCallback callback);
 

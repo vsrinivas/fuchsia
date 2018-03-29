@@ -46,9 +46,9 @@ class Watcher : public ledger::PageWatcher {
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override {
+                OnChangeCallback callback) override {
     FXL_DCHECK(page_change);
     changes_seen++;
     last_result_state_ = result_state;
@@ -557,9 +557,9 @@ class WaitingWatcher : public ledger::PageWatcher {
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override {
+                OnChangeCallback callback) override {
     FXL_DCHECK(page_change);
     FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";

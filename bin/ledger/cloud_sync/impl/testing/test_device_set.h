@@ -29,17 +29,17 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
  private:
   // cloud_provider::DeviceSet:
   void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
-                        const CheckFingerprintCallback& callback) override;
+                        CheckFingerprintCallback callback) override;
 
   void SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
-                      const SetFingerprintCallback& callback) override;
+                      SetFingerprintCallback callback) override;
 
   void SetWatcher(
       fidl::VectorPtr<uint8_t> fingerprint,
       fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      SetWatcherCallback callback) override;
 
-  void Erase(const EraseCallback& callback) override;
+  void Erase(EraseCallback callback) override;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestDeviceSet);
 };

@@ -11,6 +11,7 @@
 #include <leveldb/db.h>
 #include <rapidjson/document.h>
 
+#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/strings/string_view.h"
 
@@ -34,6 +35,9 @@ class ExtendedStringView : public fxl::StringView {
   ExtendedStringView(const fidl::VectorPtr<uint8_t>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array->data()),
                         array->size()) {}
+  template <size_t N>
+  constexpr ExtendedStringView(const fidl::Array<uint8_t, N>& array)  // NOLINT
+      : fxl::StringView(reinterpret_cast<const char*>(array.data()), N) {}
   ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
       : fxl::StringView(slice.data(), slice.size()) {}
   ExtendedStringView(const std::string& string)  // NOLINT
@@ -81,6 +85,13 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) {
 
 // Returns the fidl::VectorPtr representation of the given value.
 fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
+
+// Returns the fidl::VectorPtr representation of the given value.
+template<size_t N>
+void ToArray(ExtendedStringView value, fidl::Array<uint8_t, N>* out) {
+  ZX_ASSERT(value.size() == N);
+  memcpy(out->mutable_data(), value.data(), N);
+}
 
 // Returns the std::string representation of the given value.
 std::string ToString(ExtendedStringView value);

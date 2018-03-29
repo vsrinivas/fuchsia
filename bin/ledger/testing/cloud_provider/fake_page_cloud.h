@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
 
-#include "garnet/lib/callback/auto_cleanable.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -28,19 +28,19 @@ class FakePageCloud : public cloud_provider::PageCloud {
   bool MustReturnError();
 
   // cloud_provider::PageCloud:
-  void AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
-                  const AddCommitsCallback& callback) override;
+  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                  AddCommitsCallback callback) override;
   void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
-                  const GetCommitsCallback& callback) override;
+                  GetCommitsCallback callback) override;
   void AddObject(fidl::VectorPtr<uint8_t> id,
-                 fsl::SizedVmoTransportPtr data,
-                 const AddObjectCallback& callback) override;
+                 fsl::SizedVmoTransport data,
+                 AddObjectCallback callback) override;
   void GetObject(fidl::VectorPtr<uint8_t> id,
-                 const GetObjectCallback& callback) override;
+                 GetObjectCallback callback) override;
   void SetWatcher(
       fidl::VectorPtr<uint8_t> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      SetWatcherCallback callback) override;
 
   InjectNetworkError inject_network_error_;
   size_t remaining_errors_to_inject_;
@@ -48,7 +48,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fxl::Closure on_empty_;
 
-  fidl::VectorPtr<cloud_provider::CommitPtr> commits_;
+  fidl::VectorPtr<cloud_provider::Commit> commits_;
   std::map<std::string, std::string> objects_;
 
   // Watchers set by the client.

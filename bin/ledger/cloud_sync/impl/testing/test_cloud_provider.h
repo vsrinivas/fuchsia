@@ -25,13 +25,13 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
  private:
   // cloud_provider::CloudProvider:
   void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
-                    const GetDeviceSetCallback& callback) override;
+                    GetDeviceSetCallback callback) override;
 
   void GetPageCloud(
       fidl::VectorPtr<uint8_t> app_id,
       fidl::VectorPtr<uint8_t> page_id,
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      const GetPageCloudCallback& callback) override;
+      GetPageCloudCallback callback) override;
 
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;

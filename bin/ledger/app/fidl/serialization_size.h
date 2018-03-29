@@ -17,11 +17,17 @@ namespace fidl_serialization {
 constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 constexpr size_t kMaxMessageHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
 
-const size_t kArrayHeaderSize = sizeof(fidl::internal::Array_Data<char>);
+// FIXME(LE-449): Remove dependency on FIDL internal structure layout.
+// These constants and the associated computations are no longer valid in FIDL2.
+const size_t kArrayHeaderSize = 8; //sizeof(fidl::internal::Array_Data<char>);
 const size_t kPointerSize = sizeof(uint64_t);
 const size_t kEnumSize = sizeof(int32_t);
 const size_t kHandleSize = sizeof(int32_t);
-const size_t kStructHeaderSize = sizeof(fidl::internal::StructHeader);
+const size_t kStructHeaderSize = 8; //sizeof(fidl::internal::StructHeader);
+
+inline size_t Align(size_t n) {
+  return (n + 7) & ~7;
+}
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
 // arrays.
@@ -35,7 +41,7 @@ size_t GetByteArraySize(size_t array_length);
 size_t GetEntrySize(size_t key_length);
 
 // Returns the fidl size of an InlinedEntry.
-size_t GetInlinedEntrySize(const InlinedEntryPtr& entry);
+size_t GetInlinedEntrySize(const InlinedEntry& entry);
 
 }  // namespace fidl_serialization
 }  //  namespace ledger

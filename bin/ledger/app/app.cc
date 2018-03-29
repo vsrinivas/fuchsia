@@ -57,7 +57,7 @@ fxl::AutoCall<fxl::Closure> SetupCobalt(
 // clients to individual Ledger instances. It should not however hold long-lived
 // objects shared between Ledger instances, as we need to be able to put them in
 // separate processes when the app becomes multi-instance.
-class App : public LedgerController {
+class App : public ledger_internal::LedgerController {
  public:
   explicit App(AppParams app_params)
       : app_params_(app_params),
@@ -80,8 +80,8 @@ class App : public LedgerController {
         std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get());
 
     application_context_->outgoing_services()
-        ->AddService<LedgerRepositoryFactory>(
-            [this](fidl::InterfaceRequest<LedgerRepositoryFactory> request) {
+        ->AddService<ledger_internal::LedgerRepositoryFactory>(
+            [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request) {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });
@@ -106,7 +106,7 @@ class App : public LedgerController {
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  fidl::BindingSet<LedgerRepositoryFactory> factory_bindings_;
+  fidl::BindingSet<ledger_internal::LedgerRepositoryFactory> factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);

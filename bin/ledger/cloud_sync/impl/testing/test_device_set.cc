@@ -12,13 +12,13 @@ TestDeviceSet::TestDeviceSet() {}
 TestDeviceSet::~TestDeviceSet() {}
 
 void TestDeviceSet::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
-                                     const CheckFingerprintCallback& callback) {
+                                     CheckFingerprintCallback callback) {
   checked_fingerprint = convert::ToString(fingerprint);
   callback(status_to_return);
 }
 
 void TestDeviceSet::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
-                                   const SetFingerprintCallback& callback) {
+                                   SetFingerprintCallback callback) {
   set_fingerprint = convert::ToString(fingerprint);
   callback(status_to_return);
 }
@@ -26,7 +26,7 @@ void TestDeviceSet::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
 void TestDeviceSet::SetWatcher(
     fidl::VectorPtr<uint8_t> fingerprint,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-    const SetWatcherCallback& callback) {
+    SetWatcherCallback callback) {
   set_watcher_calls++;
   watched_fingerprint = convert::ToString(fingerprint);
   set_watcher = watcher.Bind();
@@ -36,7 +36,7 @@ void TestDeviceSet::SetWatcher(
   callback(set_watcher_status_to_return);
 }
 
-void TestDeviceSet::Erase(const EraseCallback& callback) {
+void TestDeviceSet::Erase(EraseCallback callback) {
   callback(status_to_return);
 }
 

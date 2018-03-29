@@ -48,9 +48,9 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   void Run();
 
   // ledger::PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+                OnChangeCallback callback) override;
 
  private:
   void Start(int step);
@@ -65,7 +65,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
   const int device_count_;
   std::string server_id_;
   std::vector<DeviceContext> devices_;
-  fidl::VectorPtr<uint8_t> page_id_;
+  ledger::PageId page_id_;
   std::multiset<std::string> remaining_keys_;
   int current_step_ = -1;
 

@@ -16,7 +16,7 @@ TestCloudProvider::~TestCloudProvider() {}
 
 void TestCloudProvider::GetDeviceSet(
     fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
-    const GetDeviceSetCallback& callback) {
+    GetDeviceSetCallback callback) {
   device_set_binding_.Bind(std::move(request));
   callback(cloud_provider::Status::OK);
 }
@@ -25,7 +25,7 @@ void TestCloudProvider::GetPageCloud(
     fidl::VectorPtr<uint8_t> /*app_id*/,
     fidl::VectorPtr<uint8_t> /*page_id*/,
     fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
-    const GetPageCloudCallback& /*callback*/) {
+    GetPageCloudCallback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 

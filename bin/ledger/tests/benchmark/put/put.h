@@ -44,9 +44,9 @@ class PutBenchmark : public ledger::PageWatcher {
   void Run();
 
   // ledger::PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override;
+                OnChangeCallback callback) override;
 
  private:
   // Initilizes the keys to be used in the benchmark. In case the benchmark is

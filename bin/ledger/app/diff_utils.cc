@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "garnet/lib/callback/waiter.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
@@ -90,9 +91,8 @@ void ComputePageChange(
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp();
-  context->page_change->changed_entries = fidl::VectorPtr<EntryPtr>::New(0);
-  context->page_change->deleted_keys =
-      fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+  context->page_change->changed_entries.resize(0);
+  context->page_change->deleted_keys.resize(0);
 
   if (min_key < prefix_key) {
     min_key = prefix_key;
@@ -128,9 +128,9 @@ void ComputePageChange(
       return true;
     }
 
-    EntryPtr entry = Entry::New();
-    entry->key = convert::ToArray(change.entry.key);
-    entry->priority = change.entry.priority == storage::KeyPriority::EAGER
+    Entry entry;
+    entry.key = convert::ToArray(change.entry.key);
+    entry.priority = change.entry.priority == storage::KeyPriority::EAGER
                           ? Priority::EAGER
                           : Priority::LAZY;
     context->page_change->changed_entries.push_back(std::move(entry));
@@ -180,8 +180,8 @@ void ComputePageChange(
       FXL_DCHECK(results.size() ==
                  context->page_change->changed_entries->size());
       for (size_t i = 0; i < results.size(); i++) {
-        context->page_change->changed_entries->at(i)->value =
-            std::move(results[i]).ToTransport();
+        context->page_change->changed_entries->at(i).value =
+            fidl::MakeOptional(std::move(results[i]).ToTransport());
       }
       callback(Status::OK, std::make_pair(std::move(context->page_change),
                                           std::move(context->next_token)));
@@ -201,11 +201,11 @@ void ComputeThreeWayDiff(
     std::string min_key,
     DiffType diff_type,
     std::function<void(Status,
-                       std::pair<fidl::VectorPtr<DiffEntryPtr>, std::string>)>
+                       std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
         callback) {
   struct Context {
     // The array to be returned through the callback.
-    fidl::VectorPtr<DiffEntryPtr> changes;
+    fidl::VectorPtr<DiffEntry> changes;
     // The serialization size of all entries.
     size_t fidl_size = fidl_serialization::kArrayHeaderSize;
     // The number of handles.
@@ -257,13 +257,13 @@ void ComputeThreeWayDiff(
     context->fidl_size += diffentry_size;
     context->handles_count += number_of_values;
 
-    DiffEntryPtr diff_entry = DiffEntry::New();
-    diff_entry->key = convert::ToArray(key);
-    diff_entry->base =
+    DiffEntry diff_entry;
+    convert::ToArray(key, &diff_entry.key);
+    diff_entry.base =
         GetValueFromEntry(storage, change.base, waiter->NewCallback());
-    diff_entry->left =
+    diff_entry.left =
         GetValueFromEntry(storage, change.left, waiter->NewCallback());
-    diff_entry->right =
+    diff_entry.right =
         GetValueFromEntry(storage, change.right, waiter->NewCallback());
     context->changes.push_back(std::move(diff_entry));
     return true;
@@ -302,16 +302,16 @@ void ComputeThreeWayDiff(
       FXL_DCHECK(results.size() == 3 * context->changes->size());
       for (size_t i = 0; i < context->changes->size(); i++) {
         if (results[3 * i]) {
-          context->changes->at(i)->base->value =
-              std::move(results[3 * i]).ToTransport();
+          context->changes->at(i).base->value =
+              fidl::MakeOptional(std::move(results[3 * i]).ToTransport());
         }
         if (results[3 * i + 1]) {
-          context->changes->at(i)->left->value =
-              std::move(results[3 * i + 1]).ToTransport();
+          context->changes->at(i).left->value =
+              fidl::MakeOptional(std::move(results[3 * i + 1]).ToTransport());
         }
         if (results[3 * i + 2]) {
-          context->changes->at(i)->right->value =
-              std::move(results[3 * i + 2]).ToTransport();
+          context->changes->at(i).right->value =
+              fidl::MakeOptional(std::move(results[3 * i + 2]).ToTransport());
         }
       }
       callback(Status::OK, std::make_pair(std::move(context->changes),

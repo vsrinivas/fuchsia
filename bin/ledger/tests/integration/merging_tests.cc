@@ -47,9 +47,9 @@ class Watcher : public ledger::PageWatcher {
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChangePtr page_change,
+  void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
-                const OnChangeCallback& callback) override {
+                OnChangeCallback callback) override {
     FXL_DCHECK(page_change);
     FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
@@ -319,7 +319,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
  private:
   // ConflictResolverFactory:
   void GetPolicy(fidl::VectorPtr<uint8_t> /*page_id*/,
-                 const GetPolicyCallback& callback) override {
+                 GetPolicyCallback callback) override {
     get_policy_calls++;
     fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
         [this, callback] {

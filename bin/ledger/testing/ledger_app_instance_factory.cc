@@ -5,6 +5,7 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 #include <zx/time.h>
+#include <lib/fidl/cpp/clone.h>
 
 #include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
@@ -23,7 +24,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
 
 LedgerAppInstanceFactory::LedgerAppInstance::~LedgerAppInstance() {}
 
-ledger::LedgerRepositoryFactory*
+ledger_internal::LedgerRepositoryFactory*
 LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {
   return ledger_repository_factory_.get();
 }
@@ -45,7 +46,7 @@ ledger::LedgerPtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedger() {
 
   ledger_internal::LedgerRepositoryPtr repository = GetTestLedgerRepository();
   ledger::Status status;
-  repository->GetLedger(test_ledger_name_.Clone(), ledger.NewRequest(),
+  repository->GetLedger(fidl::Clone(test_ledger_name_), ledger.NewRequest(),
                         [&status](ledger::Status s) { status = s; });
   repository.WaitForResponse();
   EXPECT_EQ(ledger::Status::OK, status);
@@ -65,12 +66,12 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
 }
 
 ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const fidl::VectorPtr<uint8_t>& page_id,
+    const ledger::PageIdPtr& page_id,
     ledger::Status expected_status) {
   ledger::PagePtr page_ptr;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->GetPage(page_id.Clone(), page_ptr.NewRequest(),
+  ledger->GetPage(fidl::Clone(page_id), page_ptr.NewRequest(),
                   [&status](ledger::Status s) { status = s; });
   ledger.WaitForResponse();
   EXPECT_EQ(expected_status, status);
@@ -79,12 +80,12 @@ ledger::PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
 }
 
 void LedgerAppInstanceFactory::LedgerAppInstance::DeletePage(
-    const fidl::VectorPtr<uint8_t>& page_id,
+    const ledger::PageId& page_id,
     ledger::Status expected_status) {
   fidl::InterfaceHandle<ledger::Page> page;
   ledger::Status status;
   ledger::LedgerPtr ledger = GetTestLedger();
-  ledger->DeletePage(page_id.Clone(),
+  ledger->DeletePage(fidl::Clone(page_id),
                      [&status](ledger::Status s) { status = s; });
   ledger.WaitForResponse();
   EXPECT_EQ(expected_status, status);

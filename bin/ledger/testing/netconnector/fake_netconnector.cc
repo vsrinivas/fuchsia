@@ -18,8 +18,9 @@ void FakeNetConnector::RegisterServiceProvider(
     fidl::InterfaceHandle<component::ServiceProvider> service_provider) {
   component::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
-      fxl::MakeCopyable([name, service_provider_ptr = std::move(
-                                   service_provider_ptr)](zx::channel channel) {
+      fxl::MakeCopyable([
+        name, service_provider_ptr = std::move(service_provider_ptr)
+      ](zx::channel channel) {
         service_provider_ptr->ConnectToService(name, std::move(channel));
       }),
       name);
@@ -33,7 +34,7 @@ void FakeNetConnector::GetDeviceServiceProvider(
 
 void FakeNetConnector::GetKnownDeviceNames(
     uint64_t version_last_seen,
-    const GetKnownDeviceNamesCallback& callback) {
+    GetKnownDeviceNamesCallback callback) {
   delegate_->GetDevicesNames(version_last_seen, callback);
 }
 

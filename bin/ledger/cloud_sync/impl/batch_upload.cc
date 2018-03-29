@@ -257,7 +257,7 @@ void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
   auto waiter =
-      callback::Waiter<encryption::Status, cloud_provider::CommitPtr>::Create(
+      callback::Waiter<encryption::Status, cloud_provider::Commit>::Create(
           encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
@@ -266,9 +266,9 @@ void BatchUpload::UploadCommits() {
         [id, callback = waiter->NewCallback()](
             encryption::Status status,
             std::string encrypted_storage_bytes) mutable {
-          auto commit = cloud_provider::Commit::New();
-          commit->id = convert::ToArray(id);
-          commit->data = convert::ToArray(encrypted_storage_bytes);
+          cloud_provider::Commit commit;
+          commit.id = convert::ToArray(id);
+          commit.data = convert::ToArray(encrypted_storage_bytes);
           callback(status, std::move(commit));
         });
     ids.push_back(std::move(id));
@@ -277,13 +277,13 @@ void BatchUpload::UploadCommits() {
       weak_ptr_factory_.GetWeakPtr(),
       [this, ids = std::move(ids)](
           encryption::Status status,
-          std::vector<cloud_provider::CommitPtr> commits) mutable {
+          std::vector<cloud_provider::Commit> commits) mutable {
         if (status != encryption::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
           return;
         }
-        fidl::VectorPtr<cloud_provider::CommitPtr> commit_array;
+        fidl::VectorPtr<cloud_provider::Commit> commit_array;
         for (auto& commit : commits) {
           commit_array.push_back(std::move(commit));
         }

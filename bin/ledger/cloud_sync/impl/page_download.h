@@ -116,7 +116,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // The current batch of remote commits being downloaded.
   std::unique_ptr<BatchDownload> batch_download_;
   // Pending remote commits to download.
-  fidl::VectorPtr<cloud_provider::CommitPtr> commits_to_download_;
+  fidl::VectorPtr<cloud_provider::Commit> commits_to_download_;
   fidl::VectorPtr<uint8_t> position_token_;
   // Container for in-progress datasource.
   callback::ManagedContainer managed_container_;

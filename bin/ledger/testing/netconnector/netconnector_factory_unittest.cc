@@ -6,12 +6,13 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/netconnector.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
-#include "lib/netconnector/fidl/netconnector.fidl.h"
 #include "peridot/bin/ledger/environment/environment.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -41,14 +42,14 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::NetConnector::kInitialKnownDeviceNames,
+      netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_NE(netconnector::NetConnector::kInitialKnownDeviceNames, version);
+  EXPECT_NE(netconnector::kInitialKnownDeviceNames, version);
   ASSERT_GE(1u, host_list->size());
   EXPECT_EQ(1u, host_list->size());
   EXPECT_EQ("host1", host_list->at(0));
@@ -71,7 +72,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   uint64_t version = 0;
   fidl::VectorPtr<fidl::StringPtr> host_list;
   netconnector1->GetKnownDeviceNames(
-      netconnector::NetConnector::kInitialKnownDeviceNames,
+      netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &version,
                         &host_list));
 
@@ -100,7 +101,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
 
   called = false;
   netconnector2->GetKnownDeviceNames(
-      netconnector::NetConnector::kInitialKnownDeviceNames,
+      netconnector::kInitialKnownDeviceNames,
       callback::Capture(callback::SetWhenCalled(&called), &new_version,
                         &host_list));
 

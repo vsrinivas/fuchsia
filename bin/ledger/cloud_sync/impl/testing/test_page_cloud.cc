@@ -10,13 +10,13 @@
 
 namespace cloud_sync {
 
-cloud_provider::CommitPtr MakeTestCommit(
+cloud_provider::Commit MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
     const std::string& id,
     const std::string& data) {
-  auto commit = cloud_provider::Commit::New();
-  commit->id = convert::ToArray(id);
-  commit->data =
+  cloud_provider::Commit commit;
+  commit.id = convert::ToArray(id);
+  commit.data =
       convert::ToArray(encryption_service->EncryptCommitSynchronous(data));
   return commit;
 }
@@ -34,28 +34,28 @@ void TestPageCloud::RunPendingCallbacks() {
 }
 
 // cloud_provider::PageCloud:
-void TestPageCloud::AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
-                               const AddCommitsCallback& callback) {
+void TestPageCloud::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                               AddCommitsCallback callback) {
   add_commits_calls++;
   for (auto& commit : *commits) {
     ReceivedCommit received_commit;
-    received_commit.id = convert::ToString(commit->id);
-    received_commit.data = convert::ToString(commit->data);
+    received_commit.id = convert::ToString(commit.id);
+    received_commit.data = convert::ToString(commit.data);
     received_commits.push_back(std::move(received_commit));
   }
   callback(commit_status_to_return);
 }
 
 void TestPageCloud::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,
-                               const GetCommitsCallback& callback) {
+                               GetCommitsCallback callback) {
   get_commits_calls++;
   callback(status_to_return, std::move(commits_to_return),
            std::move(position_token_to_return));
 }
 
 void TestPageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
-                              fsl::SizedVmoTransportPtr data,
-                              const AddObjectCallback& callback) {
+                              fsl::SizedVmoTransport data,
+                              AddObjectCallback callback) {
   add_object_calls++;
   std::string received_data;
   if (!fsl::StringFromVmo(data, &received_data)) {
@@ -78,7 +78,7 @@ void TestPageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
 }
 
 void TestPageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
-                              const GetObjectCallback& callback) {
+                              GetObjectCallback callback) {
   get_object_calls++;
   if (status_to_return != cloud_provider::Status::OK) {
     callback(status_to_return, 0, zx::socket());
@@ -98,7 +98,7 @@ void TestPageCloud::GetObject(fidl::VectorPtr<uint8_t> id,
 void TestPageCloud::SetWatcher(
     fidl::VectorPtr<uint8_t> min_position_token,
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-    const SetWatcherCallback& callback) {
+    SetWatcherCallback callback) {
   set_watcher_position_tokens.push_back(convert::ToString(min_position_token));
   set_watcher = watcher.Bind();
   callback(status_to_return);

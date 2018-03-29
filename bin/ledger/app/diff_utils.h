@@ -57,7 +57,7 @@ void ComputeThreeWayDiff(
     std::string min_key,
     DiffType diff_type,
     std::function<void(Status,
-                       std::pair<fidl::VectorPtr<DiffEntryPtr>, std::string>)>
+                       std::pair<fidl::VectorPtr<DiffEntry>, std::string>)>
         callback);
 
 }  // namespace diff_utils

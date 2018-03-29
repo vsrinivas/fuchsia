@@ -93,7 +93,7 @@ void PageDownload::StartDownload() {
             ->GetCommits(
                 std::move(position_token),
                 [this](cloud_provider::Status cloud_status,
-                       fidl::VectorPtr<cloud_provider::CommitPtr> commits,
+                       fidl::VectorPtr<cloud_provider::Commit> commits,
                        fidl::VectorPtr<uint8_t> position_token) {
                   if (cloud_status != cloud_provider::Status::OK) {
                     // Fetching the remote commits failed, schedule a retry.

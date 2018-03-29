@@ -10,6 +10,8 @@
 #include <iostream>
 
 #include <fuchsia/cpp/cloud_provider.h>
+
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
@@ -100,12 +102,12 @@ void SyncBenchmark::Run() {
                       std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError(status, "beta ledger");
 
-  fidl::VectorPtr<uint8_t> id;
+  ledger::PageId id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &alpha, nullptr, &alpha_page_, &id);
   QuitOnError(status, "alpha page initialization");
-  page_id_ = id.Clone();
-  beta->GetPage(std::move(id), beta_page_.NewRequest(),
+  page_id_ = id;
+  beta->GetPage(fidl::MakeOptional(std::move(id)), beta_page_.NewRequest(),
                 benchmark::QuitOnErrorCallback("GetPage"));
 
   ledger::PageSnapshotPtr snapshot;
@@ -119,13 +121,13 @@ void SyncBenchmark::Run() {
                           });
 }
 
-void SyncBenchmark::OnChange(ledger::PageChangePtr page_change,
+void SyncBenchmark::OnChange(ledger::PageChange page_change,
                              ledger::ResultState result_state,
-                             const OnChangeCallback& callback) {
-  FXL_DCHECK(page_change->changed_entries->size() > 0);
+                             OnChangeCallback callback) {
+  FXL_DCHECK(page_change.changed_entries->size() > 0);
   size_t i =
-      std::stoul(convert::ToString(page_change->changed_entries->at(0)->key));
-  changed_entries_received_ += page_change->changed_entries->size();
+      std::stoul(convert::ToString(page_change.changed_entries->at(0).key));
+  changed_entries_received_ += page_change.changed_entries->size();
   if (result_state == ledger::ResultState::COMPLETED ||
       result_state == ledger::ResultState::PARTIAL_STARTED) {
     TRACE_ASYNC_END("benchmark", "sync latency", i);

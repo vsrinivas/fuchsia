@@ -7,10 +7,11 @@
 #include <iostream>
 //#include <cmath>
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include <trace/event.h>
 
 #include "garnet/lib/callback/waiter.h"
-#include <fuchsia/cpp/cloud_provider.h>
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
@@ -75,7 +76,7 @@ BacklogBenchmark::BacklogBenchmark(
 void BacklogBenchmark::SyncStateChanged(
     ledger::SyncState download,
     ledger::SyncState upload,
-    const SyncStateChangedCallback& callback) {
+    SyncStateChangedCallback callback) {
   if (on_sync_state_changed_) {
     on_sync_state_changed_(download, upload);
   }
@@ -160,7 +161,7 @@ void BacklogBenchmark::ConnectReader() {
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);
   TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
-  reader_->GetPage(std::move(page_id_), reader_page_.NewRequest(),
+  reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
                    [this](ledger::Status status) {
                      if (benchmark::QuitOnError(status, "GetPage")) {
                        return;

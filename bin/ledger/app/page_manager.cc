@@ -91,25 +91,25 @@ void PageManager::BindPageSnapshot(
                      std::move(commit), std::move(key_prefix));
 }
 
-ReferencePtr PageManager::CreateReference(
+Reference PageManager::CreateReference(
     storage::ObjectIdentifier object_identifier) {
   uint64_t index;
   fxl::RandBytes(&index, sizeof(index));
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
-  ReferencePtr reference = Reference::New();
-  reference->opaque_id = convert::ToArray(storage::SerializeNumber(index));
+  Reference reference;
+  reference.opaque_id = convert::ToArray(storage::SerializeNumber(index));
   return reference;
 }
 
 Status PageManager::ResolveReference(
-    ReferencePtr reference,
+    Reference reference,
     storage::ObjectIdentifier* object_identifier) {
-  if (reference->opaque_id->size() != sizeof(uint64_t)) {
+  if (reference.opaque_id->size() != sizeof(uint64_t)) {
     return Status::REFERENCE_NOT_FOUND;
   }
   uint64_t index = storage::DeserializeNumber<uint64_t>(
-      convert::ToStringView(reference->opaque_id));
+      convert::ToStringView(reference.opaque_id));
   auto iterator = references_.find(index);
   if (iterator == references_.end()) {
     return Status::REFERENCE_NOT_FOUND;
@@ -142,10 +142,13 @@ void PageManager::OnSyncBacklogDownloaded() {
 void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
   page_storage_->GetHeadCommitIds(
       [callback](storage::Status status, std::vector<storage::CommitId> heads) {
-        fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
-            fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
-        for (const auto& head : heads)
-          result.push_back(convert::ToArray(head));
+        fidl::VectorPtr<ledger_internal::CommitId> result;
+        result.resize(0);
+        for (const auto& head : heads) {
+          ledger_internal::CommitId commit_id;
+          commit_id.id = convert::ToArray(head);
+          result.push_back(std::move(commit_id));
+        }
 
         callback(PageUtils::ConvertStatus(status, Status::INVALID_ARGUMENT),
                  std::move(result));
@@ -153,11 +156,11 @@ void PageManager::GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) {
 }
 
 void PageManager::GetSnapshot(
-    fidl::VectorPtr<uint8_t> commit_id,
+    ledger_internal::CommitId commit_id,
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     GetSnapshotCallback callback) {
   page_storage_->GetCommit(
-      convert::ToStringView(commit_id),
+      convert::ToStringView(commit_id.id),
       fxl::MakeCopyable(
           [this, snapshot_request = std::move(snapshot_request), callback](
               storage::Status status,
@@ -171,22 +174,23 @@ void PageManager::GetSnapshot(
           }));
 }
 
-void PageManager::GetCommit(fidl::VectorPtr<uint8_t> commit_id,
+void PageManager::GetCommit(ledger_internal::CommitId commit_id,
                             GetCommitCallback callback) {
   page_storage_->GetCommit(
-      convert::ToStringView(commit_id),
+      convert::ToStringView(commit_id.id),
       fxl::MakeCopyable(
           [callback = std::move(callback)](
               storage::Status status,
               std::unique_ptr<const storage::Commit> commit) mutable {
-            ledger::CommitPtr commit_struct = NULL;
+            ledger_internal::CommitPtr commit_struct = NULL;
             if (status == storage::Status::OK) {
-              commit_struct = ledger::Commit::New();
-              commit_struct->commit_id = convert::ToArray(commit->GetId());
-              commit_struct->parents_ids =
-                  fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+              commit_struct = ledger_internal::Commit::New();
+              commit_struct->commit_id.id = convert::ToArray(commit->GetId());
+              commit_struct->parents_ids.resize(0);
               for (storage::CommitIdView parent : commit->GetParentIds()) {
-                commit_struct->parents_ids.push_back(convert::ToArray(parent));
+                ledger_internal::CommitId id;
+                id.id = convert::ToArray(parent);
+                commit_struct->parents_ids.push_back(std::move(id));
               }
               commit_struct->timestamp = commit->GetTimestamp();
               commit_struct->generation = commit->GetGeneration();

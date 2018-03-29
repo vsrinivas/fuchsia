@@ -45,13 +45,13 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
  private:
   void GetDeviceSet(
       fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-      const GetDeviceSetCallback& callback) override;
+      GetDeviceSetCallback callback) override;
 
   void GetPageCloud(
       fidl::VectorPtr<uint8_t> app_id,
       fidl::VectorPtr<uint8_t> page_id,
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      const GetPageCloudCallback& callback) override;
+      GetPageCloudCallback callback) override;
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet>
       device_set_;

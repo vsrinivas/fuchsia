@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
@@ -64,7 +65,7 @@ void UpdateEntryBenchmark::Run() {
   QuitOnError(status, "GetLedger");
 
   fidl::VectorPtr<uint8_t> key = generator_.MakeKey(0, key_size_);
-  fidl::VectorPtr<uint8_t> id;
+  ledger::PageId id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "GetPageEnsureInitialized");
@@ -94,7 +95,7 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
 
   fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
   TRACE_ASYNC_BEGIN("benchmark", "put", i);
-  page_->Put(key.Clone(), std::move(value),
+  page_->Put(fidl::Clone(key), std::move(value),
              fxl::MakeCopyable([this, i, key = std::move(key)](
                                    ledger::Status status) mutable {
                if (benchmark::QuitOnError(status, "Page::Put")) {

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "lib/fidl/cpp/clone.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -80,7 +81,7 @@ void NetConnectorFactory::UpdatedHostList() {
     device_names.push_back(holder_pair.first);
   }
   for (auto callback : pending_device_list_callbacks_) {
-    callback(current_version_, device_names.Clone());
+    callback(current_version_, fidl::Clone(device_names));
   }
   pending_device_list_callbacks_.clear();
 }

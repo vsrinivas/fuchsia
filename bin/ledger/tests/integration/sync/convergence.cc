@@ -89,9 +89,9 @@ class PageWatcherImpl : public ledger::PageWatcher {
 
  private:
   // PageWatcher:
-  void OnChange(ledger::PageChangePtr /*page_change*/,
+  void OnChange(ledger::PageChange /*page_change*/,
                 ledger::ResultState /*result_state*/,
-                const OnChangeCallback& callback) override {
+                OnChangeCallback callback) override {
     changes++;
     current_snapshot_ = fxl::AdoptRef(new RefCountedPageSnapshot());
     callback((**current_snapshot_).NewRequest());
@@ -117,7 +117,7 @@ class SyncWatcherImpl : public ledger::SyncWatcher {
   // SyncWatcher
   void SyncStateChanged(ledger::SyncState download,
                         ledger::SyncState upload,
-                        const SyncStateChangedCallback& callback) override {
+                        SyncStateChangedCallback callback) override {
     this->download = download;
     this->upload = upload;
     new_state = true;
@@ -196,7 +196,7 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
  private:
   // ConflictResolverFactory:
   void GetPolicy(fidl::VectorPtr<uint8_t> /*page_id*/,
-                 const GetPolicyCallback& callback) override {
+                 GetPolicyCallback callback) override {
     callback(ledger::MergePolicy::CUSTOM);
   }
 

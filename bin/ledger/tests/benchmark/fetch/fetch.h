@@ -39,7 +39,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   // ledger::SyncWatcher:
   void SyncStateChanged(ledger::SyncState download,
                         ledger::SyncState upload,
-                        const SyncStateChangedCallback& callback) override;
+                        SyncStateChangedCallback callback) override;
 
  private:
   void Populate();
@@ -67,7 +67,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
   component::ApplicationControllerPtr reader_controller_;
   ledger::LedgerPtr writer_;
   ledger::LedgerPtr reader_;
-  fidl::VectorPtr<uint8_t> page_id_;
+  ledger::PageId page_id_;
   ledger::PagePtr writer_page_;
   ledger::PagePtr reader_page_;
   std::vector<fidl::VectorPtr<uint8_t>> keys_;

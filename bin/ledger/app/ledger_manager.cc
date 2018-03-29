@@ -250,20 +250,22 @@ void LedgerManager::BindLedgerDebug(
 }
 
 // TODO(ayaelattar): See LE-370: Inspect ledgers and pages not currently active.
-void LedgerManager::GetPagesList(const GetPagesListCallback& callback) {
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> result =
-      fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+void LedgerManager::GetPagesList(GetPagesListCallback callback) {
+  fidl::VectorPtr<ledger::PageId> result;
+  result.resize(0);
   for (const auto& key_value : page_managers_) {
-    result.push_back(convert::ToArray(key_value.first));
+    ledger::PageId page_id;
+    convert::ToArray(key_value.first, &page_id.id);
+    result.push_back(page_id);
   }
   callback(std::move(result));
 }
 
 void LedgerManager::GetPageDebug(
-    fidl::VectorPtr<uint8_t> page_id,
+    ledger::PageId page_id,
     fidl::InterfaceRequest<ledger_internal::PageDebug> page_debug,
     GetPageDebugCallback callback) {
-  auto it = page_managers_.find(page_id);
+  auto it = page_managers_.find(convert::ExtendedStringView(page_id.id));
   if (it != page_managers_.end()) {
     it->second.BindPageDebug(std::move(page_debug), callback);
   } else {

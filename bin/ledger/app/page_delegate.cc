@@ -12,6 +12,7 @@
 
 #include "garnet/lib/callback/scoped_callback.h"
 #include "garnet/lib/callback/waiter.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -63,7 +64,9 @@ void PageDelegate::Init(std::function<void(Status)> on_done) {
 
 // GetId() => (array<uint8> id);
 void PageDelegate::GetId(Page::GetIdCallback callback) {
-  callback(convert::ToArray(storage_->GetId()));
+  ledger::PageId page_id;
+  convert::ToArray(storage_->GetId(), &page_id.id);
+  callback(std::move(page_id));
 }
 
 // GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
@@ -120,7 +123,7 @@ void PageDelegate::PutWithPriority(
     fidl::VectorPtr<uint8_t> key,
     fidl::VectorPtr<uint8_t> value,
     Priority priority,
-    const Page::PutWithPriorityCallback& callback) {
+    Page::PutWithPriorityCallback callback) {
   if (key->size() > kMaxKeySize) {
     FXL_VLOG(1) << "Key too large: " << key->size()
                 << " bytes long, which is more than the maximum allowed size ("
@@ -250,13 +253,13 @@ void PageDelegate::CreateReference(
             }
 
             callback(Status::OK,
-                     manager_->CreateReference(std::move(object_identifier)));
+                     fidl::MakeOptional(manager_->CreateReference(std::move(object_identifier))));
           }));
 }
 
 // StartTransaction() => (Status status);
 void PageDelegate::StartTransaction(
-    const Page::StartTransactionCallback& callback) {
+    Page::StartTransactionCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
         if (journal_) {
@@ -285,7 +288,7 @@ void PageDelegate::StartTransaction(
 }
 
 // Commit() => (Status status);
-void PageDelegate::Commit(const Page::CommitCallback& callback) {
+void PageDelegate::Commit(Page::CommitCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
         if (!journal_) {
@@ -335,7 +338,7 @@ void PageDelegate::SetSyncStateWatcher(
 }
 
 void PageDelegate::WaitForConflictResolution(
-    const Page::WaitForConflictResolutionCallback& callback) {
+    Page::WaitForConflictResolutionCallback callback) {
   if (!merge_resolver_->HasUnfinishedMerges()) {
     callback(ConflictResolutionWaitStatus::NO_CONFLICTS);
     return;

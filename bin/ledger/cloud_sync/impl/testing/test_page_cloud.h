@@ -18,7 +18,7 @@ struct ReceivedCommit {
   std::string data;
 };
 
-cloud_provider::CommitPtr MakeTestCommit(
+cloud_provider::Commit MakeTestCommit(
     encryption::FakeEncryptionService* encryption_service,
     const std::string& id,
     const std::string& data);
@@ -41,7 +41,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
 
   // GetCommits().
   unsigned int get_commits_calls = 0u;
-  fidl::VectorPtr<cloud_provider::CommitPtr> commits_to_return;
+  fidl::VectorPtr<cloud_provider::Commit> commits_to_return;
   fidl::VectorPtr<uint8_t> position_token_to_return;
 
   // AddObject().
@@ -61,19 +61,19 @@ class TestPageCloud : public cloud_provider::PageCloud {
 
  private:
   // cloud_provider::PageCloud:
-  void AddCommits(fidl::VectorPtr<cloud_provider::CommitPtr> commits,
-                  const AddCommitsCallback& callback) override;
+  void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                  AddCommitsCallback callback) override;
   void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
-                  const GetCommitsCallback& callback) override;
+                  GetCommitsCallback callback) override;
   void AddObject(fidl::VectorPtr<uint8_t> id,
-                 fsl::SizedVmoTransportPtr data,
-                 const AddObjectCallback& callback) override;
+                 fsl::SizedVmoTransport data,
+                 AddObjectCallback callback) override;
   void GetObject(fidl::VectorPtr<uint8_t> id,
-                 const GetObjectCallback& callback) override;
+                 GetObjectCallback callback) override;
   void SetWatcher(
       fidl::VectorPtr<uint8_t> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-      const SetWatcherCallback& callback) override;
+      SetWatcherCallback callback) override;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
 

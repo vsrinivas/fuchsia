@@ -61,7 +61,7 @@ void PutBenchmark::Run() {
       &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
   QuitOnError(status, "GetLedger");
 
-  fidl::VectorPtr<uint8_t> id;
+  ledger::PageId id;
   status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "GetPageEnsureInitialized");
@@ -84,11 +84,11 @@ void PutBenchmark::Run() {
       }));
 }
 
-void PutBenchmark::OnChange(ledger::PageChangePtr page_change,
+void PutBenchmark::OnChange(ledger::PageChange page_change,
                             ledger::ResultState /*result_state*/,
-                            const OnChangeCallback& callback) {
-  for (auto const& change : *page_change->changed_entries) {
-    size_t key_number = std::stoul(convert::ToString(change->key));
+                            OnChangeCallback callback) {
+  for (auto const& change : *page_change.changed_entries) {
+    size_t key_number = std::stoul(convert::ToString(change.key));
     if (keys_to_receive_.find(key_number) != keys_to_receive_.end()) {
       TRACE_ASYNC_END("benchmark", "local_change_notification", key_number);
       keys_to_receive_.erase(key_number);
@@ -200,7 +200,7 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
             TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
             TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
             page_->PutReference(
-                std::move(key), std::move(reference), ledger::Priority::EAGER,
+                std::move(key), std::move(*reference), ledger::Priority::EAGER,
                 [trace_event_id,
                  on_done = std::move(on_done)](ledger::Status status) {
                   if (QuitOnError(status, "Page::PutReference")) {

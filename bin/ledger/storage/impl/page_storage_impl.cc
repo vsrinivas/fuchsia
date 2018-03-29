@@ -913,19 +913,11 @@ void PageStorageImpl::FillBufferWithObjectContent(
                  callback(Status::FORMAT_ERROR);
                  return;
                }
-               size_t written_size;
                zx_status_t zx_status =
-                   vmo.vmo().write(content.data(), offset, size, &written_size);
+                   vmo.vmo().write(content.data(), offset, size);
                if (zx_status != ZX_OK) {
                  FXL_LOG(ERROR)
                      << "Unable to write to vmo. Status: " << zx_status;
-                 callback(Status::INTERNAL_IO_ERROR);
-                 return;
-               }
-               if (written_size != size) {
-                 FXL_LOG(ERROR)
-                     << "Error when writing content to vmo. Expected to write:"
-                     << size << " but only wrote: " << written_size;
                  callback(Status::INTERNAL_IO_ERROR);
                  return;
                }

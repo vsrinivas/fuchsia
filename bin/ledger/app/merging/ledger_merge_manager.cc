@@ -8,6 +8,7 @@
 #include <string>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/random/rand.h"
 #include "peridot/bin/ledger/app/merging/auto_merge_strategy.h"
 #include "peridot/bin/ledger/app/merging/custom_merge_strategy.h"
@@ -63,12 +64,14 @@ void LedgerMergeManager::GetResolverStrategyForPage(
     std::function<void(std::unique_ptr<MergeStrategy>)> strategy_callback) {
   if (!conflict_resolver_factory_) {
     strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
-  } else if (conflict_resolver_factory_.encountered_error()) {
+  } else if (!conflict_resolver_factory_.is_bound()) {
     strategy_callback(nullptr);
   } else {
+    ledger::PageId converted_page_id;
+    convert::ToArray(page_id, &converted_page_id.id);
     conflict_resolver_factory_->GetPolicy(
-        convert::ToArray(page_id),
-        [this, page_id, strategy_callback](MergePolicy policy) {
+        converted_page_id.id,
+        [this, page_id, converted_page_id, strategy_callback](MergePolicy policy) {
           switch (policy) {
             case MergePolicy::LAST_ONE_WINS:
               strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
@@ -76,7 +79,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
             case MergePolicy::AUTOMATIC_WITH_FALLBACK: {
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
-                  page_id, conflict_resolver.NewRequest());
+                  converted_page_id.id, conflict_resolver.NewRequest());
               std::unique_ptr<AutoMergeStrategy> auto_merge_strategy =
                   std::make_unique<AutoMergeStrategy>(
                       std::move(conflict_resolver));
@@ -86,9 +89,11 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               break;
             }
             case MergePolicy::CUSTOM: {
+              ledger::PageId converted_page_id;
+              convert::ToArray(page_id, &converted_page_id.id);
               ConflictResolverPtr conflict_resolver;
               conflict_resolver_factory_->NewConflictResolver(
-                  page_id, conflict_resolver.NewRequest());
+                  converted_page_id.id, conflict_resolver.NewRequest());
               std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
                   std::make_unique<CustomMergeStrategy>(
                       std::move(conflict_resolver));

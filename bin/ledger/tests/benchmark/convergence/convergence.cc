@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include "garnet/lib/callback/waiter.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -84,7 +85,7 @@ void ConvergenceBenchmark::Run() {
         &device_context.app_controller, std::move(cloud_provider),
         "convergence", synced_dir_path, &device_context.ledger);
     QuitOnError(status, "GetLedger");
-    device_context.ledger->GetPage(page_id_.Clone(),
+    device_context.ledger->GetPage(fidl::MakeOptional(page_id_),
                                    device_context.page_connection.NewRequest(),
                                    benchmark::QuitOnErrorCallback("GetPage"));
     ledger::PageSnapshotPtr snapshot;
@@ -128,12 +129,12 @@ void ConvergenceBenchmark::Start(int step) {
   current_step_ = step;
 }
 
-void ConvergenceBenchmark::OnChange(ledger::PageChangePtr page_change,
+void ConvergenceBenchmark::OnChange(ledger::PageChange page_change,
                                     ledger::ResultState result_state,
-                                    const OnChangeCallback& callback) {
+                                    OnChangeCallback callback) {
   FXL_DCHECK(result_state == ledger::ResultState::COMPLETED);
-  for (auto& change : *page_change->changed_entries) {
-    auto find_one = remaining_keys_.find(convert::ToString(change->key));
+  for (auto& change : *page_change.changed_entries) {
+    auto find_one = remaining_keys_.find(convert::ToString(change.key));
     remaining_keys_.erase(find_one);
   }
   if (remaining_keys_.empty()) {

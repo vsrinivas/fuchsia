@@ -96,7 +96,7 @@ void P2PProviderImpl::StartService() {
   net_connector_->RegisterServiceProvider(kRespondingServiceName + user_id_,
                                           std::move(handle));
 
-  ListenForNewDevices(netconnector::NetConnector::kInitialKnownDeviceNames);
+  ListenForNewDevices(netconnector::kInitialKnownDeviceNames);
 }
 
 void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
@@ -176,7 +176,8 @@ void P2PProviderImpl::ProcessHandshake(RemoteConnection* connection,
 
 void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
   net_connector_->GetKnownDeviceNames(
-      version, [this](uint64_t new_version, fidl::VectorPtr<fidl::StringPtr> devices) {
+      version,
+      [this](uint64_t new_version, fidl::VectorPtr<fidl::StringPtr> devices) {
         std::vector<std::string> seen_devices;
         for (auto& remote_name : *devices) {
           seen_devices.push_back(remote_name);

@@ -10,6 +10,8 @@
 #include <iostream>
 
 #include <fuchsia/cpp/cloud_provider.h>
+
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
@@ -65,7 +67,7 @@ FetchBenchmark::FetchBenchmark(size_t entry_count, size_t value_size,
 void FetchBenchmark::SyncStateChanged(
     ledger::SyncState download,
     ledger::SyncState upload,
-    const SyncStateChangedCallback& callback) {
+    SyncStateChangedCallback callback) {
   if (on_sync_state_changed_) {
     on_sync_state_changed_(download, upload);
   }
@@ -145,7 +147,7 @@ void FetchBenchmark::ConnectReader() {
       reader_path, &reader_);
   QuitOnError(status, "ConnectReader");
 
-  reader_->GetPage(std::move(page_id_), reader_page_.NewRequest(),
+  reader_->GetPage(fidl::MakeOptional(std::move(page_id_)), reader_page_.NewRequest(),
                    [this](ledger::Status status) {
                      if (benchmark::QuitOnError(status, "GetPage")) {
                        return;

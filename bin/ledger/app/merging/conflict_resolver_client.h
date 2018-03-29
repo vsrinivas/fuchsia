@@ -39,7 +39,7 @@ class ConflictResolverClient : public MergeResultProvider {
 
  private:
   void OnNextMergeResult(
-      const MergedValuePtr& merged_value,
+      const MergedValue& merged_value,
       const fxl::RefPtr<callback::Waiter<storage::Status,
                                          storage::ObjectIdentifier>>& waiter);
   void Finalize(Status status);
@@ -48,7 +48,7 @@ class ConflictResolverClient : public MergeResultProvider {
   void GetDiff(diff_utils::DiffType type,
                fidl::VectorPtr<uint8_t> token,
                const std::function<void(Status,
-                                        fidl::VectorPtr<DiffEntryPtr>,
+                                        fidl::VectorPtr<DiffEntry>,
                                         fidl::VectorPtr<uint8_t>)>& callback);
 
   // MergeResultProvider:
@@ -65,7 +65,7 @@ class ConflictResolverClient : public MergeResultProvider {
   // Checks whether this ConflictResolverClient is not cancelled and the storage
   // returned status is ok. If not, calls the given |callback| and |Finalize|
   // with an error status.
-  bool IsInValidStateAndNotify(const MergeCallback& callback,
+  bool IsInValidStateAndNotify(MergeCallback callback,
                                storage::Status status = storage::Status::OK);
 
   storage::PageStorage* const storage_;

@@ -34,7 +34,7 @@ class LedgerAppInstanceFactory {
 
     // Returns the LedgerRepositoryFactory associated with this application
     // instance.
-    ledger::LedgerRepositoryFactory* ledger_repository_factory();
+    ledger_internal::LedgerRepositoryFactory* ledger_repository_factory();
     // Builds and returns a new connection to the default LedgerRepository
     // object.
     ledger_internal::LedgerRepositoryPtr GetTestLedgerRepository();
@@ -44,10 +44,10 @@ class LedgerAppInstanceFactory {
     // Ledger object.
     ledger::PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
-    ledger::PagePtr GetPage(const fidl::VectorPtr<uint8_t>& page_id,
+    ledger::PagePtr GetPage(const ledger::PageIdPtr& page_id,
                             ledger::Status expected_status);
     // Deletes the given page on the default Ledger object.
-    void DeletePage(const fidl::VectorPtr<uint8_t>& page_id,
+    void DeletePage(const ledger::PageId& page_id,
                     ledger::Status expected_status);
 
    private:

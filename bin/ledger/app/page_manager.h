@@ -70,10 +70,10 @@ class PageManager : public ledger_internal::PageDebug {
                         std::string key_prefix);
 
   // Create a new reference for the given object identifier.
-  ReferencePtr CreateReference(storage::ObjectIdentifier object_identifier);
+  Reference CreateReference(storage::ObjectIdentifier object_identifier);
 
   // Retrieve an object identifier from a Reference.
-  Status ResolveReference(ReferencePtr reference,
+  Status ResolveReference(Reference reference,
                           storage::ObjectIdentifier* object_identifier);
 
   void set_on_empty(const fxl::Closure& on_empty_callback) {
@@ -86,11 +86,11 @@ class PageManager : public ledger_internal::PageDebug {
 
   void GetHeadCommitsIds(GetHeadCommitsIdsCallback callback) override;
 
-  void GetSnapshot(fidl::VectorPtr<uint8_t> commit_id,
+  void GetSnapshot(ledger_internal::CommitId commit_id,
                    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
                    GetSnapshotCallback callback) override;
 
-  void GetCommit(fidl::VectorPtr<uint8_t> commit_id,
+  void GetCommit(ledger_internal::CommitId commit_id,
                  GetCommitCallback callback) override;
 
   Environment* const environment_;

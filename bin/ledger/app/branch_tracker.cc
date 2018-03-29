@@ -91,8 +91,8 @@ class BranchTracker::PageWatcherContainer {
            last_commit_->GetId() == current_commit_->GetId();
   }
 
-  std::vector<PageChangePtr> PaginateChanges(PageChangePtr change) {
-    std::vector<PageChangePtr> changes;
+  std::vector<PageChange> PaginateChanges(PageChangePtr change) {
+    std::vector<PageChange> changes;
 
     // These are initialized to valid values in the first run of the loop.
     size_t fidl_size = -1;
@@ -103,10 +103,10 @@ class BranchTracker::PageWatcherContainer {
     for (size_t i = 0, j = 0; i < entries->size() || j < deletions->size();) {
       bool add_entry =
           i < entries->size() && (j == deletions->size() ||
-                                 convert::ExtendedStringView(entries->at(i)->key) <
+                                 convert::ExtendedStringView(entries->at(i).key) <
                                      convert::ExtendedStringView(deletions->at(j)));
       size_t entry_size =
-          add_entry ? fidl_serialization::GetEntrySize(entries->at(i)->key->size())
+          add_entry ? fidl_serialization::GetEntrySize(entries->at(i).key->size())
                     : fidl_serialization::GetByteArraySize(deletions->at(j)->size());
       size_t entry_handle_count = add_entry ? 1 : 0;
 
@@ -114,28 +114,28 @@ class BranchTracker::PageWatcherContainer {
           fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize ||
           handle_count + entry_handle_count >
               fidl_serialization::kMaxMessageHandles) {
-        changes.push_back(PageChange::New());
-        changes.back()->timestamp = timestamp;
-        changes.back()->changed_entries = fidl::VectorPtr<EntryPtr>::New(0);
-        changes.back()->deleted_keys =
-            fidl::VectorPtr<fidl::VectorPtr<uint8_t>>::New(0);
+        PageChange change;
+        change.timestamp = timestamp;
+        change.changed_entries.resize(0);
+        change.deleted_keys.resize(0);
+        changes.push_back(std::move(change));
         fidl_size = fidl_serialization::kPageChangeHeaderSize;
         handle_count = 0u;
       }
       fidl_size += entry_size;
       handle_count += entry_handle_count;
       if (add_entry) {
-        changes.back()->changed_entries.push_back(std::move(entries->at(i)));
+        changes.back().changed_entries.push_back(std::move(entries->at(i)));
         ++i;
       } else {
-        changes.back()->deleted_keys.push_back(std::move(deletions->at(j)));
+        changes.back().deleted_keys.push_back(std::move(deletions->at(j)));
         ++j;
       }
     }
     return changes;
   }
 
-  void SendChange(PageChangePtr page_change,
+  void SendChange(PageChange page_change,
                   ResultState state,
                   std::unique_ptr<const storage::Commit> new_commit,
                   fxl::Closure on_done) {
@@ -206,7 +206,7 @@ class BranchTracker::PageWatcherContainer {
                 SendCommit();
                 return;
               }
-              std::vector<PageChangePtr> paginated_changes =
+              std::vector<PageChange> paginated_changes =
                   PaginateChanges(std::move(page_change_ptr.first));
               if (paginated_changes.size() == 1) {
                 SendChange(std::move(paginated_changes[0]),
