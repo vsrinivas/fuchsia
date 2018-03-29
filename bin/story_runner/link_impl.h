@@ -10,6 +10,7 @@
 
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
@@ -94,18 +95,9 @@ class LinkImpl : PageClient {
   // If |create_link_info| is null, then this is a request to connect to an
   // existing link.
   LinkImpl(LedgerClient* ledger_client,
-           ledger::PageId page_id,
+           LedgerPageId page_id,
            const LinkPath& link_path,
            CreateLinkInfoPtr create_link_info);
-
-  LinkImpl(LedgerClient* ledger_client,
-           const LedgerPageId& page_id,
-           const LinkPath& link_path,
-           CreateLinkInfoPtr create_link_info)
-      : LinkImpl(ledger_client,
-                 PageClient::MakePageId(page_id),
-                 link_path,
-                 std::move(create_link_info)) {}
 
   ~LinkImpl() override;
 

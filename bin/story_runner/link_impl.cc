@@ -542,7 +542,7 @@ class LinkImpl::ChangeCall : Operation<> {
 };
 
 LinkImpl::LinkImpl(LedgerClient* const ledger_client,
-                   ledger::PageId page_id,
+                   LedgerPageId page_id,
                    const LinkPath& link_path,
                    CreateLinkInfoPtr create_link_info)
     : PageClient(MakeLinkKey(link_path),

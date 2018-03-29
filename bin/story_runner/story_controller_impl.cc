@@ -12,6 +12,7 @@
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -553,7 +554,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
     }
 
     link_impl_.reset(new LinkImpl(story_controller_impl_->ledger_client_,
-                                  story_controller_impl_->story_page_id_,
+                                  fidl::Clone(story_controller_impl_->story_page_id_),
                                   *link_path_, std::move(create_link_info_)));
     LinkImpl* const link_ptr = link_impl_.get();
     if (request_) {
