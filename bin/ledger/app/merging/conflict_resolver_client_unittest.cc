@@ -171,12 +171,12 @@ TEST_F(ConflictResolverClientTest, Error) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   // Create a bogus conflict resolution.
-  fidl::VectorPtr<MergedValuePtr> merged_values =
-      fidl::VectorPtr<MergedValuePtr>::New(0);
+  fidl::VectorPtr<MergedValue> merged_values =
+      fidl::VectorPtr<MergedValue>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
-    merged_value->key = convert::ToArray("unknown_key");
-    merged_value->source = ValueSource::RIGHT;
+    MergedValue merged_value;
+    merged_value.key = convert::ToArray("unknown_key");
+    merged_value.source = ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
 
@@ -293,12 +293,12 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
   Status status;
-  fidl::VectorPtr<MergedValuePtr> merged_values =
-      fidl::VectorPtr<MergedValuePtr>::New(0);
+  fidl::VectorPtr<MergedValue> merged_values =
+      fidl::VectorPtr<MergedValue>::New(0);
   {
-    MergedValuePtr merged_value = MergedValue::New();
-    merged_value->key = convert::ToArray("key1");
-    merged_value->source = ValueSource::RIGHT;
+    MergedValue merged_value;
+    merged_value.key = convert::ToArray("key1");
+    merged_value.source = ValueSource::RIGHT;
     merged_values.push_back(std::move(merged_value));
   }
 
