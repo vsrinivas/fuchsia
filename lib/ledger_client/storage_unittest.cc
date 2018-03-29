@@ -27,9 +27,9 @@ TEST(Storage, EncodeLinkPath) {
     fidl_array.push_back(s);
   }
 
-  auto link_path = LinkPath::New();
-  link_path->link_name = "Fred";
-  link_path->module_path = std::move(fidl_array);
+  LinkPath link_path;
+  link_path.link_name = "Fred";
+  link_path.module_path = std::move(fidl_array);
   EXPECT_EQ("foo:\\:bar/Fred", EncodeLinkPath(link_path));
 }
 
