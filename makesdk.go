@@ -174,8 +174,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			path.Join(armBuildDir, "images/fvm.blk.qcow2"),
-			"target/aarch64/fvm.blk.qcow2",
+			path.Join(armBuildDir, "images/fvm.blk"),
+			"target/aarch64/fvm.blk",
 		},
 
 		{
@@ -200,8 +200,8 @@ func init() {
 		},
 		{
 			kernelImg,
-			path.Join(x64BuildDir, "images/fvm.blk.qcow2"),
-			"target/x86_64/fvm.blk.qcow2",
+			path.Join(x64BuildDir, "images/fvm.blk"),
+			"target/x86_64/fvm.blk",
 		},
 		{
 			kernelImg,
