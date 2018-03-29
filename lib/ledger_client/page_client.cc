@@ -16,7 +16,7 @@ namespace modular {
 
 PageClient::PageClient(std::string context,
                        LedgerClient* ledger_client,
-                       ledger::PageId page_id,
+                       LedgerPageId page_id,
                        std::string prefix)
     : binding_(this),
       context_(std::move(context)),
@@ -36,12 +36,6 @@ PageClient::PageClient(std::string context,
 PageClient::~PageClient() {
   // We assume ledger client always outlives page client.
   ledger_client_->DropPageClient(this);
-}
-
-ledger::PageId PageClient::MakePageId(const LedgerPageId& page_id) {
-  ledger::PageId p;
-  std::copy(page_id.cbegin(), page_id.cend(), p.id.begin());
-  return p;
 }
 
 fidl::InterfaceRequest<ledger::PageSnapshot> PageClient::NewRequest() {

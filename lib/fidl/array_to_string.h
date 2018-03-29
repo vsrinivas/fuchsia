@@ -44,14 +44,11 @@ inline std::string to_hex_string(const std::array<uint8_t, N>& data) {
 }
 
 inline std::string to_hex_string(const fidl::VectorPtr<uint8_t>& data) {
-  constexpr char kHexadecimalCharacters[] = "0123456789abcdef";
-  std::string ret;
-  ret.reserve(data->size() * 2);
-  for (unsigned char i : *data) {
-    ret.push_back(kHexadecimalCharacters[i >> 4]);
-    ret.push_back(kHexadecimalCharacters[i & 0xf]);
-  }
-  return ret;
+  return to_hex_string(data->data(), data->size());
+}
+
+inline std::string to_hex_string(const std::vector<uint8_t>& data) {
+  return to_hex_string(data.data(), data.size());
 }
 
 inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {

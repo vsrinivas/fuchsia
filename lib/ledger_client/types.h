@@ -11,13 +11,12 @@
 
 namespace modular {
 
-// TODO(mesch): Not sure how useful that is. These types can lie.
-typedef fidl::Array<uint8_t, 16> LedgerPageId;
-typedef fidl::Array<uint8_t, 16> LedgerPageKey;
-typedef fidl::VectorPtr<uint8_t> LedgerToken;
+using LedgerPageId = ledger::PageId;
+using LedgerPageKey = fidl::VectorPtr<uint8_t>;
+using LedgerToken = fidl::VectorPtr<uint8_t>;
 
 inline bool PageIdsEqual(const LedgerPageId& a, const LedgerPageId& b) {
-  return std::equal(a.cbegin(), a.cend(), b.cbegin(), b.cend());
+  return a.id == b.id;
 }
 
 }  // namespace modular

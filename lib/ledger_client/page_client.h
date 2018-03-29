@@ -49,19 +49,9 @@ class PageClient : ledger::PageWatcher {
   // client reference is to receive conflicts from the ledger.
   explicit PageClient(std::string context,
                       LedgerClient* ledger_client,
-                      ledger::PageId page_id,
+                      LedgerPageId page_id,
                       std::string prefix = "");
-  explicit PageClient(std::string context,
-                      LedgerClient* ledger_client,
-                      const LedgerPageId& page_id,
-                      std::string prefix = "")
-      : PageClient(std::move(context),
-                   ledger_client,
-                   MakePageId(page_id),
-                   std::move(prefix)) {}
   ~PageClient() override;
-
-  static ledger::PageId MakePageId(const LedgerPageId& page_id);
 
   // Returns the current page snapshot. It is returned as a shared_ptr, so that
   // it can be used in an asynchronous operation. In that case, the page
@@ -95,7 +85,7 @@ class PageClient : ledger::PageWatcher {
   // The argument to OnPageConflict(). It's mutated in place so it's easier to
   // extend without having to alter clients.
   struct Conflict {
-    std::array<uint8_t, 16> key;
+    fidl::VectorPtr<uint8_t> key;
 
     bool has_left{};
     std::string left;

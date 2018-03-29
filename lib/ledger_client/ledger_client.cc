@@ -9,6 +9,7 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -25,7 +26,7 @@ namespace {
 
 PageClient::Conflict ToConflict(const ledger::DiffEntry* entry) {
   PageClient::Conflict conflict;
-  std::copy(entry->key.cbegin(), entry->key.cend(), conflict.key.begin());
+  conflict.key = entry->key.Clone();
   if (entry->left) {
     conflict.has_left = true;
     std::string value;
@@ -172,7 +173,7 @@ class LedgerClient::ConflictResolverImpl::ResolveCall : Operation<> {
 
             if (pair.second.resolution != PageClient::LEFT) {
               ledger::MergedValue merged_value;
-              std::copy(conflict.key.cbegin(), conflict.key.cend(), merged_value.key.begin());
+              merged_value.key = conflict.key.Clone();
               if (pair.second.resolution == PageClient::RIGHT) {
                 merged_value.source = ledger::ValueSource::RIGHT;
               } else {
@@ -344,7 +345,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
                                     const std::string& context,
                                     const ledger::PageId& page_id) {
   auto i = std::find_if(pages_.begin(), pages_.end(), [&page_id](auto& entry) {
-    return PageIdsEqual(entry->page_id, page_id.id);
+    return PageIdsEqual(entry->page_id, page_id);
   });
 
   if (i != pages_.end()) {
@@ -363,7 +364,7 @@ ledger::Page* LedgerClient::GetPage(PageClient* const page_client,
       });
 
   auto entry = std::make_unique<PageEntry>();
-  entry->page_id = page_id.id;
+  entry->page_id = CloneStruct(page_id);
   entry->clients.push_back(page_client);
 
   entry->page = std::move(page);
@@ -448,9 +449,7 @@ void LedgerClient::ClearConflictResolver(const LedgerPageId& page_id) {
 LedgerClient::ConflictResolverImpl::ConflictResolverImpl(
     LedgerClient* const ledger_client,
     const LedgerPageId& page_id)
-    : ledger_client_(ledger_client) {
-      std::copy(page_id.cbegin(), page_id.cend(), page_id_.begin());
-    }
+    : ledger_client_(ledger_client), page_id_(CloneStruct(page_id)) {}
 
 LedgerClient::ConflictResolverImpl::~ConflictResolverImpl() = default;
 
