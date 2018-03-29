@@ -22,7 +22,8 @@
 #if BUILD_FOR_TEST
 zx_status_t vc_init_gfx(gfx_surface* gfx);
 #else
-zx_status_t vc_init_gfx(int fd);
+zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height,
+                        zx_pixel_format_t format, int32_t stride);
 void vc_free_gfx();
 #endif
 
@@ -166,3 +167,7 @@ void vc_destroy(vc_t* vc);
 ssize_t vc_write(vc_t* vc, const void* buf, size_t count, zx_off_t off);
 zx_status_t vc_set_active(int num, vc_t* vc);
 void vc_show_active();
+
+bool vc_display_init(void);
+
+void set_log_listener_active(bool active);

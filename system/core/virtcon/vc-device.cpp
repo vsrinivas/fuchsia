@@ -8,7 +8,6 @@
 #include <string.h>
 #include <sys/param.h>
 
-#include <zircon/device/display.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 

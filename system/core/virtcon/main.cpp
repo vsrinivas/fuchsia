@@ -14,7 +14,6 @@
 
 #include <zircon/device/pty.h>
 #include <zircon/device/vfs.h>
-#include <zircon/device/display.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -31,34 +30,14 @@
 #include "vc.h"
 
 port_t port;
-static port_handler_t ownership_ph;
 static port_handler_t log_ph;
 static port_handler_t new_vc_ph;
 static port_handler_t input_ph;
-static port_handler_t fb_ph;
 
 static int input_dir_fd;
-static int fb_dir_fd;
 
 static vc_t* log_vc;
 static zx_koid_t proc_koid;
-
-static int g_fb_fd = -1;
-#define FB_NAME_LEN 32
-static char g_fb_name[FB_NAME_LEN + 1];
-
-static zx_status_t fb_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-static zx_status_t ownership_ph_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt);
-
-// remember whether the virtual console controls the display
-bool g_vc_owns_display = true;
-
-void vc_toggle_framebuffer() {
-    if (g_fb_fd != -1) {
-        uint32_t n = g_vc_owns_display ? 1 : 0;
-        ioctl_display_set_owner(g_fb_fd, &n);
-    }
-}
 
 static zx_status_t log_reader_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
     char buf[ZX_LOG_RECORD_MAX];
@@ -303,66 +282,6 @@ static void setup_dir_watcher(const char* dir,
     }
 }
 
-static void fb_dir_event(unsigned evt, const char* name) {
-    if (strlen(name) > FB_NAME_LEN) {
-        printf("vc: truncating long framebuffer name (\"%s\")\n", name);
-    }
-
-    // If we're already connected to a display, ignore events on other displays
-    if (g_fb_fd != -1 && strncmp(g_fb_name, name, FB_NAME_LEN)) {
-        return;
-    }
-
-    if (evt == VFS_WATCH_EVT_ADDED || evt == VFS_WATCH_EVT_EXISTING) {
-        strncpy(g_fb_name, name, FB_NAME_LEN);
-        g_fb_name[FB_NAME_LEN] = '\0';
-
-        int fd;
-        char file_name[sizeof("/dev/class/framebuffer//virtcon") + FB_NAME_LEN];
-        snprintf(file_name, sizeof(file_name), "/dev/class/framebuffer/%s/virtcon", g_fb_name);
-        if ((fd = open(file_name, O_RDWR)) < 0) {
-            printf("vc: failed to open display \"%s\": %d\n", file_name, fd);
-            return;
-        }
-
-        if (vc_init_gfx(fd) < 0) {
-            printf("vc: failed to initialize graphics for new display\n");
-            return;
-        }
-
-        g_fb_fd = fd;
-
-        zx_handle_t e = ZX_HANDLE_INVALID;
-        ioctl_display_get_ownership_change_event(fd, &e);
-
-        if (e != ZX_HANDLE_INVALID) {
-            ownership_ph.func = ownership_ph_cb;
-            ownership_ph.handle = e;
-            ownership_ph.waitfor = ZX_USER_SIGNAL_1;
-            port_wait(&port, &ownership_ph);
-        }
-
-        // Only listen for logs when we have somewhere to print them. Also,
-        // use a repeating wait so that we don't add/remove observers for each
-        // log message (which is helpful when tracing the addition/removal of
-        // observers).
-        port_wait_repeating(&port, &log_ph);
-        vc_show_active();
-    } else if (evt == VFS_WATCH_EVT_REMOVED) {
-        close(g_fb_fd);
-        g_fb_fd = -1;
-
-        port_cancel(&port, &log_ph);
-        vc_free_gfx();
-
-        // Remove and re-add the framebuffer watcher to handle the case where
-        // a second display was already attached (with the EXISTING event).
-        port_cancel(&port, &fb_ph);
-        close(fb_dir_fd);
-        setup_dir_watcher("/dev/class/framebuffer", fb_cb, &fb_ph, &fb_dir_fd);
-    }
-}
-
 static bool handle_dir_event(port_handler_t* ph, zx_signals_t signals,
                              void (*event_handler)(unsigned event, const char* msg)) {
     if (!(signals & ZX_CHANNEL_READABLE)) {
@@ -403,29 +322,12 @@ static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t e
     return ZX_OK;
 }
 
-static zx_status_t fb_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    if (!handle_dir_event(ph, signals, fb_dir_event)) {
-        return ZX_ERR_STOP;
-    }
-    return ZX_OK;
-}
-
-static zx_status_t ownership_ph_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-    // If we owned it, we've been notified of losing it, or the other way 'round
-    g_vc_owns_display = !g_vc_owns_display;
-
-    // If we've gained it, repaint
-    // In both cases adjust waitfor to wait for the opposite
-    if (g_vc_owns_display) {
-        ph->waitfor = ZX_USER_SIGNAL_1;
-        if (g_active_vc) {
-            vc_flush_all(g_active_vc);
-        }
+void set_log_listener_active(bool active) {
+    if (active) {
+        port_wait_repeating(&port, &log_ph);
     } else {
-        ph->waitfor = ZX_USER_SIGNAL_0;
+        port_cancel(&port, &log_ph);
     }
-
-    return ZX_OK;
 }
 
 int main(int argc, char** argv) {
@@ -490,7 +392,10 @@ int main(int argc, char** argv) {
     }
 
     setup_dir_watcher("/dev/class/input", input_cb, &input_ph, &input_dir_fd);
-    setup_dir_watcher("/dev/class/framebuffer", fb_cb, &fb_ph, &fb_dir_fd);
+
+    if (!vc_display_init()) {
+        return -1;
+    }
 
     setenv("TERM", "xterm", 1);
 

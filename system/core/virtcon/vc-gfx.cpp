@@ -4,7 +4,6 @@
 
 #include <gfx/gfx.h>
 
-#include <zircon/device/display.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -89,7 +88,6 @@ void vc_gfx_invalidate_region(vc_t* vc, unsigned x, unsigned y, unsigned w, unsi
     }
 }
 #else
-static int vc_gfx_fd = -1;
 static zx_handle_t vc_gfx_vmo = ZX_HANDLE_INVALID;
 static uintptr_t vc_gfx_mem = 0;
 static size_t vc_gfx_size = 0;
@@ -107,31 +105,22 @@ void vc_free_gfx() {
         zx_vmar_unmap(zx_vmar_root_self(), vc_gfx_mem, vc_gfx_size);
         vc_gfx_mem = 0;
     }
-    if (vc_gfx_fd >= 0) {
-        close(vc_gfx_fd);
-        vc_gfx_fd = -1;
+    if (vc_gfx_vmo) {
+        zx_handle_close(vc_gfx_vmo);
+        vc_gfx_vmo = ZX_HANDLE_INVALID;
     }
 }
 
-zx_status_t vc_init_gfx(int fd) {
+zx_status_t vc_init_gfx(zx_handle_t fb_vmo, int32_t width, int32_t height,
+                        zx_pixel_format_t format, int32_t stride) {
     const gfx_font* font = vc_get_font();
     vc_font = font;
 
-    ioctl_display_get_fb_t fb;
-    vc_gfx_fd = fd;
     uintptr_t ptr;
-
+    vc_gfx_vmo = fb_vmo;
+    vc_gfx_size = stride * ZX_PIXEL_FORMAT_BYTES(format) * height;
 
     zx_status_t r;
-    if (ioctl_display_get_fb(fd, &fb) < 0) {
-        printf("vc_alloc: cannot get fb from driver instance\n");
-        r = ZX_ERR_INTERNAL;
-        goto fail;
-    }
-
-    vc_gfx_vmo = fb.vmo;
-    vc_gfx_size = fb.info.stride * fb.info.pixelsize * fb.info.height;
-
     if ((r = zx_vmar_map(zx_vmar_root_self(), 0, vc_gfx_vmo, 0, vc_gfx_size,
                          ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &vc_gfx_mem)) < 0) {
         goto fail;
@@ -139,15 +128,15 @@ zx_status_t vc_init_gfx(int fd) {
 
     r = ZX_ERR_NO_MEMORY;
     // init the status bar
-    if ((vc_tb_gfx = gfx_create_surface((void*) vc_gfx_mem, fb.info.width, font->height,
-                                        fb.info.stride, fb.info.format, 0)) == NULL) {
+    if ((vc_tb_gfx = gfx_create_surface((void*) vc_gfx_mem, width, font->height,
+                                        stride, format, 0)) == NULL) {
         goto fail;
     }
 
     // init the main surface
-    ptr = vc_gfx_mem + fb.info.stride * font->height * fb.info.pixelsize;
-    if ((vc_gfx = gfx_create_surface((void*) ptr, fb.info.width, fb.info.height - font->height,
-                                     fb.info.stride, fb.info.format, 0)) == NULL) {
+    ptr = vc_gfx_mem + stride * font->height * ZX_PIXEL_FORMAT_BYTES(format);
+    if ((vc_gfx = gfx_create_surface((void*) ptr, width, height - font->height,
+                                     stride, format, 0)) == NULL) {
         goto fail;
     }
 
@@ -162,43 +151,30 @@ fail:
 
 void vc_gfx_invalidate_all(vc_t* vc) {
     if (vc->active) {
-        ioctl_display_flush_fb(vc_gfx_fd);
+        zx_cache_flush(reinterpret_cast<void*>(vc_gfx_mem), vc_gfx_size, ZX_CACHE_FLUSH_DATA);
     }
 }
 
 void vc_gfx_invalidate_status() {
-    ioctl_display_region_t r = {
-        .x = 0,
-        .y = 0,
-        .width = vc_tb_gfx->width,
-        .height = vc_tb_gfx->height,
-    };
-    ioctl_display_flush_fb_region(vc_gfx_fd, &r);
+    zx_cache_flush(reinterpret_cast<void*>(vc_gfx_mem),
+                   vc_tb_gfx->stride * vc_tb_gfx->height * vc_tb_gfx->pixelsize,
+                   ZX_CACHE_FLUSH_DATA);
 }
 
 // pixel coords
 void vc_gfx_invalidate_region(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h) {
-    if (vc->active) {
-        ioctl_display_region_t r = {
-            .x = x,
-            .y = vc->charh + y,
-            .width = w,
-            .height = h,
-        };
-        ioctl_display_flush_fb_region(vc_gfx_fd, &r);
+    if (!vc->active) {
+        return;
+    }
+    uint32_t flush_size = w * vc_gfx->pixelsize;
+    uintptr_t addr = vc_gfx_mem + (vc_gfx->stride * (vc->charh + y) * vc_gfx->pixelsize);
+    for (unsigned i = 0; i < h; i++, addr += (vc_gfx->stride * vc_gfx->pixelsize)) {
+        zx_cache_flush(reinterpret_cast<void*>(addr), flush_size, ZX_CACHE_FLUSH_DATA);
     }
 }
 
 // text coords
 void vc_gfx_invalidate(vc_t* vc, unsigned x, unsigned y, unsigned w, unsigned h) {
-    if (vc->active) {
-        ioctl_display_region_t r = {
-            .x = x * vc->charw,
-            .y = vc->charh + y * vc->charh,
-            .width = w * vc->charw,
-            .height = h * vc->charh,
-        };
-        ioctl_display_flush_fb_region(vc_gfx_fd, &r);
-    }
+    vc_gfx_invalidate_region(vc, x * vc->charw, y * vc->charh, w * vc->charw, h * vc->charh);
 }
 #endif

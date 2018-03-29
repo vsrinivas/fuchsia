@@ -20,12 +20,14 @@ LOCAL_STATIC_LIBS := \
     system/ulib/port \
     system/ulib/zxcpp \
     system/ulib/fbl \
+    system/ulib/fidl \
 
 LOCAL_LIBS := \
     system/ulib/fdio \
     system/ulib/zircon \
     system/ulib/c
 
+LOCAL_FIDL_LIBS := system/fidl/display
 
 # virtual-console
 
@@ -34,11 +36,13 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userapp
 MODULE_GROUP := core
 
-MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/main.cpp
+MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/main.cpp $(LOCAL_DIR)/vc-display.cpp
 
 MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 
 MODULE_LIBS := system/ulib/launchpad $(LOCAL_LIBS)
+
+MODULE_FIDL_LIBS := $(LOCAL_FIDL_LIBS)
 
 MODULE_NAME := virtual-console
 
@@ -56,6 +60,8 @@ MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/keyboard-test.cpp $(LOCAL_DIR)/textcon
 MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 
 MODULE_LIBS := system/ulib/unittest $(LOCAL_LIBS)
+
+MODULE_FIDL_LIBS := $(LOCAL_FIDL_LIBS)
 
 MODULE_NAME := virtual-console-test
 
