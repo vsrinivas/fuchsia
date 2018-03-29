@@ -45,8 +45,8 @@ typedef struct ramdisk_device {
     zx_handle_t vmo;
 
     bool asleep; // true if the ramdisk is "sleeping"
-    uint64_t txn_count; // current count of successful transactions
     uint64_t sa_txn_count; // number of transactions to sleep after
+    ramdisk_txn_counts_t txn_counts; // current transaction counts
 
     thrd_t worker;
     char name[NAME_MAX];
@@ -59,15 +59,35 @@ typedef struct {
 
 // The worker thread processes messages from iotxns in the background
 static int worker_thread(void* arg) {
+    zx_status_t status = ZX_OK;
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
-    ramdisk_txn_t* txn;
-    bool dead;
+    ramdisk_txn_t* txn = NULL;
+    bool dead, asleep;
 
     for (;;) {
         for (;;) {
             mtx_lock(&dev->lock);
             dead = dev->dead;
-            txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+            // Increment the count if the previous transaction completed.
+            if (txn != NULL) {
+                if (status == ZX_OK) {
+                    dev->txn_counts.successful++;
+                } else {
+                    dev->txn_counts.failed++;
+                }
+                // Put the ramdisk to sleep if we have reached the required # of transactions
+                if (dev->sa_txn_count != 0) {
+                    --dev->sa_txn_count;
+                    dev->asleep = (dev->sa_txn_count == 0);
+                }
+            }
+            // Grab the next transaction unless the device is saving them until it wakes
+            asleep = dev->asleep;
+            if (!dead && asleep && (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0) {
+                txn = NULL;
+            } else {
+                txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+            }
             mtx_unlock(&dev->lock);
             if (dead) {
                 goto goodbye;
@@ -80,7 +100,6 @@ static int worker_thread(void* arg) {
             }
         }
 
-        zx_status_t status = ZX_OK;
         void* addr = (void*) dev->mapped_addr + txn->op.rw.offset_dev;
         size_t len = txn->op.rw.length * dev->blk_size;
 
@@ -89,29 +108,13 @@ static int worker_thread(void* arg) {
             continue;
         }
 
-        // Put the ramdisk to sleep if we have reached the required # of transactions
-        if (dev->sa_txn_count > 0 && dev->txn_count >= dev->sa_txn_count) {
-            dev->asleep = true;
-        }
-
-        if (dev->asleep) {
+        if (asleep) {
             status = ZX_ERR_UNAVAILABLE;
         } else if (txn->op.command == BLOCK_OP_READ) {
-            if (zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
-                             len) != ZX_OK)  {
-                status = ZX_ERR_IO;
-            } else {
-                dev->txn_count++;
-            }
+            status = zx_vmo_write(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
         } else { // BLOCK_OP_WRITE
-            if (zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo,
-                            len) != ZX_OK) {
-                status = ZX_ERR_IO;
-            } else {
-                dev->txn_count++;
-            }
+            status = zx_vmo_read(txn->op.rw.vmo, addr, txn->op.rw.offset_vmo, len);
         }
-
         txn->op.completion_cb(&txn->op, status);
     }
 
@@ -172,34 +175,37 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
     }
     case IOCTL_RAMDISK_WAKE_UP: {
         // Reset state and transaction counts
+        mtx_lock(&ramdev->lock);
         ramdev->asleep = false;
-        ramdev->txn_count = 0;
+        memset(&ramdev->txn_counts, 0, sizeof(ramdev->txn_counts));
         ramdev->sa_txn_count = 0;
+        mtx_unlock(&ramdev->lock);
+        completion_signal(&ramdev->signal);
         return ZX_OK;
     }
     case IOCTL_RAMDISK_SLEEP_AFTER: {
         if (cmd_len < sizeof(uint64_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-
         uint64_t* txn_count = (uint64_t*)cmd;
+        mtx_lock(&ramdev->lock);
         ramdev->asleep = false;
-        ramdev->txn_count = 0;
+        memset(&ramdev->txn_counts, 0, sizeof(ramdev->txn_counts));
         ramdev->sa_txn_count = *txn_count;
-
         if (*txn_count == 0) {
             ramdev->asleep = true;
         }
+        mtx_unlock(&ramdev->lock);
         return ZX_OK;
     }
-    case IOCTL_RAMDISK_GET_TXN_COUNT: {
-        if (max < sizeof(uint64_t)) {
+    case IOCTL_RAMDISK_GET_TXN_COUNTS: {
+        if (max < sizeof(ramdisk_txn_counts_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-
-        uint64_t* txn_count = reply;
-        *txn_count = ramdev->txn_count;
-        *out_actual = sizeof(uint64_t);
+        mtx_lock(&ramdev->lock);
+        memcpy(reply, &ramdev->txn_counts, sizeof(ramdisk_txn_counts_t));
+        mtx_unlock(&ramdev->lock);
+        *out_actual = sizeof(ramdisk_txn_counts_t);
         return ZX_OK;
     }
     // Block Protocol
@@ -245,6 +251,7 @@ static void ramdisk_queue(void* ctx, block_op_t* bop) {
 
         mtx_lock(&ramdev->lock);
         if (!(dead = ramdev->dead)) {
+            ramdev->txn_counts.received++;
             list_add_tail(&ramdev->txn_list, &txn->node);
         }
         mtx_unlock(&ramdev->lock);

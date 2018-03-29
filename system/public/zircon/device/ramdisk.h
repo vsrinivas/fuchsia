@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <zircon/device/ioctl.h>
 #include <zircon/device/ioctl-wrapper.h>
+#include <zircon/types.h>
 
 #define IOCTL_RAMDISK_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 1)
@@ -20,8 +21,11 @@
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 4)
 #define IOCTL_RAMDISK_SLEEP_AFTER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 5)
-#define IOCTL_RAMDISK_GET_TXN_COUNT \
+#define IOCTL_RAMDISK_GET_TXN_COUNTS \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_RAMDISK, 6)
+
+// Ramdisk-specific flags
+#define RAMDISK_FLAG_RESUME_ON_WAKE 0xFF000001
 
 typedef struct ramdisk_ioctl_config {
     uint64_t blk_size;
@@ -31,6 +35,12 @@ typedef struct ramdisk_ioctl_config {
 typedef struct ramdisk_ioctl_config_response {
     char name[NAME_MAX + 1];
 } ramdisk_ioctl_config_response_t;
+
+typedef struct ramdisk_txn_counts {
+    uint64_t received;
+    uint64_t successful;
+    uint64_t failed;
+} ramdisk_txn_counts_t;
 
 // ssize_t ioctl_ramdisk_config(int fd, const ramdisk_ioctl_config_t* in,
 //                              ramdisk_ioctl_config_response_t* out);
@@ -63,6 +73,7 @@ IOCTL_WRAPPER(ioctl_ramdisk_wake_up, IOCTL_RAMDISK_WAKE_UP);
 // This will reset the current transaction count.
 IOCTL_WRAPPER_IN(ioctl_ramdisk_sleep_after, IOCTL_RAMDISK_SLEEP_AFTER, uint64_t);
 
-// ssize_t ioctl_ramdisk_get_txn_count(int fd, uint64_t* out);
-// Retrieve the number of successful transactions since the last call to sleep/wake.
-IOCTL_WRAPPER_OUT(ioctl_ramdisk_get_txn_count, IOCTL_RAMDISK_GET_TXN_COUNT, uint64_t);
+// ssize_t ioctl_ramdisk_get_txn_count(int fd, ramdisk_txn_counts_t* out);
+// Retrieve the number of received, successful, and failed transactions since the last call to
+// sleep/wake.
+IOCTL_WRAPPER_OUT(ioctl_ramdisk_get_txn_counts, IOCTL_RAMDISK_GET_TXN_COUNTS, ramdisk_txn_counts_t);

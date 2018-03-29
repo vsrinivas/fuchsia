@@ -17,6 +17,7 @@ MODULE_NAME := ramdisk-test
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/sync \
+    system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl \
 

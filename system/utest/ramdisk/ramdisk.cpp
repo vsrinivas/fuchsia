@@ -28,6 +28,7 @@
 #include <fbl/unique_ptr.h>
 #include <fdio/watcher.h>
 #include <unittest/unittest.h>
+#include <lib/zx/time.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
 
@@ -409,6 +410,7 @@ bool ramdisk_test_fifo_basic(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     int fd = get_ramdisk(PAGE_SIZE, 512);
+
     zx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
     ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
@@ -435,6 +437,9 @@ bool ramdisk_test_fifo_basic(void) {
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
               "Failed to attach vmo");
 
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
+
     // Batch write the VMO to the ramdisk
     // Split it into two requests, spread across the disk
     block_fifo_request_t requests[2];
@@ -452,8 +457,6 @@ bool ramdisk_test_fifo_basic(void) {
     requests[1].vmo_offset = 1;
     requests[1].dev_offset = 100;
 
-    fifo_client_t* client;
-    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
     ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
 
     // Empty the vmo, then read the info we just wrote to the disk
@@ -473,6 +476,7 @@ bool ramdisk_test_fifo_basic(void) {
 
     ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
     block_fifo_release_client(client);
+
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     ASSERT_EQ(close(fd), 0);
     END_TEST;
@@ -1183,6 +1187,191 @@ bool ramdisk_test_fifo_bad_client_bad_vmo(void) {
     END_TEST;
 }
 
+bool ramdisk_test_fifo_sleep_unavailable(void) {
+    BEGIN_TEST;
+    // Set up the initial handshake connection with the ramdisk
+    int fd = get_ramdisk(PAGE_SIZE, 512);
+
+    // Put the ramdisk to sleep after 2 transactions
+    uint64_t two = 2;
+    ASSERT_GE(ioctl_ramdisk_sleep_after(fd, &two), 0);
+
+    zx_handle_t fifo;
+    ssize_t expected = sizeof(fifo);
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
+    txnid_t txnid;
+    expected = sizeof(txnid_t);
+    ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
+
+    // Create an arbitrary VMO, fill it with some stuff
+    uint64_t vmo_size = PAGE_SIZE * 3;
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
+    ASSERT_TRUE(ac.check());
+    fill_random(buf.get(), vmo_size);
+
+    ASSERT_EQ(zx_vmo_write(vmo, buf.get(), 0, vmo_size), ZX_OK);
+
+    // Send a handle to the vmo to the block device, get a vmoid which identifies it
+    vmoid_t vmoid;
+    expected = sizeof(vmoid_t);
+    zx_handle_t xfer_vmo;
+    ASSERT_EQ(zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+    ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
+              "Failed to attach vmo");
+
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
+
+    // Batch write the VMO to the ramdisk
+    // Split it into two requests, spread across the disk
+    block_fifo_request_t requests[2];
+    requests[0].txnid = txnid;
+    requests[0].vmoid = vmoid;
+    requests[0].opcode = BLOCKIO_WRITE;
+    requests[0].length = 1;
+    requests[0].vmo_offset = 0;
+    requests[0].dev_offset = 0;
+
+    requests[1].txnid = txnid;
+    requests[1].vmoid = vmoid;
+    requests[1].opcode = BLOCKIO_WRITE;
+    requests[1].length = 2;
+    requests[1].vmo_offset = 1;
+    requests[1].dev_offset = 100;
+
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
+
+    // The ramdisk should be asleep now
+    requests[0].opcode = BLOCKIO_READ;
+    requests[1].opcode = BLOCKIO_READ;
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_ERR_UNAVAILABLE);
+
+    // Close the current vmo
+    requests[0].opcode = BLOCKIO_CLOSE_VMO;
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), ZX_OK);
+
+    ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
+    block_fifo_release_client(client);
+
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_EQ(close(fd), 0);
+    END_TEST;
+}
+
+static int fifo_wake_thread(void* arg) {
+    int fd = *(static_cast<int*>(arg));
+    ramdisk_txn_counts_t counts;
+    for (uint64_t attempts = 0; attempts < 20; ++attempts) {
+        if (ioctl_ramdisk_get_txn_counts(fd, &counts) < 0) {
+            return -1;
+        }
+        if (counts.received == 4) {
+            break;
+        }
+        zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    }
+    if (counts.successful + counts.failed != 2 || ioctl_ramdisk_wake_up(fd) < 0) {
+        return -1;
+    }
+    return 0;
+}
+
+bool ramdisk_test_fifo_sleep_deferred(void) {
+    BEGIN_TEST;
+    // Set up the initial handshake connection with the ramdisk
+    int fd = get_ramdisk(PAGE_SIZE, 512);
+
+    // Put the ramdisk to sleep after 2 transactions
+    uint64_t two = 2;
+    ASSERT_GE(ioctl_ramdisk_sleep_after(fd, &two), 0);
+
+    // Tell ramdisk to defer txns while sleeping
+    uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
+    ASSERT_GE(ioctl_ramdisk_set_flags(fd, &flags), 0);
+
+    // Start thread to wake ramdisk
+    thrd_t thread;
+    ASSERT_EQ(thrd_create(&thread, fifo_wake_thread, &fd), thrd_success);
+
+    zx_handle_t fifo;
+    ssize_t expected = sizeof(fifo);
+    ASSERT_EQ(ioctl_block_get_fifos(fd, &fifo), expected, "Failed to get FIFO");
+    txnid_t txnid;
+    expected = sizeof(txnid_t);
+    ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
+
+    // Create an arbitrary VMO, fill it with some stuff
+    uint64_t vmo_size = PAGE_SIZE * 3;
+    zx_handle_t vmo;
+    ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[vmo_size]);
+    ASSERT_TRUE(ac.check());
+    fill_random(buf.get(), vmo_size);
+
+    ASSERT_EQ(zx_vmo_write(vmo, buf.get(), 0, vmo_size), ZX_OK);
+
+    // Send a handle to the vmo to the block device, get a vmoid which identifies it
+    vmoid_t vmoid;
+    expected = sizeof(vmoid_t);
+    zx_handle_t xfer_vmo;
+    ASSERT_EQ(zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
+    ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &vmoid), expected,
+              "Failed to attach vmo");
+
+    fifo_client_t* client;
+    ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
+
+    // Batch write the VMO to the ramdisk
+    // Split it into two requests, spread across the disk
+    block_fifo_request_t requests[2];
+    requests[0].txnid = txnid;
+    requests[0].vmoid = vmoid;
+    requests[0].opcode = BLOCKIO_WRITE;
+    requests[0].length = 1;
+    requests[0].vmo_offset = 0;
+    requests[0].dev_offset = 0;
+
+    requests[1].txnid = txnid;
+    requests[1].vmoid = vmoid;
+    requests[1].opcode = BLOCKIO_WRITE;
+    requests[1].length = 2;
+    requests[1].vmo_offset = 1;
+    requests[1].dev_offset = 100;
+
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
+
+    // Empty the vmo, then read the info we just wrote to the disk
+    fbl::unique_ptr<uint8_t[]> out(new (&ac) uint8_t[vmo_size]());
+    ASSERT_TRUE(ac.check());
+
+    ASSERT_EQ(zx_vmo_write(vmo, out.get(), 0, vmo_size), ZX_OK);
+    requests[0].opcode = BLOCKIO_READ;
+    requests[1].opcode = BLOCKIO_READ;
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
+    ASSERT_EQ(zx_vmo_read(vmo, out.get(), 0, vmo_size), ZX_OK);
+    ASSERT_EQ(memcmp(buf.get(), out.get(), vmo_size), 0, "Read data not equal to written data");
+
+    // Check the wake thread succeeded
+    int res;
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
+    ASSERT_EQ(res, 0, "Background thread failed");
+
+    // Close the current vmo
+    requests[0].opcode = BLOCKIO_CLOSE_VMO;
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], 1), ZX_OK);
+
+    ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
+    block_fifo_release_client(client);
+
+    ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
+    ASSERT_EQ(close(fd), 0);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(ramdisk_tests)
 RUN_TEST_SMALL(ramdisk_test_simple)
 RUN_TEST_SMALL(ramdisk_test_vmo)
@@ -1206,6 +1395,8 @@ RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_txnid)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_unaligned_request)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_overflow)
 RUN_TEST_SMALL(ramdisk_test_fifo_bad_client_bad_vmo)
+RUN_TEST_SMALL(ramdisk_test_fifo_sleep_unavailable)
+RUN_TEST_SMALL(ramdisk_test_fifo_sleep_deferred)
 END_TEST_CASE(ramdisk_tests)
 
 } // namespace tests
