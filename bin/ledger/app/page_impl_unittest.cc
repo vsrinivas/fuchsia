@@ -34,7 +34,7 @@ namespace ledger {
 namespace {
 std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   std::string value;
-  bool status = fsl::StringFromVmo(vmo, &value);
+  bool status = fsl::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
@@ -164,8 +164,8 @@ class PageImplTest : public gtest::TestWithMessageLoop {
 };
 
 TEST_F(PageImplTest, GetId) {
-  page_ptr_->GetId([this](fidl::VectorPtr<uint8_t> page_id) {
-    EXPECT_EQ(page_id1_, convert::ToString(page_id));
+  page_ptr_->GetId([this](ledger::PageId page_id) {
+    EXPECT_EQ(page_id1_, convert::ToString(page_id.id));
     message_loop_.PostQuitTask();
   });
   RunLoop();
@@ -215,7 +215,7 @@ TEST_F(PageImplTest, PutReferenceNoTransaction) {
   ASSERT_EQ(Status::OK, status);
 
   std::string key("some_key");
-  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -257,7 +257,7 @@ TEST_F(PageImplTest, PutUnknownReference) {
     EXPECT_EQ(0u, journals.size());
     message_loop_.PostQuitTask();
   };
-  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
                           Priority::LAZY, callback);
   RunLoop();
 }
@@ -299,7 +299,7 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
 
-  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -406,7 +406,7 @@ TEST_F(PageImplTest, TransactionCommit) {
     EXPECT_EQ(storage::KeyPriority::EAGER, entry.priority);
   }
 
-  page_ptr_->PutReference(convert::ToArray(key2), std::move(reference),
+  page_ptr_->PutReference(convert::ToArray(key2), std::move(*reference),
                           Priority::LAZY,
                           callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -587,9 +587,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -600,13 +600,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntries) {
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
-  EXPECT_EQ(eager_value, ToString(actual_entries->at(0)->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  EXPECT_EQ(eager_value, ToString(actual_entries->at(0).value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
-  EXPECT_EQ(lazy_value, ToString(actual_entries->at(1)->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
+  EXPECT_EQ(lazy_value, ToString(actual_entries->at(1).value));
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
@@ -632,7 +632,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   fidl::VectorPtr<uint8_t> next_token;
-  fidl::VectorPtr<InlinedEntryPtr> actual_entries;
+  fidl::VectorPtr<InlinedEntry> actual_entries;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
       callback::Capture(MakeQuitTask(), &status, &actual_entries, &next_token));
@@ -641,13 +641,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInline) {
   EXPECT_TRUE(next_token.is_null());
 
   ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
-  EXPECT_EQ(eager_value, convert::ToString(actual_entries->at(0)->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  EXPECT_EQ(eager_value, convert::ToString(actual_entries->at(0).value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
-  EXPECT_EQ(lazy_value, convert::ToString(actual_entries->at(1)->value));
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
+  EXPECT_EQ(lazy_value, convert::ToString(actual_entries->at(1).value));
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
@@ -666,10 +666,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   // Call GetEntries and find a partial result.
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   fidl::VectorPtr<uint8_t> actual_next_token;
   auto callback_getentries = [this, &actual_entries, &actual_next_token](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
     EXPECT_FALSE(next_token.is_null());
@@ -682,7 +682,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
 
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries, &entry_count](
-                                  Status status, fidl::VectorPtr<EntryPtr> entries,
+                                  Status status, fidl::VectorPtr<Entry> entries,
                                   fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -700,8 +700,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
     ASSERT_EQ(GetKey(i, min_key_size),
-              convert::ToString(actual_entries->at(i)->key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i)->value));
+              convert::ToString(actual_entries->at(i).key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i).value));
   }
 }
 
@@ -714,7 +714,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
 
   // Call GetEntries and find a partial result.
   Status status;
-  fidl::VectorPtr<InlinedEntryPtr> actual_entries;
+  fidl::VectorPtr<InlinedEntry> actual_entries;
   fidl::VectorPtr<uint8_t> actual_next_token;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
@@ -725,7 +725,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   EXPECT_FALSE(actual_next_token.is_null());
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<InlinedEntryPtr> actual_entries2;
+  fidl::VectorPtr<InlinedEntry> actual_entries2;
   fidl::VectorPtr<uint8_t> actual_next_token2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
@@ -742,9 +742,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForSize) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i)->key));
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i)->value));
+              convert::ToString(actual_entries->at(i).value));
   }
 }
 
@@ -768,7 +768,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
 
   // Call GetEntries and find a partial result.
   Status status;
-  fidl::VectorPtr<InlinedEntryPtr> actual_entries;
+  fidl::VectorPtr<InlinedEntry> actual_entries;
   fidl::VectorPtr<uint8_t> actual_next_token;
   snapshot->GetEntriesInline(
       nullptr, nullptr,
@@ -779,7 +779,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   EXPECT_FALSE(actual_next_token.is_null());
 
   // Call GetEntries with the previous token and receive the remaining results.
-  fidl::VectorPtr<InlinedEntryPtr> actual_entries2;
+  fidl::VectorPtr<InlinedEntry> actual_entries2;
   fidl::VectorPtr<uint8_t> actual_next_token2;
   snapshot->GetEntriesInline(
       nullptr, std::move(actual_next_token),
@@ -796,9 +796,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i)->key));
+    ASSERT_EQ(GetKey(i, 0), convert::ToString(actual_entries->at(i).key));
     ASSERT_EQ(GetValue(i, min_value_size),
-              convert::ToString(actual_entries->at(i)->value));
+              convert::ToString(actual_entries->at(i).value));
   }
 }
 
@@ -808,10 +808,10 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   // Call GetEntries and find a partial result.
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   fidl::VectorPtr<uint8_t> actual_next_token;
   auto callback_getentries = [this, &actual_entries, &actual_next_token](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::PARTIAL_RESULT, status);
     EXPECT_FALSE(next_token.is_null());
@@ -824,7 +824,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
 
   // Call GetEntries with the previous token and receive the remaining results.
   auto callback_getentries2 = [this, &actual_entries](
-                                  Status status, fidl::VectorPtr<EntryPtr> entries,
+                                  Status status, fidl::VectorPtr<Entry> entries,
                                   fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -841,8 +841,8 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForHandles) {
   // Check that the correct values of the keys are all present in the result and
   // in the correct order.
   for (int i = 0; i < static_cast<int>(actual_entries->size()); ++i) {
-    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries->at(i)->key));
-    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i)->value));
+    ASSERT_EQ(GetKey(i), convert::ToString(actual_entries->at(i).key));
+    ASSERT_EQ(GetValue(i, 0), ToString(actual_entries->at(i).value));
   }
 }
 
@@ -872,9 +872,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -885,13 +885,13 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithFetch) {
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
-  EXPECT_EQ(eager_value, ToString(actual_entries->at(0)->value));
-  EXPECT_EQ(Priority::EAGER, actual_entries->at(0)->priority);
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  EXPECT_EQ(eager_value, ToString(actual_entries->at(0).value));
+  EXPECT_EQ(Priority::EAGER, actual_entries->at(0).priority);
 
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
-  EXPECT_FALSE(actual_entries->at(1)->value);
-  EXPECT_EQ(Priority::LAZY, actual_entries->at(1)->priority);
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
+  EXPECT_FALSE(actual_entries->at(1).value);
+  EXPECT_EQ(Priority::LAZY, actual_entries->at(1).priority);
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
@@ -914,9 +914,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot(convert::ToArray("001"));
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -927,15 +927,15 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithPrefix) {
   RunLoop();
 
   ASSERT_EQ(1u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
 
   snapshot = GetSnapshot(convert::ToArray("00"));
   snapshot->GetEntries(nullptr, nullptr, callback_getentries);
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
@@ -958,9 +958,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   RunLoop();
 
   PageSnapshotPtr snapshot = GetSnapshot();
-  fidl::VectorPtr<EntryPtr> actual_entries;
+  fidl::VectorPtr<Entry> actual_entries;
   auto callback_getentries = [this, &actual_entries](
-                                 Status status, fidl::VectorPtr<EntryPtr> entries,
+                                 Status status, fidl::VectorPtr<Entry> entries,
                                  fidl::VectorPtr<uint8_t> next_token) {
     EXPECT_EQ(Status::OK, status);
     EXPECT_TRUE(next_token.is_null());
@@ -971,14 +971,14 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithStart) {
   RunLoop();
 
   ASSERT_EQ(1u, actual_entries->size());
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(0)->key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(0).key));
 
   snapshot->GetEntries(convert::ToArray("001"), nullptr, callback_getentries);
   RunLoop();
 
   ASSERT_EQ(2u, actual_entries->size());
-  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0)->key));
-  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1)->key));
+  EXPECT_EQ(eager_key, convert::ExtendedStringView(actual_entries->at(0).key));
+  EXPECT_EQ(lazy_key, convert::ExtendedStringView(actual_entries->at(1).key));
 }
 
 TEST_F(PageImplTest, PutGetSnapshotGetKeys) {
@@ -1217,7 +1217,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   ASSERT_EQ(Status::OK, status);
 
   std::string key("some_key");
-  page_ptr_->PutReference(convert::ToArray(key), std::move(reference),
+  page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
                           Priority::EAGER,
                           callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -1299,7 +1299,7 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
   std::string content;
-  EXPECT_TRUE(fsl::StringFromVmo(buffer, &content));
+  EXPECT_TRUE(fsl::StringFromVmo(*buffer, &content));
   EXPECT_EQ("small", content);
 }
 
