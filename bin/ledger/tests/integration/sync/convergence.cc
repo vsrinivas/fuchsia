@@ -39,17 +39,10 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
            << "VMO has the wrong size: " << vmo->size << " instead of "
            << sizeof(double) << ".";
   }
-  size_t num_read;
-  zx_status_t status = vmo->vmo.read(dbl, 0, sizeof(double), &num_read);
+  zx_status_t status = vmo->vmo.read(dbl, 0, sizeof(double));
   if (status < 0) {
     return ::testing::AssertionFailure() << "Unable to read the VMO.";
   }
-  if (num_read != sizeof(double)) {
-    return ::testing::AssertionFailure()
-           << "VMO read of the wrong size: " << num_read << " instead of "
-           << sizeof(double) << ".";
-  }
-
   return ::testing::AssertionSuccess();
 }
 
@@ -197,16 +190,16 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
 
  private:
   // ConflictResolverFactory:
-  void GetPolicy(fidl::Array<uint8_t, 16> /*page_id*/,
+  void GetPolicy(ledger::PageId /*page_id*/,
                  GetPolicyCallback callback) override {
     callback(ledger::MergePolicy::CUSTOM);
   }
 
   void NewConflictResolver(
-      fidl::Array<uint8_t, 16> page_id,
+      ledger::PageId page_id,
       fidl::InterfaceRequest<ledger::ConflictResolver> resolver) override {
     resolvers.emplace(std::piecewise_construct,
-                      std::forward_as_tuple(convert::ToString(page_id)),
+                      std::forward_as_tuple(convert::ToString(page_id.id)),
                       std::forward_as_tuple(std::move(resolver)));
   }
 
