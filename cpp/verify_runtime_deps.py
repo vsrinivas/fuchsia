@@ -24,7 +24,10 @@ def has_missing_files(runtime_files, package_deps):
     """Returns true if a runtime file is missing from the given deps."""
     has_missing_files = False
     for file in runtime_files:
-        if not has_packaged_file(file, package_deps):
+        # Some libraries are only known to GN as ABI stubs, whereas the real
+        # runtime dependency is generated in parallel as a ".so.impl" file.
+        if (not has_packaged_file(file, package_deps) and
+                not has_packaged_file('%s.impl' % file, package_deps)):
             print('No package dependency generates %s' % file)
             has_missing_files = True
     return has_missing_files
