@@ -16,9 +16,6 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {
@@ -34,7 +31,7 @@ class ModuleControllerImpl : ModuleController, EmbedModuleController {
   ModuleControllerImpl(
       StoryControllerImpl* story_controller_impl,
       component::ApplicationLauncher* application_launcher,
-      AppConfigPtr module_config,
+      AppConfig module_config,
       const ModuleData* module_data,
       component::ServiceListPtr service_list,
       fidl::InterfaceHandle<ModuleContext> module_context,

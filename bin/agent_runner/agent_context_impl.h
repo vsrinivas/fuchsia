@@ -7,23 +7,15 @@
 
 #include <string>
 
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include "lib/async/cpp/operation.h"
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular.h>
+#include "lib/app/cpp/service_provider_impl.h"
+#include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 
@@ -46,7 +38,7 @@ struct AgentContextInfo {
 class AgentContextImpl : AgentContext, AgentController {
  public:
   explicit AgentContextImpl(const AgentContextInfo& info,
-                            AppConfigPtr agent_config);
+                            AppConfig agent_config);
   ~AgentContextImpl() override;
 
   // Stops the running agent, irrespective of whether there are active
@@ -117,10 +109,10 @@ class AgentContextImpl : AgentContext, AgentController {
   // application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
 
-  modular_auth::TokenProviderFactory* const token_provider_factory_;  // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;        // Not owned.
-  UserIntelligenceProvider* const
-      user_intelligence_provider_;  // Not owned.
+  modular_auth::TokenProviderFactory* const
+      token_provider_factory_;                                  // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;          // Not owned.
+  UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
 
   State state_ = State::INITIALIZING;
 

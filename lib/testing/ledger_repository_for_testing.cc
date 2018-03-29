@@ -20,9 +20,9 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       tmp_dir_("/tmp/" + repository_name) {
-  AppConfigPtr ledger_config = AppConfig::New();
-  ledger_config->url = kLedgerAppUrl;
-  ledger_config->args.push_back(kLedgerNoMinfsWaitFlag);
+  AppConfig ledger_config;
+  ledger_config.url = kLedgerAppUrl;
+  ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
   auto& app_launcher = application_context_->launcher();
   ledger_app_client_ =

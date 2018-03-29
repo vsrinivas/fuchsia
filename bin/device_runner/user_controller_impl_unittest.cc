@@ -4,9 +4,9 @@
 
 #include "peridot/bin/device_runner/user_controller_impl.h"
 
+#include <fuchsia/cpp/component.h>
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include <fuchsia/cpp/component.h>
 #include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {
@@ -18,8 +18,8 @@ class UserControllerImplTest : public gtest::TestWithMessageLoop {};
 TEST_F(UserControllerImplTest, StartUserRunner) {
   FakeApplicationLauncher launcher;
   std::string url = "test_url_string";
-  auto app_config = AppConfig::New();
-  app_config->url = url;
+  AppConfig app_config;
+  app_config.url = url;
 
   auth::TokenProviderFactoryPtr token_provider_factory_ptr;
   auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
@@ -34,7 +34,7 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
 
   UserControllerPtr user_controller_ptr;
   UserControllerImpl impl(
-      &launcher, app_config.Clone(), app_config.Clone(), app_config.Clone(),
+      &launcher, app_config, app_config, app_config,
       std::move(token_provider_factory_ptr), nullptr /* account */,
       nullptr /* view_owner_request */, nullptr /* device_shell_services */,
       user_controller_ptr.NewRequest(), nullptr /* done_callback */);

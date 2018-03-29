@@ -14,6 +14,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/resolver.h>
 #include <fuchsia/cpp/speech.h>
@@ -46,10 +47,10 @@ class RemoteInvokerImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
-class UserRunnerImpl : UserRunner,
+class UserRunnerImpl : modular_private::UserRunner,
                        UserShellContext,
                        EntityProviderLauncher,
-                       UserRunnerDebug {
+                       modular_private::UserRunnerDebug {
  public:
   UserRunnerImpl(component::ApplicationContext* application_context, bool test);
 
@@ -63,23 +64,25 @@ class UserRunnerImpl : UserRunner,
 
   // |UserRunner|
   void Initialize(
-      auth::AccountPtr account,
-      AppConfigPtr user_shell,
-      AppConfigPtr story_shell,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      fidl::InterfaceHandle<UserContext> user_context,
+      modular_auth::AccountPtr account,
+      AppConfig user_shell,
+      AppConfig story_shell,
+      fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+          token_provider_factory,
+      fidl::InterfaceHandle<modular_private::UserContext> user_context,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
       override;
 
   // |UserRunner|
-  void SwapUserShell(AppConfigPtr user_shell,
+  void SwapUserShell(AppConfig user_shell,
                      SwapUserShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeUser(
-      auth::AccountPtr account,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      fidl::InterfaceHandle<UserContext> user_context);
+      modular_auth::AccountPtr account,
+      fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+          token_provider_factory,
+      fidl::InterfaceHandle<modular_private::UserContext> user_context);
   void InitializeLedger();
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
@@ -87,12 +90,12 @@ class UserRunnerImpl : UserRunner,
   void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
   void InitializeMaxwell(const fidl::StringPtr& user_shell_url,
-                         AppConfigPtr story_shell);
+                         AppConfig story_shell);
   void InitializeUserShell(
-      AppConfigPtr user_shell,
+      AppConfig user_shell,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request);
 
-  void RunUserShell(AppConfigPtr user_shell);
+  void RunUserShell(AppConfig user_shell);
   // This is a termination sequence that may be used with |AtEnd()|, but also
   // may be executed to terminate the currently running user shell.
   void TerminateUserShell(const std::function<void()>& done);
@@ -107,7 +110,7 @@ class UserRunnerImpl : UserRunner,
       fidl::InterfaceRequest<FocusController> request) override;
   void GetFocusProvider(fidl::InterfaceRequest<FocusProvider> request) override;
   void GetIntelligenceServices(
-      fidl::InterfaceRequest<maxwell::IntelligenceServices> request) override;
+      fidl::InterfaceRequest<modular::IntelligenceServices> request) override;
   void GetLink(fidl::InterfaceRequest<Link> request) override;
   void GetPresentation(
       fidl::InterfaceRequest<presentation::Presentation> request) override;
@@ -115,7 +118,7 @@ class UserRunnerImpl : UserRunner,
       fidl::InterfaceRequest<speech::SpeechToText> request) override;
   void GetStoryProvider(fidl::InterfaceRequest<StoryProvider> request) override;
   void GetSuggestionProvider(
-      fidl::InterfaceRequest<maxwell::SuggestionProvider> request) override;
+      fidl::InterfaceRequest<modular::SuggestionProvider> request) override;
   void GetVisibleStoriesController(
       fidl::InterfaceRequest<VisibleStoriesController> request) override;
   void Logout() override;
@@ -130,7 +133,7 @@ class UserRunnerImpl : UserRunner,
   // |UserRunnerDebug|
   void DumpState(DumpStateCallback callback) override;
 
-  component::ServiceProviderPtr GetServiceProvider(AppConfigPtr config);
+  component::ServiceProviderPtr GetServiceProvider(AppConfig config);
   component::ServiceProviderPtr GetServiceProvider(const std::string& url);
 
   cloud_provider::CloudProviderPtr GetCloudProvider();
@@ -162,15 +165,16 @@ class UserRunnerImpl : UserRunner,
   component::ApplicationContext* const application_context_;
   const bool test_;
 
-  fidl::BindingSet<UserRunner> bindings_;
-  fidl::BindingSet<UserRunnerDebug> user_runner_debug_bindings_;
+  fidl::BindingSet<modular_private::UserRunner> bindings_;
+  fidl::BindingSet<modular_private::UserRunnerDebug>
+      user_runner_debug_bindings_;
   fidl::Binding<UserShellContext> user_shell_context_binding_;
 
-  auth::TokenProviderFactoryPtr token_provider_factory_;
-  UserContextPtr user_context_;
+  modular_auth::TokenProviderFactoryPtr token_provider_factory_;
+  modular_private::UserContextPtr user_context_;
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
-  std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_;
+  std::unique_ptr<AppClient<ledger_internal::LedgerController>> ledger_app_;
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   ledger_internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
@@ -179,9 +183,9 @@ class UserRunnerImpl : UserRunner,
 
   std::unique_ptr<Scope> user_scope_;
 
-  auth::AccountPtr account_;
+  modular_auth::AccountPtr account_;
 
-  std::unique_ptr<AppClient<maxwell::UserIntelligenceProviderFactory>>
+  std::unique_ptr<AppClient<modular::UserIntelligenceProviderFactory>>
       maxwell_app_;
   std::unique_ptr<AppClient<Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<Lifecycle>> module_resolver_app_;
@@ -212,9 +216,9 @@ class UserRunnerImpl : UserRunner,
 
   // Service provider interfaces for maxwell services. They are created with
   // the component context above as parameters.
-  fidl::InterfacePtr<maxwell::UserIntelligenceProvider>
+  fidl::InterfacePtr<modular::UserIntelligenceProvider>
       user_intelligence_provider_;
-  fidl::InterfacePtr<maxwell::IntelligenceServices> intelligence_services_;
+  fidl::InterfacePtr<modular::IntelligenceServices> intelligence_services_;
 
   // Services we provide to the module resolver's namespace.
   component::ServiceProviderImpl module_resolver_ns_services_;

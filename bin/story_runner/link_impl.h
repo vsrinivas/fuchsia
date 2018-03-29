@@ -5,9 +5,10 @@
 #ifndef PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
 #define PERIDOT_BIN_STORY_RUNNER_LINK_IMPL_H_
 
-#include <vector>
 #include <set>
+#include <vector>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
@@ -16,10 +17,6 @@
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/key_generator.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -154,7 +151,7 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(fidl::VectorPtr<LinkChangePtr> changes);
+  void Replay(fidl::VectorPtr<LinkChange> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
   bool ApplyChange(LinkChange* change);
@@ -239,7 +236,7 @@ class LinkImpl : PageClient {
   KeyGenerator key_generator_;
 
   // Track changes that have been saved to the Ledger but not confirmed
-  std::vector<LinkChangePtr> pending_ops_;
+  std::vector<LinkChange> pending_ops_;
 
   // The latest key that's been applied to this Link. If we receive an earlier
   // key in OnChange, then replay the history.
@@ -294,7 +291,8 @@ class LinkConnection : Link {
   void SetSchema(fidl::StringPtr json_schema) override;
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
                     fidl::StringPtr json) override;
-  void Set(fidl::VectorPtr<fidl::StringPtr> path, fidl::StringPtr json) override;
+  void Set(fidl::VectorPtr<fidl::StringPtr> path,
+           fidl::StringPtr json) override;
   void Get(fidl::VectorPtr<fidl::StringPtr> path,
            GetCallback callback) override;
   void Erase(fidl::VectorPtr<fidl::StringPtr> path) override;

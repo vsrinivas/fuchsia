@@ -16,9 +16,6 @@
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
@@ -28,7 +25,6 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/device_runner/user_provider_impl.h"
 #include "peridot/lib/common/async_holder.h"
@@ -290,8 +286,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     }
 
     // 3. Start OAuth Token Manager App.
-    AppConfigPtr token_manager_config = AppConfig::New();
-    token_manager_config->url = settings_.account_provider.url;
+    AppConfig token_manager_config;
+    token_manager_config.url = settings_.account_provider.url;
     token_manager_ = std::make_unique<AppClient<auth::AccountProvider>>(
         app_context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");

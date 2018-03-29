@@ -6,11 +6,10 @@
 // solely to implement the history of change operations for Links.
 
 #include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/fidl/clone.h"
+#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -115,7 +114,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
     // operations coming directly from the API, data_->key is empty, so this
     // block will do nothing.
     if (!impl_->pending_ops_.empty() &&
-        data_->key == impl_->pending_ops_[0]->key) {
+        data_->key == impl_->pending_ops_[0].key) {
       impl_->pending_ops_.erase(impl_->pending_ops_.begin());
       return;
     }
@@ -139,7 +138,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
       }
 
       data_->key = impl_->key_generator_.Create();
-      impl_->pending_ops_.push_back(CloneOptional(data_));
+      impl_->pending_ops_.push_back(CloneStruct(data_));
       new IncrementalWriteCall(&operation_queue_, impl_, CloneOptional(data_),
                                [flow] {});
     }
@@ -192,7 +191,7 @@ void LinkImpl::ReloadCall::Run() {
   FlowToken flow{this};
   new ReadAllDataCall<LinkChange>(
       &operation_queue_, impl_->page(), MakeLinkKey(impl_->link_path_),
-      XdrLinkChange, [this, flow](fidl::VectorPtr<LinkChangePtr> changes) {
+      XdrLinkChange, [this, flow](fidl::VectorPtr<LinkChange> changes) {
         if (changes->empty()) {
           if (impl_->create_link_info_ &&
               !impl_->create_link_info_->initial_data.is_null() &&
@@ -211,7 +210,7 @@ void LinkImpl::ReloadCall::Run() {
       });
 }
 
-void LinkImpl::Replay(fidl::VectorPtr<LinkChangePtr> changes) {
+void LinkImpl::Replay(fidl::VectorPtr<LinkChange> changes) {
   doc_ = CrtJsonDoc();
   auto it1 = changes->begin();
   auto it2 = pending_ops_.begin();
@@ -221,36 +220,36 @@ void LinkImpl::Replay(fidl::VectorPtr<LinkChangePtr> changes) {
     bool it1_done = it1 == changes->end();
     bool it2_done = it2 == pending_ops_.end();
 
-    FXL_DCHECK(it1_done || !(*it1)->key.is_null());
-    FXL_DCHECK(it2_done || !(*it2)->key.is_null());
+    FXL_DCHECK(it1_done || !it1->key.is_null());
+    FXL_DCHECK(it2_done || !it2->key.is_null());
 
     if (it1_done && it2_done) {
       // Done
       break;
     } else if (!it1_done && it2_done) {
-      change = it1->get();
+      change = &*it1;
       ++it1;
     } else if (it1_done && !it2_done) {
-      change = it2->get();
+      change = &*it2;
       ++it2;
     } else {
       // Both it1 and it2 are valid
-      const std::string& s1 = (*it1)->key.get();
-      const std::string& s2 = (*it2)->key.get();
+      const std::string& s1 = it1->key.get();
+      const std::string& s2 = it2->key.get();
       int sgn = s1.compare(s2);
       sgn = sgn < 0 ? -1 : (sgn > 0 ? 1 : 0);
       switch (sgn) {
         case 0:
-          change = it1->get();
+          change = &*it1;
           ++it1;
           ++it2;
           break;
         case -1:
-          change = it1->get();
+          change = &*it1;
           ++it1;
           break;
         case 1:
-          change = it2->get();
+          change = &*it2;
           ++it2;
           break;
       }

@@ -50,15 +50,11 @@ void FocusHandler::AddControllerBinding(
 
 // |FocusProvider|
 void FocusHandler::Query(QueryCallback callback) {
-  new ReadAllDataCall<FocusInfo>(
-      &operation_queue_, page(), kFocusKeyPrefix, XdrFocusInfo, [callback](fidl::VectorPtr<FocusInfoPtr> infos) {
-        fidl::VectorPtr<FocusInfo> vector;
-        vector->reserve(infos->size());
-        for (const auto& i : *infos) {
-          vector.push_back((*i));
-        }
-        callback(std::move(vector));
-      });
+  new ReadAllDataCall<FocusInfo>(&operation_queue_, page(), kFocusKeyPrefix,
+                                 XdrFocusInfo,
+                                 [callback](fidl::VectorPtr<FocusInfo> infos) {
+                                   callback(std::move(infos));
+                                 });
 }
 
 // |FocusProvider|
@@ -85,9 +81,9 @@ void FocusHandler::Set(fidl::StringPtr story_id) {
   data->focused_story_id = story_id;
   data->last_focus_change_timestamp = time(nullptr);
 
-  new WriteDataCall<FocusInfo>(
-      &operation_queue_, page(), MakeFocusKey(device_id_), XdrFocusInfo,
-      std::move(data), [] {});
+  new WriteDataCall<FocusInfo>(&operation_queue_, page(),
+                               MakeFocusKey(device_id_), XdrFocusInfo,
+                               std::move(data), [] {});
 }
 
 // |FocusController|

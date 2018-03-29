@@ -44,14 +44,15 @@ zx::channel CloneChannel(int fd) {
 }  // namespace
 
 AppClientBase::AppClientBase(component::ApplicationLauncher* const launcher,
-                             AppConfigPtr config, std::string data_origin,
+                             AppConfig config,
+                             std::string data_origin,
                              component::ServiceListPtr additional_services)
-    : AsyncHolderBase(config->url) {
+    : AsyncHolderBase(config.url) {
   component::ApplicationLaunchInfo launch_info;
   launch_info.directory_request = services_.NewRequest();
-  launch_info.url = config->url;
+  launch_info.url = config.url;
   fidl::VectorPtr<fidl::StringPtr> args;
-  for (const auto& arg : *config->args) {
+  for (const auto& arg : *config.args) {
     args.push_back(arg);
   }
   launch_info.arguments = std::move(args);

@@ -43,7 +43,8 @@ std::unique_ptr<T> CloneOptional(const std::unique_ptr<T>& value_ptr) {
   return nullptr;
 }
 
-fidl::VectorPtr<fidl::StringPtr> CloneStringVector(const fidl::VectorPtr<fidl::StringPtr>& sv) {
+inline fidl::VectorPtr<fidl::StringPtr> CloneStringVector(
+    const fidl::VectorPtr<fidl::StringPtr>& sv) {
   fidl::VectorPtr<fidl::StringPtr> new_vector;
   new_vector->resize(sv->size());
   std::copy(sv->begin(), sv->end(), new_vector->begin());
@@ -54,22 +55,22 @@ template <typename T>
 fidl::VectorPtr<T> CloneStructVector(const fidl::VectorPtr<T>& vector) {
   fidl::VectorPtr<T> new_vector;
   new_vector->resize(vector->size());
-  for (size_t i=0; i<vector->size(); i++) {
+  for (size_t i = 0; i < vector->size(); i++) {
     vector->at(i).Clone(&new_vector->at(i));
   }
   return new_vector;
 }
 
 template <typename T>
-fidl::VectorPtr<T> CloneStructVector(const fidl::VectorPtr<std::unique_ptr<T>>& vector) {
+fidl::VectorPtr<T> CloneStructVector(
+    const fidl::VectorPtr<std::unique_ptr<T>>& vector) {
   fidl::VectorPtr<T> new_vector;
   new_vector->resize(vector->size());
-  for (size_t i=0; i<vector->size(); i++) {
+  for (size_t i = 0; i < vector->size(); i++) {
     vector->at(i)->Clone(&new_vector->at(i));
   }
   return new_vector;
 }
-
 
 }  // namespace modular
 

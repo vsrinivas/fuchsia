@@ -7,13 +7,13 @@
 
 #include <map>
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
@@ -44,7 +44,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   void GetCurrentDevice(GetCurrentDeviceCallback callback) override;
 
   // |DeviceMap|
-  void SetCurrentDeviceProfile(const ::fidl::StringPtr& profile) override;
+  void SetCurrentDeviceProfile(::fidl::StringPtr profile) override;
 
   // |DeviceMap|
   void WatchDeviceMap(fidl::InterfaceHandle<DeviceMapWatcher> watcher) override;
@@ -65,7 +65,7 @@ class DeviceMapImpl : DeviceMap, PageClient {
   fidl::BindingSet<DeviceMap> bindings_;
 
   // All known devices from the Ledger page.
-  std::map<std::string, DeviceMapEntryPtr> devices_;
+  std::map<std::string, DeviceMapEntry> devices_;
 
   // The local device in the |devices_| map.
   std::string current_device_id_;

@@ -570,7 +570,7 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
     new ReadAllDataCall<modular_private::StoryData>(
         &operation_queue_, story_provider_impl_->page(), kStoryKeyPrefix,
         XdrStoryData,
-        [this, flow](fidl::VectorPtr<modular_private::StoryDataPtr> data) {
+        [this, flow](fidl::VectorPtr<modular_private::StoryData> data) {
           for (size_t i = 0; i < data->size(); ++i) {
             DumpStoryPage(std::move(data->at(i)), flow);
           }
@@ -582,9 +582,9 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
         });
   }
 
-  void DumpStoryPage(modular_private::StoryDataPtr story_data, FlowToken flow) {
-    auto story_id = std::move(story_data->story_info.id);
-    auto page_id = std::move(story_data->story_page_id);
+  void DumpStoryPage(modular_private::StoryData story_data, FlowToken flow) {
+    auto story_id = std::move(story_data.story_info.id);
+    auto page_id = std::move(story_data.story_page_id);
     ledger::PagePtr story_page;
     story_provider_impl_->ledger_client_->ledger()->GetPage(
         std::move(page_id), story_page.NewRequest(), [](auto s) {});
@@ -616,7 +616,7 @@ StoryProviderImpl::StoryProviderImpl(
     std::string device_id,
     LedgerClient* const ledger_client,
     LedgerPageId root_page_id,
-    AppConfigPtr story_shell,
+    AppConfig story_shell,
     const ComponentContextInfo& component_context_info,
     FocusProviderPtr focus_provider,
     UserIntelligenceProvider* const user_intelligence_provider,
@@ -724,7 +724,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   }
 
   auto story_shell_app = std::make_unique<AppClient<Lifecycle>>(
-      user_scope_->GetLauncher(), CloneOptional(story_shell_));
+      user_scope_->GetLauncher(), CloneStruct(story_shell_));
 
   // CreateView must be called in order to get the Flutter application to run
 
@@ -832,12 +832,12 @@ void StoryProviderImpl::GetController(
 void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   new ReadAllDataCall<modular_private::StoryData>(
       &operation_queue_, page(), kStoryKeyPrefix, XdrStoryData,
-      [callback](fidl::VectorPtr<modular_private::StoryDataPtr> data) {
+      [callback](fidl::VectorPtr<modular_private::StoryData> data) {
         fidl::VectorPtr<fidl::StringPtr> result;
         result.resize(0);
 
         for (auto& story_data : *data) {
-          result.push_back(story_data->story_info.id);
+          result.push_back(story_data.story_info.id);
         }
 
         callback(std::move(result));

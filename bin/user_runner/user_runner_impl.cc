@@ -35,6 +35,7 @@
 #include "peridot/lib/fidl/scope.h"
 #include "peridot/lib/ledger_client/constants.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/status.h"
 #include "peridot/lib/ledger_client/storage.h"
 
@@ -45,7 +46,7 @@ namespace modular {
 // connection is closed once the ServiceTerminate() call invokes its done
 // callback.)
 template <>
-void AppClient<maxwell::UserIntelligenceProviderFactory>::ServiceTerminate(
+void AppClient<modular::UserIntelligenceProviderFactory>::ServiceTerminate(
     const std::function<void()>& done) {
   done();
 }
@@ -66,15 +67,15 @@ constexpr char kLedgerDashboardUrl[] = "ledger_dashboard";
 constexpr char kLedgerDashboardEnvLabel[] = "ledger-dashboard";
 constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
-cloud_provider_firebase::ConfigPtr GetLedgerFirebaseConfig() {
-  auto firebase_config = cloud_provider_firebase::Config::New();
-  firebase_config->server_id = kFirebaseServerId;
-  firebase_config->api_key = kFirebaseApiKey;
+cloud_provider_firebase::Config GetLedgerFirebaseConfig() {
+  cloud_provider_firebase::Config firebase_config;
+  firebase_config.server_id = kFirebaseServerId;
+  firebase_config.api_key = kFirebaseApiKey;
   return firebase_config;
 }
 
-std::string GetAccountId(const auth::AccountPtr& account) {
-  return account.is_null() ? "GUEST" : account->id;
+std::string GetAccountId(const modular_auth::AccountPtr& account) {
+  return !account ? "GUEST" : account->id;
 }
 
 // Creates a function that can be used as termination action passed to AtEnd(),
@@ -83,15 +84,6 @@ std::string GetAccountId(const auth::AccountPtr& account) {
 template <typename X>
 std::function<void(std::function<void()>)> Reset(
     std::unique_ptr<X>* const field) {
-  return [field](std::function<void()> cont) {
-    field->reset();
-    cont();
-  };
-}
-
-template <typename X>
-std::function<void(std::function<void()>)> Reset(
-    fidl::StructPtr<X>* const field) {
   return [field](std::function<void()> cont) {
     field->reset();
     cont();
@@ -143,20 +135,23 @@ UserRunnerImpl::UserRunnerImpl(
 
   // TODO(alhaad): Once VFS supports asynchronous operations, expose directly
   // to filesystem instead of this indirection.
-  application_context_->outgoing_services()->AddService<UserRunnerDebug>(
-      [this](fidl::InterfaceRequest<UserRunnerDebug> request) {
-        user_runner_debug_bindings_.AddBinding(this, std::move(request));
-      });
+  application_context_->outgoing_services()
+      ->AddService<modular_private::UserRunnerDebug>(
+          [this](fidl::InterfaceRequest<modular_private::UserRunnerDebug>
+                     request) {
+            user_runner_debug_bindings_.AddBinding(this, std::move(request));
+          });
 }
 
 UserRunnerImpl::~UserRunnerImpl() = default;
 
 void UserRunnerImpl::Initialize(
-    auth::AccountPtr account,
-    AppConfigPtr user_shell,
-    AppConfigPtr story_shell,
-    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    fidl::InterfaceHandle<UserContext> user_context,
+    modular_auth::AccountPtr account,
+    AppConfig user_shell,
+    AppConfig story_shell,
+    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+        token_provider_factory,
+    fidl::InterfaceHandle<modular_private::UserContext> user_context,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   InitializeUser(std::move(account), std::move(token_provider_factory),
                  std::move(user_context));
@@ -165,7 +160,7 @@ void UserRunnerImpl::Initialize(
   InitializeDeviceMap();
   InitializeRemoteInvoker();
   InitializeMessageQueueManager();
-  InitializeMaxwell(user_shell->url, std::move(story_shell));
+  InitializeMaxwell(user_shell.url, std::move(story_shell));
   InitializeClipboard();
   InitializeUserShell(std::move(user_shell), std::move(view_owner_request));
 
@@ -173,9 +168,10 @@ void UserRunnerImpl::Initialize(
 }
 
 void UserRunnerImpl::InitializeUser(
-    auth::AccountPtr account,
-    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    fidl::InterfaceHandle<UserContext> user_context) {
+    modular_auth::AccountPtr account,
+    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+        token_provider_factory,
+    fidl::InterfaceHandle<modular_private::UserContext> user_context) {
   token_provider_factory_ = token_provider_factory.Bind();
   AtEnd(Reset(&token_provider_factory_));
 
@@ -192,23 +188,23 @@ void UserRunnerImpl::InitializeUser(
 }
 
 void UserRunnerImpl::InitializeLedger() {
-  AppConfigPtr ledger_config = AppConfig::New();
-  ledger_config->url = kLedgerAppUrl;
-  ledger_config->args.push_back(kLedgerNoMinfsWaitFlag);
+  AppConfig ledger_config;
+  ledger_config.url = kLedgerAppUrl;
+  ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);
 
   component::ServiceListPtr service_list = nullptr;
   if (account_) {
     service_list = component::ServiceList::New();
-    service_list->names.push_back(auth::TokenProvider::Name_);
-    ledger_service_provider_.AddService<auth::TokenProvider>(
-        [this](fidl::InterfaceRequest<auth::TokenProvider> request) {
+    service_list->names.push_back(modular_auth::TokenProvider::Name_);
+    ledger_service_provider_.AddService<modular_auth::TokenProvider>(
+        [this](fidl::InterfaceRequest<modular_auth::TokenProvider> request) {
           token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                                     std::move(request));
         });
     ledger_service_provider_.AddBinding(service_list->provider.NewRequest());
   }
 
-  ledger_app_ = std::make_unique<AppClient<ledger::LedgerController>>(
+  ledger_app_ = std::make_unique<AppClient<ledger_internal::LedgerController>>(
       user_scope_->GetLauncher(), std::move(ledger_config), "/data/LEDGER",
       std::move(service_list));
   ledger_app_->SetAppErrorHandler([this] {
@@ -222,9 +218,9 @@ void UserRunnerImpl::InitializeLedger() {
   if (account_) {
     // If not running in Guest mode, spin up a cloud provider for Ledger to use
     // for syncing.
-    AppConfigPtr cloud_provider_config = AppConfig::New();
-    cloud_provider_config->url = kCloudProviderFirebaseAppUrl;
-    cloud_provider_config->args = fidl::VectorPtr<fidl::StringPtr>::New(0);
+    AppConfig cloud_provider_config;
+    cloud_provider_config.url = kCloudProviderFirebaseAppUrl;
+    cloud_provider_config.args = fidl::VectorPtr<fidl::StringPtr>::New(0);
     cloud_provider_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(cloud_provider_config));
     cloud_provider_app_->services().ConnectToService(
@@ -274,7 +270,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
   AtEnd(Reset(&ledger_dashboard_scope_));
 
   ledger_dashboard_scope_->AddService<ledger_internal::LedgerRepositoryDebug>(
-      [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request) {
+      [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug>
+                 request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(
               std::move(request), [](ledger::Status status) {
@@ -287,8 +284,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
         }
       });
 
-  auto ledger_dashboard_config = AppConfig::New();
-  ledger_dashboard_config->url = kLedgerDashboardUrl;
+  AppConfig ledger_dashboard_config;
+  ledger_dashboard_config.url = kLedgerDashboardUrl;
 
   ledger_dashboard_app_ = std::make_unique<AppClient<Lifecycle>>(
       ledger_dashboard_scope_->GetLauncher(),
@@ -307,9 +304,9 @@ void UserRunnerImpl::InitializeDeviceMap() {
   device_name_ = LoadDeviceName(GetAccountId(account_));
   const std::string device_profile = LoadDeviceProfile();
 
-  device_map_impl_ = std::make_unique<DeviceMapImpl>(
-      device_name_, device_id, device_profile, ledger_client_.get(),
-      fidl::VectorPtr<uint8_t>::New(16));
+  device_map_impl_ =
+      std::make_unique<DeviceMapImpl>(device_name_, device_id, device_profile,
+                                      ledger_client_.get(), ledger::PageId());
   user_scope_->AddService<DeviceMap>(
       [this](fidl::InterfaceRequest<DeviceMap> request) {
         // device_map_impl_ may be reset before user_scope_.
@@ -355,12 +352,13 @@ void UserRunnerImpl::InitializeMessageQueueManager() {
   }
 
   message_queue_manager_ = std::make_unique<MessageQueueManager>(
-      ledger_client_.get(), to_array(kMessageQueuePageId), message_queue_path);
+      ledger_client_.get(), MakePageId(kMessageQueuePageId),
+      message_queue_path);
   AtEnd(Reset(&message_queue_manager_));
 }
 
 void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
-                                       AppConfigPtr story_shell) {
+                                       AppConfig story_shell) {
   // NOTE: There is an awkward service exchange here between
   // UserIntelligenceProvider, AgentRunner, StoryProviderImpl,
   // FocusHandler, VisibleStoriesHandler.
@@ -384,7 +382,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   auto intelligence_provider_request = user_intelligence_provider_.NewRequest();
   AtEnd(Reset(&user_intelligence_provider_));
 
-  fidl::InterfaceHandle<maxwell::ContextEngine> context_engine;
+  fidl::InterfaceHandle<modular::ContextEngine> context_engine;
   auto context_engine_request = context_engine.NewRequest();
 
   fidl::InterfaceHandle<StoryProvider> story_provider;
@@ -397,15 +395,15 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   auto visible_stories_provider_request = visible_stories_provider.NewRequest();
 
   // Start kMaxwellUrl
-  auto maxwell_config = AppConfig::New();
-  maxwell_config->url = kMaxwellUrl;
+  AppConfig maxwell_config;
+  maxwell_config.url = kMaxwellUrl;
   if (test_) {
-    maxwell_config->args.push_back(
+    maxwell_config.args.push_back(
         "--config=/system/data/maxwell/test_config.json");
   }
 
   maxwell_app_ =
-      std::make_unique<AppClient<maxwell::UserIntelligenceProviderFactory>>(
+      std::make_unique<AppClient<modular::UserIntelligenceProviderFactory>>(
           user_scope_->GetLauncher(), std::move(maxwell_config));
   maxwell_app_->primary_service()->GetUserIntelligenceProvider(
       std::move(context_engine), std::move(story_provider),
@@ -419,7 +417,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   AtEnd(Reset(&entity_provider_runner_));
 
   agent_runner_storage_ = std::make_unique<AgentRunnerStorageImpl>(
-      ledger_client_.get(), to_array(kAgentRunnerPageId));
+      ledger_client_.get(), MakePageId(kAgentRunnerPageId));
   AtEnd(Reset(&agent_runner_storage_));
 
   agent_runner_.reset(new AgentRunner(
@@ -451,8 +449,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
     service_list->names.push_back(ComponentContext::Name_);
     context_engine_ns_services_.AddBinding(service_list->provider.NewRequest());
 
-    auto context_engine_config = AppConfig::New();
-    context_engine_config->url = kContextEngineUrl;
+    AppConfig context_engine_config;
+    context_engine_config.url = kContextEngineUrl;
 
     context_engine_app_ = std::make_unique<AppClient<Lifecycle>>(
         user_scope_->GetLauncher(), std::move(context_engine_config),
@@ -480,11 +478,11 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
 
   // Setup for kModuleResolverUrl
   {
-    module_resolver_ns_services_.AddService<maxwell::IntelligenceServices>(
-        [this](fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-          auto component_scope = maxwell::ComponentScope::New();
-          component_scope->set_global_scope(maxwell::GlobalScope::New());
-          fidl::InterfaceHandle<maxwell::IntelligenceServices>
+    module_resolver_ns_services_.AddService<modular::IntelligenceServices>(
+        [this](fidl::InterfaceRequest<modular::IntelligenceServices> request) {
+          modular::ComponentScope component_scope;
+          component_scope.set_global_scope(modular::GlobalScope());
+          fidl::InterfaceHandle<modular::IntelligenceServices>
               intelligence_services;
           if (user_intelligence_provider_) {
             user_intelligence_provider_->GetComponentIntelligenceServices(
@@ -501,15 +499,15 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
               std::move(request));
         });
     auto service_list = component::ServiceList::New();
-    service_list->names.push_back(maxwell::IntelligenceServices::Name_);
+    service_list->names.push_back(modular::IntelligenceServices::Name_);
     service_list->names.push_back(modular::ComponentContext::Name_);
     module_resolver_ns_services_.AddBinding(
         service_list->provider.NewRequest());
 
-    auto module_resolver_config = AppConfig::New();
-    module_resolver_config->url = kModuleResolverUrl;
+    AppConfig module_resolver_config;
+    module_resolver_config.url = kModuleResolverUrl;
     if (test_) {
-      module_resolver_config->args.push_back("--test");
+      module_resolver_config.args.push_back("--test");
     }
     // For now, we want data_origin to be "", which uses our (parent process's)
     // /data. This is appropriate for the module_resolver. We can in the future
@@ -543,9 +541,8 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   // story lifetimes.
   story_provider_impl_.reset(new StoryProviderImpl(
       user_scope_.get(), device_map_impl_->current_device_id(),
-      ledger_client_.get(), fidl::VectorPtr<uint8_t>::New(16),
-      std::move(story_shell), component_context_info,
-      std::move(focus_provider_story_provider),
+      ledger_client_.get(), ledger::PageId(), std::move(story_shell),
+      component_context_info, std::move(focus_provider_story_provider),
       user_intelligence_provider_.get(), module_resolver_service_.get(),
       test_));
   story_provider_impl_->Connect(std::move(story_provider_request));
@@ -553,9 +550,9 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
   AtEnd(
       Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
 
-  focus_handler_ = std::make_unique<FocusHandler>(
-      device_map_impl_->current_device_id(), ledger_client_.get(),
-      fidl::VectorPtr<uint8_t>::New(16));
+  focus_handler_ =
+      std::make_unique<FocusHandler>(device_map_impl_->current_device_id(),
+                                     ledger_client_.get(), ledger::PageId());
   focus_handler_->AddProviderBinding(std::move(focus_provider_request_maxwell));
   focus_handler_->AddProviderBinding(
       std::move(focus_provider_request_story_provider));
@@ -569,7 +566,7 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
 }
 
 void UserRunnerImpl::InitializeUserShell(
-    AppConfigPtr user_shell,
+    AppConfig user_shell,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
   // We setup our own view and make the UserShell a child of it.
   user_shell_view_host_ = std::make_unique<ViewHost>(
@@ -580,7 +577,7 @@ void UserRunnerImpl::InitializeUserShell(
   AtEnd([this](std::function<void()> cont) { TerminateUserShell(cont); });
 }
 
-void UserRunnerImpl::RunUserShell(AppConfigPtr user_shell) {
+void UserRunnerImpl::RunUserShell(AppConfig user_shell) {
   user_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
       user_scope_->GetLauncher(), std::move(user_shell));
 
@@ -619,7 +616,7 @@ class UserRunnerImpl::SwapUserShellOperation : Operation<> {
  public:
   SwapUserShellOperation(OperationContainer* const container,
                          UserRunnerImpl* const user_runner_impl,
-                         AppConfigPtr user_shell_config,
+                         AppConfig user_shell_config,
                          ResultCall result_call)
       : Operation("UserRunnerImpl::SwapUserShellOperation",
                   container,
@@ -640,12 +637,12 @@ class UserRunnerImpl::SwapUserShellOperation : Operation<> {
   }
 
   UserRunnerImpl* const user_runner_impl_;
-  AppConfigPtr user_shell_config_;
+  AppConfig user_shell_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SwapUserShellOperation);
 };
 
-void UserRunnerImpl::SwapUserShell(AppConfigPtr user_shell_config,
+void UserRunnerImpl::SwapUserShell(AppConfig user_shell_config,
                                    SwapUserShellCallback callback) {
   new SwapUserShellOperation(&operation_queue_, this,
                              std::move(user_shell_config), callback);
@@ -678,7 +675,7 @@ void UserRunnerImpl::DumpState(DumpStateCallback callback) {
 }
 
 void UserRunnerImpl::GetAccount(GetAccountCallback callback) {
-  callback(account_.Clone());
+  callback(std::make_unique<modular_auth::Account>(*account_));
 }
 
 void UserRunnerImpl::GetAgentProvider(
@@ -706,9 +703,9 @@ void UserRunnerImpl::GetFocusProvider(
 }
 
 void UserRunnerImpl::GetIntelligenceServices(
-    fidl::InterfaceRequest<maxwell::IntelligenceServices> request) {
-  auto component_scope = maxwell::ComponentScope::New();
-  component_scope->set_global_scope(maxwell::GlobalScope::New());
+    fidl::InterfaceRequest<modular::IntelligenceServices> request) {
+  modular::ComponentScope component_scope;
+  component_scope.set_global_scope(modular::GlobalScope());
   user_intelligence_provider_->GetComponentIntelligenceServices(
       std::move(component_scope), std::move(request));
 }
@@ -720,12 +717,11 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
     return;
   }
 
-  LinkPathPtr link_path = LinkPath::New();
-  link_path->module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
-  link_path->link_name = kUserShellLinkName;
+  LinkPath link_path;
+  link_path.module_path.resize(0);
+  link_path.link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(
-      ledger_client_.get(), fidl::VectorPtr<uint8_t>::New(16),
-      std::move(link_path), nullptr);
+      ledger_client_.get(), ledger::PageId(), std::move(link_path), nullptr);
   user_shell_link_->Connect(std::move(request),
                             LinkImpl::ConnectionType::Secondary);
 }
@@ -746,7 +742,7 @@ void UserRunnerImpl::GetStoryProvider(
 }
 
 void UserRunnerImpl::GetSuggestionProvider(
-    fidl::InterfaceRequest<maxwell::SuggestionProvider> request) {
+    fidl::InterfaceRequest<modular::SuggestionProvider> request) {
   user_intelligence_provider_->GetSuggestionProvider(std::move(request));
 }
 
@@ -772,7 +768,7 @@ void UserRunnerImpl::ConnectToEntityProvider(
 
 cloud_provider::CloudProviderPtr UserRunnerImpl::GetCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
-  fidl::InterfaceHandle<auth::TokenProvider> ledger_token_provider;
+  fidl::InterfaceHandle<modular_auth::TokenProvider> ledger_token_provider;
   token_provider_factory_->GetTokenProvider(kLedgerAppUrl,
                                             ledger_token_provider.NewRequest());
   auto firebase_config = GetLedgerFirebaseConfig();

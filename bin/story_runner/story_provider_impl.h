@@ -9,22 +9,16 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/async/cpp/operation.h"
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
@@ -41,17 +35,16 @@ class StoryControllerImpl;
 
 class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
  public:
-  StoryProviderImpl(
-      Scope* user_scope,
-      std::string device_id,
-      LedgerClient* ledger_client,
-      LedgerPageId page_id,
-      AppConfigPtr story_shell,
-      const ComponentContextInfo& component_context_info,
-      FocusProviderPtr focus_provider,
-      UserIntelligenceProvider* user_intelligence_provider,
-      ModuleResolver* module_resolver,
-      bool test);
+  StoryProviderImpl(Scope* user_scope,
+                    std::string device_id,
+                    LedgerClient* ledger_client,
+                    LedgerPageId page_id,
+                    AppConfig story_shell,
+                    const ComponentContextInfo& component_context_info,
+                    FocusProviderPtr focus_provider,
+                    UserIntelligenceProvider* user_intelligence_provider,
+                    ModuleResolver* module_resolver,
+                    bool test);
 
   ~StoryProviderImpl() override;
 
@@ -82,7 +75,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   ModuleResolver* module_resolver() { return module_resolver_; }
 
   // Called by StoryControllerImpl.
-  const AppConfig& story_shell() const { return *story_shell_; }
+  const AppConfig& story_shell() const { return story_shell_; }
 
   // Called by StoryControllerImpl.
   //
@@ -105,8 +98,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   void RequestStoryFocus(fidl::StringPtr story_id);
 
   // Called by StoryControllerImpl.
-  void NotifyStoryStateChange(fidl::StringPtr story_id,
-                              StoryState story_state);
+  void NotifyStoryStateChange(fidl::StringPtr story_id, StoryState story_state);
 
   void DumpState(const std::function<void(const std::string&)>& callback);
 
@@ -116,11 +108,10 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
                    CreateStoryCallback callback) override;
 
   // |StoryProvider|
-  void CreateStoryWithInfo(
-      fidl::StringPtr module_url,
-      fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr root_json,
-      CreateStoryWithInfoCallback callback) override;
+  void CreateStoryWithInfo(fidl::StringPtr module_url,
+                           fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
+                           fidl::StringPtr root_json,
+                           CreateStoryWithInfoCallback callback) override;
 
   // |StoryProvider|
   void DeleteStory(fidl::StringPtr story_id,
@@ -181,7 +172,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
   fidl::BindingSet<StoryProvider> bindings_;
 
   // Used to preload story shell before it is requested.
-  AppConfigPtr story_shell_;
+  AppConfig story_shell_;
   struct StoryShellConnection {
     std::unique_ptr<AppClient<Lifecycle>> story_shell_app;
     views_v1_token::ViewOwnerPtr story_shell_view;
@@ -214,8 +205,7 @@ class StoryProviderImpl : StoryProvider, PageClient, FocusWatcher {
 
   const ComponentContextInfo component_context_info_;
 
-  UserIntelligenceProvider* const
-      user_intelligence_provider_;  // Not owned.
+  UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned.
 
   ModuleResolver* const module_resolver_;  // Not owned.
 

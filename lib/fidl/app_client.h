@@ -16,7 +16,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
-#include <fuchsia/cpp/modular.h>
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"
 
@@ -40,7 +39,8 @@ namespace modular {
 // be inline. It can be used on its own too.
 class AppClientBase : public AsyncHolderBase {
  public:
-  AppClientBase(component::ApplicationLauncher* launcher, AppConfigPtr config,
+  AppClientBase(component::ApplicationLauncher* launcher,
+                AppConfig config,
                 std::string data_origin = "",
                 component::ServiceListPtr additional_services = nullptr);
   virtual ~AppClientBase();
@@ -75,10 +75,13 @@ class AppClientBase : public AsyncHolderBase {
 template <class Service>
 class AppClient : public AppClientBase {
  public:
-  AppClient(component::ApplicationLauncher* const launcher, AppConfigPtr config,
+  AppClient(component::ApplicationLauncher* const launcher,
+            AppConfig config,
             std::string data_origin = "",
             component::ServiceListPtr additional_services = nullptr)
-      : AppClientBase(launcher, std::move(config), std::move(data_origin),
+      : AppClientBase(launcher,
+                      std::move(config),
+                      std::move(data_origin),
                       std::move(additional_services)) {
     services().ConnectToService(service_.NewRequest());
   }

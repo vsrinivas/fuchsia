@@ -37,8 +37,10 @@ class AgentContextImpl::InitializeCall : Operation<> {
   InitializeCall(OperationContainer* const container,
                  AgentContextImpl* const agent_context_impl,
                  component::ApplicationLauncher* const app_launcher,
-                 AppConfigPtr agent_config)
-      : Operation("AgentContextImpl::InitializeCall", container, [] {},
+                 AppConfig agent_config)
+      : Operation("AgentContextImpl::InitializeCall",
+                  container,
+                  [] {},
                   agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         app_launcher_(app_launcher),
@@ -109,7 +111,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
 
   AgentContextImpl* const agent_context_impl_;
   component::ApplicationLauncher* const app_launcher_;
-  AppConfigPtr agent_config_;
+  AppConfig agent_config_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
@@ -168,8 +170,8 @@ class AgentContextImpl::StopCall : Operation<bool> {
 };
 
 AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
-                                   AppConfigPtr agent_config)
-    : url_(agent_config->url),
+                                   AppConfig agent_config)
+    : url_(agent_config.url),
       agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info,
                               kAgentComponentNamespace,
@@ -195,39 +197,35 @@ void AgentContextImpl::NewAgentConnection(
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
   // Queue adding the connection
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable([this, requestor_url,
-                         incoming_services_request =
-                             std::move(incoming_services_request),
-                         agent_controller_request =
-                             std::move(agent_controller_request)]() mutable {
-        FXL_CHECK(state_ == State::RUNNING);
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
+    this, requestor_url,
+    incoming_services_request = std::move(incoming_services_request),
+    agent_controller_request = std::move(agent_controller_request)
+  ]() mutable {
+    FXL_CHECK(state_ == State::RUNNING);
 
-        agent_->Connect(requestor_url, std::move(incoming_services_request));
+    agent_->Connect(requestor_url, std::move(incoming_services_request));
 
-        // Add a binding to the |controller|. When all the bindings go away,
-        // the agent will stop.
-        agent_controller_bindings_.AddBinding(
-            this, std::move(agent_controller_request));
-      }));
+    // Add a binding to the |controller|. When all the bindings go away,
+    // the agent will stop.
+    agent_controller_bindings_.AddBinding(this,
+                                          std::move(agent_controller_request));
+  }));
 }
 
 void AgentContextImpl::NewEntityProviderConnection(
     fidl::InterfaceRequest<EntityProvider> entity_provider_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
-  new SyncCall(
-      &operation_queue_,
-      fxl::MakeCopyable(
-          [this, entity_provider_request = std::move(entity_provider_request),
-           agent_controller_request =
-               std::move(agent_controller_request)]() mutable {
-            FXL_CHECK(state_ == State::RUNNING);
-            app_client_->services().ConnectToService(
-                std::move(entity_provider_request));
-            agent_controller_bindings_.AddBinding(
-                this, std::move(agent_controller_request));
-          }));
+  new SyncCall(&operation_queue_, fxl::MakeCopyable([
+    this, entity_provider_request = std::move(entity_provider_request),
+    agent_controller_request = std::move(agent_controller_request)
+  ]() mutable {
+    FXL_CHECK(state_ == State::RUNNING);
+    app_client_->services().ConnectToService(
+        std::move(entity_provider_request));
+    agent_controller_bindings_.AddBinding(this,
+                                          std::move(agent_controller_request));
+  }));
 }
 
 void AgentContextImpl::NewTask(const std::string& task_id) {

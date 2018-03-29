@@ -17,9 +17,9 @@ namespace modular {
 
 UserControllerImpl::UserControllerImpl(
     component::ApplicationLauncher* const application_launcher,
-    AppConfigPtr user_runner,
-    AppConfigPtr user_shell,
-    AppConfigPtr story_shell,
+    AppConfig user_runner,
+    AppConfig user_shell,
+    AppConfig story_shell,
     fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
     auth::AccountPtr account,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -105,7 +105,7 @@ void UserControllerImpl::GetPresentation(
 }
 
 // |UserController|
-void UserControllerImpl::SwapUserShell(AppConfigPtr user_shell,
+void UserControllerImpl::SwapUserShell(AppConfig user_shell,
                                        SwapUserShellCallback callback) {
   user_runner_->SwapUserShell(std::move(user_shell), callback);
 }

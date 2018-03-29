@@ -6,21 +6,17 @@
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_CONTROLLER_IMPL_H_
 
 #include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
 
@@ -40,9 +36,9 @@ class UserControllerImpl : UserController, UserContext {
 
   UserControllerImpl(
       component::ApplicationLauncher* application_launcher,
-      AppConfigPtr user_runner,
-      AppConfigPtr user_shell,
-      AppConfigPtr story_shell,
+      AppConfig user_runner,
+      AppConfig user_shell,
+      AppConfig story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       auth::AccountPtr account,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -58,7 +54,7 @@ class UserControllerImpl : UserController, UserContext {
 
  private:
   // |UserController|
-  void SwapUserShell(AppConfigPtr user_shell,
+  void SwapUserShell(AppConfig user_shell,
                      SwapUserShellCallback callback) override;
 
   // |UserController|

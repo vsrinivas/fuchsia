@@ -116,8 +116,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
   AgentContextInfo info = {component_info, application_launcher_,
                            token_provider_factory_,
                            user_intelligence_provider_};
-  auto agent_config = AppConfig::New();
-  agent_config->url = agent_url;
+  AppConfig agent_config;
+  agent_config.url = agent_url;
 
   FXL_CHECK(running_agents_
                 .emplace(agent_url, std::make_unique<AgentContextImpl>(
@@ -136,7 +136,8 @@ void AgentRunner::RunAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ConnectToAgent(
-    const std::string& requestor_url, const std::string& agent_url,
+    const std::string& requestor_url,
+    const std::string& agent_url,
     fidl::InterfaceRequest<component::ServiceProvider>
         incoming_services_request,
     fidl::InterfaceRequest<AgentController> agent_controller_request) {
@@ -222,8 +223,7 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
     data.queue_name = task_info.trigger_condition.queue_name().get();
   } else if (task_info.trigger_condition.is_alarm_in_seconds()) {
     data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_ALARM;
-    data.alarm_in_seconds =
-        task_info.trigger_condition.alarm_in_seconds();
+    data.alarm_in_seconds = task_info.trigger_condition.alarm_in_seconds();
   } else {
     // Not a defined trigger condition.
     FXL_NOTREACHED();

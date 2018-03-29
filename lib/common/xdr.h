@@ -9,7 +9,7 @@
 
 namespace modular {
 
-void XdrAccount(XdrContext* const xdr, auth::Account* const data) {
+void XdrAccount(XdrContext* const xdr, modular_auth::Account* const data) {
   xdr->Field("id", &data->id);
   xdr->Field("identity_provider", &data->identity_provider);
   xdr->Field("display_name", &data->display_name);

@@ -11,6 +11,7 @@
 #include <memory>
 
 #include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
@@ -22,11 +23,6 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
 
@@ -47,8 +43,8 @@ class Settings {
 };
 
 class DevUserShellApp : modular::StoryWatcher,
-                        maxwell::InterruptionListener,
-                        maxwell::NextListener,
+                        modular::InterruptionListener,
+                        modular::NextListener,
                         public modular::SingleServiceApp<modular::UserShell> {
  public:
   explicit DevUserShellApp(
@@ -159,7 +155,7 @@ class DevUserShellApp : modular::StoryWatcher,
 
   // |NextListener|
   void OnNextResults(
-      fidl::VectorPtr<maxwell::SuggestionPtr> suggestions) override {
+      fidl::VectorPtr<modular::SuggestionPtr> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
       FXL_LOG(INFO) << "  " << suggestion->uuid << " "
@@ -168,7 +164,7 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |InterruptionListener|
-  void OnInterrupt(maxwell::SuggestionPtr suggestion) override {
+  void OnInterrupt(modular::SuggestionPtr suggestion) override {
     FXL_VLOG(4) << "DevUserShell/InterruptionListener::OnInterrupt() "
                 << suggestion->uuid;
   }
@@ -192,10 +188,10 @@ class DevUserShellApp : modular::StoryWatcher,
 
   fidl::Binding<modular::StoryWatcher> story_watcher_binding_;
 
-  maxwell::SuggestionProviderPtr suggestion_provider_;
-  fidl::BindingSet<maxwell::InterruptionListener>
+  modular::SuggestionProviderPtr suggestion_provider_;
+  fidl::BindingSet<modular::InterruptionListener>
       interruption_listener_bindings_;
-  fidl::BindingSet<maxwell::NextListener> next_listener_bindings_;
+  fidl::BindingSet<modular::NextListener> next_listener_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DevUserShellApp);
 };

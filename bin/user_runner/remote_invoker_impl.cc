@@ -4,12 +4,15 @@
 
 #include "peridot/bin/user_runner/remote_invoker_impl.h"
 
+#include <fuchsia/cpp/ledger.h>
+
 #include <chrono>
 
-#include <fuchsia/cpp/ledger.h>
 #include "lib/fidl/cpp/array.h"
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
@@ -51,13 +54,9 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::StringPtr> {
     FlowToken flow{this, &page_id_};
 
     // TODO(planders) Use Zac's function to generate page id (once it's ready)
-    fidl::VectorPtr<uint8_t> page_id = to_array(device_id_);
-    if (page_id->size() != 16) {
-      // WARNING: HACK! Ledger page ids are 16 bytes but often we use non-16
-      // byte page ids. This makes sure that the page id will be 16 bytes.
-      page_id.resize(16);
-    }
-    ledger_->GetPage(std::move(page_id), device_page_.NewRequest(),
+    ledger::PageId page_id = MakePageId(device_id_);
+    ledger_->GetPage(fidl::MakeOptional(std::move(page_id)),
+                     device_page_.NewRequest(),
                      [this, flow](ledger::Status status) {
                        if (status != ledger::Status::OK) {
                          FXL_LOG(ERROR) << trace_name() << " "
@@ -115,10 +114,10 @@ class RemoteInvokerImpl::StartOnDeviceCall : Operation<fidl::StringPtr> {
   }
 
   void Cont4(FlowToken flow) {
-    device_page_->GetId([this, flow](fidl::VectorPtr<uint8_t> page_id) {
+    device_page_->GetId([this, flow](ledger::PageId page_id) {
       FXL_LOG(INFO) << trace_name() << " "
-                    << "Retrieved page " << to_string(page_id);
-      page_id_ = to_string(page_id);
+                    << "Retrieved page " << to_string(page_id.id);
+      page_id_ = to_string(page_id.id);
     });
   }
 

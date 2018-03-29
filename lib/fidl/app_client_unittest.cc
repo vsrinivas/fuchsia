@@ -17,9 +17,9 @@ namespace {
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
 
-AppConfigPtr GetTestAppConfig() {
-  auto app_config = AppConfig::New();
-  app_config->url = kTestUrl;
+AppConfig GetTestAppConfig() {
+  AppConfig app_config;
+  app_config.url = kTestUrl;
   return app_config;
 }
 

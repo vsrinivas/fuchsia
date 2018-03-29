@@ -353,8 +353,8 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     FXL_LOG(INFO) << "StoryControllerImpl::LaunchModule() "
                   << module_data_->module_url << " "
                   << PathString(module_data_->module_path);
-    auto module_config = AppConfig::New();
-    module_config->url = module_data_->module_url;
+    AppConfig module_config;
+    module_config.url = module_data_->module_url;
 
     views_v1::ViewProviderPtr view_provider;
     fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request =
@@ -553,9 +553,10 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
       return;
     }
 
-    link_impl_.reset(new LinkImpl(story_controller_impl_->ledger_client_,
-                                  fidl::Clone(story_controller_impl_->story_page_id_),
-                                  *link_path_, std::move(create_link_info_)));
+    link_impl_.reset(
+        new LinkImpl(story_controller_impl_->ledger_client_,
+                     fidl::Clone(story_controller_impl_->story_page_id_),
+                     *link_path_, std::move(create_link_info_)));
     LinkImpl* const link_ptr = link_impl_.get();
     if (request_) {
       link_impl_->Connect(std::move(request_), connection_type_);
@@ -1396,19 +1397,19 @@ class StoryControllerImpl::StartCall : Operation<> {
     // respective links.
     new ReadAllDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
-        XdrModuleData, [this, flow](fidl::VectorPtr<ModuleDataPtr> data) {
+        XdrModuleData, [this, flow](fidl::VectorPtr<ModuleData> data) {
           for (auto& module_data : *data) {
-            if (module_data->module_source == ModuleSource::EXTERNAL &&
-                !module_data->module_stopped) {
+            if (module_data.module_source == ModuleSource::EXTERNAL &&
+                !module_data.module_stopped) {
               new StartModuleInShellCall(
                   &operation_queue_, story_controller_impl_,
-                  module_data->module_path, module_data->module_url,
-                  module_data->link_path.link_name,
+                  module_data.module_path, module_data.module_url,
+                  module_data.link_path.link_name,
                   nullptr /* module_manifest */, nullptr /* chain_data */,
                   nullptr /* incoming_services */,
                   nullptr /* module_controller_request */,
-                  CloneOptional(module_data->surface_relation), true,
-                  module_data->module_source, std::move(module_data->daisy),
+                  CloneOptional(module_data.surface_relation), true,
+                  module_data.module_source, std::move(module_data.daisy),
                   [flow] {});
             }
           }
@@ -2336,11 +2337,11 @@ void StoryControllerImpl::GetActiveModules(
 
 // |StoryController|
 void StoryControllerImpl::GetModules(GetModulesCallback callback) {
-  new ReadAllDataCall<ModuleData>(
-      &operation_queue_, page(), kModuleKeyPrefix, XdrModuleData,
-      [callback](fidl::VectorPtr<ModuleDataPtr> data) {
-        callback(CloneStructVector(data));
-      });
+  new ReadAllDataCall<ModuleData>(&operation_queue_, page(), kModuleKeyPrefix,
+                                  XdrModuleData,
+                                  [callback](fidl::VectorPtr<ModuleData> data) {
+                                    callback(CloneStructVector(data));
+                                  });
 }
 
 // |StoryController|

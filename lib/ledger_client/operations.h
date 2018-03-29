@@ -9,10 +9,10 @@
 
 #include <string>
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
 #include "lib/fsl/vmo/strings.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"
@@ -105,8 +105,7 @@ class ReadDataCall : Operation<DataPtr> {
 };
 
 template <typename Data,
-          typename DataPtr = std::unique_ptr<Data>,
-          typename DataArray = fidl::VectorPtr<DataPtr>,
+          typename DataArray = fidl::VectorPtr<Data>,
           typename DataFilter = XdrFilterType<Data>>
 class ReadAllDataCall : Operation<DataArray> {
  public:
@@ -167,12 +166,10 @@ class ReadAllDataCall : Operation<DataArray> {
         continue;
       }
 
-      DataPtr data;
+      Data data;
       if (!XdrRead(value_as_string, &data, filter_)) {
         continue;
       }
-
-      FXL_DCHECK(data);
 
       data_.push_back(std::move(data));
     }

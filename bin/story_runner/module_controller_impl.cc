@@ -38,15 +38,17 @@ std::string HashModuleUrl(const std::string& module_url) {
 ModuleControllerImpl::ModuleControllerImpl(
     StoryControllerImpl* const story_controller_impl,
     component::ApplicationLauncher* const application_launcher,
-    AppConfigPtr module_config, const ModuleData* const module_data,
+    AppConfig module_config,
+    const ModuleData* const module_data,
     component::ServiceListPtr service_list,
     fidl::InterfaceHandle<ModuleContext> module_context,
     fidl::InterfaceRequest<views_v1::ViewProvider> view_provider_request,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services)
     : story_controller_impl_(story_controller_impl),
       app_client_(
-          application_launcher, CloneOptional(module_config),
-          std::string(kAppStoragePath) + HashModuleUrl(module_config->url),
+          application_launcher,
+          CloneStruct(module_config),
+          std::string(kAppStoragePath) + HashModuleUrl(module_config.url),
           std::move(service_list)),
       module_data_(module_data) {
   app_client_.SetAppErrorHandler([this] { SetState(ModuleState::ERROR); });
