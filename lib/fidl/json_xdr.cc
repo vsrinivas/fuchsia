@@ -82,6 +82,51 @@ void XdrContext::Value(unsigned char* const data) {
   }
 }
 
+void XdrContext::Value(int8_t* const data) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      value_->Set(static_cast<int>(*data), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        AddError("Value() of int8: int expected");
+        return;
+      }
+      *data = static_cast<int8_t>(value_->Get<int>());
+  }
+}
+
+void XdrContext::Value(unsigned short* const data) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      value_->Set(static_cast<int>(*data), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        AddError("Value() of unsigned short: int expected");
+        return;
+      }
+      *data = static_cast<unsigned short>(value_->Get<int>());
+  }
+}
+
+void XdrContext::Value(short* const data) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      value_->Set(static_cast<int>(*data), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        AddError("Value() of short: int expected");
+        return;
+      }
+      *data = static_cast<short>(value_->Get<int>());
+  }
+}
+
 void XdrContext::Value(fidl::StringPtr* const data) {
   switch (op_) {
     case XdrOp::TO_JSON:

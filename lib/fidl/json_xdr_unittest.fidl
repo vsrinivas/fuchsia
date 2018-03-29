@@ -1,0 +1,100 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library json_xdr_unittest;
+
+struct RequiredData {
+  string @string;
+  bool @bool;
+  int8 @int8;
+  int16 @int16;
+  int32 @int32;
+  int64 @int64;
+  uint8 @uint8;
+  uint16 @uint16;
+  uint32 @uint32;
+  uint64 @uint64;
+  float32 @float32;
+  float64 @float64;
+  Struct @struct;
+  Enum @enum;
+  Union @union;
+};
+
+struct OptionalData {
+  string? @string;
+  Struct? @struct;
+  Union? @union;
+};
+
+struct RequiredRepeatedRequiredData {
+  vector<string> @string;
+  vector<bool> @bool;
+  vector<int8> @int8;
+  vector<int16> @int16;
+  vector<int32> @int32;
+  vector<int64> @int64;
+  vector<uint8> @uint8;
+  vector<uint16> @uint16;
+  vector<uint32> @uint32;
+  vector<uint64> @uint64;
+  vector<float32> @float32;
+  vector<float64> @float64;
+  vector<Struct> @struct;
+  vector<Enum> @enum;
+  vector<Union>? @union;
+};
+
+struct RequiredRepeatedOptionalData {
+  vector<string?> @string;
+  vector<Struct?> @struct;
+  vector<Union?>? @union;
+};
+
+// NOTE(mesch): According to jeffbrown, optional vector typed fields are going
+// away.
+
+struct OptionalRepeatedRequiredData {
+  vector<string>? @string;
+  vector<bool>? @bool;
+  vector<int8>? @int8;
+  vector<int16>? @int16;
+  vector<int32>? @int32;
+  vector<int64>? @int64;
+  vector<uint8>? @uint8;
+  vector<uint16>? @uint16;
+  vector<uint32>? @uint32;
+  vector<uint64>? @uint64;
+  vector<float32>? @float32;
+  vector<float64>? @float64;
+  vector<Struct>? @struct;
+  vector<Enum>? @enum;
+  vector<Union>? @union;
+};
+
+struct OptionalRepeatedOptionalData {
+  vector<string?>? @string;
+  vector<Struct?>? @struct;
+  vector<Union?>? @union;
+};
+
+// The purpose of this struct is coverage for struct valued fields above. The
+// field exists only so we have something to be checked to be there. Other types
+// of fields of structs are covered above, not here.
+struct Struct {
+  int32 item;
+};
+
+enum Enum {
+  ZERO = 0;
+  ONE = 1;
+  TWO = 2;
+};
+
+
+// NOTE(mesch): Can't use @struct, FIDL-130.
+union Union {
+  int32 @int32;
+  string @string;
+};

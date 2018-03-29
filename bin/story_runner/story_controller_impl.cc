@@ -157,7 +157,6 @@ void XdrNoun(XdrContext* const xdr, Noun* const data) {
           break;
         }
         case Noun::Tag::Invalid:
-        default:
           FXL_LOG(ERROR) << "XdrNoun TO_JSON unknown tag: "
                          << static_cast<int>(data->Which());
           break;

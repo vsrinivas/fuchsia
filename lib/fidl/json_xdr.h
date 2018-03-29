@@ -130,11 +130,11 @@ class XdrContext {
   // If we supply a custom filter for the value of a field, the data
   // type of the field very often does not match directly the data
   // type for which we write a filter, therefore this template has two
-  // type parameters. This happens in two situations:
+  // type parameters. This happens in several situations:
   //
-  // 1. Fields with fidl struct types. The field data type, which we
-  //    pass the data for, is a StructPtr<X>, but the filter supplied
-  //    is for X (and thus takes X*).
+  // 1. Fields with fidl struct types. The field data type, which we pass the
+  //    data for, is a std::unique_ptr<X>, but the filter supplied is for X (and
+  //    thus takes X*).
   //
   // 2. Fields with fidl array types. The filter is for an element,
   //    but the field is the array type.
@@ -142,17 +142,9 @@ class XdrContext {
   // 3. Fields with STL container types. The filter is for an element,
   //    but the field is the container type.
   //
-  // We could handle this by specialization, however there is an
-  // unfortunate combinatorial explosion:
-  //
-  // 1. Fidl structs can be one of two pointer types (StructPtr<> or
-  //    InlinedStructPtr<>).
-  //
-  // 2. Arrays that contain structs actually contain struct pointers.
-  //
-  // Therefore, at this level, it's much simpler to just cover all
-  // possible combinations with a template of higher dimension, at the
-  // expense of covering also a few impossible cases.
+  // We could handle this by specialization, it's much simpler to just cover all
+  // possible combinations with a template of higher dimension, at the expense
+  // of covering also a few impossible cases.
   template <typename D, typename V>
   void Field(const char field[], D* const data, XdrFilterType<V> const filter) {
     Field(field).Value(data, filter);
@@ -198,8 +190,12 @@ class XdrContext {
     }
   }
 
-  // An unsigned byte is also mapped to a JSON int.
+  // Bytes and shorts, both signed and unsigned, are mapped to JSON int, since
+  // they are not directly supported in the rapidjson API.
   void Value(unsigned char* data);
+  void Value(int8_t* data);
+  void Value(unsigned short* data);
+  void Value(short* data);
 
   // A fidl String is mapped to either (i.e., the union type of) JSON
   // null or JSON string.
@@ -214,6 +210,30 @@ class XdrContext {
   template <typename D, typename V>
   void Value(D* data, XdrFilterType<V> filter) {
     filter(this, data);
+  }
+
+  // Operator & may be overloaded to return a type that acts like a pointer, but
+  // isn't one, and therefore is not matched by the Value<D,V>(data, filter)
+  // method above. In that case, we need to exercise the operator * of the
+  // pointer type explicitly.
+  //
+  // This is needed for example for std::vector<bool>, where &at(i) is a bit
+  // iterator, not a bool*.
+  template <typename Ptr, typename V>
+  void Value(Ptr data, XdrFilterType<V> filter) {
+    switch (op_) {
+      case XdrOp::TO_JSON: {
+        V value = *data;
+        filter(this, &value);
+        break;
+      }
+
+      case XdrOp::FROM_JSON: {
+        V value;
+        filter(this, &value);
+        *data = std::move(value);
+      }
+    }
   }
 
   template <typename S>

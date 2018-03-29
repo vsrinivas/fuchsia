@@ -141,7 +141,7 @@ source_set("message_receiver_client") {
   ]
 }
 
-fidl("unittest_fidl") {
+fidl("app_client_unittest_fidl") {
   testonly = true
 
   name = "modular_test"
@@ -169,13 +169,23 @@ source_set("app_client_unittest") {
 
   deps = [
     ":app_client",
-    ":unittest_fidl",
+    ":app_client_unittest_fidl",
     "//garnet/lib/gtest",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/lib/testing:fake_application_launcher",
     "//third_party/googletest:gtest",
+  ]
+}
+
+fidl("json_xdr_unittest_fidl") {
+  testonly = true
+
+  name = "json_xdr_unittest"
+
+  sources = [
+    "json_xdr_unittest.fidl",
   ]
 }
 
@@ -188,6 +198,7 @@ source_set("json_xdr_unittest") {
 
   deps = [
     ":json_xdr",
+    ":json_xdr_unittest_fidl",
     "//third_party/googletest:gtest",
   ]
 }
