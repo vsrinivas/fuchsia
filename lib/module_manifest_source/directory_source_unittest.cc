@@ -123,30 +123,30 @@ TEST_F(DirectoryModuleManifestSourceTest, CreateFiles_And_CorrectEntries) {
 
   ASSERT_TRUE(RunLoopUntilWithTimeout([this]() { return idle_; }));
   ASSERT_EQ(2lu, entries_.size());
-  EXPECT_EQ("binary1", entries_[0]->binary);
-  EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0]->verb);
-  EXPECT_EQ(2lu, entries_[0]->noun_constraints->size());
-  EXPECT_EQ("start", entries_[0]->noun_constraints->at(0)->name);
-  EXPECT_EQ("foo", entries_[0]->noun_constraints->at(0)->type);
-  EXPECT_EQ("destination", entries_[0]->noun_constraints->at(1)->name);
-  EXPECT_EQ("baz", entries_[0]->noun_constraints->at(1)->type);
+  EXPECT_EQ("binary1", entries_[0].binary);
+  EXPECT_EQ("com.google.fuchsia.navigate.v1", entries_[0].verb);
+  EXPECT_EQ(2lu, entries_[0].noun_constraints->size());
+  EXPECT_EQ("start", entries_[0].noun_constraints->at(0).name);
+  EXPECT_EQ("foo", entries_[0].noun_constraints->at(0).type);
+  EXPECT_EQ("destination", entries_[0].noun_constraints->at(1).name);
+  EXPECT_EQ("baz", entries_[0].noun_constraints->at(1).type);
 
-  EXPECT_EQ("binary2", entries_[1]->binary);
-  EXPECT_EQ("com.google.fuchsia.pick.v1", entries_[1]->verb);
-  EXPECT_EQ(1lu, entries_[1]->noun_constraints->size());
-  EXPECT_EQ("thing", entries_[1]->noun_constraints->at(0)->name);
-  EXPECT_EQ("frob", entries_[1]->noun_constraints->at(0)->type);
+  EXPECT_EQ("binary2", entries_[1].binary);
+  EXPECT_EQ("com.google.fuchsia.pick.v1", entries_[1].verb);
+  EXPECT_EQ(1lu, entries_[1].noun_constraints->size());
+  EXPECT_EQ("thing", entries_[1].noun_constraints->at(0).name);
+  EXPECT_EQ("frob", entries_[1].noun_constraints->at(0).type);
 
   // Add a new file, expect to see the results.
   WriteManifestFile("manifest3", kManifest3);
   ASSERT_TRUE(
       RunLoopUntilWithTimeout([this]() { return entries_.size() == 3; }));
 
-  EXPECT_EQ("binary3", entries_[2]->binary);
-  EXPECT_EQ("com.google.fuchsia.annotate.v1", entries_[2]->verb);
-  EXPECT_EQ(1lu, entries_[2]->noun_constraints->size());
-  EXPECT_EQ("thingy", entries_[2]->noun_constraints->at(0)->name);
-  EXPECT_EQ("chair", entries_[2]->noun_constraints->at(0)->type);
+  EXPECT_EQ("binary3", entries_[2].binary);
+  EXPECT_EQ("com.google.fuchsia.annotate.v1", entries_[2].verb);
+  EXPECT_EQ(1lu, entries_[2].noun_constraints->size());
+  EXPECT_EQ("thingy", entries_[2].noun_constraints->at(0).name);
+  EXPECT_EQ("chair", entries_[2].noun_constraints->at(0).type);
 }
 
 TEST_F(DirectoryModuleManifestSourceTest, RemovedFiles) {
