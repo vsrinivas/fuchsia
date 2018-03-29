@@ -36,6 +36,7 @@ LedgerSyncImpl::~LedgerSyncImpl() {
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage,
+    storage::PageSyncClient* page_sync_client,
     fxl::Closure error_callback) {
   FXL_DCHECK(page_storage);
 
@@ -50,8 +51,9 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
         }
       });
   auto page_sync = std::make_unique<PageSyncImpl>(
-      environment_->main_runner(), page_storage, encryption_service_,
-      std::move(page_cloud), std::make_unique<backoff::ExponentialBackoff>(),
+      environment_->main_runner(), page_storage, page_sync_client,
+      encryption_service_, std::move(page_cloud),
+      std::make_unique<backoff::ExponentialBackoff>(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback,
       aggregator_.GetNewStateWatcher());
   if (upload_enabled_) {

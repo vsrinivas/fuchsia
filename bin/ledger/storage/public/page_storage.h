@@ -16,13 +16,13 @@
 #include "peridot/bin/ledger/storage/public/data_source.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
 #include "peridot/bin/ledger/storage/public/object.h"
-#include "peridot/bin/ledger/storage/public/page_sync_delegate.h"
+#include "peridot/bin/ledger/storage/public/page_sync_client.h"
 #include "peridot/bin/ledger/storage/public/types.h"
 
 namespace storage {
 
 // |PageStorage| manages the local storage of a single page.
-class PageStorage {
+class PageStorage : public PageSyncClient {
  public:
   struct CommitIdAndBytes {
     CommitIdAndBytes();
@@ -46,10 +46,6 @@ class PageStorage {
 
   // Returns the id of this page.
   virtual PageId GetId() = 0;
-
-  // Sets the PageSyncDelegate for this PageStorage. A nullptr can be passed to
-  // unset a previously set value.
-  virtual void SetSyncDelegate(PageSyncDelegate* page_sync) = 0;
 
   // Finds the ids of all head commits. It is guaranteed that valid pages have
   // at least one head commit, even if they are empty.

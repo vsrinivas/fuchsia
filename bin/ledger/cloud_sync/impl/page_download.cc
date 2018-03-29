@@ -38,12 +38,14 @@ bool IsPermanentError(cloud_provider::Status status) {
 
 PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner,
                            storage::PageStorage* storage,
+                           storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr* page_cloud,
                            Delegate* delegate,
                            std::unique_ptr<backoff::Backoff> backoff)
     : task_runner_(task_runner),
       storage_(storage),
+      sync_client_(sync_client),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
       delegate_(delegate),
@@ -53,13 +55,13 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner,
       watcher_binding_(this) {}
 
 PageDownload::~PageDownload() {
-  storage_->SetSyncDelegate(nullptr);
+  sync_client_->SetSyncDelegate(nullptr);
 }
 
 void PageDownload::StartDownload() {
   SetCommitState(DOWNLOAD_BACKLOG);
 
-  storage_->SetSyncDelegate(this);
+  sync_client_->SetSyncDelegate(this);
 
   // Retrieve the server-side timestamp of the last commit we received.
   storage_->GetSyncMetadata(
@@ -116,9 +118,10 @@ void PageDownload::StartDownload() {
                         << "initial sync finished, no new remote commits";
                     BacklogDownloaded();
                   } else {
-                    FXL_VLOG(1) << log_prefix_ << "retrieved " << commits->size()
-                                << " (possibly) new remote commits, "
-                                << "adding them to storage.";
+                    FXL_VLOG(1)
+                        << log_prefix_ << "retrieved " << commits->size()
+                        << " (possibly) new remote commits, "
+                        << "adding them to storage.";
                     // If not, fire the backlog download callback when the
                     // remote commits are downloaded.
                     const auto commit_count = commits->size();
@@ -387,7 +390,7 @@ void PageDownload::HandleDownloadCommitError(const char error_description[]) {
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();
   }
-  storage_->SetSyncDelegate(nullptr);
+  sync_client_->SetSyncDelegate(nullptr);
   SetCommitState(DOWNLOAD_PERMANENT_ERROR);
 }
 

@@ -29,6 +29,7 @@ class LedgerSync {
   // unrecoverable error.
   virtual std::unique_ptr<PageSync> CreatePageSync(
       storage::PageStorage* page_storage,
+      storage::PageSyncClient* page_sync_client,
       fxl::Closure error_callback) = 0;
 
  private:

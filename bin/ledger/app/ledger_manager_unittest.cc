@@ -93,6 +93,7 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
 
   std::unique_ptr<cloud_sync::PageSync> CreatePageSync(
       storage::PageStorage* /*page_storage*/,
+      storage::PageSyncClient* /*page_sync_client*/,
       fxl::Closure /*error_callback*/) override {
     return nullptr;
   }

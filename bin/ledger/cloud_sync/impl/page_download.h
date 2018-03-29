@@ -35,6 +35,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
 
   PageDownload(callback::ScopedTaskRunner* task_runner,
                storage::PageStorage* storage,
+               storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud,
                Delegate* delegate,
@@ -104,6 +105,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher,
   // Owned by whoever owns this class.
   callback::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
+  storage::PageSyncClient* sync_client_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;
   Delegate* const delegate_;

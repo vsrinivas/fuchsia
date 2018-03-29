@@ -24,6 +24,7 @@ source_set("public") {
     "object.h",
     "page_storage.cc",
     "page_storage.h",
+    "page_sync_client.h",
     "page_sync_delegate.h",
     "read_data_source.cc",
     "read_data_source.h",

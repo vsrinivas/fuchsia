@@ -57,6 +57,7 @@ class PageSyncImpl : public PageSync,
  public:
   PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
                storage::PageStorage* storage,
+               storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr page_cloud,
                std::unique_ptr<backoff::Backoff> download_backoff,
@@ -98,6 +99,7 @@ class PageSyncImpl : public PageSync,
   void NotifyStateWatcher();
 
   storage::PageStorage* const storage_;
+  storage::PageSyncClient* const sync_client_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr page_cloud_;
   const fxl::Closure on_error_;
