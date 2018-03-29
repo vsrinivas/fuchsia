@@ -35,7 +35,7 @@ class TestWithLedger : public gtest::TestWithMessageLoop {
   void TearDown() override;
 
  protected:
-  ledger::LedgerRepository* ledger_repository() {
+  ledger_internal::LedgerRepository* ledger_repository() {
     return ledger_app_->ledger_repository();
   }
   LedgerClient* ledger_client() { return ledger_client_.get(); }

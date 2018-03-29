@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include "lib/config/fidl/config.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
@@ -25,8 +25,9 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
   ledger_config->args.push_back(kLedgerNoMinfsWaitFlag);
 
   auto& app_launcher = application_context_->launcher();
-  ledger_app_client_ = std::make_unique<AppClient<ledger::LedgerController>>(
-      app_launcher.get(), std::move(ledger_config));
+  ledger_app_client_ =
+      std::make_unique<AppClient<ledger_internal::LedgerController>>(
+          app_launcher.get(), std::move(ledger_config));
 
   ledger_app_client_->services().ConnectToService(
       ledger_repo_factory_.NewRequest());
@@ -34,7 +35,8 @@ LedgerRepositoryForTesting::LedgerRepositoryForTesting(
 
 LedgerRepositoryForTesting::~LedgerRepositoryForTesting() = default;
 
-ledger::LedgerRepository* LedgerRepositoryForTesting::ledger_repository() {
+ledger_internal::LedgerRepository*
+LedgerRepositoryForTesting::ledger_repository() {
   if (!ledger_repo_) {
     ledger_repo_factory_->GetRepository(
         tmp_dir_.path(), nullptr, ledger_repo_.NewRequest(),

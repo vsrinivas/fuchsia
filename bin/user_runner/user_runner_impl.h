@@ -171,8 +171,8 @@ class UserRunnerImpl : UserRunner,
   std::unique_ptr<AppClient<Lifecycle>> cloud_provider_app_;
   cloud_provider_firebase::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_;
-  ledger::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-  ledger::LedgerRepositoryPtr ledger_repository_;
+  ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
+  ledger_internal::LedgerRepositoryPtr ledger_repository_;
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;

@@ -273,8 +273,8 @@ void UserRunnerImpl::InitializeLedgerDashboard() {
       user_scope_->environment(), std::string(kLedgerDashboardEnvLabel));
   AtEnd(Reset(&ledger_dashboard_scope_));
 
-  ledger_dashboard_scope_->AddService<ledger::LedgerRepositoryDebug>(
-      [this](fidl::InterfaceRequest<ledger::LedgerRepositoryDebug> request) {
+  ledger_dashboard_scope_->AddService<ledger_internal::LedgerRepositoryDebug>(
+      [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryDebug> request) {
         if (ledger_repository_) {
           ledger_repository_->GetLedgerRepositoryDebug(
               std::move(request), [](ledger::Status status) {

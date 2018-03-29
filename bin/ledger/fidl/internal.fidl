@@ -7,7 +7,7 @@ library ledger_internal;
 // Entry interface implemented by the Ledger application, intended to be used by
 // the process setting up the user environment to obtain repositories for
 // individual users.
-[ServiceName="ledger::LedgerRepositoryFactory"]
+[ServiceName="ledger_internal::LedgerRepositoryFactory"]
 interface LedgerRepositoryFactory {
   // Binds to the repository stored under |repository_path|, creating it if
   // needed. If this is called multiple times for the same |repository_path|,

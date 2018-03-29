@@ -26,7 +26,7 @@ class LedgerRepositoryForTesting {
   explicit LedgerRepositoryForTesting(const std::string& repository_name);
   ~LedgerRepositoryForTesting();
 
-  ledger::LedgerRepository* ledger_repository();
+  ledger_internal::LedgerRepository* ledger_repository();
 
   // Terminates the ledger repository app.
   void Terminate(std::function<void()> done);
@@ -34,7 +34,8 @@ class LedgerRepositoryForTesting {
  private:
   std::unique_ptr<component::ApplicationContext> application_context_;
   files::ScopedTempDir tmp_dir_;
-  std::unique_ptr<AppClient<ledger::LedgerController>> ledger_app_client_;
+  std::unique_ptr<AppClient<ledger_internal::LedgerController>>
+      ledger_app_client_;
   ledger_internal::LedgerRepositoryFactoryPtr ledger_repo_factory_;
   ledger_internal::LedgerRepositoryPtr ledger_repo_;
 

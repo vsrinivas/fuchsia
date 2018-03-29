@@ -4,7 +4,7 @@
 
 library ledger_internal;
 
-[ServiceName="ledger::LedgerRepositoryDebug"]
+[ServiceName="ledger_internal::LedgerRepositoryDebug"]
 interface LedgerRepositoryDebug {
   // Returns the instances list in LedgerRepository.
   1: GetInstancesList() -> (vector<vector<uint8>> result);
