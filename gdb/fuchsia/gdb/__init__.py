@@ -193,7 +193,7 @@ def _NewObjfileHandler(event):
     # "ephemeral" by nature. So we punt on setting sysroot for now, even
     # though IWBN if we could use it.
     if sysroot_dir:
-        solib_search_path = "%s/debug-info" % (sysroot_dir)
+        solib_search_path = "%s/debug" % (sysroot_dir)
         print "Note: Setting solib-search-path to %s" % (solib_search_path)
         gdb.execute("set solib-search-path %s" % (solib_search_path))
     else:

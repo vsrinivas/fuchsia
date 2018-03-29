@@ -226,28 +226,28 @@ func init() {
 		{
 			kernelDebugObjs,
 			x64ZxBuildDir,
-			"sysroot/x86_64-fuchsia/debug-info",
+			"sysroot/x86_64-fuchsia/debug",
 			customType,
 			copyKernelDebugObjs,
 		},
 		{
 			kernelDebugObjs,
 			x64BuildDir,
-			"sysroot/x86_64-fuchsia/debug-info",
+			"sysroot/x86_64-fuchsia/debug",
 			customType,
 			copyIdsTxt,
 		},
 		{
 			kernelDebugObjs,
 			armZxBuildDir,
-			"sysroot/aarch64-fuchsia/debug-info",
+			"sysroot/aarch64-fuchsia/debug",
 			customType,
 			copyKernelDebugObjs,
 		},
 		{
 			kernelDebugObjs,
 			armBuildDir,
-			"sysroot/aarch64-fuchsia/debug-info",
+			"sysroot/aarch64-fuchsia/debug",
 			customType,
 			copyIdsTxt,
 		},
@@ -258,9 +258,9 @@ func init() {
 	}
 	for _, c := range clientLibs {
 		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared", c.name), path.Join("sysroot/x86_64-fuchsia/lib", c.name)})
-		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared/lib.unstripped", c.name), path.Join("sysroot/x86_64-fuchsia/debug-info", c.name)})
+		files = append(files, file{c.flag, path.Join(x64BuildDir, "x64-shared/lib.unstripped", c.name), path.Join("sysroot/x86_64-fuchsia/debug", c.name)})
 		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared", c.name), path.Join("sysroot/aarch64-fuchsia/lib", c.name)})
-		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared/lib.unstripped", c.name), path.Join("sysroot/aarch64-fuchsia/debug-info", c.name)})
+		files = append(files, file{c.flag, path.Join(armBuildDir, "arm64-shared/lib.unstripped", c.name), path.Join("sysroot/aarch64-fuchsia/debug", c.name)})
 	}
 	for _, d := range dirs {
 		components = append(components, component{d.flag, d.src, d.dst, dirType, nil})
