@@ -60,7 +60,8 @@ public:
             return ZX_ERR_OUT_OF_RANGE;
         }
         AutoSpinLock lock(&lock_);
-        return bitmap_.SetOne(reverse(vector));
+        bitmap_.SetOne(reverse(vector));
+        return ZX_OK;
     }
 
     // Tracks the given interrupt, and signals any waiters.
