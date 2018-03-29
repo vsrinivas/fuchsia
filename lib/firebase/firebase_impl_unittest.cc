@@ -214,9 +214,9 @@ TEST_F(FirebaseImplTest, WatchRequest) {
             fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
   EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers->size());
-  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0)->name);
+  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0).name);
   EXPECT_EQ("text/event-stream",
-            fake_network_wrapper_.GetRequest()->headers->at(0)->value);
+            fake_network_wrapper_.GetRequest()->headers->at(0).value);
 }
 
 TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
@@ -231,9 +231,9 @@ TEST_F(FirebaseImplTest, WatchRequestWithQuery) {
       fake_network_wrapper_.GetRequest()->url);
   EXPECT_EQ("GET", fake_network_wrapper_.GetRequest()->method);
   EXPECT_EQ(1u, fake_network_wrapper_.GetRequest()->headers->size());
-  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0)->name);
+  EXPECT_EQ("Accept", fake_network_wrapper_.GetRequest()->headers->at(0).name);
   EXPECT_EQ("text/event-stream",
-            fake_network_wrapper_.GetRequest()->headers->at(0)->value);
+            fake_network_wrapper_.GetRequest()->headers->at(0).value);
 }
 
 TEST_F(FirebaseImplTest, WatchPut) {
