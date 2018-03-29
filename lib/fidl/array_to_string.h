@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fidl/cpp/vector.h"
 #include "lib/fidl/cpp/string.h"
+#include "lib/fidl/cpp/vector.h"
 
 namespace modular {
 
@@ -33,12 +33,12 @@ inline std::string to_hex_string(const uint8_t* data, size_t size) {
   return ret;
 }
 
-template<size_t N>
+template <size_t N>
 inline std::string to_hex_string(const fidl::Array<uint8_t, N>& data) {
   return to_hex_string(data.data(), N);
 }
 
-template<size_t N>
+template <size_t N>
 inline std::string to_hex_string(const std::array<uint8_t, N>& data) {
   return to_hex_string(data.data(), N);
 }
@@ -59,14 +59,8 @@ inline fidl::VectorPtr<uint8_t> to_array(const std::string& val) {
   return ret;
 }
 
-inline void to_array(const std::string& val, fidl::Array<uint8_t, 16>* array) {
-  size_t i = 0;
-  for (char c : val) {
-    (*array)[i++] = c;
-  }
-}
-
-inline fidl::VectorPtr<fidl::StringPtr> to_array(const std::vector<std::string>& val) {
+inline fidl::VectorPtr<fidl::StringPtr> to_array(
+    const std::vector<std::string>& val) {
   fidl::VectorPtr<fidl::StringPtr> ret;
   ret.resize(0);  // mark as not null
   for (const std::string& s : val) {

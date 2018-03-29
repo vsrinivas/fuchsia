@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/ledger_client/page_client.h"
+#include <memory>
+
 #include "gtest/gtest.h"
 #include "lib/fxl/macros.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 
 namespace modular {
@@ -38,8 +41,8 @@ class PageClientImpl : PageClient {
     ++conflict_count_;
 
     FXL_LOG(INFO) << "OnPageConflict " << prefix() << " " << conflict_count_
-                  << " " << conflict->key << " " << conflict->left << " "
-                  << conflict->right;
+                  << " " << to_string(conflict->key) << " " << conflict->left
+                  << " " << conflict->right;
 
     conflict->resolution = MERGE;
     conflict->merged = "value3";
@@ -59,7 +62,7 @@ class PageClientImpl : PageClient {
 
 class PageClientTest : public TestWithLedger {
  public:
-  PageClientTest() : page_id_(to_array("0123456789123456")) {}
+  PageClientTest() : page_id_(MakePageId("0123456789123456")) {}
 
   ~PageClientTest() = default;
 
@@ -70,14 +73,12 @@ class PageClientTest : public TestWithLedger {
 
     // TODO(mesch): Registration order matters for overlapping prefixes. This
     // should not be like that.
-    page_client_a_.reset(
-        new PageClientImpl(ledger_client(), page_id_.Clone(), "a/"));
-    page_client_b_.reset(
-        new PageClientImpl(ledger_client(), page_id_.Clone(), "b/"));
-    page_client_.reset(new PageClientImpl(ledger_client(), page_id_.Clone()));
+    page_client_a_.reset(new PageClientImpl(ledger_client(), page_id_, "a/"));
+    page_client_b_.reset(new PageClientImpl(ledger_client(), page_id_, "b/"));
+    page_client_.reset(new PageClientImpl(ledger_client(), page_id_));
 
     ledger_client()->ledger()->GetPage(
-        page_id_.Clone(), page_.NewRequest(),
+        std::make_unique<ledger::PageId>(page_id_), page_.NewRequest(),
         [](ledger::Status status) { ASSERT_EQ(ledger::Status::OK, status); });
   }
 
@@ -115,7 +116,7 @@ class PageClientTest : public TestWithLedger {
   // conflicts are resolved, then until the observed |condition| becomes true.
   void Run(const bool wait_for_resolved, std::function<bool()> condition) {
     RunLoopUntilWithTimeout(
-        [this, wait_for_resolved, condition = std::move(condition)] {
+        [ this, wait_for_resolved, condition = std::move(condition) ] {
           // First wait for Finish() to be called.
           if (!finished_) {
             return false;

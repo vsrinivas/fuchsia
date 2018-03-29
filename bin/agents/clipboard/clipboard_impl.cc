@@ -7,23 +7,15 @@
 #include <string>
 
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger_client/page_id.h"
 
 namespace modular {
 namespace {
 constexpr char kClipboardImplPageId[] = "ClipboardPage___";  // 16 chars
-
-LedgerPageId GetPageId() {
-  LedgerPageId id;
-  static_assert(sizeof(LedgerPageId) == sizeof(kClipboardImplPageId) - 1,
-                "Sizes must match.");
-  memcpy(id.mutable_data(), kClipboardImplPageId, id.count());
-  return id;
-}
-
 }  // namespace
 
 ClipboardImpl::ClipboardImpl(LedgerClient* ledger_client)
-    : storage_(ledger_client, GetPageId()) {}
+    : storage_(ledger_client, MakePageId(kClipboardImplPageId)) {}
 
 ClipboardImpl::~ClipboardImpl() = default;
 

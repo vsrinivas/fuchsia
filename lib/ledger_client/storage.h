@@ -10,10 +10,9 @@
 #include <string>
 
 #include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/string.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 
@@ -91,7 +90,8 @@ constexpr char kCharsToEscape[] = ":/";
 //    second sub separator character.
 //
 constexpr char kSubSeparator[] = ":";
-std::string EncodeModulePath(const fidl::VectorPtr<fidl::StringPtr>& module_path);
+std::string EncodeModulePath(
+    const fidl::VectorPtr<fidl::StringPtr>& module_path);
 std::string EncodeLinkPath(const LinkPath& link_path);
 std::string EncodeModuleComponentNamespace(const std::string& story_id);
 

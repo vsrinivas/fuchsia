@@ -40,6 +40,8 @@ source_set("page_client") {
     "ledger_client.h",
     "page_client.cc",
     "page_client.h",
+    "page_id.cc",
+    "page_id.h",
   ]
 
   deps = [
