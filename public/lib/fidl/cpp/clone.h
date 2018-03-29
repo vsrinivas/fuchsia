@@ -18,19 +18,6 @@
 
 namespace fidl {
 
-// Returns a deep copy of |value|.
-// This operation also attempts to duplicate any handles the value contains.
-//
-// Crashes the program if the value could not be cloned, perhaps because a
-// handle was not duplicable.
-template <typename T>
-inline T Clone(const T& value) {
-  T clone;
-  zx_status_t status = Clone(value, &clone);
-  ZX_ASSERT(status == ZX_OK);
-  return clone;
-}
-
 // Deep copies the contents of |value| into |result|.
 // This operation also attempts to duplicate any handles the value contains.
 //
@@ -128,6 +115,19 @@ inline zx_status_t Clone(const InterfaceRequest<T>& value,
     return ZX_OK;
   }
   return ZX_ERR_ACCESS_DENIED;
+}
+
+// Returns a deep copy of |value|.
+// This operation also attempts to duplicate any handles the value contains.
+//
+// Crashes the program if the value could not be cloned, perhaps because a
+// handle was not duplicable.
+template <typename T>
+inline T Clone(const T& value) {
+  T clone;
+  zx_status_t status = Clone(value, &clone);
+  ZX_ASSERT(status == ZX_OK);
+  return clone;
 }
 
 }  // namespace fidl
