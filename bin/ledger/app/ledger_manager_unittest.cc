@@ -13,6 +13,7 @@
 #include "garnet/lib/callback/waiter.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
@@ -26,10 +27,9 @@
 namespace ledger {
 namespace {
 
-storage::PageId RandomId() {
-  std::string result;
-  result.resize(kPageIdSize);
-  fxl::RandBytes(&result[0], kPageIdSize);
+ledger::PageId RandomId() {
+  ledger::PageId result;
+  fxl::RandBytes(&result.id[0], result.id.count());
   return result;
 }
 
@@ -130,7 +130,7 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
   FakeLedgerSync* sync_ptr;
   std::unique_ptr<LedgerManager> ledger_manager_;
   LedgerPtr ledger_;
-  LedgerDebugPtr ledger_debug_;
+  ledger_internal::LedgerDebugPtr ledger_debug_;
 };
 
 // Verifies that LedgerImpl proxies vended by LedgerManager work correctly,
@@ -161,24 +161,23 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.Unbind();
   storage_ptr->ClearCalls();
 
-  storage::PageId id = RandomId();
-  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger::PageId id = RandomId();
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
                    [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
+  EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
   page.Unbind();
   storage_ptr->ClearCalls();
 
-  ledger_->DeletePage(convert::ToArray(id),
-                      [this](Status) { message_loop_.PostQuitTask(); });
+  ledger_->DeletePage(id, [this](Status) { message_loop_.PostQuitTask(); });
   message_loop_.Run();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->delete_page_calls.size());
-  EXPECT_EQ(id, storage_ptr->delete_page_calls[0]);
+  EXPECT_EQ(convert::ToString(id.id), storage_ptr->delete_page_calls[0]);
   storage_ptr->ClearCalls();
 }
 
@@ -209,20 +208,20 @@ TEST_F(LedgerManagerTest, OnEmptyCalled) {
 // Verifies that two successive calls to GetPage do not create 2 storages.
 TEST_F(LedgerManagerTest, CallGetPageTwice) {
   PagePtr page;
-  storage::PageId id = RandomId();
+  ledger::PageId id = RandomId();
 
   uint8_t calls = 0;
-  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
                    [&calls](Status) { calls++; });
   page.Unbind();
-  ledger_->GetPage(convert::ToArray(id), page.NewRequest(),
+  ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
                    [&calls](Status) { calls++; });
   page.Unbind();
   RunLoopUntilIdle();
   EXPECT_EQ(2u, calls);
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
-  EXPECT_EQ(id, storage_ptr->get_page_calls[0]);
+  EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
 }
 
@@ -232,6 +231,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   Status status;
 
   PagePtr page;
+  ledger::PageId id = RandomId();
   bool called;
   // Get the root page.
   storage_ptr->ClearCalls();
@@ -248,7 +248,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
   page.Unbind();
   ledger_->GetPage(
-      convert::ToArray(RandomId()), page.NewRequest(),
+      fidl::MakeOptional(id), page.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -270,20 +270,21 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
 // Verifies that LedgerDebugImpl proxy vended by LedgerManager works correctly.
 TEST_F(LedgerManagerTest, CallGetPagesList) {
   std::vector<PagePtr> pages(3);
-  std::vector<storage::PageId> ids;
+  std::vector<ledger::PageId> ids;
 
-  for (size_t i = 0; i < pages.size(); ++i)
+  for (size_t i = 0; i < pages.size(); ++i) {
     ids.push_back(RandomId());
+  }
 
   Status status;
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> actual_pages_list;
+  fidl::VectorPtr<ledger::PageId> actual_pages_list;
 
   EXPECT_EQ(0u, actual_pages_list->size());
 
   auto waiter = callback::StatusWaiter<Status>::Create(Status::OK);
   for (size_t i = 0; i < pages.size(); ++i) {
-    ledger_->GetPage(convert::ToArray(ids[i]), pages[i].NewRequest(),
+    ledger_->GetPage(fidl::MakeOptional(ids[i]), pages[i].NewRequest(),
                      waiter->NewCallback());
   }
 
@@ -301,9 +302,13 @@ TEST_F(LedgerManagerTest, CallGetPagesList) {
   EXPECT_TRUE(called);
   EXPECT_EQ(pages.size(), actual_pages_list->size());
 
-  std::sort(ids.begin(), ids.end());
+  std::sort(ids.begin(), ids.end(),
+            [](const ledger::PageId& lhs, const ledger::PageId& rhs) {
+              return convert::ToStringView(lhs.id) <
+                     convert::ToStringView(rhs.id);
+            });
   for (size_t i = 0; i < ids.size(); i++)
-    EXPECT_EQ(ids[i], convert::ToString(actual_pages_list->at(i)));
+    EXPECT_EQ(ids[i].id, actual_pages_list->at(i).id);
 }
 
 }  // namespace
