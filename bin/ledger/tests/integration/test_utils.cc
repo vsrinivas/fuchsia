@@ -25,7 +25,7 @@ namespace test {
 namespace integration {
 
 fidl::VectorPtr<uint8_t> RandomArray(size_t size,
-                                 const std::vector<uint8_t>& prefix) {
+                                     const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
   fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(size);
   for (size_t i = 0; i < prefix.size(); ++i) {
@@ -48,7 +48,7 @@ fidl::VectorPtr<uint8_t> RandomArray(int size) {
 ledger::PageId PageGetId(ledger::PagePtr* page) {
   ledger::PageId page_id;
   (*page)->GetId([&page_id](ledger::PageId id) { page_id = std::move(id); });
-  EXPECT_TRUE(page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_EQ(ZX_OK, page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   return page_id;
 }
 
@@ -58,7 +58,7 @@ ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
   (*page)->GetSnapshot(
       snapshot.NewRequest(), std::move(prefix), nullptr,
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_TRUE(page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_EQ(ZX_OK, page->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   return snapshot;
 }
 
@@ -82,7 +82,8 @@ fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     (*snapshot)->GetKeys(
         start.Clone(), std::move(token),
         [&result, &next_token, &num_queries](
-            ledger::Status status, fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
+            ledger::Status status,
+            fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys,
             fidl::VectorPtr<uint8_t> new_next_token) {
           EXPECT_TRUE(status == ledger::Status::OK ||
                       status == ledger::Status::PARTIAL_RESULT);
@@ -94,7 +95,8 @@ fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
           }
           next_token = std::move(new_next_token);
         });
-    EXPECT_TRUE(snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+    EXPECT_EQ(ZX_OK,
+              snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
     token = std::move(next_token);
     next_token = nullptr;  // Suppress misc-use-after-move.
   } while (token);
@@ -134,7 +136,8 @@ fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
           }
           next_token = std::move(new_next_token);
         });
-    EXPECT_TRUE(snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+    EXPECT_EQ(ZX_OK,
+              snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
     token = std::move(next_token);
     next_token = nullptr;  // Suppress misc-use-after-move.
   } while (token);
@@ -163,7 +166,8 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
         EXPECT_EQ(ledger::Status::OK, status);
         EXPECT_TRUE(fsl::StringFromVmo(*buffer, &result));
       });
-  EXPECT_TRUE(snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
+  EXPECT_EQ(ZX_OK,
+            snapshot->WaitForResponseUntil(zx::deadline_after(zx::sec(1))));
   return result;
 }
 

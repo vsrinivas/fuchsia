@@ -39,21 +39,21 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
   snapshot->Get(convert::ToArray("favorite book"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -78,9 +78,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
 
-  EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
 
   EXPECT_EQ(ledger::Status::OK, status);
   ASSERT_TRUE(value);
@@ -102,15 +102,15 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
       convert::ToArray("name"), convert::ToArray(value2),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
 
-  EXPECT_TRUE(page.WaitForResponse());
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(value2, ToString(value));
 }
@@ -121,7 +121,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   EXPECT_EQ("Alice",
@@ -152,7 +152,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   fsl::SizedVmoTransportPtr value;
   snapshot->FetchPartial(convert::ToArray("favorite book"), 0, -1,
                          callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -180,7 +180,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
     page->Put(key.Clone(), RandomArray(50), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    EXPECT_TRUE(page.WaitForResponse());
+    EXPECT_EQ(ZX_OK, page.WaitForResponse());
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -261,7 +261,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
     page->Put(key.Clone(), RandomArray(10), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    ASSERT_TRUE(page.WaitForResponse());
+    ASSERT_EQ(ZX_OK, page.WaitForResponse());
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -303,7 +303,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    EXPECT_TRUE(page.WaitForResponse());
+    EXPECT_EQ(ZX_OK, page.WaitForResponse());
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -355,7 +355,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
         EXPECT_TRUE(next_token.is_null());
         entries = std::move(e);
       });
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   EXPECT_EQ(0u, entries->size());
 }
 
@@ -368,7 +368,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
   auto entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries).take();
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries)
+          .take();
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -394,12 +395,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    ASSERT_TRUE(page.WaitForResponse());
+    ASSERT_EQ(ZX_OK, page.WaitForResponse());
   }
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries).take();
+  entries =
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries)
+          .take();
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -417,7 +420,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
   auto entries =
-      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries).take();
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries)
+          .take();
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -437,12 +441,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    ASSERT_TRUE(page.WaitForResponse());
+    ASSERT_EQ(ZX_OK, page.WaitForResponse());
   }
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries).take();
+  entries =
+      SnapshotGetEntries(&snapshot, fidl::VectorPtr<uint8_t>(), &num_queries)
+          .take();
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -472,7 +478,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
     page->Put(keys[i].Clone(), values[i].Clone(), [](ledger::Status status) {
       EXPECT_EQ(ledger::Status::OK, status);
     });
-    EXPECT_TRUE(page.WaitForResponse());
+    EXPECT_EQ(ZX_OK, page.WaitForResponse());
   }
 
   // Get a snapshot.
@@ -510,7 +516,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
       [](ledger::Status status, ledger::ReferencePtr ref) {
         EXPECT_EQ(ledger::Status::IO_ERROR, status);
       });
-  ASSERT_TRUE(page.WaitForResponse());
+  ASSERT_EQ(ZX_OK, page.WaitForResponse());
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
@@ -527,14 +533,14 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
         EXPECT_EQ(ledger::Status::OK, status);
         reference = std::move(ref);
       });
-  ASSERT_TRUE(page.WaitForResponse());
+  ASSERT_EQ(ZX_OK, page.WaitForResponse());
 
   // Set the reference under a key.
   page->PutReference(convert::ToArray("big data"), std::move(*reference),
                      ledger::Priority::EAGER, [](ledger::Status status) {
                        EXPECT_EQ(ledger::Status::OK, status);
                      });
-  ASSERT_TRUE(page.WaitForResponse());
+  ASSERT_EQ(ZX_OK, page.WaitForResponse());
 
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -542,7 +548,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture([] {}, &status, &value));
-  ASSERT_TRUE(snapshot.WaitForResponse());
+  ASSERT_EQ(ZX_OK, snapshot.WaitForResponse());
 
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -564,14 +570,14 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
         EXPECT_EQ(ledger::Status::OK, status);
         reference = std::move(ref);
       });
-  ASSERT_TRUE(page.WaitForResponse());
+  ASSERT_EQ(ZX_OK, page.WaitForResponse());
 
   // Set the reference under a key.
   page->PutReference(convert::ToArray("big data"), std::move(*reference),
                      ledger::Priority::EAGER, [](ledger::Status status) {
                        EXPECT_EQ(ledger::Status::OK, status);
                      });
-  ASSERT_TRUE(page.WaitForResponse());
+  ASSERT_EQ(ZX_OK, page.WaitForResponse());
 
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
@@ -579,7 +585,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture([] {}, &status, &value));
-  ASSERT_TRUE(snapshot.WaitForResponse());
+  ASSERT_EQ(ZX_OK, snapshot.WaitForResponse());
 
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ(big_data, ToString(value));
@@ -591,7 +597,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
@@ -602,14 +608,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 
   // Attempt to get an entry that is not in the page.
   snapshot->Get(convert::ToArray("favorite book"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   // People don't read much these days.
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
@@ -619,12 +625,12 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageId test_page_id;
   page->GetId(callback::Capture([] {}, &test_page_id));
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   page->Put(
       convert::ToArray("name"), convert::ToArray("Alice"),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   page.Unbind();
 
@@ -633,14 +639,14 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   ledger::PageId page_id;
   page->GetId(callback::Capture([] {}, &page_id));
   EXPECT_EQ(test_page_id.id, page_id.id);
-  EXPECT_TRUE(page.WaitForResponse());
+  EXPECT_EQ(ZX_OK, page.WaitForResponse());
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
   fsl::SizedVmoTransportPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
-  EXPECT_TRUE(snapshot.WaitForResponse());
+  EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
   EXPECT_EQ(ledger::Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 }

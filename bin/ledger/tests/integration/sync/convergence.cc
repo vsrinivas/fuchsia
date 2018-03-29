@@ -73,13 +73,11 @@ class PageWatcherImpl : public ledger::PageWatcher {
     // We need to make sure the PageSnapshotPtr used to make the |GetInline|
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
-    (*current_snapshot_)
-        ->GetInline(std::move(key), [snapshot = current_snapshot_.Clone(),
-                                     callback = std::move(callback)](
-                                        ledger::Status status,
-                                        fidl::VectorPtr<uint8_t> value) mutable {
-          callback(status, std::move(value));
-        });
+    (*current_snapshot_)->GetInline(std::move(key), [
+      snapshot = current_snapshot_.Clone(), callback = std::move(callback)
+    ](ledger::Status status, fidl::VectorPtr<uint8_t> value) mutable {
+      callback(status, std::move(value));
+    });
   }
 
  private:
@@ -151,9 +149,8 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
         nullptr,
         fxl::MakeCopyable([merge_result_provider =
                                std::move(merge_result_provider)](
-                              ledger::Status status,
-                              fidl::VectorPtr<ledger::DiffEntry> changes,
-                              fidl::VectorPtr<uint8_t> next_token) mutable {
+            ledger::Status status, fidl::VectorPtr<ledger::DiffEntry> changes,
+            fidl::VectorPtr<uint8_t> next_token) mutable {
           ASSERT_EQ(ledger::Status::OK, status);
           ASSERT_EQ(1u, changes->size());
 
@@ -171,10 +168,10 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
           ledger::Status merge_status;
           merge_result_provider->Merge(std::move(merged_values),
                                        callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForResponse());
+          ASSERT_EQ(ZX_OK, merge_result_provider.WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
           merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-          ASSERT_TRUE(merge_result_provider.WaitForResponse());
+          ASSERT_EQ(ZX_OK, merge_result_provider.WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
         }));
   }
