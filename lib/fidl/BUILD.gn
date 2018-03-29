@@ -144,6 +144,8 @@ source_set("message_receiver_client") {
 fidl("unittest_fidl") {
   testonly = true
 
+  name = "modular_test"
+
   sources = [
     "app_client_unittest.fidl",
   ]

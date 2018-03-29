@@ -4,11 +4,10 @@
 
 #include "peridot/lib/fidl/app_client.h"
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular_test.h>
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include "peridot/lib/fidl/app_client_unittest.fidl.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {
@@ -58,9 +57,9 @@ TEST_F(AppClientTest, BaseRun_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
-        EXPECT_EQ(kTestUrl, launch_info->url);
+        EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
   AppClientBase app_client_base(&launcher, GetTestAppConfig());
@@ -75,9 +74,9 @@ TEST_F(AppClientTest, BaseTerminate_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called, &controller](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
-        EXPECT_EQ(kTestUrl, launch_info->url);
+        EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
         controller.Connect(std::move(ctrl));
       });
@@ -105,13 +104,14 @@ TEST_F(AppClientTest, Run_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
-        EXPECT_EQ(kTestUrl, launch_info->url);
+        EXPECT_EQ(kTestUrl, launch_info.url);
         callback_called = true;
       });
 
-  AppClient<test::TerminateService> app_client(&launcher, GetTestAppConfig());
+  AppClient<modular_test::TerminateService> app_client(&launcher,
+                                                       GetTestAppConfig());
 
   EXPECT_TRUE(callback_called);
 }
@@ -127,16 +127,15 @@ TEST_F(AppClientTest, RunWithParams_Success) {
   launcher.RegisterApplication(
       kTestUrl,
       [&callback_called](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
-        EXPECT_EQ(kTestUrl, launch_info->url);
-        auto additional_services = std::move(launch_info->additional_services);
-        EXPECT_FALSE(additional_services.is_null());
+        EXPECT_EQ(kTestUrl, launch_info.url);
+        auto additional_services = std::move(launch_info.additional_services);
         EXPECT_EQ(kServiceName, additional_services->names->at(0));
         callback_called = true;
       });
 
-  AppClient<test::TerminateService> app_client(
+  AppClient<modular_test::TerminateService> app_client(
       &launcher, GetTestAppConfig(), "", std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
