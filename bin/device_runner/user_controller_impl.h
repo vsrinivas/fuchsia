@@ -8,6 +8,7 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/presentation.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
@@ -26,7 +27,7 @@ namespace modular {
 // UserRunner is bound to this class.  |UserControllerImpl| is not self-owned,
 // but still drives its own deletion: On logout, it signals its
 // owner (DeviceRunnerApp) to delete it.
-class UserControllerImpl : UserController, UserContext {
+class UserControllerImpl : UserController, modular_private::UserContext {
  public:
   // After perfoming logout, to signal our completion (and deletion of our
   // instance) to our owner, we do it using a callback supplied to us in our
@@ -39,8 +40,9 @@ class UserControllerImpl : UserController, UserContext {
       AppConfig user_runner,
       AppConfig user_shell,
       AppConfig story_shell,
-      fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-      auth::AccountPtr account,
+      fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+          token_provider_factory,
+      modular_auth::AccountPtr account,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
       fidl::InterfaceRequest<UserController> user_controller_request,
@@ -50,7 +52,7 @@ class UserControllerImpl : UserController, UserContext {
 
   // This will effectively tear down the entire instance by calling |done|.
   // |UserController|
-  void Logout(const LogoutCallback& done) override;
+  void Logout(LogoutCallback done) override;
 
  private:
   // |UserController|
@@ -69,7 +71,7 @@ class UserControllerImpl : UserController, UserContext {
 
   std::unique_ptr<Scope> user_runner_scope_;
   std::unique_ptr<AppClient<Lifecycle>> user_runner_app_;
-  UserRunnerPtr user_runner_;
+  modular_private::UserRunnerPtr user_runner_;
 
   fidl::Binding<UserContext> user_context_binding_;
   fidl::Binding<UserController> user_controller_binding_;

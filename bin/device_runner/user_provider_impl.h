@@ -5,10 +5,9 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_USER_PROVIDER_IMPL_H_
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "peridot/bin/device_runner/user_controller_impl.h"
@@ -23,7 +22,7 @@ class UserProviderImpl : UserProvider {
                    const AppConfig& user_runner,
                    const AppConfig& default_user_shell,
                    const AppConfig& story_shell,
-                   auth::AccountProvider* account_provider);
+                   modular_auth::AccountProvider* account_provider);
 
   void Connect(fidl::InterfaceRequest<UserProvider> request);
 
@@ -33,23 +32,23 @@ class UserProviderImpl : UserProvider {
 
  private:
   // |UserProvider|
-  void Login(UserLoginParamsPtr params) override;
+  void Login(UserLoginParams params) override;
 
   // |UserProvider|
   void PreviousUsers(PreviousUsersCallback callback) override;
 
   // |UserProvider|
-  void AddUser(auth::IdentityProvider identity_provider,
+  void AddUser(modular_auth::IdentityProvider identity_provider,
                AddUserCallback callback) override;
 
   // |UserProvider|
-  void RemoveUser(const fidl::StringPtr& account_id,
+  void RemoveUser(fidl::StringPtr account_id,
                   RemoveUserCallback callback) override;
 
   bool WriteUsersDb(const std::string& serialized_users, std::string* error);
   bool Parse(const std::string& serialized_users);
 
-  void LoginInternal(auth::AccountPtr account, UserLoginParamsPtr params);
+  void LoginInternal(modular_auth::AccountPtr account, UserLoginParams params);
 
   fidl::BindingSet<UserProvider> bindings_;
 
@@ -57,7 +56,7 @@ class UserProviderImpl : UserProvider {
   const AppConfig& user_runner_;         // Neither owned nor copied.
   const AppConfig& default_user_shell_;  // Neither owned nor copied.
   const AppConfig& story_shell_;         // Neither owned nor copied.
-  auth::AccountProvider* const account_provider_;
+  modular_auth::AccountProvider* const account_provider_;
 
   std::string serialized_users_;
   const modular::UsersStorage* users_storage_ = nullptr;

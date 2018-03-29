@@ -31,6 +31,7 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/util/filesystem.h"
 
 namespace modular {
@@ -184,7 +185,8 @@ class Settings {
   FXL_DISALLOW_COPY_AND_ASSIGN(Settings);
 };
 
-class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
+class DeviceRunnerApp : DeviceShellContext,
+                        modular_auth::AccountProviderContext {
  public:
   explicit DeviceRunnerApp(
       const Settings& settings,
@@ -256,7 +258,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // to the device shell. This is done first so that we can show some UI until
     // other things come up.
     device_shell_app_ = std::make_unique<AppClient<Lifecycle>>(
-        app_context_->launcher().get(), settings_.device_shell.Clone());
+        app_context_->launcher().get(), CloneStruct(settings_.device_shell));
     device_shell_app_->services().ConnectToService(device_shell_.NewRequest());
 
     views_v1::ViewProviderPtr device_shell_view_provider;
@@ -275,8 +277,8 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     }
 
     // Populate parameters and initialize the device shell.
-    auto params = DeviceShellParams::New();
-    params->presentation = std::move(presentation);
+    DeviceShellParams params;
+    params.presentation = std::move(presentation);
     device_shell_->Initialize(device_shell_context_binding_.NewBinding(),
                               std::move(params));
 
@@ -288,7 +290,7 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
     // 3. Start OAuth Token Manager App.
     AppConfig token_manager_config;
     token_manager_config.url = settings_.account_provider.url;
-    token_manager_ = std::make_unique<AppClient<auth::AccountProvider>>(
+    token_manager_ = std::make_unique<AppClient<modular_auth::AccountProvider>>(
         app_context_->launcher().get(), std::move(token_manager_config),
         "/data/modular/ACCOUNT_MANAGER");
     token_manager_->SetAppErrorHandler([] {
@@ -342,8 +344,9 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
 
   // |AccountProviderContext|
   void GetAuthenticationContext(
-      const fidl::StringPtr& account_id,
-      fidl::InterfaceRequest<AuthenticationContext> request) override {
+      fidl::StringPtr account_id,
+      fidl::InterfaceRequest<modular_auth::AuthenticationContext> request)
+      override {
     device_shell_->GetAuthenticationContext(account_id, std::move(request));
   }
 
@@ -355,9 +358,10 @@ class DeviceRunnerApp : DeviceShellContext, auth::AccountProviderContext {
   std::function<void()> on_shutdown_;
 
   fidl::Binding<DeviceShellContext> device_shell_context_binding_;
-  fidl::Binding<auth::AccountProviderContext> account_provider_context_binding_;
+  fidl::Binding<modular_auth::AccountProviderContext>
+      account_provider_context_binding_;
 
-  std::unique_ptr<AppClient<auth::AccountProvider>> token_manager_;
+  std::unique_ptr<AppClient<modular_auth::AccountProvider>> token_manager_;
   std::unique_ptr<AppClient<Lifecycle>> device_shell_app_;
   DeviceShellPtr device_shell_;
 

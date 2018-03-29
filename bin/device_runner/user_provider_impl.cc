@@ -13,6 +13,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/device_runner/users_generated.h"
 #include "peridot/lib/common/xdr.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
@@ -21,16 +22,16 @@ namespace {
 
 constexpr char kUsersConfigurationFile[] = "/data/modular/users-v5.db";
 
-auth::AccountPtr Convert(const UserStorage* const user) {
+modular_auth::AccountPtr Convert(const UserStorage* const user) {
   FXL_DCHECK(user);
-  auto account = auth::Account::New();
+  auto account = modular_auth::Account::New();
   account->id = user->id()->str();
   switch (user->identity_provider()) {
     case IdentityProvider_DEV:
-      account->identity_provider = auth::IdentityProvider::DEV;
+      account->identity_provider = modular_auth::IdentityProvider::DEV;
       break;
     case IdentityProvider_GOOGLE:
-      account->identity_provider = auth::IdentityProvider::GOOGLE;
+      account->identity_provider = modular_auth::IdentityProvider::GOOGLE;
       break;
     default:
       FXL_DCHECK(false) << "Unrecognized IdentityProvider"
@@ -60,8 +61,10 @@ std::string GetRandomId() {
 
 UserProviderImpl::UserProviderImpl(
     std::shared_ptr<component::ApplicationContext> app_context,
-    const AppConfig& user_runner, const AppConfig& default_user_shell,
-    const AppConfig& story_shell, auth::AccountProvider* const account_provider)
+    const AppConfig& user_runner,
+    const AppConfig& default_user_shell,
+    const AppConfig& story_shell,
+    modular_auth::AccountProvider* const account_provider)
     : app_context_(std::move(app_context)),
       user_runner_(user_runner),
       default_user_shell_(default_user_shell),
@@ -96,7 +99,7 @@ void UserProviderImpl::Teardown(const std::function<void()>& callback) {
   }
 
   for (auto& it : user_controllers_) {
-    auto cont = [this, ptr = it.first, callback] {
+    auto cont = [ this, ptr = it.first, callback ] {
       // This is okay because during teardown, |cont| is never invoked
       // asynchronously.
       user_controllers_.erase(ptr);
@@ -130,9 +133,9 @@ std::string UserProviderImpl::DumpState() {
   return output.str();
 }
 
-void UserProviderImpl::Login(UserLoginParamsPtr params) {
+void UserProviderImpl::Login(UserLoginParams params) {
   // If requested, run in incognito mode.
-  if (params->account_id.is_null() || params->account_id == "") {
+  if (params.account_id.is_null() || params.account_id == "") {
     FXL_LOG(INFO) << "UserProvider::Login() Incognito mode";
     LoginInternal(nullptr /* account */, std::move(params));
     return;
@@ -143,7 +146,7 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
   const UserStorage* found_user = nullptr;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
-      if (user->id()->str() == params->account_id) {
+      if (user->id()->str() == params.account_id) {
         found_user = user;
         break;
       }
@@ -157,28 +160,28 @@ void UserProviderImpl::Login(UserLoginParamsPtr params) {
     return;
   }
 
-  FXL_LOG(INFO) << "UserProvider::Login() account: " << params->account_id;
+  FXL_LOG(INFO) << "UserProvider::Login() account: " << params.account_id;
   LoginInternal(Convert(found_user), std::move(params));
 }
 
 void UserProviderImpl::PreviousUsers(PreviousUsersCallback callback) {
-  fidl::VectorPtr<auth::AccountPtr> accounts =
-      fidl::VectorPtr<auth::AccountPtr>::New(0);
+  fidl::VectorPtr<modular_auth::Account> accounts;
+  accounts.resize(0);
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
-      accounts.push_back(Convert(user));
+      accounts.push_back(*Convert(user));
     }
   }
   callback(std::move(accounts));
 }
 
-void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
+void UserProviderImpl::AddUser(modular_auth::IdentityProvider identity_provider,
                                AddUserCallback callback) {
   account_provider_->AddAccount(
       identity_provider,
-      [this, identity_provider, callback](auth::AccountPtr account,
-                                          const fidl::StringPtr& error_code) {
-        if (account.is_null()) {
+      [this, identity_provider, callback](modular_auth::AccountPtr account,
+                                          fidl::StringPtr error_code) {
+        if (!account) {
           callback(nullptr, error_code);
           return;
         }
@@ -200,11 +203,11 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
 
         modular::IdentityProvider flatbuffer_identity_provider;
         switch (account->identity_provider) {
-          case auth::IdentityProvider::DEV:
+          case modular_auth::IdentityProvider::DEV:
             flatbuffer_identity_provider =
                 modular::IdentityProvider::IdentityProvider_DEV;
             break;
-          case auth::IdentityProvider::GOOGLE:
+          case modular_auth::IdentityProvider::GOOGLE:
             flatbuffer_identity_provider =
                 modular::IdentityProvider::IdentityProvider_GOOGLE;
             break;
@@ -234,9 +237,9 @@ void UserProviderImpl::AddUser(auth::IdentityProvider identity_provider,
       });
 }
 
-void UserProviderImpl::RemoveUser(const fidl::StringPtr& account_id,
+void UserProviderImpl::RemoveUser(fidl::StringPtr account_id,
                                   RemoveUserCallback callback) {
-  auth::AccountPtr account;
+  modular_auth::AccountPtr account;
   if (users_storage_) {
     for (const auto* user : *users_storage_->users()) {
       if (user->id()->str() == account_id) {
@@ -245,17 +248,18 @@ void UserProviderImpl::RemoveUser(const fidl::StringPtr& account_id,
     }
   }
 
-  if (account.is_null()) {
+  if (!account) {
     callback("User not found.");
     return;
   }
 
   FXL_DCHECK(account_provider_);
   account_provider_->RemoveAccount(
-      std::move(account), false /* disable single logout*/,
-      [this, account_id = account_id, callback](auth::AuthErrPtr auth_err) {
-        if (auth_err->status != auth::Status::OK) {
-          callback(auth_err->message);
+      std::move(*account), false /* disable single logout*/,
+      [ this, account_id = account_id,
+        callback ](modular_auth::AuthErr auth_err) {
+        if (auth_err.status != modular_auth::Status::OK) {
+          callback(auth_err.message);
           return;
         }
 
@@ -330,23 +334,23 @@ bool UserProviderImpl::Parse(const std::string& serialized_users) {
   return true;
 }
 
-void UserProviderImpl::LoginInternal(auth::AccountPtr account,
-                                     UserLoginParamsPtr params) {
+void UserProviderImpl::LoginInternal(modular_auth::AccountPtr account,
+                                     UserLoginParams params) {
   // Get token provider factory for this user.
-  auth::TokenProviderFactoryPtr token_provider_factory;
+  modular_auth::TokenProviderFactoryPtr token_provider_factory;
   account_provider_->GetTokenProviderFactory(
-      account.is_null() ? GetRandomId() : account->id.get(),
+      account ? account->id.get() : GetRandomId(),
       token_provider_factory.NewRequest());
 
-  auto user_shell = params->user_shell_config.is_null()
-                        ? default_user_shell_.Clone()
-                        : std::move(params->user_shell_config);
+  auto user_shell = params.user_shell_config
+                        ? std::move(*params.user_shell_config)
+                        : CloneStruct(default_user_shell_);
   auto controller = std::make_unique<UserControllerImpl>(
-      app_context_->launcher().get(), user_runner_.Clone(),
-      std::move(user_shell), story_shell_.Clone(),
+      app_context_->launcher().get(), CloneStruct(user_runner_),
+      std::move(user_shell), CloneStruct(story_shell_),
       std::move(token_provider_factory), std::move(account),
-      std::move(params->view_owner), std::move(params->services),
-      std::move(params->user_controller),
+      std::move(params.view_owner), std::move(params.services),
+      std::move(params.user_controller),
       [this](UserControllerImpl* c) { user_controllers_.erase(c); });
   user_controllers_[controller.get()] = std::move(controller);
 }

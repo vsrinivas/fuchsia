@@ -21,7 +21,7 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   AppConfig app_config;
   app_config.url = url;
 
-  auth::TokenProviderFactoryPtr token_provider_factory_ptr;
+  modular_auth::TokenProviderFactoryPtr token_provider_factory_ptr;
   auto token_provider_factory_request = token_provider_factory_ptr.NewRequest();
 
   bool callback_called = false;

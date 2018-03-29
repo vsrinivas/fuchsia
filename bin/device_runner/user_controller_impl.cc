@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/user/fidl/user_runner.fidl-sync.h"
 #include "peridot/lib/common/async_holder.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/array_to_string.h"
@@ -20,8 +19,9 @@ UserControllerImpl::UserControllerImpl(
     AppConfig user_runner,
     AppConfig user_shell,
     AppConfig story_shell,
-    fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
-    auth::AccountPtr account,
+    fidl::InterfaceHandle<modular_auth::TokenProviderFactory>
+        token_provider_factory,
+    modular_auth::AccountPtr account,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     fidl::InterfaceHandle<component::ServiceProvider> device_shell_services,
     fidl::InterfaceRequest<UserController> user_controller_request,
@@ -33,7 +33,7 @@ UserControllerImpl::UserControllerImpl(
       done_(std::move(done)) {
   // 0. Generate the path to map '/data' for the user runner we are starting.
   std::string data_origin;
-  if (account.is_null()) {
+  if (!account) {
     // Guest user.
     // Generate a random number to be used in this case.
     uint32_t random_number;
@@ -62,16 +62,15 @@ UserControllerImpl::UserControllerImpl(
 }
 
 std::string UserControllerImpl::DumpState() {
-  UserRunnerDebugSyncPtr debug;
-  user_runner_app_->services().ConnectToService(
-      fidl::GetSynchronousProxy(&debug));
+  modular_private::UserRunnerDebugSyncPtr debug;
+  user_runner_app_->services().ConnectToService(debug.NewRequest());
   fidl::StringPtr output;
   debug->DumpState(&output);
   return output;
 }
 
 // |UserController|
-void UserControllerImpl::Logout(const LogoutCallback& done) {
+void UserControllerImpl::Logout(LogoutCallback done) {
   FXL_LOG(INFO) << "UserController::Logout()";
   logout_response_callbacks_.push_back(done);
   if (logout_response_callbacks_.size() > 1) {
@@ -89,8 +88,9 @@ void UserControllerImpl::Logout(const LogoutCallback& done) {
     // We announce |OnLogout| only at point just before deleting ourselves,
     // so we can avoid any race conditions that may be triggered by |Shutdown|
     // (which in-turn will call this |Logout| since we have not completed yet).
-    user_watchers_.ForAllPtrs(
-        [](UserWatcher* watcher) { watcher->OnLogout(); });
+    for (auto& watcher : user_watchers_.ptrs()) {
+      (*watcher)->OnLogout();
+    }
     done_(this);
   });
 }

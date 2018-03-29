@@ -9,11 +9,10 @@
 #include <memory>
 #include <utility>
 
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -80,7 +79,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   // |DeviceShell|
   void Initialize(
       fidl::InterfaceHandle<modular::DeviceShellContext> device_shell_context,
-      modular::DeviceShellParamsPtr device_shell_params) override {
+      modular::DeviceShellParams device_shell_params) override {
     device_shell_context_.Bind(std::move(device_shell_context));
     device_shell_context_->GetUserProvider(user_provider_.NewRequest());
 
@@ -89,8 +88,8 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
 
   // |DeviceShell|
   void GetAuthenticationContext(
-      const fidl::StringPtr& /*username*/,
-      fidl::InterfaceRequest<modular::AuthenticationContext> /*request*/)
+      fidl::StringPtr /*username*/,
+      fidl::InterfaceRequest<modular_auth::AuthenticationContext> /*request*/)
       override {
     FXL_LOG(INFO)
         << "DeviceShell::GetAuthenticationContext() is unimplemented.";
@@ -103,10 +102,10 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
   }
 
   void Login(const std::string& account_id) {
-    auto params = modular::UserLoginParams::New();
-    params->account_id = account_id;
-    params->view_owner = std::move(view_owner_request_);
-    params->user_controller = user_controller_.NewRequest();
+    modular::UserLoginParams params;
+    params.account_id = account_id;
+    params.view_owner = std::move(view_owner_request_);
+    params.user_controller = user_controller_.NewRequest();
     user_provider_->Login(std::move(params));
     user_controller_->Watch(user_watcher_binding_.NewBinding());
   }
@@ -120,7 +119,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](fidl::VectorPtr<modular::auth::AccountPtr> accounts) {
+          [this](fidl::VectorPtr<modular_auth::AccountPtr> accounts) {
             FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
@@ -139,9 +138,9 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
             }
             if (account_id.empty()) {
               user_provider_->AddUser(
-                  modular::auth::IdentityProvider::DEV,
-                  [this](modular::auth::AccountPtr account,
-                         const fidl::StringPtr& status) { Login(account->id); });
+                  modular_auth::IdentityProvider::DEV,
+                  [this](modular_auth::AccountPtr account,
+                         fidl::StringPtr status) { Login(account->id); });
             } else {
               Login(account_id);
             }
