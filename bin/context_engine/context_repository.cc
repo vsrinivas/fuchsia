@@ -10,10 +10,12 @@
 #include "peridot/bin/context_engine/debug.h"
 
 #include "lib/context/cpp/formatting.h"
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextGraph::ContextGraph() = default;
 
@@ -98,8 +100,8 @@ ContextRepository::Id CreateSubscriptionId() {
   return std::to_string(next_id++);
 }
 
-void LogInvalidAncestorMetadata(const ContextMetadataPtr& from,
-                                ContextMetadataPtr* to,
+void LogInvalidAncestorMetadata(const ContextMetadata& from,
+                                ContextMetadata* to,
                                 const char* type) {
   FXL_LOG(WARNING) << "Context value and ancestor both have metadata type ("
                    << type
@@ -108,16 +110,14 @@ void LogInvalidAncestorMetadata(const ContextMetadataPtr& from,
   FXL_LOG(WARNING) << "Ancestor metadata: " << from;
 }
 
-void MergeMetadata(const ContextMetadataPtr& from, ContextMetadataPtr* to) {
+void MergeMetadata(const ContextMetadata& from,
+                   ContextMetadata* to) {
 #define MERGE(type)                                \
-  if (from && from->type) {                        \
-    if (!*to) {                                    \
-      *to = ContextMetadata::New();                \
-    }                                              \
-    if ((*to)->type) {                             \
+  if (from.type) {                                 \
+    if (to->type) {                                \
       LogInvalidAncestorMetadata(from, to, #type); \
     } else {                                       \
-      (*to)->type = from->type.Clone();            \
+      fidl::Clone(from.type, &(*to).type);         \
     }                                              \
   }
   // Go through each type of metadata on |from|, and copy it to
@@ -141,16 +141,16 @@ bool ContextRepository::Contains(const Id& id) const {
 }
 
 ContextRepository::Id ContextRepository::Add(const Id& parent_id,
-                                             ContextValuePtr value) {
+                                             ContextValue value) {
   FXL_DCHECK(values_.find(parent_id) != values_.end()) << parent_id;
   return AddInternal(parent_id, std::move(value));
 }
 
-ContextRepository::Id ContextRepository::Add(ContextValuePtr value) {
+ContextRepository::Id ContextRepository::Add(ContextValue value) {
   return AddInternal("", std::move(value));
 }
 
-void ContextRepository::Update(const Id& id, ContextValuePtr value) {
+void ContextRepository::Update(const Id& id, ContextValue value) {
   // TODO(thatguy): Short-circuit if |value| isn't changing anything to avoid
   // spurious update computation.
 
@@ -174,8 +174,7 @@ void ContextRepository::Update(const Id& id, ContextValuePtr value) {
 }
 
 ContextRepository::Id ContextRepository::AddInternal(const Id& parent_id,
-                                                     ContextValuePtr value) {
-  FXL_DCHECK(value);
+                                                     ContextValue value) {
   const auto new_id = CreateValueId();
 
   // Add the new value to |values_|.
@@ -231,7 +230,9 @@ ContextValuePtr ContextRepository::Get(const Id& id) const {
   if (it == values_.end())
     return ContextValuePtr();
 
-  return it->second.value->Clone();
+  ContextValue value;
+  fidl::Clone(it->second.value, &value);
+  return fidl::MakeOptional(std::move(value));
 }
 
 ContextValuePtr ContextRepository::GetMerged(const Id& id) const {
@@ -239,20 +240,21 @@ ContextValuePtr ContextRepository::GetMerged(const Id& id) const {
   if (it == values_.end())
     return ContextValuePtr();
 
-  ContextValuePtr merged_value = it->second.value->Clone();
+  ContextValue merged_value;
+  fidl::Clone(it->second.value, &merged_value);
   // Copy the merged metadata (includes ancestor metadata).
-  merged_value->meta = it->second.merged_metadata.Clone();
-  return merged_value;
+  fidl::Clone(it->second.merged_metadata, &merged_value.meta);
+  return fidl::MakeOptional(std::move(merged_value));
 }
 
-ContextUpdatePtr ContextRepository::Query(const ContextQueryPtr& query) {
+ContextUpdate ContextRepository::Query(const ContextQuery& query) {
   return QueryInternal(query).first;
 }
 
 ContextRepository::Id ContextRepository::AddSubscription(
-    ContextQueryPtr query,
-    ContextListener* const listener,
-    SubscriptionDebugInfoPtr debug_info) {
+    ContextQuery query,
+    ContextListenerPtr* const listener,
+    SubscriptionDebugInfo debug_info) {
   // Add the subscription to our list.
   Subscription subscription;
   subscription.query = std::move(query);
@@ -271,11 +273,11 @@ ContextRepository::Id ContextRepository::AddSubscription(
   return id;
 }
 
-void ContextRepository::AddSubscription(ContextQueryPtr query,
+void ContextRepository::AddSubscription(ContextQuery query,
                                         ContextListenerPtr listener,
-                                        SubscriptionDebugInfoPtr debug_info) {
+                                        SubscriptionDebugInfo debug_info) {
   auto id =
-      AddSubscription(std::move(query), listener.get(), std::move(debug_info));
+      AddSubscription(std::move(query), &listener, std::move(debug_info));
   listener.set_error_handler([this, id] { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
   subscriptions_[id].listener_storage = std::move(listener);
@@ -286,7 +288,7 @@ ContextDebugImpl* ContextRepository::debug() {
 }
 
 void ContextRepository::AddDebugBinding(
-    f1dl::InterfaceRequest<ContextDebug> request) {
+    fidl::InterfaceRequest<ContextDebug> request) {
   debug_bindings_.AddBinding(debug_.get(), std::move(request));
 }
 
@@ -298,28 +300,28 @@ void ContextRepository::RemoveSubscription(Id id) {
   debug_->OnSubscriptionRemoved(id);
 }
 
-std::pair<ContextUpdatePtr, ContextRepository::IdAndVersionSet>
-ContextRepository::QueryInternal(const ContextQueryPtr& query) {
+std::pair<ContextUpdate, ContextRepository::IdAndVersionSet>
+ContextRepository::QueryInternal(const ContextQuery& query) {
   // For each entry in |query->selector|, query the index for matching values.
   IdAndVersionSet matching_id_version;
-  ContextUpdatePtr update = ContextUpdate::New();
-  for (const auto& entry : *query->selector) {
-    const auto& key = entry->key;
-    const auto& selector = entry->value;
+  ContextUpdate update;
+  for (const auto& entry : *query.selector) {
+    const auto& key = entry.key;
+    const auto& selector = entry.value;
 
     std::set<ContextIndex::Id> values = Select(selector);
 
-    auto update_entry = ContextUpdateEntry::New();
-    update_entry->key = key;
-    update_entry->value = f1dl::VectorPtr<ContextValuePtr>::New(0);
-    update->values.push_back(std::move(update_entry));
+    ContextUpdateEntry update_entry;
+    update_entry.key = key;
+    update_entry.value = fidl::VectorPtr<ContextValue>::New(0);
+    update.values.push_back(std::move(update_entry));
     for (const auto& id : values) {
       auto it = values_.find(id);
       FXL_DCHECK(it != values_.end()) << id;
       matching_id_version.insert(std::make_pair(id, it->second.version));
-      for (auto& it : *update->values) {
-        if (it->key == key) {
-          it->value.push_back(GetMerged(id));
+      for (auto& it : *update.values) {
+        if (it.key == key) {
+          it.value.push_back(std::move(*GetMerged(id)));
         }
       }
     }
@@ -329,7 +331,7 @@ ContextRepository::QueryInternal(const ContextQueryPtr& query) {
 
 void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
                                             bool force) {
-  std::pair<ContextUpdatePtr, IdAndVersionSet> result =
+  std::pair<ContextUpdate, IdAndVersionSet> result =
       QueryInternal(subscription->query);
   if (!force) {
     // Check if this update contains any new values.
@@ -344,13 +346,13 @@ void ContextRepository::QueryAndMaybeNotify(Subscription* const subscription,
   }
   subscription->last_update = result.second;
 
-  subscription->listener->OnContextUpdate(std::move(result.first));
+  (*subscription->listener)->OnContextUpdate(std::move(result.first));
 }
 
 void ContextRepository::ReindexAndNotify(
     ContextRepository::InProgressUpdate update) {
   for (auto& value : update.removed_values) {
-    index_.Remove(value.id, value.value->type, value.merged_metadata);
+    index_.Remove(value.id, value.value.type, value.merged_metadata);
   }
   for (auto* value : update.updated_values) {
     // Step 1: reindex the value.
@@ -358,9 +360,9 @@ void ContextRepository::ReindexAndNotify(
     // Before we add the newest metadata values to the index, we need to remove
     // the old values from the index. |value.merged_metadata| contains whatever
     // we added to the index last time.
-    index_.Remove(value->id, value->value->type, value->merged_metadata);
+    index_.Remove(value->id, value->value.type, value->merged_metadata);
     RecomputeMergedMetadata(value);
-    index_.Add(value->id, value->value->type, value->merged_metadata);
+    index_.Add(value->id, value->value.type, value->merged_metadata);
   }
 
   // Step 2: recompute the output for each subscription and notify its
@@ -371,7 +373,7 @@ void ContextRepository::ReindexAndNotify(
 }
 
 void ContextRepository::RecomputeMergedMetadata(ValueInternal* const value) {
-  value->merged_metadata = ContextMetadataPtr();
+  value->merged_metadata = ContextMetadata();
   // It doesn't matter what order we merge the ancestor values, because there
   // should always only be one of each type, and thus no collisions.
   std::vector<Id> ancestors = graph_.GetAncestors(value->id);
@@ -379,16 +381,16 @@ void ContextRepository::RecomputeMergedMetadata(ValueInternal* const value) {
     const auto& it = values_.find(ancestor_id);
     FXL_DCHECK(it != values_.end());
     const auto& ancestor_value = it->second;
-    MergeMetadata(ancestor_value.value->meta, &value->merged_metadata);
+    MergeMetadata(ancestor_value.value.meta, &value->merged_metadata);
   }
-  MergeMetadata(value->value->meta, &value->merged_metadata);
+  MergeMetadata(value->value.meta, &value->merged_metadata);
 }
 
 std::set<ContextRepository::Id> ContextRepository::Select(
-    const ContextSelectorPtr& selector) {
+    const ContextSelector& selector) {
   std::set<ContextIndex::Id> values;
-  index_.Query(selector->type, selector->meta, &values);
+  index_.Query(selector.type, selector.meta, &values);
   return values;
 }
 
-}  // namespace maxwell
+}  // namespace modular

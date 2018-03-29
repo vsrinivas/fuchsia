@@ -4,9 +4,11 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/context/cpp/formatting.h"
 #include "lib/entity/cpp/json.h"
-#include <fuchsia/cpp/modular.h>
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/context_engine/context_writer_impl.h"
@@ -27,17 +29,14 @@ ContextWriterImpl::ContextWriterImpl(
   FXL_DCHECK(repository != nullptr);
 
   // Set up a query to the repository to get our parent id.
-  if (client_infod.>is_module_scope()) {
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::MODULE;
-    selector->meta = ContextMetadata::New();
-    selector->meta->story = StoryMetadata::New();
-    selector->meta->story->id = client_info->get_module_scope()->story_id;
-    selector->meta->mod = ModuleMetadata::New();
-    selector->meta->mod->path =
-        client_info.get_module_scope()->module_path.Clone();
-
-    parent_value_selector_ = std::move(selector);
+  if (client_info.is_module_scope()) {
+    parent_value_selector_.type = ContextValueType::MODULE;
+    parent_value_selector_.meta = ContextMetadata::New();
+    parent_value_selector_.meta->story = StoryMetadata::New();
+    parent_value_selector_.meta->story->id = client_info.module_scope().story_id;
+    parent_value_selector_.meta->mod = ModuleMetadata::New();
+    fidl::Clone(client_info.module_scope().module_path,
+                &parent_value_selector_.meta->mod->path);
   }
 }
 
@@ -57,29 +56,27 @@ fidl::VectorPtr<fidl::StringPtr> Deprecated_GetTypesFromJsonEntity(
   if (types.empty())
     return {};
 
-  return fidl::VectorPtr<fidl::StringPtr>::From(types);
+  auto result = fidl::VectorPtr<fidl::StringPtr>();
+  for (const auto& it: types) {
+    result.push_back(it);
+  }
+  return result;
 }
 
 void MaybeFillEntityTypeMetadata(const fidl::VectorPtr<fidl::StringPtr>& types,
-                                 ContextValuePtr* value_ptr) {
-  auto& value = *value_ptr;
-  if (value->type != ContextValueType::ENTITY || !types)
+                                 ContextValue& value) {
+  if (value.type != ContextValueType::ENTITY || !types)
     return;
 
-  if (!value->meta) {
-    value->meta = ContextMetadata::New();
+  if (!value.meta.entity) {
+    value.meta.entity = EntityMetadata::New();
   }
-  if (!value->meta->entity) {
-    value->meta->entity = EntityMetadata::New();
-  }
-  value->meta->entity->type = types.Clone();
+  fidl::Clone(types, &value.meta.entity->type);
 }
 
 bool MaybeFindParentValueId(ContextRepository* repository,
-                            const ContextSelectorPtr& selector,
+                            const ContextSelector& selector,
                             ContextRepository::Id* out) {
-  if (!selector)
-    return false;
   // There is technically a race condition here, since on construction, we
   // are given a ComponentScope, which contains some metadata to find a value
   // in the context engine. It is the responsibility of the story_info
@@ -91,7 +88,7 @@ bool MaybeFindParentValueId(ContextRepository* repository,
   // something that we plan to disallow once Links speak in Entities, as then
   // Modules that wish to store context can simply write Entities into a new
   // link.
-  auto ids = repository->Select(selector.Clone());
+  auto ids = repository->Select(selector);
   if (ids.size() == 1) {
     *out = *ids.begin();
     return true;
@@ -126,8 +123,8 @@ void ContextWriterImpl::DestroyContextValueWriter(ContextValueWriterImpl* ptr) {
   value_writer_storage_.erase(it, value_writer_storage_.end());
 }
 
-void ContextWriterImpl::WriteEntityTopic(const fidl::StringPtr& topic,
-                                         const fidl::StringPtr& value) {
+void ContextWriterImpl::WriteEntityTopic(fidl::StringPtr topic,
+                                         fidl::StringPtr value) {
   auto activity = repository_->debug()->RegisterOngoingActivity();
 
   if (!value) {
@@ -142,13 +139,12 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::StringPtr& topic,
   GetEntityTypesFromEntityReference(
       value, [this, activity, topic,
               value](const fidl::VectorPtr<fidl::StringPtr>& types) {
-        auto value_ptr = ContextValue::New();
-        value_ptr->type = ContextValueType::ENTITY;
-        value_ptr->content = value;
-        value_ptr->meta = ContextMetadata::New();
-        value_ptr->meta->entity = EntityMetadata::New();
-        value_ptr->meta->entity->topic = topic;
-        value_ptr->meta->entity->type = types.Clone();
+        ContextValue context_value;
+        context_value.type = ContextValueType::ENTITY;
+        context_value.content = value;
+        context_value.meta.entity = EntityMetadata::New();
+        context_value.meta.entity->topic = topic;
+        fidl::Clone(types, &context_value.meta.entity->type);
 
         auto it = topic_value_ids_.find(topic);
         if (it == topic_value_ids_.end()) {
@@ -156,13 +152,13 @@ void ContextWriterImpl::WriteEntityTopic(const fidl::StringPtr& topic,
           ContextRepository::Id id;
           if (MaybeFindParentValueId(repository_, parent_value_selector_,
                                      &parent_id)) {
-            id = repository_->Add(parent_id, std::move(value_ptr));
+            id = repository_->Add(parent_id, std::move(context_value));
           } else {
-            id = repository_->Add(std::move(value_ptr));
+            id = repository_->Add(std::move(context_value));
           }
           topic_value_ids_[topic] = id;
         } else {
-          repository_->Update(it->second, std::move(value_ptr));
+          repository_->Update(it->second, std::move(context_value));
         }
       });
 }
@@ -230,7 +226,7 @@ void ContextValueWriterImpl::CreateChildValue(
       }));
 }
 
-void ContextValueWriterImpl::Set(const fidl::StringPtr& content,
+void ContextValueWriterImpl::Set(fidl::StringPtr content,
                                  ContextMetadataPtr metadata) {
   auto activity = writer_->repository()->debug()->RegisterOngoingActivity();
 
@@ -243,11 +239,13 @@ void ContextValueWriterImpl::Set(const fidl::StringPtr& content,
 
         if (!weak_this->value_id_) {
           // We're creating this value for the first time.
-          auto value = ContextValue::New();
-          value->type = weak_this->type_;
-          value->content = content;
-          value->meta = std::move(metadata);
-          MaybeFillEntityTypeMetadata(entity_types, &value);
+          ContextValue value;
+          value.type = weak_this->type_;
+          value.content = content;
+          if (metadata) {
+              fidl::Clone(*metadata, &value.meta);
+          }
+          MaybeFillEntityTypeMetadata(entity_types, value);
 
           if (weak_this->parent_id_.empty()) {
             weak_this->value_id_ =
@@ -271,11 +269,11 @@ void ContextValueWriterImpl::Set(const fidl::StringPtr& content,
             value->content = content;
           }
           if (metadata) {
-            value->meta = metadata.Clone();
+            fidl::Clone(*metadata, &value->meta);
           }
-          MaybeFillEntityTypeMetadata(entity_types, &value);
+          MaybeFillEntityTypeMetadata(entity_types, *value);
           weak_this->writer_->repository()->Update(weak_this->value_id_.get(),
-                                                   std::move(value));
+                                                   std::move(*value));
         }
       };
 

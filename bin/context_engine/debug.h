@@ -25,12 +25,12 @@ class ContextDebugImpl : public ContextDebug {
 
   void OnValueChanged(const std::set<Id>& parent_ids,
                       const Id& id,
-                      const ContextValuePtr& value);
+                      const ContextValue& value);
   void OnValueRemoved(const Id& id);
 
   void OnSubscriptionAdded(const Id& id,
-                           const ContextQueryPtr& query,
-                           const SubscriptionDebugInfoPtr& debug_info);
+                           const ContextQuery& query,
+                           const SubscriptionDebugInfo& debug_info);
   void OnSubscriptionRemoved(const Id& id);
 
   // Forwards to |IdleWaiter::RegisterOngoingActivity|
@@ -44,11 +44,11 @@ class ContextDebugImpl : public ContextDebug {
   // |ContextDebug|
   void WaitUntilIdle(WaitUntilIdleCallback callback) override;
 
-  void DispatchOneValue(ContextDebugValuePtr value);
-  void DispatchValues(fidl::VectorPtr<ContextDebugValuePtr> values);
-  void DispatchOneSubscription(ContextDebugSubscriptionPtr value);
+  void DispatchOneValue(ContextDebugValue value);
+  void DispatchValues(fidl::VectorPtr<ContextDebugValue> values);
+  void DispatchOneSubscription(ContextDebugSubscription value);
   void DispatchSubscriptions(
-      fidl::VectorPtr<ContextDebugSubscriptionPtr> values);
+      fidl::VectorPtr<ContextDebugSubscription> values);
 
   // Used in order to get a complete state snapshot when Watch() is called.
   const ContextRepository* const repository_;

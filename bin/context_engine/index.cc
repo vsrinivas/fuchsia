@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <sstream>
 
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "peridot/bin/context_engine/index.h"
 
@@ -29,6 +31,15 @@ const char kEntityTypeKey[] = "ey";
 
 // Key for ContextValueType.
 const char kContextValueTypeKey[] = "t";
+
+std::set<std::string> EncodeMetadataAndType(
+    ContextValueType nodeType,
+    const ContextMetadata& metadata) {
+  ContextMetadata meta_clone;
+  fidl::Clone(metadata, &meta_clone);
+  return EncodeMetadataAndType(nodeType,
+                               fidl::MakeOptional(std::move(meta_clone)));
+}
 
 std::set<std::string> EncodeMetadataAndType(
     ContextValueType nodeType,
@@ -97,7 +108,7 @@ std::set<std::string> EncodeMetadataAndType(
 
 void ContextIndex::Add(Id id,
                        ContextValueType type,
-                       const ContextMetadataPtr& metadata) {
+                       const ContextMetadata& metadata) {
   auto keys = internal::EncodeMetadataAndType(type, metadata);
   for (const auto& key : keys) {
     index_[key].insert(id);
@@ -106,7 +117,7 @@ void ContextIndex::Add(Id id,
 
 void ContextIndex::Remove(Id id,
                           ContextValueType type,
-                          const ContextMetadataPtr& metadata) {
+                          const ContextMetadata& metadata) {
   auto keys = internal::EncodeMetadataAndType(type, metadata);
   for (const auto& key : keys) {
     index_[key].erase(id);

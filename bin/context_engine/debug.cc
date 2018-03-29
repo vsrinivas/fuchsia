@@ -4,9 +4,11 @@
 
 #include "peridot/bin/context_engine/debug.h"
 
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/context_engine/context_repository.h"
 
-namespace maxwell {
+namespace modular {
 
 ContextDebugImpl::ContextDebugImpl(const ContextRepository* const repository)
     : repository_(repository), weak_ptr_factory_(this) {}
@@ -18,35 +20,44 @@ fxl::WeakPtr<ContextDebugImpl> ContextDebugImpl::GetWeakPtr() {
 
 void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
                                       const Id& id,
-                                      const ContextValuePtr& value) {
-  auto update = ContextDebugValue::New();
-  update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::From(parent_ids);
-  update->id = id;
-  update->value = value.Clone();
+                                      const ContextValue& value) {
+  ContextDebugValue update;
+  update.parent_ids = fidl::VectorPtr<fidl::StringPtr>();
+  for (const auto& it: parent_ids) {
+    update.parent_ids.push_back(it);
+  }
+  update.id = id;
+  ContextValue value_clone;
+  fidl::Clone(value, &value_clone);
+  update.value = fidl::MakeOptional(std::move(value_clone));
   DispatchOneValue(std::move(update));
 }
 
 void ContextDebugImpl::OnValueRemoved(const Id& id) {
-  auto update = ContextDebugValue::New();
-  update->id = id;
-  update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+  ContextDebugValue update;
+  update.id = id;
+  update.parent_ids = fidl::VectorPtr<fidl::StringPtr>::New(0);
   DispatchOneValue(std::move(update));
 }
 
 void ContextDebugImpl::OnSubscriptionAdded(
     const Id& id,
-    const ContextQueryPtr& query,
-    const SubscriptionDebugInfoPtr& debug_info) {
-  auto update = ContextDebugSubscription::New();
-  update->id = id;
-  update->query = query.Clone();
-  update->debug_info = debug_info.Clone();
+    const ContextQuery& query,
+    const SubscriptionDebugInfo& debug_info) {
+  ContextDebugSubscription update;
+  update.id = id;
+  ContextQuery query_clone;
+  fidl::Clone(query, &query_clone);
+  update.query = fidl::MakeOptional(std::move(query_clone));
+  SubscriptionDebugInfo debug_info_clone;
+  fidl::Clone(debug_info, &debug_info_clone);
+  update.debug_info = fidl::MakeOptional(std::move(debug_info_clone));
   DispatchOneSubscription(std::move(update));
 }
 
 void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
-  auto update = ContextDebugSubscription::New();
-  update->id = id;
+  ContextDebugSubscription update;
+  update.id = id;
   DispatchOneSubscription(std::move(update));
 }
 
@@ -59,17 +70,21 @@ bool ContextDebugImpl::FinishIdleCheck() {
 }
 
 void ContextDebugImpl::Watch(
-    f1dl::InterfaceHandle<ContextDebugListener> listener) {
+    fidl::InterfaceHandle<ContextDebugListener> listener) {
   FXL_LOG(INFO) << "Watch(): entered";
   auto listener_ptr = listener.Bind();
   // Build a complete state snapshot and send it to |listener|.
-  auto all_values = f1dl::VectorPtr<ContextDebugValuePtr>::New(0);
+  auto all_values = fidl::VectorPtr<ContextDebugValue>::New(0);
   for (const auto& entry : repository_->values_) {
-    auto update = ContextDebugValue::New();
-    update->id = entry.first;
-    update->value = entry.second.value.Clone();
-    update->parent_ids = f1dl::VectorPtr<f1dl::StringPtr>::From(
-        repository_->graph_.GetParents(entry.first));
+    ContextDebugValue update;
+    update.id = entry.first;
+    ContextValue value_clone;
+    fidl::Clone(entry.second.value, &value_clone);
+    update.value = fidl::MakeOptional(std::move(value_clone));
+    update.parent_ids = fidl::VectorPtr<fidl::StringPtr>();
+    for (const auto& it: repository_->graph_.GetParents(entry.first)) {
+      update.parent_ids.push_back(it);
+    }
     all_values.push_back(std::move(update));
   }
   listener_ptr->OnValuesChanged(std::move(all_values));
@@ -78,35 +93,39 @@ void ContextDebugImpl::Watch(
   listeners_.AddInterfacePtr(std::move(listener_ptr));
 }
 
-void ContextDebugImpl::WaitUntilIdle(const WaitUntilIdleCallback& callback) {
+void ContextDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
   wait_until_idle_.WaitUntilIdle(callback);
 }
 
-void ContextDebugImpl::DispatchOneValue(ContextDebugValuePtr value) {
-  f1dl::VectorPtr<ContextDebugValuePtr> values;
-  values.push_back(value.Clone());
+void ContextDebugImpl::DispatchOneValue(ContextDebugValue value) {
+  fidl::VectorPtr<ContextDebugValue> values;
+  values.push_back(std::move(value));
   DispatchValues(std::move(values));
 }
 
 void ContextDebugImpl::DispatchValues(
-    f1dl::VectorPtr<ContextDebugValuePtr> values) {
-  listeners_.ForAllPtrs([&values](ContextDebugListener* listener) {
-    listener->OnValuesChanged(values.Clone());
-  });
+    fidl::VectorPtr<ContextDebugValue> values) {
+  for (const auto& listener: listeners_.ptrs()) {
+    fidl::VectorPtr<ContextDebugValue> values_clone;
+    fidl::Clone(values, &values_clone);
+    (*listener)->OnValuesChanged(std::move(values_clone));
+  }
 }
 
 void ContextDebugImpl::DispatchOneSubscription(
-    ContextDebugSubscriptionPtr value) {
-  f1dl::VectorPtr<ContextDebugSubscriptionPtr> values;
-  values.push_back(value.Clone());
+    ContextDebugSubscription value) {
+  fidl::VectorPtr<ContextDebugSubscription> values;
+  values.push_back(std::move(value));
   DispatchSubscriptions(std::move(values));
 }
 
 void ContextDebugImpl::DispatchSubscriptions(
-    f1dl::VectorPtr<ContextDebugSubscriptionPtr> subscriptions) {
-  listeners_.ForAllPtrs([&subscriptions](ContextDebugListener* listener) {
-    listener->OnSubscriptionsChanged(subscriptions.Clone());
-  });
+    fidl::VectorPtr<ContextDebugSubscription> subscriptions) {
+  for (const auto& listener: listeners_.ptrs()) {
+    fidl::VectorPtr<ContextDebugSubscription> subscriptions_clone;
+    fidl::Clone(subscriptions, &subscriptions_clone);
+    (*listener)->OnSubscriptionsChanged(std::move(subscriptions_clone));
+  }
 }
 
-}  // namespace maxwell
+}  // namespace modular

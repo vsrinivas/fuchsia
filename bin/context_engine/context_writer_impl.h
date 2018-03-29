@@ -55,7 +55,7 @@ class ContextWriterImpl : ContextWriter {
 
   fidl::Binding<ContextWriter> binding_;
 
-  ContextSelectorPtr parent_value_selector_;
+  ContextSelector parent_value_selector_;
   ContextRepository* const repository_;
   modular::EntityResolver* const entity_resolver_;
 

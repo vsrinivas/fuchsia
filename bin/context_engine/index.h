@@ -23,7 +23,8 @@ namespace internal {
 // and |type| for use in an inverted index.
 std::set<std::string> EncodeMetadataAndType(ContextValueType type,
                                             const ContextMetadataPtr& metadata);
-
+std::set<std::string> EncodeMetadataAndType(ContextValueType type,
+                                            const ContextMetadata& metadata);
 }  // namespace internal
 
 class ContextIndex {
@@ -34,8 +35,8 @@ class ContextIndex {
   ContextIndex();
   ~ContextIndex();
 
-  void Add(Id id, ContextValueType type, const ContextMetadataPtr& metadata);
-  void Remove(Id id, ContextValueType type, const ContextMetadataPtr& metadata);
+  void Add(Id id, ContextValueType type, const ContextMetadata& metadata);
+  void Remove(Id id, ContextValueType type, const ContextMetadata& metadata);
 
   // Intersects the ids in |out| with those of type |type| and match every
   // field in |metadata|.
