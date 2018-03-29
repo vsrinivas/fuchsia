@@ -5,7 +5,6 @@
 #ifndef LIB_MODULE_RESOLVER_CPP_FORMATTING_H_
 #define LIB_MODULE_RESOLVER_CPP_FORMATTING_H_
 
-#include "lib/fidl/cpp/formatting.h"
 #include <fuchsia/cpp/modular.h>
 
 namespace modular {
