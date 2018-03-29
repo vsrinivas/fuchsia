@@ -19,20 +19,20 @@ PushPackageSource::PushPackageSource(
     component::ApplicationContext* const context)
     : weak_factory_(this) {
   context->debug_export_dir()->AddEntry(
-      PushPackageIndexer::Name_,
+      module_manifest_source::PushPackageIndexer::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         indexer_bindings_.AddBinding(
             this,
-            f1dl::InterfaceRequest<PushPackageIndexer>(std::move(channel)));
+            fidl::InterfaceRequest<module_manifest_source::PushPackageIndexer>(
+                std::move(channel)));
         return ZX_OK;
       })));
 }
 
 PushPackageSource::~PushPackageSource() {}
 
-void PushPackageSource::IndexManifest(
-    const f1dl::StringPtr& package_name,
-    const f1dl::StringPtr& module_manifest_path) {
+void PushPackageSource::IndexManifest(fidl::StringPtr package_name,
+                                      fidl::StringPtr module_manifest_path) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(new_entry_fn_);
 
@@ -43,22 +43,23 @@ void PushPackageSource::IndexManifest(
     return;
   }
 
-  auto entry = modular::ModuleManifest::New();
+  modular::ModuleManifest entry;
   if (!ModuleManifestEntryFromJson(data, &entry)) {
     FXL_LOG(WARNING) << "Couldn't parse module manifest from: "
                      << module_manifest_path;
     return;
   }
 
-  task_runner_->PostTask(
-      fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(), package_name,
-                         entry = std::move(entry)]() mutable {
-        if (!weak_this) {
-          return;
-        }
+  task_runner_->PostTask(fxl::MakeCopyable([
+    weak_this = weak_factory_.GetWeakPtr(), package_name,
+    entry = std::move(entry)
+  ]() mutable {
+    if (!weak_this) {
+      return;
+    }
 
-        weak_this->new_entry_fn_(package_name, std::move(entry));
-      }));
+    weak_this->new_entry_fn_(package_name, std::move(entry));
+  }));
 }
 
 void PushPackageSource::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,

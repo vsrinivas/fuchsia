@@ -7,28 +7,21 @@
 #include <memory>
 #include <string>
 
+#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/ledger_internal.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/network.h>
+#include <fuchsia/cpp/resolver.h>
 #include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/connect.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/resolver.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/component/component_context_impl.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
-#include <fuchsia/cpp/ledger_internal.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
@@ -674,8 +667,9 @@ void UserRunnerImpl::DumpState(DumpStateCallback callback) {
   XdrWrite(&account_json, &account_, XdrAccount);
   output << account_json << std::endl;
 
-  story_provider_impl_->DumpState(fxl::MakeCopyable(
-      [output = std::move(output), callback](const std::string& debug) mutable {
+  story_provider_impl_->DumpState(
+      fxl::MakeCopyable([ output = std::move(output),
+                          callback ](const std::string& debug) mutable {
         output << debug;
         callback(output.str());
       }));

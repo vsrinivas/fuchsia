@@ -9,29 +9,21 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/cloud_provider_firebase.h>
+#include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/resolver.h>
+#include <fuchsia/cpp/speech.h>
+#include <fuchsia/cpp/ui.h>
 #include <fuchsia/cpp/views_v1_token.h>
 #include "lib/app/cpp/service_provider_impl.h"
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/cloud_provider.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/resolver.h>
-#include <fuchsia/cpp/speech.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/ui.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner_storage_impl.h"
-#include "peridot/bin/cloud_provider_firebase/fidl/factory.fidl.h"
 #include "peridot/bin/entity/entity_provider_launcher.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/common/async_holder.h"
@@ -76,7 +68,8 @@ class UserRunnerImpl : UserRunner,
       AppConfigPtr story_shell,
       fidl::InterfaceHandle<auth::TokenProviderFactory> token_provider_factory,
       fidl::InterfaceHandle<UserContext> user_context,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request)
+      override;
 
   // |UserRunner|
   void SwapUserShell(AppConfigPtr user_shell,

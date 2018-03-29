@@ -17,11 +17,11 @@ std::ostream& operator<<(std::ostream& os, const Daisy& daisy) {
 
 std::ostream& operator<<(std::ostream& os, const Noun& noun) {
   if (noun.is_json()) {
-    os << noun.get_json();
+    os << noun.json();
   } else if (noun.is_entity_reference()) {
-    os << "[ref: " << noun.get_entity_reference() << "]";
+    os << "[ref: " << noun.entity_reference() << "]";
   } else if (noun.is_entity_type()) {
-    for (const auto& type : *noun.get_entity_type()) {
+    for (const auto& type : *noun.entity_type()) {
       os << type << ", ";
     }
   }

@@ -2,28 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/network.h>
+
+#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
-#include <fuchsia/cpp/network.h>
-#include "lib/suggestion/fidl/query_handler.fidl.h"
-#include "lib/user_intelligence/fidl/intelligence_services.fidl.h"
-
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
+#include "peridot/lib/fidl/equals.h"
 #include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
 #include "peridot/lib/module_manifest_source/push_package_source.h"
 #include "peridot/public/lib/entity/cpp/json.h"
 
-namespace maxwell {
+namespace modular {
 namespace {
 
 // NOTE: This must match the path specified in
@@ -71,38 +70,38 @@ class ModuleResolverApp : ContextListener {
     }
 
     // Make |resolver_impl_| a query (ask) handler.
-    f1dl::InterfaceHandle<QueryHandler> query_handler;
+    fidl::InterfaceHandle<QueryHandler> query_handler;
     resolver_impl_->BindQueryHandler(query_handler.NewRequest());
     intelligence_services_->RegisterQueryHandler(std::move(query_handler));
 
     intelligence_services_->GetProposalPublisher(
         proposal_publisher_.NewRequest());
 
-    auto query = ContextQuery::New();
-    auto selector = ContextSelector::New();
-    selector->type = ContextValueType::ENTITY;
-    auto selector_entry = ContextQueryEntry::New();
-    selector_entry->key = kContextListenerEntitiesKey;
-    selector_entry->value = std::move(selector);
-    f1dl::VectorPtr<ContextQueryEntryPtr> selector_array;
+    ContextQuery query;
+    ContextSelector selector;
+    selector.type = ContextValueType::ENTITY;
+    ContextQueryEntry selector_entry;
+    selector_entry.key = kContextListenerEntitiesKey;
+    selector_entry.value = std::move(selector);
+    fidl::VectorPtr<ContextQueryEntry> selector_array;
     selector_array.push_back(std::move(selector_entry));
-    query->selector = std::move(selector_array);
+    query.selector = std::move(selector_array);
     context_reader_->Subscribe(std::move(query),
                                context_listener_binding_.NewBinding());
 
     context->outgoing_services()->AddService<modular::ModuleResolver>(
-        [this](f1dl::InterfaceRequest<modular::ModuleResolver> request) {
+        [this](fidl::InterfaceRequest<modular::ModuleResolver> request) {
           resolver_impl_->Connect(std::move(request));
         });
   }
 
   void Terminate(const std::function<void()>& done) { done(); }
 
-  void OnContextUpdate(ContextUpdatePtr update) {
-    f1dl::VectorPtr<ContextValuePtr> values;
-    for (const auto& entry : *update->values) {
-      if (entry->key == kContextListenerEntitiesKey) {
-        values = std::move(entry->value);
+  void OnContextUpdate(ContextUpdate update) override {
+    fidl::VectorPtr<ContextValue> values;
+    for (auto& entry : *update.values) {
+      if (entry.key == kContextListenerEntitiesKey) {
+        values = std::move(entry.value);
         break;
       }
     }
@@ -110,28 +109,27 @@ class ModuleResolverApp : ContextListener {
       return;
     }
 
-    auto query = modular::ResolverQuery::New();
+    modular::ResolverQuery query;
     // The story id to be extracted from the context update.
     std::string story_id;
 
     for (const auto& value : *values) {
-      if (value->meta->story.is_null() || value->meta->link.is_null() ||
-          value->meta->entity.is_null()) {
+      if (!value.meta.story || !value.meta.link || !value.meta.entity) {
         continue;
       }
-      story_id = value->meta->story->id;
+      story_id = value.meta.story->id;
 
-      query->noun_constraints.push_back(
+      query.noun_constraints.push_back(
           CreateResolverNounConstraintFromContextValue(value));
     }
 
     resolver_impl_->FindModules(
         std::move(query),
-        [this, story_id](const modular::FindModulesResultPtr& result) {
-          std::vector<ProposalPtr> new_proposals;
+        [this, story_id](const modular::FindModulesResult& result) {
+          std::vector<Proposal> new_proposals;
           std::vector<modular::DaisyPtr> new_daisies;  // Only for comparison.
           int proposal_count = 0;
-          for (const auto& module : *result->modules) {
+          for (const auto& module : *result.modules) {
             modular::DaisyPtr daisy;
             new_proposals.push_back(CreateProposalFromModuleResolverResult(
                 module, story_id, proposal_count++, &daisy));
@@ -145,7 +143,7 @@ class ModuleResolverApp : ContextListener {
           if (new_daisies.size() == current_proposal_daisies_.size()) {
             push_new_proposals = false;
             for (uint32_t i = 0; i < new_daisies.size(); ++i) {
-              if (!new_daisies[i].Equals(current_proposal_daisies_[i])) {
+              if (!DaisyEqual(new_daisies[i], current_proposal_daisies_[i])) {
                 push_new_proposals = true;
                 break;
               }
@@ -162,7 +160,7 @@ class ModuleResolverApp : ContextListener {
             }
             current_proposal_ids_.clear();
             for (uint32_t i = 0; i < new_proposals.size(); ++i) {
-              current_proposal_ids_.push_back(new_proposals[i]->id);
+              current_proposal_ids_.push_back(new_proposals[i].id);
               proposal_publisher_->Propose(std::move(new_proposals[i]));
             }
             current_proposal_daisies_ = std::move(new_daisies);
@@ -176,56 +174,55 @@ class ModuleResolverApp : ContextListener {
   // |story_id| is the id of the story that the proposal should add modules to.
   // |proposal_id| is the id of the created proposal, which will also be cached
   // in |current_proposal_ids_|.
-  ProposalPtr CreateProposalFromModuleResolverResult(
-      const modular::ModuleResolverResultPtr& module_result,
+  Proposal CreateProposalFromModuleResolverResult(
+      const modular::ModuleResolverResult& module_result,
       const std::string& story_id,
       int proposal_id,
       modular::DaisyPtr* daisy_out) {
-    auto daisy = modular::Daisy::New();
-    daisy->url = module_result->module_id;
-    f1dl::VectorPtr<modular::NounEntryPtr> nouns;
-    for (const modular::ChainEntryPtr& chain_entry :
-         *module_result->create_chain_info->property_info) {
-      auto noun_entry = modular::NounEntry::New();
-      noun_entry->name = chain_entry->key;
-      auto noun = modular::Noun::New();
-      const modular::CreateChainPropertyInfoPtr& create_chain_info =
-          chain_entry->value;
-      if (create_chain_info->is_link_path()) {
-        noun->set_link_path(create_chain_info->get_link_path().Clone());
-      } else if (create_chain_info->is_create_link()) {
-        noun->set_entity_reference(
-            create_chain_info->get_create_link()->initial_data);
+    modular::Daisy daisy;
+    daisy.url = module_result.module_id;
+    fidl::VectorPtr<modular::NounEntry> nouns;
+    for (const modular::ChainEntry& chain_entry :
+         *module_result.create_chain_info.property_info) {
+      modular::NounEntry noun_entry;
+      noun_entry.name = chain_entry.key;
+      modular::Noun noun;
+      const modular::CreateChainPropertyInfo& create_chain_info =
+          chain_entry.value;
+      if (create_chain_info.is_link_path()) {
+        modular::LinkPath link_path;
+        fidl::Clone(create_chain_info.link_path(), &link_path);
+        noun.set_link_path(std::move(link_path));
+      } else if (create_chain_info.is_create_link()) {
+        noun.set_entity_reference(create_chain_info.create_link().initial_data);
       }
-      noun_entry->noun = std::move(noun);
+      noun_entry.noun = std::move(noun);
       nouns.push_back(std::move(noun_entry));
     }
-    daisy->nouns = std::move(nouns);
+    daisy.nouns = std::move(nouns);
 
-    auto add_module = AddModule::New();
-    *daisy_out = daisy.Clone();
-    add_module->daisy = std::move(daisy);
-    add_module->module_name = module_result->module_id;
-    add_module->story_id = story_id;
-    add_module->surface_relation = modular::SurfaceRelation::New();
-    auto action = Action::New();
-    action->set_add_module(std::move(add_module));
+    AddModule add_module;
+    fidl::Clone(daisy, daisy_out->get());
+    add_module.daisy = std::move(daisy);
+    add_module.module_name = module_result.module_id;
+    add_module.story_id = story_id;
+    Action action;
+    action.set_add_module(std::move(add_module));
 
-    auto proposal = Proposal::New();
-    proposal->id = std::to_string(proposal_id);
-    proposal->on_selected.push_back(std::move(action));
+    Proposal proposal;
+    proposal.id = std::to_string(proposal_id);
+    proposal.on_selected.push_back(std::move(action));
 
-    auto display = SuggestionDisplay::New();
-    if (module_result->manifest &&
-        module_result->manifest->suggestion_headline) {
-      display->headline = module_result->manifest->suggestion_headline;
-      display->subheadline = module_result->module_id;
+    SuggestionDisplay display;
+    if (module_result.manifest && module_result.manifest->suggestion_headline) {
+      display.headline = module_result.manifest->suggestion_headline;
+      display.subheadline = module_result.module_id;
     } else {
-      display->headline = module_result->module_id;
+      display.headline = module_result.module_id;
     }
-    display->color = 0x00aa00aa;  // argb purple
-    display->annoyance = AnnoyanceType::NONE;
-    proposal->display = std::move(display);
+    display.color = 0x00aa00aa;  // argb purple
+    display.annoyance = AnnoyanceType::NONE;
+    proposal.display = std::move(display);
 
     return proposal;
   }
@@ -234,28 +231,28 @@ class ModuleResolverApp : ContextListener {
   //
   // |value| must contain |entity| and |link| in its |meta|. This is to ensure
   // that link_info can be constructed for the noun constraint.
-  modular::ResolverNounConstraintEntryPtr
-  CreateResolverNounConstraintFromContextValue(const ContextValuePtr& value) {
-    f1dl::VectorPtr<f1dl::StringPtr> entity_types =
-        value->meta->entity->type.Clone();
-    const LinkMetadataPtr& link_metadata = value->meta->link;
+  modular::ResolverNounConstraintEntry
+  CreateResolverNounConstraintFromContextValue(const ContextValue& value) {
+    fidl::VectorPtr<fidl::StringPtr> entity_types =
+        value.meta.entity->type.Clone();
+    const LinkMetadataPtr& link_metadata = value.meta.link;
 
-    auto link_info = modular::ResolverLinkInfo::New();
-    auto link_path = modular::LinkPath::New();
-    link_path->module_path = link_metadata->module_path.Clone();
-    link_path->link_name = link_metadata->name;
-    link_info->path = std::move(link_path);
+    modular::ResolverLinkInfo link_info;
+    modular::LinkPath link_path;
+    link_path.module_path = link_metadata->module_path.Clone();
+    link_path.link_name = link_metadata->name;
+    link_info.path = std::move(link_path);
 
-    auto link_allowed_types = modular::LinkAllowedTypes::New();
-    link_allowed_types->allowed_entity_types = std::move(entity_types);
-    link_info->allowed_types = std::move(link_allowed_types);
+    modular::LinkAllowedTypes link_allowed_types;
+    link_allowed_types.allowed_entity_types = std::move(entity_types);
+    link_info.allowed_types = fidl::MakeOptional(std::move(link_allowed_types));
 
-    auto noun_constraint = modular::ResolverNounConstraint::New();
-    noun_constraint->set_link_info(std::move(link_info));
+    modular::ResolverNounConstraint noun_constraint;
+    noun_constraint.set_link_info(std::move(link_info));
 
-    auto noun_constraint_entry = modular::ResolverNounConstraintEntry::New();
-    noun_constraint_entry->key = link_metadata->name;
-    noun_constraint_entry->constraint = std::move(noun_constraint);
+    modular::ResolverNounConstraintEntry noun_constraint_entry;
+    noun_constraint_entry.key = link_metadata->name;
+    noun_constraint_entry.constraint = std::move(noun_constraint);
     return noun_constraint_entry;
   }
 
@@ -279,13 +276,13 @@ class ModuleResolverApp : ContextListener {
   component::ApplicationContext* const app_context_;
 
   ContextReaderPtr context_reader_;
-  f1dl::Binding<ContextListener> context_listener_binding_;
+  fidl::Binding<ContextListener> context_listener_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverApp);
 };
 
 }  // namespace
-}  // namespace maxwell
+}  // namespace modular
 
 const char kUsage[] = R"USAGE(%s [--test])USAGE";
 
@@ -298,9 +295,9 @@ int main(int argc, const char** argv) {
   }
   auto is_test = command_line.HasOption("test");
   auto context = component::ApplicationContext::CreateFromStartupInfo();
-  modular::AppDriver<maxwell::ModuleResolverApp> driver(
+  modular::AppDriver<modular::ModuleResolverApp> driver(
       context->outgoing_services(),
-      std::make_unique<maxwell::ModuleResolverApp>(context.get(), is_test),
+      std::make_unique<modular::ModuleResolverApp>(context.get(), is_test),
       [&loop] { loop.QuitNow(); });
   loop.Run();
   return 0;

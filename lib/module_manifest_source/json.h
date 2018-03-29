@@ -7,8 +7,8 @@
 namespace modular {
 
 bool ModuleManifestEntryFromJson(const std::string& json,
-                                 modular::ModuleManifestPtr* entry);
-void ModuleManifestEntryToJson(const modular::ModuleManifestPtr& entry,
+                                 modular::ModuleManifest* entry);
+void ModuleManifestEntryToJson(const modular::ModuleManifest& entry,
                                std::string* json);
 
 }  // namespace modular

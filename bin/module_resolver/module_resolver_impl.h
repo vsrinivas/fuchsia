@@ -7,20 +7,17 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <vector>
 
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
-
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/async/cpp/operation.h"
-#include "lib/context/fidl/context_reader.fidl.h"
 #include <fuchsia/cpp/modular.h>
+#include "lib/async/cpp/operation.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/suggestion/fidl/query_handler.fidl.h"
 #include "peridot/bin/module_resolver/type_inference.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
-namespace maxwell {
+namespace modular {
 
 class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
  public:
@@ -32,13 +29,12 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   void AddSource(std::string name,
                  std::unique_ptr<modular::ModuleManifestSource> repo);
 
-  void Connect(f1dl::InterfaceRequest<modular::ModuleResolver> request);
+  void Connect(fidl::InterfaceRequest<modular::ModuleResolver> request);
 
-  void BindQueryHandler(f1dl::InterfaceRequest<QueryHandler> request);
+  void BindQueryHandler(fidl::InterfaceRequest<QueryHandler> request);
 
   // Finds modules matching |query|.
-  void FindModules(modular::ResolverQueryPtr query,
-                   const FindModulesCallback& done);
+  void FindModules(modular::ResolverQuery query, FindModulesCallback done);
 
  private:
   class FindModulesCall;
@@ -47,17 +43,17 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   using EntryId = std::pair<std::string, std::string>;
 
   // |QueryHandler|
-  void OnQuery(UserInputPtr query, const OnQueryCallback& done) override;
+  void OnQuery(UserInput query, OnQueryCallback done) override;
 
   // |ModuleResolver|
-  void FindModules(modular::ResolverQueryPtr query,
+  void FindModules(modular::ResolverQuery query,
                    modular::ResolverScoringInfoPtr scoring_info,
-                   const FindModulesCallback& done) override;
+                   FindModulesCallback done) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name,
                           std::string id,
-                          modular::ModuleManifestPtr entry);
+                          modular::ModuleManifest entry);
   void OnRemoveManifestEntry(const std::string& source_name, std::string id);
 
   void PeriodicCheckIfSourcesAreReady();
@@ -75,7 +71,7 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   // sent us all entries they knew about at construction time.
   std::set<std::string> ready_sources_;
   // Map of (repo name, module manifest ID) -> entry.
-  std::map<EntryId, modular::ModuleManifestPtr> entries_;
+  std::map<EntryId, modular::ModuleManifest> entries_;
 
   // verb -> key in |entries_|
   std::map<std::string, std::set<EntryId>> verb_to_entries_;
@@ -85,10 +81,10 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   //  (type) -> key in |entries_|.
   std::map<std::string, std::set<EntryId>> noun_type_to_entries_;
 
-  f1dl::BindingSet<modular::ModuleResolver> bindings_;
-  f1dl::Binding<QueryHandler> query_handler_binding_;
+  fidl::BindingSet<modular::ModuleResolver> bindings_;
+  fidl::Binding<QueryHandler> query_handler_binding_;
   // These are buffered until AllSourcesAreReady() == true.
-  std::vector<f1dl::InterfaceRequest<ModuleResolver>> pending_bindings_;
+  std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
   NounTypeInferenceHelper type_helper_;
@@ -99,6 +95,6 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleResolverImpl);
 };
 
-}  // namespace maxwell
+}  // namespace modular
 
 #endif  // PERIDOT_BIN_MODULE_RESOLVER_MODULE_RESOLVER_IMPL_H_

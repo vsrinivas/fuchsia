@@ -10,12 +10,12 @@
 #include <fdio/util.h>
 #include <sys/types.h>
 
+#include <fuchsia/cpp/module_manifest_source.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "peridot/lib/module_manifest_source/fidl/push_package_indexer.fidl.h"
 
 // This function finds the PushPackageIndexer fidl service that the
 // module_resolver runs.
@@ -40,7 +40,7 @@ std::string FindPushPackageIndexerService() {
   FXL_CHECK(!user_env.empty()) << "Could not find the running user's job.";
   return fxl::StringPrintf("/hub/sys/%s/module_resolver/debug/%s",
                            user_env.c_str(),
-                           modular::PushPackageIndexer::Name_);
+                           module_manifest_source::PushPackageIndexer::Name_);
 }
 
 int main(int argc, const char** argv) {
@@ -62,7 +62,7 @@ int main(int argc, const char** argv) {
       fxl::StringPrintf("/pkgfs/packages/%s/%s/meta/module.json",
                         package_name.c_str(), package_version.c_str());
 
-  modular::PushPackageIndexerPtr indexer;
+  module_manifest_source::PushPackageIndexerPtr indexer;
   auto req_handle = indexer.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), req_handle.get()) != ZX_OK) {
     FXL_LOG(FATAL) << "Could not connect to service " << service_path;

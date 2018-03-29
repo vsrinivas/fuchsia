@@ -63,7 +63,7 @@ void ReadDirectory(const std::string dir_path, WatcherState* state) {
       continue;
     }
     state->task_runner->PostTask(
-        [source = state->source, state, name_str = std::move(name_str)] {
+        [ source = state->source, state, name_str = std::move(name_str) ] {
           // If the repository has gone out of scope, |state| either already
           // did, or it will soon.
           if (!source)
@@ -72,7 +72,7 @@ void ReadDirectory(const std::string dir_path, WatcherState* state) {
         });
   }
 
-  state->task_runner->PostTask([source = state->source, state] {
+  state->task_runner->PostTask([ source = state->source, state ] {
     if (!source)
       return;
     state->on_idle();
@@ -94,7 +94,7 @@ zx_status_t WatcherHandler(const int dirfd,
   switch (event) {
     case WATCH_EVENT_ADD_FILE:
       state->task_runner->PostTask(
-          [source = state->source, state, name_str = std::move(name_str)] {
+          [ source = state->source, state, name_str = std::move(name_str) ] {
             // If the repository has gone out of scope, |state| either already
             // did, or it will soon.
             if (!source)
@@ -104,7 +104,7 @@ zx_status_t WatcherHandler(const int dirfd,
       break;
     case WATCH_EVENT_REMOVE_FILE:
       state->task_runner->PostTask(
-          [source = state->source, state, name_str = std::move(name_str)] {
+          [ source = state->source, state, name_str = std::move(name_str) ] {
             // If the repository has gone out of scope, |state| either already
             // did, or it will soon.
             if (!source)
@@ -115,7 +115,7 @@ zx_status_t WatcherHandler(const int dirfd,
     case WATCH_EVENT_IDLE:
       // This means we've seen all the existing files and we're now waiting for
       // new ones.
-      state->task_runner->PostTask([source = state->source, state] {
+      state->task_runner->PostTask([ source = state->source, state ] {
         if (!source)
           return;
         state->on_idle();
@@ -149,8 +149,10 @@ void DirectoryModuleManifestSource::Watch(
   // fdio_watch_directory() is blocking so we start the watching process in its
   // own thread. We give that thread a pointer to the TaskRunner and a WeakPtr
   // to us in case we are destroyed.
-  auto thread = std::thread([weak_this = weak_factory_.GetWeakPtr(),
-                             task_runner, idle_fn, new_fn, removed_fn] {
+  auto thread = std::thread([
+    weak_this = weak_factory_.GetWeakPtr(), task_runner, idle_fn, new_fn,
+    removed_fn
+  ] {
     // In the unlikely event our owner is destroyed before we get here.
     if (!weak_this)
       return;
@@ -214,7 +216,7 @@ void DirectoryModuleManifestSource::OnNewFile(const std::string& name,
   bool read_result = files::ReadFileToString(path, &data);
   FXL_CHECK(read_result) << "Couldn't read file: " << path;
 
-  auto entry = modular::ModuleManifest::New();
+  modular::ModuleManifest entry;
   if (!ModuleManifestEntryFromJson(data, &entry)) {
     FXL_LOG(WARNING) << "Could not parse Module manifest from: " << path;
     return;

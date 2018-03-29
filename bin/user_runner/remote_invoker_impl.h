@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
 #define PERIDOT_BIN_USER_RUNNER_REMOTE_INVOKER_IMPL_H_
 
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/modular.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 
@@ -25,8 +25,8 @@ class RemoteInvokerImpl : RemoteInvoker {
 
  private:
   // |RemoteInvoker|
-  void StartOnDevice(const fidl::StringPtr& device_id,
-                     const fidl::StringPtr& story_id,
+  void StartOnDevice(fidl::StringPtr device_id,
+                     fidl::StringPtr story_id,
                      StartOnDeviceCallback callback) override;
 
   fidl::BindingSet<RemoteInvoker> bindings_;

@@ -9,15 +9,15 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/tasks/task_runner.h"
 #include <fuchsia/cpp/modular.h>
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
 
 // Abstract base class for all Module Manifest Source implementations.
 class ModuleManifestSource {
  public:
-  using NewEntryFn = std::function<void(std::string, ModuleManifestPtr)>;
+  using NewEntryFn = std::function<void(std::string, ModuleManifest)>;
   using RemovedEntryFn = std::function<void(std::string)>;
   using IdleFn = std::function<void()>;
 

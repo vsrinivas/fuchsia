@@ -10,7 +10,7 @@
 #include "lib/module_resolver/cpp/formatting.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
-namespace maxwell {
+namespace modular {
 namespace {
 
 // Returns pair<true, ..> if key found, else <false, nullptr>.
@@ -35,7 +35,7 @@ class QueryBuilder {
     SetVerb(verb);
   }
 
-  modular::ResolverQueryPtr build() { return std::move(query); }
+  modular::ResolverQuery build() { return std::move(query); }
 
   QueryBuilder& SetUrl(std::string url) {
     query->url = url;
@@ -50,8 +50,8 @@ class QueryBuilder {
   // Creates a noun that's just Entity types.
   QueryBuilder& AddNounTypes(std::string name, std::vector<std::string> types) {
     auto noun = modular::ResolverNounConstraint::New();
-    auto types_array = f1dl::VectorPtr<f1dl::StringPtr>::From(types);
-    noun->set_entity_type(std::move(types_array));
+    auto types_array = fidl::VectorPtr<fidl::StringPtr>::From(types);
+    noun.set_entity_type(std::move(types_array));
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
@@ -63,7 +63,7 @@ class QueryBuilder {
 
   QueryBuilder& AddEntityNoun(std::string name, std::string entity_reference) {
     auto noun = modular::ResolverNounConstraint::New();
-    noun->set_entity_reference(entity_reference);
+    noun.set_entity_reference(entity_reference);
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
@@ -76,7 +76,7 @@ class QueryBuilder {
   // Creates a noun that's made of JSON content.
   QueryBuilder& AddJsonNoun(std::string name, std::string json) {
     auto noun = modular::ResolverNounConstraint::New();
-    noun->set_json(json);
+    noun.set_json(json);
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
@@ -93,7 +93,7 @@ class QueryBuilder {
       std::string entity_reference) {
     auto link_path = modular::LinkPath::New();
     link_path->module_path =
-        f1dl::VectorPtr<f1dl::StringPtr>::From(path_parts.first);
+        fidl::VectorPtr<fidl::StringPtr>::From(path_parts.first);
     link_path->link_name = path_parts.second;
 
     auto link_info = modular::ResolverLinkInfo::New();
@@ -102,7 +102,7 @@ class QueryBuilder {
         modular::EntityReferenceToJson(entity_reference);
 
     auto noun = modular::ResolverNounConstraint::New();
-    noun->set_link_info(std::move(link_info));
+    noun.set_link_info(std::move(link_info));
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
@@ -119,17 +119,17 @@ class QueryBuilder {
       std::vector<std::string> allowed_types) {
     auto link_path = modular::LinkPath::New();
     link_path->module_path =
-        f1dl::VectorPtr<f1dl::StringPtr>::From(path_parts.first);
+        fidl::VectorPtr<fidl::StringPtr>::From(path_parts.first);
     link_path->link_name = path_parts.second;
 
     auto link_info = modular::ResolverLinkInfo::New();
     link_info->path = std::move(link_path);
     link_info->allowed_types = modular::LinkAllowedTypes::New();
     link_info->allowed_types->allowed_entity_types =
-        f1dl::VectorPtr<f1dl::StringPtr>::From(allowed_types);
+        fidl::VectorPtr<fidl::StringPtr>::From(allowed_types);
 
     auto noun = modular::ResolverNounConstraint::New();
-    noun->set_link_info(std::move(link_info));
+    noun.set_link_info(std::move(link_info));
     auto resolver_noun_constraint_entry =
         modular::ResolverNounConstraintEntry::New();
     resolver_noun_constraint_entry->key = name;
@@ -140,7 +140,7 @@ class QueryBuilder {
   }
 
  private:
-  modular::ResolverQueryPtr query;
+  modular::ResolverQuery query;
 };
 
 class TestManifestSource : public modular::ModuleManifestSource {
@@ -185,17 +185,17 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
     return ptr;
   }
 
-  f1dl::StringPtr AddEntity(std::map<std::string, std::string> entity_data) {
+  fidl::StringPtr AddEntity(std::map<std::string, std::string> entity_data) {
     return entity_resolver_->AddEntity(std::move(entity_data));
   }
 
-  void FindModules(modular::ResolverQueryPtr query) {
+  void FindModules(modular::ResolverQuery query) {
     auto scoring_info = modular::ResolverScoringInfo::New();
 
     bool got_response = false;
     resolver_->FindModules(
         std::move(query), nullptr /* scoring_info */,
-        [this, &got_response](const modular::FindModulesResultPtr& result) {
+        [this, &got_response](const modular::FindModulesResult& result) {
           got_response = true;
           result_ = result.Clone();
         });
@@ -203,7 +203,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
         RunLoopUntilWithTimeout([&got_response] { return got_response; }));
   }
 
-  const f1dl::VectorPtr<modular::ModuleResolverResultPtr>& results() const {
+  const fidl::VectorPtr<modular::ModuleResolverResult>& results() const {
     return result_->modules;
   }
 
@@ -213,7 +213,7 @@ class ModuleResolverImplTest : public gtest::TestWithMessageLoop {
   std::map<std::string, modular::ModuleManifestSource*> test_sources_;
   modular::ModuleResolverPtr resolver_;
 
-  modular::FindModulesResultPtr result_;
+  modular::FindModulesResult result_;
 };
 
 TEST_F(ModuleResolverImplTest, Null) {
@@ -290,7 +290,7 @@ TEST_F(ModuleResolverImplTest, SimpleVerb) {
   bool got_response = false;
   resolver_->FindModules(
       std::move(query), nullptr /* scoring_info */,
-      [this, &got_response](const modular::FindModulesResultPtr& result) {
+      [this, &got_response](const modular::FindModulesResult& result) {
         got_response = true;
         result_ = result.Clone();
       });
@@ -352,8 +352,8 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
     entry->binary = "module3";
     entry->verb = "com.google.fuchsia.exist.vinfinity";
     auto noun = modular::NounConstraint::New();
-    noun->name = "with";
-    noun->type = "compantionCube";
+    noun.name = "with";
+    noun.type = "compantionCube";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("3", std::move(entry));
   }
@@ -379,7 +379,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 
   // Given an entity of type "frob", find a module with verb
   // com.google.fuchsia.navigate.v1.
-  f1dl::StringPtr location_entity = AddEntity({{"frob", ""}});
+  fidl::StringPtr location_entity = AddEntity({{"frob", ""}});
   ASSERT_TRUE(!location_entity->empty());
 
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
@@ -392,7 +392,7 @@ TEST_F(ModuleResolverImplTest, SimpleNounTypes) {
 
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
-  EXPECT_EQ(1lu, res->create_chain_info->property_info->size());
+  EXPECT_EQ(1lu, res->create_chain_info.property_info->size());
   ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
   auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
@@ -439,8 +439,8 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
     entry->binary = "module3";
     entry->verb = "com.google.fuchsia.exist.vinfinity";
     auto noun = modular::NounConstraint::New();
-    noun->name = "with";
-    noun->type = "compantionCube";
+    noun.name = "with";
+    noun.type = "compantionCube";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("3", std::move(entry));
   }
@@ -467,7 +467,7 @@ TEST_F(ModuleResolverImplTest, SimpleJsonNouns) {
 
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
-  EXPECT_EQ(2lu, res->create_chain_info->property_info->size());
+  EXPECT_EQ(2lu, res->create_chain_info.property_info->size());
   ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
   auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_create_link());
@@ -515,7 +515,7 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
 
   // Same thing should happen if there aren't any allowed types, but the Link's
   // content encodes an Entity reference.
-  f1dl::StringPtr entity_reference = AddEntity({{"foo", ""}});
+  fidl::StringPtr entity_reference = AddEntity({{"foo", ""}});
   query = QueryBuilder("com.google.fuchsia.navigate.v1")
               .AddLinkInfoNounWithContent("start", {{"a", "b"}, "c"},
                                           entity_reference)
@@ -527,7 +527,7 @@ TEST_F(ModuleResolverImplTest, LinkInfoNounType) {
 
   // Verify that |create_chain_info| is set up correctly.
   ASSERT_TRUE(res->create_chain_info);
-  EXPECT_EQ(1lu, res->create_chain_info->property_info->size());
+  EXPECT_EQ(1lu, res->create_chain_info.property_info->size());
   ASSERT_TRUE(GetProperty(res->create_chain_info, "start").first);
   auto start = GetProperty(res->create_chain_info, "start").second;
   ASSERT_TRUE(start->is_link_path());
@@ -569,8 +569,8 @@ TEST_F(ModuleResolverImplTest, MatchingNounWithNoVerbOrUrl) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "start";
-    noun->type = "foo";
+    noun.name = "start";
+    noun.type = "foo";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -596,8 +596,8 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrl) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "end";
-    noun->type = "foo";
+    noun.name = "end";
+    noun.type = "foo";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -623,8 +623,8 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrlMultipleMatches) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "end";
-    noun->type = "foo";
+    noun.name = "end";
+    noun.type = "foo";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -633,8 +633,8 @@ TEST_F(ModuleResolverImplTest, CorrectNounTypeWithNoVerbOrUrlMultipleMatches) {
     entry->binary = "module2";
     entry->verb = "com.google.fuchsia.navigate.v2";
     auto noun = modular::NounConstraint::New();
-    noun->name = "end";
-    noun->type = "foo";
+    noun.name = "end";
+    noun.type = "foo";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("2", std::move(entry));
   }
@@ -661,8 +661,8 @@ TEST_F(ModuleResolverImplTest, IncorrectNounTypeWithNoVerbOrUrl) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "start";
-    noun->type = "not";
+    noun.name = "start";
+    noun.type = "not";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -687,8 +687,8 @@ TEST_F(ModuleResolverImplTest, QueryWithMoreNounsThanEntry) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "start";
-    noun->type = "gps";
+    noun.name = "start";
+    noun.type = "gps";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -728,10 +728,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndMultipleNouns) {
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
+  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::StringPtr end_entity = AddEntity({{"not_gps", "not gps data"}});
+  fidl::StringPtr end_entity = AddEntity({{"not_gps", "not gps data"}});
   ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
@@ -777,10 +777,10 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndTwoNounsOfSameType) {
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
+  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
+  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
   auto query = QueryBuilder()
@@ -847,13 +847,13 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbAndThreeNounsOfSameType) {
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
+  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
+  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
-  f1dl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
+  fidl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
   ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
@@ -891,13 +891,13 @@ TEST_F(ModuleResolverImplTest,
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
+  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data one"}});
   ASSERT_TRUE(!start_entity->empty());
 
-  f1dl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
+  fidl::StringPtr end_entity = AddEntity({{"gps", "gps data two"}});
   ASSERT_TRUE(!end_entity->empty());
 
-  f1dl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
+  fidl::StringPtr middle_entity = AddEntity({{"gps", "gps data three"}});
   ASSERT_TRUE(!middle_entity->empty());
 
   auto query = QueryBuilder()
@@ -935,7 +935,7 @@ TEST_F(ModuleResolverImplTest,
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
+  fidl::StringPtr start_entity = AddEntity({{"gps", "gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest
@@ -958,15 +958,15 @@ TEST_F(ModuleResolverImplTest, QueryWithoutVerbIncompatibleNounTypes) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "start";
-    noun->type = "gps";
+    noun.name = "start";
+    noun.type = "gps";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
 
   source->idle();
 
-  f1dl::StringPtr start_entity = AddEntity({{"not_gps", "not gps data"}});
+  fidl::StringPtr start_entity = AddEntity({{"not_gps", "not gps data"}});
   ASSERT_TRUE(!start_entity->empty());
 
   // The query only contains an Entity for "noun1", but the module manifest
@@ -990,8 +990,8 @@ TEST_F(ModuleResolverImplTest, QueryWithVerbMatchesBothNounNamesAndTypes) {
     entry->binary = "module1";
     entry->verb = "com.google.fuchsia.navigate.v1";
     auto noun = modular::NounConstraint::New();
-    noun->name = "end";
-    noun->type = "foo";
+    noun.name = "end";
+    noun.type = "foo";
     entry->noun_constraints.push_back(std::move(noun));
     source->add("1", std::move(entry));
   }
@@ -1008,4 +1008,4 @@ TEST_F(ModuleResolverImplTest, QueryWithVerbMatchesBothNounNamesAndTypes) {
 }
 
 }  // namespace
-}  // namespace maxwell
+}  // namespace modular

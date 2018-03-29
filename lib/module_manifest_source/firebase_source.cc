@@ -141,7 +141,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
       return;
     }
 
-    auto entry = modular::ModuleManifest::New();
+    modular::ModuleManifest entry;
     if (!modular::XdrRead(&doc, &entry, XdrEntry)) {
       FXL_LOG(WARNING) << "Could not parse Module manifest from: " << name;
       return;

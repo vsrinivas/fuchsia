@@ -6,8 +6,8 @@
 
 #include <chrono>
 
-#include "lib/fidl/cpp/array.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fidl/cpp/array.h"
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/storage.h"
@@ -136,8 +136,8 @@ RemoteInvokerImpl::RemoteInvokerImpl(ledger::Ledger* const ledger)
     : ledger_(ledger) {}
 
 // | RemoteService |
-void RemoteInvokerImpl::StartOnDevice(const fidl::StringPtr& device_id,
-                                      const fidl::StringPtr& story_id,
+void RemoteInvokerImpl::StartOnDevice(fidl::StringPtr device_id,
+                                      fidl::StringPtr story_id,
                                       StartOnDeviceCallback callback) {
   FXL_LOG(INFO) << "Starting rehydrate call for story " << story_id
                 << " on device " << device_id;

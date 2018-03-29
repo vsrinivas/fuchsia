@@ -10,15 +10,16 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/module_manifest_source.h>
 #include "garnet/public/lib/app/cpp/application_context.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/lib/module_manifest_source/fidl/push_package_indexer.fidl.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {
 
-class PushPackageSource : public ModuleManifestSource, PushPackageIndexer {
+class PushPackageSource : public ModuleManifestSource,
+                          module_manifest_source::PushPackageIndexer {
  public:
   PushPackageSource(component::ApplicationContext* context);
   ~PushPackageSource() override;
@@ -31,13 +32,14 @@ class PushPackageSource : public ModuleManifestSource, PushPackageIndexer {
 
  private:
   // |PushPackageIndexer|
-  void IndexManifest(const f1dl::StringPtr& package_name,
-                     const f1dl::StringPtr& module_manifest_path) override;
+  void IndexManifest(fidl::StringPtr package_name,
+                     fidl::StringPtr module_manifest_path) override;
 
   const std::string dir_;
   NewEntryFn new_entry_fn_;
 
-  f1dl::BindingSet<PushPackageIndexer> indexer_bindings_;
+  fidl::BindingSet<module_manifest_source::PushPackageIndexer>
+      indexer_bindings_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   fxl::WeakPtrFactory<PushPackageSource> weak_factory_;

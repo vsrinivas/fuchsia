@@ -33,15 +33,12 @@ executable("bin") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/network/fidl",
     "//peridot/lib/module_manifest_source:directory_source",
+    "//peridot/lib/fidl:equals",
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:push_package_source",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 

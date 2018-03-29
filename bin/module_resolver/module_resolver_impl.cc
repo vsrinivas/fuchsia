@@ -6,13 +6,13 @@
 
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
+#include <fuchsia/cpp/modular.h>
 #include "garnet/public/lib/fxl/strings/split_string.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/public/lib/entity/cpp/json.h"
-#include "peridot/public/lib/story/fidl/create_chain.fidl.h"
 
-namespace maxwell {
+namespace modular {
 
 namespace {
 
@@ -41,19 +41,18 @@ void ModuleResolverImpl::AddSource(
   auto ptr = repo.get();
   sources_.emplace(name, std::move(repo));
 
-  ptr->Watch(
-      fsl::MessageLoop::GetCurrent()->task_runner(),
-      [this, name]() { OnSourceIdle(name); },
-      [this, name](std::string id, const modular::ModuleManifestPtr& entry) {
-        OnNewManifestEntry(name, std::move(id), entry.Clone());
-      },
-      [this, name](std::string id) {
-        OnRemoveManifestEntry(name, std::move(id));
-      });
+  ptr->Watch(fsl::MessageLoop::GetCurrent()->task_runner(),
+             [this, name]() { OnSourceIdle(name); },
+             [this, name](std::string id, modular::ModuleManifest entry) {
+               OnNewManifestEntry(name, std::move(id), std::move(entry));
+             },
+             [this, name](std::string id) {
+               OnRemoveManifestEntry(name, std::move(id));
+             });
 }
 
 void ModuleResolverImpl::Connect(
-    f1dl::InterfaceRequest<modular::ModuleResolver> request) {
+    fidl::InterfaceRequest<modular::ModuleResolver> request) {
   if (!AllSourcesAreReady()) {
     PeriodicCheckIfSourcesAreReady();
     pending_bindings_.push_back(std::move(request));
@@ -63,16 +62,16 @@ void ModuleResolverImpl::Connect(
 }
 
 void ModuleResolverImpl::BindQueryHandler(
-    f1dl::InterfaceRequest<QueryHandler> request) {
+    fidl::InterfaceRequest<QueryHandler> request) {
   query_handler_binding_.Bind(std::move(request));
 }
 
 class ModuleResolverImpl::FindModulesCall
-    : modular::Operation<modular::FindModulesResultPtr> {
+    : modular::Operation<modular::FindModulesResult> {
  public:
   FindModulesCall(modular::OperationContainer* container,
                   ModuleResolverImpl* module_resolver_impl,
-                  modular::ResolverQueryPtr query,
+                  modular::ResolverQuery query,
                   modular::ResolverScoringInfoPtr scoring_info,
                   ResultCall result_call)
       : Operation("ModuleResolverImpl::FindModulesCall",
@@ -93,7 +92,7 @@ class ModuleResolverImpl::FindModulesCall
   void Run() {
     FlowToken flow{this, &result_};
 
-    if (query_->url) {
+    if (query_.url) {
       // TODO(MI4-888): revisit this short circuiting and add the module
       // manifest to the result.
       // Client already knows what Module they want to use, so we'll
@@ -102,8 +101,8 @@ class ModuleResolverImpl::FindModulesCall
       return;
     }
 
-    if (query_->verb) {
-      auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_->verb);
+    if (query_.verb) {
+      auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_.verb);
       if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
         result_ = CreateEmptyResult();
         return;
@@ -114,22 +113,22 @@ class ModuleResolverImpl::FindModulesCall
 
     // For each noun in the ResolverQuery, try to find Modules that provide the
     // types in the noun as constraints.
-    if (query_->noun_constraints.is_null() ||
-        query_->noun_constraints->size() == 0) {
+    if (query_.noun_constraints.is_null() ||
+        query_.noun_constraints->size() == 0) {
       Finally(flow);
       return;
     }
 
-    num_nouns_countdown_ = query_->noun_constraints->size();
-    for (const auto& noun_entry : *query_->noun_constraints) {
-      const auto& noun_name = noun_entry->key;
-      const auto& noun_constraints = noun_entry->constraint;
+    num_nouns_countdown_ = query_.noun_constraints->size();
+    for (const auto& noun_entry : *query_.noun_constraints) {
+      const auto& noun_name = noun_entry.key;
+      const auto& noun_constraints = noun_entry.constraint;
 
       module_resolver_impl_->type_helper_.GetNounTypes(
           noun_constraints,
           [noun_name, flow, this](std::vector<std::string> types) {
             ProcessNounTypes(noun_name, std::move(types),
-                             !query_->verb.is_null());
+                             !query_.verb.is_null());
             if (--num_nouns_countdown_ == 0) {
               Finally(flow);
             }
@@ -227,23 +226,24 @@ class ModuleResolverImpl::FindModulesCall
 
       const auto& entry = entry_it->second;
 
-      if (!query_->verb && !query_->url) {
+      if (!query_.verb && !query_.url) {
         // If there is no verb and no url each entry may be able to be matched
         // in multiple ways (i.e. values of nouns with the same type are
         // interchangeable), so the result set may contain multiple entries for
         // the same candidate.
         auto new_results = MatchQueryNounsToEntryNounsByType(entry);
         for (size_t i = 0; i < new_results->size(); ++i) {
-          result_->modules.push_back(std::move(new_results->at(i)));
+          result_.modules.push_back(std::move(new_results->at(i)));
         }
 
       } else {
-        auto result = modular::ModuleResolverResult::New();
-        result->module_id = entry->binary;
-        result->manifest = entry.Clone();
-        CopyNounsToModuleResolverResult(query_, result.get());
+        modular::ModuleResolverResult result;
+        result.module_id = entry.binary;
+        result.manifest = modular::ModuleManifest::New();
+        fidl::Clone(entry, result.manifest.get());
+        CopyNounsToModuleResolverResult(query_, &result);
 
-        result_->modules.push_back(std::move(result));
+        result_.modules.push_back(std::move(result));
       }
     }
   }
@@ -253,12 +253,12 @@ class ModuleResolverImpl::FindModulesCall
   //
   // In order for a query to match an entry, it must contain enough nouns to
   // populate each of the entry nouns.
-  f1dl::VectorPtr<modular::ModuleResolverResultPtr>
-  MatchQueryNounsToEntryNounsByType(const modular::ModuleManifestPtr& entry) {
-    f1dl::VectorPtr<modular::ModuleResolverResultPtr> modules;
+  fidl::VectorPtr<modular::ModuleResolverResult>
+  MatchQueryNounsToEntryNounsByType(const modular::ModuleManifest& entry) {
+    fidl::VectorPtr<modular::ModuleResolverResult> modules;
     modules.resize(0);
     // TODO(MI4-866): Handle entries with optional nouns.
-    if (query_->noun_constraints->size() < entry->noun_constraints->size()) {
+    if (query_.noun_constraints->size() < entry.noun_constraints->size()) {
       return modules;
     }
 
@@ -275,10 +275,11 @@ class ModuleResolverImpl::FindModulesCall
 
     // For each of the possible mappings, create a resolver result.
     for (const auto& noun_mapping : noun_mappings) {
-      auto result = modular::ModuleResolverResult::New();
-      result->module_id = entry->binary;
-      result->manifest = entry.Clone();
-      CopyNounsToModuleResolverResult(query_, result.get(), noun_mapping);
+      modular::ModuleResolverResult result;
+      result.module_id = entry.binary;
+      result.manifest = modular::ModuleManifest::New();
+      fidl::Clone(entry, result.manifest.get());
+      CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
       modules.push_back(std::move(result));
     }
 
@@ -288,19 +289,19 @@ class ModuleResolverImpl::FindModulesCall
   // Returns a map where the keys are the |entry|'s nouns, and the values are
   // all the |query_| nouns that are type-compatible with that |entry| noun.
   std::map<std::string, std::vector<std::string>>
-  MapEntryNounsToCompatibleQueryNouns(const modular::ModuleManifestPtr& entry) {
+  MapEntryNounsToCompatibleQueryNouns(const modular::ModuleManifest& entry) {
     std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
-    for (const auto& entry_noun : *entry->noun_constraints) {
+    for (const auto& entry_noun : *entry.noun_constraints) {
       std::vector<std::string> matching_query_nouns;
-      for (const auto& query_noun : *query_->noun_constraints) {
-        const auto& this_query_noun_cache = noun_types_cache_[query_noun->key];
+      for (const auto& query_noun : *query_.noun_constraints) {
+        const auto& this_query_noun_cache = noun_types_cache_[query_noun.key];
         if (std::find(this_query_noun_cache.begin(),
                       this_query_noun_cache.end(),
-                      entry_noun->type) != this_query_noun_cache.end()) {
-          matching_query_nouns.push_back(query_noun->key);
+                      entry_noun.type) != this_query_noun_cache.end()) {
+          matching_query_nouns.push_back(query_noun.key);
         }
       }
-      entry_noun_to_query_nouns[entry_noun->name] = matching_query_nouns;
+      entry_noun_to_query_nouns[entry_noun.name] = matching_query_nouns;
     }
     return entry_noun_to_query_nouns;
   }
@@ -374,9 +375,9 @@ class ModuleResolverImpl::FindModulesCall
     return result;
   }
 
-  std::vector<std::string> ToArray(f1dl::VectorPtr<f1dl::StringPtr>& values) {
+  std::vector<std::string> ToArray(fidl::VectorPtr<fidl::StringPtr>& values) {
     std::vector<std::string> ret;
-    for (f1dl::StringPtr str : *values) {
+    for (fidl::StringPtr str : *values) {
       ret.push_back(str.get());
     }
     return ret;
@@ -388,82 +389,84 @@ class ModuleResolverImpl::FindModulesCall
   // that should be populated. If no such mapping exists, the query noun name
   // will be used.
   void CopyNounsToModuleResolverResult(
-      const modular::ResolverQueryPtr& query,
+      const modular::ResolverQuery& query,
       modular::ModuleResolverResult* result,
       std::map<std::string, std::string> noun_mapping = {}) {
-    result->create_chain_info = modular::CreateChainInfo::New();
     auto& create_chain_info = result->create_chain_info;  // For convenience.
-    for (const auto& query_noun : *query->noun_constraints) {
-      const auto& noun = query_noun->constraint;
-      std::string name = query_noun->key;
-      auto it = noun_mapping.find(query_noun->key);
+    for (const auto& query_noun : *query.noun_constraints) {
+      const auto& noun = query_noun.constraint;
+      std::string name = query_noun.key;
+      auto it = noun_mapping.find(query_noun.key);
       if (it != noun_mapping.end()) {
         name = it->second;
       }
 
-      if (noun->is_entity_reference()) {
-        auto create_link = modular::CreateLinkInfo::New();
-        create_link->initial_data =
-            modular::EntityReferenceToJson(noun->get_entity_reference());
+      if (noun.is_entity_reference()) {
+        modular::CreateLinkInfo create_link;
+        create_link.initial_data =
+            modular::EntityReferenceToJson(noun.entity_reference());
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        auto property_info = modular::CreateChainPropertyInfo::New();
-        property_info->set_create_link(std::move(create_link));
-        auto chain_entry = modular::ChainEntry::New();
-        chain_entry->key = name;
-        chain_entry->value = std::move(property_info);
-        create_chain_info->property_info.push_back(std::move(chain_entry));
-      } else if (noun->is_link_info()) {
-        auto property_info = modular::CreateChainPropertyInfo::New();
-        property_info->set_link_path(noun->get_link_info()->path.Clone());
-        auto chain_entry = modular::ChainEntry::New();
-        chain_entry->key = name;
-        chain_entry->value = std::move(property_info);
-        create_chain_info->property_info.push_back(std::move(chain_entry));
-      } else if (noun->is_json()) {
-        auto create_link = modular::CreateLinkInfo::New();
-        create_link->initial_data = noun->get_json();
+        modular::CreateChainPropertyInfo property_info;
+        property_info.set_create_link(std::move(create_link));
+        modular::ChainEntry chain_entry;
+        chain_entry.key = name;
+        chain_entry.value = std::move(property_info);
+        create_chain_info.property_info.push_back(std::move(chain_entry));
+      } else if (noun.is_link_info()) {
+        modular::CreateChainPropertyInfo property_info;
+        modular::LinkPath link_path;
+        noun.link_info().path.Clone(&link_path);
+        property_info.set_link_path(std::move(link_path));
+        modular::ChainEntry chain_entry;
+        chain_entry.key = name;
+        chain_entry.value = std::move(property_info);
+        create_chain_info.property_info.push_back(std::move(chain_entry));
+      } else if (noun.is_json()) {
+        modular::CreateLinkInfo create_link;
+        create_link.initial_data = noun.json();
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
-        auto property_info = modular::CreateChainPropertyInfo::New();
-        property_info->set_create_link(std::move(create_link));
-        auto chain_entry = modular::ChainEntry::New();
-        chain_entry->key = name;
-        chain_entry->value = std::move(property_info);
-        create_chain_info->property_info.push_back(std::move(chain_entry));
+        modular::CreateChainPropertyInfo property_info;
+        property_info.set_create_link(std::move(create_link));
+        modular::ChainEntry chain_entry;
+        chain_entry.key = name;
+        chain_entry.value = std::move(property_info);
+        create_chain_info.property_info.push_back(std::move(chain_entry));
       }
       // There's nothing to copy over from 'entity_types', since it only
       // specifies noun constraint information, and no actual content.
     }
   }
 
-  modular::FindModulesResultPtr HandleUrlQuery(
-      const modular::ResolverQueryPtr& query) {
-    auto mod_result = modular::ModuleResolverResult::New();
-    mod_result->module_id = query->url;
+  modular::FindModulesResult HandleUrlQuery(
+      const modular::ResolverQuery& query) {
+    modular::ModuleResolverResult mod_result;
+    mod_result.module_id = query.url;
     for (const auto& iter : module_resolver_impl_->entries_) {
-      if (iter.second->binary == query->url) {
-        mod_result->manifest = iter.second.Clone();
+      if (iter.second.binary == query.url) {
+        mod_result.manifest = modular::ModuleManifest::New();
+        fidl::Clone(iter.second, mod_result.manifest.get());
       }
     }
 
-    CopyNounsToModuleResolverResult(query, mod_result.get());
+    CopyNounsToModuleResolverResult(query, &mod_result);
 
-    auto result = modular::FindModulesResult::New();
-    result->modules.push_back(std::move(mod_result));
+    modular::FindModulesResult result;
+    result.modules.push_back(std::move(mod_result));
     return result;
   }
 
-  modular::FindModulesResultPtr CreateEmptyResult() {
-    auto result = modular::FindModulesResult::New();
-    result->modules.resize(0);
+  modular::FindModulesResult CreateEmptyResult() {
+    modular::FindModulesResult result;
+    result.modules.resize(0);
     return result;
   }
 
-  modular::FindModulesResultPtr result_;
+  modular::FindModulesResult result_;
 
   ModuleResolverImpl* const module_resolver_impl_;
-  modular::ResolverQueryPtr query_;
+  modular::ResolverQuery query_;
   modular::ResolverScoringInfoPtr scoring_info_;
 
   // A cache of the Entity types for each noun in |query_|.
@@ -475,15 +478,15 @@ class ModuleResolverImpl::FindModulesCall
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
 
-void ModuleResolverImpl::FindModules(modular::ResolverQueryPtr query,
-                                     const FindModulesCallback& done) {
+void ModuleResolverImpl::FindModules(modular::ResolverQuery query,
+                                     FindModulesCallback done) {
   new FindModulesCall(&operations_, this, std::move(query), nullptr, done);
 }
 
 void ModuleResolverImpl::FindModules(
-    modular::ResolverQueryPtr query,
+    modular::ResolverQuery query,
     modular::ResolverScoringInfoPtr scoring_info,
-    const FindModulesCallback& done) {
+    FindModulesCallback done) {
   new FindModulesCall(&operations_, this, std::move(query),
                       std::move(scoring_info), done);
 }
@@ -494,8 +497,7 @@ bool StringStartsWith(const std::string& str, const std::string& prefix) {
 }
 }  // namespace
 
-void ModuleResolverImpl::OnQuery(UserInputPtr query,
-                                 const OnQueryCallback& done) {
+void ModuleResolverImpl::OnQuery(UserInput query, OnQueryCallback done) {
   // TODO(thatguy): This implementation is bare-bones. Don't judge.
   // Before adding new member variables to support OnQuery() (and tying the
   // ModuleResolverImpl internals up with what's needed for this method),
@@ -503,10 +505,10 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
 
-  f1dl::VectorPtr<ProposalPtr> proposals = f1dl::VectorPtr<ProposalPtr>::New(0);
-  if (query->text->empty()) {
-    auto response = QueryResponse::New();
-    response->proposals = std::move(proposals);
+  fidl::VectorPtr<Proposal> proposals;
+  if (query.text->empty()) {
+    QueryResponse response;
+    response.proposals = std::move(proposals);
     done(std::move(response));
     return;
   }
@@ -516,28 +518,27 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     // Simply prefix match on the last element of the verb.
     // Verbs have a convention of being namespaced like java classes:
     // com.google.subdomain.verb
-    std::string verb = entry->verb;
+    std::string verb = entry.verb;
     auto parts =
         fxl::SplitString(verb, ".", fxl::kKeepWhitespace, fxl::kSplitWantAll);
     const auto& last_part = parts.back();
-    if (StringStartsWith(entry->verb, query->text) ||
-        StringStartsWith(last_part.ToString(), query->text)) {
-      auto proposal = Proposal::New();
-      proposal->id = entry->binary;
-      auto create_story = CreateStory::New();
-      create_story->module_id = entry->binary;
-      auto action = Action::New();
-      action->set_create_story(std::move(create_story));
-      proposal->on_selected.push_back(std::move(action));
+    if (StringStartsWith(entry.verb, query.text) ||
+        StringStartsWith(last_part.ToString(), query.text)) {
+      Proposal proposal;
+      proposal.id = entry.binary;
+      CreateStory create_story;
+      create_story.module_id = entry.binary;
+      Action action;
+      action.set_create_story(std::move(create_story));
+      proposal.on_selected.push_back(std::move(action));
 
-      proposal->display = SuggestionDisplay::New();
-      proposal->display->headline =
+      proposal.display.headline =
           std::string("Go go gadget ") + last_part.ToString();
-      proposal->display->subheadline = entry->binary;
-      proposal->display->color = 0xffffffff;
-      proposal->display->annoyance = AnnoyanceType::NONE;
+      proposal.display.subheadline = entry.binary;
+      proposal.display.color = 0xffffffff;
+      proposal.display.annoyance = AnnoyanceType::NONE;
 
-      proposal->confidence = 1.0;  // Yeah, super confident.
+      proposal.confidence = 1.0;  // Yeah, super confident.
 
       proposals.push_back(std::move(proposal));
     }
@@ -547,8 +548,8 @@ void ModuleResolverImpl::OnQuery(UserInputPtr query,
     proposals.resize(10);
   }
 
-  auto response = QueryResponse::New();
-  response->proposals = std::move(proposals);
+  QueryResponse response;
+  response.proposals = std::move(proposals);
   done(std::move(response));
 }
 
@@ -570,13 +571,12 @@ void ModuleResolverImpl::OnSourceIdle(const std::string& source_name) {
   }
 }
 
-void ModuleResolverImpl::OnNewManifestEntry(
-    const std::string& source_name,
-    std::string id_in,
-    modular::ModuleManifestPtr new_entry) {
+void ModuleResolverImpl::OnNewManifestEntry(const std::string& source_name,
+                                            std::string id_in,
+                                            modular::ModuleManifest new_entry) {
   FXL_LOG(INFO) << "New Module manifest " << id_in
-                << ": verb = " << new_entry->verb
-                << ", binary = " << new_entry->binary;
+                << ": verb = " << new_entry.verb
+                << ", binary = " << new_entry.binary;
   // Add this new entry info to our local index.
   if (entries_.count(EntryId(source_name, id_in)) > 0) {
     // Remove this existing entry first, then add it back in.
@@ -587,13 +587,13 @@ void ModuleResolverImpl::OnNewManifestEntry(
   FXL_CHECK(ret.second);
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
-  verb_to_entries_[entry->verb].insert(id);
+  verb_to_entries_[entry.verb].insert(id);
 
-  for (const auto& constraint : *entry->noun_constraints) {
-    noun_type_and_name_to_entries_[std::make_pair(constraint->type,
-                                                  constraint->name)]
+  for (const auto& constraint : *entry.noun_constraints) {
+    noun_type_and_name_to_entries_[std::make_pair(constraint.type,
+                                                  constraint.name)]
         .insert(id);
-    noun_type_to_entries_[constraint->type].insert(id);
+    noun_type_to_entries_[constraint.type].insert(id);
   }
 }
 
@@ -607,13 +607,13 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   }
 
   const auto& entry = it->second;
-  verb_to_entries_[entry->verb].erase(id);
+  verb_to_entries_[entry.verb].erase(id);
 
-  for (const auto& constraint : *entry->noun_constraints) {
-    noun_type_and_name_to_entries_[std::make_pair(constraint->type,
-                                                  constraint->name)]
+  for (const auto& constraint : *entry.noun_constraints) {
+    noun_type_and_name_to_entries_[std::make_pair(constraint.type,
+                                                  constraint.name)]
         .erase(id);
-    noun_type_to_entries_[constraint->type].erase(id);
+    noun_type_to_entries_[constraint.type].erase(id);
   }
 
   entries_.erase(id);
@@ -641,4 +641,4 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
   }
 }
 
-}  // namespace maxwell
+}  // namespace modular

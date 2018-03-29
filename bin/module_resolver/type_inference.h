@@ -5,12 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "lib/async/cpp/operation.h"
-#include "lib/entity/fidl/entity.fidl.h"
 #include <fuchsia/cpp/modular.h>
-#include "lib/module_resolver/fidl/module_resolver.fidl.h"
+#include "lib/async/cpp/operation.h"
 
-namespace maxwell {
+namespace modular {
 
 class NounTypeInferenceHelper {
  public:
@@ -20,7 +18,7 @@ class NounTypeInferenceHelper {
   // Returns a list of types represented in |noun_constraint|. Chooses the
   // correct process for type extraction based on the type of Noun.
   void GetNounTypes(
-      const modular::ResolverNounConstraintPtr& noun_constraint,
+      const modular::ResolverNounConstraint& noun_constraint,
       const std::function<void(std::vector<std::string>)>& result_callback);
 
  private:
@@ -32,4 +30,4 @@ class NounTypeInferenceHelper {
   FXL_DISALLOW_COPY_AND_ASSIGN(NounTypeInferenceHelper);
 };
 
-}  // namespace maxwell
+}  // namespace modular

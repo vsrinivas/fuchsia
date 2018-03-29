@@ -71,6 +71,14 @@ source_set("clone") {
   ]
 }
 
+source_set("equals") {
+  sources = [
+    "equals.h",
+  ]
+  public_deps = [
+    "//peridot/public/lib:fidl",
+  ]
+}
 
 source_set("scope") {
   sources = [

@@ -31,7 +31,7 @@ void XdrEntry(modular::XdrContext* const xdr,
 }  // namespace
 
 bool ModuleManifestEntryFromJson(const std::string& json,
-                                 modular::ModuleManifestPtr* entry) {
+                                 modular::ModuleManifest* entry) {
   rapidjson::Document doc;
   // Schema validation of the JSON is happening at publish time. By the time we
   // get here, we assume it's valid manifest JSON.
@@ -52,10 +52,11 @@ bool ModuleManifestEntryFromJson(const std::string& json,
   return true;
 }
 
-void ModuleManifestEntryToJson(const modular::ModuleManifestPtr& entry,
+void ModuleManifestEntryToJson(const modular::ModuleManifest& entry,
                                std::string* json) {
   rapidjson::Document doc;
-  modular::ModuleManifestPtr local_entry = entry.Clone();
+  modular::ModuleManifest local_entry;
+  fidl::Clone(entry, &local_entry);
   modular::XdrWrite(&doc, &local_entry, XdrEntry);
 
   *json = JsonValueToPrettyString(doc);

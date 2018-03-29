@@ -51,6 +51,7 @@ source_set("story_runner") {
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:equals",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/fidl:proxy",
     "//peridot/lib/fidl:scope",

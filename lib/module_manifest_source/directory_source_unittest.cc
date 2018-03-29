@@ -44,7 +44,7 @@ class DirectoryModuleManifestSourceTest : public gtest::TestWithMessageLoop {
     repo_.reset(new DirectoryModuleManifestSource(repo_dir_, create_dir));
     repo_->Watch(
         task_runner, [this]() { idle_ = true; },
-        [this](std::string id, modular::ModuleManifestPtr entry) {
+        [this](std::string id, modular::ModuleManifest entry) {
           entries_.push_back(std::move(entry));
           entry_ids_.push_back(std::move(id));
         },
@@ -68,7 +68,7 @@ class DirectoryModuleManifestSourceTest : public gtest::TestWithMessageLoop {
   std::string repo_dir_;
   std::unique_ptr<DirectoryModuleManifestSource> repo_;
 
-  std::vector<modular::ModuleManifestPtr> entries_;
+  std::vector<modular::ModuleManifest> entries_;
   std::vector<std::string> entry_ids_;
   std::vector<std::string> removed_ids_;
 };
