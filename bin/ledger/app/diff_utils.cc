@@ -258,7 +258,7 @@ void ComputeThreeWayDiff(
     context->handles_count += number_of_values;
 
     DiffEntry diff_entry;
-    convert::ToArray(key, &diff_entry.key);
+    diff_entry.key = convert::ToArray(key);
     diff_entry.base =
         GetValueFromEntry(storage, change.base, waiter->NewCallback());
     diff_entry.left =

@@ -86,7 +86,7 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) {
 // Returns the fidl::VectorPtr representation of the given value.
 fidl::VectorPtr<uint8_t> ToArray(ExtendedStringView value);
 
-// Returns the fidl::VectorPtr representation of the given value.
+// Returns the fidl::Array representation of the given value.
 template<size_t N>
 void ToArray(ExtendedStringView value, fidl::Array<uint8_t, N>* out) {
   ZX_ASSERT(value.size() == N);
