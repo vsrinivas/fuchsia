@@ -17,6 +17,7 @@
 namespace btlib {
 namespace gap {
 
+class BrEdrDiscoverySession;
 class LowEnergyDiscoverySession;
 class RemoteDevice;
 
@@ -50,6 +51,7 @@ class AdapterServer : public AdapterServerBase<::bluetooth_host::Adapter> {
   bool requesting_discovery_;
   std::unique_ptr<::btlib::gap::LowEnergyDiscoverySession>
       le_discovery_session_;
+  std::unique_ptr<::btlib::gap::BrEdrDiscoverySession> bredr_discovery_session_;
 
   // The delegate that was set via SetDelegate().
   ::bluetooth_host::AdapterDelegatePtr delegate_;

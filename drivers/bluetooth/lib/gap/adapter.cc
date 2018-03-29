@@ -6,7 +6,6 @@
 
 #include <endian.h>
 
-#include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
@@ -17,9 +16,11 @@
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/random/uuid.h"
 
+#include "bredr_discovery_manager.h"
 #include "low_energy_advertising_manager.h"
 #include "low_energy_connection_manager.h"
 #include "low_energy_discovery_manager.h"
+#include "remote_device.h"
 
 namespace btlib {
 namespace gap {
@@ -416,6 +417,9 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
+  bredr_discovery_manager_ =
+      std::make_unique<BrEdrDiscoveryManager>(hci_, &device_cache_);
+
   // This completes the initialization sequence.
   init_state_ = State::kInitialized;
   callback(true);
@@ -429,6 +433,12 @@ uint64_t Adapter::BuildEventMask() {
       static_cast<uint64_t>(hci::EventMask::kDisconnectionCompleteEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kHardwareErrorEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kLEMetaEvent);
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kInquiryCompleteEvent);
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kInquiryResultEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kInquiryResultWithRSSIEvent);
+  event_mask |=
+      static_cast<uint64_t>(hci::EventMask::kExtendedInquiryResultEvent);
 
   return event_mask;
 }
@@ -450,6 +460,8 @@ void Adapter::CleanUp() {
   init_state_ = State::kNotInitialized;
   state_ = AdapterState();
   transport_closed_cb_ = nullptr;
+
+  bredr_discovery_manager_ = nullptr;
 
   le_advertising_manager_ = nullptr;
   le_connection_manager_ = nullptr;

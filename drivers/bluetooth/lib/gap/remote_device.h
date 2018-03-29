@@ -77,6 +77,19 @@ class RemoteDevice final {
   void SetLEAdvertisingData(int8_t rssi,
                             const common::ByteBuffer& advertising_data);
 
+  // Updates the device based on inquiry result data obtained through a
+  // BR/EDR discovery procedure.
+  void SetInquiryData(const hci::InquiryResult& result);
+
+  // Updates the name of this device.
+  // If Advertising Data has been set, this must match any local name advertised
+  // in that data. (Bluetooth 5.0, Vol 2 E 6.23)
+  void SetName(const std::string& name);
+
+  // Gets the user-friendly name of the device, if it's known.
+  // This can be set by LE Advertising data as well as by SetName.
+  const common::Optional<std::string>& name() const { return name_; }
+
   // Returns the most recently used connection parameters for this device.
   // Returns nullptr if these values are unknown.
   const hci::LEConnectionParameters* le_connection_params() const {
@@ -123,6 +136,24 @@ class RemoteDevice final {
   // Returns a string representation of this device.
   std::string ToString() const;
 
+  // Returns the device class of this device, if it is known.
+  const common::Optional<common::DeviceClass>& device_class() const {
+    return device_class_;
+  }
+
+  // Returns the page scan repettion mode of this device, if known.
+  const common::Optional<hci::PageScanRepetitionMode>&
+  page_scan_repetition_mode() const {
+    return page_scan_repetition_mode_;
+  }
+
+  // Returns the clock offset reported by the device, if known and valid.
+  // Otherwise, the returned clock offset will have the highest-order bit
+  // set, and the rest represent bits 16-2 of CLKNslave-CLK.
+  const common::Optional<uint16_t>& clock_offset() const {
+    return clock_offset_;
+  }
+
  private:
   friend class RemoteDeviceCache;
 
@@ -136,9 +167,14 @@ class RemoteDevice final {
   TechnologyType technology_;
   ConnectionState connection_state_;
   common::DeviceAddress address_;
+  common::Optional<std::string> name_;
   bool connectable_;
   bool temporary_;
   int8_t rssi_;
+
+  common::Optional<common::DeviceClass> device_class_;
+  common::Optional<hci::PageScanRepetitionMode> page_scan_repetition_mode_;
+  common::Optional<uint16_t> clock_offset_;
 
   // TODO(armansito): Store device name and remote features.
   // TODO(armansito): Store discovered service UUIDs.

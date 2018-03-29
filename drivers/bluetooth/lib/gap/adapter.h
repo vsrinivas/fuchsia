@@ -28,6 +28,8 @@ class Transport;
 
 namespace gap {
 
+class BrEdrDiscoveryManager;
+
 class LowEnergyAdvertisingManager;
 class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
@@ -93,6 +95,12 @@ class Adapter final {
 
   // Returns this Adapter's remote device cache.
   const RemoteDeviceCache& device_cache() const { return device_cache_; }
+
+  // Returns this Adapter's BR/EDR discovery manager.
+  BrEdrDiscoveryManager* bredr_discovery_manager() const {
+    FXL_DCHECK(bredr_discovery_manager_);
+    return bredr_discovery_manager_.get();
+  }
 
   // Returns this Adapter's LE discovery manager.
   LowEnergyDiscoveryManager* le_discovery_manager() const {
@@ -188,10 +196,13 @@ class Adapter final {
   std::unique_ptr<hci::LowEnergyAdvertiser> hci_le_advertiser_;
   std::unique_ptr<hci::LowEnergyConnector> hci_le_connector_;
 
-  // Objects that perform BLE procedures.
+  // Objects that perform LE procedures.
   std::unique_ptr<LowEnergyDiscoveryManager> le_discovery_manager_;
   std::unique_ptr<LowEnergyConnectionManager> le_connection_manager_;
   std::unique_ptr<LowEnergyAdvertisingManager> le_advertising_manager_;
+
+  // Objects that perform BR/EDR procedures.
+  std::unique_ptr<BrEdrDiscoveryManager> bredr_discovery_manager_;
 
   // This must remain the last member to make sure that all weak pointers are
   // invalidating before other members are destroyed.

@@ -93,10 +93,9 @@ enum PairRequestType {
   CONSENT = 3;
 };
 
-// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device discovered
-// during general discovery.
+// Represents a remote BR/EDR, LE, or dual-mode BR/EDR/LE device.
 struct RemoteDevice {
-  // UUID that uniquely identifies this device on the current system.
+  // Uniquely identifies this device on the current system.
   string identifier;
 
   // Bluetooth device address that identifies this remote device. Clients

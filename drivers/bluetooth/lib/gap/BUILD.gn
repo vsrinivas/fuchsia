@@ -10,6 +10,8 @@ static_library("gap") {
     "adapter_state.h",
     "advertising_data.cc",
     "advertising_data.h",
+    "bredr_discovery_manager.cc",
+    "bredr_discovery_manager.h",
     "discovery_filter.cc",
     "discovery_filter.h",
     "gap.h",
@@ -46,6 +48,7 @@ source_set("tests") {
   sources = [
     "adapter_unittest.cc",
     "advertising_data_unittest.cc",
+    "bredr_discovery_manager_unittest.cc",
     "discovery_filter_unittest.cc",
     "low_energy_advertising_manager_unittest.cc",
     "low_energy_connection_manager_unittest.cc",

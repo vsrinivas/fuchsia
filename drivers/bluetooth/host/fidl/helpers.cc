@@ -119,10 +119,12 @@ Status NewFidlError(::bluetooth::ErrorCode error_code,
 
   ::btlib::gap::AdvertisingData adv_data;
   if (!::btlib::gap::AdvertisingData::FromBytes(device.advertising_data(),
-                                                &adv_data))
-    return nullptr;
+                                                &adv_data)) {
+    fidl_device->service_uuids.resize(0);
+    return fidl_device;
+  }
 
-  std::unordered_set<::btlib::common::UUID> uuids = adv_data.service_uuids();
+  const auto& uuids = adv_data.service_uuids();
 
   // |service_uuids| is not a nullable field, so we need to assign something to
   // it.

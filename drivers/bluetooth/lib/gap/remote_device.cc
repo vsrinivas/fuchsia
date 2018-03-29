@@ -30,6 +30,8 @@ std::string ConnectionStateToString(RemoteDevice::ConnectionState state) {
   return "(unknown)";
 }
 
+constexpr uint16_t kClockOffsetValidBitMask = 0x8000;
+
 }  // namespace
 
 RemoteDevice::RemoteDevice(const std::string& identifier,
@@ -77,6 +79,18 @@ void RemoteDevice::SetLEAdvertisingData(
   }
 
   advertising_data.Copy(&advertising_data_buffer_);
+}
+
+void RemoteDevice::SetInquiryData(const hci::InquiryResult& result) {
+  FXL_DCHECK(address_.value() == result.bd_addr);
+
+  clock_offset_ = le16toh(kClockOffsetValidBitMask | result.clock_offset);
+  page_scan_repetition_mode_ = result.page_scan_repetition_mode;
+  device_class_ = result.class_of_device;
+}
+
+void RemoteDevice::SetName(const std::string& name) {
+  name_ = name;
 }
 
 bool RemoteDevice::TryMakeNonTemporary() {
