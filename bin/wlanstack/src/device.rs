@@ -91,13 +91,13 @@ impl DeviceManager {
     }
 
     /// Creates an interface on the phy with the given id.
-    pub fn create_iface(&mut self, phy_id: u16, role: wlan::MacRole) -> Box<Future<Item = u16, Error = zx::Status> + Send> {
+    pub fn create_iface(&mut self, phy_id: u16, role: wlan::MacRole) -> impl Future<Item = u16, Error = zx::Status> + Send {
         let phy = match self.phys.get(&phy_id) {
             Some(p) => p,
-            None => return Box::new(future::err(zx::Status::INVALID_ARGS)),
+            None => return future::err(zx::Status::INVALID_ARGS).left(),
         };
         let mut req = wlan::CreateIfaceRequest { role };
-        Box::new(phy.proxy.create_iface(&mut req)
+        phy.proxy.create_iface(&mut req)
             .map_err(|_| zx::Status::IO)
             .and_then(|resp| {
             if let Ok(()) = zx::Status::ok(resp.status) {
@@ -105,7 +105,7 @@ impl DeviceManager {
             } else {
                 future::err(zx::Status::from_raw(resp.status))
             }
-        }))
+        }).right()
     }
 
     /// Destroys an interface with the given ids.
