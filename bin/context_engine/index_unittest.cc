@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/context_engine/index.h"
+#include <fuchsia/cpp/modular.h>
 #include "gtest/gtest.h"
 #include "lib/context/cpp/formatting.h"
-#include "lib/context/fidl/context_engine.fidl.h"
+#include "lib/fidl/cpp/clone.h"
 
-namespace maxwell {
+namespace modular {
 namespace {
 
 TEST(IndexTest, Encode_Basic) {
@@ -41,34 +42,34 @@ TEST(IndexTest, Encode_Differences) {
   auto kStory = ContextValueType::STORY;
   // Encoding two entirely different ContextMetadata structs should produce
   // two non-intersecting sets of encodings.
-  auto meta1 = ContextMetadata::New();
-  meta1->story = StoryMetadata::New();
-  meta1->story->id = "story1";
-  meta1->story->focused = FocusedState::New();
-  meta1->story->focused->state = FocusedState::State::FOCUSED;
-  meta1->mod = ModuleMetadata::New();
-  meta1->mod->url = "url1";
-  meta1->mod->path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
-  meta1->mod->path.push_back("1");
-  meta1->mod->path.push_back("2");
-  meta1->entity = EntityMetadata::New();
-  meta1->entity->topic = "topic1";
-  meta1->entity->type = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
-  meta1->entity->type.push_back("type1");
-  meta1->entity->type.push_back("type2");
+  ContextMetadata meta1;
+  meta1.story = StoryMetadata::New();
+  meta1.story->id = "story1";
+  meta1.story->focused = FocusedState::New();
+  meta1.story->focused->state = State::FOCUSED;
+  meta1.mod = ModuleMetadata::New();
+  meta1.mod->url = "url1";
+  meta1.mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.mod->path.push_back("1");
+  meta1.mod->path.push_back("2");
+  meta1.entity = EntityMetadata::New();
+  meta1.entity->topic = "topic1";
+  meta1.entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.entity->type.push_back("type1");
+  meta1.entity->type.push_back("type2");
 
   auto meta2 = ContextMetadata::New();
   meta2->story = StoryMetadata::New();
   meta2->story->id = "story2";
   meta2->story->focused = FocusedState::New();
-  meta2->story->focused->state = FocusedState::State::NOT_FOCUSED;
+  meta2->story->focused->state = State::NOT_FOCUSED;
   meta2->mod = ModuleMetadata::New();
   meta2->mod->url = "url2";
-  meta2->mod->path = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+  meta2->mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
   meta2->mod->path.push_back("2");
   meta2->entity = EntityMetadata::New();
   meta2->entity->topic = "topic2";
-  meta2->entity->type = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
+  meta2->entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
   meta2->entity->type.push_back("type3");
   meta2->entity->type.push_back("type4");
   meta2->entity->type.push_back("type5");
@@ -89,7 +90,7 @@ TEST(IndexTest, Encode_Differences) {
 
   // If we start changing some values to be equal, we should see encoded values
   // included.
-  meta2->story->focused->state = FocusedState::State::FOCUSED;
+  meta2->story->focused->state = State::FOCUSED;
   meta2->entity->type->at(1) = "type2";
 
   encoded1 = internal::EncodeMetadataAndType(kEntity, meta1);
@@ -110,14 +111,14 @@ TEST(IndexTest, AddRemoveQuery) {
   // query results for a subset of fields, and infer that the same behavior
   // would happen for other fields.
   ContextIndex index;
-  auto meta1 = ContextMetadata::New();
-  meta1->story = StoryMetadata::New();
-  meta1->story->id = "story1";
-  meta1->entity = EntityMetadata::New();
-  meta1->entity->topic = "topic1";
-  meta1->entity->type = f1dl::VectorPtr<f1dl::StringPtr>::New(0);
-  meta1->entity->type.push_back("type1");
-  meta1->entity->type.push_back("type2");
+  ContextMetadata meta1;
+  meta1.story = StoryMetadata::New();
+  meta1.story->id = "story1";
+  meta1.entity = EntityMetadata::New();
+  meta1.entity->topic = "topic1";
+  meta1.entity->type = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  meta1.entity->type.push_back("type1");
+  meta1.entity->type.push_back("type2");
 
   index.Add("e1", kEntity, meta1);
 
@@ -151,8 +152,8 @@ TEST(IndexTest, AddRemoveQuery) {
   EXPECT_TRUE(res.find("e1") != res.end());
 
   // Add a new entity.
-  auto meta2 = meta1->Clone();
-  meta2->entity->type.push_back("type3");
+  auto meta2 = fidl::Clone(meta1);
+  meta2.entity->type.push_back("type3");
   index.Add("e2", kEntity, meta2);
 
   res.clear();
@@ -184,4 +185,4 @@ TEST(IndexTest, AddRemoveQuery) {
 }
 
 }  // namespace
-}  // namespace maxwell
+}  // namespace modular
