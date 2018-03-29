@@ -8,6 +8,13 @@ When describing the location of buttons, pins and other items on the board,
 we will refer to the side with the USB, ethernet and HDMI connectors as the front of the board
 and the opposite side the back of the board.
 
+## Heat Sink
+
+Before you start, you need a heat sink. A passive chip heat sink will allow you
+to run 2 cores out of 8 at full speed before reaching 80C, the critical
+temperature at which cores have to be throttled down.
+
+
 ## Serial Console
 
 The debug UART for the serial console is exposed on the 40 pin header at the back of the board.
@@ -24,10 +31,12 @@ these correspond to pins 17 through 19.
 ## Buttons
 
 The VIM and VIM2 have 3 buttons on the left side of the board.
-The front button is the reset button. The other two buttons are general purpose,
-but the back button can also be used for entering flashing mode.
-If the back button is held down while the board is reset or power cycled,
-the bootloader will enter flashing mode instead of booting the kernel normally.
+On the board schematic, SW1 (also labelled 'R') is the switch closest to the USB
+plug. This is the reset switch. The other two switches are general purpose,
+SW3 (farthest away from the USB plug, labelled P on the schematic) can
+be used for entering flashing mode.  If SW3 is held down while the
+board is reset or power cycled, the bootloader will enter flashing mode
+instead of booting the kernel normally.
 
 ## Preparing the Bootloader
 
@@ -53,10 +62,11 @@ saveenv
 ```
 
 After resetting the board again, the board should enter fastboot mode when booting
-with the back button depressed.
-Then the board can be flashed with the Android fastboot tool.
+if you press SW3 for long enough (first you will see "detect upgrade key" on the
+serial console and if you hold it longer, you will see "USB RESET/SPEED ENUM).
+At this point, the board can be flashed with the Android fastboot tool.  
 If the board fails to enter fastboot mode, your board might have an older version of u-boot
-that does not support it.
+that does not support it.  
 In that case you will need to update the u-boot on your board.
 Otherwise, skip ahead to "Building Zircon"
 
@@ -92,18 +102,19 @@ make -j32 arm64
 
 ## Flashing Zircon
 
-First enter fastboot mode by resetting the board with the back button depressed.
+First enter fastboot mode by resetting the board with SW3 depressed. If you want
+to flash zedboot instead of zircon, please add '-m' on the command line.
 Then:
 
 ### VIM
 
 ```
-scripts/flash-vim
+scripts/flash-vim [-m]
 ```
 
 ### VIM2
 
 ```
-scripts/flash-vim2
+scripts/flash-vim2 [-m]
 ```
 
