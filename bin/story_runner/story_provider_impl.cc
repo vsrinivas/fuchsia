@@ -216,8 +216,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
 
   void Cont1(FlowToken flow) {
     controller_ = std::make_unique<StoryControllerImpl>(
-        story_id_, story_provider_impl_->ledger_client_,
-        std::move(story_page_id_.id), story_provider_impl_);
+        story_id_, story_provider_impl_->ledger_client_, story_page_id_,
+        story_provider_impl_);
     auto create_link_info = CreateLinkInfo::New();
     create_link_info->initial_data = std::move(root_json_);
 
@@ -388,7 +388,7 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
     struct StoryControllerImplContainer container;
     container.impl = std::make_unique<StoryControllerImpl>(
         story_id_, story_provider_impl_->ledger_client_,
-        story_data_->story_page_id->id, story_provider_impl_);
+        *story_data_->story_page_id, story_provider_impl_);
     container.impl->Connect(std::move(request_));
     container.current_info = CloneOptional(story_data_->story_info);
     story_controller_impls_->emplace(story_id_, std::move(container));
