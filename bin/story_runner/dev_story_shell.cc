@@ -47,9 +47,9 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void ConnectView(fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
-                   const fidl::StringPtr& /*view_id*/,
-                   const fidl::StringPtr& /*parent_id*/,
+  void ConnectView(fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
+                   fidl::StringPtr /*view_id*/,
+                   fidl::StringPtr /*parent_id*/,
                    modular::SurfaceRelationPtr /*surface_relation*/,
                    modular::ModuleManifestPtr /*module_manifest*/) override {
     if (view_) {
@@ -60,19 +60,19 @@ class DevStoryShellApp : public modular::SingleServiceApp<modular::StoryShell> {
   }
 
   // |StoryShell|
-  void FocusView(const fidl::StringPtr& /*view_id*/,
-                 const fidl::StringPtr& /*relative_view_id*/) override {}
+  void FocusView(fidl::StringPtr /*view_id*/,
+                 fidl::StringPtr /*relative_view_id*/) override {}
 
   // |StoryShell|
-  void DefocusView(const fidl::StringPtr& /*view_id*/,
+  void DefocusView(fidl::StringPtr /*view_id*/,
                    DefocusViewCallback callback) override {
     callback();
   }
 
   // |StoryShell|
   void AddContainer(
-      const fidl::StringPtr& /*container_name*/,
-      const fidl::StringPtr& /*parent_id*/,
+      fidl::StringPtr /*container_name*/,
+      fidl::StringPtr /*parent_id*/,
       modular::SurfaceRelationPtr /* relation */,
       fidl::VectorPtr<modular::ContainerLayoutPtr> /*layout*/,
       fidl::VectorPtr<modular::ContainerRelationEntryPtr> /* relationships */,
