@@ -5,6 +5,7 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
@@ -12,7 +13,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/fidl/serialization_size.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
@@ -42,14 +42,13 @@ class Watcher : public ledger::PageWatcher {
   uint changes_seen = 0;
   ledger::ResultState last_result_state_;
   ledger::PageSnapshotPtr last_snapshot_;
-  ledger::PageChangePtr last_page_change_;
+  ledger::PageChange last_page_change_;
 
  private:
   // PageWatcher:
   void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
                 OnChangeCallback callback) override {
-    FXL_DCHECK(page_change);
     changes_seen++;
     last_result_state_ = result_state;
     last_page_change_ = std::move(page_change);

@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
@@ -15,7 +16,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/bin/ledger/tests/integration/test_utils.h"
@@ -43,14 +43,13 @@ class Watcher : public ledger::PageWatcher {
 
   uint changes_seen = 0;
   ledger::PageSnapshotPtr last_snapshot_;
-  ledger::PageChangePtr last_page_change_;
+  ledger::PageChange last_page_change_;
 
  private:
   // PageWatcher:
   void OnChange(ledger::PageChange page_change,
                 ledger::ResultState result_state,
                 OnChangeCallback callback) override {
-    FXL_DCHECK(page_change);
     FXL_DCHECK(result_state == ledger::ResultState::COMPLETED)
         << "Handling OnChange pagination not implemented yet";
     changes_seen++;

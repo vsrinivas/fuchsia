@@ -54,7 +54,7 @@ class LedgerAppInstanceImpl final
 
    private:
     ledger::Environment environment_;
-    ledger_internal::LedgerRepositoryFactoryImpl factory_impl_;
+    ledger::LedgerRepositoryFactoryImpl factory_impl_;
     fidl::Binding<ledger_internal::LedgerRepositoryFactory> factory_binding_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryFactoryContainer);
