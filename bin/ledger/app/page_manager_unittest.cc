@@ -9,6 +9,7 @@
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
@@ -36,7 +37,7 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
 
 std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
   std::string value;
-  bool status = fsl::StringFromVmo(vmo, &value);
+  bool status = fsl::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
   return value;
 }
@@ -235,7 +236,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   // The page shouldn't be bound until sync backlog is downloaded.
   EXPECT_TRUE(RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(200)));
 
-  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](ledger::PageId id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -258,7 +259,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
                         callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](ledger::PageId id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -292,7 +293,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
                         callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](ledger::PageId id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -359,7 +360,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
   // The page should be bound immediately.
   RunLoop();
   ASSERT_EQ(Status::OK, status);
-  page->GetId([this, &called](fidl::VectorPtr<uint8_t> id) {
+  page->GetId([this, &called](ledger::PageId id) {
     called = true;
     message_loop_.PostQuitTask();
   });
@@ -381,7 +382,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  PageDebugPtr page_debug;
+  ledger_internal::PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -395,7 +396,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads1;
+  fidl::VectorPtr<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
   RunLoop();
@@ -410,14 +411,15 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads2;
+  fidl::VectorPtr<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
-  EXPECT_NE(convert::ToString(heads1->at(0)), convert::ToString(heads2->at(0)));
+  EXPECT_NE(convert::ToString(heads1->at(0).id),
+            convert::ToString(heads2->at(0).id));
 
   PageSnapshotPtr snapshot1;
   page_debug->GetSnapshot(std::move(heads1->at(0)), snapshot1.NewRequest(),
@@ -431,7 +433,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<EntryPtr> expected_entries1;
+  fidl::VectorPtr<Entry> expected_entries1;
   fidl::VectorPtr<uint8_t> next_token;
   snapshot1->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
@@ -439,20 +441,20 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, expected_entries1->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0)->key));
-  EXPECT_EQ(value1, ToString(expected_entries1->at(0)->value));
+  EXPECT_EQ(key1, convert::ToString(expected_entries1->at(0).key));
+  EXPECT_EQ(value1, ToString(expected_entries1->at(0).value));
 
-  fidl::VectorPtr<EntryPtr> expected_entries2;
+  fidl::VectorPtr<Entry> expected_entries2;
   snapshot2->GetEntries(nullptr, nullptr,
                         callback::Capture(MakeQuitTask(), &status,
                                           &expected_entries2, &next_token));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(2u, expected_entries2->size());
-  EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0)->key));
-  EXPECT_EQ(value1, ToString(expected_entries2->at(0)->value));
-  EXPECT_EQ(key2, convert::ToString(expected_entries2->at(1)->key));
-  EXPECT_EQ(value2, ToString(expected_entries2->at(1)->value));
+  EXPECT_EQ(key1, convert::ToString(expected_entries2->at(0).key));
+  EXPECT_EQ(value1, ToString(expected_entries2->at(0).value));
+  EXPECT_EQ(key2, convert::ToString(expected_entries2->at(1).key));
+  EXPECT_EQ(value2, ToString(expected_entries2->at(1).value));
 }
 
 TEST_F(PageManagerTest, GetCommit) {
@@ -468,7 +470,7 @@ TEST_F(PageManagerTest, GetCommit) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  PageDebugPtr page_debug;
+  ledger_internal::PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
   RunLoop();
@@ -482,7 +484,7 @@ TEST_F(PageManagerTest, GetCommit) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads1;
+  fidl::VectorPtr<ledger_internal::CommitId> heads1;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads1));
   RunLoop();
@@ -497,26 +499,24 @@ TEST_F(PageManagerTest, GetCommit) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  fidl::VectorPtr<fidl::VectorPtr<uint8_t>> heads2;
+  fidl::VectorPtr<ledger_internal::CommitId> heads2;
   page_debug->GetHeadCommitsIds(
       callback::Capture(MakeQuitTask(), &status, &heads2));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(1u, heads2->size());
 
-  ledger::CommitPtr commit_struct = ledger::Commit::New();
-  fidl::VectorPtr<uint8_t> currHeadCommit = heads2->at(0).Clone();
+  ledger_internal::CommitPtr commit_struct;
+  ledger_internal::CommitId currHeadCommit = fidl::Clone(heads2->at(0));
   page_debug->GetCommit(
       std::move(currHeadCommit),
       callback::Capture(MakeQuitTask(), &status, &commit_struct));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
-  EXPECT_EQ(convert::ToString(heads2->at(0)),
-            convert::ToString(commit_struct->commit_id));
+  EXPECT_EQ(heads2->at(0).id, commit_struct->commit_id.id);
   EXPECT_EQ(1u, commit_struct->parents_ids->size());
   EXPECT_EQ(1u, commit_struct->generation);
-  EXPECT_EQ(convert::ToString(heads1->at(0)),
-            convert::ToString(commit_struct->parents_ids->at(0)));
+  EXPECT_EQ(heads1->at(0).id, commit_struct->parents_ids->at(0).id);
 }
 
 TEST_F(PageManagerTest, GetCommitError) {
@@ -532,15 +532,15 @@ TEST_F(PageManagerTest, GetCommitError) {
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  PageDebugPtr page_debug;
+  ledger_internal::PageDebugPtr page_debug;
   page_manager.BindPageDebug(page_debug.NewRequest(),
                              callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   EXPECT_EQ(Status::OK, status);
 
-  ledger::CommitPtr commit_struct = ledger::Commit::New();
+  ledger_internal::CommitPtr commit_struct;
   page_debug->GetCommit(
-      convert::ToArray("fake_commit_id"),
+      {convert::ToArray("fake_commit_id")},
       callback::Capture(MakeQuitTask(), &status, &commit_struct));
   RunLoop();
   EXPECT_EQ(Status::INVALID_ARGUMENT, status);
