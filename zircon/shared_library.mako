@@ -123,12 +123,14 @@ sdk_atom("${data.name}_sdk") {
   shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
 
   files = [
+    % if data.with_sdk_headers:
     % for dest, source in sorted(data.includes.iteritems()):
     {
       source = "${source}"
       dest = "include/${dest}"
     },
     % endfor
+    % endif
     {
       source = "$shared_out_dir/${data.lib_name}"
       dest = "lib/${data.lib_name}"
