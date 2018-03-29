@@ -151,22 +151,22 @@ class DevUserShellApp : modular::StoryWatcher,
   }
 
   // |StoryWatcher|
-  void OnModuleAdded(modular::ModuleDataPtr /*module_data*/) override {}
+  void OnModuleAdded(modular::ModuleData /*module_data*/) override {}
 
   // |NextListener|
   void OnNextResults(
-      fidl::VectorPtr<modular::SuggestionPtr> suggestions) override {
+      fidl::VectorPtr<modular::Suggestion> suggestions) override {
     FXL_VLOG(4) << "DevUserShell/NextListener::OnNextResults()";
     for (auto& suggestion : *suggestions) {
-      FXL_LOG(INFO) << "  " << suggestion->uuid << " "
-                    << suggestion->display->headline;
+      FXL_LOG(INFO) << "  " << suggestion.uuid << " "
+                    << suggestion.display.headline;
     }
   }
 
   // |InterruptionListener|
-  void OnInterrupt(modular::SuggestionPtr suggestion) override {
+  void OnInterrupt(modular::Suggestion suggestion) override {
     FXL_VLOG(4) << "DevUserShell/InterruptionListener::OnInterrupt() "
-                << suggestion->uuid;
+                << suggestion.uuid;
   }
 
   // |NextListener|
