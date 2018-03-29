@@ -7,6 +7,7 @@
 #include <fuchsia/cpp/component.h>
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 
 namespace modular {
@@ -27,17 +28,18 @@ TEST_F(UserControllerImplTest, StartUserRunner) {
   bool callback_called = false;
   launcher.RegisterApplication(
       url, [&callback_called](
-               component::ApplicationLaunchInfoPtr launch_info,
+               component::ApplicationLaunchInfo launch_info,
                fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         callback_called = true;
       });
 
   UserControllerPtr user_controller_ptr;
   UserControllerImpl impl(
-      &launcher, app_config, app_config, app_config,
-      std::move(token_provider_factory_ptr), nullptr /* account */,
-      nullptr /* view_owner_request */, nullptr /* device_shell_services */,
-      user_controller_ptr.NewRequest(), nullptr /* done_callback */);
+      &launcher, CloneStruct(app_config), CloneStruct(app_config),
+      CloneStruct(app_config), std::move(token_provider_factory_ptr),
+      nullptr /* account */, nullptr /* view_owner_request */,
+      nullptr /* device_shell_services */, user_controller_ptr.NewRequest(),
+      nullptr /* done_callback */);
 
   EXPECT_TRUE(callback_called);
 }

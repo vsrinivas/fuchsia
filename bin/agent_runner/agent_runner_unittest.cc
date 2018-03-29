@@ -6,19 +6,19 @@
 
 #include <fs/service.h>
 
-#include "gtest/gtest.h"
-#include <fuchsia/cpp/modular.h>
-#include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include "gtest/gtest.h"
+#include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/fake_agent_runner_storage.h"
 #include "peridot/lib/testing/fake_application_launcher.h"
 #include "peridot/lib/testing/mock_base.h"
@@ -36,7 +36,7 @@ class AgentRunnerTest : public TestWithLedger {
     TestWithLedger::SetUp();
 
     mqm_.reset(new MessageQueueManager(
-        ledger_client(), to_array("0123456789123456"), "/tmp/test_mq_data"));
+        ledger_client(), MakePageId("0123456789123456"), "/tmp/test_mq_data"));
     entity_provider_runner_.reset(new EntityProviderRunner(nullptr));
     agent_runner_.reset(
         new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
@@ -66,8 +66,8 @@ class AgentRunnerTest : public TestWithLedger {
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
   std::unique_ptr<AgentRunner> agent_runner_;
 
-  auth::TokenProviderFactoryPtr token_provider_factory_;
-  maxwell::UserIntelligenceProviderPtr ui_provider_;
+  modular_auth::TokenProviderFactoryPtr token_provider_factory_;
+  modular::UserIntelligenceProviderPtr ui_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AgentRunnerTest);
 };
@@ -104,15 +104,15 @@ class MyDummyAgent : Agent,
   void Wait(WaitCallback callback) override { ++counts["Wait"]; }
 
   // |Agent|
-  void Connect(const fidl::StringPtr& /*requestor_url*/,
+  void Connect(fidl::StringPtr /*requestor_url*/,
                fidl::InterfaceRequest<component::ServiceProvider> /*services*/)
       override {
     ++counts["Connect"];
   }
 
   // |Agent|
-  void RunTask(const fidl::StringPtr& /*task_id*/,
-               const RunTaskCallback& /*callback*/) override {
+  void RunTask(fidl::StringPtr /*task_id*/,
+               RunTaskCallback /*callback*/) override {
     ++counts["RunTask"];
   }
 
@@ -134,10 +134,10 @@ TEST_F(AgentRunnerTest, ConnectToAgent) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent, &agent_launch_count](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->directory_request), std::move(ctrl));
+            std::move(launch_info.directory_request), std::move(ctrl));
         ++agent_launch_count;
       });
 
@@ -180,10 +180,10 @@ TEST_F(AgentRunnerTest, AgentController) {
   launcher()->RegisterApplication(
       kMyAgentUrl,
       [&dummy_agent](
-          component::ApplicationLaunchInfoPtr launch_info,
+          component::ApplicationLaunchInfo launch_info,
           fidl::InterfaceRequest<component::ApplicationController> ctrl) {
         dummy_agent = std::make_unique<MyDummyAgent>(
-            std::move(launch_info->directory_request), std::move(ctrl));
+            std::move(launch_info.directory_request), std::move(ctrl));
       });
 
   component::ServiceProviderPtr incoming_services;

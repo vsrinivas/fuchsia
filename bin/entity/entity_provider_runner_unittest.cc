@@ -6,18 +6,16 @@
 
 #include <fs/service.h>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_auth.h>
 #include "gtest/gtest.h"
 #include "lib/agent/cpp/agent_impl.h"
-#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/app/cpp/service_provider_impl.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/modular_auth.h>
-#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_launcher.h"
@@ -154,8 +152,7 @@ class MyEntityProvider : AgentImpl::Delegate,
   }
 
   // |EntityProvider|
-  void GetTypes(fidl::StringPtr cookie,
-                GetTypesCallback callback) override {
+  void GetTypes(fidl::StringPtr cookie, GetTypesCallback callback) override {
     fidl::VectorPtr<fidl::StringPtr> types;
     types.push_back("MyType");
     callback(std::move(types));
@@ -262,8 +259,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   EXPECT_EQ("type1", output_types->at(0));
 
   fidl::StringPtr output_data;
-  entity->GetData(
-      "type1", [&output_data](fidl::StringPtr result) { output_data = result; });
+  entity->GetData("type1", [&output_data](fidl::StringPtr result) {
+    output_data = result;
+  });
   RunLoopUntilWithTimeout([&output_data] { return !output_data.is_null(); });
   EXPECT_EQ("data1", output_data);
 }

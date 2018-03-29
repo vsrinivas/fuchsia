@@ -136,6 +136,7 @@ source_set("unittests") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:fake_application_launcher",
     "//third_party/googletest:gtest",
   ]

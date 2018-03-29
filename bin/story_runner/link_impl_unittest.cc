@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 #include "peridot/bin/story_runner/link_impl.h"
+#include <fuchsia/cpp/modular.h>
 #include "gtest/gtest.h"
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/array.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/fidl/array_to_string.h"
+#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
+#include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_with_ledger.h"
@@ -28,11 +29,11 @@ void XdrLinkChange(XdrContext* const xdr, LinkChange* const data);
 
 namespace {
 
-LinkPathPtr GetTestLinkPath() {
-  LinkPathPtr link_path = LinkPath::New();
-  link_path->module_path.push_back("root");
-  link_path->module_path.push_back("photos");
-  link_path->link_name = "theLinkName";
+LinkPath GetTestLinkPath() {
+  LinkPath link_path;
+  link_path.module_path.push_back("root");
+  link_path.module_path.push_back("photos");
+  link_path.link_name = "theLinkName";
   return link_path;
 }
 
@@ -88,20 +89,21 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
       ++operations_[operation_name];
     });
 
-    auto page_id = to_array("0123456789123456");
+    auto page_id = MakePageId("0123456789123456");
     auto link_path = GetTestLinkPath();
 
     auto create_link_info = GetCreateLinkInfo();
 
-    link_impl_ = std::make_unique<LinkImpl>(ledger_client(), page_id.Clone(),
-                                            link_path->Clone(),
-                                            std::move(create_link_info));
+    link_impl_ =
+        std::make_unique<LinkImpl>(ledger_client(), CloneStruct(page_id),
+                                   link_path, std::move(create_link_info));
 
     link_impl_->Connect(link_.NewRequest(), LinkImpl::ConnectionType::Primary);
 
     ledger_client_peer_ = ledger_client()->GetLedgerClientPeer();
     page_client_peer_ = std::make_unique<PageClientPeer>(
-        ledger_client_peer_.get(), page_id.Clone(), MakeLinkKey(link_path));
+        ledger_client_peer_.get(), CloneStruct(page_id),
+        MakeLinkKey(link_path));
   }
 
   void TearDown() override {
@@ -154,7 +156,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   void ClearCalls() { operations_.clear(); }
 
-  void Notify(const fidl::StringPtr& json) override {
+  void Notify(fidl::StringPtr json) override {
     step_++;
     last_json_notify_ = json;
     continue_();
@@ -295,8 +297,9 @@ TEST_F(LinkImplTest, Erase) {
 
   link_->Set(nullptr, "{ \"value\": 4 }");
 
-  std::vector<std::string> segments{"value"};
-  link_->Erase(fidl::VectorPtr<fidl::StringPtr>::From(segments));
+  fidl::VectorPtr<fidl::StringPtr> segments;
+  segments.push_back("value");
+  link_->Erase(std::move(segments));
 
   bool synced{};
   link_->Sync([&synced] { synced = true; });
@@ -344,7 +347,6 @@ TEST_F(LinkImplTest, SetEntity) {
   });
   EXPECT_TRUE(RunLoopUntilWithTimeout([&done] { return done; }));
 }
-
 
 class LinkImplReadOnlyTest : public LinkImplTestBase {
  public:

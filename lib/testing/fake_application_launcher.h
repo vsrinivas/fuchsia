@@ -25,7 +25,7 @@ class FakeApplicationLauncher : public component::ApplicationLauncher {
 
   // Registers an application located at "url" with a connector. When someone
   // tries to CreateApplication() with this |url|, the supplied |connector| is
-  // called with the the ApplicationLaunchInfoPtr and associated
+  // called with the the ApplicationLaunchInfo and associated
   // ApplicationController request. The connector may implement the
   // |ApplicationLaunchInfo.services| and |ApplicationController| interfaces to
   // communicate with its connector and listen for application closing signals

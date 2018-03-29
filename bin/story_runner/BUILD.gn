@@ -119,6 +119,8 @@ source_set("chain_impl_unittest") {
 
   deps = [
     ":story_runner",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fsl",
     "//garnet/lib/gtest",
     "//peridot/lib/testing:story_controller_mock",
     "//third_party/googletest:gtest",
@@ -147,6 +149,7 @@ source_set("link_impl_unittest") {
 
   deps = [
     ":story_runner",
+    "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib/entity/cpp:json",
     "//third_party/googletest:gtest",
