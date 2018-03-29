@@ -257,6 +257,24 @@ static bool time_test() {
     ASSERT_EQ((zx::time::infinite() - zx::time::infinite()).get(), 0);
     ASSERT_EQ((zx::time() + zx::duration::infinite()).get(), ZX_TIME_INFINITE);
 
+    zx::duration d(0u);
+    d += zx::nsec(19);
+    ASSERT_EQ(d.get(), ZX_NSEC(19));
+    d -= zx::nsec(19);
+    ASSERT_EQ(d.get(), ZX_NSEC(0));
+
+    d = zx::min(1);
+    d *= 19u;
+    ASSERT_EQ(d.get(), ZX_MIN(19));
+    d /= 19u;
+    ASSERT_EQ(d.get(), ZX_MIN(1));
+
+    zx::time t(0u);
+    t += zx::msec(19);
+    ASSERT_EQ(t.get(), ZX_MSEC(19));
+    t -= zx::msec(19);
+    ASSERT_EQ(t.get(), ZX_MSEC(0));
+
     // Just a smoke test
     ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
 

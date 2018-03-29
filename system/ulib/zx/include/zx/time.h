@@ -19,15 +19,19 @@ public:
 
     constexpr zx_duration_t get() const { return value_; }
 
-    constexpr duration operator-(duration other) const {
-        return duration(value_ - other.value_);
-    }
-
     constexpr duration operator+(duration other) const {
         return duration(value_ + other.value_);
     }
 
-    constexpr duration operator/(int64_t divisor) const {
+    constexpr duration operator-(duration other) const {
+        return duration(value_ - other.value_);
+    }
+
+    constexpr duration operator*(uint64_t multiplier) const {
+        return duration(value_ * multiplier);
+    }
+
+    constexpr duration operator/(uint64_t divisor) const {
         return duration(value_ / divisor);
     }
 
@@ -35,8 +39,24 @@ public:
         return value_ / other.value_;
     }
 
-    constexpr duration operator*(int64_t multiplier) const {
-        return duration(value_ * multiplier);
+    duration& operator+=(duration other) {
+        value_ += other.value_;
+        return *this;
+    }
+
+    duration& operator-=(duration other) {
+      value_ -= other.value_;
+      return *this;
+    }
+
+    duration& operator*=(uint64_t multiplier) {
+        value_ *= multiplier;
+        return *this;
+    }
+
+    duration& operator/=(uint64_t divisor) {
+      value_ /= divisor;
+      return *this;
     }
 
     constexpr bool operator==(duration other) const { return value_ == other.value_; }
@@ -72,6 +92,16 @@ public:
 
     constexpr time operator-(duration delta) const {
         return time(value_ - delta.get());
+    }
+
+    time& operator+=(duration delta) {
+      value_ += delta.get();
+      return *this;
+    }
+
+    time& operator-=(duration delta) {
+      value_ -= delta.get();
+      return *this;
     }
 
     constexpr bool operator==(time other) const { return value_ == other.value_; }
