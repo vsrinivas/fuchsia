@@ -164,11 +164,10 @@ void SuggestionEngineImpl::NotifyInteraction(
 
     if (suggestion_in_ask) {
       CleanUpPreviousQuery();
+      UpdateRanking();
     } else {
       RemoveNextProposal(suggestion->prototype->source_url, proposal.id);
     }
-
-    UpdateRanking();
   } else {
     FXL_LOG(WARNING) << "Requested suggestion prototype not found. UUID: "
                      << suggestion_uuid;

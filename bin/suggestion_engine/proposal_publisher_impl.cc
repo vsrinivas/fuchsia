@@ -25,12 +25,10 @@ void ProposalPublisherImpl::AddBinding(
 
 void ProposalPublisherImpl::Propose(Proposal proposal) {
   engine_->AddNextProposal(this, std::move(proposal));
-  engine_->UpdateRanking();
 }
 
 void ProposalPublisherImpl::Remove(fidl::StringPtr proposal_id) {
   engine_->RemoveNextProposal(component_url_, proposal_id);
-  engine_->UpdateRanking();
 }
 
 ProposalPublisherImpl::BindingSet::BindingSet(ProposalPublisherImpl* impl)

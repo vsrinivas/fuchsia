@@ -61,6 +61,7 @@ void NextProcessor::AddProposal(const std::string& component_url,
 
   suggestions_.AddSuggestion(suggestion);
   dirty_ = true;
+  UpdateRanking();
 }
 
 void NextProcessor::RemoveProposal(const std::string& component_url,
@@ -80,6 +81,7 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
   NotifyOfProcessingChange(true);
   if (suggestions_.RemoveProposal(component_url, proposal_id)) {
     dirty_ = true;
+    UpdateRanking();
   }
 }
 
