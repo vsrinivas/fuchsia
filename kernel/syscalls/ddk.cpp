@@ -543,7 +543,28 @@ zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
 
 zx_status_t sys_irq_create(zx_handle_t src_obj, uint32_t src_num,
                            uint32_t options, user_out_handle* out_handle) {
+#if ENABLE_NEW_IRQ_API
+    LTRACEF("options 0x%x\n", options);
+
+    // resource not required for virtual interrupts
+    if (!(options & ZX_INTERRUPT_VIRTUAL)) {
+        // TODO(ZX-971): finer grained validation
+        zx_status_t status;
+        if ((status = validate_resource(src_obj, ZX_RSRC_KIND_ROOT)) < 0) {
+            return status;
+        }
+    }
+
+    fbl::RefPtr<Dispatcher> dispatcher;
+    zx_rights_t rights;
+    zx_status_t result = InterruptEventDispatcher::Create(&dispatcher, &rights, src_num, options);
+    if (result != ZX_OK)
+        return result;
+
+    return out_handle->make(fbl::move(dispatcher), rights);
+#else
     return ZX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 zx_status_t sys_irq_bind(zx_handle_t inth, zx_handle_t porth,
@@ -551,22 +572,71 @@ zx_status_t sys_irq_bind(zx_handle_t inth, zx_handle_t porth,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_irq_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
+zx_status_t sys_irq_ack(zx_handle_t handle) {
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t sys_irq_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
+#if ENABLE_NEW_IRQ_API
+    LTRACEF("handle %x\n", handle);
+
+    zx_status_t status;
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WAIT, &interrupt);
+    if (status != ZX_OK)
+        return status;
+
+    //TODO(braval): Check for this error
+    // **ZX_ERR_BAD_STATE** the interrupt object is bound to a port
+
+    zx_time_t timestamp;
+    status = interrupt->WaitForInterrupt(&timestamp);
+    if (status == ZX_OK && out_timestamp)
+        status = out_timestamp.copy_to_user(timestamp);
+    return status;
+#else
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 zx_status_t sys_irq_destroy(zx_handle_t handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
+#if ENABLE_NEW_IRQ_API
+    LTRACEF("handle %x\n", handle);
 
-zx_status_t sys_irq_ack(zx_handle_t handle) {
+    zx_status_t status;
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    status = up->GetDispatcher(handle, &interrupt);
+    if (status != ZX_OK)
+        return status;
+    return interrupt->Destroy();
+#else
     return ZX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 zx_status_t sys_irq_trigger(zx_handle_t handle,
                             uint32_t options,
                             zx_time_t timestamp) {
+#if ENABLE_NEW_IRQ_API
+    LTRACEF("handle %x\n", handle);
+
+    if (options) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status;
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SIGNAL, &interrupt);
+    if (status != ZX_OK)
+        return status;
+
+    return interrupt->UserSignal(timestamp);
+#else
     return ZX_ERR_NOT_SUPPORTED;
+#endif
 }
 
 zx_status_t sys_smc_call(zx_handle_t rsrc_handle,

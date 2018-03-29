@@ -19,6 +19,17 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     device_ = nullptr;
 }
 
+#if ENABLE_NEW_IRQ_API
+pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
+                                                           uint irq_id,
+                                                           void* ctx) {
+    DEBUG_ASSERT(ctx);
+    PciInterruptDispatcher* thiz
+            = reinterpret_cast<PciInterruptDispatcher *>(ctx);
+    thiz->InterruptHandler(true);
+    return PCIE_IRQRET_MASK;
+}
+#else
 pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
                                                            uint irq_id,
                                                            void* ctx) {
@@ -37,6 +48,7 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
     thiz->Signal(SIGNAL_MASK(interrupt->slot), true);
     return PCIE_IRQRET_MASK;
 }
+#endif
 
 zx_status_t PciInterruptDispatcher::Create(
         const fbl::RefPtr<PcieDevice>& device,
@@ -61,6 +73,13 @@ zx_status_t PciInterruptDispatcher::Create(
 
     fbl::AutoLock lock(interrupt_dispatcher->get_lock());
 
+#if ENABLE_NEW_IRQ_API
+    // Register the interrupt
+    zx_status_t status = interrupt_dispatcher->RegisterInterruptHandler_HelperLocked(irq_id,
+                                                                   INTERRUPT_UNMASK_PREWAIT);
+    if (status != ZX_OK)
+        return status;
+#else
     // bind our PCI interrupt
     zx_status_t result = interrupt_dispatcher->AddSlotLocked(ZX_PCI_INTERRUPT_SLOT, irq_id,
                                                              INTERRUPT_UNMASK_PREWAIT);
@@ -72,6 +91,7 @@ zx_status_t PciInterruptDispatcher::Create(
     if (result != ZX_OK)
         return result;
 
+#endif
 
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
     // (if it is maskable) then transfer our dispatcher refererence to the

@@ -13,8 +13,15 @@
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
 public:
+#if ENABLE_NEW_IRQ_API
+    static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher,
+                              zx_rights_t* rights,
+                              uint32_t vector,
+                              uint32_t options);
+#else
     static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
+#endif
 
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
     InterruptEventDispatcher& operator=(const InterruptDispatcher &) = delete;

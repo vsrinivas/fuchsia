@@ -13,6 +13,7 @@
 
 extern zx_handle_t get_root_resource(void);
 
+#if !ENABLE_NEW_IRQ_API
 // Tests support for virtual interrupts
 static bool interrupt_test(void) {
     const uint32_t BOUND_SLOT = 0;
@@ -81,8 +82,45 @@ static bool interrupt_test_multiple(void) {
 
     END_TEST;
 }
-
 BEGIN_TEST_CASE(interrupt_tests)
 RUN_TEST(interrupt_test)
 RUN_TEST(interrupt_test_multiple)
 END_TEST_CASE(interrupt_tests)
+#else
+// Tests support for virtual interrupts
+static bool interrupt_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t virt_interrupt_handle;
+    zx_handle_t virt_interrupt_handle_cancelled;
+    zx_handle_t rsrc = get_root_resource();
+    zx_time_t signaled_timestamp = 12345;
+    zx_time_t timestamp;
+
+    ASSERT_EQ(zx_irq_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL, &virt_interrupt_handle), ZX_OK, "");
+    ASSERT_EQ(zx_irq_create(rsrc, 0, ZX_INTERRUPT_VIRTUAL, &virt_interrupt_handle_cancelled), ZX_OK, "");
+    ASSERT_EQ(zx_irq_create(rsrc, 0, ZX_INTERRUPT_SLOT_USER, &virt_interrupt_handle), ZX_ERR_INVALID_ARGS, "");
+
+    ASSERT_EQ(zx_irq_destroy(virt_interrupt_handle_cancelled), ZX_OK, "");
+    ASSERT_EQ(zx_irq_trigger(virt_interrupt_handle_cancelled, 0, signaled_timestamp), ZX_ERR_CANCELED, "");
+
+    ASSERT_EQ(zx_irq_trigger(virt_interrupt_handle, 0, signaled_timestamp), ZX_OK, "");
+
+    ASSERT_EQ(zx_irq_wait(virt_interrupt_handle_cancelled, &timestamp), ZX_ERR_CANCELED, "");
+    ASSERT_EQ(zx_irq_wait(virt_interrupt_handle, &timestamp), ZX_OK, "");
+    ASSERT_EQ(timestamp, signaled_timestamp, "");
+
+    ASSERT_EQ(zx_irq_trigger(virt_interrupt_handle, 0, signaled_timestamp), ZX_OK, "");
+    ASSERT_EQ(zx_irq_wait(virt_interrupt_handle, NULL), ZX_OK, "");
+
+    ASSERT_EQ(zx_handle_close(virt_interrupt_handle), ZX_OK, "");
+    ASSERT_EQ(zx_handle_close(virt_interrupt_handle_cancelled), ZX_OK, "");
+    ASSERT_EQ(zx_irq_trigger(virt_interrupt_handle, 0, signaled_timestamp), ZX_ERR_BAD_HANDLE, "");
+
+    END_TEST;
+}
+BEGIN_TEST_CASE(interrupt_tests)
+RUN_TEST(interrupt_test)
+END_TEST_CASE(interrupt_tests)
+#endif
+

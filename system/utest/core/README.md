@@ -11,6 +11,7 @@ etc.
 
 ```
 ./scripts/run-zircon-x64 -c userboot=bin/core-tests
+./scripts/run-zircon-arm64 -c userboot=bin/core-tests
 ```
 
 ## Notes

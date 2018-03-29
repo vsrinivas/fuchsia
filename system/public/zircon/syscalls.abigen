@@ -595,7 +595,7 @@ syscall irq_bind
 
 syscall irq_wait blocking
     (handle: zx_handle_t)
-    returns (zx_status_t, out_timestamp: zx_time_t);
+    returns (zx_status_t, out_timestamp: zx_time_t optional);
 
 syscall irq_destroy
     (handle: zx_handle_t)
