@@ -12,6 +12,8 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <kernel/mutex.h>
+#include <kernel/thread.h>
 #include <platform.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,6 +24,9 @@
 #include <unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+// Ensures unittests are not run concurrently.
+static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
 
 /**
  * \brief Function called to dump results
@@ -174,7 +179,32 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
     return passed == testcase->test_cnt;
 }
 
-static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
+// Runs the testcase specified by |arg| and returns 1 if test passes.
+//
+// |arg| is a const unittest_testcase_registration_t*.
+static int run_unittest_thread_entry(void* arg) {
+    const unittest_testcase_registration_t* testcase = arg;
+    return run_unittest(testcase);
+}
+
+// Runs |testcase| in another thread and waits for it to complete.
+//
+// Returns true if the test passed.
+static bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
+    thread_t* t = thread_create("unittest thread", run_unittest_thread_entry, (void*)testcase,
+                                DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    if (!t) {
+        printf("failed to create unittest thread\n");
+        return false;
+    }
+    thread_resume(t);
+    int success = 0;
+    thread_join(t, &success, ZX_TIME_INFINITE);
+    return success;
+}
+
+static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags) {
+    DEBUG_ASSERT(is_mutex_held(&lock));
     if (argc != 2) {
         usage(argv[0].str);
         return 0;
@@ -205,7 +235,8 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
         if (testcase->name) {
             if (run_all || !strcmp(casename, testcase->name)) {
                 chosen++;
-                if (run_unittest(testcase)) {
+
+                if (run_testcase_in_thread(testcase)) {
                     passed++;
                 } else {
                     *fn++ = testcase->name;
@@ -236,6 +267,13 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     free(failed_names);
+    return ret;
+}
+
+static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
+    mutex_acquire(&lock);
+    const int ret = run_unittests_locked(argc, argv, flags);
+    mutex_release(&lock);
     return ret;
 }
 
