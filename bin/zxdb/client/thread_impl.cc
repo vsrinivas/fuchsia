@@ -22,13 +22,33 @@ uint64_t ThreadImpl::GetKoid() const { return koid_; }
 const std::string& ThreadImpl::GetName() const { return name_; }
 debug_ipc::ThreadRecord::State ThreadImpl::GetState() const { return state_; }
 
-void ThreadImpl::Continue() {
-  debug_ipc::ContinueRequest request;
+void ThreadImpl::Pause() {
+  debug_ipc::PauseRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
-  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
+  session()->Send<debug_ipc::PauseRequest, debug_ipc::PauseReply>(
       request,
-      [](const Err& err, debug_ipc::ContinueReply) {});
+      [](const Err& err, debug_ipc::PauseReply) {});
+}
+
+void ThreadImpl::Continue() {
+  debug_ipc::ResumeRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+  request.how = debug_ipc::ResumeRequest::How::kContinue;
+  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+      request,
+      [](const Err& err, debug_ipc::ResumeReply) {});
+}
+
+void ThreadImpl::StepInstruction() {
+  debug_ipc::ResumeRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+  request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
+  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+      request,
+      [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {

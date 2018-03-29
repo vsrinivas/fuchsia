@@ -20,21 +20,37 @@ namespace zxdb {
 
 namespace {
 
+// If the system has at least one running process, returns true. If not,
+// returns false and sets the err.
+//
+// When doing global things like System::Continue(), it will succeed if there
+// are no running prograns (it will successfully continue all 0 processes).
+// This is confusing to the user so this function is used to check first.
+bool VerifySystemHasRunningProcess(System* system, Err* err) {
+  for (const Target* target : system->GetTargets()) {
+    if (target->GetProcess())
+      return true;
+  }
+  *err = Err("No processes are running.");
+  return false;
+}
+
 // continue --------------------------------------------------------------------
 
-const char kContinueShortHelp[] = "continue / c: Continue a suspended thread.";
+const char kContinueShortHelp[] =
+    "continue / c: Continue a suspended thread or process.";
 const char kContinueHelp[] =
-    R"(continue
-
-  Alias: "c"
+    R"(continue / c
 
   When a thread is stopped at an exception or a breakpoint, "continue" will
   continue execution.
 
+  See "pause" to stop a running thread or process.
+
   The behavior will depend upon the context specified.
 
-  - By itself, "continue" will continue all threads of all processes that
-    are currently stopped.
+  - By itself, "continue" will continue all threads of all processes that are
+    currently stopped.
 
   - When a process is specified ("process 2 continue" for an explicit process
     or "process continue" for the current process), only the threads in that
@@ -45,6 +61,10 @@ const char kContinueHelp[] =
     or "thread continue" for the current thread), only that thread will be
     continued. Other threads in that process and other processes currently
     stopped will remain so.
+
+  TODO(brettw) it might be nice to have a --other flag that would continue
+  all threads other than the specified one (which the user might want to step
+  while everything else is going).
 
 Examples
 
@@ -78,22 +98,127 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
       return Err("Process not running, can't continue.");
     process->Continue();
   } else {
-    // Nothing explicitly specified, continue all processes. If there is no
-    // debugged programs, System.Continue() will still work (it will
-    // successfully continue 0 processes) which is confusing to users who may
-    // not realize the process isn't running.
-    bool has_running_target = false;
-    for (const Target* target : context->session()->system().GetTargets()) {
-      if (target->GetProcess()) {
-        has_running_target = true;
-        break;
-      }
-    }
-    if (!has_running_target)
-      return Err("No processes are running to continue.");
+    if (!VerifySystemHasRunningProcess(&context->session()->system(), &err))
+      return err;
     context->session()->system().Continue();
   }
 
+  return Err();
+}
+
+// pause -----------------------------------------------------------------------
+
+const char kPauseShortHelp[] = "pause / pa: Pause a thread or process.";
+const char kPauseHelp[] =
+    R"(pause / pa
+
+  When a thread or process is running, "pause" will stop execution so state
+  can be inspected or the thread single-stepped.
+
+  See "continue" to resume a paused thread or process.
+
+  The behavior will depend upon the context specified.
+
+  - By itself, "pause" will pause all threads of all processes that are
+    currently running.
+
+  - When a process is specified ("process 2 pause" for an explicit process
+    or "process pause" for the current process), only the threads in that
+    process will be paused. Other debugged processes currently running will
+    remain so.
+
+  - When a thread is specified ("thread 1 pause" for an explicit thread
+    or "thread pause" for the current thread), only that thread will be
+    paused. Other threads in that process and other processes currently
+    running will remain so.
+
+  TODO(brettw) it might be nice to have a --other flag that would pause
+  all threads other than the specified one.
+
+Examples
+
+  pa
+  pause
+      Pause all processes and threads.
+
+  pr pa
+  process pause
+  process 4 pause
+      Pause all threads of a process (the current process is implicit if
+      no process index is specified).
+
+  t pa
+  thread pause
+  pr 2 t 4 pa
+  process 2 thread 4 pause
+      Pause only one thread (the current process and thread are implicit
+      if no index is specified).
+)";
+Err DoPause(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({ Noun::kProcess, Noun::kThread });
+  if (err.has_error())
+    return err;
+
+  if (cmd.HasNoun(Noun::kThread)) {
+    cmd.thread()->Pause();
+  } else if (cmd.HasNoun(Noun::kProcess)) {
+    Process* process = cmd.target()->GetProcess();
+    if (!process)
+      return Err("Process not running, can't pause.");
+    process->Pause();
+  } else {
+    if (!VerifySystemHasRunningProcess(&context->session()->system(), &err))
+      return err;
+    context->session()->system().Pause();
+  }
+
+  return Err();
+}
+
+// stepi -----------------------------------------------------------------------
+
+const char kStepiShortHelp[] =
+    "stepi / si: Single-step a thread one machine instruction.";
+const char kStepiHelp[] =
+    R"(stepi / si
+
+  When a thread is stopped, "stepi" will execute one machine instruction and
+  stop the thread again. If the thread is running it will issue an error.
+
+  By default, "stepi" will single-step the current thread. If a thread context
+  is given, the specified thread will be single-stepped. You can't single-step
+  a process.
+
+Examples
+
+  si
+  stepi
+      Step the current thread.
+
+  t 2 si
+  thread 2 stepi
+      Steps thread 2 in the current process.
+
+  pr 3 si
+  process 3 stepi
+      Steps the current thread in process 3 (regardless of which process is
+      the current process).
+
+  pr 3 t 2 si
+  process 3 thread 2 stepi
+      Steps thread 2 in process 3.
+)";
+Err DoStepi(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({ Noun::kProcess, Noun::kThread });
+  if (err.has_error())
+    return err;
+
+  if (!cmd.thread() ||
+      (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
+       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kSuspended))
+    return Err("\"stepi\" requires a suspended or blocked thread to step.");
+
+  cmd.thread()->StepInstruction();
   return Err();
 }
 
@@ -103,6 +228,10 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "c"}, kContinueShortHelp,
                  kContinueHelp);
+  (*verbs)[Verb::kPause] =
+      VerbRecord(&DoPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp);
+  (*verbs)[Verb::kStepi] =
+      VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp);
 }
 
 }  // namespace zxdb

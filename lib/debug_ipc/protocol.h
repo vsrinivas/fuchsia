@@ -25,7 +25,8 @@ struct MsgHeader {
     kLaunch,
     kAttach,
     kDetach,
-    kContinue,
+    kPause,
+    kResume,
     kProcessTree,
     kThreads,
     kReadMemory,
@@ -89,14 +90,33 @@ struct DetachReply {
   uint32_t status = 0;
 };
 
-struct ContinueRequest {
-  // If 0, all debugged processes will be continued.
+struct PauseRequest {
+  // If 0, all threads of all debugged processes will be paused.
+  uint64_t process_koid = 0;
+
+  // If 0, all threads in the given process will be paused.
+  uint64_t thread_koid = 0;
+};
+struct PauseReply {
+};
+
+struct ResumeRequest {
+  enum class How : uint32_t {
+    kContinue = 0,  // Continue execution without stopping.
+    kStepInstruction,  // Step one machine instruction.
+
+    kLast  // Not a real state, used for validation.
+  };
+
+  // If 0, all threads of all debugged processes will be continued.
   uint64_t process_koid = 0;
 
   // If 0, all threads in the given process will be continued.
   uint64_t thread_koid = 0;
+
+  How how = How::kContinue;
 };
-struct ContinueReply {
+struct ResumeReply {
 };
 
 struct ProcessTreeRequest {};

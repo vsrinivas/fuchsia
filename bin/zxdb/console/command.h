@@ -52,8 +52,10 @@ enum class Verb {
   kListProcesses,
   kMemRead,
   kNew,
+  kPause,
   kQuit,
   kRun,
+  kStepi,
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.
   kLast  // Not a real verb, keep last.

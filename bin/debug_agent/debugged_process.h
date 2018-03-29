@@ -26,7 +26,8 @@ class DebuggedProcess {
   zx::process& process() { return process_; }
 
   // IPC handlers.
-  void OnContinue(const debug_ipc::ContinueRequest& request);
+  void OnPause(const debug_ipc::PauseRequest& request);
+  void OnResume(const debug_ipc::ResumeRequest& request);
   void OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
                     debug_ipc::ReadMemoryReply* reply);
   void OnAddOrChangeBreakpoint(

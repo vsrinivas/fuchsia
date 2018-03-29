@@ -31,6 +31,7 @@ class ProcessImpl : public Process {
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
+  void Pause() override;
   void Continue() override;
   void ReadMemory(
       uint64_t address,

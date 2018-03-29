@@ -111,10 +111,10 @@ void WriteReply(const DetachReply& reply,
   writer->WriteUint32(reply.status);
 }
 
-// Continue --------------------------------------------------------------------
+// Pause -----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,
-                 ContinueRequest* request,
+                 PauseRequest* request,
                  uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
@@ -127,10 +127,39 @@ bool ReadRequest(MessageReader* reader,
   return true;
 }
 
-void WriteReply(const ContinueReply& reply,
+void WriteReply(const PauseReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kContinue, transaction_id);
+  writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
+}
+
+// Resume ----------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 ResumeRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  if (!reader->ReadUint64(&request->process_koid))
+    return false;
+  if (!reader->ReadUint64(&request->thread_koid))
+    return false;
+
+  uint32_t how;
+  if (!reader->ReadUint32(&how))
+    return false;
+  if (how >= static_cast<uint32_t>(ResumeRequest::How::kLast))
+    return false;
+  request->how = static_cast<ResumeRequest::How>(how);
+  return true;
+}
+
+void WriteReply(const ResumeReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
 }
 
 // ProcessTree -----------------------------------------------------------------

@@ -159,8 +159,10 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
   if (callback)
     callback(this, issue_err);
 
-  for (auto& observer : observers())
-    observer.DidCreateProcess(this, process_.get());
+  if (state_ == State::kRunning) {
+    for (auto& observer : observers())
+      observer.DidCreateProcess(this, process_.get());
+  }
 }
 
 void TargetImpl::OnDetachReply(const Err& err, uint32_t status,

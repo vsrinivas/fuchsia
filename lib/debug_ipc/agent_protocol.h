@@ -43,11 +43,19 @@ void WriteReply(const DetachReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
-// Continue.
+// Pause.
 bool ReadRequest(MessageReader* reader,
-                 ContinueRequest* request,
+                 PauseRequest* request,
                  uint32_t* transaction_id);
-void WriteReply(const ContinueReply& reply,
+void WriteReply(const PauseReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
+// Resume.
+bool ReadRequest(MessageReader* reader,
+                 ResumeRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const ResumeReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 

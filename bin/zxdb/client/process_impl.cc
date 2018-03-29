@@ -70,12 +70,21 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
   });
 }
 
-void ProcessImpl::Continue() {
-  debug_ipc::ContinueRequest request;
+void ProcessImpl::Pause() {
+  debug_ipc::PauseRequest request;
   request.process_koid = koid_;
   request.thread_koid = 0;  // 0 means all threads.
-  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
-      request, [](const Err& err, debug_ipc::ContinueReply) {});
+  session()->Send<debug_ipc::PauseRequest, debug_ipc::PauseReply>(
+      request, [](const Err& err, debug_ipc::PauseReply) {});
+}
+
+void ProcessImpl::Continue() {
+  debug_ipc::ResumeRequest request;
+  request.process_koid = koid_;
+  request.thread_koid = 0;  // 0 means all threads.
+  request.how = debug_ipc::ResumeRequest::How::kContinue;
+  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+      request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
 void ProcessImpl::ReadMemory(

@@ -70,7 +70,8 @@ class Process : public ClientObject {
   // To get the computed threads, call GetThreads() once the callback runs.
   virtual void SyncThreads(std::function<void()> callback) = 0;
 
-  // Continues execution of all threads in the process.
+  // Applies to all threads in the process.
+  virtual void Pause() = 0;
   virtual void Continue() = 0;
 
   // Reads memory from the debugged process.

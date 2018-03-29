@@ -85,13 +85,23 @@ void SystemImpl::DeleteBreakpoint(Breakpoint* breakpoint) {
   FXL_NOTREACHED();
 }
 
-void SystemImpl::Continue() {
-  debug_ipc::ContinueRequest request;
+void SystemImpl::Pause() {
+  debug_ipc::PauseRequest request;
   request.process_koid = 0;  // 0 means all processes.
   request.thread_koid = 0;   // 0 means all threads.
-  session()->Send<debug_ipc::ContinueRequest, debug_ipc::ContinueReply>(
+  session()->Send<debug_ipc::PauseRequest, debug_ipc::PauseReply>(
       request,
-      std::function<void(const Err&, debug_ipc::ContinueReply)>());
+      std::function<void(const Err&, debug_ipc::PauseReply)>());
+}
+
+void SystemImpl::Continue() {
+  debug_ipc::ResumeRequest request;
+  request.process_koid = 0;  // 0 means all processes.
+  request.thread_koid = 0;   // 0 means all threads.
+  request.how = debug_ipc::ResumeRequest::How::kContinue;
+  session()->Send<debug_ipc::ResumeRequest, debug_ipc::ResumeReply>(
+      request,
+      std::function<void(const Err&, debug_ipc::ResumeReply)>());
 }
 
 void SystemImpl::AddNewTarget(std::unique_ptr<TargetImpl> target) {

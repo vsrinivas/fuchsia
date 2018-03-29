@@ -62,7 +62,8 @@ class System : public ClientObject {
   // this call.
   virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
 
-  // Continues execution of all threads in all debugged processes.
+  // Applies to all threads of all debugged processes.
+  virtual void Pause() = 0;
   virtual void Continue() = 0;
 
  protected:

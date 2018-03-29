@@ -87,11 +87,12 @@ void DebugAgent::OnStreamData() {
 
   switch (header.type) {
     DISPATCH(Hello);
-    DISPATCH(Continue);
     DISPATCH(Launch);
+    DISPATCH(Pause);
     DISPATCH(ProcessTree);
     DISPATCH(Threads);
     DISPATCH(ReadMemory);
+    DISPATCH(Resume);
     DISPATCH(Detach);
     DISPATCH(AddOrChangeBreakpoint);
     DISPATCH(RemoveBreakpoint);
@@ -259,17 +260,31 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
   }
 }
 
-void DebugAgent::OnContinue(const debug_ipc::ContinueRequest& request,
-                            debug_ipc::ContinueReply* reply) {
+void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
+                          debug_ipc::PauseReply* reply) {
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
     if (proc)
-      proc->OnContinue(request);
+      proc->OnPause(request);
   } else {
     // All debugged processes.
     for (const auto& pair : procs_)
-      pair.second->OnContinue(request);
+      pair.second->OnPause(request);
+  }
+}
+
+void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
+                          debug_ipc::ResumeReply* reply) {
+  if (request.process_koid) {
+    // Single process.
+    DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+    if (proc)
+      proc->OnResume(request);
+  } else {
+    // All debugged processes.
+    for (const auto& pair : procs_)
+      pair.second->OnResume(request);
   }
 }
 

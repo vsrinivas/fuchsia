@@ -43,12 +43,20 @@ bool ReadReply(MessageReader* reader,
                DetachReply* reply,
                uint32_t* transaction_id);
 
-// Continue.
-void WriteRequest(const ContinueRequest& request,
+// Pause.
+void WriteRequest(const PauseRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer);
 bool ReadReply(MessageReader* reader,
-               ContinueReply* reply,
+               PauseReply* reply,
+               uint32_t* transaction_id);
+
+// Resume.
+void WriteRequest(const ResumeRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               ResumeReply* reply,
                uint32_t* transaction_id);
 
 // ProcessTree.

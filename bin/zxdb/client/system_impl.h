@@ -31,6 +31,7 @@ class SystemImpl : public System {
   Target* CreateNewTarget(Target* clone) override;
   Breakpoint* CreateNewBreakpoint() override;
   void DeleteBreakpoint(Breakpoint* breakpoint) override;
+  void Pause() override;
   void Continue() override;
 
  private:

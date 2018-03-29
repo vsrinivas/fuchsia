@@ -145,17 +145,32 @@ TEST(Protocol, DetachReply) {
   EXPECT_EQ(initial.status, second.status);
 }
 
-// Continue --------------------------------------------------------------------
+// Pause ---------------------------------------------------------------------
 
-TEST(Protocol, ContinueRequest) {
-  ContinueRequest initial;
+TEST(Protocol, PauseRequest) {
+  PauseRequest initial;
   initial.process_koid = 3746234;
   initial.thread_koid = 123523;
 
-  ContinueRequest second;
+  PauseRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread_koid, second.thread_koid);
+}
+
+// Resume --------------------------------------------------------------------
+
+TEST(Protocol, ResumeRequest) {
+  ResumeRequest initial;
+  initial.process_koid = 3746234;
+  initial.thread_koid = 123523;
+  initial.how = ResumeRequest::How::kStepInstruction;
+
+  ResumeRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.how, second.how);
 }
 
 // ProcessTree -----------------------------------------------------------------

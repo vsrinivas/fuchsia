@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include "garnet/public/lib/fxl/macros.h"
-
 #include <zx/thread.h>
+
+#include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/public/lib/fxl/macros.h"
 
 class DebugAgent;
 class DebuggedProcess;
@@ -27,9 +28,6 @@ class DebuggedThread {
     // Exception from the program.
     kException,
 
-    // Hit a breakpoint.
-    kBreakpoint,
-
     // Anything else.
     kOther
   };
@@ -47,9 +45,14 @@ class DebuggedThread {
 
   void OnException(uint32_t type);
 
-  // Continues execution of the thread. The thead should currently be in a
+  // Pauses execution of the thread. If it is already stopped, this will be
+  // ignored. Pausing happens asynchronously so the thread will not necessarily
+  // have stopped when this returns.
+  void Pause();
+
+  // Resumes execution of the thread. The thead should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
-  void Continue(bool single_step);
+  void Resume(debug_ipc::ResumeRequest::How how);
 
  private:
   enum class AfterBreakpointStep {

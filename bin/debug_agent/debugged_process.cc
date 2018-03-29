@@ -19,17 +19,31 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
     : debug_agent_(debug_agent), koid_(koid), process_(std::move(proc)) {}
 DebuggedProcess::~DebuggedProcess() = default;
 
-void DebuggedProcess::OnContinue(const debug_ipc::ContinueRequest& request) {
+void DebuggedProcess::OnPause(const debug_ipc::PauseRequest& request) {
   if (request.thread_koid) {
     DebuggedThread* thread = GetThread(request.thread_koid);
     if (thread)
-      thread->Continue(false);
+      thread->Pause();
     // Could be not found if there is a race between the thread exiting and
     // the client sending the request.
   } else {
     // 0 thread ID means resume all in process.
     for (const auto& pair : threads_)
-      pair.second->Continue(false);
+      pair.second->Pause();
+  }
+}
+
+void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
+  if (request.thread_koid) {
+    DebuggedThread* thread = GetThread(request.thread_koid);
+    if (thread)
+      thread->Resume(request.how);
+    // Could be not found if there is a race between the thread exiting and
+    // the client sending the request.
+  } else {
+    // 0 thread ID means resume all in process.
+    for (const auto& pair : threads_)
+      pair.second->Resume(request.how);
   }
 }
 

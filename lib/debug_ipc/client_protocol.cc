@@ -147,18 +147,39 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
-// Continue --------------------------------------------------------------------
+// Pause -----------------------------------------------------------------------
 
-void WriteRequest(const ContinueRequest& request,
+void WriteRequest(const PauseRequest& request,
                   uint32_t transaction_id,
                   MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kContinue, transaction_id);
+  writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
   writer->WriteUint64(request.process_koid);
   writer->WriteUint64(request.thread_koid);
 }
 
 bool ReadReply(MessageReader* reader,
-               ContinueReply* reply,
+               PauseReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return true;
+}
+
+// Resume ----------------------------------------------------------------------
+
+void WriteRequest(const ResumeRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
+  writer->WriteUint64(request.process_koid);
+  writer->WriteUint64(request.thread_koid);
+  writer->WriteUint32(static_cast<uint32_t>(request.how));
+}
+
+bool ReadReply(MessageReader* reader,
+               ResumeReply* reply,
                uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))

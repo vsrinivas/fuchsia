@@ -43,8 +43,10 @@ class DebugAgent : public ExceptionHandler::Sink {
   void OnAttach(std::vector<char> serialized);
   void OnDetach(const debug_ipc::DetachRequest& request,
                 debug_ipc::DetachReply* reply);
-  void OnContinue(const debug_ipc::ContinueRequest& request,
-                  debug_ipc::ContinueReply* reply);
+  void OnPause(const debug_ipc::PauseRequest& request,
+               debug_ipc::PauseReply* reply);
+  void OnResume(const debug_ipc::ResumeRequest& request,
+                  debug_ipc::ResumeReply* reply);
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply);
   void OnThreads(const debug_ipc::ThreadsRequest& request,

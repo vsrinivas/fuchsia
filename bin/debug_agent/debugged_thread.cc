@@ -52,7 +52,7 @@ void DebuggedThread::OnException(uint32_t type) {
       // This step was an internal thing to step over the breakpoint in service
       // of continuing from a breakpoint. Transparently resume the thread since
       // the client didn't request the step.
-      Continue(false);
+      Resume(debug_ipc::ResumeRequest::How::kContinue);
       return;
     }
     // Something else went wrong while stepping (the instruction with the
@@ -94,28 +94,37 @@ void DebuggedThread::OnException(uint32_t type) {
   // processes as desired.
 }
 
-void DebuggedThread::Continue(bool single_step) {
+void DebuggedThread::Pause() {
+  if (suspend_reason_ == SuspendReason::kNone) {
+    if (thread_.suspend() == ZX_OK)
+      suspend_reason_ = SuspendReason::kOther;
+  }
+}
+
+void DebuggedThread::Resume(debug_ipc::ResumeRequest::How how) {
   if (suspend_reason_ == SuspendReason::kException) {
     if (current_breakpoint_) {
       // Going over a breakpoint always requires a single-step first. Then we
       // either continue or break.
       SetSingleStep(true);
-      if (single_step)
+      if (how == debug_ipc::ResumeRequest::How::kStepInstruction)
         after_breakpoint_step_ = AfterBreakpointStep::kBreak;
       else
         after_breakpoint_step_ = AfterBreakpointStep::kContinue;
 
       current_breakpoint_->BeginStepOver(this);
     } else {
-      SetSingleStep(single_step);
+      SetSingleStep(how == debug_ipc::ResumeRequest::How::kStepInstruction);
     }
+    suspend_reason_ = SuspendReason::kNone;
     thread_.resume(ZX_RESUME_EXCEPTION);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.
     FXL_DCHECK(!current_breakpoint_);
 
-    SetSingleStep(single_step);
+    SetSingleStep(how == debug_ipc::ResumeRequest::How::kStepInstruction);
+    suspend_reason_ = SuspendReason::kNone;
     thread_.resume(0);
   }
 }
@@ -176,11 +185,7 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
 
 void DebuggedThread::SetSingleStep(bool single_step) {
   zx_thread_state_single_step_t value = single_step ? 1 : 0;
-  zx_status_t status =
-      thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
-  if (status != ZX_OK) {
-    fprintf(stderr,
-            "Warning: could not set single-step flag on thread, error = %d.",
-            static_cast<int>(status));
-  }
+  // This could fail for legitimate reasons, like the process could have just
+  // closed the thread.
+  thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
