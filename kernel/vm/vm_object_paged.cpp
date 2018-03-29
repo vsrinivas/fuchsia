@@ -841,11 +841,8 @@ zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {
 // perform some sort of copy in/out on a range of the object using a passed in lambda
 // for the copy routine
 template <typename T>
-zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
-                                             T copyfunc) {
+zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc) {
     canary_.Assert();
-    if (bytes_copied)
-        *bytes_copied = 0;
 
     AutoLock a(&lock_);
 
@@ -853,21 +850,18 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED)
         return  ZX_ERR_BAD_STATE;
 
-    // trim the size
-    uint64_t new_len;
-    if (!TrimRange(offset, len, size_, &new_len))
+    // test if in range
+    uint64_t end_offset;
+    if (add_overflow(offset, len, &end_offset) || end_offset > size_) {
         return ZX_ERR_OUT_OF_RANGE;
-
-    // was in range, just zero length
-    if (new_len == 0)
-        return 0;
+    }
 
     // walk the list of pages and do the write
     uint64_t src_offset = offset;
     size_t dest_offset = 0;
-    while (new_len > 0) {
+    while (len > 0) {
         size_t page_offset = src_offset % PAGE_SIZE;
-        size_t tocopy = MIN(PAGE_SIZE - page_offset, new_len);
+        size_t tocopy = MIN(PAGE_SIZE - page_offset, len);
 
         // fault in the page
         paddr_t pa;
@@ -886,16 +880,14 @@ zx_status_t VmObjectPaged::ReadWriteInternal(uint64_t offset, size_t len, size_t
             return err;
 
         src_offset += tocopy;
-        if (bytes_copied)
-            *bytes_copied += tocopy;
         dest_offset += tocopy;
-        new_len -= tocopy;
+        len -= tocopy;
     }
 
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len) {
     canary_.Assert();
     // test to make sure this is a kernel pointer
     if (!is_kernel_address(reinterpret_cast<vaddr_t>(_ptr))) {
@@ -910,10 +902,10 @@ zx_status_t VmObjectPaged::Read(void* _ptr, uint64_t offset, size_t len, size_t*
         return ZX_OK;
     };
 
-    return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
+    return ReadWriteInternal(offset, len, false, read_routine);
 }
 
-zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) {
     canary_.Assert();
     // test to make sure this is a kernel pointer
     if (!is_kernel_address(reinterpret_cast<vaddr_t>(_ptr))) {
@@ -928,7 +920,7 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len, 
         return ZX_OK;
     };
 
-    return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
+    return ReadWriteInternal(offset, len, true, write_routine);
 }
 
 zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
@@ -1007,7 +999,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, uint pf_flags,
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+zx_status_t VmObjectPaged::ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) {
     canary_.Assert();
 
     // read routine that uses copy_to_user
@@ -1015,11 +1007,10 @@ zx_status_t VmObjectPaged::ReadUser(user_out_ptr<void> ptr, uint64_t offset, siz
         return ptr.byte_offset(offset).copy_array_to_user(src, len);
     };
 
-    return ReadWriteInternal(offset, len, bytes_read, false, read_routine);
+    return ReadWriteInternal(offset, len, false, read_routine);
 }
 
-zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
-                                     size_t* bytes_written) {
+zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) {
     canary_.Assert();
 
     // write routine that uses copy_from_user
@@ -1027,7 +1018,7 @@ zx_status_t VmObjectPaged::WriteUser(user_in_ptr<const void> ptr, uint64_t offse
         return ptr.byte_offset(offset).copy_array_from_user(dst, len);
     };
 
-    return ReadWriteInternal(offset, len, bytes_written, true, write_routine);
+    return ReadWriteInternal(offset, len, true, write_routine);
 }
 
 zx_status_t VmObjectPaged::LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,

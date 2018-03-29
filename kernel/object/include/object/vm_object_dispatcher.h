@@ -36,9 +36,9 @@ public:
 
     // VmObjectDispatcher own methods.
     zx_status_t Read(user_out_ptr<void> user_data, size_t length,
-                     uint64_t offset, size_t* actual);
+                     uint64_t offset);
     zx_status_t Write(user_in_ptr<const void> user_data, size_t length,
-                      uint64_t offset, size_t* actual);
+                      uint64_t offset);
     zx_status_t SetSize(uint64_t);
     zx_status_t GetSize(uint64_t* size);
     zx_status_t RangeOp(uint32_t op, uint64_t offset, uint64_t size, user_inout_ptr<void> buffer,

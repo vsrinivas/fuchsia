@@ -92,10 +92,10 @@ public:
     }
 
     // read/write operators against kernel pointers only
-    virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+    virtual zx_status_t Read(void* ptr, uint64_t offset, size_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual zx_status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) {
+    virtual zx_status_t Write(const void* ptr, uint64_t offset, size_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -106,11 +106,10 @@ public:
     }
 
     // read/write operators against user space pointers only
-    virtual zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len, size_t* bytes_read) {
+    virtual zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    virtual zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
-                                  size_t* bytes_written) {
+    virtual zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 

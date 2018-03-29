@@ -119,21 +119,11 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
 
     uint8_t* dst_addr = (uint8_t*)paddr_to_physmap(base_addr);
 
-    size_t bytes_remaining = vmo_size;
-    size_t offset = 0;
-    while (bytes_remaining) {
-        size_t bytes_read;
-
-        st = vmo->Read(dst_addr + offset, offset, bytes_remaining, &bytes_read);
-
-        if (st != ZX_OK || bytes_read == 0) {
-            // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
-            //               and return an error.
-            panic("Failed to read to contiguous vmo");
-        }
-
-        bytes_remaining -= bytes_read;
-        offset += bytes_read;
+    st = vmo->Read(dst_addr, 0, vmo_size);
+    if (st != ZX_OK) {
+        // TODO(gkalsi): Free pages allocated by pmm_alloc_contiguous pages
+        //               and return an error.
+        panic("Failed to read to contiguous vmo");
     }
 
     arch_clean_invalidate_cache_range((addr_t)dst_addr, vmo_size);
@@ -270,19 +260,9 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
             return result;
         }
 
-        size_t bytes_remaining = crashlog_len;
-        size_t offset = 0;
-        while (bytes_remaining) {
-            size_t bytes_read;
-
-            result = stashed_crashlog->Read(bootdata_section + offset, offset, bytes_remaining,
-                                            &bytes_read);
-            if (result != ZX_OK) {
-                return result;
-            }
-
-            bytes_remaining -= bytes_read;
-            offset += bytes_read;
+        result = stashed_crashlog->Read(bootdata_section, 0, crashlog_len);
+        if (result != ZX_OK) {
+            return result;
         }
     }
 

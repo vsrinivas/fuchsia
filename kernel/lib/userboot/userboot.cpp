@@ -265,8 +265,7 @@ static fbl::unique_ptr<MessagePacket> prepare_bootstrap_message() {
 
 static void clog_to_vmo(const void* data, size_t off, size_t len, void* cookie) {
     VmObject* vmo = static_cast<VmObject*>(cookie);
-    size_t actual;
-    vmo->Write(data, off, len, &actual);
+    vmo->Write(data, off, len);
 }
 
 // Converts platform crashlog into a VMO

@@ -67,20 +67,18 @@ zx_status_t VmObjectDispatcher::set_name(const char* name, size_t len) {
 
 zx_status_t VmObjectDispatcher::Read(user_out_ptr<void> user_data,
                                      size_t length,
-                                     uint64_t offset,
-                                     size_t* bytes_read) {
+                                     uint64_t offset) {
     canary_.Assert();
 
-    return vmo_->ReadUser(user_data, offset, length, bytes_read);
+    return vmo_->ReadUser(user_data, offset, length);
 }
 
 zx_status_t VmObjectDispatcher::Write(user_in_ptr<const void> user_data,
                                       size_t length,
-                                      uint64_t offset,
-                                      size_t* bytes_written) {
+                                      uint64_t offset) {
     canary_.Assert();
 
-    return vmo_->WriteUser(user_data, offset, length, bytes_written);
+    return vmo_->WriteUser(user_data, offset, length);
 }
 
 zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {

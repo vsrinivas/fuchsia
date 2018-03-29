@@ -50,15 +50,13 @@ public:
     zx_status_t Pin(uint64_t offset, uint64_t len) override;
     void Unpin(uint64_t offset, uint64_t len) override;
 
-    zx_status_t Read(void* ptr, uint64_t offset, size_t len, size_t* bytes_read) override;
-    zx_status_t Write(const void* ptr, uint64_t offset, size_t len, size_t* bytes_written) override;
+    zx_status_t Read(void* ptr, uint64_t offset, size_t len) override;
+    zx_status_t Write(const void* ptr, uint64_t offset, size_t len) override;
     zx_status_t Lookup(uint64_t offset, uint64_t len, uint pf_flags,
                        vmo_lookup_fn_t lookup_fn, void* context) override;
 
-    zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len,
-                         size_t* bytes_read) override;
-    zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len,
-                          size_t* bytes_written) override;
+    zx_status_t ReadUser(user_out_ptr<void> ptr, uint64_t offset, size_t len) override;
+    zx_status_t WriteUser(user_in_ptr<const void> ptr, uint64_t offset, size_t len) override;
 
     zx_status_t LookupUser(uint64_t offset, uint64_t len, user_inout_ptr<paddr_t> buffer,
                            size_t buffer_size) override;
@@ -122,8 +120,7 @@ private:
 
     // internal read/write routine that takes a templated copy function to help share some code
     template <typename T>
-    zx_status_t ReadWriteInternal(uint64_t offset, size_t len, size_t* bytes_copied, bool write,
-                                  T copyfunc);
+    zx_status_t ReadWriteInternal(uint64_t offset, size_t len, bool write, T copyfunc);
 
     // set our offset within our parent
     zx_status_t SetParentOffsetLocked(uint64_t o) TA_REQ(lock_);

@@ -96,20 +96,7 @@ zx_status_t sys_vmo_read(zx_handle_t handle, user_out_ptr<void> _data,
         }
     }
 
-    uint64_t size;
-    status = vmo->GetSize(&size);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint64_t end_offset;
-    if (add_overflow(offset, len, &end_offset) || (end_offset > size)) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    status = vmo->Read(_data, len, offset, &size);
-    if (status == ZX_OK && size != len) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return status;
+    return vmo->Read(_data, len, offset);
 }
 
 zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
@@ -145,20 +132,7 @@ zx_status_t sys_vmo_write(zx_handle_t handle, user_in_ptr<const void> _data,
         }
     }
 
-    uint64_t size;
-    status = vmo->GetSize(&size);
-    if (status != ZX_OK) {
-        return status;
-    }
-    uint64_t end_offset;
-    if (add_overflow(offset, len, &end_offset) || (end_offset > size)) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    status = vmo->Write(_data, len, offset, &size);
-    if (status == ZX_OK && size != len) {
-        return ZX_ERR_OUT_OF_RANGE;
-    }
-    return status;
+    return vmo->Write(_data, len, offset);
 }
 
 zx_status_t sys_vmo_get_size(zx_handle_t handle, user_out_ptr<uint64_t> _size) {
