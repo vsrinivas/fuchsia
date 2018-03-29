@@ -37,6 +37,7 @@ double AudioResult::FloorOutput8 = -INFINITY;
 double AudioResult::FloorSource16 = -INFINITY;
 double AudioResult::FloorMix16 = -INFINITY;
 double AudioResult::FloorOutput16 = -INFINITY;
+double AudioResult::FloorStereoMono = -INFINITY;
 
 // Val-being-checked (in dBr to reference signal) must be >= this value.
 constexpr double AudioResult::kPrevFloorSource8;
@@ -238,6 +239,10 @@ constexpr double AudioResult::kPrevDynRangeTolerance;
 
 constexpr double AudioResult::kPrevSinadDownEpsilon;
 constexpr double AudioResult::kPrevSinadDown60;
+
+constexpr double AudioResult::kPrevLevelStereoMono;
+constexpr double AudioResult::kPrevStereoMonoTolerance;
+constexpr double AudioResult::kPrevFloorStereoMono;
 
 }  // namespace test
 }  // namespace audio

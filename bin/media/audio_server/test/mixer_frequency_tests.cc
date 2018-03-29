@@ -477,7 +477,14 @@ TEST(DynamicRange, StereoToMono) {
   OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                   std::numeric_limits<int16_t>::max());
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source[idx * 2] = source[(idx * 2) + 1] = mono[idx];
+    source[idx * 2] = mono[idx];
+  }
+
+  // Populate mono source buffer; copy it into stereo source buffer
+  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
+                  std::numeric_limits<int16_t>::max(), M_PI / 2);
+  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+    source[(idx * 2) + 1] = mono[idx];
   }
 
   uint32_t dst_offset = 0;
@@ -490,19 +497,22 @@ TEST(DynamicRange, StereoToMono) {
             frac_src_offset);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other, level_mono_db, sinad_mono_db;
+  double magn_signal, magn_other, level_mono_db;
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
   level_mono_db = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
-  sinad_mono_db = ValToDb(magn_signal / magn_other);
+  AudioResult::FloorStereoMono =
+      ValToDb(std::numeric_limits<int16_t>::max() / magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
-  EXPECT_GE(level_mono_db, -AudioResult::kLevelToleranceSource16);
-  EXPECT_LE(level_mono_db, AudioResult::kLevelToleranceSource16);
+  EXPECT_GE(level_mono_db, AudioResult::kPrevLevelStereoMono -
+                               AudioResult::kPrevStereoMonoTolerance);
+  EXPECT_LE(level_mono_db, AudioResult::kPrevLevelStereoMono +
+                               AudioResult::kPrevStereoMonoTolerance);
 
-  EXPECT_GE(sinad_mono_db, AudioResult::kPrevFloorMix16);
+  EXPECT_GE(AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 }
 
 // Test mix level and noise floor, when accumulating sources.

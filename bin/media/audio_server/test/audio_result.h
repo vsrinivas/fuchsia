@@ -55,6 +55,7 @@ class AudioResult {
   static double FloorSource16;
   static double FloorMix16;
   static double FloorOutput16;
+  static double FloorStereoMono;
 
   // Val-being-checked (in dBr to reference signal) must be >= this value.
   static constexpr double kPrevFloorSource8 = 49.952957;
@@ -160,6 +161,10 @@ class AudioResult {
 
   static constexpr double kPrevSinadDownEpsilon = 93.232593;
   static constexpr double kPrevSinadDown60 = 34.196374;
+
+  static constexpr double kPrevLevelStereoMono = -3.01029927;
+  static constexpr double kPrevStereoMonoTolerance = 0.00015;
+  static constexpr double kPrevFloorStereoMono = 95.958321;
 
   // class is static only - prevent attempts to instantiate it
   AudioResult() = delete;

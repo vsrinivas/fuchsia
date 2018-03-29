@@ -189,16 +189,14 @@ TEST(PassThru, StereoToMono_Cancel) {
   EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
 }
 
-// Do we correctly mix stereo->mono (shift? divide? truncate? round? dither?)
-// Our 2:1 folddown shifts (not div+round); leading to slight negative bias.
-// TODO(mpuryear): Adjust the expected values below, after we fix MTWN-81.
+// Validate that we correctly mix stereo->mono, including rounding.
 TEST(PassThru, StereoToMono_Round) {
   // pairs: positive even, neg even, pos odd, neg odd, pos limit, neg limit
   int16_t source[] = {-21,   12021, 123,   -345,  -1000,  1005,
                       -4155, -7000, 32767, 32767, -32768, -32768};
 
   int32_t accum[] = {-123, 234, -345, 456, -567, 678};
-  int32_t expect[] = {6000, -111, 2, -5578, 32767, -32768};
+  int32_t expect[] = {6000, -111, 3, -5578, 32767, -32768};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000,
                                Resampler::SampleAndHold);

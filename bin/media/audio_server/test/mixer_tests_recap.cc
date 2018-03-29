@@ -30,10 +30,11 @@ TEST(Recap, NoiseFloor) {
          AudioResult::kPrevFloorSource16);
 
   printf("\n\n   Mix Floor");
-  printf("\n\t     8-bit           16-bit");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorMix8,
-         AudioResult::kPrevFloorMix8, AudioResult::FloorMix16,
-         AudioResult::kPrevFloorMix16);
+  printf("\n\t     8-bit           16-bit         Stereo->Mono");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorMix8, AudioResult::kPrevFloorMix8,
+         AudioResult::FloorMix16, AudioResult::kPrevFloorMix16,
+         AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 
   printf("\n\n   Outputs");
   printf("\n\t     8-bit           16-bit");

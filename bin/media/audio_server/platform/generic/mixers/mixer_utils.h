@@ -141,11 +141,10 @@ class SrcReader<
  public:
   static constexpr size_t DstPerSrc = 1;
   static inline int32_t Read(const SType* src) {
-    // TODO(mpuryear): MTWN-81 Resolve asymmetry between neg and pos odds.
-    // Either divide instead of shift, or +1 (if positive) before shifting
-    return (SampleNormalizer<SType>::Read(src + 0) +
-            SampleNormalizer<SType>::Read(src + 1)) >>
-           1;
+    // Before shift, add 1 if positive (right-shift truncates asymmetrically).
+    int32_t sum = SampleNormalizer<SType>::Read(src + 0) +
+                  SampleNormalizer<SType>::Read(src + 1);
+    return (sum > 0 ? sum + 1 : sum) >> 1;
   }
 };
 

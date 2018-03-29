@@ -138,13 +138,6 @@ fractional bits -- will require changes to all stages, including Normalize.
 
 **Rechannel**
 
-*   MTWN-81
-
-    When mixing from stereo to mono, our calculations have a negative bias:
-+1.5 rounds to 1, but -1.5 rounds to -2. This type of asymmetry causes slight
-distortion. To accomodate this in today's code, certain expected numerical
-results have been adjusted by 1 to reflect the reality of today's system.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether
