@@ -57,7 +57,7 @@ func (b *Binding) Init(e func(error)) error {
 	// Declare the wait handler as a closure.
 	h := func(d *dispatch.Dispatcher, s zx.Status, sigs *zx.PacketSignal) dispatch.WaitResult {
 		if s != zx.ErrOk {
-			b.errHandler(&zx.Error{Status: s})
+			b.errHandler(zx.Error{Status: s})
 			return dispatch.WaitFinished
 		}
 		if sigs.Observed&zx.SignalChannelReadable != 0 {
@@ -73,7 +73,7 @@ func (b *Binding) Init(e func(error)) error {
 			}
 			return dispatch.WaitAgain
 		}
-		b.errHandler(&zx.Error{Status: zx.ErrPeerClosed})
+		b.errHandler(zx.Error{Status: zx.ErrPeerClosed})
 		return dispatch.WaitFinished
 	}
 
@@ -134,7 +134,7 @@ func (b *Binding) dispatch() (bool, error) {
 // closes the bound Channel.
 func (b *Binding) Close() error {
 	if err := d.CancelWait(*b.id); err != nil {
-		zxErr, ok := err.(*zx.Error)
+		zxErr, ok := err.(zx.Error)
 		// If it just says that the ID isn't found, there are cases where this is
 		// a reasonable error (particularly when we're in the middle of handling
 		// a signal from the dispatcher).
