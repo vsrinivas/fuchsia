@@ -10,22 +10,22 @@
 // clang-format off
 
 // For virtio_vsock_hdr_t.
-#define VIRTIO_VSOCK_TYPE_STREAM            1
+#define VIRTIO_VSOCK_TYPE_STREAM            1u
 
-#define VIRTIO_VSOCK_OP_INVALID             0
-#define VIRTIO_VSOCK_OP_REQUEST             1
-#define VIRTIO_VSOCK_OP_RESPONSE            2
-#define VIRTIO_VSOCK_OP_RST                 3
-#define VIRTIO_VSOCK_OP_SHUTDOWN            4
-#define VIRTIO_VSOCK_OP_RW                  5
-#define VIRTIO_VSOCK_OP_CREDIT_UPDATE       6
-#define VIRTIO_VSOCK_OP_CREDIT_REQUEST      7
+#define VIRTIO_VSOCK_OP_INVALID             0u
+#define VIRTIO_VSOCK_OP_REQUEST             1u
+#define VIRTIO_VSOCK_OP_RESPONSE            2u
+#define VIRTIO_VSOCK_OP_RST                 3u
+#define VIRTIO_VSOCK_OP_SHUTDOWN            4u
+#define VIRTIO_VSOCK_OP_RW                  5u
+#define VIRTIO_VSOCK_OP_CREDIT_UPDATE       6u
+#define VIRTIO_VSOCK_OP_CREDIT_REQUEST      7u
 
-#define VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV     1
-#define VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND     2
+#define VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV     (1u << 0)
+#define VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND     (1u << 1)
 
 // For virtio_vsock_event_t.
-#define VIRTIO_VSOCK_EVENT_TRANSPORT_RESET  0
+#define VIRTIO_VSOCK_EVENT_TRANSPORT_RESET  0u
 
 // clang-format on
 
