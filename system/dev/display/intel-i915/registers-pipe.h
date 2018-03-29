@@ -47,6 +47,17 @@ public:
     DEF_BIT(3, ring_flip_source);
 };
 
+// PLANE_SURFLIVE
+class PlaneSurfaceLive : public hwreg::RegisterBase<PlaneSurfaceLive, uint32_t> {
+public:
+    static constexpr uint32_t kBaseAddr = 0x701ac;
+
+    // This field omits the lower 12 bits of the address, so the address
+    // must be 4k-aligned.
+    static constexpr uint32_t kPageShift = 12;
+    DEF_FIELD(31, 12, surface_base_addr);
+};
+
 // PLANE_STRIDE
 class PlaneSurfaceStride : public hwreg::RegisterBase<PlaneSurfaceStride, uint32_t> {
 public:
@@ -170,6 +181,9 @@ public:
     // The following methods get the instance of the plane register for plane 1.
     hwreg::RegisterAddr<registers::PlaneSurface> PlaneSurface() {
         return GetReg<registers::PlaneSurface>();
+    }
+    hwreg::RegisterAddr<registers::PlaneSurfaceLive> PlaneSurfaceLive() {
+        return GetReg<registers::PlaneSurfaceLive>();
     }
     hwreg::RegisterAddr<registers::PlaneSurfaceStride> PlaneSurfaceStride() {
         return GetReg<registers::PlaneSurfaceStride>();

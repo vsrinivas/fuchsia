@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display.h>
+#include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
 #include <hw/inout.h>
 #include <hw/pci.h>
@@ -51,6 +52,8 @@
 #define ENABLE_MODESETTING 1
 
 namespace {
+static const zx_pixel_format_t supported_formats[1] = { ZX_PIXEL_FORMAT_ARGB_8888 };
+
 bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::Pipe pipe) {
     for (size_t i = 0; i < displays.size(); i++) {
         if (displays[i]->pipe() == pipe) {
@@ -111,6 +114,11 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
         }
         device->DdkRemove();
         zxlogf(SPEW, "Display unplugged\n");
+
+        if (dc_cb_) {
+            int id = device->id();
+            dc_cb_->on_displays_changed(dc_cb_ctx_, NULL, 0, &id, 1);
+        }
     } else { // New device was plugged in
         fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
         if (!device) {
@@ -118,16 +126,43 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
             return;
         }
 
+        int id = device->id();
         if (AddDisplay(fbl::move(device)) != ZX_OK) {
             zxlogf(INFO, "Failed to add display %d\n", ddi);
+            return;
         } else {
             zxlogf(SPEW, "Display connected\n");
+        }
+        if (dc_cb_) {
+            dc_cb_->on_displays_changed(dc_cb_ctx_, &id, 1, NULL, 0);
         }
     }
 }
 
 void Controller::HandlePipeVsync(registers::Pipe pipe) {
-    // TODO(ZX-1413): Do something with these when we actually have something to do
+    if (!dc_cb_) {
+        return;
+    }
+
+    for (auto display : display_devices_) {
+        if (display->pipe() == pipe) {
+            registers::PipeRegs regs(pipe);
+            auto live_surface = regs.PlaneSurfaceLive().ReadFrom(mmio_space());
+            void* handle = reinterpret_cast<void*>(
+                    live_surface.surface_base_addr() << live_surface.kPageShift);
+            dc_cb_->on_display_vsync(dc_cb_ctx_, display->id(), handle);
+            return;
+        }
+    }
+}
+
+DisplayDevice* Controller::FindDevice(int32_t display_id) {
+    for (auto d : display_devices_) {
+        if (d->id() == display_id) {
+            return d;
+        }
+    }
+    return nullptr;
 }
 
 bool Controller::BringUpDisplayEngine(bool resume) {
@@ -429,18 +464,24 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
         zxlogf(INFO, "i915: Could not allocate pipe for ddi %d\n", ddi);
         return nullptr;
     }
+    // It'd be possible to handle this by looking for an id which isn't currently in use. But
+    // a lot of clients probably assume that display ids are completely unique, so just fail. It's
+    // unlikely that we'd ever run into a system with >2 billion hotplug events.
+    if (next_id_ < 0) {
+        return nullptr;
+    }
 
     fbl::AllocChecker ac;
     if (igd_opregion_.SupportsDp(ddi)) {
         zxlogf(SPEW, "Checking for displayport monitor\n");
-        auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, ddi, pipe);
+        auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, pipe);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
             return dp_disp;
         }
     }
     if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
         zxlogf(SPEW, "Checking for hdmi monitor\n");
-        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, ddi, pipe);
+        auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi, pipe);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
             return hdmi_disp;
         }
@@ -461,12 +502,25 @@ zx_status_t Controller::InitDisplays() {
                 }
             }
         }
+
+        // TODO(stevensd): Once displays are no longer real ddk devices, move
+        // InitDisplays before DdkAdd so that dc_cb_ can't be set before here.
+        if (dc_cb_ && !display_devices_.is_empty()) {
+            int displays[registers::kDdiCount];
+            for (unsigned i = 0; i < display_devices_.size(); i++) {
+                displays[i] = display_devices_[i]->id();
+            }
+
+            dc_cb_->on_displays_changed(dc_cb_ctx_, displays,
+                                        static_cast<uint32_t>(display_devices_.size()), NULL, 0);
+        }
+
         return ZX_OK;
     } else {
         fbl::AllocChecker ac;
         // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
         auto disp_device = fbl::make_unique_checked<BootloaderDisplay>(
-                &ac, this, registers::DDI_A, registers::PIPE_A);
+                &ac, this, next_id_, registers::DDI_A, registers::PIPE_A);
         if (!ac.check()) {
             zxlogf(ERROR, "i915: failed to alloc disp_device\n");
             return ZX_ERR_NO_MEMORY;
@@ -500,8 +554,116 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
                                new_device->info().format, new_device->info().width,
                                new_device->info().height, new_device->info().stride);
     }
+
+    next_id_++;
     return ZX_OK;
 }
+
+// DisplayController methods
+
+void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+    dc_cb_ctx_ = cb_ctx;
+    dc_cb_ = cb;
+
+    int displays[registers::kDdiCount];
+    for (unsigned i = 0; i < display_devices_.size(); i++) {
+        displays[i] = display_devices_[i]->id();
+    }
+
+    cb->on_displays_changed(cb_ctx, displays,
+                            static_cast<uint32_t>(display_devices_.size()), NULL, 0);
+}
+
+zx_status_t Controller::GetDisplayInfo(int32_t display_id, display_info_t* info) {
+    DisplayDevice* device;
+    if ((device = FindDevice(display_id)) == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    info->edid = device->edid().edid_bytes();
+    info->edid_length = device->edid().edid_length();
+    info->pixel_formats = supported_formats;
+    info->pixel_format_count = static_cast<uint32_t>(fbl::count_of(supported_formats));
+    return ZX_OK;
+}
+
+zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
+    if (image->type != IMAGE_TYPE_SIMPLE || offset % PAGE_SIZE != 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::AllocChecker ac;
+    imported_images_.reserve(imported_images_.size() + 1, &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    uint32_t length = image->height * ZX_PIXEL_FORMAT_BYTES(image->pixel_format) *
+            registers::PlaneSurfaceStride::compute_linear_stride(image->width, image->pixel_format);
+    fbl::unique_ptr<const GttRegion> gtt_region;
+    zx_status_t status = gtt_.Insert(vmo, length,
+                                     registers::PlaneSurface::kLinearAlignment,
+                                     registers::PlaneSurface::kTrailingPtePadding,
+                                     &gtt_region);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    image->handle = reinterpret_cast<void*>(gtt_region->base());
+    imported_images_.push_back(fbl::move(gtt_region));
+    return ZX_OK;
+}
+
+void Controller::ReleaseImage(image_t* image) {
+    for (unsigned i = 0; i < imported_images_.size(); i++) {
+        if (imported_images_[i]->base() == reinterpret_cast<uint64_t>(image->handle)) {
+            imported_images_.erase(i);
+            return;
+        }
+    }
+}
+
+bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t display_count) {
+    for (unsigned i = 0; i < display_count; i++) {
+        auto* config = display_config[i];
+        if (!FindDevice(config->display_id)) {
+            return false;
+        }
+        if (config->image.width != config->h_active || config->image.height != config->v_active
+                || config->image.pixel_format != ZX_PIXEL_FORMAT_ARGB_8888
+                || config->image.type != IMAGE_TYPE_SIMPLE) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t display_count) {
+    ZX_DEBUG_ASSERT(CheckConfiguration(display_config, display_count));
+
+    for (auto display : display_devices_) {
+        display_config_t* config = nullptr;
+        for (unsigned i = 0; i < display_count; i++) {
+            if (display_config[i]->display_id == display->id()) {
+                config = display_config[i];
+                break;
+            }
+        }
+        if (config != nullptr) {
+            display->ApplyConfiguration(config);
+        }
+        interrupts_.EnablePipeVsync(display->pipe(), config != nullptr);
+    }
+}
+
+uint32_t Controller::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
+    return registers::PlaneSurfaceStride::compute_linear_stride(width, format);
+}
+
+zx_status_t Controller::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
+    return zx_vmo_create(size, 0, vmo_out);
+}
+
+// Ddk methods
 
 void Controller::DdkUnbind() {
     while (!display_devices_.is_empty()) {

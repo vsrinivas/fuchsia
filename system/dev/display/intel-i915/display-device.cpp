@@ -21,9 +21,9 @@
 
 namespace i915 {
 
-DisplayDevice::DisplayDevice(Controller* controller, registers::Ddi ddi,
-                             registers::Trans trans, registers::Pipe pipe)
-        : DisplayDeviceType(controller->zxdev()), controller_(controller)
+DisplayDevice::DisplayDevice(Controller* controller, int32_t id,
+                             registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe)
+        : DisplayDeviceType(controller->zxdev()), controller_(controller), id_(id)
         , ddi_(ddi), trans_(trans), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
@@ -123,11 +123,12 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    fb_gfx_addr_ = controller_->gtt()->Insert(&framebuffer_vmo_, framebuffer_size_,
-                                              registers::PlaneSurface::kLinearAlignment,
-                                              registers::PlaneSurface::kTrailingPtePadding);
-    if (!fb_gfx_addr_) {
-        zxlogf(ERROR, "i915: Failed to allocate gfx address for framebuffer\n");
+    status = controller_->gtt()->Insert(framebuffer_vmo_, framebuffer_size_,
+                                        registers::PlaneSurface::kLinearAlignment,
+                                        registers::PlaneSurface::kTrailingPtePadding,
+                                        &fb_gfx_addr_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to allocate gfx address for framebuffer %d\n", status);
         return false;
     }
 
@@ -179,6 +180,16 @@ bool DisplayDevice::Resume() {
     plane_surface.WriteTo(controller_->mmio_space());
 
     return true;
+}
+
+void DisplayDevice::ApplyConfiguration(display_config_t* config) {
+    registers::PipeRegs pipe_regs(pipe());
+
+    uint32_t base_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(config->image.handle));
+
+    auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
+    plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
+    plane_surface.WriteTo(controller_->mmio_space());
 }
 
 } // namespace i915

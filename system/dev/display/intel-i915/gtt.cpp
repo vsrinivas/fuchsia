@@ -96,13 +96,18 @@ zx_status_t Gtt::Init(Controller* controller) {
     return region_allocator_.AddRegion({ .base = 0, .size = gfx_mem_size });
 }
 
-fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
-                                             uint32_t length, uint32_t align_pow2,
-                                             uint32_t pte_padding) {
+zx_status_t Gtt::Insert(const zx::vmo& buffer,
+                        uint32_t length, uint32_t align_pow2, uint32_t pte_padding,
+                        fbl::unique_ptr<const GttRegion>* gtt_out) {
+    fbl::AllocChecker ac;
+    auto r = fbl::make_unique_checked<GttRegion>(&ac, this);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     uint32_t region_length = ROUNDUP(length, PAGE_SIZE) + (pte_padding * PAGE_SIZE);
-    auto r = fbl::make_unique<GttRegion>(this);
     if (region_allocator_.GetRegion(region_length, align_pow2, r->region_) != ZX_OK) {
-        return nullptr;
+        return ZX_ERR_NO_RESOURCES;
     }
 
     zx_paddr_t paddrs[kEntriesPerPinTxn];
@@ -113,10 +118,9 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
     uint32_t pte_idx_end = pte_idx + num_pages;
 
     size_t num_pins = ROUNDUP(length, min_contiguity_) / min_contiguity_;
-    fbl::AllocChecker ac;
     r->pmts_.reserve(num_pins, &ac);
     if (!ac.check()) {
-        return nullptr;
+        return ZX_ERR_NO_MEMORY;
     }
 
     while (pte_idx < pte_idx_end) {
@@ -127,11 +131,11 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
 
         uint64_t actual_entries = ROUNDUP(cur_len, min_contiguity_) / min_contiguity_;
         zx::pmt pmt;
-        status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, *buffer,
+        status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, buffer,
                           vmo_offset, cur_len, paddrs, actual_entries, &pmt);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
-            return nullptr;
+            return status;
         }
         vmo_offset += cur_len;
         r->mapped_end_ = static_cast<uint32_t>(vmo_offset);
@@ -151,7 +155,8 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
     }
     controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
 
-    return fbl::unique_ptr<const GttRegion>(r.release());
+    *gtt_out = fbl::move(r);
+    return ZX_OK;
 }
 
 void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding) {

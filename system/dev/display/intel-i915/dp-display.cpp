@@ -843,8 +843,8 @@ static registers::Trans select_trans(registers::Ddi ddi, registers::Pipe pipe) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe)
-        : DisplayDevice(controller, ddi, select_trans(ddi, pipe), pipe) { }
+DpDisplay::DpDisplay(Controller* controller, int32_t id, registers::Ddi ddi, registers::Pipe pipe)
+        : DisplayDevice(controller, id, ddi, select_trans(ddi, pipe), pipe) { }
 
 bool DpDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
     // For eDP displays, assume that the BIOS has enabled panel power, given

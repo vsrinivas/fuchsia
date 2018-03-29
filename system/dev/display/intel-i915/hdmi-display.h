@@ -10,7 +10,7 @@ namespace i915 {
 
 class HdmiDisplay : public DisplayDevice, private edid::EdidDdcSource {
 public:
-    HdmiDisplay(Controller* controller, registers::Ddi ddi, registers::Pipe pipe);
+    HdmiDisplay(Controller* controller, int32_t id, registers::Ddi ddi, registers::Pipe pipe);
 
 private:
     bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) final;

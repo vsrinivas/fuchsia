@@ -7,6 +7,7 @@
 #if __cplusplus
 
 #include <ddk/protocol/pci.h>
+#include <ddktl/protocol/display-controller.h>
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -29,7 +30,7 @@ namespace i915 {
 class Controller;
 using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, ddk::Resumable>;
 
-class Controller : public DeviceType {
+class Controller : public DeviceType, public ddk::DisplayControllerProtocol<Controller> {
 public:
     Controller(zx_device_t* parent);
     ~Controller();
@@ -39,6 +40,15 @@ public:
     zx_status_t DdkSuspend(uint32_t reason);
     zx_status_t DdkResume(uint32_t reason);
     zx_status_t Bind(fbl::unique_ptr<i915::Controller>* controller_ptr);
+
+    void SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb);
+    zx_status_t GetDisplayInfo(int32_t display_id, display_info_t* info);
+    zx_status_t ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset);
+    void ReleaseImage(image_t* image);
+    bool CheckConfiguration(display_config_t** display_config, uint32_t display_count);
+    void ApplyConfiguration(display_config_t** display_config, uint32_t display_count);
+    uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
+    zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
     pci_protocol_t* pci() { return &pci_; }
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
@@ -62,6 +72,10 @@ private:
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display);
     bool BringUpDisplayEngine(bool resume);
     void AllocDisplayBuffers();
+    DisplayDevice* FindDevice(int32_t display_id);
+
+    void* dc_cb_ctx_;
+    display_controller_cb_t* dc_cb_;
 
     Gtt gtt_;
     IgdOpRegion igd_opregion_;
@@ -72,9 +86,13 @@ private:
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
     zx_handle_t regs_handle_;
 
+    // These regions' VMOs are not owned
+    fbl::Vector<fbl::unique_ptr<const GttRegion>> imported_images_;
+
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.
     fbl::Vector<DisplayDevice*> display_devices_;
+    int32_t next_id_ = 0;
 
     Power power_;
     PowerWellRef cd_clk_power_well_;
