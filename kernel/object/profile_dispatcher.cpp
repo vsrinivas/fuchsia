@@ -8,14 +8,28 @@
 
 #include <err.h>
 
-#include <zircon/rights.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/ref_ptr.h>
+
+#include <object/thread_dispatcher.h>
+
+#include <zircon/rights.h>
+
+zx_status_t validate_profile(const zx_profile_info_t& info) {
+    if (info.type != ZX_PROFILE_INFO_SCHEDULER)
+        return ZX_ERR_NOT_SUPPORTED;
+    if ((info.scheduler.priority < LOWEST_PRIORITY) ||
+        (info.scheduler.priority  > HIGHEST_PRIORITY))
+        return ZX_ERR_INVALID_ARGS;
+    return ZX_OK;
+}
 
 zx_status_t ProfileDispatcher::Create(const zx_profile_info_t& info,
                                       fbl::RefPtr<Dispatcher>* dispatcher,
                                       zx_rights_t* rights) {
-    if (info.type != ZX_PROFILE_INFO_SCHEDULER)
-        return ZX_ERR_NOT_SUPPORTED;
+    auto status = validate_profile(info);
+    if (status != ZX_OK)
+        return status;
 
     fbl::AllocChecker ac;
     auto disp = new (&ac) ProfileDispatcher(info);
@@ -31,6 +45,9 @@ ProfileDispatcher::ProfileDispatcher(const zx_profile_info_t& info)
     : info_(info) {}
 
 ProfileDispatcher::~ProfileDispatcher() {
-    // TODO(cpu): this silences clang "unused info_" nag. Remove.
-    (void) info_.scheduler.priority;
+}
+
+zx_status_t ProfileDispatcher::ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread) {
+    // At the moment, the only thing we support is the priority.
+    return thread->SetPriority(info_.scheduler.priority);
 }

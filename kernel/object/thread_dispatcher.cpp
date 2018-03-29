@@ -918,6 +918,18 @@ zx_status_t ThreadDispatcher::WriteState(zx_thread_state_topic_t state_kind,
     }
 }
 
+zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
+    AutoLock state_lock(get_lock());
+    if ((state_ == State::INITIAL) ||
+        (state_ == State::DYING) ||
+        (state_ == State::DEAD)) {
+        return ZX_ERR_BAD_STATE;
+    }
+    // The priority was already validated by the Profile dispatcher.
+    thread_set_priority(&thread_, priority);
+    return ZX_OK;
+}
+
 void get_user_thread_process_name(const void* user_thread,
                                   char out_name[ZX_MAX_NAME_LEN]) {
     const ThreadDispatcher* ut =

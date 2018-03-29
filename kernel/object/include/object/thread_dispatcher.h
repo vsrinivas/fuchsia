@@ -163,6 +163,8 @@ public:
     zx_status_t ReadState(zx_thread_state_topic_t state_kind, void* buffer, size_t buffer_len);
     zx_status_t WriteState(zx_thread_state_topic_t state_kind, const void* buffer,
                            size_t buffer_len);
+    // Profile support
+    zx_status_t SetPriority(int32_t priority);
 
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }

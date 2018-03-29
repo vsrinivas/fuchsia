@@ -20,6 +20,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/type_support.h>
 
 #include "priv.h"
 
@@ -59,8 +60,8 @@ zx_status_t sys_object_set_profile(zx_handle_t handle,
 
     // TODO(cpu): support more than thread objects, and actually do something.
 
-    fbl::RefPtr<ThreadDispatcher> dispatcher;
-    auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_THREAD, &dispatcher);
+    fbl::RefPtr<ThreadDispatcher> thread;
+    auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_THREAD, &thread);
     if (status != ZX_OK)
         return status;
 
@@ -70,6 +71,6 @@ zx_status_t sys_object_set_profile(zx_handle_t handle,
     if (result != ZX_OK)
         return result;
 
-    return ZX_OK;
+    return profile->ApplyProfile(fbl::move(thread));
 }
 

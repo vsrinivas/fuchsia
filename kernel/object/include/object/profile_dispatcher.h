@@ -22,6 +22,8 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PROFILE; }
     bool has_state_tracker() const final { return false; }
 
+    zx_status_t ApplyProfile(fbl::RefPtr<ThreadDispatcher> thread);
+
 private:
     explicit ProfileDispatcher(const zx_profile_info_t& info);
 
