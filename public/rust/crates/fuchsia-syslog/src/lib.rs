@@ -19,6 +19,7 @@ use log::{Level, LevelFilter, Metadata, Record};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use zx::sys::*;
+use std::fmt::Arguments;
 
 #[allow(non_camel_case_types)]
 mod syslog;
@@ -76,10 +77,7 @@ macro_rules! fx_log {
     (tag: $tag:expr, $lvl:expr, $($arg:tt)+) => ({
         let lvl = $lvl;
         if $crate::LOGGER.is_enabled(lvl) {
-            let s = std::fmt::format(format_args!($($arg)+));
-            let c_msg = std::ffi::CString::new(s).unwrap();
-            let c_tag = std::ffi::CString::new($tag).unwrap();
-            $crate::LOGGER.log_c(lvl, &c_tag, &c_msg);
+            $crate::log_helper(format_args!($($arg)+), lvl, $tag);
         }
     });
     ($lvl:expr, $($arg:tt)+) => (fx_log!(tag: "", $lvl, $($arg)+))
@@ -201,6 +199,14 @@ impl Logger {
 lazy_static! {
     /// Global reference to default logger object.
     pub static ref LOGGER: Logger = get_default();
+}
+
+/// macro helper function to convert strings and call log
+pub fn log_helper(args: Arguments, lvl: i32, tag: &str) {
+    let s = std::fmt::format(args);
+    let c_msg = CString::new(s).unwrap();
+    let c_tag = CString::new(tag).unwrap();
+    LOGGER.log_c(lvl, &c_tag, &c_msg);
 }
 
 /// Gets default logger.
