@@ -461,14 +461,13 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
 
 template <typename Message>
 zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, wlan_mlme::Method method) {
-    auto msg = std::make_unique<Message>();
-    auto status = DeserializeServiceMsg<Message>(*packet, method, msg.get());
+    Message msg;
+    auto status = DeserializeServiceMsg<Message>(*packet, method, &msg);
     if (status != ZX_OK) {
         errorf("could not deserialize MLME Method %d: %d\n", method, status);
         return status;
     }
-    ZX_DEBUG_ASSERT(msg != nullptr);
-    return mlme_->HandleFrame(method, *msg);
+    return mlme_->HandleFrame(method, msg);
 }
 
 template <>
@@ -477,16 +476,16 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
     debugfn();
     ZX_DEBUG_ASSERT(method == wlan_mlme::Method::DEVICE_QUERY_request);
 
-    auto resp = wlan_mlme::DeviceQueryResponse::New();
+    wlan_mlme::DeviceQueryResponse resp;
     const wlanmac_info_t& info = device_->GetWlanInfo();
 
-    memcpy(resp->mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
+    memcpy(resp.mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
 
-    resp->modes->resize(0);
-    if (info.mac_modes & WLAN_MAC_MODE_STA) { resp->modes->push_back(wlan_mlme::MacMode::STA); }
-    if (info.mac_modes & WLAN_MAC_MODE_AP) { resp->modes->push_back(wlan_mlme::MacMode::AP); }
+    resp.modes->resize(0);
+    if (info.mac_modes & WLAN_MAC_MODE_STA) { resp.modes->push_back(wlan_mlme::MacMode::STA); }
+    if (info.mac_modes & WLAN_MAC_MODE_AP) { resp.modes->push_back(wlan_mlme::MacMode::AP); }
 
-    resp->bands->resize(0);
+    resp.bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
         const wlan_band_info_t& band_info = info.bands[band_idx];
         wlan_mlme::BandCapabilities band;
@@ -504,7 +503,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
                 band.channels->push_back(chan_list.channels[chan_idx]);
             }
         }
-        resp->bands->push_back(std::move(band));
+        resp.bands->push_back(std::move(band));
     }
 
     // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
@@ -517,7 +516,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
     auto packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), buf_len));
     packet->set_peer(Packet::Peer::kService);
     zx_status_t status =
-        SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEVICE_QUERY_confirm, resp.get());
+        SerializeServiceMsg(packet.get(), wlan_mlme::Method::DEVICE_QUERY_confirm, &resp);
     if (status != ZX_OK) {
         errorf("could not serialize DeviceQueryResponse: %d\n", status);
         return status;
