@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/story/fidl/link.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/mock_base.h"
 
@@ -23,22 +23,22 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   ~LinkMockBase() override = default;
 
-  void SetSchema(const fidl::StringPtr& /*json_schema*/) override {
+  void SetSchema(fidl::StringPtr /*json_schema*/) override {
     ++counts["SetSchema"];
   }
 
   void Get(fidl::VectorPtr<fidl::StringPtr> /*path*/,
-           const GetCallback& /*callback*/) override {
+           GetCallback /*callback*/) override {
     ++counts["Get"];
   }
 
   void Set(fidl::VectorPtr<fidl::StringPtr> /*path*/,
-           const fidl::StringPtr& /*json*/) override {
+           fidl::StringPtr /*json*/) override {
     ++counts["Set"];
   }
 
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> /*path*/,
-                    const fidl::StringPtr& /*json*/) override {
+                    fidl::StringPtr /*json*/) override {
     ++counts["UpdateObject"];
   }
 
@@ -46,12 +46,12 @@ class LinkMockBase : protected Link, public testing::MockBase {
     ++counts["Erase"];
   }
 
-  void GetEntity(const Link::GetEntityCallback& callback) override {
+  void GetEntity(Link::GetEntityCallback callback) override {
     ++counts["GetEntity"];
     callback("");
   }
 
-  void SetEntity(const fidl::StringPtr& /*entity_reference*/) override {
+  void SetEntity(fidl::StringPtr /*entity_reference*/) override {
     ++counts["SetEntity"];
   }
 
@@ -63,7 +63,7 @@ class LinkMockBase : protected Link, public testing::MockBase {
     ++counts["WatchAll"];
   }
 
-  void Sync(const SyncCallback& /*callback*/) override { ++counts["Sync"]; }
+  void Sync(SyncCallback /*callback*/) override { ++counts["Sync"]; }
 };
 
 class LinkMock : public LinkMockBase {
@@ -80,7 +80,7 @@ class LinkMock : public LinkMockBase {
   }
 
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
-                    const fidl::StringPtr& json) override {
+                    fidl::StringPtr json) override {
     LinkMockBase::UpdateObject(std::move(path), json);
     fsl::MessageLoop::GetCurrent()->QuitNow();
   }
