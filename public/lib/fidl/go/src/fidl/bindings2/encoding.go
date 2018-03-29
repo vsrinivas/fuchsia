@@ -266,7 +266,12 @@ func (e *encoder) marshalStructInline(t reflect.Type, v reflect.Value) error {
 		return err
 	}
 	e.head = align(e.head, a)
-	return e.marshalStructFields(t, v)
+	err = e.marshalStructFields(t, v)
+	if err != nil {
+		return err
+	}
+	e.head = align(e.head, a)
+	return nil
 }
 
 // marshalStructPointer marshals a nullable struct's reference, and then marshals
