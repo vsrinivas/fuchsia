@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
+#include <fbl/auto_call.h>
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
@@ -22,6 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unittest.h>
+#include <vm/vm_aspace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -183,7 +185,7 @@ static bool run_unittest(const unittest_testcase_registration_t* testcase) {
 //
 // |arg| is a const unittest_testcase_registration_t*.
 static int run_unittest_thread_entry(void* arg) {
-    const unittest_testcase_registration_t* testcase = arg;
+    auto* testcase = static_cast<const unittest_testcase_registration_t*>(arg);
     return run_unittest(testcase);
 }
 
@@ -191,15 +193,31 @@ static int run_unittest_thread_entry(void* arg) {
 //
 // Returns true if the test passed.
 static bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
-    thread_t* t = thread_create("unittest thread", run_unittest_thread_entry, (void*)testcase,
-                                DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
-    if (!t) {
-        printf("failed to create unittest thread\n");
+    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::TYPE_USER, "unittest");
+    if (!aspace) {
+        unittest_printf("failed to create unittest user aspace\n");
         return false;
     }
+    auto destroy_aspace = fbl::MakeAutoCall([&]() {
+        zx_status_t status = aspace->Destroy();
+        DEBUG_ASSERT(status == ZX_OK);
+    });
+    thread_t* t = thread_create("unittest", run_unittest_thread_entry,
+                                const_cast<void*>(static_cast<const void*>(testcase)),
+                                DEFAULT_PRIORITY, DEFAULT_STACK_SIZE);
+    if (!t) {
+        unittest_printf("failed to create unittest thread\n");
+        return false;
+    }
+    aspace->AttachToThread(t);
+
     thread_resume(t);
     int success = 0;
-    thread_join(t, &success, ZX_TIME_INFINITE);
+    zx_status_t status = thread_join(t, &success, ZX_TIME_INFINITE);
+    if (status != ZX_OK) {
+        unittest_printf("failed to join unittest thread: %d\n", status);
+        return false;
+    }
     return success;
 }
 
@@ -225,7 +243,7 @@ static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags) 
     const size_t num_tests =
         run_all ? __stop_unittest_testcases - __start_unittest_testcases : 1;
     // Array of names with a NULL sentinel at the end.
-    const char** failed_names = calloc(num_tests + 1, sizeof(char*));
+    const char** failed_names = static_cast<const char**>(calloc(num_tests + 1, sizeof(char*)));
     const char** fn = failed_names;
 
     for (testcase = __start_unittest_testcases;

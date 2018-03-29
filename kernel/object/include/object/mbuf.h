@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 
-#include <lib/user_copy/testable_user_ptr.h>
+#include <lib/user_copy/user_ptr.h>
 #include <zircon/types.h>
 #include <fbl/intrusive_single_list.h>
 
@@ -24,8 +24,7 @@ public:
     // Writes |len| bytes of stream data from |src| and sets |written| to number of bytes written.
     //
     // Returns an error on failure.
-    template <typename UCT>
-    zx_status_t WriteStream(testable_user_in_ptr<const void, UCT> src, size_t len, size_t* written);
+    zx_status_t WriteStream(user_in_ptr<const void> src, size_t len, size_t* written);
 
     // Writes a datagram of |len| bytes from |src| and sets |written| to number of bytes written.
     //
@@ -33,9 +32,7 @@ public:
     // chain is unmodified.
     //
     // Returns an error on failure.
-    template <typename UCT>
-    zx_status_t WriteDatagram(testable_user_in_ptr<const void, UCT> src, size_t len,
-                              size_t* written);
+    zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
 
     // Reads upto |len| bytes from chain into |dst|.
     //
@@ -46,8 +43,7 @@ public:
     // partial datagram is returned and its remaining bytes are discarded.
     //
     // Returns number of bytes read.
-    template <typename UCT>
-    size_t Read(testable_user_out_ptr<void, UCT> dst, size_t len, bool datagram);
+    size_t Read(user_out_ptr<void> dst, size_t len, bool datagram);
 
     bool is_full() const;
     bool is_empty() const;

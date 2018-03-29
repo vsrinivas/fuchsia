@@ -6,14 +6,87 @@
 
 #include <object/mbuf.h>
 
-#include <lib/user_copy/fake_user_ptr.h>
+#include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <unittest.h>
-
-using internal::testing::make_fake_user_out_ptr;
-using internal::testing::make_fake_user_in_ptr;
+#include <vm/pmm.h>
+#include <vm/vm.h>
+#include <vm/vm_aspace.h>
+#include <vm/vm_object_paged.h>
 
 namespace {
+
+// UserMemory facilitates testing code that requires user memory.
+//
+// Example:
+//    unique_ptr<UserMemory> mem = UserMemory::Create(sizeof(thing));
+//    auto mem_out = make_user_out_ptr(mem->out());
+//    mem_out.copy_array_to_user(&thing, sizeof(thing));
+//
+class UserMemory {
+public:
+    static fbl::unique_ptr<UserMemory> Create(size_t size);
+    virtual ~UserMemory();
+    void* out() { return reinterpret_cast<void*>(mapping_->base()); }
+    const void* in() { return reinterpret_cast<void*>(mapping_->base()); }
+
+private:
+    UserMemory(fbl::RefPtr<VmMapping> mapping)
+        : mapping_(fbl::move(mapping)) {}
+
+    fbl::RefPtr<VmMapping> mapping_;
+};
+
+UserMemory::~UserMemory() {
+    zx_status_t status = mapping_->Unmap(mapping_->base(), mapping_->size());
+    DEBUG_ASSERT(status == ZX_OK);
+}
+
+// static
+fbl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
+    size = ROUNDUP_PAGE_SIZE(size);
+
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    if (status != ZX_OK) {
+        unittest_printf("VmObjectPaged::Create failed: %d\n", status);
+        return nullptr;
+    }
+
+    fbl::RefPtr<VmAspace> aspace = fbl::WrapRefPtr(vmm_aspace_to_obj(get_current_thread()->aspace));
+    DEBUG_ASSERT(aspace);
+    DEBUG_ASSERT(aspace->is_user());
+    fbl::RefPtr<VmAddressRegion> root_vmar = aspace->RootVmar();
+    constexpr uint32_t vmar_flags = VMAR_FLAG_CAN_MAP_READ |
+                                    VMAR_FLAG_CAN_MAP_WRITE |
+                                    VMAR_FLAG_CAN_MAP_EXECUTE;
+    fbl::RefPtr<VmMapping> mapping;
+    constexpr uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ |
+                                    ARCH_MMU_FLAG_PERM_WRITE;
+    status = root_vmar->CreateVmMapping(/* offset= */ 0, size, /* align_pow2= */ 0, vmar_flags,
+                                        vmo, 0, arch_mmu_flags, "unittest", &mapping);
+    if (status != ZX_OK) {
+        unittest_printf("CreateVmMapping failed: %d\n", status);
+        return nullptr;
+    }
+    auto unmap = fbl::MakeAutoCall([&]() {
+        if (mapping) {
+            zx_status_t status = mapping->Unmap(mapping->base(), mapping->size());
+            DEBUG_ASSERT(status == ZX_OK);
+        }
+    });
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping));
+    if (!ac.check()) {
+        unittest_printf("failed to allocate from heap\n");
+        return nullptr;
+    }
+    // Unmapping is now UserMemory's responsibility.
+    unmap.cancel();
+
+    return mem;
+}
 
 static bool initial_state() {
     BEGIN_TEST;
@@ -27,24 +100,27 @@ static bool initial_state() {
 // Tests reading a stream when the chain is empty.
 static bool stream_read_empty() {
     BEGIN_TEST;
-    char buf[1] = {0};
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_out = make_user_out_ptr(mem->out());
+
     MBufChain chain;
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf));
-    EXPECT_EQ(0U, chain.Read(dst, sizeof(buf), false), "");
+    EXPECT_EQ(0U, chain.Read(mem_out, 1, false), "");
     END_TEST;
 }
 
 // Tests reading a stream with a zero-length buffer.
 static bool stream_read_zero() {
     BEGIN_TEST;
-    char buf[1] = {'A'};
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
+
     MBufChain chain;
     size_t written = 7;
-    ASSERT_EQ(ZX_OK, chain.WriteStream(src, 1, &written), "");
+    ASSERT_EQ(ZX_OK, chain.WriteStream(mem_in, 1, &written), "");
     ASSERT_EQ(1U, written, "");
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf));
-    EXPECT_EQ(0U, chain.Read(dst, 0, false), "");
+
+    EXPECT_EQ(0U, chain.Read(mem_out, 0, false), "");
     END_TEST;
 }
 
@@ -53,15 +129,19 @@ static bool stream_write_basic() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 1024;
     constexpr int kNumWrites = 5;
-    char buf[kWriteLen] = {0};
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
+
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
 
     size_t written = 0;
     MBufChain chain;
     // Call write several times with different buffer contents.
     for (int i = 0; i < kNumWrites; ++i) {
+        char buf[kWriteLen] = {0};
         memset(buf, 'A' + i, kWriteLen);
-        ASSERT_EQ(ZX_OK, chain.WriteStream(src, kWriteLen, &written), "");
+        ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, kWriteLen), "");
+        ASSERT_EQ(ZX_OK, chain.WriteStream(mem_in, kWriteLen, &written), "");
         ASSERT_EQ(kWriteLen, written, "");
         EXPECT_FALSE(chain.is_empty(), "");
         EXPECT_FALSE(chain.is_full(), "");
@@ -69,36 +149,41 @@ static bool stream_write_basic() {
     }
 
     // Read it all back in one call.
-    fbl::AllocChecker ac;
-    auto read_buf = fbl::unique_ptr<char[]>(new (&ac) char[kWriteLen * kNumWrites]);
-    ASSERT_TRUE(ac.check(), "");
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(read_buf.get()));
-    size_t result = chain.Read(dst, kNumWrites * kWriteLen, false);
-    ASSERT_EQ(kNumWrites * kWriteLen, result, "");
+    constexpr size_t kTotalLen = kWriteLen * kNumWrites;
+    ASSERT_EQ(kTotalLen, chain.size(), "");
+    fbl::unique_ptr<UserMemory> read_buf = UserMemory::Create(kTotalLen);
+    auto read_buf_in = make_user_in_ptr(read_buf->in());
+    auto read_buf_out = make_user_out_ptr(read_buf->out());
+    size_t result = chain.Read(read_buf_out, kTotalLen, false);
+    ASSERT_EQ(kTotalLen, result, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_FALSE(chain.is_full(), "");
     EXPECT_EQ(0U, chain.size(), "");
 
     // Verify result.
-    auto expected_buf = fbl::unique_ptr<char[]>(new (&ac) char[kWriteLen * kNumWrites]);
+    fbl::AllocChecker ac;
+    auto expected_buf = fbl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
     ASSERT_TRUE(ac.check(), "");
     for (int i = 0; i < kNumWrites; ++i) {
         memset(static_cast<void*>(expected_buf.get() + i * kWriteLen), 'A' + i, kWriteLen);
     }
+    auto actual_buf = fbl::unique_ptr<char[]>(new (&ac) char[kTotalLen]);
+    ASSERT_TRUE(ac.check(), "");
+    ASSERT_EQ(ZX_OK, read_buf_in.copy_array_from_user(actual_buf.get(), kTotalLen), "");
     EXPECT_EQ(0, memcmp(static_cast<void*>(expected_buf.get()),
-                        static_cast<void*>(read_buf.get()), kWriteLen), "");
+                        static_cast<void*>(actual_buf.get()), kTotalLen), "");
     END_TEST;
 }
 
 // Tests writing a stream with a zero-length buffer.
 static bool stream_write_zero() {
     BEGIN_TEST;
-    char buf[1] = {0};
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_in = make_user_in_ptr(mem->in());
     size_t written = 7;
     MBufChain chain;
     // TODO(maniscalco): Is ZX_ERR_SHOULD_WAIT really the right error here in this case?
-    EXPECT_EQ(ZX_ERR_SHOULD_WAIT, chain.WriteStream(src, 0, &written), "");
+    EXPECT_EQ(ZX_ERR_SHOULD_WAIT, chain.WriteStream(mem_in, 0, &written), "");
     EXPECT_EQ(7U, written, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_FALSE(chain.is_full(), "");
@@ -110,17 +195,15 @@ static bool stream_write_zero() {
 static bool stream_write_too_much() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 65536;
-    fbl::AllocChecker ac;
-    auto buf = fbl::unique_ptr<char[]>(new (&ac) char[kWriteLen]);
-    ASSERT_TRUE(ac.check(), "");
-    memset(static_cast<void*>(buf.get()), 'A', kWriteLen);
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf.get()));
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
     size_t written = 0;
     MBufChain chain;
     size_t total_written = 0;
 
     // Fill the chain until it refuses to take any more.
-    while (!chain.is_full() && chain.WriteStream(src, kWriteLen, &written) == ZX_OK) {
+    while (!chain.is_full() && chain.WriteStream(mem_in, kWriteLen, &written) == ZX_OK) {
         total_written += written;
     }
     ASSERT_FALSE(chain.is_empty(), "");
@@ -130,8 +213,7 @@ static bool stream_write_too_much() {
     // Read it all back out and see we get back the same number of bytes we wrote.
     size_t total_read = 0;
     size_t bytes_read = 0;
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf.get()));
-    while (!chain.is_empty() && (bytes_read = chain.Read(dst, kWriteLen, false)) > 0) {
+    while (!chain.is_empty() && (bytes_read = chain.Read(mem_out, kWriteLen, false)) > 0) {
         total_read += bytes_read;
     }
     EXPECT_TRUE(chain.is_empty(), "");
@@ -146,14 +228,15 @@ static bool stream_write_too_much() {
 // Tests reading a datagram with a zero-length buffer.
 static bool datagram_read_zero() {
     BEGIN_TEST;
-    char buf[1] = {'A'};
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(1);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
+
     MBufChain chain;
     size_t written = 7;
-    ASSERT_EQ(ZX_OK, chain.WriteDatagram(src, 1, &written), "");
+    ASSERT_EQ(ZX_OK, chain.WriteDatagram(mem_in, 1, &written), "");
     ASSERT_EQ(1U, written, "");
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf));
-    EXPECT_EQ(0U, chain.Read(dst, 0, true), "");
+    EXPECT_EQ(0U, chain.Read(mem_out, 0, true), "");
     EXPECT_FALSE(chain.is_empty(), "");
     END_TEST;
 }
@@ -162,39 +245,47 @@ static bool datagram_read_zero() {
 static bool datagram_read_buffer_too_small() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 32;
-    char buf[kWriteLen] = {0};
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
     size_t written = 0;
     MBufChain chain;
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
 
     // Write the 'A' datagram.
-    memset(buf, 'A', kWriteLen);
-    ASSERT_EQ(ZX_OK, chain.WriteDatagram(src, kWriteLen, &written), "");
+    char buf[kWriteLen] = {0};
+    memset(buf, 'A', sizeof(buf));
+    ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
+    ASSERT_EQ(ZX_OK, chain.WriteDatagram(mem_in, kWriteLen, &written), "");
     ASSERT_EQ(kWriteLen, written, "");
     EXPECT_EQ(kWriteLen, chain.size(), "");
     ASSERT_FALSE(chain.is_empty(), "");
 
     // Write the 'B' datagram.
-    memset(buf, 'B', kWriteLen);
-    ASSERT_EQ(ZX_OK, chain.WriteDatagram(src, kWriteLen, &written), "");
+    memset(buf, 'B', sizeof(buf));
+    ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
+    ASSERT_EQ(ZX_OK, chain.WriteDatagram(mem_in, kWriteLen, &written), "");
     ASSERT_EQ(kWriteLen, written, "");
     EXPECT_EQ(2 * kWriteLen, chain.size(), "");
     ASSERT_FALSE(chain.is_empty(), "");
 
     // Read back the first datagram, but with a buffer that's too small.  See that we get back a
     // truncated 'A' datagram.
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf));
-    memset(buf, 0, kWriteLen);
-    EXPECT_EQ(1U, chain.Read(dst, 1, true), "");
+    memset(buf, 0, sizeof(buf));
+    ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
+    EXPECT_EQ(1U, chain.Read(mem_out, 1, true), "");
     EXPECT_FALSE(chain.is_empty(), "");
-    EXPECT_EQ('A', buf[0],"");
+    ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(buf, sizeof(buf)), "");
+    EXPECT_EQ('A', buf[0], "");
+    EXPECT_EQ(0, buf[1], "");
 
     // Read the next one and see that it's 'B' implying the remainder of 'A' was discarded.
     EXPECT_EQ(kWriteLen, chain.size(), "");
     memset(buf, 0, kWriteLen);
-    EXPECT_EQ(kWriteLen, chain.Read(dst, kWriteLen, true), "");
+    ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
+    EXPECT_EQ(kWriteLen, chain.Read(mem_out, kWriteLen, true), "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
+    ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(buf, sizeof(buf)), "");
     char expected_buf[kWriteLen] = {0};
     memset(expected_buf, 'B', kWriteLen);
     EXPECT_EQ(0, memcmp(expected_buf, buf, kWriteLen), "");
@@ -207,27 +298,32 @@ static bool datagram_write_basic() {
     constexpr int kNumDatagrams = 100;
     constexpr size_t kMaxLength = kNumDatagrams;
     size_t written = 0;
-    char buf[kMaxLength] = {0};
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf));
+
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kMaxLength);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
 
     MBufChain chain;
     // Write a series of datagrams with different sizes.
     for (unsigned i = 1; i <= kNumDatagrams; ++i) {
+        char buf[kMaxLength] = {0};
         memset(buf, i, i);
-        ASSERT_EQ(ZX_OK, chain.WriteDatagram(src, i, &written), "");
+        ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
+        ASSERT_EQ(ZX_OK, chain.WriteDatagram(mem_in, i, &written), "");
         ASSERT_EQ(i, written, "");
         EXPECT_FALSE(chain.is_empty(), "");
         EXPECT_FALSE(chain.is_full(), "");
     }
 
     // Read them back and verify their contents.
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf));
     for (unsigned i = 1; i <= kNumDatagrams; ++i) {
         char expected_buf[kMaxLength] = {0};
         memset(expected_buf, i, i);
-        size_t result = chain.Read(dst, i, true);
+        size_t result = chain.Read(mem_out, i, true);
         ASSERT_EQ(i, result, "");
-        EXPECT_EQ(0, memcmp(expected_buf, buf, i), "");
+        char actual_buf[kMaxLength] = {0};
+        ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(actual_buf, sizeof(actual_buf)), "");
+        EXPECT_EQ(0, memcmp(expected_buf, actual_buf, i), "");
     }
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
@@ -241,16 +337,15 @@ static bool datagram_write_basic() {
 static bool datagram_write_too_much() {
     BEGIN_TEST;
     constexpr size_t kWriteLen = 65536;
-    fbl::AllocChecker ac;
-    auto buf = fbl::unique_ptr<char[]>(new (&ac) char[kWriteLen]);
-    ASSERT_TRUE(ac.check(), "");
-    memset(static_cast<void*>(buf.get()), 'A', kWriteLen);
-    auto src = make_fake_user_in_ptr(static_cast<const void*>(buf.get()));
+    fbl::unique_ptr<UserMemory> mem = UserMemory::Create(kWriteLen);
+    auto mem_in = make_user_in_ptr(mem->in());
+    auto mem_out = make_user_out_ptr(mem->out());
+
     size_t written = 0;
     MBufChain chain;
     int num_datagrams_written = 0;
     // Fill the chain until it refuses to take any more.
-    while (!chain.is_full() && chain.WriteDatagram(src, kWriteLen, &written) == ZX_OK) {
+    while (!chain.is_full() && chain.WriteDatagram(mem_in, kWriteLen, &written) == ZX_OK) {
         ++num_datagrams_written;
         ASSERT_EQ(kWriteLen, written, "");
     }
@@ -258,8 +353,7 @@ static bool datagram_write_too_much() {
     EXPECT_EQ(kWriteLen * num_datagrams_written, chain.size(), "");
     // Read it all back out and see that there's none left over.
     int num_datagrams_read = 0;
-    auto dst = make_fake_user_out_ptr(static_cast<void*>(buf.get()));
-    while (!chain.is_empty() && chain.Read(dst, kWriteLen, true) > 0) {
+    while (!chain.is_empty() && chain.Read(mem_out, kWriteLen, true) > 0) {
         ++num_datagrams_read;
     }
     EXPECT_TRUE(chain.is_empty(), "");
@@ -268,7 +362,7 @@ static bool datagram_write_too_much() {
     END_TEST;
 }
 
-}  // namespace
+} // namespace
 
 UNITTEST_START_TESTCASE(mbuf_tests)
 UNITTEST("initial_state", initial_state)
