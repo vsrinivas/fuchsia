@@ -8,9 +8,7 @@ import (
 	"testing"
 
 	"app/context"
-	"fidl/bindings"
-
-	"garnet/public/lib/device_settings/fidl/device_settings"
+	"fuchsia/go/device_settings"
 )
 
 const (
@@ -19,11 +17,11 @@ const (
 
 func TestDeviceSettingsSimple(t *testing.T) {
 	ctx := context.CreateFromStartupInfo()
-	var dm *device_settings.DeviceSettingsManager_Proxy
-	r, d := dm.NewRequest(bindings.GetAsyncWaiter())
-	dm = d
-	ctx.ConnectToEnvService(r)
-	defer dm.Close()
+	req, dm, err := device_settings.NewDeviceSettingsManagerInterfaceRequest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.ConnectToEnvService(req)
 
 	if s, err := dm.SetInteger(TestSettingKey, 10); err != nil {
 		t.Fatal(err)
@@ -32,7 +30,7 @@ func TestDeviceSettingsSimple(t *testing.T) {
 	}
 	if i, s, err := dm.GetInteger(TestSettingKey); err != nil {
 		t.Fatal(err)
-	} else if s != device_settings.Status_Ok {
+	} else if s != device_settings.StatusOk {
 		t.Fatalf("got err status: %s", s)
 	} else if i != 10 {
 		t.Fatalf("expected 10 got : %d", i)
@@ -45,7 +43,7 @@ func TestDeviceSettingsSimple(t *testing.T) {
 	}
 	if str, s, err := dm.GetString(TestSettingKey); err != nil {
 		t.Fatal(err)
-	} else if s != device_settings.Status_Ok {
+	} else if s != device_settings.StatusOk {
 		t.Fatalf("got err status: %s", s)
 	} else if str != "somestring" {
 		t.Fatalf("expected 'somestring' got : %q", str)
