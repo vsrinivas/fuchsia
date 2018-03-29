@@ -132,4 +132,7 @@ void platform_suspend(void);
 // reinitialize arch components.  Must be called with interrupts disabled.
 void platform_resume(void);
 
+// Returns true if this system has a debug serial port that is enabled
+bool platform_serial_enabled(void);
+
 __END_CDECLS

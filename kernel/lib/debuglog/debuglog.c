@@ -359,9 +359,12 @@ static void dlog_init_hook(uint level) {
                                  HIGH_PRIORITY - 1, DEFAULT_STACK_SIZE)) != NULL) {
         thread_resume(rthread);
     }
-    if ((rthread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
-                                 HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
-        thread_resume(rthread);
+
+    if (platform_serial_enabled()) {
+        if ((rthread = thread_create("debuglog-dumper", debuglog_dumper, NULL,
+                                     HIGH_PRIORITY - 2, DEFAULT_STACK_SIZE)) != NULL) {
+            thread_resume(rthread);
+        }
     }
 }
 

@@ -36,6 +36,7 @@ function HELP {
     echo "--audio[=<host_drv>] : use Intel HD Audio"
     echo "                     : <host_drv> should be one of (alsa, pa, wav, none)"
     echo "--debugger           : Enable gdb stub and wait for connection"
+    echo "--no-serial          : Disable writing out to the guest's serial port"
     echo "--vnc=<display>      : use vnc based display"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
     echo "-h for help"
@@ -70,6 +71,7 @@ RELEASE=0
 UPSCRIPT=no
 VNC=
 VIRTIO=0
+SERIAL=1
 SMP=4
 INITRD=
 CMDLINE=""
@@ -118,6 +120,7 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:q:rs:u:Vx:h-:" FLAG; do
             debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
             diskfmt=*) DISKFMT=${OPTARG#*=};;
+            no-serial) SERIAL=0;;
             vnc=*) VNC=${OPTARG#*=};;
             *)
                 echo unrecognized long option
@@ -333,6 +336,10 @@ case $ARCH in
         if [[ $GIC != 0 ]]; then
             ARGS+=",gic_version=${GIC}"
         fi
+
+        if (( !$SERIAL )); then
+          CMDLINE+="kernel.serial=none "
+        fi
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
@@ -342,6 +349,12 @@ case $ARCH in
           ARGS+=" -enable-kvm -cpu host,migratable=no"
         else
           ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
+        fi
+
+        if (( $SERIAL )); then
+          CMDLINE+="kernel.serial=legacy "
+        else
+          CMDLINE+="kernel.serial=none "
         fi
         ;;
     *)

@@ -63,6 +63,7 @@ static uint cpu_cluster_count = 0;
 static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
 static bool halt_on_panic = false;
+static bool uart_disabled = false;
 
 struct mem_bank {
     size_t num;
@@ -558,6 +559,10 @@ void platform_early_init(void) {
     // Read cmdline after processing bootdata, which may contain cmdline data.
     halt_on_panic = cmdline_get_bool("kernel.halt-on-panic", false);
 
+    // Check if serial should be enabled
+    const char* serial_mode = cmdline_get("kernel.serial");
+    uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
+
     // add the ramdisk to the boot reserve memory list
     paddr_t ramdisk_start_phys = physmap_to_paddr(ramdisk_base);
     paddr_t ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;
@@ -617,14 +622,23 @@ static void platform_init_postvm(uint level) {
 LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);
 
 void platform_dputs_thread(const char* str, size_t len) {
+    if (uart_disabled) {
+        return;
+    }
     uart_puts(str, len, true, true);
 }
 
 void platform_dputs_irq(const char* str, size_t len) {
+    if (uart_disabled) {
+        return;
+    }
     uart_puts(str, len, false, true);
 }
 
 int platform_dgetc(char* c, bool wait) {
+    if (uart_disabled) {
+        return -1;
+    }
     int ret = uart_getc(wait);
     if (ret == -1)
         return -1;
@@ -633,10 +647,16 @@ int platform_dgetc(char* c, bool wait) {
 }
 
 void platform_pputc(char c) {
+    if (uart_disabled) {
+        return;
+    }
     uart_pputc(c);
 }
 
 int platform_pgetc(char* c, bool wait) {
+    if (uart_disabled) {
+        return -1;
+    }
     int r = uart_pgetc();
     if (r == -1) {
         return -1;
@@ -711,4 +731,8 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops,
                     uintptr_t entry64_addr) {
     mexec_assembly((uintptr_t)new_bootimage_addr, 0, 0, arm64_get_boot_el(),
                    ops, (void*)(get_kernel_base_phys()));
+}
+
+bool platform_serial_enabled(void) {
+    return !uart_disabled && uart_present();
 }

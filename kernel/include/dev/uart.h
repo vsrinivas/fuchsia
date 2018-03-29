@@ -16,6 +16,7 @@ __BEGIN_CDECLS
 void uart_init(void);
 void uart_init_early(void);
 
+bool uart_present(void);
 void uart_putc(char c);
 int uart_getc(bool wait);
 

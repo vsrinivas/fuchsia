@@ -45,6 +45,10 @@ void uart_init(void) {
 void uart_init_early(void) {
 }
 
+bool uart_present(void) {
+    return uart_ops != &default_ops;
+}
+
 void uart_putc(char c) {
     uart_ops->dputs(&c, 1, true, true);
 }

@@ -199,6 +199,15 @@ parameters.
 If false, this option leaves PCI devices running when calling mexec. Defaults
 to true.
 
+## kernel.serial=\<string\>
+
+This controls what serial port is used.  If provided, it overrides the serial
+port described by the system's bootdata.
+
+If set to "none", the kernel debug serial port will be disabled.
+On x64, if set to "legacy", the legacy COM1 interface is used.
+All other values are currently undefined.
+
 ## kernel.shell=\<bool>
 
 This option tells the kernel to start its own shell on the kernel console
