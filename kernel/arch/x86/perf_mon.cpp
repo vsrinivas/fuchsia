@@ -127,7 +127,8 @@ typedef enum {
 #define INTEL_MCHBAR_PCI_VENDOR_ID 0x8086
 const uint16_t supported_mem_device_ids[] = {
     0x1900,  // docs use this value
-    0x1904,  // seen on NUC
+    0x1904,  // seen on NUC6
+    0x5904,  // seen on NUC7
 };
 
 // Offset in PCI config space of the BAR (base address register) of the
