@@ -14,6 +14,8 @@
 #include <rapidjson/writer.h>
 #include <time.h>
 
+#include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
@@ -227,7 +229,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
       [this, firebase_api_key =
-                 firebase_api_key.get()](network::URLResponsePtr response) {
+                 firebase_api_key.get()](network::URLResponse response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }
@@ -315,36 +317,36 @@ modular_auth::FirebaseTokenPtr ServiceAccountTokenProvider::GetFirebaseToken(
   return token;
 }
 
-network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
+network::URLRequest ServiceAccountTokenProvider::GetIdentityRequest(
     const std::string& api_key,
     const std::string& custom_token) {
-  auto request = network::URLRequest::New();
-  request->url =
+  network::URLRequest request;
+  request.url =
       "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
       "verifyCustomToken?key=" +
       api_key;
-  request->method = "POST";
-  request->auto_follow_redirects = true;
-  request->response_body_mode = network::ResponseBodyMode::SIZED_BUFFER;
+  request.method = "POST";
+  request.auto_follow_redirects = true;
+  request.response_body_mode = network::ResponseBodyMode::SIZED_BUFFER;
 
   // content-type header.
   network::HttpHeader content_type_header;
   content_type_header.name = "content-type";
   content_type_header.value = "application/json";
-  request->headers.push_back(std::move(content_type_header));
+  request.headers.push_back(std::move(content_type_header));
 
   // set accept header
   network::HttpHeader accept_header;
   accept_header.name = "accept";
   accept_header.value = "application/json";
-  request->headers.push_back(std::move(accept_header));
+  request.headers.push_back(std::move(accept_header));
 
   fsl::SizedVmo data;
   bool result = fsl::VmoFromString(GetIdentityRequestBody(custom_token), &data);
   FXL_DCHECK(result);
 
-  request->body = network::URLBody::New();
-  request->body->set_sized_buffer(std::move(data).ToTransport());
+  request.body = network::URLBody::New();
+  request.body->set_sized_buffer(std::move(data).ToTransport());
 
   return request;
 }
@@ -369,19 +371,18 @@ std::string ServiceAccountTokenProvider::GetIdentityRequestBody(
 
 void ServiceAccountTokenProvider::HandleIdentityResponse(
     const std::string& api_key,
-    network::URLResponsePtr response) {
-  if (!response->error.is_null()) {
+    network::URLResponse response) {
+  if (response.error) {
     ResolveCallbacks(api_key, nullptr,
                      GetError(modular_auth::Status::NETWORK_ERROR,
-                              response->error->description));
+                              response.error->description));
     return;
   }
 
   std::string response_body;
-  if (!response->body.is_null()) {
-    FXL_DCHECK(response->body->is_sized_buffer());
-    if (!fsl::StringFromVmo(response->body->get_sized_buffer(),
-                            &response_body)) {
+  if (response.body) {
+    FXL_DCHECK(response.body->is_sized_buffer());
+    if (!fsl::StringFromVmo(response.body->sized_buffer(), &response_body)) {
       ResolveCallbacks(api_key, nullptr,
                        GetError(modular_auth::Status::INTERNAL_ERROR,
                                 "Unable to read from VMO."));
@@ -389,7 +390,7 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
     }
   }
 
-  if (response->status_code != 200) {
+  if (response.status_code != 200) {
     ResolveCallbacks(
         api_key, nullptr,
         GetError(modular_auth::Status::OAUTH_SERVER_ERROR, response_body));
@@ -428,11 +429,11 @@ void ServiceAccountTokenProvider::HandleIdentityResponse(
 void ServiceAccountTokenProvider::ResolveCallbacks(
     const std::string& api_key,
     modular_auth::FirebaseTokenPtr token,
-    modular_auth::AuthErrPtr error) {
+    modular_auth::AuthErr error) {
   auto callbacks = std::move(in_progress_callbacks_[api_key]);
   in_progress_callbacks_[api_key].clear();
   for (const auto& callback : callbacks) {
-    callback(token.Clone(), error.Clone());
+    callback(fidl::Clone(token), fidl::Clone(error));
   }
 }
 

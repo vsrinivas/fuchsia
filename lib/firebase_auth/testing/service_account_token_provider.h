@@ -53,11 +53,11 @@ class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
   std::string GetClaims();
   bool GetCustomToken(std::string* custom_token);
   modular_auth::FirebaseTokenPtr GetFirebaseToken(const std::string& id_token);
-  network::URLRequestPtr GetIdentityRequest(const std::string& api_key,
-                                            const std::string& custom_token);
+  network::URLRequest GetIdentityRequest(const std::string& api_key,
+                                         const std::string& custom_token);
   std::string GetIdentityRequestBody(const std::string& custom_token);
   void HandleIdentityResponse(const std::string& api_key,
-                              network::URLResponsePtr response);
+                              network::URLResponse response);
   void ResolveCallbacks(const std::string& api_key,
                         modular_auth::FirebaseTokenPtr token,
                         modular_auth::AuthErr error);
