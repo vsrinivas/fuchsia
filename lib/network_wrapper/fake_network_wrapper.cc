@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "garnet/lib/callback/cancellable_helper.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 
@@ -21,10 +22,12 @@ network::URLRequest* FakeNetworkWrapper::GetRequest() {
   return request_received_.get();
 }
 
-void FakeNetworkWrapper::ResetRequest() { request_received_.reset(); }
+void FakeNetworkWrapper::ResetRequest() {
+  request_received_.reset();
+}
 
 void FakeNetworkWrapper::SetResponse(network::URLResponse response) {
-  response_to_return_ = std::move(response);
+  response_to_return_ = fidl::MakeOptional(std::move(response));
 }
 
 void FakeNetworkWrapper::SetSocketResponse(zx::socket body,
@@ -57,8 +60,9 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
                           callback = cancellable->WrapCallback(callback),
                           request_factory = std::move(request_factory)] {
     if (!*cancelled_ptr) {
-      request_received_ = request_factory();
-      callback(std::move(response_to_return_));
+      request_received_ = fidl::MakeOptional(request_factory());
+      callback(std::move(*response_to_return_));
+      response_to_return_.reset();
     }
   });
   return cancellable;
