@@ -5,12 +5,17 @@
 #pragma once
 
 #include <stddef.h>
+#include <string.h>
 
 namespace fidl {
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 class Array {
 public:
+    Array() {
+        memset(data_, 0, sizeof(data_));
+    }
+
     constexpr size_t count() const { return N; }
 
     const T* data() const { return data_; }
