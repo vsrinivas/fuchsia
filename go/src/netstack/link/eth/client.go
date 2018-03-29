@@ -220,6 +220,14 @@ func (c *Client) closeLocked() {
 	c.changeStateLocked(StateClosed)
 }
 
+func (c *Client) SetPromiscuousMode(enabled bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	m := syscall.FDIOForFD(int(c.f.Fd()))
+	return IoctlSetPromisc(m, enabled)
+}
+
 // AllocForSend returns a Buffer to be passed to Send.
 // If there are too many outstanding transmission buffers, then
 // AllocForSend will return nil. WaitSend can be called to block

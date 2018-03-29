@@ -329,10 +329,20 @@ func (ns *netstack) addLoopback() error {
 
 func (ns *netstack) Bridge(nics []tcpip.NICID) error {
 	// TODO(stijlist): save bridge in netstack state as NetInterface
+	// TODO(stijlist): initialize bridge context.Context & cancelFunc
 	b, err := ns.stack.Bridge(nics)
 	if err != nil {
 		return fmt.Errorf("%s", err)
 	}
+
+	for _, nicid := range nics {
+		nic, ok := ns.ifStates[nicid]
+		if !ok {
+			panic("NIC known by netstack not in interface table")
+		}
+		nic.eth.SetPromiscuousMode(true)
+	}
+
 	b.Enable()
 	return nil
 }
