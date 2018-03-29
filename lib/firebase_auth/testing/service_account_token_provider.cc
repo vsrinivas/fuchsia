@@ -75,11 +75,11 @@ std::string GetHeader() {
       fxl::StringView(string_buffer.GetString(), string_buffer.GetSize()));
 }
 
-modular_auth::AuthErrPtr GetError(modular_auth::Status status,
-                                   std::string message) {
-  auto error = modular_auth::AuthErr::New();
-  error->status = status;
-  error->message = message;
+modular_auth::AuthErr GetError(modular_auth::Status status,
+                               std::string message) {
+  modular_auth::AuthErr error;
+  error.status = status;
+  error.message = message;
   return error;
 }
 
@@ -176,22 +176,21 @@ bool ServiceAccountTokenProvider::LoadCredentials(
 }
 
 void ServiceAccountTokenProvider::GetAccessToken(
-    const GetAccessTokenCallback& callback) {
+    GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
            GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
-void ServiceAccountTokenProvider::GetIdToken(
-    const GetIdTokenCallback& callback) {
+void ServiceAccountTokenProvider::GetIdToken(GetIdTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(nullptr,
            GetError(modular_auth::Status::INTERNAL_ERROR, "Not implemented."));
 }
 
 void ServiceAccountTokenProvider::GetFirebaseAuthToken(
-    const f1dl::StringPtr& firebase_api_key,
-    const GetFirebaseAuthTokenCallback& callback) {
+    fidl::StringPtr firebase_api_key,
+    GetFirebaseAuthTokenCallback callback) {
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.
   if (!in_progress_callbacks_[firebase_api_key].empty()) {
@@ -233,8 +232,7 @@ void ServiceAccountTokenProvider::GetFirebaseAuthToken(
       }));
 }
 
-void ServiceAccountTokenProvider::GetClientId(
-    const GetClientIdCallback& callback) {
+void ServiceAccountTokenProvider::GetClientId(GetClientIdCallback callback) {
   callback(credentials_->client_id);
 }
 
@@ -327,19 +325,18 @@ network::URLRequestPtr ServiceAccountTokenProvider::GetIdentityRequest(
       api_key;
   request->method = "POST";
   request->auto_follow_redirects = true;
-  request->response_body_mode =
-      network::URLRequest::ResponseBodyMode::SIZED_BUFFER;
+  request->response_body_mode = network::ResponseBodyMode::SIZED_BUFFER;
 
   // content-type header.
-  network::HttpHeaderPtr content_type_header = network::HttpHeader::New();
-  content_type_header->name = "content-type";
-  content_type_header->value = "application/json";
+  network::HttpHeader content_type_header;
+  content_type_header.name = "content-type";
+  content_type_header.value = "application/json";
   request->headers.push_back(std::move(content_type_header));
 
   // set accept header
-  network::HttpHeaderPtr accept_header = network::HttpHeader::New();
-  accept_header->name = "accept";
-  accept_header->value = "application/json";
+  network::HttpHeader accept_header;
+  accept_header.name = "accept";
+  accept_header.value = "application/json";
   request->headers.push_back(std::move(accept_header));
 
   fsl::SizedVmo data;

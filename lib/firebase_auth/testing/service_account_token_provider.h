@@ -7,8 +7,8 @@
 
 #include <map>
 
-#include "garnet/lib/callback/cancellable.h"
 #include <fuchsia/cpp/modular_auth.h>
+#include "garnet/lib/callback/cancellable.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 
 #include "lib/fxl/macros.h"
@@ -40,12 +40,11 @@ class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
   bool LoadCredentials(const std::string& json_file);
 
   // modular_auth::TokenProvider:
-  void GetAccessToken(const GetAccessTokenCallback& callback) override;
-  void GetIdToken(const GetIdTokenCallback& callback) override;
-  void GetFirebaseAuthToken(
-      const f1dl::StringPtr& firebase_api_key,
-      const GetFirebaseAuthTokenCallback& callback) override;
-  void GetClientId(const GetClientIdCallback& callback) override;
+  void GetAccessToken(GetAccessTokenCallback callback) override;
+  void GetIdToken(GetIdTokenCallback callback) override;
+  void GetFirebaseAuthToken(fidl::StringPtr firebase_api_key,
+                            GetFirebaseAuthTokenCallback callback) override;
+  void GetClientId(GetClientIdCallback callback) override;
 
  private:
   struct Credentials;
@@ -61,7 +60,7 @@ class ServiceAccountTokenProvider : public modular_auth::TokenProvider {
                               network::URLResponsePtr response);
   void ResolveCallbacks(const std::string& api_key,
                         modular_auth::FirebaseTokenPtr token,
-                        modular_auth::AuthErrPtr error);
+                        modular_auth::AuthErr error);
 
   network_wrapper::NetworkWrapper* network_wrapper_;
   const std::string user_id_;

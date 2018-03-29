@@ -9,6 +9,7 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -16,7 +17,6 @@
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "garnet/lib/network_wrapper/fake_network_wrapper.h"
 
 namespace service_account {
 namespace {
@@ -92,18 +92,18 @@ class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
     return std::string(string_buffer.GetString(), string_buffer.GetSize());
   }
 
-  network::URLResponsePtr GetResponse(network::NetworkErrorPtr error,
-                                      uint32_t status,
-                                      std::string body) {
-    auto response = network::URLResponse::New();
-    response->error = std::move(error);
-    response->status_code = status;
+  network::URLResponse GetResponse(network::NetworkErrorPtr error,
+                                   uint32_t status,
+                                   std::string body) {
+    network::URLResponse response;
+    response.error = std::move(error);
+    response.status_code = status;
     fsl::SizedVmo buffer;
     if (!fsl::VmoFromString(body, &buffer)) {
       ADD_FAILURE() << "Unable to convert string to Vmo.";
     }
-    response->body = network::URLBody::New();
-    response->body->set_sized_buffer(std::move(buffer).ToTransport());
+    response.body = network::URLBody::New();
+    response.body->set_sized_buffer(std::move(buffer).ToTransport());
     return response;
   }
 
