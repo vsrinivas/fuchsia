@@ -119,7 +119,7 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
       }
 
       user_provider_->PreviousUsers(
-          [this](fidl::VectorPtr<modular_auth::AccountPtr> accounts) {
+          [this](fidl::VectorPtr<modular_auth::Account> accounts) {
             FXL_LOG(INFO) << "Found " << accounts->size()
                           << " users in the user "
                           << "database";
@@ -128,11 +128,11 @@ class DevDeviceShellApp : modular::SingleServiceApp<modular::DeviceShell>,
             // added.
             std::string account_id;
             for (const auto& account : *accounts) {
-              FXL_LOG(INFO) << "Found user " << account->display_name;
-              if (account->display_name->size() >= settings_.user.size() &&
-                  account->display_name->substr(settings_.user.size()) ==
+              FXL_LOG(INFO) << "Found user " << account.display_name;
+              if (account.display_name->size() >= settings_.user.size() &&
+                  account.display_name->substr(settings_.user.size()) ==
                       settings_.user) {
-                account_id = account->id;
+                account_id = account.id;
                 break;
               }
             }
