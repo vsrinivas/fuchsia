@@ -478,9 +478,8 @@ zx_status_t Device::LoadFirmware() {
 
     zx::vmo fw(fw_handle);
     uint8_t fwversion[2];
-    size_t actual = 0;
-    status = fw.read(fwversion, fw_size - 4, 2, &actual);
-    if (status != ZX_OK || actual != sizeof(fwversion)) {
+    status = fw.read(fwversion, fw_size - 4, 2);
+    if (status != ZX_OK) {
         errorf("error reading fw version\n");
         return ZX_ERR_BAD_STATE;
     }
@@ -528,8 +527,8 @@ zx_status_t Device::LoadFirmware() {
 
     while (remaining) {
         size_t to_send = std::min(remaining, sizeof(buf));
-        status = fw.read(buf, offset, to_send, &actual);
-        if (status != ZX_OK || actual != to_send) {
+        status = fw.read(buf, offset, to_send);
+        if (status != ZX_OK) {
             errorf("error reading firmware\n");
             return ZX_ERR_BAD_STATE;
         }
