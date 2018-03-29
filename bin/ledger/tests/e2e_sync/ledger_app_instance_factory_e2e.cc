@@ -96,11 +96,11 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   component::ApplicationControllerPtr controller;
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
   component::Services child_services;
-  auto launch_info = component::ApplicationLaunchInfo::New();
-  launch_info->url = "ledger";
-  launch_info->directory_request = child_services.NewRequest();
-  launch_info->arguments.push_back("--no_minfs_wait");
-  launch_info->arguments.push_back("--no_statistics_reporting_for_testing");
+  component::ApplicationLaunchInfo launch_info;
+  launch_info.url = "ledger";
+  launch_info.directory_request = child_services.NewRequest();
+  launch_info.arguments.push_back("--no_minfs_wait");
+  launch_info.arguments.push_back("--no_statistics_reporting_for_testing");
 
   application_context_->launcher()->CreateApplication(std::move(launch_info),
                                                       controller.NewRequest());

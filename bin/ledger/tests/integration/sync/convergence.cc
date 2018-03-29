@@ -7,13 +7,14 @@
 #include <trace/event.h>
 #include <zx/time.h>
 
+#include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/waiter.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/vector.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/storage/public/types.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/get_ledger.h"
@@ -25,7 +26,8 @@ namespace sync {
 namespace {
 
 fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
-  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(sizeof(double));
+  fidl::VectorPtr<uint8_t> array =
+      fidl::VectorPtr<uint8_t>::New(sizeof(double));
   std::memcpy(array->data(), &dbl, sizeof(double));
   return array;
 }
@@ -157,21 +159,21 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
         fxl::MakeCopyable([merge_result_provider =
                                std::move(merge_result_provider)](
                               ledger::Status status,
-                              fidl::VectorPtr<ledger::DiffEntryPtr> changes,
+                              fidl::VectorPtr<ledger::DiffEntry> changes,
                               fidl::VectorPtr<uint8_t> next_token) mutable {
           ASSERT_EQ(ledger::Status::OK, status);
           ASSERT_EQ(1u, changes->size());
 
           double d1, d2;
-          EXPECT_TRUE(VmoToDouble(changes->at(0)->left->value, &d1));
-          EXPECT_TRUE(VmoToDouble(changes->at(0)->right->value, &d2));
+          EXPECT_TRUE(VmoToDouble(changes->at(0).left->value, &d1));
+          EXPECT_TRUE(VmoToDouble(changes->at(0).right->value, &d2));
           double new_value = (4 * d1 + d2) / 3;
-          ledger::MergedValuePtr merged_value = ledger::MergedValue::New();
-          merged_value->key = std::move(changes->at(0)->key);
-          merged_value->source = ledger::ValueSource::NEW;
-          merged_value->new_value = ledger::BytesOrReference::New();
-          merged_value->new_value->set_bytes(DoubleToArray(new_value));
-          fidl::VectorPtr<ledger::MergedValuePtr> merged_values;
+          ledger::MergedValue merged_value;
+          merged_value.key = std::move(changes->at(0).key);
+          merged_value.source = ledger::ValueSource::NEW;
+          merged_value.new_value = ledger::BytesOrReference::New();
+          merged_value.new_value->set_bytes(DoubleToArray(new_value));
+          fidl::VectorPtr<ledger::MergedValue> merged_values;
           merged_values.push_back(std::move(merged_value));
           ledger::Status merge_status;
           merge_result_provider->Merge(std::move(merged_values),
@@ -195,13 +197,13 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
 
  private:
   // ConflictResolverFactory:
-  void GetPolicy(fidl::VectorPtr<uint8_t> /*page_id*/,
+  void GetPolicy(fidl::Array<uint8_t, 16> /*page_id*/,
                  GetPolicyCallback callback) override {
     callback(ledger::MergePolicy::CUSTOM);
   }
 
   void NewConflictResolver(
-      fidl::VectorPtr<uint8_t> page_id,
+      fidl::Array<uint8_t, 16> page_id,
       fidl::InterfaceRequest<ledger::ConflictResolver> resolver) override {
     resolvers.emplace(std::piecewise_construct,
                       std::forward_as_tuple(convert::ToString(page_id)),
@@ -233,7 +235,8 @@ class ConvergenceTest
 
     ASSERT_GT(num_ledgers_, 1);
 
-    fidl::VectorPtr<uint8_t> page_id;
+    ledger::PageId page_id;
+
     for (int i = 0; i < num_ledgers_; i++) {
       auto ledger_instance = NewLedgerAppInstance();
       ASSERT_TRUE(ledger_instance);
@@ -244,7 +247,7 @@ class ConvergenceTest
           &message_loop_, &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
-          i == 0 ? nullptr : page_id.Clone(), &pages_[i], &page_id);
+          i == 0 ? nullptr : fidl::MakeOptional(page_id), &pages_[i], &page_id);
       ASSERT_EQ(ledger::Status::OK, status);
     }
   }

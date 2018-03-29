@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fsl/vmo/sized_vmo.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fsl/vmo/sized_vmo.h"
 
 namespace test {
 namespace integration {
@@ -19,7 +19,7 @@ fidl::VectorPtr<uint8_t> RandomArray(size_t size,
 
 fidl::VectorPtr<uint8_t> RandomArray(int size);
 
-fidl::VectorPtr<uint8_t> PageGetId(ledger::PagePtr* page);
+ledger::PageId PageGetId(ledger::PagePtr* page);
 
 ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
                                         fidl::VectorPtr<uint8_t> prefix = nullptr);
@@ -32,10 +32,10 @@ fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     fidl::VectorPtr<uint8_t> start,
     int* num_queries);
 
-fidl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
+fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
     fidl::VectorPtr<uint8_t> start);
-fidl::VectorPtr<ledger::EntryPtr> SnapshotGetEntries(
+fidl::VectorPtr<ledger::Entry> SnapshotGetEntries(
     ledger::PageSnapshotPtr* snapshot,
     fidl::VectorPtr<uint8_t> start,
     int* num_queries);

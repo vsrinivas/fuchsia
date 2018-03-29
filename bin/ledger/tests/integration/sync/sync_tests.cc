@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/callback/capture.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 #include "peridot/lib/convert/convert.h"
@@ -16,7 +17,7 @@ class SyncIntegrationTest : public IntegrationTest {
  protected:
   ::testing::AssertionResult GetEntries(
       ledger::Page* page,
-      fidl::VectorPtr<ledger::EntryPtr>* entries) {
+      fidl::VectorPtr<ledger::Entry>* entries) {
     ledger::PageSnapshotPtr snapshot;
     ledger::Status status;
     page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
@@ -29,7 +30,7 @@ class SyncIntegrationTest : public IntegrationTest {
     fidl::VectorPtr<uint8_t> token = nullptr;
     fidl::VectorPtr<uint8_t> next_token = nullptr;
     do {
-      fidl::VectorPtr<ledger::EntryPtr> new_entries;
+      fidl::VectorPtr<ledger::Entry> new_entries;
       snapshot->GetEntries(nullptr, std::move(token),
                            callback::Capture(MakeQuitTask(), &status,
                                              &new_entries, &next_token));
@@ -54,14 +55,14 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
             callback::Capture(MakeQuitTask(), &status));
   RunLoop();
   ASSERT_EQ(ledger::Status::OK, status);
-  fidl::VectorPtr<uint8_t> page_id;
+  ledger::PageId page_id;
   page->GetId(callback::Capture(MakeQuitTask(), &page_id));
   RunLoop();
 
   auto instance2 = NewLedgerAppInstance();
-  page = instance2->GetPage(page_id, ledger::Status::OK);
+  page = instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
   EXPECT_TRUE(RunLoopUntil([this, &page] {
-    fidl::VectorPtr<ledger::EntryPtr> entries;
+    fidl::VectorPtr<ledger::Entry> entries;
     if (!GetEntries(page.get(), &entries)) {
       return true;
     }
@@ -86,10 +87,11 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto instance2 = NewLedgerAppInstance();
 
   auto page1 = instance1->GetTestPage();
-  fidl::VectorPtr<uint8_t> page_id;
+  ledger::PageId page_id;
   page1->GetId(callback::Capture(MakeQuitTask(), &page_id));
   RunLoop();
-  auto page2 = instance2->GetPage(page_id, ledger::Status::OK);
+  auto page2 =
+      instance2->GetPage(fidl::MakeOptional(page_id), ledger::Status::OK);
 
   ledger::Status status;
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
@@ -98,7 +100,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   ASSERT_EQ(ledger::Status::OK, status);
 
   EXPECT_TRUE(RunLoopUntil([this, &page2] {
-    fidl::VectorPtr<ledger::EntryPtr> entries;
+    fidl::VectorPtr<ledger::Entry> entries;
     if (!GetEntries(page2.get(), &entries)) {
       return true;
     }
