@@ -8,12 +8,12 @@
 #include <thread>
 
 #include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/cloud_provider_firestore.h>
 #include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/bin/cloud_provider_firestore/fidl/factory.fidl.h"
 #include "peridot/lib/firebase_auth/testing/service_account_token_provider.h"
 
 namespace cloud_provider_firestore {
