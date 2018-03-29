@@ -6,10 +6,10 @@
 
 #include <google/firestore/v1beta1/firestore.pb.h>
 
+#include <fuchsia/cpp/modular.h>
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
-#include "lib/lifecycle/fidl/lifecycle.fidl.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
 
 namespace cloud_provider_firestore {
