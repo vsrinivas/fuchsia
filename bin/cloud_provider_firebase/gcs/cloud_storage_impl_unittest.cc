@@ -28,7 +28,7 @@ network::HttpHeaderPtr GetHeader(
     const fidl::VectorPtr<network::HttpHeader>& headers,
     const std::string& header_name) {
   for (const auto& header : *headers) {
-    if (header->name == header_name) {
+    if (header.name == header_name) {
       auto result = network::HttpHeader::New();
       fidl::Clone(header, result.get());
       return result;
@@ -99,8 +99,7 @@ TEST_F(CloudStorageImplTest, TestUpload) {
   EXPECT_TRUE(fake_network_wrapper_.GetRequest()->body->is_sized_buffer());
   std::string sent_content;
   EXPECT_TRUE(fsl::StringFromVmo(
-      fake_network_wrapper_.GetRequest()->body->get_sized_buffer(),
-      &sent_content));
+      fake_network_wrapper_.GetRequest()->body->sized_buffer(), &sent_content));
   EXPECT_EQ(content, sent_content);
 
   network::HttpHeaderPtr content_length_header =
