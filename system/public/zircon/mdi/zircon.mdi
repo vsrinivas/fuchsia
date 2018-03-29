@@ -48,6 +48,7 @@ uint64  kernel.arm-gic-v3.gicr-offset     MDI_ARM_GIC_V3_GICR_OFFSET            
 uint64  kernel.arm-gic-v3.gicr-stride     MDI_ARM_GIC_V3_GICR_STRIDE            1013
 uint32  kernel.arm-gic-v3.ipi-base        MDI_ARM_GIC_V3_IPI_BASE               1014
 boolean kernel.arm-gic-v3.optional        MDI_ARM_GIC_V3_OPTIONAL               1015
+uint64  kernel.arm-gic-v3.mx8-gpr-virt    MDI_ARM_GIC_V3_MX8_GPR_VIRT           1016
 
 // ARM generic timer driver
 list    kernel.arm-timer                  MDI_ARM_TIMER                         1030
@@ -88,3 +89,6 @@ list kernel.hdmi-hdcp                       MDI_HDMI_HDCP                       
 uint64  kernel.hdmi-hdcp.preset-virt        MDI_HDMI_HDCP_PRESET_BASE_VIRT      1201
 uint64  kernel.hdmi-hdcp.hiu-virt           MDI_HDMI_HDCP_HIU_BASE_VIRT         1202
 uint64  kernel.hdmi-hdcp.hdmitx-virt        MDI_HDMI_HDCP_HDMITX_BASE_VIRT      1203
+
+// NXP IMX UART
+list    kernel.arm-nxp-imx-uart             MDI_ARM_NXP_IMX_UART                1300
