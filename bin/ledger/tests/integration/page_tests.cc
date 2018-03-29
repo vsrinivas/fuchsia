@@ -10,6 +10,7 @@
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
@@ -64,25 +65,25 @@ TEST_P(PageIntegrationTest, NewPage) {
   auto instance = NewLedgerAppInstance();
   // Get two pages and check that their ids are different.
   ledger::PagePtr page1 = instance->GetTestPage();
-  fidl::VectorPtr<uint8_t> id1 = PageGetId(&page1);
+  ledger::PageId id1 = PageGetId(&page1);
   ledger::PagePtr page2 = instance->GetTestPage();
-  fidl::VectorPtr<uint8_t> id2 = PageGetId(&page2);
+  ledger::PageId id2 = PageGetId(&page2);
 
-  EXPECT_TRUE(!id1.Equals(id2));
+  EXPECT_TRUE(id1.id != id2.id);
 }
 
 TEST_P(PageIntegrationTest, GetPage) {
   auto instance = NewLedgerAppInstance();
   // Create a page and expect to find it by its id.
   ledger::PagePtr page = instance->GetTestPage();
-  fidl::VectorPtr<uint8_t> id = PageGetId(&page);
-  instance->GetPage(id, ledger::Status::OK);
+  ledger::PageId id = PageGetId(&page);
+  instance->GetPage(fidl::MakeOptional(id), ledger::Status::OK);
 
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Search with a random id and expect a PAGE_NOT_FOUND result.
   fidl::VectorPtr<uint8_t> test_id = RandomArray(16);
-  instance->GetPage(test_id, ledger::Status::PAGE_NOT_FOUND);
+  instance->GetPage(fidl::MakeOptional(test_id), ledger::Status::PAGE_NOT_FOUND);
 #endif
 }
 
@@ -91,19 +92,20 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
   ledger::PagePtr page1 = instance->GetTestPage();
-  fidl::VectorPtr<uint8_t> page_id_1 = PageGetId(&page1);
+  ledger::PageId page_id_1 = PageGetId(&page1);
 
   // Connect to the same page again.
-  ledger::PagePtr page2 = instance->GetPage(page_id_1, ledger::Status::OK);
-  fidl::VectorPtr<uint8_t> page_id_2 = PageGetId(&page2);
-  EXPECT_EQ(convert::ToString(page_id_1), convert::ToString(page_id_2));
+  ledger::PagePtr page2 =
+      instance->GetPage(fidl::MakeOptional(page_id_1), ledger::Status::OK);
+  ledger::PageId page_id_2 = PageGetId(&page2);
+  EXPECT_EQ(page_id_1.id, page_id_2.id);
 }
 
 TEST_P(PageIntegrationTest, DeletePage) {
   auto instance = NewLedgerAppInstance();
   // Create a new page and find its id.
   ledger::PagePtr page = instance->GetTestPage();
-  fidl::VectorPtr<uint8_t> id = PageGetId(&page);
+  ledger::PageId id = PageGetId(&page);
 
   // Delete the page.
   bool page_closed = false;
@@ -117,7 +119,7 @@ TEST_P(PageIntegrationTest, DeletePage) {
 // TODO(etiennej): Reactivate after LE-87 is fixed.
 #if 0
   // Verify that the deleted page cannot be retrieved.
-  instance->GetPage(id, ledger::Status::PAGE_NOT_FOUND);
+  instance->GetPage(fidl::MakeOptional(id), ledger::Status::PAGE_NOT_FOUND);
 #endif
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
@@ -140,7 +142,7 @@ TEST_P(PageIntegrationTest, MultipleLedgerConnections) {
 
   // Delete this page on the second connection and verify that the operation
   // succeeds.
-  fidl::VectorPtr<uint8_t> id = PageGetId(&page);
+  ledger::PageId id = PageGetId(&page);
   ledger_connection_2->DeletePage(std::move(id),
                                   [&status](ledger::Status s) { status = s; });
   EXPECT_TRUE(ledger_connection_2.WaitForResponse());
