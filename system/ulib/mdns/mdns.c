@@ -163,3 +163,19 @@ int mdns_add_answer(mdns_message* m,
     m->header.an_count = an_count;
     return 0;
 }
+
+int mdns_add_authority(mdns_message* m,
+                       char* name,
+                       uint16_t type,
+                       uint16_t clazz,
+                       uint8_t* rdata,
+                       uint16_t rdlength,
+                       uint32_t ttl) {
+    int ns_count = mdns_add_rr(&(m->authorities), name, type, clazz, rdata,
+                               rdlength, ttl);
+    if (ns_count < 0) {
+        return ns_count;
+    }
+    m->header.ns_count = ns_count;
+    return 0;
+}

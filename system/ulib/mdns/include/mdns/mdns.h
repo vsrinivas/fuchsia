@@ -111,7 +111,7 @@ typedef struct mdns_header_t {
     uint16_t flags;
     uint16_t qd_count; // Question count
     uint16_t an_count; // Answer count
-    uint16_t ns_count; // Name server count
+    uint16_t ns_count; // Authoritative name server count
     uint16_t ar_count; // Additional record count
 } mdns_header;
 
@@ -187,6 +187,17 @@ int mdns_add_answer(mdns_message*,
                     uint8_t* rdata,
                     uint16_t rdlength,
                     uint32_t ttl);
+
+// Appends an authority resource record to a message.
+//
+// See mdns_add_answer for documentation.
+int mdns_add_authority(mdns_message*,
+                       char* name,
+                       uint16_t type,
+                       uint16_t clazz,
+                       uint8_t* rdata,
+                       uint16_t rdlength,
+                       uint32_t ttl);
 
 // Zeroes all pointers and values associated with the given message.
 //
