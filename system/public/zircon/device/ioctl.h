@@ -71,6 +71,7 @@
 #define IOCTL_FAMILY_BT_HOST        0x33
 #define IOCTL_FAMILY_WLANPHY        0x34
 #define IOCTL_FAMILY_SERIAL         0x35
+#define IOCTL_FAMILY_WLANTAP        0x36
 
 // IOCTL constructor
 // --K-FFNN
