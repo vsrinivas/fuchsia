@@ -327,6 +327,16 @@ func (ns *netstack) addLoopback() error {
 	return nil
 }
 
+func (ns *netstack) Bridge(nics []tcpip.NICID) error {
+	// TODO(stijlist): save bridge in netstack state as NetInterface
+	b, err := ns.stack.Bridge(nics)
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
+	b.Enable()
+	return nil
+}
+
 func (ns *netstack) addEth(path string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 

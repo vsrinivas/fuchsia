@@ -249,6 +249,18 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddr
 	return nsfidl.NetErr{nsfidl.StatusOk, ""}, nil
 }
 
+func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (nsfidl.NetErr, error) {
+	nics := make([]tcpip.NICID, len(nicids))
+	for i, n := range nicids {
+		nics[i] = tcpip.NICID(n)
+	}
+	err := ns.Bridge(nics)
+	if err != nil {
+		return nsfidl.NetErr{Status: nsfidl.StatusUnknownError}, nil
+	}
+	return nsfidl.NetErr{Status: nsfidl.StatusOk}, nil
+}
+
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
 	s := ns.stack.Stats()
 	return nsfidl.AggregateStats{

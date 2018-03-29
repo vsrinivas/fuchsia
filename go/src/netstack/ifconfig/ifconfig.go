@@ -148,6 +148,27 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	return a.netstack.SetRouteTable(append(rs, r))
 }
 
+func (a *netstackClientApp) bridge(ifNames []string) error {
+	ifs := make([]*netstack.NetInterface, len(ifNames))
+	nicIDs := make([]uint32, len(ifNames))
+	// first, validate that all interfaces exist
+	for i, ifName := range ifNames {
+		iface := a.getIfaceByName(ifName)
+		if iface == nil {
+			return fmt.Errorf("no such interface '%s'\n", ifName)
+		}
+		ifs[i] = iface
+		nicIDs[i] = iface.Id
+	}
+
+	result, _ := a.netstack.BridgeInterfaces(nicIDs)
+	if result.Status != netstack.StatusOk {
+		return fmt.Errorf("error bridging interfaces: %s, result: %s", result, ifs)
+	}
+
+	return nil
+}
+
 func (a *netstackClientApp) setDHCP(iface netstack.NetInterface, startStop string) {
 	switch startStop {
 	case "start":
@@ -243,7 +264,9 @@ func usage() {
 	fmt.Printf("  %s [<interface>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
-	fmt.Printf("  %s [<interface>] dhcp [start|stop]", os.Args[0])
+	fmt.Printf("  %s [<interface>] dhcp [start|stop]\n", os.Args[0])
+	fmt.Printf("  %s route [add|del] [<address>]/[<mask>]\n", os.Args[0])
+	fmt.Printf("  %s bridge [<interface>]+\n", os.Args[0])
 	os.Exit(1)
 }
 
@@ -284,6 +307,15 @@ func main() {
 			usage()
 		}
 
+		return
+	case "bridge":
+		ifaces := os.Args[2:]
+		err := a.bridge(ifaces)
+		if err != nil {
+			fmt.Printf("error creating bridge: %s", err)
+		}
+		// fmt.Printf("Created virtual nic %s", bridge)
+		fmt.Printf("Bridged interfaces %s\n", ifaces)
 		return
 	default:
 		iface = a.getIfaceByName(os.Args[1])
