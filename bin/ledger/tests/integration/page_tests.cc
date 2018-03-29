@@ -113,7 +113,7 @@ TEST_P(PageIntegrationTest, DeletePage) {
   instance->DeletePage(id, ledger::Status::OK);
 
   // Verify that deletion of the page closed the page connection.
-  EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, page.WaitForResponse());
   EXPECT_TRUE(page_closed);
 
 // TODO(etiennej): Reactivate after LE-87 is fixed.
