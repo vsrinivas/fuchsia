@@ -1,0 +1,147 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library display;
+
+// A display mode configuration.
+struct Mode {
+  // Resolution in pixels.
+  uint32 horizontal_resolution;
+  uint32 vertical_resolution;
+  // Vertical refresh rate in Hz * 100
+  uint32 refresh_rate_e2;
+
+  // Bitfield of flags defined below which further specify the mode.
+  uint32 flags;
+};
+
+// === Mode flags ===
+
+// Flag for interlaced display modes.
+const int32 modeInterlaced = 0x1;
+
+// Info contains the information about a particular attached display.
+struct Info {
+  int32 id;
+
+  // Modes supported by the attached display. The first entry is the
+  // preferred mode.
+  vector<Mode> modes;
+  // zx_pixel_format_t constants supported by the attached display. The
+  // first entry is the preferred mode.
+  vector<uint32> pixel_format;
+};
+
+// An ImageConfig accompanies image data and defines how to interpret that data.
+struct ImageConfig {
+  // The width and height of the image in pixels.
+  uint32 width;
+  uint32 height;
+
+  // A zx_pixel_format_t constant that defines the pixel format of the data.
+  int32 pixel_format;
+
+  // Type conveys information about what is providing the pixel data. If this
+  // is not typeSimple, it is up to the driver and image producer to
+  // agree on the meaning of the value through some mechanism outside the scope
+  // of this API.
+  uint32 type = typeSimple;
+};
+const uint32 typeSimple = 0;
+
+// TODO(stevensd): Merge this interface with the Controller interface when
+// fidl supports events.
+interface ControllerCallback {
+  // Event fired when displays are added or removed. This event will be fired
+  // when the callback is registered if there are any connected displays.
+  1: OnDisplaysChanged(vector<Info> added, vector<int32> removed);
+
+  // Event fired when the client gains or loses ownership of the displays.
+  //
+  // New clients should assume they do not have ownership of the display
+  // until this event informs them otherwise.
+  2: OnClientOwnershipChange(bool has_ownership);
+};
+
+// Interface for accessing the display hardware.
+//
+// The driver supports two simultaneous clients - a primary client and a virtcon
+// client. The primary client is obtained by directly opening the devfs device,
+// while the virtcon client is obtained by opening a 'virtcon' child of the
+// device.
+interface Controller {
+  1: SetControllerCallback(handle<channel> callback);
+
+  // Imports a VMO backed image. If tiling is not typeSimple, it is up to
+  // the driver and client to agree on its meaning through some mechanism
+  // outside the scope of this API.
+  2: ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (status res, int32 image_id);
+
+  // Releases an image. It is safe to call this on an image which is currently
+  // in use, but the resources associated with such an image will not be
+  // released until the image is no longer in use.
+  3: ReleaseImage(int32 image_id);
+
+  // Imports an event into the driver and associates it with the given id.
+  //
+  // Passing an id which is less than 0 will cause the connection to close. Ids
+  // must uniquely identify the underlying event. It is not well defined to
+  // import one event with two different ids or to import two different events
+  // with the same id.
+  4: ImportEvent(handle<event> event, int32 id);
+
+  // Releases the event imported with the given id.
+  //
+  // If any images are currently using the given event, the event will still be
+  // waited up or signaled as appropriate before its resources are released.
+  5: ReleaseEvent(int32 id);
+
+  // Sets the image for the display.
+  //
+  // If wait_event_id corresponds to an imported event, the driver will
+  // wait for ZX_EVENT_SIGNALED on the object before presenting the image.
+  //
+  // If present_event_id is valid, then the driver will signal the event when
+  // the image is presented. If signal_event_id is valid, then the driver will
+  // signal the event when the image is no longer being presented.
+  //
+  // The driver will queue the images that are not yet ready. When an image is
+  // ready, any older images which are not yet ready will be dropped and their
+  // present and signal events will immediately be signaled. The driver also
+  // does not attempt to synchronize with vsync. If multiple images are ready
+  // within one vsync period, then only the last image will actually be
+  // displayed.
+  //
+  //
+  // An image cannot be used for multiple displays simultaneously, nor can an
+  // image be given back to the display controller while it is still in use.
+  // An image is considered used when it is part of a pending configuration or
+  // from when its configuration is applied until its signal_event_id is
+  // signaled.
+  6: SetDisplayImage(int32 display, int32 image_id, int32 wait_event_id, int32 present_event_id, int32 signal_event_id);
+
+  // Attempts to validate the current configuration.
+  //
+  // If discard is true, the pending changes will be discarded after validation.
+  7: CheckConfig(bool discard) -> (bool valid);
+
+  // Applies any pending changes to the current configuration.
+  //
+  // If the pending configuration cannot be applied, this call will silently
+  // fail, so the client should ensure its configuration is valid with
+  // CheckConfig.
+  8: ApplyConfig();
+
+  // Sets whether or not this client has ownership of the display. This call
+  // will silently fail if called from the primary client.
+  9: SetOwnership(bool active);
+
+  // Computes the stride (in pixels) necessary for a linear image with the
+  // given width and pixel format. Returns 0 on error.
+  10: ComputeLinearImageStride(uint32 width, int32 pixel_format) -> (uint32 stride);
+
+  // Allocates a VMO of the requested size which can be used for images.
+  // TODO: move this into a seperate video buffer management system.
+  11: AllocateVmo(uint64 size) -> (status res, handle<vmo>? vmo);
+};

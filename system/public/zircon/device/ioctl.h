@@ -72,6 +72,7 @@
 #define IOCTL_FAMILY_WLANPHY        0x34
 #define IOCTL_FAMILY_SERIAL         0x35
 #define IOCTL_FAMILY_WLANTAP        0x36
+#define IOCTL_FAMILY_DISPLAY_CONTROLLER 0x37
 
 // IOCTL constructor
 // --K-FFNN
