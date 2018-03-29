@@ -6,7 +6,7 @@
 #ifndef PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_STORAGE_H_
 #define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_STORAGE_H_
 
-#include "lib/component/fidl/component_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 

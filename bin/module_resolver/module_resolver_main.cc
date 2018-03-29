@@ -5,7 +5,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
-#include "lib/component/fidl/component_context.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"

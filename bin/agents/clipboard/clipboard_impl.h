@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "lib/clipboard/fidl/clipboard.fidl.h"
+#include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
@@ -24,10 +24,10 @@ class ClipboardImpl : Clipboard {
 
  private:
   // |Clipboard|
-  void Push(const fidl::StringPtr& text) override;
+  void Push(fidl::StringPtr text) override;
 
   // |Clipboard|
-  void Peek(const PeekCallback& callback) override;
+  void Peek(PeekCallback callback) override;
 
   // The storage instance that manages interactions with the Ledger.
   ClipboardStorage storage_;

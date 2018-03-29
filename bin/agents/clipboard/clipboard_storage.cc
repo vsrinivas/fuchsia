@@ -15,7 +15,7 @@ fidl::VectorPtr<uint8_t> ToArray(const std::string& str) {
   return array;
 }
 
-std::string ToString(fsl::SizedVmoTransportPtr value) {
+std::string ToString(fsl::SizedVmoTransport value) {
   fsl::SizedVmo vmo;
   std::string parsed_string;
   if (!fsl::SizedVmo::FromTransport(std::move(value), &vmo)) {
@@ -63,7 +63,7 @@ void ClipboardStorage::Peek(const std::function<void(fidl::StringPtr)>& callback
                 fxl::MakeCopyable([callback, snapshot = std::move(snapshot)](
                                       ledger::Status status,
                                       fsl::SizedVmoTransportPtr value) mutable {
-                  callback(ToString(std::move(value)));
+                  callback(ToString(std::move(*value)));
                 }));
   ;
 }
