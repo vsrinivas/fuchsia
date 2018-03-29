@@ -198,7 +198,9 @@ func (ifs *ifState) restart() {
 	ifs.ns.mu.Unlock()
 
 	ifs.ns.stack.SetRouteTable(ifs.ns.flattenRouteTables())
-	ifs.setDHCPStatus(ifs.dhcpState.enabled)
+	// TODO(NET-298): remove special case for WLAN after fix for multiple DHCP clients
+	// is enabled
+	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&eth.FeatureWlan != 0)
 }
 
 func (ifs *ifState) stop() {
@@ -397,24 +399,26 @@ func (ns *netstack) addEth(path string) error {
 
 	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
 	ifs.dhcpState.ctx, ifs.dhcpState.cancel = context.WithCancel(ifs.ctx)
-	// TODO(stijlist): remove default DHCP policy for first NIC once policy manager
-	// sets DHCP status.
-	if firstNIC {
-		ifs.setDHCPStatus(true)
-	}
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
 
-	// TODO(porce): Delete this condition. Treat wired ethernet, WLAN NICs in the same way.
+	// TODO(NET-298): Delete this condition after enabling multiple concurrent DHCP clients
+	// in third_party/netstack.
 	if client.Features&eth.FeatureWlan != 0 {
 		// WLAN: Upon 802.1X port open, the state change will ensue, which
 		// will invoke the DHCP Client.
 		return nil
 	}
 
+	// TODO(stijlist): remove default DHCP policy for first NIC once policy manager
+	// sets DHCP status.
+	if firstNIC {
+		ifs.setDHCPStatus(true)
+	}
 	return nil
 }
+
 func setNICName(nic *netiface.NIC, features uint32) {
 	if nic.ID == 1 {
 		nic.Name = "lo"
