@@ -15,10 +15,9 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/macros.h"
 
-namespace modular {
-namespace auth {
+namespace modular_auth {
 
-class AccountProviderImpl : modular_auth::AccountProvider {
+class AccountProviderImpl : AccountProvider {
  public:
   AccountProviderImpl();
 
@@ -102,8 +101,7 @@ void AccountProviderImpl::GetTokenProviderFactory(
     fidl::StringPtr account_id,
     fidl::InterfaceRequest<modular_auth::TokenProviderFactory> request) {}
 
-}  // namespace auth
-}  // namespace modular
+}  // namespace modular_auth
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

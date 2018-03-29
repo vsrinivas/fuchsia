@@ -253,7 +253,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     story_state_watcher_.Watch(&story_controller_);
 
     // Start and show the new story.
-    fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
+    fidl::InterfaceRequest<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(std::move(story_view));
   }
 
