@@ -44,7 +44,7 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
   }
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id,
-                   fsl::SizedVmoTransportPtr data,
+                   fsl::SizedVmoTransport data,
                    OnNewObjectCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
@@ -141,10 +141,10 @@ TEST_F(PageCloudImplTest, GetCommits) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
   EXPECT_EQ(2u, commits->size());
-  EXPECT_EQ("id_0", convert::ToString(commits->at(0)->id));
-  EXPECT_EQ("data_0", convert::ToString(commits->at(0)->data));
-  EXPECT_EQ("id_1", convert::ToString(commits->at(1)->id));
-  EXPECT_EQ("data_1", convert::ToString(commits->at(1)->data));
+  EXPECT_EQ("id_0", convert::ToString(commits->at(0).id));
+  EXPECT_EQ("data_0", convert::ToString(commits->at(0).data));
+  EXPECT_EQ("id_1", convert::ToString(commits->at(1).id));
+  EXPECT_EQ("data_1", convert::ToString(commits->at(1).data));
   EXPECT_EQ("43", convert::ToString(token));
 }
 
@@ -174,8 +174,8 @@ TEST_F(PageCloudImplTest, GetCommitsNullToken) {
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(cloud_provider::Status::OK, status);
   EXPECT_EQ(1u, commits->size());
-  EXPECT_EQ("id_0", convert::ToString(commits->at(0)->id));
-  EXPECT_EQ("data_0", convert::ToString(commits->at(0)->data));
+  EXPECT_EQ("id_0", convert::ToString(commits->at(0).id));
+  EXPECT_EQ("data_0", convert::ToString(commits->at(0).data));
   EXPECT_EQ("42", convert::ToString(token));
 }
 
@@ -265,10 +265,10 @@ TEST_F(PageCloudImplTest, SetWatcher) {
   handler_->DeliverRemoteCommits();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(2u, on_new_commits_commits_->size());
-  EXPECT_EQ("id_0", convert::ToString(on_new_commits_commits_->at(0)->id));
-  EXPECT_EQ("data_0", convert::ToString(on_new_commits_commits_->at(0)->data));
-  EXPECT_EQ("id_1", convert::ToString(on_new_commits_commits_->at(1)->id));
-  EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_->at(1)->data));
+  EXPECT_EQ("id_0", convert::ToString(on_new_commits_commits_->at(0).id));
+  EXPECT_EQ("data_0", convert::ToString(on_new_commits_commits_->at(0).data));
+  EXPECT_EQ("id_1", convert::ToString(on_new_commits_commits_->at(1).id));
+  EXPECT_EQ("data_1", convert::ToString(on_new_commits_commits_->at(1).data));
   EXPECT_EQ("43", convert::ToString(on_new_commits_position_token_));
   on_new_commits_commits_callback_();
 }
