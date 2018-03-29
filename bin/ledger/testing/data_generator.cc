@@ -53,7 +53,7 @@ std::vector<fidl::VectorPtr<uint8_t>> DataGenerator::MakeKeys(
     keys[i] = MakeKey(i, key_size);
   }
   for (size_t i = unique_key_count; i < key_count; i++) {
-    fidl::Clone(keys[i - unique_key_count], &keys[i]);
+    keys[i] = fidl::Clone(keys[i - unique_key_count]);
   }
   return keys;
 }
