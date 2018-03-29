@@ -252,12 +252,17 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if ((flags & FDIO_MMAP_FLAG_WRITE) || !(flags & FDIO_MMAP_FLAG_PRIVATE)) {
+    if (flags & FDIO_MMAP_FLAG_WRITE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (flags & FDIO_MMAP_FLAG_EXACT) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     // Let clients map and set the names of their VMOs.
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
+    // We can ignore FDIO_MMAP_FLAG_PRIVATE, since private / shared access
+    // to the underlying VMO can both be satisfied with a clone due to
+    // the immutability of blobfs blobs.
     rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
     return CloneVmo(rights, out);

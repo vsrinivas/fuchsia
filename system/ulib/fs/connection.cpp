@@ -880,7 +880,9 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             handle = &msg->handle[0];
         }
 
-        if ((flags_ & ZX_FS_FLAG_APPEND) && flags & FDIO_MMAP_FLAG_WRITE) {
+        if ((flags & FDIO_MMAP_FLAG_PRIVATE) && (flags & FDIO_MMAP_FLAG_EXACT)) {
+            return ZX_ERR_INVALID_ARGS;
+        } else if ((flags_ & ZX_FS_FLAG_APPEND) && flags & FDIO_MMAP_FLAG_WRITE) {
             return ZX_ERR_ACCESS_DENIED;
         } else if (!IsWritable(flags_) && (flags & FDIO_MMAP_FLAG_WRITE)) {
             return ZX_ERR_ACCESS_DENIED;

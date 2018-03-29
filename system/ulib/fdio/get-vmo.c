@@ -162,8 +162,8 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    zx_status_t status = io->ops->get_vmo(io, FDIO_MMAP_FLAG_READ |
-                                          FDIO_MMAP_FLAG_EXEC, out_vmo);
+    zx_status_t status = io->ops->get_vmo(io, FDIO_MMAP_FLAG_READ | FDIO_MMAP_FLAG_EXEC |
+                                          FDIO_MMAP_FLAG_EXACT, out_vmo);
     fdio_release(io);
 
     return status;
