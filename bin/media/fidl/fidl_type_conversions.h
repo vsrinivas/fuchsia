@@ -86,9 +86,17 @@ struct TypeConverter<media::ColorSpace, media::VideoStreamType::ColorSpace> {
 };
 
 template <>
+struct TypeConverter<media::MediaType, media::StreamType> {
+  static media::MediaType Convert(const media::StreamType& input);
+};
+
+template <>
 struct TypeConverter<media::MediaType, std::unique_ptr<media::StreamType>> {
   static media::MediaType Convert(
-      const std::unique_ptr<media::StreamType>& input);
+      const std::unique_ptr<media::StreamType>& input) {
+    FXL_DCHECK(input);
+    return fxl::To<media::MediaType>(*input);
+  }
 };
 
 template <>
@@ -97,7 +105,7 @@ struct TypeConverter<media::MediaTypePtr, std::unique_ptr<media::StreamType>> {
       const std::unique_ptr<media::StreamType>& input) {
     if (!input)
       return nullptr;
-    return fidl::MakeOptional(fxl::To<media::MediaType>(input));
+    return fidl::MakeOptional(fxl::To<media::MediaType>(*input));
   }
 };
 
@@ -136,6 +144,16 @@ struct TypeConverter<media::MediaMetadataPtr,
                      std::unique_ptr<media::Metadata>> {
   static media::MediaMetadataPtr Convert(
       const std::unique_ptr<media::Metadata>& input);
+};
+
+template <>
+struct TypeConverter<media::MediaMetadataPtr, const media::Metadata*> {
+  static media::MediaMetadataPtr Convert(const media::Metadata* input);
+};
+
+template <>
+struct TypeConverter<media::MediaMetadataPtr, media::Metadata> {
+  static media::MediaMetadataPtr Convert(const media::Metadata& input);
 };
 
 template <>

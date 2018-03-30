@@ -343,60 +343,54 @@ TypeConverter<media::ColorSpace, media::VideoStreamType::ColorSpace>::Convert(
   abort();
 }
 
-media::MediaType
-TypeConverter<media::MediaType, std::unique_ptr<media::StreamType>>::Convert(
-    const std::unique_ptr<media::StreamType>& input) {
+media::MediaType TypeConverter<media::MediaType, media::StreamType>::Convert(
+    const media::StreamType& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
-  if (input == nullptr) {
-    return media::MediaType();
-  }
-
-  switch (input->medium()) {
+  switch (input.medium()) {
     case media::StreamType::Medium::kAudio: {
       media::AudioMediaTypeDetails audio_details;
       audio_details.sample_format =
-          To<media::AudioSampleFormat>(input->audio()->sample_format());
-      audio_details.channels = input->audio()->channels();
-      audio_details.frames_per_second = input->audio()->frames_per_second();
+          To<media::AudioSampleFormat>(input.audio()->sample_format());
+      audio_details.channels = input.audio()->channels();
+      audio_details.frames_per_second = input.audio()->frames_per_second();
       media::MediaTypeDetails details;
       details.set_audio(std::move(audio_details));
       media::MediaType media_type;
       media_type.medium = media::MediaTypeMedium::AUDIO;
       media_type.details = std::move(details);
-      media_type.encoding = input->encoding();
+      media_type.encoding = input.encoding();
       media_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
+          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kVideo: {
       media::VideoMediaTypeDetails video_details;
-      video_details.profile =
-          To<media::VideoProfile>(input->video()->profile());
+      video_details.profile = To<media::VideoProfile>(input.video()->profile());
       video_details.pixel_format =
-          To<media::PixelFormat>(input->video()->pixel_format());
+          To<media::PixelFormat>(input.video()->pixel_format());
       video_details.color_space =
-          To<media::ColorSpace>(input->video()->color_space());
-      video_details.width = input->video()->width();
-      video_details.height = input->video()->height();
-      video_details.coded_width = input->video()->coded_width();
-      video_details.coded_height = input->video()->coded_height();
+          To<media::ColorSpace>(input.video()->color_space());
+      video_details.width = input.video()->width();
+      video_details.height = input.video()->height();
+      video_details.coded_width = input.video()->coded_width();
+      video_details.coded_height = input.video()->coded_height();
       video_details.pixel_aspect_ratio_width =
-          input->video()->pixel_aspect_ratio_width();
+          input.video()->pixel_aspect_ratio_width();
       video_details.pixel_aspect_ratio_height =
-          input->video()->pixel_aspect_ratio_height();
+          input.video()->pixel_aspect_ratio_height();
       video_details.line_stride =
-          To<fidl::VectorPtr<uint32_t>>(input->video()->line_stride());
+          To<fidl::VectorPtr<uint32_t>>(input.video()->line_stride());
       video_details.plane_offset =
-          To<fidl::VectorPtr<uint32_t>>(input->video()->plane_offset());
+          To<fidl::VectorPtr<uint32_t>>(input.video()->plane_offset());
       media::MediaTypeDetails details;
       details.set_video(std::move(video_details));
       media::MediaType media_type;
       media_type.medium = media::MediaTypeMedium::VIDEO;
       media_type.details = std::move(details);
-      media_type.encoding = input->encoding();
+      media_type.encoding = input.encoding();
       media_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
+          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kText: {
@@ -405,9 +399,9 @@ TypeConverter<media::MediaType, std::unique_ptr<media::StreamType>>::Convert(
       media::MediaType media_type;
       media_type.medium = media::MediaTypeMedium::TEXT;
       media_type.details = std::move(details);
-      media_type.encoding = input->encoding();
+      media_type.encoding = input.encoding();
       media_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
+          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return media_type;
     }
     case media::StreamType::Medium::kSubpicture: {
@@ -416,9 +410,9 @@ TypeConverter<media::MediaType, std::unique_ptr<media::StreamType>>::Convert(
       media::MediaType media_type;
       media_type.medium = media::MediaTypeMedium::SUBPICTURE;
       media_type.details = std::move(details);
-      media_type.encoding = input->encoding();
+      media_type.encoding = input.encoding();
       media_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input->encoding_parameters());
+          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return media_type;
     }
   }
@@ -576,26 +570,34 @@ TypeConverter<std::unique_ptr<media::StreamTypeSet>,
 media::MediaMetadataPtr
 TypeConverter<media::MediaMetadataPtr, std::unique_ptr<media::Metadata>>::
     Convert(const std::unique_ptr<media::Metadata>& input) {
-  if (input == nullptr) {
-    return nullptr;
-  }
+  return input == nullptr ? nullptr : fxl::To<media::MediaMetadataPtr>(*input);
+}
 
+media::MediaMetadataPtr
+TypeConverter<media::MediaMetadataPtr, const media::Metadata*>::Convert(
+    const media::Metadata* input) {
+  return input == nullptr ? nullptr : fxl::To<media::MediaMetadataPtr>(*input);
+}
+
+media::MediaMetadataPtr
+TypeConverter<media::MediaMetadataPtr, media::Metadata>::Convert(
+    const media::Metadata& input) {
   media::MediaMetadataPtr result = media::MediaMetadata::New();
-  result->duration = input->duration_ns();
-  result->title = input->title().empty() ? fidl::StringPtr()
-                                         : fidl::StringPtr(input->title());
-  result->artist = input->artist().empty() ? fidl::StringPtr()
-                                           : fidl::StringPtr(input->artist());
-  result->album = input->album().empty() ? fidl::StringPtr()
-                                         : fidl::StringPtr(input->album());
-  result->publisher = input->publisher().empty()
+  result->duration = input.duration_ns();
+  result->title = input.title().empty() ? fidl::StringPtr()
+                                        : fidl::StringPtr(input.title());
+  result->artist = input.artist().empty() ? fidl::StringPtr()
+                                          : fidl::StringPtr(input.artist());
+  result->album = input.album().empty() ? fidl::StringPtr()
+                                        : fidl::StringPtr(input.album());
+  result->publisher = input.publisher().empty()
                           ? fidl::StringPtr()
-                          : fidl::StringPtr(input->publisher());
-  result->genre = input->genre().empty() ? fidl::StringPtr()
-                                         : fidl::StringPtr(input->genre());
-  result->composer = input->composer().empty()
+                          : fidl::StringPtr(input.publisher());
+  result->genre = input.genre().empty() ? fidl::StringPtr()
+                                        : fidl::StringPtr(input.genre());
+  result->composer = input.composer().empty()
                          ? fidl::StringPtr()
-                         : fidl::StringPtr(input->composer());
+                         : fidl::StringPtr(input.composer());
   return result;
 }
 
