@@ -175,7 +175,7 @@ TEST_F(ModPairRankingFeatureTest, CreateContextSelector) {
   EXPECT_NE(selector, nullptr);
   EXPECT_EQ(selector->type, ContextValueType::MODULE);
   EXPECT_EQ(selector->meta->story->focused->state,
-            State::FOCUSED);
+            FocusedStateState::FOCUSED);
 }
 
 }  // namespace
