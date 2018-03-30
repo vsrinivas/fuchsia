@@ -9,16 +9,6 @@
 
 namespace modular {
 
-bool StringVectorEqual(const fidl::VectorPtr<fidl::StringPtr>& a,
-                       const fidl::VectorPtr<fidl::StringPtr>& b) {
-  return std::equal(a->begin(), a->end(), b->begin(), b->end());
-}
-
-bool LinkPathEqual(const LinkPath& a, const LinkPath& b) {
-  return (a.link_name == b.link_name) &&
-         StringVectorEqual(a.module_path, b.module_path);
-}
-
 bool ChainDataEqual(const ChainData& a, const ChainData& b) {
   if (a.key_to_link_map->size() != b.key_to_link_map->size()) {
     return false;
@@ -35,7 +25,7 @@ bool ChainDataEqual(const ChainData& a, const ChainData& b) {
       // key not found
       return false;
     }
-    if (!LinkPathEqual(*j->second, i.link_path)) {
+    if (*j->second != i.link_path) {
       // values don't match
       return false;
     }
@@ -73,11 +63,11 @@ bool NounEqual(const Noun& a, const Noun& b) {
       return a.json() == b.json();
     case Noun::Tag::kEntityType:
       // TODO(thatguy): should this be compared ignoring order?
-      return StringVectorEqual(a.entity_type(), b.entity_type());
+      return a.entity_type() == b.entity_type();
     case Noun::Tag::kLinkName:
       return a.link_name() == b.link_name();
     case Noun::Tag::kLinkPath:
-      return LinkPathEqual(a.link_path(), b.link_path());
+      return a.link_path() == b.link_path();
     case Noun::Tag::Invalid:
     default:
       return false;
@@ -120,13 +110,17 @@ bool DaisyEqual(const DaisyPtr& a, const DaisyPtr& b) {
 }
 
 bool ModuleDataEqual(const ModuleData& a, const ModuleData& b) {
-  return (a.module_url == b.module_url) &&
-         StringVectorEqual(a.module_path, b.module_path) &&
+  return a.module_url == b.module_url && a.module_path == b.module_path &&
          ChainDataEqual(a.chain_data, b.chain_data) &&
-         LinkPathEqual(a.link_path, b.link_path) &&
-         (a.module_source == b.module_source) &&
+         a.link_path == b.link_path && a.module_source == b.module_source &&
          SurfaceRelationEqual(a.surface_relation, b.surface_relation) &&
-         (a.module_stopped == b.module_stopped) && DaisyEqual(a.daisy, b.daisy);
+         a.module_stopped == b.module_stopped && DaisyEqual(a.daisy, b.daisy);
+}
+
+bool ModuleDataEqual(const ModuleDataPtr& a, const ModuleDataPtr& b) {
+  if (!a || !b)
+    return !a && !b;
+  return ModuleDataEqual(*a, *b);
 }
 
 }  // namespace modular

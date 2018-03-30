@@ -13,13 +13,6 @@
 namespace modular {
 
 template <typename T>
-T CloneStruct(const std::unique_ptr<T>& value) {
-  T new_value;
-  value->Clone(&new_value);
-  return new_value;
-}
-
-template <typename T>
 T CloneStruct(const T& value) {
   T new_value;
   value.Clone(&new_value);

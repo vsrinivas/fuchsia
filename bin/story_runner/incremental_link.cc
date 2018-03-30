@@ -138,7 +138,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
       }
 
       data_->key = impl_->key_generator_.Create();
-      impl_->pending_ops_.push_back(CloneStruct(data_));
+      impl_->pending_ops_.push_back(CloneStruct(*data_));
       new IncrementalWriteCall(&operation_queue_, impl_, CloneOptional(data_),
                                [flow] {});
     }

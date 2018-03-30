@@ -521,7 +521,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
     link_path->link_name = link_name_;
 
     link_peer->link = std::make_unique<LinkImpl>(
-        link_peer->ledger.get(), CloneStruct(story_data_->story_page_id),
+        link_peer->ledger.get(), CloneStruct(*story_data_->story_page_id),
         std::move(*link_path), nullptr);
 
     link_peer->link->Connect(std::move(request_),
@@ -672,7 +672,7 @@ void StoryProviderImpl::Watch(
   auto watcher_ptr = watcher.Bind();
   for (const auto& item : story_controller_impls_) {
     const auto& container = item.second;
-    watcher_ptr->OnChange(CloneStruct(container.current_info),
+    watcher_ptr->OnChange(CloneStruct(*container.current_info),
                           container.impl->GetStoryState());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));

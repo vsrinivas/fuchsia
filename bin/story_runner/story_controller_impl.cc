@@ -10,6 +10,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
@@ -18,9 +19,11 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
+#include "lib/fxl/type_converter.h"
 #include "peridot/bin/device_runner/cobalt/cobalt.h"
 #include "peridot/bin/story_runner/chain_impl.h"
 #include "peridot/bin/story_runner/link_impl.h"
@@ -43,10 +46,8 @@ namespace {
 
 fidl::StringPtr PathString(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  // fidl::StringPtr no longer supports size(), begin() or end(). JoinStrings()
-  // only supports element types with those methods.
-  std::vector<std::string> path_vec(module_path->begin(), module_path->end());
-  return fxl::JoinStrings(path_vec, ":");
+  auto path = fxl::To<std::vector<std::string>>(module_path);
+  return fxl::JoinStrings(path, ":");
 }
 
 fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
@@ -321,7 +322,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // existing module instance on a new link and notify it about the changed
     // link value.
     if (i->module_data.module_url != module_data_->module_url ||
-        !LinkPathEqual(i->module_data.link_path, module_data_->link_path) ||
+        i->module_data.link_path != module_data_->link_path ||
         !ChainDataEqual(i->module_data.chain_data, module_data_->chain_data) ||
         embed_module_watcher_.is_valid() || incoming_services_.is_valid()) {
       i->module_controller_impl->Teardown([this, flow] {
@@ -368,12 +369,12 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
 
     // Ensure that the Module's Chain is available before we launch it.
     // TODO(thatguy): Set up the ChainImpl based on information in ModuleData.
-    auto i = std::find_if(story_controller_impl_->chains_.begin(),
-                          story_controller_impl_->chains_.end(),
-                          [this](const std::unique_ptr<ChainImpl>& ptr) {
-                            return StringVectorEqual(ptr->chain_path(),
-                                                     module_data_->module_path);
-                          });
+    auto i =
+        std::find_if(story_controller_impl_->chains_.begin(),
+                     story_controller_impl_->chains_.end(),
+                     [this](const std::unique_ptr<ChainImpl>& ptr) {
+                       return ptr->chain_path() == module_data_->module_path;
+                     });
     if (i == story_controller_impl_->chains_.end()) {
       story_controller_impl_->chains_.emplace_back(
           new ChainImpl(module_data_->module_path, module_data_->chain_data));
@@ -536,7 +537,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
     auto i = std::find_if(story_controller_impl_->links_.begin(),
                           story_controller_impl_->links_.end(),
                           [this](const std::unique_ptr<LinkImpl>& l) {
-                            return LinkPathEqual(l->link_path(), *link_path_);
+                            return l->link_path() == *link_path_;
                           });
     if (i != story_controller_impl_->links_.end()) {
       (*i)->Connect(std::move(request_), connection_type_);
@@ -753,12 +754,12 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->module_stopped = false;
     module_data_->daisy = std::move(daisy_);
 
-    CreateChainInfo create_chain_info;
-    create_chain_info_->Clone(&create_chain_info);
+    CreateChainInfoPtr create_chain_info;
+    fidl::Clone(create_chain_info_, &create_chain_info);
     // Initialize |module_data_->chain_data|.
     new InitializeChainCall(&operation_queue_, story_controller_impl_,
                             CloneStringVector(module_path_),
-                            fidl::MakeOptional(std::move(create_chain_info)),
+                            std::move(create_chain_info),
                             [this, flow](ChainDataPtr chain_data) {
                               module_data_->chain_data = std::move(*chain_data);
                               MaybeWriteModuleData(flow);
@@ -775,7 +776,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         [this, flow](ModuleDataPtr data) {
           // If what we're about to write is already present on the ledger, just
           // launch the module.
-          if (ModuleDataEqual(*data, *module_data_)) {
+          if (ModuleDataEqual(data, module_data_)) {
             Launch(flow);
             return;
           }
@@ -785,11 +786,10 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
 
   void WriteModuleData(FlowToken flow) {
     std::string key{MakeModuleKey(module_path_)};
-    ModuleData module_data;
-    module_data_->Clone(&module_data);
+    ModuleDataPtr module_data;
+    fidl::Clone(module_data_, &module_data);
     new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
-                                    std::move(key),
-                                    fidl::MakeOptional(std::move(module_data)),
+                                    std::move(key), std::move(module_data),
                                     [this, flow] { Launch(flow); });
   }
 
@@ -2032,11 +2032,10 @@ void StoryControllerImpl::ConnectLinkPath(
 LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
     const fidl::VectorPtr<fidl::StringPtr>& module_path,
     fidl::StringPtr key) {
-  auto i =
-      std::find_if(chains_.begin(), chains_.end(),
-                   [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
-                     return StringVectorEqual(ptr->chain_path(), module_path);
-                   });
+  auto i = std::find_if(chains_.begin(), chains_.end(),
+                        [&module_path](const std::unique_ptr<ChainImpl>& ptr) {
+                          return ptr->chain_path() == module_path;
+                        });
   // We expect a Chain for each Module to have been created during Module
   // initialization.
   FXL_CHECK(i != chains_.end()) << PathString(module_path);
@@ -2341,7 +2340,7 @@ void StoryControllerImpl::GetModuleController(
     this, module_path = std::move(module_path), request = std::move(request)
   ]() mutable {
     for (auto& connection : connections_) {
-      if (StringVectorEqual(module_path, connection.module_data.module_path)) {
+      if (module_path == connection.module_data.module_path) {
         connection.module_controller_impl->Connect(std::move(request));
         return;
       }
@@ -2473,7 +2472,7 @@ void StoryControllerImpl::OnModuleStateChange(
   if (first_module_path_.is_null()) {
     first_module_path_ = CloneStringVector(module_path);
   }
-  if (StringVectorEqual(first_module_path_, module_path)) {
+  if (first_module_path_ == module_path) {
     UpdateStoryState(state);
   }
 
@@ -2523,7 +2522,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     fidl::StringPtr path = module_path->at(module_path->size() - 1);
   }
   for (auto& c : connections_) {
-    if (StringVectorEqual(c.module_data.module_path, module_path)) {
+    if (c.module_data.module_path == module_path) {
       return &c;
     }
   }
