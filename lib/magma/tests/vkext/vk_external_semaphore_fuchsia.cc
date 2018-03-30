@@ -249,7 +249,8 @@ bool VulkanTest::InitVulkan()
     vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_(
         vk_physical_device_, &external_semaphore_info, &external_semaphore_properties);
 
-    EXPECT_EQ(external_semaphore_properties.compatibleHandleTypes, 0u);
+    EXPECT_EQ(external_semaphore_properties.compatibleHandleTypes,
+              VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR);
     EXPECT_EQ(external_semaphore_properties.externalSemaphoreFeatures,
               0u | VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
                   VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR);
