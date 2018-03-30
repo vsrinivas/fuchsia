@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/media_service/media_source_impl.h"
 
-#include "garnet/bin/media/fidl/fidl_reader.h"
+#include "garnet/bin/media/demux/fidl_reader.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/media_service/fidl_conversion_pipeline_builder.h"

@@ -13,8 +13,6 @@ source_set("fidl") {
     "fidl_packet_consumer.h",
     "fidl_packet_producer.cc",
     "fidl_packet_producer.h",
-    "fidl_reader.cc",
-    "fidl_reader.h",
     "fidl_type_conversions.cc",
     "fidl_type_conversions.h",
     "timeline_control_point.cc",
@@ -22,7 +20,6 @@ source_set("fidl") {
   ]
 
   deps = [
-    "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
     "//garnet/public/lib/fsl",

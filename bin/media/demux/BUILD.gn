@@ -7,8 +7,12 @@ import("//build/test.gni")
 source_set("demux") {
   sources = [
     "demux.h",
+    "fidl_reader.cc",
+    "fidl_reader.h",
     "file_reader.cc",
     "file_reader.h",
+    "http_reader.cc",
+    "http_reader.h",
     "reader.h",
     "reader_cache.cc",
     "reader_cache.h",
@@ -17,8 +21,11 @@ source_set("demux") {
   ]
 
   deps = [
+    "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
+    "//garnet/bin/network:errors",
+    "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
   ]
 }

@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/media_service/media_demux_impl.h"
 
+#include "garnet/bin/media/demux/fidl_reader.h"
 #include "garnet/bin/media/demux/reader_cache.h"
-#include "garnet/bin/media/fidl/fidl_reader.h"
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fidl/cpp/clone.h"
