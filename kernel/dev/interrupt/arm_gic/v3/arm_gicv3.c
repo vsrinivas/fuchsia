@@ -38,6 +38,24 @@ static uint64_t arm_gicv3_gic_base = 0;
 static uint64_t arm_gicv3_gicd_offset = 0;
 static uint64_t arm_gicv3_gicr_offset = 0;
 static uint64_t arm_gicv3_gicr_stride = 0;
+
+/*
+IMX8M Errata: e11171: CA53: Cannot support single-core runtime wakeup
+
+According to the GIC500 specification and the Arm Trusted Firmware design, when a CPU
+core enters the deepest CPU idle state (power-down), it must disable the GIC500 CPU
+interface and set the Redistributor register to indicate that this CPU is in sleep state.
+
+On NXP IMX8M, However, if the CPU core is in WFI or power-down with CPU interface disabled,
+another core cannot wake-up the powered-down core using SGI interrupt.
+
+One workaround is to use another A53 core for the IRQ0 which is controlled by the IOMUX
+GPR to generate an external interrupt to wake-up the powered-down core.
+The SW workaround is implemented into default BSP release. The workaround commit tag is
+“MLK-16804-04 driver: irqchip: Add IPI SW workaround for imx8mq" on the linux-imx project
+*/
+static uint64_t mx8_gpr_virt = 0;
+
 static uint32_t ipi_base = 0;
 
 // this header uses the arm_gicv3_gic_* variables above
@@ -194,6 +212,18 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
 
         gic_write_sgi1r(val);
         cluster += 1;
+        // Work around
+        if (mx8_gpr_virt) {
+            uint32_t regVal;
+            // peinding irq32 to wakeup core
+            regVal = *(volatile uint32_t *)(mx8_gpr_virt + 0x4);
+            regVal |= (1 << 12);
+            *(volatile uint32_t *)(mx8_gpr_virt + 0x4) = regVal;
+            // delay
+            spin(50);
+            regVal &= ~(1 << 12);
+            *(volatile uint32_t *)(mx8_gpr_virt + 0x4) = regVal;
+        }
     }
 
     return ZX_OK;
@@ -379,6 +409,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     bool got_gicr_offset = false;
     bool got_gicr_stride = false;
     bool got_ipi_base = false;
+    bool got_mx8_gpr_virt = false;
+
     bool optional = false;
 
     // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
@@ -406,6 +438,9 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         case MDI_ARM_GIC_V3_IPI_BASE:
             got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
             break;
+        case MDI_ARM_GIC_V3_MX8_GPR_VIRT:
+            got_mx8_gpr_virt = !mdi_node_uint64(&child, &mx8_gpr_virt);
+            break;
         case MDI_ARM_GIC_V3_OPTIONAL:
             mdi_node_boolean(&child, &optional);
             break;
@@ -431,6 +466,9 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     if (!got_ipi_base) {
         printf("arm-gic-v3: ipi_base not defined\n");
         return;
+    }
+    if (got_mx8_gpr_virt) {
+        printf("arm-gic-v3: Applying Errata e11171 for NXP MX8!\n");
     }
 
     arm_gicv3_gic_base = (uint64_t)gic_base_virt;

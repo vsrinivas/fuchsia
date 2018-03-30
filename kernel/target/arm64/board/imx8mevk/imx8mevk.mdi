@@ -3,9 +3,7 @@ include "system/public/zircon/mdi/zircon.mdi"
 cpu-map = {
     clusters = {
         {
-            // FIXME: cpu-count at 4 causes freeze
-            // Need to implement NXP Errata e11171
-            cpu-count = 2
+            cpu-count = 4
         }
     }
 }
@@ -40,9 +38,9 @@ kernel = {
         base-virt = PERIPH_VIRT + 0x38800000
         gicd-offset = 0x00000
         gicr-offset = 0x80000
-        gicr-stride = 0x00000
+        gicr-stride = 0x20000
         ipi-base = 9
-        // TODO: To be used for Errata e11171
+        // Used for Errata e11171
         mx8-gpr-virt = PERIPH_VIRT + 0x30340000
     }
     arm-psci = {
