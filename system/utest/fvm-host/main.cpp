@@ -10,9 +10,9 @@
 
 #include <fvm/fvm-lz4.h>
 
-#define SLICE_SIZE     (64lu * (1 << 20)) // 64 mb
-#define PARTITION_SIZE (1lu * (1 << 29))  // 512 mb
-#define CONTAINER_SIZE (4lu * (1 << 30))  // 4 gb
+#define DEFAULT_SLICE_SIZE (64lu * (1 << 20)) // 64 mb
+#define PARTITION_SIZE     (1lu * (1 << 29))  // 512 mb
+#define CONTAINER_SIZE     (4lu * (1 << 30))  // 4 gb
 
 #define MAX_PARTITIONS 5
 
@@ -151,12 +151,12 @@ bool AddPartitions(Container* container) {
     END_HELPER;
 }
 
-bool CreateSparse(compress_type_t compress) {
+bool CreateSparse(compress_type_t compress, size_t slice_size) {
     BEGIN_HELPER;
     const char* path = compress ? sparse_lz4_path : sparse_path;
     unittest_printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
-    ASSERT_EQ(SparseContainer::Create(path, SLICE_SIZE, compress, &sparseContainer), ZX_OK,
+    ASSERT_EQ(SparseContainer::Create(path, slice_size, compress, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
     ASSERT_TRUE(AddPartitions(sparseContainer.get()));
     ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
@@ -193,7 +193,7 @@ bool ReportSparse(bool compress) {
     return ReportContainer(sparse_path, 0);
 }
 
-bool CreateFvm(bool create_before, off_t offset) {
+bool CreateFvm(bool create_before, off_t offset, size_t slice_size) {
     BEGIN_HELPER;
     unittest_printf("Creating fvm container: %s\n", fvm_path);
 
@@ -204,7 +204,7 @@ bool CreateFvm(bool create_before, off_t offset) {
     }
 
     fbl::unique_ptr<FvmContainer> fvmContainer;
-    ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, offset, length - offset, &fvmContainer),
+    ASSERT_EQ(FvmContainer::Create(fvm_path, slice_size, offset, length - offset, &fvmContainer),
               ZX_OK, "Failed to initialize fvm container");
     ASSERT_TRUE(AddPartitions(fvmContainer.get()));
     ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
@@ -217,7 +217,7 @@ bool ExtendFvm(off_t length) {
     off_t current_length;
     ASSERT_TRUE(StatFile(fvm_path, &current_length));
     fbl::unique_ptr<FvmContainer> fvmContainer;
-    ASSERT_EQ(FvmContainer::Create(fvm_path, SLICE_SIZE, 0, current_length, &fvmContainer),
+    ASSERT_EQ(FvmContainer::Create(fvm_path, DEFAULT_SLICE_SIZE, 0, current_length, &fvmContainer),
               ZX_OK, "Failed to initialize fvm container");
     ASSERT_EQ(fvmContainer->Extend(length), ZX_OK, "Failed to write to fvm file");
     ASSERT_TRUE(StatFile(fvm_path, &current_length));
@@ -418,23 +418,23 @@ bool CreatePartitions() {
     END_HELPER;
 }
 
-bool CreateReportDestroy(container_t type) {
+bool CreateReportDestroy(container_t type, size_t slice_size) {
     BEGIN_HELPER;
     switch (type) {
     case SPARSE: {
-        ASSERT_TRUE(CreateSparse(NONE));
+        ASSERT_TRUE(CreateSparse(NONE, slice_size));
         ASSERT_TRUE(ReportSparse(NONE));
         ASSERT_TRUE(DestroySparse(NONE));
         break;
     }
     case SPARSE_LZ4: {
-        ASSERT_TRUE(CreateSparse(LZ4));
+        ASSERT_TRUE(CreateSparse(LZ4, slice_size));
         ASSERT_TRUE(ReportSparse(LZ4));
         ASSERT_TRUE(DestroySparse(LZ4));
         break;
     }
     case FVM: {
-        ASSERT_TRUE(CreateFvm(true, 0));
+        ASSERT_TRUE(CreateFvm(true, 0, slice_size));
         ASSERT_TRUE(ReportFvm(0));
         ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
         ASSERT_TRUE(ReportFvm(0));
@@ -442,7 +442,7 @@ bool CreateReportDestroy(container_t type) {
         break;
     }
     case FVM_NEW: {
-        ASSERT_TRUE(CreateFvm(false, 0));
+        ASSERT_TRUE(CreateFvm(false, 0, slice_size));
         ASSERT_TRUE(ReportFvm(0));
         ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
         ASSERT_TRUE(ReportFvm(0));
@@ -450,8 +450,8 @@ bool CreateReportDestroy(container_t type) {
         break;
     }
     case FVM_OFFSET: {
-        ASSERT_TRUE(CreateFvm(true, SLICE_SIZE));
-        ASSERT_TRUE(ReportFvm(SLICE_SIZE));
+        ASSERT_TRUE(CreateFvm(true, DEFAULT_SLICE_SIZE, slice_size));
+        ASSERT_TRUE(ReportFvm(DEFAULT_SLICE_SIZE));
         ASSERT_TRUE(DestroyFvm());
         break;
     }
@@ -462,21 +462,22 @@ bool CreateReportDestroy(container_t type) {
     END_HELPER;
 }
 
-template <container_t ContainerType>
+template <container_t ContainerType, size_t SliceSize>
 bool TestEmptyPartitions() {
     BEGIN_TEST;
     ASSERT_TRUE(CreatePartitions());
-    ASSERT_TRUE(CreateReportDestroy(ContainerType));
+    ASSERT_TRUE(CreateReportDestroy(ContainerType, SliceSize));
     ASSERT_TRUE(DestroyPartitions());
     END_TEST;
 }
 
-template <container_t ContainerType, size_t NumDirs, size_t NumFiles, size_t MaxSize>
+template <container_t ContainerType, size_t NumDirs, size_t NumFiles, size_t MaxSize,
+          size_t SliceSize>
 bool TestPartitions() {
     BEGIN_TEST;
     ASSERT_TRUE(CreatePartitions());
     ASSERT_TRUE(PopulatePartitions(NumDirs, NumFiles, MaxSize));
-    ASSERT_TRUE(CreateReportDestroy(ContainerType));
+    ASSERT_TRUE(CreateReportDestroy(ContainerType, SliceSize));
     ASSERT_TRUE(DestroyPartitions());
     END_TEST;
 }
@@ -547,18 +548,28 @@ bool Cleanup() {
     END_HELPER;
 }
 
+#define RUN_FOR_ALL_TYPES_EMPTY(slice_size) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE, slice_size>)) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<SPARSE_LZ4, slice_size>)) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<FVM, slice_size>)) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_NEW, slice_size>)) \
+    RUN_TEST_MEDIUM((TestEmptyPartitions<FVM_OFFSET, slice_size>))
+
+#define RUN_FOR_ALL_TYPES(num_dirs, num_files, max_size, slice_size) \
+    RUN_TEST_MEDIUM((TestPartitions<SPARSE, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestPartitions<FVM, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, num_dirs, num_files, max_size, slice_size>)) \
+    RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, num_dirs, num_files, max_size, slice_size>))
+
 //TODO(planders): add tests for FVM on GPT (with offset)
 BEGIN_TEST_CASE(fvm_host_tests)
-RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE>)
-RUN_TEST_MEDIUM(TestEmptyPartitions<SPARSE_LZ4>)
-RUN_TEST_MEDIUM(TestEmptyPartitions<FVM>)
-RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_NEW>)
-RUN_TEST_MEDIUM(TestEmptyPartitions<FVM_OFFSET>)
-RUN_TEST_MEDIUM((TestPartitions<SPARSE, 10, 100, (1 << 20)>))
-RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, 10, 100, (1 << 20)>))
-RUN_TEST_MEDIUM((TestPartitions<FVM, 10, 100, (1 << 20)>))
-RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, 10, 100, (1 << 20)>))
-RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, 10, 100, (1 << 20)>))
+RUN_FOR_ALL_TYPES_EMPTY(8192)
+RUN_FOR_ALL_TYPES_EMPTY(32768)
+RUN_FOR_ALL_TYPES_EMPTY(DEFAULT_SLICE_SIZE)
+RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 8192)
+RUN_FOR_ALL_TYPES(10, 100, (1 << 20), 32768)
+RUN_FOR_ALL_TYPES(10, 100, (1 << 20), DEFAULT_SLICE_SIZE)
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {
