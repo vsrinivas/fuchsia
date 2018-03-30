@@ -21,14 +21,10 @@ public:
         EXPECT_EQ(abi_semaphore->ptr()->id(), semaphore->id());
         EXPECT_EQ(2, semaphore.use_count());
 
-        // Verify return before timeout
-        std::thread thread([abi_semaphore] {
-            DLOG("Waiting for semaphore");
-            EXPECT_TRUE(abi_semaphore->ptr()->Wait(100));
-            DLOG("Semaphore wait returned");
-        });
+        EXPECT_FALSE(abi_semaphore->ptr()->Wait(100));
+
         semaphore->Signal();
-        thread.join();
+        EXPECT_TRUE(abi_semaphore->ptr()->Wait(100));
 
         abi_semaphore.reset();
 
@@ -37,5 +33,4 @@ public:
 };
 }
 
-// TODO(MA-433): deflake
-TEST(MsdIntelSemaphore, DISABLED_Test) { TestMsdIntelSemaphore::Test(); }
+TEST(MsdIntelSemaphore, Test) { TestMsdIntelSemaphore::Test(); }
