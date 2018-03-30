@@ -103,9 +103,9 @@ zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end,
 }
 
 zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
+    zx_status_t status;
     if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        zx_status_t status;
         if ((status = zx_vmo_create(0, 0, &vmo_)) != ZX_OK) {
             return status;
         }
@@ -116,7 +116,15 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
     rights |= (flags & FDIO_MMAP_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
     if (flags & FDIO_MMAP_FLAG_PRIVATE) {
-        return zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out);
+        if ((status = zx_vmo_clone(vmo_, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_, out)) != ZX_OK) {
+            return status;
+        }
+
+        if ((status = zx_handle_replace(*out, rights, out)) != ZX_OK) {
+            zx_handle_close(*out);
+            return status;
+        }
+        return ZX_OK;
     }
 
     return zx_handle_duplicate(vmo_, rights, out);
