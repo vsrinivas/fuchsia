@@ -620,8 +620,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   EXPECT_EQ(ledger::Status::KEY_NOT_FOUND, status);
 }
 
-// TODO(fidl2): Broken during the FIDL2 transition.
-TEST_P(PageSnapshotIntegrationTest, DISABLED_PageGetById) {
+TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   auto instance = NewLedgerAppInstance();
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageId test_page_id;
@@ -639,8 +638,8 @@ TEST_P(PageSnapshotIntegrationTest, DISABLED_PageGetById) {
       instance->GetPage(fidl::MakeOptional(test_page_id), ledger::Status::OK);
   ledger::PageId page_id;
   page->GetId(callback::Capture([] {}, &page_id));
-  EXPECT_EQ(test_page_id.id, page_id.id);
   EXPECT_EQ(ZX_OK, page.WaitForResponse());
+  EXPECT_EQ(test_page_id.id, page_id.id);
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
