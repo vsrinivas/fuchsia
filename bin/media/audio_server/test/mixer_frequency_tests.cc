@@ -367,9 +367,8 @@ void MeasureSummaryDynamicRange(Gain::AScale scale,
 // Measure dynamic range at two gain settings: less than 1.0 by the smallest
 // increment possible, as well as the smallest increment detectable (the
 // closest-to-1.0 gain that actually causes incoming data values to change).
-// For now (until MTWN-73 is fixed) these increments are actually the same.
 TEST(DynamicRange, Epsilon) {
-  double unity_level_db, unity_sinad_db;
+  double unity_level_db, unity_sinad_db, level_db, sinad_db;
 
   MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
                              &unity_sinad_db);
@@ -377,11 +376,17 @@ TEST(DynamicRange, Epsilon) {
   EXPECT_LE(unity_level_db, AudioResult::kLevelToleranceSource16);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSource16);
 
-  // Highest (nearest 1.0) gain_scale at which we observe an effect on signals
-  constexpr Gain::AScale epsilon_scale = Gain::kUnityScale - 1;
+  // At this gain_scale, we should not observe an effect different than unity.
+  static_assert(AudioResult::kScaleEpsilon < Gain::kUnityScale - 1,
+                "kScaleEpsilon should be less than kUnityScale - 1");
+  MeasureSummaryDynamicRange(Gain::kUnityScale - 1, &level_db, &sinad_db);
+  EXPECT_EQ(level_db, unity_level_db);
+  EXPECT_EQ(sinad_db, unity_sinad_db);
 
-  // At this 'detectable reduction' scale, level and noise floor appear reduced
-  MeasureSummaryDynamicRange(epsilon_scale, &AudioResult::LevelDownEpsilon,
+  // kScaleEpsilon: nearest-unity scale at which we observe effects on signals.
+  // At this 'detectable reduction' scale, level and noise floor appear reduced.
+  MeasureSummaryDynamicRange(AudioResult::kScaleEpsilon,
+                             &AudioResult::LevelDownEpsilon,
                              &AudioResult::SinadDownEpsilon);
   EXPECT_GE(
       AudioResult::LevelDownEpsilon,
@@ -569,8 +574,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 TEST(DynamicRange, Mix_8) {
   MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
 
-  EXPECT_GE(AudioResult::LevelMix8, -AudioResult::kLevelToleranceSource8);
-  EXPECT_LE(AudioResult::LevelMix8, AudioResult::kLevelToleranceSource8);
+  EXPECT_GE(AudioResult::LevelMix8, -AudioResult::kLevelToleranceMix8);
+  EXPECT_LE(AudioResult::LevelMix8, AudioResult::kLevelToleranceMix8);
 
   // When summing two full-scale streams, signal should be approx +6dBFS, and
   // (8-bit) noise floor should be approx -43dBFS. If architecture contains
@@ -585,8 +590,8 @@ TEST(DynamicRange, Mix_8) {
 TEST(DynamicRange, Mix_16) {
   MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
 
-  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kLevelToleranceSource16);
-  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kLevelToleranceSource16);
+  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kLevelToleranceMix16);
+  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kLevelToleranceMix16);
 
   // When summing two full-scale streams, signal should be approx +6dBFS, and
   // (16-bit) noise floor should be approx -92dBFS. If architecture contains

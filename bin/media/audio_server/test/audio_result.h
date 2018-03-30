@@ -34,9 +34,12 @@ class AudioResult {
   // must be within this distance (above OR below) from the reference dB level.
   static constexpr double kLevelToleranceSource8 = 0.067219077;
   static constexpr double kLevelToleranceOutput8 = 0.065638245;
+  static constexpr double kLevelToleranceMix8 = kLevelToleranceSource8;
+
   static constexpr double kLevelToleranceSource16 = 0.00000068542196;
   static constexpr double kLevelToleranceOutput16 = 0.00000068541681;
   static constexpr double kLevelToleranceInterp16 = 0.00000080781106;
+  static constexpr double kLevelToleranceMix16 = 0.00017031199;
 
   //
   // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
@@ -52,6 +55,7 @@ class AudioResult {
   static double FloorSource8;
   static double FloorMix8;
   static double FloorOutput8;
+
   static double FloorSource16;
   static double FloorMix16;
   static double FloorOutput16;
@@ -61,6 +65,7 @@ class AudioResult {
   static constexpr double kPrevFloorSource8 = 49.952957;
   static constexpr double kPrevFloorMix8 = 49.952957;
   static constexpr double kPrevFloorOutput8 = 45.920261;
+
   static constexpr double kPrevFloorSource16 = 98.104753;
   static constexpr double kPrevFloorMix16 = 90.677331;
   static constexpr double kPrevFloorOutput16 = 98.104753;
@@ -148,6 +153,11 @@ class AudioResult {
   // signal" calculation, but also as a second avenue toward measuring a
   // system's linearity/accuracy/precision with regard to data scaling and gain.
 
+  // The nearest-unity scale at which we observe effects on signals.
+  static constexpr uint32_t kScaleEpsilon = 0x0FFFEFFF;
+  // The lowest scale at which full-scale signals are not reduced to zero.
+  static constexpr uint32_t kMinScaleNonZero = 0x00001000;
+
   // Level and unwanted artifacts, applying the smallest-detectable gain change.
   static double LevelDownEpsilon;
   static double SinadDownEpsilon;
@@ -157,7 +167,7 @@ class AudioResult {
   static double SinadDown60;
 
   static constexpr double kPrevLevelDownEpsilon = -0.00016807164;
-  static constexpr double kPrevDynRangeTolerance = 0.004922;
+  static constexpr double kPrevDynRangeTolerance = 0.0075380325;
 
   static constexpr double kPrevSinadDownEpsilon = 93.232593;
   static constexpr double kPrevSinadDown60 = 34.196374;

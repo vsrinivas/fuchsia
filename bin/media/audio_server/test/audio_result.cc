@@ -16,9 +16,12 @@ namespace test {
 // must be within this distance (above OR below) from the reference dB level.
 constexpr double AudioResult::kLevelToleranceSource8;
 constexpr double AudioResult::kLevelToleranceOutput8;
+constexpr double AudioResult::kLevelToleranceMix8;
+
 constexpr double AudioResult::kLevelToleranceSource16;
 constexpr double AudioResult::kLevelToleranceOutput16;
 constexpr double AudioResult::kLevelToleranceInterp16;
+constexpr double AudioResult::kLevelToleranceMix16;
 
 //
 // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
@@ -222,6 +225,11 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
 // the "noise in the presence of signal" calculation, but also as a second
 // avenue toward measuring a system's linearity/accuracy/precision with regard
 // to data scaling and gain.
+
+// The nearest-unity scale at which we observe effects on signals.
+constexpr uint32_t AudioResult::kScaleEpsilon;
+// The lowest scale at which full-scale signals are not reduced to zero.
+constexpr uint32_t AudioResult::kMinScaleNonZero;
 
 // Level and unwanted artifacts, applying the smallest-detectable gain change.
 double AudioResult::LevelDownEpsilon = -INFINITY;

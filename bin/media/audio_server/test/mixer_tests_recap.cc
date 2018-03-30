@@ -152,12 +152,12 @@ TEST(Recap, DynamicRange) {
   printf("\n Dynamic Range");
   printf("\n   (in dB, with prior results)");
 
-  printf("\n\n      Input Gain       Mixed Result       Usable Range\n");
-  printf("\n     -0.00000003   %8.4lf (%8.4lf)   %5.2lf (%5.2lf)",
+  printf("\n\n      Input Gain       Mixed Result          Usable Range\n");
+  printf("\n     -0.000133  %10.6lf ( > %9.6lf)   %5.2lf (%5.2lf)",
          AudioResult::LevelDownEpsilon, AudioResult::kPrevLevelDownEpsilon,
          AudioResult::SinadDownEpsilon, AudioResult::kPrevSinadDownEpsilon);
-  printf("\n    -60.0000       %8.4lf (%8.4lf)   %5.2lf (%5.2lf)",
-         AudioResult::LevelDown60, -60.0 - AudioResult::kPrevDynRangeTolerance,
+  printf("\n    -60.0000    %8.4lf   (+/- %6.4lf  )   %5.2lf (%5.2lf)",
+         AudioResult::LevelDown60, AudioResult::kPrevDynRangeTolerance,
          AudioResult::SinadDown60, AudioResult::kPrevSinadDown60);
   printf("\n\n");
 }

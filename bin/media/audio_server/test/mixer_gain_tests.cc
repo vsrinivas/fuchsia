@@ -201,51 +201,74 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect2[] = {329, 327, 3, 0, -2, -3, -328, -330};
+  int32_t expect2[] = {330, 328, 3, 0, -1, -2, -328, -329};
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
-// How does our Gain respond to very low values? Today during the scaling
-// process we shift-right. This is faster than divide but truncates fractional
-// vals toward -inf. This means not only that 0.9999 becomes 0, but also that we
-// are unable to attenuate negative vals to 0 (even -0.00000001 stays -1).
-// In the future, the system should round fractional data values away from 0.
-// By "round away from zero", we mean: 1.5 --> 2; -1.5 --> -2; -1.1 --> -1.
+// How does our Gain respond to very low values? During scaling we shift-right,
+// first biasing values by a fractional value so that we 'round away from zero'.
+// By this we mean: +1.5 becomes +2; -1.5 becomes -2; -1.1 becomes -1.
+// However, we still truncate in gain_scale formulation, causing too-low values.
 TEST(Gain, Scaling_Precision) {
-  // TODO(mpuryear): when MTWN-73 is fixed, amend these values
   int16_t source[] = {32767, -32768, -1, 1};  // max/min values
   int32_t accum[4];
 
   //
-  // Today, a gain even slightly less than unity will reduce all positive vals
-  Gain::AScale gain_scale = Gain::kUnityScale - 1;
+  // Before, even slightly below unity reduced all positive vals. Now we round.
+  // For this reason, at this gain_scale, resulting audio should be unchanged.
+  Gain::AScale gain_scale = AudioResult::kScaleEpsilon + 1;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect[] = {32766, -32768, -1, 0};
+  int32_t expect[] = {32767, -32768, -1, 1};
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //
-  // This gain will output non-zero, given a full-scale signal.
-  gain_scale = 0x00002001;
+  // This gain is the first (closest-to-unity) to change a full-scale signal.
+  gain_scale = AudioResult::kScaleEpsilon;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(std::move(mixer), source, accum, false, 2, gain_scale);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        gain_scale);
 
-  int32_t expect2[] = {1, -2, -1, 0};
+  int32_t expect2[] = {32766, -32767, -1, 1};
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 
   //
-  // Today, this gain truncates full-scale to zero.
-  gain_scale = 0x00002000;
+  // This is lowest gain_scale that produces non-zero from full-scale.
+  // Why "+1"? Differences in negative and positive range; see subsequent check.
+  gain_scale = AudioResult::kMinScaleNonZero + 1;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
-  DoMix(std::move(mixer), source, accum, false, 2, gain_scale);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        gain_scale);
 
-  int32_t expect3[] = {0, -1, -1, 0};
+  int32_t expect3[] = {1, -1, 0, 0};
   EXPECT_TRUE(CompareBuffers(accum, expect3, fbl::count_of(accum)));
+
+  //
+  // This 'special' scale straddles boundaries: 32767 is reduced to _just_ less
+  // than .5 (and rounds in) while -32768 becomes -.50000 (rounding out to -1).
+  gain_scale = AudioResult::kMinScaleNonZero;
+  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        gain_scale);
+
+  int32_t expect4[] = {0, -1, 0, 0};
+  EXPECT_TRUE(CompareBuffers(accum, expect4, fbl::count_of(accum)));
+
+  //
+  // At this gain, even -32768 is reduced to -.49... thus rounds in to 0.
+  gain_scale = AudioResult::kMinScaleNonZero - 1;
+  mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
+        gain_scale);
+
+  EXPECT_TRUE(CompareBufferToVal(accum, 0, fbl::count_of(accum)));
 }
 
 //

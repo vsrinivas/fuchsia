@@ -71,10 +71,12 @@ class SampleScaler<
     typename std::enable_if<(ScaleType == ScalerType::NE_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
-    // Called extremely frequently: 1 MUL, 1 SHIFT
-    // TODO(mpuryear): MTWN-80 Round before shifting down
-    return static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
-                                Gain::kFractionalScaleBits);
+    // Called extremely frequently: 1 COMPARE, 1 MUL, 1 ADD, 1 SHIFT
+    int64_t rounding_val = (val >= 0 ? Gain::kFractionalRoundValue
+                                     : Gain::kFractionalRoundValue - 1);
+    return static_cast<int32_t>(
+        (static_cast<int64_t>(val) * scale + rounding_val) >>
+        Gain::kFractionalScaleBits);
   }
 };
 

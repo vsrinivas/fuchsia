@@ -206,13 +206,6 @@ on both our fixed-point representation of gain and the resultant audio data,
 while being mindful of integer container size and precision. In the process, we
 down-scale the gain scalar itself without first rounding, leading to truncation.
 
-*   MTWN-80
-
-    Related to MTWN-73, once we have a gain scalar we apply it to audio data
-without first rounding, leading to truncation. This, and MTWN-73, contribute to
-our producing results that (for certain inputs) are "expected-1". Again, we have
-accomodated this in all related test code, annotating appropriately.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether

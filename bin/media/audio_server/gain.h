@@ -69,12 +69,15 @@ class Gain {
   //
   // @return The value at which the amplitude scaler is guaranteed to drive all
   // samples to a value of 0 (meaning that you are wasting compute cycles
-  // attempting to scale anything).  For example, when scaling 16 bit signed
-  // integers, if amplitude_scale() <= MuteThreshold(15), then all scaled values
-  // are going to end up as 0, so there is no point in performing the fixed
-  // point multiply.
+  // attempting to scale anything).  Note: this includes any rounding effects on
+  // data & scalars. For example, when scaling 16 bit signed integers, if
+  // amplitude_scale() <= MuteThreshold(15), then all scaled values are going to
+  // end up as 0 (even with rounding), so there is no point in performing the
+  // fixed point multiply. Now that we round data values during scaling, we use
+  // "bit_count - 1", not merely bit_count in this calculation.
   static constexpr AScale MuteThreshold(unsigned int bit_count) {
-    return (static_cast<AScale>(1u) << (kFractionalScaleBits - bit_count)) - 1;
+    return (static_cast<AScale>(1u) << (kFractionalScaleBits - bit_count - 1)) -
+           1;
   }
 
  private:
