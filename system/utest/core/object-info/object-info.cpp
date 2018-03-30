@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <mini-process/mini-process.h>
+#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <mini-process/mini-process.h>
-#include <unittest/unittest.h>
 
 #include <inttypes.h>
 #include <limits.h>
@@ -258,7 +258,7 @@ zx_handle_t get_test_process_etc(const test_mapping_info_t** info) {
                 return ZX_HANDLE_INVALID;
             }
         }
-        zx_handle_close(vmo); // Kept alive by the VMAR.
+        zx_handle_close(vmo);      // Kept alive by the VMAR.
         zx_handle_close(sub_vmar); // Kept alive by the process.
 
         test_process = process;
@@ -304,7 +304,7 @@ bool process_maps_smoke() {
     EXPECT_GT(maps[1].size, 1u * 1024 * 1024 * 1024 * 1024, "Root VMAR size");
 
     // Look for the VMAR and all of the mappings we created.
-    bool saw_vmar = false; // Whether we've seen our VMAR.
+    bool saw_vmar = false;   // Whether we've seen our VMAR.
     bool under_vmar = false; // If we're looking at children of our VMAR.
     size_t vmar_depth = 0;
     uint32_t saw_mapping = 0u; // bitmask of mapping indices we've seen.
@@ -492,7 +492,7 @@ bool single_zero_buffer_fails() {
     // in/out entry should fail.
     EXPECT_EQ(zx_object_get_info(GetHandle(), Topic,
                                  &entry, // buffer
-                                 0, // len
+                                 0,      // len
                                  &actual, &avail),
               ZX_ERR_BUFFER_TOO_SMALL);
     EXPECT_EQ(0u, actual);
@@ -509,7 +509,7 @@ bool multi_zero_buffer_succeeds() {
     // in/out entries should succeed.
     EXPECT_EQ(zx_object_get_info(GetHandle(), Topic,
                                  nullptr, // buffer
-                                 0, // len
+                                 0,       // len
                                  &actual, &avail),
               ZX_OK);
     EXPECT_EQ(0u, actual);
@@ -540,7 +540,7 @@ bool null_avail_actual_succeeds() {
     EntryType entries[2];
     EXPECT_EQ(zx_object_get_info(GetHandle(), Topic,
                                  entries, sizeof(entries),
-                                 nullptr, // actual
+                                 nullptr,  // actual
                                  nullptr), // avail
               ZX_OK);
     END_TEST;
@@ -817,7 +817,7 @@ zx_handle_t get_test_job() {
         if (false) {
         fail:
             EXPECT_EQ(s, ZX_OK, msg); // Poison the test
-            zx_task_kill(root); // Clean up all tasks; leaks handles
+            zx_task_kill(root);       // Clean up all tasks; leaks handles
             return ZX_HANDLE_INVALID;
         }
         test_job = root;
@@ -864,7 +864,7 @@ bool job_children_smoke() {
 uint32_t handle_count_or_zero(zx_handle_t handle) {
     zx_info_handle_count_t info;
     if (ZX_OK != zx_object_get_info(
-        handle, ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr)) {
+                     handle, ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr, nullptr)) {
         return 0u;
     }
     return info.handle_count;
@@ -880,7 +880,8 @@ bool handle_count_valid() {
 
     for (size_t i = 1; i != countof(event); ++i) {
         ASSERT_EQ(zx_handle_duplicate(
-            event[0], ZX_RIGHT_SIGNAL, &event[i]), ZX_OK);
+                      event[0], ZX_RIGHT_SIGNAL, &event[i]),
+                  ZX_OK);
         EXPECT_EQ(handle_count_or_zero(event[0]), i + 1);
     }
 
@@ -890,6 +891,32 @@ bool handle_count_valid() {
     }
 
     zx_handle_close(event[0]);
+    return true;
+}
+
+bool handle_stats_control() {
+    zx_info_process_handle_stats_t info;
+    zx_status_t status = zx_object_get_info(zx_process_self(), ZX_INFO_PROCESS_HANDLE_STATS,
+                                            &info, sizeof(info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    EXPECT_EQ(info.handle_count[ZX_OBJ_TYPE_NONE], 0);
+    EXPECT_GT(info.handle_count[ZX_OBJ_TYPE_PROCESS], 0);
+    EXPECT_GT(info.handle_count[ZX_OBJ_TYPE_THREAD], 0);
+    EXPECT_GT(info.handle_count[ZX_OBJ_TYPE_VMO], 0);
+    EXPECT_EQ(info.handle_count[ZX_OBJ_TYPE_INTERRUPT], 0);
+
+    uint32_t channel_count = info.handle_count[ZX_OBJ_TYPE_CHANNEL];
+
+    zx_handle_t h1, h2;
+    status = zx_channel_create(0, &h1, &h2);
+    ASSERT_EQ(status, ZX_OK);
+
+    status = zx_object_get_info(zx_process_self(), ZX_INFO_PROCESS_HANDLE_STATS,
+                                &info, sizeof(info), nullptr, nullptr);
+    ASSERT_EQ(status, ZX_OK);
+    EXPECT_EQ(info.handle_count[ZX_OBJ_TYPE_CHANNEL], channel_count + 2);
+    zx_handle_close(h1);
+    zx_handle_close(h2);
     return true;
 }
 
@@ -1008,6 +1035,8 @@ RUN_TEST((invalid_handle_fails<ZX_INFO_THREAD_EXCEPTION_REPORT, zx_exception_rep
 // RUN_SINGLE_ENTRY_TESTS(ZX_INFO_KMEM_STATS, zx_info_kmem_stats_t, get_root_resource);
 
 RUN_TEST(handle_count_valid);
+
+RUN_TEST(handle_stats_control);
 
 END_TEST_CASE(object_info_tests)
 

@@ -32,6 +32,7 @@ typedef enum {
     ZX_INFO_RESOURCE                   = 18, // zx_info_resource_t[1]
     ZX_INFO_HANDLE_COUNT               = 19, // zx_info_handle_count_t[1]
     ZX_INFO_BTI                        = 20, // zx_info_bti_t[1]
+    ZX_INFO_PROCESS_HANDLE_STATS       = 21, // zx_info_process_handle_stats_t[1]
     ZX_INFO_LAST
 } zx_object_info_topic_t;
 
@@ -66,6 +67,11 @@ typedef struct zx_info_handle_count {
     // The number of outstanding handles to a kernel object.
     uint32_t handle_count;
 } zx_info_handle_count_t;
+
+typedef struct zx_info_process_handle_stats {
+    // The number of outstanding handles to kernel objects of each type.
+    uint32_t handle_count[64];
+} zx_info_process_handle_stats_t;
 
 typedef struct zx_info_process {
     // The process's return code; only valid if |exited| is true.

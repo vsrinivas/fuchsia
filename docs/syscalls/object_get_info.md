@@ -94,6 +94,19 @@ if the caller has one handle and the *handle_count* is equal to 2 it
 means that another process has a reference to this object which can be
 duplicated at any time.
 
+### ZX_INFO_PROCESS_HANDLE_STATS
+
+*handle* type: **Process**
+
+*buffer* type: **zx_info_process_handle_stats_t[1]**
+
+```
+typedef struct zx_info_process_handle_stats {
+    // The number of outstanding handles to kernel objects of each type.
+    uint32_t handle_count[ZX_OBJ_TYPE_LAST];
+} zx_info_process_handle_stats_t;
+```
+
 ### ZX_INFO_PROCESS
 
 *handle* type: **Process**

@@ -556,6 +556,25 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             return single_record_result(
                 _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
         }
+        case ZX_INFO_PROCESS_HANDLE_STATS: {
+            fbl::RefPtr<ProcessDispatcher> process;
+            auto status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &process);
+            if (status != ZX_OK)
+                return status;
+
+            zx_info_process_handle_stats_t info = {};
+            static_assert(fbl::count_of(info.handle_count) >= ZX_OBJ_TYPE_LAST,
+                          "Need room for each handle type.");
+
+            process->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
+                                       const Dispatcher* dispatcher) {
+                ++info.handle_count[dispatcher->get_type()];
+                return ZX_OK;
+            });
+
+            return single_record_result(
+                _buffer, buffer_size, _actual, _avail, &info, sizeof(info));
+        }
 
         default:
             return ZX_ERR_NOT_SUPPORTED;
