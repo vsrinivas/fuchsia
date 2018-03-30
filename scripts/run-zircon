@@ -340,6 +340,7 @@ case $ARCH in
         if (( !$SERIAL )); then
           CMDLINE+="kernel.serial=none "
         fi
+        BOOTDATA="$BUILDDIR/qemu-bootdata.bin"
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
@@ -356,6 +357,7 @@ case $ARCH in
         else
           CMDLINE+="kernel.serial=none "
         fi
+        BOOTDATA="$BUILDDIR/bootdata.bin"
         ;;
     *)
         echo unsupported arch
@@ -366,8 +368,8 @@ esac
 # ramdisk image
 if [[ -n $INITRD ]]; then
     ARGS+=" -initrd $INITRD"
-elif [[ -f "$BUILDDIR/bootdata.bin" ]]; then
-    ARGS+=" -initrd $BUILDDIR/bootdata.bin"
+elif [[ -f "$BOOTDATA" ]]; then
+    ARGS+=" -initrd $BOOTDATA"
 fi
 
 # Propagate our TERM environment variable as a kernel command line
