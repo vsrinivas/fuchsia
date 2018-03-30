@@ -471,6 +471,7 @@ template("package") {
                  "--manifest",
                  rebase_path(partial_archive_manifest, root_build_dir),
                ] + contents
+        inputs = extra_inputs
         forward_variables_from(invoker,
                                [
                                  "deps",
