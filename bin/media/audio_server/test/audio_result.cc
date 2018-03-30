@@ -8,9 +8,8 @@ namespace media {
 namespace audio {
 namespace test {
 
-// Audio measurements that are determined by various test cases throughout the
-// overall set. These measurements are eventually displayed in an overall recap,
-// after all other tests have completed.
+// These audio measurements are measured by various test cases throughout the
+// set. They are eventually displayed in a recap after all other tests complete.
 
 //
 // How close is a measured level to the reference dB level?  Val-being-checked
@@ -27,10 +26,10 @@ constexpr double AudioResult::kLevelToleranceInterp16;
 constexpr double AudioResult::kGainToleranceMultiplier;
 
 //
-// What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
-// Val is root-sum-square of all other freqs besides the 1kHz reference, in
-// dBr units (compared to magnitude of received reference). Using dBr (not
-// dBFS) includes level attenuation, making this metric a good proxy of
+// What is our best-case noise floor in absence of rechannel/gain/SRC/mix. Val
+// is root-sum-square of all other freqs besides the 1kHz reference, in dBr
+// units (compared to magnitude of received reference). Using dBr (not dBFS)
+// includes level attenuation, making this metric a good proxy of
 // frequency-independent fidelity in our audio processing pipeline.
 double AudioResult::FloorSource8 = -INFINITY;
 double AudioResult::FloorMix8 = -INFINITY;
@@ -65,6 +64,7 @@ double AudioResult::LevelMix16 = -INFINITY;
 // from frequency_set.h), storing the result at each frequency. As with
 // resampling ratios, subsequent CL contains a more exhaustive frequency set,
 // for in-depth testing and diagnostics to be done outside CQ.
+
 // clang-format off
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUnity = {
     -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
@@ -96,10 +96,12 @@ std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinear
 
 // Val-being-checked (in dBFS) must be greater than or equal to this value.
 //
-// Note: with rates other than N:1 or 1:N, interpolating resamplers dampen
-// high frequencies, as shown in the previously-saved LinearSampler results.
+// Note: with rates other than N:1 or 1:N, interpolating resamplers dampen high
+// frequencies, as shown in previously-saved LinearSampler results.
+
 // clang-format off
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFreqRespPointUnity = {
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevFreqRespPointUnity = {
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
@@ -109,7 +111,8 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFre
          0.0,       0.0,       0.0,       0.0,      -INFINITY, -INFINITY,
         -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFreqRespPointDown = {
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevFreqRespPointDown = {
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
@@ -119,37 +122,46 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFre
          0.0,       0.0,       0.0,       0.0,       0.0,       0.0,
          0.0,       0.0,       0.0,       0.0,       0.0        };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFreqRespLinearDown = {
-         0.0,              0.0,             -0.0000010765944, -0.00000011222767, -0.0000020938986, -0.0000018778418,
-        -0.0000094623437, -0.0000098927249, -0.000014065467,  -0.000022771550,   -0.000037785192,  -0.000054824344,
-        -0.000095210661,  -0.00014667886,   -0.00022827781,   -0.00036619075,    -0.00057611855,   -0.00091960698,
-        -0.0014540418,    -0.0023462583,    -0.0036589951,    -0.0057131220,     -0.0093914625,    -0.014676537,
-        -0.022955636,     -0.036462171,     -0.058795450,     -0.091922681,      -0.14606405,      -0.23562194,
-        -0.36871115,      -0.53193138,      -0.95022508,      -1.4196069,        -1.4947992,       -1.5718087,
-        -1.6511036,       -1.8235774,       -2.0597837,       -2.1695306,        -2.3593078,       -3.8104597,
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevFreqRespLinearDown = {
+         0.0,              0.0,             -0.0000010765944, -0.0000023500457,  -0.0000023204115, -0.0000024819551,
+        -0.0000094623437, -0.0000098927249, -0.000015352092,  -0.000024634046,   -0.000037785192,  -0.000055401688,
+        -0.000095210661,  -0.00014667886,   -0.00023037397,   -0.00036630747,    -0.00057694728,   -0.00091971656,
+        -0.0014540418,    -0.0023462583,    -0.0036597335,    -0.0057131220,     -0.0093914625,    -0.014676537,
+        -0.022958352,     -0.036462171,     -0.058796479,     -0.091924166,      -0.14606405,      -0.23562194,
+        -0.36871115,      -0.53193309,      -0.95022584,      -1.4196076,        -1.4948005,       -1.5718115,
+        -1.6511036,       -1.8235781,       -2.0597837,       -2.1695351,        -2.3593078,       -3.8104597,
         -6.3343783,       -7.8036133,       -7.8427753,       -INFINITY,         -INFINITY          };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevFreqRespLinearUp = {
-         0.0,             -0.0000023504212, -0.0000043544860, -0.0000056409654,  -0.000010595969,  -0.000013453493,
-        -0.000026934650,  -0.000035439283,  -0.000056430585,  -0.000094066218,   -0.00014871579,   -0.00022482655,
-        -0.00038486095,   -0.00057909159,   -0.00091727461,   -0.0014642418,     -0.0023078001,    -0.0036759177,
-        -0.0058170869,    -0.0093834696,    -0.014647070,     -0.022867357,      -0.037581601,     -0.058746770,
-        -0.091919936,     -0.14606728,      -0.23572517,      -0.36897083,       -0.58739390,      -0.95056709,
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevFreqRespLinearUp = {
+         0.0,             -0.0000023504212, -0.0000043544860, -0.0000058073382,  -0.000010595969,  -0.000013453493,
+        -0.000028152172,  -0.000035439283,  -0.000056947810,  -0.000094066218,   -0.00014871579,   -0.00022498862,
+        -0.00038578026,   -0.00057974394,   -0.00091727461,   -0.0014643869,     -0.0023078001,    -0.0036776787,
+        -0.0058170869,    -0.0093836438,    -0.014647070,     -0.022867596,      -0.037581764,     -0.058746770,
+        -0.091922190,     -0.14606728,      -0.23572614,      -0.36897083,       -0.58739390,      -0.95056709,
         -1.4946470,       -2.1693107,       -3.9380418,       -5.9982547,        -6.3364566,       -6.6853228,
-        -7.0472276,       -7.8442173,       -INFINITY,        -INFINITY,         -INFINITY,        -INFINITY,
+        -7.0472288,       -7.8442190,       -INFINITY,        -INFINITY,         -INFINITY,        -INFINITY,
         -INFINITY,        -INFINITY,        -INFINITY,        -INFINITY,        - INFINITY          };
+// clang-format on
 
 //
 // Distortion is measured at a single reference frequency (kReferenceFreq).
 // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
 // signal (nominally 1kHz) to the combined power of all OTHER frequencies.
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity;
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown;
-std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearDown;
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::SinadPointUnity;
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::SinadPointDown;
+std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::SinadLinearDown;
 std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUp;
 
 // Val-being-checked (in dBFS) must be greater than or equal to this value.
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointUnity = {
+
+// clang-format off
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevSinadPointUnity = {
         98.104753, 98.092846, 98.104753, 98.104753, 98.092846, 98.104753,
         98.104753, 98.104753, 98.104753, 98.104753, 98.104753, 98.104753,
         98.104753, 98.104753, 98.104753, 98.104753, 98.104753, 98.104753,
@@ -159,7 +171,8 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
         98.104753, 98.104753, 98.104753, 98.104753, -INFINITY, -INFINITY,
         -INFINITY, -INFINITY, -INFINITY, -INFINITY, -INFINITY   };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadPointDown = {
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevSinadPointDown = {
         98.104753, 98.092846, 98.104753, 98.104753, 98.092846, 98.104753,
         98.104753, 98.104753, 98.104753, 98.104753, 98.104753, 98.104753,
         98.104753, 98.104753, 98.104753, 98.104753, 98.104753, 98.104753,
@@ -170,42 +183,44 @@ const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSin
         -0.00000000067187492, -0.00000000067185563, -0.00000000067184599,
         -0.00000000067185852, -0.00000000067184695, -0.00000000067184599 };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearDown = {
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevSinadLinearDown = {
       98.104753, 93.124218,  93.076842, 93.089388, 93.087849,   93.104014,
       93.124252, 93.090645,  93.094310, 93.042959, 93.054275,   92.991397,
       92.875920, 92.646527,  92.008977, 90.782039, 88.678501,   85.663296,
       82.149077, 78.222449,  74.421795, 70.595109, 66.291866,   62.410875,
-      58.517504, 54.480815,  50.300839, 46.376093, 42.282661,   38.012863,
-      33.952617, 30.563039,  25.010493, 20.970874, 20.436069,   19.911664,
-      19.394056, 18.336941,  17.017179, 14.391131, -0.12037547, -0.42761185,
+      58.517504, 54.480815,  50.300839, 46.375885, 42.282581,   38.012863,
+      33.952617, 30.563039,  25.010451, 20.970874, 20.436067,   19.911664,
+      19.394056, 18.336941,  17.017172, 14.391131, -0.12037547, -0.42761185,
       -1.743604, -3.0325247, -3.071563, -INFINITY, -INFINITY     };
 
-const std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::kPrevSinadLinearUp = {
+const std::array<double, FrequencySet::kNumReferenceFreqs>
+    AudioResult::kPrevSinadLinearUp = {
       98.104753, 93.128846,   93.096975, 93.096829, 93.107059, 93.060076,
       93.052275, 93.072997,   92.992189, 92.857695, 92.586523, 92.039931,
       90.468576, 88.599321,   85.677088, 82.109717, 78.343967, 74.403325,
-      70.441937, 66.297342,   62.428449, 58.548117, 54.215684, 50.308188,
-      46.376423, 42.282509,   38.008959, 33.946106, 29.632320, 25.006935,
-      20.437138, 16.447282,    9.4396456, 3.8398891, 3.0577226, 2.2800661,
-      1.5015966, -0.12452049, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
+      70.441937, 66.297342,   62.428449, 58.548117, 54.215625, 50.308188,
+      46.376339, 42.282366,   38.008890, 33.946106, 29.632310, 25.006935,
+      20.437118, 16.447273,    9.4396395, 3.8398891, 3.0577226, 2.2800661,
+      1.5015886, -0.12452049, -INFINITY, -INFINITY, -INFINITY, -INFINITY,
       -INFINITY, -INFINITY,   -INFINITY, -INFINITY, -INFINITY   };
 // clang-format on
 
 //
 // Dynamic Range (gain integrity and system response at low volume levels) is
 // measured at a single reference frequency (kReferenceFreq), on a lone mono
-// source without SRC. By determining the smallest possible change in gain
-// that causes a detectable change in output (our 'gain epsilon'), we
-// determine a system's sensitivity to gain changes. We measure not only the
-// output level of the signal, but also the noise level across all other
-// frequencies. Performing these same measurements (output level and noise
-// level) with a gain of -60 dB as well is the standard definition of Dynamic
-// Range testing: by adding 60 dB to the measured signal-to-noise, one
-// determines a system's usable range of data values (translatable into the
-// more accessible Effective Number Of Bits metric). The level measurement at
-// -60 dB is useful not only as a component of the "noise in the presence of
-// signal" calculation, but also as a second avenue toward measuring a
-// system's linearity/accuracy/precision with regard to data scaling and gain.
+// source without SRC. By determining the smallest possible change in gain that
+// causes a detectable change in output (our 'gain epsilon'), we determine a
+// system's sensitivity to gain changes. We measure not only the output level of
+// the signal, but also the noise level across all other frequencies. Performing
+// these same measurements (output level and noise level) with a gain of -60 dB
+// as well is the standard definition of Dynamic Range testing: by adding 60 dB
+// to the measured signal-to-noise, one determines a system's usable range of
+// data values (translatable into the more accessible Effective Number Of Bits
+// metric). The level measurement at -60 dB is useful not only as a component of
+// the "noise in the presence of signal" calculation, but also as a second
+// avenue toward measuring a system's linearity/accuracy/precision with regard
+// to data scaling and gain.
 
 // Level and unwanted artifacts, applying the smallest-detectable gain change.
 double AudioResult::LevelDownEpsilon = -INFINITY;

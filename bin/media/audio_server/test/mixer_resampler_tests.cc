@@ -261,7 +261,6 @@ TEST(Timing, Position_Fractional_Linear) {
 // Test LinearSampler interpolation accuracy, given fractional position.
 // Inputs trigger various +/- values that should be rounded each direction.
 // Test varies the fractional starting offsets, still with step_size ONE.
-// TODO(mpuryear): After MTWN-74 is fixed, tighten expectations below
 TEST(Timing, Interpolation_Values) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
@@ -309,7 +308,7 @@ TEST(Timing, Interpolation_Values) {
   dst_offset = 0;
   int16_t source3[] = {-32766, 32767};
   accum_result = 0xCAFE;  // value will be overwritten
-  expected = 0;           // result 0.5 should round "out" to 1
+  expected = 1;           // result 0.5 rounds "out" to 1
 
   mix_result = mixer->Mix(&accum_result, 1, &dst_offset, source3,
                           2 << kPtsFractionalBits, &frac_src_offset,
@@ -341,7 +340,7 @@ TEST(Timing, Interpolation_Values) {
   dst_offset = 0;
   int16_t source5[] = {-2186, 32767};
   accum_result = 0xCAFE;
-  expected = -2;  // result −1.4375 should "round in", to -1.
+  expected = -1;  // result −1.4375 should "round in", to -1.
 
   mix_result = mixer->Mix(&accum_result, 1, &dst_offset, source5,
                           2 << kPtsFractionalBits, &frac_src_offset,
@@ -385,7 +384,7 @@ TEST(Timing, Interpolation_Rates) {
   dst_offset = 0;
   int16_t source2[] = {-2186, 32767};
   accum_result = 0xCAFE;
-  expected = -2;  // result −1.4375 should "round in", to -1.
+  expected = -1;  // result −1.4375 "rounds in", to -1.
 
   mix_result = mixer->Mix(&accum_result, 1, &dst_offset, source2,
                           2 << kPtsFractionalBits, &frac_src_offset,

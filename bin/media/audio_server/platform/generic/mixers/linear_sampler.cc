@@ -44,9 +44,10 @@ class LinearSamplerImpl : public LinearSampler {
                   Gain::AScale amplitude_scale);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
-    // TODO(mpuryear): MTWN-74 Add rounding before the shift-down.
-    return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
+    // Called very frequently: optimized to 3 add, 1 mult, 2 shift, 1 compare.
+    A = (A << kPtsFractionalBits) + (B - A) * static_cast<int32_t>(alpha);
+    A += (A >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
+    return A >> kPtsFractionalBits;
   }
 
   int32_t filter_data_[2 * DChCount];
@@ -89,10 +90,11 @@ class NxNLinearSamplerImpl : public LinearSampler {
                   size_t chan_count);
 
   static inline int32_t Interpolate(int32_t A, int32_t B, uint32_t alpha) {
-    // Called extremely often: optimized to 2 adds, 1 mult, 1 shift
-    // TODO(mpuryear): MTWN-74 Add rounding before the shift-down.
-    // TODO(mpuryear): MTWN-75 minimize LinearSamplerImpl code duplication
-    return A + (((B - A) * static_cast<int32_t>(alpha)) >> kPtsFractionalBits);
+    // TODO(mpuryear): MTWN-75 minimize LinearSamplerImpl code duplication.
+    // Called very frequently: optimized to 3 add, 1 mult, 2 shift, 1 compare.
+    A = (A << kPtsFractionalBits) + (B - A) * static_cast<int32_t>(alpha);
+    A += (A >= 0 ? kPtsRoundingVal : kPtsRoundingVal - 1);
+    return A >> kPtsFractionalBits;
   }
 
   size_t chan_count_;
@@ -444,8 +446,7 @@ static inline MixerPtr SelectLSM(const AudioMediaTypeDetails& src_format,
   }
 }
 
-static inline MixerPtr SelectNxNLSM(
-    const AudioMediaTypeDetails& src_format) {
+static inline MixerPtr SelectNxNLSM(const AudioMediaTypeDetails& src_format) {
   switch (src_format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
       return MixerPtr(new NxNLinearSamplerImpl<uint8_t>(src_format.channels));
@@ -458,8 +459,7 @@ static inline MixerPtr SelectNxNLSM(
 
 MixerPtr LinearSampler::Select(const AudioMediaTypeDetails& src_format,
                                const AudioMediaTypeDetails& dst_format) {
-  if (src_format.channels == dst_format.channels &&
-      src_format.channels > 2) {
+  if (src_format.channels == dst_format.channels && src_format.channels > 2) {
     return SelectNxNLSM(src_format);
   }
 
