@@ -749,7 +749,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->module_path = CloneStringVector(module_path_);
     link_path_->Clone(&module_data_->link_path);
     module_data_->module_source = module_source_;
-    surface_relation_->Clone(module_data_->surface_relation.get());
+    fidl::Clone(surface_relation_, &module_data_->surface_relation);
     module_data_->module_stopped = false;
     module_data_->daisy = std::move(daisy_);
 
@@ -869,17 +869,16 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-    ModuleManifest module_manifest;
-    module_manifest_->Clone(&module_manifest);
-    CreateChainInfo create_chain_info;
-    create_chain_info_->Clone(&create_chain_info);
-    SurfaceRelation surface_relation;
-    surface_relation_->Clone(&surface_relation);
+    ModuleManifestPtr module_manifest;
+    fidl::Clone(module_manifest_, &module_manifest);
+    CreateChainInfoPtr create_chain_info;
+    fidl::Clone(create_chain_info_, &create_chain_info);
+    SurfaceRelationPtr surface_relation;
+    fidl::Clone(surface_relation_, &surface_relation);
     new StartModuleCall(
         &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        link_name_, fidl::MakeOptional(std::move(module_manifest)),
-        fidl::MakeOptional(std::move(create_chain_info)), module_source_,
-        fidl::MakeOptional(std::move(surface_relation)),
+        link_name_, std::move(module_manifest), std::move(create_chain_info),
+        module_source_, std::move(surface_relation),
         std::move(incoming_services_), std::move(module_controller_request_),
         nullptr /* embed_module_watcher */, view_owner_.NewRequest(),
         std::move(daisy_), [this, flow] { Cont(flow); });
