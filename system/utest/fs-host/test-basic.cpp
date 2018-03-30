@@ -6,7 +6,6 @@
 
 bool test_basic(void) {
     BEGIN_TEST;
-
     ASSERT_EQ(emu_mkdir("::alpha", 0755), 0);
     ASSERT_EQ(emu_mkdir("::alpha/bravo", 0755), 0);
     ASSERT_EQ(emu_mkdir("::alpha/bravo/charlie", 0755), 0);
@@ -32,6 +31,7 @@ bool test_basic(void) {
     ASSERT_EQ(emu_write(fd1, "Don't write to directories", 26), -1);
     ASSERT_EQ(emu_ftruncate(fd1, 0), -1);
     ASSERT_EQ(emu_close(fd1), 0);
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 

@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include "util.h"
 
+#include <minfs/fsck.h>
+
 void setup_fs_test(size_t disk_size) {
     int r = open(MOUNT_PATH, O_RDWR | O_CREAT | O_EXCL, 0755);
 
@@ -42,4 +44,34 @@ void teardown_fs_test() {
     if (unlink(MOUNT_PATH) < 0) {
         exit(-1);
     }
+}
+
+int run_fsck() {
+    fbl::unique_fd disk(open(MOUNT_PATH, O_RDONLY));
+
+    if (!disk) {
+        fprintf(stderr, "Unable to open disk for fsck\n");
+        return -1;
+    }
+
+    struct stat stats;
+    if (fstat(disk.get(), &stats) < 0) {
+        fprintf(stderr, "error: minfs could not find end of file/device\n");
+        return 0;
+    }
+
+    if (stats.st_size == 0) {
+        fprintf(stderr, "Invalid disk\n");
+        return -1;
+    }
+
+    size_t size = stats.st_size /= minfs::kMinfsBlockSize;
+
+    fbl::unique_ptr<minfs::Bcache> block_cache;
+    if (minfs::Bcache::Create(&block_cache, fbl::move(disk), size) < 0) {
+        fprintf(stderr, "error: cannot create block cache\n");
+        return -1;
+    }
+
+    return minfs_check(fbl::move(block_cache));
 }

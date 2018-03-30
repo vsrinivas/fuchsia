@@ -82,6 +82,7 @@ bool test_maxfile(void) {
     ASSERT_EQ(bytes_read, sz);
 
     ASSERT_EQ(emu_close(fd), 0);
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 

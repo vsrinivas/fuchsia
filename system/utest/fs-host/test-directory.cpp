@@ -47,6 +47,7 @@ bool test_directory_large(void) {
         ASSERT_EQ(emu_close(fd), 0);
     }
 
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 
@@ -79,6 +80,7 @@ bool test_directory_readdir(void) {
         {false, "file2", DT_REG},
     };
     ASSERT_TRUE(check_dir_contents("::a", filled_dir, countof(filled_dir)));
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 
@@ -112,6 +114,7 @@ bool test_directory_readdir_large(void) {
 
     ASSERT_EQ(num_seen, num_entries, "Did not see all expected entries");
     ASSERT_EQ(emu_closedir(dir), 0);
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 

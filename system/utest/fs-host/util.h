@@ -18,6 +18,7 @@ typedef struct expected_dirent {
 
 void setup_fs_test(size_t disk_size);
 void teardown_fs_test(void);
+int run_fsck(void);
 
 #define BEGIN_FS_TEST_CASE(case_name, disk_size) \
     BEGIN_TEST_CASE(case_name)                   \

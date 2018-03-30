@@ -77,6 +77,7 @@ bool test_truncate_small(void) {
 }
 
 bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
+    BEGIN_HELPER;
     // Acquire the old size
     struct stat st;
     ASSERT_EQ(emu_stat(filename, &st), 0);
@@ -119,9 +120,10 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
         ASSERT_STREAM_ALL(emu_read, fd, readbuf.get(), new_len);
         ASSERT_EQ(memcmp(readbuf.get(), u8, new_len), 0);
     }
-    ASSERT_EQ(emu_close(fd), 0);
 
-    return true;
+    ASSERT_EQ(emu_close(fd), 0);
+    ASSERT_EQ(run_fsck(), 0);
+    END_HELPER;
 }
 
 // Test that truncate doesn't have issues dealing with larger files

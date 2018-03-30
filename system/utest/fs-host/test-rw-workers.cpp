@@ -189,14 +189,17 @@ int do_work() {
     return busy_count ? BUSY : DONE;
 }
 
-void do_all_work() {
+bool do_all_work() {
+    BEGIN_HELPER;
     for (;;) {
         int r = do_work();
-        assert(r != FAIL);
+        ASSERT_NE(r, FAIL);
         if (r == DONE) {
             break;
         }
+        ASSERT_EQ(run_fsck(), 0);
     }
+    END_HELPER;
 }
 
 static bool init_environment() {
@@ -214,8 +217,8 @@ static bool init_environment() {
 bool test_work_single_thread(void) {
     BEGIN_TEST;
 
-    init_environment();
-    do_all_work();
+    ASSERT_TRUE(init_environment());
+    ASSERT_TRUE(do_all_work());
     worker_t* w = all_workers;
     worker_t* next;
     while (w != NULL) {
@@ -223,6 +226,7 @@ bool test_work_single_thread(void) {
         free(w);
         w = next;
     }
+
     END_TEST;
 }
 

@@ -66,6 +66,7 @@ bool test_sparse(void) {
     }
 
     ASSERT_EQ(emu_close(fd), 0);
+    ASSERT_EQ(run_fsck(), 0);
     END_TEST;
 }
 
