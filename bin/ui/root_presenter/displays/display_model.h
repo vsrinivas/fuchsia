@@ -50,7 +50,7 @@ class DisplayModel {
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    presentation::DisplayUsage usage = presentation::DisplayUsage::UNKNOWN;
+    presentation::DisplayUsage usage = presentation::DisplayUsage::kUnknown;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.

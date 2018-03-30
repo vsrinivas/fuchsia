@@ -41,18 +41,18 @@ constexpr float kIdealPipVisualAngleDegrees = 0.0255;
 
 constexpr float GetDefaultViewingDistanceInMm(presentation::DisplayUsage usage) {
   switch (usage) {
-    case presentation::DisplayUsage::HANDHELD:
+    case presentation::DisplayUsage::kHandheld:
       return 360.f;
-    case presentation::DisplayUsage::CLOSE:
+    case presentation::DisplayUsage::kClose:
       return 500.f;
-    case presentation::DisplayUsage::NEAR:
+    case presentation::DisplayUsage::kNear:
       return 720.f;
-    case presentation::DisplayUsage::MIDRANGE:
+    case presentation::DisplayUsage::kMidrange:
       return 1200.f;
-    case presentation::DisplayUsage::FAR:
+    case presentation::DisplayUsage::kFar:
       return 3000.f;
     default:
-    case presentation::DisplayUsage::UNKNOWN:
+    case presentation::DisplayUsage::kUnknown:
       return 0.f;
   }
 }

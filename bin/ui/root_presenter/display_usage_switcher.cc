@@ -16,25 +16,25 @@ const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
 const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
 
 static const std::array<presentation::DisplayUsage, 5> kDisplayUsages = {
-    presentation::DisplayUsage::HANDHELD, presentation::DisplayUsage::CLOSE,
-    presentation::DisplayUsage::NEAR, presentation::DisplayUsage::MIDRANGE,
-    presentation::DisplayUsage::FAR};
+    presentation::DisplayUsage::kHandheld, presentation::DisplayUsage::kClose,
+    presentation::DisplayUsage::kNear, presentation::DisplayUsage::kMidrange,
+    presentation::DisplayUsage::kFar};
 }  // namespace
 
 std::string GetDisplayUsageAsString(presentation::DisplayUsage usage) {
   switch (usage) {
-    case presentation::DisplayUsage::UNKNOWN:
-      return "UNKNOWN";
-    case presentation::DisplayUsage::HANDHELD:
-      return "HANDHELD";
-    case presentation::DisplayUsage::CLOSE:
-      return "CLOSE";
-    case presentation::DisplayUsage::NEAR:
-      return "NEAR";
-    case presentation::DisplayUsage::MIDRANGE:
-      return "MIDRANGE";
-    case presentation::DisplayUsage::FAR:
-      return "FAR";
+    case presentation::DisplayUsage::kUnknown:
+      return "kUnknown";
+    case presentation::DisplayUsage::kHandheld:
+      return "kHandheld";
+    case presentation::DisplayUsage::kClose:
+      return "kClose";
+    case presentation::DisplayUsage::kNear:
+      return "kNear";
+    case presentation::DisplayUsage::kMidrange:
+      return "kMidrange";
+    case presentation::DisplayUsage::kFar:
+      return "kFar";
   }
 }
 

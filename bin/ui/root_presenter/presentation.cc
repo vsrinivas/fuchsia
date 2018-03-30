@@ -323,7 +323,7 @@ void Presentation::SetDisplayUsage(presentation::DisplayUsage usage) {
 void Presentation::SetDisplayUsageWithoutApplyingChanges(
     presentation::DisplayUsage usage) {
   display_model_simulated_.environment_info().usage =
-      (usage == presentation::DisplayUsage::UNKNOWN)
+      (usage == presentation::DisplayUsage::kUnknown)
           ? display_model_actual_.environment_info().usage
           : usage;
 }

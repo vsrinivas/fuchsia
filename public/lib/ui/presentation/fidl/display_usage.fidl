@@ -6,15 +6,15 @@ library presentation;
 
 // Describes the intended usage of the display.
 enum DisplayUsage {
-  UNKNOWN = 0;
+  kUnknown = 0;
   // Display is held in one or both hands.
-  HANDHELD = 1;
+  kHandheld = 1;
   // Display is used well within arm's reach.
-  CLOSE = 2;
+  kClose = 2;
   // Display is used at arm's reach.
-  NEAR = 3;
+  kNear = 3;
   // Display is used beyond arm's reach.
-  MIDRANGE = 4;
+  kMidrange = 4;
   // Display is used well beyond arm's reach.
-  FAR = 5;
+  kFar = 5;
 };

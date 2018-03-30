@@ -31,7 +31,7 @@ void InitializeModelForDisplay(uint32_t width_in_px,
       LookupDisplayUsageForDisplay(width_in_px, height_in_px);
 
   FXL_DCHECK(model->display_info().density_in_px_per_mm != 0.f);
-  FXL_DCHECK(model->environment_info().usage != presentation::DisplayUsage::UNKNOWN);
+  FXL_DCHECK(model->environment_info().usage != presentation::DisplayUsage::kUnknown);
 }
 
 // Returns density_in_px_per_mm. This will be replaced by something that
@@ -66,16 +66,16 @@ presentation::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
-    return presentation::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::kClose;
   } else if (width_in_px == 2400 && height_in_px == 1600) {
     // Assume that the device is a Google Pixelbook.
-    return presentation::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::kClose;
   } else if (width_in_px == 3840 && height_in_px == 2160) {
     // Assume the display is a 24in 4K monitor.
-    return presentation::DisplayUsage::NEAR;
+    return presentation::DisplayUsage::kNear;
   } else {
     // TODO(MZ-384): Don't lie.
-    return presentation::DisplayUsage::CLOSE;
+    return presentation::DisplayUsage::kClose;
   }
 }
 
