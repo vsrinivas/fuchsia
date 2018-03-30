@@ -171,7 +171,6 @@ TEST(Gain, Precision) {
 // truncation or rounding (above just checks the generation of scale values).
 //
 // Verify whether per-stream gain interacts linearly with accumulation buffer.
-// TODO(mpuryear): when we fix MTWN-82, update our expected values.
 TEST(Gain, Scaling_Linearity) {
   int16_t source[] = {3300, 3276, 35, 4, -14, -25, -3276, -3291};
   int32_t accum[8];
@@ -179,8 +178,7 @@ TEST(Gain, Scaling_Linearity) {
 
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
   //
-  // Can a single signal with kMaxGain clip our accumulation buffer?
-  // No, but that one stream IS limited to 16-bit values (even after scaling)
+  // Can a signal with kMaxGain exceed the max value for a sample?  Yes.
   gain.SetRendererGain(20.0f);
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
@@ -189,7 +187,7 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect[] = {32767, 32760, 350, 40, -140, -250, -32760, -32768};
+  int32_t expect[] = {33000, 32760, 350, 40, -140, -250, -32760, -32910};
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //

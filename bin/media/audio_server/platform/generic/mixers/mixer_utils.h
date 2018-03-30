@@ -22,9 +22,8 @@ namespace mixers {
 // Enum used to differentiate between different scaling optimization types.
 enum class ScalerType {
   MUTED,     // Massive attenuation.  Just skip data.
-  LT_UNITY,  // Less than unity gain.  Scaling is needed, but clipping is not.
+  NE_UNITY,  // Non-unity non-zero gain.  Scaling is needed, clipping is not.
   EQ_UNITY,  // Unity gain.  Neither scaling nor clipping is needed.
-  GT_UNITY,  // Greater than unity gain.  Scaling and clipping is needed.
 };
 
 // Template to read samples and normalize them into signed 16 bit integers
@@ -69,7 +68,7 @@ class SampleScaler<
 template <ScalerType ScaleType>
 class SampleScaler<
     ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::LT_UNITY), void>::type> {
+    typename std::enable_if<(ScaleType == ScalerType::NE_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     // Called extremely frequently: 1 MUL, 1 SHIFT
@@ -85,29 +84,6 @@ class SampleScaler<
     typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY), void>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale) { return val; }
-};
-
-template <ScalerType ScaleType>
-class SampleScaler<
-    ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::GT_UNITY), void>::type> {
- public:
-  static inline int32_t Scale(int32_t val, Gain::AScale scale) {
-    using Limit = std::numeric_limits<int16_t>;
-    // Called extremely frequently: 1 MUL, 1 SHIFT
-    // TODO(mpuryear): MTWN-80 Round before shifting down
-    val = static_cast<int32_t>(((static_cast<int64_t>(val) * scale)) >>
-                               Gain::kFractionalScaleBits);
-
-    // TODO(mpuryear): MTWN-82 No per-stream clamp (MTWN-83 Accumulate clamp)
-    // With this, we may be able to merge GT_UNITY and LT_UNITY specializations.
-    if (unlikely(val > Limit::max())) {
-      return Limit::max();
-    } else if (unlikely(val < Limit::min())) {
-      return Limit::min();
-    }
-    return val;
-  }
 };
 
 // Template to read normalized source samples, and combine channels if required.
@@ -173,7 +149,7 @@ class DstMixer<ScaleType,
   static inline constexpr int32_t Mix(int32_t dst,
                                       int32_t sample,
                                       Gain::AScale scale) {
-    // TODO(mpuryear): MTWN-83 Accumulator should clamp to int32 (also MTWN-82)
+    // TODO(mpuryear): MTWN-83 Accumulator should clamp to int32.
     return SampleScaler<ScaleType>::Scale(sample, scale) + dst;
   }
 };

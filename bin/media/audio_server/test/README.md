@@ -213,13 +213,6 @@ without first rounding, leading to truncation. This, and MTWN-73, contribute to
 our producing results that (for certain inputs) are "expected-1". Again, we have
 accomodated this in all related test code, annotating appropriately.
 
-*   MTWN-82
-
-    During gain-scaling, we clamp each stream individually before accumulation.
-This in large part eliminates the benefits of a wider accumulator, and is
-unneeded as the OutputFormatter object clamps the final mix before writing it
-to the output buffer.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether

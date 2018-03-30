@@ -162,18 +162,11 @@ bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
     return Mix<ScalerType::MUTED, false>(dst, dst_frames, dst_offset, src,
                                          frac_src_frames, frac_src_offset,
                                          frac_step_size, amplitude_scale);
-  } else if (amplitude_scale < Gain::kUnityScale) {
-    return accumulate ? Mix<ScalerType::LT_UNITY, true>(
-                            dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale)
-                      : Mix<ScalerType::LT_UNITY, false>(
-                            dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale);
   } else {
-    return accumulate ? Mix<ScalerType::GT_UNITY, true>(
+    return accumulate ? Mix<ScalerType::NE_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale)
-                      : Mix<ScalerType::GT_UNITY, false>(
+                      : Mix<ScalerType::NE_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale);
   }
@@ -265,21 +258,12 @@ bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
     return Mix<ScalerType::MUTED, false>(
         dst, dst_frames, dst_offset, src, frac_src_frames, frac_src_offset,
         frac_step_size, amplitude_scale, chan_count_);
-  } else if (amplitude_scale < Gain::kUnityScale) {
-    return accumulate ? Mix<ScalerType::LT_UNITY, true>(
-                            dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_)
-                      : Mix<ScalerType::LT_UNITY, false>(
-                            dst, dst_frames, dst_offset, src, frac_src_frames,
-                            frac_src_offset, frac_step_size, amplitude_scale,
-                            chan_count_);
   } else {
-    return accumulate ? Mix<ScalerType::GT_UNITY, true>(
+    return accumulate ? Mix<ScalerType::NE_UNITY, true>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale,
                             chan_count_)
-                      : Mix<ScalerType::GT_UNITY, false>(
+                      : Mix<ScalerType::NE_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale,
                             chan_count_);
@@ -333,8 +317,7 @@ static inline MixerPtr SelectNxNPSM(const AudioMediaTypeDetails& src_format) {
 
 MixerPtr PointSampler::Select(const AudioMediaTypeDetails& src_format,
                               const AudioMediaTypeDetails& dst_format) {
-  if (src_format.channels == dst_format.channels &&
-      src_format.channels > 2) {
+  if (src_format.channels == dst_format.channels && src_format.channels > 2) {
     return SelectNxNPSM(src_format);
   }
 
