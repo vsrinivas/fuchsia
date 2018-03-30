@@ -24,7 +24,7 @@ typedef struct meson_clk {
     platform_device_protocol_t pdev;
     clk_protocol_t clk;
     zx_device_t* zxdev;
-    pdev_vmo_buffer_t mmio;
+    io_buffer_t mmio;
 
     meson_clk_gate_t* gates;
     size_t gate_count;
@@ -41,7 +41,7 @@ static zx_status_t meson_clk_toggle(void* ctx, const uint32_t idx,
 
     const meson_clk_gate_t* const gate = &meson_clk->gates[idx];
 
-    volatile uint32_t* regs = (volatile uint32_t*)meson_clk->mmio.vaddr;
+    volatile uint32_t* regs = (volatile uint32_t*)io_buffer_virt(&meson_clk->mmio);
 
     mtx_lock(&meson_clk->lock);
 
@@ -75,7 +75,7 @@ clk_protocol_ops_t clk_ops = {
 
 static void meson_clk_release(void* ctx) {
     meson_clk_t* clk = ctx;
-    pdev_vmo_buffer_release(&clk->mmio);
+    io_buffer_release(&clk->mmio);
     mtx_destroy(&clk->lock);
     free(clk);
 }

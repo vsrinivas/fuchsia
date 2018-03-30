@@ -387,7 +387,7 @@ static zx_status_t dsi_bind(void* ctx, zx_device_t* parent) {
     dsi_mipi_test(dsi);
 
     // dsi_mipi_init(dsi);
-    zxlogf(INFO, "MIPI Initialized. Version is 0x%x\n", readl(dsi->mmio.vaddr));
+    zxlogf(INFO, "MIPI Initialized. Version is 0x%x\n", readl(io_buffer_virt(&dsi->mmio)));
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

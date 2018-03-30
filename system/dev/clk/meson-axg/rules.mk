@@ -12,9 +12,9 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/meson-axg-clk.c \
 
 MODULE_STATIC_LIBS := \
+    system/dev/clk/meson-lib \
     system/ulib/ddk \
     system/ulib/sync \
-    system/dev/clk/meson-lib \
 
 MODULE_LIBS := \
     system/ulib/driver \

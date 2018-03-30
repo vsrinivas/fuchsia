@@ -42,7 +42,7 @@ typedef struct {
     serial_impl_protocol_t serial;
     zx_device_t* zxdev;
     serial_port_info_t serial_port_info;
-    pdev_vmo_buffer_t mmio;
+    io_buffer_t mmio;
     thrd_t irq_thread;
     zx_handle_t irq_handle;
     serial_notify_cb notify_cb;
@@ -56,7 +56,7 @@ typedef struct {
 
 // reads the current state from the status register and calls notify_cb if it has changed
 static uint32_t aml_uart_read_state(aml_uart_t* uart) {
-    void* mmio = uart->mmio.vaddr;
+    void* mmio = io_buffer_virt(&uart->mmio);
 
     mtx_lock(&uart->status_lock);
 
@@ -112,7 +112,7 @@ static zx_status_t aml_serial_get_info(void* ctx, serial_port_info_t* info) {
 
 static zx_status_t aml_serial_config(void* ctx, uint32_t baud_rate, uint32_t flags) {
     aml_uart_t* uart = ctx;
-    void* mmio = uart->mmio.vaddr;
+    void* mmio = io_buffer_virt(&uart->mmio);
 
     // control register is determined completely by this logic, so start with a clean slate
     uint32_t ctrl_bits = 0;
@@ -200,7 +200,7 @@ static zx_status_t aml_serial_config(void* ctx, uint32_t baud_rate, uint32_t fla
 }
 
 static void aml_serial_enable_locked(aml_uart_t* uart, bool enable) {
-    void* mmio = uart->mmio.vaddr;
+    void* mmio = io_buffer_virt(&uart->mmio);
     volatile uint32_t* ctrl_reg = mmio + AML_UART_CONTROL;
     volatile uint32_t* misc_reg = mmio + AML_UART_MISC;
 
@@ -277,7 +277,7 @@ static zx_status_t aml_serial_enable(void* ctx, bool enable) {
 static zx_status_t aml_serial_read(void* ctx, void* buf, size_t length,
                                    size_t* out_actual) {
     aml_uart_t* uart = ctx;
-    void* mmio = uart->mmio.vaddr;
+    void* mmio = io_buffer_virt(&uart->mmio);
     volatile uint32_t* rfifo_reg = mmio + AML_UART_RFIFO;
 
     uint8_t* bufptr = buf;
@@ -298,7 +298,7 @@ static zx_status_t aml_serial_read(void* ctx, void* buf, size_t length,
 static zx_status_t aml_serial_write(void* ctx, const void* buf, size_t length,
                                     size_t* out_actual) {
     aml_uart_t* uart = ctx;
-    void* mmio = uart->mmio.vaddr;
+    void* mmio = io_buffer_virt(&uart->mmio);
     volatile uint32_t* wfifo_reg = mmio + AML_UART_WFIFO;
 
     const uint8_t* bufptr = buf;
@@ -349,7 +349,7 @@ static serial_impl_ops_t aml_serial_ops = {
 static void aml_uart_release(void* ctx) {
     aml_uart_t* uart = ctx;
     aml_serial_enable(uart, false);
-    pdev_vmo_buffer_release(&uart->mmio);
+    io_buffer_release(&uart->mmio);
     zx_handle_close(uart->irq_handle);
     free(uart);
 }

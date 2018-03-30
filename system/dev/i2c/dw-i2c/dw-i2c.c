@@ -26,7 +26,7 @@
 typedef struct {
     zx_handle_t                     irq_handle;
     zx_handle_t                     event_handle;
-    pdev_vmo_buffer_t               regs_iobuff;
+    io_buffer_t                     regs_iobuff;
     void*                           virt_reg;
     zx_duration_t                   timeout;
 
@@ -378,7 +378,7 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
         zxlogf(ERROR, "%s: io_buffer_init_physical failed %d\n", __FUNCTION__, status);
         goto init_fail;
     }
-    device->virt_reg = device->regs_iobuff.vaddr;
+    device->virt_reg = io_buffer_virt(&device->regs_iobuff);
 
     status = pdev_map_interrupt(&i2c->pdev, index, &device->irq_handle);
     if (status != ZX_OK) {
@@ -404,7 +404,7 @@ static zx_status_t i2c_dw_init(i2c_dw_t* i2c, uint32_t index) {
 
 init_fail:
     if (device) {
-        pdev_vmo_buffer_release(&device->regs_iobuff);
+        io_buffer_release(&device->regs_iobuff);
         if (device->event_handle != ZX_HANDLE_INVALID) {
             zx_handle_close(device->event_handle);
         }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/driver.h>
+#include <ddk/io-buffer.h>
 #include <ddk/protocol/serial.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
@@ -70,25 +71,21 @@ static inline zx_status_t pdev_get_device_info(platform_device_protocol_t* pdev,
 
 // MMIO mapping helpers
 
-typedef struct {
-    void*       vaddr;
-    size_t      size;
-    zx_handle_t handle;
-} pdev_vmo_buffer_t;
-
 static inline zx_status_t pdev_map_mmio_buffer(platform_device_protocol_t* pdev, uint32_t index,
-                                        uint32_t cache_policy, pdev_vmo_buffer_t* buffer) {
-    return pdev_map_mmio(pdev, index, cache_policy, &buffer->vaddr, &buffer->size, &buffer->handle);
-}
+                                               uint32_t cache_policy, io_buffer_t* buffer) {
+    void* vaddr;
+    size_t size;
+    zx_handle_t vmo_handle;
 
-static inline void pdev_vmo_buffer_release(pdev_vmo_buffer_t* buffer) {
-    if (buffer->vaddr) {
-        uintptr_t vaddr = ROUNDDOWN((uintptr_t)buffer->vaddr, PAGE_SIZE);
-        size_t size;
-        zx_vmo_get_size(buffer->handle, &size);
-        zx_vmar_unmap(zx_vmar_root_self(), vaddr, size);
+    zx_status_t status = pdev_map_mmio(pdev, index, cache_policy, &vaddr, &size, &vmo_handle);
+    if (status != ZX_OK) {
+        return status;
     }
-    zx_handle_close(buffer->handle);
+    zx_off_t offset = (uintptr_t)vaddr & (PAGE_SIZE - 1);
+    vaddr = (void *)((uintptr_t)vaddr - offset);
+    status = io_buffer_init_mmio(buffer, vmo_handle, vaddr, offset, size);
+    zx_handle_close(vmo_handle);
+    return status;
 }
 
 __END_CDECLS;

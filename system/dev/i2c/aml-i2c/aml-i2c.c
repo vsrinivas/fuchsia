@@ -54,7 +54,7 @@ typedef enum {
 typedef struct {
     zx_handle_t         irq;
     zx_handle_t         event;
-    pdev_vmo_buffer_t   regs_iobuff;
+    io_buffer_t         regs_iobuff;
     aml_i2c_regs_t*     virt_regs;
     zx_duration_t       timeout;
 } aml_i2c_dev_t;
@@ -259,7 +259,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
         goto init_fail;
     }
 
-    device->virt_regs = (aml_i2c_regs_t*)device->regs_iobuff.vaddr;
+    device->virt_regs = (aml_i2c_regs_t*)io_buffer_virt(&device->regs_iobuff);
 
     status = pdev_map_interrupt(&i2c->pdev, index, &device->irq);
     if (status != ZX_OK) {
@@ -278,7 +278,7 @@ static zx_status_t aml_i2c_dev_init(aml_i2c_t* i2c, unsigned index) {
 
 init_fail:
     if (device) {
-        pdev_vmo_buffer_release(&device->regs_iobuff);
+        io_buffer_release(&device->regs_iobuff);
         zx_handle_close(device->event);
         zx_handle_close(device->irq);
         free(device);
@@ -346,7 +346,7 @@ static void aml_i2c_release(void* ctx) {
     aml_i2c_t* i2c = ctx;
     for (unsigned i = 0; i < i2c->dev_count; i++) {
         aml_i2c_dev_t* device = &i2c->i2c_devs[i];
-        pdev_vmo_buffer_release(&device->regs_iobuff);
+        io_buffer_release(&device->regs_iobuff);
         zx_handle_close(device->event);
         zx_handle_close(device->irq);
     }

@@ -54,7 +54,7 @@ typedef enum dw_pcie_clks {
 typedef struct dw_pcie {
     zx_device_t* zxdev;
 
-    pdev_vmo_buffer_t buffers[ADDR_WINDOW_COUNT];
+    io_buffer_t buffers[ADDR_WINDOW_COUNT];
 
     // Protocols structs from the parent driver that we need to function.
     platform_device_protocol_t pdev;
@@ -66,7 +66,7 @@ static void dw_pcie_release(void* ctx) {
     dw_pcie_t* pcie = (dw_pcie_t*)ctx;
 
     for (dw_pcie_addr_window_t wnd = 0; wnd < ADDR_WINDOW_COUNT; ++wnd) {
-        pdev_vmo_buffer_release(&pcie->buffers[wnd]);
+        io_buffer_release(&pcie->buffers[wnd]);
     }
 
     free(pcie);
@@ -79,7 +79,7 @@ static zx_protocol_device_t dw_pcie_device_proto = {
 
 static inline void clear_reset(dw_pcie_t* pcie, uint32_t bits) {
     volatile uint32_t* reg =
-            (pcie->buffers[RESET_WINDOW].vaddr + RST_OFFSET_BYTES);
+            (io_buffer_virt(&pcie->buffers[RESET_WINDOW]) + RST_OFFSET_BYTES);
     uint32_t val = readl(reg);
     val |= bits;
     writel(val, reg);
@@ -87,7 +87,7 @@ static inline void clear_reset(dw_pcie_t* pcie, uint32_t bits) {
 
 static inline void assert_reset(dw_pcie_t* pcie, uint32_t bits) {
     volatile uint32_t* reg =
-            (pcie->buffers[RESET_WINDOW].vaddr + RST_OFFSET_BYTES);
+            (io_buffer_virt(&pcie->buffers[RESET_WINDOW]) + RST_OFFSET_BYTES);
     uint32_t val = readl(reg);
     val &= ~bits;
     writel(val, reg);
@@ -115,7 +115,7 @@ static zx_status_t dw_program_outbound_atu(dw_pcie_t* pcie,
     // DBI base
     const size_t bank_offset = (0x3 << 20) | (index << 9);
     volatile uint8_t* atu_base =
-        (volatile uint8_t*)(pcie->buffers[ELBI_WINDOW].vaddr + bank_offset);
+        (volatile uint8_t*)(io_buffer_virt(&pcie->buffers[ELBI_WINDOW]) + bank_offset);
 
     volatile atu_ctrl_regs_t* regs = (volatile atu_ctrl_regs_t*)(atu_base);
 
@@ -189,8 +189,8 @@ static void aml_pcie_gpio_reset(dw_pcie_t* pcie) {
 static void aml_pcie_init(dw_pcie_t* pcie) {
     uint32_t val;
 
-    volatile uint8_t* elb = (volatile uint8_t*)pcie->buffers[ELBI_WINDOW].vaddr;
-    volatile uint8_t* cfg = (volatile uint8_t*)pcie->buffers[CFG_WINDOW].vaddr;
+    volatile uint8_t* elb = (volatile uint8_t*)io_buffer_virt(&pcie->buffers[ELBI_WINDOW]);
+    volatile uint8_t* cfg = (volatile uint8_t*)io_buffer_virt(&pcie->buffers[CFG_WINDOW]);
 
     val = readl(cfg);
     val |= APP_LTSSM_ENABLE;
@@ -315,8 +315,8 @@ static zx_status_t await_link_up(volatile uint8_t* cfg) {
 }
 
 static zx_status_t aml_pcie_establish_link(dw_pcie_t* pcie) {
-    volatile uint8_t* elbi = pcie->buffers[ELBI_WINDOW].vaddr;
-    volatile uint8_t* cfg = pcie->buffers[CFG_WINDOW].vaddr;
+    volatile uint8_t* elbi = io_buffer_virt(&pcie->buffers[ELBI_WINDOW]);
+    volatile uint8_t* cfg = io_buffer_virt(&pcie->buffers[CFG_WINDOW]);
 
     aml_pcie_gpio_reset(pcie);
 
@@ -349,7 +349,7 @@ static int dw_pcie_init_thrd(void* arg) {
     assert_reset(pcie, RST_PCIE_A | RST_PCIE_B | RST_PCIE_APB | RST_PCIE_PHY);
 
     // Enable the PLL and configure it to run at 100MHz
-    pcie_pll_set_rate((zx_vaddr_t)pcie->buffers[PLL_WINDOW].vaddr);
+    pcie_pll_set_rate((zx_vaddr_t)io_buffer_virt(&pcie->buffers[PLL_WINDOW]));
 
     clear_reset(pcie, RST_PCIE_APB | RST_PCIE_PHY);
 

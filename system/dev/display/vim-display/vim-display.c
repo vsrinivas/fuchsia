@@ -100,13 +100,13 @@ static void display_release(void* ctx) {
     vim2_display_t* display = ctx;
 
     if (display) {
-        pdev_vmo_buffer_release(&display->mmio_preset);
-        pdev_vmo_buffer_release(&display->mmio_hdmitx);
-        pdev_vmo_buffer_release(&display->mmio_hiu);
-        pdev_vmo_buffer_release(&display->mmio_vpu);
-        pdev_vmo_buffer_release(&display->mmio_hdmitx_sec);
-        pdev_vmo_buffer_release(&display->mmio_dmc);
-        pdev_vmo_buffer_release(&display->mmio_cbus);
+        io_buffer_release(&display->mmio_preset);
+        io_buffer_release(&display->mmio_hdmitx);
+        io_buffer_release(&display->mmio_hiu);
+        io_buffer_release(&display->mmio_vpu);
+        io_buffer_release(&display->mmio_hdmitx_sec);
+        io_buffer_release(&display->mmio_dmc);
+        io_buffer_release(&display->mmio_cbus);
         io_buffer_release(&display->fbuffer);
         zx_handle_close(display->bti);
         free(display->edid_buf);

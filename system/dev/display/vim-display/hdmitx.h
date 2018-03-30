@@ -23,26 +23,26 @@
                         ((mask & ~DISPLAY_MASK(start, count)) | \
                                 (((value) << (start)) & DISPLAY_MASK(start, count)))
 
-#define READ32_PRESET_REG(a)             readl(display->mmio_preset.vaddr + a)
-#define WRITE32_PRESET_REG(a, v)         writel(v, display->mmio_preset.vaddr + a)
+#define READ32_PRESET_REG(a)             readl(io_buffer_virt(&display->mmio_preset) + a)
+#define WRITE32_PRESET_REG(a, v)         writel(v, io_buffer_virt(&display->mmio_preset) + a)
 
-#define READ32_HDMITX_REG(a)             readl(display->mmio_hdmitx.vaddr + a)
-#define WRITE32_HDMITX_REG(a, v)         writel(v, display->mmio_hdmitx.vaddr + a)
+#define READ32_HDMITX_REG(a)             readl(io_buffer_virt(&display->mmio_hdmitx) + a)
+#define WRITE32_HDMITX_REG(a, v)         writel(v, io_buffer_virt(&display->mmio_hdmitx) + a)
 
-#define READ32_HHI_REG(a)                readl(display->mmio_hiu.vaddr + a)
-#define WRITE32_HHI_REG(a, v)            writel(v, display->mmio_hiu.vaddr + a)
+#define READ32_HHI_REG(a)                readl(io_buffer_virt(&display->mmio_hiu) + a)
+#define WRITE32_HHI_REG(a, v)            writel(v, io_buffer_virt(&display->mmio_hiu) + a)
 
-#define READ32_VPU_REG(a)                readl(display->mmio_vpu.vaddr + a)
-#define WRITE32_VPU_REG(a, v)            writel(v, display->mmio_vpu.vaddr + a)
+#define READ32_VPU_REG(a)                readl(io_buffer_virt(&display->mmio_vpu) + a)
+#define WRITE32_VPU_REG(a, v)            writel(v, io_buffer_virt(&display->mmio_vpu) + a)
 
-#define READ32_DMC_REG(a)                readl(display->mmio_dmc.vaddr + a)
-#define WRITE32_DMC_REG(a, v)            writel(v, display->mmio_dmc.vaddr + a)
+#define READ32_DMC_REG(a)                readl(io_buffer_virt(&display->mmio_dmc) + a)
+#define WRITE32_DMC_REG(a, v)            writel(v, io_buffer_virt(&display->mmio_dmc) + a)
 
-#define READ32_HDMITX_SEC_REG(a)         readl(display->mmio_hdmitx_sec.vaddr + a)
-#define WRITE32_HDMITX_SEC_REG(a, v)     writel(v, display->mmio_hdmitx_sec.vaddr + a)
+#define READ32_HDMITX_SEC_REG(a)         readl(io_buffer_virt(&display->mmio_hdmitx_sec) + a)
+#define WRITE32_HDMITX_SEC_REG(a, v)     writel(v, io_buffer_virt(&display->mmio_hdmitx_sec) + a)
 
-#define READ32_CBUS_REG(a)              readl(display->mmio_cbus.vaddr + 0x400 + a)
-#define WRITE32_CBUS_REG(a, v)          writel(v, display->mmio_cbus.vaddr + 0x400+ a)
+#define READ32_CBUS_REG(a)              readl(io_buffer_virt(&display->mmio_cbus) + 0x400 + a)
+#define WRITE32_CBUS_REG(a, v)          writel(v, io_buffer_virt(&display->mmio_cbus) + 0x400+ a)
 
 #define SET_BIT32(x, dest, value, count, start) \
             WRITE32_##x##_REG(dest, (READ32_##x##_REG(dest) & ~DISPLAY_MASK(start, count)) | \

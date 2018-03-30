@@ -62,6 +62,14 @@ zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, zx_handle_t bti, size_t 
 zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t vmo_handle,
                                zx_off_t offset, uint32_t flags);
 
+// Initializes an io_buffer base on an existing VMO that has already been mapped
+// duplicates the provided vmo_handle - does not take ownership
+// vmo_handle must be a VMO that was created via zx_vmo_create_physical()
+// the virtual address provided in vaddr will be unmapped by io_buffer_release()
+// |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
+zx_status_t io_buffer_init_mmio(io_buffer_t* buffer, zx_handle_t vmo_handle, void* vaddr,
+                                zx_off_t offset, size_t size);
+
 // Initializes an io_buffer that maps a given physical address
 // |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
 zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,

@@ -47,7 +47,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     gpio_protocol_t gpio;
     zx_device_t* zxdev;
-    pdev_vmo_buffer_t mmios[2];    // separate MMIO for AO domain
+    io_buffer_t mmios[2];    // separate MMIO for AO domain
     aml_gpio_block_t* gpio_blocks;
     const aml_pinmux_block_t* pinmux_blocks;
     size_t block_count;
@@ -88,7 +88,7 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
         return status;
     }
 
-    volatile uint32_t* reg = (volatile uint32_t *)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t *)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->oen_offset;
 
     mtx_lock(&block->lock);
@@ -125,7 +125,8 @@ static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, uint
     const aml_pinmux_t* mux = &block->mux[pin_index];
 
     aml_gpio_block_t* gpio_block = &gpio->gpio_blocks[block_index];
-    volatile uint32_t* reg = (volatile uint32_t *)gpio->mmios[gpio_block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t *)
+                                    io_buffer_virt(&gpio->mmios[gpio_block->mmio_index]);
 
     mtx_lock(&gpio->pinmux_lock);
 
@@ -164,7 +165,7 @@ static zx_status_t aml_gpio_read(void* ctx, uint32_t pin, uint8_t* out_value) {
 
     const uint32_t readmask = 1 << pin_index;
 
-    volatile uint32_t* reg = (volatile uint32_t *)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t *)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->input_offset;
 
     mtx_lock(&block->lock);
@@ -193,7 +194,7 @@ static zx_status_t aml_gpio_write(void* ctx, uint32_t pin, uint8_t value) {
         return status;
     }
 
-    volatile uint32_t* reg = (volatile uint32_t *)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t *)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->output_offset;
     pin_index += block->output_shift;
 
@@ -224,7 +225,7 @@ static gpio_protocol_ops_t gpio_ops = {
 static void aml_gpio_release(void* ctx) {
     aml_gpio_t* gpio = ctx;
     for (unsigned i = 0; i < countof(gpio->mmios); i++) {
-        pdev_vmo_buffer_release(&gpio->mmios[i]);
+        io_buffer_release(&gpio->mmios[i]);
     }
     free(gpio);
 }

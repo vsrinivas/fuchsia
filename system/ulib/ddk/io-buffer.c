@@ -180,6 +180,21 @@ zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t
     return io_buffer_init_common(buffer, bti, vmo_handle, size, offset, flags);
 }
 
+zx_status_t io_buffer_init_mmio(io_buffer_t* buffer, zx_handle_t vmo_handle, void* virt,
+                                zx_off_t offset, size_t size) {
+    memset(buffer, 0, sizeof(*buffer));
+
+    zx_status_t status = zx_handle_duplicate(vmo_handle, ZX_RIGHT_SAME_RIGHTS, &vmo_handle);
+    if (status != ZX_OK) return status;
+
+    buffer->vmo_handle = vmo_handle;
+    buffer->size = size;
+    buffer->offset = offset;
+    buffer->virt = (void *)virt;
+
+    return ZX_OK;
+}
+
 zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,
                                     size_t size, zx_handle_t resource, uint32_t cache_policy) {
     memset(buffer, 0, sizeof(*buffer));

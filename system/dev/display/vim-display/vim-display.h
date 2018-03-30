@@ -36,13 +36,13 @@ typedef struct {
 
     thrd_t                              main_thread;
 
-    pdev_vmo_buffer_t                   mmio_preset;
-    pdev_vmo_buffer_t                   mmio_hdmitx;
-    pdev_vmo_buffer_t                   mmio_hiu;
-    pdev_vmo_buffer_t                   mmio_vpu;
-    pdev_vmo_buffer_t                   mmio_hdmitx_sec;
-    pdev_vmo_buffer_t                   mmio_dmc;
-    pdev_vmo_buffer_t                   mmio_cbus;
+    io_buffer_t                         mmio_preset;
+    io_buffer_t                         mmio_hdmitx;
+    io_buffer_t                         mmio_hiu;
+    io_buffer_t                         mmio_vpu;
+    io_buffer_t                         mmio_hdmitx_sec;
+    io_buffer_t                         mmio_dmc;
+    io_buffer_t                         mmio_cbus;
     io_buffer_t                         fbuffer;
     zx_display_info_t                   disp_info;
 

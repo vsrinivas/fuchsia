@@ -37,7 +37,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     gpio_protocol_t gpio;
     zx_device_t* zxdev;
-    pdev_vmo_buffer_t mmios[2];    // separate MMIO for AO domain
+    io_buffer_t mmios[2];    // separate MMIO for AO domain
     aml_gpio_block_t* gpio_blocks;
     size_t block_count;
 } aml_gpio_t;
@@ -74,7 +74,7 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
 
     mtx_lock(&block->lock);
 
-    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t*)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->oen_offset;
     uint32_t regval = readl(reg);
     const uint32_t pinmask = 1 << pinid;
@@ -111,7 +111,7 @@ static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, cons
     }
 
     // Points to the control register.
-    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t*)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->mux_offset;
 
     // Sanity Check: pin_to_block must return a block that contains `pin`
@@ -150,7 +150,7 @@ static zx_status_t aml_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) 
     const uint32_t pinindex = index - block->pin_block;
     const uint32_t readmask = 1 << pinindex;
 
-    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t*)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->input_offset;
 
     mtx_lock(&block->lock);
@@ -180,7 +180,7 @@ static zx_status_t aml_gpio_write(void* ctx, uint32_t index, uint8_t value) {
 
     uint32_t pinindex = index - block->pin_block;
 
-    volatile uint32_t* reg = (volatile uint32_t*)gpio->mmios[block->mmio_index].vaddr;
+    volatile uint32_t* reg = (volatile uint32_t*)io_buffer_virt(&gpio->mmios[block->mmio_index]);
     reg += block->output_offset;
     pinindex += block->output_shift;
 
@@ -211,7 +211,7 @@ static gpio_protocol_ops_t gpio_ops = {
 static void aml_gpio_release(void* ctx) {
     aml_gpio_t* gpio = ctx;
     for (unsigned i = 0; i < countof(gpio->mmios); i++) {
-        pdev_vmo_buffer_release(&gpio->mmios[i]);
+        io_buffer_release(&gpio->mmios[i]);
     }
     free(gpio);
 }

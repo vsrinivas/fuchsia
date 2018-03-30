@@ -81,7 +81,7 @@ typedef struct {
     platform_device_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
-    pdev_vmo_buffer_t mmio;
+    io_buffer_t mmio;
     zx_handle_t bti_handle;
 
     usb_mode_t usb_mode;
@@ -110,7 +110,7 @@ typedef struct {
 } dwc3_t;
 
 static inline volatile void* dwc3_mmio(dwc3_t* dwc) {
-    return dwc->mmio.vaddr;
+    return io_buffer_virt(&dwc->mmio);
 }
 
 void dwc3_usb_reset(dwc3_t* dwc);
