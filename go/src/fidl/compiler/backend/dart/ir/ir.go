@@ -114,6 +114,10 @@ type Root struct {
 	Unions      []Union
 }
 
+// FIXME(FIDL-107): Add "get" and "set" back to this list.
+// They are only reserved in certain contexts.  We should add them
+// back but also make the code generator smarter about escaping
+// reserved words to avoid style violations in various contexts.
 var reservedWords = map[string]bool{
 	"abstract":   true,
 	"as":         true,
@@ -141,7 +145,6 @@ var reservedWords = map[string]bool{
 	"final":      true,
 	"finally":    true,
 	"for":        true,
-	"get":        true,
 	"if":         true,
 	"implements": true,
 	"import":     true,
@@ -154,7 +157,6 @@ var reservedWords = map[string]bool{
 	"part":       true,
 	"rethrow":    true,
 	"return":     true,
-	"set":        true,
 	"static":     true,
 	"super":      true,
 	"switch":     true,
