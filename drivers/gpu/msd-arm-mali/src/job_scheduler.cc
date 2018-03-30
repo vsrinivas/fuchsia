@@ -38,7 +38,7 @@ void JobScheduler::TryToSchedule()
 {
     while (true) {
         if (atoms_.empty())
-            return;
+            break;
         bool found_atom = false;
         for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
             std::shared_ptr<MsdArmAtom> atom = *it;
@@ -84,8 +84,9 @@ void JobScheduler::TryToSchedule()
             }
         }
         if (!found_atom)
-            return;
+            break;
     }
+    UpdatePowerManager();
 }
 
 void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> connection)
@@ -213,4 +214,14 @@ void JobScheduler::ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection
             owner_->ReleaseMappingsForAtom(executing_atom.get());
         }
     }
+}
+
+void JobScheduler::UpdatePowerManager()
+{
+    bool active = false;
+    for (std::shared_ptr<MsdArmAtom>& slot : executing_atoms_) {
+        if (slot)
+            active = true;
+    }
+    owner_->UpdateGpuActive(active);
 }

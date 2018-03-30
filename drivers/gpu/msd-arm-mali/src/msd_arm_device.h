@@ -57,6 +57,9 @@ public:
             uint64_t bitmask;
         };
         std::vector<CorePowerState> power_states;
+        // Only accounts for recent past.
+        uint64_t total_time_ms;
+        uint64_t active_time_ms;
 
         uint32_t gpu_fault_status;
         uint64_t gpu_fault_address;
@@ -138,11 +141,13 @@ private:
 
     void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
 
+    // JobScheduler::Owner implementation.
     void RunAtom(MsdArmAtom* atom) override;
     void AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) override;
     void HardStopAtom(MsdArmAtom* atom) override;
     void ReleaseMappingsForAtom(MsdArmAtom* atom) override;
     magma::PlatformPort* GetPlatformPort() override;
+    void UpdateGpuActive(bool active) override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

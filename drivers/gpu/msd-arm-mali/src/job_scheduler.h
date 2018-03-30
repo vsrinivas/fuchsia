@@ -22,6 +22,7 @@ public:
         virtual void HardStopAtom(MsdArmAtom* atom) {}
         virtual void ReleaseMappingsForAtom(MsdArmAtom* atom) {}
         virtual magma::PlatformPort* GetPlatformPort() { return nullptr; }
+        virtual void UpdateGpuActive(bool active) {}
     };
     using Clock = std::chrono::steady_clock;
 
@@ -51,6 +52,7 @@ private:
     MsdArmAtom* executing_atom() const { return executing_atoms_[0].get(); }
     void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
     void SoftJobCompleted(std::shared_ptr<MsdArmSoftAtom> atom);
+    void UpdatePowerManager();
 
     void set_timeout_duration(uint64_t timeout_duration_ms)
     {

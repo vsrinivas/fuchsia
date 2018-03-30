@@ -28,16 +28,19 @@ public:
     }
     void HardStopAtom(MsdArmAtom* atom) override { stopped_atoms_.push_back(atom); }
     magma::PlatformPort* GetPlatformPort() override { return platform_port_.get(); }
+    void UpdateGpuActive(bool active) override { gpu_active_ = active; }
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
     std::vector<ResultPair>& completed_list() { return completed_list_; }
     std::vector<MsdArmAtom*>& stopped_atoms() { return stopped_atoms_; }
+    bool gpu_active() { return gpu_active_; }
 
 private:
     std::vector<MsdArmAtom*> run_list_;
     std::vector<ResultPair> completed_list_;
     std::vector<MsdArmAtom*> stopped_atoms_;
     std::unique_ptr<magma::PlatformPort> platform_port_;
+    bool gpu_active_ = false;
 };
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
@@ -82,14 +85,17 @@ public:
         MsdArmAtom* atom2_ptr = atom2.get();
         scheduler.EnqueueAtom(std::move(atom2));
         EXPECT_EQ(0u, owner.run_list().size());
+        EXPECT_FALSE(owner.gpu_active());
 
         scheduler.TryToSchedule();
         EXPECT_EQ(1u, owner.run_list().size());
         EXPECT_EQ(atom1_ptr, owner.run_list()[0]);
+        EXPECT_TRUE(owner.gpu_active());
         scheduler.JobCompleted(0, kArmMaliResultSuccess);
         EXPECT_EQ(2u, owner.run_list().size());
         EXPECT_EQ(atom2_ptr, owner.run_list()[1]);
         scheduler.JobCompleted(0, kArmMaliResultSuccess);
+        EXPECT_FALSE(owner.gpu_active());
     }
 
     void TestCancelJob()

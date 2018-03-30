@@ -41,10 +41,46 @@ public:
                 EXPECT_EQ(1u, reg_io->Read32(offset));
         }
     }
+
+    void TimeCoalesce()
+    {
+        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+        PowerManager power_manager(reg_io.get());
+
+        for (int i = 0; i < 100; i++) {
+            power_manager.UpdateGpuActive(true);
+            usleep(1000);
+            power_manager.UpdateGpuActive(false);
+            usleep(1000);
+        }
+
+        auto time_periods = power_manager.time_periods();
+        EXPECT_GE(3u, time_periods.size());
+    }
 };
 
 TEST(PowerManager, MockEnable)
 {
     TestPowerManager test;
     test.MockEnable();
+}
+
+TEST(PowerManager, TimeAccumulation)
+{
+    std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+    PowerManager power_manager(reg_io.get());
+    power_manager.UpdateGpuActive(true);
+    usleep(150 * 1000);
+
+    std::chrono::steady_clock::duration total_time;
+    std::chrono::steady_clock::duration active_time;
+    power_manager.GetGpuActiveInfo(&total_time, &active_time);
+    EXPECT_LE(100u, std::chrono::duration_cast<std::chrono::milliseconds>(total_time).count());
+    EXPECT_EQ(total_time, active_time);
+}
+
+TEST(PowerManager, TimeCoalesce)
+{
+    TestPowerManager test;
+    test.TimeCoalesce();
 }
