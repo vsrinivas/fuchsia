@@ -61,10 +61,11 @@ struct LinkMetadata {
 // struct with an enum in it to represent the boolean states, so that we can
 // allow it to be null.
 struct FocusedState {
-  enum State {
-    FOCUSED = 1;
-    NOT_FOCUSED = 2;
-  };
-
-  State state;
+  FocusedStateState state;
 };
+
+enum FocusedStateState {
+  FOCUSED = 1;
+  NOT_FOCUSED = 2;
+};
+

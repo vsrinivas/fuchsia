@@ -21,7 +21,7 @@ ContextMetadataBuilder& ContextMetadataBuilder::SetStoryFocused(bool focused) {
   auto& story_meta = StoryMetadata();
   story_meta->focused = modular::FocusedState::New();
   story_meta->focused->state = focused ?
-      modular::State::FOCUSED : modular::State::NOT_FOCUSED;
+      modular::FocusedStateState::FOCUSED : modular::FocusedStateState::NOT_FOCUSED;
   return *this;
 }
 

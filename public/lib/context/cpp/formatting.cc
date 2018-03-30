@@ -20,7 +20,7 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const modular::FocusedState& state) {
-  return os << (state.state == modular::State::FOCUSED ? "yes" : "no");
+  return os << (state.state == modular::FocusedStateState::FOCUSED ? "yes" : "no");
 }
 
 std::ostream& operator<<(std::ostream& os, const modular::StoryMetadata& meta) {

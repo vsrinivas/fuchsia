@@ -93,7 +93,7 @@ ContextSelectorPtr ModPairRankingFeature::CreateContextSelectorInternal() {
   selector->meta = ContextMetadata::New();
   selector->meta->story = StoryMetadata::New();
   selector->meta->story->focused = FocusedState::New();
-  selector->meta->story->focused->state = State::FOCUSED;
+  selector->meta->story->focused->state = FocusedStateState::FOCUSED;
   return selector;
 }
 

@@ -56,7 +56,7 @@ std::set<std::string> EncodeMetadataAndType(
       if (metadata->story->focused) {
         std::ostringstream str;
         str << kStoryFocusedKey;
-        if (metadata->story->focused->state == State::FOCUSED) {
+        if (metadata->story->focused->state == FocusedStateState::FOCUSED) {
           str << "1";
         } else {
           str << "0";

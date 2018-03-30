@@ -46,7 +46,7 @@ TEST(IndexTest, Encode_Differences) {
   meta1.story = StoryMetadata::New();
   meta1.story->id = "story1";
   meta1.story->focused = FocusedState::New();
-  meta1.story->focused->state = State::FOCUSED;
+  meta1.story->focused->state = FocusedStateState::FOCUSED;
   meta1.mod = ModuleMetadata::New();
   meta1.mod->url = "url1";
   meta1.mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
@@ -62,7 +62,7 @@ TEST(IndexTest, Encode_Differences) {
   meta2->story = StoryMetadata::New();
   meta2->story->id = "story2";
   meta2->story->focused = FocusedState::New();
-  meta2->story->focused->state = State::NOT_FOCUSED;
+  meta2->story->focused->state = FocusedStateState::NOT_FOCUSED;
   meta2->mod = ModuleMetadata::New();
   meta2->mod->url = "url2";
   meta2->mod->path = fidl::VectorPtr<fidl::StringPtr>::New(0);
@@ -90,7 +90,7 @@ TEST(IndexTest, Encode_Differences) {
 
   // If we start changing some values to be equal, we should see encoded values
   // included.
-  meta2->story->focused->state = State::FOCUSED;
+  meta2->story->focused->state = FocusedStateState::FOCUSED;
   meta2->entity->type->at(1) = "type2";
 
   encoded1 = internal::EncodeMetadataAndType(kEntity, meta1);
