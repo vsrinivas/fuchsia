@@ -14,45 +14,41 @@
 
 static const pbus_mmio_t i2c_mmios[] = {
     {
-        // AML_I2C_A
-        .base = 0xc1108500,
-        .length = 0x20,
+        .base = S912_I2C_A_BASE,
+        .length = S912_I2C_A_LENGTH,
     },
     {
-        // AML_I2C_B
-        .base = 0xc11087c0,
-        .length = 0x20,
+        .base = S912_I2C_B_BASE,
+        .length = S912_I2C_B_LENGTH,
     },
     {
-        // AML_I2C_C
-        .base = 0xc11087e0,
-        .length = 0x20,
+        .base = S912_I2C_C_BASE,
+        .length = S912_I2C_C_LENGTH,
     },
 /*
     {
-        // AML_I2C_D
-        .base = 0xc1108d20,
-        .length = 0x20,
+        .base = S912_I2C_D_BASE,
+        .length = S912_I2C_D_LENGTH,
     },
 */
 };
 
 static const pbus_irq_t i2c_irqs[] = {
     {
-        .irq = 21 + 32,
+        .irq = S912_M_I2C_0_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = 214 + 32,
+        .irq = S912_M_I2C_1_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        .irq = 215 + 32,
+        .irq = S912_M_I2C_2_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 /*
     {
-        .irq = 39 + 32,
+        .irq = S912_M_I2C_3_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 */

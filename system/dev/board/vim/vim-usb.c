@@ -6,8 +6,8 @@
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 
-#include <soc/aml-a113/a113-hw.h>
-#include <soc/aml-a113/a113-usb-phy.h>
+#include <soc/aml-common/aml-usb-phy.h>
+#include <soc/aml-s912/s912-hw.h>
 
 #include "vim.h"
 
@@ -17,14 +17,14 @@
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
-        .base = 0xc9000000,
-        .length = 0x100000,
+        .base = S912_USB0_BASE,
+        .length = S912_USB0_LENGTH,
     },
 };
 
 static const pbus_irq_t xhci_irqs[] = {
     {
-        .irq = 62,
+        .irq = S912_USBH_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -59,7 +59,8 @@ zx_status_t vim_usb_init(vim_bus_t* bus) {
         return status;
     }
     io_buffer_t usb_phy;
-    status = io_buffer_init_physical(&usb_phy, bti, 0xd0078000, 4096,  get_root_resource(),
+    status = io_buffer_init_physical(&usb_phy, bti, S912_USB_PHY_BASE, S912_USB_PHY_LENGTH,
+                                     get_root_resource(),
                                      ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_usb_init io_buffer_init_physical failed %d\n", status);

@@ -26,15 +26,15 @@
 static const pbus_mmio_t bt_uart_mmios[] = {
     // UART_A, for BT HCI
     {
-        .base = 0xc11084c0,
-        .length = 0x18,
+        .base = S912_UART_A_BASE,
+        .length = S912_UART_A_LENGTH,
     },
 };
 
 static const pbus_irq_t bt_uart_irqs[] = {
     // UART_A, for BT HCI
     {
-        .irq = 58,
+        .irq = S912_UART_A_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -59,15 +59,15 @@ static pbus_dev_t bt_uart_dev = {
 static const pbus_mmio_t header_uart_mmios[] = {
     // UART_AO_B, on 40 pin header
     {
-        .base = 0xc81004e0,
-        .length = 0x18,
+        .base = S912_UART_AO_B_BASE,
+        .length = S912_UART_AO_B_LENGTH,
     },
 };
 
 static const pbus_irq_t header_uart_irqs[] = {
     // UART_AO_B, on 40 pin header
     {
-        .irq = 229,
+        .irq = S912_UART_AO_B_IRQ,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };

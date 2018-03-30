@@ -4,7 +4,7 @@
 
 #pragma once
 
-// Display Related Register
+// Display Related Registers
 #define S912_PRESET_BASE                0xC1104000
 #define S912_PRESET_LENGTH              0x1000
 #define S912_CBUS_REG_BASE              0xC8834000
@@ -21,6 +21,56 @@
 #define S912_VPU_LENGTH                 0x40000
 #define S912_HDMITX_SEC_BASE            0xDA83A000
 #define S912_HDMITX_SEC_LENGTH          0x2000
+
+#define S912_GPIO_BASE                  0xc8834400
+#define S912_GPIO_LENGTH                0x1C00
+#define S912_GPIO_A0_BASE               0xc8100000
+#define S912_GPIO_AO_LENGTH             0x1000
+
+#define S912_I2C_A_BASE                 0xc1108500
+#define S912_I2C_A_LENGTH               0x20
+#define S912_I2C_B_BASE                 0xc11087c0
+#define S912_I2C_B_LENGTH               0x20
+#define S912_I2C_C_BASE                 0xc11087e0
+#define S912_I2C_C_LENGTH               0x20
+#define S912_I2C_D_BASE                 0xc1108d20
+#define S912_I2C_D_LENGTH               0x20
+
+#define S912_USB0_BASE                  0xc9000000
+#define S912_USB0_LENGTH                0x100000
+#define S912_USB1_BASE                  0xc9100000
+#define S912_USB1_LENGTH                0x100000
+
+#define S912_USB_PHY_BASE               0xd0078000
+#define S912_USB_PHY_LENGTH             0x1000
+
+#define S912_UART_A_BASE                0xc11084c0
+#define S912_UART_A_LENGTH              0x18
+#define S912_UART_AO_B_BASE             0xc81004e0
+#define S912_UART_AO_B_LENGTH          0x18
+
+// IRQs
+#define S912_M_I2C_0_IRQ                53
+#define S912_UART_A_IRQ                 58
+#define S912_USBH_IRQ                   62
+#define S912_USBD_IRQ                   63
+#define S912_M_I2C_3_IRQ                71
+#define S912_GPIO_IRQ_0                 96
+#define S912_GPIO_IRQ_1                 97
+#define S912_GPIO_IRQ_2                 98
+#define S912_GPIO_IRQ_3                 99
+#define S912_GPIO_IRQ_4                 100
+#define S912_GPIO_IRQ_5                 101
+#define S912_GPIO_IRQ_6                 102
+#define S912_GPIO_IRQ_7                 103
+#define S912_MALI_IRQ_GP                192
+#define S912_MALI_IRQ_GPMMU             193
+#define S912_MALI_IRQ_PP                194
+#define S912_UART_AO_B_IRQ              229
+#define S912_A0_GPIO_IRQ_0              232
+#define S912_A0_GPIO_IRQ_1              233
+#define S912_M_I2C_1_IRQ                246
+#define S912_M_I2C_2_IRQ                247
 
 // Alternate Functions for I2C
 #define S912_I2C_SDA_A      S912_GPIODV(24)

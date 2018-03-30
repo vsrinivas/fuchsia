@@ -18,18 +18,15 @@ static const pbus_mmio_t mali_mmios[] = {
 
 static const pbus_irq_t mali_irqs[] = {
     {
-        // mali_irq_pp
-        .irq = 194,
+        .irq = S912_MALI_IRQ_PP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
-        // mali_irq_gpmmu
-        .irq = 193,
+        .irq = S912_MALI_IRQ_GPMMU,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
     {
-        // mali_irq_gp
-        .irq = 192,
+        .irq = S912_MALI_IRQ_GP,
         .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
 };

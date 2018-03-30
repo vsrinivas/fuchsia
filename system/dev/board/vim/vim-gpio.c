@@ -7,8 +7,9 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 
-#include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s905x/s905x-gpio.h>
+#include <soc/aml-s912/s912-gpio.h>
+#include <soc/aml-s912/s912-hw.h>
 
 #include <limits.h>
 
@@ -20,65 +21,55 @@
 // S905X and S912 have same MMIO addresses
 static const pbus_mmio_t gpio_mmios[] = {
     {
-        .base = 0xc8834400,
-        .length = 0x1C00,
+        .base = S912_GPIO_BASE,
+        .length = S912_GPIO_LENGTH,
     },
     {
-        .base = 0xc8100000,
-        .length = PAGE_SIZE,
+        .base = S912_GPIO_A0_BASE,
+        .length = S912_GPIO_AO_LENGTH,
     },
 };
 
 // S905X and S912 have same GPIO IRQ numbers
 static const pbus_irq_t gpio_irqs[] = {
     {
-        // gpio_irq0
-        .irq = 96,
+        .irq = S912_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq1
-        .irq = 97,
+        .irq = S912_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq2
-        .irq = 98,
+        .irq = S912_GPIO_IRQ_2,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq3
-        .irq = 99,
+        .irq = S912_GPIO_IRQ_3,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq4
-        .irq = 100,
+        .irq = S912_GPIO_IRQ_4,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq5
-        .irq = 101,
+        .irq = S912_GPIO_IRQ_5,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq6
-        .irq = 102,
+        .irq = S912_GPIO_IRQ_6,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq7
-        .irq = 103,
+        .irq = S912_GPIO_IRQ_7,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // ao_gpio_irq0
-        .irq = 232,
+        .irq = S912_A0_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // ao_gpio_irq1
-        .irq = 233,
+        .irq = S912_A0_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };

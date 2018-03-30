@@ -6,8 +6,8 @@
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 
+#include <soc/aml-common/aml-usb-phy.h>
 #include <soc/aml-a113/a113-hw.h>
-#include <soc/aml-a113/a113-usb-phy.h>
 
 #include "gauss.h"
 #include "gauss-hw.h"
