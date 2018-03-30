@@ -172,16 +172,20 @@ static uint8_t getInterlaced(uint8_t flag)
 
 static uint8_t getHPol(uint8_t flag)
 {
-    ZX_DEBUG_ASSERT(((flag & 0x18) >> 3) == 0x3);
-    // sync type is 3 (i.e. digitail separate)
-    return ((flag & (0x02)) >> 1);
+    if(((flag & 0x18) >> 3) == 0x3) {
+        // sync type is 3 (i.e. digitail separate)
+        return ((flag & (0x02)) >> 1);
+    }
+    return 0;
 }
 
 static uint8_t getVPol(uint8_t flag)
 {
-    ZX_DEBUG_ASSERT(((flag & 0x18) >> 3) == 0x3);
-    // sync type is 3 (i.e. digitail separate)
-    return ((flag & (0x04)) >> 2);
+    if(((flag & 0x18) >> 3) == 0x3) {
+        // sync type is 3 (i.e. digitail separate)
+        return ((flag & (0x04)) >> 2);
+    }
+    return 0;
 }
 
 static zx_status_t get_vic(vim2_display_t* display)
