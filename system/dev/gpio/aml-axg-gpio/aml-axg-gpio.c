@@ -273,7 +273,7 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "aml-a113-gpio",
+        .name = "aml-axg-gpio",
         .ctx = gpio,
         .ops = &gpio_device_proto,
         .flags = DEVICE_ADD_NON_BINDABLE,
