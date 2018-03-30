@@ -147,8 +147,7 @@ TEST(Gain, Precision) {
   Gain gain;
   gain.SetRendererGain(-159.99f);
   Gain::AScale amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x00000002u, amplitude_scale);
-  // TODO(mpuryear): when MTWN-73 is fixed, ...2.68 should round up to ...3
+  EXPECT_EQ(0x00000003u, amplitude_scale);  // 2.68 rounds up to 3
 
   gain.SetRendererGain(-157.696f);
   amplitude_scale = gain.GetGainScale(0.0f);
@@ -156,8 +155,7 @@ TEST(Gain, Precision) {
 
   gain.SetRendererGain(-0.50f);
   amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x0F1ADF93u, amplitude_scale);  // (future)
-  // TODO(mpuryear): when MTWN-73 is fixed, ...F93.8 should round to ...F94
+  EXPECT_EQ(0x0F1ADF94u, amplitude_scale);  // ...F93.8 rounds to ...F94
 
   gain.SetRendererGain(Gain::kMaxGain);
   amplitude_scale = gain.GetGainScale(0.0f);
@@ -201,14 +199,13 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect2[] = {330, 328, 3, 0, -1, -2, -328, -329};
+  int32_t expect2[] = {330, 328, 4, 0, -1, -3, -328, -329};
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
 // How does our Gain respond to very low values? During scaling we shift-right,
 // first biasing values by a fractional value so that we 'round away from zero'.
 // By this we mean: +1.5 becomes +2; -1.5 becomes -2; -1.1 becomes -1.
-// However, we still truncate in gain_scale formulation, causing too-low values.
 TEST(Gain, Scaling_Precision) {
   int16_t source[] = {32767, -32768, -1, 1};  // max/min values
   int32_t accum[4];

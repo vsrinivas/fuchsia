@@ -159,18 +159,18 @@ class AudioResult {
   static constexpr uint32_t kMinScaleNonZero = 0x00001000;
 
   // Level and unwanted artifacts, applying the smallest-detectable gain change.
-  static double LevelDownEpsilon;
-  static double SinadDownEpsilon;
+  static double LevelEpsilonDown;
+  static double SinadEpsilonDown;
 
   // Level and unwanted artifacts, applying -60dB gain (measures dynamic range).
-  static double LevelDown60;
-  static double SinadDown60;
+  static double Level60Down;
+  static double Sinad60Down;
 
-  static constexpr double kPrevLevelDownEpsilon = -0.00016807164;
+  static constexpr double kPrevLevelEpsilonDown = -0.00016807164;
   static constexpr double kPrevDynRangeTolerance = 0.0075380325;
 
-  static constexpr double kPrevSinadDownEpsilon = 93.232593;
-  static constexpr double kPrevSinadDown60 = 34.196374;
+  static constexpr double kPrevSinadEpsilonDown = 93.232593;
+  static constexpr double kPrevSinad60Down = 34.196374;
 
   static constexpr double kPrevLevelStereoMono = -3.01029927;
   static constexpr double kPrevStereoMonoTolerance = 0.00015;

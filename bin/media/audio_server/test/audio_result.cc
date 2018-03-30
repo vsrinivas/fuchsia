@@ -232,21 +232,22 @@ constexpr uint32_t AudioResult::kScaleEpsilon;
 constexpr uint32_t AudioResult::kMinScaleNonZero;
 
 // Level and unwanted artifacts, applying the smallest-detectable gain change.
-double AudioResult::LevelDownEpsilon = -INFINITY;
-double AudioResult::SinadDownEpsilon = -INFINITY;
+double AudioResult::LevelEpsilonDown = -INFINITY;
+double AudioResult::SinadEpsilonDown = -INFINITY;
 
 // Level and unwanted artifacts, applying -60dB gain (measures dynamic range).
-double AudioResult::LevelDown60 = -INFINITY;
-double AudioResult::SinadDown60 = -INFINITY;
+double AudioResult::Level60Down = -INFINITY;
+double AudioResult::Sinad60Down = -INFINITY;
 
 // Level-being-checked (in dBFS) should be within kLevelToleranceSource16 of the
 // dB gain setting. For SINAD, value-being-checked (in dBr, output signal to all
 // other frequencies) must be greater than or equal to the below cached value.
-constexpr double AudioResult::kPrevLevelDownEpsilon;
+
+constexpr double AudioResult::kPrevLevelEpsilonDown;
 constexpr double AudioResult::kPrevDynRangeTolerance;
 
-constexpr double AudioResult::kPrevSinadDownEpsilon;
-constexpr double AudioResult::kPrevSinadDown60;
+constexpr double AudioResult::kPrevSinadEpsilonDown;
+constexpr double AudioResult::kPrevSinad60Down;
 
 constexpr double AudioResult::kPrevLevelStereoMono;
 constexpr double AudioResult::kPrevStereoMonoTolerance;

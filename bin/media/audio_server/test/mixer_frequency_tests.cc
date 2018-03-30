@@ -386,34 +386,34 @@ TEST(DynamicRange, Epsilon) {
   // kScaleEpsilon: nearest-unity scale at which we observe effects on signals.
   // At this 'detectable reduction' scale, level and noise floor appear reduced.
   MeasureSummaryDynamicRange(AudioResult::kScaleEpsilon,
-                             &AudioResult::LevelDownEpsilon,
-                             &AudioResult::SinadDownEpsilon);
+                             &AudioResult::LevelEpsilonDown,
+                             &AudioResult::SinadEpsilonDown);
   EXPECT_GE(
-      AudioResult::LevelDownEpsilon,
-      AudioResult::kPrevLevelDownEpsilon - AudioResult::kPrevDynRangeTolerance);
+      AudioResult::LevelEpsilonDown,
+      AudioResult::kPrevLevelEpsilonDown - AudioResult::kPrevDynRangeTolerance);
   EXPECT_LE(
-      AudioResult::LevelDownEpsilon,
-      AudioResult::kPrevLevelDownEpsilon + AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LT(AudioResult::LevelDownEpsilon, unity_level_db);
+      AudioResult::LevelEpsilonDown,
+      AudioResult::kPrevLevelEpsilonDown + AudioResult::kPrevDynRangeTolerance);
+  EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
 
-  EXPECT_GE(AudioResult::SinadDownEpsilon, AudioResult::kPrevSinadDownEpsilon);
+  EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
 }
 
 // Measure dynamic range (signal level, noise floor) when gain is -60dB.
-TEST(DynamicRange, Down60) {
+TEST(DynamicRange, 60Down) {
   Gain gain;
 
   gain.SetRendererGain(-60.0f);
   const Gain::AScale scale = gain.GetGainScale(0.0f);
 
-  MeasureSummaryDynamicRange(scale, &AudioResult::LevelDown60,
-                             &AudioResult::SinadDown60);
+  MeasureSummaryDynamicRange(scale, &AudioResult::Level60Down,
+                             &AudioResult::Sinad60Down);
 
-  EXPECT_GE(AudioResult::LevelDown60,
+  EXPECT_GE(AudioResult::Level60Down,
             -60.0 - AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LE(AudioResult::LevelDown60,
+  EXPECT_LE(AudioResult::Level60Down,
             -60.0 + AudioResult::kPrevDynRangeTolerance);
-  EXPECT_GE(AudioResult::SinadDown60, AudioResult::kPrevSinadDown60);
+  EXPECT_GE(AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
 
   // Validate level & floor in equivalent gain combination (per-stream, master).
   gain.SetRendererGain(0.0f);
@@ -422,8 +422,8 @@ TEST(DynamicRange, Down60) {
   double level_db, sinad_db;
   MeasureSummaryDynamicRange(scale2, &level_db, &sinad_db);
 
-  EXPECT_EQ(level_db, AudioResult::LevelDown60);
-  EXPECT_EQ(sinad_db, AudioResult::SinadDown60);
+  EXPECT_EQ(level_db, AudioResult::Level60Down);
+  EXPECT_EQ(sinad_db, AudioResult::Sinad60Down);
 }
 
 // Test our mix level and noise floor, when rechannelizing mono into stereo.

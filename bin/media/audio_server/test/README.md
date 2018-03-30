@@ -199,13 +199,6 @@ clarified (might be as easy as changing a "should" to a "must"). Depending on
 whether single-threaded is a requirement, we will need additional product code
 and tests.
 
-*   MTWN-73
-
-    Applying gain to audio values requires scale-up and scale-down operations
-on both our fixed-point representation of gain and the resultant audio data,
-while being mindful of integer container size and precision. In the process, we
-down-scale the gain scalar itself without first rounding, leading to truncation.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether

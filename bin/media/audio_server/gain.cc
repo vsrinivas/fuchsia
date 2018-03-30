@@ -46,8 +46,7 @@ Gain::AScale Gain::GetGainScale(float output_db_gain) {
                   "kMaxScale exceeds the capacity of our AScale container!");
 
     amp_scale *= static_cast<double>(kUnityScale);
-    // TODO(mpuryear): MTWN-73 round amp_scale instead of truncating
-    amplitude_scale_ = static_cast<AScale>(amp_scale);
+    amplitude_scale_ = static_cast<AScale>(round(amp_scale));
     FXL_DCHECK(amplitude_scale_ <= kMaxScale);
   }
 
