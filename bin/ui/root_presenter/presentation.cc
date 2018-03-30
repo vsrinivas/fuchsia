@@ -240,7 +240,9 @@ void Presentation::SetDisplaySizeInMm(float width_in_mm, float height_in_mm) {
                 << display_model_simulated_.display_info().height_in_mm
                 << "mm.";
 
-  ApplyDisplayModelChanges(true);
+  if (ApplyDisplayModelChanges(true)) {
+    PresentScene();
+  }
 }
 
 bool Presentation::SetDisplaySizeInMmWithoutApplyingChanges(float width_in_mm,
@@ -302,7 +304,9 @@ void Presentation::SetDisplayUsage(presentation::DisplayUsage usage) {
     return;
   }
 
-  ApplyDisplayModelChanges(true);
+  if (ApplyDisplayModelChanges(true)) {
+    PresentScene();
+  }
 
   FXL_LOG(INFO) << "Presentation::SetDisplayUsage: changing display usage to "
                 << GetDisplayUsageAsString(
