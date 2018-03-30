@@ -70,7 +70,6 @@ multiconst!(u32, [
     ZX_VMO_OP_DECOMMIT = 2;
     ZX_VMO_OP_LOCK = 3;
     ZX_VMO_OP_UNLOCK = 4;
-    ZX_VMO_OP_LOOKUP = 5;
     ZX_VMO_OP_CACHE_SYNC = 6;
     ZX_VMO_OP_CACHE_INVALIDATE = 7;
     ZX_VMO_OP_CACHE_CLEAN = 8;

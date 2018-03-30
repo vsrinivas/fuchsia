@@ -6,7 +6,7 @@
 
 use {AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
 use {sys, ok};
-use std::{mem, ptr};
+use std::ptr;
 
 /// An object representing a Zircon
 /// [virtual memory object](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md).
@@ -86,22 +86,6 @@ impl Vmo {
         ok(status)
     }
 
-    /// Look up a list of physical addresses corresponding to the pages held by the VMO from
-    /// `offset` to `offset`+`size`, and store them in `buffer`.
-    ///
-    /// Wraps the
-    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_op_range.md)
-    /// syscall with ZX_VMO_OP_LOOKUP.
-    pub fn lookup(&self, offset: u64, size: u64, buffer: &mut [sys::zx_paddr_t])
-        -> Result<(), Status>
-    {
-        let status = unsafe {
-            sys::zx_vmo_op_range(self.raw_handle(), VmoOp::LOOKUP.into_raw(), offset, size,
-                buffer.as_mut_ptr() as *mut u8, buffer.len() * mem::size_of::<sys::zx_paddr_t>())
-        };
-        ok(status)
-    }
-
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
@@ -136,7 +120,6 @@ assoc_values!(VmoOp, [
     DECOMMIT =         sys::ZX_VMO_OP_DECOMMIT;
     LOCK =             sys::ZX_VMO_OP_LOCK;
     UNLOCK =           sys::ZX_VMO_OP_UNLOCK;
-    LOOKUP =           sys::ZX_VMO_OP_LOOKUP;
     CACHE_SYNC =       sys::ZX_VMO_OP_CACHE_SYNC;
     CACHE_INVALIDATE = sys::ZX_VMO_OP_CACHE_INVALIDATE;
     CACHE_CLEAN =      sys::ZX_VMO_OP_CACHE_CLEAN;
@@ -189,25 +172,6 @@ mod tests {
         let vmo = Vmo::create(12).unwrap();
         assert_eq!(vmo.op_range(VmoOp::LOCK, 0, 1), Err(Status::NOT_SUPPORTED));
         assert_eq!(vmo.op_range(VmoOp::UNLOCK, 0, 1), Err(Status::NOT_SUPPORTED));
-    }
-
-    #[test]
-    fn vmo_lookup() {
-        let vmo = Vmo::create(12).unwrap();
-        let mut buffer = vec![0; 2];
-
-        // Lookup will fail as it is not committed yet.
-        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::NO_MEMORY));
-
-        // COMMIT and try again.
-        assert_eq!(vmo.op_range(VmoOp::COMMIT, 0, 12), Ok(()));
-        assert_eq!(vmo.lookup(0, 12, &mut buffer), Ok(()));
-        assert_ne!(buffer[0], 0);
-        assert_eq!(buffer[1], 0);
-
-        // If we decommit then lookup should go back to failing.
-        assert_eq!(vmo.op_range(VmoOp::DECOMMIT, 0, 12), Ok(()));
-        assert_eq!(vmo.lookup(0, 12, &mut buffer), Err(Status::NO_MEMORY));
     }
 
     #[test]
