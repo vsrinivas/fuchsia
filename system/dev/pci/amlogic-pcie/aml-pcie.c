@@ -78,16 +78,14 @@ static zx_protocol_device_t dw_pcie_device_proto = {
 };
 
 static inline void clear_reset(dw_pcie_t* pcie, uint32_t bits) {
-    volatile uint32_t* reg =
-            (io_buffer_virt(&pcie->buffers[RESET_WINDOW]) + RST_OFFSET_BYTES);
+    volatile uint32_t* reg = io_buffer_virt(&pcie->buffers[RESET_WINDOW]);
     uint32_t val = readl(reg);
     val |= bits;
     writel(val, reg);
 }
 
 static inline void assert_reset(dw_pcie_t* pcie, uint32_t bits) {
-    volatile uint32_t* reg =
-            (io_buffer_virt(&pcie->buffers[RESET_WINDOW]) + RST_OFFSET_BYTES);
+    volatile uint32_t* reg = io_buffer_virt(&pcie->buffers[RESET_WINDOW]);
     uint32_t val = readl(reg);
     val &= ~bits;
     writel(val, reg);

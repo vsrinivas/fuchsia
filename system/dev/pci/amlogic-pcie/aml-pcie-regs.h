@@ -76,7 +76,6 @@
 #define RST_PCIE_B       (0x1 << 2)
 #define RST_PCIE_APB     (0x1 << 6)
 #define RST_PCIE_PHY     (0x1 << 7)
-#define RST_OFFSET_BYTES (0x80)
 
 #define PCI_TYPE1_BAR0  (0x10)
 #define PCI_TYPE1_BAR1  (0x14)

@@ -31,9 +31,9 @@ static const pbus_mmio_t dw_pcie_mmios[] = {
         .base = 0xff646000,
         .length = 0x2000,     // 8KiB
     },
-    {   // reset actually 0x10 bytes at 0xffd01080 but align to a page boundary
-        .base = 0xffd01000,
-        .length = PAGE_SIZE,  // 4KiB
+    {   // reset
+        .base = 0xffd01080,
+        .length = 0x10,       // 16B
     },
     {   // config
         .base = 0xf9c00000,
