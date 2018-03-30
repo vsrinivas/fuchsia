@@ -112,9 +112,7 @@ class XdrContext {
   // get data from objects. However, in general, try to avoid special-casing
   // an XdrFilter to change behavior based on whether it's translating to or
   // from JSON.
-  XdrOp op() const {
-    return op_;
-  }
+  XdrOp op() const { return op_; }
 
   // Below are methods to handle values on properties of objects for
   // handling standalone values. These methods are called by filter
@@ -220,7 +218,29 @@ class XdrContext {
 
   template <typename S>
   void Value(std::unique_ptr<S>* data, XdrFilterType<S> filter) {
-    filter(this, data->operator->());
+    switch (op_) {
+      case XdrOp::TO_JSON:
+        if (!data->get()) {
+          value_->SetNull();
+        } else {
+          value_->SetObject();
+          filter(this, data->get());
+        }
+        break;
+
+      case XdrOp::FROM_JSON:
+        if (value_->IsNull()) {
+          data->reset();
+        } else {
+          if (!value_->IsObject()) {
+            AddError("Object type expected.");
+            return;
+          }
+
+          *data = std::make_unique<S>();
+          filter(this, data->get());
+        }
+    }
   }
 
   // A fidl vector is mapped to JSON null and JSON Array with a custom

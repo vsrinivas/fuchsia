@@ -82,11 +82,6 @@ void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
   xdr->Field("emphasis", &data->emphasis);
 }
 
-void XdrSurfaceRelationPtr(XdrContext* const xdr,
-                           SurfaceRelationPtr* const data) {
-  XdrSurfaceRelation(xdr, data->get());
-}
-
 void XdrNoun(XdrContext* const xdr, Noun* const data) {
   static constexpr char kTag[] = "tag";
   static constexpr char kEntityReference[] = "entity_reference";
@@ -184,20 +179,15 @@ void XdrDaisy(XdrContext* const xdr, Daisy* const data) {
   xdr->Field("nouns", &data->nouns, XdrNounEntry);
 }
 
-void XdrDaisyPtr(XdrContext* const xdr, DaisyPtr* const data) {
-  XdrDaisy(xdr, data->get());
-}
-
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
   // TODO(mesch): Rename the XDR field eventually.
   xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation,
-             XdrSurfaceRelationPtr);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
-  xdr->Field("daisy", &data->daisy, XdrDaisyPtr);
+  xdr->Field("daisy", &data->daisy, XdrDaisy);
 
   xdr->ReadErrorHandler([data] { data->chain_data.key_to_link_map.resize(0); })
       ->Field("chain_data", &data->chain_data, XdrChainData);
