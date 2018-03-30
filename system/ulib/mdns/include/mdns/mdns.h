@@ -199,6 +199,17 @@ int mdns_add_authority(mdns_message*,
                        uint16_t rdlength,
                        uint32_t ttl);
 
+// Appends an additional info resource record to a message.
+//
+// See mdns_add_answer for documentation.
+int mdns_add_additional(mdns_message*,
+                        char* name,
+                        uint16_t type,
+                        uint16_t clazz,
+                        uint8_t* rdata,
+                        uint16_t rdlength,
+                        uint32_t ttl);
+
 // Zeroes all pointers and values associated with the given message.
 //
 // Clients should free(message) after calling mdns_free_message(message) if the

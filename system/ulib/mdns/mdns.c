@@ -179,3 +179,19 @@ int mdns_add_authority(mdns_message* m,
     m->header.ns_count = ns_count;
     return 0;
 }
+
+int mdns_add_additional(mdns_message* m,
+                        char* name,
+                        uint16_t type,
+                        uint16_t clazz,
+                        uint8_t* rdata,
+                        uint16_t rdlength,
+                        uint32_t ttl) {
+    int ar_count = mdns_add_rr(&(m->additionals), name, type, clazz, rdata,
+                               rdlength, ttl);
+    if (ar_count < 0) {
+        return ar_count;
+    }
+    m->header.ar_count = ar_count;
+    return 0;
+}

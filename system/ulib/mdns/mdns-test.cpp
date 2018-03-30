@@ -324,6 +324,88 @@ static bool test_mdns_add_authority_bad_rr_class(void) {
     END_TEST;
 }
 
+static bool test_mdns_add_first_additional(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+
+    int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(retval, 0, "should return zero if no error");
+    EXPECT_NONNULL(t.message.additionals, "additional was not added");
+    EXPECT_EQ(t.message.header.ar_count, 1, "additional count should be one");
+    EXPECT_TRUE(verify_rr(t.message.additionals, t.rr.name, t.rr.type, t.rr.clazz,
+                          t.rr.rdata, t.rr.rdlength, t.rr.ttl));
+
+    END_TEST;
+}
+
+static bool test_mdns_add_nth_additional(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+
+    int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(retval, 0, "should return zero if no error");
+
+    char other_name[] = "other name";
+    uint16_t other_type = RR_TYPE_A;
+    uint16_t other_clazz = RR_CLASS_IN;
+    uint8_t other_rdata[] = {t.rr.rdata[0]};
+    uint16_t other_rdlength = sizeof(other_rdata) / sizeof(uint8_t);
+    uint32_t other_ttl = t.rr.ttl + 1;
+    retval = mdns_add_additional(&t.message, other_name, other_type, other_clazz,
+                                 other_rdata, other_rdlength, other_ttl);
+    EXPECT_NONNULL(t.message.additionals, "additional was not added");
+    EXPECT_EQ(t.message.header.ar_count, 2, "additional count should be two");
+
+    EXPECT_TRUE(verify_rr(t.message.additionals, t.rr.name, t.rr.type, t.rr.clazz,
+                          t.rr.rdata, t.rr.rdlength, t.rr.ttl));
+
+    EXPECT_NONNULL(t.message.additionals->next, "second additional was not added");
+    EXPECT_TRUE(verify_rr(t.message.additionals->next, other_name, other_type,
+                          other_clazz, other_rdata, other_rdlength, other_ttl));
+    EXPECT_NULL(t.message.additionals->next->next,
+                "second additional nextptr should be null");
+
+    END_TEST;
+}
+
+static bool test_mdns_add_additional_bad_rr_type(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+    t.rr.type = (uint16_t)(RR_TYPE_A + 1); // Unsupported record type.
+    int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(errno, EINVAL, "errno should be EINVAL when given bad rr type");
+    EXPECT_EQ(retval, -1, "should return value < zero on error");
+    EXPECT_NULL(t.message.additionals, "should not have added additional to message");
+    EXPECT_EQ(t.message.header.ar_count, 0, "additional count should be zero");
+
+    END_TEST;
+}
+
+static bool test_mdns_add_additional_bad_rr_class(void) {
+    BEGIN_TEST;
+
+    test_data t;
+    t.reset();
+    t.rr.clazz = (uint16_t)(RR_CLASS_IN + 1); // Unsupported record class.
+    int retval = mdns_add_additional(&t.message, t.rr.name, t.rr.type, t.rr.clazz,
+                                     t.rr.rdata, t.rr.rdlength, t.rr.ttl);
+    EXPECT_EQ(errno, EINVAL, "errno should be EINVAL when given bad rr class");
+    EXPECT_EQ(retval, -1, "should return value < zero on error");
+    EXPECT_NULL(t.message.additionals, "should not have added additional to message");
+    EXPECT_EQ(t.message.header.ar_count, 0, "additional count should be zero");
+
+    END_TEST;
+}
+
 static bool test_mdns_free_message(void) {
     BEGIN_TEST;
 
@@ -373,6 +455,13 @@ RUN_TEST(test_mdns_add_nth_authority)
 RUN_TEST(test_mdns_add_authority_bad_rr_type)
 RUN_TEST(test_mdns_add_authority_bad_rr_class)
 END_TEST_CASE(mdns_add_authority)
+
+BEGIN_TEST_CASE(mdns_add_additional)
+RUN_TEST(test_mdns_add_first_additional)
+RUN_TEST(test_mdns_add_nth_additional)
+RUN_TEST(test_mdns_add_additional_bad_rr_type)
+RUN_TEST(test_mdns_add_additional_bad_rr_class)
+END_TEST_CASE(mdns_add_additional)
 
 int main(int argc, char* argv[]) {
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
