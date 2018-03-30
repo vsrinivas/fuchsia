@@ -164,15 +164,6 @@ int vmo_run_benchmark() {
     });
     printf("\ttook %" PRIu64 " nsecs to commit vmo of size %zu\n", t, size);
 
-    uint64_t addrs[size / PAGE_SIZE];
-    t = time_it([&](){
-        zx_status_t status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, size, addrs, sizeof(addrs));
-        if (status != ZX_OK) {
-            __builtin_trap();
-        }
-    });
-    printf("\ttook %" PRIu64 " nsecs to lookup vmo of size %zu\n", t, size);
-
     t = time_it([&](){
         zx_status_t status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, nullptr, 0);
         if (status != ZX_OK) {

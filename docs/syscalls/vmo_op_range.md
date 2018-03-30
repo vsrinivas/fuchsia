@@ -25,7 +25,7 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle, uint32_t op,
 
 *op* the operation to perform:
 
-*buffer* and *buffer_size* are used to store the addresses returned by *ZX_VMO_OP_LOOKUP*.
+*buffer* and *buffer_size* are currently unused.
 
 **ZX_VMO_OP_COMMIT** - Commit *size* bytes worth of pages starting at byte *offset* for the VMO.
 More information can be found in the [vm object documentation](../objects/vm_object.md).
@@ -35,12 +35,6 @@ More information can be found in the [vm object documentation](../objects/vm_obj
 **ZX_VMO_OP_LOCK** - Presently unsupported.
 
 **ZX_VMO_OP_UNLOCK** - Presently unsupported.
-
-**ZX_VMO_OP_LOOKUP** - Returns a list of physical addresses (paddr_t) corresponding to the pages held by the VMO
-from *offset* to *offset*+*size*. The result is stored in *buffer*, up to *buffer_size* bytes.
-The returned physical addresses are aligned to page boundaries. So if the provided offset
-is not page aligned, the first physical address returned will match the beginning of the page containing
-the offset, not the actual physical address corresponding to the offset.
 
 **ZX_VMO_OP_CACHE_SYNC** - Performs a cache sync operation.
 
@@ -67,8 +61,7 @@ value is returned.
 **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
 
 **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid
-operation, *op* is *ZX_VMO_OP_LOOKUP* and *buffer* is an invalid pointer, or
-*size* is zero and *op* is a cache operation.
+operation, or *size* is zero and *op* is a cache operation.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was *ZX_VMO_OP_LOCK* or *ZX_VMO_OP_UNLOCK*.
 

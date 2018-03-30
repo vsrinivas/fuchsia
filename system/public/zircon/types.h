@@ -226,7 +226,7 @@ typedef uint32_t zx_rights_t;
 #define ZX_VMO_OP_DECOMMIT               2u
 #define ZX_VMO_OP_LOCK                   3u
 #define ZX_VMO_OP_UNLOCK                 4u
-#define ZX_VMO_OP_LOOKUP                 5u
+// opcode 5 was ZX_VMO_OP_LOOKUP, but is now unused.
 #define ZX_VMO_OP_CACHE_SYNC             6u
 #define ZX_VMO_OP_CACHE_INVALIDATE       7u
 #define ZX_VMO_OP_CACHE_CLEAN            8u

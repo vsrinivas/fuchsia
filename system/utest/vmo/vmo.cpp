@@ -632,63 +632,6 @@ bool vmo_rights_test() {
     END_TEST;
 }
 
-bool vmo_lookup_test() {
-    BEGIN_TEST;
-
-    zx_handle_t vmo;
-    zx_status_t status;
-
-    const size_t size = 16384;
-    zx_paddr_t buf[size / PAGE_SIZE];
-
-    status = zx_vmo_create(size, 0, &vmo);
-    EXPECT_EQ(0, status, "vm_object_create");
-
-    // do a lookup (this should fail becase the pages aren't committed)
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on uncommitted vmo");
-
-    // commit the memory
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(ZX_OK, status, "committing memory");
-
-    // do a lookup (should succeed)
-    memset(buf, 0, sizeof(buf));
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, size, buf, sizeof(buf));
-    EXPECT_EQ(ZX_OK, status, "lookup on committed vmo");
-
-    for (auto addr: buf)
-        EXPECT_NE(0u, addr, "looked up address");
-
-    // do a lookup with an odd offset and an end pointer that ends up at an odd offset
-    memset(buf, 0, sizeof(buf));
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 1, size - PAGE_SIZE, buf, sizeof(buf));
-    EXPECT_EQ(ZX_OK, status, "lookup on committed vmo");
-
-    for (auto addr: buf)
-        EXPECT_NE(0u, addr, "looked up address");
-
-    // invalid args
-
-    // do a lookup with no size
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, 0, buf, sizeof(buf));
-    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "zero size on lookup");
-
-    // do a lookup out of range
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, size + 1, 1, buf, sizeof(buf));
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, status, "out of range");
-
-    // do a lookup out of range
-    status = zx_vmo_op_range(vmo, ZX_VMO_OP_LOOKUP, 0, size + 1, buf, sizeof(buf));
-    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status, "buffer too small");
-
-    // close the handle
-    status = zx_handle_close(vmo);
-    EXPECT_EQ(ZX_OK, status, "handle_close");
-
-    END_TEST;
-}
-
 bool vmo_commit_test() {
     BEGIN_TEST;
 
@@ -1649,7 +1592,6 @@ RUN_TEST(vmo_size_align_test);
 RUN_TEST(vmo_resize_align_test);
 RUN_TEST(vmo_clone_size_align_test);
 RUN_TEST(vmo_rights_test);
-RUN_TEST(vmo_lookup_test);
 RUN_TEST(vmo_commit_test);
 RUN_TEST(vmo_decommit_misaligned_test);
 RUN_TEST(vmo_cache_test);

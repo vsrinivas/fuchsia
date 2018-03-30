@@ -118,15 +118,6 @@ zx_status_t VmObjectDispatcher::RangeOp(uint32_t op, uint64_t offset, uint64_t s
         case ZX_VMO_OP_UNLOCK:
             // TODO: handle
             return ZX_ERR_NOT_SUPPORTED;
-        case ZX_VMO_OP_LOOKUP:
-            // we will be using the user pointer
-            if (!buffer)
-                return ZX_ERR_INVALID_ARGS;
-
-            // make sure that zx_paddr_t doesn't drift from paddr_t, which the VM uses internally
-            static_assert(sizeof(zx_paddr_t) == sizeof(paddr_t), "");
-
-            return vmo_->LookupUser(offset, size, buffer.reinterpret<paddr_t>(), buffer_size);
         case ZX_VMO_OP_CACHE_SYNC:
             return vmo_->SyncCache(offset, size);
         case ZX_VMO_OP_CACHE_INVALIDATE:
