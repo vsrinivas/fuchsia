@@ -12,6 +12,7 @@
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
 #include "peridot/bin/ledger/p2p_sync/impl/message_generated.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {
@@ -19,7 +20,9 @@ class PageCommunicatorImplInspectorForTest;
 
 class PageCommunicatorImpl : public PageCommunicator {
  public:
-  PageCommunicatorImpl(std::string namespace_id,
+  PageCommunicatorImpl(storage::PageStorage* storage,
+                       storage::PageSyncClient* sync_client,
+                       std::string namespace_id,
                        std::string page_id,
                        DeviceMesh* mesh);
   ~PageCommunicatorImpl() override;

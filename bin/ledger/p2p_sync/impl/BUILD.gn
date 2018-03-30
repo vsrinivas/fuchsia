@@ -15,21 +15,24 @@ source_set("impl") {
     "ledger_communicator_impl.h",
     "page_communicator_impl.cc",
     "page_communicator_impl.h",
+    "user_communicator_factory.cc",
+    "user_communicator_factory.h",
     "user_communicator_impl.cc",
     "user_communicator_impl.h",
   ]
 
   public_deps = [
     "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/environment",
     "//peridot/bin/ledger/p2p_provider/impl",
     "//peridot/bin/ledger/p2p_sync/public",
+    "//peridot/bin/ledger/storage/public",
     "//peridot/lib/convert",
   ]
 
   deps = [
     ":message",
     "//garnet/lib/callback",
-    "//peridot/lib/convert",
     "//peridot/lib/ledger_client:constants",
   ]
 }
@@ -54,6 +57,7 @@ source_set("unittests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/p2p_provider/impl",
+    "//peridot/bin/ledger/storage/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/bin/ledger/testing/netconnector",
 

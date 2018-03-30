@@ -62,11 +62,15 @@ void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source,
 }
 
 std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
-    std::string page_id) {
+    storage::PageStorage* storage,
+    storage::PageSyncClient* sync_client) {
+  storage::PageId page_id = storage->GetId();
+
   FXL_DCHECK(pages_.find(page_id) == pages_.end());
 
   std::unique_ptr<PageCommunicatorImpl> page =
-      std::make_unique<PageCommunicatorImpl>(namespace_id_, page_id, mesh_);
+      std::make_unique<PageCommunicatorImpl>(storage, sync_client,
+                                             namespace_id_, page_id, mesh_);
   PageCommunicatorImpl* page_ptr = page.get();
   pages_.emplace(page_id, page_ptr);
   page->set_on_delete([this, page_id = std::move(page_id), page_ptr] {

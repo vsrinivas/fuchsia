@@ -8,9 +8,12 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {
-PageCommunicatorImpl::PageCommunicatorImpl(std::string namespace_id,
-                                           std::string page_id,
-                                           DeviceMesh* mesh)
+PageCommunicatorImpl::PageCommunicatorImpl(
+    storage::PageStorage* /*storage*/,
+    storage::PageSyncClient* /*sync_client*/,
+    std::string namespace_id,
+    std::string page_id,
+    DeviceMesh* mesh)
     : namespace_id_(std::move(namespace_id)),
       page_id_(std::move(page_id)),
       mesh_(mesh) {}

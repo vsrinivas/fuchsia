@@ -9,7 +9,6 @@
 #include <set>
 
 #include "lib/fxl/strings/string_view.h"
-#include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {

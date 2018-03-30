@@ -9,13 +9,28 @@
 // directly as it is private to the library.
 #include "gmock/gmock.h"
 #include "peridot/bin/ledger/p2p_sync/impl/device_mesh.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace p2p_sync {
 namespace {
+
+class FakePageStorage : public storage::PageStorageEmptyImpl {
+ public:
+  explicit FakePageStorage(std::string page_id)
+      : page_id_(std::move(page_id)) {}
+  ~FakePageStorage() override {}
+
+  storage::PageId GetId() override { return page_id_; }
+
+ private:
+  const std::string page_id_;
+};
+
 class FakeDeviceMesh : public DeviceMesh {
  public:
   FakeDeviceMesh() {}
+  ~FakeDeviceMesh() override {}
 
   const DeviceSet& GetDeviceList() override { return devices_; }
 
@@ -43,7 +58,9 @@ class PageCommunicatorImplTest : public gtest::TestWithMessageLoop {
 TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
   FakeDeviceMesh mesh;
   mesh.devices_.emplace("device2");
-  PageCommunicatorImpl page_communicator("ledger", "page", &mesh);
+  FakePageStorage storage("page");
+  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
+                                         &mesh);
 
   EXPECT_TRUE(mesh.messages_.empty());
 
@@ -72,7 +89,9 @@ TEST_F(PageCommunicatorImplTest, ConnectToExistingMesh) {
 
 TEST_F(PageCommunicatorImplTest, ConnectToNewMeshParticipant) {
   FakeDeviceMesh mesh;
-  PageCommunicatorImpl page_communicator("ledger", "page", &mesh);
+  FakePageStorage storage("page");
+  PageCommunicatorImpl page_communicator(&storage, &storage, "ledger", "page",
+                                         &mesh);
   page_communicator.Start();
 
   EXPECT_TRUE(mesh.messages_.empty());

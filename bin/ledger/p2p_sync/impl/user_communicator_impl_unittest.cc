@@ -18,6 +18,7 @@
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_provider/public/user_id_provider.h"
 #include "peridot/bin/ledger/p2p_sync/impl/page_communicator_impl.h"
+#include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"
 
 namespace p2p_sync {
@@ -31,6 +32,18 @@ class PageCommunicatorImplInspectorForTest {
 };
 
 namespace {
+
+class FakePageStorage : public storage::PageStorageEmptyImpl {
+ public:
+  explicit FakePageStorage(std::string page_id)
+      : page_id_(std::move(page_id)) {}
+  ~FakePageStorage() {}
+
+  storage::PageId GetId() override { return page_id_; }
+
+ private:
+  const std::string page_id_;
+};
 
 class FakeUserIdProvider : public p2p_provider::UserIdProvider {
  public:
@@ -77,7 +90,9 @@ TEST_F(UserCommunicatorImplTest, OneHost_NoCrash) {
   user_communicator->Start();
   std::unique_ptr<LedgerCommunicator> ledger =
       user_communicator->GetLedgerCommunicator("ledger1");
-  std::unique_ptr<PageCommunicator> page = ledger->GetPageCommunicator("page1");
+  FakePageStorage storage("page1");
+  std::unique_ptr<PageCommunicator> page =
+      ledger->GetPageCommunicator(&storage, &storage);
   page->Start();
   RunLoopUntilIdle();
 }
@@ -88,8 +103,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   user_communicator1->Start();
   std::unique_ptr<LedgerCommunicator> ledger1 =
       user_communicator1->GetLedgerCommunicator("app");
+  FakePageStorage storage1("page");
   std::unique_ptr<PageCommunicator> page1 =
-      ledger1->GetPageCommunicator("page");
+      ledger1->GetPageCommunicator(&storage1, &storage1);
   page1->Start();
   RunLoopUntilIdle();
 
@@ -98,8 +114,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 =
       user_communicator2->GetLedgerCommunicator("app");
+  FakePageStorage storage2("page");
   std::unique_ptr<PageCommunicator> page2 =
-      ledger2->GetPageCommunicator("page");
+      ledger2->GetPageCommunicator(&storage2, &storage2);
   page2->Start();
   RunLoopUntilIdle();
 
@@ -113,8 +130,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   user_communicator3->Start();
   std::unique_ptr<LedgerCommunicator> ledger3 =
       user_communicator3->GetLedgerCommunicator("app");
+  FakePageStorage storage3("page");
   std::unique_ptr<PageCommunicator> page3 =
-      ledger3->GetPageCommunicator("page");
+      ledger3->GetPageCommunicator(&storage3, &storage3);
   page3->Start();
   RunLoopUntilIdle();
 
@@ -139,11 +157,13 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   user_communicator1->Start();
   std::unique_ptr<LedgerCommunicator> ledger1 =
       user_communicator1->GetLedgerCommunicator("app");
+  FakePageStorage storage1_1("page1");
   std::unique_ptr<PageCommunicator> page1_1 =
-      ledger1->GetPageCommunicator("page1");
+      ledger1->GetPageCommunicator(&storage1_1, &storage1_1);
   page1_1->Start();
+  FakePageStorage storage1_2("page2");
   std::unique_ptr<PageCommunicator> page1_2 =
-      ledger1->GetPageCommunicator("page2");
+      ledger1->GetPageCommunicator(&storage1_2, &storage1_2);
   page1_2->Start();
   RunLoopUntilIdle();
 
@@ -152,8 +172,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 =
       user_communicator2->GetLedgerCommunicator("app");
+  FakePageStorage storage2_1("page1");
   std::unique_ptr<PageCommunicator> page2_1 =
-      ledger2->GetPageCommunicator("page1");
+      ledger2->GetPageCommunicator(&storage2_1, &storage2_1);
   page2_1->Start();
   RunLoopUntilIdle();
 
@@ -162,8 +183,9 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   user_communicator3->Start();
   std::unique_ptr<LedgerCommunicator> ledger3 =
       user_communicator3->GetLedgerCommunicator("app");
+  FakePageStorage storage3_2("page2");
   std::unique_ptr<PageCommunicator> page3_2 =
-      ledger3->GetPageCommunicator("page2");
+      ledger3->GetPageCommunicator(&storage3_2, &storage3_2);
   page3_2->Start();
   RunLoopUntilIdle();
 

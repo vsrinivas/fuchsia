@@ -42,7 +42,8 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
 
   // LedgerCommunicator:
   std::unique_ptr<PageCommunicator> GetPageCommunicator(
-      std::string page_id) override;
+      storage::PageStorage* storage,
+      storage::PageSyncClient* sync_client) override;
 
  private:
   std::map<std::string, PageCommunicatorImpl*, convert::StringViewComparator>

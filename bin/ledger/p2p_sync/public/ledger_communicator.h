@@ -10,6 +10,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/p2p_sync/public/page_communicator.h"
+#include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace p2p_sync {
 // LedgerCommunicator handles ledger-level data transfer between peers.
@@ -22,7 +23,8 @@ class LedgerCommunicator {
   // All |PageCommunicator| objects obtained through this method must be
   // destroyed before |LedgerCommunicator|.
   virtual std::unique_ptr<PageCommunicator> GetPageCommunicator(
-      std::string page_id) = 0;
+      storage::PageStorage* storage,
+      storage::PageSyncClient* sync_client) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerCommunicator);
