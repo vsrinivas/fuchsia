@@ -205,6 +205,19 @@ void Graph::PrepareInput(const InputRef& input) {
   engine_.PrepareInput(input.actual());
 }
 
+void Graph::Unprepare() {
+  for (StageImpl* sink : sinks_) {
+    for (size_t i = 0; i < sink->input_count(); ++i) {
+      engine_.UnprepareInput(&sink->input(i));
+    }
+  }
+}
+
+void Graph::UnprepareInput(const InputRef& input) {
+  FXL_DCHECK(input);
+  engine_.UnprepareInput(input.actual());
+}
+
 void Graph::FlushOutput(const OutputRef& output, bool hold_frame) {
   FXL_DCHECK(output);
   engine_.FlushOutput(output.actual(), hold_frame);

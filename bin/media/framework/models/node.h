@@ -28,6 +28,8 @@ class GenericNode {
 
   Stage* generic_stage() { return generic_stage_; }
 
+  virtual const char* label() const { return "<not labelled>"; }
+
  protected:
   // Posts a task to run as soon as possible. A task posted with this method is
   // run exclusive of any other such tasks.

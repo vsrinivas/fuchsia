@@ -191,6 +191,13 @@ class Graph {
   // prepare subgraphs added when the rest of the graph is already prepared.
   void PrepareInput(const InputRef& input);
 
+  // Unprepares the graph after operation.
+  void Unprepare();
+
+  // Unprepares the input and everything upstream of it. This method is used to
+  // unprepare subgraphs.
+  void UnprepareInput(const InputRef& input);
+
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
   // frame.

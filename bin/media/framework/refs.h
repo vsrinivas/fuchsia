@@ -15,6 +15,7 @@ class Output;
 class Engine;
 class InputRef;
 class OutputRef;
+class GenericNode;
 
 // Opaque Stage pointer used for graph building.
 class NodeRef {
@@ -49,6 +50,12 @@ class NodeRef {
   // Returns true if the reference refers to a node, false if it's null.
   explicit operator bool() const { return stage_ != nullptr; }
 
+  // Gets the actual node referenced by this |NodeRef|.
+  GenericNode* GetGenericNode();
+
+  bool operator==(const NodeRef& other) const { return stage_ == other.stage_; }
+  bool operator!=(const NodeRef& other) const { return stage_ != other.stage_; }
+
  private:
   explicit NodeRef(StageImpl* stage) : stage_(stage) {}
 
@@ -81,9 +88,21 @@ class InputRef {
   // on a null |InputRef| results in undefined behavior.
   bool connected() const;
 
+  // Indicates whether this input is prepared. Calling this method on a null
+  // |InputRef| results in undefined behavior.
+  bool prepared() const;
+
   // Returns a reference to the output to which this input is connected. Returns
   // an invalid reference if this input isn't connected to an output.
   OutputRef mate() const;
+
+  bool operator==(const InputRef& other) const {
+    return input_ == other.input_;
+  }
+
+  bool operator!=(const InputRef& other) const {
+    return input_ != other.input_;
+  }
 
  private:
   InputRef(Input* input) : input_(input) {}
@@ -124,6 +143,14 @@ class OutputRef {
   // Returns a reference to the input to which this output is connected. Returns
   // an invalid reference if this output isn't connected to an input.
   InputRef mate() const;
+
+  bool operator==(const OutputRef& other) const {
+    return output_ == other.output_;
+  }
+
+  bool operator!=(const OutputRef& other) const {
+    return output_ != other.output_;
+  }
 
  private:
   OutputRef(Output* output) : output_(output) {}

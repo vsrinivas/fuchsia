@@ -55,9 +55,9 @@ class StreamType {
         new StreamType(medium, encoding, std::move(encoding_parameters)));
   }
 
-  explicit StreamType(Medium medium,
-                      const std::string& encoding,
-                      std::unique_ptr<Bytes> encoding_parameters);
+  StreamType(Medium medium,
+             const std::string& encoding,
+             std::unique_ptr<Bytes> encoding_parameters);
 
   virtual ~StreamType();
 

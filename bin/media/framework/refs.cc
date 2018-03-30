@@ -45,6 +45,10 @@ OutputRef NodeRef::output() const {
   return OutputRef(&stage_->output(0));
 }
 
+GenericNode* NodeRef::GetGenericNode() {
+  return stage_ ? stage_->GetGenericNode() : nullptr;
+}
+
 NodeRef InputRef::node() const {
   return input_ ? NodeRef(input_->stage()) : NodeRef();
 }
@@ -52,6 +56,11 @@ NodeRef InputRef::node() const {
 bool InputRef::connected() const {
   FXL_DCHECK(input_);
   return input_->connected();
+}
+
+bool InputRef::prepared() const {
+  FXL_DCHECK(input_);
+  return input_->prepared();
 }
 
 OutputRef InputRef::mate() const {

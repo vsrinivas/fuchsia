@@ -76,6 +76,9 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Flushes an output.
   virtual void FlushOutput(size_t index) = 0;
 
+  // Gets the generic node.
+  virtual GenericNode* GetGenericNode() = 0;
+
   // Shuts down the stage.
   void ShutDown();
 
@@ -104,9 +107,6 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   void PostTask(const fxl::Closure& task);
 
  protected:
-  // Gets the generic node.
-  virtual GenericNode* GetGenericNode() = 0;
-
   // Updates packet supply and demand.
   virtual void Update() = 0;
 
