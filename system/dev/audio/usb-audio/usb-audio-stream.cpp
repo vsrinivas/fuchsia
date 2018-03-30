@@ -4,7 +4,6 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <ddk/device.h>
-#include <zircon/device/audio.h>
 #include <zircon/device/usb.h>
 #include <zircon/hw/usb-audio.h>
 #include <zircon/process.h>
@@ -19,6 +18,7 @@
 #include "usb-audio.h"
 #include "usb-audio-device.h"
 #include "usb-audio-stream.h"
+#include "usb-audio-stream-interface.h"
 
 namespace audio {
 namespace usb {
@@ -31,24 +31,21 @@ static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
         | (static_cast<uint32_t>(sr.freq[2]) << 16);
 }
 
-UsbAudioStream::UsbAudioStream(fbl::RefPtr<UsbAudioDevice> parent,
-                               usb_protocol_t* usb,
-                               bool is_input,
-                               int usb_index,
-                               fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain)
+UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent,
+                               fbl::unique_ptr<UsbAudioStreamInterface> ifc,
+                               fbl::RefPtr<dispatcher::ExecutionDomain> default_domain)
     : UsbAudioStreamBase(parent->zxdev()),
-      AudioStreamProtocol(is_input),
-      parent_(fbl::move(parent)),
-      usb_(*usb),
+      AudioStreamProtocol(ifc->direction() == Direction::Input),
+      parent_(*parent),
+      ifc_(fbl::move(ifc)),
       default_domain_(fbl::move(default_domain)),
-      usb_index_(usb_index),
       create_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
     snprintf(log_prefix_, sizeof(log_prefix_),
              "UsbAud %04hx:%04hx %s-%03d",
-             parent_->vid(),
-             parent_->pid(),
-             is_input ? "input" : "output",
-             usb_index_);
+             parent_.vid(),
+             parent_.pid(),
+             is_input() ? "input" : "output",
+             ifc_->term_link());
 }
 
 UsbAudioStream::~UsbAudioStream() {
@@ -60,53 +57,31 @@ UsbAudioStream::~UsbAudioStream() {
     }
 }
 
-// static
-zx_status_t UsbAudioStream::Create(fbl::RefPtr<UsbAudioDevice> parent,
-                                   bool is_input,
-                                   usb_protocol_t* usb,
-                                   int index,
-                                   usb_interface_descriptor_t* usb_interface,
-                                   usb_endpoint_descriptor_t* usb_endpoint,
-                                   usb_audio_ac_format_type_i_desc* format_desc) {
+fbl::RefPtr<UsbAudioStream> UsbAudioStream::Create(UsbAudioDevice* parent,
+                                                   fbl::unique_ptr<UsbAudioStreamInterface> ifc) {
+    ZX_DEBUG_ASSERT(parent != nullptr);
+    ZX_DEBUG_ASSERT(ifc != nullptr);
+
     auto domain = dispatcher::ExecutionDomain::Create();
-    if (domain == nullptr) { return ZX_ERR_NO_MEMORY; }
-
-    auto stream = fbl::AdoptRef(
-            new UsbAudioStream(fbl::move(parent), usb, is_input, index, fbl::move(domain)));
-    char name[64];
-    snprintf(name, sizeof(name), "usb-audio-%s-%03d", is_input ? "input" : "output", index);
-
-    zx_status_t res = stream->Bind(name, usb_interface, usb_endpoint, format_desc);
-    if (res == ZX_OK) {
-        // If bind/setup has succeeded, then the devmgr now controls our
-        // lifecycle and will release us when finished with us.  Let go of our
-        // local reference.
-        //
-        // TODO(johngro) : outright leaking this reference feels wrong.  We
-        // should bind this to the devmgr cookie somehow instead.
-        __UNUSED auto leak = stream.leak_ref();
+    if (domain == nullptr) {
+        LOG_EX(ERROR, *parent,
+               "Failed to create execution domain while trying to create UsbAudioStream\n");
+        return nullptr;
     }
 
-    return ZX_OK;
+    fbl::AllocChecker ac;
+    auto stream = fbl::AdoptRef(
+            new (&ac) UsbAudioStream(parent, fbl::move(ifc), fbl::move(domain)));
+    if (!ac.check()) {
+        LOG_EX(ERROR, *parent,
+               "Out of memory while attempting to allocate UsbAudioStream\n");
+        return nullptr;
+    }
+
+    return stream;
 }
 
-zx_status_t UsbAudioStream::Bind(const char* devname,
-                                 usb_interface_descriptor_t* usb_interface,
-                                 usb_endpoint_descriptor_t* usb_endpoint,
-                                 usb_audio_ac_format_type_i_desc* format_desc) {
-    // TODO(johngro) : parse all of the supported formats and widgets present in
-    // this audio device.  Support things like aynch plug notification, format
-    // selection, gain control, sidetone, etc...
-    if (!usb_interface || !usb_endpoint || !format_desc)
-        return ZX_ERR_INVALID_ARGS;
-
-    ZX_DEBUG_ASSERT(!supported_formats_.size());
-    zx_status_t res = AddFormats(*format_desc, &supported_formats_);
-    if (res != ZX_OK) {
-        LOG(ERROR, "Failed to parse format descriptor (res %d)\n", res);
-        return res;
-    }
-
+zx_status_t UsbAudioStream::Bind() {
     // TODO(johngro): Do this differently when we have the ability to queue io
     // transactions to a USB isochronous endpoint and can have the bus driver
     // DMA directly from the ring buffer we have set up with our user.
@@ -116,15 +91,16 @@ zx_status_t UsbAudioStream::Bind(const char* devname,
         list_initialize(&free_req_);
         free_req_cnt_ = 0;
         allocated_req_cnt_ = 0;
-        max_req_size_ = usb_ep_max_packet(usb_endpoint);
 
         for (uint32_t i = 0; i < MAX_OUTSTANDING_REQ; ++i) {
             usb_request_t* req;
-            zx_status_t status = usb_req_alloc(&usb_, &req, max_req_size_,
-                                                   usb_endpoint->bEndpointAddress);
+            zx_status_t status = usb_req_alloc(&parent_.usb_proto(),
+                                               &req,
+                                               ifc_->max_req_size(),
+                                               ifc_->ep_addr());
             if (status != ZX_OK) {
                 LOG(ERROR, "Failed to allocate usb request %u/%u (size %u): %d\n",
-                    i + 1, MAX_OUTSTANDING_REQ, max_req_size_, status);
+                    i + 1, MAX_OUTSTANDING_REQ, ifc_->max_req_size(), status);
                 return status;
             }
 
@@ -140,11 +116,21 @@ zx_status_t UsbAudioStream::Bind(const char* devname,
         }
     }
 
-    iface_num_   = usb_interface->bInterfaceNumber;
-    alt_setting_ = usb_interface->bAlternateSetting;
-    usb_ep_addr_ = usb_endpoint->bEndpointAddress;
+    char name[64];
+    snprintf(name, sizeof(name), "usb-audio-%s-%03d",
+             is_input() ? "input" : "output", ifc_->term_link());
 
-    return UsbAudioStreamBase::DdkAdd(devname);
+    zx_status_t status = UsbAudioStreamBase::DdkAdd(name);
+    if (status == ZX_OK) {
+        // If bind/setup has succeeded, then the devmgr now holds a reference to us.
+        // Manually increase our reference count to account for this.
+        this->AddRef();
+    } else {
+        LOG(ERROR, "Failed to publish UsbAudioStream device node (name \"%s\", status %d)\n",
+            name, status);
+    }
+
+    return status;
 }
 
 void UsbAudioStream::ReleaseRingBufferLocked() {
@@ -158,143 +144,22 @@ void UsbAudioStream::ReleaseRingBufferLocked() {
     ring_buffer_vmo_.reset();
 }
 
-zx_status_t UsbAudioStream::AddFormats(
-        const usb_audio_ac_format_type_i_desc& format_desc,
-        fbl::Vector<audio_stream_format_range_t>* supported_formats) {
-    if (!supported_formats)
-        return ZX_ERR_INVALID_ARGS;
-
-    // Record the min/max number of channels.
-    audio_stream_format_range_t range;
-    range.min_channels = format_desc.bNrChannels;
-    range.max_channels = format_desc.bNrChannels;
-
-    // Encode the bit resolution and subframe size from the audio descriptor as
-    // an audio device driver audio_sample_format_t
-    //
-    // TODO(johngro) : figure out how format descriptors are used to indicate
-    // 32-bit floating point, uLaw/aLaw compression, or 8 bit unsigned.  In
-    // theory, there should be a wFormatTag field somewhere in the structure
-    // which indicates this, but their does not appear to be one (currently).
-    // If it follows the pattern of a Type II MPEG audio format, it may be that
-    // bDescriptorSubtype is supposed to be USB_AUDIO_AS_FORMAT_SPECIFIC which
-    // will then be followed by a 2 byte wFormatTag instead of a single byte
-    // bFormatType.
-    switch (format_desc.bBitResolution) {
-    case 8:
-    case 16:
-    case 32: {
-        if (format_desc.bSubFrameSize != (format_desc.bBitResolution >> 3)) {
-            LOG(WARN,
-                "Unsupported format.  Subframe size (%u bytes) does not "
-                "match Bit Res (%u bits)\n",
-                format_desc.bSubFrameSize,
-                format_desc.bBitResolution);
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        switch (format_desc.bBitResolution) {
-        case 8:  range.sample_formats = AUDIO_SAMPLE_FORMAT_8BIT; break;
-        case 16: range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT; break;
-        case 32: range.sample_formats = AUDIO_SAMPLE_FORMAT_32BIT; break;
-        }
-    } break;
-
-    case 20:
-    case 24: {
-        if ((format_desc.bSubFrameSize != 3) && (format_desc.bSubFrameSize != 4)) {
-            LOG(WARN,
-                "Unsupported format.  %u-bit audio must be packed into a 3 "
-                "or 4 byte subframe (Subframe size %u)\n",
-                format_desc.bBitResolution,
-                format_desc.bSubFrameSize);
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-        switch (format_desc.bBitResolution) {
-        case 20: range.sample_formats = (format_desc.bSubFrameSize == 3)
-                                      ? AUDIO_SAMPLE_FORMAT_20BIT_PACKED
-                                      : AUDIO_SAMPLE_FORMAT_20BIT_IN32;
-        case 24: range.sample_formats = (format_desc.bSubFrameSize == 3)
-                                      ? AUDIO_SAMPLE_FORMAT_24BIT_PACKED
-                                      : AUDIO_SAMPLE_FORMAT_24BIT_IN32;
-        }
-    } break;
-
-    default:
-        LOG(WARN, "Unsupported format.  Bad Bit Res (%u bits)\n", format_desc.bBitResolution);
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // If bSamFreqType is 0, it means that we have a continuous range of
-    // sampling frequencies available.  Otherwise, we have a discrete number and
-    // bSamFreqType specifies how many.
-    //
-    // See Universal Serial Bus Device Class Definition for Audio Data Formats
-    // Release 1.0 Tables 2-2 and 2-3.
-    if (format_desc.bSamFreqType) {
-        fbl::AllocChecker ac;
-        supported_formats->reserve(format_desc.bSamFreqType, &ac);
-        if (!ac.check()) {
-            LOG(ERROR, "Out of memory attempting to reserve %u format ranges\n",
-                format_desc.bSamFreqType);
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        // TODO(johngro) : This could be encoded more compactly if wanted to do
-        // so by extracting all of the 48k and 44.1k rates into a bitmask, and
-        // then putting together ranges which represented continuous runs of
-        // frame rates in each of the families.
-        for (uint32_t i = 0; i < format_desc.bSamFreqType; ++i) {
-            uint32_t rate = ExtractSampleRate(format_desc.tSamFreq[i]);
-            range.min_frames_per_second = rate;
-            range.max_frames_per_second = rate;
-
-            if (audio::utils::FrameRateIn48kFamily(rate)) {
-                range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
-            } else
-            if (audio::utils::FrameRateIn441kFamily(rate)) {
-                range.flags = ASF_RANGE_FLAG_FPS_44100_FAMILY;
-            } else {
-                range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
-            }
-
-            supported_formats->push_back(range);
-        }
-        fixed_sample_rate_ = supported_formats->size() <= 1;
-    } else {
-        fbl::AllocChecker ac;
-        supported_formats->reserve(1, &ac);
-        if (!ac.check()) {
-            LOG(ERROR, "Out of memory attempting to reserve 1 format range\n");
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        range.min_frames_per_second = ExtractSampleRate(format_desc.tSamFreq[0]);
-        range.max_frames_per_second = ExtractSampleRate(format_desc.tSamFreq[1]);
-        range.flags = ASF_RANGE_FLAG_FPS_CONTINUOUS;
-
-        supported_formats->push_back(range);
-        fixed_sample_rate_ = false;
-    }
-
-    return ZX_OK;
-}
-
 void UsbAudioStream::DdkUnbind() {
     // Close all of our client event sources if we have not already.
     default_domain_->Deactivate();
 
     // Unpublish our device node.
     DdkRemove();
-
-    // Release our reference to our parent.
-    parent_.reset();
 }
 
 void UsbAudioStream::DdkRelease() {
     // Reclaim our reference from the driver framework and let it go out of
     // scope.  If this is our last reference (it should be), we will destruct
     // immediately afterwards.
-    auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+    auto stream = fbl::internal::MakeRefPtrNoAdopt(this);
+
+    // Make sure that our parent is no longer holding a reference to us.
+    parent_.RemoveAudioStream(stream);
 }
 
 zx_status_t UsbAudioStream::DdkIoctl(uint32_t op,
@@ -454,29 +319,32 @@ zx_status_t UsbAudioStream::ProcessRingBufferChannel(dispatcher::Channel* channe
 zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channel,
                                                      const audio_proto::StreamGetFmtsReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
-    size_t formats_sent = 0;
     audio_proto::StreamGetFmtsResp resp = { };
 
-    if (supported_formats_.size() > fbl::numeric_limits<uint16_t>::max()) {
+    const auto& formats = ifc_->formats();
+    if (formats.size() > fbl::numeric_limits<uint16_t>::max()) {
         LOG(ERROR, "Too many formats (%zu) to send during AUDIO_STREAM_CMD_GET_FORMATS request!\n",
-            supported_formats_.size());
+            formats.size());
         return ZX_ERR_INTERNAL;
     }
 
+    size_t formats_sent = 0;
     resp.hdr = req.hdr;
-    resp.format_range_count = static_cast<uint16_t>(supported_formats_.size());
+    resp.format_range_count = static_cast<uint16_t>(formats.size());
 
     do {
         size_t todo, payload_sz, __UNUSED to_send;
         zx_status_t res;
 
-        todo = fbl::min<size_t>(supported_formats_.size() - formats_sent,
-                                   AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
+        todo = fbl::min<size_t>(formats.size() - formats_sent,
+                                AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE);
         payload_sz = sizeof(resp.format_ranges[0]) * todo;
         to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
 
         resp.first_format_range_ndx = static_cast<uint16_t>(formats_sent);
-        ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+        for (uint32_t i = 0; i < todo; ++i) {
+            resp.format_ranges[i] = formats[formats_sent + i].range_;
+        }
 
         res = channel->Write(&resp, sizeof(resp));
         if (res != ZX_OK) {
@@ -485,7 +353,7 @@ zx_status_t UsbAudioStream::OnGetStreamFormatsLocked(dispatcher::Channel* channe
         }
 
         formats_sent += todo;
-    } while (formats_sent < supported_formats_.size());
+    } while (formats_sent < formats.size());
 
     return ZX_OK;
 }
@@ -497,8 +365,6 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
 
     zx::channel client_rb_channel;
     audio_proto::StreamSetFmtResp resp = { };
-    bool found_one = false;
-
     resp.hdr = req.hdr;
 
     // Only the privileged stream channel is allowed to change the format.
@@ -508,22 +374,56 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
         goto finished;
     }
 
-    // Check the format for compatibility
-    for (const auto& fmt : supported_formats_) {
-        if (audio::utils::FormatIsCompatible(req.frames_per_second,
-                                             req.channels,
-                                             req.sample_format,
-                                             fmt)) {
-            found_one = true;
-            break;
-        }
+    // Look up the details about the interface and the endpoint which will be
+    // used for the requested format.
+    size_t format_ndx;
+    resp.result = ifc_->LookupFormat(req.frames_per_second,
+                                     req.channels,
+                                     req.sample_format,
+                                     &format_ndx);
+    if (resp.result != ZX_OK) {
+        goto finished;
     }
 
-    if (!found_one) {
+    // Determine the frame size needed for this requested format, then compute
+    // the size of our short packets, and the constants used to generate the
+    // short/long packet cadence.  For now, assume that we will be operating at
+    // a 1mSec isochronous rate.
+    //
+    // Make sure that we can fit our longest payload length into one of our
+    // usb requests.
+    //
+    // Store the results of all of these calculations in local variables.  Do
+    // not commit them to member variables until we are certain that we are
+    // going to go ahead with this format change.
+    //
+    // TODO(johngro) : Unless/until we can find some way to set the USB bus
+    // driver to perform direct DMA to/from the Ring Buffer VMO without the need
+    // for software intervention, we may want to expose ways to either increase
+    // the isochronous interval (to minimize load) or to use USB 2.0 125uSec
+    // sub-frame timing (to decrease latency) if possible.
+    uint32_t frame_size;
+    frame_size = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
+    if (!frame_size) {
+        LOG(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n",
+            req.channels, req.sample_format);
+        resp.result = ZX_ERR_INTERNAL;
+        goto finished;
+    }
+
+    static constexpr uint32_t iso_packet_rate = 1000;
+    uint32_t bytes_per_packet, fractional_bpp_inc, long_payload_len;
+    bytes_per_packet   = (req.frames_per_second / iso_packet_rate) * frame_size;
+    fractional_bpp_inc = (req.frames_per_second % iso_packet_rate);
+    long_payload_len   = bytes_per_packet + (fractional_bpp_inc ? frame_size : 0);
+
+    ZX_DEBUG_ASSERT(format_ndx < ifc_->formats().size());
+    if (long_payload_len > ifc_->formats()[format_ndx].max_req_size_) {
         resp.result = ZX_ERR_INVALID_ARGS;
         goto finished;
     }
 
+    // Deny the format change request if the ring buffer is not currently stopped.
     {
         // TODO(johngro) : If the ring buffer is running, should we automatically
         // stop it instead of returning bad state?
@@ -534,37 +434,6 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
         }
     }
 
-    // Determine the frame size.
-    frame_size_ = audio::utils::ComputeFrameSize(req.channels, req.sample_format);
-    if (!frame_size_) {
-        LOG(ERROR, "Failed to compute frame size (ch %hu fmt 0x%08x)\n",
-            req.channels, req.sample_format);
-        resp.result = ZX_ERR_INTERNAL;
-        goto finished;
-    }
-
-    // Compute the size of our short packets, and the constants used to generate
-    // the short/long packet cadence.  For now, assume that we will be operating
-    // at a 1mSec isochronous rate.
-    //
-    // Make sure that we can fit our longest payload length into one of our
-    // usb requests.
-    //
-    // TODO(johngro) : Unless/until we can find some way to set the USB bus
-    // driver to perform direct DMA to/from the Ring Buffer VMO without the need
-    // for software intervention, we may want to expose ways to either increase
-    // the isochronous interval (to minimize load) or to use USB 2.0 125uSec
-    // sub-frame timing (to decrease latency) if possible.
-    uint32_t long_payload_len;
-    iso_packet_rate_    = 1000;
-    bytes_per_packet_   = (req.frames_per_second / iso_packet_rate_) * frame_size_;
-    fractional_bpp_inc_ = (req.frames_per_second % iso_packet_rate_);
-    long_payload_len    = bytes_per_packet_ + (fractional_bpp_inc_ ? frame_size_ : 0);
-    if (long_payload_len > max_req_size_) {
-        resp.result = ZX_ERR_INVALID_ARGS;
-        goto finished;
-    }
-
     // Looks like we are going ahead with this format change.  Tear down any
     // exiting ring buffer interface before proceeding.
     if (rb_channel_ != nullptr) {
@@ -572,10 +441,21 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
         rb_channel_.reset();
     }
 
-    // We always try to keep two isochronous packets in flight at any point in
-    // time.  Based on our cadence generation parameters, determine if it is
-    // possible to have 0, 1 or 2 long packets back to back at any point in time
-    // during the sequence.
+    // Record the details of our cadence and format selection
+    selected_format_ndx_ = format_ndx;
+    selected_frame_rate_ = req.frames_per_second;
+    frame_size_          = frame_size;
+    iso_packet_rate_     = iso_packet_rate;
+    bytes_per_packet_    = bytes_per_packet;
+    fractional_bpp_inc_  = fractional_bpp_inc;
+
+    // Compute the effective fifo depth for this stream.  Right now, we assume
+    // that the controller will never get farther ahead than two isochronous usb
+    // requests, so we report this as the worst case fifo_depth.
+    //
+    // Based on our cadence generation parameters, adjust this number based on
+    // whether or not it is possible to have 0, 1 or 2 long packets back to back
+    // at any point in time during the sequence.
     //
     // TODO(johngro): This is not the proper way to report the FIFO depth.  How
     // far ahead the USB controller will read ahead into its FIFO is going to be
@@ -583,9 +463,6 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
     // possible that this is negotiable to some extent as well.  I need to work
     // with voydanof@ to determine what we can expose from the USB bus driver in
     // order to report this accurately.
-    //
-    // Right now, we assume that the controller will never get farther ahead
-    // than two isochronous usb requests, so we report this the worst case fifo_depth.
     fifo_bytes_ = bytes_per_packet_ << 1;
 
     // If we have no fractional portion to accumulate, we always send
@@ -596,23 +473,6 @@ zx_status_t UsbAudioStream::OnSetStreamFormatLocked(dispatcher::Channel* channel
         fifo_bytes_ += frame_size_;
         if (fractional_bpp_inc_ > (iso_packet_rate_ >> 1)) {
             fifo_bytes_ += frame_size_;
-        }
-    }
-
-    // Send the commands required to set up the new format.  Do not attempt to
-    // set the sample rate if the endpoint supports only one.  In theory,
-    // devices should ignore this request, but in practice, some devices will
-    // refuse the command entirely, and we will get ZX_ERR_IO_REFUSED back from
-    // the bus driver.
-    //
-    // TODO(johngro): more work is needed if we are changing sample format or
-    // channel count.  Right now, we only support the one format/count provided
-    // to us by the outer layer, but eventually we need to support them all.
-    if (!fixed_sample_rate_) {
-        ZX_DEBUG_ASSERT(parent_ != nullptr);
-        resp.result = usb_audio_set_sample_rate(&usb_, usb_ep_addr_, req.frames_per_second);
-        if (resp.result != ZX_OK) {
-            goto finished;
         }
     }
 
@@ -657,37 +517,54 @@ zx_status_t UsbAudioStream::OnGetGainLocked(dispatcher::Channel* channel,
                                             const audio_proto::GetGainReq& req) {
     ZX_DEBUG_ASSERT(channel != nullptr);
     audio_proto::GetGainResp resp = { };
+    resp.hdr = req.hdr;
 
-    resp.hdr       = req.hdr;
-    resp.cur_mute  = false;
-    resp.cur_gain  = 0.0;
-    resp.can_mute  = false;
-    resp.min_gain  = 0.0;
-    resp.max_gain  = 0.0;
-    resp.gain_step = 0.0;
+    ZX_DEBUG_ASSERT(ifc_->path() != nullptr);
+    const auto& path = *(ifc_->path());
+
+    resp.can_mute  = path.has_mute();
+    resp.cur_mute  = path.cur_mute();
+    resp.cur_gain  = path.cur_gain();
+    resp.min_gain  = path.min_gain();
+    resp.max_gain  = path.max_gain();
+    resp.gain_step = path.gain_res();
 
     return channel->Write(&resp, sizeof(resp));
 }
 
 zx_status_t UsbAudioStream::OnSetGainLocked(dispatcher::Channel* channel,
                                             const audio_proto::SetGainReq& req) {
+    // TODO(johngro): Actually perform the set operation on our audio path.
     ZX_DEBUG_ASSERT(channel != nullptr);
-    if (req.hdr.cmd & AUDIO_FLAG_NO_ACK)
-        return ZX_OK;
 
     audio_proto::SetGainResp resp = { };
     resp.hdr = req.hdr;
 
-    bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && (req.flags & AUDIO_SGF_MUTE);
-    bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0.0f);
+    ZX_DEBUG_ASSERT(ifc_->path() != nullptr);
+    auto& path = *(ifc_->path());
+    bool req_mute = req.flags & AUDIO_SGF_MUTE;
+    bool illegal_mute = (req.flags & AUDIO_SGF_MUTE_VALID) && req_mute && !path.has_mute();
+    bool illegal_gain = (req.flags & AUDIO_SGF_GAIN_VALID) && (req.gain != 0) && !path.has_gain();
 
-    resp.cur_mute = false;
-    resp.cur_gain = 0.0;
-    resp.result   = (illegal_mute || illegal_gain)
-                  ? ZX_ERR_INVALID_ARGS
-                  : ZX_OK;
+    if (illegal_mute || illegal_gain) {
+        // If this request is illegal, make no changes but attempt to report the
+        // current state of the world.
+        resp.cur_mute = path.cur_mute();
+        resp.cur_gain = path.cur_gain();
+        resp.result = ZX_ERR_INVALID_ARGS;
+    } else {
+        if (req.flags & AUDIO_SGF_MUTE_VALID) {
+            resp.cur_mute = path.SetMute(parent_.usb_proto(), req_mute);
+        }
 
-    return channel->Write(&resp, sizeof(resp));
+        if (req.flags & AUDIO_SGF_GAIN_VALID) {
+            resp.cur_gain = path.SetGain(parent_.usb_proto(), req.gain);
+        }
+
+        resp.result = ZX_OK;
+    }
+
+    return (req.hdr.cmd & AUDIO_FLAG_NO_ACK) ? ZX_OK : channel->Write(&resp, sizeof(resp));
 }
 
 zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
@@ -697,8 +574,7 @@ zx_status_t UsbAudioStream::OnPlugDetectLocked(dispatcher::Channel* channel,
 
     audio_proto::PlugDetectResp resp = { };
     resp.hdr   = req.hdr;
-    resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED |
-                                                       AUDIO_PDNF_PLUGGED);
+    resp.flags = static_cast<audio_pd_notify_flags_t>(AUDIO_PDNF_HARDWIRED | AUDIO_PDNF_PLUGGED);
     resp.plug_state_time = create_time_;
 
     return channel->Write(&resp, sizeof(resp));
@@ -823,9 +699,10 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
     // We are idle, all of our usb requests should be sitting in the free list.
     ZX_DEBUG_ASSERT(allocated_req_cnt_ == free_req_cnt_);
 
-    // switch to alternate interface if necessary
-    if (alt_setting_ != 0) {
-        usb_set_interface(&usb_, iface_num_, alt_setting_);
+    // Activate the format.
+    resp.result = ifc_->ActivateFormat(selected_format_ndx_, selected_frame_rate_);
+    if (resp.result != ZX_OK) {
+        return channel->Write(&resp, sizeof(resp));
     }
 
     // Initialize the counters used to...
@@ -850,15 +727,13 @@ zx_status_t UsbAudioStream::OnStartLocked(dispatcher::Channel* channel,
     // isochronous frame" sentinel value and figure out which frame that was
     // during the callback.
     size_t read_amt;
-    resp.result = device_ioctl(parent_->parent(), IOCTL_USB_GET_CURRENT_FRAME,
+    resp.result = device_ioctl(parent_.parent(), IOCTL_USB_GET_CURRENT_FRAME,
                                NULL, 0,
                                &usb_frame_num_, sizeof(usb_frame_num_),
                                &read_amt);
     if ((resp.result != ZX_OK) || (read_amt != sizeof(usb_frame_num_))) {
         LOG(ERROR, "Failed to fetch USB frame number!  (res %d, amt %zu)\n", resp.result, read_amt);
-        if (alt_setting_ != 0) {
-            usb_set_interface(&usb_, iface_num_, 0);
-        }
+        ifc_->ActivateIdleFormat();
         return channel->Write(&resp, sizeof(resp));
     }
 
@@ -880,10 +755,11 @@ zx_status_t UsbAudioStream::OnStopLocked(dispatcher::Channel* channel,
                                          const audio_proto::RingBufStopReq& req) {
     fbl::AutoLock req_lock(&req_lock_);
 
-    // TODO(johngro): We currently cannot cancel USB transactions once queued.
-    // When we can, we can come back and simply cancel the in-flight
-    // transactions instead of having an intermediate STOPPING state we use to
-    // wait for the transactions in flight to finish via RequestComplete.
+    // TODO(johngro): Fix this to use the cancel transaction capabilities added
+    // to the USB bus driver.
+    //
+    // Also, investigate whether or not the cancel interface is syncronous or
+    // whether we will need to maintain an intermediate stopping state.
     if (ring_buffer_state_ != RingBufferState::STARTED) {
         audio_proto::RingBufStopResp resp = { };
 
@@ -1045,6 +921,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
             {
                 fbl::AutoLock req_lock(&req_lock_);
                 ring_buffer_state_ = RingBufferState::STOPPED;
+                ifc_->ActivateIdleFormat();
             }
             break;
 
@@ -1104,7 +981,7 @@ void UsbAudioStream::QueueRequestLocked() {
 
     req->header.frame = usb_frame_num_++;
     req->header.length = todo;
-    usb_request_queue(&usb_, req);
+    usb_request_queue(&parent_.usb_proto(), req);
 }
 
 void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {

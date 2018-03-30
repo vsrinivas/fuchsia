@@ -6,13 +6,20 @@
 
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <zircon/thread_annotations.h>
 
+#include "usb-audio-control-interface.h"
+#include "usb-audio-descriptors.h"
 #include "debug-logging.h"
 
 namespace audio {
 namespace usb {
+
+class UsbAudioStream;
 
 class UsbAudioDevice;
 using UsbAudioDeviceBase = ddk::Device<UsbAudioDevice, ddk::Unbindable>;
@@ -23,6 +30,8 @@ public:
     static zx_status_t DriverBind(zx_device_t* parent);
     void DdkUnbind();
     void DdkRelease();
+
+    void RemoveAudioStream(const fbl::RefPtr<UsbAudioStream>& stream);
 
     const char* log_prefix() const { return log_prefix_; }
     const usb_device_descriptor_t& desc() const { return usb_dev_desc_; }
@@ -39,7 +48,10 @@ private:
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     usb_protocol_t usb_proto_;
+    fbl::Mutex lock_;
     usb_device_descriptor_t usb_dev_desc_;
+    fbl::RefPtr<DescriptorListMemory> desc_list_;
+    fbl::DoublyLinkedList<fbl::RefPtr<UsbAudioStream>> streams_ TA_GUARDED(lock_);
 };
 
 }  // namespace usb

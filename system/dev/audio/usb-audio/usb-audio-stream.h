@@ -7,10 +7,13 @@
 #include <ddktl/device.h>
 #include <ddktl/device-internal.h>
 #include <driver/usb.h>
-#include <zircon/listnode.h>
-#include <lib/zx/vmo.h>
+#include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+#include <lib/zx/vmo.h>
+#include <zircon/listnode.h>
 
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
@@ -22,6 +25,7 @@ namespace audio {
 namespace usb {
 
 class UsbAudioDevice;
+class UsbAudioStreamInterface;
 
 struct AudioStreamProtocol : public ddk::internal::base_protocol {
     explicit AudioStreamProtocol(bool is_input) {
@@ -38,15 +42,12 @@ using UsbAudioStreamBase = ddk::Device<UsbAudioStream,
 
 class UsbAudioStream : public UsbAudioStreamBase,
                        public AudioStreamProtocol,
-                       public fbl::RefCounted<UsbAudioStream> {
+                       public fbl::RefCounted<UsbAudioStream>,
+                       public fbl::DoublyLinkedListable<fbl::RefPtr<UsbAudioStream>> {
 public:
-    static zx_status_t Create(fbl::RefPtr<UsbAudioDevice> parent,
-                              bool is_input,
-                              usb_protocol_t* usb,
-                              int index,
-                              usb_interface_descriptor_t* usb_interface,
-                              usb_endpoint_descriptor_t* usb_endpoint,
-                              usb_audio_ac_format_type_i_desc* format_desc);
+    static fbl::RefPtr<UsbAudioStream> Create(UsbAudioDevice* parent,
+                                              fbl::unique_ptr<UsbAudioStreamInterface> ifc);
+    zx_status_t Bind();
 
     const char* log_prefix() const { return log_prefix_; }
 
@@ -68,22 +69,12 @@ private:
         STARTED,
     };
 
-    UsbAudioStream(fbl::RefPtr<UsbAudioDevice> parent,
-                   usb_protocol_t* usb,
-                   bool is_input,
-                   int usb_index,
-                   fbl::RefPtr<dispatcher::ExecutionDomain>&& default_domain);
+    UsbAudioStream(UsbAudioDevice* parent,
+                   fbl::unique_ptr<UsbAudioStreamInterface> ifc,
+                   fbl::RefPtr<dispatcher::ExecutionDomain> default_domain);
     virtual ~UsbAudioStream();
 
-    zx_status_t Bind(const char* devname,
-                     usb_interface_descriptor_t* usb_interface,
-                     usb_endpoint_descriptor_t* usb_endpoint,
-                     usb_audio_ac_format_type_i_desc* format_desc);
-
     void ReleaseRingBufferLocked() __TA_REQUIRES(lock_);
-
-    zx_status_t AddFormats(const usb_audio_ac_format_type_i_desc& format_desc,
-                           fbl::Vector<audio_stream_format_range_t>* supported_formats);
 
     // Thunks for dispatching stream channel events.
     zx_status_t ProcessStreamChannel(dispatcher::Channel* channel, bool privileged);
@@ -122,23 +113,20 @@ private:
     void QueueRequestLocked() __TA_REQUIRES(req_lock_);
     void CompleteRequestLocked(usb_request_t* req) __TA_REQUIRES(req_lock_);
 
-    fbl::RefPtr<UsbAudioDevice> parent_;
-    usb_protocol_t usb_;
+    UsbAudioDevice& parent_;
+    const fbl::unique_ptr<UsbAudioStreamInterface> ifc_;
+    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
+
     fbl::Mutex lock_;
     fbl::Mutex req_lock_ __TA_ACQUIRED_AFTER(lock_);
-    char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::Channel> rb_channel_     __TA_GUARDED(lock_);
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
-    // TODO(johngro) : support parsing and selecting from all of the format
-    // descriptors present for a stream, not just a single format (with multiple
-    // sample rates).
-    fbl::Vector<audio_stream_format_range_t> supported_formats_;
-    bool fixed_sample_rate_ = false;
-
+    size_t   selected_format_ndx_;
+    uint32_t selected_frame_rate_;
     uint32_t frame_size_;
     uint32_t iso_packet_rate_;
     uint32_t bytes_per_packet_;
@@ -166,13 +154,6 @@ private:
     list_node_t     free_req_ __TA_GUARDED(req_lock_);
     uint32_t        free_req_cnt_ __TA_GUARDED(req_lock_);
     uint32_t        allocated_req_cnt_;
-    uint32_t        max_req_size_;
-
-    uint8_t         iface_num_   = 0;
-    uint8_t         alt_setting_ = 0;
-    uint8_t         usb_ep_addr_ = 0;
-
-    const int       usb_index_;
     const zx_time_t create_time_;
 
     // TODO(johngro) : See MG-940.  eliminate this ASAP
