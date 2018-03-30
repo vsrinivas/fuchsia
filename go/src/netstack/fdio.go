@@ -549,6 +549,21 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 		if err := s.Share(peerS); err != nil {
 			return err
 		}
+		// SignalPeer CONNECTED first, then locally Signal CONNECTED.
+		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
+		switch status := mxerror.Status(err); status {
+		case zx.ErrOk:
+		case zx.ErrPeerClosed:
+			// The peer might have closed the handle.
+		default:
+			log.Printf("signal-peer failed: %v", err)
+			return err
+		}
+		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
+		if err != nil {
+			log.Printf("signal failed: %v", err)
+			return err
+		}
 	} else {
 		// Before we add a dispatcher for this iostate, respond to the client describing what
 		// kind of object this is.
@@ -569,21 +584,6 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 
 	ios.controlLoopDone = make(chan struct{})
 	go ios.loopControl(s, int64(newCookie))
-
-	if isAccept {
-		// Signal 'Connected' to the peer.
-		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
-		if err != nil {
-			log.Printf("socket signal-peer ZXSIO_SIGNAL_CONNECTED: %v", err)
-			return err
-		}
-		// Signal 'Connected' locally.
-		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
-		if err != nil {
-			log.Printf("socket signal ZXSIO_SIGNAL_CONNECTED: %v", err)
-			return err
-		}
-	}
 
 	switch transProto {
 	case tcp.ProtocolNumber:
@@ -1043,7 +1043,7 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true)
 		if err != nil {
 			if debug {
-				log.Printf("listen: newIostate failed: %v", e)
+				log.Printf("listen: newIostate failed: %v", err)
 			}
 			return
 		}
@@ -1141,14 +1141,40 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 				ios.mu.Lock()
 				ios.lastError = e
 				ios.mu.Unlock()
-				// Signal 'Outgoing' to the peer.
-				ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING)
+				err = ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING)
+				switch status := mxerror.Status(err); status {
+				case zx.ErrOk:
+				case zx.ErrPeerClosed:
+					// The peer might have closed the handle.
+				default:
+					log.Printf("connect: signal-peer failed: %v", err)
+					// TODO: communicate this to the client
+				}
 				return
 			}
-			// Signal 'Outgoing' and 'Connected' to the peer.
-			ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED)
-			// Signal 'Connected' locally.
-			ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
+			// SignalPeer CONNECTED first, then locally Signal CONNECTED.
+  			// This way the peer always detects CONNECTED signal before any data is written by
+			// loopSocketRead.
+			err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED)
+			switch status := mxerror.Status(err); status {
+			case zx.ErrOk:
+			case zx.ErrBadHandle, zx.ErrPeerClosed:
+				// The socket might have been closed.
+				// TODO: consider synchronizing with iosCloseHandler.
+			default:
+				log.Printf("connect: signal-peer failed: %v", err)
+				// TODO: communicate this to the client
+			}
+			err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
+			switch status := mxerror.Status(err); status {
+			case zx.ErrOk:
+			case zx.ErrBadHandle, zx.ErrPeerClosed:
+				// The socket might have been closed.
+				// TODO: consider synchronizing with iosCloseHandler.
+			default:
+				log.Printf("connect: signal failed: %v", err)
+				// TODO: communicate this to the client
+			}
 		}()
 		return zx.ErrShouldWait
 	}
@@ -1161,25 +1187,20 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
-		// Signal 'Connected' to the peer.
+		// SignalPeer CONNECTED first, then locally Signal CONNECTED.
 		err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_CONNECTED)
 		switch status := mxerror.Status(err); status {
 		case zx.ErrOk:
-			// NOP
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-			return status
+		case zx.ErrPeerClosed:
+			// The peer might have closed the handle.
 		default:
 			log.Printf("connect: signal-peer failed: %v", err)
-		}
-		// Signal 'Connected' locally.
-		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
-		switch status := mxerror.Status(err); status {
-		case zx.ErrOk:
-			// NOP
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return status
-		default:
+		}
+		err = ios.dataHandle.Signal(0, ZXSIO_SIGNAL_CONNECTED)
+		if err != nil {
 			log.Printf("connect: signal failed: %v", err)
+			return mxerror.Status(err)
 		}
 	}
 
