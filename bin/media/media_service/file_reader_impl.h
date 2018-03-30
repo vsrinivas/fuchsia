@@ -6,13 +6,13 @@
 
 #include <memory>
 
+#include <fuchsia/cpp/media.h>
 #include <zx/socket.h>
 
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -38,12 +38,6 @@ class FileReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
   FileReaderImpl(fxl::UniqueFD fd,
                  fidl::InterfaceRequest<SeekingReader> request,
                  MediaComponentFactory* owner);
-
-  // Callback function for WriteToSocket's async wait.
-  static void WriteToSocketStatic(zx_status_t status,
-                                  zx_signals_t pending,
-                                  uint64_t count,
-                                  void* closure);
 
   // Writes data to socket_;
   void WriteToSocket();

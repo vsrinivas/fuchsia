@@ -108,28 +108,6 @@ void FileReaderImpl::ReadAt(uint64_t position, ReadAtCallback callback) {
   callback(result_, std::move(other_socket));
 }
 
-// static
-void FileReaderImpl::WriteToSocketStatic(zx_status_t status,
-                                         zx_signals_t pending,
-                                         uint64_t count,
-                                         void* closure) {
-  FileReaderImpl* reader = reinterpret_cast<FileReaderImpl*>(closure);
-  reader->wait_id_ = 0;
-  if (status == ZX_ERR_CANCELED) {
-    // Run loop has aborted...the app is shutting down.
-    reader->socket_.reset();
-    return;
-  }
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx::socket::write failed, status " << status;
-    reader->socket_.reset();
-    return;
-  }
-
-  reader->WriteToSocket();
-}
-
 void FileReaderImpl::WriteToSocket() {
   while (true) {
     if (remaining_buffer_bytes_count_ == 0 && !reached_end_) {
@@ -157,7 +135,24 @@ void FileReaderImpl::WriteToSocket() {
     if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE, FileReaderImpl::WriteToSocketStatic, this);
+          ZX_TIME_INFINITE,
+          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
+            wait_id_ = 0;
+            if (status == ZX_ERR_CANCELED) {
+              // Run loop has aborted...the app is shutting down.
+              socket_.reset();
+              return;
+            }
+
+            if (status != ZX_OK) {
+              FXL_LOG(ERROR) << "zx::socket::write failed, status " << status;
+              socket_.reset();
+              return;
+            }
+
+            WriteToSocket();
+          });
+
       return;
     }
 

@@ -86,7 +86,22 @@ void FakeWavReader::WriteToSocket() {
     if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE, FakeWavReader::WriteToSocketStatic, this);
+          ZX_TIME_INFINITE,
+          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
+            wait_id_ = 0;
+            if (status == ZX_ERR_CANCELED) {
+              // Run loop has aborted...the app is shutting down.
+              return;
+            }
+
+            if (status != ZX_OK) {
+              FXL_LOG(ERROR) << "AsyncWait failed " << status;
+              socket_.reset();
+              return;
+            }
+
+            WriteToSocket();
+          });
       return;
     }
 
@@ -129,27 +144,6 @@ uint8_t FakeWavReader::GetByte(size_t position) {
 
   // Unpleasant sound.
   return static_cast<uint8_t>(position ^ (position >> 8));
-}
-
-// static
-void FakeWavReader::WriteToSocketStatic(zx_status_t status,
-                                        zx_signals_t pending,
-                                        uint64_t count,
-                                        void* closure) {
-  FakeWavReader* reader = reinterpret_cast<FakeWavReader*>(closure);
-  reader->wait_id_ = 0;
-  if (status == ZX_ERR_CANCELED) {
-    // Run loop has aborted...the app is shutting down.
-    return;
-  }
-
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "AsyncWait failed " << status;
-    reader->socket_.reset();
-    return;
-  }
-
-  reader->WriteToSocket();
 }
 
 }  // namespace media

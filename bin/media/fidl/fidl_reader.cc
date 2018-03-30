@@ -119,7 +119,21 @@ void FidlReader::ReadFromSocket() {
     if (status == ZX_ERR_SHOULD_WAIT) {
       wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
           socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE, FidlReader::ReadFromSocketStatic, this);
+          ZX_TIME_INFINITE,
+          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
+            wait_id_ = 0;
+
+            if (status != ZX_OK) {
+              if (status != ZX_ERR_CANCELED) {
+                FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
+              }
+
+              FailReadAt(status);
+              return;
+            }
+
+            ReadFromSocket();
+          });
       break;
     }
 
@@ -165,27 +179,6 @@ void FidlReader::FailReadAt(zx_status_t status) {
   socket_.reset();
   socket_position_ = kUnknownSize;
   CompleteReadAt(result_);
-}
-
-// static
-void FidlReader::ReadFromSocketStatic(zx_status_t status,
-                                      zx_signals_t pending,
-                                      uint64_t count,
-                                      void* closure) {
-  FidlReader* reader = reinterpret_cast<FidlReader*>(closure);
-
-  reader->wait_id_ = 0;
-
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_CANCELED) {
-      FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
-    }
-
-    reader->FailReadAt(status);
-    return;
-  }
-
-  reader->ReadFromSocket();
 }
 
 }  // namespace media

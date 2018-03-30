@@ -38,12 +38,6 @@ class FidlReader : public Reader,
               ReadAtCallback callback) override;
 
  private:
-  // Calls ReadFromSocket.
-  static void ReadFromSocketStatic(zx_status_t status,
-                                   zx_signals_t pending,
-                                   uint64_t count,
-                                   void* closure);
-
   FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader);
 
   // Continues a ReadAt operation on the thread on which this reader was

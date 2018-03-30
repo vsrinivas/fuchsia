@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIN_MEDIA_FIDL_FIDL_ASYNC_WAITER_H_
-#define BIN_MEDIA_FIDL_FIDL_ASYNC_WAITER_H_
+#pragma once
 
-#include <zircon/types.h>
+#include <functional>
+
 #include <stdint.h>
+#include <zircon/types.h>
+
+namespace media {
 
 typedef uint64_t FidlAsyncWaitID;
 static_assert(sizeof(uintptr_t) <= sizeof(uint64_t),
               "uintptr_t larger than uint64_t!");
-
-typedef void (*FidlAsyncWaitCallback)(zx_status_t result,
-                                      zx_signals_t pending,
-                                      uint64_t count,
-                                      void* closure);
 
 // Functions for asynchronously waiting (and cancelling asynchronous waits) on a
 // handle.
@@ -31,6 +29,9 @@ typedef void (*FidlAsyncWaitCallback)(zx_status_t result,
 //   - If a |FidlAsyncWaiter| is valid on multiple threads, then its functions
 //     must be thread-safe (subject to the first restriction above).
 struct FidlAsyncWaiter {
+  using FidlAsyncWaitCallback = std::function<
+      void(zx_status_t result, zx_signals_t pending, uint64_t count)>;
+
   // Arranges for |callback| to be called on the current thread at some future
   // when |handle| satisfies |signals| or it is known that it will never satisfy
   // |signals| (with the same behavior as |zx_object_wait_one()|).
@@ -49,11 +50,10 @@ struct FidlAsyncWaiter {
   //
   // Note that once the callback has been called, the returned |FidlAsyncWaitID|
   // becomes invalid.
-  FidlAsyncWaitID (*AsyncWait)(zx_handle_t handle,
-                               zx_signals_t signals,
-                               zx_time_t timeout,
-                               FidlAsyncWaitCallback callback,
-                               void* closure);
+  FidlAsyncWaitID AsyncWait(zx_handle_t handle,
+                            zx_signals_t signals,
+                            zx_time_t timeout,
+                            FidlAsyncWaitCallback callback) const;
 
   // Cancels an outstanding async wait (specified by |wait_id|) initiated by
   // |AsyncWait()|. This may only be called from the same thread on which the
@@ -65,7 +65,7 @@ struct FidlAsyncWaiter {
   // handle provided to |AsyncWait()|. (I.e., the implementation of this
   // |MojoAsyncWaiter| will no longer wait on, or do anything else with, the
   // handle.)
-  void (*CancelWait)(FidlAsyncWaitID wait_id);
+  void CancelWait(FidlAsyncWaitID wait_id) const;
 };
 
-#endif  // BIN_MEDIA_FIDL_FIDL_ASYNC_WAITER_H_
+}  // namespace media

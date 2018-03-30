@@ -4,8 +4,8 @@
 
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 
-#include "lib/fxl/logging.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/logging.h"
 
 namespace media {
 namespace {
@@ -13,9 +13,8 @@ namespace {
 class HandleWatcher : public fsl::MessageLoopHandler {
  public:
   HandleWatcher(zx_handle_t handle,
-                FidlAsyncWaitCallback callback,
-                void* context)
-      : key_(0), handle_(handle), callback_(callback), context_(context) {}
+                FidlAsyncWaiter::FidlAsyncWaitCallback callback)
+      : key_(0), handle_(handle), callback_(callback) {}
 
   ~HandleWatcher() {
     if (key_)
@@ -34,7 +33,9 @@ class HandleWatcher : public fsl::MessageLoopHandler {
   }
 
  protected:
-  void OnHandleReady(zx_handle_t handle, zx_signals_t pending, uint64_t count) override {
+  void OnHandleReady(zx_handle_t handle,
+                     zx_signals_t pending,
+                     uint64_t count) override {
     FXL_DCHECK(handle_ == handle);
     CallCallback(ZX_OK, pending, count);
   }
@@ -46,38 +47,36 @@ class HandleWatcher : public fsl::MessageLoopHandler {
 
  private:
   void CallCallback(zx_status_t status, zx_signals_t pending, uint64_t count) {
-    FidlAsyncWaitCallback callback = callback_;
-    void* context = context_;
+    FidlAsyncWaiter::FidlAsyncWaitCallback callback = callback_;
     delete this;
-    callback(status, pending, count, context);
+    callback(status, pending, count);
   }
 
   fsl::MessageLoop::HandlerKey key_;
   zx_handle_t handle_;
-  FidlAsyncWaitCallback callback_;
-  void* context_;
+  FidlAsyncWaiter::FidlAsyncWaitCallback callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HandleWatcher);
 };
 
-FidlAsyncWaitID AsyncWait(zx_handle_t handle,
-                          zx_signals_t signals,
-                          zx_time_t timeout,
-                          FidlAsyncWaitCallback callback,
-                          void* context) {
+}  // namespace
+
+FidlAsyncWaitID FidlAsyncWaiter::AsyncWait(
+    zx_handle_t handle,
+    zx_signals_t signals,
+    zx_time_t timeout,
+    FidlAsyncWaitCallback callback) const {
   // This instance will be deleted when done or cancelled.
-  HandleWatcher* watcher = new HandleWatcher(handle, callback, context);
+  HandleWatcher* watcher = new HandleWatcher(handle, callback);
   watcher->Start(signals, timeout);
   return reinterpret_cast<FidlAsyncWaitID>(watcher);
 }
 
-void CancelWait(FidlAsyncWaitID wait_id) {
+void FidlAsyncWaiter::CancelWait(FidlAsyncWaitID wait_id) const {
   delete reinterpret_cast<HandleWatcher*>(wait_id);
 }
 
-constexpr FidlAsyncWaiter kDefaultAsyncWaiter = {AsyncWait, CancelWait};
-
-}  // namespace
+const FidlAsyncWaiter kDefaultAsyncWaiter;
 
 const FidlAsyncWaiter* GetDefaultAsyncWaiter() {
   return &kDefaultAsyncWaiter;

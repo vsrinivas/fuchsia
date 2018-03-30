@@ -6,12 +6,12 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/media.h>
 #include <zx/socket.h>
 
 #include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -49,12 +49,6 @@ class FakeWavReader : public SeekingReader {
   static constexpr uint16_t kSamplesPerFrame = 2;      // Stereo
   static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
   static constexpr uint16_t kBitsPerSample = 16;       // 16-bit samples
-
-  // Callback function for WriteToSocket's async wait.
-  static void WriteToSocketStatic(zx_status_t status,
-                                  zx_signals_t pending,
-                                  uint64_t count,
-                                  void* closure);
 
   // Writes data to socket_ starting at postion_;
   void WriteToSocket();
