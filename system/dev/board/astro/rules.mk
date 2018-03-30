@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-usb.c \
 
 MODULE_STATIC_LIBS := \
+    system/dev/soc/amlogic \
     system/ulib/ddk \
     system/ulib/sync
 

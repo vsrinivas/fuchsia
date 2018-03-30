@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/a113-clocks.c \
+    $(LOCAL_DIR)/aml-usb-phy-v2.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

@@ -51,11 +51,11 @@ static int aml_start_thread(void* arg) {
         zxlogf(ERROR, "aml_i2c_init failed: %d\n", status);
         goto fail;
     }
+*/
     if ((status = aml_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "aml_usb_init failed: %d\n", status);
         goto fail;
     }
-*/
 
     return ZX_OK;
 fail:
