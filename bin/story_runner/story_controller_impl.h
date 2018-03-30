@@ -16,20 +16,18 @@
 #include <string>
 #include <vector>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
-#include <fuchsia/cpp/component.h>
 #include "lib/async/cpp/operation.h"
-#include <fuchsia/cpp/modular.h>
-#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
-#include <fuchsia/cpp/modular.h>
 #include "peridot/bin/story_runner/link_impl.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/scope.h"
@@ -214,7 +212,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void SetInfoExtra(fidl::StringPtr name,
                     fidl::StringPtr value,
                     SetInfoExtraCallback callback) override;
-  void Start(fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
+  void Start(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
   void Stop(StopCallback done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
   void AddModuleDeprecated(fidl::VectorPtr<fidl::StringPtr> module_path,
@@ -239,7 +238,8 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                  SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
-  void StartStoryShell(fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
+  void StartStoryShell(
+      fidl::InterfaceRequest<views_v1_token::ViewOwner> request);
 
   // Misc internal helpers.
   void NotifyStateChange();
@@ -294,14 +294,15 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   // Holds the view of a non-embedded running module (identified by its
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
-  std::map<fidl::StringPtr,
-           std::pair<fidl::VectorPtr<fidl::StringPtr>, views_v1_token::ViewOwnerPtr>>
+  std::map<
+      fidl::StringPtr,
+      std::pair<fidl::VectorPtr<fidl::StringPtr>, views_v1_token::ViewOwnerPtr>>
       pending_views_;
 
   // The first ingredient of a story: Modules. For each Module in the Story,
   // there is one Connection to it.
   struct Connection {
-    ModuleData module_data;
+    ModuleDataPtr module_data;
     EmbedModuleWatcherPtr embed_module_watcher;
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;

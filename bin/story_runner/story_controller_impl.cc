@@ -321,9 +321,9 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // TODO(mesch): If only the link is different, we should just hook the
     // existing module instance on a new link and notify it about the changed
     // link value.
-    if (i->module_data.module_url != module_data_->module_url ||
-        i->module_data.link_path != module_data_->link_path ||
-        !ChainDataEqual(i->module_data.chain_data, module_data_->chain_data) ||
+    if (i->module_data->module_url != module_data_->module_url ||
+        i->module_data->link_path != module_data_->link_path ||
+        !ChainDataEqual(i->module_data->chain_data, module_data_->chain_data) ||
         embed_module_watcher_.is_valid() || incoming_services_.is_valid()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
@@ -361,7 +361,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     service_list->provider = std::move(provider);
 
     Connection connection;
-    module_data_->Clone(&connection.module_data);
+    fidl::Clone(module_data_, &connection.module_data);
 
     if (embed_module_watcher_.is_valid()) {
       connection.embed_module_watcher.Bind(std::move(embed_module_watcher_));
@@ -384,7 +384,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     connection.module_controller_impl = std::make_unique<ModuleControllerImpl>(
         story_controller_impl_,
         story_controller_impl_->story_scope_.GetLauncher(),
-        std::move(module_config), &connection.module_data,
+        std::move(module_config), connection.module_data.get(),
         std::move(service_list), std::move(module_context),
         std::move(view_provider_request), std::move(incoming_services_));
 
@@ -403,7 +403,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         story_controller_impl_->story_provider_impl_->module_resolver()};
 
     connection.module_context_impl = std::make_unique<ModuleContextImpl>(
-        module_context_info, &connection.module_data,
+        module_context_info, connection.module_data.get(),
         connection.module_controller_impl.get(), std::move(provider_request));
 
     story_controller_impl_->connections_.emplace_back(std::move(connection));
@@ -911,7 +911,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
 
     auto* const anchor = story_controller_impl_->FindAnchor(connection);
     if (anchor) {
-      const auto anchor_view_id = PathString(anchor->module_data.module_path);
+      const auto anchor_view_id = PathString(anchor->module_data->module_path);
       if (story_controller_impl_->connected_views_.count(anchor_view_id)) {
         ConnectView(flow, anchor_view_id);
         return;
@@ -1491,7 +1491,7 @@ class StoryControllerImpl::FocusCall : Operation<> {
       // Focus modules relative to their anchor module.
       story_controller_impl_->story_shell_->FocusView(
           PathString(module_path_),
-          PathString(anchor->module_data.module_path));
+          PathString(anchor->module_data->module_path));
     } else {
       // Focus root modules absolutely.
       story_controller_impl_->story_shell_->FocusView(PathString(module_path_),
@@ -2005,7 +2005,7 @@ void StoryControllerImpl::ReleaseModule(
                         });
   FXL_DCHECK(f != connections_.end());
   f->module_controller_impl.release();
-  pending_views_.erase(PathString(f->module_data.module_path));
+  pending_views_.erase(PathString(f->module_data->module_path));
   connections_.erase(f);
 }
 
@@ -2175,7 +2175,7 @@ void StoryControllerImpl::ProcessPendingViews() {
       continue;
     }
 
-    const auto anchor_view_id = PathString(anchor->module_data.module_path);
+    const auto anchor_view_id = PathString(anchor->module_data->module_path);
     if (!connected_views_.count(anchor_view_id)) {
       continue;
     }
@@ -2183,7 +2183,7 @@ void StoryControllerImpl::ProcessPendingViews() {
     const auto view_id = PathString(kv.second.first);
     story_shell_->ConnectView(
         std::move(kv.second.second), view_id, anchor_view_id,
-        CloneOptional(connection->module_data.surface_relation),
+        CloneOptional(connection->module_data->surface_relation),
         nullptr /* module_manifest */);
     connected_views_.emplace(view_id);
 
@@ -2313,7 +2313,7 @@ void StoryControllerImpl::GetActiveModules(
                      fidl::VectorPtr<ModuleData> result;
                      result.resize(connections_.size());
                      for (size_t i = 0; i < connections_.size(); i++) {
-                       connections_[i].module_data.Clone(&result->at(i));
+                       connections_[i].module_data->Clone(&result->at(i));
                      }
                      callback(std::move(result));
                    }));
@@ -2336,7 +2336,7 @@ void StoryControllerImpl::GetModuleController(
     this, module_path = std::move(module_path), request = std::move(request)
   ]() mutable {
     for (auto& connection : connections_) {
-      if (module_path == connection.module_data.module_path) {
+      if (module_path == connection.module_data->module_path) {
         connection.module_controller_impl->Connect(std::move(request));
         return;
       }
@@ -2455,7 +2455,7 @@ bool StoryControllerImpl::IsExternalModule(
     return false;
   }
 
-  return i->module_data.module_source == ModuleSource::EXTERNAL;
+  return i->module_data->module_source == ModuleSource::EXTERNAL;
 }
 
 void StoryControllerImpl::OnModuleStateChange(
@@ -2518,7 +2518,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     fidl::StringPtr path = module_path->at(module_path->size() - 1);
   }
   for (auto& c : connections_) {
-    if (c.module_data.module_path == module_path) {
+    if (c.module_data->module_path == module_path) {
       return &c;
     }
   }
@@ -2532,13 +2532,13 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
   }
 
   auto* anchor =
-      FindConnection(ParentModulePath(connection->module_data.module_path));
+      FindConnection(ParentModulePath(connection->module_data->module_path));
 
   // Traverse up until there is a non-embedded module. We recognize non-embedded
   // modules by having a non-null SurfaceRelation. If the root module is there
   // at all, it has a non-null surface relation.
-  while (anchor && anchor->module_data.surface_relation) {
-    anchor = FindConnection(ParentModulePath(anchor->module_data.module_path));
+  while (anchor && anchor->module_data->surface_relation) {
+    anchor = FindConnection(ParentModulePath(anchor->module_data->module_path));
   }
 
   return anchor;
@@ -2553,7 +2553,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindEmbedder(
     if (parent->embed_module_watcher) {
       return parent;
     }
-    parent = FindConnection(ParentModulePath(parent->module_data.module_path));
+    parent = FindConnection(ParentModulePath(parent->module_data->module_path));
   }
 
   return nullptr;
