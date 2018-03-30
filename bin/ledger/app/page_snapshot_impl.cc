@@ -26,6 +26,16 @@
 namespace ledger {
 namespace {
 
+// Transform a SizedVmo tp an optional SizedVmoTransport. Returns null when
+// status is not OK, or a not-null transport otherwise.
+fsl::SizedVmoTransportPtr ToOptionalTransport(Status status,
+                                              fsl::SizedVmo vmo) {
+  if (status != Status::OK) {
+    return nullptr;
+  }
+  return fidl::MakeOptional(std::move(vmo).ToTransport());
+}
+
 template <typename EntryType>
 EntryType CreateEntry(const storage::Entry& entry) {
   EntryType result;
@@ -78,8 +88,11 @@ storage::Status FillSingleEntry(const storage::Object& object,
                                 InlinedEntry* entry) {
   fxl::StringView data;
   storage::Status status = object.GetData(&data);
+  if (status != storage::Status::OK) {
+    return status;
+  }
   entry->value = convert::ToArray(data);
-  return status;
+  return storage::Status::OK;
 }
 
 // Calls |callback| with filled entries of the provided type per
@@ -208,17 +221,17 @@ void FillEntries(
 
                 storage::Status read_status =
                     FillSingleEntry(*results[i], &entry);
+                if (read_status != storage::Status::OK) {
+                  callback(PageUtils::ConvertStatus(read_status), nullptr,
+                           nullptr);
+                  return;
+                }
                 size_t entry_size = ComputeEntrySize(entry);
                 if (real_size + entry_size + next_token_size >
                     fidl_serialization::kMaxInlineDataSize) {
                   break;
                 }
                 real_size += entry_size;
-                if (read_status != storage::Status::OK) {
-                  callback(PageUtils::ConvertStatus(read_status), nullptr,
-                           nullptr);
-                  return;
-                }
               }
               if (i != results.size()) {
                 if (i == 0) {
@@ -339,7 +352,7 @@ void PageSnapshotImpl::Get(fidl::VectorPtr<uint8_t> key, GetCallback callback) {
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
+              callback(status, ToOptionalTransport(status, std::move(data)));
             });
       });
 }
@@ -363,6 +376,10 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
             storage::PageStorage::Location::LOCAL, Status::NEEDS_FETCH,
             [callback = std::move(callback)](Status status,
                                              fxl::StringView data_view) {
+              if (status != Status::OK) {
+                callback(status, nullptr);
+                return;
+              }
               if (fidl_serialization::GetByteArraySize(data_view.size()) +
                       // Size of the Status.
                       fidl_serialization::kEnumSize >
@@ -394,7 +411,7 @@ void PageSnapshotImpl::Fetch(fidl::VectorPtr<uint8_t> key,
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
+              callback(status, ToOptionalTransport(status, std::move(data)));
             });
       });
 }
@@ -421,7 +438,7 @@ void PageSnapshotImpl::FetchPartial(fidl::VectorPtr<uint8_t> key,
             storage::PageStorage::Location::NETWORK, Status::INTERNAL_ERROR,
             [callback = std::move(callback)](Status status,
                                              fsl::SizedVmo data) {
-              callback(status, fidl::MakeOptional(std::move(data).ToTransport()));
+              callback(status, ToOptionalTransport(status, std::move(data)));
             });
       });
 }

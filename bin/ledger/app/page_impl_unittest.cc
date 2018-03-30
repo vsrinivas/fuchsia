@@ -1241,8 +1241,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
   EXPECT_EQ(Status::VALUE_TOO_LARGE, status);
 }
 
-// TODO(fidl2): Broken by the FIDL2 transition.
-TEST_F(PageImplTest, DISABLED_SnapshotGetNeedsFetch) {
+TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
   std::string key("some_key");
   std::string value("a small value");
 
@@ -1266,6 +1265,7 @@ TEST_F(PageImplTest, DISABLED_SnapshotGetNeedsFetch) {
   RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
+  EXPECT_FALSE(actual_value);
 
   fidl::VectorPtr<uint8_t> actual_inlined_value;
   snapshot->GetInline(
@@ -1274,6 +1274,7 @@ TEST_F(PageImplTest, DISABLED_SnapshotGetNeedsFetch) {
   RunLoop();
 
   EXPECT_EQ(Status::NEEDS_FETCH, status);
+  EXPECT_FALSE(actual_inlined_value);
 }
 
 TEST_F(PageImplTest, SnapshotFetchPartial) {

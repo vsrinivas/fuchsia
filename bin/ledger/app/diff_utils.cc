@@ -180,6 +180,7 @@ void ComputePageChange(
       FXL_DCHECK(results.size() ==
                  context->page_change->changed_entries->size());
       for (size_t i = 0; i < results.size(); i++) {
+        FXL_DCHECK(results[i].vmo());
         context->page_change->changed_entries->at(i).value =
             fidl::MakeOptional(std::move(results[i]).ToTransport());
       }
