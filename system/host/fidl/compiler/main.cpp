@@ -267,8 +267,8 @@ int main(int argc, char* argv[]) {
 
     if (!library_name.empty() && final_library->name() != library_name) {
         auto name = final_library->name();
-        fprintf(stderr, "Generated library did not match --name argument: '%.*s'\n",
-                static_cast<int>(name.size()), name.data());
+        fprintf(stderr, "Generated library '%.*s' did not match --name argument: %s\n",
+                static_cast<int>(name.size()), name.data(), library_name.c_str());
         return 1;
     }
 
