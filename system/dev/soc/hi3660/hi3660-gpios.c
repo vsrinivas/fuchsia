@@ -153,7 +153,7 @@ zx_status_t hi3660_gpio_init(hi3660_t* hi3660, zx_handle_t bti) {
             return ZX_ERR_NO_MEMORY;
         }
 
-        status = io_buffer_init_physical_with_bti(&gpios->buffer, bti, block->base, block->length,
+        status = io_buffer_init_physical(&gpios->buffer, bti, block->base, block->length,
                                          resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != ZX_OK) {
             zxlogf(ERROR, "hi3660_gpio_init: io_buffer_init_physical failed %d\n", status);

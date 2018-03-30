@@ -141,11 +141,11 @@ static int phy_irq_thread(void* arg) {
 }
 
 zx_status_t gauss_usb_init(gauss_bus_t* bus) {
-    zx_status_t status = io_buffer_init_physical_with_bti(&bus->usb_phy, bus->bti_handle,
-                                                          0xffe09000, 4096, get_root_resource(),
-                                                          ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    zx_status_t status = io_buffer_init_physical(&bus->usb_phy, bus->bti_handle, 0xffe09000, 4096,
+                                                 get_root_resource(),
+                                                 ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "gauss_usb_init io_buffer_init_physical_with_bti failed %d\n", status);
+        zxlogf(ERROR, "gauss_usb_init io_buffer_init_physical failed %d\n", status);
         return status;
     }
 

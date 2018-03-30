@@ -51,8 +51,8 @@ zx_status_t usb_request_alloc_vmo(usb_request_t** out, zx_handle_t bti_handle,
     if (!req) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = io_buffer_init_vmo_with_bti(&req->buffer, bti_handle, vmo_handle,
-                                                     vmo_offset, IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init_vmo(&req->buffer, bti_handle, vmo_handle, vmo_offset,
+                                            IO_BUFFER_RW);
     if (status != ZX_OK) {
         free(req);
         return status;
@@ -70,8 +70,8 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t bti_handle, zx_hand
                              uint64_t vmo_offset, uint64_t length, uint8_t ep_address) {
     memset(req, 0, sizeof(*req));
 
-    zx_status_t status = io_buffer_init_vmo_with_bti(&req->buffer, bti_handle, vmo_handle,
-                                                     vmo_offset, IO_BUFFER_RW);
+    zx_status_t status = io_buffer_init_vmo(&req->buffer, bti_handle, vmo_handle, vmo_offset,
+                                            IO_BUFFER_RW);
     if (status != ZX_OK) {
         return status;
     }

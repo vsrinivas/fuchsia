@@ -100,10 +100,10 @@ static zx_status_t vim_enable_wifi_32K(vim_bus_t* bus) {
         return status;
     }
     io_buffer_t buffer;
-    status = io_buffer_init_physical_with_bti(&buffer, bti, S912_PWM_BASE, 0x10000,
-                                              get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = io_buffer_init_physical(&buffer, bti, S912_PWM_BASE, 0x10000, get_root_resource(),
+                                     ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical_with_bti failed: %d\n", status);
+        zxlogf(ERROR, "vim_enable_wifi_32K: io_buffer_init_physical failed: %d\n", status);
         zx_handle_close(bti);
         return status;
     }

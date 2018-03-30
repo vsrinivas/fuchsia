@@ -60,24 +60,18 @@ zx_status_t io_buffer_init_aligned_with_bti(io_buffer_t* buffer, zx_handle_t bti
 // Initializes an io_buffer base on an existing VMO.
 // duplicates the provided vmo_handle - does not take ownership
 // |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
-
-zx_status_t io_buffer_init_vmo_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                        zx_handle_t vmo_handle, zx_off_t offset, uint32_t flags);
+zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t vmo_handle,
+                               zx_off_t offset, uint32_t flags);
 
 // Initializes an io_buffer that maps a given physical address
 // |bti| is borrowed by the io_buffer and may be used throughout the lifetime of the io_buffer.
-zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                             zx_paddr_t addr, size_t size,
-                                             zx_handle_t resource, uint32_t cache_policy);
+zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,
+                                    size_t size, zx_handle_t resource, uint32_t cache_policy);
 
 // Legacy variants of the above
 zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) __DDK_DEPRECATE;
 zx_status_t io_buffer_init_aligned(io_buffer_t* buffer, size_t size, uint32_t alignment_log2,
                                    uint32_t flags) __DDK_DEPRECATE;
-zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t vmo_handle,
-                               zx_off_t offset, uint32_t flags) __DDK_DEPRECATE;
-zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t size,
-                                    zx_handle_t resource, uint32_t cache_policy) __DDK_DEPRECATE;
 
 zx_status_t io_buffer_cache_op(io_buffer_t* buffer, const uint32_t op,
                                const zx_off_t offset, const size_t size);

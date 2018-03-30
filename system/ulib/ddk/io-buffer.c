@@ -124,17 +124,6 @@ zx_status_t io_buffer_init(io_buffer_t* buffer, size_t size, uint32_t flags) {
     return io_buffer_init_with_bti(buffer, ZX_HANDLE_INVALID, size, flags);
 }
 
-zx_status_t io_buffer_init_vmo(io_buffer_t* buffer,
-                               zx_handle_t vmo_handle, zx_off_t offset, uint32_t flags) {
-    return io_buffer_init_vmo_with_bti(buffer, ZX_HANDLE_INVALID, vmo_handle, offset, flags);
-}
-
-zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_paddr_t addr, size_t size,
-                                    zx_handle_t resource, uint32_t cache_policy) {
-    return io_buffer_init_physical_with_bti(buffer, ZX_HANDLE_INVALID, addr, size, resource,
-                                            cache_policy);
-}
-
 zx_status_t io_buffer_init_aligned_with_bti(io_buffer_t* buffer, zx_handle_t bti,
                                             size_t size, uint32_t alignment_log2, uint32_t flags) {
     memset(buffer, 0, sizeof(*buffer));
@@ -180,8 +169,8 @@ zx_status_t io_buffer_init_with_bti(io_buffer_t* buffer, zx_handle_t bti,
     return io_buffer_init_aligned_with_bti(buffer, bti, size, 0, flags);
 }
 
-zx_status_t io_buffer_init_vmo_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                        zx_handle_t vmo_handle, zx_off_t offset, uint32_t flags) {
+zx_status_t io_buffer_init_vmo(io_buffer_t* buffer, zx_handle_t bti, zx_handle_t vmo_handle,
+                               zx_off_t offset, uint32_t flags) {
     memset(buffer, 0, sizeof(*buffer));
 
     if (flags != IO_BUFFER_RO && flags != IO_BUFFER_RW) {
@@ -201,9 +190,8 @@ zx_status_t io_buffer_init_vmo_with_bti(io_buffer_t* buffer, zx_handle_t bti,
     return io_buffer_init_common(buffer, bti, vmo_handle, size, offset, flags);
 }
 
-zx_status_t io_buffer_init_physical_with_bti(io_buffer_t* buffer, zx_handle_t bti,
-                                             zx_paddr_t addr, size_t size, zx_handle_t resource,
-                                             uint32_t cache_policy) {
+zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_paddr_t addr,
+                                    size_t size, zx_handle_t resource, uint32_t cache_policy) {
     memset(buffer, 0, sizeof(*buffer));
 
     zx_handle_t vmo_handle;

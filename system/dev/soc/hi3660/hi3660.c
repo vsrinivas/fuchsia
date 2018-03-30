@@ -40,21 +40,21 @@ zx_status_t hi3660_init(zx_handle_t resource, zx_handle_t bti, hi3660_t** out) {
     list_initialize(&hi3660->gpios);
 
     zx_status_t status;
-    if ((status = io_buffer_init_physical_with_bti(&hi3660->usb3otg_bc, bti, MMIO_USB3OTG_BC_BASE,
+    if ((status = io_buffer_init_physical(&hi3660->usb3otg_bc, bti, MMIO_USB3OTG_BC_BASE,
                                           MMIO_USB3OTG_BC_LENGTH, resource,
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical_with_bti(&hi3660->peri_crg, bti, MMIO_PERI_CRG_BASE,
+         (status = io_buffer_init_physical(&hi3660->peri_crg, bti, MMIO_PERI_CRG_BASE,
                                            MMIO_PERI_CRG_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical_with_bti(&hi3660->pctrl, bti, MMIO_PCTRL_BASE, MMIO_PCTRL_LENGTH,
+         (status = io_buffer_init_physical(&hi3660->pctrl, bti, MMIO_PCTRL_BASE, MMIO_PCTRL_LENGTH,
                                            resource, ZX_CACHE_POLICY_UNCACHED_DEVICE) != ZX_OK) ||
-         (status = io_buffer_init_physical_with_bti(&hi3660->iomg_pmx4, bti, MMIO_IOMG_PMX4_BASE,
+         (status = io_buffer_init_physical(&hi3660->iomg_pmx4, bti, MMIO_IOMG_PMX4_BASE,
                                            MMIO_IOMG_PMX4_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical_with_bti(&hi3660->pmu_ssio, bti, MMIO_PMU_SSI0_BASE,
+         (status = io_buffer_init_physical(&hi3660->pmu_ssio, bti, MMIO_PMU_SSI0_BASE,
                                            MMIO_PMU_SSI0_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
-         (status = io_buffer_init_physical_with_bti(&hi3660->iomcu, bti, MMIO_IOMCU_CONFIG_BASE,
+         (status = io_buffer_init_physical(&hi3660->iomcu, bti, MMIO_IOMCU_CONFIG_BASE,
                                            MMIO_IOMCU_CONFIG_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
         goto fail;

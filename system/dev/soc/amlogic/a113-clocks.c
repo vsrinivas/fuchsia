@@ -30,8 +30,8 @@ zx_status_t a113_clk_init(zx_handle_t bti, a113_clk_dev_t **device) {
     zx_handle_t resource = get_root_resource();
     zx_status_t status;
 
-    status = io_buffer_init_physical_with_bti(&(*device)->regs_iobuff, bti, A113_CLOCKS_BASE_PHYS,
-                                              PAGE_SIZE, resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
+    status = io_buffer_init_physical(&(*device)->regs_iobuff, bti, A113_CLOCKS_BASE_PHYS,PAGE_SIZE,
+                                     resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
 
     if (status != ZX_OK) {
         zxlogf(ERROR, "a113_clk_init: io_buffer_init_physical failed %d\n", status);
