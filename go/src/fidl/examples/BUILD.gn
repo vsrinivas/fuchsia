@@ -28,6 +28,7 @@ fidl_example("example-7") { name = "example_7" }
 fidl_example("example-8") { name = "example_8" }
 fidl_example("example-9") { name = "example_9" }
 fidl_example("interface-ordinals") { name = "interface_ordinals" }
+fidl_example("tables") {}
 fidl_example("test") {}
 fidl_example("types") {}
 
@@ -62,6 +63,7 @@ group("examples") {
     ":example-8",
     ":example-9",
     ":interface-ordinals",
+    ":tables",
     ":test",
     ":types",
     ":point",
