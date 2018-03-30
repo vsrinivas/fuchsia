@@ -141,10 +141,11 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
                fidl::InterfaceHandle<ledger::PageSnapshot> /*common_version*/,
                fidl::InterfaceHandle<ledger::MergeResultProvider>
                    result_provider) override {
-    ledger::MergeResultProviderPtr merge_result_provider =
-        result_provider.Bind();
+    auto merge_result_provider =
+        std::make_unique<ledger::MergeResultProviderPtr>(
+            result_provider.Bind());
     ledger::MergeResultProvider* merge_result_provider_ptr =
-        merge_result_provider.get();
+        merge_result_provider->get();
     merge_result_provider_ptr->GetFullDiff(
         nullptr,
         fxl::MakeCopyable([merge_result_provider =
@@ -166,12 +167,14 @@ class NonAssociativeConflictResolverImpl : public ledger::ConflictResolver {
           fidl::VectorPtr<ledger::MergedValue> merged_values;
           merged_values.push_back(std::move(merged_value));
           ledger::Status merge_status;
-          merge_result_provider->Merge(std::move(merged_values),
-                                       callback::Capture([] {}, &merge_status));
-          ASSERT_EQ(ZX_OK, merge_result_provider.WaitForResponse());
+          (*merge_result_provider)
+              ->Merge(std::move(merged_values),
+                      callback::Capture([] {}, &merge_status));
+          ASSERT_EQ(ZX_OK, merge_result_provider->WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
-          merge_result_provider->Done(callback::Capture([] {}, &merge_status));
-          ASSERT_EQ(ZX_OK, merge_result_provider.WaitForResponse());
+          (*merge_result_provider)
+              ->Done(callback::Capture([] {}, &merge_status));
+          ASSERT_EQ(ZX_OK, merge_result_provider->WaitForResponse());
           ASSERT_EQ(ledger::Status::OK, merge_status);
         }));
   }
@@ -310,8 +313,7 @@ class ConvergenceTest
 
 // Verify that the Ledger converges over different settings of merging functions
 // and number of ledger instances.
-// TODO(fidl2): This test started hanging with P=8 after the FIDL2 migration.
-TEST_P(ConvergenceTest, DISABLED_NLedgersConverge) {
+TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<PageWatcherImpl>> watchers;
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
 
