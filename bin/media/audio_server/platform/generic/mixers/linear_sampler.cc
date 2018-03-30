@@ -118,6 +118,15 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
 
+  // Although the number of source frames is expressed in fixed-point 20.12
+  // format, the actual number of frames must always be an integer.
+  FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  // Interpolation offset is int32, so even though frac_src_frames is a uint32,
+  // callers should not exceed int32_t::max().
+  FXL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+
   using SR = SrcReader<SType, SChCount, DChCount>;
   using DM = DstMixer<ScaleType, DoAccumulate>;
   const SType* src = static_cast<const SType*>(src_void);
@@ -280,6 +289,15 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
   static_assert(
       ScaleType != ScalerType::MUTED || DoAccumulate == true,
       "Mixing muted streams without accumulation is explicitly unsupported");
+
+  // Although the number of source frames is expressed in fixed-point 20.12
+  // format, the actual number of frames must always be an integer.
+  FXL_DCHECK((frac_src_frames & kPtsFractionalMask) == 0);
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  // Interpolation offset is int32, so even though frac_src_frames is a uint32,
+  // callers should not exceed int32_t::max().
+  FXL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   using DM = DstMixer<ScaleType, DoAccumulate>;
   const SType* src = static_cast<const SType*>(src_void);

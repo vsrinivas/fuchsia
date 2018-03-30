@@ -70,11 +70,12 @@ void DoMix(MixerPtr mixer,
            Gain::AScale mix_scale) {
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
-  mixer->Mix(accum_buf, num_frames, &dst_offset, src_buf,
-             num_frames << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, mix_scale, accumulate);
+  bool mix_result =
+      mixer->Mix(accum_buf, num_frames, &dst_offset, src_buf,
+                 num_frames << kPtsFractionalBits, &frac_src_offset,
+                 Mixer::FRAC_ONE, mix_scale, accumulate);
 
-  // TODO(mpuryear): when MTWN-78 is fixed, EXPECT_TRUE(the above Mix()).
+  EXPECT_TRUE(mix_result);
   EXPECT_EQ(static_cast<uint32_t>(num_frames), dst_offset);
   EXPECT_EQ(dst_offset << kPtsFractionalBits,
             static_cast<uint32_t>(frac_src_offset));
