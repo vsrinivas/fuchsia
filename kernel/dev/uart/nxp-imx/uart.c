@@ -28,18 +28,33 @@
 #define MX8_USR2                    (0x98)
 #define MX8_UTS                     (0xB4)
 
+/* UCR1 Bit Definition */
+#define UCR1_TRDYEN                 (1 << 13)
+#define UCR1_RRDYEN                 (1 << 9)
+#define UCR1_UARTEN                 (1 << 0)
 
-#define UCR1_RRDYEN             (1 << 9)
-#define UCR1_UARTEN             (1 << 0)
-#define UCR2_TXEN               (1 << 2)
-#define UCR2_RXEN               (1 << 1)
-#define UCR2_SRST               (1 << 0)
-#define UFCR_RXTL(x)            (x << 0)
-#define USR1_RRDY               (1 << 9)
-#define UTS_TXEMPTY             (1 << 6)
-#define UTS_RXEMPTY             (1 << 5)
-#define UTS_TXFULL              (1 << 4)
-#define UTS_RXFULL              (1 << 3)
+/* UCR2 Bit Definition */
+#define UCR2_TXEN                   (1 << 2)
+#define UCR2_RXEN                   (1 << 1)
+#define UCR2_SRST                   (1 << 0)
+
+/* UFCR Bit Definition */
+#define UFCR_TXTL(x)                (x << 10)
+#define UFCR_RXTL(x)                (x << 0)
+#define UFCR_MASK                   (0x3f)
+
+/* USR1 Bit Definition */
+#define USR1_TRDY                   (1 << 13)
+#define USR1_RRDY                   (1 << 9)
+
+/* USR2 Bit Definition */
+#define USR2_TXFE                   (1 << 14)
+
+/* UTS Bit Definition */
+#define UTS_TXEMPTY                 (1 << 6)
+#define UTS_RXEMPTY                 (1 << 5)
+#define UTS_TXFULL                  (1 << 4)
+#define UTS_RXFULL                  (1 << 3)
 
 #define RXBUF_SIZE 32
 
@@ -49,6 +64,14 @@ static bool initialized = false;
 static uint64_t uart_base = 0;
 static uint32_t uart_irq = 0;
 static cbuf_t uart_rx_buf;
+// static cbuf_t uart_tx_buf;
+
+static bool uart_tx_irq_enabled = false;
+static event_t uart_dputc_event = EVENT_INITIAL_VALUE(uart_dputc_event,
+                                                      true,
+                                                      EVENT_FLAG_AUTOUNSIGNAL);
+
+static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 #define UARTREG(reg)          (*(volatile uint32_t*)((uart_base)  + (reg)))
 
@@ -61,6 +84,16 @@ static void uart_irq_handler(void *arg)
         }
         char c = UARTREG(MX8_URXD) & 0xFF;
         cbuf_write_char(&uart_rx_buf, c);
+    }
+
+    /* Signal if anyone is waiting to TX */
+    if (UARTREG(MX8_UCR1) & UCR1_TRDYEN) {
+        spin_lock(&uart_spinlock);
+        if (!(UARTREG(MX8_USR2) & UTS_TXFULL)) {
+            // signal
+            event_signal(&uart_dputc_event, true);
+        }
+        spin_unlock(&uart_spinlock);
     }
 }
 
@@ -116,8 +149,28 @@ static int imx_uart_getc(bool wait)
 static void imx_dputs(const char* str, size_t len,
                         bool block, bool map_NL)
 {
+    spin_lock_saved_state_t state;
     bool copied_CR = false;
+
+    if (!uart_base) {
+        return;
+    }
+    if (!uart_tx_irq_enabled) {
+        block = false;
+    }
+    spin_lock_irqsave(&uart_spinlock, state);
+
     while (len > 0) {
+        // is FIFO full?
+        while ((UARTREG(MX8_UTS) & UTS_TXFULL)) {
+            spin_unlock_irqrestore(&uart_spinlock, state);
+            if (block) {
+                event_wait(&uart_dputc_event);
+            } else {
+                arch_spinloop_pause();
+            }
+            spin_lock_irqsave(&uart_spinlock, state);
+        }
         if (*str == '\n' && map_NL && !copied_CR) {
             copied_CR = true;
             imx_uart_pputc('\r');
@@ -127,10 +180,12 @@ static void imx_dputs(const char* str, size_t len,
             len--;
         }
     }
+    spin_unlock_irqrestore(&uart_spinlock, state);
 }
 
 static void imx_start_panic(void)
 {
+    uart_tx_irq_enabled = false;
 }
 
 static const struct pdev_uart_ops uart_ops = {
@@ -153,13 +208,19 @@ static void imx_uart_init(mdi_node_ref_t* node, uint level)
 
     // set rx fifo threshold to 1 character
     regVal = UARTREG(MX8_UFCR);
-    regVal &= ~UFCR_RXTL(0x1f);
+    regVal &= ~UFCR_RXTL(UFCR_MASK);
+    regVal &= ~UFCR_TXTL(UFCR_MASK);
     regVal |= UFCR_RXTL(1);
+    regVal |= UFCR_TXTL(0x2);
     UARTREG(MX8_UFCR) = regVal;
 
     // enable rx interrupt
     regVal = UARTREG(MX8_UCR1);
     regVal |= UCR1_RRDYEN;
+#if !ENABLE_KERNEL_LL_DEBUG
+    // enable tx interrupt
+    regVal |= UCR1_TRDYEN;
+#endif
     UARTREG(MX8_UCR1) = regVal;
 
     // enable rx and tx transmisster
@@ -167,10 +228,18 @@ static void imx_uart_init(mdi_node_ref_t* node, uint level)
     regVal |= UCR2_RXEN | UCR2_TXEN;
     UARTREG(MX8_UCR2) = regVal;
 
-    // enable interrupts
-    unmask_interrupt(uart_irq);
+#if ENABLE_KERNEL_LL_DEBUG
+    uart_tx_irq_enabled = false;
+#else
+    /* start up tx driven output */
+    printf("UART: started IRQ driven TX\n");
+    uart_tx_irq_enabled = true;
+#endif
 
     initialized = true;
+
+    // enable interrupts
+    unmask_interrupt(uart_irq);
 }
 
 static void imx_uart_init_early(mdi_node_ref_t* node, uint level) {
