@@ -7,6 +7,8 @@ import("//build/test.gni")
 source_set("demux") {
   sources = [
     "demux.h",
+    "file_reader.cc",
+    "file_reader.h",
     "reader.h",
     "reader_cache.cc",
     "reader_cache.h",
