@@ -517,7 +517,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
     link_peer->ledger = impl_->ledger_client_->GetLedgerClientPeer();
 
     auto link_path = LinkPath::New();
-    link_path->module_path = CloneStringVector(module_path_);
+    link_path->module_path = module_path_.Clone();
     link_path->link_name = link_name_;
 
     link_peer->link = std::make_unique<LinkImpl>(

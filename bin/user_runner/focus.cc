@@ -121,7 +121,7 @@ void VisibleStoriesHandler::AddControllerBinding(
 }
 
 void VisibleStoriesHandler::Query(QueryCallback callback) {
-  callback(CloneStringVector(visible_stories_));
+  callback(visible_stories_.Clone());
 }
 
 void VisibleStoriesHandler::Watch(
@@ -137,7 +137,7 @@ void VisibleStoriesHandler::Duplicate(
 void VisibleStoriesHandler::Set(fidl::VectorPtr<fidl::StringPtr> story_ids) {
   visible_stories_ = std::move(story_ids);
   for (const auto& watcher : change_watchers_) {
-    watcher->OnVisibleStoriesChange(CloneStringVector(visible_stories_));
+    watcher->OnVisibleStoriesChange(visible_stories_.Clone());
   }
 }
 

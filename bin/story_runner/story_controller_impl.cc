@@ -692,7 +692,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
                   std::move(result_call),
                   module_url),
         story_controller_impl_(story_controller_impl),
-        module_path_(CloneStringVector(module_path)),
+        module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
         module_manifest_(std::move(module_manifest)),
@@ -747,7 +747,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   void InitializeModuleData(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
-    module_data_->module_path = CloneStringVector(module_path_);
+    module_data_->module_path = module_path_.Clone();
     link_path_->Clone(&module_data_->link_path);
     module_data_->module_source = module_source_;
     fidl::Clone(surface_relation_, &module_data_->surface_relation);
@@ -758,8 +758,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     fidl::Clone(create_chain_info_, &create_chain_info);
     // Initialize |module_data_->chain_data|.
     new InitializeChainCall(&operation_queue_, story_controller_impl_,
-                            CloneStringVector(module_path_),
-                            std::move(create_chain_info),
+                            module_path_.Clone(), std::move(create_chain_info),
                             [this, flow](ChainDataPtr chain_data) {
                               module_data_->chain_data = std::move(*chain_data);
                               MaybeWriteModuleData(flow);
@@ -846,7 +845,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
                   std::move(result_call),
                   module_url),
         story_controller_impl_(story_controller_impl),
-        module_path_(CloneStringVector(module_path)),
+        module_path_(module_path.Clone()),
         module_url_(module_url),
         link_name_(link_name),
         module_manifest_(std::move(module_manifest)),
@@ -919,10 +918,9 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       }
     }
 
-    story_controller_impl_->pending_views_.emplace(
-        std::make_pair(PathString(module_path_),
-                       std::make_pair(CloneStringVector(module_path_),
-                                      std::move(view_owner_))));
+    story_controller_impl_->pending_views_.emplace(std::make_pair(
+        PathString(module_path_),
+        std::make_pair(module_path_.Clone(), std::move(view_owner_))));
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
@@ -1007,7 +1005,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   void WriteModuleData(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
-    module_data_->module_path = CloneStringVector(module_path_);
+    module_data_->module_path = module_path_.Clone();
     link_path_->Clone(&module_data_->link_path);
     module_data_->module_source = ModuleSource::EXTERNAL;
     module_data_->surface_relation = CloneOptional(surface_relation_);
@@ -1247,7 +1245,7 @@ class StoryControllerImpl::StopModuleCall : Operation<> {
                  const std::function<void()>& done)
       : Operation("StoryControllerImpl::StopModuleCall", container, done),
         story_controller_impl_(story_controller_impl),
-        module_path_(CloneStringVector(module_path)) {
+        module_path_(module_path.Clone()) {
     Ready();
   }
 
@@ -1599,7 +1597,7 @@ class StoryControllerImpl::ResolveModulesCall
           // The chain doesn't contain a value for this Link, so assume it's
           // one the Module created itself.
           link_path = LinkPath::New();
-          link_path->module_path = CloneStringVector(requesting_module_path_);
+          link_path->module_path = requesting_module_path_.Clone();
           link_path->link_name = noun.link_name();
         }
 
@@ -1641,7 +1639,7 @@ class StoryControllerImpl::ResolveModulesCall
 
       } else if (noun.is_entity_type()) {
         auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_entity_type(CloneStringVector(noun.entity_type()));
+        noun_constraint->set_entity_type(noun.entity_type().Clone());
         auto noun_constraint_entry = ResolverNounConstraintEntry::New();
         noun_constraint_entry->key = name;
         noun_constraint_entry->constraint = std::move(*noun_constraint);
@@ -1717,8 +1715,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
     FlowToken flow{this};
     // parent + container used as module path of requesting module for
     // containers
-    fidl::VectorPtr<fidl::StringPtr> module_path =
-        CloneStringVector(parent_module_path_);
+    fidl::VectorPtr<fidl::StringPtr> module_path = parent_module_path_.Clone();
     // module_path.push_back(container_name_);
     // Adding non-module 'container_name_' to the module path results in
     // Ledger Client issuing a ReadData() call and failing with a fatal error
@@ -1742,7 +1739,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       views_v1_token::ViewOwnerPtr view_owner;
       node_views_[nodes_->at(i)->node_name] = std::move(view_owner);
       fidl::VectorPtr<fidl::StringPtr> module_path =
-          CloneStringVector(parent_module_path_);
+          parent_module_path_.Clone();
       // module_path.push_back(container_name_);
       // same issue as documented in Run()
       module_path.push_back(nodes_->at(i)->node_name);
@@ -1842,7 +1839,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
 
     new ResolveModulesCall(&operation_queue_, story_controller_impl_,
                            CloneOptional(daisy_),
-                           CloneStringVector(requesting_module_path_),
+                           requesting_module_path_.Clone(),
                            [this, flow](FindModulesResultPtr result) {
                              StartModuleFromResult(flow, std::move(result));
                            });
@@ -1856,7 +1853,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
       const auto& module_url = module_result.module_id;
       const auto& create_chain_info = module_result.create_chain_info;
 
-      auto module_path = CloneStringVector(requesting_module_path_);
+      auto module_path = requesting_module_path_.Clone();
       module_path.push_back(module_name_);
 
       if (!view_owner_request_) {
@@ -1985,12 +1982,12 @@ void StoryControllerImpl::Sync(const std::function<void()>& done) {
 
 void StoryControllerImpl::FocusModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  new FocusCall(&operation_queue_, this, CloneStringVector(module_path));
+  new FocusCall(&operation_queue_, this, module_path.Clone());
 }
 
 void StoryControllerImpl::DefocusModule(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  new DefocusCall(&operation_queue_, this, CloneStringVector(module_path));
+  new DefocusCall(&operation_queue_, this, module_path.Clone());
 }
 
 void StoryControllerImpl::StopModule(
@@ -2054,7 +2051,7 @@ void StoryControllerImpl::StartModuleDeprecated(
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     const ModuleSource module_source) {
-  auto module_path = CloneStringVector(parent_module_path);
+  auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
@@ -2076,7 +2073,7 @@ void StoryControllerImpl::StartModuleInShellDeprecated(
     SurfaceRelationPtr surface_relation,
     const bool focus,
     ModuleSource module_source) {
-  auto module_path = CloneStringVector(parent_module_path);
+  auto module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleInShellCall(
       &operation_queue_, this, module_path, module_url, link_name,
@@ -2095,12 +2092,12 @@ void StoryControllerImpl::EmbedModule(
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
-  new AddDaisyCall(
-      &operation_queue_, this, CloneStringVector(parent_module_path),
-      module_name, std::move(*daisy), std::move(incoming_services),
-      std::move(module_controller_request), nullptr /* surface_relation */,
-      std::move(view_owner_request), std::move(module_source),
-      std::move(callback));
+  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
+                   module_name, std::move(*daisy), std::move(incoming_services),
+                   std::move(module_controller_request),
+                   nullptr /* surface_relation */,
+                   std::move(view_owner_request), std::move(module_source),
+                   std::move(callback));
 }
 
 void StoryControllerImpl::StartModule(
@@ -2112,12 +2109,12 @@ void StoryControllerImpl::StartModule(
     SurfaceRelationPtr surface_relation,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
-  new AddDaisyCall(
-      &operation_queue_, this, CloneStringVector(parent_module_path),
-      module_name, std::move(*daisy), std::move(incoming_services),
-      std::move(module_controller_request), std::move(surface_relation),
-      nullptr /* view_owner_request */, std::move(module_source),
-      std::move(callback));
+  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
+                   module_name, std::move(*daisy), std::move(incoming_services),
+                   std::move(module_controller_request),
+                   std::move(surface_relation),
+                   nullptr /* view_owner_request */, std::move(module_source),
+                   std::move(callback));
 }
 
 void StoryControllerImpl::StartContainerInShell(
@@ -2128,7 +2125,7 @@ void StoryControllerImpl::StartContainerInShell(
     fidl::VectorPtr<ContainerRelationEntry> relationships,
     fidl::VectorPtr<ContainerNodePtr> nodes) {
   new StartContainerInShellCall(&operation_queue_, this,
-                                CloneStringVector(parent_module_path), name,
+                                parent_module_path.Clone(), name,
                                 std::move(parent_relation), std::move(layout),
                                 std::move(relationships), std::move(nodes));
 }
@@ -2143,8 +2140,7 @@ void StoryControllerImpl::EmbedModuleDeprecated(
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceHandle<EmbedModuleWatcher> embed_module_watcher,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) {
-  fidl::VectorPtr<fidl::StringPtr> module_path =
-      CloneStringVector(parent_module_path);
+  fidl::VectorPtr<fidl::StringPtr> module_path = parent_module_path.Clone();
   module_path.push_back(module_name);
   new StartModuleCall(
       &operation_queue_, this, module_path, module_url, link_name,
@@ -2328,7 +2324,7 @@ void StoryControllerImpl::GetModules(GetModulesCallback callback) {
   new ReadAllDataCall<ModuleData>(&operation_queue_, page(), kModuleKeyPrefix,
                                   XdrModuleData,
                                   [callback](fidl::VectorPtr<ModuleData> data) {
-                                    callback(CloneStructVector(data));
+                                    callback(std::move(data));
                                   });
 }
 
@@ -2470,7 +2466,7 @@ void StoryControllerImpl::OnModuleStateChange(
   }
 
   if (first_module_path_.is_null()) {
-    first_module_path_ = CloneStringVector(module_path);
+    first_module_path_ = module_path.Clone();
   }
   if (first_module_path_ == module_path) {
     UpdateStoryState(state);

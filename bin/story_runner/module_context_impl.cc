@@ -11,13 +11,14 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "peridot/bin/story_runner/module_controller_impl.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
-#include "peridot/lib/ledger_client/storage.h"
 #include "peridot/lib/fidl/clone.h"
+#include "peridot/lib/ledger_client/storage.h"
 
 namespace modular {
 
 ModuleContextImpl::ModuleContextImpl(
-    const ModuleContextInfo& info, const ModuleData* const module_data,
+    const ModuleContextInfo& info,
+    const ModuleData* const module_data,
     ModuleControllerImpl* const module_controller_impl,
     fidl::InterfaceRequest<component::ServiceProvider> service_provider_request)
     : module_data_(module_data),
@@ -48,7 +49,7 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
         module_data_->module_path, name);
     if (!link_path) {
       link_path = LinkPath::New();
-      link_path->module_path = CloneStringVector(module_data_->module_path);
+      link_path->module_path = module_data_->module_path.Clone();
       link_path->link_name = name;
       connection_type = LinkImpl::ConnectionType::Primary;
     }
@@ -60,7 +61,8 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
 }
 
 void ModuleContextImpl::StartModuleDeprecated(
-    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr name,
+    fidl::StringPtr query,
     fidl::StringPtr link_name,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
@@ -73,7 +75,8 @@ void ModuleContextImpl::StartModuleDeprecated(
 }
 
 void ModuleContextImpl::EmbedModule(
-    fidl::StringPtr name, Daisy daisy,
+    fidl::StringPtr name,
+    Daisy daisy,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
@@ -85,11 +88,13 @@ void ModuleContextImpl::EmbedModule(
 }
 
 void ModuleContextImpl::StartModuleInShellDeprecated(
-    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr name,
+    fidl::StringPtr query,
     fidl::StringPtr link_name,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation, const bool focus) {
+    SurfaceRelationPtr surface_relation,
+    const bool focus) {
   story_controller_impl_->StartModuleInShellDeprecated(
       module_data_->module_path, name, query, link_name,
       nullptr /* module_manifest */, nullptr /* create_chain_info */,
@@ -98,10 +103,12 @@ void ModuleContextImpl::StartModuleInShellDeprecated(
 }
 
 void ModuleContextImpl::StartModule(
-    fidl::StringPtr name, Daisy daisy,
+    fidl::StringPtr name,
+    Daisy daisy,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation, StartModuleCallback callback) {
+    SurfaceRelationPtr surface_relation,
+    StartModuleCallback callback) {
   story_controller_impl_->StartModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(daisy)),
       std::move(incoming_services), std::move(module_controller),
@@ -120,12 +127,14 @@ void ModuleContextImpl::StartContainerInShell(
     node_ptrs.push_back(fidl::MakeOptional(std::move(i)));
   }
   story_controller_impl_->StartContainerInShell(
-      module_data_->module_path, name, fidl::MakeOptional(std::move(parent_relation)),
-      std::move(layout), std::move(relationships), std::move(node_ptrs));
+      module_data_->module_path, name,
+      fidl::MakeOptional(std::move(parent_relation)), std::move(layout),
+      std::move(relationships), std::move(node_ptrs));
 }
 
 void ModuleContextImpl::EmbedModuleDeprecated(
-    fidl::StringPtr name, fidl::StringPtr query,
+    fidl::StringPtr name,
+    fidl::StringPtr query,
     fidl::StringPtr link_name,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller,
@@ -146,7 +155,7 @@ void ModuleContextImpl::GetComponentContext(
 void ModuleContextImpl::GetIntelligenceServices(
     fidl::InterfaceRequest<IntelligenceServices> request) {
   auto module_scope = ModuleScope::New();
-  module_scope->module_path = CloneStringVector(module_data_->module_path);
+  module_scope->module_path = module_data_->module_path.Clone();
   module_scope->url = module_data_->module_url;
   module_scope->story_id = story_controller_impl_->GetStoryId();
 
