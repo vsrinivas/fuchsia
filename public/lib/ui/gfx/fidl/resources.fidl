@@ -89,7 +89,7 @@ struct BufferArgs {
 // A DisplayCompositor draws its attached |LayerStack| into an image that is
 // presented on a display.
 struct DisplayCompositorArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // An ImagePipeCompositor draws its attached |LayerStack| into an image that is
@@ -106,7 +106,7 @@ struct ImagePipeCompositorArgs {
 // Supported commands:
 // - AddLayer
 struct LayerStackArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // Supported commands:
@@ -122,7 +122,7 @@ struct LayerStackArgs {
 //
 // A layer is not drawn unless it has a camera, texture, or color.
 struct LayerArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 
@@ -132,7 +132,7 @@ struct LayerArgs {
 //   - Add/RemoveLight
 //   - AddChild
 struct SceneArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // A Camera is used to render a Scene from a particular viewpoint.  This is
@@ -161,7 +161,7 @@ struct StereoCameraArgs {
 //   - SetCamera
 //   - SetRendererParam
 struct RendererArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // An AmbientLight is a Light that is is assumed to be everywhere in the scene,
@@ -170,7 +170,7 @@ struct RendererArgs {
 // The following commands may be applied to an AmbientLight (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetLightColor
 struct AmbientLightArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // A DirectionalLight is a Light that is emitted from a point at infinity.
@@ -184,7 +184,7 @@ struct AmbientLightArgs {
 //   - SetLightColor
 //   - SetDirection
 struct DirectionalLightArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 // Simple texture-mapped material.
@@ -194,7 +194,7 @@ struct DirectionalLightArgs {
 //   The texture can be an Image or ImagePipe.
 // SetColorCommand will set the color.
 struct MaterialArgs {
-    uint8 dummy;
+    uint32 dummy = 0;
 };
 
 struct VariableArgs {
