@@ -558,6 +558,12 @@ class LayerStack final : public Resource {
     AddLayer(layer.id());
   }
   void AddLayer(uint32_t layer_id);
+  void RemoveLayer(const Layer& layer) {
+    FXL_DCHECK(session() == layer.session());
+    RemoveLayer(layer.id());
+  }
+  void RemoveLayer(uint32_t layer_id);
+  void RemoveAllLayers();
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LayerStack);

@@ -168,9 +168,10 @@ bool Session::ApplyCommand(::gfx::Command command) {
     case ::gfx::Command::Tag::kAddLayer:
       return ApplyAddLayerCommand(std::move(command.add_layer()));
     case ::gfx::Command::Tag::kRemoveLayer:
+      return ApplyRemoveLayerCommand(std::move(command.remove_layer()));
     case ::gfx::Command::Tag::kRemoveAllLayers:
-      // TODO(SCN-636): Implement.
-      return false;
+      return ApplyRemoveAllLayersCommand(
+          std::move(command.remove_all_layers()));
     case ::gfx::Command::Tag::kSetLayerStack:
       return ApplySetLayerStackCommand(std::move(command.set_layer_stack()));
     case ::gfx::Command::Tag::kSetRenderer:
@@ -521,6 +522,26 @@ bool Session::ApplyAddLayerCommand(::gfx::AddLayerCommand command) {
   auto layer = resources_.FindResource<Layer>(command.layer_id);
   if (layer_stack && layer) {
     return layer_stack->AddLayer(std::move(layer));
+  }
+  return false;
+}
+
+bool Session::ApplyRemoveLayerCommand(::gfx::RemoveLayerCommand command) {
+  auto layer_stack =
+      resources_.FindResource<LayerStack>(command.layer_stack_id);
+  auto layer = resources_.FindResource<Layer>(command.layer_id);
+  if (layer_stack && layer) {
+    return layer_stack->RemoveLayer(std::move(layer));
+  }
+  return false;
+}
+
+bool Session::ApplyRemoveAllLayersCommand(
+    ::gfx::RemoveAllLayersCommand command) {
+  auto layer_stack =
+      resources_.FindResource<LayerStack>(command.layer_stack_id);
+  if (layer_stack) {
+    return layer_stack->RemoveAllLayers();
   }
   return false;
 }

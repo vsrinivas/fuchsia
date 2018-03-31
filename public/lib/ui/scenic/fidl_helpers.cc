@@ -782,6 +782,25 @@ gfx::Command NewAddLayerCommand(uint32_t layer_stack_id, uint32_t layer_id) {
   return command;
 }
 
+gfx::Command NewRemoveLayerCommand(uint32_t layer_stack_id, uint32_t layer_id) {
+  gfx::RemoveLayerCommand remove_layer;
+  remove_layer.layer_stack_id = layer_stack_id;
+  remove_layer.layer_id = layer_id;
+
+  gfx::Command command;
+  command.set_remove_layer(std::move(remove_layer));
+  return command;
+}
+
+gfx::Command NewRemoveAllLayersCommand(uint32_t layer_stack_id) {
+  gfx::RemoveAllLayersCommand remove_all_layers;
+  remove_all_layers.layer_stack_id = layer_stack_id;
+
+  gfx::Command command;
+  command.set_remove_all_layers(std::move(remove_all_layers));
+  return command;
+}
+
 gfx::Command NewSetLayerStackCommand(uint32_t compositor_id,
                                      uint32_t layer_stack_id) {
   gfx::SetLayerStackCommand set_layer_stack;

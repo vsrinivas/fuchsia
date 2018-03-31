@@ -160,6 +160,8 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetColorCommand(::gfx::SetColorCommand command);
   bool ApplyBindMeshBuffersCommand(::gfx::BindMeshBuffersCommand command);
   bool ApplyAddLayerCommand(::gfx::AddLayerCommand command);
+  bool ApplyRemoveLayerCommand(::gfx::RemoveLayerCommand command);
+  bool ApplyRemoveAllLayersCommand(::gfx::RemoveAllLayersCommand command);
   bool ApplySetLayerStackCommand(::gfx::SetLayerStackCommand command);
   bool ApplySetRendererCommand(::gfx::SetRendererCommand command);
   bool ApplySetRendererParamCommand(::gfx::SetRendererParamCommand command);

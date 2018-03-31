@@ -35,6 +35,11 @@ class LayerStack : public Resource {
 
   // AddLayerCommand.
   bool AddLayer(LayerPtr layer);
+  // RemoveLayerCommand.
+  bool RemoveLayer(LayerPtr layer);
+  // RemoveAllLayersCommand.
+  bool RemoveAllLayers();
+
   const std::unordered_set<LayerPtr>& layers() const { return layers_; }
 
   // | Resource |

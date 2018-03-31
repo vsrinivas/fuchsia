@@ -198,6 +198,8 @@ gfx::Command NewBindMeshBuffersCommand(uint32_t mesh_id,
 
 // Layer / LayerStack / Compositor operations.
 gfx::Command NewAddLayerCommand(uint32_t layer_stack_id, uint32_t layer_id);
+gfx::Command NewRemoveLayerCommand(uint32_t layer_stack_id, uint32_t layer_id);
+gfx::Command NewRemoveAllLayersCommand(uint32_t layer_stack_id);
 gfx::Command NewSetLayerStackCommand(uint32_t compositor_id,
                                      uint32_t layer_stack_id);
 gfx::Command NewSetRendererCommand(uint32_t layer_id, uint32_t renderer_id);

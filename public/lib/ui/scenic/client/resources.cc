@@ -438,6 +438,14 @@ void LayerStack::AddLayer(uint32_t layer_id) {
   session()->Enqueue(NewAddLayerCommand(id(), layer_id));
 }
 
+void LayerStack::RemoveLayer(uint32_t layer_id) {
+  session()->Enqueue(NewRemoveLayerCommand(id(), layer_id));
+}
+
+void LayerStack::RemoveAllLayers() {
+  session()->Enqueue(NewRemoveAllLayersCommand(id()));
+}
+
 DisplayCompositor::DisplayCompositor(Session* session) : Resource(session) {
   session->Enqueue(NewCreateDisplayCompositorCommand(id()));
 }
