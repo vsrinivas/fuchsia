@@ -110,8 +110,7 @@ void LogInvalidAncestorMetadata(const ContextMetadata& from,
   FXL_LOG(WARNING) << "Ancestor metadata: " << from;
 }
 
-void MergeMetadata(const ContextMetadata& from,
-                   ContextMetadata* to) {
+void MergeMetadata(const ContextMetadata& from, ContextMetadata* to) {
 #define MERGE(type)                                \
   if (from.type) {                                 \
     if (to->type) {                                \
@@ -276,11 +275,12 @@ ContextRepository::Id ContextRepository::AddSubscription(
 void ContextRepository::AddSubscription(ContextQuery query,
                                         ContextListenerPtr listener,
                                         SubscriptionDebugInfo debug_info) {
-  auto id =
-      AddSubscription(std::move(query), &listener, std::move(debug_info));
+  auto id = AddSubscription(std::move(query), &listener, std::move(debug_info));
   listener.set_error_handler([this, id] { RemoveSubscription(id); });
   // RemoveSubscription() above is responsible for freeing this memory.
-  subscriptions_[id].listener_storage = std::move(listener);
+  Subscription& subscription = subscriptions_[id];
+  subscription.listener_storage = std::move(listener);
+  subscription.listener = &subscription.listener_storage;
 }
 
 ContextDebugImpl* ContextRepository::debug() {

@@ -738,6 +738,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
           false /* not_found_is_ok */, XdrModuleData,
           [this, flow](ModuleDataPtr module_data) {
             FXL_DCHECK(module_data);
+            link_path_ = LinkPath::New();
             module_data->link_path.Clone(link_path_.get());
             InitializeModuleData(flow);
           });
