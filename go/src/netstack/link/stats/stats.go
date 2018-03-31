@@ -51,7 +51,7 @@ func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, remoteLi
 	e.Stats.Rx.PktsTotal += 1
 	e.Stats.Rx.BytesTotal += uint64(vv.Size())
 	raw := vv.First()
-	e.analyzeTrafficStats(&e.Stats.Rx, protocol, raw)
+	e.analyzeTrafficStats(&e.Stats.Rx, protocol, raw, vv.Size())
 	e.dispatcher.DeliverNetworkPacket(e, remoteLinkAddr, protocol, vv)
 }
 
@@ -80,22 +80,27 @@ func (e *StatsEndpoint) LinkAddress() tcpip.LinkAddress {
 // It performs packet inspection, and extracts a rich set of statistics,
 // and stores them to a FIDL data structure.
 func (e *StatsEndpoint) WritePacket(r *stack.Route, hdr *buffer.Prependable, payload buffer.View, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
-	e.Stats.Tx.PktsTotal += 1
-	e.Stats.Tx.BytesTotal += uint64(len(payload))
 	raw := hdr.UsedBytes()
-	e.analyzeTrafficStats(&e.Stats.Tx, protocol, raw)
+	size := len(payload) + len(raw)
+	e.Stats.Tx.PktsTotal += 1
+	e.Stats.Tx.BytesTotal += uint64(size)
+	e.analyzeTrafficStats(&e.Stats.Tx, protocol, raw, size)
 	return e.lower.WritePacket(r, hdr, payload, protocol)
 }
 
-func (e *StatsEndpoint) analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, raw []byte) {
+func (e *StatsEndpoint) analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, hdr []byte, packetSize int) {
 	switch protocol {
 	case header.IPv4ProtocolNumber:
-		ipPkt := header.IPv4(raw)
-		e.analyzeIPv4(ts, ipPkt)
+		ipPkt := header.IPv4(hdr)
+		if ipPkt.IsValid(packetSize) {
+			e.analyzeIPv4(ts, ipPkt)
+		}
 
 	case header.IPv6ProtocolNumber:
-		ipPkt := header.IPv6(raw)
-		e.analyzeIPv6(ts, ipPkt)
+		ipPkt := header.IPv6(hdr)
+		if ipPkt.IsValid(packetSize) {
+			e.analyzeIPv6(ts, ipPkt)
+		}
 
 		// Add other protocol below.
 	}
