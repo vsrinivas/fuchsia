@@ -26,8 +26,8 @@ extern crate futures;
 extern crate log;
 extern crate parking_lot;
 
-mod logger;
 mod device;
+mod logger;
 mod service;
 
 use component::server::ServicesServer;
@@ -37,7 +37,6 @@ use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
 use wlan_service::DeviceServiceMarker;
-
 
 const MAX_LOG_LEVEL: log::LogLevelFilter = log::LogLevelFilter::Info;
 
@@ -66,10 +65,9 @@ fn main_res() -> Result<(), Error> {
     let iface_watcher = device::new_iface_watcher(IFACE_PATH, devmgr.clone());
 
     let services_server = ServicesServer::new()
-        .add_service((DeviceServiceMarker::NAME,
-                      move |channel|
-                            async::spawn(service::device_service(devmgr.clone(), channel)))
-                     )
+        .add_service((DeviceServiceMarker::NAME, move |channel| {
+            async::spawn(service::device_service(devmgr.clone(), channel))
+        }))
         .start()
         .context("error configuring device service")?;
 
