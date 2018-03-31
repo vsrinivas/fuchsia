@@ -159,6 +159,8 @@ void Mesh::BindBuffers(const Buffer& index_buffer,
                        uint32_t vertex_count,
                        const float bounding_box_min[3],
                        const float bounding_box_max[3]) {
+  FXL_DCHECK(session() == index_buffer.session() &&
+             session() == vertex_buffer.session());
   session()->Enqueue(NewBindMeshBuffersCommand(
       id(), index_buffer.id(), index_format, index_offset, index_count,
       vertex_buffer.id(), std::move(vertex_format), vertex_offset, vertex_count,

@@ -206,7 +206,10 @@ class Material final : public Resource {
   ~Material();
 
   // Sets the material's texture.
-  void SetTexture(const Image& image) { SetTexture(image.id()); }
+  void SetTexture(const Image& image) {
+    FXL_DCHECK(session() == image.session());
+    SetTexture(image.id());
+  }
   void SetTexture(uint32_t image_id);
 
   // Sets the material's color.
@@ -268,11 +271,17 @@ class ShapeNode final : public Node {
   ~ShapeNode();
 
   // Sets the shape that the shape node should draw.
-  void SetShape(const Shape& shape) { SetShape(shape.id()); }
+  void SetShape(const Shape& shape) {
+    FXL_DCHECK(session() == shape.session());
+    SetShape(shape.id());
+  }
   void SetShape(uint32_t shape_id);
 
   // Sets the material with which to draw the shape.
-  void SetMaterial(const Material& material) { SetMaterial(material.id()); }
+  void SetMaterial(const Material& material) {
+    FXL_DCHECK(session() == material.session());
+    SetMaterial(material.id());
+  }
   void SetMaterial(uint32_t material_id);
 
  private:
@@ -284,10 +293,16 @@ class ShapeNode final : public Node {
 class ContainerNode : public Node {
  public:
   // Adds a child to the node.
-  void AddChild(const Node& child) { AddChild(child.id()); }
+  void AddChild(const Node& child) {
+   FXL_DCHECK(session() == child.session());
+   AddChild(child.id());
+ }
   void AddChild(uint32_t child_node_id);
 
-  void AddPart(const Node& part) { AddPart(part.id()); }
+  void AddPart(const Node& part) {
+    FXL_DCHECK(session() == part.session());
+    AddPart(part.id());
+  }
   void AddPart(uint32_t part_node_id);
 
   // Detaches all children from the node.
@@ -436,7 +451,10 @@ class Scene final : public ContainerNode {
   Scene(Scene&& moved);
   ~Scene();
 
-  void AddLight(const Light& light) { AddLight(light.id()); }
+  void AddLight(const Light& light) {
+    FXL_DCHECK(session() == light.session());
+    AddLight(light.id());
+  }
   void AddLight(uint32_t light_id);
   void DetachLights();
 
@@ -480,7 +498,10 @@ class Renderer final : public Resource {
   ~Renderer();
 
   // Sets the camera whose view will be rendered.
-  void SetCamera(const Camera& camera) { SetCamera(camera.id()); }
+  void SetCamera(const Camera& camera) {
+    FXL_DCHECK(session() == camera.session());
+    SetCamera(camera.id());
+  }
   void SetCamera(uint32_t camera_id);
 
   void SetParam(gfx::RendererParam param);
@@ -515,7 +536,10 @@ class Layer final : public Resource {
   }
   void SetSize(const float size[2]);
 
-  void SetRenderer(const Renderer& renderer) { SetRenderer(renderer.id()); }
+  void SetRenderer(const Renderer& renderer) {
+    FXL_DCHECK(session() == renderer.session());
+    SetRenderer(renderer.id());
+  }
   void SetRenderer(uint32_t renderer_id);
 
  private:
@@ -529,7 +553,10 @@ class LayerStack final : public Resource {
   LayerStack(LayerStack&& moved);
   ~LayerStack();
 
-  void AddLayer(const Layer& layer) { AddLayer(layer.id()); }
+  void AddLayer(const Layer& layer) {
+    FXL_DCHECK(session() == layer.session());
+    AddLayer(layer.id());
+  }
   void AddLayer(uint32_t layer_id);
 
  private:
@@ -545,6 +572,7 @@ class DisplayCompositor final : public Resource {
 
   // Sets the layer-stack that is to be composited.
   void SetLayerStack(const LayerStack& layer_stack) {
+    FXL_DCHECK(session() == layer_stack.session());
     SetLayerStack(layer_stack.id());
   }
   void SetLayerStack(uint32_t layer_stack_id);
