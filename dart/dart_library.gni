@@ -111,7 +111,18 @@ if (current_toolchain == dart_toolchain) {
     action(dot_packages_target_name) {
       script = "//build/dart/gen_dot_packages.py"
 
-      deps = dart_deps
+      deps = []
+      package_files = []
+      foreach(dep, dart_deps) {
+        deps += [
+          "${dep}_dot_packages",
+        ]
+        dep_gen_dir = get_label_info(dep, "target_gen_dir")
+        dep_name = get_label_info(dep, "name")
+        package_files += [
+          "$dep_gen_dir/$dep_name.packages",
+        ]
+      }
       if (defined(invoker.non_dart_deps)) {
         public_deps = invoker.non_dart_deps
       }
@@ -121,7 +132,7 @@ if (current_toolchain == dart_toolchain) {
         "//build/dart/label_to_package_name.py",
       ]
 
-      sources = [
+      sources = package_files + [
         # Require a manifest file, allowing the analysis service to identify the
         # package.
         "$package_root/pubspec.yaml",
@@ -130,20 +141,14 @@ if (current_toolchain == dart_toolchain) {
       outputs = [
         dot_packages_file,
       ]
-      depfile = "$dot_packages_file.d"
 
       args = [
         "--out",
-        rebase_path(dot_packages_file, root_build_dir),
+        rebase_path(dot_packages_file),
         "--source-dir",
         rebase_path(source_dir),
-        "--root-build-dir",
-        rebase_path(root_build_dir),
-        "--root-gen-dir",
-        rebase_path(root_gen_dir),
-        "--depfile",
-        rebase_path(depfile),
-      ]
+        "--deps",
+      ] + rebase_path(package_files)
 
       if (defined(package_name)) {
         args += [
@@ -156,8 +161,6 @@ if (current_toolchain == dart_toolchain) {
           target_label,
         ]
       }
-
-      args += [ "--deps" ] + dart_deps
     }
 
     source_target_name = "${target_name}_identify_sources"
@@ -370,6 +373,11 @@ if (current_toolchain == dart_toolchain) {
     }
 
     group(target_name) {
+      # dart_deps are added here to ensure they are fully built.
+      # Up to this point, only the targets generating .packages had been
+      # depended on.
+      deps = dart_deps
+
       public_deps = group_deps
     }
   }
