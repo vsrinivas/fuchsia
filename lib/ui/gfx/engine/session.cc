@@ -167,6 +167,10 @@ bool Session::ApplyCommand(::gfx::Command command) {
           std::move(command.bind_mesh_buffers()));
     case ::gfx::Command::Tag::kAddLayer:
       return ApplyAddLayerCommand(std::move(command.add_layer()));
+    case ::gfx::Command::Tag::kRemoveLayer:
+    case ::gfx::Command::Tag::kRemoveAllLayers:
+      // TODO(SCN-636): Implement.
+      return false;
     case ::gfx::Command::Tag::kSetLayerStack:
       return ApplySetLayerStackCommand(std::move(command.set_layer_stack()));
     case ::gfx::Command::Tag::kSetRenderer:

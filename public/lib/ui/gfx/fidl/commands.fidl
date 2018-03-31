@@ -58,6 +58,8 @@ union Command {
 
   // Layer and renderer commands.
   AddLayerCommand add_layer;
+  RemoveLayerCommand remove_layer;
+  RemoveAllLayersCommand remove_all_layers;
   SetLayerStackCommand set_layer_stack;
   SetRendererCommand set_renderer;
   SetRendererParamCommand set_renderer_param;
@@ -591,6 +593,23 @@ struct BindMeshBuffersCommand {
 struct AddLayerCommand {
   uint32 layer_stack_id;
   uint32 layer_id;
+};
+
+// Remove a layer from a layer stack.
+// Constraints:
+// - |layer_stack_id| refs a |LayerStack|.
+// - |layer_id| refs a |Layer|.
+// - The layer must belong to this stack.
+struct RemoveLayerCommand {
+  uint32 layer_stack_id;
+  uint32 layer_id;
+};
+
+// Remove all layers from a layer stack.
+// Constraints
+// - |layer_stack_id| refs a |LayerStack|.
+struct RemoveAllLayersCommand {
+  uint32 layer_stack_id;
 };
 
 // Set a compositor's layer stack, replacing the current stack (if any).

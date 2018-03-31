@@ -77,6 +77,10 @@ std::ostream& operator<<(std::ostream& stream, const gfx::Command& command) {
       return stream << "BindMeshBuffers";
     case Command::Tag::kAddLayer:
       return stream << "AddLayer";
+    case Command::Tag::kRemoveLayer:
+      return stream << "RemoveLayer";
+    case Command::Tag::kRemoveAllLayers:
+      return stream << "RemoveAllLayers";
     case Command::Tag::kSetLayerStack:
       return stream << "SetLayerStack";
     case Command::Tag::kSetRenderer:
