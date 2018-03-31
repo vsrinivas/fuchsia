@@ -10,6 +10,7 @@
 #![feature(conservative_impl_trait, universal_impl_trait)]
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![allow(stable_features)]
 
 extern crate failure;
 extern crate fidl;

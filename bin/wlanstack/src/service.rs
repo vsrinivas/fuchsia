@@ -6,7 +6,7 @@ use async;
 use device::{self, DevMgrRef};
 use failure::Error;
 use fidl;
-use futures::{Future, FutureExt, Never};
+use futures::{Future, FutureExt, Never, StreamExt};
 use futures::future::{self, FutureResult};
 use wlan_service::{
     self,
@@ -30,11 +30,20 @@ pub fn device_service(devmgr: DevMgrRef, channel: async::Channel)
     DeviceServiceImpl {
         state: devmgr,
 
-        list_phys: |state, c| catch_and_log_err("list_phys", || {
+        list_phys: |state, c| {
             debug!("list_phys");
-            let result = state.lock().list_phys();
-            c.send(&mut wlan_service::ListPhysResponse { phys: result })
-        }),
+            state.lock().list_phys().collect().then(move |phys| {
+                match phys {
+                    Ok(p) => catch_and_log_err("list_phys", || {
+                        c.send(&mut wlan_service::ListPhysResponse { phys: p })
+                    }),
+                    Err(e) => {
+                        error!("could not query phys: {:?}", e);
+                        future::ok(())
+                    }
+                }
+            })
+        },
 
         list_ifaces: |_, c| catch_and_log_err("list_ifaces", || {
             debug!("list_ifaces (stub)");

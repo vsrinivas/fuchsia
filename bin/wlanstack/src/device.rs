@@ -4,7 +4,7 @@
 
 use async;
 use failure::Error;
-use futures::future;
+use futures::{future, stream};
 use futures::prelude::*;
 use parking_lot::Mutex;
 use vfs_watcher;
@@ -77,17 +77,22 @@ impl DeviceManager {
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
-    pub fn list_phys(&self) -> Vec<wlan::PhyInfo> {
+    pub fn list_phys(&self) -> impl Stream<Item = wlan::PhyInfo, Error = ()> {
         self.phys
             .values()
-            .filter_map(|phy| {
-                // TODO(tkilbourn): use the cached value of the query once it's available
-                phy.dev.query().ok().map(|mut info| {
-                    info.id = phy.id;
-                    info
-                })
+            .map(|phy| {
+                let phy_id = phy.id;
+                // For now we query each device for every call to `list_phys`. We will need to
+                // decide how to handle queries for static vs dynamic data, caching response, etc.
+                phy.proxy.query()
+                    .map_err(|_| ())
+                    .map(move |response| {
+                        let mut info = response.info;
+                        info.id = phy_id;
+                        info
+                    })
             })
-            .collect()
+            .collect::<stream::FuturesUnordered<_>>()
     }
 
     /// Creates an interface on the phy with the given id.
