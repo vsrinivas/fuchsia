@@ -1047,8 +1047,8 @@ void thread_set_user_callback(thread_t* t, thread_user_callback_t cb) {
  *
  * See thread_create() for a discussion of priority values.
  */
-void thread_set_priority(int priority) {
-    thread_t* current_thread = get_current_thread();
+void thread_set_priority(thread_t* t, int priority) {
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     THREAD_LOCK(state);
 
@@ -1056,10 +1056,8 @@ void thread_set_priority(int priority) {
         priority = IDLE_PRIORITY + 1;
     if (priority > HIGHEST_PRIORITY)
         priority = HIGHEST_PRIORITY;
-    current_thread->base_priority = priority;
-    current_thread->priority_boost = 0;
 
-    sched_reschedule();
+    sched_change_priority(t, priority);
 
     THREAD_UNLOCK(state);
 }

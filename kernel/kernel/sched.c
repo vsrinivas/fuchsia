@@ -669,6 +669,44 @@ void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
     }
 }
 
+/* changes the thread's base priority and if the re-computed effective priority changed
+*  then the thread is moved to the proper queue on the same processor and a re-schedule
+*  might be issued.
+*/
+void sched_change_priority(thread_t* t, int pri) {
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (unlikely(t->state == THREAD_DEATH))
+        return;
+
+    if (pri > HIGHEST_PRIORITY)
+        pri = HIGHEST_PRIORITY;
+
+    int old_ep = t->effec_priority;
+    t->base_priority = pri;
+    t->priority_boost = 0;
+
+    compute_effec_priority(t);
+    if (old_ep == t->effec_priority) {
+        // No effective change so we exit. The boost has reset but that's ok.
+        return;
+    }
+
+    cpu_mask_t accum_cpu_mask = 0;
+    bool local_resched = false;
+
+    // see if we need to do something based on the state of the thread.
+    sched_priority_changed(t, old_ep, &local_resched, &accum_cpu_mask);
+
+    // send some ipis based on the previous code
+    if (accum_cpu_mask) {
+        mp_reschedule(accum_cpu_mask, 0);
+    }
+    if (local_resched) {
+        sched_reschedule();
+    }
+}
+
 /* preemption timer that is set whenever a thread is scheduled */
 static void sched_timer_tick(timer_t* t, zx_time_t now, void* arg) {
     /* if the preemption timer went off on the idle or a real time thread, ignore it */

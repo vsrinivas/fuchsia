@@ -263,7 +263,7 @@ zx_status_t sys_thread_set_priority(int32_t prio) {
     if ((prio < LOWEST_PRIORITY) || (prio > HIGHEST_PRIORITY))
         return ZX_ERR_INVALID_ARGS;
 
-    thread_set_priority(prio);
+    thread_set_priority(get_current_thread(), prio);
 
     return ZX_OK;
 #else

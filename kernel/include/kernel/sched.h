@@ -27,9 +27,14 @@ void sched_unblock_idle(thread_t* t);
 void sched_migrate(thread_t* t);
 
 /* set the inherited priority of a thread and return if the caller should locally reschedule.
- * pri should be <= MAX_PRIORITY, negative values disable priority inheritance
+ * pri should be <= MAX_PRIORITY, negative values disable priority inheritance.
  */
 void sched_inherit_priority(thread_t* t, int pri, bool* local_resched);
+
+/* set the priority of a thread and reset the boost value. This function might reschedule.
+ * pri should be 0 <= to <= MAX_PRIORITY.
+ */
+void sched_change_priority(thread_t* t, int pri);
 
 /* return true if the thread was placed on the current cpu's run queue */
 /* this usually means the caller should locally reschedule soon */
