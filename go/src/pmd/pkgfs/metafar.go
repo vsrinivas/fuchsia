@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"thinfs/fs"
@@ -28,6 +29,7 @@ func GetMetaFar(name, version, blob string, fs *Filesystem) (*metaFar, error) {
 		blob:    blob,
 		fs:      fs,
 
+		rc: 1,
 		fr: fr,
 	}
 
@@ -41,7 +43,19 @@ type metaFar struct {
 
 	fs *Filesystem
 
+	// reference count of handles to this meta.far
+	rc uint64
 	fr *far.Reader
+}
+
+func (mf *metaFar) AddRef() {
+	atomic.AddUint64(&mf.rc, 1)
+}
+
+func (mf *metaFar) Deref() {
+	if atomic.AddUint64(&mf.rc, ^uint64(0)) == 0 {
+		mf.fr.Close()
+	}
 }
 
 type metaFarDir struct {
@@ -77,18 +91,33 @@ func newMetaFarDirAt(name, version, blob string, fs *Filesystem, path string) (*
 
 func (d *metaFarDir) Close() error {
 	debugLog("pkgfs:metaFarDir:close %q/%q@%s", d.name, d.version, d.blob)
+	if d.metaFar == nil {
+		return fs.ErrNotOpen
+	}
+	d.Deref()
+	d.metaFar = nil
 	return nil
 }
 
 func (d *metaFarDir) Dup() (fs.Directory, error) {
+	if d.metaFar == nil {
+		return nil, fs.ErrNotOpen
+	}
+	d.AddRef()
 	return d, nil
 }
 
 func (d *metaFarDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
+	if d.metaFar == nil {
+		return nil, fs.ErrNotOpen
+	}
 	return d, nil
 }
 
 func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
+	if d.metaFar == nil {
+		return nil, nil, nil, fs.ErrNotOpen
+	}
 	name = clean(name)
 	debugLog("pkgfs:metaFarDir:open %q", name)
 
@@ -130,6 +159,9 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 func (d *metaFarDir) Read() ([]fs.Dirent, error) {
 	debugLog("pkgfs:metaFarDir:read %q %q", d.blob, d.path)
+	if d.metaFar == nil {
+		return nil, fs.ErrNotOpen
+	}
 
 	// TODO(raggi): improve efficiency
 	dirs := map[string]struct{}{}
@@ -157,6 +189,9 @@ func (d *metaFarDir) Read() ([]fs.Dirent, error) {
 
 func (d *metaFarDir) Stat() (int64, time.Time, time.Time, error) {
 	debugLog("pkgfs:metaFarDir:stat %q/%q@%s", d.name, d.version, d.blob)
+	if d.metaFar == nil {
+		return 0, time.Time{}, time.Time{}, fs.ErrNotOpen
+	}
 	// TODO(raggi): forward stat values from the index
 	return int64(len(d.fr.List())), d.fs.mountTime, d.fs.mountTime, nil
 }
@@ -189,11 +224,20 @@ func newMetaFarFile(name, version, blob string, fs *Filesystem, path string) (*m
 
 func (f *metaFarFile) Close() error {
 	debugLog("pkgfs:metaFarFile:close %q/%s", f.blob, f.path)
+	if f.metaFar == nil {
+		return fs.ErrNotOpen
+	}
+	f.Deref()
+	f.metaFar = nil
 	return nil
 }
 
 func (f *metaFarFile) Dup() (fs.File, error) {
 	debugLog("pkgfs:metaFarFile:dup %q/%s", f.blob, f.path)
+	if f.metaFar == nil {
+		return nil, fs.ErrNotOpen
+	}
+	f.metaFar.AddRef()
 	return &metaFarFile{
 		f.unsupportedFile,
 		f.metaFar,
@@ -204,12 +248,18 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 
 func (f *metaFarFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
 	debugLog("pkgfs:metaFarFile:reopen %q/%s", f.blob, f.path)
+	if f.metaFar == nil {
+		return nil, fs.ErrNotOpen
+	}
 	f.off = 0
 	return f, nil
 }
 
 func (f *metaFarFile) Read(p []byte, off int64, whence int) (int, error) {
 	debugLog("pkgfs:metaFarFile:read %q/%s - %d %d", f.blob, f.path, off, whence)
+	if f.metaFar == nil {
+		return 0, fs.ErrNotOpen
+	}
 	// TODO(raggi): this could allocate less/be far more efficient
 
 	ra, err := f.fr.Open(f.path)
@@ -232,6 +282,9 @@ func (f *metaFarFile) Read(p []byte, off int64, whence int) (int, error) {
 
 func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 	debugLog("pkgfs:metaFarFile:seek %q/%s", f.blob, f.path)
+	if f.metaFar == nil {
+		return 0, fs.ErrNotOpen
+	}
 	var err error
 	var n int64
 	switch whence {
@@ -252,5 +305,8 @@ func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 
 func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {
 	debugLog("pkgfs:metaFarFile:stat")
+	if f.metaFar == nil {
+		return 0, time.Time{}, time.Time{}, fs.ErrNotOpen
+	}
 	return int64(f.fr.GetSize(f.path)), time.Time{}, time.Time{}, nil
 }

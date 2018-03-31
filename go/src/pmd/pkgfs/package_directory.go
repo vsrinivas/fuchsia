@@ -5,12 +5,10 @@
 package pkgfs
 
 import (
-	"bufio"
 	"bytes"
-	"io"
+	"encoding/json"
 	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
@@ -45,23 +43,12 @@ func newPackageDir(name, version string, filesystem *Filesystem) (*packageDir, e
 		merkleroot = string(bmerkle)
 	}
 
-	pd, err := newPackageDirFromBlob(merkleroot, filesystem)
-	if err != nil {
-		return nil, err
-	}
-
-	// update the name related fields for easier debugging:
-	pd.unsupportedDirectory = unsupportedDirectory(filepath.Join("/packages", name, version))
-	pd.name = name
-	pd.version = version
-
-	return pd, nil
+	return newPackageDirFromBlob(merkleroot, filesystem)
 }
 
 // Initialize a package directory server interface from a package meta.far
 func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, error) {
-	blobPath := filepath.Join(filesystem.blobfs.Root, blob)
-	f, err := os.Open(blobPath)
+	f, err := filesystem.blobfs.Open(blob)
 	if err != nil {
 		log.Printf("pkgfs: failed to open package contents at %q: %s", blob, err)
 		return nil, goErrToFSErr(err)
@@ -74,55 +61,53 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 		return nil, goErrToFSErr(err)
 	}
 
-	buf, err := fr.ReadFile("meta/contents")
+	buf, err := fr.ReadFile("meta/package")
+	if err != nil {
+		log.Printf("pkgfs: failed to read meta/package from %q: %s", blob, err)
+		return nil, goErrToFSErr(err)
+	}
+	var p pkg.Package
+	if err := json.Unmarshal(buf, &p); err != nil {
+		log.Printf("pkgfs: failed to parse meta/package from %q: %s", blob, err)
+		return nil, goErrToFSErr(err)
+	}
+
+	buf, err = fr.ReadFile("meta/contents")
 	if err != nil {
 		log.Printf("pkgfs: failed to read meta/contents from %q: %s", blob, err)
 		return nil, goErrToFSErr(err)
 	}
 
-	pd, err := newPackageDirFromReader(bytes.NewReader(buf), filesystem)
-	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
-	pd.unsupportedDirectory = unsupportedDirectory(blob)
-	pd.name = blob
-	pd.version = ""
-
-	pd.contents["meta"] = blob
-
-	return pd, nil
-}
-
-func newPackageDirFromReader(r io.Reader, filesystem *Filesystem) (*packageDir, error) {
 	pd := packageDir{
-		unsupportedDirectory: unsupportedDirectory("packageDir"),
+		unsupportedDirectory: unsupportedDirectory(filepath.Join("/packages", p.Name, p.Version)),
+		name:                 p.Name,
+		version:              p.Version,
 		fs:                   filesystem,
 		contents:             map[string]string{},
 	}
 
-	b := bufio.NewReader(r)
+	lines := bytes.Split(buf, []byte("\n"))
 
-	for {
-		line, err := b.ReadString('\n')
-		if err == io.EOF {
-			if len(line) == 0 {
-				break
-			}
-			err = nil
-		}
-
-		if err != nil {
-			log.Printf("pkgfs: failed to read package contents from %v: %s", r, err)
-			// TODO(raggi): better error?
-			return nil, fs.ErrFailedPrecondition
-		}
-		line = strings.TrimSpace(line)
-		parts := strings.SplitN(line, "=", 2)
+	for _, line := range lines {
+		line = bytes.TrimSpace(line)
+		parts := bytes.SplitN(line, []byte("="), 2)
 		if len(parts) != 2 {
 			log.Printf("pkgfs: bad contents line: %v", line)
 			continue
 		}
-		pd.contents[parts[0]] = parts[1]
+		pd.contents[string(parts[0])] = string(parts[1])
+	}
+	if err != nil {
+		return nil, goErrToFSErr(err)
+	}
+
+	pd.contents["meta"] = blob
+	for _, name := range fr.List() {
+		if !strings.HasPrefix(name, "meta/") {
+			log.Printf("pkgfs:packageDir:new %q/%q illegal file in meta.far: %q", pd.name, pd.version, name)
+			continue
+		}
+		pd.contents[name] = name
 	}
 
 	return &pd, nil
@@ -163,15 +148,22 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 
-	if name == "meta" || strings.HasPrefix(name, "meta/") {
-		if blob, ok := d.contents["meta"]; ok {
-			d, err := newMetaFarDir(d.name, d.version, blob, d.fs)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			return d.Open(strings.TrimPrefix(name, "meta"), flags)
+	if name == "meta" {
+		mfd, err := newMetaFarDir(d.name, d.version, d.contents[name], d.fs)
+		return nil, mfd, nil, err
+	}
+
+	if strings.HasPrefix(name, "meta/") {
+		if _, found := d.contents[name]; !found {
+			return nil, nil, nil, fs.ErrNotFound
 		}
-		return nil, nil, nil, fs.ErrNotFound
+
+		mfd, err := newMetaFarDir(d.name, d.version, d.contents["meta"], d.fs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		defer mfd.Close()
+		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}
 
 	if root, ok := d.contents[name]; ok {
