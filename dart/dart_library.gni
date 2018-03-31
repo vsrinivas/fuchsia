@@ -375,7 +375,7 @@ if (current_toolchain == dart_toolchain) {
     }
 
     group(target_name) {
-      deps = group_deps
+      public_deps = group_deps
     }
   }
 } else {  # Not the Dart toolchain.
