@@ -64,21 +64,13 @@ typedef struct mount_options {
     bool create_mountpoint;
 } mount_options_t;
 
-static const mount_options_t default_mount_options = {
-    .readonly = false,
-    .verbose_mount = false,
-    .collect_metrics = false,
-    .wait_until_ready = true,
-    .create_mountpoint = false,
-};
+extern const mount_options_t default_mount_options;
 
 typedef struct mkfs_options {
     bool verbose;
 } mkfs_options_t;
 
-static const mkfs_options_t default_mkfs_options = {
-    .verbose = false,
-};
+extern const mkfs_options_t default_mkfs_options;
 
 #define NUM_MKFS_OPTIONS 1
 
@@ -92,12 +84,7 @@ typedef struct fsck_options {
 
 #define NUM_FSCK_OPTIONS 3
 
-static const fsck_options_t default_fsck_options = {
-    .verbose = false,
-    .never_modify = false,
-    .always_modify = false,
-    .force = false,
-};
+extern const fsck_options_t default_fsck_options;
 
 typedef zx_status_t (*LaunchCallback)(int argc, const char** argv,
                                       zx_handle_t* hnd, uint32_t* ids, size_t len);

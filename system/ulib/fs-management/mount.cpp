@@ -243,6 +243,25 @@ zx_status_t Mounter::Mount(unique_fd device, disk_format_t format,
 
 }  // namespace
 
+const mount_options_t default_mount_options = {
+    .readonly = false,
+    .verbose_mount = false,
+    .collect_metrics = false,
+    .wait_until_ready = true,
+    .create_mountpoint = false,
+};
+
+const mkfs_options_t default_mkfs_options = {
+    .verbose = false,
+};
+
+const fsck_options_t default_fsck_options = {
+    .verbose = false,
+    .never_modify = false,
+    .always_modify = false,
+    .force = false,
+};
+
 disk_format_t detect_disk_format(int fd) {
     uint8_t data[HEADER_SIZE];
     if (read(fd, data, sizeof(data)) != sizeof(data)) {
