@@ -21,7 +21,7 @@ use std::sync::Arc;
 struct PhyDevice {
     id: u16,
     proxy: wlan::PhyProxy,
-    dev: wlan_dev::WlanPhy,
+    _dev: wlan_dev::WlanPhy,
 }
 
 impl PhyDevice {
@@ -30,7 +30,10 @@ impl PhyDevice {
         Ok(PhyDevice {
             id,
             proxy: dev.connect()?,
-            dev,
+            // TODO(tkilbourn): see about removing this field. It will close the fd to the device,
+            // which means the refcount on the dev node goes down. Investigate how this works out
+            // in practice.
+            _dev: dev,
         })
     }
 }
@@ -118,9 +121,21 @@ impl DeviceManager {
     }
 
     /// Destroys an interface with the given ids.
-    pub fn destroy_iface(&mut self, phy_id: u16, iface_id: u16) -> Result<(), Error> {
-        let phy = self.phys.get(&phy_id).ok_or(zx::Status::INVALID_ARGS)?;
-        phy.dev.destroy_iface(iface_id).map_err(|e| e.into())
+    pub fn destroy_iface(
+        &mut self,
+        phy_id: u16,
+        iface_id: u16,
+    ) -> impl Future<Item = (), Error = zx::Status> {
+        let phy = match self.phys.get(&phy_id) {
+            Some(p) => p,
+            None => return future::err(zx::Status::INVALID_ARGS).left(),
+        };
+        let mut req = wlan::DestroyIfaceRequest { id: iface_id };
+        phy.proxy
+            .destroy_iface(&mut req)
+            .map_err(|_| zx::Status::IO)
+            .and_then(|resp| zx::Status::ok(resp.status).into_future())
+            .right()
     }
 
     /// Adds an `EventListener`. The event methods will be called for each existing object tracked

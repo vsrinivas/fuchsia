@@ -69,12 +69,12 @@ pub fn device_service(
         },
 
         destroy_iface: |state, req, _| {
-            catch_and_log_err("destroy_iface", || {
-                debug!("destroy_iface req: {:?}", req);
-                // TODO(tkilbourn): have DeviceManager return a future here
-                let _ = state.lock().destroy_iface(req.phy_id, req.iface_id);
-                Ok(())
-            })
+            debug!("destroy_iface req: {:?}", req);
+            state
+                .lock()
+                .destroy_iface(req.phy_id, req.iface_id)
+                .map(move |_| info!("successfully destroyed iface {}", req.iface_id))
+                .recover(|e| error!("could not destroy iface: {:?}", e))
         },
 
         register_listener: |state, listener, _| {
