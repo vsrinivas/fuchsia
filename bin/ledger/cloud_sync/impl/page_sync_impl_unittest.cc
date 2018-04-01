@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
@@ -257,7 +259,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
   storage_.NewCommit("id1", "content1");
 
   page_sync_->SetOnBacklogDownloaded([this] {
-    message_loop_.task_runner()->PostTask([this] {
+    async::PostTask(message_loop_.async(), [this] {
       auto commit = storage_.NewCommit("id2", "content2");
       storage_.new_commits_to_return["id2"] = commit->Clone();
       storage_.watcher_->OnNewCommits(commit->AsList(),

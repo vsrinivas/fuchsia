@@ -4,6 +4,9 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/queue_persistence_test_service.h>
+#include <lib/async/cpp/task.h>
+#include <lib/task/default.h>
+
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -46,11 +49,11 @@ class ParentApp {
     // we time out. If that happens, the module will exit normally through
     // Stop(), but the test will fail because some TestPoints will not have been
     // passed.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(async_get_default(),
         callback::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),
-        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        zx::msec(kTimeoutMilliseconds));
   }
 
   // Called by ModuleDriver.

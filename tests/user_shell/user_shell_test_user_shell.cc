@@ -9,6 +9,9 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -404,8 +407,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         story1_run_.Pass();
 
         // When the story is done, we start the next one.
-        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-            [this] { TestStory2(); });
+        async::PostTask(async_get_default(), [this] { TestStory2(); });
       });
     });
 
@@ -510,8 +512,9 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
             "StoryState after Start() must be STARTING or RUNNING.");
       }
 
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-          [this] { TestStory2_DeleteStory(); }, fxl::TimeDelta::FromSeconds(5));
+      async::PostDelayedTask(async_get_default(),
+                             [this] { TestStory2_DeleteStory(); },
+                             zx::sec(5));
     });
   }
 

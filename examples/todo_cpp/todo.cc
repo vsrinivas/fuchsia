@@ -11,6 +11,9 @@
 #include <algorithm>
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include <fuchsia/cpp/ledger_internal.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -122,7 +125,7 @@ void TodoApp::Initialize(
                      HandleResponse("Watch"));
   List(std::move(snapshot));
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] { Act(); });
+  async::PostTask(async_get_default(), [this] { Act(); });
 }
 
 void TodoApp::Terminate() {
@@ -194,9 +197,8 @@ void TodoApp::Act() {
       AddNew();
     }
   });
-  fxl::TimeDelta delay = fxl::TimeDelta::FromSeconds(delay_distribution_(rng_));
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      [this] { Act(); }, delay);
+  zx::duration delay = zx::sec(delay_distribution_(rng_));
+  async::PostDelayedTask(async_get_default(), [this] { Act(); }, delay);
 }
 
 }  // namespace todo

@@ -7,6 +7,9 @@
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 
 #include <fuchsia/cpp/modular.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/public/lib/fxl/strings/split_string.h"
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -630,14 +633,15 @@ void ModuleResolverImpl::PeriodicCheckIfSourcesAreReady() {
     if (already_checking_if_sources_are_ready_)
       return;
     already_checking_if_sources_are_ready_ = true;
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [weak_this = weak_factory_.GetWeakPtr()]() {
           if (weak_this) {
             weak_this->already_checking_if_sources_are_ready_ = false;
             weak_this->PeriodicCheckIfSourcesAreReady();
           }
         },
-        fxl::TimeDelta::FromSeconds(10));
+        zx::sec(10));
   }
 }
 

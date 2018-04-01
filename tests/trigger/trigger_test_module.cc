@@ -4,6 +4,9 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_test_trigger.h>
+#include <lib/async/cpp/task.h>
+#include <lib/task/default.h>
+
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/module_driver.h"
@@ -82,11 +85,12 @@ class ParentApp {
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         callback::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),
-        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        zx::msec(kTimeoutMilliseconds));
   }
 
   TestPoint stopped_{"Root module stopped"};

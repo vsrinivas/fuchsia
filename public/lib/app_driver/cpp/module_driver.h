@@ -10,6 +10,8 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -122,9 +124,9 @@ class ModuleDriver : LifecycleImpl::Delegate, ModuleImpl::Delegate, ModuleHost {
     if (impl_) {
       impl_->Terminate([this] {
         // Cf. AppDriver::Terminate().
-        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
-          impl_.reset();
-          on_terminated_();
+        async::PostTask(async_get_default(), [this] {
+            impl_.reset();
+            on_terminated_();
         });
       });
     } else {

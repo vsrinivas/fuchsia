@@ -4,6 +4,7 @@
 
 #include "peridot/bin/ledger/testing/run_with_tracing.h"
 
+#include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <trace/observer.h>
@@ -30,7 +31,8 @@ int RunWithTracing(fsl::MessageLoop* loop, std::function<void()> runnable) {
   }
 
   int err = 0;
-  loop->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      loop->async(),
       [&started, loop, &err] {
         if (!started) {
           // To avoid running the runnable if the tracing state changes to
@@ -44,7 +46,7 @@ int RunWithTracing(fsl::MessageLoop* loop, std::function<void()> runnable) {
           loop->PostQuitTask();
         }
       },
-      fxl::TimeDelta::FromSeconds(5));
+      zx::sec(5));
 
   loop->Run();
   return err;

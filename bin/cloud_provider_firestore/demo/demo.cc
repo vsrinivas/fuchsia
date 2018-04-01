@@ -7,6 +7,8 @@
 #include <google/firestore/v1beta1/firestore.pb.h>
 
 #include <fuchsia/cpp/modular.h>
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -35,8 +37,9 @@ class Demo : public modular::Lifecycle, ListenCallClient {
   void Run() {
     listen_call_handler_ = firestore_service_.Listen(nullptr, this);
 
-    loop_.task_runner()->PostDelayedTask([this] { loop_.PostQuitTask(); },
-                                         fxl::TimeDelta::FromSeconds(20));
+    async::PostDelayedTask(loop_.async(),
+                          [this] { loop_.PostQuitTask(); },
+                          zx::sec(20));
 
     loop_.Run();
   }
@@ -102,8 +105,9 @@ class Demo : public modular::Lifecycle, ListenCallClient {
           }
           FXL_LOG(INFO) << "Created document " << result.name();
 
-          loop_.task_runner()->PostDelayedTask([this] { CreateNextDocument(); },
-                                               fxl::TimeDelta::FromSeconds(3));
+          async::PostDelayedTask(loop_.async(),
+                                 [this] { CreateNextDocument(); },
+                                 zx::sec(3));
         });
   }
 

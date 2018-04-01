@@ -7,6 +7,9 @@
 
 #include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/views_v1_token.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -246,8 +249,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
         story1_run_.Pass();
 
         // When the story is done, the test is over.
-        fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-            [this] { user_shell_context_->Logout(); });
+        async::PostTask(async_get_default(),
+                        [this] { user_shell_context_->Logout(); });
       });
     });
     story_state_watcher_.Watch(&story_controller_);

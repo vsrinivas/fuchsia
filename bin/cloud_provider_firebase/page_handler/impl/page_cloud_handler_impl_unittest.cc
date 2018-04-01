@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -48,7 +50,8 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     upload_auth_tokens_.push_back(std::move(auth_token));
     upload_keys_.push_back(key);
     upload_data_.push_back(std::move(data));
-    message_loop_.task_runner()->PostTask(
+    async::PostTask(
+        message_loop_.async(),
         [callback = std::move(callback)] { callback(gcs::Status::OK); });
   }
 
@@ -59,7 +62,8 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
           callback) override {
     download_auth_tokens_.push_back(std::move(auth_token));
     download_keys_.push_back(key);
-    message_loop_.task_runner()->PostTask(
+    async::PostTask(
+        message_loop_.async(),
         [this, callback = std::move(callback)] {
           callback(download_status_, download_response_size_,
                    std::move(download_response_));
@@ -74,7 +78,8 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
                          const rapidjson::Value& value)> callback) override {
     get_keys_.push_back(key);
     get_queries_.push_back(query_params);
-    message_loop_.task_runner()->PostTask(
+    async::PostTask(
+        message_loop_.async(),
         [this, callback = std::move(callback)] {
           callback(firebase::Status::OK, *get_response_);
           message_loop_.PostQuitTask();
@@ -87,7 +92,8 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
            std::function<void(firebase::Status status)> callback) override {
     put_keys_.push_back(key);
     put_data_.push_back(data);
-    message_loop_.task_runner()->PostTask(
+    async::PostTask(
+        message_loop_.async(),
         [this, callback = std::move(callback)] {
           callback(firebase::Status::OK);
           message_loop_.PostQuitTask();
@@ -101,7 +107,8 @@ class PageCloudHandlerImplTest : public gtest::TestWithMessageLoop,
     patch_keys_.push_back(key);
     patch_queries_.push_back(query_params);
     patch_data_.push_back(data);
-    message_loop_.task_runner()->PostTask(
+    async::PostTask(
+        message_loop_.async(),
         [this, callback = std::move(callback)] {
           callback(firebase::Status::OK);
           message_loop_.PostQuitTask();

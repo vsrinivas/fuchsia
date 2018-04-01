@@ -8,6 +8,8 @@
 #include <fuchsia/cpp/images.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -146,7 +148,8 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
     }
 
     fxl::WeakPtr<Module2App> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
             return;
@@ -160,7 +163,7 @@ class Module2App : public modular::SingleServiceApp<modular::Module> {
           store_.MarkDirty();
           store_.ModelChanged();
         },
-        fxl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
+        zx::msec(kAnimationDelayInMs));
   }
 
   std::unique_ptr<Module2View> view_;

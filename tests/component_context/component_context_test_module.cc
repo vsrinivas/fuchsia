@@ -6,6 +6,8 @@
 
 #include <fuchsia/cpp/component_context_test.h>
 #include <fuchsia/cpp/modular.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
@@ -22,7 +24,7 @@ namespace {
 
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
-constexpr fxl::TimeDelta kTimeout = fxl::TimeDelta::FromSeconds(15);
+constexpr zx::duration kTimeout = zx::sec(15);
 
 constexpr char kOneAgentUrl[] =
     "file:///system/test/modular_tests/component_context_test_one_agent";
@@ -110,7 +112,8 @@ class ParentApp {
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                              [this] { steps_.Cancel(); }),
         kTimeout);
@@ -180,13 +183,14 @@ class ParentApp {
     // TODO(jimbe) We don't check if the agent started running in the allotted
     // time, so this test isn't reliable. We need to make a call to the agent
     // and wait for a response.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                              [this, done_cb] {
                                unstoppable_agent_controller_.Unbind();
                                done_cb();
                              }),
-        fxl::TimeDelta::FromMilliseconds(500));
+        zx::msec(500));
   }
 
   CounterTrigger steps_;

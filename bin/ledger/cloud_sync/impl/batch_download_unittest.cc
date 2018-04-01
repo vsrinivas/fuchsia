@@ -6,6 +6,8 @@
 
 #include <map>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -34,11 +36,11 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
-      message_loop_->task_runner()->PostTask(
-          [callback]() { callback(storage::Status::IO_ERROR); });
+      async::PostTask(message_loop_->async(),
+                      [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
+    async::PostTask(message_loop_->async(), fxl::MakeCopyable(
         [this, ids_and_bytes = std::move(ids_and_bytes), callback]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
@@ -51,8 +53,8 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                        fxl::StringView value,
                        std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    message_loop_->task_runner()->PostTask(
-        [callback]() { callback(storage::Status::OK); });
+    async::PostTask(message_loop_->async(),
+                    [callback]() { callback(storage::Status::OK); });
   }
 
   bool should_fail_add_commit_from_sync = false;

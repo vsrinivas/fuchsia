@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -64,12 +66,13 @@ void FakePageStorage::GetCommit(
     return;
   }
 
-  message_loop_->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      message_loop_->async(),
       [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
       },
-      fxl::TimeDelta::FromMilliseconds(5));
+      zx::msec(5));
 }
 
 void FakePageStorage::StartCommit(
@@ -117,7 +120,8 @@ void FakePageStorage::CommitJournal(
         heads_.emplace(commit->GetId());
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
-            message_loop_->task_runner()->PostTask(fxl::MakeCopyable(
+            async::PostTask(
+                message_loop_->async(), fxl::MakeCopyable(
                 [watcher, commit = commit->Clone()]() mutable {
                   std::vector<std::unique_ptr<const Commit>> commits;
                   commits.push_back(std::move(commit));
@@ -194,8 +198,9 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  message_loop_->task_runner()->PostDelayedTask(
-      [this] { SendNextObject(); }, fxl::TimeDelta::FromMilliseconds(5));
+  async::PostDelayedTask(message_loop_->async(),
+                         [this] { SendNextObject(); },
+                         zx::msec(5));
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,

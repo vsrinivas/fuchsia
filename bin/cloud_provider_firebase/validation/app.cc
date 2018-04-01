@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
@@ -43,7 +45,8 @@ int main(int argc, char** argv) {
       });
 
   int32_t return_code = -1;
-  message_loop.task_runner()->PostTask(
+  async::PostTask(
+      message_loop.async(),
       [&factory, &launcher, &return_code, &message_loop] {
         factory.Init();
         launcher.Run({}, [&return_code, &message_loop](int32_t result) {

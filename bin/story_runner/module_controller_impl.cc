@@ -4,6 +4,9 @@
 
 #include "peridot/bin/story_runner/module_controller_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -142,7 +145,7 @@ void ModuleControllerImpl::Teardown(std::function<void()> done) {
   // call Module.Stop(), but also schedule a timeout in case it
   // doesn't return from Stop().
   if (state_ == ModuleState::UNLINKED) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(cont);
+    async::PostTask(async_get_default(), cont);
   } else {
     app_client_.Teardown(kBasicTimeout, cont);
   }

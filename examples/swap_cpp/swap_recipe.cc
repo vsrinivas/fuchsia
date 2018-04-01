@@ -6,6 +6,9 @@
 #include <memory>
 
 #include <fuchsia/cpp/modular.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -95,8 +98,9 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
   void SwapModule() {
     StartModule(kModuleQueries[query_index_]);
     query_index_ = (query_index_ + 1) % kModuleQueries.size();
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-        [this] { SwapModule(); }, fxl::TimeDelta::FromSeconds(kSwapSeconds));
+    async::PostDelayedTask(async_get_default(),
+                           [this] { SwapModule(); },
+                           zx::sec(kSwapSeconds));
   }
 
   void StartModule(const std::string& module_query) {

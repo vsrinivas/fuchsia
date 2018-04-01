@@ -9,6 +9,8 @@
 #include <fuchsia/cpp/images.h>
 #include <fuchsia/cpp/views_v1.h>
 #include <fuchsia/cpp/views_v1_token.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
@@ -183,7 +185,8 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
     }
 
     fxl::WeakPtr<Module1App> module_ptr = weak_ptr_factory_.GetWeakPtr();
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [this, module_ptr] {
           if (!module_ptr.get() || store_.terminating()) {
             return;
@@ -197,7 +200,7 @@ class Module1App : modular::SingleServiceApp<modular::Module> {
           store_.MarkDirty();
           store_.ModelChanged();
         },
-        fxl::TimeDelta::FromMilliseconds(kAnimationDelayInMs));
+        zx::msec(kAnimationDelayInMs));
   }
 
   // This is a ServiceProvider we expose to our parent (recipe) module, to

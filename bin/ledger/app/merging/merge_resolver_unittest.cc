@@ -7,6 +7,8 @@
 #include <string>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/cancellable_helper.h"
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
@@ -426,7 +428,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.set_on_empty(callback::SetWhenCalled(&called));
   resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
-  message_loop_.task_runner()->PostTask([&resolver] {
+  async::PostTask(message_loop_.async(), [&resolver] {
     resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
   });
 

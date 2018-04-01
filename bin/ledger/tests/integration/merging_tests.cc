@@ -7,6 +7,9 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
@@ -322,14 +325,15 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   void GetPolicy(ledger::PageId /*page_id*/,
                  GetPolicyCallback callback) override {
     get_policy_calls++;
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [this, callback] {
           callback(policy_);
           if (callback_) {
             callback_();
           }
         },
-        response_delay_);
+        zx::nsec(response_delay_.ToNanoseconds()));
   }
 
   void NewConflictResolver(

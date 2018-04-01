@@ -6,6 +6,9 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
@@ -447,9 +450,10 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      async_get_default(),
       [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      fxl::TimeDelta::FromSeconds(1));
+      zx::sec(1));
   fsl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);

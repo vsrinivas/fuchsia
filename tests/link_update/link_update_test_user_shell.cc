@@ -5,6 +5,9 @@
 #include <memory>
 
 #include <fuchsia/cpp/modular_private.h>
+#include <lib/async/cpp/task.h>
+#include <lib/task/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
@@ -159,7 +162,8 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     root_peer_->Set(nullptr, "5");
     root_link_->Set(nullptr, "6");
 
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [this, called] {
           if (!*called) {
             FXL_LOG(WARNING) << "Shutdown timed out";
@@ -167,7 +171,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
             *called = true;
           }
         },
-        fxl::TimeDelta::FromSeconds(5u));
+        zx::sec(5));
 
     // The code below does not work because it does not wait for the Ledger
     // to deliver all of its messages.

@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -179,8 +181,8 @@ TEST_F(EventStreamTest, DeleteOnEvent) {
   delete_on_event_ = true;
   fsl::BlockingCopyFromString("event: abc\ndata: bazinga\n\n",
                               producer_socket_);
-  message_loop_.task_runner()->PostTask(
-      [this]() { message_loop_.PostQuitTask(); });
+  async::PostTask(message_loop_.async(),
+                  [this]() { message_loop_.PostQuitTask(); });
   message_loop_.Run();
 
   EXPECT_EQ(1u, status_.size());

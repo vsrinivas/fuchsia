@@ -7,6 +7,9 @@
 #include <trace/event.h>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
@@ -119,7 +122,8 @@ void OperationBase::Ready() {
 void OperationBase::Schedule() {
   TraceAsyncBegin();
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
+  async::PostTask(
+      async_get_default(),
       [this, weak = weak_ptr_factory_.GetWeakPtr()] {
         if (weak) {
           Run();

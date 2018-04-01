@@ -4,6 +4,9 @@
 
 #include "peridot/bin/suggestion_engine/query_processor.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
@@ -15,7 +18,7 @@ namespace {
 // Force queries to complete after some delay for better UX until/unless we can
 // bring back staggered results in a way that isn't jarring and doesn't overly
 // complicate the API.
-constexpr fxl::TimeDelta kQueryTimeout = fxl::TimeDelta::FromSeconds(9);
+constexpr zx::duration kQueryTimeout = zx::sec(9);
 
 }  // namespace
 
@@ -39,7 +42,8 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
       DispatchQuery(handler_record);
     }
 
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         [w = weak_ptr_factory_.GetWeakPtr()] {
           if (w)
             w->TimeOut();

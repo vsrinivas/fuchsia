@@ -8,6 +8,9 @@
 #include <set>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -19,7 +22,7 @@
 
 namespace modular {
 
-constexpr fxl::TimeDelta kTeardownTimeout = fxl::TimeDelta::FromSeconds(3);
+constexpr zx::duration kTeardownTimeout = zx::sec(3);
 
 AgentRunner::AgentRunner(
     component::ApplicationLauncher* const application_launcher,
@@ -86,8 +89,9 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 
   auto cont_timeout = [cont] { cont(true); };
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
-      std::move(cont_timeout), kTeardownTimeout);
+  async::PostDelayedTask(async_get_default(),
+                         std::move(cont_timeout),
+                         kTeardownTimeout);
 }
 
 void AgentRunner::MaybeRunAgent(const std::string& agent_url,
@@ -371,7 +375,8 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
 
   found_it->second[task_id] = alarm_in_seconds;
   auto terminating = terminating_;
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      async_get_default(),
       [this, agent_url, task_id, terminating] {
         // If agent runner is terminating, do not run any new tasks.
         if (*terminating) {
@@ -393,7 +398,7 @@ void AgentRunner::ScheduleAlarmTask(const std::string& agent_url,
                             false);
         });
       },
-      fxl::TimeDelta::FromSeconds(alarm_in_seconds));
+      zx::sec(alarm_in_seconds));
 }
 
 void AgentRunner::DeleteTask(const std::string& agent_url,

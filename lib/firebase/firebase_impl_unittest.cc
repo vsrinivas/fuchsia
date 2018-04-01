@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
 #include <rapidjson/document.h>
 
 #include "garnet/lib/gtest/test_with_message_loop.h"
@@ -419,8 +420,7 @@ TEST_F(FirebaseImplTest, UnWatch) {
   EXPECT_TRUE(fsl::BlockingCopyFromString(event, socket.socket2));
 
   // TODO(ppi): how to avoid the wait?
-  message_loop_.task_runner()->PostDelayedTask(
-      MakeQuitTask(), fxl::TimeDelta::FromMilliseconds(100));
+  async::PostDelayedTask(message_loop_.async(), MakeQuitTask(), zx::msec(100));
   EXPECT_FALSE(RunLoopWithTimeout());
 
   EXPECT_EQ(2u, put_count_);

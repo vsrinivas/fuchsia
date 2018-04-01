@@ -4,7 +4,10 @@
 
 #include "peridot/lib/common/async_holder.h"
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
@@ -44,8 +47,9 @@ void AsyncHolderBase::Teardown(fxl::TimeDelta timeout,
 
   auto cont_normal = [cont] { cont(false); };
 
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(cont_timeout,
-                                                                 timeout);
+  async::PostDelayedTask(async_get_default(),
+                         cont_timeout,
+                         zx::nsec(timeout.ToNanoseconds()));
   ImplTeardown(cont_normal);
 }
 

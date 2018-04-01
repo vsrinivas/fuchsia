@@ -9,6 +9,9 @@
 #include <memory>
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -73,7 +76,7 @@ class AppDriver : LifecycleImpl::Delegate {
       // until the current stack rolls back up to the MessageLoop which
       // guarantees impl_::Terminate() and anything that asynchronously
       // invokes this callback are done running.
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this] {
+      async::PostTask(async_get_default(), [this] {
         impl_.reset();
         on_terminated_();
       });

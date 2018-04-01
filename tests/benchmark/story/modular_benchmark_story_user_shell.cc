@@ -11,6 +11,9 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1_token.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/command_line.h"
@@ -154,8 +157,7 @@ class TestApp : public modular::SingleServiceApp<modular::UserShell> {
     if (story_count_ < settings_.story_count) {
       FXL_LOG(INFO) << "Loop at " << story_count_ << " of "
                     << settings_.story_count;
-      fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-          [this] { StoryCreate(); });
+      async::PostTask(async_get_default(), [this] { StoryCreate(); });
 
     } else {
       TRACE_ASYNC_BEGIN("benchmark", "user/logout", 0);

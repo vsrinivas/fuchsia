@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -326,8 +328,8 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
     message_loop_.PostQuitTask();
   });
 
-  message_loop_.task_runner()->PostTask(
-      [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
+  async::PostTask(message_loop_.async(),
+                  [fake_page_sync_ptr] { fake_page_sync_ptr->on_idle(); });
 
   RunLoop();
 }

@@ -5,6 +5,8 @@
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 
 #include <fuchsia/cpp/cloud_provider.h>
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/fidl/cpp/binding.h"
@@ -306,9 +308,10 @@ TEST_F(PageCloudImplTest, SetWatcherNotificationsOneAtATime) {
       cloud_provider_firebase::Commit("id_1", "data_1"), "43");
   handler_->DeliverRemoteCommits();
   // Verify that the client does not receive another notification.
-  message_loop_.task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      message_loop_.async(),
       [this] { message_loop_.PostQuitTask(); },
-      fxl::TimeDelta::FromMilliseconds(1));
+      zx::msec(1));
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_EQ(1u, on_new_commits_commits_->size());
   EXPECT_EQ(1, on_new_commits_calls_);

@@ -9,6 +9,9 @@
 #include <list>
 #include <memory>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/public/lib/fsl/tasks/message_loop.h"
 #include "garnet/public/lib/fxl/functional/make_copyable.h"
 #include "garnet/public/lib/fxl/macros.h"
@@ -82,8 +85,8 @@ class FutureValue {
 
  private:
   void Dispatch(UseValueFunction fn) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        [value = value_, fn = std::move(fn)] { fn(*value); });
+    async::PostTask(async_get_default(),
+                    [value = value_, fn = std::move(fn)] { fn(*value); });
   }
 
   std::shared_ptr<T> value_;

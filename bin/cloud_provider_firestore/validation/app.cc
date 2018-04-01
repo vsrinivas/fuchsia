@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
@@ -77,15 +79,18 @@ int main(int argc, char** argv) {
       });
 
   int32_t return_code = -1;
-  message_loop.task_runner()->PostTask([&factory, &launcher, &return_code,
-                                        &message_loop,
-                                        arguments = std::move(arguments)] {
-    factory.Init();
+  async::PostTask(
+      message_loop.async(),
+      [&factory, &launcher, &return_code,
+      &message_loop,
+      arguments = std::move(arguments)] {
+          factory.Init();
 
-    launcher.Run(arguments, [&return_code, &message_loop](int32_t result) {
-      return_code = result;
-      message_loop.PostQuitTask();
-    });
+          launcher.Run(arguments, [&return_code, &message_loop](int32_t result)
+          {
+            return_code = result;
+            message_loop.PostQuitTask();
+          });
   });
   message_loop.Run();
   return return_code;

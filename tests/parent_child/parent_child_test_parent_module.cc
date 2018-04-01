@@ -6,6 +6,9 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/views_v1.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app_driver/cpp/module_driver.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -35,11 +38,12 @@ class ParentApp {
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+    async::PostDelayedTask(
+        async_get_default(),
         callback::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),
-        fxl::TimeDelta::FromMilliseconds(kTimeoutMilliseconds));
+        zx::msec(kTimeoutMilliseconds));
 
     StartChildModuleTwice();
   }

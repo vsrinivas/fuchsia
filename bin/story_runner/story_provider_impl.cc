@@ -8,9 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/views_v1.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+#include <zx/time.h>
+
 #include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -321,7 +328,7 @@ class StoryProviderImpl::DeleteStoryCall : Operation<> {
     // functions that run as methods of other objects owned by |this| or
     // provided to |this|. To avoid such problems, the delete is invoked
     // through the run loop.
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask([this, flow] {
+    async::PostTask(async_get_default(), [this, flow] {
       story_controller_impls_->erase(story_id_);
       message_queue_manager_->DeleteNamespace(
           EncodeModuleComponentNamespace(story_id_), [flow] {});
@@ -705,7 +712,8 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
 }
 
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
-  fsl::MessageLoop::GetCurrent()->task_runner()->PostDelayedTask(
+  async::PostDelayedTask(
+      async_get_default(),
       [weak_this = weak_factory_.GetWeakPtr()] {
         if (weak_this) {
           new SyncCall(&weak_this->operation_queue_, [weak_this] {
@@ -715,7 +723,7 @@ void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
           });
         }
       },
-      fxl::TimeDelta::FromSeconds(5));
+      zx::sec(5));
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {
