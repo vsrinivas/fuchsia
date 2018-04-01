@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/app/merging/test_utils.h"
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -27,7 +29,7 @@ fxl::TimeDelta TestBackoff::GetNext() {
 void TestBackoff::Reset() {}
 
 TestWithPageStorage::TestWithPageStorage()
-    : encryption_service_(message_loop_.task_runner()){};
+    : encryption_service_(message_loop_.async()){};
 
 TestWithPageStorage::~TestWithPageStorage() {}
 

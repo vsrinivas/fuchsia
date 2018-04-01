@@ -22,7 +22,7 @@ namespace {
 class LedgerStorageTest : public gtest::TestWithMessageLoop {
  public:
   LedgerStorageTest()
-      : encryption_service_(message_loop_.task_runner()),
+      : encryption_service_(message_loop_.async()),
         storage_(message_loop_.task_runner(),
                  &coroutine_service_,
                  &encryption_service_,

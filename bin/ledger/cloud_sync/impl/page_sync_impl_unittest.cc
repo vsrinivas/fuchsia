@@ -67,7 +67,7 @@ class PageSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   PageSyncImplTest()
       : storage_(&message_loop_),
-        encryption_service_(message_loop_.task_runner()),
+        encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {
     std::unique_ptr<TestSyncStateWatcher> watcher =
         std::make_unique<TestSyncStateWatcher>();

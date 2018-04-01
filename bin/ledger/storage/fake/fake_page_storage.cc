@@ -34,13 +34,13 @@ FakePageStorage::FakePageStorage(PageId page_id)
     : rng_(0),
       message_loop_(fsl::MessageLoop::GetCurrent()),
       page_id_(std::move(page_id)),
-      encryption_service_(message_loop_->task_runner()) {}
+      encryption_service_(message_loop_->async()) {}
 
 FakePageStorage::FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id)
     : rng_(0),
       message_loop_(message_loop),
       page_id_(std::move(page_id)),
-      encryption_service_(message_loop_->task_runner()) {}
+      encryption_service_(message_loop_->async()) {}
 
 FakePageStorage::~FakePageStorage() {}
 

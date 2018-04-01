@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/backoff/testing/test_backoff.h"
 #include "garnet/lib/callback/capture.h"
@@ -37,7 +39,7 @@ class BasePageDownloadTest : public gtest::TestWithMessageLoop,
  public:
   BasePageDownloadTest()
       : storage_(&message_loop_),
-        encryption_service_(message_loop_.task_runner()),
+        encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.task_runner()) {
     page_download_ = std::make_unique<PageDownload>(
@@ -372,9 +374,8 @@ TEST_F(PageDownloadTest, RetryGetObject) {
 class FailingDecryptCommitEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingDecryptCommitEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingDecryptCommitEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void DecryptCommit(
       convert::ExtendedStringView /*storage_bytes*/,
@@ -386,9 +387,8 @@ class FailingDecryptCommitEncryptionService
 class FailingGetNameEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingGetNameEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingGetNameEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void GetObjectName(
       storage::ObjectIdentifier /*object_identifier*/,
@@ -400,9 +400,8 @@ class FailingGetNameEncryptionService
 class FailingDecryptObjectEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingDecryptObjectEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingDecryptObjectEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void DecryptObject(
       storage::ObjectIdentifier /*object_identifier*/,

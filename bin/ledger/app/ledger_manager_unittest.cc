@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/callback/waiter.h"
@@ -119,7 +121,7 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_,
         std::make_unique<encryption::FakeEncryptionService>(
-            message_loop_.task_runner()),
+            message_loop_.async()),
         std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());

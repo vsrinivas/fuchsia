@@ -34,7 +34,7 @@ class PageUploadTest : public gtest::TestWithMessageLoop,
  public:
   PageUploadTest()
       : storage_(&message_loop_),
-        encryption_service_(message_loop_.task_runner()),
+        encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.task_runner()) {
     auto test_backoff = std::make_unique<backoff::TestBackoff>();

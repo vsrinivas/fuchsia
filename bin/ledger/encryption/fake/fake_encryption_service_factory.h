@@ -5,14 +5,14 @@
 #ifndef PERIDOT_BIN_LEDGER_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_FACTORY_H_
 #define PERIDOT_BIN_LEDGER_ENCRYPTION_FAKE_FAKE_ENCRYPTION_SERVICE_FACTORY_H_
 
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "peridot/bin/ledger/encryption/public/encryption_service_factory.h"
 
 namespace encryption {
 class FakeEncryptionServiceFactory : public EncryptionServiceFactory {
  public:
-  explicit FakeEncryptionServiceFactory(
-      fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit FakeEncryptionServiceFactory(async_t* async);
   ~FakeEncryptionServiceFactory() override;
 
   // EncryptionServiceFactory
@@ -20,7 +20,7 @@ class FakeEncryptionServiceFactory : public EncryptionServiceFactory {
       std::string namespace_id) override;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 };
 }  // namespace encryption
 

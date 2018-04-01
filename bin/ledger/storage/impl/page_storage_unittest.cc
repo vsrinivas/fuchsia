@@ -177,7 +177,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
 
 class PageStorageTest : public ::test::TestWithCoroutines {
  public:
-  PageStorageTest() : encryption_service_(message_loop_.task_runner()) {}
+  PageStorageTest() : encryption_service_(message_loop_.async()) {}
 
   ~PageStorageTest() override {}
 

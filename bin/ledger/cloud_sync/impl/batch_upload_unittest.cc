@@ -8,6 +8,8 @@
 #include <map>
 #include <utility>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
@@ -165,7 +167,7 @@ template <typename E>
 class BaseBatchUploadTest : public gtest::TestWithMessageLoop {
  public:
   BaseBatchUploadTest()
-      : encryption_service_(message_loop_.task_runner()),
+      : encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {}
   ~BaseBatchUploadTest() override {}
 
@@ -663,9 +665,8 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 class FailingEncryptCommitEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingEncryptCommitEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingEncryptCommitEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void EncryptCommit(
       std::string /*commit_storage*/,
@@ -677,9 +678,8 @@ class FailingEncryptCommitEncryptionService
 class FailingGetNameEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingGetNameEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingGetNameEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void GetObjectName(
       storage::ObjectIdentifier /*object_identifier*/,
@@ -691,9 +691,8 @@ class FailingGetNameEncryptionService
 class FailingEncryptObjectEncryptionService
     : public encryption::FakeEncryptionService {
  public:
-  explicit FailingEncryptObjectEncryptionService(
-      fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : encryption::FakeEncryptionService(std::move(task_runner)) {}
+  explicit FailingEncryptObjectEncryptionService(async_t* async)
+      : encryption::FakeEncryptionService(async) {}
 
   void EncryptObject(
       storage::ObjectIdentifier /*object_identifier*/,

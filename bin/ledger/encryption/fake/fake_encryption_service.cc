@@ -4,6 +4,8 @@
 
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
@@ -26,9 +28,7 @@ storage::ObjectIdentifier MakeDefaultObjectIdentifier(
   return {1u, 1u, std::move(digest)};
 }
 
-FakeEncryptionService::FakeEncryptionService(
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+FakeEncryptionService::FakeEncryptionService(async_t* async) : async_(async) {}
 
 FakeEncryptionService::~FakeEncryptionService() {}
 
@@ -41,9 +41,11 @@ void FakeEncryptionService::EncryptCommit(
     std::string commit_storage,
     std::function<void(Status, std::string)> callback) {
   std::string encrypted_commit = EncryptCommitSynchronous(commit_storage);
-  task_runner_->PostTask([encrypted_commit = std::move(encrypted_commit),
-                          callback = std::move(callback)]() mutable {
-    callback(Status::OK, std::move(encrypted_commit));
+  async::PostTask(
+      async_,
+      [encrypted_commit = std::move(encrypted_commit),
+       callback = std::move(callback)]() mutable {
+         callback(Status::OK, std::move(encrypted_commit));
   });
 }
 
@@ -51,7 +53,8 @@ void FakeEncryptionService::DecryptCommit(
     convert::ExtendedStringView storage_bytes,
     std::function<void(Status, std::string)> callback) {
   std::string commit = DecryptCommitSynchronous(storage_bytes);
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [commit = std::move(commit), callback = std::move(callback)]() mutable {
         callback(Status::OK, std::move(commit));
       });
@@ -61,9 +64,10 @@ void FakeEncryptionService::GetObjectName(
     storage::ObjectIdentifier object_identifier,
     std::function<void(Status, std::string)> callback) {
   std::string result = GetObjectNameSynchronous(object_identifier);
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [callback = std::move(callback), result = std::move(result)]() mutable {
-        callback(Status::OK, std::move(result));
+          callback(Status::OK, std::move(result));
       });
 }
 
@@ -77,7 +81,8 @@ void FakeEncryptionService::EncryptObject(
     return;
   }
   std::string result = EncryptObjectSynchronous(content_as_string);
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [callback = std::move(callback), result = std::move(result)]() mutable {
         callback(Status::OK, std::move(result));
       });
@@ -88,7 +93,8 @@ void FakeEncryptionService::DecryptObject(
     std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   std::string result = DecryptObjectSynchronous(encrypted_data);
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [callback = std::move(callback), result = std::move(result)]() mutable {
         callback(Status::OK, std::move(result));
       });

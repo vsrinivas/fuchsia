@@ -44,7 +44,7 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
-      : encryption_service_(message_loop_.task_runner()),
+      : encryption_service_(message_loop_.async()),
         page_storage_(message_loop_.task_runner(),
                       &coroutine_service_,
                       &encryption_service_,

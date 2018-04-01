@@ -69,7 +69,7 @@ class BatchDownloadTest : public gtest::TestWithMessageLoop {
  public:
   BatchDownloadTest()
       : storage_(&message_loop_),
-        encryption_service_(message_loop_.task_runner()) {}
+        encryption_service_(message_loop_.async()) {}
   ~BatchDownloadTest() override {}
 
  protected:

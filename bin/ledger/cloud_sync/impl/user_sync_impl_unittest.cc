@@ -32,7 +32,7 @@ class UserSyncImplTest : public gtest::TestWithMessageLoop {
   UserSyncImplTest()
       : environment_(message_loop_.task_runner()),
         cloud_provider_(cloud_provider_ptr_.NewRequest()),
-        encryption_service_(message_loop_.task_runner()) {
+        encryption_service_(message_loop_.async()) {
     UserConfig user_config;
     user_config.user_directory = tmp_dir.path();
     user_config.cloud_provider = std::move(cloud_provider_ptr_);

@@ -8,7 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/lib/convert/convert.h"
 
@@ -23,7 +24,7 @@ storage::ObjectIdentifier MakeDefaultObjectIdentifier(
 
 class FakeEncryptionService : public EncryptionService {
  public:
-  explicit FakeEncryptionService(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit FakeEncryptionService(async_t* async);
   ~FakeEncryptionService() override;
 
   // EncryptionService:
@@ -68,7 +69,7 @@ class FakeEncryptionService : public EncryptionService {
       convert::ExtendedStringView encrypted_data);
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 };
 
 }  // namespace encryption
