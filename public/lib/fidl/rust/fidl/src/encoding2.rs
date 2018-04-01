@@ -796,6 +796,29 @@ macro_rules! fidl2_enum {
     }
 }
 
+impl Encodable for zx::Status {
+    fn inline_align(&self) -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn inline_size(&self) -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        let slot = encoder.next_slice(mem::size_of::<zx::sys::zx_status_t>())?;
+        LittleEndian::write_i32(slot, self.into_raw());
+        Ok(())
+    }
+}
+
+
+impl Decodable for zx::Status {
+    fn new_empty() -> Self { Self::from_raw(0) }
+    fn inline_size() -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn inline_align() -> usize { mem::size_of::<zx::sys::zx_status_t>() }
+    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        let end = mem::size_of::<zx::sys::zx_status_t>();
+        let range = split_off_front(&mut decoder.buf, end)?;
+        *self = Self::from_raw(LittleEndian::read_i32(range));
+        Ok(())
+    }
+}
+
 impl Encodable for zx::Handle {
     fn inline_align(&self) -> usize { 4 }
     fn inline_size(&self) -> usize { 4 }

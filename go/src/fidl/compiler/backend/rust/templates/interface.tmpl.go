@@ -14,11 +14,11 @@ State,
   {{- range $request := $method.Request -}} {{ $request.Type -}},{{- end -}}
   {{- if $method.HasResponse -}}
   {{- $interface.Name -}}{{- $method.CamelName -}}Response
-  {{- else }}
+  {{- else -}}
   {{ $interface.Name -}}Controller_ask_cramertj_to_fix_naming_now
   {{- end }}) -> {{ $method.CamelName }}Fut,
   {{ $method.CamelName }}Fut: Future<Item = (), Error = Never>,
-  {{- end -}}
+  {{- end }}
 {{- end -}}
 {{- end -}}
 
@@ -103,7 +103,9 @@ pub trait {{ $interface.Name }} {
       channel: ::std::sync::Arc::new(channel),
       msg_buf: zx::MessageBuf::new(),
       {{- range $method := $interface.Methods }}
+      {{- if $method.HasRequest -}}
       {{ $method.Name }}_futures: futures::stream::FuturesUnordered::new(),
+      {{- end -}}
       {{- end }}
     }
   }
@@ -114,7 +116,9 @@ pub struct {{ $interface.Name }}Server<T: {{ $interface.Name }}> {
   channel: ::std::sync::Arc<async::Channel>,
   msg_buf: zx::MessageBuf,
   {{- range $method := $interface.Methods }}
+  {{- if $method.HasRequest -}}
   {{ $method.Name }}_futures: futures::stream::FuturesUnordered<T::{{ $method.CamelName }}Fut>,
+  {{- end -}}
   {{- end }}
 }
 
@@ -127,10 +131,12 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
     let mut made_progress_this_loop_iter = false;
 
     {{- range $method := $interface.Methods }}
+    {{- if $method.HasRequest -}}
     match self.{{ $method.Name }}_futures.poll_next(cx).map_err(|never| match never {})? {
       futures::Async::Ready(Some(())) => made_progress_this_loop_iter = true,
       _ => {},
     }
+    {{- end -}}
     {{- end }}
 
     match self.channel.recv_from(&mut self.msg_buf, cx) {
@@ -155,6 +161,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 
     match header.ordinal {
       {{- range $method := $interface.Methods }}
+      {{- if $method.HasRequest }}
       {{ $method.Ordinal }} => {
        let mut req: (
         {{- range $index, $param := $method.Request -}}
@@ -188,6 +195,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
        );
       }
       {{- end }}
+      {{- end }}
       // TODO(cramertj) handle control/fileio messages
       _ => return Err(fidl::Error::UnknownOrdinal {
        ordinal: header.ordinal,
@@ -217,8 +225,8 @@ impl<
   {{- range $method := $interface.Methods -}}
   {{ if $method.HasRequest }}
   {{ $method.CamelName }},
-  {{ $method.CamelName }}Fut,
-  {{- end -}}
+  {{ $method.CamelName -}}Fut,
+  {{- end }}
   {{- end }}
 >
 {
