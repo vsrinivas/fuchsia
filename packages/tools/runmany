@@ -1,0 +1,8 @@
+{
+    "languages": [
+        "cpp"
+    ],
+    "packages": {
+        "runmany": "//garnet/bin/runmany"
+    }
+}
