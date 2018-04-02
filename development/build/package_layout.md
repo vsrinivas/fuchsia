@@ -3,7 +3,8 @@
 Each [layer](/development/source_code/layers.md) of the Fuchsia source tree
 contains a top-level directory called `package` containing all the
 [build packages](packages.md) for that layer. The present document describes
-the structure of these directories.
+the packages that are common to all of the layers. Each layer will introduce
+additional packages specific to that layer.
 
 ## Directory map
 
@@ -26,6 +27,7 @@ in Fuchsia.
   * config/          # config files for the system (e.g. what to boot into)
   * sdk/             # SDK definitions
   * products/        # definitions for specific products
+    ...                # each package will also define additional packages
 ```
 
 ## Cross-layer dependencies
