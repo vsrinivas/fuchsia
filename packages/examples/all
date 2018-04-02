@@ -3,6 +3,7 @@
         "garnet/packages/examples/auth",
         "garnet/packages/examples/benchmark",
         "garnet/packages/examples/bluetooth",
+        "garnet/packages/examples/crust",
         "garnet/packages/examples/escher",
         "garnet/packages/examples/fidl",
         "garnet/packages/examples/http",
