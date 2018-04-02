@@ -439,3 +439,27 @@ zx_status_t SocketDispatcher::Accept(HandleOwner* h) TA_NO_THREAD_SAFETY_ANALYSI
 
     return ZX_OK;
 }
+
+size_t SocketDispatcher::ReceiveBufferMax() const {
+    canary_.Assert();
+    AutoLock lock(get_lock());
+    return data_.max_size();
+}
+
+size_t SocketDispatcher::ReceiveBufferSize() const {
+    canary_.Assert();
+    AutoLock lock(get_lock());
+    return data_.size();
+}
+
+size_t SocketDispatcher::TransmitBufferMax() const TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    AutoLock lock(get_lock());
+    return peer_->data_.max_size();
+}
+
+size_t SocketDispatcher::TransmitBufferSize() const TA_NO_THREAD_SAFETY_ANALYSIS {
+    canary_.Assert();
+    AutoLock lock(get_lock());
+    return peer_->data_.size();
+}

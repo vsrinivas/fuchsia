@@ -52,6 +52,12 @@ public:
     // On success, a HandleOwner is returned via h
     zx_status_t Accept(HandleOwner* h);
 
+    // Property methods.
+    size_t ReceiveBufferMax() const;
+    size_t ReceiveBufferSize() const;
+    size_t TransmitBufferMax() const;
+    size_t TransmitBufferSize() const;
+
     void OnPeerZeroHandlesLocked() TA_REQ(get_lock());
 
     zx_status_t CheckShareable(SocketDispatcher* to_send);

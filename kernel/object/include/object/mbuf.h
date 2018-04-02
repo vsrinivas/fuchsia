@@ -55,6 +55,9 @@ public:
     // Returns number of bytes stored in the chain.
     size_t size() const { return size_; }
 
+    // Returns the maximum number of bytes that can be stored in the chain.
+    size_t max_size() const { return kSizeMax; }
+
 private:
     // An MBuf is a small fixed-size chainable memory buffer.
     struct MBuf : public fbl::SinglyLinkedListable<MBuf*> {

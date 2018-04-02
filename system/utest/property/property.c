@@ -283,12 +283,55 @@ static bool bad_importance_value_fails(void) {
     END_TEST;
 }
 
+static bool socket_buffer_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t sockets[2];
+    ASSERT_EQ(zx_socket_create(0, &sockets[0], &sockets[1]), ZX_OK, "");
+
+    // Check the default state of the properties.
+    size_t value;
+    struct {
+        uint32_t max_prop;
+        uint32_t size_prop;
+    } props[] = {
+        {ZX_PROP_SOCKET_RX_BUF_MAX, ZX_PROP_SOCKET_RX_BUF_SIZE},
+        {ZX_PROP_SOCKET_TX_BUF_MAX, ZX_PROP_SOCKET_TX_BUF_SIZE},
+    };
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 2; j++) {
+            ASSERT_EQ(zx_object_get_property(sockets[i], props[j].max_prop, &value, sizeof(value)),
+                      ZX_OK, "");
+            EXPECT_GT(value, 0u, "");
+            ASSERT_EQ(zx_object_get_property(sockets[i], props[j].size_prop, &value, sizeof(value)),
+                      ZX_OK, "");
+            EXPECT_EQ(value, 0u, "");
+        }
+    }
+
+    // Check the buffer size after a write.
+    uint8_t buf[8] = {};
+    size_t actual;
+    ASSERT_EQ(zx_socket_write(sockets[1], 0, buf, sizeof(buf), &actual), ZX_OK, "");
+    EXPECT_EQ(actual, sizeof(buf), "");
+
+    ASSERT_EQ(zx_object_get_property(sockets[0], ZX_PROP_SOCKET_RX_BUF_SIZE, &value, sizeof(value)),
+              ZX_OK, "");
+    EXPECT_EQ(value, sizeof(buf), "");
+    ASSERT_EQ(zx_object_get_property(sockets[1], ZX_PROP_SOCKET_TX_BUF_SIZE, &value, sizeof(value)),
+              ZX_OK, "");
+    EXPECT_EQ(value, sizeof(buf), "");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
 RUN_TEST(vmo_name_test);
 RUN_TEST(importance_smoke_test);
 RUN_TEST(bad_importance_value_fails);
+RUN_TEST(socket_buffer_test);
 END_TEST_CASE(property_tests)
 
 int main(int argc, char** argv) {

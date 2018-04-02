@@ -45,7 +45,7 @@ failure, one of the following values is returned.
 
 ## LIMITATIONS
 
-The maximum capacity is not currently set-able or get-able.
+The maximum capacity is not currently set-able.
 
 ## SEE ALSO
 

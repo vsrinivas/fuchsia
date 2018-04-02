@@ -369,7 +369,13 @@ typedef struct zx_info_resource {
 #define ZX_PROP_PROCESS_VDSO_BASE_ADDRESS   6u
 
 // Argument is an zx_job_importance_t value.
-#define ZX_PROP_JOB_IMPORTANCE             7u
+#define ZX_PROP_JOB_IMPORTANCE              7u
+
+// Argument is a size_t.
+#define ZX_PROP_SOCKET_RX_BUF_MAX           8u
+#define ZX_PROP_SOCKET_RX_BUF_SIZE          9u
+#define ZX_PROP_SOCKET_TX_BUF_MAX           10u
+#define ZX_PROP_SOCKET_TX_BUF_SIZE          11u
 
 // Describes how important a job is.
 typedef int32_t zx_job_importance_t;
