@@ -25,6 +25,17 @@ template("rust_artifact") {
     assert(false, "Must specify an artifact type")
   }
 
+  public_hdrs = []
+  if (type == "lib" && defined(invoker.libtype) && invoker.libtype == "static") {
+    staticlib = true
+    if (defined(invoker.public)) {
+      public_hdrs += invoker.public
+    }
+  } else {
+    staticlib = false
+    public_hdrs = []
+  }
+
   if (defined(invoker.name)) {
     name = invoker.name
   } else {
@@ -78,7 +89,11 @@ template("rust_artifact") {
     build_target_name = "${target_name}_build"
   } else if (type == "lib") {
     output_base = "$specific_out_dir/lib$name"
-    output_file = "$output_base.rlib"
+    if (staticlib) {
+      output_file = "$output_base.a"
+    } else {
+      output_file = "$output_base.rlib"
+    }
     output_depfile = "$base_out_dir/lib${name}.d"
     build_target_name = "${target_name}_lib"
     group_deps += [ ":$build_target_name" ]
@@ -303,6 +318,30 @@ template("rust_artifact") {
         rebase_path(clang_prefix, "", root_out_dir),
         "--sysroot",
         rebase_path("$root_out_dir/sdks/zircon_sysroot/sysroot"),
+      ]
+    }
+  }
+
+  if (staticlib) {
+    header_target = "_${target_name}_staticlib_headers"
+    config_target = "_${target_name}_staticlib_config"
+    group_target = "${target_name}_staticlib"
+
+    source_set(header_target) {
+      public = public_hdrs
+      visibility = [ ":$group_target" ]
+    }
+
+    config(config_target) {
+      libs = [ output_file ]
+      visibility = [ ":$group_target" ]
+    }
+
+    group(group_target) {
+      public_configs = [ ":$config_target" ]
+      public_deps = [
+        ":$build_target_name",
+        ":$header_target",
       ]
     }
   }

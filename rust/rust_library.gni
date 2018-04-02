@@ -19,7 +19,10 @@ import("//build/rust/rust_artifact.gni")
 #     Cargo.toml need to be listed here. Any Rust crates that are dependencies from
 #     Cargo.toml will be added during the gen phase of the build.
 #
-#   with_tests (optional) #DEPRECATED
+#   libtype (optional)
+#     If set to "static", will compile the crate as a staticlib which can be linked
+#     into targets from other languages.
+#
 #   with_unit_tests (optional)
 #     Builds tests associated with the library. This will create a
 #     `<name>-lib-unit-test` test file in the output directory.
@@ -39,10 +42,11 @@ template("rust_library") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "libtype",
                              "name",
                              "non_rust_deps",
+                             "public",
                              "source_dir",
-                             "with_tests",  # alias for with_unit_tests
                              "with_unit_tests",
                              "integration_tests",
                            ])
