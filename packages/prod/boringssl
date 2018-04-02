@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "imports": [
         "garnet/packages/prod/boringssl_libssl"
     ],

@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "netconnector": "//garnet/bin/netconnector"
     }

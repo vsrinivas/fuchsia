@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "rust"
-    ],
     "packages": {
         "xi_core": "//garnet/bin/xi_core"
     }

@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "bluetooth": "//garnet/bin/bluetooth",
         "bluetooth_tools": "//garnet/bin/bluetooth_tools",

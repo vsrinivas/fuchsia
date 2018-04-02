@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "zxdb": "//garnet/bin/zxdb"
     }

@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "go"
-    ],
     "labels": [
         "//garnet/go/src/pm:host"
     ],

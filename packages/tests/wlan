@@ -1,9 +1,4 @@
 {
-    "languages": [
-        "cpp",
-        "go",
-        "rust"
-    ],
     "packages": {
         "wlanstack_test": "//garnet/go/src/wlan:wlanstack_test",
         "wlan_tests": "//garnet/lib/wlan/mlme/tests:wlan_tests"

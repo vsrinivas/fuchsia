@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "go"
-    ],
     "imports": [
         "garnet/packages/prod/power_manager"
     ],

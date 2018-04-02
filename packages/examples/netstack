@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "nc": "//garnet/examples/network:nc"
     }

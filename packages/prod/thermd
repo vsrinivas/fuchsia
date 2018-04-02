@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "thermd": "//garnet/bin/thermd"
     }

@@ -1,9 +1,4 @@
 {
-    "languages": [
-        "cpp",
-        "go",
-        "rust"
-    ],
     "labels": [
         "//garnet/examples/fidl/echo2_client_cpp",
         "//garnet/examples/fidl/echo2_client_rust",

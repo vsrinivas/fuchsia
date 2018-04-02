@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "rust"
-    ],
     "packages": {
         "wlancfg": "//garnet/bin/wlancfg"
     }

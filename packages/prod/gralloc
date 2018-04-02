@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "gralloc": "//garnet/bin/gralloc"
     }

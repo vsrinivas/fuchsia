@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "imports": [
         "garnet/packages/prod/guest_tool",
         "garnet/packages/prod/pkgsvr",

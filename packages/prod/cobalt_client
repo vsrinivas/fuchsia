@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "cobalt": "//garnet/bin/cobalt:cobalt",
         "cobalt_system_metrics": "//garnet/bin/cobalt:cobalt_system_metrics"

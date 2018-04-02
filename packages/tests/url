@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "url_tests": "//garnet/public/lib/url:url_tests"
     }

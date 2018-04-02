@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "go"
-    ],
     "packages": {
         "netstack": "//garnet/go/src/netstack"
     }

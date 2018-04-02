@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "audio_policy_service": "//garnet/bin/media/audio_policy_service",
         "media_service": "//garnet/bin/media/media_service",

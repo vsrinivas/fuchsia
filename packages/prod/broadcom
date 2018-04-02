@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "brcmfmac": "//garnet/drivers/wlan/third_party/broadcom/brcmfmac"
     }

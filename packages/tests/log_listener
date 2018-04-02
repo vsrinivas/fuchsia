@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "rust"
-    ],
     "imports": [
         "garnet/packages/prod/log_listener"
     ],

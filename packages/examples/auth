@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "oauth_examples": "//garnet/bin/auth:oauth_examples"
     }

@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "benchmark": "//garnet/examples/benchmark"
     }

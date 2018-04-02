@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "imports": [
         "garnet/packages/config/network",
         "garnet/packages/experimental/linux_guest",

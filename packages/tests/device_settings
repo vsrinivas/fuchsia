@@ -1,8 +1,4 @@
 {
-    "languages": [
-        "rust",
-        "go"
-    ],
     "imports": [
         "garnet/packages/prod/device_settings"
     ],

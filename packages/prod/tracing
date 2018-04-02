@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "labels": [
         "//garnet/bin/traceutil",
         "//garnet/bin/cpuperf_provider:report_generators"

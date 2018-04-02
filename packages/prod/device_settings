@@ -1,8 +1,4 @@
 {
-    "languages": [
-        "rust",
-        "go"
-    ],
     "packages": {
         "device_settings_manager": "//garnet/bin/device_settings:device_settings_manager"
     }

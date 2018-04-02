@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "vkcube" : "//garnet/lib/magma:vkcube"
     }

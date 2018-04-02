@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "zircon-guest": "//garnet/bin/guest/zircon-guest"
     }

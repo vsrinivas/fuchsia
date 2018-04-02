@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "fsl": "//garnet/public/lib/fsl:package"
     }

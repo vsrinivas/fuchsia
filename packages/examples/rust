@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "rust"
-    ],
     "packages": {
         "garnet-rust-examples": "//garnet/examples/rust:garnet-rust-examples"
     }

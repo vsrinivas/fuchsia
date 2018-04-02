@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "mdns": "//garnet/bin/mdns/tool"
     }

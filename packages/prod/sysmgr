@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "sysmgr": "//garnet/bin/sysmgr"
     }

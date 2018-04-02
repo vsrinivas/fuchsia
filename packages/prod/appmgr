@@ -1,8 +1,4 @@
 {
-    "languages": [
-        "cpp",
-        "rust"
-    ],
     "packages": {
         "appmgr": "//garnet/bin/appmgr"
     }

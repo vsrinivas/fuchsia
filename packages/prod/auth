@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "labels": [
         "//garnet/bin/auth:token_manager"
     ],

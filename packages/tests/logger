@@ -1,8 +1,4 @@
 {
-    "languages": [
-        "rust",
-        "cpp"
-    ],
     "imports": [
         "garnet/packages/prod/logger"
     ],

@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "go"
-    ],
     "packages": {
         "thinfs": "//garnet/go/src/thinfs"
     }
