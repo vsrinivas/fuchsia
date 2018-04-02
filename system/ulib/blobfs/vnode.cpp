@@ -256,7 +256,8 @@ zx_status_t VnodeBlob::GetVmo(int flags, zx_handle_t* out) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
+    // Let clients map and set the names of their VMOs.
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
     rights |= (flags & FDIO_MMAP_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & FDIO_MMAP_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
     return CloneVmo(rights, out);
