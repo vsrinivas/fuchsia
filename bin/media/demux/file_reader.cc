@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "garnet/bin/media/util/file_channel.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file_descriptor.h"
 
 namespace media {
@@ -17,7 +18,9 @@ std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
   return std::make_shared<FileReader>(FdFromChannel(std::move(file_channel)));
 }
 
-FileReader::FileReader(fxl::UniqueFD fd) : fd_(std::move(fd)) {
+FileReader::FileReader(fxl::UniqueFD fd)
+    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+      fd_(std::move(fd)) {
   result_ = fd_.is_valid() ? Result::kOk : Result::kNotFound;
 
   if (result_ == Result::kOk) {
@@ -68,7 +71,9 @@ void FileReader::ReadAt(size_t position,
     return;
   }
 
-  callback(Result::kOk, result);
+  task_runner_->PostTask([ callback = std::move(callback), result ]() {
+    callback(Result::kOk, result);
+  });
 }
 
 }  // namespace media

@@ -8,6 +8,7 @@
 
 #include "garnet/bin/media/demux/reader.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -29,6 +30,7 @@ class FileReader : public Reader {
               ReadAtCallback callback) override;
 
  private:
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::UniqueFD fd_;
   Result result_ = Result::kOk;
   uint64_t size_ = kUnknownSize;
