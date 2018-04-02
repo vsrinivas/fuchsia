@@ -23,6 +23,8 @@
 
 #define VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV     (1u << 0)
 #define VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND     (1u << 1)
+#define VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH     (VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV | \
+                                             VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND)
 
 // For virtio_vsock_event_t.
 #define VIRTIO_VSOCK_EVENT_TRANSPORT_RESET  0u
@@ -32,24 +34,24 @@
 __BEGIN_CDECLS;
 
 typedef struct virtio_vsock_config {
-  uint64_t guest_cid;
+    uint64_t guest_cid;
 } __PACKED virtio_vsock_config_t;
 
 typedef struct virtio_vsock_hdr {
-  uint64_t src_cid;
-  uint64_t dst_cid;
-  uint32_t src_port;
-  uint32_t dst_port;
-  uint32_t len;
-  uint16_t type;
-  uint16_t op;
-  uint32_t flags;
-  uint32_t buf_alloc;
-  uint32_t fwd_cnt;
+    uint64_t src_cid;
+    uint64_t dst_cid;
+    uint32_t src_port;
+    uint32_t dst_port;
+    uint32_t len;
+    uint16_t type;
+    uint16_t op;
+    uint32_t flags;
+    uint32_t buf_alloc;
+    uint32_t fwd_cnt;
 } __PACKED virtio_vsock_hdr_t;
 
 typedef struct virtio_vsock_event {
-  uint32_t id;
+    uint32_t id;
 } __PACKED virtio_vsock_event_t;
 
 __END_CDECLS;
