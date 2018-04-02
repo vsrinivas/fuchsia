@@ -67,7 +67,7 @@ typedef struct {
 
 #define PCI_MAX_DATA 4096
 typedef struct {
-    zx_txid_t txid; // FIDL2 message header
+    zx_txid_t txid; // FIDL message header
     uint32_t reserved0;
     uint32_t flags;
     uint32_t ordinal;

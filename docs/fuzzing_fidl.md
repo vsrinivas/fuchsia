@@ -29,7 +29,7 @@ adjusting if you're not building on x86 Linux, etc.
 
 ## Run the fuzzer
 
-The parser includes some examples to use as inputs. As fidl2 becomes adopted we can expand our inputs to include all of
+The parser includes some examples to use as inputs. As fidl becomes adopted we can expand our inputs to include all of
 the different interfaces declared across our tree, but for now we use what's in `system/host/fidl/examples`.
 
 ```

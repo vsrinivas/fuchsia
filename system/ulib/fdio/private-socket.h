@@ -33,7 +33,7 @@ typedef struct zxsio_msg zxsio_msg_t;
 // For now, we keep them to preserve the message header format of zxrio_msg
 // to make the conversion process easier.
 struct zxsio_msg {
-    zx_txid_t txid;                    // FIDL2 message header
+    zx_txid_t txid;                    // FIDL message header
     uint32_t reserved0;
     uint32_t flags;
     uint32_t op;

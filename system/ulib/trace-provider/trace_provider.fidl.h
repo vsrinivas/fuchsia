@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //
-// NOTE: This file was generated using the fidl2 tool then manually modified
+// NOTE: This file was generated using the fidl tool then manually modified
 // to workaround limitations of the current code generator including table
 // symbol collisions and invalid interface types in structs.
 //

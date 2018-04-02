@@ -21,7 +21,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include <fdio/io.fidl2.h>
+#include <fdio/io.fidl.h>
 #include <fdio/util.h>
 #include <fdio/remoteio.h>
 
@@ -252,7 +252,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, iostate_t* ios) {
         zxrio_msg_t* rmsg = (zxrio_msg_t*) &msg;
 
         if (msg.op == ZXFIDL_OPEN) {
-            // Decode open request (FIDL2)
+            // Decode open request (FIDL)
             if ((msize < sizeof(DirectoryOpenRequest)) ||
                 (FIDL_ALIGN(sizeof(DirectoryOpenRequest)) + FIDL_ALIGN(request->path.size) != msize) ||
                 (request->object != FIDL_HANDLE_PRESENT) ||

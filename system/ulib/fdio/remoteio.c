@@ -22,7 +22,7 @@
 #include <zircon/syscalls.h>
 
 #include <fdio/debug.h>
-#include <fdio/io.fidl2.h>
+#include <fdio/io.fidl.h>
 #include <fdio/io.h>
 #include <fdio/namespace.h>
 #include <fdio/remoteio.h>
@@ -952,7 +952,7 @@ zx_status_t zxrio_misc(fdio_t* io, uint32_t op, int64_t off,
     zx_status_t r;
 
 #ifdef ZXRIO_FIDL
-    // Reroute FIDL2 operations
+    // Reroute FIDL operations
     switch (op) {
     case ZXRIO_STAT: {
         size_t out_sz;

@@ -25,7 +25,7 @@
 #include <zircon/types.h>
 
 #include <fdio/debug.h>
-#include <fdio/io.fidl2.h>
+#include <fdio/io.fidl.h>
 #include <fdio/io.h>
 #include <fdio/vfs.h>
 

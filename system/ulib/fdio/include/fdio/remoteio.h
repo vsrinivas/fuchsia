@@ -212,7 +212,7 @@ typedef struct {
 // A one-way message which may be emitted by the server without an
 // accompanying request. Optionally used as a part of the Open handshake.
 typedef struct {
-    zx_txid_t txid;                    // FIDL2 message header
+    zx_txid_t txid;                    // FIDL message header
     uint32_t reserved0;                // Padding
     uint32_t flags;
     uint32_t op;
@@ -223,7 +223,7 @@ typedef struct {
 } zxrio_describe_t;
 
 struct zxrio_msg {
-    zx_txid_t txid;                    // FIDL2 message header
+    zx_txid_t txid;                    // FIDL message header
     uint32_t reserved0;
     uint32_t flags;
     uint32_t op;

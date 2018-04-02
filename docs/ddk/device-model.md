@@ -93,7 +93,7 @@ Devices may implement Interfaces, which are RPC protocols that clients (services
 applications, etc).  The base device interface supports posix style open/close/read/write
 style IO.  Currently Interfaces are supported via the ioctl operation in the base
 device interface.  In the future, Fuchsia's interface definition language and bindings
-(FIDL2) will be supported.
+(FIDL) will be supported.
 
 In many cases a Protocol is used to allow drivers to be simpler by taking advantage
 of a common implementation of an Interface.  For example, the "block" driver implements
