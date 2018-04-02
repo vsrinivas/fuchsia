@@ -399,12 +399,8 @@ void TouchscreenState::Update(input::InputReport input_report,
 
     // For now when we get DOWN we need to fake trigger ADD first.
     if (pt.phase == input::PointerEventPhase::DOWN) {
-      input::InputEvent add_ev;
-      zx_status_t clone_result = fidl::Clone(ev, &add_ev);
-      FXL_DCHECK(clone_result);
-      input::PointerEvent add_pt;
-      clone_result = fidl::Clone(pt, &add_pt);
-      FXL_DCHECK(clone_result);
+      input::InputEvent add_ev = fidl::Clone(ev);
+      input::PointerEvent add_pt = fidl::Clone(pt);
       add_pt.phase = input::PointerEventPhase::ADD;
       add_ev.set_pointer(std::move(add_pt));
       device_state_->callback()(std::move(add_ev));
@@ -416,17 +412,14 @@ void TouchscreenState::Update(input::InputReport input_report,
 
   for (const auto& pointer : old_pointers) {
     input::InputEvent ev;
-    input::PointerEvent pt;
-    zx_status_t clone_result = fidl::Clone(pointer, &pt);
-    FXL_DCHECK(clone_result);
+    input::PointerEvent pt = fidl::Clone(pointer);
     pt.phase = input::PointerEventPhase::UP;
     pt.event_time = now;
     ev.set_pointer(std::move(pt));
     device_state_->callback()(std::move(ev));
 
     ev = input::InputEvent();
-    clone_result = fidl::Clone(pointer, &pt);
-    FXL_DCHECK(clone_result);
+    pt = fidl::Clone(pointer);
     pt.phase = input::PointerEventPhase::REMOVE;
     pt.event_time = now;
     ev.set_pointer(std::move(pt));

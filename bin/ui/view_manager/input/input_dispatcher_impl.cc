@@ -284,14 +284,17 @@ void InputDispatcherImpl::OnHitTestResult(const geometry::PointF& point,
                                  std::move(event), nullptr);
           }
 
-          FXL_VLOG(1) << "Input focus gained by " << new_chain->chain.front();
-          input::InputEvent event = input::InputEvent();
-          input::FocusEvent focus = input::FocusEvent();
-          focus.event_time = InputEventTimestampNow();
-          focus.focused = true;
-          event.set_focus(std::move(focus));
-          owner_->DeliverEvent(new_chain->chain.front(), std::move(event),
-                               nullptr);
+          if (new_chain) {
+            FXL_VLOG(1) << "Input focus gained by " << new_chain->chain.front();
+            input::InputEvent event = input::InputEvent();
+            input::FocusEvent focus = input::FocusEvent();
+            focus.event_time = InputEventTimestampNow();
+            focus.focused = true;
+            event.set_focus(std::move(focus));
+            owner_->DeliverEvent(new_chain->chain.front(), std::move(event),
+                                nullptr);
+
+          }
 
           active_focus_chain_ = std::move(new_chain);
         }

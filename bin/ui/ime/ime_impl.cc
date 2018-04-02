@@ -82,20 +82,14 @@ void ImeImpl::InjectInput(input::InputEvent event) {
       state_.selection.extent = state_.selection.base;
 
       FXL_VLOG(1) << "Notifying (state = " << &state_ << "')";
-      input::TextInputState state_clone;
-      zx_status_t clone_result = fidl::Clone(state_, &state_clone);
-      FXL_DCHECK(clone_result);
-      client_->DidUpdateState(std::move(state_clone),
+      client_->DidUpdateState(fidl::Clone(state_),
                               fidl::MakeOptional(std::move(event)));
     } else {
       switch (keyboard.hid_usage) {
         case HID_USAGE_KEY_BACKSPACE: {
           DeleteBackward(state_);
           FXL_VLOG(1) << "Notifying (state = " << &state_ << "')";
-          input::TextInputState state_clone;
-          zx_status_t clone_result = fidl::Clone(state_, &state_clone);
-          FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone),
+          client_->DidUpdateState(fidl::Clone(state_),
                                   fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_LEFT: {
@@ -111,10 +105,7 @@ void ImeImpl::InjectInput(input::InputEvent event) {
           }
 
           FXL_VLOG(1) << "Notifying (state = " << &state_ << "')";
-          input::TextInputState state_clone;
-          zx_status_t clone_result = fidl::Clone(state_, &state_clone);
-          FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone),
+          client_->DidUpdateState(fidl::Clone(state_),
                                   fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_RIGHT: {
@@ -131,10 +122,7 @@ void ImeImpl::InjectInput(input::InputEvent event) {
           }
 
           FXL_VLOG(1) << "Notifying (state = " << &state_ << "')";
-          input::TextInputState state_clone;
-          zx_status_t clone_result = fidl::Clone(state_, &state_clone);
-          FXL_DCHECK(clone_result);
-          client_->DidUpdateState(std::move(state_clone),
+          client_->DidUpdateState(fidl::Clone(state_),
                                   fidl::MakeOptional(std::move(event)));
         } break;
         case HID_USAGE_KEY_ENTER: {

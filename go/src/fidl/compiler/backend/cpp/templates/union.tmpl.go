@@ -147,7 +147,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
       return ::fidl::Clone({{ .StorageName }}, &result->{{ .StorageName }});
     {{- end }}
      default:
-      return ZX_ERR_INVALID_ARGS;
+      return ZX_OK;
   }
 }
 
