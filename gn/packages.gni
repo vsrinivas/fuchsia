@@ -31,9 +31,5 @@ _preprocessed_packages = exec_script("prepreprocess_build_packages.py",
                                      "scope",
                                      [ "package_imports_resolver.py" ])
 
-packages_have_cpp = _preprocessed_packages.have_cpp
-packages_have_dart = _preprocessed_packages.have_dart
-packages_have_go = _preprocessed_packages.have_go
-packages_have_rust = _preprocessed_packages.have_rust
 packages_imported = _preprocessed_packages.imported
 packages_labels = _preprocessed_packages.labels

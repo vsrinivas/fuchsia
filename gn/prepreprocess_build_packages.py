@@ -8,16 +8,13 @@ import sys
 
 from package_imports_resolver import PackageImportsResolver
 
-class PackageLangageObserver:
+class PackageLabelObserver:
     def __init__(self):
-        self.languages = set()
         self.labels = []
 
     def import_resolved(self, config, config_path):
         for label in config.get("labels", []):
             self.labels.append(label)
-        if config.get("languages"):
-            self.languages.update(config.get("languages"))
 
 
 def get_dep_from_package_name(package_name):
@@ -26,24 +23,16 @@ def get_dep_from_package_name(package_name):
     return '"//%s"' % package_name
 
 def main():
-    parser = argparse.ArgumentParser(description="Determine languages used by a"
-                                     + " given set of packages")
+    parser = argparse.ArgumentParser(description="Determine labels and Fuchsia "
+                                     "packages included in the current build")
     parser.add_argument("--packages", help="list of packages", required=True)
     args = parser.parse_args()
 
-
-    language_observer = PackageLangageObserver()
-    imports_resolver = PackageImportsResolver(language_observer)
+    observer = PackageLabelObserver()
+    imports_resolver = PackageImportsResolver(observer)
     imported = imports_resolver.resolve_imports(args.packages.split(","))
-    languages = language_observer.languages
-    labels = language_observer.labels
+    labels = observer.labels
 
-    # Some build tools depend on Go, so we always need to include it.
-    languages.add("go")
-
-    for language in ["cpp", "dart", "go", "rust"]:
-        sys.stdout.write("have_%s = %s\n" %
-                         (language, str(language in languages).lower()))
     sys.stdout.write("imported = [%s]\n" %
                      ",".join(map(get_dep_from_package_name, imported)))
     sys.stdout.write("labels = [%s]\n" %
