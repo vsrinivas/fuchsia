@@ -17,7 +17,7 @@ namespace machina {
 VirtioConsole::Stream::Stream(async_t* async,
                               VirtioQueue* queue,
                               zx_handle_t socket)
-    : async_(async), socket_(socket), queue_(queue), queue_wait_(async) {
+    : async_(async), socket_(socket), queue_(queue), queue_wait_(async, queue) {
   socket_wait_.set_handler(
       fbl::BindMember(this, &VirtioConsole::Stream::OnSocketReady));
 }
@@ -32,7 +32,7 @@ void VirtioConsole::Stream::Stop() {
 
 zx_status_t VirtioConsole::Stream::WaitOnQueue() {
   return queue_wait_.Wait(
-      queue_, fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady));
+      fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady));
 }
 
 void VirtioConsole::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
@@ -116,17 +116,15 @@ VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
                              zx::socket socket)
     : VirtioDeviceBase(phys_mem),
       socket_(fbl::move(socket)),
-      rx_stream_(async, rx_queue(), socket_.get()),
-      tx_stream_(async, tx_queue(), socket_.get()) {}
-
-VirtioConsole::~VirtioConsole() = default;
+      rx_stream_(async, queue(0), socket_.get()),
+      tx_stream_(async, queue(1), socket_.get()) {}
 
 zx_status_t VirtioConsole::Start() {
   zx_status_t status = rx_stream_.Start();
-  if (status == ZX_OK) {
-    status = tx_stream_.Start();
+  if (status != ZX_OK) {
+    return status;
   }
-  return status;
+  return tx_stream_.Start();
 }
 
 }  // namespace machina

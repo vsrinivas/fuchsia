@@ -8,28 +8,29 @@
 
 namespace machina {
 
-VirtioQueueWaiter::VirtioQueueWaiter(async_t* async) : async_(async) {
-  FXL_DCHECK(async_);
-}
-
-zx_status_t VirtioQueueWaiter::Wait(VirtioQueue* queue, Callback callback) {
-  callback_ = fbl::move(callback);
-  queue_ = queue;
+VirtioQueueWaiter::VirtioQueueWaiter(async_t* async, VirtioQueue* queue)
+    : async_(async), queue_(queue) {
+  FXL_DCHECK(async_ != nullptr && queue_ != nullptr);
   wait_.set_object(queue->event());
   wait_.set_trigger(VirtioQueue::SIGNAL_QUEUE_AVAIL);
   wait_.set_handler(fbl::BindMember(this, &VirtioQueueWaiter::Handler));
+}
+
+zx_status_t VirtioQueueWaiter::Wait(Callback callback) {
+  if (callback_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  callback_ = fbl::move(callback);
   zx_status_t status = wait_.Begin(async_);
   if (status != ZX_OK) {
-    callback_ = Callback();
-    queue_ = nullptr;
+    callback_ = nullptr;
   }
   return status;
 }
 
 void VirtioQueueWaiter::Cancel() {
   wait_.Cancel(async_);
-  callback_ = Callback();
-  queue_ = nullptr;
+  callback_ = nullptr;
 }
 
 async_wait_result_t VirtioQueueWaiter::Handler(
@@ -46,7 +47,6 @@ async_wait_result_t VirtioQueueWaiter::Handler(
 
   Callback callback = std::move(callback_);
   callback(status, index);
-
   return ASYNC_WAIT_FINISHED;
 }
 

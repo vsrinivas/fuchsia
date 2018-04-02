@@ -16,10 +16,10 @@ namespace machina {
 // Helper for performing async waits against a virtio queue.
 class VirtioQueueWaiter {
  public:
-  VirtioQueueWaiter(async_t* async);
+  VirtioQueueWaiter(async_t* async, VirtioQueue* queue);
   using Callback = fbl::Function<void(zx_status_t, uint16_t index)>;
 
-  zx_status_t Wait(VirtioQueue* queue, Callback callback);
+  zx_status_t Wait(Callback callback);
 
   void Cancel();
 

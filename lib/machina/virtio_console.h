@@ -23,12 +23,8 @@ class VirtioConsole : public VirtioDeviceBase<VIRTIO_ID_CONSOLE,
                                               virtio_console_config_t> {
  public:
   VirtioConsole(const PhysMem&, async_t* async, zx::socket socket);
-  ~VirtioConsole() override;
 
   zx_status_t Start();
-
-  VirtioQueue* rx_queue() { return queue(0); }
-  VirtioQueue* tx_queue() { return queue(1); }
 
  private:
   zx::socket socket_;

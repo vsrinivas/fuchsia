@@ -9,25 +9,25 @@
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
 
-#define QUEUE_SIZE 8u
-
 namespace machina {
 namespace {
+
+static constexpr uint16_t kVirtioNetQueueSize = 8;
 
 class VirtioNetTest : public testing::Test {
  public:
   VirtioNetTest() : net_(phys_mem_, loop_.async()), queue_(net_.rx_queue()) {}
 
   void SetUp() override {
-    ASSERT_EQ(queue_.Init(QUEUE_SIZE), ZX_OK);
-    ASSERT_EQ(zx_fifo_create(QUEUE_SIZE, sizeof(eth_fifo_entry_t), 0,
+    ASSERT_EQ(queue_.Init(kVirtioNetQueueSize), ZX_OK);
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
                              &fifos_.rx_fifo, &fifo_[0]),
               ZX_OK);
-    ASSERT_EQ(zx_fifo_create(QUEUE_SIZE, sizeof(eth_fifo_entry_t), 0,
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
                              &fifos_.tx_fifo, &fifo_[1]),
               ZX_OK);
-    fifos_.rx_depth = QUEUE_SIZE;
-    fifos_.tx_depth = QUEUE_SIZE;
+    fifos_.rx_depth = kVirtioNetQueueSize;
+    fifos_.tx_depth = kVirtioNetQueueSize;
     ASSERT_EQ(net_.WaitOnFifos(fifos_), ZX_OK);
   }
 

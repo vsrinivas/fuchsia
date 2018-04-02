@@ -15,15 +15,14 @@ TEST(VirtioQueueWaiter, Wait) {
   fsl::MessageLoop loop;
 
   VirtioDeviceFake device;
-  VirtioQueueWaiter waiter(loop.async());
+  VirtioQueueWaiter waiter(loop.async(), device.queue());
   ASSERT_EQ(device.Init(), ZX_OK);
   bool wait_complete = false;
 
-  EXPECT_EQ(ZX_OK, waiter.Wait(device.queue(),
-                               [&](zx_status_t status, uint32_t events) {
-                                 EXPECT_EQ(ZX_OK, status);
-                                 wait_complete = true;
-                               }));
+  EXPECT_EQ(ZX_OK, waiter.Wait([&](zx_status_t status, uint32_t events) {
+    EXPECT_EQ(ZX_OK, status);
+    wait_complete = true;
+  }));
 
   loop.RunUntilIdle();
   EXPECT_FALSE(wait_complete);

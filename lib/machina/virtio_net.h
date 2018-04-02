@@ -45,12 +45,8 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device, async_t* async);
-    zx_status_t Start(VirtioQueue* queue,
-                      zx_handle_t fifo,
-                      size_t fifo_num_entries,
-                      bool rx);
-    void Stop() {}
+    Stream(VirtioNet* device, async_t* async, VirtioQueue* queue);
+    zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
    private:
     // Move buffers from VirtioQueue -> FIFO.
@@ -67,9 +63,9 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
                                        zx_status_t status,
                                        const zx_packet_signal_t* signal);
 
-    VirtioNet* device_ = nullptr;
-    async_t* async_ = nullptr;
-    VirtioQueue* queue_ = nullptr;
+    VirtioNet* device_;
+    async_t* async_;
+    VirtioQueue* queue_;
     zx_handle_t fifo_ = ZX_HANDLE_INVALID;
     bool rx_ = false;
 
