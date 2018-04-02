@@ -8,6 +8,7 @@
 #include <ddk/protocol/platform-defs.h>
 
 #include <soc/aml-s905d2/s905d2-gpio.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
 
 #include <limits.h>
 
@@ -18,64 +19,54 @@
 
 static const pbus_mmio_t gpio_mmios[] = {
     {
-        .base = 0xff634400,
-        .length = 0x11C00,
+        .base = S905D2_GPIO_BASE,
+        .length = S905D2_GPIO_LENGTH,
     },
     {
-        .base = 0xff800000,
-        .length = PAGE_SIZE,
+        .base = S905D2_GPIO_A0_BASE,
+        .length = S905D2_GPIO_AO_LENGTH,
     },
 };
 
 static const pbus_irq_t gpio_irqs[] = {
     {
-        // gpio_irq0
-        .irq = 94,
+        .irq = S905D2_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq1
-        .irq = 95,
+        .irq = S905D2_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq2
-        .irq = 96,
+        .irq = S905D2_GPIO_IRQ_2,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq3
-        .irq = 97,
+        .irq = S905D2_GPIO_IRQ_3,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq4
-        .irq = 98,
+        .irq = S905D2_GPIO_IRQ_4,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq5
-        .irq = 99,
+        .irq = S905D2_GPIO_IRQ_5,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq6
-        .irq = 100,
+        .irq = S905D2_GPIO_IRQ_6,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // gpio_irq7
-        .irq = 101,
+        .irq = S905D2_GPIO_IRQ_7,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // ao_gpio_irq0
-        .irq = 238,
+        .irq = S905D2_A0_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
-        // ao_gpio_irq1
-        .irq = 239,
+        .irq = S905D2_A0_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
