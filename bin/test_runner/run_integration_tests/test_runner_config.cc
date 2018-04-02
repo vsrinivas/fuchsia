@@ -31,6 +31,8 @@ TestRunnerConfig::TestRunnerConfig(const std::string& json_path) {
 
   for (auto& test : tests.GetArray()) {
     FXL_CHECK(test.IsObject());
+    if (test.HasMember("disabled"))
+      continue;
     std::string test_name = test["name"].GetString();
     std::string test_exec = test["exec"].GetString();
     test_names_.push_back(test_name);
