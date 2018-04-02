@@ -64,7 +64,7 @@ guest_app("zircon-guest") {
     ":guest-bootdata",
   ]
 
-  cmdline = "TERM=uart"
+  cmdline = "TERM=uart console.path=/dev/class/console/virtio-console"
   bootdata_outputs = get_target_outputs(":guest-bootdata")
   ramdisk = bootdata_outputs[0]
   zircon = "$zircon_build_dir/zircon.bin"
