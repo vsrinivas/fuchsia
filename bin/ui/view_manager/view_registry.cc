@@ -102,33 +102,11 @@ geometry::Transform ToTransform(const gfx::mat4& matrix) {
   return transform;
 }
 
-bool Equals(const views_v1::DisplayMetrics& a,
-            const views_v1::DisplayMetrics& b) {
-  return a.device_pixel_ratio == b.device_pixel_ratio;
-}
-
-bool Equals(const views_v1::ViewLayout& a,
-            const views_v1::ViewLayout& b) {
-  return a.size.width == b.size.width &&
-         a.size.height == b.size.height &&
-         a.inset.top == b.inset.top &&
-         a.inset.right == b.inset.right &&
-         a.inset.bottom == b.inset.bottom &&
-         a.inset.left == b.inset.left;
-}
-
-bool Equals(const views_v1::ViewProperties& a, const views_v1::ViewProperties& b) {
-  if (!!a.display_metrics != !!b.display_metrics)
-    return false;
-  if (a.display_metrics) {
-      if (!Equals(*a.display_metrics, *b.display_metrics))
-        return false;
-  }
-  if (!!a.view_layout != !!b.view_layout)
-    return false;
-  if (a.view_layout)
-    return Equals(*a.view_layout, *b.view_layout);
-  return true;
+bool Equals(const views_v1::ViewPropertiesPtr& a,
+            const views_v1::ViewPropertiesPtr& b) {
+  if (!a || !b)
+    return !a && !b;
+  return *a == *b;
 }
 
 }  // namespace
@@ -239,13 +217,12 @@ void ViewRegistry::CreateViewTree(
   FXL_CHECK(!FindViewTree(view_tree_token.value));
 
   // Create the state and bind the interfaces to it.
-  ViewTreeState* tree_state = new ViewTreeState(
-      this, view_tree_token, std::move(view_tree_request),
-      std::move(view_tree_listener), SanitizeLabel(label));
+  ViewTreeState* tree_state =
+      new ViewTreeState(this, view_tree_token, std::move(view_tree_request),
+                        std::move(view_tree_listener), SanitizeLabel(label));
 
   // Add to registry.
-  view_trees_by_token_.emplace(tree_state->view_tree_token().value,
-                               tree_state);
+  view_trees_by_token_.emplace(tree_state->view_tree_token().value, tree_state);
   FXL_VLOG(1) << "CreateViewTree: tree=" << tree_state;
 }
 
@@ -405,7 +382,7 @@ void ViewRegistry::SetChildProperties(
     return;
 
   // Store the updated properties specified by the container if changed.
-  if (Equals(*child_properties, *child_stub->properties()))
+  if (Equals(child_properties, child_stub->properties()))
     return;
 
   // Apply the change.
@@ -620,7 +597,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
     views_v1::ViewPropertiesPtr properties = ResolveViewProperties(view_state);
     if (properties) {
       if (!view_state->issued_properties() ||
-          !Equals(*properties, *view_state->issued_properties())) {
+          !Equals(properties, view_state->issued_properties())) {
         view_state->IssueProperties(std::move(properties));
         view_properties_changed = true;
       }
@@ -644,8 +621,7 @@ void ViewRegistry::TraverseView(ViewState* view_state,
     if (!(flags & ViewState::INVALIDATION_IN_PROGRESS)) {
       views_v1::ViewProperties cloned_properties;
       view_state->issued_properties()->Clone(&cloned_properties);
-      SendPropertiesChanged(view_state,
-                            std::move(cloned_properties));
+      SendPropertiesChanged(view_state, std::move(cloned_properties));
       flags = ViewState::INVALIDATION_IN_PROGRESS;
     } else {
       FXL_VLOG(2) << "View invalidation stalled awaiting response: view="
@@ -761,17 +737,17 @@ void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
   session_.HitTestDeviceRay(
       (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
-      [this, callback = std::move(callback), ray_origin,
-       ray_direction](fidl::VectorPtr<gfx::Hit> hits) {
+      [ this, callback = std::move(callback), ray_origin,
+        ray_direction ](fidl::VectorPtr<gfx::Hit> hits) {
         auto view_hits = fidl::VectorPtr<ViewHit>::New(hits->size());
         for (auto& hit : *hits) {
           auto it = views_by_token_.find(hit.tag_value);
           if (it != views_by_token_.end()) {
             ViewState* view_state = it->second;
 
-            view_hits->emplace_back(ViewHit{
-                view_state->view_token(), ray_origin, ray_direction,
-                hit.distance, ToTransform(hit.inverse_transform)});
+            view_hits->emplace_back(
+                ViewHit{view_state->view_token(), ray_origin, ray_direction,
+                        hit.distance, ToTransform(hit.inverse_transform)});
           }
         }
         callback(std::move(view_hits));
@@ -878,9 +854,8 @@ void ViewRegistry::GetImeService(
 
 // EXTERNAL SIGNALING
 
-void ViewRegistry::SendPropertiesChanged(
-    ViewState* view_state,
-    views_v1::ViewProperties properties) {
+void ViewRegistry::SendPropertiesChanged(ViewState* view_state,
+                                         views_v1::ViewProperties properties) {
   FXL_DCHECK(view_state);
   FXL_DCHECK(view_state->view_listener());
 
@@ -966,9 +941,8 @@ void ViewRegistry::CreateInputConnection(
 
   const uint32_t view_token_value = view_token.value;
   input_connections_by_view_token_.emplace(
-      view_token_value,
-      std::make_unique<InputConnectionImpl>(this, this, view_token,
-                                            std::move(request)));
+      view_token_value, std::make_unique<InputConnectionImpl>(
+                            this, this, view_token, std::move(request)));
 }
 
 void ViewRegistry::OnInputConnectionDied(InputConnectionImpl* connection) {
