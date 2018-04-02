@@ -370,6 +370,9 @@ evalloop(union node *n, int flags)
 		if (i != 0)
 			break;
 		status = evaltree(n->nbinary.ch2, flags);
+		if (status == ZX_ERR_CANCELED) {
+			evalskip = SKIPBREAK;
+		}
 		skip = skiploop();
 	} while (!(skip & ~SKIPCONT));
 	loopnest--;
@@ -405,6 +408,9 @@ evalfor(union node *n, int flags)
 	for (sp = arglist.list ; sp ; sp = sp->next) {
 		setvar(n->nfor.var, sp->text, 0);
 		status = evaltree(n->nfor.body, flags);
+		if (status == ZX_ERR_CANCELED) {
+			evalskip = SKIPBREAK;
+		}
 		if (skiploop() & ~SKIPCONT)
 			break;
 	}
