@@ -6,7 +6,7 @@
 
 #include <fuchsia/cpp/modular_private.h>
 #include <lib/async/cpp/task.h>
-#include <lib/task/default.h>
+#include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"

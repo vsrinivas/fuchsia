@@ -52,7 +52,7 @@ fidl::StringPtr PathString(
 
 fidl::VectorPtr<fidl::StringPtr> ParentModulePath(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  fidl::VectorPtr<fidl::StringPtr> ret;
+  fidl::VectorPtr<fidl::StringPtr> ret = fidl::VectorPtr<fidl::StringPtr>::New(0);
 
   if (module_path->size() > 0) {
     for (size_t i = 0; i < module_path->size() - 1; i++) {
@@ -231,6 +231,7 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
         story_controller_impl_(story_controller_impl),
         key_(std::move(key)),
         module_data_(std::move(module_data)) {
+    FXL_DCHECK(!module_data_->module_path.is_null());
     ModuleData module_data_clone;
     module_data_->Clone(&module_data_clone);
     story_controller_impl_->blocked_operations_.push_back(
@@ -298,6 +299,7 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
         embed_module_watcher_(std::move(embed_module_watcher)),
         view_owner_request_(std::move(view_owner_request)),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
+    FXL_DCHECK(!module_data_->module_path.is_null());
     Ready();
   }
 
@@ -631,6 +633,7 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
       if (info.is_link_path()) {
         info.link_path().Clone(&mapping->link_path);
       } else {  // info->is_create_link()
+        mapping->link_path.module_path.resize(0);
         // Create a new Link. ConnectLinkCall will either create a new Link, or
         // connect to an existing one.
         // TODO(thatguy): If the Link already exists (it shouldn't),

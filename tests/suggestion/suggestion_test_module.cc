@@ -4,7 +4,7 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <lib/async/cpp/task.h>
-#include <lib/task/default.h>
+#include <lib/async/default.h>
 
 #include "garnet/lib/callback/scoped_callback.h"
 #include "lib/app/cpp/connect.h"
