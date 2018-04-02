@@ -56,12 +56,6 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
-#   generated_code (optional)
-#     Boolean indicating that this library contains generated code. This option
-#     relaxes some constraints around package structure.
-#     Defaults to false.
-#     TODO(pylaligand): get rid of this option post-FIDL 2.0.
-#
 # Example of usage:
 #
 #   dart_library("baz") {
@@ -126,11 +120,12 @@ if (current_toolchain == dart_toolchain) {
         # This file contributes to the script and needs to be listed as an input.
         "//build/dart/label_to_package_name.py",
       ]
-      if (!defined(invoker.generated_code) || !invoker.generated_code) {
+
+      sources = [
         # Require a manifest file, allowing the analysis service to identify the
         # package.
-        inputs += [ "$package_root/pubspec.yaml" ]
-      }
+        "$package_root/pubspec.yaml",
+      ]
 
       outputs = [
         dot_packages_file,
