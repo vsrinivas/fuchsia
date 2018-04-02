@@ -21,6 +21,18 @@ static volatile uint32_t pending = 0;
 
 zx_time_t debuglog_next_timeout = ZX_TIME_INFINITE;
 
+#define SEND_DELAY_SHORT ZX_MSEC(100)
+#define SEND_DELAY_LONG ZX_SEC(4)
+
+// Number of consecutive unacknowledged packets we will send before reducing send rate.
+static const unsigned kUnackedThreshold = 5;
+
+// Number of consecutive packets that went unacknowledged. Is reset on acknowledgment.
+static unsigned num_unacked = 0;
+
+// How long to wait between sending.
+static zx_duration_t send_delay = SEND_DELAY_SHORT;
+
 static int get_log_line(char* out) {
     char buf[ZX_LOG_RECORD_MAX + 1];
     zx_log_record_t* rec = (zx_log_record_t*)buf;
@@ -85,7 +97,7 @@ static void debuglog_send(void) {
     }
     udp6_send(&pkt, pkt_len, &ip6_ll_all_nodes, DEBUGLOG_PORT, DEBUGLOG_ACK_PORT, false);
 done:
-    debuglog_next_timeout = zx_deadline_after(ZX_MSEC(100));
+    debuglog_next_timeout = zx_deadline_after(send_delay);
 }
 
 void debuglog_recv(void* data, size_t len, bool is_mcast) {
@@ -101,12 +113,22 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
         return;
     }
 
+    // Received an ack. We have an active listener. Don't delay.
+    num_unacked = 0;
+    send_delay = SEND_DELAY_SHORT;
+
     seqno++;
     pending = 0;
     debuglog_send();
 }
 
 void debuglog_timeout_expired(void) {
+    if (pending) {
+        // No reply. If noone is listening, reduce send rate.
+        if (++num_unacked >= kUnackedThreshold) {
+            send_delay = SEND_DELAY_LONG;
+        }
+    }
     debuglog_send();
 }
 
