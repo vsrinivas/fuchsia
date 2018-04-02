@@ -287,6 +287,36 @@ func (_ *TestStruct2) InlineSize() int {
 	return 88
 }
 
+type TestUnion1 struct {
+	A Union1
+	B *Union1
+}
+
+// Implements Payload.
+func (_ *TestUnion1) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestUnion1) InlineSize() int {
+	return 24
+}
+
+type TestUnion2 struct {
+	A []Union1
+	B []*Union1
+}
+
+// Implements Payload.
+func (_ *TestUnion2) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *TestUnion2) InlineSize() int {
+	return 32
+}
+
 type TestHandle1 struct {
 	A _zx.Handle
 	B _zx.Handle `fidl:"*"`
@@ -334,6 +364,58 @@ func (_ *TestInterface1) InlineAlignment() int {
 // Implements Payload.
 func (_ *TestInterface1) InlineSize() int {
 	return 16
+}
+
+type Union1Tag uint32
+
+const (
+	Union1A Union1Tag = iota
+	Union1B Union1Tag = iota
+	Union1C Union1Tag = iota
+	Union1D Union1Tag = iota
+)
+
+// Union1 is a FIDL union.
+type Union1 struct {
+	Union1Tag `fidl:"tag"`
+	A         [3]int8
+	B         TestSimple
+	C         *TestSimple
+	D         float32
+}
+
+// Implements Payload.
+func (_ *Union1) InlineAlignment() int {
+	return 8
+}
+
+// Implements Payload.
+func (_ *Union1) InlineSize() int {
+	return 16
+}
+
+func (u *Union1) Which() Union1Tag {
+	return u.Union1Tag
+}
+
+func (u *Union1) SetA(a [3]int8) {
+	u.Union1Tag = Union1A
+	u.A = a
+}
+
+func (u *Union1) SetB(b TestSimple) {
+	u.Union1Tag = Union1B
+	u.B = b
+}
+
+func (u *Union1) SetC(c *TestSimple) {
+	u.Union1Tag = Union1C
+	u.C = c
+}
+
+func (u *Union1) SetD(d float32) {
+	u.Union1Tag = Union1D
+	u.D = d
 }
 
 // Request for Echo.

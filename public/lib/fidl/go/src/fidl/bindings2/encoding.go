@@ -4,9 +4,6 @@
 
 package bindings2
 
-// TODO(mknyszek): Support unions.
-// TODO(mknyszek): Create a proper set of error values.
-
 import (
 	"errors"
 	"fmt"
@@ -42,6 +39,16 @@ var (
 	interfaceRequestType              = reflect.TypeOf(InterfaceRequest{})
 	proxyType                         = reflect.TypeOf(Proxy{})
 )
+
+// isUnionType returns true if the reflected type is a FIDL union type.
+func isUnionType(t reflect.Type) bool {
+	// This is a safe way to check if it's a union type because the generated
+	// code inserts a "dummy" field (of type struct{}) at the beginning as a
+	// marker that the struct should be treated as a FIDL union. Because all FIDL
+	// fields are exported, there's no potential for name collision either, and a
+	// struct accidentally being treated as a union.
+	return t.Kind() == reflect.Struct && t.NumField() > 1 && t.Field(0).Tag.Get("fidl") == "tag"
+}
 
 // isHandleType returns true if the reflected type is a Fuchsia handle type.
 func isHandleType(t reflect.Type) bool {
@@ -107,6 +114,9 @@ func getSize(t reflect.Type, v reflect.Value) (int, error) {
 			return 16, nil
 		case reflect.String:
 			return 16, nil
+		case reflect.Struct:
+			// Handles both structs and unions.
+			return 8, nil
 		}
 		return 0, fmt.Errorf("unsupported pointer type kind %s for type %s", t.Kind(), t.Name())
 	case reflect.String:
@@ -114,7 +124,8 @@ func getSize(t reflect.Type, v reflect.Value) (int, error) {
 	case reflect.Slice:
 		return 16, nil
 	case reflect.Struct:
-		return getStructSize(t, v)
+		// Handles both structs and unions.
+		return getPayloadSize(t, v)
 	}
 	return 0, fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
 }
@@ -136,7 +147,7 @@ func structAsPayload(t reflect.Type, v reflect.Value) (Payload, error) {
 	return payload, nil
 }
 
-func getStructSize(t reflect.Type, v reflect.Value) (int, error) {
+func getPayloadSize(t reflect.Type, v reflect.Value) (int, error) {
 	p, err := structAsPayload(t, v)
 	if err != nil {
 		return 0, err
@@ -144,7 +155,7 @@ func getStructSize(t reflect.Type, v reflect.Value) (int, error) {
 	return p.InlineSize(), nil
 }
 
-func getStructAlignment(t reflect.Type, v reflect.Value) (int, error) {
+func getPayloadAlignment(t reflect.Type, v reflect.Value) (int, error) {
 	p, err := structAsPayload(t, v)
 	if err != nil {
 		return 0, err
@@ -270,17 +281,21 @@ func (e *encoder) writeUint(val uint64, size int) {
 	e.head += size
 }
 
-// marshalStructInline first aligns head to the struct's alignment factor, and
-// then writes its fields inline.
+// marshalStructOrUnionInline first aligns head to the struct's or union's alignment
+// factor, and then writes its field(s) inline.
 //
-// Expects the Type t and Value v to refer to a struct value, not a pointer.
-func (e *encoder) marshalStructInline(t reflect.Type, v reflect.Value) error {
-	a, err := getStructAlignment(t, v)
+// Expects the Type t and Value v to refer to a golang struct value, not a pointer.
+func (e *encoder) marshalStructOrUnionInline(t reflect.Type, v reflect.Value) error {
+	a, err := getPayloadAlignment(t, v)
 	if err != nil {
 		return err
 	}
 	e.head = align(e.head, a)
-	err = e.marshalStructFields(t, v)
+	if isUnionType(t) {
+		err = e.marshalUnion(t, v, a)
+	} else {
+		err = e.marshalStructFields(t, v)
+	}
 	if err != nil {
 		return err
 	}
@@ -288,11 +303,11 @@ func (e *encoder) marshalStructInline(t reflect.Type, v reflect.Value) error {
 	return nil
 }
 
-// marshalStructPointer marshals a nullable struct's reference, and then marshals
-// the struct itself out-of-line.
+// marshalStructOrUnionPointer marshals a nullable struct's or union's reference, and then
+// marshals the value itself out-of-line.
 //
-// Expects the Type t and Value v to refer to a pointer to a struct.
-func (e *encoder) marshalStructPointer(t reflect.Type, v reflect.Value) error {
+// Expects the Type t and Value v to refer to a pointer to a golang struct.
+func (e *encoder) marshalStructOrUnionPointer(t reflect.Type, v reflect.Value) error {
 	if v.IsNil() {
 		e.writeUint(noAlloc, 8)
 		return nil
@@ -300,14 +315,19 @@ func (e *encoder) marshalStructPointer(t reflect.Type, v reflect.Value) error {
 	e.writeUint(allocPresent, 8)
 	et := t.Elem()
 	ev := v.Elem()
-	// Encode the struct out-of-line.
-	s, err := getStructSize(et, ev)
+	// Encode the value out-of-line.
+	payload, err := structAsPayload(et, ev)
 	if err != nil {
 		return err
 	}
 	oldHead := e.head
-	e.head = e.newObject(align(s, 8))
-	if err := e.marshalStructFields(et, ev); err != nil {
+	e.head = e.newObject(align(payload.InlineSize(), 8))
+	if isUnionType(et) {
+		err = e.marshalUnion(et, ev, payload.InlineAlignment())
+	} else {
+		err = e.marshalStructFields(et, ev)
+	}
+	if err != nil {
 		return err
 	}
 	e.head = oldHead
@@ -335,6 +355,31 @@ func (e *encoder) marshalStructFields(t reflect.Type, v reflect.Value) error {
 		}
 	}
 	return nil
+}
+
+// marshalUnion marshals a FIDL union represented as a golang struct inline,
+// without any external alignment.
+//
+// Expects the Type t and Value v to refer to a golang struct value, not a
+// pointer. The alignment field is used to align the union's field.
+func (e *encoder) marshalUnion(t reflect.Type, v reflect.Value, alignment int) error {
+	kind := v.Field(0).Uint()
+
+	// Index into the fields of the struct, adding 1 for the tag.
+	fieldIndex := int(kind) + 1
+	if fieldIndex >= t.NumField() {
+		return ErrInvalidUnionTag
+	}
+	e.writeUint(kind, 4)
+
+	f := t.Field(fieldIndex)
+	var n nestedTypeData
+	if err := n.FromTag(f.Tag); err != nil {
+		return err
+	}
+	// Re-align to the union's alignment before writing its field.
+	e.head = align(e.head, alignment)
+	return e.marshal(f.Type, v.Field(fieldIndex), n)
 }
 
 // marshalArray marshals a FIDL array inline.
@@ -380,7 +425,7 @@ func (e *encoder) marshalInline(t reflect.Type, v reflect.Value, n nestedTypeDat
 	case reflect.Float64:
 		e.writeUint(math.Float64bits(v.Float()), 8)
 	case reflect.Struct:
-		return e.marshalStructInline(t, v)
+		return e.marshalStructOrUnionInline(t, v)
 	default:
 		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -474,7 +519,7 @@ func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeDa
 	case reflect.String:
 		return e.marshalString(v.Elem(), n)
 	case reflect.Struct:
-		return e.marshalStructPointer(t, v)
+		return e.marshalStructOrUnionPointer(t, v)
 	}
 	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }
@@ -589,24 +634,33 @@ func (d *decoder) readUint(size int) uint64 {
 	return val
 }
 
-// unmarshalStructInline unmarshals a struct inline based on Type t into Value v, first
-// aligning head to the alignment of the struct.
+// unmarshalStructOrUnionInline unmarshals a struct or union inline based on Type t
+// into Value v, first aligning head to the alignment of the value.
 //
-// Expects the Type t and Value v to refer to a struct value, not a pointer.
-func (d *decoder) unmarshalStructInline(t reflect.Type, v reflect.Value) error {
-	a, err := getStructAlignment(t, v)
+// Expects the Type t and Value v to refer to a golang struct value, not a pointer.
+func (d *decoder) unmarshalStructOrUnionInline(t reflect.Type, v reflect.Value) error {
+	a, err := getPayloadAlignment(t, v)
 	if err != nil {
 		return err
 	}
 	d.head = align(d.head, a)
-	return d.unmarshalStructFields(t, v)
+	if isUnionType(t) {
+		err = d.unmarshalUnion(t, v, a)
+	} else {
+		err = d.unmarshalStructFields(t, v)
+	}
+	if err != nil {
+		return err
+	}
+	d.head = align(d.head, a)
+	return nil
 }
 
-// unmarshalStructPointer unmarshals a pointer to a struct (i.e. a nullable FIDL struct)
-// into the Value v.
+// unmarshalStructOrUnionPointer unmarshals a pointer to a golang struct (i.e. a
+// nullable FIDL struct or union) into the Value v.
 //
-// Expects the Type t and Value v to refer to a pointer to a struct.
-func (d *decoder) unmarshalStructPointer(t reflect.Type, v reflect.Value) error {
+// Expects the Type t and Value v to refer to a pointer to a golang struct.
+func (d *decoder) unmarshalStructOrUnionPointer(t reflect.Type, v reflect.Value) error {
 	if d.readUint(8) == noAlloc {
 		v.Set(reflect.Zero(t))
 		return nil
@@ -619,14 +673,19 @@ func (d *decoder) unmarshalStructPointer(t reflect.Type, v reflect.Value) error 
 	// Set up the out-of-line space and the head.
 	oldHead := d.head
 	d.head = d.nextObject
-	s, err := getStructSize(et, ev)
+	payload, err := structAsPayload(et, ev)
 	if err != nil {
 		return err
 	}
-	d.nextObject += align(s, 8)
+	d.nextObject += align(payload.InlineSize(), 8)
 
-	// Marshal all the fields of the struct out-of-line.
-	if err := d.unmarshalStructFields(et, ev); err != nil {
+	// Unmarshal the value itself out-of-line.
+	if isUnionType(et) {
+		err = d.unmarshalUnion(et, ev, payload.InlineAlignment())
+	} else {
+		err = d.unmarshalStructFields(et, ev)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -655,6 +714,30 @@ func (d *decoder) unmarshalStructFields(t reflect.Type, v reflect.Value) error {
 		}
 	}
 	return nil
+}
+
+// unmarshalUnion unmarshals a FIDL union at d.head into the Value v (a golang
+// struct) without any external alignment.
+//
+// Expects the Type t and Value v to refer to a golang struct value, not a pointer.
+// The alignment field is used to align to the union's field before reading.
+func (d *decoder) unmarshalUnion(t reflect.Type, v reflect.Value, alignment int) error {
+	kind := d.readUint(4)
+
+	// Index into the fields of the struct, adding 1 for the tag.
+	fieldIndex := int(kind) + 1
+	if fieldIndex >= t.NumField() {
+		return ErrInvalidUnionTag
+	}
+	v.Field(0).SetUint(kind)
+
+	f := t.Field(fieldIndex)
+	var n nestedTypeData
+	if err := n.FromTag(f.Tag); err != nil {
+		return err
+	}
+	d.head = align(d.head, alignment)
+	return d.unmarshal(f.Type, v.Field(fieldIndex), n)
 }
 
 // unmarshalArray unmarshals an array inline based on Type t into Value v, taking into account
@@ -706,7 +789,7 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 	case reflect.Float64:
 		v.SetFloat(math.Float64frombits(d.readUint(8)))
 	case reflect.Struct:
-		return d.unmarshalStructInline(t, v)
+		return d.unmarshalStructOrUnionInline(t, v)
 	default:
 		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
 	}
@@ -830,7 +913,7 @@ func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedType
 	case reflect.String:
 		return d.unmarshalString(t, v, n)
 	case reflect.Struct:
-		return d.unmarshalStructPointer(t, v)
+		return d.unmarshalStructOrUnionPointer(t, v)
 	}
 	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
 }

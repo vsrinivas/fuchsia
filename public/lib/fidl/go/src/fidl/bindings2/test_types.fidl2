@@ -99,6 +99,23 @@ struct TestStruct2 {
     TestString1? d;
 };
 
+union Union1 {
+    array<int8>:3 a;
+    TestSimple b;
+    TestSimple? c;
+    float32 d;
+};
+
+struct TestUnion1 {
+    Union1 a;
+    Union1? b;
+};
+
+struct TestUnion2 {
+    vector<Union1> a;
+    vector<Union1?> b;
+};
+
 struct TestHandle1 {
     handle a;
     handle? b;

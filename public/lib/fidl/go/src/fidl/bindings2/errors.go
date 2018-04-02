@@ -10,5 +10,6 @@ import (
 
 // TODO(mknyszek): Flesh these out and make them better.
 var (
-	ErrUnknownOrdinal = errors.New("unknown ordinal")
+	ErrInvalidUnionTag = errors.New("invalid union tag")
+	ErrUnknownOrdinal  = errors.New("unknown ordinal")
 )

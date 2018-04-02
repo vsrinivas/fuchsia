@@ -135,6 +135,18 @@ func TestEncodingIdentity(t *testing.T) {
 			},
 		}, 152, &TestStruct2{})
 	})
+	t.Run("Unions", func(t *testing.T) {
+		u1 := Union1{}
+		u1.SetB(TestSimple{X: 555})
+		testIdentity(t, &TestUnion1{
+			A: u1,
+			B: nil,
+		}, 24, &TestUnion1{})
+		testIdentity(t, &TestUnion2{
+			A: []Union1{u1, u1, u1},
+			B: []*Union1{&u1, nil, nil},
+		}, 120, &TestUnion2{})
+	})
 	t.Run("Handles", func(t *testing.T) {
 		vmo, err := zx.NewVMO(10, 0)
 		if err != nil {
