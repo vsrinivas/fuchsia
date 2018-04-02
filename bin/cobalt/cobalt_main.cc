@@ -157,6 +157,28 @@ class CobaltEncoderImpl : public CobaltEncoder {
       fidl::VectorPtr<BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override;
 
+  void StartTimer(
+      uint32_t metric_id,
+      uint32_t encoding_id,
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      uint32_t timeout_s,
+      StartTimerCallback callback) override;
+
+  void EndTimer(
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      uint32_t timeout_s,
+      EndTimerCallback callback) override;
+
+  void EndTimerMultiPart(
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      fidl::StringPtr part_name,
+      fidl::VectorPtr<ObservationValue> observation,
+      uint32_t timeout_s,
+      EndTimerMultiPartCallback callback) override;
+
   void SendObservations(SendObservationsCallback callback) override;
 
   Encoder encoder_;
@@ -330,6 +352,37 @@ void CobaltEncoderImpl::AddIntBucketDistribution(
   auto result = encoder_.EncodeIntBucketDistribution(metric_id, encoding_id,
                                                      distribution_map);
   AddEncodedObservation(&result, callback);
+}
+
+void CobaltEncoderImpl::StartTimer(
+    uint32_t metric_id,
+    uint32_t encoding_id,
+    fidl::StringPtr timer_id,
+    uint64_t timestamp,
+    uint32_t timeout_s,
+    StartTimerCallback callback) {
+  // TODO(ninai)
+  callback(Status::OK);
+}
+
+void CobaltEncoderImpl::EndTimer(
+    fidl::StringPtr timer_id,
+    uint64_t timestamp,
+    uint32_t timeout_s,
+    EndTimerCallback callback) {
+  // TODO(ninai)
+  callback(Status::OK);
+}
+
+void CobaltEncoderImpl::EndTimerMultiPart(
+    fidl::StringPtr timer_id,
+    uint64_t timestamp,
+    fidl::StringPtr part_name,
+    fidl::VectorPtr<ObservationValue> observation,
+    uint32_t timeout_s,
+    EndTimerMultiPartCallback callback) {
+  // TODO(ninai)
+  callback(Status::OK);
 }
 
 void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {

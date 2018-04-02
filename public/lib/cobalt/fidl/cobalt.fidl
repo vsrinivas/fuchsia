@@ -100,7 +100,7 @@ interface CobaltEncoderFactory {
 // sends them to the server. An instance of CobaltEncoder is associated with a
 // particular Cobalt project ID.
 //
-// Next method ordinal: 8
+// Next method ordinal: 12
 interface CobaltEncoder {
   // Adds a string observation. It will eventually be sent to the Cobalt server.
   // |metric_id| Must be a metric ID registered with the Cobalt system and
@@ -175,6 +175,7 @@ interface CobaltEncoder {
   // Adds an observation. It will eventually be sent to the Cobalt server.
   // This version of Add*Observation() allows the user to specify the
   // observation using the variadic type |Value|.
+  //
   // |metric_id| Must be a metric ID registered with the Cobalt system and
   //             associated with this encoder's project ID.  The specified
   //             metric must have a single part and the the type of this part
@@ -213,10 +214,175 @@ interface CobaltEncoder {
   // |metric_id| Must be a metric ID registered with the Cobalt system and
   //             associated with this encoder's project ID.
   //
-  // |observation| The multi-value Observation to be encoded. Must be consistent
-  //               with the definition of the metric and encoding.
+  // |observation| The multi-value Observation to be encoded. Must be
+  //               consistent with the definition of the metric and encoding.
   6: AddMultipartObservation(uint32 metric_id,
                             vector<ObservationValue> observation)
+      -> (Status @status);
+
+  // This method is part of Cobalt's helper service for measuring the time
+  // delta between two events that occur in different processes. This starts
+  // the timer. A corresponding invocation of EndTimer() with the same
+  // |timer_id| ends the timer. It is OK if Cobalt receives the EndTimer()
+  // call before the StartTimer() call.
+  //
+  // |metric_id| Must be a metric ID registered with the Cobalt system and
+  //             associated with this encoder's project ID. The specified
+  //             metric must have at least one part of type INTEGER that will
+  //             be used to store the time delta. The EndTimer() call
+  //             determines which metric part to use.
+  //
+  // |encoding_id| Must be an encoding ID registered with the Cobalt system
+  //               and associated with this encoder's project ID. It will be
+  //               used to encode the time delta.
+  //
+  // |timer_id| The ID of the timer being started. This is an arbitrary
+  //            non-empty string provided by the caller and it is the caller's
+  //            responsibility to ensure that Cobalt receives a pair of
+  //            StartTimer(), EndTimer() calls with this id before the timeout
+  //            and without any intervening additional calls to StartTimer()
+  //            or EndTimer() using the same id. Once such a pair is received
+  //            Cobalt will delete the timer with this ID and after that the
+  //            ID may be re-used.
+  //
+  // |timestamp| The timestamp to set as the start of the timer. The units used
+  //             are application-dependent and must be documented in the
+  //             Metric definition in the Cobalt registration.
+  //
+  // |timeout_s| The number of seconds Cobalt should wait to receive the
+  //             corresponding EndTimer() call with the same |timer_id|. If
+  //             Cobalt has already received the corresponding EndTimer() call
+  //             before receiving this StartTimer() call then this value is
+  //             ignored as the timeout has already been set by the EndTimer()
+  //             call. If Cobalt does not receive the corresponding EndTimer()
+  //             call before the timeout then the timer will be deleted and
+  //             this invocation of StartTimer() will be forgotten. Must be a
+  //             positive value less than 300.
+  // |status| Returns OK on success. There are two success cases:
+  //          (i) Cobalt does not currently have any timers with the given
+  //              timer_id. In that case this call creates a new timer with
+  //              the given ID and start timestamp.
+  //          (ii) Cobalt currently has a timer with the given timer_id for
+  //              which it has received exactly one EndTimer() call and no
+  //              StartTimer() calls. In this case Cobalt will delete the
+  //              timer and create a new Observation using the difference
+  //              between the end timestamp and the start timestamp as the
+  //              value of the Observation's unique part. It is ok if this
+  //              time delta is negative.
+  //           Returns INVALID_ARGUMENTS if |metric_id| or |encoding_id| are
+  //              invalid, if |timer_id| is empty or the timeout is not
+  //              positive and less than 5 minutes.
+  //           Returns FAILED_PRECONDITION if Cobalt currently has a timer
+  //              with the given timer_ID and it already has a start
+  //              timestamp. In this case Cobalt will delete the timer with
+  //              the given |timer_id| and this invocation of StartTimer()
+  //              will be forgotten.
+  9: StartTimer(uint32 metric_id, uint32 encoding_id, string timer_id,
+                uint64 timestamp, uint32 timeout_s) -> (Status @status);
+
+  // This method is part of Cobalt's helper service for measuring the time
+  // delta between two events that occur in different processes. This ends the
+  // timer. A corresponding invocation of StartTimer() with the same
+  // |timer_id| starts the timer. It is OK if Cobalt receives the EndTimer()
+  // call before the StartTimerCall().
+  //
+  // |timer_id| The ID of the timer being ended. This is an arbitrary
+  //            non-empty string provided by the caller and it is the caller's
+  //            responsibility to ensure that Cobalt receives a pair of
+  //            StartTimer(), EndTimer() calls with this id before the timeout
+  //            and without any intervening additional calls to StartTimer()
+  //            or EndTimer() using the same id. Once such a pair is received
+  //            Cobalt will delete the timer with this ID and after that the
+  //            ID may be re-used.
+  //
+  // |timestamp| The timestamp to set as the end of the timer. The units used
+  //             are application-dependent and must be documented in the
+  //             Metric definition in the Cobalt registration.
+  //
+  // |timeout_s| The number of seconds Cobalt should wait to receive the
+  //             corresponding StartTimer() call with the same |timer_id|. If
+  //             Cobalt has already received the corresponding StartTimer()
+  //             call before receiving this EndTimer() call then this value is
+  //             ignored as the timeout has already been set by the
+  //             StartTimer() call. Must be a positive value less than 300.
+  //             If Cobalt does not receive the corresponding StartTimer()
+  //             call before the timeout then the timer will be deleted and
+  //             this invocation of EndTimer() will be forgotten.
+  // |status| Returns OK on success. There are two success cases:
+  //          (i) Cobalt does not currently have any timers with the given
+  //              timer_id. In that case this call creates a new timer with
+  //              the given ID and end timestamp.
+  //          (ii) Cobalt currently has a timer with the given timer_id for
+  //              which it has received exactly one StartTimer() call and no
+  //              EndTimer() calls. In this case Cobalt will delete the
+  //              timer and create a new Observation using the difference
+  //              between the end timestamp and the start timestamp as the
+  //              value of the Observation's unique part. It is ok if this
+  //              time delta is negative.
+  //           Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout
+  //              is not positive and less than 5 minutes.
+  //           Returns FAILED_PRECONDITION if Cobalt currently has a timer
+  //              with the given timer_ID and it already has an end timestamp.
+  //              In this case Cobalt will delete the timer with the given
+  //              |timer_id| and this invocation of EndTimer() will be
+  //              forgotten.
+  10: EndTimer(string timer_id,  uint64 timestamp, uint32 timeout_s)
+      -> (Status @status);
+
+  // This version of EndTimer() supports multi-part observations in which there
+  // are other parts in addition to the time delta. See the documentation on
+  // the other version of EndTimer().
+  //
+  // |timer_id| The ID of the timer being ended. This is an arbitrary
+  //            non-empty string provided by the caller and it is the caller's
+  //            responsibility to ensure that Cobalt receives a pair of
+  //            StartTimer(), EndTimer() calls with this id before the timeout
+  //            and without any intervening additional calls to StartTimer()
+  //            or EndTimer() using the same id. Once such a pair is received
+  //            Cobalt will delete the timer with this ID and after that the
+  //            ID may be re-used.
+  //
+  // |timestamp| The timestamp to set as the end of the timer. The units used
+  //             are application-dependent and must be documented in the
+  //             Metric definition in the Cobalt registration.
+  //
+  // |part_name| Must be the name of a part of type INTEGER within the metric
+  //             whose ID is given. The time delta will become the value for
+  //             this part of the observation.
+  //
+  // |observations| The multi-value Observation to be encoded in addition to
+  //                the time delta.
+  //
+  // |timeout_s| The number of seconds Cobalt should wait to receive the
+  //             corresponding StartTimer() call with the same |timer_id|. If
+  //             Cobalt has already received the corresponding StartTimer()
+  //             call before receiving this EndTimer() call then this value is
+  //             ignored as the timeout has already been set by the
+  //             StartTimer() call. Must be a positive value less than 300.
+  //             If Cobalt does not receive the corresponding StartTimer()
+  //             call before the timeout then the timer will be deleted and
+  //             this invocation of EndTimer() will be forgotten.
+  // |status| Returns OK on success. There are two success cases:
+  //          (i) Cobalt does not currently have any timers with the given
+  //              timer_id. In that case this call creates a new timer with
+  //              the given ID and end timestamp.
+  //          (ii) Cobalt currently has a timer with the given timer_id for
+  //              which it has received exactly one StartTimer() call and no
+  //              EndTimer() calls. In this case Cobalt will delete the
+  //              timer and create a new Observation using the difference
+  //              between the end timestamp and the start timestamp as the
+  //              value of the Observation's unique part. It is ok if this
+  //              time delta is negative.
+  //           Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout
+  //              is not positive and less than 5 minutes or if part_name is
+  //              an empty string.
+  //           Returns FAILED_PRECONDITION if Cobalt currently has a timer
+  //              with the given timer_ID and it already has an end timestamp.
+  //              In this case Cobalt will delete the timer with the given
+  //              |timer_id| and this invocation of EndTimer() will be
+  //              forgotten.
+  11: EndTimerMultiPart(string timer_id,  uint64 timestamp, string part_name,
+                        vector<ObservationValue> observation, uint32 timeout_s)
       -> (Status @status);
 
   // Obsolete. This does nothing and always returns OK.
