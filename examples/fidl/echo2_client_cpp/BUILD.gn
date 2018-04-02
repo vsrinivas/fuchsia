@@ -12,7 +12,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/examples/fidl2/services:echo2",
+    "//garnet/examples/fidl/services:echo2",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/svc/cpp",

@@ -14,7 +14,7 @@ members =  [
   "drivers/wlan/testing/util",
   "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
-  "examples/fidl2/*rust",
+  "examples/fidl/*rust",
   "examples/network/wget-rs",
   "examples/rust/testing",
   "lib/rust/crates/eapol",

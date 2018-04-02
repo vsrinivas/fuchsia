@@ -10,7 +10,7 @@ template("fidl_example") {
     forward_variables_from(invoker, [ "name" ])
 
     sources = [
-      "//zircon/system/host/fidl/examples/${target_name}.fidl2"
+      "//zircon/system/host/fidl/examples/${target_name}.fidl"
     ]
   }
 }
@@ -34,13 +34,13 @@ fidl_example("types") {}
 
 fidl("point") {
   sources = [
-    "//zircon/system/host/fidl/examples/library-a/point.fidl2"
+    "//zircon/system/host/fidl/examples/library-a/point.fidl"
   ]
 }
 
 fidl("view") {
   sources = [
-    "//zircon/system/host/fidl/examples/library-b/view.fidl2"
+    "//zircon/system/host/fidl/examples/library-b/view.fidl"
   ]
 
   deps = [

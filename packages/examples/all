@@ -3,7 +3,7 @@
         "garnet/packages/examples/auth",
         "garnet/packages/examples/benchmark",
         "garnet/packages/examples/escher",
-        "garnet/packages/examples/fidl2",
+        "garnet/packages/examples/fidl",
         "garnet/packages/examples/media",
         "garnet/packages/examples/netconnector",
         "garnet/packages/examples/netstack",
