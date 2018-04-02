@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![allow(stable_features)]
 #![feature(conservative_impl_trait)]
 
 #[macro_use]
