@@ -10,7 +10,6 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <lib/async/cpp/task.h>
 #include <sync/completion.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
@@ -151,7 +150,8 @@ constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)) {
+    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)),
+      dispatcher_(ralink_async_t()) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
 
@@ -260,8 +260,6 @@ zx_status_t Device::Bind() {
     gc.set_gpio2_dir(1);
     status = WriteRegister(gc);
     CHECK_WRITE(GPIO_CTRL, status);
-
-    dispatcher_ = std::make_unique<wlan::async::Dispatcher<wlan_device::Phy>>(ralink_async_t());
 
     // Add the device. The radios are not active yet though; we wait until the wlanmac start method
     // is called.
@@ -3261,55 +3259,21 @@ void Device::HandleTxComplete(usb_request_t* request) {
 
 void Device::Unbind() {
     debugfn();
-    completion_reset(&shutdown_completion_);
-    {
-        // Proper shutdown
-        //
-        // We must ensure that no threads attempt to access the Device after it has been released.
-        // Since we use the driver's async_t to serve FIDL requests, we want to ensure that all such
-        // requests have finished before we remove this device. We do this by setting a flag to
-        // indicate that the device is going away, and checking that value in every FIDL handler. We
-        // also queue a task that will run after any already-queued tasks, and which will signal
-        // that it is safe to proceed with device release.
-        //
-        // Note that DDK operations do not typically check dead_ (thereby avoiding taking the lock
-        // unless they modify some shared state). The unbind method will trigger an unbind of the
-        // children of this device, which will then be released before this device is released. If
-        // it becomes important to avoid running any code from a DDK method when dead_ == true,
-        // those methods should take the lock and check before proceeding.
 
-        // Set the flag under the lock to ensure any in-flight operations have a chance to finish.
+    {
         std::lock_guard<std::mutex> guard(lock_);
         dead_ = true;
-
-        // Reset the dispatcher to release any FIDL bindings and close their channels. This ensures
-        // that no additional requests will be made on this device.
-        dispatcher_.reset();
-
-        // Prepare a task to signal the completion to unblock the Release() method.
-        auto task = new async::Task(zx_clock_get(ZX_CLOCK_MONOTONIC), ASYNC_FLAG_HANDLE_SHUTDOWN);
-        auto f =
-            [cmp = &shutdown_completion_,
-            task](async_t* async, zx_status_t status) -> async_task_result_t {
-            // We don't actually care about status here, since in any case we know that no more
-            // async tasks will run.
-            completion_signal(cmp);
-            delete task;
-            return ASYNC_TASK_FINISHED;
-        };
-        task->set_handler(f);
-        ZX_DEBUG_ASSERT(task->Post(ralink_async_t()) == ZX_OK);
     }
 
-    device_remove(zxdev_);
+    // Stop accepting new FIDL requests. Once the dispatcher is shut down,
+    // remove the device.
+    dispatcher_.InitiateShutdown([this]{
+        device_remove(zxdev_);
+    });
 }
 
 void Device::Release() {
     debugfn();
-
-    // Wait for the shutdown task to run, proving that all outstanding requests are handled.
-    completion_wait(&shutdown_completion_, ZX_TIME_INFINITE);
-
     delete this;
 }
 
@@ -3376,14 +3340,7 @@ zx_status_t Device::Connect(const void* buf, size_t len) {
     zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
     zx::channel chan(hnd);
 
-    std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        return ZX_ERR_PEER_CLOSED;
-    }
-
-    zx_status_t status = dispatcher_->AddBinding(std::move(chan), this);
-    if (status != ZX_OK) { return status; }
-    return ZX_OK;
+    return dispatcher_.AddBinding(std::move(chan), this);
 }
 
 void Device::Query(QueryCallback callback) {
@@ -3458,11 +3415,6 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req,
     wlan_device::CreateIfaceResponse resp;
 
     std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        resp.status = ZX_ERR_PEER_CLOSED;
-        callback(std::move(resp));
-        return;
-    }
 
     if (wlanmac_dev_ != nullptr) {
         // Only one interface supported for now.
@@ -3495,11 +3447,6 @@ void Device::DestroyIface(wlan_device::DestroyIfaceRequest req,
     wlan_device::DestroyIfaceResponse resp;
 
     std::lock_guard<std::mutex> guard(lock_);
-    if (dead_) {
-        resp.status = ZX_ERR_PEER_CLOSED;
-        callback(std::move(resp));
-        return;
-    }
 
     if (wlanmac_dev_ == nullptr) {
         errorf("calling destroy iface when no iface exists\n");

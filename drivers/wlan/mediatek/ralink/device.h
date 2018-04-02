@@ -8,7 +8,6 @@
 #include <ddk/usb-request.h>
 #include <driver/usb.h>
 #include <fbl/unique_ptr.h>
-#include <sync/completion.h>
 #include <wlan/async/dispatcher.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/compiler.h>
@@ -239,9 +238,8 @@ class Device : public wlan_device::Phy {
 
     std::mutex lock_;
     bool dead_ __TA_GUARDED(lock_) = false;
-    completion_t shutdown_completion_;
     fbl::unique_ptr<WlanmacIfcProxy> wlanmac_proxy_ __TA_GUARDED(lock_);
-    std::unique_ptr<wlan::async::Dispatcher<wlan_device::Phy>> dispatcher_;
+    wlan::async::Dispatcher<wlan_device::Phy> dispatcher_;
 
     constexpr static size_t kEepromSize = 0x0100;
     std::array<uint16_t, kEepromSize> eeprom_ = {};
