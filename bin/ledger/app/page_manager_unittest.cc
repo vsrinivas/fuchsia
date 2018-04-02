@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
@@ -69,7 +70,8 @@ class FakePageSync : public cloud_sync::PageSyncEmptyImpl {
 class PageManagerTest : public gtest::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(fsl::MessageLoop::GetCurrent()->task_runner(), nullptr) {}
+      : environment_(fsl::MessageLoop::GetCurrent()->task_runner(),
+                     async_get_default()) {}
   ~PageManagerTest() override {}
 
  protected:

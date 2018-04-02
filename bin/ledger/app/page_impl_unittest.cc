@@ -41,7 +41,8 @@ std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
 
 class PageImplTest : public gtest::TestWithMessageLoop {
  public:
-  PageImplTest() : environment_(message_loop_.task_runner(), nullptr) {}
+  PageImplTest() : environment_(message_loop_.task_runner(),
+                                message_loop_.async()) {}
   ~PageImplTest() override {}
 
  protected:

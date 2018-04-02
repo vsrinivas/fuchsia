@@ -5,10 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_ENVIRONMENT_ENVIRONMENT_H_
 #define PERIDOT_BIN_LEDGER_ENVIRONMENT_ENVIRONMENT_H_
 
-#include <thread>
+#include <lib/async/dispatcher.h>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
@@ -18,25 +16,20 @@ namespace ledger {
 class Environment {
  public:
   explicit Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                       fxl::RefPtr<fxl::TaskRunner> io_runner = nullptr);
+                       async_t* async = nullptr);
   ~Environment();
 
   const fxl::RefPtr<fxl::TaskRunner> main_runner() { return main_runner_; }
+  const async_t* async() { return async_; }
 
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
   }
 
-  // Returns a TaskRunner allowing to access the I/O thread. The I/O thread
-  // should be used to access the file system.
-  const fxl::RefPtr<fxl::TaskRunner> GetIORunner();
-
  private:
   fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  async_t* const async_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
-
-  std::thread io_thread_;
-  fxl::RefPtr<fxl::TaskRunner> io_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Environment);
 };

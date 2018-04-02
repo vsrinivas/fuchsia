@@ -30,7 +30,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class UserSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   UserSyncImplTest()
-      : environment_(message_loop_.task_runner()),
+      : environment_(message_loop_.task_runner(), message_loop_.async()),
         cloud_provider_(cloud_provider_ptr_.NewRequest()),
         encryption_service_(message_loop_.async()) {
     UserConfig user_config;

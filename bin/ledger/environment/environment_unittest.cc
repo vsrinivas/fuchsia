@@ -10,28 +10,11 @@
 namespace ledger {
 namespace {
 
-TEST(Environment, NoIOThread) {
-  // Check that the environment without an io_thread can be deleted correctly.
+TEST(Environment, InitializationOfAsync) {
   fsl::MessageLoop loop;
-  Environment env(loop.task_runner());
-}
+  Environment env(loop.task_runner(), loop.async());
 
-TEST(Environment, GivenIOThread) {
-  fsl::MessageLoop loop;
-  Environment env(loop.task_runner(), loop.task_runner());
-
-  EXPECT_EQ(loop.task_runner(), env.GetIORunner());
-}
-
-TEST(Environment, DefaultIOThread) {
-  fsl::MessageLoop loop;
-  int value = 0;
-  {
-    Environment env(loop.task_runner());
-    auto io_runner = env.GetIORunner();
-    io_runner->PostTask([&value] { value = 1; });
-  }
-  EXPECT_EQ(1, value);
+  EXPECT_EQ(loop.async(), env.async());
 }
 
 }  // namespace
