@@ -35,6 +35,7 @@ __BEGIN_CDECLS;
 // Google
 #define PDEV_VID_GOOGLE             3
 #define PDEV_PID_GAUSS              1
+#define PDEV_PID_MACHINA            2
 
 #define PDEV_DID_GAUSS_AUDIO_IN     1
 #define PDEV_DID_GAUSS_AUDIO_OUT    2
