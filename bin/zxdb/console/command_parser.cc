@@ -326,9 +326,8 @@ std::vector<std::string> GetCommandCompletions(const std::string& input) {
   if (!tokens.empty()) {
     // All tokens but the last one.
     for (size_t i = 0; i < tokens.size() - 1; i++) {
-      if (i > 0)
-        prefix.push_back(' ');
       prefix += tokens[i];
+      prefix.push_back(' ');
     }
   }
 

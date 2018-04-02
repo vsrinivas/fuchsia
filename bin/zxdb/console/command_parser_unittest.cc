@@ -199,6 +199,10 @@ TEST(CommandParser, Completions) {
   EXPECT_TRUE(CompletionContains(comp, "h"));
   EXPECT_TRUE(CompletionContains(comp, "help"));
 
+  // Noun + Verb completion.
+  comp = GetCommandCompletions("process 2 p");
+  EXPECT_TRUE(CompletionContains(comp, "process 2 pause"));
+
   // Ending in a space gives everything.
   comp = GetCommandCompletions("process ");
   EXPECT_TRUE(CompletionContains(comp, "process quit"));

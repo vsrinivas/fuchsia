@@ -68,6 +68,9 @@ const char kNewHelp[] =
   process is specified ("process 2 new"), the new process context will clone
   the given one. The new context will be the active context.
 
+  A process noun must be specified. Long-term we want to add support to "new"
+  multiple things.
+
 Hints
 
   To see a list of available process contexts, type "process". To switch the
@@ -80,12 +83,19 @@ Example
 
   [zxdb] run chrome
   Process 1 Running 3456 chrome
-  [zxdb] new
+  [zxdb] process new
   Process 2 created.
   [zxdb] attach 1239
   Process 2 Running 1239
 )";
 Err DoNew(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.HasNoun(Noun::kProcess))
+    return Err("Use \"process new\" to create a new process context.");
+
   Target* new_target =
       context->session()->system().CreateNewTarget(cmd.target());
   context->SetActiveTarget(new_target);

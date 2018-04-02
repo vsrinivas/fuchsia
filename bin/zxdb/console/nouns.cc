@@ -136,6 +136,10 @@ bool HandleProcess(ConsoleContext* context, const Command& cmd) {
 
 void ListBreakpoints(ConsoleContext* context) {
   auto breakpoints = context->session()->system().GetBreakpoints();
+  if (breakpoints.empty()) {
+    Console::get()->Output("No breakpoints.\n");
+    return;
+  }
 
   int active_breakpoint_id = context->GetActiveBreakpointId();
 

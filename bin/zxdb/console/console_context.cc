@@ -153,14 +153,6 @@ Err ConsoleContext::FillOutCommand(Command* cmd) {
   // Find the thread.
   int thread_id = cmd->GetNounIndex(Noun::kThread);
   if (thread_id == Command::kNoIndex) {
-    // No index: use the active one (though it may not exist if the program
-    // isn't running, for example).
-    if (cmd->HasNoun(Noun::kThread) && !record->active_thread_id) {
-      return Err(ErrType::kInput,
-          "There is no active thread.\n"
-          "Use \"thread <index>\" to set the active one, or specify an "
-          "explicit\none for a command via \"thread <index> <command>\".");
-    }
     thread_id = record->active_thread_id;
     cmd->set_thread(record->id_to_thread[thread_id]);
   } else {
@@ -181,12 +173,6 @@ Err ConsoleContext::FillOutCommand(Command* cmd) {
   int breakpoint_id = cmd->GetNounIndex(Noun::kBreakpoint);
   if (breakpoint_id == Command::kNoIndex) {
     // No index: use the active one (which may not exist).
-    if (cmd->HasNoun(Noun::kBreakpoint) && !active_breakpoint_id_) {
-      return Err(ErrType::kInput,
-          "There is no active breakpoint.\n"
-          "Use \"breakpoint <index>\" to set the active one, or specify an "
-          "explicit\none for a command via \"breakpoint <index> <command>\".");
-    }
     breakpoint_id = active_breakpoint_id_;
     cmd->set_breakpoint(GetActiveBreakpoint());
   } else {
