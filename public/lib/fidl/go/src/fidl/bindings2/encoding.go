@@ -47,6 +47,12 @@ func isHandleType(t reflect.Type) bool {
 	switch t {
 	case handleType:
 		fallthrough
+	case channelType:
+		fallthrough
+	case logType:
+		fallthrough
+	case portType:
+		fallthrough
 	case vmoType:
 		fallthrough
 	case eventType:
