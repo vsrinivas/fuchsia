@@ -538,6 +538,10 @@ private:
     bool CompileStruct(Struct* struct_declaration);
     bool CompileUnion(Union* union_declaration);
 
+    // Compiling a type both validates the type, and computes shape
+    // information for the type. In particular, we validate that
+    // optional identifier types refer to things that can in fact be
+    // nullable (ie not enums).
     bool CompileArrayType(ArrayType* array_type, TypeShape* out_type_metadata);
     bool CompileVectorType(VectorType* vector_type, TypeShape* out_type_metadata);
     bool CompileStringType(StringType* string_type, TypeShape* out_type_metadata);

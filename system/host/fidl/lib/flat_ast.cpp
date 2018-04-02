@@ -1038,6 +1038,14 @@ bool Library::CompileArrayType(flat::ArrayType* array_type, TypeShape* out_types
 }
 
 bool Library::CompileVectorType(flat::VectorType* vector_type, TypeShape* out_typeshape) {
+    // We do not need the typeshape, but we do need to compile the
+    // element type. Compiling the type is the time we check for
+    // certain invalid states, like optional enums (prior to this we
+    // do not know if |Foo?| is referring to a struct or union, or an
+    // enum).
+    TypeShape element_typeshape;
+    if (!CompileType(vector_type->element_type.get(), &element_typeshape))
+        return false;
     *out_typeshape = VectorTypeShape();
     return true;
 }
