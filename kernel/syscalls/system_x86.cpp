@@ -165,7 +165,6 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
     }
 
     // Acquire resources for suspend and resume if necessary.
-    zx_status_t status;
     if (target_s_state < 5) {
         // If we're not shutting down, prepare a resume path and execute the
         // suspend on a separate thread (see comment on |suspend_thread()| for
@@ -177,11 +176,10 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
             return ZX_ERR_NO_MEMORY;
         }
 
-        status = thread_resume(t);
-        ASSERT(status == ZX_OK);
+        thread_resume(t);
 
         zx_status_t retcode;
-        status = thread_join(t, &retcode, ZX_TIME_INFINITE);
+        zx_status_t status = thread_join(t, &retcode, ZX_TIME_INFINITE);
         ASSERT(status == ZX_OK);
 
         if (retcode != ZX_OK) {

@@ -272,13 +272,11 @@ zx_status_t thread_set_real_time(thread_t* t) {
  *
  * This function is called to start a thread which has just been
  * created with thread_create() or which has been suspended with
- * thread_suspend().
+ * thread_suspend(). It can not fail.
  *
  * @param t  Thread to resume
- *
- * @return ZX_OK on success.
  */
-zx_status_t thread_resume(thread_t* t) {
+void thread_resume(thread_t* t) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
 
     bool ints_disabled = arch_ints_disabled();
@@ -291,7 +289,7 @@ zx_status_t thread_resume(thread_t* t) {
     if (t->state == THREAD_DEATH) {
         THREAD_UNLOCK(state);
         // The thread is dead, resuming it is a no-op.
-        return ZX_OK;
+        return;
     }
 
     /* Clear the suspend signal in case there is a pending suspend */
@@ -308,7 +306,6 @@ zx_status_t thread_resume(thread_t* t) {
     THREAD_UNLOCK(state);
 
     kcounter_add(thread_resume_count, 1u);
-    return ZX_OK;
 }
 
 zx_status_t thread_detach_and_resume(thread_t* t) {
@@ -316,7 +313,8 @@ zx_status_t thread_detach_and_resume(thread_t* t) {
     err = thread_detach(t);
     if (err < 0)
         return err;
-    return thread_resume(t);
+    thread_resume(t);
+    return ZX_OK;
 }
 
 /**

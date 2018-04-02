@@ -223,7 +223,7 @@ void thread_set_priority(int priority);
 void thread_set_user_callback(thread_t* t, thread_user_callback_t cb);
 thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority, size_t stack_size);
 thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg, int priority, void* stack, void* unsafe_stack, size_t stack_size, thread_trampoline_routine alt_trampoline);
-zx_status_t thread_resume(thread_t*);
+void thread_resume(thread_t*);
 zx_status_t thread_suspend(thread_t*);
 void thread_signal_policy_exception(void);
 void thread_exit(int retcode) __NO_RETURN;

@@ -382,7 +382,8 @@ zx_status_t ThreadDispatcher::Resume() {
     if (state_ != State::RUNNING && state_ != State::SUSPENDED)
         return ZX_ERR_BAD_STATE;
 
-    return thread_resume(&thread_);
+    thread_resume(&thread_);
+    return ZX_OK;
 }
 
 static void ThreadCleanupDpc(dpc_t *d) {
