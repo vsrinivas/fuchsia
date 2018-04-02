@@ -41,7 +41,7 @@ const $fidl.MethodType {{ .TypeSymbol }} = {{ .TypeExpr }};
 class {{ .ProxyName }} extends $fidl.Proxy<{{ .Name }}>
     implements {{ .Name }} {
 
-  {{ .ProxyName }}() : super(new $fidl.ProxyController<{{ .Name }}>()) {
+  {{ .ProxyName }}() : super(new $fidl.ProxyController<{{ .Name }}>($serviceName: {{ .ServiceName }})) {
     ctrl.onResponse = _handleResponse;
   }
 
