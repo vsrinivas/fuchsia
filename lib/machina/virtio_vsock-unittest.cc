@@ -412,6 +412,30 @@ TEST_F(VirtioVsockTest, MultipleConnections) {
   }
 }
 
+TEST_F(VirtioVsockTest, CreditRequest) {
+  zx::socket sockets[2];
+  ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
+  HostConnectOnPortRequest(kVirtioVsockHostPort, std::move(sockets[1]));
+  HostConnectOnPortResponse(kVirtioVsockHostPort);
+
+  // Test credit request.
+  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_TYPE_STREAM,
+         VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+
+  virtio_vsock_hdr_t rx_header = {};
+  ASSERT_EQ(rx_queue_.BuildDescriptor()
+                .AppendWritable(&rx_header, sizeof(rx_header))
+                .Build(),
+            ZX_OK);
+
+  loop_.RunUntilIdle();
+
+  VerifyHeader(&rx_header, kVirtioVsockHostPort, kVirtioVsockGuestPort + 200,
+               VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
+  EXPECT_GT(rx_header.buf_alloc, 0u);
+  EXPECT_EQ(rx_header.fwd_cnt, 0u);
+}
+
 TEST_F(VirtioVsockTest, UnsupportedSocketType) {
   zx::socket socket;
   auto acceptor = [&socket](uint32_t* port_out, zx::socket* socket_out) {

@@ -277,6 +277,26 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
         used += static_cast<uint32_t>(actual);
         break;
       }
+      case VIRTIO_VSOCK_OP_CREDIT_UPDATE: {
+        // We are sending a credit update, therefore we move to a ready to
+        // read/write state.
+        size_t max;
+        status = conn->socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max,
+                                           sizeof(max));
+        if (status != ZX_OK) {
+          break;
+        }
+        size_t used;
+        status = conn->socket.get_property(ZX_PROP_SOCKET_TX_BUF_SIZE, &used,
+                                           sizeof(used));
+        if (status != ZX_OK) {
+          break;
+        }
+        header->buf_alloc = max;
+        header->fwd_cnt = used;
+        conn->op = VIRTIO_VSOCK_OP_RW;
+        break;
+      }
       case VIRTIO_VSOCK_OP_SHUTDOWN:
         header->flags = conn->flags;
         if (header->flags == VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH) {
@@ -396,6 +416,12 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         used += static_cast<uint32_t>(actual);
         break;
       }
+      case VIRTIO_VSOCK_OP_CREDIT_REQUEST:
+        // We received a credit request, therefore we move to sending a credit
+        // update.
+        conn->op = VIRTIO_VSOCK_OP_CREDIT_UPDATE;
+        status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
+        break;
       case VIRTIO_VSOCK_OP_RST:
         // We received a connection reset, therefore remove the connection.
         status = ZX_ERR_STOP;
