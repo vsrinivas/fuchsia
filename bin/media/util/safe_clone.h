@@ -15,6 +15,24 @@ std::unique_ptr<T> SafeClone(const std::unique_ptr<T>& t_ptr) {
 }
 
 template <typename T>
+std::unique_ptr<T> SafeClone(const T* t) {
+  if (!t) {
+    return nullptr;
+  }
+
+  auto result = T::New();
+  t->Clone(result.get());
+  return result;
+}
+
+template <typename T>
+std::unique_ptr<T> SafeClone(const T& t) {
+  auto result = T::New();
+  t.Clone(result.get());
+  return result;
+}
+
+template <typename T>
 std::unique_ptr<std::vector<std::unique_ptr<T>>> SafeClone(
     const std::unique_ptr<std::vector<std::unique_ptr<T>>>& vec) {
   if (vec == nullptr) {
