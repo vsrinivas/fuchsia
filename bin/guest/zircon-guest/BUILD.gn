@@ -37,9 +37,9 @@ bootdata_mdi("guest-mdi") {
 
 bootdata_platform("guest-platform-id") {
   visibility = [ ":*" ]
-  vid = 1
-  pid = 1
-  board = "qemu-virt"
+  vid = 3
+  pid = 2
+  board = "machina"
 }
 
 bootdata("guest-bootdata") {
