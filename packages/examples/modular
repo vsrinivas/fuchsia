@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "modular_examples": "//peridot/examples:modular_examples"
     }

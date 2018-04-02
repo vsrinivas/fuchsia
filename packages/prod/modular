@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "device_runner_monitor": "//peridot/bin/device_runner_monitor",
         "device_runner": "//peridot/bin/device_runner",

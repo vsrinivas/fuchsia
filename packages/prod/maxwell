@@ -1,7 +1,4 @@
 {
-    "languages": [
-        "cpp"
-    ],
     "packages": {
         "action_log": "//peridot/bin/action_log",
         "context_engine": "//peridot/bin/context_engine",
