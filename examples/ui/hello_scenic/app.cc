@@ -47,7 +47,7 @@ App::App()
   // Connect to the SceneManager service.
   scenic_ = application_context_->ConnectToEnvironmentService<ui::Scenic>();
   scenic_.set_error_handler([this] {
-    FXL_LOG(INFO) << "Lost connection to Mozart service.";
+    FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->QuitNow();
   });
   scenic_->GetDisplayInfo(

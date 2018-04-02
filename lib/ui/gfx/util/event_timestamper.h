@@ -26,7 +26,7 @@ namespace gfx {
 // by everyone who needs event-timestamps.
 class EventTimestamper {
  private:
-  class Wait;
+  class Waiter;
 
  public:
   using Callback = std::function<void(zx_time_t timestamp)>;
@@ -61,7 +61,7 @@ class EventTimestamper {
     const zx::event& event() const;
 
    private:
-    Wait* wait_;
+    Waiter* waiter_;
     EventTimestamper* timestamper_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Watch);
@@ -71,16 +71,16 @@ class EventTimestamper {
   // Helper object that stores state corresponding to a single Watch object.
   // Invariants:
   // - |state_| only changes on the main thread.
-  // - instances of Wait are only destroyed on the main thread.
-  class Wait {
+  // - instances of Waiter are only destroyed on the main thread.
+  class Waiter {
    public:
     enum class State { STARTED, STOPPED, ABANDONED };
 
-    Wait(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
-         zx::event event,
-         zx_status_t trigger,
-         Callback callback);
-    ~Wait();
+    Waiter(const fxl::RefPtr<fxl::TaskRunner>& task_runner,
+           zx::event event,
+           zx_status_t trigger,
+           Callback callback);
+    ~Waiter();
 
     void set_state(State state) { state_ = state; }
     State state() const { return state_; }
