@@ -7,7 +7,8 @@ should never be manually edited.
 
 In order to expose a Zircon module to GN, set the `MODULE_PACKAGE` attribute in
 its `rules.mk` build file. The possible values are:
+ - `bin`: the module is exposed as a host application;
  - `src`: the module's sources are published;
  - `shared`: the module is exposed as a precompiled shared library;
  - `static`: the module is exposed as a precompiled static library;
-Note that this currently only applies to `ulib` modules.
+Note that this currently only applies to `ulib` and `hostapp` modules.
