@@ -18,6 +18,7 @@ const (
 	ProxySuffix   = "Interface"
 	StubSuffix    = "Stub"
 	RequestSuffix = "InterfaceRequest"
+	TagSuffix     = "Tag"
 
 	MessageHeaderSize = 16
 )
@@ -146,6 +147,40 @@ type StructMember struct {
 	Tag string
 }
 
+// Union represets a FIDL union as a golang struct.
+type Union struct {
+	// Name is the name of the FIDL union as a golang struct.
+	Name string
+
+	// TagName is the name of the golang enum type for the tag of the FIDL enum.
+	TagName string
+
+	// Members is a list of FIDL union members represented as golang struct members.
+	Members []UnionMember
+
+	// Size is the size of the FIDL union on the wire in bytes.
+	Size int
+
+	// Alignment is the alignment factor of the FIDL union on the wire in bytes.
+	Alignment int
+}
+
+// UnionMember represents a FIDL union member as a golang struct member.
+type UnionMember struct {
+	// Name is the exported name of the FIDL union member.
+	Name string
+
+	// PrivateName is the unexported name of the FIDL union member.
+	PrivateName string
+
+	// Type is the golang type of the union member.
+	Type Type
+
+	// Tag is the golang struct member tag which holds additional metadata
+	// about the union member.
+	Tag string
+}
+
 // Interface represents a FIDL interface in terms of golang structures.
 type Interface struct {
 	// Name is the Golang name of the interface.
@@ -187,8 +222,6 @@ type Method struct {
 // The golang backend IR structure is loosely modeled after an abstract syntax
 // tree, and is used to generate golang code from templates.
 type Root struct {
-	// TODO(mknyszek): Support unions.
-
 	// Name is the name of the library.
 	Name string
 
@@ -200,6 +233,9 @@ type Root struct {
 
 	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
+
+	// Unions represents the list of FIDL unions represented as Go structs.
+	Unions []Union
 
 	// Interfaces represents the list of FIDL interfaces represented as Go types.
 	Interfaces []Interface
@@ -430,7 +466,6 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
-		// TODO(mknyszek): Support unions.
 		switch declType {
 		case types.EnumDeclType:
 			r = Type(e)
@@ -440,6 +475,8 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag) {
 			}
 			r = Type(e + ProxySuffix)
 		case types.StructDeclType:
+			fallthrough
+		case types.UnionDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
 			} else {
@@ -459,8 +496,8 @@ func (c *compiler) compileConst(val types.Const) Const {
 	// to be either an enum, a primitive, or a string.
 	t, _ := c.compileType(val.Type)
 	return Const{
-		Name: c.compileCompoundIdentifier(val.Name, ""),
-		Type: t,
+		Name:  c.compileCompoundIdentifier(val.Name, ""),
+		Type:  t,
 		Value: c.compileConstant(val.Value),
 	}
 }
@@ -486,10 +523,10 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	ty, tag := c.compileType(val.Type)
 	return StructMember{
-		Type: ty,
-		Name: c.compileIdentifier(val.Name, true, ""),
+		Type:        ty,
+		Name:        c.compileIdentifier(val.Name, true, ""),
 		PrivateName: c.compileIdentifier(val.Name, false, ""),
-		Tag:  tag.String(),
+		Tag:         tag.String(),
 	}
 }
 
@@ -505,13 +542,36 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
+func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
+	ty, tag := c.compileType(val.Type)
+	return UnionMember{
+		Type:        ty,
+		Name:        c.compileIdentifier(val.Name, true, ""),
+		PrivateName: c.compileIdentifier(val.Name, false, ""),
+		Tag:         tag.String(),
+	}
+}
+
+func (c *compiler) compileUnion(val types.Union) Union {
+	r := Union{
+		Name:      c.compileCompoundIdentifier(val.Name, ""),
+		TagName:   c.compileCompoundIdentifier(val.Name, TagSuffix),
+		Size:      val.Size,
+		Alignment: val.Alignment,
+	}
+	for _, v := range val.Members {
+		r.Members = append(r.Members, c.compileUnionMember(r.Name, v))
+	}
+	return r
+}
+
 func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	ty, tag := c.compileType(p.Type)
 	return StructMember{
-		Type: ty,
-		Name: c.compileIdentifier(p.Name, true, ""),
+		Type:        ty,
+		Name:        c.compileIdentifier(p.Name, true, ""),
 		PrivateName: c.compileIdentifier(p.Name, false, ""),
-		Tag:  tag.String(),
+		Tag:         tag.String(),
 	}
 }
 
@@ -574,6 +634,9 @@ func Compile(fidlData types.Root) Root {
 	}
 	for _, v := range fidlData.Structs {
 		r.Structs = append(r.Structs, c.compileStruct(v))
+	}
+	for _, v := range fidlData.Unions {
+		r.Unions = append(r.Unions, c.compileUnion(v))
 	}
 	if len(fidlData.Interfaces) != 0 {
 		r.NeedsBindings = true

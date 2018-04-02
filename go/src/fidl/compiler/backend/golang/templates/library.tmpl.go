@@ -37,6 +37,9 @@ const (
 {{ range $struct := .Structs -}}
 {{ template "StructDefinition" $struct }}
 {{ end -}}
+{{ range $union := .Unions -}}
+{{ template "UnionDefinition" $union }}
+{{ end -}}
 {{ range $interface := .Interfaces -}}
 {{ template "InterfaceDefinition" $interface }}
 {{ end -}}
