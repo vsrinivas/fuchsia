@@ -8,15 +8,14 @@
 
 namespace encryption {
 
-EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(async_t* async)
+    : async_(async) {}
 
 EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}
 
 std::unique_ptr<EncryptionService>
 EncryptionServiceFactoryImpl::MakeEncryptionService(std::string namespace_id) {
-  return std::make_unique<EncryptionServiceImpl>(task_runner_,
+  return std::make_unique<EncryptionServiceImpl>(async_,
                                                  std::move(namespace_id));
 }
 

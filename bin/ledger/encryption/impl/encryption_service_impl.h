@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "garnet/lib/callback/scoped_task_runner.h"
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "peridot/bin/ledger/cache/lazy_value.h"
 #include "peridot/bin/ledger/cache/lru_cache.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
@@ -19,8 +19,7 @@ namespace encryption {
 
 class EncryptionServiceImpl : public EncryptionService {
  public:
-  EncryptionServiceImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                        std::string namespace_id);
+  EncryptionServiceImpl(async_t* async, std::string namespace_id);
   ~EncryptionServiceImpl() override;
 
   // EncryptionService:
@@ -75,9 +74,6 @@ class EncryptionServiceImpl : public EncryptionService {
   cache::LRUCache<uint32_t, std::string, Status> namespace_keys_;
   // Reference keys indexed by deletion scope seed.
   cache::LRUCache<DeletionScopeSeed, std::string, Status> reference_keys_;
-
-  // This must be the last member of this class.
-  callback::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace encryption

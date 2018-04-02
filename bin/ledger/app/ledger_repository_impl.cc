@@ -21,7 +21,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<sync_coordinator::UserSync> user_sync)
     : base_storage_dir_(std::move(base_storage_dir)),
       environment_(environment),
-      encryption_service_factory_(environment->main_runner()),
+      encryption_service_factory_(environment->async()),
       watchers_(std::move(watchers)),
       user_sync_(std::move(user_sync)) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });

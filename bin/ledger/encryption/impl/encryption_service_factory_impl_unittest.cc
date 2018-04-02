@@ -13,7 +13,7 @@ namespace {
 using EncryptionServiceFactoryTest = gtest::TestWithMessageLoop;
 
 TEST_F(EncryptionServiceFactoryTest, MakeEncryptionService) {
-  EncryptionServiceFactoryImpl factory(message_loop_.task_runner());
+  EncryptionServiceFactoryImpl factory(message_loop_.async());
   EXPECT_TRUE(factory.MakeEncryptionService("namespace_id"));
 }
 

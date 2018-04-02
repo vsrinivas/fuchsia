@@ -16,7 +16,7 @@ namespace {
 class EncryptionServiceTest : public gtest::TestWithMessageLoop {
  public:
   EncryptionServiceTest()
-      : encryption_service_(message_loop_.task_runner(), "namespace_id") {}
+      : encryption_service_(message_loop_.async(), "namespace_id") {}
 
  protected:
   void EncryptCommit(std::string commit_storage,
