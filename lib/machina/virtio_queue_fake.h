@@ -27,10 +27,10 @@ class DescBuilder {
   }
 
   // Adds a buffer to the chain that is flagged as device writeable.
-  DescBuilder& AppendWriteable(void* addr, size_t size) {
+  DescBuilder& AppendWritable(void* addr, size_t size) {
     return Append(addr, size, true);
   }
-  DescBuilder& AppendWriteable(uintptr_t addr, size_t size) {
+  DescBuilder& AppendWritable(uintptr_t addr, size_t size) {
     return Append(addr, size, true);
   }
 

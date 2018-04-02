@@ -85,7 +85,7 @@ class VirtioGpuTest {
     zx_status_t status = control_queue()
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
-                             .AppendWriteable(&response, sizeof(response))
+                             .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
     if (status != ZX_OK) {
       return status;
@@ -143,7 +143,7 @@ class VirtioGpuTest {
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
                              .AppendReadable(&entry, sizeof(entry))
-                             .AppendWriteable(&response, sizeof(response))
+                             .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
     if (status != ZX_OK) {
       return status;
@@ -174,7 +174,7 @@ class VirtioGpuTest {
     zx_status_t status = control_queue()
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
-                             .AppendWriteable(&response, sizeof(response))
+                             .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
     if (status != ZX_OK)
       return status;
@@ -202,7 +202,7 @@ class VirtioGpuTest {
     zx_status_t status = control_queue()
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
-                             .AppendWriteable(&response, sizeof(response))
+                             .AppendWritable(&response, sizeof(response))
                              .Build(&desc);
     if (status != ZX_OK)
       return status;
@@ -240,7 +240,7 @@ TEST(VirtioGpuTest, HandleGetDisplayInfo) {
   ASSERT_EQ(test.control_queue()
                 .BuildDescriptor()
                 .AppendReadable(&request, sizeof(request))
-                .AppendWriteable(&response, sizeof(response))
+                .AppendWritable(&response, sizeof(response))
                 .Build(&desc),
             ZX_OK);
 
@@ -289,7 +289,7 @@ TEST(VirtioGpuTest, SetScanoutToInvalidResource) {
   ASSERT_EQ(test.control_queue()
                 .BuildDescriptor()
                 .AppendReadable(&request, sizeof(request))
-                .AppendWriteable(&response, sizeof(response))
+                .AppendWritable(&response, sizeof(response))
                 .Build(&desc),
             ZX_OK);
 
@@ -323,7 +323,7 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
   ASSERT_EQ(test.control_queue()
                 .BuildDescriptor()
                 .AppendReadable(&request, sizeof(request))
-                .AppendWriteable(&response, sizeof(response))
+                .AppendWritable(&response, sizeof(response))
                 .Build(&desc),
             ZX_OK);
 
@@ -381,7 +381,7 @@ TEST(VirtioGpuTest, DrawCursor) {
   ASSERT_EQ(test.control_queue()
                 .BuildDescriptor()
                 .AppendReadable(&transfer_request, sizeof(transfer_request))
-                .AppendWriteable(&response, sizeof(response))
+                .AppendWritable(&response, sizeof(response))
                 .Build(&desc),
             ZX_OK);
   uint32_t used = 0;
