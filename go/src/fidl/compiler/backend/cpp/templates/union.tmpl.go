@@ -158,7 +158,17 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   switch (lhs.tag_) {
     {{- range $index, $member := .Members }}
      case {{ $index }}:
-      return lhs.{{ .StorageName }} == rhs.{{ .StorageName }};
+    {{- if .Type.IsPointer }}
+      if (lhs.{{ .StorageName }} == nullptr && rhs.{{ .StorageName }} != nullptr) {
+        return false;
+      } else if (rhs.{{ .StorageName }} == nullptr) {
+        return false;
+      } else if (*lhs.{{ .StorageName }} != *rhs.{{ .StorageName }}) {
+        return false;
+      }
+    {{- else }}
+        return lhs.{{ .StorageName }} != rhs.{{ .StorageName }};
+    {{- end }}
     {{- end }}
      default:
       return false;
