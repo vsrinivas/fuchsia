@@ -118,6 +118,7 @@ typedef struct ethdev {
     void* io_buf;
     size_t io_size;
     zx_paddr_t* paddr_map;
+    zx_handle_t pmt;
 
     tx_info_t all_tx_bufs[FIFO_DEPTH];
     mtx_t lock;  // Protects free_tx_bufs
@@ -615,8 +616,8 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
             goto fail;
         }
         zx_handle_t bti = edev->edev0->mac.ops->get_bti(edev->edev0->mac.ctx);
-        if ((status = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
-                                 vmo, 0, size, edev->paddr_map, pages)) != ZX_OK) {
+        if ((status = zx_bti_pin_new(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
+                                     vmo, 0, size, edev->paddr_map, pages, &edev->pmt)) != ZX_OK) {
             zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d\n",
                    edev->name, status);
             goto fail;
@@ -882,12 +883,12 @@ static void eth_kill_locked(ethdev_t* edev) {
         edev->io_buf = NULL;
     }
     if (edev->paddr_map != NULL) {
-        zx_handle_t bti = edev->edev0->mac.ops->get_bti(edev->edev0->mac.ctx);
-        if (zx_bti_unpin(bti, edev->paddr_map[0]) != ZX_OK) {
+        if (zx_pmt_unpin(edev->pmt) != ZX_OK) {
             zxlogf(ERROR, "eth [%s]: cannot unpin vmo?!\n", edev->name);
         }
         free(edev->paddr_map);
         edev->paddr_map = NULL;
+        edev->pmt = ZX_HANDLE_INVALID;
     }
     zxlogf(TRACE, "eth [%s]: all resources released\n", edev->name);
 }
