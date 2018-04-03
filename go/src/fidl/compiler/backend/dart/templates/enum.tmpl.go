@@ -53,7 +53,7 @@ class {{ .Name }} extends $fidl.Enum {
     }
   }
 
-  static {{ .Name }} _ctor(int v) => values[v];
+  static {{ .Name }} _ctor(int v) => new {{ .Name }}(v);
 }
 
 const $fidl.EnumType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
