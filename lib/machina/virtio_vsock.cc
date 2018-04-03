@@ -354,14 +354,21 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // We received a connection request.
         if (conn->op == VIRTIO_VSOCK_OP_RESPONSE && conn->acceptor) {
           // We were expecting a connection request, therefore create a new
-          // connection we move it to a sending a response state.
+          // connection.
           auto new_conn = fbl::make_unique<Connection>();
-          std::tie(key.port, new_conn->socket) = conn->acceptor();
           new_conn->dst_cid = header->src_cid;
           new_conn->dst_port = header->src_port;
-          new_conn->rx_wait.set_object(new_conn->socket.get());
-          new_conn->tx_wait.set_object(new_conn->socket.get());
-          new_conn->op = VIRTIO_VSOCK_OP_RESPONSE;
+          status = conn->acceptor(&key.port, &new_conn->socket);
+          if (status == ZX_OK) {
+            // If the acceptor succeeded, we move to a sending response state.
+            new_conn->rx_wait.set_object(new_conn->socket.get());
+            new_conn->tx_wait.set_object(new_conn->socket.get());
+            new_conn->op = VIRTIO_VSOCK_OP_RESPONSE;
+          } else {
+            // If the acceptor failed, we move to a sending reset state.
+            key.port = UINT32_MAX;
+            new_conn->op = VIRTIO_VSOCK_OP_RST;
+          }
 
           conn = new_conn.get();
           status = AddConnectionLocked(key, std::move(new_conn));

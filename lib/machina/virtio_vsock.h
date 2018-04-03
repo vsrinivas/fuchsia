@@ -49,7 +49,7 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
   // @param port Port that we are listening for.
   // @param acceptor Callback that is invoked each time a new connection is made
   //     in order to allocate a new port and socket for the connection.
-  using ConnectionAcceptor = fbl::Function<std::pair<uint32_t, zx::socket>()>;
+  using ConnectionAcceptor = fbl::Function<zx_status_t(uint32_t*, zx::socket*)>;
   zx_status_t Listen(uint32_t cid, uint32_t port, ConnectionAcceptor acceptor);
 
   VirtioQueue* rx_queue() { return queue(0); }
