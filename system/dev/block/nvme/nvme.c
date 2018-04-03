@@ -47,6 +47,7 @@ typedef struct {
 typedef struct {
     zx_paddr_t phys;    // io buffer phys base (1 page)
     void* virt;         // io buffer virt base
+    zx_handle_t pmt;    // pinned memory
     nvme_txn_t* txn;    // related txn
     uint16_t id;
     uint16_t reserved0;
@@ -371,8 +372,8 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
 
         pages = utxn->virt;
 
-        if ((r = zx_bti_pin(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT,
-                            pages, pagecount)) != ZX_OK) {
+        if ((r = zx_bti_pin_new(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT,
+                                pages, pagecount, &utxn->pmt)) != ZX_OK) {
             zxlogf(ERROR, "nvme: could not pin pages: %d\n", r);
             break;
         }
@@ -425,7 +426,7 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
     }
 
     // failure
-    if ((r = zx_bti_unpin(nvme->bti, pages[0])) != ZX_OK) {
+    if ((r = zx_pmt_unpin(utxn->pmt)) != ZX_OK) {
         zxlogf(ERROR, "nvme: cannot unpin io buffer: %d\n", r);
     }
     utxn_put(nvme, utxn);
@@ -504,7 +505,7 @@ static void io_process_cpls(nvme_device_t* nvme) {
         }
 
         zx_status_t r;
-        if ((r = zx_bti_unpin(nvme->bti, ((zx_paddr_t*)utxn->virt)[0])) != ZX_OK) {
+        if ((r = zx_pmt_unpin(utxn->pmt)) != ZX_OK) {
             zxlogf(ERROR, "nvme: cannot unpin io buffer: %d\n", r);
         }
 
