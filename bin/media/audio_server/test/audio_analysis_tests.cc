@@ -53,6 +53,28 @@ TEST(AnalysisHelpers, CompareBuffers_32) {
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
 }
 
+// Test float version of CompareBuffers, which we use to test accum buffers
+TEST(AnalysisHelpers, CompareBuffers_Float) {
+  float source[] = {-0.5f, 1.0f / 3.0f, -2.0f / 9.0f, 3.1416f};
+  float expect[] = {-0.5f, 1.0f / 3.0f, -2.0f / 9.0f, 3.14159f};
+
+  // Buffers do not match ...
+  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
+  // ... but the first three values DO
+  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
+}
+
+// Test double version of CompareBuffers, which we use to test accum buffers
+TEST(AnalysisHelpers, CompareBuffers_Double) {
+  double source[] = {-0.5, 1.0 / 3.0, -2.0 / 9.0, 3.14159001};
+  double expect[] = {-0.5, 1.0 / 3.0, -2.0 / 9.0, 3.14159};
+
+  // Buffers do not match ...
+  EXPECT_FALSE(CompareBuffers(source, expect, fbl::count_of(source), false));
+  // ... but the first three values DO
+  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source) - 1));
+}
+
 // Test uint8 version of this func, which we use to test output buffers
 TEST(AnalysisHelpers, CompareBuffToVal_8) {
   uint8_t source[] = {0xBB, 0xBB};
@@ -85,6 +107,17 @@ TEST(AnalysisHelpers, CompareBuffToVal_32) {
       CompareBufferToVal(source, 0xF00CAFE, fbl::count_of(source), false));
   // Match - if we only look at the first value
   EXPECT_TRUE(CompareBufferToVal(source, 0xF00CAFE, 1));
+}
+
+// Test float version of this func, which we use to test output buffers
+TEST(AnalysisHelpers, CompareBuffToVal_Float) {
+  float source[] = {3.1415926f, 2.7182818f};
+
+  // No match ...
+  EXPECT_FALSE(
+      CompareBufferToVal(source, 3.1415926f, fbl::count_of(source), false));
+  // Match - if we only look at the first value
+  EXPECT_TRUE(CompareBufferToVal(source, 3.1415926f, 1));
 }
 
 // GenerateCosine writes a cosine wave into given buffer & length, at given
@@ -132,6 +165,21 @@ TEST(AnalysisHelpers, GenerateCosine_32) {
   EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
 }
 
+// Test float-based version of AccumCosine, including default amplitude (1.0)
+TEST(AnalysisHelpers, GenerateCosine_Float) {
+  float source[] = {-1.0f, -2.0f, 3.0f, 4.0f};  // to be overwritten
+
+  OverwriteCosine(source, fbl::count_of(source), 0.0);
+  float expect[] = {1.0f, 1.0f, 1.0f, 1.0f};
+  EXPECT_TRUE(CompareBuffers(source, expect, fbl::count_of(source)));
+
+  // PI/2 shifts the freq:1 wave left by 1 here
+  AccumulateCosine(source, fbl::count_of(source), 1.0, 0.5, M_PI / 2.0);
+  float expect2[] = {1.0f, 0.5f, 1.0f, 1.5f};
+  EXPECT_TRUE(CompareBuffers(source, expect2, fbl::count_of(source)));
+}
+
+// Test double-based version of AccumCosine (no int-based rounding)
 TEST(AnalysisHelpers, GenerateCosine_Double) {
   double source[] = {-4000.0, -83000.0, 4000.0, 78000.0};
   AccumulateCosine(source, fbl::count_of(source), 1.0, 12345.5,
@@ -238,7 +286,7 @@ TEST(AnalysisHelpers, FFT) {
 // frequency, and combined (root-sum-square) magnitude of all OTHER frequencies.
 // For inputs of magnitude 3 and 4, their combination equals 5.
 TEST(AnalysisHelpers, MeasureAudioFreq_32) {
-  int32_t reals[] = {5, -3, 13, -3};  // sinusoids at freq 0,1,2; magns 3,4,6
+  int32_t reals[] = {5, -3, 13, -3};  // cos freq 0,1,2; mag 3,4,6; phase 0,pi,0
   double magn_signal = -54.32;        // will be overwritten
   double magn_other = 42.0;           // will be overwritten
 
@@ -250,6 +298,24 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
   EXPECT_EQ(6.0, magn_signal);
+  EXPECT_EQ(5.0, magn_other);
+}
+
+// Test float-based MeasureAudioFreq (only needed to validate OutputFormatter).
+// reals[] consists of cosines with freq 0,1,2; magnitude 3,4,6; phase 0,pi,pi.
+TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
+  float reals[] = {-7.0f, 9.0f, 1.0f, 9.0f};
+  double magn_signal = -54.32;
+  double magn_other = 42.0;
+
+  MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
+  EXPECT_EQ(3.0, magn_signal);
+
+  MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
+  EXPECT_EQ(4.0, magn_signal);
+
+  MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
+  EXPECT_EQ(6.0, magn_signal);  // Magnitude is absolute value (ignore phase)
   EXPECT_EQ(5.0, magn_other);
 }
 

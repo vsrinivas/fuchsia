@@ -34,12 +34,18 @@ bool CompareBuffers(const T* actual,
                     const T* expect,
                     uint32_t buf_size,
                     bool expect_to_pass) {
+  // uint8_t is interpreted as char. Cast into larger int for correct display.
+  constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
+
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (actual[idx] != expect[idx]) {
       if (expect_to_pass) {
         FXL_LOG(ERROR) << "[" << idx << "] was "
-                       << static_cast<int32_t>(actual[idx]) << ", should be "
-                       << static_cast<int32_t>(expect[idx]);
+                       << (is_uint8 ? static_cast<int32_t>(actual[idx])
+                                    : actual[idx])
+                       << ", should be "
+                       << (is_uint8 ? static_cast<int32_t>(expect[idx])
+                                    : expect[idx]);
       }
       return false;
     }
@@ -58,19 +64,24 @@ bool CompareBufferToVal(const T* buf,
                         T val,
                         uint32_t buf_size,
                         bool expect_to_pass) {
+  // uint8_t is interpreted as char. Cast into larger int for correct display.
+  constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
+
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (buf[idx] != val) {
       if (expect_to_pass) {
         FXL_LOG(ERROR) << "[" << idx << "] was "
-                       << static_cast<int32_t>(buf[idx]) << ", should be "
-                       << static_cast<int32_t>(val);
+                       << (is_uint8 ? static_cast<int32_t>(buf[idx]) : buf[idx])
+                       << ", should be "
+                       << (is_uint8 ? static_cast<int32_t>(val) : val);
       }
       return false;
     }
   }
   if (!expect_to_pass) {
     FXL_LOG(ERROR) << "We expected buffer (length " << buf_size
-                   << ") to differ from value " << static_cast<int32_t>(val)
+                   << ") to differ from value "
+                   << (is_uint8 ? static_cast<int32_t>(val) : val)
                    << ", but it was equal!";
   }
   return true;
@@ -351,6 +362,7 @@ template bool CompareBuffers<int32_t>(const int32_t*,
                                       const int32_t*,
                                       uint32_t,
                                       bool);
+template bool CompareBuffers<float>(const float*, const float*, uint32_t, bool);
 template bool CompareBuffers<double>(const double*,
                                      const double*,
                                      uint32_t,
@@ -368,6 +380,7 @@ template bool CompareBufferToVal<int32_t>(const int32_t*,
                                           int32_t,
                                           uint32_t,
                                           bool);
+template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool);
 
 template void GenerateCosine<uint8_t>(uint8_t*,
                                       uint32_t,
@@ -387,13 +400,18 @@ template void GenerateCosine<int32_t>(int32_t*,
                                       bool,
                                       double,
                                       double);
+template void GenerateCosine<float>(float*,
+                                    uint32_t,
+                                    double,
+                                    bool,
+                                    double,
+                                    double);
 template void GenerateCosine<double>(double*,
                                      uint32_t,
                                      double,
                                      bool,
                                      double,
                                      double);
-
 template void MeasureAudioFreq<uint8_t>(uint8_t* audio,
                                         uint32_t buf_size,
                                         uint32_t freq,
@@ -409,6 +427,12 @@ template void MeasureAudioFreq<int32_t>(int32_t* audio,
                                         uint32_t freq,
                                         double* magn_signal,
                                         double* magn_other = nullptr);
+
+template void MeasureAudioFreq<float>(float* audio,
+                                      uint32_t buf_size,
+                                      uint32_t freq,
+                                      double* magn_signal,
+                                      double* magn_other = nullptr);
 
 }  // namespace test
 }  // namespace audio
