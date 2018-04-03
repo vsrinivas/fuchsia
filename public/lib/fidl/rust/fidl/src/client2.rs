@@ -50,8 +50,35 @@ fn decode_from_messagebuf<D: Decodable>(mut buf: MessageBuf) -> Result<D, Error>
     Ok(output)
 }
 
-fn response_header_tx_id(buf: &[u8]) -> Result<u32, Error> {
-    decode_transaction_header(buf).map(|(header, _bytes)| header.tx_id)
+/// A FIDL transaction id. Will not be zero for a message that includes a response.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Txid(u32);
+/// A message interest id.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+struct InterestId(usize);
+
+impl InterestId {
+    fn from_txid(txid: Txid) -> Self {
+        InterestId(txid.0 as usize - 1)
+    }
+
+    fn as_raw_id(&self) -> usize {
+        self.0
+    }
+}
+
+impl Txid {
+    fn from_interest_id(int_id: InterestId) -> Self {
+        Txid((int_id.0 + 1) as u32)
+    }
+
+    fn as_raw_id(&self) -> u32 {
+        self.0
+    }
+}
+
+fn response_header_tx_id(buf: &[u8]) -> Result<Txid, Error> {
+    decode_transaction_header(buf).map(|(header, _bytes)| Txid(header.tx_id))
 }
 
 impl Client {
@@ -89,7 +116,7 @@ impl Client {
         let res_fut = self.send_raw_query(|tx_id| {
             let msg = &mut TransactionMessage {
                 header: TransactionHeader {
-                    tx_id,
+                    tx_id: tx_id.as_raw_id(),
                     flags: 0,
                     ordinal,
                 },
@@ -110,10 +137,10 @@ impl Client {
     /// Send a raw query and receive a response future.
     pub fn send_raw_query<'a, F>(&'a self, msg_from_id: F)
             -> RawQueryResponseFut
-            where F: FnOnce(u32) -> Result<(&'a mut [u8], &'a mut Vec<zx::Handle>), Error>
+            where F: FnOnce(Txid) -> Result<(&'a mut [u8], &'a mut Vec<zx::Handle>), Error>
     {
         let id = self.inner.register_msg_interest();
-        let (out_buf, handles) = match msg_from_id(id) {
+        let (out_buf, handles) = match msg_from_id(Txid::from_interest_id(id)) {
             Ok(x) => x,
             Err(e) => return future::err(e).left(),
         };
@@ -122,7 +149,7 @@ impl Client {
         }
 
         MessageResponse {
-            id: id,
+            id: Txid::from_interest_id(id),
             client: Some(self.inner.clone()),
             last_registered_waker: None,
         }.right()
@@ -133,7 +160,7 @@ impl Client {
 /// A future which polls for the response to a client message.
 #[derive(Debug)]
 pub struct MessageResponse {
-    id: u32,
+    id: Txid,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
     last_registered_waker: Option<Waker>,
@@ -174,7 +201,7 @@ impl Future for MessageResponse {
 impl Drop for MessageResponse {
     fn drop(&mut self) {
         if let Some(ref client) = self.client {
-            client.deregister_msg_interest(self.id as usize)
+            client.deregister_msg_interest(InterestId::from_txid(self.id))
         }
     }
 }
@@ -230,29 +257,23 @@ impl ClientInner {
     ///
     /// This function returns a `usize` ID which should be used to send a message
     /// via the channel. Responses are then received using `poll_recv`.
-    fn register_msg_interest(&self) -> u32 {
+    fn register_msg_interest(&self) -> InterestId {
         // TODO(cramertj) use `try_from` here and assert that the conversion from
         // `usize` to `u32` hasn't overflowed.
-        (self.message_interests.lock().unwrap().insert(
-            MessageInterest::WillPoll) + 1) as u32
+        InterestId(self.message_interests.lock().unwrap().insert(
+            MessageInterest::WillPoll))
     }
 
     /// Check for receipt of a message with a given ID.
     fn poll_recv(
         &self,
-        id: u32,
+        id: Txid,
         waker_to_register_opt: Option<&Waker>,
         cx: &mut task::Context
     ) -> Poll<MessageBuf, Error> {
-        if id == 0 {
-            return Err(Error::InvalidResponseTxid);
-        }
-        let txid = id as usize;
-        // The message interest ids are 0-based, while FIDL txids are 1-based.
-        let interest_id = txid - 1;
-
         // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
         // one happens on this call.
+        let interest_id = InterestId::from_txid(id);
 
         // Look to see if there are messages available
         if self.received_messages_count.load(Ordering::Acquire) > 0 {
@@ -260,8 +281,8 @@ impl ClientInner {
 
             // If a message was received for the ID in question,
             // remove the message interest entry and return the response.
-            if message_interests.get(interest_id).expect("Polled unregistered interest").is_received() {
-                let buf = message_interests.remove(interest_id).unwrap_received();
+            if message_interests.get(interest_id.as_raw_id()).expect("Polled unregistered interest").is_received() {
+                let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
                 self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
                 return Ok(Async::Ready(buf));
             }
@@ -277,19 +298,19 @@ impl ClientInner {
             {
                 let mut message_interests = self.message_interests.lock().unwrap();
 
-                if message_interests.get(interest_id)
+                if message_interests.get(interest_id.as_raw_id())
                     .expect("Polled unregistered interst")
                     .is_received()
                 {
                     // If, by happy accident, we just raced to getting the result,
                     // then yay! Return success.
-                    let buf = message_interests.remove(interest_id).unwrap_received();
+                    let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
                     self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
                     return Ok(Async::Ready(buf));
                 } else {
                     // Set the current waker to be notified when a response arrives.
                     if let Some(waker_to_register) = waker_to_register_opt {
-                        *message_interests.get_mut(interest_id)
+                        *message_interests.get_mut(interest_id.as_raw_id())
                             .expect("Polled unregistered interest") =
                                 MessageInterest::Waiting(waker_to_register.clone());
                     }
@@ -299,25 +320,18 @@ impl ClientInner {
 
             // TODO(cramertj) handle control messages (e.g. epitaph)
             let recvd_id = response_header_tx_id(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
-            if recvd_id == 0 {
-                return Err(Error::InvalidResponseTxid);
-            }
-
-            // TODO(cramertj) use TryFrom here after stabilization
-            let recvd_txid = recvd_id as usize;
-            let recvd_interest_id = recvd_txid - 1;
 
             // If a message was received for the ID in question,
             // remove the message interest entry and return the response.
-            if recvd_txid == txid {
-                self.message_interests.lock().unwrap().remove(interest_id);
+            if recvd_id == id {
+                self.message_interests.lock().unwrap().remove(interest_id.as_raw_id());
                 return Ok(Async::Ready(buf));
             }
 
             // Look for a message interest with the given ID.
             // If one is found, store the message so that it can be picked up later.
             let mut message_interests = self.message_interests.lock().unwrap();
-            if let Some(entry) = message_interests.get_mut(recvd_interest_id) {
+            if let Some(entry) = message_interests.get_mut(interest_id.as_raw_id()) {
                 let old_entry = mem::replace(entry, MessageInterest::Received(buf));
                 self.received_messages_count.fetch_add(1, Ordering::AcqRel);
                 if let MessageInterest::Waiting(waker) = old_entry {
@@ -328,9 +342,9 @@ impl ClientInner {
         }
     }
 
-    fn deregister_msg_interest(&self, id: usize) {
+    fn deregister_msg_interest(&self, id: InterestId) {
         if self.message_interests
-               .lock().unwrap().remove(id)
+               .lock().unwrap().remove(id.as_raw_id())
                .is_received()
         {
             self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
