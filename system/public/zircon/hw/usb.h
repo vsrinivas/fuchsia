@@ -198,6 +198,7 @@ typedef struct {
 } __attribute__ ((packed)) usb_endpoint_descriptor_t;
 #define usb_ep_direction(ep)    ((ep)->bEndpointAddress & USB_ENDPOINT_DIR_MASK)
 #define usb_ep_type(ep)         ((ep)->bmAttributes & USB_ENDPOINT_TYPE_MASK)
+#define usb_ep_sync_type(ep)    ((ep)->bmAttributes & USB_ENDPOINT_SYNCHRONIZATION_MASK)
 // max packet size is in bits 10..0
 #define usb_ep_max_packet(ep)   (le16toh((ep)->wMaxPacketSize) & 0x07FF)
 // for high speed interrupt and isochronous endpoints, additional transactions per microframe

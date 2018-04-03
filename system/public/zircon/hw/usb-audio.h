@@ -7,8 +7,15 @@
 // clang-format off
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS;
+
+////////////////////////////////////////////////////
+//
+// General Audio interface constants
+//
+////////////////////////////////////////////////////
 
 // audio interface subclasses
 #define USB_SUBCLASS_AUDIO_CONTROL              0x01
@@ -22,6 +29,12 @@ __BEGIN_CDECLS;
 #define USB_AUDIO_CS_INTERFACE                  0x24
 #define USB_AUDIO_CS_ENDPOINT                   0x25
 
+////////////////////////////////////////////////////
+//
+// Audio Control interface constants
+//
+////////////////////////////////////////////////////
+
 // audio class specific AC interface descriptor subtypes
 #define USB_AUDIO_AC_HEADER                     0x01
 #define USB_AUDIO_AC_INPUT_TERMINAL             0x02
@@ -31,14 +44,6 @@ __BEGIN_CDECLS;
 #define USB_AUDIO_AC_FEATURE_UNIT               0x06
 #define USB_AUDIO_AC_PROCESSING_UNIT            0x07
 #define USB_AUDIO_AC_EXTENSION_UNIT             0x08
-
-// audio class specific AS interface descriptor subtypes
-#define USB_AUDIO_AS_GENERAL                    0x01
-#define USB_AUDIO_AS_FORMAT_TYPE                0x02
-#define USB_AUDIO_AS_FORMAT_SPECIFIC            0x03
-
-// audio class format types
-#define USB_AUDIO_FORMAT_TYPE_I                 0x01
 
 // processing unit process types
 #define USB_AUDIO_UP_DOWN_MIX_PROCESS           0x01
@@ -189,6 +194,48 @@ __BEGIN_CDECLS;
 #define USB_AUDIO_TERMINAL_MULTI_TRACK_RECORDER         0x0712
 #define USB_AUDIO_TERMINAL_SYNTHESIZER                  0x0713
 
+////////////////////////////////////////////////////
+//
+// Audio streaming interface constants
+//
+////////////////////////////////////////////////////
+
+// Audio stream class-specific AS interface descriptor subtypes
+#define USB_AUDIO_AS_GENERAL                    0x01
+#define USB_AUDIO_AS_FORMAT_TYPE                0x02
+#define USB_AUDIO_AS_FORMAT_SPECIFIC            0x03
+
+// wFormatTag values present in the class specific AS header
+// Defined in Section A.1 of USB Device Class Definition for Audio Data Formats
+#define USB_AUDIO_AS_FT_TYPE_I_UNDEFINED        0x0000
+#define USB_AUDIO_AS_FT_PCM                     0x0001
+#define USB_AUDIO_AS_FT_PCM8                    0x0002
+#define USB_AUDIO_AS_FT_IEEE_FLOAT              0x0003
+#define USB_AUDIO_AS_FT_ALAW                    0x0004
+#define USB_AUDIO_AS_FT_MULAW                   0x0005
+#define USB_AUDIO_AS_FT_TYPE_II_UNDEFINED       0x1000
+#define USB_AUDIO_AS_FT_MPEG                    0x1001
+#define USB_AUDIO_AS_FT_AC3                     0x1002
+#define USB_AUDIO_AS_FT_TYPE_III_UNDEFINED      0x2000
+#define USB_AUDIO_AS_FT_IEC1937_AC3             0x2001
+#define USB_AUDIO_AS_FT_IEC1937_MPEG1_L1        0x2002
+#define USB_AUDIO_AS_FT_IEC1937_MPEG1_L23       0x2003
+#define USB_AUDIO_AS_FT_IEC1937_MPEG2_EXT       0x2004
+#define USB_AUDIO_AS_FT_IEC1937_MPEG2_L1_LS     0x2005
+#define USB_AUDIO_AS_FT_IEC1937_MPEG2_L23_LS    0x2006
+
+// Audio stream class-specific format-specific types
+#define USB_AUDIO_FORMAT_TYPE_UNDEFINED         0x00
+#define USB_AUDIO_FORMAT_TYPE_I                 0x01
+#define USB_AUDIO_FORMAT_TYPE_II                0x02
+#define USB_AUDIO_FORMAT_TYPE_III               0x03
+
+////////////////////////////////////////////////////
+//
+// MIDI streaming interface constants
+//
+////////////////////////////////////////////////////
+
 // MIDI class specific MS interface descriptor subtypes
 #define USB_MIDI_MS_HEADER                      0x01
 #define USB_MIDI_IN_JACK                        0x02
@@ -202,17 +249,20 @@ __BEGIN_CDECLS;
 #define USB_MIDI_JACK_EMBEDDED                  0x01
 #define USB_MIDI_JACK_INTERNAL                  0x02
 
-// MIDI endpoint control seletors
+// MIDI endpoint control selectors
 #define USB_MIDI_ASSOCIATION_CONTROL            0x01
 
 
-// header for usb_audio_ac_* below
+// Top level header structure shared by all USB audio descriptors.
+//
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
     uint8_t bDescriptorSubtype;
-} __PACKED usb_audio_ac_desc_header;
+} __PACKED usb_audio_desc_header;
 
+// Audio Control Interface descriptor definitions
+//
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
@@ -222,6 +272,26 @@ typedef struct {
     uint8_t bInCollection;
     uint8_t baInterfaceNr[];
 } __PACKED usb_audio_ac_header_desc;
+
+// Common header structure shared by all unit and terminal descriptors found in
+// an Audio Control interface descriptor.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_.*_(TERMINAL|UNIT)
+    uint8_t bID;
+} __PACKED usb_audio_ac_ut_desc;
+
+// Common header structure shared by all terminal descriptors found in an Audio
+// Control interface descriptor.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_(INPUT|OUTPUT)_TERMINAL
+    uint8_t bTerminalID;
+    uint16_t wTerminalType;
+    uint8_t bAssocTerminal;
+} __PACKED usb_audio_ac_terminal_desc;
 
 typedef struct {
     uint8_t bLength;
@@ -247,15 +317,51 @@ typedef struct {
     uint8_t iTerminal;
 } __PACKED usb_audio_ac_output_terminal_desc;
 
+// Note: Mixer unit descriptors contain two inlined variable length arrays, each
+// with descriptor data following them.  They are therefor described using 3
+// structure definitions which are logically concatenated, but separated by the
+// inline arrays.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_MIXER_UNIT
+    uint8_t bUnitID;
+    uint8_t bNrInPins;
+    uint8_t baSourceID[];
+} __PACKED usb_audio_ac_mixer_unit_desc_0;
+
+typedef struct {
+    uint8_t bNrChannels;
+    uint16_t wChannelConfig;
+    uint8_t iChannelNames;
+    uint8_t bmControls[];
+} __PACKED usb_audio_ac_mixer_unit_desc_1;
+
+typedef struct {
+    uint8_t iMixer;
+} __PACKED usb_audio_ac_mixer_unit_desc_2;
+
+// Note: Selector unit descriptors contain an inlined variable length array with
+// descriptor data following it.  They are therefor described using 2 structure
+// definitions which are logically concatenated, but separated by the inline
+// array.
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
     uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_SELECTOR_UNIT
-    uint8_t bUintID;
+    uint8_t bUnitID;
     uint8_t bNrInPins;
     uint8_t baSourceID[];
-} __PACKED usb_audio_ac_selector_unit_desc;
+} __PACKED usb_audio_ac_selector_unit_desc_0;
 
+typedef struct {
+    uint8_t iSelector;
+} __PACKED usb_audio_ac_selector_unit_desc_1;
+
+// Note: Feature unit descriptors contain an inlined variable length array with
+// descriptor data following it.  They are therefor described using 2 structure
+// definitions which are logically concatenated, but separated by the inline
+// array.
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
@@ -264,11 +370,97 @@ typedef struct {
     uint8_t bSourceID;
     uint8_t bControlSize;
     uint8_t bmaControls[];
-} __PACKED usb_audio_ac_feature_unit_desc;
+} __PACKED usb_audio_ac_feature_unit_desc_0;
+
+typedef struct {
+    uint8_t iFeature;
+} __PACKED usb_audio_ac_feature_unit_desc_1;
+
+// Note: Processing unit descriptors contain two inlined variable length arrays,
+// each with descriptor data following them.  They are therefor described using
+// 3 structure definitions which are logically concatinated, but separated by
+// the inline arrays.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_PROCESSING_UNIT
+    uint8_t bUnitID;
+    uint16_t wProcessType;
+    uint8_t bNrInPins;
+    uint8_t baSourceID[];
+} __PACKED usb_audio_ac_processing_unit_desc_0;
+
+typedef struct {
+    uint8_t bNrChannels;
+    uint16_t wChannelConfig;
+    uint8_t iChannelNames;
+    uint8_t bControlSize;
+    uint8_t bmControls[];
+} __PACKED usb_audio_ac_processing_unit_desc_1;
+
+typedef struct {
+    uint8_t iProcessing;
+    // Note: The Process-specific control structure follows this with the
+    // structure type determined by wProcessType
+    // TODO(johngro) : Define the process specific control structures.  As of
+    // the 1.0 revision of the USB audio spec, the types to be defined are...
+    //
+    // ** Up/Down-mix
+    // ** Dolby Prologic
+    // ** 3D-Stereo Extender
+    // ** Reverberation
+    // ** Chorus
+    // ** Dynamic Range Compressor
+} __PACKED usb_audio_ac_processing_unit_desc_2;
+
+// Note: Extension unit descriptors contain two inlined variable length arrays,
+// each with descriptor data following them.  They are therefor described using
+// 3 structure definitions which are logically concatenated, but separated by
+// the inline arrays.
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AC_EXTENSION_UNIT
+    uint8_t bUnitID;
+    uint16_t wExtensionCode;
+    uint8_t bNrInPins;
+    uint8_t baSourceID[];
+} __PACKED usb_audio_ac_extension_unit_desc_0;
+
+typedef struct {
+    uint8_t bNrChannels;
+    uint16_t wChannelConfig;
+    uint8_t iChannelNames;
+    uint8_t bControlSize;
+    uint8_t bmControls[];
+} __PACKED usb_audio_ac_extension_unit_desc_1;
+
+typedef struct {
+    uint8_t iExtension;
+} __PACKED usb_audio_ac_extension_unit_desc_2;
+
+// Audio Streaming Interface descriptor definitions
+//
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AS_GENERAL
+    uint8_t bTerminalLink;
+    uint8_t bDelay;
+    uint16_t wFormatTag;
+} __PACKED usb_audio_as_header_desc;
 
 typedef struct {
     uint8_t freq[3];            // 24 bit unsigned integer, little-endian
-} __PACKED usb_audio_ac_samp_freq;
+} __PACKED usb_audio_as_samp_freq;
+
+// Common header used by all format type descriptors
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_AS_FORMAT_TYPE
+    uint8_t bFormatType;
+} __PACKED usb_audio_as_format_type_hdr;
 
 typedef struct {
     uint8_t bLength;
@@ -279,9 +471,21 @@ typedef struct {
     uint8_t bSubFrameSize;
     uint8_t bBitResolution;
     uint8_t bSamFreqType;           // number of sampling frequencies
-    usb_audio_ac_samp_freq tSamFreq[]; // list of sampling frequcencies (3 bytes each)
-} __PACKED usb_audio_ac_format_type_i_desc;
+    usb_audio_as_samp_freq tSamFreq[]; // list of sampling frequencies (3 bytes each)
+} __PACKED usb_audio_as_format_type_i_desc;
 
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;        // USB_AUDIO_CS_ENDPOINT
+    uint8_t bDescriptorSubtype;     // USB_AUDIO_EP_GENERAL
+    uint8_t bmAttributes;
+    uint8_t bLockDelayUnits;
+    uint16_t wLockDelay;
+} __PACKED usb_audio_as_isoch_ep_desc;
+
+// MIDI Streaming Interface descriptor definitions
+//
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_INTERFACE
@@ -317,5 +521,11 @@ typedef struct {
     uint8_t bNumEmbMIDIJack;
     uint8_t baAssocJackID[];
 } __PACKED usb_midi_ms_endpoint_desc;
+
+// TODO(johngro) : remove these aliases once all user code has been updated.
+typedef usb_audio_desc_header usb_audio_ac_desc_header;
+typedef usb_audio_ac_feature_unit_desc_0 usb_audio_ac_feature_unit_desc;
+typedef usb_audio_as_format_type_i_desc usb_audio_ac_format_type_i_desc;
+typedef usb_audio_as_samp_freq usb_audio_ac_samp_freq;
 
 __END_CDECLS;
