@@ -5,9 +5,11 @@
 #include <pthread.h>
 
 #include <zircon/syscalls.h>
+#include <lib/zx/event.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -197,17 +199,20 @@ static bool unadopted_release_asserts() {
 namespace {
 class RawUpgradeTester : public fbl::RefCounted<RawUpgradeTester> {
 public:
-    RawUpgradeTester(fbl::Mutex* mutex, bool* destroying)
-        : mutex_(mutex), destroying_(destroying) {}
+    RawUpgradeTester(fbl::Mutex* mutex, fbl::atomic<bool>* destroying, zx::event* event)
+        : mutex_(mutex), destroying_(destroying), destroying_event_(event) {}
 
     ~RawUpgradeTester() {
-        *destroying_ = true;
+        atomic_store(destroying_, true);
+        if (destroying_event_)
+            destroying_event_->signal(0u, ZX_EVENT_SIGNALED);
         fbl::AutoLock al(mutex_);
     }
 
 private:
     fbl::Mutex* mutex_;
-    bool* destroying_;
+    fbl::atomic<bool>* destroying_;
+    zx::event* destroying_event_;
 };
 
 void* adopt_and_reset(void* arg) {
@@ -223,16 +228,16 @@ void* adopt_and_reset(void* arg) {
 
 static bool upgrade_fail_test() {
     BEGIN_TEST;
-    // Skip this test, because it's flaky.
-    // https://fuchsia.atlassian.net/browse/ZX-1606
-    unittest_printf_critical(" [SKIPPING]");
-    return true;
 
     fbl::Mutex mutex;
     fbl::AllocChecker ac;
-    bool destroying = false;
+    fbl::atomic<bool> destroying{false};
+    zx::event destroying_event;
 
-    auto raw = new (&ac) RawUpgradeTester(&mutex, &destroying);
+    zx_status_t status = zx::event::create(0u, &destroying_event);
+    ASSERT_EQ(status, ZX_OK);
+
+    auto raw = new (&ac) RawUpgradeTester(&mutex, &destroying, &destroying_event);
     EXPECT_TRUE(ac.check());
 
     pthread_t thread;
@@ -240,8 +245,10 @@ static bool upgrade_fail_test() {
         fbl::AutoLock al(&mutex);
         int res = pthread_create(&thread, NULL, &adopt_and_reset, raw);
         ASSERT_LE(0, res);
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(300)));
-        EXPECT_TRUE(destroying);
+        // Wait until the thread is in the destructor.
+        status = destroying_event.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), nullptr);
+        EXPECT_EQ(status, ZX_OK);
+        EXPECT_TRUE(atomic_load(&destroying));
         // The RawUpgradeTester must be blocked in the destructor, the upgrade will fail.
         auto upgrade1 = fbl::internal::MakeRefPtrUpgradeFromRaw(raw, mutex);
         EXPECT_FALSE(upgrade1);
@@ -259,9 +266,9 @@ static bool upgrade_success_test() {
 
     fbl::Mutex mutex;
     fbl::AllocChecker ac;
-    bool destroying = false;
+    fbl::atomic<bool> destroying{false};
 
-    auto ref = fbl::AdoptRef(new (&ac) RawUpgradeTester(&mutex, &destroying));
+    auto ref = fbl::AdoptRef(new (&ac) RawUpgradeTester(&mutex, &destroying, nullptr));
     EXPECT_TRUE(ac.check());
     auto raw = ref.get();
 
@@ -274,7 +281,7 @@ static bool upgrade_success_test() {
     }
 
     ref.reset();
-    EXPECT_TRUE(destroying);
+    EXPECT_TRUE(atomic_load(&destroying));
 
     END_TEST;
 }
