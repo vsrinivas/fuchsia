@@ -24,7 +24,7 @@ BOARD_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-bootdata.bin
 BOARD_COMBO_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-combo-bootdata.bin
 
 ifeq ($(PLATFORM_USE_SHIM),true)
-BOARD_BOOT_SHIM_OPTS := --header $(BOOT_SHIM_BIN) --header-align $(BOOT_SHIM_ALIGN)
+BOARD_BOOT_SHIM_OPTS := --header $(BOOT_SHIM_BIN) --header-align $(KERNEL_ALIGN)
 else
 BOARD_BOOT_SHIM_OPTS :=
 endif

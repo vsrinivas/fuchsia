@@ -25,7 +25,7 @@ GAUSS_ZZIRCON_KDTB := $(BUILDDIR)/gauss-zzircon.kdtb
 # prepend shim to kernel image
 $(GAUSS_ZIRCON): $(MKBOOTFS) $(BOOT_SHIM_BIN) $(OUTLKBIN)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) --header $(BOOT_SHIM_BIN) --header-align $(BOOT_SHIM_ALIGN)
+	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) --header $(BOOT_SHIM_BIN) --header-align $(KERNEL_ALIGN)
 
 $(GAUSS_ZZIRCON): $(GAUSS_ZIRCON)
 	$(call BUILDECHO,gzipping image $@)
