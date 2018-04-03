@@ -6,15 +6,11 @@ executable("hello_spaces") {
   output_name = "hello_spaces"
 
   sources = [
-    #"app.cc",
-    #"app.h",
     "main.cc",
   ]
 
   deps = [
-    #"//garnet/lib/ui/gfx/tests:util",
     "//garnet/public/lib/app/cpp",
-    #"//garnet/public/lib/escher",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -24,10 +20,6 @@ executable("hello_spaces") {
   ]
 
   include_dirs = [
-    #"//garnet/public/lib/escher",
-    #"//third_party/glm",
     "//lib",
   ]
-
-  #defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }
