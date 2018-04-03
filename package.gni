@@ -406,7 +406,7 @@ template("package") {
 
         full_pkg_json_file = rebase_path(package_json_file)
         contents += [ "meta/package=${full_pkg_json_file}" ]
-        extra_inputs += [ source ]
+        extra_inputs += [ package_json_file ]
       }
 
       action(manifest_target_name) {
