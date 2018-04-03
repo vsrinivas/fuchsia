@@ -248,13 +248,14 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     zx_handle_t vmo = txn->bop.rw.vmo;
     bool is_write = cmd_is_write(txn->cmd);
     uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
-    zx_status_t st = zx_bti_pin(dev->bti_handle, options, vmo, offset_vmo & ~PAGE_MASK,
-                                pagecount * PAGE_SIZE, pages, pagecount);
+    zx_handle_t pmt;
+    zx_status_t st = zx_bti_pin_new(dev->bti_handle, options, vmo, offset_vmo & ~PAGE_MASK,
+                                    pagecount * PAGE_SIZE, pages, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(SPEW, "ahci.%d: failed to pin pages, err = %d\n", port->nr, st);
         return st;
     }
-    txn->phys = pages[0];
+    txn->pmt = pmt;
 
     phys_iter_buffer_t physbuf = {
         .phys = pages,
@@ -483,7 +484,7 @@ void ahci_queue(ahci_device_t* device, int portnr, sata_txn_t* txn) {
             port->nr, txn, txn->bop.rw.offset_dev, txn->bop.rw.length);
 
     // reset the physical address
-    txn->phys = 0;
+    txn->pmt = ZX_HANDLE_INVALID;
 
     // put the cmd on the queue
     mtx_lock(&port->lock);
@@ -526,8 +527,8 @@ static int ahci_worker_thread(void* arg) {
                             port->nr, slot);
                 } else {
                     mtx_unlock(&port->lock);
-                    if (txn->phys != 0) {
-                        zx_bti_unpin(dev->bti_handle, txn->phys);
+                    if (txn->pmt != ZX_HANDLE_INVALID) {
+                        zx_pmt_unpin(txn->pmt);
                     }
                     zxlogf(SPEW, "ahci.%d: complete txn %p\n", port->nr, txn);
                     block_complete(&txn->bop, ZX_OK);
