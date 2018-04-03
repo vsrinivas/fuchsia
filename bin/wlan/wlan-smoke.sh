@@ -136,23 +136,28 @@ wlan_connect() {
   return 1
 }
 
-get_eth_iface_name() {
-  # There exists no way reliably to figure out this in Fuchsia.
-  # Return hard-coded value, noting WLAN developers setups are similar.
-  # Godspeed.
-  echo "en2"
+get_eth_iface_list() {
+  # The delimiter used in ifconfig is a single tab character
+  # TODO(eyw): Verify the behavior of pipe vs file regarding tab vs spaces
+  return $(ifconfig | grep ^en | cut -f1 -d$'\t')
 }
 
 test_setup() {
   rm -rf "${TEST_LOG}" > /dev/null
-  eth_iface=$(get_eth_iface_name)
-  ifconfig "${eth_iface}" down
+  eth_iface_setup=("$@")
+  for eth_iface in "${eth_iface_setup[@]}"
+  do
+    ifconfig "${eth_iface}" down
+  done
 }
 
 test_teardown() {
+  eth_iface_teardown=("$@")
   # Restore to the original state
-  eth_iface=$(get_eth_iface_name)
-  ifconfig "${eth_iface}" up
+  for eth_iface in "${eth_iface_teardown[@]}"
+  do
+    ifconfig "${eth_iface}" up
+  done
 }
 
 run() {
@@ -169,7 +174,8 @@ run() {
 
 main() {
   log "Start"
-  run test_setup
+  eth_iface_list=$(get_eth_iface_list)
+  run test_setup "${eth_iface_list[@]}"
   run wlan_disconnect
   run wlan_connect GoogleGuest
   log "Starting traffic tests"
@@ -178,7 +184,7 @@ main() {
   run test_wget
   log "Ending traffic tests"
   run wlan_disconnect
-  run test_teardown
+  run test_teardown "${eth_iface_list[@]}"
   log "End"
 }
 
