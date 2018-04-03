@@ -39,7 +39,7 @@ void JobScheduler::TryToSchedule()
     while (true) {
         if (atoms_.empty())
             break;
-        bool found_atom = false;
+        bool continue_scheduling = false;
         for (auto it = atoms_.begin(); it != atoms_.end(); ++it) {
             std::shared_ptr<MsdArmAtom> atom = *it;
             bool dependencies_finished;
@@ -47,6 +47,7 @@ void JobScheduler::TryToSchedule()
             if (dependencies_finished) {
                 ArmMaliResultCode dep_status = atom->GetFinalDependencyResult();
                 if (dep_status != kArmMaliResultSuccess) {
+                    continue_scheduling = true;
                     owner_->AtomCompleted(it->get(), dep_status);
                     atoms_.erase(it);
                     break;
@@ -54,13 +55,13 @@ void JobScheduler::TryToSchedule()
 
                 auto soft_atom = MsdArmSoftAtom::cast(atom);
                 if (soft_atom) {
-                    found_atom = true;
+                    continue_scheduling = true;
                     atoms_.erase(it);
                     soft_atom->SetExecutionStarted();
                     ProcessSoftAtom(soft_atom);
                     break;
                 } else if (atom->IsDependencyOnly()) {
-                    found_atom = true;
+                    continue_scheduling = true;
                     owner_->AtomCompleted(it->get(), kArmMaliResultSuccess);
                     atoms_.erase(it);
                     break;
@@ -69,7 +70,7 @@ void JobScheduler::TryToSchedule()
                     uint32_t slot = atom->slot();
                     DASSERT(slot < executing_atoms_.size());
                     if (!executing_atoms_[slot]) {
-                        found_atom = true;
+                        continue_scheduling = true;
                         atom->SetExecutionStarted();
                         executing_atoms_[slot] = atom;
                         atoms_.erase(it);
@@ -83,7 +84,7 @@ void JobScheduler::TryToSchedule()
                 DLOG("Skipping atom %lx due to dependency", (atom)->gpu_address());
             }
         }
-        if (!found_atom)
+        if (!continue_scheduling)
             break;
     }
     UpdatePowerManager();
@@ -150,17 +151,26 @@ size_t JobScheduler::GetAtomListSize() { return atoms_.size(); }
 
 JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration()
 {
-    auto execution_start = Clock::time_point::max();
+    auto timeout_time = Clock::time_point::max();
     for (auto& atom : executing_atoms_) {
         if (!atom || atom->hard_stopped())
             continue;
-        if (atom->execution_start_time() < execution_start)
-            execution_start = atom->execution_start_time();
+        auto atom_timeout_time =
+            atom->execution_start_time() + std::chrono::milliseconds(timeout_duration_ms_);
+        if (atom_timeout_time < timeout_time)
+            timeout_time = atom_timeout_time;
     }
 
-    if (execution_start == Clock::time_point::max())
+    for (auto& atom : waiting_atoms_) {
+        auto atom_timeout_time = atom->execution_start_time() +
+                                 std::chrono::milliseconds(semaphore_timeout_duration_ms_);
+        if (atom_timeout_time < timeout_time)
+            timeout_time = atom_timeout_time;
+    }
+
+    if (timeout_time == Clock::time_point::max())
         return Clock::duration::max();
-    return execution_start + std::chrono::milliseconds(timeout_duration_ms_) - Clock::now();
+    return timeout_time - Clock::now();
 }
 
 void JobScheduler::KillTimedOutAtoms()
@@ -174,6 +184,22 @@ void JobScheduler::KillTimedOutAtoms()
             owner_->HardStopAtom(atom.get());
         }
     }
+    bool removed_waiting_atoms = false;
+    for (auto it = waiting_atoms_.begin(); it != waiting_atoms_.end();) {
+        std::shared_ptr<MsdArmAtom> atom = *it;
+        auto atom_timeout_time = atom->execution_start_time() +
+                                 std::chrono::milliseconds(semaphore_timeout_duration_ms_);
+        if (atom_timeout_time <= now) {
+            removed_waiting_atoms = true;
+            owner_->AtomCompleted(atom.get(), kArmMaliResultTimedOut);
+            // The semaphore wait on the port will be canceled by the closing of the event handle.
+            it = waiting_atoms_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    if (removed_waiting_atoms)
+        TryToSchedule();
 }
 
 void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom)

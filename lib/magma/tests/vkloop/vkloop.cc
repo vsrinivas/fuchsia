@@ -22,7 +22,7 @@ namespace {
 
 class VkLoopTest {
 public:
-    VkLoopTest() {}
+    explicit VkLoopTest(bool hang_on_event) : hang_on_event_(hang_on_event) {}
 
     bool Initialize();
     bool Exec();
@@ -31,6 +31,7 @@ private:
     bool InitVulkan();
     bool InitCommandBuffer();
 
+    bool hang_on_event_;
     bool is_initialized_ = false;
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_device_;
@@ -248,8 +249,19 @@ bool VkLoopTest::InitCommandBuffer()
         return DRETF(false, "vkCreateComputePipelines failed: %d", result);
     }
 
-    vkCmdBindPipeline(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
-    vkCmdDispatch(vk_command_buffer_, 1, 1, 1);
+    if (hang_on_event_) {
+        VkEvent event;
+        VkEventCreateInfo event_info = {
+            .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, .pNext = nullptr, .flags = 0};
+        if ((result = vkCreateEvent(vk_device_, &event_info, nullptr, &event)) != VK_SUCCESS)
+          return DRETF(false, "vkCreateEvent failed: %d", result);
+
+        vkCmdWaitEvents(vk_command_buffer_, 1, &event, VK_PIPELINE_STAGE_HOST_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);
+    } else {
+        vkCmdBindPipeline(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
+        vkCmdDispatch(vk_command_buffer_, 1, 1, 1);
+    }
 
     if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS)
         return DRETF(false, "vkEndCommandBuffer failed: %d", result);
@@ -295,10 +307,17 @@ bool VkLoopTest::Exec()
 TEST(Vulkan, InfiniteLoop)
 {
     for (int i = 0; i < 2; i++) {
-        VkLoopTest test;
+        VkLoopTest test(false);
         ASSERT_TRUE(test.Initialize());
         ASSERT_TRUE(test.Exec());
     }
+}
+
+TEST(Vulkan, EventHang)
+{
+    VkLoopTest test(true);
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec());
 }
 
 } // namespace

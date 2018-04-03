@@ -400,6 +400,44 @@ public:
         }
     }
 
+    void TestSemaphoreTimeout()
+    {
+        TestOwner owner;
+        TestConnectionOwner connection_owner;
+        std::shared_ptr<MsdArmConnection> connection =
+            MsdArmConnection::Create(0, &connection_owner);
+        JobScheduler scheduler(&owner, 1);
+
+        // Make timeout lower so test runs faster.
+        static constexpr uint64_t kTimeoutDurationMs = 10;
+        scheduler.set_semaphore_timeout_duration(kTimeoutDurationMs);
+
+        auto semaphore =
+            std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+
+        auto atom = std::make_shared<MsdArmSoftAtom>(connection, kAtomFlagSemaphoreWait, semaphore,
+                                                     0, magma_arm_mali_user_data());
+        scheduler.EnqueueAtom(atom);
+        DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
+
+        auto atom2 = std::make_shared<MsdArmAtom>(connection, 0u, 0, 0, magma_arm_mali_user_data());
+
+        atom2->set_dependencies({MsdArmAtom::Dependency{kArmMaliDependencyOrder, atom}});
+        scheduler.EnqueueAtom(atom2);
+
+        scheduler.TryToSchedule();
+        EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <=
+                    std::chrono::milliseconds(kTimeoutDurationMs));
+        while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
+            ;
+        scheduler.KillTimedOutAtoms();
+        EXPECT_EQ(kArmMaliResultTimedOut, atom->result_code());
+        EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
+
+        EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
+        scheduler.KillTimedOutAtoms();
+    }
+
     void TestCancelNull()
     {
         TestOwner owner;
@@ -488,6 +526,8 @@ TEST(JobScheduler, DataDependency) { TestJobScheduler().TestDataDependency(); }
 TEST(JobScheduler, Timeout) { TestJobScheduler().TestTimeout(); }
 
 TEST(JobScheduler, Semaphores) { TestJobScheduler().TestSemaphores(); }
+
+TEST(JobScheduler, SemaphoreTimeout) { TestJobScheduler().TestSemaphoreTimeout(); }
 
 TEST(JobScheduler, CancelNull) { TestJobScheduler().TestCancelNull(); }
 

@@ -40,8 +40,8 @@ public:
 
     size_t GetAtomListSize();
 
-    // Gets the duration until the currently executing atom should time out,
-    // or max if there's no timeout pending.
+    // Gets the duration until the earliest currently executing or waiting atom should time out, or
+    // max if there's no timeout pending.
     Clock::duration GetCurrentTimeoutDuration();
 
     void KillTimedOutAtoms();
@@ -58,12 +58,19 @@ private:
     {
         timeout_duration_ms_ = timeout_duration_ms;
     }
+    void set_semaphore_timeout_duration(uint64_t semaphore_timeout_duration_ms)
+    {
+        semaphore_timeout_duration_ms_ = semaphore_timeout_duration_ms;
+    }
 
     Owner* owner_;
 
     uint32_t job_slots_;
 
     uint64_t timeout_duration_ms_ = 1000;
+    // Semaphore timeout is longer because one semaphore may need to wait for a
+    // lot of atoms to complete.
+    uint64_t semaphore_timeout_duration_ms_ = 5000;
 
     std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
     std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;
