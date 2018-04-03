@@ -157,16 +157,18 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   }
   switch (lhs.tag_) {
     {{- range $index, $member := .Members }}
-     case {{ $index }}:
+    case {{ $index }}:
     {{- if .Type.IsPointer }}
-        if (!lhs.{{ .StorageName }} || !rhs.{{ .StorageName }})
-          return !lhs.{{ .StorageName }} && !rhs.{{ .StorageName }}
-        return *lhs.{{ .StorageName }} == *rhs.{{ .StorageName }};
+       if (!lhs.{{ .StorageName }} || !rhs.{{ .StorageName }})
+         return !lhs.{{ .StorageName }} && !rhs.{{ .StorageName }};
+       return *lhs.{{ .StorageName }} == *rhs.{{ .StorageName }};
     {{- else }}
-        return lhs.{{ .StorageName }} != rhs.{{ .StorageName }};
+       return lhs.{{ .StorageName }} == rhs.{{ .StorageName }};
     {{- end }}
     {{- end }}
-     default:
+    case ::std::numeric_limits<::fidl_union_tag_t>::max():
+      return true;
+    default:
       return false;
   }
 }

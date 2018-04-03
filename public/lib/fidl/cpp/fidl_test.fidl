@@ -16,3 +16,10 @@ struct Has2OptionalFieldStruct {
     Int64Struct? x;
     Int64Struct? y;
 };
+
+union SimpleUnion {
+  int32 i32;
+  int64 i64;
+  Int64Struct s;
+  Int64Struct? os;
+};
