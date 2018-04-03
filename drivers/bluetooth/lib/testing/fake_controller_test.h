@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
@@ -140,7 +142,8 @@ class FakeControllerTest : public TestBase {
     if (!data_received_callback_)
       return;
 
-    TestBase::message_loop()->task_runner()->PostTask(
+    async::PostTask(
+        TestBase::message_loop()->async(),
         fxl::MakeCopyable([this, packet = std::move(data_packet)]() mutable {
           data_received_callback_(std::move(packet));
         }));

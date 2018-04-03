@@ -4,8 +4,8 @@
 
 #include "lib/escher/flib/fence_listener.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <zx/time.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
@@ -51,8 +51,7 @@ void FenceListener::WaitReadyAsync(fxl::Closure ready_callback) {
   FXL_DCHECK(!ready_callback_);
 
   if (ready_) {
-    fsl::MessageLoop::GetCurrent()->task_runner()->PostTask(
-        std::move(ready_callback));
+    async::PostTask(async_get_default(), std::move(ready_callback));
     return;
   }
 

@@ -20,6 +20,7 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include <fuchsia/cpp/gfx.h>
+#include <lib/async/cpp/task.h>
 
 #include "lib/app/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
@@ -159,10 +160,10 @@ void App::Init(gfx::DisplayInfo display_info) {
   });
 
   // Wait kSessionDuration seconds, and close the session.
-  constexpr int kSessionDuration = 40;
-  loop_->task_runner()->PostDelayedTask(
-      [this] { ReleaseSessionResources(); },
-      fxl::TimeDelta::FromSeconds(kSessionDuration));
+  constexpr zx::duration kSessionDuration = zx::sec(40);
+  async::PostDelayedTask(loop_->async(),
+                         [this] { ReleaseSessionResources(); },
+                         kSessionDuration);
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);

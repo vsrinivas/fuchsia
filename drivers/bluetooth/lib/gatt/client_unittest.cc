@@ -59,8 +59,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUMalformedResponse) {
   att()->set_preferred_mtu(kPreferredMTU);
 
   // Initiate the request in a message loop task, as Expect() below blocks
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
   ASSERT_FALSE(fake_chan()->link_error());
@@ -101,8 +101,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorNotSupported) {
   att()->set_preferred_mtu(kPreferredMTU);
 
   // Initiate the request on the message loop since Expect() below blocks.
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
 
@@ -140,8 +140,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUErrorOther) {
   EXPECT_EQ(att::kLEMinMTU, att()->mtu());
 
   // Initiate the request on the message loop since Expect() below blocks.
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
 
@@ -180,8 +180,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectLocal) {
   att()->set_preferred_mtu(kPreferredMTU);
 
   // Initiate the request on the message loop since Expect() below blocks.
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
   ASSERT_EQ(att::kLEMinMTU, att()->mtu());
@@ -219,8 +219,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectRemote) {
   att()->set_preferred_mtu(kPreferredMTU);
 
   // Initiate the request on the message loop since Expect() below blocks.
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
   ASSERT_EQ(att::kLEMinMTU, att()->mtu());
@@ -258,8 +258,8 @@ TEST_F(GATT_ClientTest, ExchangeMTUSelectDefault) {
   att()->set_preferred_mtu(kPreferredMTU);
 
   // Initiate the request on the message loop since Expect() below blocks.
-  message_loop()->task_runner()->PostTask(
-      [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
+  async::PostTask(message_loop()->async(),
+                  [this, mtu_cb] { client()->ExchangeMTU(mtu_cb); });
 
   ASSERT_TRUE(Expect(kExpectedRequest));
   ASSERT_EQ(att::kLEMinMTU, att()->mtu());

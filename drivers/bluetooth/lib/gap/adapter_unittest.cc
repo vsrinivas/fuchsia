@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include <lib/async/cpp/task.h>
 #include <zx/channel.h>
 
 #include "gtest/gtest.h"
@@ -181,7 +182,7 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
 
   // Deleting the FakeController should cause the transport closed callback to
   // get called.
-  message_loop()->task_runner()->PostTask([this] { DeleteTestDevice(); });
+  async::PostTask(message_loop()->async(), [this] { DeleteTestDevice(); });
   RunMessageLoop();
   EXPECT_TRUE(transport_closed_called());
 }
