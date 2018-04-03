@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"log"
 	"syscall/zx"
-	"syscall/zx/fdio"
 	"syscall/zx/mxerror"
+	"syscall/zx/zxsocket"
 	"unsafe"
 
 	"github.com/google/netstack/tcpip"
@@ -44,13 +44,13 @@ func (v *c_mxrio_sockopt_req_reply) Decode(data []byte) error {
 	return nil
 }
 
-func (v *c_mxrio_sockopt_req_reply) Encode(msg *fdio.Msg) {
+func (v *c_mxrio_sockopt_req_reply) Encode(msg *zxsocket.Msg) {
 	r := (*c_mxrio_sockopt_req_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-func (v *c_mxrio_gai_req) Decode(msg *fdio.Msg) error {
+func (v *c_mxrio_gai_req) Decode(msg *zxsocket.Msg) error {
 	data := msg.Data[:msg.Datalen]
 	if uintptr(len(data)) < unsafe.Sizeof(c_mxrio_gai_req{}) {
 		return fmt.Errorf("netstack: short c_mxrio_gai_req: %d", len(data))
@@ -67,13 +67,13 @@ func (v *c_mxrio_sockopt_tcp_info) Encode(out *c_mxrio_sockopt_req_reply) error 
 	return nil
 }
 
-func (v *c_mxrio_gai_reply) Encode(msg *fdio.Msg) {
+func (v *c_mxrio_gai_reply) Encode(msg *zxsocket.Msg) {
 	r := (*c_mxrio_gai_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-func (v *c_mxrio_sockaddr_reply) Encode(msg *fdio.Msg) {
+func (v *c_mxrio_sockaddr_reply) Encode(msg *zxsocket.Msg) {
 	r := (*c_mxrio_sockaddr_reply)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
@@ -88,13 +88,13 @@ func (v *c_ip_mreq) Decode(data []byte) error {
 	return nil
 }
 
-func (v *c_netc_get_if_info) Encode(msg *fdio.Msg) {
+func (v *c_netc_get_if_info) Encode(msg *zxsocket.Msg) {
 	r := (*c_netc_get_if_info)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))
 }
 
-func (v *c_netc_if_info) Encode(msg *fdio.Msg) {
+func (v *c_netc_if_info) Encode(msg *zxsocket.Msg) {
 	r := (*c_netc_if_info)(unsafe.Pointer(&msg.Data[0]))
 	*r = *v
 	msg.Datalen = uint32(unsafe.Sizeof(*v))

@@ -610,7 +610,7 @@ type socketServer struct {
 	io   map[cookie]*iostate
 }
 
-func (s *socketServer) opSocket(h zx.Handle, ios *iostate, msg *fdio.Msg, path string) (err error) {
+func (s *socketServer) opSocket(h zx.Handle, path string) (err error) {
 	var domain, typ, protocol int
 	if n, _ := fmt.Sscanf(path, "socket-v2/%d/%d/%d\x00", &domain, &typ, &protocol); n != 3 {
 		return mxerror.Errorf(zx.ErrInvalidArgs, "socket: bad path %q (n=%d)", path, n)
@@ -731,7 +731,7 @@ func mxNetError(e *tcpip.Error) zx.Status {
 	return zx.ErrInternal
 }
 
-func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opGetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -827,7 +827,7 @@ func (s *socketServer) opGetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opSetSockOpt(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_sockopt_req_reply
 	if err := val.Decode(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -851,7 +851,7 @@ func (s *socketServer) opSetSockOpt(ios *iostate, msg *fdio.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (s *socketServer) opBind(ios *iostate, msg *fdio.Msg) (status zx.Status) {
+func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
 	addr, err := readSockaddrIn(msg.Data[:msg.Datalen])
 	if err != nil {
 		if debug {
@@ -911,7 +911,7 @@ func (s *socketServer) buildIfInfos() *c_netc_get_if_info {
 // a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
 var lastIfInfo *c_netc_get_if_info
 
-func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opIoctl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	// TODO: deprecated in favor of FIDL service. Remove.
 	switch msg.IoctlOp() {
 	case ioctlNetcGetIfInfo:
@@ -963,7 +963,7 @@ func (s *socketServer) opIoctl(ios *iostate, msg *fdio.Msg) zx.Status {
 	return zx.ErrInvalidArgs
 }
 
-func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) zx.Status {
+func fdioSockAddrReply(a tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
 	var err error
 	rep := c_mxrio_sockaddr_reply{}
 	rep.len, err = writeSockaddrStorage(&rep.addr, a)
@@ -975,7 +975,7 @@ func fdioSockAddrReply(a tcpip.FullAddress, msg *fdio.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opGetSockName(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return mxNetError(err)
@@ -986,7 +986,7 @@ func (s *socketServer) opGetSockName(ios *iostate, msg *fdio.Msg) zx.Status {
 	return fdioSockAddrReply(a, msg)
 }
 
-func (s *socketServer) opGetPeerName(ios *iostate, msg *fdio.Msg) (status zx.Status) {
+func (s *socketServer) opGetPeerName(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
 	if ios.ep == nil {
 		return zx.ErrBadState
 	}
@@ -1050,7 +1050,7 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 	}
 }
 
-func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) {
+func (s *socketServer) opListen(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
 	d := msg.Data[:msg.Datalen]
 	if len(d) != 4 {
 		if debug {
@@ -1087,7 +1087,7 @@ func (s *socketServer) opListen(ios *iostate, msg *fdio.Msg) (status zx.Status) 
 	return zx.ErrOk
 }
 
-func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status) {
+func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Status) {
 	if msg.Datalen == 0 {
 		if ios.transProto == udp.ProtocolNumber {
 			// connect() can be called with no address to
@@ -1207,7 +1207,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *fdio.Msg) (status zx.Status)
 	return zx.ErrOk
 }
 
-func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opGetAddrInfo(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	var val c_mxrio_gai_req
 	if err := val.Decode(msg); err != nil {
 		return errStatus(err)
@@ -1322,7 +1322,7 @@ func (s *socketServer) opGetAddrInfo(ios *iostate, msg *fdio.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (s *socketServer) opFcntl(ios *iostate, msg *fdio.Msg) zx.Status {
+func (s *socketServer) opFcntl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	cmd := uint32(msg.Arg)
 	if debug2 {
 		log.Printf("fcntl: cmd %v, flags %v", cmd, msg.FcntlFlags())
@@ -1381,7 +1381,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 	cookie := cookie(cookieVal)
 	op := msg.Op()
 	if debug2 {
-		log.Printf("socketServer.fdio: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
+		log.Printf("fdioHandler: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
 	s.mu.Lock()
@@ -1413,7 +1413,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		case strings.HasPrefix(path, "none-v2"): // ZXRIO_SOCKET_DIR_NONE
 			err = s.newIostate(msg.Handle[0], ipv4.ProtocolNumber, tcp.ProtocolNumber, nil, nil, false)
 		case strings.HasPrefix(path, "socket-v2/"): // ZXRIO_SOCKET_DIR_SOCKET
-			err = s.opSocket(msg.Handle[0], ios, msg, path)
+			err = s.opSocket(msg.Handle[0], path)
 		default:
 			if debug2 {
 				log.Printf("open: unknown path=%q", path)
@@ -1431,6 +1431,37 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 			msg.Handle[0].Close()
 		}
 		return fdio.ErrIndirect.Status
+	case fdio.OpClose:
+		s.iosCloseHandler(ios, cookie)
+		return zx.ErrOk
+	default:
+		log.Printf("fdioHandler: unknown socket op: %v", op)
+		return zx.ErrNotSupported
+	}
+	return zx.ErrBadState
+	// TODO do_halfclose
+}
+
+func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVal int64) zx.Status {
+	cookie := cookie(cookieVal)
+	op := msg.Op()
+	if debug2 {
+		log.Printf("zxsocketHandler: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
+	}
+
+	s.mu.Lock()
+	ios := s.io[cookie]
+	s.mu.Unlock()
+	if ios == nil {
+		if op == fdio.OpClose && rh == 0 {
+			// The close op was synthesized by Dispatcher (because the peer channel was closed).
+			return zx.ErrOk
+		}
+		log.Printf("zxsioHandler: request (op:%v) dropped because of the state mismatch", op)
+		return zx.ErrBadState
+	}
+
+	switch op {
 	case fdio.OpConnect:
 		return s.opConnect(ios, msg) // do_connect
 	case fdio.OpClose:
@@ -1470,13 +1501,9 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 	case fdio.OpFcntl:
 		return s.opFcntl(ios, msg)
 	default:
-		log.Printf("unknown socket op: %v", op)
+		log.Printf("zxsocketHandler: unknown socket op: %v", op)
 		return zx.ErrNotSupported
 	}
 	return zx.ErrBadState
 	// TODO do_halfclose
-}
-
-func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVal int64) zx.Status {
-	return s.fdioHandler(msg.AsFDIOMsg(), zx.Handle(rh), cookieVal)
 }
