@@ -193,8 +193,7 @@ TEST(Timing, Position_Fractional_Point) {
 // locations. Ensure it doesn't touch other buffer sections, regardless of
 // 'accumulate' flag. Check cases when supply > demand, and vice versa, and =.
 // This test uses fractional lengths/offsets, still with a step_size of ONE.
-// Today's interpolator divides w/out rounding, leading to slight inaccuracy.
-// TODO(mpuryear): When MTWN-77 and MTWN-74 are fixed, adjust expected values.
+// TODO(mpuryear): When/if MTWN-77 is fixed, adjust expected values.
 TEST(Timing, Position_Fractional_Linear) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
@@ -340,7 +339,7 @@ TEST(Timing, Interpolation_Values) {
   dst_offset = 0;
   int16_t source5[] = {-2186, 32767};
   accum_result = 0xCAFE;
-  expected = -1;  // result −1.4375 should "round in", to -1.
+  expected = -1;  // result −1.4375 "rounds in", to -1.
 
   mix_result = mixer->Mix(&accum_result, 1, &dst_offset, source5,
                           2 << kPtsFractionalBits, &frac_src_offset,
@@ -353,7 +352,6 @@ TEST(Timing, Interpolation_Values) {
 // Subset of above, while varying step_size. Interp results should not change:
 // it depends on frac_src_pos, not the frac_step_size into/out of that pos.
 // dst_offset andfrac_src_offset should continue to advance accurately
-// TODO(mpuryear): After MTWN-74 is fixed, tighten expectations below
 TEST(Timing, Interpolation_Rates) {
   bool mix_result;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,

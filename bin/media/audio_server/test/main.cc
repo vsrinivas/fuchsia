@@ -10,13 +10,8 @@ int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   // --full
-  if (command_line.HasOption("full")) {
-    media::audio::test::FrequencySet::UseFullFrequencySet = true;
-    std::cout << "\nProfile flag was set to 'full'";
-  } else {
-    media::audio::test::FrequencySet::UseFullFrequencySet = false;
-    printf("\nProfile flag was not set\n\n");
-  }
+  media::audio::test::FrequencySet::UseFullFrequencySet =
+      (command_line.HasOption("full"));
 
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

@@ -41,6 +41,8 @@ class AudioResult {
   static constexpr double kLevelToleranceInterp16 = 0.00000080781106;
   static constexpr double kLevelToleranceMix16 = 0.00017031199;
 
+  static constexpr double kLevelToleranceOutputFloat = 0.00000068541681;
+
   //
   // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
   // derived values must be within this multiplier (above or below) of target.
@@ -59,6 +61,9 @@ class AudioResult {
   static double FloorSource16;
   static double FloorMix16;
   static double FloorOutput16;
+
+  static double FloorOutputFloat;
+
   static double FloorStereoMono;
 
   // Val-being-checked (in dBr to reference signal) must be >= this value.
@@ -69,6 +74,8 @@ class AudioResult {
   static constexpr double kPrevFloorSource16 = 98.104753;
   static constexpr double kPrevFloorMix16 = 90.677331;
   static constexpr double kPrevFloorOutput16 = 98.104753;
+
+  static constexpr double kPrevFloorOutputFloat = 98.104753;
 
   static double LevelMix8;
   static double LevelMix16;

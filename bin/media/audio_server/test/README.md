@@ -232,13 +232,6 @@ fractional bits -- will require changes to all stages, including Accumulation.
 
 **Denormalize (Output)**
 
-*   MTWN-54
-
-    As a future enhancement, the audio mixer should output its mixed audio data
-in float (32-bit) format, as is supported by certain audio hardware (or as is
-expected by certain audio capturer clients). This is easily added even before
-we support this format throughout the audio mixer's processing pipeline.
-
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether

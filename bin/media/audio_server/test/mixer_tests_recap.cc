@@ -37,10 +37,11 @@ TEST(Recap, NoiseFloor) {
          AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 
   printf("\n\n   Outputs");
-  printf("\n\t     8-bit           16-bit");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorOutput8,
-         AudioResult::kPrevFloorOutput8, AudioResult::FloorOutput16,
-         AudioResult::kPrevFloorOutput16);
+  printf("\n\t     8-bit           16-bit            Float");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
+         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
+         AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
 
   printf("\n\n");
 }

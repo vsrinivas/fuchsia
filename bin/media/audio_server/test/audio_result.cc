@@ -23,6 +23,8 @@ constexpr double AudioResult::kLevelToleranceOutput16;
 constexpr double AudioResult::kLevelToleranceInterp16;
 constexpr double AudioResult::kLevelToleranceMix16;
 
+constexpr double AudioResult::kLevelToleranceOutputFloat;
+
 //
 // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
 // derived values must be within this multiplier (above or below) of target.
@@ -37,18 +39,25 @@ constexpr double AudioResult::kGainToleranceMultiplier;
 double AudioResult::FloorSource8 = -INFINITY;
 double AudioResult::FloorMix8 = -INFINITY;
 double AudioResult::FloorOutput8 = -INFINITY;
+
 double AudioResult::FloorSource16 = -INFINITY;
 double AudioResult::FloorMix16 = -INFINITY;
 double AudioResult::FloorOutput16 = -INFINITY;
+
+double AudioResult::FloorOutputFloat = -INFINITY;
+
 double AudioResult::FloorStereoMono = -INFINITY;
 
 // Val-being-checked (in dBr to reference signal) must be >= this value.
 constexpr double AudioResult::kPrevFloorSource8;
 constexpr double AudioResult::kPrevFloorMix8;
 constexpr double AudioResult::kPrevFloorOutput8;
+
 constexpr double AudioResult::kPrevFloorSource16;
 constexpr double AudioResult::kPrevFloorMix16;
 constexpr double AudioResult::kPrevFloorOutput16;
+
+constexpr double AudioResult::kPrevFloorOutputFloat;
 
 double AudioResult::LevelMix8 = -INFINITY;
 double AudioResult::LevelMix16 = -INFINITY;

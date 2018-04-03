@@ -21,7 +21,7 @@ class DstConverter;
 template <typename DType>
 class DstConverter<
     DType,
-    typename std::enable_if<std::is_same<DType, int16_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     return static_cast<DType>(sample);
@@ -31,13 +31,23 @@ class DstConverter<
 template <typename DType>
 class DstConverter<
     DType,
-    typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
     // Before we right-shift, add an effective "0.5" so that values 'round'.
     // But -0.5 must round *away from* zero: add just a bit less, if negative.
     sample += (sample >= 0 ? 0x8080 : 0x807F);
     return static_cast<DType>((fbl::clamp(sample, 0, 0xFFFF)) >> 8);
+  }
+};
+
+template <typename DType>
+class DstConverter<
+    DType,
+    typename std::enable_if<std::is_same<DType, float>::value>::type> {
+ public:
+  static inline constexpr DType Convert(int32_t sample) {
+    return static_cast<DType>(sample) / -std::numeric_limits<int16_t>::min();
   }
 };
 
@@ -48,9 +58,11 @@ class SilenceMaker;
 template <typename DType>
 class SilenceMaker<
     DType,
-    typename std::enable_if<std::is_same<DType, int16_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<DType, int16_t>::value ||
+                            std::is_same<DType, float>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
+    // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
     ::memset(dest, 0, samples * sizeof(DType));
   }
 };
@@ -58,7 +70,7 @@ class SilenceMaker<
 template <typename DType>
 class SilenceMaker<
     DType,
-    typename std::enable_if<std::is_same<DType, uint8_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     ::memset(dest, 0x80, samples * sizeof(DType));
@@ -81,9 +93,9 @@ class OutputFormatterImpl : public OutputFormatter {
 
     for (size_t i = 0; i < (static_cast<size_t>(frames) * channels_); ++i) {
       int32_t val = source[i];
-      if (val > std::numeric_limits<int16_t>::max()) {
+      if (val >= std::numeric_limits<int16_t>::max()) {
         dest[i] = DC::Convert(std::numeric_limits<int16_t>::max());
-      } else if (val < std::numeric_limits<int16_t>::min()) {
+      } else if (val <= std::numeric_limits<int16_t>::min()) {
         dest[i] = DC::Convert(std::numeric_limits<int16_t>::min());
       } else {
         dest[i] = DC::Convert(val);
@@ -119,6 +131,8 @@ OutputFormatterPtr OutputFormatter::Select(
       return OutputFormatterPtr(new OutputFormatterImpl<uint8_t>(format));
     case AudioSampleFormat::SIGNED_16:
       return OutputFormatterPtr(new OutputFormatterImpl<int16_t>(format));
+    case AudioSampleFormat::FLOAT:
+      return OutputFormatterPtr(new OutputFormatterImpl<float>(format));
     default:
       FXL_LOG(ERROR) << "Unsupported output format "
                      << (uint32_t)format->sample_format;

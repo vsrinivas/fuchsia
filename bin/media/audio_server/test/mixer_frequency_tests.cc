@@ -97,6 +97,8 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
   } else if (std::is_same<T, int16_t>::value) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 1);
+  } else if (std::is_same<T, float>::value) {
+    output_formatter = SelectOutputFormatter(AudioSampleFormat::FLOAT, 1);
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
@@ -118,12 +120,16 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // We can directly compare 'signal' and 'other', regardless of output format.
   *sinad_db = ValToDb(magn_signal / magn_other);
 
-  // Calculate magnitude of primary signal strength
+  // Calculate magnitude of primary signal strength, compared to max value.
   // For 8-bit output, compensate for the shift it got on the way to accum.
-  // N.B.: using int8::max (not uint8::max is intentional, as within uint8
+  // N.B.: using int8::max (not uint8::max) is intentional, as within uint8
   // we still use a maximum amplitude of 127 (it is just centered on 128).
+  // For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
   if (std::is_same<T, uint8_t>::value) {
     return ValToDb(magn_signal / std::numeric_limits<int8_t>::max());
+  } else if (std::is_same<T, float>::value) {
+    return ValToDb(magn_signal * (-std::numeric_limits<int16_t>::min()) /
+                   std::numeric_limits<int16_t>::max());
   } else {
     return ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
   }
@@ -149,6 +155,17 @@ TEST(NoiseFloor, Output_16) {
   EXPECT_LE(level_db, AudioResult::kLevelToleranceOutput16);
 
   EXPECT_GE(AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
+}
+
+// Measure level response and noise floor for 1kHz sine, to a 16bit output.
+TEST(NoiseFloor, Output_Float) {
+  double level_db =
+      MeasureOutputNoiseFloor<float>(&AudioResult::FloorOutputFloat);
+
+  EXPECT_GE(level_db, -AudioResult::kLevelToleranceOutputFloat);
+  EXPECT_LE(level_db, AudioResult::kLevelToleranceOutputFloat);
+
+  EXPECT_GE(AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
 }
 
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum
