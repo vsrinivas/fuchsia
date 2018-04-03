@@ -170,8 +170,8 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
 
   // TODO(thatguy): This function could be re-used in multiple places. Move it
   // somewhere other places can reach it.
-  EntityPtr entity;
-  entity_resolver_->ResolveEntity(reference, entity.NewRequest());
+  std::unique_ptr<EntityPtr> entity = std::make_unique<EntityPtr>();
+  entity_resolver_->ResolveEntity(reference, entity->NewRequest());
 
   auto fallback = fxl::MakeAutoCall([done, reference] {
     // The contents of the Entity value could be a deprecated JSON Entity, not
@@ -179,7 +179,7 @@ void ContextWriterImpl::GetEntityTypesFromEntityReference(
     done(Deprecated_GetTypesFromJsonEntity(reference));
   });
 
-  entity->GetTypes(fxl::MakeCopyable(
+  (*entity)->GetTypes(fxl::MakeCopyable(
       [this, activity, id = entities_.GetId(&entity), done = std::move(done),
        fallback = std::move(fallback)](
           const fidl::VectorPtr<fidl::StringPtr>& types) mutable {

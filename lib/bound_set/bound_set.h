@@ -13,12 +13,6 @@
 
 namespace modular {
 
-// General implementation intended to cover InterfacePtr.
-template <typename T, typename U>
-T GetFidlType(U t) {
-  return t;
-}
-
 // "Specialization" (overload) covering unique_ptr.
 template <typename T>
 T* GetFidlType(std::unique_ptr<T>* p) {
@@ -29,12 +23,6 @@ T* GetFidlType(std::unique_ptr<T>* p) {
 template <typename FidlType, typename UniqueType = FidlType*>
 UniqueType Identify(FidlType* binding) {
   return binding;
-}
-
-// "Specialization" (overload) covering InterfacePtr.
-template <typename Interface, typename UniqueType = Interface*>
-UniqueType Identify(fidl::InterfacePtr<Interface>* ip) {
-  return ip->get();
 }
 
 // An extensible/derivable InterfacePtrSet/(Strong)BindingSet that contains a
@@ -120,16 +108,6 @@ class BoundSet {
   std::vector<T> elements_;
 };
 
-// Convenience alias of BoundSet to handle InterfacePtr containers.
-//
-// Since InterfacePtr itself is a movable type, the thing that uniquely
-// identifies the InterfacePtr we wish to erase is its Interface*.
-template <typename Interface,
-          typename T = fidl::InterfacePtr<Interface>,
-          fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
-using BoundPtrSet =
-    BoundSet<fidl::InterfacePtr<Interface>, T, GetFidlType, Interface*>;
-
 // Convenience alias of BoundSet to handle non-movable FIDL types, like Bindings
 // (and the mythical StrongBinding).
 //
@@ -139,6 +117,12 @@ template <typename FidlType,
           typename T = std::unique_ptr<FidlType>,
           FidlType* GetFidlType(T*) = GetFidlType>
 using BoundNonMovableSet = BoundSet<FidlType, T, GetFidlType, FidlType*>;
+
+template <typename Interface,
+          typename T = std::unique_ptr<fidl::InterfacePtr<Interface>>,
+          fidl::InterfacePtr<Interface>* GetFidlType(T*) = GetFidlType>
+using BoundPtrSet =
+  BoundNonMovableSet<fidl::InterfacePtr<Interface>, T, GetFidlType>;
 
 // Convenience alias of BoundSet to handle Binding containers.
 template <typename Interface,
