@@ -1,17 +1,22 @@
-# src
+# Ledger
 
 Implementation of Ledger.
 
 ## Contents
 
  - [app](app) implements Ledger fidl API
- - [cloud_provider](cloud_provider) encapsulates the features provided by the
-   cloud that enable cloud sync
- - [convert](convert) is a helper type-conversion library
- - [network](network) contains an abstraction of the network service and some
-   fake network service implementations to be used in tests
- - [firebase](firebase) is a client for the REST api of Firebase Realtime
-   Database
- - [gcs](gcs) is a client for Google Cloud Storage
- - [storage](storage) implements persistant representation of data held in
+ - [cache](cache)
+ - [cloud_sync](cloud_sync) implements Ledger synchronisation via cloud
+ - [cobalt](cobalt) contains helper methods for reporting Cobalt events
+ - [coroutine](coroutine) coroutine library
+ - [encryption](encryption) implements encryption service for Ledger
+ - [environment](environment)
+ - [fidl](fidl) FIDL interfaces internal to Ledger and peridot framework (not exposed to upper layers)
+ - [fidl_helpers](fidl_helpers)
+ - [lock](lock)
+ - [p2p_provider](p2p_provider) implements P2P primitives powering the P2P sync
+ - [p2p_sync](p2p_sync) implements Ledger synchronisation via P2P
+ - [storage](storage) implements persistent representation of data held in
    Ledger
+ - [testing](testing) contains helper functions used for testing Ledger
+ - [tests](tests) contains tests and benchmarks for Ledger
