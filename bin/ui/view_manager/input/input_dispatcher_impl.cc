@@ -182,8 +182,10 @@ void InputDispatcherImpl::DeliverEvent(uint64_t event_path_propagation_id,
                         view_hit.distance, &event);
   FXL_VLOG(1) << "DeliverEvent " << event_path_propagation_id << " to "
               << event_path_[index].view_token << ": " << event;
+  input::InputEvent cloned_event;
+  fidl::Clone(event, &cloned_event);
   owner_->DeliverEvent(
-      event_path_[index].view_token, std::move(event),
+      event_path_[index].view_token, std::move(cloned_event),
       fxl::MakeCopyable([this, event_path_propagation_id, index,
                          event = std::move(event)](bool handled) mutable {
         if (!handled) {

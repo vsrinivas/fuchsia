@@ -739,7 +739,7 @@ void ViewRegistry::HitTest(views_v1::ViewTreeToken view_tree_token,
       (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
       [ this, callback = std::move(callback), ray_origin,
         ray_direction ](fidl::VectorPtr<gfx::Hit> hits) {
-        auto view_hits = fidl::VectorPtr<ViewHit>::New(hits->size());
+        auto view_hits = fidl::VectorPtr<ViewHit>::New(0);
         for (auto& hit : *hits) {
           auto it = views_by_token_.find(hit.tag_value);
           if (it != views_by_token_.end()) {
