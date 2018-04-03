@@ -616,8 +616,8 @@ static ssize_t eth_set_iobuf_locked(ethdev_t* edev, const void* in_buf, size_t i
             goto fail;
         }
         zx_handle_t bti = edev->edev0->mac.ops->get_bti(edev->edev0->mac.ctx);
-        if ((status = zx_bti_pin_new(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
-                                     vmo, 0, size, edev->paddr_map, pages, &edev->pmt)) != ZX_OK) {
+        if ((status = zx_bti_pin(bti, ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
+                                 vmo, 0, size, edev->paddr_map, pages, &edev->pmt)) != ZX_OK) {
             zxlogf(ERROR, "eth [%s]: bti_pin failed, can't pin vmo: %d\n",
                    edev->name, status);
             goto fail;

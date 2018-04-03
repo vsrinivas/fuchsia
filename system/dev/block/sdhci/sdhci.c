@@ -414,9 +414,9 @@ static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
     zx_handle_t pmt;
     // offset_vmo is converted to bytes by the sdmmc layer
     uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    zx_status_t st = zx_bti_pin_new(dev->bti_handle, options, bop->rw.vmo,
-                                    bop->rw.offset_vmo & ~PAGE_MASK,
-                                    pagecount * PAGE_SIZE, phys, pagecount, &pmt);
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
+                                bop->rw.offset_vmo & ~PAGE_MASK,
+                                pagecount * PAGE_SIZE, phys, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d bti_pin\n", st);
         return st;

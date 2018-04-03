@@ -249,8 +249,8 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
     bool is_write = cmd_is_write(txn->cmd);
     uint32_t options = is_write ? ZX_BTI_PERM_READ : ZX_BTI_PERM_WRITE;
     zx_handle_t pmt;
-    zx_status_t st = zx_bti_pin_new(dev->bti_handle, options, vmo, offset_vmo & ~PAGE_MASK,
-                                    pagecount * PAGE_SIZE, pages, pagecount, &pmt);
+    zx_status_t st = zx_bti_pin(dev->bti_handle, options, vmo, offset_vmo & ~PAGE_MASK,
+                                pagecount * PAGE_SIZE, pages, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(SPEW, "ahci.%d: failed to pin pages, err = %d\n", port->nr, st);
         return st;

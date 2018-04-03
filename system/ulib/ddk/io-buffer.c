@@ -36,8 +36,8 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
     // returned list.  If it's too big, allocate on the heap.
     if (num_entries < 512) {
         zx_paddr_t addrs[512];
-        status = zx_bti_pin_new(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
-                                pmt);
+        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
+                            pmt);
         if (status == ZX_OK) {
             *phys = addrs[0];
         }
@@ -46,8 +46,8 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
         if (addrs == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
-        status = zx_bti_pin_new(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
-                                pmt);
+        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
+                            pmt);
         if (status != ZX_OK) {
             free(addrs);
             return status;
@@ -339,9 +339,8 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
     }
 
     uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-    zx_status_t status = zx_bti_pin_new(buffer->bti_handle, options, buffer->vmo_handle,
-                                        pin_offset, pin_length, physmap, phys_count,
-                                        pmt);
+    zx_status_t status = zx_bti_pin(buffer->bti_handle, options, buffer->vmo_handle,
+                                    pin_offset, pin_length, physmap, phys_count, pmt);
     if (status != ZX_OK) {
         return status;
     }

@@ -77,8 +77,8 @@ zx_status_t Gtt::Init(Controller* controller) {
         return status;
     }
 
-    status = bti_.pin_new(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE,
-                          &scratch_buffer_paddr_, 1, &scratch_buffer_pmt_);
+    status = bti_.pin(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE, &scratch_buffer_paddr_, 1,
+                      &scratch_buffer_pmt_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to look up scratch buffer %d\n", status);
         return status;
@@ -127,8 +127,8 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
 
         uint64_t actual_entries = ROUNDUP(cur_len, min_contiguity_) / min_contiguity_;
         zx::pmt pmt;
-        status = bti_.pin_new(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, *buffer,
-                              vmo_offset, cur_len, paddrs, actual_entries, &pmt);
+        status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, *buffer,
+                          vmo_offset, cur_len, paddrs, actual_entries, &pmt);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
             return nullptr;

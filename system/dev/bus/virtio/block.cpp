@@ -409,8 +409,8 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
     zx_handle_t vmo = txn->op.rw.vmo;
     uint64_t pages[MAX_SCATTER];
     zx_status_t r;
-    if ((r = zx_bti_pin_new(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo,
-                            aligned_offset, pin_size, pages, num_pages, &txn->pmt)) != ZX_OK) {
+    if ((r = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo,
+                        aligned_offset, pin_size, pages, num_pages, &txn->pmt)) != ZX_OK) {
         TRACEF("virtio: could not pin pages\n");
         txn_complete(txn, ZX_ERR_INTERNAL);
         return;

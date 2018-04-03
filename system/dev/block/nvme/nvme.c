@@ -372,8 +372,8 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
 
         pages = utxn->virt;
 
-        if ((r = zx_bti_pin_new(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT,
-                                pages, pagecount, &utxn->pmt)) != ZX_OK) {
+        if ((r = zx_bti_pin(nvme->bti, opt, vmo, pageoffset, pagecount << PAGE_SHIFT,
+                            pages, pagecount, &utxn->pmt)) != ZX_OK) {
             zxlogf(ERROR, "nvme: could not pin pages: %d\n", r);
             break;
         }
