@@ -19,7 +19,7 @@ import (
 	"syscall/zx/fdio"
 	"time"
 
-	"application/lib/app/context"
+	"app/context"
 	"fuchsia/go/amber"
 	"thinfs/fs"
 	"thinfs/zircon/rpc"

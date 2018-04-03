@@ -26,10 +26,6 @@ wlan_go_dependencies = [
     source = "eapol"
   },
   {
-    package = "fidl"
-    source = "//garnet/public/lib/fidl/go/src/fidl"
-  },
-  {
     package = "netstack/link/eth"
     source = "//garnet/go/src/netstack/link/eth"
   },
@@ -46,14 +42,6 @@ wlan_go_dependencies = [
     source = "//garnet/go/src/netstack/trace"
   },
   {
-    package = "app"
-    source = "//garnet/public/lib/app/go/src/app"
-  },
-  {
-    package = "svc"
-    source = "//garnet/public/lib/svc/go/src/svc"
-  },
-  {
     source = "//third_party/golang/crypto"
     package = "golang.org/x/crypto"
   },
@@ -63,6 +51,8 @@ wlan_gn_deps = [
   "//garnet/public/lib/app/fidl($go_toolchain)",
   "//garnet/public/lib/netstack/fidl($go_toolchain)",
   "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
+  "//garnet/public/lib/app/go/src/app",
+  "//garnet/public/lib/fidl/go/src/fidl",
 ]
 
 go_test("keywrap_test_bin") {
@@ -79,42 +69,38 @@ go_test("keywrap_test_bin") {
 go_test("elements_test_bin") {
   output_name = "elements_test"
   gopackage = "wlan/wlan/elements"
-  go_dependencies = [ {
-        package = "wlan/wlan/elements"
-        source = "wlan/elements"
-      } ]
+  go_dependencies = [
+    {
+      package = "wlan/wlan/elements"
+      source = "wlan/elements"
+    },
+  ]
 }
 
 go_test("eapol_handshake_test_bin") {
   output_name = "eapol_handshake_test"
   gopackage = "wlan/eapol/handshake"
   go_dependencies = [
-      {
-        package = "fidl"
-        source = "//garnet/public/lib/fidl/go/src/fidl"
-      },
-      {
-        package = "wlan/wlan"
-        source = "wlan"
-      },
-      {
-        package = "wlan/eapol"
-        source = "eapol"
-      },
-      {
-        package = "wlan/keywrap"
-        source = "keywrap"
-      },
-      {
-        source = "//third_party/golang/crypto"
-        package = "golang.org/x/crypto"
-      },
+    {
+      package = "wlan/wlan"
+      source = "wlan"
+    },
+    {
+      package = "wlan/eapol"
+      source = "eapol"
+    },
+    {
+      package = "wlan/keywrap"
+      source = "keywrap"
+    },
+    {
+      source = "//third_party/golang/crypto"
+      package = "golang.org/x/crypto"
+    },
   ]
 
   extra_dependencies = wlan_gn_deps
-  extra_dependencies += [
-      "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)",
-  ]
+  extra_dependencies += [ "//garnet/public/lib/wlan/fidl:mlme($go_toolchain)" ]
 }
 
 go_test("eapol_crypto_test_bin") {
@@ -152,23 +138,13 @@ go_binary("wlantool_bin") {
       package = "wlantool"
       source = "wlantool"
     },
-    {
-      package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
     "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl",
   ]
 }
 
@@ -191,25 +167,25 @@ package("wlanstack") {
   binary = "wlanstack"
 
   meta = [
-      {
-        path = rebase_path("wlanstack/meta/sandbox")
-        dest = "sandbox"
-      },
-      {
-        path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
-        dest = "legacy_flat_exported_dir"
-      }
- ]
+    {
+      path = rebase_path("wlanstack/meta/sandbox")
+      dest = "sandbox"
+    },
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+  ]
 
   resources = [
-      {
-        path = rebase_path("default.json")
-        dest = "config.json"
-      },
-      {
-        path = rebase_path("ap.json")
-        dest = "ap_config.json"
-      }
+    {
+      path = rebase_path("default.json")
+      dest = "config.json"
+    },
+    {
+      path = rebase_path("ap.json")
+      dest = "ap_config.json"
+    },
   ]
 }
 
@@ -220,9 +196,11 @@ package("wlantool") {
     ":wlantool_bin",
   ]
 
-  binaries = [ {
-        name = "wlan"
-      } ]
+  binaries = [
+    {
+      name = "wlan"
+    },
+  ]
 }
 
 package("wlanstack_test") {

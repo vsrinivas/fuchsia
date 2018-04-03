@@ -11,11 +11,8 @@ go_test("syslog_go_tests") {
     {
       package = "syslog_tests"
     },
-    {
-      package = "syslog"
-      source = "//garnet/public/lib/syslog/go/src/syslog"
-    },
   ]
+  extra_dependencies = [ "//garnet/public/lib/syslog/go/src/syslog" ]
 }
 
 package("syslog_gotests") {

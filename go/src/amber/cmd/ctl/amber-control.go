@@ -5,7 +5,7 @@
 package main
 
 import (
-	"application/lib/app/context"
+	"app/context"
 	"flag"
 	"fmt"
 	"fuchsia/go/amber"

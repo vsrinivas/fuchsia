@@ -11,30 +11,13 @@ go_test("device_settings_integration_test") {
     {
       package = "device_settings"
     },
-    {
-      package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-    {
-      package = "garnet/public/lib/app/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/app/fidl"
-    },
-    {
-      package = "garnet/public/lib/device_settings/fidl"
-      source = "$root_gen_dir/go/src/garnet/public/lib/device_settings/fidl"
-    },
   ]
-  deps = [
-    "//garnet/public/lib/app/fidl",
-    "//garnet/public/lib/device_settings/fidl",
+
+  extra_dependencies = [
+    "//garnet/public/lib/app/fidl($go_toolchain)",
+    "//garnet/public/lib/device_settings/fidl($go_toolchain)",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl",
   ]
 }
 
@@ -45,7 +28,9 @@ package("device_settings_gotests") {
   deps = [
     ":device_settings_integration_test",
   ]
-  tests = [ {
-        name = "device_settings_integration_test"
-      } ]
+  tests = [
+    {
+      name = "device_settings_integration_test"
+    },
+  ]
 }

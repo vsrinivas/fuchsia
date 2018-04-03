@@ -16,26 +16,13 @@ go_binary("power_manager_bin") {
     {
       package = "power_manager"
     },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-    {
-      package = "syslog"
-      source = "//garnet/public/lib/syslog/go/src/syslog"
-    },
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/power_manager/fidl($go_toolchain)",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl",
   ]
 }
 
@@ -45,26 +32,13 @@ go_test("power_manager_test") {
     {
       package = "power_manager"
     },
-    {
-      package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-    {
-      package = "syslog"
-      source = "//garnet/public/lib/syslog/go/src/syslog"
-    },
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/power_manager/fidl($go_toolchain)",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl",
   ]
 }
 

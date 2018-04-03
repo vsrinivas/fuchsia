@@ -24,7 +24,7 @@ import (
 
 	amber_fidl "fuchsia/go/amber"
 
-	"application/lib/app/context"
+	"app/context"
 	"syscall/zx"
 
 	tuf_data "github.com/flynn/go-tuf/data"

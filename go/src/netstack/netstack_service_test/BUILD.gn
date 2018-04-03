@@ -14,18 +14,6 @@ go_binary("netstack_service_test") {
       source = "//garnet/go/src/netstack"
     },
     {
-      package = "app"
-      source = "//garnet/public/lib/app/go/src/app"
-    },
-    {
-      package = "svc"
-      source = "//garnet/public/lib/svc/go/src/svc"
-    },
-    {
-      package = "fidl"
-      source = "//garnet/public/lib/fidl/go/src/fidl"
-    },
-    {
       package = "github.com/google/netstack"
       source = "//third_party/netstack"
     },
@@ -34,5 +22,7 @@ go_binary("netstack_service_test") {
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
+    "//garnet/public/lib/app/go/src/app",
+    "//garnet/public/lib/fidl/go/src/fidl",
   ]
 }

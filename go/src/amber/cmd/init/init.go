@@ -5,7 +5,7 @@
 package main
 
 import (
-	"application/lib/app/context"
+	"app/context"
 	"fuchsia/go/amber"
 )
 
