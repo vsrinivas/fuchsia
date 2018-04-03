@@ -180,6 +180,7 @@ func TestLoggerVerbosity(t *testing.T) {
 
 func TestGlobalTagLimits(t *testing.T) {
 	options := logger.GetDefaultInitOptions()
+	options.ConsoleWriter = os.Stdout
 	tags := [logger.MAX_GLOBAL_TAGS + 1]string{}
 	for i := 0; i < len(tags); i++ {
 		tags[i] = "a"
@@ -209,6 +210,33 @@ func TestLocalTagLimits(t *testing.T) {
 	log.InfoTf(string(tag[:]), format, 10)
 	expectedMsg := fmt.Sprintf(format, 10)
 	checkoutput(t, sin, expectedMsg, logger.InfoLevel, string(tag[:logger.MAX_TAG_LEN]))
+}
+
+func TestFallback(t *testing.T) {
+	sin, log := setup(t, "gtag1", "gtag2")
+	sin.Close()
+	old := os.Stderr
+	f, err := ioutil.TempFile("", "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = f
+	defer func() {
+		os.Stderr = old
+		os.Remove(f.Name())
+	}()
+	log.ActivateFallbackMode()
+	format := "integer: %d"
+	log.InfoTf("local_tag", format, 10)
+	expectedMsg := fmt.Sprintf("[0][gtag1, gtag2, local_tag] INFO: %s\n", fmt.Sprintf(format, 10))
+	content, err := ioutil.ReadFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(content)
+	if !strings.HasSuffix(got, expectedMsg) {
+		t.Fatalf("%q should have ended in %q", got, expectedMsg)
+	}
 }
 
 func TestMessageLenLimit(t *testing.T) {

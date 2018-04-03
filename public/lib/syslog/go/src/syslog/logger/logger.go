@@ -14,6 +14,10 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall/zx"
+
+	"app/context"
+
+	logger_fidl "fuchsia/go/logger"
 )
 
 var (
@@ -67,6 +71,7 @@ func (ll LogLevel) String() string {
 }
 
 type LogInitOptions struct {
+	Connector         *context.Connector
 	Loglevel          LogLevel
 	ConsoleWriter     io.Writer
 	LogServiceChannel *zx.Socket
@@ -86,7 +91,7 @@ type Logger struct {
 	logLevel    LogLevel
 	tags        []string
 	socket      *zx.Socket
-	writer      io.Writer
+	writer      atomic.Value
 	tagString   string
 	pid         uint64
 	droppedLogs uint32
@@ -101,23 +106,55 @@ func (l *Logger) setTags(tags []string) error {
 			return ErrInvalidArg
 		}
 	}
-	if l.writer != nil {
+	if l.writer.Load() != nil {
 		l.tagString = strings.Join(tags, ", ")
 	}
 	l.tags = tags
 	return nil
 }
 
+func (l *Logger) ActivateFallbackMode() {
+	if l.tagString == "" {
+		l.tagString = strings.Join(l.tags, ", ")
+	}
+	l.writer.Store(os.Stderr)
+}
+
+func connectToLogger(c *context.Connector) (*zx.Socket, error) {
+	sin, sout, err := zx.NewSocket(SOCKET_DATAGRAM)
+	if err != nil {
+		return nil, err
+	}
+	req, ls, err := logger_fidl.NewLogSinkInterfaceRequest()
+	if err != nil {
+		return nil, err
+	}
+	c.ConnectToEnvService(req)
+	err = ls.Connect(sout)
+	ls.Close()
+	return &sin, err
+}
+
 func NewLogger(options LogInitOptions) (*Logger, error) {
 	l := Logger{
 		logLevel: options.Loglevel,
-		writer:   options.ConsoleWriter,
 		socket:   options.LogServiceChannel,
 		pid:      uint64(os.Getpid()),
 	}
 	if options.ConsoleWriter == nil && options.LogServiceChannel == nil {
-		// TODO (anmittal): change it to connect to garnet service
-		l.writer = os.Stderr
+		if options.Connector == nil {
+			return nil, fmt.Errorf("Init Error: Writer, LogServiceChannel or Connector needs to be provided")
+		}
+		// TODO: Add err handler for when logger service crashes.
+		// Waiting for golang fidl changes to land
+		if sock, err := connectToLogger(options.Connector); err != nil {
+			fmt.Fprintf(os.Stderr, "not able to conenct to log sink, will write logs to stderr: %s", err)
+			l.writer.Store(os.Stderr)
+		} else {
+			l.socket = sock
+		}
+	} else if options.ConsoleWriter != nil {
+		l.writer.Store(options.ConsoleWriter)
 	}
 	if err := l.setTags(options.Tags); err != nil {
 		return nil, err
@@ -125,7 +162,7 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 	return &l, nil
 }
 
-func (l *Logger) logToWriter(time zx.Time, logLevel LogLevel, tag, msg string) error {
+func (l *Logger) logToWriter(writer io.Writer, time zx.Time, logLevel LogLevel, tag, msg string) error {
 	if len(l.tagString) != 0 {
 		if len(tag) != 0 {
 			tag = fmt.Sprintf("%s, %s", l.tagString, tag)
@@ -133,7 +170,7 @@ func (l *Logger) logToWriter(time zx.Time, logLevel LogLevel, tag, msg string) e
 			tag = l.tagString
 		}
 	}
-	_, err := io.WriteString(l.writer, fmt.Sprintf("[%05d.%06d][%d][0][%s] %s: %s\n", time/1000000000, (time/1000)%1000000, l.pid, tag, logLevel, msg))
+	_, err := io.WriteString(writer, fmt.Sprintf("[%05d.%06d][%d][0][%s] %s: %s\n", time/1000000000, (time/1000)%1000000, l.pid, tag, logLevel, msg))
 	return err
 }
 
@@ -223,8 +260,9 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	if logLevel == FatalLevel {
 		defer os.Exit(1)
 	}
-	if l.writer != nil {
-		return l.logToWriter(time, logLevel, tag, msg)
+	w := l.writer.Load()
+	if w != nil {
+		return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
 	} else {
 		return l.logToSocket(time, logLevel, tag, msg)
 	}
@@ -295,13 +333,16 @@ func GetDefaultLogger() *Logger {
 	return defaultLogger
 }
 
-func InitDefaultLogger() error {
-	return InitDefaultLoggerWithConfig(GetDefaultInitOptions())
+func InitDefaultLogger(c *context.Connector) error {
+	options := GetDefaultInitOptions()
+	options.Connector = c
+	return InitDefaultLoggerWithConfig(options)
 }
 
-func InitDefaultLoggerWithTags(tags ...string) error {
+func InitDefaultLoggerWithTags(c *context.Connector, tags ...string) error {
 	o := GetDefaultInitOptions()
 	o.Tags = tags
+	o.Connector = c
 	return InitDefaultLoggerWithConfig(o)
 }
 

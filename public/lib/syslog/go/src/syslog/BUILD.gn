@@ -3,7 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
 
 go_library("syslog") {
   name = "syslog"
+  deps = [
+    "//garnet/public/lib/app/go/src/app($go_toolchain)",
+    "//garnet/public/lib/logger/fidl($go_toolchain)",
+  ]
 }
