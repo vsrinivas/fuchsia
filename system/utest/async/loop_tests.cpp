@@ -259,6 +259,18 @@ bool make_default_true_test() {
     END_TEST;
 }
 
+bool create_default_test() {
+    BEGIN_TEST;
+
+    {
+        async::Loop loop(&kAsyncLoopConfigDefault);
+        EXPECT_EQ(loop.async(), async_get_default(), "became default");
+    }
+    EXPECT_NULL(async_get_default(), "no longer default");
+
+    END_TEST;
+}
+
 bool quit_test() {
     BEGIN_TEST;
 

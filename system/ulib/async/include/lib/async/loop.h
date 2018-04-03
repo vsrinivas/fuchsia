@@ -50,6 +50,13 @@ typedef struct async_loop_config {
     void* data;
 } async_loop_config_t;
 
+// Simple config that when passed to async_loop_create will create a loop
+// that will automatically register itself as the default
+// dispatcher for the thread upon which it was created and will
+// automatically unregister itself when destroyed (which must occur on
+// the same thread).
+extern const async_loop_config_t kAsyncLoopConfigDefault;
+
 // Creates a message loop and returns its asynchronous dispatcher.
 // All operations on the message loop are thread-safe (except destroy).
 //
