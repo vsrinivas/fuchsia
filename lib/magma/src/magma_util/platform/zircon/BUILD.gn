@@ -4,6 +4,22 @@
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
+
+source_set("address_range") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_address_range.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+    "//zircon/public/lib/zx",
+  ]
+
+  libs = [ "zircon" ]
+}
+
 source_set("buffer") {
   configs += [ "..:platform_include_config" ]
 

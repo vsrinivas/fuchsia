@@ -14,6 +14,24 @@ config("tracing") {
   }
 }
 
+source_set("address_range") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_address_range.h",
+  ]
+
+  deps = [
+    "zircon:address_range",
+  ]
+
+  allow_circular_includes_from = [ "zircon:address_range" ]
+}
+
 source_set("barriers") {
   public_configs = [ ":platform_include_config" ]
 
