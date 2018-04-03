@@ -177,6 +177,7 @@ void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
       auto event = ::gfx::Event();
       event.set_metrics(::gfx::MetricsEvent());
       event.metrics().node_id = node->id();
+      event.metrics().metrics = node->reported_metrics();
       node->session()->EnqueueEvent(std::move(event));
     }
   }
