@@ -40,7 +40,6 @@
       "exec":"/system/test/modular_tests/maxwell_unittests"
     },
     {
-      "disabled": true,
       "name":"context_engine",
       "exec":"/system/test/maxwell/context_engine_test"
     },

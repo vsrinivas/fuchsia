@@ -8,6 +8,7 @@
 #include "lib/context/cpp/context_metadata_builder.h"
 #include "lib/context/cpp/formatting.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/context_engine/scope_utils.h"
@@ -178,11 +179,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
 
   modular::ContextSelector selector;
   selector.type = modular::ContextValueType::ENTITY;
-  {
-    modular::ContextMetadataPtr meta_clone;
-    fidl::Clone(meta, meta_clone.get());
-    selector.meta = std::move(meta_clone);
-  }
+  selector.meta = fidl::MakeOptional(fidl::Clone(meta));
   modular::ContextQuery query;
   AddToContextQuery(&query, "a", std::move(selector));
 
@@ -193,11 +190,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   const std::string value2 = R"({ "@type": "someType", "foo": "borf" })";
 
   std::vector<modular::ContextValue> result;
-  {
-    modular::ContextMetadataPtr meta_clone;
-    fidl::Clone(meta, meta_clone.get());
-    value->Set(value1, std::move(meta_clone));
-  }
+  value->Set(value1, fidl::MakeOptional(fidl::Clone(meta)));
 
   TestListener listener;
   reader_->Subscribe(std::move(query), listener.GetHandle());
@@ -216,11 +209,7 @@ TEST_F(ContextEngineTest, WriteNullEntity) {
   // Ensure that this didn't cause a crash; the fidl further specifies that
   // previous values should be unchanged.
 
-  {
-    modular::ContextMetadataPtr meta_clone;
-    fidl::Clone(meta, meta_clone.get());
-    value->Set(value2, std::move(meta_clone));
-  }
+  value->Set(value2, fidl::MakeOptional(fidl::Clone(meta)));
 
   WaitUntilIdle();
   ASSERT_TRUE(listener.last_update);
@@ -242,12 +231,8 @@ TEST_F(ContextEngineTest, CloseListenerAndReader) {
   TestListener listener2;
   {
     TestListener listener1;
-    modular::ContextQuery query_clone;
-    fidl::Clone(query, &query_clone);
-    reader_->Subscribe(std::move(query_clone), listener1.GetHandle());
-    query_clone = modular::ContextQuery();
-    fidl::Clone(query, &query_clone);
-    reader_->Subscribe(std::move(query_clone), listener2.GetHandle());
+    reader_->Subscribe(fidl::Clone(query), listener1.GetHandle());
+    reader_->Subscribe(fidl::Clone(query), listener2.GetHandle());
     InitReader(MakeGlobalScope());
 
     WaitUntilIdle();
@@ -291,9 +276,7 @@ TEST_F(ContextEngineTest, GetContext) {
 
   // Make sure context has been written.
   TestListener listener;
-  modular::ContextQuery query_clone;
-  fidl::Clone(query, &query_clone);
-  reader_->Subscribe(std::move(query_clone), listener.GetHandle());
+  reader_->Subscribe(fidl::Clone(query), listener.GetHandle());
 
   WaitUntilIdle();
   EXPECT_TRUE(listener.last_update);
