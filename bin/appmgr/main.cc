@@ -12,6 +12,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/vfs.h>
+#include <lib/async/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -20,7 +21,6 @@
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/root_application_loader.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings.h"
@@ -43,9 +43,9 @@ int main(int argc, char** argv) {
     config.ReadIfExistsFrom(config_file);
   }
 
-  fsl::MessageLoop message_loop;
+  async::Loop loop(&kAsyncLoopConfigDefault);
 
-  fs::ManagedVfs vfs(message_loop.async());
+  fs::ManagedVfs vfs(loop.async());
   component::RootApplicationLoader root_loader(config.TakePath());
   fbl::RefPtr<fs::PseudoDir> directory(fbl::AdoptRef(new fs::PseudoDir()));
   directory->AddEntry(
@@ -72,11 +72,11 @@ int main(int argc, char** argv) {
         std::move(launch_info), sysmgr.NewRequest());
   };
 
-  async::PostTask(message_loop.async(), [&run_sysmgr, &sysmgr] {
+  async::PostTask(loop.async(), [&run_sysmgr, &sysmgr] {
     run_sysmgr();
     sysmgr.set_error_handler(run_sysmgr);
   });
 
-  message_loop.Run();
+  loop.Run();
   return 0;
 }

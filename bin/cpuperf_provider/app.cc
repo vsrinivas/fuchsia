@@ -14,7 +14,6 @@
 #include "garnet/bin/cpuperf_provider/importer.h"
 #include "garnet/lib/cpuperf/controller.h"
 #include "garnet/lib/cpuperf/reader.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"

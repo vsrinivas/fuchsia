@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <iostream>
+#include <lib/async/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -33,12 +33,12 @@ int main(int argc, const char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  fsl::MessageLoop message_loop;
+  async::Loop loop(&kAsyncLoopConfigDefault);
 
   bluetooth_service::App app(
       component::ApplicationContext::CreateFromStartupInfo());
 
-  message_loop.Run();
+  loop.Run();
 
   return EXIT_SUCCESS;
 }

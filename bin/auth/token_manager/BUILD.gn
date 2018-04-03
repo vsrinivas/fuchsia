@@ -16,6 +16,7 @@ executable("token_manager") {
   deps = [
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//garnet/public/lib/auth/fidl",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -24,6 +25,7 @@ executable("token_manager") {
     "//garnet/bin/auth/store:lib",
     "//garnet/bin/auth/token_manager/test:dev_auth_provider",
     "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
