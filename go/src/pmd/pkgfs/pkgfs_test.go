@@ -92,9 +92,11 @@ func tmain(m *testing.M) int {
 	}
 	pkgfs.static.LoadFrom(sf)
 	sf.Close()
-	if err := pkgfs.Mount(d); err != nil {
-		panic(err)
-	}
+	go func() {
+		if err := pkgfs.Mount(d); err != nil {
+			panic(err)
+		}
+	}()
 	defer pkgfs.Unmount()
 	pkgfsMount = d
 
@@ -106,31 +108,6 @@ func TestMain(m *testing.M) {
 	v := tmain(m)
 	println("cleaned up tests")
 	os.Exit(v)
-}
-
-func TestCreateNeed(t *testing.T) {
-	f, err := os.Create(filepath.Join(pkgfsMount, "needs", "mypkg.far"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	names, err := ioutil.ReadDir(filepath.Join(pkgfsMount, "needs"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	found := false
-	for _, info := range names {
-		if info.Name() == "mypkg.far" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected to find package in needs, but did not")
-	}
 }
 
 func TestAddPackage(t *testing.T) {
