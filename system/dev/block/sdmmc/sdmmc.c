@@ -325,7 +325,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
 
         req->use_dma = true;
         req->virt = NULL;
-        req->phys = 0;
+        req->pmt = ZX_HANDLE_INVALID;
 
     } else {
         req->use_dma = false;

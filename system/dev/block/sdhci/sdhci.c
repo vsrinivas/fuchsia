@@ -371,17 +371,18 @@ static zx_status_t sdhci_build_dma_desc(sdhci_device_t* dev, sdmmc_req_t* req) {
 
     // pin the vmo
     zx_paddr_t phys[SDMMC_PAGES_COUNT];
+    zx_handle_t pmt;
     // offset_vmo is converted to bytes by the sdmmc layer
     uint32_t options = bop->command == BLOCK_OP_READ ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
-    zx_status_t st = zx_bti_pin(dev->bti_handle, options, bop->rw.vmo,
-                                bop->rw.offset_vmo & ~PAGE_MASK,
-                                pagecount * PAGE_SIZE, phys, pagecount);
+    zx_status_t st = zx_bti_pin_new(dev->bti_handle, options, bop->rw.vmo,
+                                    bop->rw.offset_vmo & ~PAGE_MASK,
+                                    pagecount * PAGE_SIZE, phys, pagecount, &pmt);
     if (st != ZX_OK) {
         zxlogf(ERROR, "sdhci: error %d bti_pin\n", st);
         return st;
     }
-    // cache this for zx_bti_unpin() later
-    req->phys = phys[0];
+    // cache this for zx_pmt_unpin() later
+    req->pmt = pmt;
 
     phys_iter_buffer_t buf = {
         .phys = phys,
@@ -517,12 +518,12 @@ err:
 
 static zx_status_t sdhci_finish_req(sdhci_device_t* dev, sdmmc_req_t* req) {
     zx_status_t st = ZX_OK;
-    if (req->use_dma && req->phys) {
-        st = zx_bti_unpin(dev->bti_handle, req->phys);
+    if (req->use_dma && req->pmt != ZX_HANDLE_INVALID) {
+        st = zx_pmt_unpin(req->pmt);
         if (st != ZX_OK) {
-            zxlogf(ERROR, "sdhci: error %d in bti_unpin\n", st);
+            zxlogf(ERROR, "sdhci: error %d in pmt_unpin\n", st);
         }
-        req->phys = 0;
+        req->pmt = ZX_HANDLE_INVALID;
     }
     return st;
 }

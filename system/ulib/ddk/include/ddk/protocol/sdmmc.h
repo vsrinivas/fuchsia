@@ -61,7 +61,7 @@ struct sdmmc_req {
 
     bool use_dma;
     void* virt;
-    zx_paddr_t phys;
+    zx_handle_t pmt;
 
     // response data
     uint32_t response[4];
