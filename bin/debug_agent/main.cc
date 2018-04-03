@@ -22,9 +22,9 @@ int main(int argc, char* argv[]) {
     fprintf(stderr, "Can't create socket.\n");
 
   // Data flows from ExceptionHandler -> RemoteAPIAdapter -> DebugAgent;
-  ExceptionHandler handler;
-  DebugAgent agent(&handler);
-  RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
+  debug_agent::ExceptionHandler handler;
+  debug_agent::DebugAgent agent(&handler);
+  debug_agent::RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
   handler.set_read_watcher(&adapter);
   handler.set_process_watcher(&agent);
 

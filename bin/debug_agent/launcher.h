@@ -11,6 +11,8 @@
 
 #include "garnet/public/lib/fxl/macros.h"
 
+namespace debug_agent {
+
 // This class is designed to help two-phase process creation, where a process
 // needs to be setup, but before starting it that process needs to be
 // registered with the exception handler.
@@ -40,3 +42,5 @@ class Launcher {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Launcher);
 };
+
+}  // namespace debug_agent

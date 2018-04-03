@@ -6,6 +6,8 @@
 
 #include "garnet/lib/debug_ipc/protocol.h"
 
+namespace debug_agent {
+
 // This is an abstract class that implements calls corresponding to the
 // client->agent IPC requests.
 class RemoteAPI {
@@ -51,3 +53,5 @@ class RemoteAPI {
       const debug_ipc::RemoveBreakpointRequest& request,
       debug_ipc::RemoveBreakpointReply* reply) = 0;
 };
+
+}  // namespace debug_agent

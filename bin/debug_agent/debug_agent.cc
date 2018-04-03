@@ -19,6 +19,8 @@
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
+namespace debug_agent {
+
 DebugAgent::DebugAgent(ExceptionHandler* handler) : handler_(handler) {}
 
 DebugAgent::~DebugAgent() {}
@@ -44,7 +46,8 @@ void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
   RemoveDebuggedProcess(process_koid);
 }
 
-void DebugAgent::OnThreadStarting(zx::thread thread, zx_koid_t process_koid,
+void DebugAgent::OnThreadStarting(zx::thread thread,
+                                  zx_koid_t process_koid,
                                   zx_koid_t thread_koid) {
   DebuggedProcess* debugged = GetDebuggedProcess(process_koid);
   if (!debugged) {
@@ -84,7 +87,8 @@ void DebugAgent::OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) {
   stream().Write(writer.MessageComplete());
 }
 
-void DebugAgent::OnException(zx_koid_t proc_koid, zx_koid_t thread_koid,
+void DebugAgent::OnException(zx_koid_t proc_koid,
+                             zx_koid_t thread_koid,
                              uint32_t type) {
   // Suspend all threads in the excepting process.
   DebuggedProcess* proc = GetDebuggedProcess(proc_koid);
@@ -166,7 +170,7 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
 }
 
 void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
-                          debug_ipc::PauseReply* reply) {
+                         debug_ipc::PauseReply* reply) {
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
@@ -221,8 +225,8 @@ void DebugAgent::OnAddOrChangeBreakpoint(
     proc->OnAddOrChangeBreakpoint(request, reply);
   } else {
     reply->status = ZX_ERR_NOT_FOUND;
-    reply->error_message = fxl::StringPrintf(
-        "Unknown process ID %" PRIu64 ".", request.process_koid);
+    reply->error_message = fxl::StringPrintf("Unknown process ID %" PRIu64 ".",
+                                             request.process_koid);
   }
 }
 
@@ -241,7 +245,8 @@ DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   return found->second.get();
 }
 
-DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t koid, zx::process proc) {
+DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t koid,
+                                                zx::process proc) {
   handler_->Attach(koid, proc.get());
   DebuggedProcess* proc_ptr = new DebuggedProcess(this, koid, std::move(proc));
   procs_[koid] = std::unique_ptr<DebuggedProcess>(proc_ptr);
@@ -257,8 +262,7 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
   procs_.erase(found);
 }
 
-void DebugAgent::SendCurrentThreads(zx_handle_t process,
-                                    zx_koid_t proc_koid) {
+void DebugAgent::SendCurrentThreads(zx_handle_t process, zx_koid_t proc_koid) {
   std::vector<debug_ipc::ThreadRecord> threads;
   GetProcessThreads(process, &threads);
   for (const auto& thread : threads)
@@ -272,7 +276,9 @@ void DebugAgent::SendThreadNotification(zx_koid_t proc_koid,
   notify.record = record;
 
   debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting,
-                               notify, &writer);
+  debug_ipc::WriteNotifyThread(
+      debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
   stream().Write(writer.MessageComplete());
 }
+
+}  // namespace debug_agent

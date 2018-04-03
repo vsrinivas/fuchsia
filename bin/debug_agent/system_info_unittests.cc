@@ -8,6 +8,8 @@
 #include "garnet/bin/debug_agent/system_info.h"
 #include "gtest/gtest.h"
 
+namespace debug_agent {
+
 namespace {
 
 // Recursively walks the process tree and returns true if there is a process
@@ -45,3 +47,5 @@ TEST(SystemInfo, GetProcessTree) {
   // Our name and koid should be somewhere in the tree.
   EXPECT_TRUE(FindProcess(root, self_name, self_koid));
 }
+
+}  // namespace debug_agent

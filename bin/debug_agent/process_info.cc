@@ -11,6 +11,8 @@
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 
+namespace debug_agent {
+
 namespace {
 
 debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
@@ -19,13 +21,12 @@ debug_ipc::ThreadRecord::State ThreadStateToEnum(uint32_t state) {
     debug_ipc::ThreadRecord::State enum_state;
   };
   static const Mapping mappings[] = {
-    { ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew },
-    { ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning },
-    { ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended },
-    { ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked },
-    { ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying },
-    { ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead }
-  };
+      {ZX_THREAD_STATE_NEW, debug_ipc::ThreadRecord::State::kNew},
+      {ZX_THREAD_STATE_RUNNING, debug_ipc::ThreadRecord::State::kRunning},
+      {ZX_THREAD_STATE_SUSPENDED, debug_ipc::ThreadRecord::State::kSuspended},
+      {ZX_THREAD_STATE_BLOCKED, debug_ipc::ThreadRecord::State::kBlocked},
+      {ZX_THREAD_STATE_DYING, debug_ipc::ThreadRecord::State::kDying},
+      {ZX_THREAD_STATE_DEAD, debug_ipc::ThreadRecord::State::kDead}};
 
   for (const Mapping& mapping : mappings) {
     if (mapping.int_state == state)
@@ -50,8 +51,8 @@ zx_status_t GetProcessThreads(zx_handle_t process,
     (*threads)[i].koid = koids[i];
 
     zx_handle_t handle;
-    if (zx_object_get_child(process, koids[i], ZX_RIGHT_SAME_RIGHTS, &handle)
-        == ZX_OK) {
+    if (zx_object_get_child(process, koids[i], ZX_RIGHT_SAME_RIGHTS, &handle) ==
+        ZX_OK) {
       FillThreadRecord(zx::thread(handle), &(*threads)[i]);
     }
   }
@@ -72,3 +73,5 @@ void FillThreadRecord(const zx::thread& thread,
     record->state = debug_ipc::ThreadRecord::State::kDead;
   }
 }
+
+}  // namespace debug_agent

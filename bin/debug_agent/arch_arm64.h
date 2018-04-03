@@ -9,9 +9,11 @@
 #include <stdint.h>
 #include <zircon/syscalls/debug.h>
 
+namespace debug_agent {
 namespace arch {
 
 // The type that is large enough to hold the debug breakpoint CPU instruction.
 using BreakInstructionType = uint32_t;
 
 }  // namespace arch
+}  // namespace debug_agent

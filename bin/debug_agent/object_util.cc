@@ -9,10 +9,13 @@
 #include <zx/process.h>
 #include <zx/thread.h>
 
+namespace debug_agent {
+
 namespace {
 
-template<typename ResultObject>
-std::vector<ResultObject> GetChildObjects(zx_handle_t parent, uint32_t child_kind) {
+template <typename ResultObject>
+std::vector<ResultObject> GetChildObjects(zx_handle_t parent,
+                                          uint32_t child_kind) {
   auto koids = GetChildKoids(parent, child_kind);
 
   std::vector<ResultObject> result;
@@ -20,7 +23,8 @@ std::vector<ResultObject> GetChildObjects(zx_handle_t parent, uint32_t child_kin
 
   for (zx_koid_t koid : koids) {
     zx_handle_t handle;
-    if (zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK)
+    if (zx_object_get_child(parent, koid, ZX_RIGHT_SAME_RIGHTS, &handle) ==
+        ZX_OK)
       result.push_back(ResultObject(handle));
   }
   return result;
@@ -41,8 +45,8 @@ zx_koid_t KoidForProcess(const zx::process& process) {
 
 zx_koid_t KoidForObject(zx_handle_t object) {
   zx_info_handle_basic_t info;
-  if (zx_object_get_info(object, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                      nullptr) != ZX_OK)
+  if (zx_object_get_info(object, ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                         nullptr, nullptr) != ZX_OK)
     return 0;
   return info.koid;
 }
@@ -67,8 +71,8 @@ std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind) {
     if (actual < available)
       result.resize(available + kNumExtraKoids);
     zx_status_t status = zx_object_get_info(parent, child_kind, result.data(),
-                                     result.size() * sizeof(zx_koid_t),
-                                     &actual, &available);
+                                            result.size() * sizeof(zx_koid_t),
+                                            &actual, &available);
     if (status != ZX_OK || actual == available)
       break;
   }
@@ -87,3 +91,5 @@ std::vector<zx::process> GetChildProcesses(zx_handle_t job) {
 std::vector<zx::thread> GetChildThreads(zx_handle_t process) {
   return GetChildObjects<zx::thread>(process, ZX_INFO_PROCESS_THREADS);
 }
+
+}  // namespace debug_agent

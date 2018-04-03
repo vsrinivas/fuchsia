@@ -12,6 +12,8 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 
+namespace debug_agent {
+
 class DebugAgent;
 class DebuggedThread;
 class ProcessBreakpoint;
@@ -33,9 +35,8 @@ class DebuggedProcess {
   void OnAddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       debug_ipc::AddOrChangeBreakpointReply* reply);
-  void OnRemoveBreakpoint(
-      const debug_ipc::RemoveBreakpointRequest& request,
-      debug_ipc::RemoveBreakpointReply* reply);
+  void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
+                          debug_ipc::RemoveBreakpointReply* reply);
 
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid);
@@ -71,3 +72,5 @@ class DebuggedProcess {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedProcess);
 };
+
+}  // namespace debug_agent

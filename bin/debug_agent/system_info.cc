@@ -15,6 +15,8 @@
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 
+namespace debug_agent {
+
 namespace {
 
 // TODO(brettw) this is based on the code in Zircon's task-utils which uses
@@ -51,8 +53,8 @@ debug_ipc::ProcessTreeRecord GetProcessTreeRecord(
     result.children.reserve(child_procs.size() + child_jobs.size());
 
     for (const auto& job : child_jobs) {
-      result.children.push_back(GetProcessTreeRecord(
-          job, debug_ipc::ProcessTreeRecord::Type::kJob));
+      result.children.push_back(
+          GetProcessTreeRecord(job, debug_ipc::ProcessTreeRecord::Type::kJob));
     }
     for (const auto& proc : child_procs) {
       result.children.push_back(GetProcessTreeRecord(
@@ -82,8 +84,8 @@ bool FindProcess(const zx::job& job, zx_koid_t search_for, zx::process* out) {
 }  // namespace
 
 zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
-  *root = GetProcessTreeRecord(
-      GetRootJob(), debug_ipc::ProcessTreeRecord::Type::kJob);
+  *root = GetProcessTreeRecord(GetRootJob(),
+                               debug_ipc::ProcessTreeRecord::Type::kJob);
   return ZX_OK;
 }
 
@@ -92,3 +94,5 @@ zx::process GetProcessFromKoid(zx_koid_t koid) {
   FindProcess(GetRootJob(), koid, &result);
   return result;
 }
+
+}  // namespace debug_agent

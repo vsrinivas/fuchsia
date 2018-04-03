@@ -11,6 +11,8 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/stream_buffer.h"
 
+namespace debug_agent {
+
 namespace {
 
 // Deserializes the request based on type, calls the given hander in the
@@ -108,3 +110,5 @@ void RemoteAPIAdapter::OnHandleReadable() {
 
 #undef DISPATCH
 }
+
+}  // namespace debug_agent

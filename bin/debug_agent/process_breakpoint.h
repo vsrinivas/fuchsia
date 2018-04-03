@@ -10,6 +10,8 @@
 #include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/macros.h"
 
+namespace debug_agent {
+
 class DebuggedProcess;
 class DebuggedThread;
 
@@ -102,3 +104,5 @@ class ProcessBreakpoint {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };
+
+}  // namespace debug_agent

@@ -7,6 +7,8 @@
 #include <fdio/io.h>
 #include <launchpad/launchpad.h>
 
+namespace debug_agent {
+
 zx_status_t Launcher::Setup(const std::vector<std::string>& argv) {
   zx_status_t status = launchpad_create(0, argv[0].c_str(), &lp_);
   if (status != ZX_OK)
@@ -64,3 +66,5 @@ zx_status_t Launcher::Start() {
   lp_ = nullptr;
   return ZX_OK;
 }
+
+}  // namespace debug_agent

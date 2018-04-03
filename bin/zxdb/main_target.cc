@@ -28,9 +28,9 @@ int main(int argc, char* argv[]) {
   }
 
   // Start the exception handler and DebugAgent class on the background thread.
-  ExceptionHandler handler;
-  DebugAgent agent(&handler);
-  RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
+  debug_agent::ExceptionHandler handler;
+  debug_agent::DebugAgent agent(&handler);
+  debug_agent::RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
   handler.set_read_watcher(&adapter);
   handler.set_process_watcher(&agent);
 

@@ -12,6 +12,8 @@
 #include "garnet/bin/debug_agent/remote_api.h"
 #include "garnet/public/lib/fxl/macros.h"
 
+namespace debug_agent {
+
 // Main state and control for the debug agent. The exception handler reports
 // exceptions in the debugged program directly to this class and data from
 // the debugger client via a StreamBuffer.
@@ -27,10 +29,12 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
 
   // ExceptionHandler::ProcessWatcher implementation.
   void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadStarting(zx::thread thread, zx_koid_t process_koid,
+  void OnThreadStarting(zx::thread thread,
+                        zx_koid_t process_koid,
                         zx_koid_t thread_koid) override;
   void OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) override;
-  void OnException(zx_koid_t proc_koid, zx_koid_t thread_koid,
+  void OnException(zx_koid_t proc_koid,
+                   zx_koid_t thread_koid,
                    uint32_t type) override;
 
  private:
@@ -45,7 +49,7 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
   void OnPause(const debug_ipc::PauseRequest& request,
                debug_ipc::PauseReply* reply) override;
   void OnResume(const debug_ipc::ResumeRequest& request,
-                  debug_ipc::ResumeReply* reply) override;
+                debug_ipc::ResumeReply* reply) override;
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply) override;
   void OnThreads(const debug_ipc::ThreadsRequest& request,
@@ -55,9 +59,8 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
   void OnAddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       debug_ipc::AddOrChangeBreakpointReply* reply) override;
-  void OnRemoveBreakpoint(
-      const debug_ipc::RemoveBreakpointRequest& request,
-      debug_ipc::RemoveBreakpointReply* reply) override;
+  void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
+                          debug_ipc::RemoveBreakpointReply* reply) override;
 
   // Returns the debugged process for the given koid or null if not found.
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
@@ -78,3 +81,5 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };
+
+}  // namespace debug_agent

@@ -15,6 +15,8 @@ class process;
 class thread;
 }
 
+namespace debug_agent {
+
 zx::thread ThreadForKoid(zx_handle_t process, zx_koid_t thread_koid);
 
 zx_koid_t KoidForObject(zx_handle_t object);
@@ -38,3 +40,5 @@ std::vector<zx_koid_t> GetChildKoids(zx_handle_t parent, uint32_t child_kind);
 std::vector<zx::job> GetChildJobs(zx_handle_t job);
 std::vector<zx::process> GetChildProcesses(zx_handle_t job);
 std::vector<zx::thread> GetChildThreads(zx_handle_t process);
+
+}  // namespace debug_agent

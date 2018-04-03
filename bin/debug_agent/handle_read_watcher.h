@@ -4,9 +4,13 @@
 
 #pragma once
 
+namespace debug_agent {
+
 // Abstract class providing a notification when a handle transitions to
 // readable.
 class HandleReadWatcher {
  public:
   virtual void OnHandleReadable() = 0;
 };
+
+}  // namespace debug_agent

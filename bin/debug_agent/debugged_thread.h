@@ -9,10 +9,13 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 
+struct zx_thread_state_general_regs;
+
+namespace debug_agent {
+
 class DebugAgent;
 class DebuggedProcess;
 class ProcessBreakpoint;
-struct zx_thread_state_general_regs;
 
 class DebuggedThread {
  public:
@@ -36,8 +39,10 @@ class DebuggedThread {
   // will be suspended, but when we attach to a process with existing threads
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discoverd via a debug notification.
-  DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                 zx_koid_t thread_koid, bool starting);
+  DebuggedThread(DebuggedProcess* process,
+                 zx::thread thread,
+                 zx_koid_t thread_koid,
+                 bool starting);
   ~DebuggedThread();
 
   zx::thread& thread() { return thread_; }
@@ -57,7 +62,7 @@ class DebuggedThread {
  private:
   enum class AfterBreakpointStep {
     kContinue,  // Resume execution.
-    kBreak  // Send the client the exception and keep stopped.
+    kBreak      // Send the client the exception and keep stopped.
   };
 
   void UpdateForSoftwareBreakpoint(zx_thread_state_general_regs* regs);
@@ -65,7 +70,7 @@ class DebuggedThread {
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
 
-  DebugAgent* debug_agent_;  // Non-owning.
+  DebugAgent* debug_agent_;   // Non-owning.
   DebuggedProcess* process_;  // Non-owning.
   zx::thread thread_;
   zx_koid_t koid_;
@@ -88,3 +93,5 @@ class DebuggedThread {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
 };
+
+}  // namespace debug_agent

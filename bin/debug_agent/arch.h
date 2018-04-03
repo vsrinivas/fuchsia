@@ -14,6 +14,7 @@
 #error
 #endif
 
+namespace debug_agent {
 namespace arch {
 
 extern const BreakInstructionType kBreakInstruction;
@@ -38,3 +39,4 @@ uint64_t* IPInRegs(zx_thread_state_general_regs* regs);
 uint64_t* SPInRegs(zx_thread_state_general_regs* regs);
 
 }  // namespace arch
+}  // namespace debug_agent

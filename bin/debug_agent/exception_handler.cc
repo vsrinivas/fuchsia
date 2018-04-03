@@ -12,6 +12,8 @@
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/public/lib/fxl/logging.h"
 
+namespace debug_agent {
+
 namespace {
 
 // Key used for waiting on a port for the socket and quit events. Everything
@@ -78,14 +80,13 @@ bool ExceptionHandler::Attach(zx_koid_t koid, zx_handle_t process) {
   processes_.push_back(std::move(deb_proc));
 
   // Attach to the special debugger exception port.
-  zx_status_t status = zx_task_bind_exception_port(
-      process, port_.get(), koid, ZX_EXCEPTION_PORT_DEBUGGER);
+  zx_status_t status = zx_task_bind_exception_port(process, port_.get(), koid,
+                                                   ZX_EXCEPTION_PORT_DEBUGGER);
   if (status != ZX_OK)
     return false;
 
   status = zx_object_wait_async(process, port_.get(), koid,
-                                ZX_PROCESS_TERMINATED,
-                                ZX_WAIT_ASYNC_REPEATING);
+                                ZX_PROCESS_TERMINATED, ZX_WAIT_ASYNC_REPEATING);
   if (status != ZX_OK)
     return false;
 
@@ -199,3 +200,5 @@ const ExceptionHandler::WatchedProcess* ExceptionHandler::WatchedProcessForKoid(
   }
   return nullptr;
 }
+
+}  // namespace debug_agent

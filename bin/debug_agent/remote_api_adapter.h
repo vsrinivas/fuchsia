@@ -11,6 +11,8 @@ namespace debug_ipc {
 class StreamBuffer;
 }
 
+namespace debug_agent {
+
 class RemoteAPI;
 
 // Converts a raw stream of input data to a series of RemoteAPI calls.
@@ -35,3 +37,5 @@ class RemoteAPIAdapter : public HandleReadWatcher {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPIAdapter);
 };
+
+}  // namespace debug_agent

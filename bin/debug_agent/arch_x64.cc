@@ -4,6 +4,7 @@
 
 #include "garnet/bin/debug_agent/arch.h"
 
+namespace debug_agent {
 namespace arch {
 
 const BreakInstructionType kBreakInstruction = 0xCC;
@@ -44,3 +45,4 @@ uint64_t* SPInRegs(zx_thread_state_general_regs* regs) {
 }
 
 }  // namespace arch
+}  // namespace debug_agent

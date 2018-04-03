@@ -12,6 +12,8 @@
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/public/lib/fxl/logging.h"
 
+namespace debug_agent {
+
 ProcessBreakpoint::ProcessBreakpoint(DebuggedProcess* process)
     : process_(process) {}
 
@@ -112,9 +114,9 @@ bool ProcessBreakpoint::Install() {
     return false;
 
   // Replace with breakpoint instruction.
-  status = process_->process().write_memory(
-      address(), &arch::kBreakInstruction,
-      sizeof(arch::BreakInstructionType), &actual);
+  status = process_->process().write_memory(address(), &arch::kBreakInstruction,
+                                            sizeof(arch::BreakInstructionType),
+                                            &actual);
   if (status != ZX_OK || actual != sizeof(arch::BreakInstructionType))
     return false;
   installed_ = true;
@@ -139,7 +141,8 @@ void ProcessBreakpoint::Uninstall() {
     return;  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
-    fprintf(stderr, "Warning: Debug break instruction unexpectedly replaced "
+    fprintf(stderr,
+            "Warning: Debug break instruction unexpectedly replaced "
             "at %" PRIX64 "\n",
             address());
     return;  // Replaced with something else, ignore.
@@ -153,3 +156,5 @@ void ProcessBreakpoint::Uninstall() {
   }
   installed_ = false;
 }
+
+}  // namespace debug_agent

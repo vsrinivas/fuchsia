@@ -20,9 +20,12 @@
 #include "garnet/lib/debug_ipc/stream_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 
+namespace debug_agent {
+
 DebuggedThread::DebuggedThread(DebuggedProcess* process,
                                zx::thread thread,
-                               zx_koid_t koid, bool starting)
+                               zx_koid_t koid,
+                               bool starting)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
@@ -31,8 +34,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process,
     thread_.resume(ZX_RESUME_EXCEPTION);
 }
 
-DebuggedThread::~DebuggedThread() {
-}
+DebuggedThread::~DebuggedThread() {}
 
 void DebuggedThread::OnException(uint32_t type) {
   suspend_reason_ = SuspendReason::kException;
@@ -134,8 +136,7 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
   uint64_t breakpoint_address =
       arch::BreakpointInstructionForExceptionAddress(*arch::IPInRegs(regs));
 
-  current_breakpoint_ =
-      process_->FindBreakpointForAddr(breakpoint_address);
+  current_breakpoint_ = process_->FindBreakpointForAddr(breakpoint_address);
   if (current_breakpoint_) {
     // When the program hits one of our breakpoints, set the IP back to
     // the exact address that triggered the breakpoint. When the thread
@@ -143,12 +144,11 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
     // putting back the original instruction), and will be what the client
     // wants to display to the user.
     *arch::IPInRegs(regs) = breakpoint_address;
-    zx_status_t status = thread_.write_state(
-        ZX_THREAD_STATE_GENERAL_REGS, regs,
-        sizeof(zx_thread_state_general_regs));
+    zx_status_t status =
+        thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
+                            sizeof(zx_thread_state_general_regs));
     if (status != ZX_OK) {
-      fprintf(stderr,
-              "Warning: could not update IP on thread, error = %d.",
+      fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
               static_cast<int>(status));
     }
   } else {
@@ -161,12 +161,11 @@ void DebuggedThread::UpdateForSoftwareBreakpoint(
       // breakpoint instruction will never go away.
       *arch::IPInRegs(regs) = arch::NextInstructionForSoftwareExceptionAddress(
           *arch::IPInRegs(regs));
-      zx_status_t status = thread_.write_state(
-          ZX_THREAD_STATE_GENERAL_REGS, regs,
-          sizeof(zx_thread_state_general_regs));
+      zx_status_t status =
+          thread_.write_state(ZX_THREAD_STATE_GENERAL_REGS, regs,
+                              sizeof(zx_thread_state_general_regs));
       if (status != ZX_OK) {
-        fprintf(stderr,
-                "Warning: could not update IP on thread, error = %d.",
+        fprintf(stderr, "Warning: could not update IP on thread, error = %d.",
                 static_cast<int>(status));
       }
     } else {
@@ -189,3 +188,5 @@ void DebuggedThread::SetSingleStep(bool single_step) {
   // closed the thread.
   thread_.write_state(ZX_THREAD_STATE_SINGLE_STEP, &value, sizeof(value));
 }
+
+}  // namespace debug_agent

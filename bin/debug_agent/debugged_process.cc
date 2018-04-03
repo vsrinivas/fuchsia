@@ -14,7 +14,10 @@
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/public/lib/fxl/logging.h"
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
+namespace debug_agent {
+
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent,
+                                 zx_koid_t koid,
                                  zx::process proc)
     : debug_agent_(debug_agent), koid_(koid), process_(std::move(proc)) {}
 DebuggedProcess::~DebuggedProcess() = default;
@@ -59,7 +62,8 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
   size_t bytes_read = 0;
   if (process_.read_memory(request.address, &block.data[0], block.size,
-                           &bytes_read) == ZX_OK && bytes_read == block.size) {
+                           &bytes_read) == ZX_OK &&
+      bytes_read == block.size) {
     block.valid = true;
   } else {
     block.valid = false;
@@ -88,8 +92,10 @@ void DebuggedProcess::OnAddOrChangeBreakpoint(
       reply->error_message = "There is already a breakpoint at this address.";
       return;
     }
-    found_id = breakpoints_.emplace(request.breakpoint.breakpoint_id,
-        std::make_unique<ProcessBreakpoint>(this)).first;
+    found_id = breakpoints_
+                   .emplace(request.breakpoint.breakpoint_id,
+                            std::make_unique<ProcessBreakpoint>(this))
+                   .first;
   } else {
     // Modifying an existing breakpoint. If there's an existing breakpoint
     // at this address, it should be the same one.
@@ -138,8 +144,8 @@ void DebuggedProcess::OnThreadStarting(zx::thread thread,
                                        zx_koid_t thread_koid) {
   FXL_DCHECK(threads_.find(thread_koid) == threads_.end());
   threads_.emplace(thread_koid,
-                   std::make_unique<DebuggedThread>(
-                       this, std::move(thread), thread_koid, true));
+                   std::make_unique<DebuggedThread>(this, std::move(thread),
+                                                    thread_koid, true));
 }
 
 void DebuggedProcess::OnThreadExiting(zx_koid_t thread_koid) {
@@ -153,11 +159,10 @@ void DebuggedProcess::PopulateCurrentThreads() {
     FXL_DCHECK(threads_.find(koid) == threads_.end());
 
     zx_handle_t handle;
-    if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle)
-        == ZX_OK) {
-      threads_.emplace(koid,
-                       std::make_unique<DebuggedThread>(
-                           this, zx::thread(handle), koid, true));
+    if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS,
+                            &handle) == ZX_OK) {
+      threads_.emplace(koid, std::make_unique<DebuggedThread>(
+                                 this, zx::thread(handle), koid, true));
     }
   }
 }
@@ -173,8 +178,7 @@ void DebuggedProcess::OnException(zx_koid_t thread_koid, uint32_t type) {
   }
 }
 
-ProcessBreakpoint* DebuggedProcess::FindBreakpointForAddr(
-    uint64_t address) {
+ProcessBreakpoint* DebuggedProcess::FindBreakpointForAddr(uint64_t address) {
   FXL_DCHECK(breakpoints_.size() == address_to_breakpoint_id_.size());
 
   auto found = address_to_breakpoint_id_.find(address);
@@ -189,3 +193,5 @@ ProcessBreakpoint* DebuggedProcess::FindBreakpointForAddr(
   }
   return found_id->second.get();
 }
+
+}  // namespace debug_agent

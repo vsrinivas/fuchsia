@@ -19,6 +19,8 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
+namespace debug_agent {
+
 // This exception handler class runs a background thread that blocks on
 // exceptions from processes being debugged. It also manages reading and
 // writing on a socket for communication with the debugger client.
@@ -112,3 +114,5 @@ class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionHandler);
 };
+
+}  // namespace debug_agent

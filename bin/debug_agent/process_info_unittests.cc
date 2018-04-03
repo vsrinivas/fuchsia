@@ -9,6 +9,8 @@
 #include "garnet/bin/debug_agent/process_info.h"
 #include "gtest/gtest.h"
 
+namespace debug_agent {
+
 TEST(ProcessInfo, GetProcessThreads) {
   zx_handle_t current_thread = zx_thread_self();
   zx_koid_t current_thread_koid = KoidForObject(current_thread);
@@ -39,3 +41,5 @@ TEST(ProcessInfo, GetProcessThreads) {
   zx_object_set_property(current_thread, ZX_PROP_NAME, old_name.c_str(),
                          old_name.size());
 }
+
+}  // namespace debug_agent
