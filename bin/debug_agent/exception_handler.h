@@ -14,6 +14,7 @@
 #include <thread>
 #include <vector>
 
+#include "garnet/bin/debug_agent/handle_read_watcher.h"
 #include "garnet/lib/debug_ipc/stream_buffer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -30,11 +31,8 @@
 // socket_buffer() will be written to the socket to the debugger client.
 class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
  public:
-  class Sink {
+  class ProcessWatcher {
    public:
-    // Notification that there is new data to be read on the socket_buffer().
-    virtual void OnStreamData() = 0;
-
     // Notification that the process is terminated. The implementation should
     // call Detach() on the handle.
     virtual void OnProcessTerminated(zx_koid_t process_koid) = 0;
@@ -55,10 +53,11 @@ class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
 
   debug_ipc::StreamBuffer& socket_buffer() { return socket_buffer_; }
 
-  // Sets the sink for data and decoded exceptions. Setting this is not
-  // threadsafe so this must be set before Start() is called, and the pointer
-  // must remain valid until Shutdown() returns.
-  void set_sink(Sink* sink) { sink_ = sink; }
+  // Sets the sinks for data and decoded process exceptions. Setting these are
+  // not threadsafe so this must be set before Start() is called, and the
+  // pointers must remain valid until Shutdown() returns.
+  void set_read_watcher(HandleReadWatcher* w) { read_watcher_ = w; }
+  void set_process_watcher(ProcessWatcher* w) { process_watcher_ = w; }
 
   // Starts listening for exceptions and socket data. set_sink() must have been
   // called prior to this so that the data has a place to go.
@@ -93,7 +92,8 @@ class ExceptionHandler : public debug_ipc::StreamBuffer::Writer {
   // nullptr on not.
   const WatchedProcess* WatchedProcessForKoid(zx_koid_t koid);
 
-  Sink* sink_;  // Non-owning.
+  HandleReadWatcher* read_watcher_ = nullptr;  // Non-owning.
+  ProcessWatcher* process_watcher_ = nullptr;  // Non-owning.
 
   // Reads and buffers commands from the client.
   zx::socket socket_;

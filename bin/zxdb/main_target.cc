@@ -8,6 +8,7 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
+#include "garnet/bin/debug_agent/remote_api_adapter.h"
 #include "garnet/bin/zxdb/client/agent_connection.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -29,7 +30,10 @@ int main(int argc, char* argv[]) {
   // Start the exception handler and DebugAgent class on the background thread.
   ExceptionHandler handler;
   DebugAgent agent(&handler);
-  handler.set_sink(&agent);
+  RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
+  handler.set_read_watcher(&adapter);
+  handler.set_process_watcher(&agent);
+
   if (!handler.Start(std::move(router_socket))) {
     fprintf(stderr, "Can't start thread, aborting.\n");
     return 1;
@@ -51,9 +55,10 @@ int main(int argc, char* argv[]) {
   main_loop.Run();
   main_loop.StopWatchingConnection(session.agent_connection());
 
-  // Ensure the ExceptionHandler doesn't try to use the sink after it's
-  // destroyed (the sink will be destroyed first).
+  // Ensure the ExceptionHandler doesn't try to use these pointers (the
+  // ExceptionHandler will be destroyed last).
   handler.Shutdown();
-  handler.set_sink(nullptr);
+  handler.set_read_watcher(nullptr);
+  handler.set_process_watcher(nullptr);
   return 0;
 }

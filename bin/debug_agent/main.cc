@@ -9,6 +9,7 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
+#include "garnet/bin/debug_agent/remote_api_adapter.h"
 
 // Currently this is just a manual test that sets up the exception handler and
 // spawns a process for
@@ -20,10 +21,13 @@ int main(int argc, char* argv[]) {
       ZX_OK)
     fprintf(stderr, "Can't create socket.\n");
 
+  // Data flows from ExceptionHandler -> RemoteAPIAdapter -> DebugAgent;
   ExceptionHandler handler;
   DebugAgent agent(&handler);
+  RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
+  handler.set_read_watcher(&adapter);
+  handler.set_process_watcher(&agent);
 
-  handler.set_sink(&agent);
   if (!handler.Start(std::move(router_socket))) {
     fprintf(stderr, "Can't start thread.\n");
     return 1;
@@ -35,10 +39,11 @@ int main(int argc, char* argv[]) {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(2000)));
   fprintf(stderr, "Done sleeping, exiting.\n");
 
-  // Ensure the ExceptionHandler doesn't try to use the sink after it's
-  // destroyed (the sink will be destroyed first).
+  // Ensure the ExceptionHandler doesn't try to use these pointers (the
+  // ExceptionHandler will be destroyed last).
   handler.Shutdown();
-  handler.set_sink(nullptr);
+  handler.set_read_watcher(nullptr);
+  handler.set_process_watcher(nullptr);
 
   return 0;
 }

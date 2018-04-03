@@ -67,7 +67,6 @@ void ExceptionHandler::Shutdown() {
   // cause the background thread to wake up and terminate.
   quit_event_.signal(0, kQuitSignal);
   thread_->join();
-  set_sink(nullptr);
 }
 
 bool ExceptionHandler::Attach(zx_koid_t koid, zx_handle_t process) {
@@ -127,11 +126,11 @@ void ExceptionHandler::DoThread() {
 
       switch (packet.type) {
         case ZX_EXCP_THREAD_STARTING:
-          sink_->OnThreadStarting(std::move(thread), proc->koid,
-                                  packet.exception.tid);
+          process_watcher_->OnThreadStarting(std::move(thread), proc->koid,
+                                             packet.exception.tid);
           break;
         case ZX_EXCP_THREAD_EXITING:
-          sink_->OnThreadExiting(proc->koid, packet.exception.tid);
+          process_watcher_->OnThreadExiting(proc->koid, packet.exception.tid);
           break;
         case ZX_EXCP_GENERAL:
         case ZX_EXCP_FATAL_PAGE_FAULT:
@@ -140,7 +139,8 @@ void ExceptionHandler::DoThread() {
         case ZX_EXCP_HW_BREAKPOINT:
         case ZX_EXCP_UNALIGNED_ACCESS:
         case ZX_EXCP_POLICY_ERROR:
-          sink_->OnException(proc->koid, packet.exception.tid, packet.type);
+          process_watcher_->OnException(proc->koid, packet.exception.tid,
+                                        packet.type);
           break;
         default:
           fprintf(stderr, "Unknown exception.\n");
@@ -155,7 +155,7 @@ void ExceptionHandler::DoThread() {
     } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
                packet.signal.observed & ZX_PROCESS_TERMINATED) {
       // Note: this will reenter us and call Detach for this process.
-      sink_->OnProcessTerminated(packet.key);
+      process_watcher_->OnProcessTerminated(packet.key);
     } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) && packet.key == kMetaKey &&
                packet.signal.observed & kQuitSignal) {
       // Quit event
@@ -188,7 +188,7 @@ void ExceptionHandler::OnSocketReadable() {
     // data so this pipe doesn't starve the entire app.
   }
 
-  sink_->OnStreamData();
+  read_watcher_->OnHandleReadable();
 }
 
 const ExceptionHandler::WatchedProcess* ExceptionHandler::WatchedProcessForKoid(

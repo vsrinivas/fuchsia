@@ -15,6 +15,7 @@ static_library("lib") {
     "debugged_thread.h",
     "exception_handler.cc",
     "exception_handler.h",
+    "handle_read_watcher.h",
     "launcher.cc",
     "launcher.h",
     "object_util.cc",
@@ -23,6 +24,9 @@ static_library("lib") {
     "process_info.h",
     "process_breakpoint.cc",
     "process_breakpoint.h",
+    "remote_api.h",
+    "remote_api_adapter.cc",
+    "remote_api_adapter.h",
     "system_info.cc",
     "system_info.h",
   ]
