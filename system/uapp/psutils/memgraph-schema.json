@@ -89,6 +89,14 @@
                         "vmo_refs": {
                             "type": "array",
                             "items": { "$ref": "#/definitions/vmo_ref" }
+                        },
+                        "handle_stats": {
+                            "type": "object",
+                            "patternProperties": {
+                                "[a-zA-Z0-9_]+": {
+                                    "type": "integer"
+                                }
+                            }
                         }
                     },
                     "required": [ "private_bytes", "shared_bytes", "pss_bytes" ]

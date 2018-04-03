@@ -27,6 +27,57 @@
 
 namespace {
 
+const char* obj_type_get_name(zx_obj_type_t type) {
+    switch (type) {
+    case ZX_OBJ_TYPE_NONE:
+        return "none";
+    case ZX_OBJ_TYPE_PROCESS:
+        return "process";
+    case ZX_OBJ_TYPE_THREAD:
+        return "thread";
+    case ZX_OBJ_TYPE_VMO:
+        return "vmo";
+    case ZX_OBJ_TYPE_CHANNEL:
+        return "channel";
+    case ZX_OBJ_TYPE_EVENT:
+        return "event";
+    case ZX_OBJ_TYPE_PORT:
+        return "port";
+    case ZX_OBJ_TYPE_INTERRUPT:
+        return "interrupt";
+    case ZX_OBJ_TYPE_PCI_DEVICE:
+        return "pci_device";
+    case ZX_OBJ_TYPE_LOG:
+        return "log";
+    case ZX_OBJ_TYPE_SOCKET:
+        return "socket";
+    case ZX_OBJ_TYPE_RESOURCE:
+        return "resource";
+    case ZX_OBJ_TYPE_EVENT_PAIR:
+        return "event_pair";
+    case ZX_OBJ_TYPE_JOB:
+        return "job";
+    case ZX_OBJ_TYPE_VMAR:
+        return "vmar";
+    case ZX_OBJ_TYPE_FIFO:
+        return "fifo";
+    case ZX_OBJ_TYPE_GUEST:
+        return "guest";
+    case ZX_OBJ_TYPE_VCPU:
+        return "vcpu";
+    case ZX_OBJ_TYPE_TIMER:
+        return "timer";
+    case ZX_OBJ_TYPE_IOMMU:
+        return "iommu";
+    case ZX_OBJ_TYPE_BTI:
+        return "bti";
+    case ZX_OBJ_TYPE_PROFILE:
+        return "profile";
+    default:
+        return "unknown";
+    }
+}
+
 // Prints info about VMOs and their relationship to a process.
 // Assumes we're in the middle of dumping a process.
 // TODO(dbort): Insert some special entry if count < avail?
@@ -118,9 +169,12 @@ class JsonTaskEnumerator final : public TaskEnumerator {
 public:
     // |self_koid| is the koid of this memgraph process, so we can
     // avoid trying to read our own VMOs (which is illegal).
-    JsonTaskEnumerator(zx_koid_t self_koid, bool show_threads, bool show_vmos)
+    JsonTaskEnumerator(zx_koid_t self_koid, bool show_threads, bool show_vmos,
+                       bool show_handle_stats)
         : self_koid_(self_koid),
-          show_threads_(show_threads), show_vmos_(show_vmos) {}
+          show_threads_(show_threads),
+          show_vmos_(show_vmos),
+          show_handle_stats_(show_handle_stats) {}
 
     zx_status_t partial_failure() const { return partial_failure_; }
 
@@ -240,6 +294,34 @@ private:
                 free(vmos);
             }
         }
+
+        if (show_handle_stats_) {
+            zx_info_process_handle_stats_t info = {};
+            s = zx_object_get_info(process, ZX_INFO_PROCESS_HANDLE_STATS, &info,
+                                   sizeof(info), nullptr, nullptr);
+            if (s != ZX_OK) {
+                fprintf(stderr,
+                        "WARNING: failed to read handle stats for process "
+                        "%" PRIu64 ": %s (%d)\n",
+                        koid, zx_status_get_string(s), s);
+                set_partial_failure(s);
+            } else {
+                printf(",\n   \"handle_stats\": {");
+                size_t count = 0;
+                for (zx_obj_type_t i = 0; i < ZX_OBJ_TYPE_LAST; i++) {
+                    if (!info.handle_count[i]) {
+                        continue;
+                    }
+                    if (count++ > 0) {
+                        printf(",");
+                    }
+                    printf("\n      \"%s\": %u", obj_type_get_name(i),
+                           info.handle_count[i]);
+                }
+                printf("\n   }");
+            }
+        }
+
         printf("},\n");
 
         return ZX_OK;
@@ -307,6 +389,7 @@ private:
     const zx_koid_t self_koid_;
     const bool show_threads_;
     const bool show_vmos_;
+    const bool show_handle_stats_;
 
     // We try to keep going despite failures, but for scripting
     // purposes it's good to indicate failure at the end.
@@ -373,6 +456,7 @@ void print_help(FILE* f) {
     fprintf(f, "Options:\n");
     fprintf(f, " -t|--threads  Include threads in the output\n");
     fprintf(f, " -v|--vmos     Include VMOs in the output\n");
+    fprintf(f, " -H|--handles  Include handle stats in the output\n");
     fprintf(f, " -S|--schema   Print the schema for the JSON output format\n");
     fprintf(f, " -h|--help     Display this message\n");
 }
@@ -380,18 +464,20 @@ void print_help(FILE* f) {
 } // namespace
 
 int main(int argc, char** argv) {
-    int show_threads = false;
-    int show_vmos = false;
+    bool show_threads = false;
+    bool show_vmos = false;
+    bool show_handle_stats = false;
     while (true) {
         static option options[] = {
             {"threads", no_argument, nullptr, 't'},
             {"vmos", no_argument, nullptr, 'v'},
+            {"handles", no_argument, nullptr, 'H'},
             {"schema", no_argument, nullptr, 'S'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int option_index = 0;
-        int c = getopt_long(argc, argv, "tvSh", options, &option_index);
+        int c = getopt_long(argc, argv, "tvHSh", options, &option_index);
         if (c < 0) {
             break;
         }
@@ -401,6 +487,9 @@ int main(int argc, char** argv) {
             break;
         case 'v':
             show_vmos = true;
+            break;
+        case 'H':
+            show_handle_stats = true;
             break;
         case 'S':
             printf(kMemgraphSchema);
@@ -442,7 +531,8 @@ int main(int argc, char** argv) {
 
     zx_status_t ks = dump_kernel_memory();
 
-    JsonTaskEnumerator jte(info.koid, show_threads, show_vmos);
+    JsonTaskEnumerator jte(info.koid, show_threads, show_vmos,
+                           show_handle_stats);
     s = jte.WalkRootJobTree();
     if (s != ZX_OK) {
         fprintf(stderr, "ERROR: %s (%d)\n", zx_status_get_string(s), s);
