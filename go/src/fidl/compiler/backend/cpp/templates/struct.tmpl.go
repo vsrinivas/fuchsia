@@ -61,10 +61,10 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   {{- range $index, $member := .Members }}
   {{- if .Type.IsPointer }}
-  if (lhs.{{ .Name }} == nullptr && rhs.{{ .Name }} != nullptr) {
-    return false;
-  } else if (rhs.{{ .Name }} == nullptr) {
-    return false;
+  if (!lhs.{{.Name}} || !rhs.{{.Name}}) {
+    if(lhs.{{.Name}} || rhs.{{.Name}}) {
+      return false;
+    }
   } else if (*lhs.{{ .Name }} != *rhs.{{ .Name }}) {
     return false;
   }

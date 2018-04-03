@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 source_set("cpp") {
   sources = [
@@ -69,6 +70,14 @@ source_set("test_support") {
   ]
 }
 
+fidl("fidl_test") {
+  testonly = true
+
+  sources = [
+    "fidl_test.fidl",
+  ]
+}
+
 source_set("test_sources") {
   testonly = true
 
@@ -76,6 +85,7 @@ source_set("test_sources") {
     "binding_set_unittest.cc",
     "binding_unittest.cc",
     "clone_unittest.cc",
+    "fidl_test.cc",
     "interface_handle_unittest.cc",
     "interface_ptr_set_unittest.cc",
     "interface_ptr_unittest.cc",
@@ -91,6 +101,7 @@ source_set("test_sources") {
 
   deps = [
     ":cpp",
+    ":fidl_test",
     ":test_support",
     "//garnet/public/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",

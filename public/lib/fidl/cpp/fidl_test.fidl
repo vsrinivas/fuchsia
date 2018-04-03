@@ -1,0 +1,18 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl_test;
+
+struct Int64Struct {
+    int64 x;
+};
+
+struct HasOptionalFieldStruct {
+    Int64Struct? x;
+};
+
+struct Has2OptionalFieldStruct {
+    Int64Struct? x;
+    Int64Struct? y;
+};
