@@ -58,7 +58,7 @@ struct ContainerPtrTraits<T*> {
     static constexpr bool CanCopy = true;
 
     static inline T*       GetRaw(const ConstPtrType& ptr) { return const_cast<RawPtrType>(ptr); }
-    static inline PtrType  Copy(RawPtrType& ptr)           { return PtrType(ptr); }
+    static inline PtrType  Copy(const RawPtrType& ptr)     { return PtrType(ptr); }
 
     static inline PtrType Take(PtrType& ptr) {
         PtrType ret = ptr;
@@ -143,7 +143,7 @@ struct ContainerPtrTraits<::fbl::RefPtr<T>> {
 
     static inline T*       GetRaw(const PtrType& ptr)      { return ptr.get(); }
     static inline const T* GetRaw(const ConstPtrType& ptr) { return ptr.get(); }
-    static inline PtrType  Copy(RawPtrType& ptr)           { return PtrType(ptr); }
+    static inline PtrType  Copy(const RawPtrType& ptr)     { return PtrType(ptr); }
     static inline PtrType  Take(PtrType& ptr)              { return PtrType(fbl::move(ptr)); }
     static inline void     Swap(PtrType& first, PtrType& second) { first.swap(second); }
 

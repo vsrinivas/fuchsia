@@ -466,7 +466,7 @@ private:
             return ret;
         }
 
-        typename PtrTraits::PtrType CopyPointer() {
+        typename PtrTraits::PtrType CopyPointer() const {
             return IsValid() ? PtrTraits::Copy(node_) : nullptr;
         }
 

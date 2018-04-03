@@ -430,7 +430,7 @@ private:
             return ret;
         }
 
-        typename PtrTraits::PtrType CopyPointer()          { return iter_.CopyPointer(); }
+        typename PtrTraits::PtrType CopyPointer()    const { return iter_.CopyPointer(); }
         typename IterTraits::RefType operator*()     const { return iter_.operator*(); }
         typename IterTraits::RawPtrType operator->() const { return iter_.operator->(); }
 
