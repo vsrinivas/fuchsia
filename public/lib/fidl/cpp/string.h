@@ -119,17 +119,74 @@ inline bool operator!=(const StringPtr& a, const char* b) {
   return !(a == b);
 }
 
-inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
-  return out << str.get();
+inline bool operator<(const StringPtr& a, const StringPtr& b) {
+  if (a.is_null() || b.is_null()) {
+    return !b.is_null();
+  }
+  return *a < *b;
 }
 
-// For use in std::map and elsewhere.
-inline bool operator<(const StringPtr& a, const StringPtr& b) {
-  if (a.is_null())
+inline bool operator<(const char* a, const StringPtr& b) {
+  if (a == nullptr || b.is_null()) {
     return !b.is_null();
-  if (b.is_null())
-    return false;
-  return a.get() < b.get();
+  }
+  return a < *b;
+}
+
+inline bool operator<(const StringPtr& a, const char* b) {
+  if (a.is_null() || b == nullptr) {
+    return b != nullptr;
+  }
+  return *a < b;
+}
+
+inline bool operator>(const StringPtr& a, const StringPtr& b) {
+  if (a.is_null() || b.is_null()) {
+    return !a.is_null();
+  }
+  return *a > *b;
+}
+
+inline bool operator>(const char* a, const StringPtr& b) {
+  if (a == nullptr || b.is_null()) {
+    return a != nullptr;
+  }
+  return a > *b;
+}
+
+inline bool operator>(const StringPtr& a, const char* b) {
+  if (a.is_null() || b == nullptr) {
+    return a != nullptr;
+  }
+  return *a > b;
+}
+
+inline bool operator<=(const StringPtr& a, const StringPtr& b) {
+  return !(a > b);
+}
+
+inline bool operator<=(const char* a, const StringPtr& b) {
+  return !(a > b);
+}
+
+inline bool operator<=(const StringPtr& a, const char* b) {
+  return !(a > b);
+}
+
+inline bool operator>=(const StringPtr& a, const StringPtr& b) {
+  return !(a < b);
+}
+
+inline bool operator>=(const char* a, const StringPtr& b) {
+  return !(a < b);
+}
+
+inline bool operator>=(const StringPtr& a, const char* b) {
+  return !(a < b);
+}
+
+inline std::ostream& operator<<(std::ostream& out, const StringPtr& str) {
+  return out << str.get();
 }
 
 template <>
