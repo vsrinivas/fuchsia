@@ -47,6 +47,7 @@ class Device : public DeviceInterface {
     void WlanmacStatus(uint32_t status);
     void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
     void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status);
+    void WlanmacIndication(uint32_t ind);
 
     // ddk ethmac_protocol_ops methods
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);

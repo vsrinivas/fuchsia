@@ -72,6 +72,7 @@ static wlanmac_ifc_t wlanmac_ifc_ops = {
                wlan_rx_info_t* info) { DEV(cookie)->WlanmacRecv(flags, data, length, info); },
     .complete_tx = [](void* cookie, wlan_tx_packet_t* pkt,
                       zx_status_t status) { DEV(cookie)->WlanmacCompleteTx(pkt, status); },
+    .indication = [](void* cookie, uint32_t ind) { DEV(cookie)->WlanmacIndication(ind); },
 };
 
 static ethmac_protocol_ops_t ethmac_ops = {
@@ -316,6 +317,11 @@ void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
     // TODO(tkilbourn): free memory and complete the ethernet tx (if necessary). For now, we aren't
     // doing any async transmits in the wlan drivers, so this method shouldn't be called yet.
     ZX_PANIC("not implemented yet!");
+}
+
+void Device::WlanmacIndication(uint32_t ind) {
+    // TODO(hahnr): Forward to dispatcher.
+    warnf("not implemented yet!");
 }
 
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {

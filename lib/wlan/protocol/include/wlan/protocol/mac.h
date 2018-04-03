@@ -273,6 +273,10 @@ typedef struct wlan_tx_packet {
     wlan_tx_info_t info;
 } wlan_tx_packet_t;
 
+enum {
+    WLAN_INDICATION_PRE_TBTT = 1,
+};
+
 typedef struct wlanmac_ifc {
     // Report the status of the wlanmac device.
     void (*status)(void* cookie, uint32_t status);
@@ -283,6 +287,9 @@ typedef struct wlanmac_ifc {
 
     // Complete the tx to return the ownership of the packet buffers to the wlan driver.
     void (*complete_tx)(void* cookie, wlan_tx_packet_t* packet, zx_status_t status);
+
+    // Reports an indication of a status, state or action to the wlan driver.
+    void (*indication)(void* cookie, uint32_t ind);
 } wlanmac_ifc_t;
 
 typedef struct wlanmac_protocol_ops {
