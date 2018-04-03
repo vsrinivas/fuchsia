@@ -133,8 +133,8 @@ func (f *Filesystem) Size() int64 {
 }
 
 func (f *Filesystem) Close() error {
-	debugLog("fs close")
-	return fs.ErrNotSupported
+	f.Unmount()
+	return nil
 }
 
 func (f *Filesystem) RootDirectory() fs.Directory {

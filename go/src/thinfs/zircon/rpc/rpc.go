@@ -566,7 +566,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			// Shut down filesystem
 			err := vfs.fs.Close()
 			if err != nil {
-				fmt.Println("Error closing Filesystem: %#v", err)
+				fmt.Printf("error unmounting filesystem: %#v\n", err)
 			}
 			// Close reply handle, indicating that the unmounting process is complete
 			rh.Close()
