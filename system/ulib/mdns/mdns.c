@@ -195,3 +195,29 @@ int mdns_add_additional(mdns_message* m,
     m->header.ar_count = ar_count;
     return 0;
 }
+
+int mdns_unmarshal(const void* buf,
+                   const size_t buf_len,
+                   mdns_message* container) {
+    // Total number of bytes read during unmarshalling.
+    int read_count = 0;
+
+    mdns_init_message(container);
+
+    // It's impossible to decode a message that doesn't contain a full header.
+    if (buf_len < MDNS_HEADER_SIZE) {
+        errno = EBADMSG;
+        return -1;
+    }
+
+    read_count += unmarshal_header(buf, &(container->header));
+
+    // TODO(kjharland): Unmarshal other sections.
+    return read_count;
+}
+
+int unmarshal_header(const void* buf,
+                     mdns_header* container) {
+    memcpy(container, buf, MDNS_HEADER_SIZE);
+    return MDNS_HEADER_SIZE;
+}

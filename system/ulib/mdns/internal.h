@@ -35,6 +35,34 @@ int mdns_add_rr(mdns_rr** rrsptr,
                 uint16_t rdlength,
                 uint32_t ttl);
 
+// Reads an mdns_message header.
+//
+// The header is a 12 byte chunk whose layout is as follows:
+//
+//   0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                      ID                       |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                     Flags                     |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                 Question Count                |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                  Answer Count                 |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Authorities Count              |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+// |                Additionals Count              |
+// +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+//
+// See RFC 1035 at https://www.ietf.org/rfc/rfc1035.txt for details on the
+// specific format header flags (bytes 16-31).
+//
+// Assumes the given buffer holds at least MDNS_HEADER_SIZE bytes.
+//
+// Always returns MDNS_HEADER_SIZE as the number of bytes read from buf, to be
+// consistent with the style of other unmarshal* functions.
+int unmarshal_header(const void* buf, mdns_header* container);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

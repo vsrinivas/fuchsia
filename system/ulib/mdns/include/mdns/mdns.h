@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 
 /**
  * This is a library that implements a subset of mDNS (RFC 6762) to support the
@@ -142,6 +143,21 @@ typedef struct mdns_message_t {
     mdns_rr* authorities;
     mdns_rr* additionals;
 } mdns_message;
+
+// Reads an mdns_message.
+//
+// buf_len is the number of bytes in buf. Data is unmarshalled into the given
+// mdns_message container which is zeroed before writing via mdns_init_message.
+// The message is zeroed even if unmarshalling fails.
+//
+// If buf_len is less than MDNS_HEADER_SIZE or the complete message is longer
+// than buf_len bytes (data is missing), -1 is returned and errno is set to
+// EBADMSG.
+//
+// Returns the number of bytes read from buf.
+int mdns_unmarshal(const void* buf,
+                   const size_t buf_len,
+                   mdns_message* container);
 
 // Zeroes the values contained in the given mdns_message.
 void mdns_init_message(mdns_message* message);
