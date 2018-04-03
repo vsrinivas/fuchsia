@@ -86,14 +86,8 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
                kEllipsisSize);
     }
     auto status = socket_.write(0, &packet, sizeof(packet), nullptr);
-    switch (status) {
-    case ZX_ERR_SHOULD_WAIT:
-    case ZX_ERR_PEER_CLOSED:
-    case ZX_ERR_NO_MEMORY:
-    case ZX_ERR_BAD_STATE:
-    case ZX_ERR_ACCESS_DENIED:
+    if (status != ZX_OK) {
         dropped_logs_.fetch_add(1);
-        break;
     }
     return status;
 }
