@@ -2,13 +2,6 @@
   "description": "Schema for a build package file",
   "type": "object",
   "properties": {
-    "languages": {
-      "description": "The set of language runtimes needed by Fuchsia packages in this file",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/language"
-      }
-    },
     "imports": {
       "description": "A list of paths to other build package files to include",
       "type": "array",
@@ -40,16 +33,6 @@
   },
   "additionalProperties": false,
   "definitions": {
-    "language": {
-      "description": "A language runtime available on Fuchsia",
-      "type": "string",
-      "enum": [
-        "cpp",
-        "dart",
-        "go",
-        "rust"
-      ]
-    },
     "gnLabel": {
       "description": "An absolute GN label",
       "type": "string",
