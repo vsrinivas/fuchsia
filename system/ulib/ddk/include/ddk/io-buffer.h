@@ -22,6 +22,7 @@ __BEGIN_CDECLS;
 typedef struct {
     zx_handle_t bti_handle; // borrowed by library
     zx_handle_t vmo_handle; // owned by library
+    zx_handle_t pmt_handle; // owned by library
     size_t size;
     zx_off_t offset;
     void* virt;
@@ -90,9 +91,12 @@ zx_status_t io_buffer_cache_flush_invalidate(io_buffer_t* buffer, zx_off_t offse
 // The 'phys_list' and 'phys_count' fields are set if this function succeeds.
 zx_status_t io_buffer_physmap(io_buffer_t* buffer);
 
+// Pins and returns the physical addresses corresponding to the requested subrange
+// of the buffer.  Invoking zx_pmt_unpin() on pmt releases the pin and makes the
+// addresses invalid to use.
 zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
                                     size_t length, size_t phys_count,
-                                    zx_paddr_t* physmap);
+                                    zx_paddr_t* physmap, zx_handle_t* pmt);
 
 // Releases an io_buffer
 void io_buffer_release(io_buffer_t* buffer);

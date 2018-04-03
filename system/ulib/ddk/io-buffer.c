@@ -21,7 +21,7 @@ static bool is_allocated_contiguous(size_t size, uint32_t flags) {
 }
 
 static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t size,
-                                     zx_paddr_t* phys) {
+                                     zx_paddr_t* phys, zx_handle_t* pmt) {
     zx_info_bti_t info;
     zx_status_t status = zx_object_get_info(bti, ZX_INFO_BTI, &info, sizeof(info),
                                             NULL, NULL);
@@ -36,7 +36,8 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
     // returned list.  If it's too big, allocate on the heap.
     if (num_entries < 512) {
         zx_paddr_t addrs[512];
-        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
+        status = zx_bti_pin_new(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
+                                pmt);
         if (status == ZX_OK) {
             *phys = addrs[0];
         }
@@ -45,7 +46,8 @@ static zx_status_t pin_contig_buffer(zx_handle_t bti, zx_handle_t vmo, size_t si
         if (addrs == NULL) {
             return ZX_ERR_NO_MEMORY;
         }
-        status = zx_bti_pin(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries);
+        status = zx_bti_pin_new(bti, options, vmo, 0, ROUNDUP(size, PAGE_SIZE), addrs, num_entries,
+                                pmt);
         if (status != ZX_OK) {
             free(addrs);
             return status;
@@ -78,9 +80,10 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
     // io_buffer_phys() works.  For non-contiguous buffers, io_buffer_physmap()
     // will need to be called.
     zx_paddr_t phys = IO_BUFFER_INVALID_PHYS;
+    zx_handle_t pmt_handle = ZX_HANDLE_INVALID;
     if (flags & IO_BUFFER_CONTIG) {
         ZX_DEBUG_ASSERT(offset == 0);
-        status = pin_contig_buffer(bti_handle, vmo_handle, size, &phys);
+        status = pin_contig_buffer(bti_handle, vmo_handle, size, &phys, &pmt_handle);
         if (status != ZX_OK) {
             zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu\n", status, size);
             zx_vmar_unmap(zx_vmar_root_self(), virt, size);
@@ -91,6 +94,7 @@ static zx_status_t io_buffer_init_common(io_buffer_t* buffer, zx_handle_t bti_ha
 
     buffer->bti_handle = bti_handle;
     buffer->vmo_handle = vmo_handle;
+    buffer->pmt_handle = pmt_handle;
     buffer->size = size;
     buffer->offset = offset;
     buffer->virt = (void *)virt;
@@ -207,7 +211,8 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_pad
     }
 
     zx_paddr_t phys;
-    status = pin_contig_buffer(bti, vmo_handle, size, &phys);
+    zx_handle_t pmt;
+    status = pin_contig_buffer(bti, vmo_handle, size, &phys, &pmt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "io_buffer: init pin failed %d size: %zu\n", status, size);
         zx_vmar_unmap(zx_vmar_root_self(), virt, size);
@@ -217,6 +222,7 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_pad
 
     buffer->bti_handle = bti;
     buffer->vmo_handle = vmo_handle;
+    buffer->pmt_handle = pmt;
     buffer->size = size;
     buffer->offset = 0;
     buffer->virt = (void *)virt;
@@ -228,18 +234,20 @@ zx_status_t io_buffer_init_physical(io_buffer_t* buffer, zx_handle_t bti, zx_pad
 
 void io_buffer_release(io_buffer_t* buffer) {
     if (buffer->vmo_handle != ZX_HANDLE_INVALID) {
-        if (buffer->bti_handle != ZX_HANDLE_INVALID && buffer->phys != IO_BUFFER_INVALID_PHYS) {
-            zx_status_t status = zx_bti_unpin(buffer->bti_handle, buffer->phys);
+        if (buffer->pmt_handle != ZX_HANDLE_INVALID) {
+            zx_status_t status = zx_pmt_unpin(buffer->pmt_handle);
             ZX_DEBUG_ASSERT(status == ZX_OK);
+            buffer->pmt_handle = ZX_HANDLE_INVALID;
         }
 
         zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)buffer->virt, buffer->size);
         zx_handle_close(buffer->vmo_handle);
         buffer->vmo_handle = ZX_HANDLE_INVALID;
     }
-    if (buffer->phys_list && buffer->bti_handle != ZX_HANDLE_INVALID) {
-        zx_status_t status = zx_bti_unpin(buffer->bti_handle, buffer->phys_list[0]);
+    if (buffer->phys_list && buffer->pmt_handle != ZX_HANDLE_INVALID) {
+        zx_status_t status = zx_pmt_unpin(buffer->pmt_handle);
         ZX_DEBUG_ASSERT(status == ZX_OK);
+        buffer->pmt_handle = ZX_HANDLE_INVALID;
     }
     free(buffer->phys_list);
     buffer->phys_list = NULL;
@@ -278,6 +286,9 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
     if (buffer->size == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
+    if (buffer->pmt_handle != ZX_HANDLE_INVALID && buffer->phys == IO_BUFFER_INVALID_PHYS) {
+        return ZX_ERR_BAD_STATE;
+    }
 
     // zx_bti_pin returns whole pages, so take into account unaligned vmo
     // offset and length when calculating the amount of pages returned
@@ -291,12 +302,23 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
         zxlogf(ERROR, "io_buffer: out of memory\n");
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = io_buffer_physmap_range(buffer, page_offset, page_length,
-                                                 pages, paddrs);
 
-    if (status != ZX_OK) {
-        free(paddrs);
-        return status;
+    if (buffer->phys == IO_BUFFER_INVALID_PHYS) {
+        zx_handle_t pmt;
+        zx_status_t status = io_buffer_physmap_range(buffer, page_offset, page_length,
+                                                     pages, paddrs, &pmt);
+        if (status != ZX_OK) {
+            free(paddrs);
+            return status;
+        }
+        buffer->pmt_handle = pmt;
+    } else {
+        // If this is a contiguous io-buffer, just populate the page array
+        // ourselves.
+        for (size_t i = 0; i < pages; ++i) {
+            paddrs[i] = buffer->phys + page_offset + i * PAGE_SIZE;
+        }
+        paddrs[0] += buffer->offset & (PAGE_SIZE - 1);
     }
     buffer->phys_list = paddrs;
     buffer->phys_count = pages;
@@ -305,7 +327,7 @@ zx_status_t io_buffer_physmap(io_buffer_t* buffer) {
 
 zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
                                     size_t length, size_t phys_count,
-                                    zx_paddr_t* physmap) {
+                                    zx_paddr_t* physmap, zx_handle_t* pmt) {
     // TODO(teisenbe): We need to figure out how to integrate lifetime
     // management of this pin into the io_buffer API...
     const size_t sub_offset = offset & (PAGE_SIZE - 1);
@@ -317,8 +339,9 @@ zx_status_t io_buffer_physmap_range(io_buffer_t* buffer, zx_off_t offset,
     }
 
     uint32_t options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-    zx_status_t status = zx_bti_pin(buffer->bti_handle, options, buffer->vmo_handle,
-                                    pin_offset, pin_length, physmap, phys_count);
+    zx_status_t status = zx_bti_pin_new(buffer->bti_handle, options, buffer->vmo_handle,
+                                        pin_offset, pin_length, physmap, phys_count,
+                                        pmt);
     if (status != ZX_OK) {
         return status;
     }
