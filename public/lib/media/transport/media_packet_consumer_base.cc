@@ -284,8 +284,7 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
   if (callback_) {
-    async::PostTask(
-        async_get_default(),
+    counter_->task_runner()->PostTask(
         [callback = callback_, counter = std::move(counter_),
          label = label_]() { callback(counter->OnPacketDeparture(label)); });
   }

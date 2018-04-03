@@ -89,7 +89,7 @@ void VideoRendererImpl::GetSupportedMediaTypes(
 }
 
 void VideoRendererImpl::SetMediaType(MediaType media_type) {
-  if (media_type.details.is_video()) {
+  if (!media_type.details.is_video()) {
     FXL_LOG(ERROR) << "Invalid argument to SetMediaType call.";
     if (video_renderer_binding_.is_bound()) {
       video_renderer_binding_.Unbind();
