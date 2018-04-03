@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <hwreg/mmio.h>
 #include <region-alloc/region-alloc.h>
 #include <lib/zx/bti.h>
@@ -27,6 +28,7 @@ private:
     fbl::unique_ptr<const RegionAllocator::Region> region_;
     Gtt* gtt_;
 
+    fbl::Vector<zx::pmt> pmts_;
     uint32_t mapped_end_;
 
     friend class Gtt;
@@ -46,6 +48,7 @@ private:
     RegionAllocator region_allocator_;
     zx::vmo scratch_buffer_;
     zx::bti bti_;
+    zx::pmt scratch_buffer_pmt_;
     zx_paddr_t scratch_buffer_paddr_;
     uint64_t min_contiguity_;
 

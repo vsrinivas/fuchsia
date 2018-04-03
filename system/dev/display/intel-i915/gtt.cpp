@@ -39,7 +39,7 @@ Gtt::Gtt() :
 
 Gtt::~Gtt() {
     if (scratch_buffer_paddr_) {
-        bti_.unpin(scratch_buffer_paddr_);
+        scratch_buffer_pmt_.unpin();
     }
 }
 
@@ -77,7 +77,8 @@ zx_status_t Gtt::Init(Controller* controller) {
         return status;
     }
 
-    status = bti_.pin(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE, &scratch_buffer_paddr_, 1);
+    status = bti_.pin_new(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE,
+                          &scratch_buffer_paddr_, 1, &scratch_buffer_pmt_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to look up scratch buffer %d\n", status);
         return status;
@@ -111,6 +112,13 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
     uint32_t pte_idx = static_cast<uint32_t>(r->base() / PAGE_SIZE);
     uint32_t pte_idx_end = pte_idx + num_pages;
 
+    size_t num_pins = ROUNDUP(length, min_contiguity_) / min_contiguity_;
+    fbl::AllocChecker ac;
+    r->pmts_.reserve(num_pins, &ac);
+    if (!ac.check()) {
+        return nullptr;
+    }
+
     while (pte_idx < pte_idx_end) {
         uint64_t cur_len = (pte_idx_end - pte_idx) * PAGE_SIZE;
         if (cur_len > kEntriesPerPinTxn * min_contiguity_) {
@@ -118,14 +126,17 @@ fbl::unique_ptr<const GttRegion> Gtt::Insert(zx::vmo* buffer,
         }
 
         uint64_t actual_entries = ROUNDUP(cur_len, min_contiguity_) / min_contiguity_;
-        status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, *buffer,
-                          vmo_offset, cur_len, paddrs, actual_entries);
+        zx::pmt pmt;
+        status = bti_.pin_new(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, *buffer,
+                              vmo_offset, cur_len, paddrs, actual_entries, &pmt);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
             return nullptr;
         }
         vmo_offset += cur_len;
         r->mapped_end_ = static_cast<uint32_t>(vmo_offset);
+        r->pmts_.push_back(fbl::move(pmt), &ac);
+        ZX_DEBUG_ASSERT(ac.check()); // Shouldn't fail because of the reserve above.
 
         for (unsigned i = 0; i < actual_entries; i++) {
             for (unsigned j = 0; j < min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
@@ -166,16 +177,16 @@ GttRegion::~GttRegion() {
 
     for (unsigned i = 0; i < mapped_end_ / PAGE_SIZE; i++) {
         uint32_t pte_offset = get_pte_offset(pte_idx++);
-        if (i % (kEntriesPerPinTxn * (gtt_->min_contiguity_ / PAGE_SIZE)) == 0) {
-            uint64_t paddr = mmio_space->Read<uint64_t>(pte_offset) & ~PAGE_PRESENT;
-            if (gtt_->bti_.unpin(paddr) != ZX_OK) {
-                zxlogf(INFO, "Error unpinning gtt region\n");
-            }
-        }
         mmio_space->Write<uint64_t>(pte_offset, pte);
     }
 
     mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
+
+    for (zx::pmt& pmt : pmts_) {
+        if (pmt.unpin() != ZX_OK) {
+             zxlogf(INFO, "Error unpinning gtt region\n");
+        }
+    }
 }
 
 } // namespace i915
