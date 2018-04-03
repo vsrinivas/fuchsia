@@ -6,6 +6,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/pmt.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
@@ -24,9 +25,7 @@ class PinnedVmo {
     PinnedVmo() = default;
     ~PinnedVmo() { Unpin(); }
 
-    zx_status_t Pin(const zx::vmo& vmo,
-                    fbl::RefPtr<RefCountedBti> bti,
-                    uint32_t rights);
+    zx_status_t Pin(const zx::vmo& vmo, const zx::bti& bti, uint32_t rights);
     void Unpin();
 
     uint32_t region_count() const { return region_count_; }
@@ -37,9 +36,9 @@ class PinnedVmo {
     }
 
   private:
-    void UnpinInternal(zx_paddr_t start_addr);
+    void UnpinInternal();
 
-    fbl::RefPtr<RefCountedBti> bti_;
+    zx::pmt pmt_;
     fbl::unique_ptr<Region[]> regions_;
     uint32_t region_count_ = 0;
 };

@@ -92,7 +92,7 @@ zx_status_t IntelHDAStream::Initialize() {
     // should only need read access to buffer descriptor lists.
     constexpr uint32_t HDA_MAP_FLAGS = ZX_BTI_PERM_READ;
     ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
-    res = bdl_hda_mem_.Pin(bdl_vmo, pci_bti_, HDA_MAP_FLAGS);
+    res = bdl_hda_mem_.Pin(bdl_vmo, pci_bti_->initiator(), HDA_MAP_FLAGS);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to pin pages for stream BDL! (res %d)\n", res);
         return res;
@@ -466,7 +466,7 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
                ? ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE
                : ZX_BTI_PERM_READ;
 
-    resp.result = pinned_ring_buffer_.Pin(ring_buffer_vmo, pci_bti_, hda_rights);
+    resp.result = pinned_ring_buffer_.Pin(ring_buffer_vmo, pci_bti_->initiator(), hda_rights);
     if (resp.result != ZX_OK) {
         LOG(TRACE, "Failed to commit and pin pages for %u bytes in ring buffer VMO (res %d)\n",
                 rb_size, resp.result);

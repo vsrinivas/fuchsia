@@ -372,7 +372,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
     // never have a reason it needs to write to the command buffer, but it would
     // need its own page if we wanted to control the access at an IOMMU level.
     constexpr uint32_t HDA_MAP_FLAGS = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
-    res = cmd_buf_hda_mem_.Pin(cmd_buf_vmo, pci_bti_, HDA_MAP_FLAGS);
+    res = cmd_buf_hda_mem_.Pin(cmd_buf_vmo, pci_bti_->initiator(), HDA_MAP_FLAGS);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to pin pages for CORB/RIRB command buffers! (res %d)\n", res);
         return res;
