@@ -755,7 +755,7 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
 
     size_t hdr_len = sizeof(EthernetII);
     size_t frame_len = hdr_len + frame.body_len;
-    auto buffer = bss_->GetPowerSavingBuffer(frame_len);
+    auto buffer = GetBuffer(frame_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
     // Copy ethernet frame into buffer acquired from the BSS.

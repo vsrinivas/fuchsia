@@ -39,7 +39,6 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     void Stop() override;
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
-    fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) override;
 
     seq_t NextSeq(const MgmtFrameHeader& hdr) override;
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;

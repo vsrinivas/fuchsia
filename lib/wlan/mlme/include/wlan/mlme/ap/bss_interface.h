@@ -36,10 +36,6 @@ class BssInterface {
     // Releases the AID associated with the given client. The AID will be available afterwards and
     // can get assigned to other, newly associated clients.
     virtual zx_status_t ReleaseAid(const common::MacAddr& client) = 0;
-    // Returns a buffer which can be hold onto while a client is in power saving mode and released
-    // once the client leaves power saving mode or explicitly requests transmission of buffered
-    // frames for example by sending PS-POLL frames.
-    virtual fbl::unique_ptr<Buffer> GetPowerSavingBuffer(size_t len) = 0;
 
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr) = 0;
     virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
