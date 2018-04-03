@@ -310,7 +310,7 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
-          story_controller->AddModule({}, "", std::move(daisy), nullptr);
+          story_controller->AddModule(nullptr, "", std::move(daisy), nullptr);
           focus_provider_ptr_->Request(story_id);
         }));
     return;
@@ -389,8 +389,9 @@ void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
     story_provider_->GetController(story_id, story_controller.NewRequest());
     modular::Daisy daisy;
     fidl::Clone(add_module.daisy, &daisy);
-    story_controller->AddModule({}, module_name, std::move(daisy),
-                                fidl::MakeOptional(add_module.surface_relation));
+    story_controller->AddModule(
+        nullptr, module_name, std::move(daisy),
+        fidl::MakeOptional(add_module.surface_relation));
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }
