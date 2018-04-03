@@ -228,7 +228,7 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
         errorf("[client] couldn't convert ethernet frame: %d\n", status);
         return status;
     }
-    return client_->SendDataFrame(fbl::move(out_frame));
+    return client_->bss()->SendDataFrame(fbl::move(out_frame));
 }
 
 zx_status_t AssociatedState::HandleDeauthentication(
@@ -282,7 +282,7 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
     hdr->addr3 = client_->bss()->bssid();
     hdr->sc.set_seq(client_->bss()->NextSeq(*hdr));
 
-    zx_status_t status = client_->SendDataFrame(fbl::move(packet));
+    zx_status_t status = client_->bss()->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send null data frame as PS-POLL response: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -362,7 +362,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     auto buffer = GetBuffer(eth_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto eth_packet = fbl::unique_ptr<Packet>(new Packet(std::move(buffer), eth_len));
+    auto eth_packet = fbl::make_unique<Packet>(fbl::move(buffer), eth_len);
     // no need to clear the packet since every byte is overwritten
     eth_packet->set_peer(Packet::Peer::kEthernet);
 
@@ -372,7 +372,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     eth->ether_type = llc->protocol_id;
     std::memcpy(eth->payload, llc->payload, frame.body_len - sizeof(LlcHeader));
 
-    auto status = client_->SendEthernet(std::move(eth_packet));
+    auto status = client_->bss()->SendEthFrame(std::move(eth_packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send ethernet data: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -442,7 +442,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     auto buffer = GetBuffer(len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
-    auto packet = fbl::unique_ptr<Packet>(new Packet(fbl::move(buffer), len));
+    auto packet = fbl::make_unique<Packet>(fbl::move(buffer), len);
     packet->clear();
     packet->set_peer(Packet::Peer::kWlan);
 
@@ -462,7 +462,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     llc->protocol_id = htobe16(kEapolProtocolId);
     std::memcpy(llc->payload, req.data->data(), req.data->size());
 
-    auto status = client_->SendDataFrame(fbl::move(packet));
+    auto status = client_->bss()->SendDataFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -509,7 +509,7 @@ zx_status_t AssociatedState::SendNextBu() {
 
     // Send Data frame.
     debugps("[client] [%s] sent BU to client\n", client_->addr().ToString().c_str());
-    return client_->SendDataFrame(fbl::move(data_packet));
+    return client_->bss()->SendDataFrame(fbl::move(data_packet));
 }
 
 // RemoteClient implementation.
@@ -629,7 +629,7 @@ zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {
     // TODO(hahnr): Evolve this to support other authentication algorithms and track seq number.
     auth->auth_txn_seq_number = 2;
 
-    auto status = device_->SendWlan(fbl::move(packet));
+    auto status = bss_->SendMgmtFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -707,7 +707,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
         return status;
     }
 
-    status = device_->SendWlan(fbl::move(packet));
+    status = bss_->SendMgmtFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send auth response packet: %d\n", addr_.ToString().c_str(),
                status);
@@ -732,20 +732,12 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
     auto deauth = frame.body;
     deauth->reason_code = reason_code;
 
-    auto status = device_->SendWlan(fbl::move(packet));
+    auto status = bss_->SendMgmtFrame(fbl::move(packet));
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send dauthentication packet: %d\n",
                addr_.ToString().c_str(), status);
     }
     return status;
-}
-
-zx_status_t RemoteClient::SendEthernet(fbl::unique_ptr<Packet> packet) {
-    return device_->SendEthernet(fbl::move(packet));
-}
-
-zx_status_t RemoteClient::SendDataFrame(fbl::unique_ptr<Packet> packet) {
-    return device_->SendWlan(fbl::move(packet));
 }
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {

@@ -40,6 +40,10 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_status_t AssignAid(const common::MacAddr& client, aid_t* out_aid) override;
     zx_status_t ReleaseAid(const common::MacAddr& client) override;
 
+    zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet) override;
+    zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) override;
+    zx_status_t SendEthFrame(fbl::unique_ptr<Packet> packet) override;
+
     seq_t NextSeq(const MgmtFrameHeader& hdr) override;
     seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
     seq_t NextSeq(const DataFrameHeader& hdr) override;

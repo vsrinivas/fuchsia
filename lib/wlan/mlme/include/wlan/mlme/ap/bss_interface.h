@@ -47,6 +47,10 @@ class BssInterface {
     virtual HtCapabilities BuildHtCapabilities() const = 0;
     virtual HtOperation BuildHtOperation(const wlan_channel_t& chan) const = 0;
 
+    virtual zx_status_t SendMgmtFrame(fbl::unique_ptr<Packet> packet) = 0;
+    virtual zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) = 0;
+    virtual zx_status_t SendEthFrame(fbl::unique_ptr<Packet> packet) = 0;
+
     virtual wlan_channel_t Chan() const = 0;
 };
 

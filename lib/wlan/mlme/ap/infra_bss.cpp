@@ -227,6 +227,20 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
     return ZX_OK;
 }
 
+zx_status_t InfraBss::SendDataFrame(fbl::unique_ptr<Packet> packet) {
+    // TODO(hahnr): Buffer non-GCR-SP frames when at least one client is dozing.
+    return device_->SendWlan(fbl::move(packet));
+}
+
+zx_status_t InfraBss::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
+    // TODO(hahnr): Buffer non-GCR-SP frames when at least one client is dozing.
+    return device_->SendWlan(fbl::move(packet));
+}
+
+zx_status_t InfraBss::SendEthFrame(fbl::unique_ptr<Packet> packet) {
+    return device_->SendEthernet(fbl::move(packet));
+}
+
 const common::MacAddr& InfraBss::bssid() const {
     return bssid_;
 }

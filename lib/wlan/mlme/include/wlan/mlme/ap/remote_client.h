@@ -51,8 +51,6 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t SendAuthentication(status_code::StatusCode result);
     zx_status_t SendAssociationResponse(aid_t aid, status_code::StatusCode result);
     zx_status_t SendDeauthentication(reason_code::ReasonCode reason_code);
-    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet);
-    zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet);
 
     // Enqueues an ethernet frame which can be sent at a later point in time.
     zx_status_t EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame);
