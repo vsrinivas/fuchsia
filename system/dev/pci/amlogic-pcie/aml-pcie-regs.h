@@ -59,9 +59,14 @@
 
 #define ATU_REGION_COUNT                      (16)
 #define ATU_REGION_CTRL2_ENABLE               (1 << 31)
+#define ATU_CFG_SHIFT_MODE                    (1 << 28)
 #define ATU_PROGRAM_RETRIES                   (5)
 #define ATU_WAIT_ENABLE_TIMEOUT_US            (10000)
+#define ATU_MIN_REGION_SIZE                   (1024 * 64)       // 64 KiB
 
+#define PCIE_TLP_TYPE_MEM_RW                  (0x00)
+#define PCIE_TLP_TYPE_MEM_RD_LOCKED           (0x01)
+#define PCIE_TLP_TYPE_IO_RW                   (0x02)
 #define PCIE_TLP_TYPE_CFG0                    (0x04)
 #define PCIE_TLP_TYPE_CFG1                    (0x05)
 #define PCIE_ECAM_SIZE                        (0x1000)

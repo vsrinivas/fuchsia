@@ -136,6 +136,7 @@ static zx_status_t dw_program_outbound_atu(dw_pcie_t* pcie,
 
     // Each region can individually be marked as Enabled or Disabled.
     regs->region_ctrl2 |= ATU_REGION_CTRL2_ENABLE;
+    regs->region_ctrl2 |= ATU_CFG_SHIFT_MODE;
 
     // Wait for the enable to take effect.
     for (unsigned int i = 0; i < ATU_PROGRAM_RETRIES; ++i) {
@@ -167,7 +168,7 @@ static void configure_root_bridge(volatile uint8_t* rb_ecam) {
 
     // This bridge will also claim all transactions for any other bus IDs on
     // this bus.
-    reg->subordinate_bus = 0xff;
+    reg->subordinate_bus = 0x1;
 
     writel(bus_reg, addr);
 
@@ -340,6 +341,75 @@ static zx_status_t aml_pcie_establish_link(dw_pcie_t* pcie) {
     return ZX_OK;
 }
 
+static zx_status_t init_kernel_pci_driver(dw_pcie_t* pcie) {
+    zx_status_t st;
+
+    const size_t pci_sz = io_buffer_size(&pcie->buffers[CONFIG_WINDOW], 0);
+    const zx_paddr_t pci_base = 0xf9c00000;
+    const size_t ecam_sz = 1 * 1024 * 1024;
+    const zx_paddr_t mmio_base = pci_base + ecam_sz;
+    const size_t mmio_sz = pci_sz - ecam_sz;
+
+    // Carve out one ECAM for our downstream device.
+    if (pci_sz < ecam_sz) {
+        zxlogf(ERROR, "dw_pcie: Could not allocate memory aperture for pcie\n");
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    st = dw_program_outbound_atu(pcie, 0, PCIE_TLP_TYPE_CFG0,
+                                 (zx_paddr_t)pci_base, 0,
+                                 ATU_MIN_REGION_SIZE);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "dw_pcie: failed to program outbound atu, st = %d\n", st);
+        return st;
+    }
+
+    // The rest of the space belongs to the PCIe bars and the bus driver is free
+    // to allocate it however it pleases.
+    st = dw_program_outbound_atu(pcie, 1 << 1, PCIE_TLP_TYPE_MEM_RW,
+                                 mmio_base, mmio_base, mmio_sz);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to program outbound atu for ECAM "
+               "st = %d\n", st);
+        return st;
+    }
+
+    // Fire up the kernel PCI driver!
+    zx_pci_init_arg_t* arg;
+    const size_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]);
+    arg = calloc(1, arg_size);
+    if (!arg) {
+        zxlogf(ERROR, "aml_pcie: failed to allocate pci init arg\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    st = zx_pci_add_subtract_io_range(get_root_resource(), true, mmio_base,
+                                      mmio_sz, true);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to add pcie mmio range, st = %d\n", st);
+        goto free_and_fail;
+    }
+
+    arg->num_irqs = 0;
+    arg->addr_window_count = 1;
+    arg->addr_windows[0].is_mmio = true;
+    arg->addr_windows[0].has_ecam = true;
+    arg->addr_windows[0].base = pci_base;
+    arg->addr_windows[0].size = ecam_sz;
+    arg->addr_windows[0].bus_start = 0;
+    arg->addr_windows[0].bus_end = 0xff;
+
+    st = zx_pci_init(get_root_resource(), arg, arg_size);
+    if (st != ZX_OK) {
+        zxlogf(ERROR, "aml_pcie: failed to init pci bus driver, st = %d\n", st);
+        goto free_and_fail;
+    }
+
+free_and_fail:
+    free(arg);
+    return st;
+}
+
 static int dw_pcie_init_thrd(void* arg) {
     zx_status_t st;
     dw_pcie_t* pcie = (dw_pcie_t*)arg;
@@ -379,6 +449,8 @@ static int dw_pcie_init_thrd(void* arg) {
                st);
         goto fail;
     }
+
+    init_kernel_pci_driver(pcie);
 
     // Device added successfully, make it visible.
     device_make_visible(pcie->zxdev);

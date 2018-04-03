@@ -37,7 +37,7 @@ static const pbus_mmio_t dw_pcie_mmios[] = {
     },
     {   // config
         .base = 0xf9c00000,
-        .length = 0x100000,   // 1MiB
+        .length = 0x400000,   // 4MiB
     },
     {   // clock/plls
         .base = 0xff63c000,

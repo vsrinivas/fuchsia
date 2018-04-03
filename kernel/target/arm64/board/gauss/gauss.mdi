@@ -45,6 +45,7 @@ kernel = {
         gich-offset = 0x4000
         gicv-offset = 0x6000
         ipi-base = 5
+        msi = true
     }
     arm-psci = {
         use-smc = true
