@@ -128,12 +128,15 @@ impl Snooper {
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards");
 
-        let flags = self.buf.bytes()[0];
+        let mut flags = self.buf.bytes()[0];
         let is_recieved = (flags & 0x04) == 0x04;
+        if is_recieved {
+            flags -= 0x04;
+        }
         let hci_flag = match flags {
-            flags if (flags & 0x00) == 0x00 => Hci::Cmd,
-            flags if (flags & 0x01) == 0x01 => Hci::Event,
-            flags if (flags & 0x02) == 0x02 => Hci::Data,
+            flags if (flags == 0x00) => Hci::Cmd,
+            flags if (flags == 0x01) => Hci::Event,
+            flags if (flags == 0x02) => Hci::Data,
             _ => Hci::Cmd,
         };
 
