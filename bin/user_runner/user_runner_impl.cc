@@ -675,7 +675,7 @@ void UserRunnerImpl::DumpState(DumpStateCallback callback) {
 }
 
 void UserRunnerImpl::GetAccount(GetAccountCallback callback) {
-  callback(std::make_unique<modular_auth::Account>(*account_));
+  callback(fidl::Clone(account_));
 }
 
 void UserRunnerImpl::GetAgentProvider(
