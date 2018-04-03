@@ -150,7 +150,7 @@ uint32_t PolicyManager::QueryBasicPolicy(pol_cookie_t policy, uint32_t condition
     case ZX_POL_NEW_PORT: return GetEffectiveAction(existing.new_port);
     case ZX_POL_NEW_SOCKET: return GetEffectiveAction(existing.new_socket);
     case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
-    case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_fifo);
+    case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_timer);
     case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
     default: return ZX_POL_ACTION_DENY;
     }
