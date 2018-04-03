@@ -866,9 +866,12 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     expected = sizeof(txnid_t);
     ASSERT_EQ(ioctl_block_alloc_txn(fd, &txnid), expected, "Failed to allocate txn");
 
-    // Create a vmo which is not block aligned
+    ASSERT_TRUE(PAGE_SIZE % kBlockSize == 0);
+    ASSERT_TRUE(PAGE_SIZE >= kBlockSize);
+
+    // Create a vmo of one page.
     test_vmo_object_t obj;
-    obj.vmo_size = kBlockSize - 1;
+    obj.vmo_size = PAGE_SIZE;
     ASSERT_EQ(zx_vmo_create(obj.vmo_size, 0, &obj.vmo), ZX_OK,
               "Failed to create vmo");
     fbl::AllocChecker ac;
@@ -884,12 +887,12 @@ bool blkdev_test_fifo_bad_client_bad_vmo(void) {
     ASSERT_EQ(ioctl_block_attach_vmo(fd, &xfer_vmo, &obj.vmoid), expected,
               "Failed to attach vmo");
 
-    // Send a request to write to write a block -- even though that's larger than the VMO
+    // Send a request to write to write more than 1 page -- even though that's larger than the VMO
     block_fifo_request_t request;
     request.txnid      = txnid;
     request.vmoid      = static_cast<vmoid_t>(obj.vmoid);
     request.opcode     = BLOCKIO_WRITE;
-    request.length     = 1;
+    request.length     = PAGE_SIZE / kBlockSize + 1;
     request.vmo_offset = 0;
     request.dev_offset = 0;
     ASSERT_EQ(block_fifo_txn(client, &request, 1), ZX_ERR_OUT_OF_RANGE, "");
