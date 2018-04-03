@@ -23,7 +23,7 @@ struct block_txn_t {
     struct vring_desc* desc;
     size_t index;
     list_node_t node;
-    zx_paddr_t pin_base;
+    zx_handle_t pmt;
 };
 
 class Ring;

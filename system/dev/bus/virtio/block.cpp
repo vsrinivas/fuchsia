@@ -28,8 +28,9 @@
 namespace virtio {
 
 void BlockDevice::txn_complete(block_txn_t* txn, zx_status_t status) {
-    if (txn->pin_base != 0) {
-        bti_.unpin(txn->pin_base);
+    if (txn->pmt != ZX_HANDLE_INVALID) {
+        zx_pmt_unpin(txn->pmt);
+        txn->pmt = ZX_HANDLE_INVALID;
     }
     txn->op.completion_cb(&txn->op, status);
 }
@@ -67,7 +68,7 @@ void BlockDevice::virtio_block_query(void* ctx, block_info_t* info, size_t* bops
 void BlockDevice::virtio_block_queue(void* ctx, block_op_t* bop) {
     BlockDevice* bd = static_cast<BlockDevice*>(ctx);
     block_txn_t* txn = static_cast<block_txn_t*>((void*) bop);
-    txn->pin_base = 0;
+    txn->pmt = ZX_HANDLE_INVALID;
 
     switch(txn->op.command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
@@ -408,14 +409,13 @@ void BlockDevice::QueueReadWriteTxn(block_txn_t* txn, bool write) {
     zx_handle_t vmo = txn->op.rw.vmo;
     uint64_t pages[MAX_SCATTER];
     zx_status_t r;
-    if ((r = zx_bti_pin(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo,
-                        aligned_offset, pin_size, pages, num_pages)) != ZX_OK) {
+    if ((r = zx_bti_pin_new(bti_.get(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, vmo,
+                            aligned_offset, pin_size, pages, num_pages, &txn->pmt)) != ZX_OK) {
         TRACEF("virtio: could not pin pages\n");
         txn_complete(txn, ZX_ERR_INTERNAL);
         return;
     }
 
-    txn->pin_base = pages[0];
     pages[0] += suboffset;
 
     bool cannot_fail = false;
