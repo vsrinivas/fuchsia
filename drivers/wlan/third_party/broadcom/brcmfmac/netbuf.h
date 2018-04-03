@@ -28,6 +28,7 @@
 // - More complete initialization
 // - Implement the rest of the functions to replace all the brcmf_netbuf library calls
 // - Full renaming of "skb" to "netbuf" in the code
+// - Test the implementation
 
 struct brcmf_netbuf;
 struct brcmf_netbuf_list {

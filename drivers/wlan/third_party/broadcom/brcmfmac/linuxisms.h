@@ -187,7 +187,6 @@ LINUX_FUNCVV(eth_zero_addr)
 LINUX_FUNCII(trace_brcmf_sdpcm_hdr)
 LINUX_FUNCVV(netdev_priv)
 LINUX_FUNCVI(trace_brcmf_bcdchdr)
-LINUX_FUNCVI(dev_kfree_skb)
 LINUX_FUNCVV(wiphy_priv)
 #define USB_DEVICE(a,b) .idVendor=a, .idProduct=b
 
@@ -227,37 +226,37 @@ LINUX_FUNCVV(usb_get_intfdata)
 LINUX_FUNCVI(usb_register)
 
 
-LINUX_FUNCVI(pskb_expand_head) // Realloc if necessary
-LINUX_FUNCVV(skb_peek_tail) // skb list
-LINUX_FUNCVV(skb_peek) // skb list
-LINUX_FUNCVV(skb_queue_head) // skb list
-LINUX_FUNCVI(skb_queue_empty) // skb list
-LINUX_FUNCVV(skb_dequeue) // skb list
-LINUX_FUNCVV(__skb_dequeue) // skb list
-LINUX_FUNCVI(skb_queue_len) // skb list
-LINUX_FUNCVI(__skb_trim) // onion
-LINUX_FUNCVI(skb_cloned) // SDIO only; probably "return false"
-LINUX_FUNCVI(skb_unlink) // skb list
-LINUX_FUNCVI(skb_push) // onion
-LINUX_FUNCVU(skb_headroom) // onion
-LINUX_FUNCVI(skb_cow_head) // realloc
-LINUX_FUNCVI(skb_queue_tail) // skb list
-LINUX_FUNCVI(skb_queue_is_last) // skb list
-LINUX_FUNCVI(skb_trim) // onion
-LINUX_FUNCVI(skb_linearize) // NOP?
-LINUX_FUNCVI(__skb_queue_after) // skb list
-LINUX_FUNCVI(__skb_unlink) // skb list
-LINUX_FUNCVI(__skb_put) // onion
-LINUX_FUNCVI(__skb_queue_head_init) // skb list
-LINUX_FUNCVI(__skb_queue_tail) // skb list
-LINUX_FUNCVV(skb_dequeue_tail) // skb list
-LINUX_FUNCVV(skb_queue_prev) // skb list
-LINUX_FUNCVV(skb_header_cloned)
-LINUX_FUNCVI(__skb_insert)
-LINUX_FUNCVI(skb_orphan)
-#define skb_queue_walk_safe(a, b, c) for(({brcmf_err("Calling skb_queue_walk_safe"); \
+LINUX_FUNCVI(brcmf_netbuf_realloc_head) // Realloc if necessary
+LINUX_FUNCVV(brcmf_netbuf_list_peek_tail) // skb list
+LINUX_FUNCVV(brcmf_netbuf_list_peek_head) // skb list
+LINUX_FUNCVV(brcmf_netbuf_list_add_head) // skb list
+LINUX_FUNCVI(brcmf_netbuf_list_is_empty) // skb list
+LINUX_FUNCVV(brcmf_netbuf_list_remove_head) // skb list
+LINUX_FUNCVV(brcmf_netbuf_list_remove_head_locked) // skb list
+LINUX_FUNCVI(brcmf_netbuf_list_length) // skb list
+LINUX_FUNCVI(brcmf_netbuf_set_length_to) // May either grow or shrink.
+LINUX_FUNCVI(brcmf_netbuf_list_remove) // skb list
+LINUX_FUNCVI(brcmf_netbuf_grow_head) // onion
+//LINUX_FUNCVU(brcmf_netbuf_head_space) // Already implemented
+//LINUX_FUNCVI(skb_cow_head) // Replaced using brcmf_netbuf_realloc_head()
+LINUX_FUNCVI(brcmf_netbuf_list_add_tail) // skb list
+LINUX_FUNCVI(skb_queue_is_last) // Replaced using brcmf_netbuf_list_peek_tail()
+LINUX_FUNCVI(brcmf_netbuf_reduce_length_to) // If length is already shorter, NOP.
+LINUX_FUNCVI(skb_linearize) // Not needed / used in this driver architecture
+LINUX_FUNCVI(brcmf_netbuf_add_after_locked) // skb list
+LINUX_FUNCVI(brcmf_netbuf_list_remove_locked) // skb list
+//LINUX_FUNCVI(brcmf_netbuf_grow_tail) // Already implemented
+LINUX_FUNCVI(brcmf_netbuf_list_init_nonlocked) // skb list
+LINUX_FUNCVI(brcmf_netbuf_add_tail_locked) // skb list
+LINUX_FUNCVV(brcmf_netbuf_remove_tail) // skb list
+LINUX_FUNCVV(brcmf_netbuf_list_prev) // skb list
+// LINUX_FUNCVV(skb_header_cloned) // Not needed / used in this driver architecture
+// LINUX_FUNCVI(__skb_insert) // Replaced by brcmf_netbuf_add_after_locked() - see fwsignal.c:1291
+// LINUX_FUNCVI(skb_orphan) // Not needed in this driver architecture
+#define brcmf_netbuf_list_for_every_safe(a, b, c)  \
+    for(({brcmf_err("Calling brcmf_netbuf_list_for_every_safe"); \
                                         (void)c;}), b=(a)->next;true;)
-#define skb_queue_walk(a, b) for(({brcmf_err("Calling skb_queue_walk"); \
+#define brcmf_netbuf_list_for_every(a, b) for(({brcmf_err("Calling brcmf_netbuf_list_for_every"); \
                                     b=(a)->next;});true;)
 
 LINUX_FUNCVI(netdev_mc_count) // In core.c

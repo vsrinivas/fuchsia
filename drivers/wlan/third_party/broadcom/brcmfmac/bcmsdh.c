@@ -373,10 +373,10 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
 
     target_list = pktlist;
     /* for host with broken sg support, prepare a page aligned list */
-    __skb_queue_head_init(&local_list);
+    brcmf_netbuf_list_init_nonlocked(&local_list);
     if (!write && sdiodev->settings->bus.sdio.broken_sg_support) {
         req_sz = 0;
-        skb_queue_walk(pktlist, pkt_next) req_sz += pkt_next->len;
+        brcmf_netbuf_list_for_every(pktlist, pkt_next) req_sz += pkt_next->len;
         req_sz = ALIGN(req_sz, func->cur_blksize);
         while (req_sz > PAGE_SIZE) {
             pkt_next = brcmu_pkt_buf_get_skb(PAGE_SIZE);
@@ -384,7 +384,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
                 ret = ZX_ERR_NO_MEMORY;
                 goto exit;
             }
-            __skb_queue_tail(&local_list, pkt_next);
+            brcmf_netbuf_add_tail_locked(&local_list, pkt_next);
             req_sz -= PAGE_SIZE;
         }
         pkt_next = brcmu_pkt_buf_get_skb(req_sz);
@@ -392,7 +392,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
             ret = ZX_ERR_NO_MEMORY;
             goto exit;
         }
-        __skb_queue_tail(&local_list, pkt_next);
+        brcmf_netbuf_add_tail_locked(&local_list, pkt_next);
         target_list = &local_list;
     }
 
@@ -484,7 +484,7 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
     if (!write && sdiodev->settings->bus.sdio.broken_sg_support) {
         local_pkt_next = local_list.next;
         orig_offset = 0;
-        skb_queue_walk(pktlist, pkt_next) {
+        brcmf_netbuf_list_for_every(pktlist, pkt_next) {
             dst_offset = 0;
             do {
                 req_sz = local_pkt_next->len - orig_offset;
@@ -501,13 +501,13 @@ static zx_status_t brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev* sdiodev, struct 
                 if (dst_offset == pkt_next->len) {
                     break;
                 }
-            } while (!skb_queue_empty(&local_list));
+            } while (!brcmf_netbuf_list_is_empty(&local_list));
         }
     }
 
 exit:
     sg_init_table(sdiodev->sgtable.sgl, sdiodev->sgtable.orig_nents);
-    while ((pkt_next = __skb_dequeue(&local_list)) != NULL) {
+    while ((pkt_next = brcmf_netbuf_list_remove_head_locked(&local_list)) != NULL) {
         brcmu_pkt_buf_free_skb(pkt_next);
     }
 
@@ -582,7 +582,7 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
             goto done;
         }
 
-        skb_queue_walk(pktq, skb) {
+        brcmf_netbuf_list_for_every(pktq, skb) {
             memcpy(skb->data, glom_skb->data, skb->len);
             brcmf_netbuf_shrink_head(glom_skb, skb->len);
         }
@@ -642,7 +642,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     addr |= SBSDIO_SB_ACCESS_2_4B_FLAG;
 
     if (pktq->qlen == 1 || !sdiodev->sg_support) {
-        skb_queue_walk(pktq, skb) {
+        brcmf_netbuf_list_for_every(pktq, skb) {
             err = brcmf_sdiod_skbuff_write(sdiodev, sdiodev->func2, addr, skb);
             if (err != ZX_OK) {
                 break;
@@ -710,7 +710,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
         if (!write) {
             memcpy(data, pkt->data, dsize);
         }
-        skb_trim(pkt, 0);
+        brcmf_netbuf_reduce_length_to(pkt, 0);
 
         /* Adjust for next transfer (if any) */
         size -= dsize;

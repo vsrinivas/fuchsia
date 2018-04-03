@@ -103,15 +103,15 @@ static inline bool pktq_pfull(struct pktq* pq, int prec) {
 }
 
 static inline bool pktq_pempty(struct pktq* pq, int prec) {
-    return skb_queue_empty(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_is_empty(&pq->q[prec].skblist);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek(struct pktq* pq, int prec) {
-    return skb_peek(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_head(&pq->q[prec].skblist);
 }
 
 static inline struct brcmf_netbuf* pktq_ppeek_tail(struct pktq* pq, int prec) {
-    return skb_peek_tail(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_tail(&pq->q[prec].skblist);
 }
 
 struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_netbuf* p);

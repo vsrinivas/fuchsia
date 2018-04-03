@@ -256,12 +256,12 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct brcmf_netbuf* skb, struct net_
     }
 
     /* Make sure there's enough writeable headroom */
-    if (skb_headroom(skb) < drvr->hdrlen || skb_header_cloned(skb)) {
-        head_delta = max((int)(drvr->hdrlen - skb_headroom(skb)), 0);
+    if (brcmf_netbuf_head_space(skb) < drvr->hdrlen) {
+        head_delta = max((int)(drvr->hdrlen - brcmf_netbuf_head_space(skb)), 0);
 
         brcmf_dbg(INFO, "%s: insufficient headroom (%d)\n", brcmf_ifname(ifp), head_delta);
         atomic_fetch_add(&drvr->bus_if->stats.pktcowed, 1);
-        ret = pskb_expand_head(skb, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
+        ret = brcmf_netbuf_realloc_head(skb, ALIGN(head_delta, NET_SKB_PAD), 0, GFP_ATOMIC);
         if (ret != ZX_OK) {
             brcmf_err("%s: failed to expand headroom\n", brcmf_ifname(ifp));
             atomic_fetch_add(&drvr->bus_if->stats.pktcow_failed, 1);

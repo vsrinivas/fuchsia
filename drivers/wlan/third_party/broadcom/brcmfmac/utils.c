@@ -67,7 +67,7 @@ struct brcmf_netbuf* brcmu_pktq_penq(struct pktq* pq, int prec, struct brcmf_net
     }
 
     q = &pq->q[prec].skblist;
-    skb_queue_tail(q, p);
+    brcmf_netbuf_list_add_tail(q, p);
     pq->len++;
 
     if (pq->hi_prec < prec) {
@@ -86,7 +86,7 @@ struct brcmf_netbuf* brcmu_pktq_penq_head(struct pktq* pq, int prec, struct brcm
     }
 
     q = &pq->q[prec].skblist;
-    skb_queue_head(q, p);
+    brcmf_netbuf_list_add_head(q, p);
     pq->len++;
 
     if (pq->hi_prec < prec) {
@@ -102,7 +102,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq(struct pktq* pq, int prec) {
     struct brcmf_netbuf* p;
 
     q = &pq->q[prec].skblist;
-    p = skb_dequeue(q);
+    p = brcmf_netbuf_list_remove_head(q);
     if (p == NULL) {
         return NULL;
     }
@@ -126,9 +126,9 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_match(struct pktq* pq, int prec,
     struct brcmf_netbuf* next;
 
     q = &pq->q[prec].skblist;
-    skb_queue_walk_safe(q, p, next) {
+    brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (match_fn == NULL || match_fn(p, arg)) {
-            skb_unlink(p, q);
+            brcmf_netbuf_list_remove(p, q);
             pq->len--;
             return p;
         }
@@ -142,7 +142,7 @@ struct brcmf_netbuf* brcmu_pktq_pdeq_tail(struct pktq* pq, int prec) {
     struct brcmf_netbuf* p;
 
     q = &pq->q[prec].skblist;
-    p = skb_dequeue_tail(q);
+    p = brcmf_netbuf_remove_tail(q);
     if (p == NULL) {
         return NULL;
     }
@@ -159,9 +159,9 @@ void brcmu_pktq_pflush(struct pktq* pq, int prec, bool dir, bool (*fn)(struct br
     struct brcmf_netbuf* next;
 
     q = &pq->q[prec].skblist;
-    skb_queue_walk_safe(q, p, next) {
+    brcmf_netbuf_list_for_every_safe(q, p, next) {
         if (fn == NULL || (*fn)(p, arg)) {
-            skb_unlink(p, q);
+            brcmf_netbuf_list_remove(p, q);
             brcmu_pkt_buf_free_skb(p);
             pq->len--;
         }
@@ -203,7 +203,7 @@ struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
     }
 
     for (prec = 0; prec < pq->hi_prec; prec++)
-        if (!skb_queue_empty(&pq->q[prec].skblist)) {
+        if (!brcmf_netbuf_list_is_empty(&pq->q[prec].skblist)) {
             break;
         }
 
@@ -211,7 +211,7 @@ struct brcmf_netbuf* brcmu_pktq_peek_tail(struct pktq* pq, int* prec_out) {
         *prec_out = prec;
     }
 
-    return skb_peek_tail(&pq->q[prec].skblist);
+    return brcmf_netbuf_list_peek_tail(&pq->q[prec].skblist);
 }
 EXPORT_SYMBOL(brcmu_pktq_peek_tail);
 
@@ -240,17 +240,17 @@ struct brcmf_netbuf* brcmu_pktq_mdeq(struct pktq* pq, uint prec_bmp, int* prec_o
         return NULL;
     }
 
-    while ((prec = pq->hi_prec) > 0 && skb_queue_empty(&pq->q[prec].skblist)) {
+    while ((prec = pq->hi_prec) > 0 && brcmf_netbuf_list_is_empty(&pq->q[prec].skblist)) {
         pq->hi_prec--;
     }
 
-    while ((prec_bmp & (1 << prec)) == 0 || skb_queue_empty(&pq->q[prec].skblist))
+    while ((prec_bmp & (1 << prec)) == 0 || brcmf_netbuf_list_is_empty(&pq->q[prec].skblist))
         if (prec-- == 0) {
             return NULL;
         }
 
     q = &pq->q[prec].skblist;
-    p = skb_dequeue(q);
+    p = brcmf_netbuf_list_remove_head(q);
     if (p == NULL) {
         return NULL;
     }

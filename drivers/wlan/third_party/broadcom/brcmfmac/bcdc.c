@@ -276,7 +276,7 @@ static void brcmf_proto_bcdc_hdrpush(struct brcmf_pub* drvr, int ifidx, uint8_t 
     brcmf_dbg(BCDC, "Enter\n");
 
     /* Push BDC header used to convey priority for buses that don't */
-    skb_push(pktbuf, BCDC_HEADER_LEN);
+    brcmf_netbuf_grow_head(pktbuf, BCDC_HEADER_LEN);
 
     h = (struct brcmf_proto_bcdc_header*)(pktbuf->data);
 

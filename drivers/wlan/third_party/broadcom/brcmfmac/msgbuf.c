@@ -671,7 +671,6 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf* msgbuf, uint16_t flowid) {
             brcmf_err("No SKB, but qlen %d\n", brcmf_flowring_qlen(flow, flowid));
             break;
         }
-        skb_orphan(skb);
         if (brcmf_msgbuf_alloc_pktid(msgbuf->drvr->bus_if->dev, msgbuf->tx_pktids, skb, ETH_HLEN,
                                      &physaddr, &pktid)) {
             brcmf_flowring_reinsert(flow, flowid, skb);
@@ -1018,7 +1017,7 @@ static void brcmf_msgbuf_process_event(struct brcmf_msgbuf* msgbuf, void* buf) {
         brcmf_netbuf_shrink_head(skb, msgbuf->rx_dataoffset);
     }
 
-    skb_trim(skb, buflen);
+    brcmf_netbuf_reduce_length_to(skb, buflen);
 
     ifp = brcmf_get_ifp(msgbuf->drvr, event->msg.ifidx);
     if (!ifp || !ifp->ndev) {
@@ -1060,7 +1059,7 @@ static void brcmf_msgbuf_process_rx_complete(struct brcmf_msgbuf* msgbuf, void* 
         brcmf_netbuf_shrink_head(skb, msgbuf->rx_dataoffset);
     }
 
-    skb_trim(skb, buflen);
+    brcmf_netbuf_reduce_length_to(skb, buflen);
 
     ifp = brcmf_get_ifp(msgbuf->drvr, rx_complete->msg.ifidx);
     if (!ifp || !ifp->ndev) {
@@ -1298,8 +1297,9 @@ static zx_status_t brcmf_msgbuf_stats_read(struct seq_file* seq, void* data) {
         seq_printf(seq,
                    "id %3u: rp %4u, wp %4u, qlen %4u, blocked %u\n"
                    "        ifidx %u, fifo %u, da %pM\n",
-                   i, commonring->r_ptr, commonring->w_ptr, skb_queue_len(&ring->skblist),
-                   ring->blocked, hash->ifidx, hash->fifo, hash->mac);
+                   i, commonring->r_ptr, commonring->w_ptr,
+                   brcmf_netbuf_list_length(&ring->skblist), ring->blocked, hash->ifidx,
+                   hash->fifo, hash->mac);
     }
 
     return ZX_OK;
