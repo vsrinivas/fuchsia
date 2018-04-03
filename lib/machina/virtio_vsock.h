@@ -5,8 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_VSOCK_H_
 #define GARNET_LIB_MACHINA_VIRTIO_VSOCK_H_
 
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
+#include <bitmap/rle-bitmap.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
 #include <zx/socket.h>
@@ -132,20 +131,12 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
 // A helper to allocate ephemeral ports for connections.
 class EphemeralPortAllocator {
  public:
-  zx_status_t Init() __TA_NO_THREAD_SAFETY_ANALYSIS;
   zx_status_t Alloc(uint32_t* port);
-  void Free(uint32_t port);
+  zx_status_t Free(uint32_t port);
 
  private:
-  static constexpr uint32_t kNumEphemeralPorts = 1u << 14;
-  static constexpr uint32_t kEphemeralPortBegin = 49152;
-  static_assert(kEphemeralPortBegin > kVirtioVsockHostCid &&
-                (kEphemeralPortBegin + kNumEphemeralPorts) < UINT32_MAX,
-                "Ephemeral ports must not overlap with reserved ports");
-
   fbl::Mutex mutex_;
-  bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumEphemeralPorts>> bitmap_
-      __TA_GUARDED(mutex_);
+  bitmap::RleBitmap bitmap_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace machina

@@ -6,6 +6,12 @@
 
 namespace machina {
 
+static constexpr uint32_t kNumEphemeralPorts = 1u << 14;
+static constexpr uint32_t kEphemeralPortOffset = 49152;
+static_assert(kEphemeralPortOffset > kVirtioVsockHostCid &&
+                  (kEphemeralPortOffset + kNumEphemeralPorts) < UINT32_MAX,
+              "Ephemeral ports must not overlap with reserved ports");
+
 template <VirtioVsock::StreamFunc F>
 zx_status_t VirtioVsock::Stream<F>::WaitOnQueue(VirtioVsock* vsock) {
   zx_status_t status = queue_wait_.Wait(fbl::BindMember(vsock, F));
@@ -415,26 +421,23 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
   } while (tx_queue()->NextAvail(&index) == ZX_OK);
 }
 
-zx_status_t EphemeralPortAllocator::Init() {
-  return bitmap_.Reset(kNumEphemeralPorts);
-}
-
 zx_status_t EphemeralPortAllocator::Alloc(uint32_t* port) {
   size_t value;
+  zx_status_t status;
   {
     fbl::AutoLock lock(&mutex_);
-    if (bitmap_.Scan(0, kNumEphemeralPorts, true, &value)) {
+    if (bitmap_.Get(0, kNumEphemeralPorts, &value)) {
       return ZX_ERR_NOT_FOUND;
     }
-    bitmap_.SetOne(value);
+    status = bitmap_.SetOne(value);
   }
-  *port = value + kEphemeralPortBegin;
-  return ZX_OK;
+  *port = value + kEphemeralPortOffset;
+  return status;
 }
 
-void EphemeralPortAllocator::Free(uint32_t port) {
+zx_status_t EphemeralPortAllocator::Free(uint32_t port) {
   fbl::AutoLock lock(&mutex_);
-  bitmap_.ClearOne(port - kEphemeralPortBegin);
+  return bitmap_.ClearOne(port - kEphemeralPortOffset);
 }
 
 }  // namespace machina
