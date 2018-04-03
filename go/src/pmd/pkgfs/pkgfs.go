@@ -41,7 +41,7 @@ type Filesystem struct {
 
 // New initializes a new pkgfs filesystem server
 func New(indexDir, blobDir string) (*Filesystem, error) {
-	bm, err := blobfs.New(blobDir, "")
+	bm, err := blobfs.New(blobDir)
 	if err != nil {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
 	}
@@ -60,10 +60,6 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 		fs:                   f,
 
 		dirs: map[string]fs.Directory{
-			"incoming": &inDirectory{
-				unsupportedDirectory: unsupportedDirectory("/incoming"),
-				fs:                   f,
-			},
 			"install": &installDir{
 				unsupportedDirectory: unsupportedDirectory("/install"),
 				fs:                   f,

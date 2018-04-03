@@ -134,7 +134,7 @@ func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 	}
 
 	debugLog("pkgfs:needsblob:%q open", name)
-	return &inFile{unsupportedFile: unsupportedFile("/needs/blobs/" + name), fs: d.fs, oname: name, name: name}, nil, nil, nil
+	return &installFile{fs: d.fs, name: name, isPkg: false}, nil, nil, nil
 }
 
 func (d *needsBlobsDir) Read() ([]fs.Dirent, error) {

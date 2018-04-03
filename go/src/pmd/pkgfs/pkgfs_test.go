@@ -108,46 +108,6 @@ func TestMain(m *testing.M) {
 	os.Exit(v)
 }
 
-func TestAddFile(t *testing.T) {
-
-	// TODO(raggi): randomize this blob
-	var tree merkle.Tree
-	tree.ReadFrom(strings.NewReader("foo"))
-	root := tree.Root()
-	path := filepath.Join(blobfsPath, fmt.Sprintf("%x", root))
-	os.RemoveAll(path)
-
-	info, err := os.Stat(filepath.Join(pkgfsMount, "incoming"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !info.IsDir() {
-		t.Errorf("expected directory, got %#v", info)
-	}
-
-	f, err := os.Create(filepath.Join(pkgfsMount, "incoming", "foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = f.Write([]byte("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	buf, err := ioutil.ReadFile(path)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(buf) != "foo" {
-		t.Errorf("got %q, want %q", string(buf), "foo")
-	}
-}
-
 func TestCreateNeed(t *testing.T) {
 	f, err := os.Create(filepath.Join(pkgfsMount, "needs", "mypkg.far"))
 	if err != nil {
@@ -193,21 +153,33 @@ func TestAddPackage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := os.Create(filepath.Join(pkgfsMount, "incoming", "meta.far"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	src, err := os.Open(filepath.Join(cfg.OutputDir, "meta.far"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var tree merkle.Tree
-	tee := io.TeeReader(src, f)
 
-	_, err = tree.ReadFrom(tee)
+	_, err = tree.ReadFrom(src)
 	if err != nil {
 		t.Error(err)
+	}
+	merkleroot := fmt.Sprintf("%x", tree.Root())
+	fi, err := src.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.Create(filepath.Join(pkgfsMount, "install", "pkg", merkleroot))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Truncate(fi.Size()); err != nil {
+		t.Fatal(err)
+	}
+	src.Seek(0, os.SEEK_SET)
+	if _, err := io.Copy(f, src); err != nil {
+		t.Fatal(err)
 	}
 	src.Close()
 	err = f.Close()
@@ -215,7 +187,7 @@ func TestAddPackage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = os.Stat(filepath.Join(blobfsPath, fmt.Sprintf("%x", tree.Root())))
+	_, err = os.Stat(filepath.Join(blobfsPath, merkleroot))
 	if err != nil {
 		t.Fatalf("package blob missing after package write: %s", err)
 	}
@@ -265,7 +237,7 @@ func TestAddPackage(t *testing.T) {
 		}
 
 		// write the real content into the target to fulfill the need
-		err := copyBlob(filepath.Join(pkgfsMount, "needs", "blobs", root), manifest.Paths[name])
+		err := copyBlob(filepath.Join(pkgfsMount, "install", "blob", root), manifest.Paths[name])
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -314,7 +286,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"incoming", "install", "needs", "packages", "system", "metadata"}
+	want := []string{"install", "needs", "packages", "system", "metadata"}
 	sort.Strings(names)
 	sort.Strings(want)
 
