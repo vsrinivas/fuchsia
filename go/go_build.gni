@@ -161,7 +161,7 @@ template("go_build") {
     }
   }
 
-  if (!defined(invoker.sdk_candidate) || invoker.sdk_candidate) {
+  if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
     sdk_atom("${target_name}_sdk") {
       domain = "exe"
       name = output_name
