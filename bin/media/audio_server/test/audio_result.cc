@@ -23,7 +23,12 @@ constexpr double AudioResult::kLevelToleranceOutput16;
 constexpr double AudioResult::kLevelToleranceInterp16;
 constexpr double AudioResult::kLevelToleranceMix16;
 
+// Note: our internal representation is still effectively int16_t (w/ headroom);
+// this overshadows any precision gains from ingesting / emitting data in float.
+// Until our accumulator is higher-precision, float/int16 metrics will be equal.
+constexpr double AudioResult::kLevelToleranceSourceFloat;
 constexpr double AudioResult::kLevelToleranceOutputFloat;
+constexpr double AudioResult::kLevelToleranceMixFloat;
 
 //
 // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
@@ -44,6 +49,8 @@ double AudioResult::FloorSource16 = -INFINITY;
 double AudioResult::FloorMix16 = -INFINITY;
 double AudioResult::FloorOutput16 = -INFINITY;
 
+double AudioResult::FloorSourceFloat = -INFINITY;
+double AudioResult::FloorMixFloat = -INFINITY;
 double AudioResult::FloorOutputFloat = -INFINITY;
 
 double AudioResult::FloorStereoMono = -INFINITY;
@@ -57,10 +64,13 @@ constexpr double AudioResult::kPrevFloorSource16;
 constexpr double AudioResult::kPrevFloorMix16;
 constexpr double AudioResult::kPrevFloorOutput16;
 
+constexpr double AudioResult::kPrevFloorSourceFloat;
+constexpr double AudioResult::kPrevFloorMixFloat;
 constexpr double AudioResult::kPrevFloorOutputFloat;
 
 double AudioResult::LevelMix8 = -INFINITY;
 double AudioResult::LevelMix16 = -INFINITY;
+double AudioResult::LevelMixFloat = -INFINITY;
 
 //
 // What is our received level (in dBFS), when sending sinusoids through our

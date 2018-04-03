@@ -31,13 +31,21 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
     mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
+  } else if (std::is_same<T, float>::value) {
+    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000);
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
 
-  const double amplitude = (std::is_same<T, uint8_t>::value)
-                               ? std::numeric_limits<int8_t>::max()
-                               : std::numeric_limits<int16_t>::max();
+  double amplitude;
+  if (std::is_same<T, uint8_t>::value) {
+    amplitude = std::numeric_limits<int8_t>::max();
+  } else if (std::is_same<T, float>::value) {
+    amplitude = -(static_cast<double>(std::numeric_limits<int16_t>::max()) /
+                  std::numeric_limits<int16_t>::min());
+  } else {
+    amplitude = std::numeric_limits<int16_t>::max();
+  }
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
   std::vector<T> source(kFreqTestBufSize);
@@ -87,6 +95,17 @@ TEST(NoiseFloor, Source_16) {
   EXPECT_LE(level_db, AudioResult::kLevelToleranceSource16);
 
   EXPECT_GE(AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
+}
+
+// Measure level response and noise floor for 1kHz sine from 16bit source.
+TEST(NoiseFloor, Source_Float) {
+  double level_db =
+      MeasureSourceNoiseFloor<float>(&AudioResult::FloorSourceFloat);
+
+  EXPECT_GE(level_db, -AudioResult::kLevelToleranceSourceFloat);
+  EXPECT_LE(level_db, AudioResult::kLevelToleranceSourceFloat);
+
+  EXPECT_GE(AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
 }
 
 template <typename T>
@@ -550,6 +569,10 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
     amplitude = std::numeric_limits<int8_t>::max();
+  } else if (std::is_same<T, float>::value) {
+    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000);
+    amplitude = static_cast<double>(-std::numeric_limits<int16_t>::max()) /
+                std::numeric_limits<int16_t>::min();
   } else {
     mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
     amplitude = std::numeric_limits<int16_t>::max();
@@ -616,6 +639,22 @@ TEST(DynamicRange, Mix_16) {
   // Today master gain is combined with renderer gain, making it pre-Sum. Noise
   // is summed along with signal; therefore we expect sinad of ~ 90dB.
   EXPECT_GE(AudioResult::FloorMix16, AudioResult::kPrevFloorMix16);
+}
+
+// Test our mix level and noise floor, when accumulating float sources.
+TEST(DynamicRange, Mix_Float) {
+  MeasureMixFloor<float>(&AudioResult::LevelMixFloat,
+                         &AudioResult::FloorMixFloat);
+
+  EXPECT_GE(AudioResult::LevelMixFloat, -AudioResult::kLevelToleranceMixFloat);
+  EXPECT_LE(AudioResult::LevelMixFloat, AudioResult::kLevelToleranceMixFloat);
+
+  // When summing two full-scale streams, signal should be approx +6dBFS, and
+  // noise floor should be approx -92dBFS. If architecture contains post-SUM
+  // master gain, after 50% gain we would expect sinad of ~ 98 dB. Today master
+  // gain is combined with renderer gain, making it pre-Sum. Noise is summed
+  // along with signal; therefore we expect sinad of ~ 90dB.
+  EXPECT_GE(AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat);
 }
 
 }  // namespace test

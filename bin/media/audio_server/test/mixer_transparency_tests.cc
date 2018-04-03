@@ -37,12 +37,16 @@ TEST(DataFormats, PointSampler_16) {
                                  11025, Resampler::Default));
 }
 
+// Create PointSampler objects for incoming buffers of type float
+TEST(DataFormats, PointSampler_Float) {
+  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 16000));
+}
+
 // Create PointSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, PointSampler_Other) {
   EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1,
                                  8000, Resampler::SampleAndHold));
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 16000));
 }
 
 // If the source sample rate is NOT an integer-multiple of the destination rate
@@ -67,13 +71,16 @@ TEST(DataFormats, LinearSampler_16) {
             SelectMixer(AudioSampleFormat::SIGNED_16, 8, 48000, 8, 44100));
 }
 
+// Create LinearSampler objects for incoming buffers of type float
+TEST(DataFormats, LinearSampler_Float) {
+  EXPECT_NE(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100));
+}
+
 // Create LinearSampler objects for other formats of incoming buffers
 // This is not expected to work, as these are not yet implemented
 TEST(DataFormats, LinearSampler_Other) {
   EXPECT_EQ(nullptr,
             SelectMixer(AudioSampleFormat::SIGNED_24_IN_32, 2, 8000, 1, 11025));
-  EXPECT_EQ(nullptr, SelectMixer(AudioSampleFormat::FLOAT, 2, 48000, 2, 44100,
-                                 Resampler::LinearInterpolation));
 }
 
 // Create OutputFormatter objects for outgoing buffers of type uint8
@@ -139,6 +146,30 @@ TEST(PassThru, Source_16) {
   ::memset(accum, 0, sizeof(accum));
   // Now try in 4-channel mode
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 4, 48000, 4, 48000,
+                      Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+}
+
+// Can float values flow unchanged (1-1, N-N) thru the system? With 1:1 frame
+// conversion, unity scale and no accumulation, we expect bit-equality.
+TEST(PassThru, Source_Float) {
+  float source[] = {-1.0,         0.999969482f,    -0.809783935f,
+                    0.603912353f, -0.00888061523f, 0.0f,
+                    0.296875f,    -0.357757568f};
+  int32_t accum[8];
+  int32_t expect[] = {-0x8000, 0x7FFF, -0x67A7, 0x4D4D,
+                      -0x123,  0,      0x2600,  -0x2DCB};
+
+  // Try in 1-channel mode
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
+                               Resampler::SampleAndHold);
+  DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum));
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+
+  ::memset(accum, 0, sizeof(accum));
+  // Now try in 4-channel mode
+  mixer = SelectMixer(AudioSampleFormat::FLOAT, 4, 48000, 4, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 4);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));

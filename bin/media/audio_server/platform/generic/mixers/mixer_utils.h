@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include <fbl/algorithm.h>
 #include <zircon/compiler.h>
+#include <cmath>
 #include <limits>
 #include <type_traits>
 
@@ -37,8 +39,7 @@ class SampleNormalizer<
     typename std::enable_if<std::is_same<SType, uint8_t>::value, void>::type> {
  public:
   static inline int32_t Read(const SType* src) {
-    SType tmp = *src;
-    return (static_cast<int32_t>(tmp) << 8) - 0x8000;
+    return (static_cast<int32_t>(*src) << 8) - 0x8000;
   }
 };
 
@@ -52,8 +53,28 @@ class SampleNormalizer<
   }
 };
 
-// Template used to scale a normalized sample value by the supplied amplitude
-// scaler.
+template <typename SType>
+class SampleNormalizer<
+    SType,
+    typename std::enable_if<std::is_same<SType, float>::value, void>::type> {
+ public:
+  static inline int32_t Read(const SType* src) {
+    // 1. constrain value to [-1.0, +1.0]; 2. scale to fixed-point nominal range
+    // ([-32768, +32768], see below); 3. round; 4. return the int portion.
+    //
+    // Converting audio between float and int is surprisingly controversial.
+    // (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there, others).
+    // Admittedly, our method DOES allow an incoming value of +1.0, translating
+    // it to +32768, which is EVENTUALLY clamped on output if not attenuated
+    // earlier. That said, the "practically clipping" +1.0 value is rare in WAV
+    // files; sources should easily be able to reduce their input levels.
+    SType val = fbl::clamp<SType>(*src, -1.0f, 1.0f);
+    val *= (-std::numeric_limits<int16_t>::min());
+    return static_cast<int32_t>(round(val));
+  }
+};
+
+// Template used to scale normalized sample vals by supplied amplitude scalers.
 template <ScalerType ScaleType, typename Enable = void>
 class SampleScaler;
 

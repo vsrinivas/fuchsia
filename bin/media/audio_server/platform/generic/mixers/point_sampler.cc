@@ -299,6 +299,8 @@ static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
       return SelectPSM<DChCount, uint8_t>(src_format, dst_format);
     case AudioSampleFormat::SIGNED_16:
       return SelectPSM<DChCount, int16_t>(src_format, dst_format);
+    case AudioSampleFormat::FLOAT:
+      return SelectPSM<DChCount, float>(src_format, dst_format);
     default:
       return nullptr;
   }
@@ -310,6 +312,8 @@ static inline MixerPtr SelectNxNPSM(const AudioMediaTypeDetails& src_format) {
       return MixerPtr(new NxNPointSamplerImpl<uint8_t>(src_format.channels));
     case AudioSampleFormat::SIGNED_16:
       return MixerPtr(new NxNPointSamplerImpl<int16_t>(src_format.channels));
+    case AudioSampleFormat::FLOAT:
+      return MixerPtr(new NxNPointSamplerImpl<float>(src_format.channels));
     default:
       return nullptr;
   }

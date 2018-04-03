@@ -41,8 +41,9 @@ class AudioResult {
   static constexpr double kLevelToleranceInterp16 = 0.00000080781106;
   static constexpr double kLevelToleranceMix16 = 0.00017031199;
 
+  static constexpr double kLevelToleranceSourceFloat = 0.00000099668031;
   static constexpr double kLevelToleranceOutputFloat = 0.00000068541681;
-
+  static constexpr double kLevelToleranceMixFloat = 0.00017069356;
   //
   // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
   // derived values must be within this multiplier (above or below) of target.
@@ -62,6 +63,8 @@ class AudioResult {
   static double FloorMix16;
   static double FloorOutput16;
 
+  static double FloorSourceFloat;
+  static double FloorMixFloat;
   static double FloorOutputFloat;
 
   static double FloorStereoMono;
@@ -75,10 +78,16 @@ class AudioResult {
   static constexpr double kPrevFloorMix16 = 90.677331;
   static constexpr double kPrevFloorOutput16 = 98.104753;
 
+  // Note: our internal representation is still int16_t (w/ headroom); this
+  // overshadows any precision gain from ingesting/emitting data in float.
+  // Until our accumulator is high-precision, float/int16 metrics will be equal.
+  static constexpr double kPrevFloorSourceFloat = 98.104911;
+  static constexpr double kPrevFloorMixFloat = 91.484408;
   static constexpr double kPrevFloorOutputFloat = 98.104753;
 
   static double LevelMix8;
   static double LevelMix16;
+  static double LevelMixFloat;
 
   //
   // What is our received level (in dBFS), when sending sinusoids through our
