@@ -252,22 +252,27 @@ static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
 static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     bool is_read = true;
     uint32_t cmd = 0;
+    uint32_t resp_type = 0;
 
     // Figure out which SD command we need to issue.
     switch(txn->bop.command) {
     case BLOCK_OP_READ:
         if (txn->bop.rw.length > 1) {
             cmd = SDMMC_READ_MULTIPLE_BLOCK;
+            resp_type = SDMMC_READ_MULTIPLE_BLOCK_RESP;
         } else {
             cmd = SDMMC_READ_BLOCK;
+            resp_type = SDMMC_READ_BLOCK_RESP;
         }
         is_read = true;
         break;
     case BLOCK_OP_WRITE:
         if (txn->bop.rw.length > 1) {
             cmd = SDMMC_WRITE_MULTIPLE_BLOCK;
+            resp_type = SDMMC_WRITE_MULTIPLE_BLOCK_RESP;
         } else {
             cmd = SDMMC_WRITE_BLOCK;
+            resp_type = SDMMC_WRITE_BLOCK_RESP;
         }
         is_read = false;
         break;
@@ -290,6 +295,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     sdmmc_req_t* req = &dev->req;
     memset(req, 0, sizeof(*req));
     req->cmd = cmd;
+    req->resp_type = resp_type;
     req->arg = txn->bop.rw.offset_dev;
     req->txn = txn;
     req->blockcount = txn->bop.rw.length;

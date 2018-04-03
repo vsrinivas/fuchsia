@@ -43,6 +43,7 @@
 
 #define HI32(val)   (((val) >> 32) & 0xffffffff)
 #define LO32(val)   ((val) & 0xffffffff)
+#define SDMMC_COMMAND(c) ((c) << 24)
 
 typedef struct sdhci_adma64_desc {
     union {
@@ -139,8 +140,8 @@ static bool sdmmc_cmd_rsp_busy(uint32_t cmd) {
     return resp == SDMMC_RESP_LEN_48B;
 }
 
-static bool sdmmc_cmd_has_data(uint32_t cmd) {
-    return cmd & SDMMC_RESP_DATA_PRESENT;
+static bool sdmmc_cmd_has_data(uint32_t resp_type) {
+    return resp_type & SDMMC_RESP_DATA_PRESENT;
 }
 
 static bool sdhci_supports_adma2_64bit(sdhci_device_t* dev) {
@@ -189,7 +190,7 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
 
     sdmmc_req_t* req = dev->cmd_req;
     volatile struct sdhci_regs* regs = dev->regs;
-    uint32_t cmd = req->cmd;
+    uint32_t cmd = SDMMC_COMMAND(req->cmd) | req->resp_type;
 
     // Read the response data.
     if (cmd & SDMMC_RESP_LEN_136) {
@@ -198,6 +199,11 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
             req->response[1] = (regs->resp2 << 8) | ((regs->resp1 >> 24) & 0xFF);
             req->response[2] = (regs->resp1 << 8) | ((regs->resp0 >> 24) & 0xFF);
             req->response[3] = (regs->resp0 << 8);
+        } else if (dev->quirks & SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER) {
+            req->response[0] = (regs->resp0 << 8);
+            req->response[1] = (regs->resp1 << 8) | ((regs->resp0 >> 24) & 0xFF);
+            req->response[2] = (regs->resp2 << 8) | ((regs->resp1 >> 24) & 0xFF);
+            req->response[3] = (regs->resp3 << 8) | ((regs->resp2 >> 24) & 0xFF);
         } else {
             req->response[0] = regs->resp0;
             req->response[1] = regs->resp1;
@@ -220,7 +226,7 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
 static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
     zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt\n");
 
-    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->cmd)) {
+    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->resp_type)) {
         zxlogf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!\n");
         return;
     }
@@ -244,7 +250,7 @@ static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
 static void sdhci_data_stage_write_ready_locked(sdhci_device_t* dev) {
     zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt\n");
 
-    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->cmd)) {
+    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->resp_type)) {
         zxlogf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!\n");
         return;
     }
@@ -433,8 +439,8 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
     const uint32_t arg = req->arg;
     const uint16_t blkcnt = req->blockcount;
     const uint16_t blksiz = req->blocksize;
-    uint32_t cmd = req->cmd;
-    bool has_data = sdmmc_cmd_has_data(cmd);
+    uint32_t cmd = SDMMC_COMMAND(req->cmd) | req->resp_type;
+    bool has_data = sdmmc_cmd_has_data(req->resp_type);
 
     if (req->use_dma && !sdhci_supports_adma2_64bit(dev)) {
         zxlogf(TRACE, "sdhci: host does not support DMA\n");
@@ -786,6 +792,7 @@ static zx_status_t sdhci_perform_tuning(void* ctx) {
     sdmmc_req_t req = {
         .cmd = MMC_SEND_TUNING_BLOCK,
         .arg = 0,
+        .resp_type = MMC_SEND_TUNING_BLOCK_RESP,
         .blockcount = 0,
         .blocksize = (dev->regs->ctrl0 & SDHCI_HOSTCTRL_EXT_DATA_WIDTH) ? 128 : 64,
     };

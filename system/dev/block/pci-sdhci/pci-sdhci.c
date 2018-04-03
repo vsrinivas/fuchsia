@@ -80,7 +80,7 @@ static uint32_t pci_sdhci_get_base_clock(void* ctx) {
 }
 
 static uint64_t pci_sdhci_get_quirks(void* ctx) {
-    return 0;
+    return SDHCI_QUIRK_STRIP_RESPONSE_CRC_PRESERVE_ORDER;
 }
 
 static void pci_sdhci_hw_reset(void* ctx) {

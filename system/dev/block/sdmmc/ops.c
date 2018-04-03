@@ -24,6 +24,7 @@ zx_status_t sdmmc_go_idle(sdmmc_device_t* dev) {
     sdmmc_req_t req = {
         .cmd = SDMMC_GO_IDLE_STATE,
         .arg = 0,
+        .resp_type = SDMMC_GO_IDLE_STATE_RESP,
     };
     return sdmmc_request(&dev->host, &req);
 }
@@ -32,6 +33,7 @@ zx_status_t sdmmc_send_status(sdmmc_device_t* dev, uint32_t* response) {
     sdmmc_req_t req = {
         .cmd = SDMMC_SEND_STATUS,
         .arg = RCA_ARG(dev),
+        .resp_type = SDMMC_SEND_STATUS_RESP,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if (st == ZX_OK) {
@@ -44,6 +46,7 @@ zx_status_t sdmmc_stop_transmission(sdmmc_device_t* dev) {
     sdmmc_req_t req = {
         .cmd = SDMMC_STOP_TRANSMISSION,
         .arg = 0,
+        .resp_type = SDMMC_STOP_TRANSMISSION_RESP,
     };
     return sdmmc_request(&dev->host, &req);
 }
@@ -56,6 +59,7 @@ zx_status_t sd_send_if_cond(sdmmc_device_t* dev) {
     sdmmc_req_t req = {
         .cmd = SD_SEND_IF_COND,
         .arg = arg,
+        .resp_type = SD_SEND_IF_COND_RESP,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if (st != ZX_OK) {
@@ -80,6 +84,7 @@ zx_status_t mmc_send_op_cond(sdmmc_device_t* dev, uint32_t ocr, uint32_t* rocr) 
     sdmmc_req_t req = {
         .cmd = MMC_SEND_OP_COND,
         .arg = arg,
+        .resp_type = MMC_SEND_OP_COND_RESP,
     };
     zx_status_t st;
     for (int i = 100; i; i--) {
@@ -101,6 +106,7 @@ zx_status_t mmc_all_send_cid(sdmmc_device_t* dev, uint32_t cid[4]) {
     sdmmc_req_t req = {
         .cmd = SDMMC_ALL_SEND_CID,
         .arg = 0,
+        .resp_type = SDMMC_ALL_SEND_CID_RESP,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if (st == ZX_OK) {
@@ -116,6 +122,7 @@ zx_status_t mmc_set_relative_addr(sdmmc_device_t* dev, uint16_t rca) {
     sdmmc_req_t req = {
         .cmd = MMC_SET_RELATIVE_ADDR,
         .arg = (rca << 16),
+        .resp_type = MMC_SET_RELATIVE_ADDR_RESP,
     };
     return sdmmc_request(&dev->host, &req);
 }
@@ -124,6 +131,7 @@ zx_status_t mmc_send_csd(sdmmc_device_t* dev, uint32_t csd[4]) {
     sdmmc_req_t req = {
         .cmd = SDMMC_SEND_CSD,
         .arg = RCA_ARG(dev),
+        .resp_type = SDMMC_SEND_CSD_RESP,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if (st == ZX_OK) {
@@ -144,6 +152,7 @@ zx_status_t mmc_send_ext_csd(sdmmc_device_t* dev, uint8_t ext_csd[512]) {
         .blocksize = 512,
         .use_dma = false,
         .virt = ext_csd,
+        .resp_type = MMC_SEND_EXT_CSD_RESP,
     };
     zx_status_t st = sdmmc_request(&dev->host, &req);
     if ((st == ZX_OK) && (driver_get_log_flags() & DDK_LOG_SPEW)) {
@@ -157,6 +166,7 @@ zx_status_t mmc_select_card(sdmmc_device_t* dev) {
     sdmmc_req_t req = {
         .cmd = MMC_SELECT_CARD,
         .arg = RCA_ARG(dev),
+        .resp_type = MMC_SELECT_CARD_RESP,
     };
     return sdmmc_request(&dev->host, &req);
 }
@@ -168,6 +178,7 @@ zx_status_t mmc_switch(sdmmc_device_t* dev, uint8_t index, uint8_t value) {
     sdmmc_req_t req = {
         .cmd = MMC_SWITCH,
         .arg = arg,
+        .resp_type = MMC_SWITCH_RESP,
     };
     return sdmmc_request(&dev->host, &req);
 }

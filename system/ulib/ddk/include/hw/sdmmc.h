@@ -46,48 +46,81 @@ __BEGIN_CDECLS;
 #define SDMMC_CMD_READ      (1 << 4)
 #define SDMMC_CMD_MULTI_BLK (1 << 5)
 
-#define SDMMC_COMMAND(c) ((c) << 24)
-
 // Common SD/MMC commands
-#define SDMMC_GO_IDLE_STATE           (SDMMC_COMMAND(0))
-#define SDMMC_ALL_SEND_CID            (SDMMC_COMMAND(2) | SDMMC_RESP_R2)
-#define SDMMC_SEND_CSD                (SDMMC_COMMAND(9) | SDMMC_RESP_R2)
-#define SDMMC_STOP_TRANSMISSION       (SDMMC_COMMAND(12) | SDMMC_RESP_R1b | SDMMC_CMD_TYPE_ABORT)
-#define SDMMC_SEND_STATUS             (SDMMC_COMMAND(13) | SDMMC_RESP_R1)
-#define SDMMC_READ_BLOCK              (SDMMC_COMMAND(17) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
-#define SDMMC_READ_MULTIPLE_BLOCK     (SDMMC_COMMAND(18) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ | \
-                                       SDMMC_CMD_MULTI_BLK | SDMMC_CMD_BLKCNT_EN)
-#define SDMMC_WRITE_BLOCK             (SDMMC_COMMAND(24) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT)
-#define SDMMC_WRITE_MULTIPLE_BLOCK    (SDMMC_COMMAND(25) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_MULTI_BLK | \
-                                       SDMMC_CMD_BLKCNT_EN)
-#define SDMMC_LOCK_UNLOCK             (SDMMC_COMMAND(42) | SDMMC_RESP_R1)
-#define SDMMC_APP_CMD                 (SDMMC_COMMAND(55) | SDMMC_RESP_R1)
-#define SDMMC_GEN_CMD                 (SDMMC_COMMAND(56) | SDMMC_RESP_R1 | SD_CMD_ISDATA)
+#define SDMMC_GO_IDLE_STATE_RESP           SDMMC_RESP_NONE
+#define SDMMC_ALL_SEND_CID_RESP            SDMMC_RESP_R2
+#define SDMMC_SEND_CSD_RESP                SDMMC_RESP_R2
+#define SDMMC_STOP_TRANSMISSION_RESP       SDMMC_RESP_R1b | SDMMC_CMD_TYPE_ABORT
+#define SDMMC_SEND_STATUS_RESP             SDMMC_RESP_R1
+#define SDMMC_READ_BLOCK_RESP              SDMMC_RESP_R1 | \
+                                           SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ
+#define SDMMC_READ_MULTIPLE_BLOCK_RESP     SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
+                                           SDMMC_CMD_READ | SDMMC_CMD_MULTI_BLK | \
+                                           SDMMC_CMD_BLKCNT_EN
+#define SDMMC_WRITE_BLOCK_RESP             SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT
+#define SDMMC_WRITE_MULTIPLE_BLOCK_RESP    SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
+                                           SDMMC_CMD_MULTI_BLK | SDMMC_CMD_BLKCNT_EN
+#define SDMMC_LOCK_UNLOCK_RESP             SDMMC_RESP_R1
+#define SDMMC_APP_CMD_RESP                 SDMMC_RESP_R1
+#define SDMMC_GEN_CMD_RESP                 SDMMC_RESP_R1 | SD_CMD_ISDATA
 
 // SD Commands
-#define SD_SEND_RELATIVE_ADDR         (SDMMC_COMMAND(3) | SDMMC_RESP_R6)
-#define SD_SWITCH_FUNC                (SDMMC_COMMAND(6) | SDMMC_RESP_R1)
-#define SD_SELECT_CARD                (SDMMC_COMMAND(7) | SDMMC_RESP_R1b)
-#define SD_SEND_IF_COND               (SDMMC_COMMAND(8) | SDMMC_RESP_R7)
-#define SD_VOLTAGE_SWITCH             (SDMMC_COMMAND(11) | SDMMC_RESP_R1)
-#define SD_APP_SEND_SCR               (SDMMC_COMMAND(51) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
+#define SD_SEND_RELATIVE_ADDR_RESP         SDMMC_RESP_R6
+#define SD_SWITCH_FUNC_RESP                SDMMC_RESP_R1
+#define SD_SELECT_CARD_RESP                SDMMC_RESP_R1b
+#define SD_SEND_IF_COND_RESP               SDMMC_RESP_R7
+#define SD_VOLTAGE_SWITCH_RESP             SDMMC_RESP_R1
+#define SD_APP_SEND_SCR_RESP               SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
+                                           SDMMC_CMD_READ
 // MMC Commands
-#define MMC_SEND_OP_COND              (SDMMC_COMMAND(1) | SDMMC_RESP_R3)
-#define MMC_SET_RELATIVE_ADDR         (SDMMC_COMMAND(3) | SDMMC_RESP_R1)
-#define MMC_SWITCH                    (SDMMC_COMMAND(6) | SDMMC_RESP_R1b)
-#define MMC_SELECT_CARD               (SDMMC_COMMAND(7) | SDMMC_RESP_R1)
-#define MMC_SEND_EXT_CSD              (SDMMC_COMMAND(8) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
-#define MMC_SEND_TUNING_BLOCK         (SDMMC_COMMAND(21) | SDMMC_RESP_R1 | \
-                                       SDMMC_RESP_DATA_PRESENT | SDMMC_CMD_READ)
+#define MMC_SEND_OP_COND_RESP              SDMMC_RESP_R3
+#define MMC_SET_RELATIVE_ADDR_RESP         SDMMC_RESP_R1
+#define MMC_SWITCH_RESP                    SDMMC_RESP_R1b
+#define MMC_SELECT_CARD_RESP               SDMMC_RESP_R1
+#define MMC_SEND_EXT_CSD_RESP              SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
+                                           SDMMC_CMD_READ
+#define MMC_SEND_TUNING_BLOCK_RESP         SDMMC_RESP_R1 | SDMMC_RESP_DATA_PRESENT | \
+                                           SDMMC_CMD_READ
+
+// Common SD/MMC commands
+#define SDMMC_GO_IDLE_STATE           0
+#define SDMMC_ALL_SEND_CID            2
+#define SDMMC_SEND_CSD                9
+#define SDMMC_STOP_TRANSMISSION       12
+#define SDMMC_SEND_STATUS             13
+#define SDMMC_READ_BLOCK              17
+#define SDMMC_READ_MULTIPLE_BLOCK     18
+#define SDMMC_WRITE_BLOCK             24
+#define SDMMC_WRITE_MULTIPLE_BLOCK    25
+#define SDMMC_LOCK_UNLOCK             42
+#define SDMMC_APP_CMD                 55
+#define SDMMC_GEN_CMD                 56
+
+// SD Commands
+#define SD_SEND_RELATIVE_ADDR         3
+#define SD_SWITCH_FUNC                6
+#define SD_SELECT_CARD                7
+#define SD_SEND_IF_COND               8
+#define SD_VOLTAGE_SWITCH             11
+#define SD_APP_SEND_SCR               51
+
+// MMC Commands
+#define MMC_SEND_OP_COND              1
+#define MMC_SET_RELATIVE_ADDR         3
+#define MMC_SWITCH                    6
+#define MMC_SELECT_CARD               7
+#define MMC_SEND_EXT_CSD              8
+#define MMC_SEND_TUNING_BLOCK         21
 
 // CID fields (SD/MMC)
 #define MMC_CID_SPEC_VRSN_40    3
+#define MMC_CID_PRODUCT_NAME_START    7
+#define MMC_CID_REVISION              6
+#define MMC_CID_SERIAL                2
+
+// CSD fields (SD/MMC)
+#define MMC_CSD_SPEC_VERSION          15
+#define MMC_CSD_SIZE_START            7
 
 // OCR fields (MMC)
 #define MMC_OCR_BUSY            (1 << 31)

@@ -49,6 +49,7 @@ typedef struct sdmmc_req sdmmc_req_t;
 struct sdmmc_req {
     uint32_t cmd;
     uint32_t arg;
+    uint32_t resp_type;
 
     // (optional) related txn
     sdmmc_txn_t* txn;
