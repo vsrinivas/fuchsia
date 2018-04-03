@@ -228,16 +228,27 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         goto fail;
     }
 
+    bool scratch_pad_is_contig = false;
     if (scratch_pad_bufs > 0) {
         // map scratchpad buffers read-only
-        uint32_t flags = xhci->page_size > PAGE_SIZE ?
-                            (IO_BUFFER_RO | IO_BUFFER_CONTIG) : IO_BUFFER_RO;
+        uint32_t flags = IO_BUFFER_RO;
+        if (xhci->page_size > PAGE_SIZE) {
+            flags |= IO_BUFFER_CONTIG;
+            scratch_pad_is_contig = true;
+        }
         size_t scratch_pad_pages_size = scratch_pad_bufs * xhci->page_size;
         result = io_buffer_init(&xhci->scratch_pad_pages_buffer, xhci->bti_handle,
                                 scratch_pad_pages_size, flags);
         if (result != ZX_OK) {
-            zxlogf(ERROR, "xhci_vmo_init failed for xhci->scratch_pad_pages_buffer\n");
+            zxlogf(ERROR, "io_buffer_init failed for xhci->scratch_pad_pages_buffer\n");
             goto fail;
+        }
+        if (!scratch_pad_is_contig) {
+            result = io_buffer_physmap(&xhci->scratch_pad_pages_buffer);
+            if (result != ZX_OK) {
+                zxlogf(ERROR, "io_buffer_physmap failed for xhci->scratch_pad_pages_buffer\n");
+                goto fail;
+            }
         }
         size_t scratch_pad_index_size = PAGE_ROUNDUP(scratch_pad_bufs * sizeof(uint64_t));
         result = io_buffer_init(&xhci->scratch_pad_index_buffer, xhci->bti_handle,
@@ -281,12 +292,14 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         off_t offset = 0;
         for (uint32_t i = 0; i < scratch_pad_bufs; i++) {
             zx_paddr_t scratch_pad_phys;
-            result = io_buffer_physmap_range(&xhci->scratch_pad_pages_buffer, offset, PAGE_SIZE, 1,
-                                             &scratch_pad_phys);
-            if (result != ZX_OK) {
-                zxlogf(ERROR, "io_buffer_physmap failed for xhci->scratch_pad_pages_buffer\n");
-                goto fail;
+            if (scratch_pad_is_contig) {
+                scratch_pad_phys = io_buffer_phys(&xhci->scratch_pad_pages_buffer) + offset;
+            } else {
+                size_t index = offset / PAGE_SIZE;
+                size_t suboffset = offset & (PAGE_SIZE - 1);
+                scratch_pad_phys = xhci->scratch_pad_pages_buffer.phys_list[index] + suboffset;
             }
+
             scratch_pad_index[i] = scratch_pad_phys;
             offset += xhci->page_size;
         }
