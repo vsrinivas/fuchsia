@@ -25,7 +25,6 @@ type Type struct {
 	Decl      string
 	Dtor      string
 	DeclType  types.DeclType
-	IsPointer bool
 }
 
 type Const struct {
@@ -432,7 +431,6 @@ func (c *compiler) compileType(val types.Type) Type {
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
 				r.Dtor = fmt.Sprintf("~unique_ptr")
-				r.IsPointer = true
 			} else {
 				r.Decl = t
 				r.Dtor = formatDestructor(val.Identifier)

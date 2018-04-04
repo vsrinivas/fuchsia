@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "lib/fidl/cpp/clone.h"
+#include "lib/fidl/cpp/comparison.h"
 #include "lib/fidl/cpp/encoder.h"
 #include "lib/fidl/cpp/internal/logging.h"
 #include "lib/fidl/cpp/traits.h"

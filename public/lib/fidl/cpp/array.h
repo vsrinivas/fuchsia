@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <lib/fidl/cpp/comparison.h>
+
 namespace fidl {
 
 template <typename T, size_t N>
@@ -43,7 +45,7 @@ class Array {
 template <typename T, size_t N>
 bool operator==(const Array<T, N>& lhs, const Array<T, N>& rhs) {
   for (size_t i = 0; i < N; ++i) {
-    if (lhs[i] != rhs[i]) {
+    if (!Equals(lhs[i], rhs[i])) {
       return false;
     }
   }

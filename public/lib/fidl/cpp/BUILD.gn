@@ -14,6 +14,7 @@ source_set("cpp") {
     "clone.h",
     "coding_traits.cc",
     "coding_traits.h",
+    "comparison.h",
     "decoder.cc",
     "decoder.h",
     "encoder.cc",

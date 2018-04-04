@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_VECTOR_H_
 
 #include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/comparison.h>
 #include <lib/fidl/cpp/vector_view.h>
 
 #include <utility>
@@ -137,7 +138,15 @@ inline bool operator==(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
   if (lhs.is_null() || rhs.is_null()) {
     return lhs.is_null() == rhs.is_null();
   }
-  return *lhs == *rhs;
+  if (lhs->size() != rhs->size()) {
+    return false;
+  }
+  for (size_t i = 0; i < lhs->size(); ++i) {
+    if (!Equals(lhs->at(i), rhs->at(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template <class T>

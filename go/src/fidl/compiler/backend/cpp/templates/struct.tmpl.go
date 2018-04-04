@@ -60,19 +60,9 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   {{- range $index, $member := .Members }}
-  {{- if .Type.IsPointer }}
-  if (!lhs.{{.Name}} || !rhs.{{.Name}}) {
-    if (lhs.{{.Name}} || rhs.{{.Name}}) {
-      return false;
-    }
-  } else if (*lhs.{{ .Name }} != *rhs.{{ .Name }}) {
+  if (!::fidl::Equals(lhs.{{ .Name }}, rhs.{{ .Name }})) {
     return false;
   }
-  {{- else }}
-  if (lhs.{{ .Name }} != rhs.{{ .Name }}) {
-    return false;
-  }
-  {{- end }}
   {{- end }}
   return true;
 }
