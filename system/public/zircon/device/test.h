@@ -8,7 +8,10 @@
 #include <zircon/device/ioctl-wrapper.h>
 #include <zircon/types.h>
 
-// Create a test device, only supported by /dev/misc/test
+
+#define TEST_CONTROL_DEVICE "/dev/misc/test"
+
+// Create a test device, only supported by TEST_CONTROL_DEVICE
 //   in: null-terminated string device name
 //   out: null-terminated string path to created device
 #define IOCTL_TEST_CREATE_DEVICE \

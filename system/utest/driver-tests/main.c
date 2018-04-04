@@ -18,7 +18,6 @@
 #include <unittest/unittest.h>
 
 #define DRIVER_TEST_DIR "/boot/driver/test"
-#define DEV_TEST "/dev/misc/test"
 
 static void do_one_test(int tfd, const char* drv_libname, zx_handle_t output, test_ioctl_test_report_t* report) {
     char devpath[1024];
@@ -117,9 +116,9 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    int fd = open(DEV_TEST, O_RDWR);
+    int fd = open(TEST_CONTROL_DEVICE, O_RDWR);
     if (fd < 0) {
-        printf("driver-tests: no %s device found\n", DEV_TEST);
+        printf("driver-tests: no %s device found\n", TEST_CONTROL_DEVICE);
         return -1;
     }
 

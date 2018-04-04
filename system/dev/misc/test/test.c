@@ -133,8 +133,6 @@ static zx_protocol_device_t test_device_proto = {
 };
 
 
-#define DEV_TEST "/dev/misc/test"
-
 static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inlen,
                               void* out, size_t outlen, size_t* out_actual) {
     test_root_t* root = ctx;
@@ -150,7 +148,7 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         strncpy(devname, "testdev", sizeof(devname));
     }
 
-    if (outlen < strlen(devname) + sizeof(DEV_TEST) + 1) {
+    if (outlen < strlen(devname) + sizeof(TEST_CONTROL_DEVICE) + 1) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
@@ -174,7 +172,7 @@ static zx_status_t test_ioctl(void* ctx, uint32_t op, const void* in, size_t inl
         return status;
     }
 
-    int length = snprintf(out, outlen,"%s/%s", DEV_TEST, devname) + 1;
+    int length = snprintf(out, outlen,"%s/%s", TEST_CONTROL_DEVICE, devname) + 1;
     *out_actual = length;
     return ZX_OK;
 }
@@ -190,7 +188,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NO_MEMORY;
     }
     device_add_args_t args = {
-       .version = DEVICE_ADD_ARGS_VERSION,
+        .version = DEVICE_ADD_ARGS_VERSION,
         .name = "test",
         .ctx = root,
         .ops = &test_root_proto,
