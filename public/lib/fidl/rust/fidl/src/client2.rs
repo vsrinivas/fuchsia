@@ -211,9 +211,15 @@ impl Drop for MessageResponse {
 /// that a response message has arrived.
 #[derive(Debug)]
 enum MessageInterest {
+    /// A new `MessageInterest` 
     WillPoll,
+    /// A task is waiting to receive a response, and can be awoken with `Waker`.
     Waiting(Waker),
+    /// A message has been received, and a task will poll to receive it.
     Received(MessageBuf),
+    /// A message has not been received, but the person interested in the response
+    /// no longer cares about it, so the message should be discared upon arrival.
+    Discard,
 }
 
 impl MessageInterest {
@@ -333,7 +339,12 @@ impl ClientInner {
             // Look for a message interest with the given ID.
             // If one is found, store the message so that it can be picked up later.
             let mut message_interests = self.message_interests.lock().unwrap();
-            if let Some(entry) = message_interests.get_mut(recvd_interest_id.as_raw_id()) {
+            let raw_recvd_interest_id = recvd_interest_id.as_raw_id();
+            if let Some(&MessageInterest::Discard) =
+                message_interests.get(raw_recvd_interest_id)
+            {
+                message_interests.remove(raw_recvd_interest_id);
+            } else if let Some(entry) = message_interests.get_mut(raw_recvd_interest_id) {
                 let old_entry = mem::replace(entry, MessageInterest::Received(buf));
                 self.received_messages_count.fetch_add(1, Ordering::AcqRel);
                 if let MessageInterest::Waiting(waker) = old_entry {
@@ -344,12 +355,13 @@ impl ClientInner {
         }
     }
 
-    fn deregister_msg_interest(&self, id: InterestId) {
-        if self.message_interests
-               .lock().unwrap().remove(id.as_raw_id())
-               .is_received()
-        {
+    fn deregister_msg_interest(&self, InterestId(id): InterestId) {
+        let mut lock = self.message_interests.lock().unwrap();
+        if lock[id].is_received() {
             self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
+            lock.remove(id);
+        } else {
+            lock[id] = MessageInterest::Discard;
         }
     }
 }
