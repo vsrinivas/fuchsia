@@ -136,7 +136,6 @@
       }
     },
     {
-      "disabled": true,
       "name":"remote",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --user_shell_args=--root_module=/system/test/modular_tests/remote_test_module --story_shell=dev_story_shell",
       "copy":{
@@ -146,7 +145,6 @@
       }
     },
     {
-      "disabled": true,
       "name":"story_update",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/story_update_test_user_shell --story_shell=dev_story_shell",
       "copy":{
@@ -156,12 +154,10 @@
       }
     },
     {
-      "disabled": true,
       "name":"suggestion_engine",
       "exec":"/system/test/maxwell/suggestion_engine_test"
     },
     {
-      "disabled": true,
       "name":"suggestion",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/suggestion_test_user_shell --story_shell=dev_story_shell",
       "copy":{
