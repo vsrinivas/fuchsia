@@ -45,7 +45,7 @@ typedef struct thread_record {
     thrd_t thread;
 } thread_record_t;
 
-const async_loop_config_t kAsyncLoopConfigDefault = {
+const async_loop_config_t kAsyncLoopConfigMakeDefault = {
     .make_default_for_current_thread = true
 };
 

@@ -30,10 +30,8 @@ See [async/loop.h](include/async/loop.h) for details.
 #include <lib/async/default.h>   // for async_get_default()
 
 int main(int argc, char** argv) {
-    async_loop_config config = {};
-    config.make_default_for_current_thread = true;
     async_t* async;
-    async_loop_create(&config, &async);
+    async_loop_create(&kAsyncLoopConfigMakeDefault, &async);
 
     do_stuff();
 

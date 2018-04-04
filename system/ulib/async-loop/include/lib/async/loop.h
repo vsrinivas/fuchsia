@@ -3,3 +3,5 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/loop.h>
+
+#define kAsyncLoopConfigDefault kAsyncLoopConfigMakeDefault

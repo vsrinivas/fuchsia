@@ -22,8 +22,13 @@ public:
     // Creates a message loop.
     // All operations on the message loop are thread-safe (except destroy).
     //
-    // |config| provides configuration for the message loop, may be NULL for
-    // default behavior.
+    // Note that it's ok to run the loop on a different thread from the one
+    // upon which it was created.
+    //
+    // |config| provides configuration for the message loop.  If null, the behavior
+    // is the same as that of a zero-initialized instance of async_loop_config_t.
+    //
+    // See also |kAsyncLoopConfigMakeDefault|.
     explicit Loop(const async_loop_config_t* config = nullptr);
 
     // Destroys the message loop.

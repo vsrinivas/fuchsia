@@ -37,7 +37,8 @@ typedef struct async_loop_config {
     // resposible for passing around the |async_t| explicitly or calling
     // |async_set_default()| on whatever threads need it.
     //
-    // Note that the loop can be used even without setting it as the default.
+    // Note that the loop can be used even without setting it as the current
+    // thread's default.
     bool make_default_for_current_thread;
 
     // A function to call before the dispatcher invokes each handler, or NULL if none.
@@ -55,17 +56,22 @@ typedef struct async_loop_config {
 // dispatcher for the thread upon which it was created and will
 // automatically unregister itself when destroyed (which must occur on
 // the same thread).
-extern const async_loop_config_t kAsyncLoopConfigDefault;
+extern const async_loop_config_t kAsyncLoopConfigMakeDefault;
 
 // Creates a message loop and returns its asynchronous dispatcher.
 // All operations on the message loop are thread-safe (except destroy).
 //
-// |config| provides configuration for the message loop, may be NULL for
-// default behavior.
+// Note that it's ok to run the loop on a different thread from the one
+// upon which it was created.
+//
+// |config| provides configuration for the message loop.  If null, the behavior
+// is the same as that of a zero-initialized instance of async_loop_config_t.
 //
 // Returns |ZX_OK| on success.
 // Returns |ZX_ERR_NO_MEMORY| if allocation failed.
 // May return other errors if the necessary internal handles could not be created.
+//
+// See also |kAsyncLoopConfigMakeDefault|.
 zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_t** out_async);
 
