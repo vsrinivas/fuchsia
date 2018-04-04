@@ -285,10 +285,14 @@ func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return fmt.Sprintf("const $fidl.%s()", t)
 }
 
+func libraryPrefix(library types.Identifier) string {
+	return fmt.Sprintf("lib$%s", string(library))
+}
+
 func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
 	t := fmt.Sprintf("k%s_Type", ident.Name)
 	if ident.Library != "" {
-		return fmt.Sprintf("%s.%s", ident.Library, t)
+		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library), t)
 	}
 	return t
 }
@@ -320,7 +324,7 @@ func (c *compiler) compileLowerCamelIdentifier(val types.Identifier) string {
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
 	if val.Library != "" {
-		strs = append(strs, changeIfReserved(string(val.Library)))
+		strs = append(strs, libraryPrefix(val.Library))
 	}
 	for _, v := range val.NestedDecls {
 		strs = append(strs, c.compileUpperCamelIdentifier(v))
@@ -672,7 +676,7 @@ func Compile(r types.Root) Root {
 		}
 		root.Imports = append(root.Imports, Import{
 			fmt.Sprintf("package:fuchsia.fidl.%s/%s.dart", l.Name, l.Name),
-			string(l.Name),
+			libraryPrefix(l.Name),
 		})
 	}
 
