@@ -30,7 +30,7 @@ class VirtioQueueWaiter {
 
   async_t* const async_;
   async::Wait wait_;
-  VirtioQueue* queue_;
+  VirtioQueue* const queue_;
   Callback callback_;
 };
 

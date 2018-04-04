@@ -273,7 +273,6 @@ int main(int argc, char** argv) {
 #elif __x86_64__
   status = interrupt_controller.Init(&guest);
 #endif
-
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create interrupt controller";
     return status;

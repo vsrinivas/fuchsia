@@ -5,7 +5,6 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_VSOCK_H_
 #define GARNET_LIB_MACHINA_VIRTIO_VSOCK_H_
 
-#include <bitmap/rle-bitmap.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
 #include <zx/socket.h>
@@ -35,22 +34,20 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
   // @param src_port Port that we are connecting from outside the guest.
   // @param dst_port Port that we are connecting to within the guest. The
   //     context ID of the destination is based on the device configuration.
+  // @param socket Socket to use for this connection.
   zx_status_t Connect(uint32_t src_cid,
                       uint32_t src_port,
                       uint32_t dst_port,
                       zx::socket socket);
 
-  // Listen on a port on this device. For each incoming connection from the
-  // guest we invoke the connection acceptor which returns a port and socket for
-  // the incoming connection.
+  // Listen on a port on this device. Only a single incoming connection from a
+  // guest is supported.
   //
   // @param cid Context ID we are listening for. This could be the context ID of
   //     the host, or the context ID of another guest.
   // @param port Port that we are listening for.
-  // @param acceptor Callback that is invoked each time a new connection is made
-  //     in order to allocate a new port and socket for the connection.
-  using ConnectionAcceptor = fbl::Function<zx_status_t(uint32_t*, zx::socket*)>;
-  zx_status_t Listen(uint32_t cid, uint32_t port, ConnectionAcceptor acceptor);
+  // @param socket Socket to use for this connection.
+  zx_status_t Listen(uint32_t cid, uint32_t port, zx::socket socket);
 
   VirtioQueue* rx_queue() { return queue(0); }
   VirtioQueue* tx_queue() { return queue(1); }
@@ -69,14 +66,13 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
     }
   };
   struct Connection {
+    uint16_t op;
+    uint32_t flags;
     uint32_t dst_cid;
     uint32_t dst_port;
-    ConnectionAcceptor acceptor;
     zx::socket socket;
     async::Wait rx_wait;
     async::Wait tx_wait;
-    uint16_t op;
-    uint32_t flags;
   };
   using ConnectionMap =
       std::unordered_map<Key, fbl::unique_ptr<Connection>, Hash>;
@@ -126,17 +122,6 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
   Stream<&VirtioVsock::Mux> rx_stream_;
   Stream<&VirtioVsock::Demux> tx_stream_;
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
-};
-
-// A helper to allocate ephemeral ports for connections.
-class EphemeralPortAllocator {
- public:
-  zx_status_t Alloc(uint32_t* port);
-  zx_status_t Free(uint32_t port);
-
- private:
-  fbl::Mutex mutex_;
-  bitmap::RleBitmap bitmap_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace machina

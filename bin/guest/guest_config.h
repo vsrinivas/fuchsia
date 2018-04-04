@@ -57,7 +57,7 @@ class GuestConfig {
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
   bool block_wait() const { return block_wait_; }
-  Gic gic_version() const {return gic_version_;}
+  Gic gic_version() const { return gic_version_; }
 
  private:
   friend class GuestConfigParser;
