@@ -48,6 +48,7 @@ var (
 	name         = flag.String("n", "", "Name/path used for the published file. This only applies to '-p', package files If not supplied, the relative path supplied to '-f' will be used.")
 	repoPath     = flag.String("r", "", "Path to the TUF repository directory.")
 	keySrc       = flag.String("k", fuchsiaBuildDir, "Directory containing the signing keys.")
+	verbose      = flag.Bool("v", false, "Print out more informational messages.")
 )
 
 func main() {
@@ -202,13 +203,15 @@ func publishManifest(manifestPath string, repo *publish.UpdateRepo) error {
 	}
 
 	dupes := make(map[string]string, len(blobIndex))
-	for p, m := range blobIndex {
-		fmt.Printf("File %q stored as %s\n", p, m)
-		dupes[m] = p
-	}
+	if *verbose {
+		for p, m := range blobIndex {
+			fmt.Printf("File %q stored as %s\n", p, m)
+			dupes[m] = p
+		}
 
-	fmt.Printf("Blobs\n  examined: %d\n  added: %d\n  duplicates: %d\n",
-		len(manifest), len(addedBlobs), len(manifest)-len(dupes))
+		fmt.Printf("Blobs\n  examined: %d\n  added: %d\n  duplicates: %d\n",
+			len(manifest), len(addedBlobs), len(manifest)-len(dupes))
+	}
 	return nil
 }
 

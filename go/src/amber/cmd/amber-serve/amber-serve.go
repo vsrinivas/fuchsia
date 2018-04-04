@@ -14,11 +14,14 @@ import (
 )
 
 const serverBase = "amber-files"
+const maxLen = 50
+const trailLen = 20
 
 var (
 	usage  = "usage: amber-serve -d=<directory_path>"
 	srcDir = flag.String("d", os.Getenv("FUCHSIA_BUILD_DIR"), "The path to the file repository to serve.")
 	listen = flag.String("l", ":8083", "HTTP listen address")
+	quiet  = flag.Bool("q", false, "Don't print out information about requests")
 )
 
 func main() {
@@ -40,7 +43,13 @@ func main() {
 	repoDir := filepath.Join(*srcDir, serverBase, "repository")
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("%q\n", r.RequestURI)
+		if !*quiet {
+			rStr := r.RequestURI
+			if len(rStr) > maxLen {
+				rStr = fmt.Sprintf("%s...%s", rStr[0:maxLen-trailLen-3], rStr[len(rStr)-trailLen:])
+			}
+			fmt.Printf("Serving %q\n", rStr)
+		}
 		http.ServeFile(w, r, filepath.Join(repoDir, r.URL.Path))
 	})
 
