@@ -62,6 +62,17 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(fbl::RefPtr<VmObject> vmo, ui
                                                offset, size, perms, pmt, pmt_rights);
 }
 
+void BusTransactionInitiatorDispatcher::ReleaseQuarantine() {
+    QuarantineList tmp;
+
+    // The PMT dtor will call RemovePmo, which will reacquire this BTI's lock.
+    // To avoid deadlock, drop the lock before letting the quarantined PMTs go.
+    {
+        fbl::AutoLock guard(&lock_);
+        quarantine_.swap(tmp);
+    }
+}
+
 void BusTransactionInitiatorDispatcher::on_zero_handles() {
     fbl::AutoLock guard(&lock_);
     // Prevent new pinning from happening.  The Dispatcher will stick around

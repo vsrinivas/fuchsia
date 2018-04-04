@@ -61,7 +61,8 @@ that the hardware bus transaction initiator will be allowed to use.
 
 On success, **bti_pin**() returns *ZX_OK*.  The device-physical addresses of the
 requested VMO pages will be written in *addrs*.  A handle to the created Pinned
-Memory Token is returned via *pmt*.
+Memory Token is returned via *pmt*.  When the PMT is no longer needed,
+*pmt_unpin*() should be invoked.
 
 In the event of failure, a negative error value is returned.
 

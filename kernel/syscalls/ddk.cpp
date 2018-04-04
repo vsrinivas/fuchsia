@@ -500,6 +500,19 @@ zx_status_t sys_bti_pin(zx_handle_t bti, uint32_t options, zx_handle_t vmo, uint
     return pmt->make(fbl::move(new_pmt), new_pmt_rights);
 }
 
+zx_status_t sys_bti_release_quarantine(zx_handle_t bti) {
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
+
+    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_WRITE, &bti_dispatcher);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    bti_dispatcher->ReleaseQuarantine();
+    return ZX_OK;
+}
+
 // Having a single-purpose syscall like this is a bit of an anti-pattern in our
 // syscall API, but we feel there is benefit in this over trying to extend the
 // semantics of handle closing in sys_handle_close and process death.  In

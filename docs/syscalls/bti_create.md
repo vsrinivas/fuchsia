@@ -22,11 +22,12 @@ downstream of that IOMMU.
 *options* must be 0 (reserved for future definition of creation flags).
 
 Upon success a handle for the new BTI is returned.  This handle will have rights
-**ZX_RIGHT_READ**, **ZX_RIGHT_MAP**, **ZX_RIGHT_DUPLICATE**, and **ZX_RIGHT_TRANSFER**.
+**ZX_RIGHT_READ**, **ZX_RIGHT_WRITE**, **ZX_RIGHT_MAP**, **ZX_RIGHT_INSPECT**,
+**ZX_RIGHT_DUPLICATE**, and **ZX_RIGHT_TRANSFER**.
 
 ## RETURN VALUE
 
-**bti_create**() returns ZX_OK and a handle to the new BTI
+**bti_create**() returns **ZX_OK** and a handle to the new BTI
 (via *out*) on success.  In the event of failure, a negative error value
 is returned.
 
@@ -46,4 +47,5 @@ is returned.
 ## SEE ALSO
 
 [bti_pin](bti_pin.md),
+[bti_release_quarantine](bti_release_quarantine.md)
 [pmt_unpin](pmt_unpin.md).

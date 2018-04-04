@@ -42,6 +42,11 @@ public:
     zx_status_t Pin(fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t size, uint32_t perms,
                     fbl::RefPtr<Dispatcher>* pmt, zx_rights_t* rights);
 
+    // Releases all quarantined PMTs.  The memory pins are released and the VMO
+    // references are dropped, so the underlying VMOs may be immediately destroyed, and the
+    // underlying physical memory may be reallocated.
+    void ReleaseQuarantine();
+
     void on_zero_handles() final;
 
     fbl::RefPtr<Iommu> iommu() const { return iommu_; }
