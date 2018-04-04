@@ -35,6 +35,8 @@
 #define SDMMC_LOCK(dev)   mtx_lock(&(dev)->lock);
 #define SDMMC_UNLOCK(dev) mtx_unlock(&(dev)->lock);
 
+#define BLOCK_OP(op)    ((op) & BLOCK_OP_MASK)
+
 #if WITH_STATS
 #define STAT_INC(name) do { dev->stat_##name++; } while (0)
 #define STAT_DEC(name) do { dev->stat_##name--; } while (0)
@@ -173,7 +175,7 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
     sdmmc_device_t* dev = ctx;
     sdmmc_txn_t* txn = containerof(btxn, sdmmc_txn_t, bop);
 
-    switch (btxn->command) {
+    switch (BLOCK_OP(btxn->command)) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE: {
         uint64_t max = dev->block_info.block_count;
@@ -199,7 +201,8 @@ static void sdmmc_queue(void* ctx, block_op_t* btxn) {
     SDMMC_LOCK(dev);
 
     STAT_INC(total_ops);
-    if ((btxn->command == BLOCK_OP_READ) || (btxn->command == BLOCK_OP_WRITE)) {
+    if ((BLOCK_OP(btxn->command) == BLOCK_OP_READ) ||
+        (BLOCK_OP(btxn->command) == BLOCK_OP_WRITE)) {
         STAT_ADD(total_blocks, btxn->rw.length);
     }
 
@@ -255,7 +258,7 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     uint32_t resp_type = 0;
 
     // Figure out which SD command we need to issue.
-    switch(txn->bop.command) {
+    switch (BLOCK_OP(txn->bop.command)) {
     case BLOCK_OP_READ:
         if (txn->bop.rw.length > 1) {
             cmd = SDMMC_READ_MULTIPLE_BLOCK;
@@ -281,13 +284,13 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         return;
     default:
         // should not get here
-        zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", txn->bop.command);
+        zxlogf(ERROR, "sdmmc: do_txn invalid block op %d\n", BLOCK_OP(txn->bop.command));
         ZX_DEBUG_ASSERT(true);
         block_complete(&txn->bop, ZX_ERR_INVALID_ARGS);
         return;
     }
 
-    zxlogf(TRACE, "sdmmc: do_txn blockop %d offset_vmo 0x%" PRIx64 " length 0x%x blocksize 0x%x"
+    zxlogf(TRACE, "sdmmc: do_txn blockop 0x%x offset_vmo 0x%" PRIx64 " length 0x%x blocksize 0x%x"
                   " max_transfer_size 0x%x\n",
            txn->bop.command, txn->bop.rw.offset_vmo, txn->bop.rw.length,
            dev->block_info.block_size, dev->block_info.max_transfer_size);
