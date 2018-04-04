@@ -205,11 +205,11 @@ TEST_F(MergeResolverTest, Empty) {
 
 class VerifyingMergeStrategy : public MergeStrategy {
  public:
-  VerifyingMergeStrategy(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  VerifyingMergeStrategy(async_t* async,
                          storage::CommitId head1,
                          storage::CommitId head2,
                          storage::CommitId ancestor)
-      : task_runner_(std::move(task_runner)),
+      : async_(async),
         head1_(std::move(head1)),
         head2_(std::move(head2)),
         ancestor_(std::move(ancestor)) {}
@@ -234,14 +234,15 @@ class VerifyingMergeStrategy : public MergeStrategy {
       // Fail
       EXPECT_EQ(head2_, actual_head2_id);
     }
-    task_runner_->PostTask(
-        [callback = std::move(callback)]() { callback(Status::OK); });
+    async::PostTask(
+          async_,
+          [callback = std::move(callback)]() { callback(Status::OK); });
   }
 
   void Cancel() override{};
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   const storage::CommitId head1_;
   const storage::CommitId head2_;
   const storage::CommitId ancestor_;
@@ -277,7 +278,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(message_loop_.task_runner(),
+      std::make_unique<VerifyingMergeStrategy>(message_loop_.async(),
                                                commit_5, commit_3, commit_2);
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
@@ -660,7 +661,7 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
       std::make_unique<VerifyingMergeStrategy>(
-          message_loop_.task_runner(), commit_1, commit_2,
+          message_loop_.async(), commit_1, commit_2,
           storage::kFirstPageCommitId.ToString());
   resolver.SetMergeStrategy(std::move(strategy));
   resolver.set_on_empty(MakeQuitTask());
