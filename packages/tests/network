@@ -3,6 +3,7 @@
         "garnet/packages/prod/network"
     ],
     "packages": {
-        "mwget": "//garnet/bin/network/tests/manual/mwget"
+        "mwget": "//garnet/bin/network/tests/manual/mwget",
+        "network_service_tests": "//garnet/bin/network:network_service_tests"
     }
 }

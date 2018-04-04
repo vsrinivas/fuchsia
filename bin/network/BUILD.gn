@@ -16,15 +16,12 @@ source_set("errors") {
   ]
 }
 
-executable("bin") {
+source_set("lib") {
   # if you don't need HTTPS, comment out NETWORK_SERVICE_USE_HTTPS in |defines| below.
   defines = [ "NETWORK_SERVICE_USE_HTTPS" ]
 
-  output_name = "network"
-
   sources = [
     "http_client.h",
-    "main.cc",
     "net_adapters.cc",
     "net_adapters.h",
     "network_service_delegate.cc",
@@ -38,16 +35,33 @@ executable("bin") {
   ]
 
   deps = [
-    ":errors",
-    "//garnet/public/lib/app/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/netstack/fidl",
     "//garnet/public/lib/network/fidl",
     "//garnet/public/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
     "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    ":errors",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("bin") {
+  output_name = "network"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
   ]
 }
 
@@ -58,8 +72,40 @@ package("network") {
 
   binary = "network"
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+}
+
+executable("network_service_tests_bin") {
+  testonly = true
+
+  sources = [
+    "upload_element_reader_unittest.cc",
+  ]
+
+  output_name = "network_service_tests"
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
+  ]
+}
+
+package("network_service_tests") {
+  testonly = true
+  system_image = true
+
+  deps = [
+    ":network_service_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "network_service_tests"
+    },
+  ]
 }
