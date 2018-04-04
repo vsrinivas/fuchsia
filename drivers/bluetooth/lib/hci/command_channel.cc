@@ -160,20 +160,27 @@ void CommandChannel::ShutDown() {
 
   FXL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
-  auto handler_cleanup_task = [this] {
-    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-    FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
-    zx_status_t status = channel_wait_.Cancel(async_get_default());
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
-                       << zx_status_get_string(status);
-    }
-  };
+  common::RunTaskSync([this] { ShutDownInternal(); }, io_task_runner_);
+  io_task_runner_ = nullptr;
+}
 
-  common::RunTaskSync(handler_cleanup_task, io_task_runner_);
+void CommandChannel::ShutDownInternal() {
+  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
+  FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
+
+  // Prevent new command packets from being queued.
   is_initialized_ = false;
 
+  // Stop listening for HCI events.
+  zx_status_t status = channel_wait_.Cancel(async_get_default());
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
+                     << zx_status_get_string(status);
+  }
+
+  // Drop all queued commands and event handlers. Pending HCI commands will be
+  // resolved with an "UnspecifiedError" error code upon destruction.
   {
     std::lock_guard<std::mutex> lock(send_queue_mutex_);
     send_queue_ = std::list<QueuedCommand>();
@@ -186,7 +193,6 @@ void CommandChannel::ShutDown() {
     pending_transactions_.clear();
     expiring_event_handler_ids_.clear();
   }
-  io_task_runner_ = nullptr;
 }
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
@@ -360,7 +366,7 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
       [this, id = cmd.data->id()]() {
         FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
                        << " timed out, shutting down.";
-        ShutDown();
+        ShutDownInternal();
         // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
       },
       zx::msec(command_timeout_ms_));

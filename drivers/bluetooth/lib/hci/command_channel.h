@@ -249,6 +249,9 @@ class CommandChannel final {
     fxl::RefPtr<fxl::TaskRunner> task_runner;
   };
 
+  void ShutDownInternal()
+      __TA_EXCLUDES(send_queue_mutex_, event_handler_mutex_);
+
   // Removes internal event handler structures for |id|.
   void RemoveEventHandlerInternal(EventHandlerId id)
       __TA_REQUIRES(event_handler_mutex_);

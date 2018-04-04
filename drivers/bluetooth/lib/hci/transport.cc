@@ -105,17 +105,22 @@ void Transport::ShutDown() {
 
   FXL_LOG(INFO) << "hci: Transport: shutting down";
 
-  if (acl_data_channel_)
+  if (acl_data_channel_) {
     acl_data_channel_->ShutDown();
-  if (command_channel_)
+  }
+  if (command_channel_) {
     command_channel_->ShutDown();
+  }
 
   bool owns_thread = io_thread_.joinable();
   io_task_runner_->PostTask([this, owns_thread] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
+
     const auto async = async_get_default();
     cmd_channel_wait_.Cancel(async);
-    acl_channel_wait_.Cancel(async);
+    if (acl_data_channel_) {
+      acl_channel_wait_.Cancel(async);
+    }
 
     // If own the IO thread, end it's message loop.
     if (owns_thread)
