@@ -41,6 +41,7 @@ public:
     Type type()           const { return type_; }
     uint managed_bus_id() const { return managed_bus_id_; }
 
+    virtual RegionAllocator& pf_mmio_regions() = 0;
     virtual RegionAllocator& mmio_lo_regions() = 0;
     virtual RegionAllocator& mmio_hi_regions() = 0;
     virtual RegionAllocator& pio_regions() = 0;

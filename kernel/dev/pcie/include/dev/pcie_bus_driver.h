@@ -159,6 +159,7 @@ public:
     const RegionAllocator::RegionPool::RefPtr& region_bookkeeping() const {
         return region_bookkeeping_;
     }
+    RegionAllocator& pf_mmio_regions() { return pf_mmio_regions_; }
     RegionAllocator& mmio_lo_regions() { return mmio_lo_regions_; }
     RegionAllocator& mmio_hi_regions() { return mmio_hi_regions_; }
     RegionAllocator& pio_regions()     { return pio_regions_; }
@@ -248,6 +249,7 @@ private:
 
     bool                                is_mmio_ = true;
     RegionAllocator::RegionPool::RefPtr region_bookkeeping_;
+    RegionAllocator                     pf_mmio_regions_;
     RegionAllocator                     mmio_lo_regions_;
     RegionAllocator                     mmio_hi_regions_;
     RegionAllocator                     pio_regions_;

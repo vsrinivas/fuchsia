@@ -27,6 +27,7 @@ public:
 
     // Properties
     PcieBusDriver& driver() { return bus_drv_; }
+    RegionAllocator& pf_mmio_regions() final { return bus_drv_.pf_mmio_regions(); }
     RegionAllocator& mmio_lo_regions() final { return bus_drv_.mmio_lo_regions(); }
     RegionAllocator& mmio_hi_regions() final { return bus_drv_.mmio_hi_regions(); }
     RegionAllocator& pio_regions()     final { return bus_drv_.pio_regions(); }

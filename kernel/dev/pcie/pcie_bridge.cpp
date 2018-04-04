@@ -32,6 +32,7 @@ PcieBridge::PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint fu
       PcieUpstreamNode(bus_drv, PcieUpstreamNode::Type::BRIDGE, mbus_id) {
     /* Assign the driver-wide region pool to this bridge's allocators. */
     DEBUG_ASSERT(driver().region_bookkeeping() != nullptr);
+    pf_mmio_regions_.SetRegionPool(driver().region_bookkeeping());
     mmio_lo_regions_.SetRegionPool(driver().region_bookkeeping());
     mmio_hi_regions_.SetRegionPool(driver().region_bookkeeping());
     pio_regions_.SetRegionPool(driver().region_bookkeeping());
@@ -229,10 +230,6 @@ zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
         pio_regions().AddRegion(*pio_window_);
     }
 
-    // TODO(johngro) : Figure out what we are supposed to do with prefetchable
-    // MMIO windows and allocations behind bridges above 4GB.  See ZX-321 for
-    // details.
-    //
     if (mem_base_ <= mem_limit_) {
         uint64_t size = mem_limit_ - mem_base_ + 1;
         ret = upstream->mmio_lo_regions().GetRegion({ .base = mem_base_, .size = size },
@@ -246,6 +243,35 @@ zx_status_t PcieBridge::AllocateBridgeWindowsLocked() {
 
         DEBUG_ASSERT(mmio_window_ != nullptr);
         mmio_lo_regions().AddRegion(*mmio_window_);
+    }
+
+    if (pf_mem_base_ <= pf_mem_limit_) {
+        uint64_t size = pf_mem_limit_ - pf_mem_base_ + 1;
+
+        // Attempt to allocate out of the upstream's prefetchable region.
+        ret = upstream->pf_mmio_regions().GetRegion({ .base = pf_mem_base_, .size = size },
+                                                    pf_mmio_window_);
+        if (ret != ZX_OK) {
+            // We failed. If it's the root bridge try to allocate from its MMIO regions.
+            if (upstream->type() == PcieUpstreamNode::Type::ROOT) {
+                ret = upstream->mmio_lo_regions().GetRegion({ .base = pf_mem_base_, .size = size },
+                                                            pf_mmio_window_);
+                if (ret != ZX_OK) {
+                    ret = upstream->mmio_hi_regions().GetRegion({ .base = pf_mem_base_, .size = size },
+                                                                pf_mmio_window_);
+                }
+            }
+        }
+
+        if (ret != ZX_OK) {
+            TRACEF("Failed to allocate bridge prefetcable MMIO window "
+                   "[%#" PRIx64 ", %#" PRIx64 "]\n",
+                    pf_mem_base_, pf_mem_limit_);
+            return ret;
+        }
+
+        DEBUG_ASSERT(pf_mmio_window_ != nullptr);
+        pf_mmio_regions().AddRegion(*pf_mmio_window_);
     }
 
     return ZX_OK;

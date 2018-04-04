@@ -540,7 +540,9 @@ zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
      * it, if possible. */
     if (info.bus_addr != 0) {
         RegionAllocator* alloc = nullptr;
-        if (info.is_mmio) {
+        if (info.is_prefetchable) {
+            alloc = &upstream->pf_mmio_regions();
+        } else if (info.is_mmio) {
             /* We currently do not support preserving an MMIO region which spans
              * the 4GB mark.  If we encounter such a thing, clear out the
              * allocation and attempt to re-allocate. */
@@ -566,7 +568,7 @@ zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
         TRACEF("Failed to preserve device %02x:%02x.%01x's %s window "
                "[%#" PRIx64 ", %#" PRIx64 "] Attempting to re-allocate.\n",
                bus_id_, dev_id_, func_id_,
-               info.is_mmio ? "MMIO" : "PIO",
+               info.is_mmio ? (info.is_prefetchable ? "PFMMIO" : "MMIO") : "PIO",
                info.bus_addr, info.bus_addr + info.size - 1);
         info.bus_addr = 0;
     }
@@ -613,7 +615,7 @@ zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
 
             TRACEF("Failed to dynamically allocate %s BAR region (size %#" PRIx64 ") "
                    "while configuring BARs for device at %02x:%02x.%01x (res = %d)\n",
-                   info.is_mmio ? "MMIO" : "PIO", info.size,
+                   info.is_mmio ? (info.is_prefetchable ? "PFMMIO" : "MMIO") : "PIO", info.size,
                    bus_id_, dev_id_, func_id_, res);
 
             // Looks like we are out of luck.  Propagate the error up the stack
