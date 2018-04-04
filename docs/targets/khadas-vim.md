@@ -118,3 +118,11 @@ scripts/flash-vim [-m]
 scripts/flash-vim2 [-m]
 ```
 
+### netbooting
+
+```
+zircon: ./build-x86/tools/bootserver ./build-arm64/zircon.bin ./build-arm64/vim2-bootdata.bin
+garnet: fx set x64 --netboot; fx build; fx boot vim2
+```
+
+
