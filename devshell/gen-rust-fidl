@@ -199,6 +199,24 @@ def main():
 
     crate_names_and_paths = []
 
+    crate_name_to_direct_deps = {}
+    for crate in target_json:
+        crate_name_to_direct_deps[crate["library_name"]] = set(crate["library_deps"])
+
+    crate_name_to_transitive_deps = {}
+    for crate in target_json:
+        deps = set()
+        to_insert_deps_of = set()
+        for dep in crate_name_to_direct_deps[crate["library_name"]]:
+            deps.add(dep)
+            to_insert_deps_of.update(crate_name_to_direct_deps[dep])
+        while len(to_insert_deps_of) != 0:
+            dep = to_insert_deps_of.pop()
+            if not dep in deps:
+                deps.add(dep)
+                to_insert_deps_of.update(crate_name_to_direct_deps[dep])
+        crate_name_to_transitive_deps[crate["library_name"]] = deps
+
     for crate in target_json:
         out_dir = args.out_pub if crate["public"] else args.out_priv
         crate_names_and_paths.append(
@@ -206,7 +224,7 @@ def main():
                 out_dir,
                 crate["library_name"],
                 crate["fidl_target"],
-                crate["library_deps"]))
+                crate_name_to_transitive_deps[crate["library_name"]]))
 
     update_workspace_cargo_toml(args.workspace_toml, crate_names_and_paths)
     return 0
