@@ -4,7 +4,6 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 LOCAL_INC := $(LOCAL_DIR)/include/lib/async-loop
-LOCAL_DEPRECATED_INC := $(LOCAL_DIR)/include/lib/async
 
 #
 # libasync-loop.a: the message loop library
@@ -20,7 +19,6 @@ MODULE_SRCS = \
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := $(LOCAL_INC)/loop.h
-MODULE_PACKAGE_INCS += $(LOCAL_DEPRECATED_INC)/loop.h
 
 MODULE_STATIC_LIBS := \
     system/ulib/async
@@ -48,7 +46,6 @@ MODULE_SRCS = \
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := $(LOCAL_INC)/cpp/loop.h
-MODULE_PACKAGE_INCS += $(LOCAL_DEPRECATED_INC)/cpp/loop.h
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
