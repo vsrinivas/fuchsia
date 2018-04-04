@@ -1438,7 +1438,6 @@ void Session::HitTestDeviceRay(::gfx::vec3 ray_origin,
 
 void Session::BeginTearDown() {
   engine()->session_manager()->TearDownSession(id());
-  FXL_DCHECK(!is_valid());
 }
 
 }  // namespace gfx
