@@ -148,9 +148,8 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
                     lw.min_severity = Some(options.min_severity)
                 }
             }
-
             let mut shared_members = state.shared_members.lock();
-            for msg in &mut shared_members.log_msg_buffer {
+            for msg in &mut shared_members.log_msg_buffer.iter_mut().rev() {
                 if ListenerStatus::Fine != lw.send_log(msg) {
                     return fok(());
                 }
