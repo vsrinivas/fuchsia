@@ -13,7 +13,7 @@ source_set("timeline") {
     "timeline_rate.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
   ]
