@@ -5,70 +5,15 @@
 package index
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
 	"fuchsia.googlesource.com/pm/pkg"
 )
-
-func TestStatic(t *testing.T) {
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
-	fmt.Fprintf(f, "a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
-	f.Seek(0, os.SEEK_SET)
-
-	si := NewStatic()
-	err = si.LoadFrom(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectList := []pkg.Package{{Name: "a", Version: "0"}}
-	gotList, err := si.List()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(gotList, expectList) {
-		t.Errorf("static.List() %v != %v", gotList, expectList)
-	}
-
-	if !si.HasName("a") {
-		t.Error("static.HasName(`a`) = false, want true")
-	}
-
-	if si.HasName("b") {
-		t.Error("static.HasName(`b`) = true, want false")
-	}
-
-	getPackageCases := []struct {
-		name, version string
-		result        string
-	}{
-		{"a", "0", "331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8"},
-		{"a", "1", ""},
-		{"b", "0", ""},
-	}
-	for _, tc := range getPackageCases {
-		if got, _ := si.Get(pkg.Package{tc.name, tc.version}); got != tc.result {
-			t.Errorf("static.Get(%q, %q) = %q want %q", tc.name, tc.version, got, tc.result)
-		}
-	}
-
-	if got, want := si.ListVersions("a"), []string{"0"}; !reflect.DeepEqual(got, want) {
-		t.Errorf("static.ListVersions(`a`) = %v, want %v", got, want)
-	}
-
-}
 
 func TestList(t *testing.T) {
 	d, err := ioutil.TempDir("", t.Name())
@@ -144,17 +89,17 @@ func TestAdd(t *testing.T) {
 
 	idx := NewDynamic(d)
 
-	err = idx.Add(pkg.Package{Name: "foo", Version: "0"})
+	err = idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = idx.Add(pkg.Package{Name: "foo", Version: "1"})
+	err = idx.Add(pkg.Package{Name: "foo", Version: "1"}, "def")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = idx.Add(pkg.Package{Name: "bar", Version: "10"})
+	err = idx.Add(pkg.Package{Name: "bar", Version: "10"}, "123")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,47 +121,5 @@ func TestAdd(t *testing.T) {
 		if got, want := paths[i], wantPaths[i]; got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
-	}
-}
-
-func TestRemove(t *testing.T) {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	idx := NewDynamic(d)
-
-	packages := []string{
-		"bar/10",
-		"foo/1",
-	}
-	for _, p := range packages {
-		err = os.MkdirAll(filepath.Dir(filepath.Join(d, "packages", p)), os.ModePerm)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = ioutil.WriteFile(filepath.Join(d, "packages", p), []byte{}, os.ModePerm)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	if err := idx.Remove(pkg.Package{Name: "foo", Version: "1"}); err != nil {
-		t.Fatal(err)
-	}
-
-	paths, err := filepath.Glob(filepath.Join(d, "packages", "*", "*"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	sort.Strings(paths)
-
-	if got, want := len(paths), 1; got != want {
-		t.Errorf("got %d, want %d", got, want)
-	}
-
-	if got, want := paths[0], filepath.Join(d, "packages", packages[0]); got != want {
-		t.Errorf("got %q, want %q", got, want)
 	}
 }

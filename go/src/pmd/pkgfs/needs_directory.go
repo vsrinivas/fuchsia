@@ -5,8 +5,6 @@
 package pkgfs
 
 import (
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"thinfs/fs"
@@ -47,43 +45,17 @@ func (d *needsRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory
 			return nil, nil, nil, fs.ErrNotSupported
 		}
 
-		idxPath := d.fs.index.NeedsFile(parts[0])
-
-		var f *os.File
-		var err error
 		if flags.Create() {
-			f, err = os.Create(idxPath)
 			go d.fs.amberPxy.GetUpdate(parts[0], nil)
-		} else {
-			f, err = os.Open(idxPath)
+			return &needsFile{unsupportedFile: unsupportedFile(filepath.Join("/needs", name)), fs: d.fs}, nil, nil, nil
 		}
-		if err != nil {
-			return nil, nil, nil, goErrToFSErr(err)
-		}
-		if err := f.Close(); err != nil {
-			return nil, nil, nil, goErrToFSErr(err)
-		}
-		return &needsFile{unsupportedFile: unsupportedFile(filepath.Join("/needs", name)), fs: d.fs}, nil, nil, nil
+
+		return nil, nil, nil, fs.ErrNotFound
 	}
 }
 
 func (d *needsRoot) Read() ([]fs.Dirent, error) {
-	infos, err := ioutil.ReadDir(d.fs.index.NeedsDir())
-	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
-
-	var dents = make([]fs.Dirent, len(infos))
-
-	for i, info := range infos {
-		if info.IsDir() {
-			dents[i] = dirDirEnt(filepath.Base(info.Name()))
-		} else {
-			dents[i] = fileDirEnt(filepath.Base(info.Name()))
-		}
-	}
-
-	return dents, nil
+	return []fs.Dirent{dirDirEnt("blobs")}, nil
 }
 
 func (d *needsRoot) Stat() (int64, time.Time, time.Time, error) {
@@ -129,8 +101,8 @@ func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	if _, err := os.Stat(d.fs.index.NeedsBlob(name)); err != nil {
-		return nil, nil, nil, goErrToFSErr(err)
+	if !d.fs.index.HasNeed(name) {
+		return nil, nil, nil, fs.ErrNotFound
 	}
 
 	debugLog("pkgfs:needsblob:%q open", name)
@@ -138,13 +110,10 @@ func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 }
 
 func (d *needsBlobsDir) Read() ([]fs.Dirent, error) {
-	names, err := filepath.Glob(d.fs.index.NeedsBlob("*"))
-	if err != nil {
-		return nil, goErrToFSErr(err)
-	}
+	names := d.fs.index.NeedsList()
 	dirents := make([]fs.Dirent, len(names))
 	for i := range names {
-		dirents[i] = fileDirEnt(filepath.Base(names[i]))
+		dirents[i] = fileDirEnt(names[i])
 	}
 	return dirents, nil
 }

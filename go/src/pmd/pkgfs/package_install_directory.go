@@ -8,10 +8,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -207,16 +205,12 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 	f.written += uint64(n)
 
 	if f.written >= f.size && err == nil {
+		f.fs.index.Fulfill(f.name)
+
 		if f.isPkg {
 			// TODO(raggi): use already open file instead of re-opening the file
 			importPackage(f.fs, f.name)
 		}
-
-		// TODO(raggi): check which of these really needs to be done, and/or move them into checkNeeds:
-		os.Remove(f.fs.index.NeedsBlob(f.name))
-		os.Remove(f.fs.index.NeedsFile(f.name))
-
-		checkNeeds(f.fs, f.name)
 	}
 
 	return n, goErrToFSErr(err)
@@ -235,10 +229,7 @@ func (f *installFile) Truncate(sz uint64) error {
 	err := f.blob.Truncate(int64(f.size))
 
 	if f.size == 0 && f.name == identityBlob && err == nil {
-		// TODO(raggi): check which of these really needs to be done, and/or move them into checkNeeds:
-		os.Remove(f.fs.index.NeedsBlob(f.name))
-		os.Remove(f.fs.index.NeedsFile(f.name))
-		checkNeeds(f.fs, f.name)
+		f.fs.index.Fulfill(f.name)
 	}
 
 	return goErrToFSErr(err)
@@ -305,14 +296,6 @@ func importPackage(fs *Filesystem, root string) {
 		return
 	}
 
-	pkgInstalling := fs.index.InstallingPackageVersionPath(p.Name, p.Version)
-	os.MkdirAll(filepath.Dir(pkgInstalling), os.ModePerm)
-	if err := ioutil.WriteFile(pkgInstalling, []byte(root), os.ModePerm); err != nil {
-		log.Printf("error writing package installing index for %s: %s", p, err)
-	}
-	pkgWaitingDir := fs.index.WaitingPackageVersionPath(p.Name, p.Version)
-	os.MkdirAll(pkgWaitingDir, os.ModePerm)
-
 	files := bytes.Split(contents, []byte{'\n'})
 	var needsCount int
 	var needBlobs []string
@@ -325,6 +308,7 @@ func importPackage(fs *Filesystem, root string) {
 		}
 		root := string(parts[1])
 
+		// XXX(raggi): this can race, which can deadlock package installs
 		if fs.blobfs.HasBlob(root) {
 			log.Printf("pkgfs: blob already present for %s: %q", p, root)
 			continue
@@ -332,22 +316,13 @@ func importPackage(fs *Filesystem, root string) {
 
 		needsCount++
 
-		err = ioutil.WriteFile(filepath.Join(pkgWaitingDir, root), []byte{}, os.ModePerm)
-		if err != nil {
-			log.Printf("pkgfs: import error, can't create waiting index for %s: %s", p, err)
-		}
-
-		err = ioutil.WriteFile(fs.index.NeedsBlob(root), []byte{}, os.ModePerm)
-		if err != nil {
-			// XXX(raggi): there are potential deadlock conditions here, we should fail the package write (???)
-			log.Printf("pkgfs: import error, can't create needs index for %s: %s", p, err)
-		}
-
 		needBlobs = append(needBlobs, root)
 	}
 
 	if needsCount == 0 {
-		activatePackage(p, fs)
+		fs.index.Add(p, root)
+	} else {
+		fs.index.AddNeeds(root, p, needBlobs)
 	}
 
 	go func() {
@@ -357,72 +332,4 @@ func importPackage(fs *Filesystem, root string) {
 			fs.amberPxy.GetBlob(root)
 		}
 	}()
-
-	checkNeeds(fs, root)
-}
-
-func checkNeeds(fs *Filesystem, root string) {
-	fulfillments, err := filepath.Glob(filepath.Join(fs.index.WaitingPackageVersionPath("*", "*"), root))
-	if err != nil {
-		log.Printf("pkgfs: error checking fulfillment of %s: %s", root, err)
-		return
-	}
-	for _, path := range fulfillments {
-		if err := os.Remove(path); err != nil {
-			log.Printf("pkgfs: error removing %q: %s", path, err)
-		}
-
-		pkgWaitingDir := filepath.Dir(path)
-
-		dir, err := os.Open(pkgWaitingDir)
-		if err != nil {
-			log.Printf("pkgfs: error opening waiting dir: %s: %s", pkgWaitingDir, err)
-			continue
-		}
-		names, err := dir.Readdirnames(0)
-		dir.Close()
-		if err != nil {
-			log.Printf("pkgfs: failed to check waiting dir %s: %s", pkgWaitingDir, err)
-			continue
-		}
-		// if all the needs are fulfilled, move the package from installing to packages.
-		if len(names) == 0 {
-			pkgNameVersion, err := filepath.Rel(fs.index.WaitingDir(), pkgWaitingDir)
-			if err != nil {
-				log.Printf("pkgfs: error extracting package name from %s: %s", pkgWaitingDir, err)
-				continue
-			}
-
-			parts := strings.SplitN(pkgNameVersion, "/", 2)
-			p := pkg.Package{Name: parts[0], Version: parts[1]}
-
-			activatePackage(p, fs)
-
-		}
-	}
-}
-
-func activatePackage(p pkg.Package, fs *Filesystem) {
-	log.Printf("pkgfs: activating %s", p)
-	from := filepath.Join(fs.index.InstallingDir(), p.Name, p.Version)
-	b, err := ioutil.ReadFile(from)
-	if err != nil {
-		log.Printf("pkgfs: error reading package installing manifest for %s: %s", p, err)
-		return
-	}
-	root := string(b)
-	if _, ok := fs.static.Get(p); ok {
-		fs.static.Set(p, root)
-		debugLog("package %s ready, updated static index", p)
-		os.Remove(from)
-	} else {
-		to := filepath.Join(fs.index.PackagesDir(), p.Name, p.Version)
-		os.MkdirAll(filepath.Dir(to), os.ModePerm)
-		debugLog("package %s ready, moving %s to %s", p, from, to)
-		if err := os.Rename(from, to); err != nil {
-			// TODO(raggi): this kind of state will need to be cleaned up by a general garbage collector at a later time.
-			log.Printf("pkgfs: error moving package from installing to packages: %s", err)
-		}
-	}
-	os.Remove(filepath.Join(fs.index.WaitingPackageVersionPath(p.Name, p.Version)))
 }
