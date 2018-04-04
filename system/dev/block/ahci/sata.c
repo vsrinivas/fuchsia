@@ -236,7 +236,7 @@ static void sata_queue(void* ctx, block_op_t* bop) {
     sata_device_t* dev = ctx;
     sata_txn_t* txn = containerof(bop, sata_txn_t, bop);
 
-    switch (bop->command) {
+    switch (BLOCK_OP(bop->command)) {
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE:
         // complete empty transactions immediately
@@ -251,11 +251,10 @@ static void sata_queue(void* ctx, block_op_t* bop) {
             return;
         }
 
-        txn->cmd = (bop->command == BLOCK_OP_READ) ?
+        txn->cmd = (BLOCK_OP(bop->command) == BLOCK_OP_READ) ?
                    SATA_CMD_READ_DMA_EXT : SATA_CMD_WRITE_DMA_EXT;
         txn->device = 0x40;
-        zxlogf(TRACE, "sata: queue %s txn %p\n",
-                (bop->command == BLOCK_OP_READ) ? "READ" : "WRITE", txn);
+        zxlogf(TRACE, "sata: queue op 0x%x txn %p\n", bop->command, txn);
         break;
     case BLOCK_OP_FLUSH:
         zxlogf(TRACE, "sata: queue FLUSH txn %p\n", txn);

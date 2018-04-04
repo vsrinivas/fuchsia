@@ -35,6 +35,8 @@
 
 #define SATA_MAX_BLOCK_COUNT  0x10000 // 16-bit count
 
+#define BLOCK_OP(op) ((op) & BLOCK_OP_MASK)
+
 typedef struct sata_txn {
     block_op_t bop;
     list_node_t node;
