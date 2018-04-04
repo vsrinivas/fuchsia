@@ -4,10 +4,11 @@
 
 #include <utility>
 
+#include <lib/async/cpp/loop.h>
+
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 namespace icu_data {
@@ -33,7 +34,7 @@ class App {
 }  // namespace icu_data
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigDefault);
   icu_data::App app;
   loop.Run();
   return 0;

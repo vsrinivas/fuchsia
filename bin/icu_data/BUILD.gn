@@ -17,6 +17,7 @@ executable("icu_data_provider") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/icu_data/cpp",
     "//garnet/public/lib/icu_data/fidl",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   data = [

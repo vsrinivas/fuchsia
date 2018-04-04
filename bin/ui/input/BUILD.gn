@@ -13,6 +13,7 @@ executable("input") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/input/fidl",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/hid",
   ]
 }

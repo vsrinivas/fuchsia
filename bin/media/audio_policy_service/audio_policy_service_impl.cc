@@ -8,7 +8,6 @@
 #include <lib/async/default.h>
 #include <zx/time.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 

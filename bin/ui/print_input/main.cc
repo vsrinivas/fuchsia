@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/loop.h>
+
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/input_device_impl.h"
 #include "lib/ui/input/cpp/formatting.h"
@@ -12,7 +14,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace print_input {
 
@@ -94,8 +95,8 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  fsl::MessageLoop message_loop;
+  async::Loop loop(&kAsyncLoopConfigDefault);
   print_input::App app;
-  message_loop.Run();
+  loop.Run();
   return 0;
 }

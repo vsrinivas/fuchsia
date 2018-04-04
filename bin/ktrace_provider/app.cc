@@ -15,7 +15,6 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 #include "garnet/bin/ktrace_provider/reader.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/logging.h"
