@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -297,9 +298,32 @@ func importPackage(fs *Filesystem, root string) {
 	}
 
 	files := bytes.Split(contents, []byte{'\n'})
+
+	// Note: the following heuristic is coarse and not easy to compute. For small
+	// packages enumerating all blobs in blobfs will be slow, but for very large
+	// packages it's more likely that polling blobfs the expensive way for missing
+	// blobs is going to be expensive. This can be improved by blobfs providing an
+	// API to handle this case of "which of the following blobs are already
+	// readable"
+	mayHaveBlob := func(root string) bool { return true }
+	if len(files) > 20 {
+		infos, err := ioutil.ReadDir(fs.blobfs.Root)
+		if err != nil {
+			log.Printf("pkgfs: error readdir(%q): %s", fs.blobfs.Root, err)
+			return
+		}
+		names := map[string]struct{}{}
+		for _, info := range infos {
+			names[info.Name()] = struct{}{}
+		}
+		mayHaveBlob = func(root string) bool {
+			_, found := names[root]
+			return found
+		}
+	}
+
 	var needsCount int
 	var needBlobs []string
-
 	for i := range files {
 		parts := bytes.SplitN(files[i], []byte{'='}, 2)
 		if len(parts) != 2 {
@@ -309,7 +333,7 @@ func importPackage(fs *Filesystem, root string) {
 		root := string(parts[1])
 
 		// XXX(raggi): this can race, which can deadlock package installs
-		if fs.blobfs.HasBlob(root) {
+		if mayHaveBlob(root) && fs.blobfs.HasBlob(root) {
 			log.Printf("pkgfs: blob already present for %s: %q", p, root)
 			continue
 		}
