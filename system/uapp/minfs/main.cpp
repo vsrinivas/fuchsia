@@ -27,16 +27,12 @@
 
 namespace {
 
-typedef struct minfs_options {
-    bool readonly;
-    bool verbose;
-} minfs_options_t;
-
 int do_minfs_check(fbl::unique_ptr<minfs::Bcache> bc) {
     return minfs_check(fbl::move(bc));
 }
 
-int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, minfs_options_t* options) {
+int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc,
+                   minfs::minfs_options_t* options) {
     zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
     if (h == ZX_HANDLE_INVALID) {
         FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -44,12 +40,11 @@ int do_minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, minfs_options_t* options) 
     }
 
     async::Loop loop;
-    fs::Vfs vfs(loop.async());
     trace::TraceProvider trace_provider(loop.async());
-    vfs.SetReadonly(options->readonly);
 
     zx_status_t status;
-    if ((status = MountAndServe(&vfs, fbl::move(bc), zx::channel(h)) != ZX_OK)) {
+    if ((status = MountAndServe(options, loop.async(), fbl::move(bc),
+                                zx::channel(h)) != ZX_OK)) {
         if (options->verbose) {
             fprintf(stderr, "minfs: Failed to mount: %d\n", status);
         }
@@ -113,7 +108,7 @@ off_t get_size(int fd) {
 } // namespace
 
 int main(int argc, char** argv) {
-    minfs_options_t options;
+    minfs::minfs_options_t options;
     options.readonly = false;
     options.verbose = false;
 

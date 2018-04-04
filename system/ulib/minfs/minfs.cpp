@@ -26,6 +26,7 @@
 #endif
 
 #include <minfs/fsck.h>
+#include <minfs/minfs.h>
 #include "minfs-private.h"
 
 // #define DEBUG_PRINTF
@@ -981,7 +982,8 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
 }
 
 #ifdef __Fuchsia__
-zx_status_t MountAndServe(fs::Vfs *vfs, fbl::unique_ptr<Bcache> bc, zx::channel mount_channel) {
+zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
+                          fbl::unique_ptr<Bcache> bc, zx::channel mount_channel) {
     TRACE_DURATION("minfs", "MountAndServe");
 
     fbl::RefPtr<VnodeMinfs> vn;
@@ -990,6 +992,9 @@ zx_status_t MountAndServe(fs::Vfs *vfs, fbl::unique_ptr<Bcache> bc, zx::channel 
         return status;
     }
 
+    fbl::RefPtr<Minfs> vfs = vn->fs_;
+    vfs->SetReadonly(options->readonly);
+    vfs->set_async(async);
     return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
 }
 #endif

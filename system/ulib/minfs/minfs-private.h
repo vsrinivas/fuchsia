@@ -84,7 +84,7 @@ class VnodeMinfs;
 
 using SyncCallback = fs::Vnode::SyncCallback;
 
-class Minfs : public fbl::RefCounted<Minfs> {
+class Minfs : public fs::Vfs, public fbl::RefCounted<Minfs> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
