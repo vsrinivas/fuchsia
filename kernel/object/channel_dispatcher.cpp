@@ -12,6 +12,7 @@
 #include <err.h>
 #include <trace.h>
 
+#include <lib/counters.h>
 #include <kernel/event.h>
 #include <platform.h>
 #include <object/handle.h>
@@ -28,6 +29,13 @@
 using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(channel_packet_depth_1, "kernel.channel.depth.1");
+KCOUNTER(channel_packet_depth_4, "kernel.channel.depth.4");
+KCOUNTER(channel_packet_depth_16, "kernel.channel.depth.16");
+KCOUNTER(channel_packet_depth_64, "kernel.channel.depth.64");
+KCOUNTER(channel_packet_depth_256, "kernel.channel.depth.256");
+KCOUNTER(channel_packet_depth_unbounded, "kernel.channel.depth.unbounded");
 
 // static
 zx_status_t ChannelDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
@@ -76,6 +84,27 @@ ChannelDispatcher::~ChannelDispatcher() {
 
     messages_.clear();
     message_count_ = 0;
+
+    switch (max_message_count_) {
+    case 0 ... 1:
+        kcounter_add(channel_packet_depth_1, 1u);
+        break;
+    case 2 ... 4:
+        kcounter_add(channel_packet_depth_4, 1u);
+        break;
+    case 5 ... 16:
+        kcounter_add(channel_packet_depth_16, 1u);
+        break;
+    case 17 ... 64:
+        kcounter_add(channel_packet_depth_64, 1u);
+        break;
+    case 65 ... 256:
+        kcounter_add(channel_packet_depth_256, 1u);
+        break;
+    default:
+        kcounter_add(channel_packet_depth_unbounded, 1u);
+        break;
+    }
 }
 
 zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
@@ -280,6 +309,9 @@ int ChannelDispatcher::WriteSelf(fbl::unique_ptr<MessagePacket> msg) {
     }
     messages_.push_back(fbl::move(msg));
     message_count_++;
+    if (message_count_ > max_message_count_) {
+        max_message_count_ = message_count_;
+    }
 
     UpdateStateLocked(0u, ZX_CHANNEL_READABLE);
     return 0;

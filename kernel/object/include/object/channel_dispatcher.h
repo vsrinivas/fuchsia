@@ -107,5 +107,6 @@ private:
 
     MessageList messages_ TA_GUARDED(get_lock());
     uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
+    uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
     WaiterList waiters_ TA_GUARDED(get_lock());
 };
