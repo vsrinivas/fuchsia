@@ -324,6 +324,9 @@ public:
     // because of debug code.
     fbl::Mutex* dev_lock() { return &dev_lock_; }
 
+    // Dump some information about the device
+    virtual void Dump() const;
+
 protected:
     friend class PcieUpstreamNode;
     friend class PcieBusDriver;  // TODO(johngro): remove this.  Currently used for IRQ swizzle.

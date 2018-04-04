@@ -662,3 +662,9 @@ void PcieDevice::DisableLocked() {
     for (auto& bar : bars_)
         bar.allocation = nullptr;
 }
+
+void PcieDevice::Dump() const {
+    printf("PCI: device at %02x:%02x:%02x vid:did %04x:%04x\n",
+            bus_id(), dev_id(), func_id(),
+            vendor_id(), device_id());
+}

@@ -53,6 +53,9 @@ public:
     uint32_t io_limit()           const { return io_limit_; }
     bool     supports_32bit_pio() const { return supports_32bit_pio_; }
 
+    // print some info about the bridge
+    void Dump() const override;
+
 protected:
     zx_status_t AllocateBars() override;
     zx_status_t AllocateBridgeWindowsLocked();

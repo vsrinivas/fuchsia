@@ -164,6 +164,15 @@ zx_status_t PcieBridge::ParseBusWindowsLocked() {
     return ZX_OK;
 }
 
+void PcieBridge::Dump() const {
+    PcieDevice::Dump();
+
+    printf("\tbridge managed bus id %#02x\n", managed_bus_id());
+    printf("\tio base %#x limit %#x\n", io_base(), io_limit());
+    printf("\tmem base %#x limit %#x\n", mem_base(), mem_limit());
+    printf("\tprefectable base %#" PRIx64 " limit %#" PRIx64 "\n", pf_mem_base(), pf_mem_limit());
+}
+
 void PcieBridge::Unplug() {
     PcieDevice::Unplug();
     PcieUpstreamNode::UnplugDownstream();
