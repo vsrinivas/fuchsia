@@ -163,7 +163,6 @@ void ViewStub::OnViewResolved(views_v1_token::ViewToken view_token,
     // 1. We got the ViewOwner GetToken() callback as expected.
     // 2. Or, the ViewOwner was closed before the GetToken() callback (in
     // which case view_token is null).
-    FXL_DCHECK(owner_);
     owner_.Unbind();
     registry_->OnViewResolved(this, std::move(view_token), success);
   }
