@@ -63,6 +63,7 @@ package("tests") {
     "//garnet/bin/media/demux:tests",
     "//garnet/bin/media/media_service:tests",
     "//garnet/bin/media/net_media_service:tests",
+    "//garnet/bin/media/player:tests",
     "//garnet/bin/media/util:tests",
     "//garnet/public/lib/media/c:tests",
     "//garnet/public/lib/media/timeline:tests",
@@ -104,6 +105,10 @@ package("tests") {
 
     {
       name = "net_media_service_tests"
+    },
+
+    {
+      name = "player_tests"
     },
   ]
 }

@@ -105,7 +105,7 @@ class InputRef {
   }
 
  private:
-  InputRef(Input* input) : input_(input) {}
+  explicit InputRef(Input* input) : input_(input) {}
 
   // Returns the actual input referenced by this object.
   Input* actual() const { return input_; }
@@ -123,6 +123,9 @@ class InputRef {
 class OutputRef {
  public:
   OutputRef() {}
+
+  // Private constructor exposed for testing.
+  explicit OutputRef(Output* output) : output_(output) {}
 
   OutputRef& operator=(std::nullptr_t) {
     output_ = nullptr;
@@ -153,8 +156,6 @@ class OutputRef {
   }
 
  private:
-  OutputRef(Output* output) : output_(output) {}
-
   // Returns the actual input referenced by this object.
   Output* actual() const { return output_; };
 

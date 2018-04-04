@@ -26,9 +26,9 @@ std::ostream& operator<<(std::ostream& os, const fidl::InterfacePtr<T>& value);
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
   if (!value) {
-    os << "<nullptr>\n";
+    return os << "<nullptr>\n";
   } else {
-    os << *value;
+    return os << *value;
   }
 }
 

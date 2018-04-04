@@ -8,12 +8,43 @@ source_set("player") {
   sources = [
     "conversion_pipeline_builder.cc",
     "conversion_pipeline_builder.h",
+    "player.cc",
+    "player.h",
+    "segment.cc",
+    "segment.h",
+    "sink_segment.cc",
+    "sink_segment.h",
+    "source_segment.cc",
+    "source_segment.h",
   ]
 
   deps = [
     "//garnet/bin/media/audio",
     "//garnet/bin/media/decode",
     "//garnet/bin/media/framework",
+    "//garnet/bin/media/util",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
   ]
 }
 
+test("tests") {
+  output_name = "player_tests"
+
+  sources = [
+    "test/fake_sink_segment.h",
+    "test/fake_source_segment.h",
+    "test/player_test.cc",
+  ]
+
+  deps = [
+    ":player",
+    "//garnet/bin/media/framework",
+    "//garnet/bin/media/framework_create",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}

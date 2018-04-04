@@ -334,6 +334,30 @@ std::ostream& operator<<(std::ostream& os, TimelineRate value) {
   return os << value.subject_delta() << "/" << value.reference_delta();
 }
 
+std::ostream& operator<<(std::ostream& os, TimelineFunction value) {
+  static constexpr int64_t kNsPerSecond = 1000000000;
+
+  if (value.subject_time() == kUnspecifiedTime) {
+    os << "<unspecified>";
+  } else {
+    os << value.subject_time() / kNsPerSecond << "."
+       << value.subject_time() % kNsPerSecond;
+  }
+
+  os << "::";
+
+  if (value.reference_time() == kUnspecifiedTime) {
+    os << "<unspecified>";
+  } else {
+    os << value.reference_time() / kNsPerSecond << "."
+       << value.reference_time() % kNsPerSecond;
+  }
+
+  os << "@";
+
+  return os << value.rate();
+}
+
 std::ostream& operator<<(std::ostream& os, Range<bool> value) {
   if (value.min) {
     return os << "true";

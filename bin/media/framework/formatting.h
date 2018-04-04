@@ -12,6 +12,7 @@
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
+#include "lib/media/timeline/timeline_function.h"
 
 //
 // This file declares a bunch of << operator overloads for dumping media stuff.
@@ -57,6 +58,7 @@ std::ostream& operator<<(std::ostream& os, VideoStreamType::PixelFormat value);
 std::ostream& operator<<(std::ostream& os, VideoStreamType::ColorSpace value);
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<Bytes>& value);
 std::ostream& operator<<(std::ostream& os, TimelineRate value);
+std::ostream& operator<<(std::ostream& os, TimelineFunction value);
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, Range<T> value) {
