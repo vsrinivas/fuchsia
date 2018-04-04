@@ -59,7 +59,8 @@ template <size_t DataSize, size_t NumOps>
 bool benchmark_write_read(void) {
     BEGIN_TEST;
     int fd = open(MOUNT_POINT "/bigfile", O_CREAT | O_RDWR, 0644);
-    ASSERT_GT(fd, 0, "Cannot create file (FS benchmarks assume mounted FS exists at '/benchmark')");
+    ASSERT_GT(fd, 0, "Cannot create file (FS benchmarks assume mounted FS"
+              "exists at '/tmp/benchmark')");
     const size_t size_mb = (DataSize * NumOps) / MB;
     if (size_mb > 64 && benchmark_banned(fd, "memfs")) {
         return true;

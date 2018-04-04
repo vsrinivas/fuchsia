@@ -442,7 +442,7 @@ bool TestData::sync() {
 
 static bool StartBlobfsBenchmark(size_t blob_size, size_t blob_count, traversal_order_t order) {
     int mountfd = open(MOUNT_PATH, O_RDONLY);
-    ASSERT_GT(mountfd, 0, "Failed to open - expected mounted blobfs partition");
+    ASSERT_GT(mountfd, 0, "Failed to open - expected mounted blobfs partition at /tmp/blobbench");
 
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
     vfs_query_info_t* info = reinterpret_cast<vfs_query_info_t*>(buf);
