@@ -89,7 +89,7 @@ type {{ .Name }} interface {
 {{- end }}
 }
 
-type {{ .RequestName }} _zx.Channel
+type {{ .RequestName }} _bindings.InterfaceRequest
 
 func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
 	req, cli, err := _bindings.NewInterfaceRequest()
@@ -101,8 +101,8 @@ func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
 func (_ {{ .RequestName }}) Name() string {
 	return {{ .ServiceName }}
 }
-func (c {{ .RequestName }}) Channel() _zx.Channel {
-	return _zx.Channel(c)
+func (c {{ .RequestName }}) ToChannel() _zx.Channel {
+	return c.Channel
 }
 
 const {{ .Name }}Name = {{ .ServiceName }}

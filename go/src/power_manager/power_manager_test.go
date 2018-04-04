@@ -13,7 +13,6 @@ import (
 	"fidl/bindings2"
 
 	"fuchsia/go/power_manager"
-	"syscall/zx"
 )
 
 type ClientMock struct {
@@ -63,7 +62,7 @@ func TestPowerManagerWatcher(t *testing.T) {
 	pmWatcher := &WatcherMock{called: 0}
 	s := power_manager.PowerManagerWatcherStub{Impl: pmWatcher}
 	bs := bindings2.BindingSet{}
-	bs.Add(&s, zx.Channel(rw))
+	bs.Add(&s, rw.Channel)
 	go bindings2.Serve()
 
 	err = pmClient.pm.Watch(*pw)

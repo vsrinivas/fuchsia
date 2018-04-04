@@ -162,8 +162,10 @@ func TestEncodingIdentity(t *testing.T) {
 		testIdentity(t, &TestInterface1{
 			A: Test1Interface(Proxy{Channel: h0}),
 			B: Test1Interface(Proxy{Channel: zx.Channel(zx.HANDLE_INVALID)}),
-			C: Test1InterfaceRequest(h1),
-			D: Test1InterfaceRequest(zx.Channel(zx.HANDLE_INVALID)),
+			C: Test1InterfaceRequest(InterfaceRequest{Channel: h1}),
+			D: Test1InterfaceRequest(InterfaceRequest{
+				Channel: zx.Channel(zx.HANDLE_INVALID),
+			}),
 		}, 16, &TestInterface1{})
 	})
 }

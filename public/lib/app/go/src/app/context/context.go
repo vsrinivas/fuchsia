@@ -86,7 +86,7 @@ func (c *Context) Serve() {
 }
 
 func (c *Context) ConnectToEnvService(r bindings2.ServiceRequest) {
-	c.ConnectToEnvServiceAt(r.Name(), r.Channel())
+	c.ConnectToEnvServiceAt(r.Name(), r.ToChannel())
 }
 
 func (c *Context) ConnectToEnvServiceAt(name string, h zx.Channel) {

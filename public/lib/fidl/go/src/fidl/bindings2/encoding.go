@@ -31,15 +31,16 @@ var (
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
 	// supported in the Go runtime.
-	handleType  reflect.Type = reflect.TypeOf(zx.Handle(0))
-	channelType              = reflect.TypeOf(zx.Channel(0))
-	logType                  = reflect.TypeOf(zx.Log(0))
-	portType                 = reflect.TypeOf(zx.Port(0))
-	vmoType                  = reflect.TypeOf(zx.VMO(0))
-	eventType                = reflect.TypeOf(zx.Event(0))
-	socketType               = reflect.TypeOf(zx.Socket(0))
-	vmarType                 = reflect.TypeOf(zx.VMAR(0))
-	proxyType                = reflect.TypeOf(Proxy{})
+	handleType           reflect.Type = reflect.TypeOf(zx.Handle(0))
+	channelType                       = reflect.TypeOf(zx.Channel(0))
+	logType                           = reflect.TypeOf(zx.Log(0))
+	portType                          = reflect.TypeOf(zx.Port(0))
+	vmoType                           = reflect.TypeOf(zx.VMO(0))
+	eventType                         = reflect.TypeOf(zx.Event(0))
+	socketType                        = reflect.TypeOf(zx.Socket(0))
+	vmarType                          = reflect.TypeOf(zx.VMAR(0))
+	interfaceRequestType              = reflect.TypeOf(InterfaceRequest{})
+	proxyType                         = reflect.TypeOf(Proxy{})
 )
 
 // isHandleType returns true if the reflected type is a Fuchsia handle type.
@@ -69,6 +70,13 @@ func isHandleType(t reflect.Type) bool {
 func isInterfaceType(t reflect.Type) bool {
 	// FIDL interfaces are represented as aliases over Proxy.
 	return t.ConvertibleTo(proxyType)
+}
+
+// isInterfaceRequestType returns true if the reflected type is a FIDL interface
+// request type.
+func isInterfaceRequestType(t reflect.Type) bool {
+	// FIDL interfaces are represented as aliases over InterfaceRequest.
+	return t.ConvertibleTo(interfaceRequestType)
 }
 
 // getSize returns the size of the type. Occasionally this requires the value,
@@ -486,9 +494,11 @@ func (e *encoder) marshal(t reflect.Type, v reflect.Value, n nestedTypeData) err
 	if isHandleType(t) {
 		return e.marshalHandle(v, n)
 	}
-	if isInterfaceType(t) {
+	if isInterfaceType(t) || isInterfaceRequestType(t) {
 		// An interface is represented by a Proxy, whose first field is
-		// a zx.Channel, and we can just marshal that.
+		// a zx.Channel, and we can just marshal that. Same goes for an
+		// interface request, which is just an InterfaceRequest whose
+		// first field is a zx.Channel.
 		return e.marshalHandle(v.Field(0), n)
 	}
 	return e.marshalInline(t, v, n)
@@ -840,9 +850,11 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 	if isHandleType(t) {
 		return d.unmarshalHandle(v, n)
 	}
-	if isInterfaceType(t) {
+	if isInterfaceType(t) || isInterfaceRequestType(t) {
 		// An interface is represented by a Proxy, whose first field is
-		// a zx.Channel, and we can just unmarshal that.
+		// a zx.Channel, and we can just marshal that. Same goes for an
+		// interface request, which is just an InterfaceRequest whose
+		// first field is a zx.Channel.
 		return d.unmarshalHandle(v.Field(0), n)
 	}
 	return d.unmarshalInline(t, v, n)

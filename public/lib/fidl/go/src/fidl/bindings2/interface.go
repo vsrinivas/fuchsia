@@ -16,20 +16,26 @@ type ServiceRequest interface {
 	// Name returns the name of the service being requested.
 	Name() string
 
-	// Channel returns the underlying channel of the ServiceRequest.
-	Channel() zx.Channel
+	// ToChannel returns the underlying channel of the ServiceRequest.
+	ToChannel() zx.Channel
+}
+
+// InterfaceRequest is a wrapper type around a channel and represents the server side
+// of a FIDL interface, to be sent to a server as a request.
+type InterfaceRequest struct {
+	zx.Channel
 }
 
 // NewInterfaceRequest generates two sides of a channel with one layer of
 // type casts out of the way to minimize the amount of generated code. Semantically,
 // the two sides of the channel represent the interface request and the client
 // side of the interface (the proxy). It returns an error on failure.
-func NewInterfaceRequest() (zx.Channel, *Proxy, error) {
+func NewInterfaceRequest() (InterfaceRequest, *Proxy, error) {
 	h0, h1, err := zx.NewChannel(0)
 	if err != nil {
-		return zx.Channel(zx.HANDLE_INVALID), nil, err
+		return InterfaceRequest{}, nil, err
 	}
-	return h0, &Proxy{Channel: h1}, nil
+	return InterfaceRequest{Channel: h0}, &Proxy{Channel: h1}, nil
 }
 
 // Proxy represents the client side of a FIDL interface.

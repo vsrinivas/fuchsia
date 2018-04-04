@@ -381,7 +381,7 @@ type Test1 interface {
 	Echo(in *string) (out *string, err_ error)
 }
 
-type Test1InterfaceRequest _zx.Channel
+type Test1InterfaceRequest InterfaceRequest
 
 func NewTest1InterfaceRequest() (Test1InterfaceRequest, *Test1Interface, error) {
 	req, cli, err := NewInterfaceRequest()

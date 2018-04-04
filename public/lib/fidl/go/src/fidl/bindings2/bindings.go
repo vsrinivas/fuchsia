@@ -151,14 +151,14 @@ func (b *Binding) Close() error {
 // BindingSet is a managed set of Bindings which know how to unbind and
 // remove themselves in the event of a connection error.
 type BindingSet struct {
-	mu sync.Mutex
+	mu       sync.Mutex
 	Bindings []*Binding
 }
 
 // Add creates a new Binding, initializes it, and adds it to the set.
 func (b *BindingSet) Add(s Stub, c zx.Channel) error {
 	binding := &Binding{
-		Stub: s,
+		Stub:    s,
 		Channel: c,
 	}
 	err := binding.Init(func(err error) {
