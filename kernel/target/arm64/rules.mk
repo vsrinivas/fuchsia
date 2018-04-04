@@ -29,4 +29,4 @@ $(BOOT_SHIM_BIN): $(BOOT_SHIM_OBJ)
 GENERATED += $(BOOT_SHIM_BIN)
 
 # include rules for our various arm64 boards
-include $(LOCAL_DIR)/*/rules.mk
+include $(LOCAL_DIR)/board/*/rules.mk
