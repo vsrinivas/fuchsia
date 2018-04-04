@@ -23,6 +23,7 @@ namespace minfs {
 
 typedef struct minfs_options {
     bool readonly;
+    bool metrics;
     bool verbose;
 } minfs_options_t;
 

@@ -23,10 +23,13 @@
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
 #include <lib/zx/event.h>
+
+#include "metrics.h"
 #endif
 
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
+
 #include "minfs-private.h"
 
 // #define DEBUG_PRINTF
@@ -700,9 +703,12 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
+    Ticker ticker(StartTicker());
+
     fbl::RefPtr<VnodeMinfs> vn = VnodeLookup(ino);
     if (vn != nullptr) {
         *out = fbl::move(vn);
+        UpdateOpenMetrics(/* cache_hit= */ true, ticker.End());
         return ZX_OK;
     }
 
@@ -725,6 +731,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
     VnodeInsert(vn.get());
 
     *out = fbl::move(vn);
+    UpdateOpenMetrics(/* cache_hit= */ false, ticker.End());
     return ZX_OK;
 }
 
@@ -999,6 +1006,7 @@ zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
 
     fbl::RefPtr<Minfs> vfs = vn->fs_;
     vfs->SetReadonly(options->readonly);
+    vfs->SetMetrics(options->metrics);
     vfs->set_async(async);
     return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
 }
@@ -1011,6 +1019,8 @@ zx_status_t Minfs::Unmount() {
     writeback_ = nullptr;
 #endif
     bc_->Sync();
+
+    DumpMetrics();
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
     // closed.
@@ -1291,5 +1301,108 @@ zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
     return minfs_check(fbl::move(bc));
 }
 #endif
+
+
+void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
+                              uint32_t dinum_count, uint64_t user_data_size,
+                              const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.initialized_vmos++;
+        metrics_.init_user_data_size += user_data_size;
+        metrics_.init_user_data_ticks += duration;
+        metrics_.init_dnum_count += dnum_count;
+        metrics_.init_inum_count += inum_count;
+        metrics_.init_dinum_count += dinum_count;
+    }
+#endif
+}
+
+void Minfs::UpdateLookupMetrics(bool success, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.lookup_calls++;
+        metrics_.lookup_calls_success += success ? 1 : 0;
+        metrics_.lookup_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateCreateMetrics(bool success, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.create_calls++;
+        metrics_.create_calls_success += success ? 1 : 0;
+        metrics_.create_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateReadMetrics(uint64_t size, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.read_calls++;
+        metrics_.read_size += size;
+        metrics_.read_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateWriteMetrics(uint64_t size, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.write_calls++;
+        metrics_.write_size += size;
+        metrics_.write_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateTruncateMetrics(const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.truncate_calls++;
+        metrics_.truncate_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateUnlinkMetrics(bool success, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.unlink_calls++;
+        metrics_.unlink_calls_success += success ? 1 : 0;
+        metrics_.unlink_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateRenameMetrics(bool success, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.rename_calls++;
+        metrics_.rename_calls_success += success ? 1 : 0;
+        metrics_.rename_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::UpdateOpenMetrics(bool cache_hit, const Duration& duration) {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.vnodes_opened++;
+        metrics_.vnodes_opened_cache_hit += cache_hit ? 1 : 0;
+        metrics_.vnode_open_ticks += duration;
+    }
+#endif
+}
+
+void Minfs::DumpMetrics() const {
+#ifdef MINFS_WITH_METRICS
+    if (collecting_metrics_) {
+        metrics_.Dump();
+    }
+#endif
+}
 
 } // namespace minfs

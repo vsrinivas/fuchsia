@@ -18,9 +18,11 @@ COMMON_SRCS := \
 # minfs implementation
 MODULE_SRCS := \
     $(COMMON_SRCS) \
+    $(LOCAL_DIR)/metrics.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \

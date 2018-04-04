@@ -20,6 +20,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/fbl \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/minfs \
     system/ulib/sync \
     system/ulib/trace \

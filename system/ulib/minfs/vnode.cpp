@@ -12,6 +12,7 @@
 
 #include <fs/block-txn.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <zircon/device/vfs.h>
 
 #ifdef __Fuchsia__
@@ -201,12 +202,21 @@ zx_status_t VnodeMinfs::InitVmo() {
         return status;
     }
     ReadTxn txn(fs_->bc_.get());
+    uint32_t dnum_count = 0;
+    uint32_t inum_count = 0;
+    uint32_t dinum_count = 0;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&]() {
+        fs_->UpdateInitMetrics(dnum_count, inum_count, dinum_count, vmo_size,
+                               ticker.End());
+    });
 
     // Initialize all direct blocks
     blk_t bno;
     for (uint32_t d = 0; d < kMinfsDirect; d++) {
         if ((bno = inode_.dnum[d]) != 0) {
             fs_->ValidateBno(bno);
+            dnum_count++;
             txn.Enqueue(vmoid_, d, bno + fs_->info_.dat_block, 1);
         }
     }
@@ -216,6 +226,7 @@ zx_status_t VnodeMinfs::InitVmo() {
         blk_t ibno;
         if ((ibno = inode_.inum[i]) != 0) {
             fs_->ValidateBno(ibno);
+            inum_count++;
 
             // Only initialize the indirect vmo if it is being used.
             if ((status = InitIndirectVmo()) != ZX_OK) {
@@ -242,6 +253,7 @@ zx_status_t VnodeMinfs::InitVmo() {
 
         if ((dibno = inode_.dinum[i]) != 0) {
             fs_->ValidateBno(dibno);
+            dinum_count++;
 
             // Only initialize the doubly indirect vmo if it is being used.
             if ((status = InitIndirectVmo()) != ZX_OK) {
@@ -1121,6 +1133,12 @@ zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_act
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
+
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &out_actual, this]() {
+        fs_->UpdateReadMetrics(*out_actual, ticker.End());
+    });
+
     zx_status_t status = ReadInternal(data, len, off, out_actual);
     if (status != ZX_OK) {
         return status;
@@ -1195,6 +1213,12 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
+
+    *out_actual = 0;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &out_actual, this]() {
+        fs_->UpdateWriteMetrics(*out_actual, ticker.End());
+    });
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
@@ -1332,6 +1356,11 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
     DirArgs args = DirArgs();
     args.name = name;
     zx_status_t status;
+    bool success = false;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
+        fs_->UpdateLookupMetrics(success, ticker.End());
+    });
     if ((status = ForEachDirent(&args, DirentCallbackFind)) < 0) {
         return status;
     }
@@ -1340,7 +1369,8 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
         return status;
     }
     *out = fbl::move(vn);
-    return ZX_OK;
+    success = (status == ZX_OK);
+    return status;
 }
 
 zx_status_t VnodeMinfs::Getattr(vnattr_t* a) {
@@ -1514,6 +1544,12 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     TRACE_DURATION("minfs", "VnodeMinfs::Create", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
+    bool success = false;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
+        fs_->UpdateCreateMetrics(success, ticker.End());
+    });
+
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -1572,7 +1608,8 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
 
     vn->fd_count_ = 1;
     *out = fbl::move(vn);
-    return ZX_OK;
+    success = (status == ZX_OK);
+    return status;
 }
 
 constexpr const char kFsName[] = "minfs";
@@ -1643,6 +1680,11 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
 zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("minfs", "VnodeMinfs::Unlink", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
+    bool success = false;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
+        fs_->UpdateUnlinkMetrics(success, ticker.End());
+    });
 
     if (!IsDirectory()) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -1661,6 +1703,7 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
         wb->PinVnode(fbl::move(fbl::WrapRefPtr(this)));
         fs_->EnqueueWork(fbl::move(wb));
     }
+    success = (status == ZX_OK);
     return status;
 }
 
@@ -1669,6 +1712,11 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
     if (IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
+
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, this] {
+        fs_->UpdateTruncateMetrics(ticker.End());
+    });
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<WritebackWork> wb(new (&ac) WritebackWork(fs_->bc_.get()));
@@ -1790,13 +1838,20 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
                                fbl::StringPiece newname, bool src_must_be_dir,
                                bool dst_must_be_dir) {
     TRACE_DURATION("minfs", "VnodeMinfs::Rename", "src", oldname, "dst", newname);
+    bool success = false;
+    Ticker ticker(fs_->StartTicker());
+    auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this](){
+        fs_->UpdateRenameMetrics(success, ticker.End());
+    });
+
     auto newdir = fbl::RefPtr<VnodeMinfs>::Downcast(_newdir);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(oldname));
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(newname));
 
     // ensure that the vnodes containing oldname and newname are directories
-    if (!(IsDirectory() && newdir->IsDirectory()))
+    if (!(IsDirectory() && newdir->IsDirectory())) {
         return ZX_ERR_NOT_SUPPORTED;
+    }
 
     zx_status_t status;
     fbl::RefPtr<VnodeMinfs> oldvn = nullptr;
@@ -1817,6 +1872,7 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
     } else if ((newdir->ino_ == ino_) && (oldname == newname)) {
         // Renaming a file or directory to itself?
         // Shortcut success case.
+        success = true;
         return ZX_OK;
     }
 
@@ -1867,7 +1923,8 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
     wb->PinVnode(oldvn);
     wb->PinVnode(newdir);
     fs_->EnqueueWork(fbl::move(wb));
-    return status;
+    success = true;
+    return ZX_OK;
 }
 
 zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {

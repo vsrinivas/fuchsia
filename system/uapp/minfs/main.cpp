@@ -81,6 +81,7 @@ int usage() {
             "\n"
             "options:  -v|--verbose     Some debug messages\n"
             "          -r|--readonly    Mount filesystem read-only\n"
+            "          -m|--metrics     Collect filesystem metrics\n"
             "          -h|--help        Display this message\n"
             "\n"
             "On Fuchsia, MinFS takes the block device argument by handle.\n"
@@ -110,11 +111,13 @@ off_t get_size(int fd) {
 int main(int argc, char** argv) {
     minfs::minfs_options_t options;
     options.readonly = false;
+    options.metrics = false;
     options.verbose = false;
 
     while (1) {
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
+            {"metrics", no_argument, nullptr, 'm'},
             {"verbose", no_argument, nullptr, 'v'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
@@ -127,6 +130,9 @@ int main(int argc, char** argv) {
         switch (c) {
         case 'r':
             options.readonly = true;
+            break;
+        case 'm':
+            options.metrics = true;
             break;
         case 'v':
             options.verbose = true;

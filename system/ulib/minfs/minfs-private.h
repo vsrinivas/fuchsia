@@ -35,6 +35,12 @@
 #include <minfs/format.h>
 #include <minfs/writeback.h>
 
+#ifdef __Fuchsia__
+#include "metrics.h"
+#endif
+
+#include "ticker.h"
+
 #define EXTENT_COUNT 5
 
 #define panic(fmt...)         \
@@ -153,6 +159,32 @@ public:
     zx_status_t ReadIno(blk_t bno, void* data);
     zx_status_t ReadDat(blk_t bno, void* data);
 
+    void SetMetrics(bool enable) { collecting_metrics_ = enable; }
+    Ticker StartTicker() { return Ticker(collecting_metrics_); }
+
+    // Update aggregate information about VMO initialization.
+    void UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
+                           uint32_t dinum_count, uint64_t user_data_size,
+                           const Duration& duration);
+    // Update aggregate information about looking up vnodes by name.
+    void UpdateLookupMetrics(bool success, const Duration& duration);
+    // Update aggregate information about looking up vnodes by inode.
+    void UpdateOpenMetrics(bool cache_hit, const Duration& duration);
+    // Update aggregate information about inode creation.
+    void UpdateCreateMetrics(bool success, const Duration& duration);
+    // Update aggregate information about reading from Vnodes.
+    void UpdateReadMetrics(uint64_t size, const Duration& duration);
+    // Update aggregate information about writing to Vnodes.
+    void UpdateWriteMetrics(uint64_t size, const Duration& duration);
+    // Update aggregate information about truncating Vnodes.
+    void UpdateTruncateMetrics(const Duration& duration);
+    // Update aggregate information about unlinking Vnodes.
+    void UpdateUnlinkMetrics(bool success, const Duration& duration);
+    // Update aggregate information about renaming Vnodes.
+    void UpdateRenameMetrics(bool success, const Duration& duration);
+    // Print information about filesystem metrics.
+    void DumpMetrics() const;
+
     // TODO(rvargas): Make private.
     fbl::unique_ptr<Bcache> bc_;
     minfs_info_t info_{};
@@ -196,7 +228,9 @@ private:
     // when the Vnode is deleted, it is immediately removed from the map.
     HashTable vnode_hash_ __TA_GUARDED(hash_lock_){};
 
+    bool collecting_metrics_ = false;
 #ifdef __Fuchsia__
+    MinfsMetrics metrics_ = {};
     fbl::unique_ptr<MappedVmo> inode_table_{};
     fbl::unique_ptr<MappedVmo> info_vmo_{};
     vmoid_t inode_map_vmoid_{};
