@@ -6,9 +6,9 @@
 
 #include <fbl/arena.h>
 
-#include <vm/vm_aspace.h>
 #include <fbl/alloc_checker.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
+#include <vm/vm_aspace.h>
 
 using fbl::Arena;
 

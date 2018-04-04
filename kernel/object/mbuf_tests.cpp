@@ -7,8 +7,8 @@
 #include <object/mbuf.h>
 
 #include <fbl/unique_ptr.h>
+#include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
-#include <unittest.h>
 
 namespace {
 

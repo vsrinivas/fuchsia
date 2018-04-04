@@ -6,8 +6,8 @@
 
 #include <object/dispatcher.h>
 
+#include <lib/unittest/unittest.h>
 #include <object/state_observer.h>
-#include <unittest.h>
 
 namespace {
 

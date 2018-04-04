@@ -15,6 +15,7 @@
 #include <inttypes.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +23,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unittest.h>
 #include <vm/vm_aspace.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

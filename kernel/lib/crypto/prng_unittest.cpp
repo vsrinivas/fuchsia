@@ -6,8 +6,8 @@
 
 #include <lib/crypto/prng.h>
 
+#include <lib/unittest/unittest.h>
 #include <stdint.h>
-#include <unittest.h>
 
 namespace crypto {
 

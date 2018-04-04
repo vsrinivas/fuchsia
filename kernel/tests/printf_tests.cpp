@@ -8,9 +8,9 @@
 #include "tests.h"
 
 #include <debug.h>
+#include <lib/unittest/unittest.h>
 #include <stdio.h>
 #include <string.h>
-#include <unittest.h>
 
 // Checks that vsnprintf() gives the expected string as output.
 static bool test_printf(const char* expected, const char* format, ...) {

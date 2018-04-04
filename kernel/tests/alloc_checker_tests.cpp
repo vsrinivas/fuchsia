@@ -8,7 +8,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 
 static bool alloc_checker_ctor() {
     BEGIN_TEST;

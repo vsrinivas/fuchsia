@@ -7,13 +7,13 @@
 #include <assert.h>
 #include <err.h>
 #include <hypervisor/guest_physical_address_space.h>
-#include <vm/vm.h>
+#include <lib/unittest/unittest.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 #include <vm/vm_object_paged.h>
-#include <unittest.h>
 
 static bool hypervisor_supported() {
 #if ARCH_ARM64

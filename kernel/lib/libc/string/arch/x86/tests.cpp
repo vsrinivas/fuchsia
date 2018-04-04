@@ -6,8 +6,8 @@
 
 #include <arch/x86/feature.h>
 #include <assert.h>
+#include <lib/unittest/unittest.h>
 #include <stddef.h>
-#include <unittest.h>
 
 extern "C" {
 

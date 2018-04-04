@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/crypto/entropy/collector.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 
 namespace crypto {
 

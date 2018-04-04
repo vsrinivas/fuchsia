@@ -16,7 +16,7 @@
 #include <assert.h>
 #include <err.h>
 #include <platform.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 
 STATIC_COMMAND_START
 STATIC_COMMAND("thread_tests", "test the scheduler", (console_cmd)&thread_tests)

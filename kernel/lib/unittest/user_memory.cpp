@@ -7,7 +7,7 @@
 #include <lib/unittest/user_memory.h>
 
 #include <fbl/auto_call.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 
 namespace testing {
 

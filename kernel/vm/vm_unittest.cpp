@@ -8,7 +8,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>

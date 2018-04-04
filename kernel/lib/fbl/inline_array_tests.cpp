@@ -4,10 +4,10 @@
 
 #include <fbl/inline_array.h>
 
-#include <stddef.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
+#include <stddef.h>
 
 namespace {
 

@@ -10,11 +10,11 @@
 //                the method that it tests lives inside syscalls_system.cpp
 
 #include <assert.h>
-#include <zircon/boot/bootdata.h>
-#include <zircon/types.h>
+#include <lib/unittest/unittest.h>
 #include <mexec.h>
 #include <stddef.h>
-#include <unittest.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/types.h>
 
 const size_t kBootdataSentinelLen = 64;
 const uint8_t kBootdataSentinelByte = 0xA5;

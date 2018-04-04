@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/unittest/unittest.h>
 #include <limits.h>
 #include <pow2.h>
-#include <unittest.h>
 
 static bool pow2_test(void)
 {

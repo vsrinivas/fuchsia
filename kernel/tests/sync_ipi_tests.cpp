@@ -13,9 +13,9 @@
 #include <kernel/event.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
+#include <lib/unittest/unittest.h>
 #include <stdio.h>
 #include <trace.h>
-#include <unittest.h>
 #include <zircon/types.h>
 
 #define LOCAL_TRACE 0

@@ -9,7 +9,7 @@
 #include <kernel/sched.h>
 #include <kernel/timer.h>
 #include <platform.h>
-#include <unittest.h>
+#include <lib/unittest/unittest.h>
 
 // Test that preempt_disable is set for timer callbacks and that, in this
 // context, preempt_pending will get set by some functions.

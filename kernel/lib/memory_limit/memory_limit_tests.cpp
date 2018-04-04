@@ -5,10 +5,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <err.h>
-#include <lib/memory_limit.h>
 #include <fbl/algorithm.h>
+#include <lib/memory_limit.h>
+#include <lib/unittest/unittest.h>
 #include <sys/types.h>
-#include <unittest.h>
 
 typedef struct {
     uintptr_t base;
