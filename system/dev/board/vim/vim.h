@@ -48,3 +48,6 @@ zx_status_t vim_usb_init(vim_bus_t* bus);
 
 // vim-sd-emmc.c
 zx_status_t vim_sd_emmc_init(vim_bus_t* bus);
+
+// vim-eth.c
+zx_status_t vim_eth_init(vim_bus_t* bus);

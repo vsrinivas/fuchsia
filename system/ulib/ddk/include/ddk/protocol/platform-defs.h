@@ -65,6 +65,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_AMLOGIC_AXG_CLK    4
 #define PDEV_DID_AMLOGIC_GXL_CLK    5
 #define PDEV_DID_AMLOGIC_SD_EMMC    6
+#define PDEV_DID_AMLOGIC_ETH        7
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6
