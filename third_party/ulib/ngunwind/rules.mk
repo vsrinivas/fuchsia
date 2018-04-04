@@ -6,6 +6,8 @@ MODULE_TYPE := userlib
 
 MODULE_EXPORT := so
 
+MODULE_PACKAGE := shared
+
 MODULE_COMPILEFLAGS := \
     -DDEBUG \
     -I$(LOCAL_DIR)/include/ngunwind \
