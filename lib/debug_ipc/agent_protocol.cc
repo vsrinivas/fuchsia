@@ -31,6 +31,15 @@ void Serialize(const MemoryBlock& block, MessageWriter* writer) {
     writer->WriteBytes(&block.data[0], block.size);
 }
 
+void Serialize(const Module& module, MessageWriter* writer) {
+  writer->WriteString(module.name);
+  writer->WriteUint64(module.base);
+}
+
+void Serialize(const StackFrame& frame, MessageWriter* writer) {
+  writer->WriteBytes(&frame, sizeof(StackFrame));
+}
+
 // Hello -----------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader,
@@ -297,8 +306,7 @@ void WriteNotifyException(const NotifyException& notify,
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
-  writer->WriteUint64(notify.ip);
-  writer->WriteUint64(notify.sp);
+  Serialize(notify.frame, writer);
 }
 
 }  // namespace debug_ipc

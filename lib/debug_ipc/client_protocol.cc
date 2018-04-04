@@ -57,6 +57,16 @@ bool Deserialize(MessageReader* reader, MemoryBlock* block) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, Module* module) {
+  if (!reader->ReadString(&module->name))
+    return false;
+  return reader->ReadUint64(&module->base);
+};
+
+bool Deserialize(MessageReader* reader, StackFrame* frame) {
+  return reader->ReadBytes(sizeof(StackFrame), frame);
+}
+
 // Hello -----------------------------------------------------------------------
 
 void WriteRequest(const HelloRequest& request,
@@ -347,12 +357,7 @@ bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
     return false;
   notify->type = static_cast<NotifyException::Type>(type);
 
-  if (!reader->ReadUint64(&notify->ip))
-    return false;
-  if (!reader->ReadUint64(&notify->sp))
-    return false;
-
-  return true;
+  return Deserialize(reader, &notify->frame);
 }
 
 }  // namespace debug_ipc

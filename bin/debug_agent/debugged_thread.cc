@@ -82,8 +82,8 @@ void DebuggedThread::OnException(uint32_t type) {
 
   notify.process_koid = process_->koid();
   FillThreadRecord(thread_, &notify.thread);
-  notify.ip = *arch::IPInRegs(&regs);
-  notify.sp = *arch::SPInRegs(&regs);
+  notify.frame.ip = *arch::IPInRegs(&regs);
+  notify.frame.sp = *arch::SPInRegs(&regs);
 
   // Send notification.
   debug_ipc::MessageWriter writer;

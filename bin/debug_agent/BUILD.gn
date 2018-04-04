@@ -29,6 +29,8 @@ static_library("lib") {
     "remote_api_adapter.h",
     "system_info.cc",
     "system_info.h",
+    "unwind.cc",
+    "unwind.h",
   ]
 
   if (current_cpu == "x64") {
@@ -51,6 +53,7 @@ static_library("lib") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/launchpad",
+    "//zircon/public/lib/ngunwind",
   ]
 }
 

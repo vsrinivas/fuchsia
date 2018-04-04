@@ -197,8 +197,8 @@ struct NotifyException {
 
   Type type = Type::kGeneral;
 
-  uint64_t ip = 0;  // Instruction pointer.
-  uint64_t sp = 0;  // Stack pointer.
+  // The frame of the top of the stack.
+  StackFrame frame;
 };
 
 #pragma pack(pop)

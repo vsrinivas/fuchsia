@@ -82,6 +82,18 @@ struct BreakpointSettings {
   Stop stop = Stop::kAll;
 };
 
+// Information on one loaded module.
+struct Module {
+  std::string name;
+  uint64_t base = 0;  // Load address of this file.
+  // Will need more things here like build_id.
+};
+
+struct StackFrame {
+  uint64_t ip = 0;  // Instruction pointer.
+  uint64_t sp = 0;  // Stack pointer.
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

@@ -378,8 +378,8 @@ TEST(Protocol, NotifyException) {
   initial.process_koid = 23;
   initial.thread.name = "foo";
   initial.type = NotifyException::Type::kHardware;
-  initial.ip = 0x7647342634;
-  initial.sp = 0x9861238251;
+  initial.frame.ip = 0x7647342634;
+  initial.frame.sp = 0x9861238251;
 
   NotifyException second;
   ASSERT_TRUE(SerializeDeserializeNotification(
@@ -388,8 +388,8 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.process_koid, second.process_koid);
   EXPECT_EQ(initial.thread.name, second.thread.name);
   EXPECT_EQ(initial.type, second.type);
-  EXPECT_EQ(initial.ip, second.ip);
-  EXPECT_EQ(initial.sp, second.sp);
+  EXPECT_EQ(initial.frame.ip, second.frame.ip);
+  EXPECT_EQ(initial.frame.sp, second.frame.sp);
 }
 
 }  // namespace debug_ipc

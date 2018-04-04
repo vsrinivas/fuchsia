@@ -64,7 +64,7 @@ void ThreadImpl::OnException(const debug_ipc::NotifyException& notify) {
   FXL_DCHECK(state_ == debug_ipc::ThreadRecord::State::kBlocked);
 
   for (auto& observer : observers())
-    observer.OnThreadStopped(this, notify.type, notify.ip);
+    observer.OnThreadStopped(this, notify.type, notify.frame.ip);
 }
 
 }  // namespace zxdb
