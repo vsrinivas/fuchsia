@@ -52,18 +52,15 @@ class TestApp {
         VerifyLinkTwo();
         return;
       }
-      EntityPtr entity;
-      entity_resolver_->ResolveEntity(entity_reference, entity.NewRequest());
-      entity->GetData("myType",
-                      fxl::MakeCopyable([this, entity = std::move(entity)](
-                                            fidl::StringPtr content) {
-                        if (content == "1337") {
-                          link_one_correct_.Pass();
-                        }
+      entity_resolver_->ResolveEntity(entity_reference, entity_.NewRequest());
+      entity_->GetData("myType", [this](fidl::StringPtr content) {
+          if (content == "1337") {
+            link_one_correct_.Pass();
+          }
 
-                        VerifyLinkTwo();
-                      }));
-    });
+          VerifyLinkTwo();
+        });
+      });
   }
 
   TestPoint link_two_correct_{"Link two value is correct."};
@@ -99,6 +96,8 @@ class TestApp {
   LinkPtr link_one_;
   LinkPtr link_two_;
   LinkPtr link_three_;
+
+  EntityPtr entity_;
 
   fidl::StringPtr entity_one_reference_;
 

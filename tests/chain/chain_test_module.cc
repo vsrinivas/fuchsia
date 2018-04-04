@@ -42,6 +42,7 @@ class TestApp : public ModuleWatcher {
     entity_data->at(0) = TypeToDataEntry();
     entity_data->at(0).type = "myType";
     entity_data->at(0).data = "1337";
+
     component_context_->CreateEntityWithData(
         std::move(entity_data), [this](fidl::StringPtr reference) {
           entity_one_reference_ = reference;
@@ -57,7 +58,6 @@ class TestApp : public ModuleWatcher {
 
  private:
   void EmbedModule() {
-    Daisy daisy_;
     daisy_.url = kChildModuleUrl;
     daisy_.nouns.resize(3);
 
@@ -93,8 +93,8 @@ class TestApp : public ModuleWatcher {
     daisy_.nouns->at(2).noun = std::move(noun);
 
     // Sync to avoid race conditions between writing
-    link_one_->Sync([this, &daisy_] {
-      link_two_->Sync([this, &daisy_] {
+    link_one_->Sync([this] {
+      link_two_->Sync([this] {
         module_context_->EmbedModule(
             "my child", std::move(daisy_), nullptr, child_module_.NewRequest(),
             child_view_.NewRequest(), [this](StartModuleStatus status) {
@@ -127,7 +127,7 @@ class TestApp : public ModuleWatcher {
   views_v1_token::ViewOwnerPtr child_view_;
 
   fidl::StringPtr entity_one_reference_;
-  DaisyPtr daisy_;
+  Daisy daisy_;
 
   LinkPtr link_one_;
   LinkPtr link_two_;
