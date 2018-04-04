@@ -123,13 +123,7 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                    fidl::VectorPtr<uint8_t> value,
                                    Priority priority,
                                    Page::PutWithPriorityCallback callback) {
-  if (key->size() > kMaxKeySize) {
-    FXL_VLOG(1) << "Key too large: " << key->size()
-                << " bytes long, which is more than the maximum allowed size ("
-                << kMaxKeySize << ").";
-    callback(Status::KEY_TOO_LARGE);
-    return;
-  }
+  FXL_DCHECK(key->size() <= kMaxKeySize);
   auto promise =
       callback::Promise<storage::Status, storage::ObjectIdentifier>::Create(
           storage::Status::ILLEGAL_STATE);
@@ -167,13 +161,7 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
                                 Reference reference,
                                 Priority priority,
                                 Page::PutReferenceCallback callback) {
-  if (key->size() > kMaxKeySize) {
-    FXL_VLOG(1) << "Key too large: " << key->size()
-                << " bytes long, which is more than the maximum allowed size ("
-                << kMaxKeySize << ").";
-    callback(Status::KEY_TOO_LARGE);
-    return;
-  }
+  FXL_DCHECK(key->size() <= kMaxKeySize);
   storage::ObjectIdentifier object_identifier;
   Status status =
       manager_->ResolveReference(std::move(reference), &object_identifier);

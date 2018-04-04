@@ -14,6 +14,7 @@
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
@@ -264,24 +265,28 @@ TEST_F(PageImplTest, PutUnknownReference) {
 }
 
 TEST_F(PageImplTest, PutKeyTooLarge) {
+  std::string value("a small value");
+
+  zx::channel writer, reader;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  page_ptr_.Bind(std::move(writer));
+
+  // Key too large; message doesn't go through, failing on validation.
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
-  std::string value("a small value");
-  auto callback = [this](Status status) {
-    EXPECT_EQ(Status::KEY_TOO_LARGE, status);
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value),
+                 [](Status status) {});
+  zx_status_t status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
-    // Make sure no entries or journals were added (operation has failed).
-    auto objects = fake_storage_->GetObjects();
-    EXPECT_EQ(0u, objects.size());
-
-    const std::map<std::string,
-                   std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-        journals = fake_storage_->GetJournals();
-    EXPECT_EQ(0u, journals.size());
-    message_loop_.PostQuitTask();
-  };
-  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value), callback);
-  RunLoop();
+  // With a smaller key, message goes through.
+  key = GetKey(1, kMaxKeySize);
+  page_ptr_->Put(convert::ToArray(key), convert::ToArray(value),
+                 [](Status status) {});
+  status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
 }
 
 TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
@@ -289,34 +294,34 @@ TEST_F(PageImplTest, PutReferenceKeyTooLarge) {
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
 
-  Status status;
+  Status reference_status;
   ReferencePtr reference;
   page_ptr_->CreateReferenceFromVmo(
       std::move(vmo).ToTransport(),
-      callback::Capture(MakeQuitTask(), &status, &reference));
+      callback::Capture(MakeQuitTask(), &reference_status, &reference));
   RunLoop();
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(Status::OK, reference_status);
 
+  zx::channel writer, reader;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &writer, &reader));
+  page_ptr_.Bind(std::move(writer));
+
+  // Key too large; message doesn't go through, failing on validation.
   const size_t key_size = kMaxKeySize + 1;
   std::string key = GetKey(1, key_size);
+  page_ptr_->PutReference(convert::ToArray(key), fidl::Clone(*reference),
+                          Priority::EAGER, [](Status status) {});
+  zx_status_t status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
+  // With a smaller key, message goes through.
+  key = GetKey(1, kMaxKeySize);
   page_ptr_->PutReference(convert::ToArray(key), std::move(*reference),
-                          Priority::LAZY,
-                          callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
-
-  EXPECT_EQ(Status::KEY_TOO_LARGE, status);
-
-  // We created a reference above, so there should be one object in storage.
-  auto objects = fake_storage_->GetObjects();
-  EXPECT_EQ(1u, objects.size());
-
-  // But there should be no operations pending (an attempt to put a new
-  // key-value pair failed).
-  const std::map<std::string,
-                 std::unique_ptr<storage::fake::FakeJournalDelegate>>&
-      journals = fake_storage_->GetJournals();
-  EXPECT_EQ(0u, journals.size());
+                          Priority::EAGER, [](Status status) {});
+  status = reader.read(0, nullptr, 0, nullptr, nullptr, 0, nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, status);
 }
 
 TEST_F(PageImplTest, DeleteNoTransaction) {
@@ -1358,8 +1363,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](
-                                Status status,
-                                mem::BufferPtr returned_value) {
+                                Status status, mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value1 = ToString(returned_value);
     message_loop_.PostQuitTask();
@@ -1369,8 +1373,7 @@ TEST_F(PageImplTest, ParallelPut) {
 
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](
-                                Status status,
-                                mem::BufferPtr returned_value) {
+                                Status status, mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value2 = ToString(returned_value);
     message_loop_.PostQuitTask();

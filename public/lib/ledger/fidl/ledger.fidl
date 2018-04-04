@@ -24,8 +24,7 @@ enum Status : int32 {
   TRANSACTION_ALREADY_IN_PROGRESS = 10;
   NO_TRANSACTION_IN_PROGRESS = 11;
   INTERNAL_ERROR = 12;
-  KEY_TOO_LARGE = 13;
-  VALUE_TOO_LARGE = 14;
+  VALUE_TOO_LARGE = 13;
   UNKNOWN_ERROR = -1;
 };
 
@@ -92,8 +91,8 @@ interface Page {
   // page state on this page connection newer than the resulting snapshot. If
   // |key_prefix| is provided too, the change notifications will only contain
   // the entries with matching keys.
-  2: GetSnapshot(request<PageSnapshot> snapshot_request, vector<uint8>? key_prefix,
-      PageWatcher? watcher) -> (Status @status);
+  2: GetSnapshot(request<PageSnapshot> snapshot_request,
+      vector<uint8>:256? key_prefix, PageWatcher? watcher) -> (Status @status);
 
   // Mutation operations.
   // Mutations are bundled together into atomic commits. If a transaction is in
@@ -105,10 +104,7 @@ interface Page {
   // - All pending mutations will regularly be bundled together and committed.
   //   They are guaranteed to be persisted as soon as the client receives a
   //   successful status.
-  // When inserting into a page, key length cannot exceed 256: Calls to any of
-  // the three insertion methods (|Put()|, |PutWithPriority()|,
-  // |PutReference()|) with a bigger key will fail with a |KEY_TOO_LARGE|
-  // status. |Put()| and |PutWithPriority()| can be used for small values that
+  // |Put()| and |PutWithPriority()| can be used for small values that
   // fit inside a FIDL message. If the value is bigger, a reference must be
   // first created using |CreateReferenceFromSocket()| or
   // |CreateReferenceFromVmo()| and then |PutReference()| can be used.
@@ -116,12 +112,12 @@ interface Page {
   // parameter managing the synchronization policy for this value. |Put()| uses
   // a default priority of |Priority.EAGER|. For the list of available
   // priorities and their definition, see |Priority|.
-  3: Put(vector<uint8> key, vector<uint8> value) -> (Status @status);
-  4: PutWithPriority(vector<uint8> key, vector<uint8> value, Priority priority)
+  3: Put(vector<uint8>:256 key, vector<uint8> value) -> (Status @status);
+  4: PutWithPriority(vector<uint8>:256 key, vector<uint8> value,
+      Priority priority) -> (Status @status);
+  5: PutReference(vector<uint8>:256 key, Reference reference, Priority priority)
       -> (Status @status);
-  5: PutReference(vector<uint8> key, Reference reference, Priority priority)
-      -> (Status @status);
-  6: Delete(vector<uint8> key) -> (Status @status);
+  6: Delete(vector<uint8>:256 key) -> (Status @status);
 
   // References.
   // Creates a new reference. The object is not part of any commit. It must be
@@ -199,7 +195,7 @@ enum Priority {
 
 // A pair of key and value.
 struct Entry {
-  vector<uint8> key;
+  vector<uint8>:256 key;
   // |value| is null and |size| is 0 if the value requested has the LAZY
   // priority and is not present on the device. Clients must use a Fetch call
   // to retrieve the contents.
@@ -209,7 +205,7 @@ struct Entry {
 
 // A pair of key and an inlined value.
 struct InlinedEntry {
-  vector<uint8> key;
+  vector<uint8>:256 key;
   // |value| is null if the value requested has the LAZY priority and is not
   // present on the device. Clients must use a Fetch call to retrieve the
   // contents.
@@ -234,12 +230,12 @@ interface PageSnapshot {
   // Only |EAGER| values are guaranteed to be returned inside |entries|.
   // Missing |LAZY| values can be retrieved over the network using Fetch().
   // The returned |entries| are sorted by |key|.
-  1: GetEntries(vector<uint8>? key_start, vector<uint8>? token)
+  1: GetEntries(vector<uint8>:256? key_start, vector<uint8>? token)
       -> (Status @status, vector<Entry>? entries, vector<uint8>? next_token);
 
   // Same as |GetEntries()|. |VALUE_TOO_LARGE| is returned if a value does not
   // fit in a FIDL message.
-  2: GetEntriesInline(vector<uint8>? key_start, vector<uint8>? token)
+  2: GetEntriesInline(vector<uint8>:256? key_start, vector<uint8>? token)
       -> (Status @status, vector<InlinedEntry>? entries,
           vector<uint8>? next_token);
 
@@ -252,24 +248,25 @@ interface PageSnapshot {
   // the value of |next_token| returned in the previous call.
   // The returned |keys| are sorted. |status| will be |PARTIAL_RESULT| as long
   // as there are more results and |OK| once finished.
-  3: GetKeys(vector<uint8>? key_start, vector<uint8>? token)
-      -> (Status @status, vector<vector<uint8>>? keys, vector<uint8>? next_token);
+  3: GetKeys(vector<uint8>:256? key_start, vector<uint8>? token)
+      -> (Status @status, vector<vector<uint8>:256>? keys,
+          vector<uint8>? next_token);
 
   // Returns the value of a given key.
   // Only |EAGER| values are guaranteed to be returned. Calls when the value is
   // |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
   // be retrieved over the network using a Fetch() call.
-  4: Get(vector<uint8> key) -> (Status @status, mem.Buffer? buffer);
+  4: Get(vector<uint8>:256 key) -> (Status @status, mem.Buffer? buffer);
 
   // Returns the value of a given key if it fits in a FIDL message.
   // |VALUE_TOO_LARGE| is returned if the value does not fit in a FIDL message.
   // See |Get()| for additional information.
-  5: GetInline(vector<uint8> key) -> (Status @status, vector<uint8>? value);
+  5: GetInline(vector<uint8>:256 key) -> (Status @status, vector<uint8>? value);
 
   // Fetches the value of a given key, over the network if not already present
   // locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
   // is not available).
-  6: Fetch(vector<uint8> key) -> (Status @status, mem.Buffer? buffer);
+  6: Fetch(vector<uint8>:256 key) -> (Status @status, mem.Buffer? buffer);
 
   // Fetches the value of a given key, over the network if not already present
   // locally, and returns a shared handle of a part of the value of a given
@@ -277,7 +274,7 @@ interface PageSnapshot {
   // is less than 0, starts at |-offset| from the end of the value.
   // Returns at most |max_size| bytes. If |max_size| is less than 0, returns
   // everything.
-  7: FetchPartial(vector<uint8> key, int64 offset, int64 max_size)
+  7: FetchPartial(vector<uint8>:256 key, int64 offset, int64 max_size)
       -> (Status @status, mem.Buffer? buffer);
 };
 
@@ -298,7 +295,7 @@ struct PageChange {
   // List of new and modified entries. |changed_entries| are sorted by |key|.
   vector<Entry> changed_entries;
   // List of deleted keys, in sorted order.
-  vector<vector<uint8>> deleted_keys;
+  vector<vector<uint8>:256> deleted_keys;
 };
 
 // Interface to watch changes to a page. The client will receive changes made by
@@ -380,7 +377,7 @@ enum ValueSource {
 // to the new value. If |source| is not |NEW|, |new_value| and |priority| are
 // ignored.
 struct MergedValue {
-  vector<uint8> key;
+  vector<uint8>:256 key;
   ValueSource source;
   BytesOrReference? new_value;
   Priority priority;
@@ -392,7 +389,7 @@ struct MergedValue {
 // was not present in the base, left or right (respectively) branch of the
 // page.
 struct DiffEntry {
-  vector<uint8> key;
+  vector<uint8>:256 key;
 
   Value? base;
   Value? left;

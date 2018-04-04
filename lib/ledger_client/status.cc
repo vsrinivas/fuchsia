@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/logging.h"
 
 namespace modular {
 
@@ -39,8 +39,6 @@ std::string LedgerStatusToString(ledger::Status status) {
       return "NO_TRANSACTION_IN_PROGRESS";
     case ledger::Status::INTERNAL_ERROR:
       return "INTERNAL_ERROR";
-    case ledger::Status::KEY_TOO_LARGE:
-      return "KEY_TOO_LARGE";
     case ledger::Status::VALUE_TOO_LARGE:
       return "VALUE_TOO_LARGE";
     case ledger::Status::UNKNOWN_ERROR:
