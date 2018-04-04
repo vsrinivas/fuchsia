@@ -103,6 +103,19 @@ static device_t sys_device = {
     .refcount = 1,
 };
 
+static device_t test_device = {
+    .parent = &root_device,
+    .flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND,
+    .protocol_id = ZX_PROTOCOL_TEST_PARENT,
+    .name = "test",
+    .libname = "",
+    .args = "test,",
+    .children = LIST_INITIAL_VALUE(test_device.children),
+    .pending = LIST_INITIAL_VALUE(test_device.pending),
+    .refcount = 1,
+};
+
+
 static zx_handle_t dmctl_socket;
 
 static void dmprintf(const char* fmt, ...) {
@@ -294,6 +307,7 @@ static void dc_dump_state(void) {
     dc_dump_device(&root_device, 0);
     dc_dump_device(&misc_device, 1);
     dc_dump_device(&sys_device, 1);
+    dc_dump_device(&test_device, 1);
 }
 
 static void dc_dump_device_props(device_t* dev) {
@@ -353,6 +367,7 @@ static void dc_dump_devprops(void) {
     dc_dump_device_props(&root_device);
     dc_dump_device_props(&misc_device);
     dc_dump_device_props(&sys_device);
+    dc_dump_device_props(&test_device);
 }
 
 static void dc_dump_drivers(void) {
@@ -451,6 +466,8 @@ static zx_status_t dc_get_topo_path(device_t* dev, char* out, size_t max) {
             name = "dev/misc";
         } else if (!strcmp(sys_device.name, dev->name)) {
             name = "dev/sys";
+        } else if (!strcmp(sys_device.name, dev->name)) {
+            name = "dev/test";
         } else {
             name = "dev";
         }
@@ -1600,6 +1617,7 @@ static void build_suspend_list(suspend_context_t* ctx) {
     append_suspend_list(ctx, root_device.proxy->host);
     list_add_head(&ctx->devhosts, &misc_device.proxy->host->snode);
     append_suspend_list(ctx, misc_device.proxy->host);
+    // test devices do not (yet) participate in suspend
 }
 
 static void process_suspend_list(suspend_context_t* ctx) {
@@ -1725,6 +1743,17 @@ static bool is_misc_driver(driver_t* drv) {
         (memcmp(&misc_device_binding, drv->binding, sizeof(misc_device_binding)) == 0);
 }
 
+// device binding program that pure (parentless)
+// test devices use to get published in the test devhost
+static struct zx_bind_inst test_device_binding =
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT);
+
+static bool is_test_driver(driver_t* drv) {
+    return (drv->binding_size == sizeof(test_device_binding)) &&
+        (memcmp(&test_device_binding, drv->binding, sizeof(test_device_binding)) == 0);
+}
+
+
 // device binding program that special root-level
 // devices use to get published in the root devhost
 static struct zx_bind_inst root_device_binding =
@@ -1801,6 +1830,8 @@ void dc_bind_driver(driver_t* drv) {
         dc_attempt_bind(drv, &root_device);
     } else if (is_misc_driver(drv)) {
         dc_attempt_bind(drv, &misc_device);
+    } else if (is_test_driver(drv)) {
+        dc_attempt_bind(drv, &test_device);
     } else if (dc_running) {
         device_t* dev;
         list_for_every_entry(&list_devices, dev, device_t, anode) {
@@ -1877,6 +1908,7 @@ void coordinator(void) {
 
     devfs_publish(&root_device, &misc_device);
     devfs_publish(&root_device, &sys_device);
+    devfs_publish(&root_device, &test_device);
 
     find_loadable_drivers("/boot/driver");
     find_loadable_drivers("/boot/driver/test");
@@ -1899,6 +1931,7 @@ void coordinator(void) {
     sys_device.libname = "/boot/driver/platform-bus.so";
 #endif
     dc_prepare_proxy(&sys_device);
+    dc_prepare_proxy(&test_device);
 
     if (require_system && !system_loaded) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");

@@ -330,7 +330,8 @@ zx_status_t devfs_publish(device_t* parent, device_t* dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    if ((dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
+    if ((dev->protocol_id == ZX_PROTOCOL_TEST_PARENT) ||
+        (dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
         (dev->protocol_id == ZX_PROTOCOL_MISC)) {
         // misc devices are singletons, not a class
         // in the sense of other device classes.

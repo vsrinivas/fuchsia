@@ -203,5 +203,5 @@ static zx_driver_ops_t test_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(test, test_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_PARENT),
 ZIRCON_DRIVER_END(test)

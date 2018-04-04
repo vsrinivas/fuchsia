@@ -9,7 +9,7 @@
 #include <zircon/types.h>
 
 
-#define TEST_CONTROL_DEVICE "/dev/misc/test"
+#define TEST_CONTROL_DEVICE "/dev/test/test"
 
 // Create a test device, only supported by TEST_CONTROL_DEVICE
 //   in: null-terminated string device name
