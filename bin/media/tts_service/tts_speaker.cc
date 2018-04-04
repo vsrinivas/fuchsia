@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/bin/media/tts_service/tts_speaker.h"
-#include "garnet/public/lib/fsl/threading/create_thread.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 
@@ -23,17 +24,16 @@ static constexpr uint32_t kLowWaterBytes =
 TtsSpeaker::TtsSpeaker(fxl::RefPtr<fxl::TaskRunner> master_task_runner)
     : master_task_runner_(std::move(master_task_runner)),
       abort_playback_(false),
-      synthesis_complete_(false) {}
+      synthesis_complete_(false) {
+  engine_loop_.StartThread();
+}
 
 zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
                               const fxl::Closure& speak_complete_cbk) {
   words_ = std::move(words);
   speak_complete_cbk_ = std::move(speak_complete_cbk);
 
-  FXL_DCHECK(!engine_thread_.joinable());
-  engine_thread_ = fsl::CreateThread(&engine_task_runner_);
-
-  engine_task_runner_->PostTask([thiz = shared_from_this()]() {
+  async::PostTask(engine_loop_.async(), [thiz = shared_from_this()]() {
     thiz->DoSpeak();
   });
 
@@ -86,15 +86,12 @@ zx_status_t TtsSpeaker::Init(
 }
 
 void TtsSpeaker::Shutdown() {
-  if (engine_task_runner_) {
-    FXL_DCHECK(engine_thread_.joinable());
-    abort_playback_.store(true);
-    {
-      std::lock_guard<std::mutex> lock(ring_buffer_lock_);
-      wakeup_event_.signal(0, ZX_USER_SIGNAL_0);
-    }
-    engine_thread_.join();
+  abort_playback_.store(true);
+  {
+    std::lock_guard<std::mutex> lock(ring_buffer_lock_);
+    wakeup_event_.signal(0, ZX_USER_SIGNAL_0);
   }
+  engine_loop_.Shutdown();
 }
 
 void TtsSpeaker::SendPendingAudio() {
@@ -286,8 +283,6 @@ void TtsSpeaker::DoSpeak() {
       speak_complete_cbk();
     });
   }
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
 }
 
 }  // namespace tts

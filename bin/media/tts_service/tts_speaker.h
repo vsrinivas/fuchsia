@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include <fbl/vmo_mapper.h>
-
 #include <mutex>
 #include <thread>
+
+#include <lib/async/cpp/loop.h>
+#include <fbl/vmo_mapper.h>
+#include <fuchsia/cpp/media.h>
 #include <zircon/types.h>
 
-#include <fuchsia/cpp/media.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -65,8 +66,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
 
   bool clock_started_ = false;
 
-  std::thread engine_thread_;
-  fxl::RefPtr<fxl::TaskRunner> engine_task_runner_;
+  async::Loop engine_loop_;
   fxl::RefPtr<fxl::TaskRunner> master_task_runner_;
 
   media::AudioRenderer2Ptr audio_renderer_;
