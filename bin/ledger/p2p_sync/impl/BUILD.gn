@@ -21,8 +21,8 @@ source_set("impl") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/bin/ledger/p2p_sync/public",
     "//peridot/bin/ledger/p2p_provider/impl",
+    "//peridot/bin/ledger/p2p_sync/public",
     "//peridot/lib/convert",
   ]
 
@@ -44,8 +44,8 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "user_communicator_impl_unittest.cc",
     "page_communicator_impl_unittest.cc",
+    "user_communicator_impl_unittest.cc",
   ]
 
   deps = [

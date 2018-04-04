@@ -65,6 +65,7 @@ source_set("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/lib/network_wrapper:fake",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl:fxl_printers",
     "//garnet/public/lib/test_runner/cpp:gtest_main",
@@ -73,7 +74,6 @@ source_set("unittests") {
     "//peridot/bin/cloud_provider_firebase/page_handler/testing",
     "//peridot/bin/ledger/testing:lib",
     "//peridot/lib/firebase_auth/testing",
-    "//garnet/lib/network_wrapper:fake",
     "//peridot/public/lib/auth/fidl",
     "//peridot/public/lib/cloud_provider/fidl",
   ]

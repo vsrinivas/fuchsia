@@ -27,10 +27,8 @@ executable("component_context_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:message_receiver_client",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 

@@ -7,21 +7,27 @@ import("//build/package.gni")
 executable("module_package_indexer_bin") {
   output_name = "module_package_indexer"
 
-  sources = ["main.cc"]
+  sources = [
+    "main.cc",
+  ]
 
   deps = [
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest_source/fidl",
-    "//zircon/public/lib/fdio"
+    "//zircon/public/lib/fdio",
   ]
 }
 
 package("module_package_indexer") {
-  deps = [":module_package_indexer_bin"]
+  deps = [
+    ":module_package_indexer_bin",
+  ]
   binary = "module_package_indexer"
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }

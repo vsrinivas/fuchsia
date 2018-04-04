@@ -24,8 +24,8 @@ executable("modular_benchmark_story_module") {
     ":tracing_waiter",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
-    "//peridot/public/lib/app_driver/cpp:module_driver",
     "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
   ]
 }
 
@@ -42,7 +42,6 @@ executable("modular_benchmark_story_user_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 
@@ -64,8 +63,8 @@ copy("modular_benchmark_story_tspec") {
 
 source_set("tracing_waiter") {
   sources = [
-    "tracing_waiter.h",
     "tracing_waiter.cc",
+    "tracing_waiter.h",
   ]
 
   public_deps = [

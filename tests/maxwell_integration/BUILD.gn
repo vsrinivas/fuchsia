@@ -27,10 +27,10 @@ executable("context_engine_test") {
     "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/bin/context_engine:scope_utils",
     "//peridot/lib/testing:entity_resolver_fake",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -55,10 +55,8 @@ executable("suggestion_engine_test") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
     "//peridot/lib/util:wait_until_idle",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -78,7 +76,6 @@ source_set("context_common") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
   ]
@@ -116,10 +113,9 @@ source_set("test_suggestion_listener") {
   ]
 
   deps = [
-    "//peridot/public/lib/suggestion/cpp:formatting",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/suggestion/cpp:formatting",
   ]
 
   public_deps = [

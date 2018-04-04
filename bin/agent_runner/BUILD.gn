@@ -30,14 +30,9 @@ source_set("agent_runner") {
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/ledger_client:types",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -65,7 +60,6 @@ source_set("unittests") {
     "//peridot/lib/testing:test_with_ledger",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/trace",
   ]
@@ -86,11 +80,8 @@ source_set("public") {
     "//peridot/bin/entity",
     "//peridot/bin/ledger/fidl",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/auth/fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

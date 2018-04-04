@@ -60,15 +60,10 @@ source_set("module_resolver_impl") {
   deps = [
     "//garnet/public/lib/fxl",
     "//peridot/lib/module_manifest_source",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 

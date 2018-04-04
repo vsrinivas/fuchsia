@@ -29,11 +29,6 @@ executable("story_info") {
     "//peridot/lib/ledger_client:storage",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
@@ -51,8 +46,6 @@ fidl("initializer") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 }

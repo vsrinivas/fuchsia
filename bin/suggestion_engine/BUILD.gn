@@ -54,13 +54,9 @@ executable("bin") {
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/lib/util:wait_until_idle",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -108,9 +104,8 @@ source_set("ranking") {
   deps = [
     ":models",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -125,9 +120,8 @@ source_set("state") {
     ":models",
     ":ranking",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -170,7 +164,6 @@ source_set("timeline_stories_watcher") {
   deps = [
     "//garnet/public/lib/fxl",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -195,7 +188,6 @@ source_set("debug") {
     ":state",
     "//garnet/public/lib/fxl",
     "//peridot/lib/util:wait_until_idle",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 }

@@ -16,7 +16,6 @@ source_set("clipboard_sources") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 

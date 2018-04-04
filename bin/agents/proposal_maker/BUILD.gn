@@ -15,8 +15,7 @@ executable("proposal_maker") {
     "//peridot/bin/agents/entity_utils:entity_span",
     "//peridot/bin/agents/entity_utils:entity_utils",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

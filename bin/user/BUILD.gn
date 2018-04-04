@@ -73,12 +73,7 @@ source_set("user_intelligence_provider") {
     "//peridot/bin/acquirers/story_info:initializer",
     "//peridot/lib/util:rate_limited_retry",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/resolver/fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -89,10 +84,6 @@ source_set("intelligence_services") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 }

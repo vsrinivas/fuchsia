@@ -11,10 +11,12 @@ package("cloud_provider_firestore") {
 
   binary = "cloud_provider_firestore"
 
-  meta = [ {
-        path = rebase_path("app/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("app/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 package("firestore_demo") {
@@ -24,10 +26,12 @@ package("firestore_demo") {
 
   binary = "firestore_demo"
 
-  meta = [ {
-        path = rebase_path("demo/meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("demo/meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
 }
 
 executable("unittests") {

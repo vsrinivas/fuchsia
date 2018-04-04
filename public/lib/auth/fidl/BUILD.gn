@@ -10,12 +10,12 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "modular_auth"
   sources = [
+    "account/account.fidl",
     "account_provider.fidl",
     "token_provider.fidl",
-    "account/account.fidl",
   ]
 
   deps = [
-    "//garnet/public/lib/ui/views/fidl:v1"
+    "//garnet/public/lib/ui/views/fidl:v1",
   ]
 }

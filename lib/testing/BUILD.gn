@@ -57,8 +57,8 @@ source_set("entity_resolver_fake") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -70,9 +70,8 @@ source_set("story_controller_mock") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
   ]
 
   deps = [
@@ -88,8 +87,8 @@ source_set("story_provider_mock") {
   ]
 
   public_deps = [
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
   ]
 
   deps = [

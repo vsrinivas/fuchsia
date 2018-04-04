@@ -23,9 +23,8 @@ executable("bin") {
     ":context_engine_impl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -45,8 +44,8 @@ source_set("context_index") {
   ]
 
   deps = [
-    "//peridot/public/lib:fidl",
     "//garnet/public/lib/fxl",
+    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -60,9 +59,9 @@ source_set("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
   ]
 }
@@ -75,9 +74,8 @@ source_set("context_reader_impl") {
 
   deps = [
     ":context_repository",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -95,8 +93,8 @@ source_set("context_repository") {
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
     "//peridot/lib/util:wait_until_idle",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib:fidl",
+    "//peridot/public/lib/context/cpp:formatting",
     "//third_party/rapidjson",
   ]
 }
@@ -111,10 +109,10 @@ source_set("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
     "//third_party/googletest:gtest",
   ]
 }
@@ -129,13 +127,11 @@ source_set("context_writer_impl") {
     ":context_repository",
     "//garnet/public/lib/fxl",
     "//peridot/lib/bound_set",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/async/cpp:future_value",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//third_party/rapidjson",
   ]
 }
@@ -156,7 +152,6 @@ source_set("context_engine_impl") {
     ":context_writer_impl",
     "//garnet/public/lib/fidl/cpp",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -168,7 +163,6 @@ source_set("scope_utils") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
     "//third_party/boringssl",  # for sha256
   ]

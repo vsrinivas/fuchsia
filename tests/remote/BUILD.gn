@@ -23,12 +23,7 @@ executable("remote_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

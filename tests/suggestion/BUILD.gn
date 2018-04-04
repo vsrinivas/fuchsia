@@ -22,10 +22,8 @@ executable("suggestion_test_module") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -39,9 +37,6 @@ executable("suggestion_test_user_shell") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 }

@@ -22,9 +22,8 @@ executable("embed_shell_test_child_module") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -39,9 +38,8 @@ executable("embed_shell_test_parent_module") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -61,10 +59,8 @@ executable("embed_shell_test_story_shell") {
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:formatting",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

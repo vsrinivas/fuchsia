@@ -24,10 +24,8 @@ executable("queue_persistence_test_module") {
     "//garnet/lib/callback",
     "//garnet/public/lib/fsl",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -44,7 +42,6 @@ executable("queue_persistence_test_agent") {
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
-    "//peridot/public/lib:fidl",
   ]
 }
 

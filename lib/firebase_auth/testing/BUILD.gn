@@ -42,8 +42,8 @@ source_set("service_account") {
 
   public_deps = [
     "//garnet/lib/callback",
-    "//garnet/public/lib/fxl",
     "//garnet/lib/network_wrapper",
+    "//garnet/public/lib/fxl",
     "//peridot/public/lib/auth/fidl",
   ]
 

@@ -21,9 +21,8 @@ executable("clipboard_test_module") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/test_runner/fidl",
-    "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
     "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp",
   ]
 }

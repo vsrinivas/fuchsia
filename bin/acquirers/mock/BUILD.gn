@@ -18,6 +18,5 @@ source_set("gps") {
     "//garnet/public/lib/fsl",
     "//peridot/bin/acquirers:gps",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

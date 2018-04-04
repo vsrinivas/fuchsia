@@ -26,6 +26,5 @@ executable("story_update_test_user_shell") {
     "//peridot/lib/testing",
     "//peridot/lib/testing:component_base",
     "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }

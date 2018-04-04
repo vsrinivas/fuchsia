@@ -27,9 +27,8 @@ executable("example_module1") {
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -48,9 +47,8 @@ executable("example_module2") {
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -69,12 +67,9 @@ executable("example_recipe") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
+    "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib/ledger/fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
-    "//peridot/public/lib:fidl",
   ]
 }
 
@@ -89,7 +84,6 @@ source_set("store") {
 
   public_deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib:fidl",
     "//peridot/public/lib:fidl",
   ]
 }

@@ -39,5 +39,3 @@ copy("run_modular_benchmarks") {
     "$root_out_dir/run_modular_benchmarks.sh",
   ]
 }
-
-
