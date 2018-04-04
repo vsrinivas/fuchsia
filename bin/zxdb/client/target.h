@@ -12,8 +12,8 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/weak_thunk.h"
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/public/lib/fxl/observer_list.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/observer_list.h"
 
 namespace zxdb {
 
@@ -69,12 +69,16 @@ class Target : public ClientObject {
   // program name configured via SetArgs().
   virtual void Launch(Callback callback) = 0;
 
+  // Kills the process with the given koid. The callback will be
+  // executed when the kill is complete (or fails).
+  virtual void Kill(Callback callback) = 0;
+
   // Attaches to the process with the given koid. The callback will be
-  // executed with the attach is complete (or fails).
+  // executed when the attach is complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
   // Detaches from the process with the given koid. The callback will be
-  // executed with the detach is complete (or fails).
+  // executed when the detach is complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
   // Notification from the agent that a process has exited.

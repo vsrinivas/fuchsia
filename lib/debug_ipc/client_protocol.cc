@@ -101,6 +101,28 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Kill ----------------------------------------------------------------------
+
+void WriteRequest(const KillRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kKill, transaction_id);
+  writer->WriteUint64(request.process_koid);
+}
+
+bool ReadReply(MessageReader* reader,
+               KillReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!reader->ReadUint32(&reply->status))
+    return false;
+  return true;
+}
+
 // Attach ----------------------------------------------------------------------
 
 void WriteRequest(const AttachRequest& request,

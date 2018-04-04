@@ -27,6 +27,14 @@ bool ReadReply(MessageReader* reader,
                LaunchReply* reply,
                uint32_t* transaction_id);
 
+// Stop.
+void WriteRequest(const KillRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               KillReply* reply,
+               uint32_t* transaction_id);
+
 // Attach.
 void WriteRequest(const AttachRequest& request,
                   uint32_t transaction_id,

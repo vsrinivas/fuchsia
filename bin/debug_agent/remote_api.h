@@ -20,6 +20,8 @@ class RemoteAPI {
 
   virtual void OnLaunch(const debug_ipc::LaunchRequest& request,
                         debug_ipc::LaunchReply* reply) = 0;
+  virtual void OnKill(const debug_ipc::KillRequest& request,
+                      debug_ipc::KillReply* reply) = 0;
 
   // Attach is special because it needs to follow the reply immediately with
   // a series of notifications about the current threads. This means it

@@ -82,6 +82,7 @@ void RemoteAPIAdapter::OnHandleReadable() {
   switch (header.type) {
     DISPATCH(Hello);
     DISPATCH(Launch);
+    DISPATCH(Kill);
     DISPATCH(Pause);
     DISPATCH(ProcessTree);
     DISPATCH(Threads);

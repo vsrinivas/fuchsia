@@ -37,6 +37,8 @@ class DebuggedProcess {
       debug_ipc::AddOrChangeBreakpointReply* reply);
   void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
                           debug_ipc::RemoveBreakpointReply* reply);
+  void OnKill(const debug_ipc::KillRequest& request,
+              debug_ipc::KillReply* reply);
 
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid);

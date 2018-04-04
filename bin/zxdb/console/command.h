@@ -56,6 +56,7 @@ enum class Verb {
   kQuit,
   kRun,
   kStepi,
+  kKill,
 
   // Adding a new one? Add in one of the functions GetVerbs() calls.
   kLast  // Not a real verb, keep last.

@@ -6,7 +6,7 @@
 
 #include <map>
 #include <memory>
-
+#include <zircon/types.h>
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/exception_handler.h"
 #include "garnet/bin/debug_agent/remote_api.h"
@@ -43,6 +43,8 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
                debug_ipc::HelloReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request,
                 debug_ipc::LaunchReply* reply) override;
+  void OnKill(const debug_ipc::KillRequest& request,
+              debug_ipc::KillReply* reply) override;
   void OnAttach(std::vector<char> serialized) override;
   void OnDetach(const debug_ipc::DetachRequest& request,
                 debug_ipc::DetachReply* reply) override;
@@ -68,6 +70,7 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
   // Returns a pointer to the newly created object.
   DebuggedProcess* AddDebuggedProcess(zx_koid_t koid, zx::process proc);
   void RemoveDebuggedProcess(zx_koid_t koid);
+  void StopDebuggedProcess(zx_koid_t koid);
 
   // Sends all current threads or one specific thread information as new thread
   // notifications about the given process.

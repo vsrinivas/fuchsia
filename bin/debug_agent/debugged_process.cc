@@ -133,6 +133,11 @@ void DebuggedProcess::OnRemoveBreakpoint(
   FXL_DCHECK(address_to_breakpoint_id_.size() == breakpoints_.size());
 }
 
+void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
+                             debug_ipc::KillReply* reply) {
+  reply->status = process_.kill();
+}
+
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) {
   auto found_thread = threads_.find(thread_koid);
   if (found_thread == threads_.end())

@@ -103,6 +103,26 @@ TEST(Protocol, LaunchReply) {
   EXPECT_EQ(initial.process_name, second.process_name);
 }
 
+// Kill ----------------------------------------------------------------------
+
+TEST(Protocol, KillRequest) {
+  KillRequest initial;
+  initial.process_koid = 5678;
+
+  KillRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+}
+
+TEST(Protocol, KillReply) {
+  KillReply initial;
+  initial.status = 67;
+
+  KillReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+  EXPECT_EQ(initial.status, second.status);
+}
+
 // Attach ----------------------------------------------------------------------
 
 TEST(Protocol, AttachRequest) {

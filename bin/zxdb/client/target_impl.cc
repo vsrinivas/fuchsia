@@ -76,6 +76,31 @@ void TargetImpl::Launch(Callback callback) {
       });
 }
 
+void TargetImpl::Kill(Callback callback) {
+  if (!process_.get()) {
+    // TODO(brettw): Send this asynchronously so as not to surprise callers.
+    callback(this, Err("Error detaching: No process."));
+    return;
+  }
+
+  debug_ipc::KillRequest request;
+  request.process_koid = process_->GetKoid();
+  session()->Send<debug_ipc::KillRequest, debug_ipc::KillReply>(
+      request, [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
+                callback](const Err& err, debug_ipc::KillReply reply) {
+        if (auto ptr = thunk.lock()) {
+          ptr->thunk->OnKillOrDetachReply(err, reply.status,
+                                          std::move(callback));
+        } else {
+          // The reply that the process was launched came after the local
+          // objects were destroyed.
+          // TODO(brettw) handle this more gracefully. Maybe kill the remote
+          // process?
+          fprintf(stderr, "Warning: process detach race\n");
+        }
+      });
+}
+
 void TargetImpl::Attach(uint64_t koid, Callback callback) {
   debug_ipc::AttachRequest request;
   request.koid = koid;
@@ -114,7 +139,7 @@ void TargetImpl::Detach(Callback callback) {
        callback](
            const Err& err, debug_ipc::DetachReply reply) {
         if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnDetachReply(err, reply.status, std::move(callback));
+          ptr->thunk->OnKillOrDetachReply(err, reply.status, std::move(callback));
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed.
@@ -165,8 +190,7 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
   }
 }
 
-void TargetImpl::OnDetachReply(const Err& err, uint32_t status,
-                               Callback callback) {
+void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback) {
   FXL_DCHECK(process_.get());  // Should have a process.
 
   Err issue_err;  // Error to send in callback.

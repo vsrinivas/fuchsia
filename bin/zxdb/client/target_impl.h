@@ -31,6 +31,7 @@ class TargetImpl : public Target {
   const std::vector<std::string>& GetArgs() const override;
   void SetArgs(std::vector<std::string> args) override;
   void Launch(Callback callback) override;
+  void Kill(Callback callback) override;
   void Attach(uint64_t koid, Callback callback) override;
   void Detach(Callback callback) override;
   void OnProcessExiting(int return_code) override;
@@ -40,7 +41,7 @@ class TargetImpl : public Target {
                              const std::string& process_name,
                              Callback callback);
 
-  void OnDetachReply(const Err& err, uint32_t status, Callback callback);
+  void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
 
   State state_ = kNone;
 

@@ -27,6 +27,14 @@ void WriteReply(const LaunchReply& reply,
                 uint32_t transaction_id,
                 MessageWriter* writer);
 
+// Stop.
+bool ReadRequest(MessageReader* reader,
+                 KillRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const KillReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Attach.
 bool ReadRequest(MessageReader* reader,
                  AttachRequest* request,
@@ -104,7 +112,8 @@ void WriteReply(const RemoveBreakpointReply& reply,
 // (These don't have a "request"/"reply".)
 
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer);
-void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify,
+void WriteNotifyThread(MsgHeader::Type type,
+                       const NotifyThread& notify,
                        MessageWriter* writer);
 void WriteNotifyException(const NotifyException& notify, MessageWriter* writer);
 

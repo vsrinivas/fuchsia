@@ -7,8 +7,8 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/err.h"
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/process.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -37,9 +37,9 @@ Err AssertRunnableTarget(Target* target) {
   return Err();
 }
 
-// Callback for both "run" and "attach". The verb affects the message printed
-// to the screen.
-void RunAndAttachCallback(const char* verb, Target* target, const Err& err) {
+// Callback for "run", "attach", "detach" and "stop". The verb affects the
+// message printed to the screen.
+void ProcessCommandCallback(const char* verb, Target* target, const Err& err) {
   Console* console = Console::get();
 
   OutputBuffer out;
@@ -153,7 +153,38 @@ Err DoRun(ConsoleContext* context, const Command& cmd) {
   }
 
   cmd.target()->Launch([](Target* target, const Err& err) {
-    RunAndAttachCallback("launch", target, err);
+    ProcessCommandCallback("launch", target, err);
+  });
+  return Err();
+}
+
+// kill ----------------------------------------------------------------------
+
+const char kKillShortHelp[] = "kill / k: terminate a process";
+const char kKillHelp[] =
+    R"(kill
+  Terminates a process from the debugger.
+Hints
+
+  By default the current process is detached.
+  To detach a different process prefix with "process N"
+
+Examples
+
+  kill
+      Kills the current process.
+
+  process 4 kill
+      Kills process 4.
+)";
+Err DoKill(ConsoleContext* context, const Command& cmd) {
+  // Only a process can be detached.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  cmd.target()->Detach([](Target* target, const Err& err) {
+    ProcessCommandCallback("kill", target, err);
   });
   return Err();
 }
@@ -196,7 +227,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
     return err;
 
   cmd.target()->Attach(koid, [](Target* target, const Err& err) {
-    RunAndAttachCallback("attach", target, err);
+    ProcessCommandCallback("attach", target, err);
   });
   return Err();
 }
@@ -233,14 +264,7 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
   // context will watch for Process destruction and print messages for each one
   // in the success case.
   cmd.target()->Detach([](Target* target, const Err& err) {
-    if (err.has_error()) {
-      Console* console = Console::get();
-      OutputBuffer out;
-      out.Append(fxl::StringPrintf("Process %d detach failed.\n",
-          console->context().IdForTarget(target)));
-      out.OutputErr(err);
-      console->Output(std::move(out));
-    }
+    ProcessCommandCallback("detach", target, err);
   });
   return Err();
 }
@@ -251,6 +275,8 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp);
   (*verbs)[Verb::kRun] =
       VerbRecord(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp);
+  (*verbs)[Verb::kKill] =
+      VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp, kKillHelp);
   (*verbs)[Verb::kAttach] =
       VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp);
   (*verbs)[Verb::kDetach] =

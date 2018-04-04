@@ -123,6 +123,17 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
   }
 }
 
+void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
+                        debug_ipc::KillReply* reply) {
+  auto debug_process = GetDebuggedProcess(request.process_koid);
+
+  if (!debug_process || !debug_process->process().is_valid()) {
+    reply->status = ZX_ERR_NOT_FOUND;
+    return;
+  }
+  debug_process->OnKill(request, reply);
+}
+
 void DebugAgent::OnAttach(std::vector<char> serialized) {
   debug_ipc::MessageReader reader(std::move(serialized));
   debug_ipc::AttachRequest request;

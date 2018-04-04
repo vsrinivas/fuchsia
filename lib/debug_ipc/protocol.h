@@ -23,6 +23,7 @@ struct MsgHeader {
     kNone = 0,
     kHello,
     kLaunch,
+    kKill,
     kAttach,
     kDetach,
     kPause,
@@ -71,6 +72,13 @@ struct LaunchReply {
   uint32_t status = 0;  // zx_status_t value from launch, ZX_OK on success.
   uint64_t process_koid = 0;
   std::string process_name;
+};
+
+struct KillRequest {
+  uint64_t process_koid = 0;
+};
+struct KillReply {
+  uint32_t status = 0;
 };
 
 // The debug agent will follow a successful AttachReply with notifications for
@@ -146,7 +154,7 @@ struct AddOrChangeBreakpointRequest {
   BreakpointSettings breakpoint;
 };
 struct AddOrChangeBreakpointReply {
-  // If the satatus is not ZX_OK (0), the breakpoint add/change did not
+  // If the status is not ZX_OK (0), the breakpoint add/change did not
   // succeded. In the case of changed breakpoints failing to modify, the
   // breakpoint with the given ID will be removed so the client and agent can
   // be in a consistent state (error always means it doesn't exist).
