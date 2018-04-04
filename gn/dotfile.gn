@@ -36,5 +36,6 @@ check_targets = [
   "//garnet/*",
   "//peridot/*",
   "//topaz/*",
+  "//vendor/*",
   "//zircon/*",
 ]
