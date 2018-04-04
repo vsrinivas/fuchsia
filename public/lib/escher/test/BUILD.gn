@@ -10,7 +10,6 @@ executable("escher_unittests") {
   sources = [
     "geometry/bounding_box_unittest.cc",
     "gpu_mem_unittest.cc",
-    "hash_unittest.cc",
     "impl/glsl_compiler_unittest.cc",
     "impl/pipeline_cache_unittest.cc",
     "math/rotations_unittest.cc",
@@ -21,6 +20,8 @@ executable("escher_unittests") {
     "scene/directional_light_unittest.cc",
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
+    "util/hash_unittest.cc",
+    "util/hashmap_unittest.cc",
     "vk/buffer_unittest.cc",
   ]
 

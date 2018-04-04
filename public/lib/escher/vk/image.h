@@ -12,7 +12,7 @@
 namespace escher {
 
 // Full description of the size and layout of an Image.
-#pragma pack(push, 1)  // As required by escher::Hash<ImageInfo>
+#pragma pack(push, 1)  // As required by escher::HashMapHasher<ImageInfo>
 struct ImageInfo {
   vk::Format format = vk::Format::eUndefined;
   uint32_t width = 0;

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/escher/util/hash.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
+#include "lib/escher/util/hash_map.h"
+#include "lib/escher/vk/image.h"
 
 #include "gtest/gtest.h"
 
@@ -32,8 +33,12 @@ void TestHashForValue(const Hashee& hashee) {
 
   // This is a bit paranoid... if the Hashees are bit-identical, then there
   // should be no way for the hash to fail, since it works only on the bits.
-  Hash<Hashee> hash;
-  EXPECT_EQ(hash(hashee1), hash(hashee1));
+  HashMapHasher<Hashee> hash;
+  EXPECT_EQ(hash(hashee0), hash(hashee1));
+
+  // Hash shouldn't be zero (some objects may cache their own hash, and a value
+  // of zero can be used to represent a dirty hash).
+  EXPECT_NE(hash(hashee), 0U);
 
   // Paranoid check that equality is commutative.
   EXPECT_EQ(hashee, hashee0);
@@ -46,18 +51,33 @@ void TestHashForValue(const Hashee& hashee) {
 
 // This test should be updated to include all hashed types used by Escher.
 TEST(Hash, AllHashedTypes) {
-  impl::ModelPipelineSpec model_pipeline_spec;
-  MeshSpec mesh_spec;
+  // MeshSpec and ModelPipelineSpec.
+  {
+    MeshSpec mesh_spec;
+    mesh_spec.flags = MeshAttribute::kPosition2D | MeshAttribute::kUV;
 
-  mesh_spec.flags = MeshAttribute::kPosition2D | MeshAttribute::kUV;
+    impl::ModelPipelineSpec model_pipeline_spec;
+    model_pipeline_spec.mesh_spec = mesh_spec;
+    model_pipeline_spec.shape_modifiers = ShapeModifier::kWobble;
+    FXL_CHECK((model_pipeline_spec.shape_modifiers & ShapeModifier::kWobble) ==
+              ShapeModifier::kWobble);
 
-  model_pipeline_spec.mesh_spec = mesh_spec;
-  model_pipeline_spec.shape_modifiers = ShapeModifier::kWobble;
+    TestHashForValue(mesh_spec);
+    TestHashForValue(model_pipeline_spec);
+  }
 
-  FXL_CHECK((model_pipeline_spec.shape_modifiers & ShapeModifier::kWobble) ==
-            ShapeModifier::kWobble);
+  // ImageInfo.
+  {
+    ImageInfo info;
+    info.format = vk::Format::eR32G32Sfloat;
+    info.width = 1024;
+    info.height = 768;
+    info.sample_count = 2;
+    info.usage = vk::ImageUsageFlagBits::eStorage;
+    info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-  TestHashForValue(model_pipeline_spec);
+    TestHashForValue(info);
+  }
 }
 
 }  // namespace

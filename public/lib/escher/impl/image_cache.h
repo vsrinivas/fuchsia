@@ -5,12 +5,11 @@
 #pragma once
 
 #include <queue>
-#include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource_manager.h"
-#include "lib/escher/util/hash.h"
+#include "lib/escher/util/hash_map.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/image_factory.h"
@@ -58,10 +57,7 @@ class ImageCache : public ResourceManager, public ImageFactory {
   // GPU stall.  The right approach is probably to trim the cache in the most
   // straightforward way, and profile to determine whether GPU stalls are a real
   // concern.
-  std::unordered_map<ImageInfo,
-                     std::queue<std::unique_ptr<Image>>,
-                     Hash<ImageInfo>>
-      unused_images_;
+  HashMap<ImageInfo, std::queue<std::unique_ptr<Image>>> unused_images_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ImageCache);
 };

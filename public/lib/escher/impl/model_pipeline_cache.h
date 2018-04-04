@@ -5,12 +5,11 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/resources/resource.h"
-#include "lib/escher/util/hash.h"
+#include "lib/escher/util/hash_map.h"
 #include "lib/fxl/macros.h"
 
 namespace escher {
@@ -47,10 +46,7 @@ class ModelPipelineCache : public Resource {
 
   ModelDataPtr model_data_;
   ModelRenderPass* const render_pass_;
-  std::unordered_map<ModelPipelineSpec,
-                     std::unique_ptr<ModelPipeline>,
-                     Hash<ModelPipelineSpec>>
-      pipelines_;
+  HashMap<ModelPipelineSpec, std::unique_ptr<ModelPipeline>> pipelines_;
   std::unique_ptr<GlslToSpirvCompiler> compiler_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModelPipelineCache);

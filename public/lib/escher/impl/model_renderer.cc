@@ -18,6 +18,7 @@
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/shape.h"
 #include "lib/escher/scene/stage.h"
+#include "lib/escher/util/hash_map.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/image.h"
@@ -86,9 +87,7 @@ ModelDisplayListPtr ModelRenderer::CreateDisplayList(
 
     // Sort all objects into bins.  Then, iterate over each bin in arbitrary
     // order, without additional sorting within the bin.
-    std::unordered_map<ModelPipelineSpec, std::vector<size_t>,
-                       Hash<ModelPipelineSpec>>
-        pipeline_bins;
+    HashMap<ModelPipelineSpec, std::vector<size_t>> pipeline_bins;
     for (size_t i = 0; i < objects.size(); ++i) {
       auto& obj = objects[i];
       if (obj.shape().type() == Shape::Type::kNone) {

@@ -5,13 +5,13 @@
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/impl/descriptor_set_pool.h"
 #include "lib/escher/impl/uniform_buffer_pool.h"
 #include "lib/escher/shape/modifier_wobble.h"
+#include "lib/escher/util/hash_map.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 
@@ -133,9 +133,7 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
   DescriptorSetPool per_model_descriptor_set_pool_;
   DescriptorSetPool per_object_descriptor_set_pool_;
 
-  std::unordered_map<MeshSpec,
-                     std::unique_ptr<MeshShaderBinding>,
-                     MeshSpec::Hash>
+  HashMap<MeshSpec, std::unique_ptr<MeshShaderBinding>>
       mesh_shader_binding_cache_;
 
   FRIEND_MAKE_REF_COUNTED(ModelData);
