@@ -368,7 +368,7 @@ private:
         // last block is filled with zeroes.
         char buf[kMinfsBlockSize];
         const size_t vmo_size = fbl::round_up(inode_.size, kMinfsBlockSize);
-        ZX_ASSERT(VmoReadExact(buf, inode_.size, vmo_size - inode_.size) == ZX_OK);
+        ZX_ASSERT(vmo_.read(buf, inode_.size, vmo_size - inode_.size) == ZX_OK);
         for (size_t i = 0; i < vmo_size - inode_.size; i++) {
             ZX_ASSERT_MSG(buf[i] == 0, "vmo[%" PRIu64 "] != 0 (inode size = %u)\n",
                           inode_.size + i, inode_.size);
@@ -538,11 +538,6 @@ private:
     // Clears the block at |offset| in memory.
     // Assumes that vmo_indirect_ has already been initialized
     void ClearIndirectVmoBlock(uint32_t offset);
-
-    // The following functionality interacts with handles directly, and are not applicable outside
-    // Fuchsia (since there is no "handle-equivalent" in host-side tools).
-    zx_status_t VmoReadExact(void* data, uint64_t offset, size_t len) const;
-    zx_status_t VmoWriteExact(const void* data, uint64_t offset, size_t len);
 
     // Use the watcher container to implement a directory watcher
     void Notify(fbl::StringPiece name, unsigned event) final;
