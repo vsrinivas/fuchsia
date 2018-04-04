@@ -21,6 +21,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 namespace ralink {
@@ -180,6 +181,9 @@ class Device : public wlan_device::Phy {
     // initialization functions
     zx_status_t LoadFirmware();
     zx_status_t EnableRadio();
+    zx_status_t StartInterruptPolling();
+    void StopInterruptPolling();
+    zx_status_t InterruptWorker();
     zx_status_t InitRegisters();
     zx_status_t InitBbp();
     zx_status_t InitBbp5592();
@@ -213,6 +217,7 @@ class Device : public wlan_device::Phy {
                                 size_t aggr_payload_len);
     uint8_t LookupTxWcid(const uint8_t* addr1, bool protected_frame);
 
+    zx::duration RemainingTbttTime();
     zx_status_t EnableHwBcn(bool active);
 
     static void ReadRequestComplete(usb_request_t* request, void* cookie);
@@ -277,6 +282,16 @@ class Device : public wlan_device::Phy {
 
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
     uint16_t iface_id_ = 0;
+
+    // Thread which periodically reads interrupt registers.
+    // Required because the device doesn't support USB interrupt endpoints.
+    constexpr static zx::duration kInterruptReadTimeout = zx::msec(1);
+    constexpr static zx::duration kPreTbttLeadTime = zx::msec(6);
+    // Message which will shut down the currently running interrupt thread.
+    static constexpr uint64_t kIntPortPktShutdown = 1;
+    std::thread interrupt_thrd_;
+    zx::port interrupt_port_;
+    zx::timer interrupt_timer_;
 };
 
 }  // namespace ralink

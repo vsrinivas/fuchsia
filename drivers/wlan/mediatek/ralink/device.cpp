@@ -1200,7 +1200,7 @@ zx_status_t Device::InitRegisters() {
     IntTimerCfg itc;
     status = ReadRegister(&itc);
     CHECK_READ(INT_TIMER_CFG, status);
-    itc.set_pre_tbtt_timer(6 << 4);
+    itc.set_pre_tbtt_timer(6 << 4); // 6.144 msec
     status = WriteRegister(itc);
     CHECK_WRITE(INT_TIMER_CFG, status);
 
@@ -3280,6 +3280,8 @@ void Device::HandleTxComplete(usb_request_t* request) {
 void Device::Unbind() {
     debugfn();
 
+    StopInterruptPolling();
+
     {
         std::lock_guard<std::mutex> guard(lock_);
         dead_ = true;
@@ -3730,6 +3732,128 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, void* cookie) {
     return ZX_OK;
 }
 
+zx_status_t Device::StartInterruptPolling() {
+    // Clear all interrupts and start thread.
+    IntStatus intStatus;
+    auto status = ReadRegister(&intStatus);
+    CHECK_READ(INT_STATUS, status);
+    status = WriteRegister(intStatus);
+    CHECK_WRITE(INT_STATUS, status);
+
+    status = zx::port::create(0, &interrupt_port_);
+    if (status != ZX_OK) {
+        errorf("could not create port: %d\n", status);
+        return status;
+    }
+
+    status = zx::timer::create(0u, ZX_CLOCK_MONOTONIC, &interrupt_timer_);
+    if (status != ZX_OK) {
+        errorf("could not create timer: %d\n", status);
+        return status;
+    }
+
+    status =
+        interrupt_timer_.wait_async(interrupt_port_, 0, ZX_TIMER_SIGNALED, ZX_WAIT_ASYNC_REPEATING);
+    if (status != ZX_OK) {
+        errorf("could not create timer: %d\n", status);
+        return status;
+    }
+
+    interrupt_thrd_ = std::thread(&Device::InterruptWorker, this);
+
+    zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
+    interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
+    return ZX_OK;
+}
+
+void Device::StopInterruptPolling() {
+    if (interrupt_thrd_.joinable()) {
+        zx_port_packet_t pkt = {
+            .key = kIntPortPktShutdown,
+            .type = ZX_PKT_TYPE_USER,
+        };
+        interrupt_port_.queue(&pkt, 0);
+        interrupt_thrd_.join();
+    }
+}
+
+zx_status_t Device::InterruptWorker() {
+    const char kThreadName[] = "ralink-interrupt-worker";
+    zx::thread::self().set_property(ZX_PROP_NAME, kThreadName, sizeof(kThreadName));
+
+    zx_port_packet_t pkt;
+    for (;;) {
+        zx::time timeout = zx::deadline_after(zx::sec(5));
+        auto status = interrupt_port_.wait(timeout, &pkt, 0);
+        if (status == ZX_ERR_TIMED_OUT) {
+            continue;
+        } else if (status != ZX_OK) {
+            if (status == ZX_ERR_BAD_HANDLE) {
+                infof("interrupt port closed, exiting loop\n");
+            } else {
+                errorf("error waiting on interrupt port: %d\n", status);
+            }
+            break;
+        }
+
+        switch (pkt.type) {
+        case ZX_PKT_TYPE_USER:
+            if (pkt.key == kIntPortPktShutdown) { return ZX_OK; }
+            break;
+        case ZX_PKT_TYPE_SIGNAL_REP: {
+            IntStatus intStatus;
+            status = ReadRegister(&intStatus);
+            CHECK_READ(INT_STATUS, status);
+
+            bool tbtt_interrupt = intStatus.mac_int_0();
+            if (tbtt_interrupt) {
+                // TODO(hahnr): Report TBTT to MLME.
+
+                // Clear interrupts.
+                status = WriteRegister(intStatus);
+                CHECK_WRITE(INT_STATUS, status);
+
+                // Wait for next Pre-TBTT.
+                zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
+                interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
+                break;
+            }
+
+            bool pre_tbtt_interrupt = intStatus.mac_int_1();
+            if (pre_tbtt_interrupt) {
+                // TODO(hahnr): Report Pre-TBTT to MLME.
+
+                // Clear interrupts.
+                status = WriteRegister(intStatus);
+                CHECK_WRITE(INT_STATUS, status);
+
+                // Wait for TBTT.
+                zx::duration tbtt = RemainingTbttTime();
+                interrupt_timer_.set(zx::deadline_after(tbtt), zx::usec(1));
+                break;
+            }
+
+            // Pre-TBTT or TBTT interrupt is about to happen very soon. Poll every millisecond.
+            interrupt_timer_.set(zx::deadline_after(kInterruptReadTimeout), zx::usec(1));
+            break;
+        }
+        default:
+            errorf("unknown port packet type: %u\n", pkt.type);
+            break;
+        }
+    }
+    return ZX_OK;
+}
+
+zx::duration Device::RemainingTbttTime() {
+    TbttTimer tbttTimer;
+    auto status = ReadRegister(&tbttTimer);
+    if (status != ZX_OK) {
+        return zx::usec(0);
+    }
+    return zx::usec(tbttTimer.tbtt_timer() * 64);
+}
+
 void Device::WlanmacStop() {
     debugfn();
     std::lock_guard<std::mutex> guard(lock_);
@@ -4030,8 +4154,22 @@ zx_status_t Device::EnableHwBcn(bool active) {
     CHECK_READ(BCN_TIME_CFG, status);
     if (bcnTimeCfg.bcn_tx_en() != active) {
         bcnTimeCfg.set_bcn_tx_en(active);
+        bcnTimeCfg.set_tbtt_timer_en(active);
         status = WriteRegister(bcnTimeCfg);
         CHECK_WRITE(BCN_TIME_CFG, status);
+
+        IntTimerEn intTimerEn;
+        status = ReadRegister(&intTimerEn);
+        CHECK_READ(interrupt_timer_EN, status);
+        intTimerEn.set_pre_tbtt_int_en(active);
+        status = WriteRegister(intTimerEn);
+        CHECK_WRITE(interrupt_timer_EN, status);
+
+        if (active) {
+            StartInterruptPolling();
+        } else {
+            StopInterruptPolling();
+        }
     }
     return ZX_OK;
 }

@@ -144,6 +144,28 @@ class SharedKeyModeEntry {
 
 // TODO(tkilbourn): differentiate between read-only and read/write registers
 
+class IntStatus : public Register<0x0200> {
+   public:
+    WLAN_BIT_FIELD(rx_dly_int, 0, 1);
+    WLAN_BIT_FIELD(tx_dly_int, 1, 1);
+    WLAN_BIT_FIELD(rx_done_int, 2, 1);
+    WLAN_BIT_FIELD(tx_done_int0, 3, 1);
+    WLAN_BIT_FIELD(tx_done_int1, 4, 2);
+    WLAN_BIT_FIELD(tx_done_int2, 5, 1);
+    WLAN_BIT_FIELD(tx_done_int3, 6, 1);
+    WLAN_BIT_FIELD(tx_done_int4, 7, 1);
+    WLAN_BIT_FIELD(tx_done_int5, 8, 1);
+    WLAN_BIT_FIELD(mcu_cmd_int, 9, 1);
+    WLAN_BIT_FIELD(tx_rx_coherent, 10, 1);
+    WLAN_BIT_FIELD(mac_int_0, 11, 1);
+    WLAN_BIT_FIELD(mac_int_1, 12, 1);
+    WLAN_BIT_FIELD(mac_int_2, 13, 1);
+    WLAN_BIT_FIELD(mac_int_3, 14, 1);
+    WLAN_BIT_FIELD(mac_int_4, 15, 1);
+    WLAN_BIT_FIELD(rx_coherent, 16, 1);
+    WLAN_BIT_FIELD(tx_coherent, 17, 1);
+};
+
 class WpdmaGloCfg : public Register<0x0208> {
    public:
     WLAN_BIT_FIELD(tx_dma_en, 0, 1);
@@ -438,10 +460,22 @@ class TbttSyncCfg : public Register<0x1118> {
     WLAN_BIT_FIELD(bcn_cwmin, 20, 4);
 };
 
+class TbttTimer : public Register<0x01124> {
+   public:
+    WLAN_BIT_FIELD(tbtt_timer, 0, 16);
+};
+
+
 class IntTimerCfg : public Register<0x1128> {
    public:
     WLAN_BIT_FIELD(pre_tbtt_timer, 0, 16);
     WLAN_BIT_FIELD(gp_timer, 16, 16);
+};
+
+class IntTimerEn : public Register<0x112C> {
+   public:
+    WLAN_BIT_FIELD(pre_tbtt_int_en, 0, 1);
+    WLAN_BIT_FIELD(gp_timer_en, 1, 1);
 };
 
 class ChIdleSta : public Register<0x1130> {
