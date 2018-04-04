@@ -65,29 +65,30 @@ zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
     zx_status_t status;
     size_t newlen = offset + len;
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
-    size_t alignedLen = fbl::round_up(newlen, static_cast<size_t>(PAGE_SIZE));
+    size_t alignedlen = fbl::round_up(newlen, static_cast<size_t>(PAGE_SIZE));
 
     if (vmo_ == ZX_HANDLE_INVALID) {
         // First access to the file? Allocate it.
-        if ((status = zx_vmo_create(alignedLen, 0, &vmo_)) != ZX_OK) {
+        if ((status = zx_vmo_create(alignedlen, 0, &vmo_)) != ZX_OK) {
             return status;
         }
-    } else if (newlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
+    } else if (alignedlen > fbl::round_up(length_, static_cast<size_t>(PAGE_SIZE))) {
         // Accessing beyond the end of the file? Extend it.
-        if ((status = zx_vmo_set_size(vmo_, alignedLen)) != ZX_OK) {
+        if ((status = zx_vmo_set_size(vmo_, alignedlen)) != ZX_OK) {
             return status;
         }
     }
 
-    if ((status = zx_vmo_write(vmo_, data, offset, len)) != ZX_OK) {
+    size_t writelen = newlen - offset;
+    if ((status = zx_vmo_write(vmo_, data, offset, writelen)) != ZX_OK) {
         return status;
     }
-    *out_actual = len;
+    *out_actual = writelen;
 
     if (newlen > length_) {
         length_ = newlen;
     }
-    if (*out_actual == 0 && offset >= kMemfsMaxFileSize) {
+    if (writelen < len) {
         // short write because we're beyond the end of the permissible length
         return ZX_ERR_FILE_BIG;
     }
