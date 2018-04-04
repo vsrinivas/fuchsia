@@ -500,14 +500,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "font-rs"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "gcc 0.3.54 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fuchsia-app"
 version = "0.1.0"
 dependencies = [
@@ -557,16 +549,6 @@ name = "fuchsia-ddk-sys"
 version = "0.1.0"
 dependencies = [
  "fuchsia-zircon 0.3.4",
-]
-
-[[package]]
-name = "fuchsia-llui"
-version = "0.1.0"
-dependencies = [
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "fdio 0.2.0",
- "font-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "fuchsia-zircon-sys 0.3.4",
 ]
 
 [[package]]
@@ -1551,7 +1533,6 @@ version = "0.1.12"
 "checksum failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "934799b6c1de475a012a02dab0ace1ace43789ee4b99bcfbf1a2e3e8ced5de82"
 "checksum failure_derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c7cdda555bb90c9bb67a3b670a0f42de8e73f5981524123ad8578aafec8ddb8b"
 "checksum fake-simd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e88a8acf291dafb59c2d96e8f59828f3838bb1a70398823ade51a84de6a6deed"
-"checksum font-rs 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "96cfd61f589e9be08d25dbdd4dacfd042a2374f9417d6477dd9eeeccb6b9326a"
 "checksum futures 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "0bab5b5e94f5c31fc764ba5dd9ad16568aae5d4825538c01d6bca680c9bf94a7"
 "checksum futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)" = "7799906214202625268bd8e970f88718681f0d8158816e792867e76e873a3dff"
 "checksum futures-channel 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)" = "a628618079c0e226f76c122f7722e0cdb360405dc93bae726d3c5eb60cc08920"

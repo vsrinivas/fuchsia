@@ -31,7 +31,6 @@ members =  [
   "public/rust/crates/fdio",
   "public/rust/crates/fuchsia-app",
   "public/rust/crates/fuchsia-async",
-  "public/rust/crates/fuchsia-llui",
   "public/rust/crates/fuchsia-syslog",
   "public/rust/crates/fuchsia-vfs",
   "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watcher",
