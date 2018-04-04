@@ -1588,15 +1588,16 @@ class StoryControllerImpl::ResolveModulesCall
         }
 
         ++(*outstanding_requests);
-        LinkPtr link;
+        auto link = std::make_unique<LinkPtr>();
+        auto link_request = link->NewRequest();
         new ConnectLinkCall(
             &operation_queue_, story_controller_impl_, CloneOptional(link_path),
             LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
-            false /* notify_watchers */, link.NewRequest(),
+            false /* notify_watchers */, std::move(link_request),
             fxl::MakeCopyable([this, name, outstanding_requests, cont,
                                link_path = std::move(link_path),
                                link = std::move(link)]() mutable {
-              link->Get(
+              (*link)->Get(
                   nullptr /* path */,
                   fxl::MakeCopyable([this, name, outstanding_requests, cont,
                                      link_path = std::move(link_path),

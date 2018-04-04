@@ -84,7 +84,6 @@
       }
     },
     {
-      "disabled": true,
       "name":"link_data",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=/system/test/modular_tests/link_data_test_user_shell --story_shell=dev_story_shell",
       "copy":{
@@ -108,7 +107,6 @@
       "exec":"/system/test/modular_tests/modular_unittests"
     },
     {
-      "disabled": true,
       "name":"parent_child",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_child_test_parent_module",
       "copy":{
