@@ -507,8 +507,7 @@ void ModuleResolverImpl::OnQuery(UserInput query, OnQueryCallback done) {
   // please split the index-building & querying portion of ModuleResolverImpl
   // out into its own class. Then, make a new class to handle OnQuery() and
   // share the same index instance here and there.
-
-  fidl::VectorPtr<Proposal> proposals;
+  auto proposals = fidl::VectorPtr<Proposal>::New(0);
   if (query.text->empty()) {
     QueryResponse response;
     response.proposals = std::move(proposals);

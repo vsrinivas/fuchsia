@@ -35,7 +35,7 @@ void makeProposalSummaries(const RankedSuggestionsList* suggestions,
 void SuggestionDebugImpl::OnAskStart(std::string query,
                                      const RankedSuggestionsList* suggestions) {
   for (auto& listener : ask_proposal_listeners_.ptrs()) {
-    fidl::VectorPtr<ProposalSummary> proposals;
+    auto proposals = fidl::VectorPtr<ProposalSummary>::New(0);
     makeProposalSummaries(suggestions, &proposals);
     (*listener)->OnAskStart(query, std::move(proposals));
   }
@@ -66,7 +66,7 @@ void SuggestionDebugImpl::OnInterrupt(
 void SuggestionDebugImpl::OnNextUpdate(
     const RankedSuggestionsList* suggestions) {
   for (auto& listener : next_proposal_listeners_.ptrs()) {
-    fidl::VectorPtr<ProposalSummary> proposals;
+    auto proposals = fidl::VectorPtr<ProposalSummary>::New(0);
     makeProposalSummaries(suggestions, &proposals);
     (*listener)->OnNextUpdate(std::move(proposals));
     cached_next_proposals_ = std::move(proposals);

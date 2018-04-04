@@ -22,8 +22,8 @@ void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
                                       const Id& id,
                                       const ContextValue& value) {
   ContextDebugValue update;
-  update.parent_ids = fidl::VectorPtr<fidl::StringPtr>();
-  for (const auto& it: parent_ids) {
+  update.parent_ids.resize(0);
+  for (const auto& it : parent_ids) {
     update.parent_ids.push_back(it);
   }
   update.id = id;
@@ -36,7 +36,7 @@ void ContextDebugImpl::OnValueChanged(const std::set<Id>& parent_ids,
 void ContextDebugImpl::OnValueRemoved(const Id& id) {
   ContextDebugValue update;
   update.id = id;
-  update.parent_ids = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  update.parent_ids.resize(0);
   DispatchOneValue(std::move(update));
 }
 
@@ -81,8 +81,8 @@ void ContextDebugImpl::Watch(
     ContextValue value_clone;
     fidl::Clone(entry.second.value, &value_clone);
     update.value = fidl::MakeOptional(std::move(value_clone));
-    update.parent_ids = fidl::VectorPtr<fidl::StringPtr>();
-    for (const auto& it: repository_->graph_.GetParents(entry.first)) {
+    update.parent_ids.resize(0);
+    for (const auto& it : repository_->graph_.GetParents(entry.first)) {
       update.parent_ids.push_back(it);
     }
     all_values.push_back(std::move(update));
@@ -105,15 +105,14 @@ void ContextDebugImpl::DispatchOneValue(ContextDebugValue value) {
 
 void ContextDebugImpl::DispatchValues(
     fidl::VectorPtr<ContextDebugValue> values) {
-  for (const auto& listener: listeners_.ptrs()) {
+  for (const auto& listener : listeners_.ptrs()) {
     fidl::VectorPtr<ContextDebugValue> values_clone;
     fidl::Clone(values, &values_clone);
     (*listener)->OnValuesChanged(std::move(values_clone));
   }
 }
 
-void ContextDebugImpl::DispatchOneSubscription(
-    ContextDebugSubscription value) {
+void ContextDebugImpl::DispatchOneSubscription(ContextDebugSubscription value) {
   fidl::VectorPtr<ContextDebugSubscription> values;
   values.push_back(std::move(value));
   DispatchSubscriptions(std::move(values));
@@ -121,7 +120,7 @@ void ContextDebugImpl::DispatchOneSubscription(
 
 void ContextDebugImpl::DispatchSubscriptions(
     fidl::VectorPtr<ContextDebugSubscription> subscriptions) {
-  for (const auto& listener: listeners_.ptrs()) {
+  for (const auto& listener : listeners_.ptrs()) {
     fidl::VectorPtr<ContextDebugSubscription> subscriptions_clone;
     fidl::Clone(subscriptions, &subscriptions_clone);
     (*listener)->OnSubscriptionsChanged(std::move(subscriptions_clone));
