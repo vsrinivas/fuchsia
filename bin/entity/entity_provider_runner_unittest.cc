@@ -42,10 +42,12 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
         ledger_client(), MakePageId("0123456789123456"), "/tmp/test_mq_data"));
     entity_provider_runner_.reset(
         new EntityProviderRunner(static_cast<EntityProviderLauncher*>(this)));
+    // The |UserIntelligenceProvider| below must be nullptr in order for agent
+    // creation to be synchronous, which these tests assume.
     agent_runner_.reset(
         new AgentRunner(&launcher_, mqm_.get(), ledger_repository(),
                         &agent_runner_storage_, token_provider_factory_.get(),
-                        ui_provider_.get(), entity_provider_runner_.get()));
+                        nullptr, entity_provider_runner_.get()));
   }
 
   void TearDown() override {
@@ -86,7 +88,6 @@ class EntityProviderRunnerTest : public TestWithLedger, EntityProviderLauncher {
   std::unique_ptr<AgentRunner> agent_runner_;
 
   modular_auth::TokenProviderFactoryPtr token_provider_factory_;
-  modular::UserIntelligenceProviderPtr ui_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(EntityProviderRunnerTest);
 };
