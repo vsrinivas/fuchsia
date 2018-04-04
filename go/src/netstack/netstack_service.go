@@ -251,10 +251,9 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address nsfidl.NetAddr
 func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err error) {
 	s := ns.stack.Stats()
 	return nsfidl.AggregateStats{
-		UnknownProtocolReceivedPackets:        s.UnknownProtocolRcvdPackets,
-		UnknownNetworkEndpointReceivedPackets: s.UnknownNetworkEndpointRcvdPackets,
-		MalformedReceivedPackets:              s.MalformedRcvdPackets,
-		DroppedPackets:                        s.DroppedPackets,
+		UnknownProtocolReceivedPackets: s.UnknownProtocolRcvdPackets,
+		MalformedReceivedPackets:       s.MalformedRcvdPackets,
+		DroppedPackets:                 s.DroppedPackets,
 		TcpStats: nsfidl.TcpStats{
 			ActiveConnectionOpenings:  s.TCP.ActiveConnectionOpenings,
 			PassiveConnectionOpenings: s.TCP.PassiveConnectionOpenings,

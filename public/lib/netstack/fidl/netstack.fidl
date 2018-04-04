@@ -68,7 +68,6 @@ struct UdpStats {
 // Mirrors tcpip.Stats in third_party/netstack/tcpip/tcpip.go.
 struct AggregateStats {
   uint64 unknown_protocol_received_packets;
-  uint64 unknown_network_endpoint_received_packets;
   uint64 malformed_received_packets;
   uint64 dropped_packets;
   TcpStats tcp_stats;
