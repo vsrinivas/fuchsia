@@ -157,12 +157,19 @@ static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     while (1) {
         zx_status_t r;
+#if ENABLE_NEW_IRQ_API
+        r = zx_irq_wait(edev->irqh, NULL);
+        if (r != ZX_OK) {
+            zxlogf(TRACE, "rtl8111: irq wait failed: %d\n", r);
+            break;
+        }
+#else
         uint64_t slots;
         if ((r = zx_interrupt_wait(edev->irqh, &slots)) < 0) {
             zxlogf(TRACE, "rtl8111: irq wait failed: %d\n", r);
             break;
         }
-
+#endif
         mtx_lock(&edev->lock);
 
         uint16_t isr = readw(RTL_ISR);

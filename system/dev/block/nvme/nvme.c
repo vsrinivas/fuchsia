@@ -287,12 +287,18 @@ static int irq_thread(void* arg) {
     nvme_device_t* nvme = arg;
     for (;;) {
         zx_status_t r;
+#if ENABLE_NEW_IRQ_API
+        if ((r = zx_irq_wait(nvme->irqh, NULL)) != ZX_OK) {
+            zxlogf(ERROR, "nvme: irq wait failed: %d\n", r);
+            break;
+        }
+#else
         uint64_t slots;
         if ((r = zx_interrupt_wait(nvme->irqh, &slots)) != ZX_OK) {
             zxlogf(ERROR, "nvme: irq wait failed: %d\n", r);
             break;
         }
-
+#endif
         nvme_cpl_t cpl;
         if (nvme_admin_cq_get(nvme, &cpl) == ZX_OK) {
             nvme->admin_result = cpl;

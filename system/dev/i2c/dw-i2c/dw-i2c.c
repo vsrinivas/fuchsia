@@ -145,12 +145,20 @@ static int i2c_dw_irq_thread(void* arg) {
     zx_status_t status;
 
     while (1) {
+#if ENABLE_NEW_IRQ_API
+        status = zx_irq_wait(dev->irq_handle, NULL);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: irq wait failed, retcode = %d\n", __FUNCTION__, status);
+            continue;
+        }
+#else
         uint64_t slots;
         status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: irq wait failed, retcode = %d\n", __FUNCTION__, status);
             continue;
         }
+#endif
 
         uint32_t reg = I2C_DW_READ32(DW_I2C_RAW_INTR_STAT);
         if (reg & DW_I2C_INTR_TX_ABRT) {

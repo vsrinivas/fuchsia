@@ -185,6 +185,13 @@ static int dwc3_irq_thread(void* arg) {
     volatile uint32_t* ring_cur = ring_start;
 
     while (1) {
+#if ENABLE_NEW_IRQ_API
+        zx_status_t status = zx_irq_wait(dwc->irq_handle, NULL);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "dwc3_irq_thread: zx_irq_wait returned %d\n", status);
+            break;
+        }
+#else
         uint64_t slots;
         zx_status_t status = zx_interrupt_wait(dwc->irq_handle, &slots);
         if (status != ZX_OK) {
@@ -194,7 +201,7 @@ static int dwc3_irq_thread(void* arg) {
         if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
             break;
         }
-
+#endif
         // read number of new bytes in the event buffer
         uint32_t event_count;
         while ((event_count = DWC3_READ32(mmio + GEVNTCOUNT(0)) & GEVNTCOUNT_EVNTCOUNT_MASK) > 0) {
@@ -238,6 +245,10 @@ void dwc3_events_start(dwc3_t* dwc) {
 }
 
 void dwc3_events_stop(dwc3_t* dwc) {
+#if ENABLE_NEW_IRQ_API
+    zx_irq_destroy(dwc->irq_handle);
+#else
     zx_interrupt_signal(dwc->irq_handle, ZX_INTERRUPT_SLOT_USER, 0);
+#endif
     thrd_join(dwc->irq_thread, NULL);
 }

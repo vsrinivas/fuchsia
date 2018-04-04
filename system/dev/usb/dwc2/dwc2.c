@@ -861,9 +861,12 @@ static int dwc_irq_thread(void* arg) {
 
     while (1) {
         zx_status_t wait_res;
+#if ENABLE_NEW_IRQ_API
+        wait_res = zx_irq_wait(dwc->irq_handle, NULL);
+#else
         uint64_t slots;
-
         wait_res = zx_interrupt_wait(dwc->irq_handle, &slots);
+#endif
         if (wait_res != ZX_OK)
             zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
 

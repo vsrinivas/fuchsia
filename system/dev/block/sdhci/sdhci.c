@@ -359,13 +359,20 @@ static int sdhci_irq_thread(void *arg) {
     zx_handle_t irq_handle = dev->irq_handle;
 
     while (true) {
+#if ENABLE_NEW_IRQ_API
+        wait_res = zx_irq_wait(irq_handle, NULL);
+        if (wait_res != ZX_OK) {
+            printf("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
+            break;
+        }
+#else
         uint64_t slots;
         wait_res = zx_interrupt_wait(irq_handle, &slots);
         if (wait_res != ZX_OK) {
             printf("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
             break;
         }
-
+#endif
         const uint32_t irq = regs->irq;
         zxlogf(TRACE, "got irq 0x%08x 0x%08x en 0x%08x\n", regs->irq, irq, regs->irqen);
 

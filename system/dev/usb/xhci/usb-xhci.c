@@ -174,7 +174,11 @@ static void xhci_shutdown(xhci_t* xhci) {
     atomic_store(&xhci->suspended, true);
     // stop our interrupt threads
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+#if ENABLE_NEW_IRQ_API
+        zx_irq_destroy(xhci->irq_handles[i]);
+#else
         zx_interrupt_signal(xhci->irq_handles[i], ZX_INTERRUPT_SLOT_USER, 0);
+#endif
         thrd_join(xhci->completer_threads[i], NULL);
         zx_handle_close(xhci->irq_handles[i]);
     }
@@ -234,6 +238,13 @@ static int completer_thread(void *arg) {
 
     while (1) {
         zx_status_t wait_res;
+#if ENABLE_NEW_IRQ_API
+        wait_res = zx_irq_wait(irq_handle, NULL);
+        if (wait_res != ZX_OK) {
+            zxlogf(ERROR, "unexpected pci_wait_irq failure (%d)\n", wait_res);
+            break;
+        }
+#else
         uint64_t slots;
         wait_res = zx_interrupt_wait(irq_handle, &slots);
 
@@ -244,6 +255,7 @@ static int completer_thread(void *arg) {
         if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
             break;
         }
+#endif
         if (atomic_load(&completer->xhci->suspended)) {
             // TODO(ravoorir): Remove this hack once the interrupt signalling bug
             // is resolved.

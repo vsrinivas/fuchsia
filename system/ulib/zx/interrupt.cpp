@@ -8,6 +8,19 @@
 
 namespace zx {
 
+#if ENABLE_NEW_IRQ_API
+zx_status_t interrupt::create(const resource& resource, uint32_t vector,
+                              uint32_t options, interrupt* result) {
+    zx_handle_t h;
+    zx_status_t status = zx_irq_create(resource.get(), vector, options, &h);
+    if (status < 0) {
+        result->reset(ZX_HANDLE_INVALID);
+    } else {
+        result->reset(h);
+    }
+    return status;
+}
+#else
 zx_status_t interrupt::create(const resource& resource, uint32_t options, interrupt* result) {
     zx_handle_t h;
     zx_status_t status = zx_interrupt_create(resource.get(), options, &h);
@@ -18,5 +31,5 @@ zx_status_t interrupt::create(const resource& resource, uint32_t options, interr
     }
     return status;
 }
-
+#endif
 } // namespace zx

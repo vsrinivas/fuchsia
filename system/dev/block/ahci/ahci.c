@@ -673,12 +673,20 @@ static int ahci_irq_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     zx_status_t status;
     for (;;) {
+#if ENABLE_NEW_IRQ_API
+        status = zx_irq_wait(dev->irq_handle, NULL);
+        if (status) {
+            zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
+            continue;
+        }
+#else
         uint64_t slots;
         status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status) {
             zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
             continue;
         }
+#endif
         // mask hba interrupts while interrupts are being handled
         uint32_t ghc = ahci_read(&dev->regs->ghc);
         ahci_write(&dev->regs->ghc, ghc & ~AHCI_GHC_IE);

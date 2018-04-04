@@ -28,6 +28,22 @@ public:
         return *this;
     }
 
+#if ENABLE_NEW_IRQ_API
+    static zx_status_t create(const resource& resource, uint32_t vector,
+                        uint32_t options, interrupt* result);
+
+    zx_status_t wait(zx::time* timestamp) {
+        return zx_irq_wait(get(), timestamp->get_address());
+    }
+
+    zx_status_t destroy() {
+        return zx_irq_destroy(get());
+    }
+
+    zx_status_t trigger(uint32_t options, zx::time timestamp) {
+        return zx_irq_trigger(get(), options, timestamp.get());
+    }
+#else
     static zx_status_t create(const resource& resource, uint32_t options, interrupt* result);
 
     zx_status_t bind(uint32_t slot, const resource& resource, uint32_t vector, uint32_t options) {
@@ -45,6 +61,7 @@ public:
     zx_status_t signal(uint32_t slot, zx::time timestamp) {
         return zx_interrupt_signal(get(), slot, timestamp.get());
     }
+#endif
 };
 
 using unowned_interrupt = const unowned<interrupt>;

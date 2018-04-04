@@ -517,6 +517,12 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* 
 
     acpi_device_irq_t* irq = dev->irqs + which_irq;
     zx_handle_t handle;
+#if ENABLE_NEW_IRQ_API
+    st = zx_irq_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ, &handle);
+    if (st != ZX_OK) {
+        goto unlock;
+    }
+#else
     st = zx_interrupt_create(get_root_resource(), 0, &handle);
     if (st != ZX_OK) {
         goto unlock;
@@ -526,7 +532,7 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* 
         zx_handle_close(handle);
         goto unlock;
     }
-
+#endif
     *out_handle = handle;
 
 unlock:
@@ -765,8 +771,9 @@ static zx_status_t acpi_drv_create(void* ctx, zx_device_t* parent, const char* n
     // We don't need bootdata VMO handle.
     zx_handle_close(bootdata_vmo);
 
-    if (init() != ZX_OK) {
-        zxlogf(ERROR, "acpi-bus: failed to initialize ACPI\n");
+    zx_status_t st;
+    if (ZX_OK != (st = init())) {
+        zxlogf(ERROR, "acpi-bus: failed to initialize ACPI %d \n",st);
         return ZX_ERR_INTERNAL;
     }
 

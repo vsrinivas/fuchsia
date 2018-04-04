@@ -20,8 +20,17 @@ namespace intel_hda {
 void IntelHDAController::WakeupIRQThread() {
     ZX_DEBUG_ASSERT(irq_.is_valid());
 
+#if ENABLE_NEW_IRQ_API
+    // TODO(johngro@): Adopt the new interrupt syscalls
+    // to bind an interrupt to a port. zx_irq_trigger()
+    // would not be supporting signalling a physical interrupt
+    // Currently there is a WA added to allow this
+    LOG(SPEW, "Waking up IRQ thread\n");
+    irq_.trigger(0, zx::time(0));
+#else
     LOG(SPEW, "Waking up IRQ thread\n");
     irq_.signal(ZX_INTERRUPT_SLOT_USER, zx::time(0));
+#endif
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
@@ -35,8 +44,12 @@ void IntelHDAController::WaitForIrqOrWakeup() {
     // we cannot currently wait with a timeout.
 
     LOG(SPEW, "IRQ thread waiting on IRQ\n");
+#if ENABLE_NEW_IRQ_API
+    irq_.wait(nullptr);
+#else
     uint64_t slots;
     irq_.wait(&slots);
+#endif
     LOG(SPEW, "IRQ thread woke up\n");
 
     // Disable IRQs at the device level
