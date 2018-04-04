@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <fbl/auto_call.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/loop.h>
+#include <lib/async-loop/loop.h>
 
 #include <assert.h>
 #include <stdatomic.h>

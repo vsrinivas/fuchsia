@@ -19,7 +19,7 @@ MODULE_NAME := dlfcn-test
 MODULE_STATIC_LIBS := \
     system/ulib/launchpad \
     system/ulib/loader-service \
-    system/ulib/async.loop \
+    system/ulib/async-loop \
     system/ulib/ldmsg \
     system/ulib/elfload \
 

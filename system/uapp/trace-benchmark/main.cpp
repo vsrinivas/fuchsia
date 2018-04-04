@@ -8,7 +8,7 @@
 
 #include <zircon/assert.h>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <fbl/array.h>
 #include <trace/handler.h>

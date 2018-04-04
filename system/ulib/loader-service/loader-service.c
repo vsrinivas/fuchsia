@@ -9,7 +9,7 @@
 #include <fdio/io.h>
 #include <inttypes.h>
 #include <ldmsg/ldmsg.h>
-#include <lib/async/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/async/wait.h>
 #include <limits.h>
 #include <stdatomic.h>

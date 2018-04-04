@@ -12,7 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/loader-service.c \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/async.loop \
+    system/ulib/async-loop \
     system/ulib/async \
     system/ulib/ldmsg \
 

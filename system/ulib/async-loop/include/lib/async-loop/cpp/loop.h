@@ -5,7 +5,7 @@
 #pragma once
 
 #include <lib/async/default.h>
-#include <lib/async/loop.h>
+#include <lib/async-loop/loop.h>
 #include <fbl/macros.h>
 #include <stdbool.h>
 #include <stddef.h>

@@ -14,10 +14,6 @@ module Async [system] {
     header "dispatcher.h"
     export *
   }
-  module loop {
-    header "loop.h"
-    export *
-  }
   module receiver {
     header "receiver.h"
     export *
