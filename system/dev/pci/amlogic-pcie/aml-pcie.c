@@ -515,17 +515,24 @@ static zx_status_t aml_pcie_bind(void* ctx, zx_device_t* parent) {
         }
     }
 
+    zx_device_prop_t props[] = {
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC },
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_KPCI },
+    };
+
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "aml-dw-pcie",
         .ctx = pcie,
         .ops = &dw_pcie_device_proto,
         .flags = DEVICE_ADD_INVISIBLE,  // Made visible by init thread.
+        .props = props,
+        .prop_count = countof(props),
     };
 
-    // TODO(gkalsi): Soon, the PCIe bus driver will bind to this driver.
-    args.proto_id = 0;
-    args.proto_ops = NULL;
+    args.proto_id = ZX_PROTOCOL_PLATFORM_DEV;
+    args.proto_ops = &pcie->pdev;
 
     st = device_add(parent, &args, &pcie->zxdev);
     if (st != ZX_OK) {
