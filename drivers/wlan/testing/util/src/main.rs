@@ -22,8 +22,8 @@ use std::path::Path;
 
 mod sys;
 
-const DEV_TEST: &str = "/dev/misc/test";
-const DEV_WLANPHY: &str = "/dev/misc/test/wlan/wlanphy-test";
+const DEV_TEST: &str = "/dev/test/test";
+const DEV_WLANPHY: &str = "/dev/test/test/wlan/wlanphy-test";
 const WLAN: &str = "wlan";
 const WLAN_DRIVER_NAME: &str = "/system/driver/wlanphy-testdev.so";
 

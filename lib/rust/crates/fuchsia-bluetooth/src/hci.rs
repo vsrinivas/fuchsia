@@ -17,7 +17,7 @@ use std;
 use fdio::{fdio_sys, ioctl};
 use zircon::{self, Handle};
 
-pub const DEV_TEST: &str = "/dev/misc/test";
+pub const DEV_TEST: &str = "/dev/test/test";
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
 
 // Returns the name of the fake device and a File representing the device on success.
