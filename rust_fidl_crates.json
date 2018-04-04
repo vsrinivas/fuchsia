@@ -88,5 +88,89 @@
     "fidl_target": "//garnet/public/lib/power_manager/fidl:fidl",
     "library_deps": [],
     "public": true
+  },
+  {
+    "library_name": "input",
+    "fidl_target": "//garnet/public/lib/ui/input/fidl:fidl",
+    "library_deps": [
+      "geometry",
+      "views_v1_token"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "media",
+    "fidl_target": "//garnet/public/lib/media/fidl:fidl",
+    "library_deps": [
+      "views_v1"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "scenic_dummy_system",
+    "fidl_target": "//garnet/public/lib/ui/scenic/fidl/dummy_system:fidl",
+    "library_deps": [],
+    "public": true
+  },
+  {
+    "library_name": "views_v1",
+    "fidl_target": "//garnet/public/lib/ui/views/fidl:v1",
+    "library_deps": [
+      "ui"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "ui",
+    "fidl_target": "//garnet/public/lib/ui/scenic/fidl:fidl",
+    "library_deps": [
+      "gfx",
+      "images",
+      "scenic_dummy_system",
+      "views"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "gfx",
+    "fidl_target": "//garnet/public/lib/ui/gfx/fidl:fidl",
+    "library_deps": [
+      "images",
+      "geometry"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "images",
+    "fidl_target": "//garnet/public/lib/images/fidl:fidl",
+    "library_deps": [
+      "fsl"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "geometry",
+    "fidl_target": "//garnet/public/lib/ui/geometry/fidl:fidl",
+    "library_deps": [
+      "fsl"
+    ],
+    "public": true
+  },
+  {
+    "library_name": "views_v1_token",
+    "fidl_target": "//garnet/public/lib/ui/views/fidl:view_token",
+    "library_deps": [],
+    "public": true
+  },
+  {
+    "library_name": "views",
+    "fidl_target": "//garnet/public/lib/ui/views/fidl:v2",
+    "library_deps": [
+      "component",
+      "geometry",
+      "gfx",
+      "input"
+    ],
+    "public": true
   }
 ]

@@ -46,10 +46,20 @@ members =  [
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
   "public/rust/fidl_crates/fidl_fsl",
+  "public/rust/fidl_crates/fidl_geometry",
+  "public/rust/fidl_crates/fidl_gfx",
+  "public/rust/fidl_crates/fidl_images",
+  "public/rust/fidl_crates/fidl_input",
   "public/rust/fidl_crates/fidl_logger",
+  "public/rust/fidl_crates/fidl_media",
   "public/rust/fidl_crates/fidl_netstack",
   "public/rust/fidl_crates/fidl_network",
   "public/rust/fidl_crates/fidl_power_manager",
+  "public/rust/fidl_crates/fidl_scenic_dummy_system",
+  "public/rust/fidl_crates/fidl_ui",
+  "public/rust/fidl_crates/fidl_views",
+  "public/rust/fidl_crates/fidl_views_v1",
+  "public/rust/fidl_crates/fidl_views_v1_token",
   "public/rust/fidl_crates/fidl_xi",
 ]
 
@@ -65,10 +75,20 @@ fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
 fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
 fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
+fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
+fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }
+fidl_images = { path = "public/rust/fidl_crates/fidl_images" }
+fidl_input = { path = "public/rust/fidl_crates/fidl_input" }
 fidl_logger = { path = "public/rust/fidl_crates/fidl_logger" }
+fidl_media = { path = "public/rust/fidl_crates/fidl_media" }
 fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
 fidl_network = { path = "public/rust/fidl_crates/fidl_network" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
+fidl_scenic_dummy_system = { path = "public/rust/fidl_crates/fidl_scenic_dummy_system" }
+fidl_ui = { path = "public/rust/fidl_crates/fidl_ui" }
+fidl_views = { path = "public/rust/fidl_crates/fidl_views" }
+fidl_views_v1 = { path = "public/rust/fidl_crates/fidl_views_v1" }
+fidl_views_v1_token = { path = "public/rust/fidl_crates/fidl_views_v1_token" }
 fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
 fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
