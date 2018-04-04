@@ -135,8 +135,8 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
   GuestConfigParser parser(&config);
 
   const char* argv[] = {"exe_name", "--block=/pkg/data/foo,ro,fdio",
-                        "--block=/dev/class/block/001,rw,fifo",
-                        "--block=guid:" TEST_GUID_STRING ",rw,fifo",
+                        "--block=/dev/class/block/001,rw,fdio",
+                        "--block=guid:" TEST_GUID_STRING ",rw,fdio",
                         "--block=type-guid:" TEST_GUID_STRING ",ro,fdio"};
   ASSERT_EQ(ZX_OK,
             parser.ParseArgcArgv(countof(argv), const_cast<char**>(argv)));
@@ -150,13 +150,13 @@ TEST(GuestConfigParserTest, BlockSpecArg) {
 
   const BlockSpec& spec1 = config.block_devices()[1];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
-  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec1.data_plane);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
   ASSERT_TRUE(spec1.guid.empty());
 
   const BlockSpec& spec2 = config.block_devices()[2];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec2.mode);
-  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec2.data_plane);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec2.data_plane);
   ASSERT_TRUE(spec2.path.empty());
   ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
             spec2.guid.type);
@@ -179,8 +179,8 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
                        R"JSON({
           "block": [
             "/pkg/data/foo,ro,fdio",
-            "/dev/class/block/001,rw,fifo",
-            "guid:)JSON" TEST_GUID_STRING R"JSON(,rw,fifo",
+            "/dev/class/block/001,rw,fdio",
+            "guid:)JSON" TEST_GUID_STRING R"JSON(,rw,fdio",
             "type-guid:)JSON" TEST_GUID_STRING R"JSON(,ro,fdio"
           ]
         })JSON"));
@@ -193,12 +193,12 @@ TEST(GuestConfigParserTest, BlockSpecJson) {
 
   const BlockSpec& spec1 = config.block_devices()[1];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec1.mode);
-  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec1.data_plane);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec1.data_plane);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
 
   const BlockSpec& spec2 = config.block_devices()[2];
   ASSERT_EQ(machina::BlockDispatcher::Mode::RW, spec2.mode);
-  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FIFO, spec2.data_plane);
+  ASSERT_EQ(machina::BlockDispatcher::DataPlane::FDIO, spec2.data_plane);
   ASSERT_TRUE(spec2.path.empty());
   ASSERT_EQ(machina::BlockDispatcher::GuidType::GPT_PARTITION_GUID,
             spec2.guid.type);

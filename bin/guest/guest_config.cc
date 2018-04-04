@@ -60,8 +60,6 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << " Additional Options:\n";
   std::cerr << "    rw/ro: Create a read/write or read-only device.\n";
   std::cerr << "    fdio:  Use the FDIO back-end for the block device.\n";
-  std::cerr << "    fifo:  Use the FIFO back-end for the block device. This only works if the\n";
-  std::cerr << "           target is a real block device (GUID or /dev/class/block/XYZ)\n";
   std::cerr << "\n";
   std::cerr << " Ex:\n";
   std::cerr << "\n";
@@ -71,10 +69,10 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\n";
   std::cerr << "      /pkg/data/system.img,fdio,ro\n";
   std::cerr << "\n";
-  std::cerr << "  To specify a block device with a given path, read-write\n";
-  std::cerr << "  permissions and the faster FIFO back-end:\n";
+  std::cerr << "  To specify a block device with a given path and read-write\n";
+  std::cerr << "  permissions\n";
   std::cerr << "\n";
-  std::cerr << "      /dev/class/block/000,fifo,rw\n";
+  std::cerr << "      /dev/class/block/000,fdio,rw\n";
   std::cerr << "\n";
   // clang-format on
 }
@@ -247,8 +245,6 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
       out->data_plane = machina::BlockDispatcher::DataPlane::FDIO;
-    } else if (token == "fifo") {
-      out->data_plane = machina::BlockDispatcher::DataPlane::FIFO;
     } else if (token == "rw") {
       out->mode = machina::BlockDispatcher::Mode::RW;
     } else if (token == "ro") {
