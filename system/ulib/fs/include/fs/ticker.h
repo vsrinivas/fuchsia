@@ -14,12 +14,12 @@
 #define ENABLE_METRICS
 
 #if defined(__Fuchsia__) && defined(ENABLE_METRICS)
-#define MINFS_WITH_METRICS
+#define FS_WITH_METRICS
 #endif
 
-namespace minfs {
+namespace fs {
 
-#ifdef MINFS_WITH_METRICS
+#ifdef FS_WITH_METRICS
 
 // Helper class for getting the duration of events.
 typedef zx::ticks Duration;
@@ -67,4 +67,4 @@ public:
 
 #endif
 
-} // namespace minfs
+} // namespace fs

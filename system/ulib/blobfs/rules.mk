@@ -18,12 +18,14 @@ COMMON_SRCS := \
 MODULE_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/blobfs.cpp \
+    $(LOCAL_DIR)/metrics.cpp \
     $(LOCAL_DIR)/writeback.cpp \
     $(LOCAL_DIR)/vnode.cpp \
     $(LOCAL_DIR)/rpc.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \

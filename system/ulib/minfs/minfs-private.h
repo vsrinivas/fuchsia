@@ -26,6 +26,7 @@
 
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
+#include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
@@ -38,8 +39,6 @@
 #ifdef __Fuchsia__
 #include "metrics.h"
 #endif
-
-#include "ticker.h"
 
 #define EXTENT_COUNT 5
 
@@ -160,28 +159,28 @@ public:
     zx_status_t ReadDat(blk_t bno, void* data);
 
     void SetMetrics(bool enable) { collecting_metrics_ = enable; }
-    Ticker StartTicker() { return Ticker(collecting_metrics_); }
+    fs::Ticker StartTicker() { return fs::Ticker(collecting_metrics_); }
 
     // Update aggregate information about VMO initialization.
     void UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
                            uint32_t dinum_count, uint64_t user_data_size,
-                           const Duration& duration);
+                           const fs::Duration& duration);
     // Update aggregate information about looking up vnodes by name.
-    void UpdateLookupMetrics(bool success, const Duration& duration);
+    void UpdateLookupMetrics(bool success, const fs::Duration& duration);
     // Update aggregate information about looking up vnodes by inode.
-    void UpdateOpenMetrics(bool cache_hit, const Duration& duration);
+    void UpdateOpenMetrics(bool cache_hit, const fs::Duration& duration);
     // Update aggregate information about inode creation.
-    void UpdateCreateMetrics(bool success, const Duration& duration);
+    void UpdateCreateMetrics(bool success, const fs::Duration& duration);
     // Update aggregate information about reading from Vnodes.
-    void UpdateReadMetrics(uint64_t size, const Duration& duration);
+    void UpdateReadMetrics(uint64_t size, const fs::Duration& duration);
     // Update aggregate information about writing to Vnodes.
-    void UpdateWriteMetrics(uint64_t size, const Duration& duration);
+    void UpdateWriteMetrics(uint64_t size, const fs::Duration& duration);
     // Update aggregate information about truncating Vnodes.
-    void UpdateTruncateMetrics(const Duration& duration);
+    void UpdateTruncateMetrics(const fs::Duration& duration);
     // Update aggregate information about unlinking Vnodes.
-    void UpdateUnlinkMetrics(bool success, const Duration& duration);
+    void UpdateUnlinkMetrics(bool success, const fs::Duration& duration);
     // Update aggregate information about renaming Vnodes.
-    void UpdateRenameMetrics(bool success, const Duration& duration);
+    void UpdateRenameMetrics(bool success, const fs::Duration& duration);
     // Print information about filesystem metrics.
     void DumpMetrics() const;
 

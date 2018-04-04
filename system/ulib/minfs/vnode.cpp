@@ -205,7 +205,7 @@ zx_status_t VnodeMinfs::InitVmo() {
     uint32_t dnum_count = 0;
     uint32_t inum_count = 0;
     uint32_t dinum_count = 0;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&]() {
         fs_->UpdateInitMetrics(dnum_count, inum_count, dinum_count, vmo_size,
                                ticker.End());
@@ -1134,7 +1134,7 @@ zx_status_t VnodeMinfs::Read(void* data, size_t len, size_t off, size_t* out_act
         return ZX_ERR_NOT_FILE;
     }
 
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &out_actual, this]() {
         fs_->UpdateReadMetrics(*out_actual, ticker.End());
     });
@@ -1215,7 +1215,7 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
     }
 
     *out_actual = 0;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &out_actual, this]() {
         fs_->UpdateWriteMetrics(*out_actual, ticker.End());
     });
@@ -1357,7 +1357,7 @@ zx_status_t VnodeMinfs::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringP
     args.name = name;
     zx_status_t status;
     bool success = false;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
         fs_->UpdateLookupMetrics(success, ticker.End());
     });
@@ -1545,7 +1545,7 @@ zx_status_t VnodeMinfs::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece nam
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
     bool success = false;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
         fs_->UpdateCreateMetrics(success, ticker.End());
     });
@@ -1681,7 +1681,7 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     TRACE_DURATION("minfs", "VnodeMinfs::Unlink", "name", name);
     ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
     bool success = false;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this]() {
         fs_->UpdateUnlinkMetrics(success, ticker.End());
     });
@@ -1713,7 +1713,7 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
         return ZX_ERR_NOT_FILE;
     }
 
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, this] {
         fs_->UpdateTruncateMetrics(ticker.End());
     });
@@ -1839,7 +1839,7 @@ zx_status_t VnodeMinfs::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece 
                                bool dst_must_be_dir) {
     TRACE_DURATION("minfs", "VnodeMinfs::Rename", "src", oldname, "dst", newname);
     bool success = false;
-    Ticker ticker(fs_->StartTicker());
+    fs::Ticker ticker(fs_->StartTicker());
     auto get_metrics = fbl::MakeAutoCall([&ticker, &success, this](){
         fs_->UpdateRenameMetrics(success, ticker.End());
     });

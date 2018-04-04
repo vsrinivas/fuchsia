@@ -11,8 +11,10 @@
 #error Fuchsia-only Header
 #endif
 
-#include <lib/async/cpp/wait.h>
+#include <string.h>
+
 #include <bitmap/raw-bitmap.h>
+#include <block-client/client.h>
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_double_list.h>
@@ -23,17 +25,15 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
+#include <fs/mapped-vmo.h>
+#include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-
-#include <string.h>
-
-#include <block-client/client.h>
-#include <fs/mapped-vmo.h>
-#include <trace/event.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
+#include <trace/event.h>
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
@@ -278,6 +278,11 @@ public:
     void CollectMetrics() { collecting_metrics_ = true; }
     bool CollectingMetrics() const { return collecting_metrics_; }
     void DisableMetrics() { collecting_metrics_ = false; }
+    void DumpMetrics() const {
+        if (collecting_metrics_) {
+            metrics_.Dump();
+        }
+    }
 
     zx_status_t Unmount();
     virtual ~Blobfs();
@@ -354,7 +359,7 @@ public:
 
     // Updates aggregate information about the total number of created
     // blobs since mounting.
-    void UpdateAllocationMetrics(uint64_t size_data, uint64_t ns);
+    void UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration);
 
     // Updates aggregate information about the number of blobs opened
     // since mounting.
@@ -363,19 +368,22 @@ public:
     // Updates aggregates information about blobs being written back
     // to blobfs since mounting.
     void UpdateClientWriteMetrics(uint64_t data_size, uint64_t merkle_size,
-                                  uint64_t enqueue_ns, uint64_t generate_ns);
+                                  const fs::Duration& enqueue_duration,
+                                  const fs::Duration& generate_duration);
 
     // Updates aggregate information about flushing bits down
     // to the underlying storage driver.
-    void UpdateWritebackMetrics(uint64_t size, uint64_t ns);
+    void UpdateWritebackMetrics(uint64_t size, const fs::Duration& duration);
 
     // Updates aggregate information about reading blobs from storage
     // since mounting.
-    void UpdateMerkleDiskReadMetrics(uint64_t size, uint64_t read_ns, uint64_t verify_ns);
+    void UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& read_duration,
+                                     const fs::Duration& verify_duration);
 
     // Updates aggregate information about general verification info
     // since mounting.
-    void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle, uint64_t ns);
+    void UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
+                                   const fs::Duration& duration);
 
     blobfs_info_t info_;
 

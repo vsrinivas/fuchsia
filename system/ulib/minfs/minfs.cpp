@@ -703,7 +703,7 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    Ticker ticker(StartTicker());
+    fs::Ticker ticker(StartTicker());
 
     fbl::RefPtr<VnodeMinfs> vn = VnodeLookup(ino);
     if (vn != nullptr) {
@@ -1305,8 +1305,8 @@ zx_status_t minfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 
 void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
                               uint32_t dinum_count, uint64_t user_data_size,
-                              const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+                              const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.initialized_vmos++;
         metrics_.init_user_data_size += user_data_size;
@@ -1318,8 +1318,8 @@ void Minfs::UpdateInitMetrics(uint32_t dnum_count, uint32_t inum_count,
 #endif
 }
 
-void Minfs::UpdateLookupMetrics(bool success, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateLookupMetrics(bool success, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.lookup_calls++;
         metrics_.lookup_calls_success += success ? 1 : 0;
@@ -1328,8 +1328,8 @@ void Minfs::UpdateLookupMetrics(bool success, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateCreateMetrics(bool success, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateCreateMetrics(bool success, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.create_calls++;
         metrics_.create_calls_success += success ? 1 : 0;
@@ -1338,8 +1338,8 @@ void Minfs::UpdateCreateMetrics(bool success, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateReadMetrics(uint64_t size, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateReadMetrics(uint64_t size, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.read_calls++;
         metrics_.read_size += size;
@@ -1348,8 +1348,8 @@ void Minfs::UpdateReadMetrics(uint64_t size, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateWriteMetrics(uint64_t size, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateWriteMetrics(uint64_t size, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.write_calls++;
         metrics_.write_size += size;
@@ -1358,8 +1358,8 @@ void Minfs::UpdateWriteMetrics(uint64_t size, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateTruncateMetrics(const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateTruncateMetrics(const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.truncate_calls++;
         metrics_.truncate_ticks += duration;
@@ -1367,8 +1367,8 @@ void Minfs::UpdateTruncateMetrics(const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateUnlinkMetrics(bool success, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateUnlinkMetrics(bool success, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.unlink_calls++;
         metrics_.unlink_calls_success += success ? 1 : 0;
@@ -1377,8 +1377,8 @@ void Minfs::UpdateUnlinkMetrics(bool success, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateRenameMetrics(bool success, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateRenameMetrics(bool success, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.rename_calls++;
         metrics_.rename_calls_success += success ? 1 : 0;
@@ -1387,8 +1387,8 @@ void Minfs::UpdateRenameMetrics(bool success, const Duration& duration) {
 #endif
 }
 
-void Minfs::UpdateOpenMetrics(bool cache_hit, const Duration& duration) {
-#ifdef MINFS_WITH_METRICS
+void Minfs::UpdateOpenMetrics(bool cache_hit, const fs::Duration& duration) {
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.vnodes_opened++;
         metrics_.vnodes_opened_cache_hit += cache_hit ? 1 : 0;
@@ -1398,7 +1398,7 @@ void Minfs::UpdateOpenMetrics(bool cache_hit, const Duration& duration) {
 }
 
 void Minfs::DumpMetrics() const {
-#ifdef MINFS_WITH_METRICS
+#ifdef FS_WITH_METRICS
     if (collecting_metrics_) {
         metrics_.Dump();
     }

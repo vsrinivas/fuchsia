@@ -17,6 +17,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/ulib/blobfs \
     system/ulib/fs \
+    system/ulib/fzl \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \

@@ -18,6 +18,7 @@
 #include <fbl/ref_ptr.h>
 #include <fdio/debug.h>
 #include <fs/block-txn.h>
+#include <fs/ticker.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <lib/zx/event.h>
@@ -93,7 +94,7 @@ blobfs_inode_t* Blobfs::GetNode(size_t index) const {
 
 zx_status_t VnodeBlob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
-    Duration duration(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->CollectingMetrics());
 
     const blobfs_inode_t* inode = blobfs_->GetNode(map_index_);
     const void* data = inode->blob_size ? GetData() : nullptr;
@@ -108,7 +109,7 @@ zx_status_t VnodeBlob::Verify() const {
     digest = reinterpret_cast<const uint8_t*>(&digest_[0]);
     zx_status_t status = MerkleTree::Verify(data, data_size, tree,
                                             merkle_size, 0, data_size, digest);
-    blobfs_->UpdateMerkleVerifyMetrics(data_size, merkle_size, duration.ns());
+    blobfs_->UpdateMerkleVerifyMetrics(data_size, merkle_size, ticker.End());
     return status;
 }
 
@@ -135,19 +136,19 @@ zx_status_t VnodeBlob::InitVmos() {
     }
 
     ReadTxn txn(blobfs_.get());
-    Duration duration(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->CollectingMetrics());
     uint64_t start = inode->start_block + DataStartBlock(blobfs_->info_);
     uint64_t length = BlobDataBlocks(*inode) + MerkleTreeBlocks(*inode);
     txn.Enqueue(vmoid_, 0, start, length);
     if ((status = txn.Flush()) != ZX_OK) {
         return status;
     }
-    uint64_t read_time = duration.ns();
-    duration.reset();
+    fs::Duration read_time = ticker.End();
+    ticker.Reset();
     if ((status = Verify()) != ZX_OK) {
         return status;
     }
-    blobfs_->UpdateMerkleDiskReadMetrics(length * kBlobfsBlockSize, read_time, duration.ns());
+    blobfs_->UpdateMerkleDiskReadMetrics(length * kBlobfsBlockSize, read_time, ticker.End());
     return ZX_OK;
 }
 
@@ -177,7 +178,7 @@ void VnodeBlob::BlobCloseHandles() {
 
 zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
-    Duration duration(blobfs_->CollectingMetrics());
+    fs::Ticker ticker(blobfs_->CollectingMetrics());
 
     if (GetState() != kBlobStateEmpty) {
         return ZX_ERR_BAD_STATE;
@@ -229,7 +230,7 @@ zx_status_t VnodeBlob::SpaceAllocate(uint64_t size_data) {
     }
 
     SetState(kBlobStateDataWrite);
-    blobfs_->UpdateAllocationMetrics(size_data, duration.ns());
+    blobfs_->UpdateAllocationMetrics(size_data, ticker.End());
     return ZX_OK;
 
 fail:
@@ -321,9 +322,9 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
 
         // More data to write.
         if (bytes_written_ < inode->blob_size) {
-            Duration duration(blobfs_->CollectingMetrics()); // Tracking enqueue time.
+            fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking enqueue time.
             blobfs_->EnqueueWork(fbl::move(wb));
-            blobfs_->UpdateClientWriteMetrics(to_write, 0, duration.ns(), 0);
+            blobfs_->UpdateClientWriteMetrics(to_write, 0, ticker.End(), fs::Duration());
             return ZX_OK;
         }
 
@@ -331,12 +332,12 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         // methods to create the merkle tree as we write data, rather than
         // waiting until the data is fully downloaded to create the tree.
         size_t merkle_size = MerkleTree::GetTreeLength(inode->blob_size);
-        uint64_t generation_time = 0;
+        fs::Duration generation_time;
         if (merkle_size > 0) {
             Digest digest;
             void* merkle_data = GetMerkle();
             const void* blob_data = GetData();
-            Duration duration(blobfs_->CollectingMetrics()); // Tracking generation time.
+            fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking generation time.
 
             if ((status = MerkleTree::Create(blob_data, inode->blob_size, merkle_data,
                                              merkle_size, &digest)) != ZX_OK) {
@@ -349,7 +350,7 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
             }
 
             WriteShared(wb->txn(), 0, merkle_size, inode->start_block);
-            generation_time = duration.ns();
+            generation_time = ticker.End();
         } else if ((status = Verify()) != ZX_OK) {
             // Small blobs may not have associated Merkle Trees, and will
             // require validation, since we are not regenerating and checking
@@ -359,13 +360,13 @@ zx_status_t VnodeBlob::WriteInternal(const void* data, size_t len, size_t* actua
         }
 
         // No more data to write. Flush to disk.
-        Duration duration(blobfs_->CollectingMetrics()); // Tracking enqueue time.
+        fs::Ticker ticker(blobfs_->CollectingMetrics()); // Tracking enqueue time.
         if ((status = WriteMetadata(fbl::move(wb))) != ZX_OK) {
             SetState(kBlobStateError);
             return status;
         }
 
-        blobfs_->UpdateClientWriteMetrics(to_write, merkle_size, duration.ns(),
+        blobfs_->UpdateClientWriteMetrics(to_write, merkle_size, ticker.End(),
                                           generation_time);
         return ZX_OK;
     }
@@ -560,6 +561,8 @@ zx_status_t Blobfs::Unmount() {
     // Ensure writeback buffer completes before auxilliary structures
     // are deleted.
     fsync(blockfd_.get());
+
+    DumpMetrics();
 
     // Explicitly delete this (rather than just letting the memory release when
     // the process exits) to ensure that the block device's fifo has been
@@ -899,11 +902,11 @@ void Blobfs::Sync(SyncCallback closure) {
     EnqueueWork(fbl::move(wb));
 }
 
-void Blobfs::UpdateAllocationMetrics(uint64_t size_data, uint64_t ns) {
+void Blobfs::UpdateAllocationMetrics(uint64_t size_data, const fs::Duration& duration) {
     if (CollectingMetrics()) {
         metrics_.blobs_created++;
         metrics_.blobs_created_total_size += size_data;
-        metrics_.total_allocation_time_ns += ns;
+        metrics_.total_allocation_time_ticks += duration;
     }
 }
 
@@ -915,36 +918,39 @@ void Blobfs::UpdateLookupMetrics(uint64_t size) {
 }
 
 void Blobfs::UpdateClientWriteMetrics(uint64_t data_size, uint64_t merkle_size,
-                                      uint64_t enqueue_ns, uint64_t generate_ns) {
+                                      const fs::Duration& enqueue_duration,
+                                      const fs::Duration& generate_duration) {
     if (CollectingMetrics()) {
         metrics_.data_bytes_written += data_size;
         metrics_.merkle_bytes_written += merkle_size;
-        metrics_.total_write_enqueue_time_ns += enqueue_ns;
-        metrics_.total_merkle_generation_time_ns += generate_ns;
+        metrics_.total_write_enqueue_time_ticks += enqueue_duration;
+        metrics_.total_merkle_generation_time_ticks += generate_duration;
     }
 }
 
-void Blobfs::UpdateWritebackMetrics(uint64_t size, uint64_t ns) {
+void Blobfs::UpdateWritebackMetrics(uint64_t size, const fs::Duration& duration) {
     if (CollectingMetrics()) {
-        metrics_.total_writeback_time_ns += ns;
+        metrics_.total_writeback_time_ticks += duration;
         metrics_.total_writeback_bytes_written += size;
     }
 }
 
-void Blobfs::UpdateMerkleDiskReadMetrics(uint64_t size, uint64_t read_ns, uint64_t verify_ns) {
+void Blobfs::UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& read_duration,
+                                         const fs::Duration& verify_duration) {
     if (CollectingMetrics()) {
-        metrics_.total_read_from_disk_time_ns += read_ns;
-        metrics_.total_read_from_disk_verify_time_ns += verify_ns;
+        metrics_.total_read_from_disk_time_ticks += read_duration;
+        metrics_.total_read_from_disk_verify_time_ticks += verify_duration;
         metrics_.bytes_read_from_disk += size;
     }
 }
 
-void Blobfs::UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle, uint64_t ns) {
+void Blobfs::UpdateMerkleVerifyMetrics(uint64_t size_data, uint64_t size_merkle,
+                                       const fs::Duration& duration) {
     if (CollectingMetrics()) {
         metrics_.blobs_verified++;
         metrics_.blobs_verified_total_size_data += size_data;
         metrics_.blobs_verified_total_size_merkle += size_merkle;
-        metrics_.total_verification_time_ns += ns;
+        metrics_.total_verification_time_ticks += duration;
     }
 }
 
