@@ -6,87 +6,13 @@
 
 #include <object/mbuf.h>
 
-#include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
+#include <lib/unittest/user_memory.h>
 #include <unittest.h>
-#include <vm/pmm.h>
-#include <vm/vm.h>
-#include <vm/vm_aspace.h>
-#include <vm/vm_object_paged.h>
 
 namespace {
 
-// UserMemory facilitates testing code that requires user memory.
-//
-// Example:
-//    unique_ptr<UserMemory> mem = UserMemory::Create(sizeof(thing));
-//    auto mem_out = make_user_out_ptr(mem->out());
-//    mem_out.copy_array_to_user(&thing, sizeof(thing));
-//
-class UserMemory {
-public:
-    static fbl::unique_ptr<UserMemory> Create(size_t size);
-    virtual ~UserMemory();
-    void* out() { return reinterpret_cast<void*>(mapping_->base()); }
-    const void* in() { return reinterpret_cast<void*>(mapping_->base()); }
-
-private:
-    UserMemory(fbl::RefPtr<VmMapping> mapping)
-        : mapping_(fbl::move(mapping)) {}
-
-    fbl::RefPtr<VmMapping> mapping_;
-};
-
-UserMemory::~UserMemory() {
-    zx_status_t status = mapping_->Unmap(mapping_->base(), mapping_->size());
-    DEBUG_ASSERT(status == ZX_OK);
-}
-
-// static
-fbl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
-    size = ROUNDUP_PAGE_SIZE(size);
-
-    fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
-    if (status != ZX_OK) {
-        unittest_printf("VmObjectPaged::Create failed: %d\n", status);
-        return nullptr;
-    }
-
-    fbl::RefPtr<VmAspace> aspace = fbl::WrapRefPtr(vmm_aspace_to_obj(get_current_thread()->aspace));
-    DEBUG_ASSERT(aspace);
-    DEBUG_ASSERT(aspace->is_user());
-    fbl::RefPtr<VmAddressRegion> root_vmar = aspace->RootVmar();
-    constexpr uint32_t vmar_flags = VMAR_FLAG_CAN_MAP_READ |
-                                    VMAR_FLAG_CAN_MAP_WRITE |
-                                    VMAR_FLAG_CAN_MAP_EXECUTE;
-    fbl::RefPtr<VmMapping> mapping;
-    constexpr uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ |
-                                    ARCH_MMU_FLAG_PERM_WRITE;
-    status = root_vmar->CreateVmMapping(/* offset= */ 0, size, /* align_pow2= */ 0, vmar_flags,
-                                        vmo, 0, arch_mmu_flags, "unittest", &mapping);
-    if (status != ZX_OK) {
-        unittest_printf("CreateVmMapping failed: %d\n", status);
-        return nullptr;
-    }
-    auto unmap = fbl::MakeAutoCall([&]() {
-        if (mapping) {
-            zx_status_t status = mapping->Unmap(mapping->base(), mapping->size());
-            DEBUG_ASSERT(status == ZX_OK);
-        }
-    });
-
-    fbl::AllocChecker ac;
-    fbl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping));
-    if (!ac.check()) {
-        unittest_printf("failed to allocate from heap\n");
-        return nullptr;
-    }
-    // Unmapping is now UserMemory's responsibility.
-    unmap.cancel();
-
-    return mem;
-}
+using testing::UserMemory;
 
 static bool initial_state() {
     BEGIN_TEST;

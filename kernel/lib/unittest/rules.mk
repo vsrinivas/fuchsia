@@ -11,6 +11,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
 	$(LOCAL_DIR)/unittest.cpp \
+	$(LOCAL_DIR)/user_memory.cpp \
 
 MODULE_COMPILEFLAGS := -Wno-format-nonliteral
 
