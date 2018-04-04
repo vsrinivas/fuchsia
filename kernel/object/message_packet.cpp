@@ -7,87 +7,111 @@
 #include <object/message_packet.h>
 
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <stdint.h>
 #include <string.h>
-
 #include <zxcpp/new.h>
-#include <object/handle.h>
 
+// MessagePackets have special allocation requirements because they can contain a variable number of
+// handles and a variable size payload.
+//
+// To reduce heap fragmentation, MessagePackets are stored in a lists of fixed size buffers
+// (BufferChains) rather than a contiguous blocks of memory.  These lists and buffers are allocated
+// from a global free list to reduce the time required to construct/destroy.
+//
+// The first buffer in a MessagePacket's BufferChain contains the MessagePacket object, followed by
+// its handles (if any), and finally its payload data (if any).
+
+// The MessagePacket object, its handles and zx_txid_t must all fit in the first buffer.
+static constexpr size_t kContiguousBytes =
+    sizeof(MessagePacket) + (kMaxMessageHandles * sizeof(Handle*)) + sizeof(zx_txid_t);
+static_assert(kContiguousBytes <= BufferChain::kContig, "");
+
+// Handles are stored just after the MessagePacket.
+static constexpr uint32_t kHandlesOffset = static_cast<uint32_t>(sizeof(MessagePacket));
+
+// PayloadOffset returns the offset of the data payload from the start of the first buffer.
+static inline uint32_t PayloadOffset(uint32_t num_handles) {
+    // The payload comes after the handles.
+    return kHandlesOffset + num_handles * static_cast<uint32_t>(sizeof(Handle*));
+}
+
+// TODO(maniscalco): There should probably be a mechanism to purge the free list in response to
+// some low memory signal.
+static BufferChainFreeList free_list(64);
+
+// Creates a MessagePacket in |msg| sufficient to hold |data_size| bytes and |num_handles|.
+//
+// Note: This method does not write the payload into the MessagePacket.
+//
+// Returns ZX_OK on success.
+//
 // static
-zx_status_t MessagePacket::NewPacket(uint32_t data_size, uint32_t num_handles,
-                                     fbl::unique_ptr<MessagePacket>* msg) {
-    // Although the API uses uint32_t, we pack the handle count into a smaller
-    // field internally. Make sure it fits.
-    static_assert(kMaxMessageHandles <= UINT16_MAX, "");
-    if (data_size > kMaxMessageSize || num_handles > kMaxMessageHandles) {
+inline zx_status_t MessagePacket::CreateCommon(uint32_t data_size, uint32_t num_handles,
+                                               fbl::unique_ptr<MessagePacket>* msg) {
+    if (unlikely(data_size > kMaxMessageSize || num_handles > kMaxMessageHandles)) {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    // Allocate space for the MessagePacket object followed by num_handles
-    // Handle*s followed by data_size bytes.
-    // TODO(dbort): Use mbuf-style memory for data_size, ideally allocating from
-    // somewhere other than the heap. Lets us better track and isolate channel
-    // memory usage.
-    char* ptr = static_cast<char*>(malloc(sizeof(MessagePacket) +
-                                          num_handles * sizeof(Handle*) +
-                                          data_size));
-    if (ptr == nullptr) {
+    const uint32_t payload_offset = PayloadOffset(num_handles);
+
+    // MessagePackets lives *inside* a list of buffers.  The first buffer holds the MessagePacket
+    // object, followed by its handles (if any), and finally the payload data.
+    BufferChain* chain = free_list.Alloc(payload_offset + data_size);
+    if (unlikely(!chain)) {
         return ZX_ERR_NO_MEMORY;
     }
+    DEBUG_ASSERT(!chain->buffers()->is_empty());
 
-    // The storage space for the Handle*s is not initialized because
-    // the only creators of MessagePackets (sys_channel_write and
-    // _call, and userboot) fill that array immediately after creation
-    // of the object.
-    msg->reset(new (ptr) MessagePacket(
-        data_size, num_handles,
-        reinterpret_cast<Handle**>(ptr + sizeof(MessagePacket))));
+    char* const data = chain->buffers()->front().data();
+    Handle** const handles = reinterpret_cast<Handle**>(data + kHandlesOffset);
+
+    // Construct the MessagePacket into the first buffer.
+    MessagePacket* const packet = reinterpret_cast<MessagePacket*>(data);
+    static_assert(kMaxMessageHandles <= UINT16_MAX, "");
+    msg->reset(new (packet) MessagePacket(chain, data_size, payload_offset,
+                                          static_cast<uint16_t>(num_handles), handles));
+    // The MessagePacket now owns the BufferChain and msg owns the MessagePacket.
+
     return ZX_OK;
 }
 
 // static
 zx_status_t MessagePacket::Create(user_in_ptr<const void> data, uint32_t data_size,
-                                  uint32_t num_handles,
-                                  fbl::unique_ptr<MessagePacket>* msg) {
-    zx_status_t status = NewPacket(data_size, num_handles, msg);
-    if (status != ZX_OK) {
+                                  uint32_t num_handles, fbl::unique_ptr<MessagePacket>* msg) {
+    fbl::unique_ptr<MessagePacket> new_msg;
+    zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
+    if (unlikely(status != ZX_OK)) {
         return status;
     }
-    if (data_size > 0u) {
-        if (data.copy_array_from_user((*msg)->data(), data_size) != ZX_OK) {
-            msg->reset();
-            return ZX_ERR_INVALID_ARGS;
-        }
+    status = new_msg->buffer_chain_->CopyIn(data, PayloadOffset(num_handles), data_size);
+    if (unlikely(status != ZX_OK)) {
+        return status;
     }
+    *msg = fbl::move(new_msg);
     return ZX_OK;
 }
 
 // static
-zx_status_t MessagePacket::Create(const void* data, uint32_t data_size,
-                                  uint32_t num_handles,
+zx_status_t MessagePacket::Create(const void* data, uint32_t data_size, uint32_t num_handles,
                                   fbl::unique_ptr<MessagePacket>* msg) {
-    zx_status_t status = NewPacket(data_size, num_handles, msg);
-    if (status != ZX_OK) {
+    fbl::unique_ptr<MessagePacket> new_msg;
+    zx_status_t status = CreateCommon(data_size, num_handles, &new_msg);
+    if (unlikely(status != ZX_OK)) {
         return status;
     }
-    if (data_size > 0u) {
-        memcpy((*msg)->data(), data, data_size);
+    status = new_msg->buffer_chain_->CopyInKernel(data, PayloadOffset(num_handles), data_size);
+    if (unlikely(status != ZX_OK)) {
+        return status;
     }
+    *msg = fbl::move(new_msg);
     return ZX_OK;
 }
 
-MessagePacket::~MessagePacket() {
-    if (owns_handles_) {
-        for (size_t ix = 0; ix != num_handles_; ++ix) {
-            // Delete the handle via HandleOwner dtor.
-            HandleOwner ho(handles_[ix]);
-        }
-    }
-}
-
-MessagePacket::MessagePacket(uint32_t data_size,
-                             uint32_t num_handles, Handle** handles)
-    : handles_(handles), data_size_(data_size),
-      // NewPacket ensures that num_handles fits in 16 bits.
-      num_handles_(static_cast<uint16_t>(num_handles)), owns_handles_(false) {
+void MessagePacket::fbl_recycle() {
+    // This function invokes the destructor so be careful about taking any references to |this|.
+    BufferChain* chain = buffer_chain_;
+    this->~MessagePacket();
+    // |this| has been destroyed.
+    free_list.Free(chain);
 }

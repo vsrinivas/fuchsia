@@ -911,6 +911,73 @@ static bool channel_read_etc(void) {
     END_TEST;
 }
 
+// Write and read messages of different sizes.
+static bool channel_write_different_sizes(void) {
+    BEGIN_TEST;
+    zx_handle_t channel[2];
+    ASSERT_EQ(zx_channel_create(0, &channel[0], &channel[1]), ZX_OK, "");
+
+    char* data_to_send = malloc(ZX_CHANNEL_MAX_MSG_BYTES);
+    ASSERT_NE(NULL, data_to_send, "");
+    char* data_recv = malloc(ZX_CHANNEL_MAX_MSG_BYTES);
+    ASSERT_NE(NULL, data_recv, "");
+
+    uint32_t actual_bytes = 0;
+    uint32_t actual_handles = 0;
+
+    // Send a bunch of messages, each with a random number of bytes and handles.  num_msgs should be
+    // large enough to provide decent coverage and small enough so the test executes quickly.
+    const size_t num_msgs = 1000;
+    srand(0);
+    for (size_t i = 0; i < num_msgs; ++i) {
+        uint32_t num_bytes = rand() % ZX_CHANNEL_MAX_MSG_BYTES;
+        uint32_t num_handles = rand() % ZX_CHANNEL_MAX_MSG_HANDLES;
+
+        // Create some handle pairs.  Keep one of each pair in |handles|, put the other in
+        // |handles_to_send|.
+        zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
+        zx_handle_t handles_to_send[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
+        zx_handle_t handles_recv[ZX_CHANNEL_MAX_MSG_HANDLES] = {0};
+        for (size_t i = 0; i < ZX_CHANNEL_MAX_MSG_HANDLES; ++i) {
+            if (i < num_handles) {
+                ASSERT_EQ(zx_channel_create(0u, &handles[i], &handles_to_send[i]), ZX_OK, "");
+            } else {
+                handles[i] = ZX_HANDLE_INVALID;
+                handles_to_send[i] = ZX_HANDLE_INVALID;
+            }
+            handles_recv[i] = ZX_HANDLE_INVALID;
+        }
+
+        memset(data_to_send, i % 256, i);
+        ASSERT_EQ(zx_channel_write(channel[0], 0u, data_to_send, num_bytes, handles_to_send,
+                                   num_handles),
+                  ZX_OK, "");
+        memset(data_recv, 0, ZX_CHANNEL_MAX_MSG_BYTES);
+        ASSERT_EQ(zx_channel_read(channel[1], 0u, data_recv, handles_recv, ZX_CHANNEL_MAX_MSG_BYTES,
+                                  num_handles, &actual_bytes, &actual_handles),
+                  ZX_OK, "");
+        ASSERT_EQ(actual_bytes, num_bytes, "");
+        ASSERT_EQ(actual_handles, num_handles, "");
+        ASSERT_EQ(memcmp(data_to_send, data_recv, num_bytes), 0, "");
+
+        // Close them.
+        for (size_t i = 0; i< ZX_CHANNEL_MAX_MSG_HANDLES; ++i) {
+            if (i < num_handles) {
+                ASSERT_EQ(zx_handle_close(handles_recv[i]), ZX_OK, "");
+                ASSERT_EQ(zx_handle_close(handles[i]), ZX_OK, "");
+            } else {
+                ASSERT_EQ(handles_recv[i], ZX_HANDLE_INVALID, "");
+            }
+        }
+    }
+
+    free(data_recv);
+    free(data_to_send);
+    EXPECT_EQ(zx_handle_close(channel[0]), ZX_OK, "");
+    EXPECT_EQ(zx_handle_close(channel[1]), ZX_OK, "");
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(channel_tests)
 RUN_TEST(channel_test)
 RUN_TEST(channel_read_error_test)
@@ -925,6 +992,7 @@ RUN_TEST(bad_channel_call_finish)
 RUN_TEST(channel_nest)
 RUN_TEST(channel_disallow_write_to_self)
 RUN_TEST(channel_read_etc)
+RUN_TEST(channel_write_different_sizes)
 END_TEST_CASE(channel_tests)
 
 #ifndef BUILD_COMBINED_TESTS

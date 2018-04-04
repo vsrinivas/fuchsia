@@ -10,6 +10,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS := \
+    $(LOCAL_DIR)/buffer_chain.cpp \
     $(LOCAL_DIR)/bus_transaction_initiator_dispatcher.cpp \
     $(LOCAL_DIR)/channel_dispatcher.cpp \
     $(LOCAL_DIR)/diagnostics.cpp \
@@ -53,6 +54,7 @@ MODULE_SRCS := \
 
 # Tests
 MODULE_SRCS += \
+    $(LOCAL_DIR)/buffer_chain_tests.cpp \
     $(LOCAL_DIR)/mbuf_tests.cpp \
     $(LOCAL_DIR)/message_packet_tests.cpp \
     $(LOCAL_DIR)/state_tracker_tests.cpp \
