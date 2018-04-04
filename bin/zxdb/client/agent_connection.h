@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
 
 #ifdef __Fuchsia__

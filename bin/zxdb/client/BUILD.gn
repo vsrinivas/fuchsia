@@ -46,6 +46,7 @@ static_library("client") {
 
   public_deps = [
     "//garnet/lib/debug_ipc:client",
+    "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
   ]
 }

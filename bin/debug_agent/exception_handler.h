@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "garnet/bin/debug_agent/handle_read_watcher.h"
-#include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 

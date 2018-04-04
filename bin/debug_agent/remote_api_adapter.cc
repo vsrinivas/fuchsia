@@ -9,7 +9,7 @@
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
-#include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 
 namespace debug_agent {
 

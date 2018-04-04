@@ -1,0 +1,31 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This library contains helper classes used by both the debug_agent and zxdb
+# but that aren't directly related to the protocol.
+static_library("helper") {
+  sources = [
+    "stream_buffer.cc",
+    "stream_buffer.h",
+  ]
+
+  public_deps = [
+    #"//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+# Unit tests for this directory. These are intended to be referenced by unit
+# test targets for the consumers of this library.
+source_set("tests") {
+  testonly = true
+  sources = [
+    "stream_buffer_unittest.cc",
+  ]
+
+  deps = [
+    ":helper",
+    "//third_party/googletest:gtest",
+  ]
+}

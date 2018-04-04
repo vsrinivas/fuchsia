@@ -24,6 +24,8 @@ class StreamBuffer {
   StreamBuffer();
   ~StreamBuffer();
 
+  // System API ----------------------------------------------------------------
+
   // Sets the writer which flushes write data to the OS.
   void set_writer(Writer* writer) { writer_ = writer; }
 
@@ -32,6 +34,8 @@ class StreamBuffer {
 
   // Notification from the OS that data can be written.
   void SetWritable();
+
+  // Public API ----------------------------------------------------------------
 
   // Returns true if the given number of bytes are available for reading.
   bool IsAvailable(size_t count) const;

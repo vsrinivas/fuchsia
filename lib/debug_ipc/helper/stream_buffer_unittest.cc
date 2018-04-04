@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/debug_ipc/stream_buffer.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 
 #include "gtest/gtest.h"
 

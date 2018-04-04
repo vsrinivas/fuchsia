@@ -16,8 +16,6 @@ static_library("shared") {
     "protocol_helpers.h",
     "records.h",
     "message_writer.h",
-    "stream_buffer.cc",
-    "stream_buffer.h",
   ]
 }
 
@@ -48,7 +46,6 @@ source_set("tests") {
   sources = [
     "message_unittests.cc",
     "protocol_unittests.cc",
-    "stream_buffer_unittest.cc",
   ]
 
   deps = [
