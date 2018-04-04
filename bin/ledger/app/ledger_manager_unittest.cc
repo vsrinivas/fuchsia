@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <lib/async/dispatcher.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
@@ -37,8 +37,7 @@ ledger::PageId RandomId() {
 
 class FakeLedgerStorage : public storage::LedgerStorage {
  public:
-  explicit FakeLedgerStorage(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {}
+  explicit FakeLedgerStorage(async_t* async) : async_(async) {}
   ~FakeLedgerStorage() override {}
 
   void CreatePageStorage(
@@ -55,7 +54,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
                                          std::unique_ptr<storage::PageStorage>)>
                           callback) override {
     get_page_calls.push_back(page_id);
-    task_runner_->PostTask([this, callback, page_id]() mutable {
+    async::PostTask(async_, [this, callback, page_id]() mutable {
       if (should_get_page_fail) {
         callback(storage::Status::NOT_FOUND, nullptr);
       } else {
@@ -83,7 +82,7 @@ class FakeLedgerStorage : public storage::LedgerStorage {
   std::vector<storage::PageId> delete_page_calls;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
 };
@@ -115,7 +114,7 @@ class LedgerManagerTest : public gtest::TestWithMessageLoop {
   void SetUp() override {
     gtest::TestWithMessageLoop::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =
-        std::make_unique<FakeLedgerStorage>(message_loop_.task_runner());
+        std::make_unique<FakeLedgerStorage>(message_loop_.async());
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
