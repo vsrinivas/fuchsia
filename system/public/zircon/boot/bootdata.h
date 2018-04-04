@@ -110,6 +110,14 @@
 // Content: ascii/utf8 log data from previous boot
 #define BOOTDATA_LAST_CRASHLOG    (0x4d4f4f42) // BOOM
 
+// CPU configuration
+// Content: bootdata_cpu_config_t
+#define BOOTDATA_CPU_CONFIG       (0x43555043) // CPUC
+
+// Memory configuration
+// Content: one or more of bootdata_mem_range_t (count determined by bootdata_t length)
+#define BOOTDATA_MEM_CONFIG       (0x434D454D) // MEMC
+
 #define BOOTDATA_IGNORE           (0x50494b53) // SKIP
 
 #ifndef __ASSEMBLER__
@@ -187,6 +195,32 @@ typedef struct {
     uint32_t pid;
     char board_name[32];
 } bootdata_platform_id_t;
+
+typedef struct {
+    uint32_t cpu_count;     // number of CPU cores in the cluster
+    uint32_t type;          // for future use
+    uint32_t flags;         // for future use
+    uint32_t reserved;
+} bootdata_cpu_cluster_t;
+
+typedef struct {
+    uint32_t cluster_count;
+    uint32_t reserved[3];
+    bootdata_cpu_cluster_t clusters[];
+} bootdata_cpu_config_t;
+
+#define BOOTDATA_MEM_RANGE_RAM          1
+#define BOOTDATA_MEM_RANGE_PERIPHERAL   2
+#define BOOTDATA_MEM_RANGE_RESERVED     3
+typedef struct {
+    uint64_t    paddr;
+    // TODO(voydanoff) remove vaddr after the kernel is able to choose peripheral
+    // virtual base address on its own.
+    uint64_t    vaddr;
+    uint64_t    length;
+    uint32_t    type;
+    uint32_t    reserved;
+} bootdata_mem_range_t;
 
 /* EFI Variable for Crash Log */
 #define ZIRCON_VENDOR_GUID \
