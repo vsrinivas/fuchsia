@@ -11,11 +11,12 @@
 #include <thread>
 #include <utility>
 
+#include <fuchsia/cpp/cobalt.h>
+#include <lib/async/cpp/task.h>
+
 #include "config/cobalt_config.pb.h"
 #include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/cobalt.h>
-#include <fuchsia/cpp/cobalt.h>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
@@ -395,8 +396,7 @@ void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {
 class CobaltControllerImpl : public CobaltController {
  public:
   // Does not take ownerhsip of |shipping_manager|.
-  CobaltControllerImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                       ShippingManager* shipping_manager);
+  CobaltControllerImpl(async_t* async, ShippingManager* shipping_manager);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -408,22 +408,21 @@ class CobaltControllerImpl : public CobaltController {
 
   void FailedSendAttempts(FailedSendAttemptsCallback callback) override;
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   ShippingManager* shipping_manager_;  // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };
 
 CobaltControllerImpl::CobaltControllerImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     ShippingManager* shipping_manager)
-    : task_runner_(std::move(task_runner)),
-      shipping_manager_(shipping_manager) {}
+    : async_(async), shipping_manager_(shipping_manager) {}
 
 void CobaltControllerImpl::RequestSendSoon(RequestSendSoonCallback callback) {
   // callback_adapter invokes |callback| on the main thread.
   std::function<void(bool)> callback_adapter = [this, callback](bool success) {
-    task_runner_->PostTask([callback, success]() { callback(success); });
+    async::PostTask(async_, [callback, success]() { callback(success); });
   };
   shipping_manager_->RequestSendSoon(callback_adapter);
 }
@@ -498,7 +497,7 @@ void CobaltEncoderFactoryImpl::GetEncoder(
 
 class CobaltApp {
  public:
-  CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  CobaltApp(async_t* async,
             std::chrono::seconds schedule_interval,
             std::chrono::seconds min_interval,
             const std::string& product_name);
@@ -525,7 +524,7 @@ class CobaltApp {
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
 };
 
-CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
+CobaltApp::CobaltApp(async_t* async,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
                      const std::string& product_name)
@@ -544,8 +543,7 @@ CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
           ShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                              kDeadlinePerSendAttempt),
           &send_retryer_),
-      controller_impl_(new CobaltControllerImpl(std::move(task_runner),
-                                                &shipping_manager_)) {
+      controller_impl_(new CobaltControllerImpl(async, &shipping_manager_)) {
   shipping_manager_.Start();
 
   // Open the cobalt config file.
@@ -631,7 +629,7 @@ int main(int argc, const char** argv) {
                 << " seconds.";
 
   fsl::MessageLoop loop;
-  CobaltApp app(loop.task_runner(), schedule_interval, min_interval, "fuchsia");
+  CobaltApp app(loop.async(), schedule_interval, min_interval, "fuchsia");
   loop.Run();
   return 0;
 }
