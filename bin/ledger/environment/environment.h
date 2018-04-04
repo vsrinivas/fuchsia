@@ -20,7 +20,7 @@ class Environment {
   ~Environment();
 
   const fxl::RefPtr<fxl::TaskRunner> main_runner() { return main_runner_; }
-  const async_t* async() { return async_; }
+  async_t* async() { return async_; }
 
   coroutine::CoroutineService* coroutine_service() {
     return coroutine_service_.get();
