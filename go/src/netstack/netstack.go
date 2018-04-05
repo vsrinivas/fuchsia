@@ -268,9 +268,10 @@ func (ns *netstack) addLoopback() error {
 	const nicid = 1
 	ctx, cancel := context.WithCancel(context.Background())
 	nic := &netiface.NIC{
-		ID:      nicid,
-		Addr:    header.IPv4Loopback,
-		Netmask: tcpip.AddressMask(strings.Repeat("\xff", 4)),
+		ID:       nicid,
+		Addr:     header.IPv4Loopback,
+		Netmask:  tcpip.AddressMask(strings.Repeat("\xff", 4)),
+		Features: eth.FeatureLoopback,
 		Routes: []tcpip.Route{
 			{
 				Destination: header.IPv4Loopback,
@@ -284,8 +285,8 @@ func (ns *netstack) addLoopback() error {
 			},
 		},
 	}
-	// features is not used for loopback NIC
-	setNICName(nic, 0)
+
+	setNICName(nic)
 
 	ifs := &ifState{
 		ns:     ns,
@@ -376,7 +377,8 @@ func (ns *netstack) addEth(path string) error {
 		ns.nodename = deviceid.DeviceID(ifs.nic.Mac)
 	}
 	ifs.nic.ID = nicid
-	setNICName(ifs.nic, client.Features)
+	ifs.nic.Features = client.Features
+	setNICName(ifs.nic)
 
 	ifs.nic.Routes = defaultRouteTable(nicid, "")
 	ns.ifStates[nicid] = ifs
@@ -419,10 +421,10 @@ func (ns *netstack) addEth(path string) error {
 	return nil
 }
 
-func setNICName(nic *netiface.NIC, features uint32) {
-	if nic.ID == 1 {
+func setNICName(nic *netiface.NIC) {
+	if nic.Features&eth.FeatureLoopback != 0 {
 		nic.Name = "lo"
-	} else if features&eth.FeatureWlan != 0 {
+	} else if nic.Features&eth.FeatureWlan != 0 {
 		nic.Name = fmt.Sprintf("wlan%d", nic.ID)
 	} else {
 		nic.Name = fmt.Sprintf("en%d", nic.ID)

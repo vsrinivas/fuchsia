@@ -78,6 +78,7 @@ struct AggregateStats {
 struct NetInterface {
   uint32 id;
   uint32 flags;
+  uint32 features;
   string name;
   NetAddress addr;
   NetAddress netmask;
@@ -88,6 +89,18 @@ struct NetInterface {
 
 // Flags for NetInterface.flags.
 const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
+
+// Features for Netinterface.features.
+// LINT.IfChange
+enum NetInterfaceFeature {
+  WLAN = 0x01;
+  SYNTH = 0x02;
+  LOOPBACK = 0x04;
+};
+// LINT.ThenChange(
+//   //zircon/system/public/zircon/device/ethernet.h,
+//   //garnet/go/src/netstack/link/eth/ioctl.go
+// )
 
 struct RouteTableEntry {
   NetAddress destination;

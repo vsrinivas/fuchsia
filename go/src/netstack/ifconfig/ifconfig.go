@@ -63,6 +63,11 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 	}
 	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
 
+	if isWLAN(iface.Features) {
+		// TODO(eyw): Fill in the actual status by asking the wlanstack nicely
+		fmt.Printf("\tWLAN Status: %s\n", "TODO")
+	}
+
 	fmt.Printf("\tRX packets:%d\n", stats.Rx.PktsTotal)
 	fmt.Printf("\tTX packets:%d\n", stats.Tx.PktsTotal)
 	fmt.Printf("\tRX bytes:%s  TX bytes:%s\n",
@@ -201,6 +206,10 @@ func toNetAddress(addr net.IP) netstack.NetAddress {
 		copy(out.Ipv6.Addr[:], addr[:])
 	}
 	return out
+}
+
+func isWLAN(features uint32) bool {
+	return features&uint32(netstack.NetInterfaceFeatureWlan) != 0
 }
 
 // bytesToString returns a human-friendly display of the given byte count.

@@ -86,6 +86,7 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 		outif := nsfidl.NetInterface{
 			Id:        uint32(nicid),
 			Flags:     flags,
+			Features:  ifs.nic.Features,
 			Name:      ifs.nic.Name,
 			Addr:      toNetAddress(ifs.nic.Addr),
 			Netmask:   toNetAddress(tcpip.Address(ifs.nic.Netmask)),
