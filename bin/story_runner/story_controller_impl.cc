@@ -2494,7 +2494,7 @@ StoryControllerImpl::Connection* StoryControllerImpl::FindAnchor(
   // Traverse up until there is a non-embedded module. We recognize non-embedded
   // modules by having a non-null SurfaceRelation. If the root module is there
   // at all, it has a non-null surface relation.
-  while (anchor && anchor->module_data->surface_relation) {
+  while (anchor && !anchor->module_data->surface_relation) {
     anchor = FindConnection(ParentModulePath(anchor->module_data->module_path));
   }
 
