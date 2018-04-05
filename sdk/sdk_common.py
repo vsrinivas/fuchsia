@@ -49,6 +49,7 @@ class Atom(object):
         self.json = json
         self.id = AtomId(json['id'])
         self.label = json['gn-label']
+        self.deps = map(lambda i: AtomId(i), json['deps'])
         self.package_deps = map(lambda i: AtomId(i), json['package-deps'])
         self.files = [File(f) for f in json['files']]
         self.tags = json['tags']
