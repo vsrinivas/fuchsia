@@ -15,6 +15,7 @@ source_set("clipboard_sources") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib:fidl",
   ]
 }

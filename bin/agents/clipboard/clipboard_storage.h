@@ -7,6 +7,7 @@
 #define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_STORAGE_H_
 
 #include <fuchsia/cpp/modular.h>
+#include "lib/async/cpp/operation.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 
@@ -32,6 +33,11 @@ class ClipboardStorage : public PageClient {
   void Peek(const std::function<void(fidl::StringPtr)>& callback);
 
  private:
+  OperationQueue operation_queue_;
+
+  class PushCall;
+  class PeekCall;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(ClipboardStorage);
 };
 
