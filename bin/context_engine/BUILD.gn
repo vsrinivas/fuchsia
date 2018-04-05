@@ -87,12 +87,14 @@ source_set("context_repository") {
     "debug.h",
   ]
 
+  public_deps = [
+    "//peridot/lib/util:wait_until_idle",
+  ]
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
-    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:formatting",
     "//third_party/rapidjson",
