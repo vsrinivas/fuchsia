@@ -274,17 +274,17 @@ void EncryptionServiceImpl::FetchMasterKey(
 void EncryptionServiceImpl::FetchNamespaceKey(
     size_t key_index,
     std::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index, [this, callback = std::move(callback)](
-                                  Status status,
-                                  const std::string& master_key) {
-    if (status != Status::OK) {
-      callback(status, "");
-      return;
-    }
-    callback(Status::OK,
-             HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}),
-                        kDerivedKeySize));
-  });
+  master_keys_.Get(
+      key_index, [this, callback = std::move(callback)](
+                     Status status, const std::string& master_key) {
+        if (status != Status::OK) {
+          callback(status, "");
+          return;
+        }
+        callback(Status::OK,
+                 HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}),
+                            kDerivedKeySize));
+      });
 }
 
 void EncryptionServiceImpl::FetchReferenceKey(

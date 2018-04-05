@@ -41,8 +41,8 @@ EntryType CreateEntry(const storage::Entry& entry) {
   EntryType result;
   result.key = convert::ToArray(entry.key);
   result.priority = entry.priority == storage::KeyPriority::EAGER
-                            ? Priority::EAGER
-                            : Priority::LAZY;
+                        ? Priority::EAGER
+                        : Priority::LAZY;
   return result;
 }
 
@@ -72,8 +72,7 @@ size_t ComputeEntrySize(const InlinedEntry& entry) {
 }
 
 // Fills an Entry from the content of object.
-storage::Status FillSingleEntry(const storage::Object& object,
-                                Entry* entry) {
+storage::Status FillSingleEntry(const storage::Object& object, Entry* entry) {
   fsl::SizedVmo vmo;
   storage::Status status = object.GetVmo(&vmo);
   if (status != storage::Status::OK) {

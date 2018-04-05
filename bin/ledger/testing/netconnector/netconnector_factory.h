@@ -38,9 +38,10 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
   void UpdatedHostList();
 
   // FakeNetConnector::Delegate:
-  void GetDevicesNames(uint64_t last_version,
-                       std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)>
-                           callback) override;
+  void GetDevicesNames(
+      uint64_t last_version,
+      std::function<void(uint64_t, fidl::VectorPtr<fidl::StringPtr>)> callback)
+      override;
   void ConnectToServiceProvider(
       std::string device_name,
       fidl::InterfaceRequest<component::ServiceProvider> request) override;
@@ -57,4 +58,4 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_H_
+#endif  // PERIDOT_BIN_LEDGER_TESTING_NETCONNECTOR_NETCONNECTOR_FACTORY_H_

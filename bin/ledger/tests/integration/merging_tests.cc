@@ -325,15 +325,14 @@ class TestConflictResolverFactory : public ledger::ConflictResolverFactory {
   void GetPolicy(ledger::PageId /*page_id*/,
                  GetPolicyCallback callback) override {
     get_policy_calls++;
-    async::PostDelayedTask(
-        async_get_default(),
-        [this, callback] {
-          callback(policy_);
-          if (callback_) {
-            callback_();
-          }
-        },
-        zx::nsec(response_delay_.ToNanoseconds()));
+    async::PostDelayedTask(async_get_default(),
+                           [this, callback] {
+                             callback(policy_);
+                             if (callback_) {
+                               callback_();
+                             }
+                           },
+                           zx::nsec(response_delay_.ToNanoseconds()));
   }
 
   void NewConflictResolver(
@@ -366,7 +365,7 @@ class Optional {
   Optional() : obj_() {}
   explicit Optional(T obj) : valid_(true), obj_(std::move(obj)) {}
 
-  constexpr const T& operator*() const & { return obj_; }
+  constexpr const T& operator*() const& { return obj_; }
 
   constexpr const T* operator->() const { return &obj_; }
 

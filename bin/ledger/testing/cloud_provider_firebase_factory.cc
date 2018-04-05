@@ -42,9 +42,10 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
     std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   modular_auth::TokenProviderPtr token_provider;
-  services_task_runner_->PostTask(fxl::MakeCopyable([
-    this, request = token_provider.NewRequest()
-  ]() mutable { token_provider_.AddBinding(std::move(request)); }));
+  services_task_runner_->PostTask(fxl::MakeCopyable(
+      [this, request = token_provider.NewRequest()]() mutable {
+        token_provider_.AddBinding(std::move(request));
+      }));
 
   cloud_provider_firebase::Config firebase_config;
   firebase_config.server_id = server_id;

@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
-#include <zx/time.h>
 #include <lib/fidl/cpp/clone.h>
+#include <zx/time.h>
 
 #include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"

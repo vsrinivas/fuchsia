@@ -46,8 +46,10 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-FetchBenchmark::FetchBenchmark(size_t entry_count, size_t value_size,
-                               size_t part_size, std::string server_id)
+FetchBenchmark::FetchBenchmark(size_t entry_count,
+                               size_t value_size,
+                               size_t part_size,
+                               std::string server_id)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
@@ -64,10 +66,9 @@ FetchBenchmark::FetchBenchmark(size_t entry_count, size_t value_size,
   cloud_provider_firebase_factory_.Init();
 }
 
-void FetchBenchmark::SyncStateChanged(
-    ledger::SyncState download,
-    ledger::SyncState upload,
-    SyncStateChangedCallback callback) {
+void FetchBenchmark::SyncStateChanged(ledger::SyncState download,
+                                      ledger::SyncState upload,
+                                      SyncStateChangedCallback callback) {
   if (on_sync_state_changed_) {
     on_sync_state_changed_(download, upload);
   }
@@ -147,8 +148,8 @@ void FetchBenchmark::ConnectReader() {
       reader_path, &reader_);
   QuitOnError(status, "ConnectReader");
 
-  reader_->GetPage(fidl::MakeOptional(std::move(page_id_)), reader_page_.NewRequest(),
-                   [this](ledger::Status status) {
+  reader_->GetPage(fidl::MakeOptional(std::move(page_id_)),
+                   reader_page_.NewRequest(), [this](ledger::Status status) {
                      if (benchmark::QuitOnError(status, "GetPage")) {
                        return;
                      }

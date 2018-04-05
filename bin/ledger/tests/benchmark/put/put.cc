@@ -25,8 +25,12 @@ namespace test {
 namespace benchmark {
 
 PutBenchmark::PutBenchmark(
-    int entry_count, int transaction_size, int key_size, int value_size,
-    bool update, PageDataGenerator::ReferenceStrategy reference_strategy,
+    int entry_count,
+    int transaction_size,
+    int key_size,
+    int value_size,
+    bool update,
+    PageDataGenerator::ReferenceStrategy reference_strategy,
     uint64_t seed)
     : generator_(seed),
       tmp_dir_(kStoragePath),
@@ -66,9 +70,9 @@ void PutBenchmark::Run() {
                                           &ledger, nullptr, &page_, &id);
   QuitOnError(status, "GetPageEnsureInitialized");
 
-  InitializeKeys(
-      fxl::MakeCopyable([this, ledger = std::move(ledger)](
-                            std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
+  InitializeKeys(fxl::MakeCopyable(
+      [this, ledger = std::move(ledger)](
+          std::vector<fidl::VectorPtr<uint8_t>> keys) mutable {
         if (transaction_size_ > 0) {
           page_->StartTransaction(fxl::MakeCopyable(
               [this, keys = std::move(keys)](ledger::Status status) mutable {
@@ -144,7 +148,8 @@ void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
           }));
 }
 
-void PutBenchmark::RunSingle(int i, std::vector<fidl::VectorPtr<uint8_t>> keys) {
+void PutBenchmark::RunSingle(int i,
+                             std::vector<fidl::VectorPtr<uint8_t>> keys) {
   if (i == entry_count_) {
     // All sent, waiting for watcher notification before shutting down.
     return;
@@ -213,9 +218,10 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
           }));
 }
 
-void PutBenchmark::CommitAndRunNext(int i,
-                                    size_t key_number,
-                                    std::vector<fidl::VectorPtr<uint8_t>> keys) {
+void PutBenchmark::CommitAndRunNext(
+    int i,
+    size_t key_number,
+    std::vector<fidl::VectorPtr<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](

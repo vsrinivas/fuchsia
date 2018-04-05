@@ -131,8 +131,8 @@ void ComputePageChange(
     Entry entry;
     entry.key = convert::ToArray(change.entry.key);
     entry.priority = change.entry.priority == storage::KeyPriority::EAGER
-                          ? Priority::EAGER
-                          : Priority::LAZY;
+                         ? Priority::EAGER
+                         : Priority::LAZY;
     context->page_change->changed_entries.push_back(std::move(entry));
     PageUtils::ResolveObjectIdentifierAsBuffer(
         storage, change.entry.object_identifier, 0u,

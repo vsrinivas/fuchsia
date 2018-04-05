@@ -7,8 +7,8 @@
 
 #include <vector>
 
-#include "lib/fxl/strings/string_view.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/strings/string_view.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 
 namespace test {

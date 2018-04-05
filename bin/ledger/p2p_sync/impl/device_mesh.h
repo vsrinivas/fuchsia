@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_P2P_IMPL_DEVICE_MESH_H_
-#define PERIDOT_BIN_LEDGER_P2P_IMPL_DEVICE_MESH_H_
+#ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_DEVICE_MESH_H_
+#define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_DEVICE_MESH_H_
 
 #include <memory>
 #include <set>

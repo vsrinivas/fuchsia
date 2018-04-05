@@ -7,8 +7,8 @@
 
 #include <functional>
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 
 namespace ledger {

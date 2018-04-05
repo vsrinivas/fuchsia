@@ -108,8 +108,8 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
 
 class LedgerManagerTest : public gtest::TestWithMessageLoop {
  public:
-  LedgerManagerTest() : environment_(message_loop_.task_runner(),
-                                     message_loop_.async()) {}
+  LedgerManagerTest()
+      : environment_(message_loop_.task_runner(), message_loop_.async()) {}
 
   // gtest::TestWithMessageLoop:
   void SetUp() override {

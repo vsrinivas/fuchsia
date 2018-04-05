@@ -40,8 +40,10 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                       [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
-    async::PostTask(message_loop_->async(), fxl::MakeCopyable(
-        [this, ids_and_bytes = std::move(ids_and_bytes), callback]() mutable {
+    async::PostTask(
+        message_loop_->async(),
+        fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
+                           callback]() mutable {
           for (auto& commit : ids_and_bytes) {
             received_commits[std::move(commit.id)] = std::move(commit.bytes);
           }
@@ -68,8 +70,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 class BatchDownloadTest : public gtest::TestWithMessageLoop {
  public:
   BatchDownloadTest()
-      : storage_(&message_loop_),
-        encryption_service_(message_loop_.async()) {}
+      : storage_(&message_loop_), encryption_service_(message_loop_.async()) {}
   ~BatchDownloadTest() override {}
 
  protected:

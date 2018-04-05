@@ -204,7 +204,8 @@ std::unique_ptr<DataSource> DataSource::Create(std::string value) {
 }
 
 std::unique_ptr<DataSource> DataSource::Create(std::vector<uint8_t> value) {
-  return std::make_unique<StringLikeDataSource<std::vector<uint8_t>>>(std::move(value));
+  return std::make_unique<StringLikeDataSource<std::vector<uint8_t>>>(
+      std::move(value));
 }
 
 std::unique_ptr<DataSource> DataSource::Create(fsl::SizedVmo vmo) {

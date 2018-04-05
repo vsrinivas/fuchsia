@@ -4,8 +4,8 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
-#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "lib/fxl/macros.h"
+#include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 
 namespace ledger {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_P2P_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
-#define PERIDOT_BIN_LEDGER_P2P_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
+#ifndef PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
+#define PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
 
 #include <flatbuffers/flatbuffers.h>
 
@@ -18,4 +18,4 @@ void CreateUnknownResponseMessage(flatbuffers::FlatBufferBuilder* buffer,
                                   ResponseStatus status);
 }  // namespace p2p_sync
 
-#endif  // PERIDOT_BIN_LEDGER_P2P_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
+#endif  // PERIDOT_BIN_LEDGER_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_

@@ -8,9 +8,9 @@
 #include <functional>
 #include <queue>
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"

@@ -101,13 +101,14 @@ class BranchTracker::PageWatcherContainer {
     auto entries = std::move(change->changed_entries);
     auto deletions = std::move(change->deleted_keys);
     for (size_t i = 0, j = 0; i < entries->size() || j < deletions->size();) {
-      bool add_entry =
-          i < entries->size() && (j == deletions->size() ||
-                                 convert::ExtendedStringView(entries->at(i).key) <
-                                     convert::ExtendedStringView(deletions->at(j)));
+      bool add_entry = i < entries->size() &&
+                       (j == deletions->size() ||
+                        convert::ExtendedStringView(entries->at(i).key) <
+                            convert::ExtendedStringView(deletions->at(j)));
       size_t entry_size =
-          add_entry ? fidl_serialization::GetEntrySize(entries->at(i).key->size())
-                    : fidl_serialization::GetByteArraySize(deletions->at(j)->size());
+          add_entry
+              ? fidl_serialization::GetEntrySize(entries->at(i).key->size())
+              : fidl_serialization::GetByteArraySize(deletions->at(j)->size());
       size_t entry_handle_count = add_entry ? 1 : 0;
 
       if (changes.empty() ||

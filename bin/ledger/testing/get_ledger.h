@@ -8,14 +8,14 @@
 #include <functional>
 #include <string>
 
-#include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/cloud_provider.h>
+#include <fuchsia/cpp/ledger.h>
+#include <fuchsia/cpp/modular_auth.h>
+#include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {

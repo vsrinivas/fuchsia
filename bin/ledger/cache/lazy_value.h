@@ -69,4 +69,4 @@ class LazyValue {
 
 }  // namespace cache
 
-#endif  // PERIDOT_BIN_LEDGER_CACHE_LRU_CACHE_H_
+#endif  // PERIDOT_BIN_LEDGER_CACHE_LAZY_VALUE_H_

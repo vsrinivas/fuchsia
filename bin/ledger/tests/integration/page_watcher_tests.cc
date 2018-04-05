@@ -450,10 +450,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries->at(0).key));
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
-  async::PostDelayedTask(
-      async_get_default(),
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
-      zx::sec(1));
+  async::PostDelayedTask(async_get_default(),
+                         [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
+                         zx::sec(1));
   fsl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
   EXPECT_EQ(2u, watcher1.changes_seen);

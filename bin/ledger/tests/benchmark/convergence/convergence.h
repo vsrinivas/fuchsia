@@ -9,9 +9,9 @@
 #include <set>
 #include <vector>
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
 

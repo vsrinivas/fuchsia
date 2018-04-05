@@ -19,11 +19,11 @@ constexpr size_t kMaxMessageHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
 
 // FIXME(LE-449): Remove dependency on FIDL internal structure layout.
 // These constants and the associated computations are no longer valid in FIDL2.
-const size_t kArrayHeaderSize = 8; //sizeof(fidl::internal::Array_Data<char>);
+const size_t kArrayHeaderSize = 8;  // sizeof(fidl::internal::Array_Data<char>);
 const size_t kPointerSize = sizeof(uint64_t);
 const size_t kEnumSize = sizeof(int32_t);
 const size_t kHandleSize = sizeof(int32_t);
-const size_t kStructHeaderSize = 8; //sizeof(fidl::internal::StructHeader);
+const size_t kStructHeaderSize = 8;  // sizeof(fidl::internal::StructHeader);
 
 inline size_t Align(size_t n) {
   return (n + 7) & ~7;

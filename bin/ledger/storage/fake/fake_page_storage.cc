@@ -121,12 +121,13 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                message_loop_->async(), fxl::MakeCopyable(
-                [watcher, commit = commit->Clone()]() mutable {
-                  std::vector<std::unique_ptr<const Commit>> commits;
-                  commits.push_back(std::move(commit));
-                  watcher->OnNewCommits(commits, ChangeSource::LOCAL);
-                }));
+                message_loop_->async(),
+                fxl::MakeCopyable(
+                    [watcher, commit = commit->Clone()]() mutable {
+                      std::vector<std::unique_ptr<const Commit>> commits;
+                      commits.push_back(std::move(commit));
+                      watcher->OnNewCommits(commits, ChangeSource::LOCAL);
+                    }));
           }
         }
         callback(status, std::move(commit));
@@ -198,8 +199,7 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(message_loop_->async(),
-                         [this] { SendNextObject(); },
+  async::PostDelayedTask(message_loop_->async(), [this] { SendNextObject(); },
                          zx::msec(5));
 }
 

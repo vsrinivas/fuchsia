@@ -52,7 +52,9 @@ namespace test {
 namespace benchmark {
 
 BacklogBenchmark::BacklogBenchmark(
-    size_t unique_key_count, size_t value_size, size_t commit_count,
+    size_t unique_key_count,
+    size_t value_size,
+    size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
     : application_context_(
@@ -73,10 +75,9 @@ BacklogBenchmark::BacklogBenchmark(
   cloud_provider_firebase_factory_.Init();
 }
 
-void BacklogBenchmark::SyncStateChanged(
-    ledger::SyncState download,
-    ledger::SyncState upload,
-    SyncStateChangedCallback callback) {
+void BacklogBenchmark::SyncStateChanged(ledger::SyncState download,
+                                        ledger::SyncState upload,
+                                        SyncStateChangedCallback callback) {
   if (on_sync_state_changed_) {
     on_sync_state_changed_(download, upload);
   }
@@ -198,9 +199,10 @@ void BacklogBenchmark::GetReaderSnapshot() {
   GetEntriesStep(nullptr, unique_key_count_);
 }
 
-void BacklogBenchmark::CheckStatusAndGetMore(ledger::Status status,
-                                             size_t entries_left,
-                                             fidl::VectorPtr<uint8_t> next_token) {
+void BacklogBenchmark::CheckStatusAndGetMore(
+    ledger::Status status,
+    size_t entries_left,
+    fidl::VectorPtr<uint8_t> next_token) {
   if ((status != ledger::Status::OK) &&
       (status != ledger::Status::PARTIAL_RESULT)) {
     QuitOnError(status, "PageSnapshot::GetEntries");

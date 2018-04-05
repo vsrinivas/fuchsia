@@ -12,9 +12,9 @@
 
 #include <fuchsia/cpp/ledger.h>
 #include "garnet/lib/callback/trace_callback.h"
+#include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include "lib/fidl/cpp/optional.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/page_impl.h"
 

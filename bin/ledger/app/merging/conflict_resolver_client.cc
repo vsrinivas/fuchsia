@@ -128,8 +128,7 @@ void ConflictResolverClient::OnNextMergeResult(
       } else {
         storage::ObjectIdentifier object_identifier;
         Status status = manager_->ResolveReference(
-            std::move(merged_value.new_value->reference()),
-            &object_identifier);
+            std::move(merged_value.new_value->reference()), &object_identifier);
         if (status != Status::OK) {
           waiter->NewCallback()(storage::Status::NOT_FOUND, {});
           return;
@@ -325,9 +324,8 @@ void ConflictResolverClient::Done(DoneCallback callback) {
           }));
 }
 
-bool ConflictResolverClient::IsInValidStateAndNotify(
-    MergeCallback callback,
-    storage::Status status) {
+bool ConflictResolverClient::IsInValidStateAndNotify(MergeCallback callback,
+                                                     storage::Status status) {
   if (!cancelled_ && status == storage::Status::OK) {
     return true;
   }

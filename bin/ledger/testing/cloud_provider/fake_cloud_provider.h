@@ -5,8 +5,8 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 #define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_CLOUD_PROVIDER_H_
 
-#include "garnet/lib/callback/auto_cleanable.h"
 #include <fuchsia/cpp/cloud_provider.h>
+#include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"

@@ -11,6 +11,7 @@
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
+#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -25,7 +26,6 @@
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
-#include <fuchsia/cpp/ledger_internal.h>
 
 namespace ledger {
 
@@ -43,7 +43,8 @@ struct AppParams {
 };
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    bool disable_statistics, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    bool disable_statistics,
+    fxl::RefPtr<fxl::TaskRunner> task_runner,
     component::ApplicationContext* application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
@@ -81,7 +82,9 @@ class App : public ledger_internal::LedgerController {
 
     application_context_->outgoing_services()
         ->AddService<ledger_internal::LedgerRepositoryFactory>(
-            [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request) {
+            [this](
+                fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
+                    request) {
               factory_bindings_.AddBinding(factory_impl_.get(),
                                            std::move(request));
             });

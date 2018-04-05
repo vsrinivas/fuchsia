@@ -41,11 +41,9 @@ void FakeEncryptionService::EncryptCommit(
     std::string commit_storage,
     std::function<void(Status, std::string)> callback) {
   std::string encrypted_commit = EncryptCommitSynchronous(commit_storage);
-  async::PostTask(
-      async_,
-      [encrypted_commit = std::move(encrypted_commit),
-       callback = std::move(callback)]() mutable {
-         callback(Status::OK, std::move(encrypted_commit));
+  async::PostTask(async_, [encrypted_commit = std::move(encrypted_commit),
+                           callback = std::move(callback)]() mutable {
+    callback(Status::OK, std::move(encrypted_commit));
   });
 }
 
@@ -53,22 +51,20 @@ void FakeEncryptionService::DecryptCommit(
     convert::ExtendedStringView storage_bytes,
     std::function<void(Status, std::string)> callback) {
   std::string commit = DecryptCommitSynchronous(storage_bytes);
-  async::PostTask(
-      async_,
-      [commit = std::move(commit), callback = std::move(callback)]() mutable {
-        callback(Status::OK, std::move(commit));
-      });
+  async::PostTask(async_, [commit = std::move(commit),
+                           callback = std::move(callback)]() mutable {
+    callback(Status::OK, std::move(commit));
+  });
 }
 
 void FakeEncryptionService::GetObjectName(
     storage::ObjectIdentifier object_identifier,
     std::function<void(Status, std::string)> callback) {
   std::string result = GetObjectNameSynchronous(object_identifier);
-  async::PostTask(
-      async_,
-      [callback = std::move(callback), result = std::move(result)]() mutable {
-          callback(Status::OK, std::move(result));
-      });
+  async::PostTask(async_, [callback = std::move(callback),
+                           result = std::move(result)]() mutable {
+    callback(Status::OK, std::move(result));
+  });
 }
 
 void FakeEncryptionService::EncryptObject(
@@ -81,11 +77,10 @@ void FakeEncryptionService::EncryptObject(
     return;
   }
   std::string result = EncryptObjectSynchronous(content_as_string);
-  async::PostTask(
-      async_,
-      [callback = std::move(callback), result = std::move(result)]() mutable {
-        callback(Status::OK, std::move(result));
-      });
+  async::PostTask(async_, [callback = std::move(callback),
+                           result = std::move(result)]() mutable {
+    callback(Status::OK, std::move(result));
+  });
 }
 
 void FakeEncryptionService::DecryptObject(
@@ -93,11 +88,10 @@ void FakeEncryptionService::DecryptObject(
     std::string encrypted_data,
     std::function<void(Status, std::string)> callback) {
   std::string result = DecryptObjectSynchronous(encrypted_data);
-  async::PostTask(
-      async_,
-      [callback = std::move(callback), result = std::move(result)]() mutable {
-        callback(Status::OK, std::move(result));
-      });
+  async::PostTask(async_, [callback = std::move(callback),
+                           result = std::move(result)]() mutable {
+    callback(Status::OK, std::move(result));
+  });
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

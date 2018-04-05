@@ -111,7 +111,8 @@ void UpdateEntryBenchmark::RunSingle(int i, fidl::VectorPtr<uint8_t> key) {
              }));
 }
 
-void UpdateEntryBenchmark::CommitAndRunNext(int i, fidl::VectorPtr<uint8_t> key) {
+void UpdateEntryBenchmark::CommitAndRunNext(int i,
+                                            fidl::VectorPtr<uint8_t> key) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit(fxl::MakeCopyable([this, i, key = std::move(key)](
                                       ledger::Status status) mutable {

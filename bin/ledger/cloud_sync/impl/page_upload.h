@@ -8,9 +8,9 @@
 #include <memory>
 #include <vector>
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"

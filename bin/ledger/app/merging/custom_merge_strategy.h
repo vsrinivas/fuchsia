@@ -5,9 +5,9 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 #define PERIDOT_BIN_LEDGER_APP_MERGING_CUSTOM_MERGE_STRATEGY_H_
 
+#include <fuchsia/cpp/ledger.h>
 #include <memory>
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/merging/conflict_resolver_client.h"
 #include "peridot/bin/ledger/app/merging/merge_strategy.h"
 #include "peridot/bin/ledger/storage/public/commit.h"

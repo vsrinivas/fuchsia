@@ -15,14 +15,15 @@ namespace test {
 namespace integration {
 
 fidl::VectorPtr<uint8_t> RandomArray(size_t size,
-                                 const std::vector<uint8_t>& prefix);
+                                     const std::vector<uint8_t>& prefix);
 
 fidl::VectorPtr<uint8_t> RandomArray(int size);
 
 ledger::PageId PageGetId(ledger::PagePtr* page);
 
-ledger::PageSnapshotPtr PageGetSnapshot(ledger::PagePtr* page,
-                                        fidl::VectorPtr<uint8_t> prefix = nullptr);
+ledger::PageSnapshotPtr PageGetSnapshot(
+    ledger::PagePtr* page,
+    fidl::VectorPtr<uint8_t> prefix = nullptr);
 
 fidl::VectorPtr<fidl::VectorPtr<uint8_t>> SnapshotGetKeys(
     ledger::PageSnapshotPtr* snapshot,

@@ -8,8 +8,8 @@
 #include <functional>
 #include <string>
 
-#include "lib/fxl/strings/string_view.h"
 #include <fuchsia/cpp/ledger.h>
+#include "lib/fxl/strings/string_view.h"
 
 namespace test {
 namespace benchmark {

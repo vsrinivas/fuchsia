@@ -5,11 +5,11 @@
 #ifndef PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 #define PERIDOT_BIN_LEDGER_APP_MERGING_LEDGER_MERGE_MANAGER_H_
 
+#include <fuchsia/cpp/ledger.h>
 #include <map>
 #include <memory>
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/app/merging/merge_resolver.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"

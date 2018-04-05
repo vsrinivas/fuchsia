@@ -14,8 +14,7 @@ size_t GetByteArraySize(size_t array_length) {
 size_t GetEntrySize(size_t key_length) {
   size_t key_size = GetByteArraySize(key_length);
   size_t object_size = GetByteArraySize(kHandleSize);
-  return kPointerSize + key_size + object_size +
-         Align(kEnumSize);
+  return kPointerSize + key_size + object_size + Align(kEnumSize);
 }
 
 size_t GetInlinedEntrySize(const InlinedEntry& entry) {

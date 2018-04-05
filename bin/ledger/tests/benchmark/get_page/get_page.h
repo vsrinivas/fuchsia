@@ -5,10 +5,10 @@
 #ifndef PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 
+#include <fuchsia/cpp/ledger.h>
 #include <vector>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/data_generator.h"
 
 namespace test {

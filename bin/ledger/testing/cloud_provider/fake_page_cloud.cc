@@ -85,7 +85,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;
   watcher_->OnNewCommits(std::move(commits), PositionToToken(next_commit_index),
-                         [ this, on_ack = std::move(on_ack) ] {
+                         [this, on_ack = std::move(on_ack)] {
                            waiting_for_watcher_ack_ = false;
                            on_ack();
                          });

@@ -119,11 +119,10 @@ void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
 
 // PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
 //   => (Status status);
-void PageDelegate::PutWithPriority(
-    fidl::VectorPtr<uint8_t> key,
-    fidl::VectorPtr<uint8_t> value,
-    Priority priority,
-    Page::PutWithPriorityCallback callback) {
+void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
+                                   fidl::VectorPtr<uint8_t> value,
+                                   Priority priority,
+                                   Page::PutWithPriorityCallback callback) {
   if (key->size() > kMaxKeySize) {
     FXL_VLOG(1) << "Key too large: " << key->size()
                 << " bytes long, which is more than the maximum allowed size ("
@@ -252,14 +251,13 @@ void PageDelegate::CreateReference(
               return;
             }
 
-            callback(Status::OK,
-                     fidl::MakeOptional(manager_->CreateReference(std::move(object_identifier))));
+            callback(Status::OK, fidl::MakeOptional(manager_->CreateReference(
+                                     std::move(object_identifier))));
           }));
 }
 
 // StartTransaction() => (Status status);
-void PageDelegate::StartTransaction(
-    Page::StartTransactionCallback callback) {
+void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
         if (journal_) {

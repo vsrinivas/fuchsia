@@ -46,7 +46,8 @@ class LedgerAppInstanceImpl final
    public:
     LedgerRepositoryFactoryContainer(
         fxl::RefPtr<fxl::TaskRunner> task_runner,
-        fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request)
+        fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
+            request)
         : environment_(task_runner),
           factory_impl_(&environment_),
           factory_binding_(&factory_impl_, std::move(request)) {}
@@ -75,7 +76,8 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fxl::RefPtr<fxl::TaskRunner> services_task_runner,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
-    fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
+    fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
+        repository_factory_ptr,
     ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                             ledger::FakeCloudProvider>*
         cloud_provider)

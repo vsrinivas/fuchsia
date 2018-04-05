@@ -8,10 +8,10 @@
 #include <memory>
 #include <set>
 
+#include <fuchsia/cpp/ledger.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include <fuchsia/cpp/ledger.h>
 #include "peridot/bin/ledger/testing/data_generator.h"
 #include "peridot/bin/ledger/testing/page_data_generator.h"
 
