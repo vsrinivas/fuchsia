@@ -55,163 +55,41 @@ unused.
 
 Mapping Declarations
 
-# Mapping FIDL Types to C Types
+### Mapping FIDL Types to C Types
 
 This is the mapping from FIDL types to C types which the code generator
 produces.
 
-<table>
-  <tr>
-   <td><strong>FIDL</strong>
-   </td>
-   <td><strong>C Type</strong>
-   </td>
-  </tr>
-  <tr>
-   <td>bool
-   </td>
-   <td>bool, <em>assuming sizeof(bool) == 1</em>
-   </td>
-  </tr>
-  <tr>
-   <td>int8
-   </td>
-   <td>int8_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint8
-   </td>
-   <td>uint8_t
-   </td>
-  </tr>
-  <tr>
-   <td>int16
-   </td>
-   <td>int16_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint16
-   </td>
-   <td>uint16_t
-   </td>
-  </tr>
-  <tr>
-   <td>int32
-   </td>
-   <td>int32_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint32
-   </td>
-   <td>uint32_t
-   </td>
-  </tr>
-  <tr>
-   <td>int64
-   </td>
-   <td>int64_t
-   </td>
-  </tr>
-  <tr>
-   <td>uint64
-   </td>
-   <td>uint64_t
-   </td>
-  </tr>
-  <tr>
-   <td>float32
-   </td>
-   <td>float
-   </td>
-  </tr>
-  <tr>
-   <td>float64
-   </td>
-   <td>double
-   </td>
-  </tr>
-  <tr>
-   <td>handle, handle?, handle<T>, handle<T>?
-   </td>
-   <td>zx_handle_t
-   </td>
-  </tr>
-  <tr>
-   <td>string, string?
-   </td>
-   <td>fidl_string_t
-   </td>
-  </tr>
-  <tr>
-   <td>vector<T>, vector<T>?
-   </td>
-   <td>fidl_vector_t
-   </td>
-  </tr>
-  <tr>
-   <td>T[N]
-   </td>
-   <td><em>T[N]</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Interface, Interface?</em>
-   </td>
-   <td><em>interface named typedef to zx_handle_t</em>
-<p>
-<em>eg. typedef zx_handle_t Foo;</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>request<Interface>, request<Interface>?</em>
-   </td>
-   <td><em>interface_request named typedef to zx_handle_t</em>
-<p>
-<em>eg. typedef zx_handle_t FooRequest;</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Struct</em>
-   </td>
-   <td>struct <em>Struct</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Struct?</em>
-   </td>
-   <td>struct <em>Struct*, assuming sizeof(void*) == 8</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Union</em>
-   </td>
-   <td>struct <em>Union</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Union?</em>
-   </td>
-   <td>struct <em>Union*, assuming sizeof(void*) == 8</em>
-   </td>
-  </tr>
-  <tr>
-   <td><em>Enum</em>
-   </td>
-   <td><em>enum named typedef to underlying type</em>
-<p>
-<em>eg. typedef uint8_t Bar;</em>
-   </td>
-  </tr>
-</table>
+| FIDL                                     | C Type                     |
+|------------------------------------------|----------------------------|
+| `bool`                                   | `bool`                     |
+| `int8`                                   | `int8_t`                   |
+| `uint8`                                  | `uint8_t`                  |
+| `int16`                                  | `int16_t`                  |
+| `uint16`                                 | `uint16_t`                 |
+| `int32`                                  | `int32_t`                  |
+| `uint32`                                 | `uint32_t`                 |
+| `int64`                                  | `int64_t`                  |
+| `uint64`                                 | `uint64_t`                 |
+| `float32`                                | `float`                    |
+| `float64`                                | `double`                   |
+| `handle`, `handle?`, `handle`, `handle?` | `zx_handle_t`              |
+| `string`, `string?`                      | `fidl_string_t`            |
+| `vector`, `vector?`                      | `fidl_vector_t`            |
+| `array<T>:N`                             | `T[N]`                     |
+| `Interface`, `Interface?`                | typedef to `zx_handle_t`   |
+| `request<I>`, `request<I>?`              | typedef to `zx_handle_t`   |
+| `Struct`                                 | `struct Struct`            |
+| `Struct?`                                | `struct Struct*`           |
+| `Union`                                  | `struct Union`             |
+| `Union?`                                 | `struct Union*`            |
+| `Enum`                                   | typedef to underlying type |
 
-# Mapping FIDL Identifiers to C Identifiers
+### Mapping FIDL Identifiers to C Identifiers
 
 TODO: discuss reserved words, name mangling
 
-# Mapping FIDL Type Declarations to C Types
+### Mapping FIDL Type Declarations to C Types
 
 TODO: discuss generated macros, enums, typedefs, encoding tables
 
