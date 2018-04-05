@@ -99,10 +99,6 @@
       }
     },
     {
-      "name":"modular_unittests",
-      "exec":"/system/test/modular_tests/modular_unittests"
-    },
-    {
       "name":"parent_child",
       "exec":"device_runner --test --account_provider=dev_token_manager --device_shell=dev_device_shell --user_shell=dev_user_shell --story_shell=dev_story_shell --user_shell_args=--root_module=/system/test/modular_tests/parent_child_test_parent_module",
       "copy":{
@@ -111,10 +107,6 @@
           "parent_child_test_child_module"
         ]
       }
-    },
-    {
-      "name":"peridot_lib_unittests",
-      "exec":"/system/test/modular_tests/peridot_lib_unittests"
     },
     {
       "name":"queue_persistence",

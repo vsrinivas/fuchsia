@@ -106,12 +106,11 @@ group("modular_all") {
 }
 
 executable("modular_unittests_bin") {
+  testonly = true
   output_name = "modular_unittests"
 
-  testonly = true
-
   deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
     "//peridot/bin/agent_runner:unittests",
     "//peridot/bin/agents/clipboard:unittests",
     "//peridot/bin/device_runner:unittests",
@@ -133,7 +132,6 @@ package("modular_unittests") {
   tests = [
     {
       name = "modular_unittests"
-      dest = "modular_tests/modular_unittests"
     },
   ]
 }

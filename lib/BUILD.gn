@@ -9,7 +9,7 @@ executable("unittests") {
   output_name = "peridot_lib_unittests"
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp:gtest_main",
+    "//third_party/googletest:gtest_main",
     "//peridot/lib/cobalt:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
@@ -34,7 +34,6 @@ package("peridot_lib_tests") {
   tests = [
     {
       name = "peridot_lib_unittests"
-      dest = "modular_tests/peridot_lib_unittests"
     },
   ]
 }
