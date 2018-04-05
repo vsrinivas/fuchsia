@@ -26,12 +26,18 @@ class VmObject;
 
 class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCounted<VmAspace> {
 public:
-    // complete initialization, may fail in OOM cases
-    zx_status_t Init();
-
-    // factory that creates a user/kernel address space based on flags
-    // may fail due to resource starvation
+    // Create an address space of the type specified in |flags| with name |name|.
+    //
+    // Although reference counted, the returned VmAspace must be explicitly destroyed via Destroy.
+    //
+    // Returns null on failure (e.g. due to resource starvation).
     static fbl::RefPtr<VmAspace> Create(uint flags, const char* name);
+
+    // Destroy this address space.
+    //
+    // Destroy does not free this object, but rather allows it to be freed when the last retaining
+    // RefPtr is destroyed.
+    zx_status_t Destroy();
 
     void Rename(const char* name);
 
@@ -55,9 +61,6 @@ public:
 
     // Get the root VMAR (briefly acquires the aspace lock)
     fbl::RefPtr<VmAddressRegion> RootVmar();
-
-    // destroy but not free the address space
-    zx_status_t Destroy();
 
     // Returns true if the address space has been destroyed.
     bool is_destroyed() const;
@@ -169,13 +172,16 @@ private:
     ~VmAspace();
     friend fbl::RefPtr<VmAspace>;
 
+    // complete initialization, may fail in OOM cases
+    zx_status_t Init();
+
+    void InitializeAslr();
+
     // internal page fault routine, friended to be only called by vmm_page_fault_handler
     zx_status_t PageFault(vaddr_t va, uint flags);
     friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);
     friend zx_status_t vmm_guest_page_fault_handler(vaddr_t va, uint flags,
                                                     fbl::RefPtr<VmAspace> aspace);
-
-    void InitializeAslr();
 
     // magic
     fbl::Canary<fbl::magic("VMAS")> canary_;
