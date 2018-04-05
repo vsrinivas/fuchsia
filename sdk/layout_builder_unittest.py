@@ -44,6 +44,7 @@ class LayoutBuilderTests(unittest.TestCase):
         builder.domains = ['c-pp']
         manifest = _manifest([_atom('exe', 'foo')])
         self.assertFalse(_process_manifest_data(manifest, builder))
+        builder.prepare.assert_not_called()
         builder.finalize.assert_not_called()
 
     @patch('layout_builder.Builder')
@@ -52,6 +53,7 @@ class LayoutBuilderTests(unittest.TestCase):
         builder.domains = ['exe']
         manifest = _manifest([_atom('exe', 'foo')])
         self.assertTrue(_process_manifest_data(manifest, builder))
+        self.assertTrue(builder.prepare.called)
         self.assertEqual(builder.install_exe_atom.call_count, 1)
         self.assertTrue(builder.finalize.called)
 
@@ -61,6 +63,7 @@ class LayoutBuilderTests(unittest.TestCase):
         builder.domains = ['exe']
         manifest = _manifest([_atom('exe', 'foo'), _atom('exe', 'bar')])
         self.assertTrue(_process_manifest_data(manifest, builder))
+        self.assertTrue(builder.prepare.called)
         self.assertEqual(builder.install_exe_atom.call_count, 2)
         self.assertTrue(builder.finalize.called)
 
@@ -71,6 +74,7 @@ class LayoutBuilderTests(unittest.TestCase):
         builder.domains = ['c-pp', 'exe']
         manifest = _manifest([_atom('exe', 'foo'), _atom('c-pp', 'bar')])
         self.assertTrue(_process_manifest_data(manifest, builder))
+        self.assertTrue(builder.prepare.called)
         self.assertEqual(builder.install_c_pp_atom.call_count, 1)
         self.assertEqual(builder.install_exe_atom.call_count, 1)
         self.assertTrue(builder.finalize.called)

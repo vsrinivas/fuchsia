@@ -39,6 +39,10 @@ class Builder(object):
         self.domains = domains
         self.metadata = None
 
+    def prepare(self):
+        '''Called before atoms are processed.'''
+        pass
+
     def finalize(self):
         '''Called after all atoms have been processed.'''
         pass
@@ -77,6 +81,8 @@ def _process_manifest_data(manifest, builder):
             print('The following domains are not currently supported: %s' %
                   ', '.join(extra_domains))
             return False
+
+    builder.prepare()
 
     # Pass the various atoms through the builder.
     for atom in atoms:
