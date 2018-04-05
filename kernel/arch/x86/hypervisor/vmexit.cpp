@@ -481,6 +481,8 @@ static zx_status_t handle_apic_rdmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_OK;
     case X2ApicMsr::LVT_LINT0:
     case X2ApicMsr::LVT_LINT1:
+    case X2ApicMsr::LVT_THERMAL_SENSOR:
+    case X2ApicMsr::LVT_CMCI:
         // LVT registers reset with the mask bit set. See Volume 3 Section 10.12.5.1.
         next_rip(exit_info, vmcs);
         guest_state->rax = LVT_MASKED;
@@ -645,6 +647,8 @@ static zx_status_t handle_apic_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     case X2ApicMsr::LVT_ERROR:
     case X2ApicMsr::LVT_LINT0:
     case X2ApicMsr::LVT_LINT1:
+    case X2ApicMsr::LVT_THERMAL_SENSOR:
+    case X2ApicMsr::LVT_CMCI:
         if (guest_state->rdx != 0 || guest_state->rax > UINT32_MAX)
             return ZX_ERR_INVALID_ARGS;
         next_rip(exit_info, vmcs);
