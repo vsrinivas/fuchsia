@@ -13,7 +13,7 @@ MODULE := $(LOCAL_DIR)
 BOOT_SHIM_DIR := $(LOCAL_DIR)/boot-shim
 BOOT_SHIM_OBJ_DIR := $(BUILDDIR)/boot-shim
 
-BOOT_SHIM_OBJ := $(BOOT_SHIM_OBJ_DIR)/boot-shim.S.o $(BOOT_SHIM_OBJ_DIR)/boot-shim.c.o
+BOOT_SHIM_OBJ := $(BOOT_SHIM_OBJ_DIR)/boot-shim.S.o $(BOOT_SHIM_OBJ_DIR)/boot-shim.c.o $(BOOT_SHIM_OBJ_DIR)/debug.c.o
 BOOT_SHIM_LD := $(BOOT_SHIM_DIR)/boot-shim.ld
 BOOT_SHIM_ELF := $(BUILDDIR)/boot-shim.elf
 BOOT_SHIM_BIN := $(BUILDDIR)/boot-shim.bin
