@@ -101,7 +101,6 @@
       }
     },
     {
-      "disabled": true,
       "name":"modular_unittests",
       "exec":"/system/test/modular_tests/modular_unittests"
     },
