@@ -11,43 +11,90 @@ class eventpair;
 class log;
 class socket;
 class vmo;
+class vmar;
+class port;
+class guest;
+class fifo;
+class interrupt;
 
 // The default traits supports:
 // - event
 // - thread
 // - process
 // - job
-// - vmar
 // - vmo
 // - bti
+// - log
+// - resource
+// - timer
 template <typename T> struct object_traits {
-    static const bool supports_duplication = true;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = false;
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = true;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = false;
 };
 
 template <> struct object_traits<channel> {
-    static const bool supports_duplication = false;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
+    static constexpr bool supports_duplication = false;
+    static constexpr bool supports_user_signal = true;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = true;
 };
 
 template <> struct object_traits<eventpair> {
-    static const bool supports_duplication = true;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = true;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = true;
+};
+
+template <> struct object_traits<fifo> {
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = true;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = true;
 };
 
 template <> struct object_traits<log> {
-    static const bool supports_duplication = true;
-    static const bool supports_user_signal = false;
-    static const bool has_peer_handle = false;
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = false;
 };
 
 template <> struct object_traits<socket> {
-    static const bool supports_duplication = true;
-    static const bool supports_user_signal = true;
-    static const bool has_peer_handle = true;
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = true;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = true;
+};
+
+template <> struct object_traits<port> {
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = false;
+    static constexpr bool has_peer_handle = false;
+};
+
+template <> struct object_traits<vmar> {
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = false;
+    static constexpr bool has_peer_handle = false;
+};
+
+template <> struct object_traits<interrupt> {
+    static constexpr bool supports_duplication = false;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = true;
+    static constexpr bool has_peer_handle = false;
+};
+
+template <> struct object_traits<guest> {
+    static constexpr bool supports_duplication = true;
+    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_wait = false;
+    static constexpr bool has_peer_handle = false;
 };
 
 } // namespace zx

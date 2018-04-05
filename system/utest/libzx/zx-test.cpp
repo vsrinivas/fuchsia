@@ -348,6 +348,17 @@ static bool job_default_test() {
     END_TEST;
 }
 
+static bool takes_any_handle(const zx::handle& handle) {
+    return handle.is_valid();
+}
+
+static bool handle_conversion_test() {
+    BEGIN_TEST;
+    EXPECT_TRUE(takes_any_handle(zx::unowned_handle::wrap(zx_thread_self())));
+    ASSERT_EQ(validate_handle(zx_thread_self()), ZX_OK);
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(libzx_tests)
 RUN_TEST(handle_invalid_test)
 RUN_TEST(handle_close_test)

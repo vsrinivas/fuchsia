@@ -94,7 +94,7 @@ public:
 
     zx_status_t duplicate(zx_rights_t rights, object<T>* result) const {
         static_assert(object_traits<T>::supports_duplication,
-                      "Receiver must support duplication.");
+                      "Object must support duplication.");
         zx_handle_t h = ZX_HANDLE_INVALID;
         zx_status_t status = zx_handle_duplicate(value_, rights, &h);
         result->reset(h);
@@ -114,15 +114,18 @@ public:
 
     zx_status_t wait_one(zx_signals_t signals, zx::time deadline,
                          zx_signals_t* pending) const {
+        static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
         return zx_object_wait_one(value_, signals, deadline.get(), pending);
     }
 
     zx_status_t wait_async(const object<port>& port, uint64_t key,
                            zx_signals_t signals, uint32_t options) const {
+        static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
         return zx_object_wait_async(value_, port.get(), key, signals, options);
     }
 
     static zx_status_t wait_many(zx_wait_item_t* wait_items, uint32_t count, zx::time deadline) {
+        static_assert(object_traits<T>::supports_wait, "Object is not waitable.");
         return zx_object_wait_many(wait_items, count, deadline.get());
     }
 
@@ -132,15 +135,15 @@ public:
 
     zx_status_t signal(uint32_t clear_mask, uint32_t set_mask) const {
         static_assert(object_traits<T>::supports_user_signal,
-                      "Receiver must support user signals.");
+                      "Object must support user signals.");
         return zx_object_signal(get(), clear_mask, set_mask);
     }
 
     zx_status_t signal_peer(uint32_t clear_mask, uint32_t set_mask) const {
         static_assert(object_traits<T>::supports_user_signal,
-                      "Receiver must support user signals.");
+                      "Object must support user signals.");
         static_assert(object_traits<T>::has_peer_handle,
-                      "Receiver must have peer object.");
+                      "Object must have peer object.");
         return zx_object_signal_peer(get(), clear_mask, set_mask);
     }
 
@@ -269,8 +272,13 @@ template <typename T> bool operator>=(const object<T>& a, zx_handle_t b) {
 // void do_something(const zx::event& event);
 //
 // void example(zx_handle_t event_handle) {
-//     do_something(unowned_event::wrap(event_handle));
+//     do_something(zx::unowned<event>::wrap(event_handle));
 // }
+//
+// Convenience aliases are provided for all object types, for example:
+//
+// zx::unowned_event::wrap(handle).signal(..)
+
 template <typename T>
 class unowned final : public T {
 public:
