@@ -19,7 +19,10 @@
 #include "garnet/bin/guest/kernel.h"
 #include "garnet/lib/machina/guest.h"
 
+#if __aarch64__
 // clang-format off
+static constexpr uintptr_t kKernelOffset  = 0;
+
 // These MDI ids are taken from zircon/system/public/zircon/mdi/zircon.mdi.
 static constexpr uint32_t kMdiCpuMap      = 0x08000002;
 static constexpr uint32_t kMdiLength      = 0x0180000d;
@@ -27,9 +30,6 @@ static constexpr uint32_t kMdiCpuClusters = 0x08000064;
 static constexpr uint32_t kMdiCpuCount    = 0x00000065;
 static constexpr uint32_t kMdiMemMap      = 0x080000c8;
 // clang-format on
-
-#if __aarch64__
-static constexpr uintptr_t kKernelOffset = 0;
 #elif __x86_64__
 static constexpr uintptr_t kKernelOffset = 0x100000;
 #include "garnet/lib/machina/arch/x86/acpi.h"
@@ -75,6 +75,7 @@ static zx_status_t load_cmdline(const std::string& cmdline,
   return ZX_OK;
 }
 
+#ifdef __aarch64__
 static zx_status_t find_mdi(const machina::PhysMem& phys_mem,
                             const uintptr_t data_off,
                             uint32_t data_len,
@@ -148,6 +149,7 @@ static zx_status_t set_cpu_count(mdi_node_ref_t* mdi_root, uint8_t num_cpus) {
   mut_node->value.u8 = num_cpus;
   return ZX_OK;
 }
+#endif // __aarch64__
 
 static zx_status_t load_bootfs(const int fd,
                                const machina::PhysMem& phys_mem,
@@ -179,6 +181,7 @@ static zx_status_t load_bootfs(const int fd,
     return ZX_ERR_IO;
   }
 
+#ifdef __aarch64__
   mdi_node_ref_t mdi_root;
   zx_status_t status =
       find_mdi(phys_mem, data_off, ramdisk_hdr.length, &mdi_root);
@@ -194,6 +197,7 @@ static zx_status_t load_bootfs(const int fd,
   if (status != ZX_OK) {
     return status;
   }
+#endif
 
   container_hdr->length += BOOTDATA_ALIGN(ramdisk_hdr.length) +
                            static_cast<uint32_t>(sizeof(bootdata_t));
