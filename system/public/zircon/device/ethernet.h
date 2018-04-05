@@ -33,6 +33,8 @@ typedef struct eth_info_t {
 #define ETH_FEATURE_WLAN  1
 // Device is a synthetic network device
 #define ETH_FEATURE_SYNTH 2
+// Device is a loopback network device
+#define ETH_FEATURE_LOOPBACK 4
 
 // Get the fifos to submit tx and rx operations
 //   in: none
