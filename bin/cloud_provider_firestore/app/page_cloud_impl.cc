@@ -8,6 +8,7 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "lib/fxl/random/uuid.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "peridot/bin/cloud_provider_firestore/app/grpc_status.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
@@ -18,7 +19,9 @@ namespace {
 
 constexpr char kSeparator[] = "/";
 constexpr char kObjectCollection[] = "objects";
+constexpr char kCommitLogCollection[] = "commit-log";
 constexpr char kDataKey[] = "data";
+constexpr char kTimestampField[] = "timestamp";
 constexpr size_t kFirestoreMaxDocumentSize = 1'000'000;
 // Ledger stores objects chunked to ~64k, so even 500kB is more than should ever
 // be needed.
@@ -29,6 +32,13 @@ std::string GetObjectPath(fxl::StringView page_path,
   std::string encoded_object_id = EncodeKey(object_id);
   return fxl::Concatenate({page_path, kSeparator, kObjectCollection, kSeparator,
                            encoded_object_id});
+}
+
+std::string GetCommitBatchPath(fxl::StringView page_path,
+                               fxl::StringView batch_id) {
+  std::string encoded_batch_id = EncodeKey(batch_id);
+  return fxl::Concatenate({page_path, kSeparator, kCommitLogCollection,
+                           kSeparator, encoded_batch_id});
 }
 
 }  // namespace
@@ -52,11 +62,52 @@ PageCloudImpl::PageCloudImpl(
 
 PageCloudImpl::~PageCloudImpl() {}
 
-void PageCloudImpl::AddCommits(
-    fidl::VectorPtr<cloud_provider::Commit> /*commits*/,
-    AddCommitsCallback callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR);
+void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
+                               AddCommitsCallback callback) {
+  auto request = google::firestore::v1beta1::CommitRequest();
+  request.set_database(firestore_service_->GetDatabasePath());
+
+  // Set the document name to a new UUID. Firestore Commit() API doesn't allow
+  // to request the ID to be assigned by the server.
+  const std::string document_name =
+      GetCommitBatchPath(page_path_, fxl::GenerateUUID());
+
+  // The commit batch is added in a single commit containing multiple writes.
+  //
+  // First write adds the document containing the encoded commit batch.
+  google::firestore::v1beta1::Write& add_batch_write = *(request.add_writes());
+  EncodeCommitBatch(commits, add_batch_write.mutable_update());
+  (*add_batch_write.mutable_update()->mutable_name()) = document_name;
+  // Ensure that the write doesn't overwrite an existing document.
+  add_batch_write.mutable_current_document()->set_exists(false);
+
+  // The second write sets the timestamp field to the server-side request
+  // timestamp.
+  google::firestore::v1beta1::Write& set_timestamp_write =
+      *(request.add_writes());
+  (*set_timestamp_write.mutable_transform()->mutable_document()) =
+      document_name;
+
+  google::firestore::v1beta1::DocumentTransform_FieldTransform& transform =
+      *(set_timestamp_write.mutable_transform()->add_field_transforms());
+  *(transform.mutable_field_path()) = kTimestampField;
+  transform.set_set_to_server_value(
+      google::firestore::v1beta1::
+          DocumentTransform_FieldTransform_ServerValue_REQUEST_TIME);
+
+  credentials_provider_->GetCredentials(
+      [this, request = std::move(request),
+       callback](auto call_credentials) mutable {
+        firestore_service_->Commit(
+            std::move(request), std::move(call_credentials),
+            [callback](auto status, auto result) {
+              if (LogGrpcRequestError(status)) {
+                callback(ConvertGrpcStatus(status.error_code()));
+                return;
+              }
+              callback(cloud_provider::Status::OK);
+            });
+      });
 }
 
 void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,

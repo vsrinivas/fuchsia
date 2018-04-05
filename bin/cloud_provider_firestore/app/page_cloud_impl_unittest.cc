@@ -4,11 +4,12 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
+#include <fuchsia/cpp/cloud_provider.h>
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
-#include <fuchsia/cpp/cloud_provider.h>
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
@@ -48,6 +49,36 @@ TEST_F(PageCloudImplTest, EmptyWhenDisconnected) {
   page_cloud_.Unbind();
   EXPECT_FALSE(RunLoopWithTimeout());
   EXPECT_TRUE(on_empty_called);
+}
+
+TEST_F(PageCloudImplTest, AddCommits) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  fidl::VectorPtr<cloud_provider::Commit> commits;
+  commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
+                                           convert::ToArray("data0")});
+  page_cloud_->AddCommits(
+      std::move(commits),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.commit_records.size());
+  const google::firestore::v1beta1::CommitRequest& request =
+      firestore_service_.commit_records.front().request;
+  EXPECT_EQ(2, request.writes_size());
+  EXPECT_TRUE(request.writes(0).has_update());
+  EXPECT_TRUE(request.writes(1).has_transform());
+  EXPECT_EQ(request.writes(0).update().name(),
+            request.writes(1).transform().document());
+
+  auto response = google::firestore::v1beta1::CommitResponse();
+  firestore_service_.commit_records.front().callback(grpc::Status::OK,
+                                                     std::move(response));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
 }
 
 TEST_F(PageCloudImplTest, AddObject) {
