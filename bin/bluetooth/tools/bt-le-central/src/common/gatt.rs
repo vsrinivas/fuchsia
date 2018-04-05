@@ -157,6 +157,34 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Item = (), Err
         })
 }
 
+// Write to a characteristic.
+fn write_characteristic(client: GattClientPtr, id: u64, value: Vec<u8>)
+    -> impl Future<Item = (), Error = Error> {
+    client
+        .read()
+        .active_proxy
+        .as_ref()
+        .unwrap()
+        .write_characteristic(id, 0, &mut value.into_iter())
+        .map_err(|_| {
+            println!("Failed to send message");
+            BluetoothError::new().into()
+        })
+        .and_then(move |status| match status.error {
+            Some(e) => {
+                println!(
+                    "Failed to read characteristics: {}",
+                    BluetoothFidlError::new(*e)
+                );
+                Ok(())
+            }
+            None => {
+                println!("done");
+                Ok(())
+            }
+        })
+}
+
 // ===== REPL =====
 
 fn do_help() -> FutureResult<(), Error> {
@@ -164,6 +192,7 @@ fn do_help() -> FutureResult<(), Error> {
     println!("    help                       Print this help message");
     println!("    list                       List discovered services");
     println!("    connect <index>            Connect to a service");
+    println!("    write-chr <id> <value>     Write to a characteristic");
     println!("    exit                       Quit and disconnect the peripheral");
 
     future::ok(())
@@ -240,6 +269,45 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
 
 }
 
+fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
+    if args.len() < 1 {
+        println!("usage: write-chr <id> <value>");
+        return Left(future::ok(()));
+    }
+
+    if client.read().active_proxy.is_none() {
+        println!("no service connected");
+        return Left(future::ok(()));
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return Left(future::ok(()));
+        }
+        Ok(i) => i,
+    };
+
+    let value: Result<Vec<u8>, _> = args[1..].iter().map(|arg| arg.parse()).collect();
+
+    match value {
+        Err(_) => {
+            println!("invalid value");
+            Left(future::ok(()))
+        }
+        Ok(v) => Right(write_characteristic(client, id, v)),
+    }
+}
+
+// Helper macro for boxing and casting the impl Future results of command handlers below. This is
+// because the handlers potentially return different concrete types which can't be returned in the
+// same Either branch.
+macro_rules! right_cmd {
+    ($cmd: expr) => (
+        Right(Box::new($cmd) as Box<Future<Item = (), Error = Error> + Send>)
+    )
+}
+
 // Processes |cmd| and returns its result.
 // TODO(armansito): Use clap for fancier command processing.
 fn handle_cmd(line: String, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
@@ -250,7 +318,8 @@ fn handle_cmd(line: String, client: GattClientPtr) -> impl Future<Item = (), Err
     match cmd {
         Some("help") => Left(do_help()),
         Some("list") => Left(do_list(args, client)),
-        Some("connect") => Right(do_connect(args, client)),
+        Some("connect") => right_cmd!(do_connect(args, client)),
+        Some("write-chr") => right_cmd!(do_write_chr(args, client)),
         Some(cmd) => {
             eprintln!("Unknown command: {}", cmd);
             Left(future::ok(()))
