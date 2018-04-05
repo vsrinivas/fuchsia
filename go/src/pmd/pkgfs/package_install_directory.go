@@ -350,8 +350,8 @@ func importPackage(fs *Filesystem, root string) {
 	}
 
 	go func() {
+		log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needBlobs), p)
 		for _, root := range needBlobs {
-			log.Printf("pkgfs: asking amber to fetch blob for %s: %q", p, root)
 			// TODO(jmatt) limit concurrency, send this to a worker routine?
 			fs.amberPxy.GetBlob(root)
 		}
