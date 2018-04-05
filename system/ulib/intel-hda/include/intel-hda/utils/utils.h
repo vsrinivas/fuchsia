@@ -27,6 +27,10 @@ zx_status_t WaitCondition(zx_time_t timeout,
                           zx_time_t poll_interval,
                           WaitConditionFn cond);
 
+template <typename E> constexpr typename fbl::underlying_type<E>::type to_underlying(E e) {
+    return static_cast<typename fbl::underlying_type<E>::type>(e);
+}
+
 zx_obj_type_t GetHandleType(const zx::handle& handle);
 
 // Utility class which manages a Bus Transaction Initiator using RefPtrs

@@ -12,8 +12,10 @@ MODULE_FIRMWARE := intel-adsp-sst/dsp_fw_kbl_v3266.bin
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/binding.c \
+    $(LOCAL_DIR)/debug.cpp \
     $(LOCAL_DIR)/intel-audio-dsp.cpp \
     $(LOCAL_DIR)/intel-dsp-code-loader.cpp \
+    $(LOCAL_DIR)/intel-dsp-ipc.cpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
@@ -22,13 +24,15 @@ MODULE_LIBS := \
 
 MODULE_STATIC_LIBS := \
     system/ulib/audio-driver-proto \
-    system/ulib/ddk \
-    system/ulib/intel-hda \
     system/ulib/audio-proto-utils \
+    system/ulib/ddk \
+    system/ulib/ddktl \
     system/ulib/dispatcher-pool \
     system/ulib/fbl \
+    system/ulib/intel-hda \
+    system/ulib/pretty \
+    system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/ddktl \
 
 include make/module.mk

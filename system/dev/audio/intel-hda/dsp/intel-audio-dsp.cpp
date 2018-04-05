@@ -3,6 +3,11 @@
 // found in the LICENSE file.
 
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <string.h>
+
+#include <pretty/hexdump.h>
 
 #include "intel-audio-dsp.h"
 #include "intel-dsp-code-loader.h"
@@ -14,14 +19,13 @@ namespace {
 
 // ADSP SRAM windows
 constexpr size_t SKL_ADSP_SRAM0_OFFSET  = 0x8000; // Shared between Skylake and Kabylake
-__UNUSED constexpr size_t SKL_ADSP_SRAM1_OFFSET  = 0xA000;
+constexpr size_t SKL_ADSP_SRAM1_OFFSET  = 0xA000;
 
 // Mailbox offsets
-__UNUSED constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000; // Section 5.5 Offset from SRAM0
-__UNUSED constexpr size_t ADSP_MAILBOX_IN_SIZE   = 0x1000;
-__UNUSED constexpr size_t ADSP_MAILBOX_OUT_SIZE  = 0x1000;
+constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000; // Section 5.5 Offset from SRAM0
 
 constexpr const char* ADSP_FIRMWARE_PATH = "/boot/lib/firmware/dsp_fw_kbl_v3266.bin";
+constexpr const char* I2S_CFG_PATH       = "/boot/lib/firmware/max98927-render-2ch-48khz-16b.bin";
 
 constexpr zx_time_t INTEL_ADSP_TIMEOUT_NSEC              = ZX_MSEC( 50); // 50mS Arbitrary
 constexpr zx_time_t INTEL_ADSP_POLL_NSEC                 = ZX_USEC(500); // 500uS Arbitrary
@@ -41,8 +45,9 @@ fbl::unique_ptr<IntelAudioDsp> IntelAudioDsp::Create(zx_device_t* hda_dev) {
 }
 
 IntelAudioDsp::IntelAudioDsp(zx_device_t* hda_dev)
-    : IntelAudioDspDeviceType(hda_dev) {
-
+    : IntelAudioDspDeviceType(hda_dev),
+      ipc_(*this) {
+    for (auto& id : module_ids_) { id = MODULE_ID_INVALID; }
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP (unknown BDF)");
 }
 
@@ -65,6 +70,8 @@ zx_status_t IntelAudioDsp::DriverBind() {
              hda_dev_info.bus_id,
              hda_dev_info.dev_id,
              hda_dev_info.func_id);
+
+    ipc_.SetLogPrefix(log_prefix_);
 
     // Fetch the bar which holds the Audio DSP registers.
     zx::vmo bar_vmo;
@@ -97,6 +104,13 @@ zx_status_t IntelAudioDsp::DriverBind() {
         LOG(ERROR, "Error attempting to map registers (res %d)\n", res);
         return res;
     }
+
+    // Initialize mailboxes
+    uint8_t* mapped_base = static_cast<uint8_t*>(mapped_regs_.start());
+    mailbox_in_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET +
+                                              ADSP_MAILBOX_IN_OFFSET), MAILBOX_SIZE);
+    mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET),
+                            MAILBOX_SIZE);
 
     // Get bus transaction initiator
     zx::bti bti;
@@ -150,14 +164,7 @@ zx_status_t IntelAudioDsp::DriverBind() {
     return ZX_OK;
 }
 
-void IntelAudioDsp::ProcessIrq() {
-    ZX_DEBUG_ASSERT(state_ == State::OPERATING);
-
-    // TODO(yky) Just ack the IRQ for now.
-    REG_SET_BITS(&regs()->hipct, (1u << 31));
-}
-
-void IntelAudioDsp::Shutdown() {
+void IntelAudioDsp::DeviceShutdown() {
     if (state_ == State::INITIALIZING) {
         thrd_join(init_thread_, NULL);
     }
@@ -172,19 +179,24 @@ void IntelAudioDsp::Shutdown() {
 }
 
 void IntelAudioDsp::DdkUnbind() {
-    Shutdown();
+    DeviceShutdown();
 }
 
 void IntelAudioDsp::DdkRelease() {
 }
 
 int IntelAudioDsp::InitThread() {
+    zx_status_t st = ZX_OK;
+    auto cleanup = fbl::MakeAutoCall([this]() {
+        DeviceShutdown();
+    });
+
     // Enable Audio DSP
     ihda_dsp_enable(&ihda_dsp_);
 
     // The HW loads the DSP base firmware from ROM during the initialization,
     // when the Tensilica Core is out of reset, but halted.
-    zx_status_t st = Boot();
+    st = Boot();
     if (st != ZX_OK) {
         LOG(ERROR, "Error in DSP boot (err %d)\n", st);
         return -1;
@@ -214,7 +226,20 @@ int IntelAudioDsp::InitThread() {
 
     // DSP Firmware is now ready.
     LOG(INFO, "DSP firmware ready\n");
-    return ZX_OK;
+
+    st = GetModulesInfo();
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error getting DSP modules info\n");
+        return -1;
+    }
+    st = SetupPipelines();
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error initializing DSP pipelines\n");
+        return -1;
+    }
+
+    cleanup.cancel();
+    return 0;
 }
 
 zx_status_t IntelAudioDsp::Boot() {
@@ -256,6 +281,43 @@ zx_status_t IntelAudioDsp::Boot() {
     return ZX_OK;
 }
 
+zx_status_t IntelAudioDsp::GetModulesInfo() {
+    uint8_t data[MAILBOX_SIZE];
+    IntelDspIpc::Txn txn(nullptr, 0, data, sizeof(data));
+    ipc_.LargeConfigGet(&txn, 0, 0, to_underlying(BaseFWParamType::MODULES_INFO), sizeof(data));
+
+    if (txn.success()) {
+        auto info = reinterpret_cast<const ModulesInfo*>(txn.rx_data);
+        uint32_t count = info->module_count;
+
+        ZX_DEBUG_ASSERT(txn.rx_actual >= sizeof(ModulesInfo) + (count * sizeof(ModuleEntry)));
+
+        static constexpr const char* MODULE_NAMES[] = {
+            [COPIER] = "COPIER",
+            [MIXIN]  = "MIXIN",
+            [MIXOUT] = "MIXOUT",
+        };
+        static_assert(countof(MODULE_NAMES) == countof(module_ids_), "invalid module id count\n");
+
+        for (uint32_t i = 0; i < count; i++) {
+            for (size_t j = 0; j < countof(MODULE_NAMES); j++) {
+                if (!strncmp(reinterpret_cast<const char*>(info->module_info[i].name),
+                             MODULE_NAMES[j], strlen(MODULE_NAMES[j]))) {
+                    if (module_ids_[j] == MODULE_ID_INVALID) {
+                        module_ids_[j] = info->module_info[i].module_id;
+                    } else {
+                        LOG(ERROR, "Found duplicate module id %hu\n",
+                                   info->module_info[i].module_id);
+                    }
+                }
+            }
+        }
+    }
+
+
+    return txn.success() ? ZX_OK : ZX_ERR_INTERNAL;
+}
+
 zx_status_t IntelAudioDsp::LoadFirmware() {
     IntelDspCodeLoader loader(&regs()->cldma, hda_bti_);
     zx_status_t st = loader.Initialize();
@@ -289,12 +351,303 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
                        });
     if (st != ZX_OK) {
         LOG(ERROR, "Error waiting for DSP base firmware entry (err %d)\n", st);
-        LOG(ERROR, "FW_STATUS  0x%08x\n", REG_RD(&fw_regs()->fw_status));
-        LOG(ERROR, "ERROR_CODE 0x%08x\n", REG_RD(&fw_regs()->error_code));
         return st;
     }
 
     return ZX_OK;
+}
+
+zx_status_t IntelAudioDsp::SetupPipelines() {
+    ZX_DEBUG_ASSERT(module_ids_[Module::COPIER] != 0);
+    ZX_DEBUG_ASSERT(module_ids_[Module::MIXIN] != 0);
+    ZX_DEBUG_ASSERT(module_ids_[Module::MIXOUT] != 0);
+
+    zx_status_t st = ZX_OK;
+
+    // Set up 2 pipelines, copier->mixin and mixout->copier, the bind the 2 pipelines
+    constexpr uint8_t PIPELINE0_ID = 0;
+    constexpr uint8_t PIPELINE1_ID = 1;
+
+    // Instance ids for modules. Globally unique for convenience.
+    constexpr uint8_t COPIER_IN_ID = 0;
+    constexpr uint8_t COPIER_OUT_ID = 1;
+    constexpr uint8_t MIXIN_ID = 2;
+    constexpr uint8_t MIXOUT_ID = 3;
+
+    // Following parameters from kbl_i2s_chrome.conf
+    struct PipelineConfig {
+        uint8_t priority;
+        uint8_t mem_pages;
+        bool lp;
+    };
+    constexpr PipelineConfig PIPELINE0_CFG = {
+        .priority = 0,
+        .mem_pages = 2,
+        .lp = true, // false in config, keep running in low power mode for dev
+    };
+    constexpr PipelineConfig PIPELINE1_CFG = {
+        .priority = 0,
+        .mem_pages = 4,
+        .lp = true, // false in config, keep running in low power mode for dev
+    };
+
+    // Use 48khz 16-bit stereo throughout
+    static const AudioDataFormat FMT_HOST = {
+        .sampling_frequency = SamplingFrequency::FS_48000HZ,
+        .bit_depth = BitDepth::DEPTH_16BIT,
+        .channel_map = 0xFFFFFF10,
+        .channel_config = ChannelConfig::CONFIG_STEREO,
+        .interleaving_style = InterleavingStyle::PER_CHANNEL,
+        .number_of_channels = 2,
+        .valid_bit_depth = 16,
+        .sample_type = SampleType::INT_MSB,
+        .reserved = 0,
+    };
+    static const AudioDataFormat FMT_I2S = {
+        .sampling_frequency = SamplingFrequency::FS_48000HZ,
+        .bit_depth = BitDepth::DEPTH_32BIT,
+        .channel_map = 0xFFFFFF10,
+        .channel_config = ChannelConfig::CONFIG_STEREO,
+        .interleaving_style = InterleavingStyle::PER_CHANNEL,
+        .number_of_channels = 2,
+        .valid_bit_depth = 16,
+        .sample_type = SampleType::INT_MSB,
+        .reserved = 0,
+    };
+    static const AudioDataFormat FMT_MIXER = {
+        .sampling_frequency = SamplingFrequency::FS_48000HZ,
+        .bit_depth = BitDepth::DEPTH_32BIT,
+        .channel_map = 0xFFFFFF10,
+        .channel_config = ChannelConfig::CONFIG_STEREO,
+        .interleaving_style = InterleavingStyle::PER_CHANNEL,
+        .number_of_channels = 2,
+        .valid_bit_depth = 32,
+        .sample_type = SampleType::INT_MSB,
+        .reserved = 0,
+    };
+
+    // Pipeline 0: copier[host DMA]->mixin
+
+    st = ipc_.CreatePipeline(PIPELINE0_ID, PIPELINE0_CFG.priority, PIPELINE0_CFG.mem_pages,
+                             PIPELINE0_CFG.lp);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Create the copier module, host DMA stream #1
+    static const CopierCfg copier_in_cfg = {
+        .base_cfg = {
+            .cpc = 100000,
+            .ibs = 384,
+            .obs = 384,
+            .is_pages = 0,
+            .audio_fmt = {
+                .sampling_frequency = FMT_HOST.sampling_frequency,
+                .bit_depth = FMT_HOST.bit_depth,
+                .channel_map = FMT_HOST.channel_map,
+                .channel_config = FMT_HOST.channel_config,
+                .interleaving_style = FMT_HOST.interleaving_style,
+                .number_of_channels = FMT_HOST.number_of_channels,
+                .valid_bit_depth = FMT_HOST.valid_bit_depth,
+                .sample_type = FMT_HOST.sample_type,
+                .reserved = 0,
+            },
+        },
+        .out_fmt = {
+            .sampling_frequency = FMT_MIXER.sampling_frequency,
+            .bit_depth = FMT_MIXER.bit_depth,
+            .channel_map = FMT_MIXER.channel_map,
+            .channel_config = FMT_MIXER.channel_config,
+            .interleaving_style = FMT_MIXER.interleaving_style,
+            .number_of_channels = FMT_MIXER.number_of_channels,
+            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
+            .sample_type = FMT_MIXER.sample_type,
+            .reserved = 0,
+        },
+        .copier_feature_mask = 0,
+        .gtw_cfg = {
+            .node_id = HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 0),
+            .dma_buffer_size = 2 * 384,
+            .config_length = 0,
+        },
+    };
+
+    st = ipc_.InitInstance(module_ids_[Module::COPIER], COPIER_IN_ID, ProcDomain::LOW_LATENCY,
+                           0, PIPELINE0_ID, sizeof(copier_in_cfg), &copier_in_cfg);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Create the mixin module
+    static const BaseModuleCfg mixin_cfg = {
+        .cpc = 100000,
+        .ibs = 384,
+        .obs = 384,
+        .is_pages = 0,
+        .audio_fmt = {
+            .sampling_frequency = FMT_MIXER.sampling_frequency,
+            .bit_depth = FMT_MIXER.bit_depth,
+            .channel_map = FMT_MIXER.channel_map,
+            .channel_config = FMT_MIXER.channel_config,
+            .interleaving_style = FMT_MIXER.interleaving_style,
+            .number_of_channels = FMT_MIXER.number_of_channels,
+            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
+            .sample_type = FMT_MIXER.sample_type,
+            .reserved = 0,
+        },
+    };
+    st = ipc_.InitInstance(module_ids_[Module::MIXIN], MIXIN_ID, ProcDomain::LOW_LATENCY, 0,
+                           PIPELINE0_ID, static_cast<uint16_t>(sizeof(mixin_cfg)),
+                           static_cast<const void*>(&mixin_cfg));
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Bind copier pin 0 to mixin pin 0
+    st = ipc_.Bind(module_ids_[Module::COPIER], COPIER_IN_ID, 0,
+                   module_ids_[Module::MIXIN], MIXIN_ID, 0);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Pipeline 1: mixout->copier[I2S0]
+
+    st = ipc_.CreatePipeline(PIPELINE1_ID, PIPELINE1_CFG.priority, PIPELINE1_CFG.mem_pages,
+                             PIPELINE1_CFG.lp);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Create the mixout module
+    static const BaseModuleCfg mixout_cfg = {
+        .cpc = 100000,
+        .ibs = 384,
+        .obs = 384,
+        .is_pages = 0,
+        .audio_fmt = {
+            .sampling_frequency = FMT_MIXER.sampling_frequency,
+            .bit_depth = FMT_MIXER.bit_depth,
+            .channel_map = FMT_MIXER.channel_map,
+            .channel_config = FMT_MIXER.channel_config,
+            .interleaving_style = FMT_MIXER.interleaving_style,
+            .number_of_channels = FMT_MIXER.number_of_channels,
+            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
+            .sample_type = FMT_MIXER.sample_type,
+            .reserved = 0,
+        },
+    };
+    st = ipc_.InitInstance(module_ids_[Module::MIXOUT], MIXOUT_ID, ProcDomain::LOW_LATENCY,
+                           0, PIPELINE1_ID, static_cast<uint16_t>(sizeof(mixout_cfg)),
+                           static_cast<const void*>(&mixout_cfg));
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Create the output copier module, I2S0 output
+    // Get the VMO containing the I2S config blob
+    // TODO(yky): this should come from ACPI (NHLT table)
+    zx::vmo blob_vmo;
+    size_t blob_size;
+    st = load_firmware(parent(), I2S_CFG_PATH, blob_vmo.reset_and_get_address(), &blob_size);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error getting I2S config blob (err %d)\n", st);
+        return st;
+    }
+
+    static const CopierCfg copier_out_cfg = {
+        .base_cfg = {
+            .cpc = 100000,
+            .ibs = 384,
+            .obs = 384,
+            .is_pages = 0,
+            .audio_fmt = {
+                .sampling_frequency = FMT_MIXER.sampling_frequency,
+                .bit_depth = FMT_MIXER.bit_depth,
+                .channel_map = FMT_MIXER.channel_map,
+                .channel_config = FMT_MIXER.channel_config,
+                .interleaving_style = FMT_MIXER.interleaving_style,
+                .number_of_channels = FMT_MIXER.number_of_channels,
+                .valid_bit_depth = FMT_MIXER.valid_bit_depth,
+                .sample_type = FMT_MIXER.sample_type,
+                .reserved = 0,
+            },
+        },
+        .out_fmt = {
+            .sampling_frequency = FMT_I2S.sampling_frequency,
+            .bit_depth = FMT_I2S.bit_depth,
+            .channel_map = FMT_I2S.channel_map,
+            .channel_config = FMT_I2S.channel_config,
+            .interleaving_style = FMT_I2S.interleaving_style,
+            .number_of_channels = FMT_I2S.number_of_channels,
+            .valid_bit_depth = FMT_I2S.valid_bit_depth,
+            .sample_type = FMT_I2S.sample_type,
+            .reserved = 0,
+        },
+        .copier_feature_mask = 0,
+        .gtw_cfg = {
+            .node_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, 0, 0),
+            .dma_buffer_size = 2 * 384,
+            .config_length = static_cast<uint32_t>(blob_size),
+        },
+    };
+
+    size_t copier_out_cfg_size = sizeof(copier_out_cfg) + blob_size;
+    ZX_DEBUG_ASSERT(copier_out_cfg_size <= UINT16_MAX);
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<uint8_t[]> copier_out_cfg_buf(new (&ac) uint8_t[copier_out_cfg_size]);
+    if (!ac.check()) {
+        LOG(ERROR, "out of memory while attempting to allocate copier config buffer\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+    memcpy(copier_out_cfg_buf.get(), &copier_out_cfg, sizeof(copier_out_cfg));
+    st = blob_vmo.read(copier_out_cfg_buf.get() + sizeof(copier_out_cfg), 0, blob_size);
+    if (st != ZX_OK) {
+        LOG(ERROR, "Error reading I2S config blob VMO (err %d)\n", st);
+        return st;
+    }
+
+    st = ipc_.InitInstance(module_ids_[Module::COPIER], COPIER_OUT_ID, ProcDomain::LOW_LATENCY,
+                           0, PIPELINE1_ID, static_cast<uint16_t>(copier_out_cfg_size),
+                           copier_out_cfg_buf.get());
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Bind mixout pin 0 to out copier pin 0
+    st = ipc_.Bind(module_ids_[Module::MIXOUT], MIXOUT_ID, 0,
+                   module_ids_[Module::COPIER], COPIER_OUT_ID, 0);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Bind mixin pin 0 to mixout pin 0
+    st = ipc_.Bind(module_ids_[Module::MIXIN], MIXIN_ID, 0,
+                   module_ids_[Module::MIXOUT], MIXOUT_ID, 0);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Start pipelines. Start sink pipeline before source
+    st = RunPipeline(PIPELINE1_ID);
+    if (st != ZX_OK) {
+        return st;
+    }
+    st = RunPipeline(PIPELINE0_ID);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t IntelAudioDsp::RunPipeline(uint8_t pipeline_id) {
+    // Pipeline must be paused before starting
+    zx_status_t st = ipc_.SetPipelineState(pipeline_id, PipelineState::PAUSED, true);
+    if (st != ZX_OK) {
+        return st;
+    }
+    return ipc_.SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
 }
 
 bool IntelAudioDsp::IsCoreEnabled(uint8_t core_mask) {
@@ -358,6 +711,23 @@ void IntelAudioDsp::RunCore(uint8_t core_mask) {
 void IntelAudioDsp::EnableInterrupts() {
     REG_SET_BITS(&regs()->adspic, ADSP_REG_ADSPIC_IPC);
     REG_SET_BITS(&regs()->hipcctl, ADSP_REG_HIPCCTL_IPCTDIE | ADSP_REG_HIPCCTL_IPCTBIE);
+}
+
+void IntelAudioDsp::ProcessIrq() {
+    if (state_ != State::OPERATING) {
+        zxlogf(ERROR, "Got IRQ when device is not operating (state %u)\n", to_underlying(state_));
+        return;
+    }
+
+    IpcMessage message(REG_RD(&regs()->hipct), REG_RD(&regs()->hipcte));
+    if (message.primary & ADSP_REG_HIPCT_BUSY) {
+
+        // Process the incoming message
+        ipc_.ProcessIpc(message);
+
+        // Ack the IRQ after reading mailboxes.
+        REG_SET_BITS(&regs()->hipct, ADSP_REG_HIPCT_BUSY);
+    }
 }
 
 }  // namespace intel_hda

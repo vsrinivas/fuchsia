@@ -305,6 +305,16 @@ constexpr uint8_t ADSP_REG_ADSPCS_CORE0_MASK = (1u << 0);
 constexpr uint32_t ADSP_REG_ADSPIC_CLDMA = (1 << 1);
 constexpr uint32_t ADSP_REG_ADSPIC_IPC   = (1 << 0);
 
+// Audio DSP Host IPC Target - (HIPCT - offset 0x40)
+constexpr uint32_t ADSP_REG_HIPCT_BUSY = (1 << 31);
+
+// Audio DSP Host Inter Processor Communication Initiator - (HIPCI - offset 0x48)
+constexpr uint32_t ADSP_REG_HIPCI_BUSY = (1 << 31);
+
+// Audio DSP Host Inter Processor Communication Initiator Extension - (HIPCIE - offset 0x4C)
+constexpr uint32_t ADSP_REG_HIPCIE_ERR  = (1 << 31);
+constexpr uint32_t ADSP_REG_HIPCIE_DONE = (1 << 30);
+
 // Audio DSP Host IPC Control - (HIPCCTL - offset 0x50)
 constexpr uint32_t ADSP_REG_HIPCCTL_IPCTDIE = (1 << 1);
 constexpr uint32_t ADSP_REG_HIPCCTL_IPCTBIE = (1 << 0);
