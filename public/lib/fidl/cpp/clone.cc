@@ -6,14 +6,6 @@
 
 namespace fidl {
 
-zx_status_t Clone(const zx::channel& value, zx::channel* result) {
-  if (!value) {
-    result->reset();
-    return ZX_OK;
-  }
-  return ZX_ERR_ACCESS_DENIED;
-}
-
 zx_status_t Clone(const StringPtr& value, StringPtr* result) {
   if (!value) {
     *result = StringPtr();

@@ -18,6 +18,22 @@
 
 namespace fidl {
 
+namespace internal {
+
+template <typename T>
+inline typename std::enable_if<zx::object_traits<T>::supports_duplication, zx_status_t>::type
+CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
+  return object.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
+}
+
+template <typename T>
+inline typename std::enable_if<!zx::object_traits<T>::supports_duplication, zx_status_t>::type
+CloneKernelObject(const zx::object<T>& object, zx::object<T>* result) {
+  return ZX_ERR_ACCESS_DENIED;
+}
+
+}  // namespace internal
+
 // Deep copies the contents of |value| into |result|.
 // This operation also attempts to duplicate any handles the value contains.
 //
@@ -35,17 +51,13 @@ inline typename std::enable_if<IsPrimitive<T>::value, zx_status_t>::type Clone(
 }
 
 template <typename T>
-inline typename std::enable_if<std::is_base_of<zx::object_base, T>::value,
-                               zx_status_t>::type
-Clone(const T& value, T* result) {
+zx_status_t Clone(const zx::object<T>& value, zx::object<T>* result) {
   if (!value) {
     result->reset();
     return ZX_OK;
   }
-  return value.duplicate(ZX_RIGHT_SAME_RIGHTS, result);
+  return internal::CloneKernelObject(value, result);
 }
-
-zx_status_t Clone(const zx::channel& value, zx::channel* result);
 
 template <typename T>
 inline zx_status_t Clone(const std::unique_ptr<T>& value,
