@@ -158,15 +158,11 @@ void ConflictResolverClient::Finalize(Status status) {
   callback(status);
 }
 
-// GetFullDiff(array<uint8>? token)
-//    => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 void ConflictResolverClient::GetFullDiff(fidl::VectorPtr<uint8_t> token,
                                          GetFullDiffCallback callback) {
   GetDiff(diff_utils::DiffType::FULL, std::move(token), callback);
 }
 
-//   GetConflictingDiff(array<uint8>? token)
-//      => (Status status, array<DiffEntry>? changes, array<uint8>? next_token);
 void ConflictResolverClient::GetConflictingDiff(
     fidl::VectorPtr<uint8_t> token,
     GetConflictingDiffCallback callback) {
@@ -207,7 +203,6 @@ void ConflictResolverClient::GetDiff(
           }));
 }
 
-// Merge(array<MergedValue>? merge_changes) => (Status status);
 void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
                                    MergeCallback callback) {
   has_merged_values_ = true;
@@ -261,7 +256,6 @@ void ConflictResolverClient::Merge(fidl::VectorPtr<MergedValue> merged_values,
       }));
 }
 
-// MergeNonConflictingEntries() => (Status status);
 void ConflictResolverClient::MergeNonConflictingEntries(
     MergeNonConflictingEntriesCallback callback) {
   auto waiter =
@@ -304,7 +298,6 @@ void ConflictResolverClient::MergeNonConflictingEntries(
                                     std::move(on_next), std::move(on_done));
 }
 
-// Done() => (Status status);
 void ConflictResolverClient::Done(DoneCallback callback) {
   in_client_request_ = false;
   FXL_DCHECK(!cancelled_);

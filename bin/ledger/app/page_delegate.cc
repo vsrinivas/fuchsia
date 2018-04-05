@@ -62,14 +62,12 @@ void PageDelegate::Init(std::function<void(Status)> on_done) {
   });
 }
 
-// GetId() => (array<uint8> id);
 void PageDelegate::GetId(Page::GetIdCallback callback) {
   ledger::PageId page_id;
   convert::ToArray(storage_->GetId(), &page_id.id);
   callback(std::move(page_id));
 }
 
-// GetSnapshot(PageSnapshot& snapshot, PageWatcher& watcher) => (Status status);
 void PageDelegate::GetSnapshot(
     fidl::InterfaceRequest<PageSnapshot> snapshot_request,
     fidl::VectorPtr<uint8_t> key_prefix,
@@ -110,15 +108,12 @@ void PageDelegate::GetSnapshot(
       }));
 }
 
-// Put(array<uint8> key, array<uint8> value) => (Status status);
 void PageDelegate::Put(fidl::VectorPtr<uint8_t> key,
                        fidl::VectorPtr<uint8_t> value,
                        Page::PutCallback callback) {
   PutWithPriority(std::move(key), std::move(value), Priority::EAGER, callback);
 }
 
-// PutWithPriority(array<uint8> key, array<uint8> value, Priority priority)
-//   => (Status status);
 void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
                                    fidl::VectorPtr<uint8_t> value,
                                    Priority priority,
@@ -155,8 +150,6 @@ void PageDelegate::PutWithPriority(fidl::VectorPtr<uint8_t> key,
           }));
 }
 
-// PutReference(array<uint8> key, Reference? reference, Priority priority)
-//   => (Status status);
 void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
                                 Reference reference,
                                 Priority priority,
@@ -204,7 +197,6 @@ void PageDelegate::PutReference(fidl::VectorPtr<uint8_t> key,
           }));
 }
 
-// Delete(array<uint8> key) => (Status status);
 void PageDelegate::Delete(fidl::VectorPtr<uint8_t> key,
                           Page::DeleteCallback callback) {
   operation_serializer_.Serialize<Status>(
@@ -244,7 +236,6 @@ void PageDelegate::CreateReference(
           }));
 }
 
-// StartTransaction() => (Status status);
 void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
@@ -273,7 +264,6 @@ void PageDelegate::StartTransaction(Page::StartTransactionCallback callback) {
       });
 }
 
-// Commit() => (Status status);
 void PageDelegate::Commit(Page::CommitCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {
@@ -294,7 +284,6 @@ void PageDelegate::Commit(Page::CommitCallback callback) {
       });
 }
 
-// Rollback() => (Status status);
 void PageDelegate::Rollback(Page::RollbackCallback callback) {
   operation_serializer_.Serialize<Status>(
       callback, [this](StatusCallback callback) {

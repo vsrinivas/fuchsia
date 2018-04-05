@@ -32,7 +32,6 @@ LedgerImpl::LedgerImpl(Delegate* delegate) : delegate_(delegate) {}
 
 LedgerImpl::~LedgerImpl() {}
 
-// GetRootPage(Page& page) => (Status status);
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              GetRootPageCallback callback) {
   delegate_->GetPage(
@@ -40,7 +39,6 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
       TRACE_CALLBACK(callback, "ledger", "ledger_get_root_page"));
 }
 
-// GetPage(array<uint8, 16>? id, Page& page) => (Status status);
 void LedgerImpl::GetPage(PageIdPtr id,
                          fidl::InterfaceRequest<Page> page_request,
                          GetPageCallback callback) {
@@ -54,15 +52,12 @@ void LedgerImpl::GetPage(PageIdPtr id,
                      TRACE_CALLBACK(callback, "ledger", "ledger_get_page"));
 }
 
-// DeletePage(array<uint8> id) => (Status status);
 void LedgerImpl::DeletePage(PageId id, DeletePageCallback callback) {
   TRACE_DURATION("ledger", "ledger_delete_page");
 
   callback(delegate_->DeletePage(id.id));
 }
 
-// SetConflictResolverFactory(ConflictResolverFactory? factory)
-//     => (Status status);
 void LedgerImpl::SetConflictResolverFactory(
     fidl::InterfaceHandle<ConflictResolverFactory> factory,
     SetConflictResolverFactoryCallback callback) {
