@@ -1127,11 +1127,13 @@ macro_rules! fidl2_union {
             fn member_index(&self) -> u32 {
                 #![allow(unused)]
                 let mut index = 0;
+                // TODO(cramertj): switch to `if let` when irrefutable `if let` patterns
+                // stabilize
                 $(
-                    if let $name::$member_name(_) = *self {
-                        return index;
+                    match *self {
+                        $name::$member_name(_) => return index,
+                        _ => index += 1,
                     }
-                    index += 1;
                 )*
                 panic!("unreachable union member")
             }
@@ -1197,12 +1199,14 @@ macro_rules! fidl2_union {
                             // Loop will only ever run once-- if the variant is not correct,
                             // it is fixed up.
                             loop {
-                                if let $name::$member_name(ref mut val) = *self {
-                                    fidl2_decode!(val, decoder)?;
-                                    break;
-                                } else {
-                                    *self = $name::$member_name(fidl2_new_empty!($member_ty));
+                                match *self {
+                                    $name::$member_name(ref mut val) => {
+                                        fidl2_decode!(val, decoder)?;
+                                        break;
+                                    }
+                                    _ => {}
                                 }
+                                *self = $name::$member_name(fidl2_new_empty!($member_ty));
                             }
                             // Skip to the end of the union's size
                             decoder.next_slice($size - (fidl2_inline_size!($member_ty) + $member_offset))?;
