@@ -6,7 +6,8 @@
 
 #include <utility>
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async/cpp/task.h>
+
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"
@@ -21,13 +22,11 @@ CloudProviderFirebaseFactory::CloudProviderFirebaseFactory(
     : application_context_(application_context) {}
 
 CloudProviderFirebaseFactory::~CloudProviderFirebaseFactory() {
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  services_thread_.join();
+  loop_.Shutdown();
 }
 
 void CloudProviderFirebaseFactory::Init() {
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
+  loop_.StartThread();
   component::Services child_services;
   component::ApplicationLaunchInfo launch_info;
   launch_info.url = kCloudProviderFirebaseAppUrl;
@@ -42,10 +41,9 @@ void CloudProviderFirebaseFactory::MakeCloudProvider(
     std::string api_key,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request) {
   modular_auth::TokenProviderPtr token_provider;
-  services_task_runner_->PostTask(fxl::MakeCopyable(
-      [this, request = token_provider.NewRequest()]() mutable {
-        token_provider_.AddBinding(std::move(request));
-      }));
+  async::PostTask(loop_.async(), fxl::MakeCopyable([
+    this, request = token_provider.NewRequest()
+  ]() mutable { token_provider_.AddBinding(std::move(request)); }));
 
   cloud_provider_firebase::Config firebase_config;
   firebase_config.server_id = server_id;
