@@ -4,7 +4,7 @@
 
 #include <fuchsia/cpp/echo2.h>
 #include <launchpad/launchpad.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <zircon/processargs.h>
 #include <zx/process.h>
@@ -58,11 +58,8 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async_loop_config_t config = {
-      // The FIDL support lib requires async_get_default() to return non-null.
-      .make_default_for_current_thread = true,
-  };
-  async::Loop loop(&config);
+  // The FIDL support lib requires async_get_default() to return non-null.
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   echo2::EchoClientApp app;
   app.Start(server_url, msg);

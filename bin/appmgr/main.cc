@@ -12,7 +12,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/vfs.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     config.ReadIfExistsFrom(config_file);
   }
 
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fs::ManagedVfs vfs(loop.async());
   component::RootApplicationLoader root_loader(config.TakePath());

@@ -11,7 +11,7 @@
 
 #include <benchmark/benchmark.h>
 #include <gflags/gflags.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>

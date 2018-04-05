@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <fuchsia/cpp/input.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <zx/time.h>
@@ -372,7 +372,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   input::InputApp app;
   async::PostTask(loop.async(),
                   [&app, command_line] { app.Run(command_line); });

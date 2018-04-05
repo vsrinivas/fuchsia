@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/fsl/tasks/incoming_task_queue.h"
 #include "lib/fsl/tasks/message_loop_handler.h"
@@ -101,7 +101,7 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
 
   void Run(bool until_idle);
 
-  static void Epilogue(async_t* async, void* data);
+  static void Epilogue(async_loop_t* loop, void* data);
 
   internal::IncomingTaskQueue* incoming_tasks() {
     return static_cast<internal::IncomingTaskQueue*>(task_runner_.get());

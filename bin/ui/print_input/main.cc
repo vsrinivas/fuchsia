@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/ui/input/device_state.h"
 #include "lib/ui/input/input_device_impl.h"
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   print_input::App app;
   loop.Run();
   return 0;

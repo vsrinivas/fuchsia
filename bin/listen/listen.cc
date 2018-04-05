@@ -8,7 +8,7 @@
 #include <fdio/util.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/cpp/auto_wait.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <netdb.h>
 #include <netinet/in.h>

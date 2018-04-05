@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/echo2.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -42,11 +42,8 @@ class EchoServerApp : public Echo {
 }  // namespace echo2
 
 int main(int argc, const char** argv) {
-  async_loop_config_t config = {
-      // The FIDL support lib requires async_get_default() to return non-null.
-      .make_default_for_current_thread = true,
-  };
-  async::Loop loop(&config);
+  // The FIDL support lib requires async_get_default() to return non-null.
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   echo2::EchoServerApp app;
   loop.Run();

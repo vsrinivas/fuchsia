@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <driver/usb.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <wlan/common/logging.h>
 
 #include <stdint.h>

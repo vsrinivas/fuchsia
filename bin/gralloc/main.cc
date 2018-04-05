@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/logging.h"
@@ -26,7 +26,7 @@ class GrallocImpl : public gralloc::Gralloc {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   std::unique_ptr<component::ApplicationContext> app_context(
       component::ApplicationContext::CreateFromStartupInfo());
 

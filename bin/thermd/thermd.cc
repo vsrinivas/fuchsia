@@ -7,7 +7,7 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/syscalls.h>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include <fdio/watcher.h>
 #include <trace-provider/provider.h>

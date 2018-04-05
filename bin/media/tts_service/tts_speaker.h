@@ -7,7 +7,7 @@
 #include <mutex>
 #include <thread>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <fbl/vmo_mapper.h>
 #include <fuchsia/cpp/media.h>
 #include <zircon/types.h>

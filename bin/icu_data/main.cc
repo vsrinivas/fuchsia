@@ -4,7 +4,7 @@
 
 #include <utility>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/icu_data/icu_data_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
@@ -34,7 +34,7 @@ class App {
 }  // namespace icu_data
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   icu_data::App app;
   loop.Run();
   return 0;

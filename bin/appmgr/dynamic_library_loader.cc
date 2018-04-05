@@ -4,29 +4,29 @@
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 
-#include <lib/async/loop.h>
+#include <lib/async-loop/loop.h>
 #include <loader-service/loader-service.h>
 
 namespace component {
 namespace DynamicLibraryLoader {
 
-static async_t* ld_async = nullptr;
+static async_loop_t* ld_loop = nullptr;
 
 zx_status_t Start(fxl::UniqueFD fd, zx::channel* result) {
   zx_status_t status = ZX_OK;
 
-  if (!ld_async) {
-    status = async_loop_create(nullptr, &ld_async);
+  if (!ld_loop) {
+    status = async_loop_create(nullptr, &ld_loop);
     if (status != ZX_OK)
       return status;
 
-    status = async_loop_start_thread(ld_async, "appmgr-loader", nullptr);
+    status = async_loop_start_thread(ld_loop, "appmgr-loader", nullptr);
     if (status != ZX_OK)
       return status;
   }
 
   loader_service_t* svc = nullptr;
-  status = loader_service_create_fd(ld_async, fd.release(), &svc);
+  status = loader_service_create_fd(async_loop_get_dispatcher(ld_loop), fd.release(), &svc);
   if (status != ZX_OK)
     return status;
   status = loader_service_connect(svc, result->reset_and_get_address());

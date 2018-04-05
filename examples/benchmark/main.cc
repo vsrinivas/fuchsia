@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>

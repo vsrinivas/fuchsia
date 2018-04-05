@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <trace-provider/provider.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #ifdef __x86_64__
 #include "garnet/bin/cpuperf_provider/app.h"
@@ -21,7 +21,7 @@ int main(int argc, const char** argv) {
 
   FXL_VLOG(2) << argv[0] << ": starting";
 
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
   cpuperf_provider::App app(command_line);

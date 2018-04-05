@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
@@ -132,7 +132,9 @@ void CommandChannel::SendCommandSync(
   // Wait up to 500ms for a response.
   timeout.set(zx::deadline_after(zx::msec(500)), zx::msec(50));
   for (;;) {
-    async_loop_run(async_get_default(), zx_deadline_after(ZX_MSEC(10)), true);
+    // TODO(NET-680): Don't use the message loop modally.
+    async_loop_run(async_loop_from_dispatcher(async_get_default()),
+                   zx_deadline_after(ZX_MSEC(10)), true);
     if (received) {
       status = ZX_OK;
       break;

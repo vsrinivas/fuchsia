@@ -16,7 +16,7 @@
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <zircon/status.h>
 #include <zx/event.h>
@@ -321,7 +321,9 @@ bool IntelFirmwareLoader::RunCommandAndExpect(
 
   while (!failed && events.size() > 0) {
     size_t remaining_evt_count = events.size();
-    async_loop_run(async_get_default(), zx_deadline_after(ZX_SEC(1)), true);
+    // TODO(NET-680): Don't use the message loop modally.
+    async_loop_run(async_loop_from_dispatcher(async_get_default()),
+                   zx_deadline_after(ZX_SEC(1)), true);
 
     if (events.size() < remaining_evt_count) {
       // The expected event was received. Clear the old timeout and set up a new

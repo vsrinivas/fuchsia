@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <iostream>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/command_line.h"
@@ -33,7 +33,7 @@ int main(int argc, const char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   bluetooth_service::App app(
       component::ApplicationContext::CreateFromStartupInfo());

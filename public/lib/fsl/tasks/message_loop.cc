@@ -208,7 +208,7 @@ void MessageLoop::ClearAfterTaskCallback() {
   after_task_callback_ = fxl::Closure();
 }
 
-void MessageLoop::Epilogue(async_t* async, void* data) {
+void MessageLoop::Epilogue(async_loop_t*, void* data) {
   auto loop = static_cast<MessageLoop*>(data);
   if (loop->after_task_callback_)
     loop->after_task_callback_();

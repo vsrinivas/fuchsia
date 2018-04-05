@@ -8,7 +8,7 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 #include <zx/port.h>
 

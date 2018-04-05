@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <utility>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "garnet/bin/fonts/font_provider_impl.h"
@@ -33,7 +33,7 @@ class App {
 }  // namespace fonts
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigDefault);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   fonts::App app;
   loop.Run();
   return 0;
