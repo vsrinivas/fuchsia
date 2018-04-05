@@ -10,17 +10,19 @@
 namespace modular {
 
 ChainImpl::ChainImpl(const fidl::VectorPtr<fidl::StringPtr>& path, const ChainData& chain_data) {
-      for (const auto& i : *path) {
-        path_->push_back(i);
-      }
-      chain_data.Clone(&chain_data_);
-    }
+  for (const auto& i : *path) {
+    path_->push_back(i);
+  }
+  chain_data.Clone(&chain_data_);
+}
+
 ChainImpl::~ChainImpl() = default;
 
 LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::StringPtr& key) {
   auto it = std::find_if(
       chain_data_.key_to_link_map->begin(), chain_data_.key_to_link_map->end(),
       [&key](const ChainKeyToLinkData& data) { return data.key == key; });
+
   if (it == chain_data_.key_to_link_map->end())
     return nullptr;
 

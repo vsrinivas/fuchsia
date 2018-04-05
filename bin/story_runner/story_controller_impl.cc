@@ -580,8 +580,6 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
   std::unique_ptr<LinkImpl> link_impl_;
 
-  OperationQueue operation_queue_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(ConnectLinkCall);
 };
 
@@ -1514,6 +1512,54 @@ class StoryControllerImpl::DefocusCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
 
+class StoryControllerImpl::ResolveNounCall
+    : Operation<ResolverNounConstraintPtr> {
+ public:
+  ResolveNounCall(OperationContainer* const container,
+                  StoryControllerImpl* const story_controller_impl,
+                  LinkPathPtr link_path,
+                  ResultCall result_call)
+      : Operation("StoryControllerImpl::ResolveNounCall",
+                  container,
+                  std::move(result_call)),
+        story_controller_impl_(story_controller_impl),
+        link_path_(std::move(link_path)) {
+    Ready();
+  }
+
+ private:
+  void Run() {
+    FlowToken flow{this, &result_};
+    new ConnectLinkCall(
+        &operation_queue_, story_controller_impl_, fidl::Clone(link_path_),
+        LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
+        false /* notify_watchers */, link_.NewRequest(),
+        [this, flow] {
+          Cont(flow);
+        });
+  }
+
+  void Cont(FlowToken flow) {
+    link_->Get(nullptr /* path */,
+               [this, flow](fidl::StringPtr content) {
+                 auto link_info = ResolverLinkInfo::New();
+                 link_info->path = std::move(*link_path_);
+                 link_info->content_snapshot = std::move(content);
+
+                 result_ = ResolverNounConstraint::New();
+                 result_->set_link_info(std::move(*link_info));
+               });
+  }
+
+  OperationQueue operation_queue_;
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  LinkPathPtr link_path_;
+  LinkPtr link_;
+  ResolverNounConstraintPtr result_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveNounCall);
+};
+
 class StoryControllerImpl::ResolveModulesCall
     : Operation<FindModulesResultPtr> {
  public:
@@ -1539,15 +1585,10 @@ class StoryControllerImpl::ResolveModulesCall
   void Run() {
     FlowToken flow{this, &result_};
 
-    DaisyToResolverQuery([this, flow] { Cont(flow); });
-  }
-
-  void DaisyToResolverQuery(std::function<void()> cont) {
     resolver_query_ = ResolverQuery::New();
     resolver_query_->verb = daisy_->verb;
     resolver_query_->url = daisy_->url;
 
-    std::shared_ptr<int> outstanding_requests{new int{0}};
     for (const auto& entry : *daisy_->nouns) {
       const auto& name = entry.name;
       const auto& noun = entry.noun;
@@ -1555,19 +1596,23 @@ class StoryControllerImpl::ResolveModulesCall
       if (noun.is_json()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_json(noun.json());
-        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
-        noun_constraint_entry->key = name;
-        noun_constraint_entry->constraint = std::move(*noun_constraint);
-        resolver_query_->noun_constraints.push_back(
-            std::move(*noun_constraint_entry));
+
+        auto entry = ResolverNounConstraintEntry::New();
+        entry->key = name;
+        entry->constraint = std::move(*noun_constraint);
+
+        resolver_query_->noun_constraints.push_back(std::move(*entry));
 
       } else if (noun.is_link_name() || noun.is_link_path()) {
         // Find the chain for this Module, or use the one that was provided via
         // the noun.
-        auto link_path = noun.is_link_path()
-                             ? CloneOptional(noun.link_path())
-                             : story_controller_impl_->GetLinkPathForChainKey(
-                                   requesting_module_path_, noun.link_name());
+        LinkPathPtr link_path;
+        if (noun.is_link_path()) {
+          link_path = CloneOptional(noun.link_path());
+        } else {
+          link_path = story_controller_impl_->GetLinkPathForChainKey(
+              requesting_module_path_, noun.link_name());
+        }
 
         if (!link_path) {
           // The chain doesn't contain a value for this Link, so assume it's
@@ -1577,66 +1622,42 @@ class StoryControllerImpl::ResolveModulesCall
           link_path->link_name = noun.link_name();
         }
 
-        ++(*outstanding_requests);
-        auto link = std::make_unique<LinkPtr>();
-        auto link_request = link->NewRequest();
-        new ConnectLinkCall(
-            &operation_queue_, story_controller_impl_, CloneOptional(link_path),
-            LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
-            false /* notify_watchers */, std::move(link_request),
-            fxl::MakeCopyable([this, name, outstanding_requests, cont,
-                               link_path = std::move(link_path),
-                               link = std::move(link)]() mutable {
-              (*link)->Get(
-                  nullptr /* path */,
-                  fxl::MakeCopyable([this, name, outstanding_requests, cont,
-                                     link_path = std::move(link_path),
-                                     link = std::move(link)](
-                                        fidl::StringPtr content) mutable {
-                    auto link_info = ResolverLinkInfo::New();
-                    link_info->path = std::move(*link_path);
-                    link_info->content_snapshot = content;
+        ++outstanding_requests_;
+        new ResolveNounCall(&operation_queue_, story_controller_impl_,
+                            std::move(link_path),
+                            [this, flow, name](ResolverNounConstraintPtr result) {
+                              auto entry = ResolverNounConstraintEntry::New();
+                              entry->key = name;
+                              entry->constraint = std::move(*result);
+                              resolver_query_->noun_constraints.push_back(std::move(*entry));
 
-                    auto noun_constraint = ResolverNounConstraint::New();
-                    noun_constraint->set_link_info(std::move(*link_info));
-
-                    auto noun_constraint_entry =
-                        ResolverNounConstraintEntry::New();
-                    noun_constraint_entry->key = name;
-                    noun_constraint_entry->constraint =
-                        std::move(*noun_constraint);
-                    resolver_query_->noun_constraints.push_back(
-                        std::move(*noun_constraint_entry));
-
-                    --(*outstanding_requests);
-                    if (*outstanding_requests == 0) {
-                      cont();
-                    }
-                  }));
-            }));
+                              if (--outstanding_requests_ == 0) {
+                                Cont(flow);
+                              }
+                            });
 
       } else if (noun.is_entity_type()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_type(noun.entity_type().Clone());
-        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
-        noun_constraint_entry->key = name;
-        noun_constraint_entry->constraint = std::move(*noun_constraint);
-        resolver_query_->noun_constraints.push_back(
-            std::move(*noun_constraint_entry));
+
+        auto entry = ResolverNounConstraintEntry::New();
+        entry->key = name;
+        entry->constraint = std::move(*noun_constraint);
+        resolver_query_->noun_constraints.push_back(std::move(*entry));
 
       } else if (noun.is_entity_reference()) {
         auto noun_constraint = ResolverNounConstraint::New();
         noun_constraint->set_entity_reference(noun.entity_reference());
-        auto noun_constraint_entry = ResolverNounConstraintEntry::New();
-        noun_constraint_entry->key = name;
-        noun_constraint_entry->constraint = std::move(*noun_constraint);
-        resolver_query_->noun_constraints.push_back(
-            std::move(*noun_constraint_entry));
+
+        auto entry = ResolverNounConstraintEntry::New();
+        entry->key = name;
+        entry->constraint = std::move(*noun_constraint);
+        resolver_query_->noun_constraints.push_back(std::move(*entry));
       }
     }
 
-    if (*outstanding_requests == 0) {
-      cont();
+    if (outstanding_requests_ == 0) {
+      Cont(flow);
     }
   }
 
@@ -1655,6 +1676,7 @@ class StoryControllerImpl::ResolveModulesCall
   const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
 
   ResolverQueryPtr resolver_query_;
+  int outstanding_requests_{0};
   FindModulesResultPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
