@@ -224,6 +224,9 @@ zx_status_t Device::Bind() {
         status = ReadEepromField(power2_offset, reinterpret_cast<uint16_t*>(&txpower2));
         CHECK_READ(EEPROM_TXPOWER_2, status);
 
+        // Note: It reads [19, 24] for 2GHz channels,
+        // [6, 12] for 5GHz UNII-1,2 channels,
+        // [-1, 0] for 5GHz UNII-3 channels. The last appears to be invalid.
         entry.second.default_power1 = extract_tx_power(byte_offset, is_5ghz, txpower1);
         entry.second.default_power2 = extract_tx_power(byte_offset, is_5ghz, txpower2);
 
@@ -2258,6 +2261,8 @@ zx_status_t Device::InitializeRfVal() {
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH36_64, &ch36_64.phase_cal_tx1);
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH100_138, &ch100_138.phase_cal_tx1);
         ReadEepromByte(EEPROM_PHASE_CAL_TX1_CH140_165, &ch140_165.phase_cal_tx1);
+        // Note: Regardless the channel, EEPROM reads 0xff for all
+        // gain calibrations and phase calibrations, making them seemingly invalid table.
         for (auto& entry : rf_vals_) {
             if (entry.second.channel <= 14) {
                 entry.second.cal_values = ch0_14;
@@ -2276,6 +2281,7 @@ zx_status_t Device::InitializeRfVal() {
     return ZX_OK;
 }
 
+// Uncertain units. Seemingly 0.5 dBm unit, per tx chain.
 constexpr uint8_t kRfPowerBound2_4Ghz = 0x27;
 constexpr uint8_t kRfPowerBound5Ghz = 0x2b;
 
@@ -2294,6 +2300,7 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     status = WriteRfcsr(r11);
     CHECK_WRITE(RF11, status);
 
+    // TODO(porce): Study why this configuration is outside ConfigureTxpower()
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
@@ -2854,12 +2861,16 @@ uint8_t CompensateTx(uint8_t power) {
 }  // namespace
 
 zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
-    // TODO(tkilbourn): calculate tx power control
-    //       use 0 (normal) for now
+    // TODO(porce): Refactor to support
+    // (1) Target EIRP configured from a higher layer
+    // (2) Calcualte compensation and truncation per rate/MCS, for 4 bit size
+
     Bbp1 b1;
     zx_status_t status = ReadBbp(&b1);
     CHECK_READ(BBP1, status);
-    b1.set_tx_power_ctrl(0);
+
+    b1.set_tx_power_ctrl(0);  // TODO(NET-697): Investigate the register effect.
+
     status = WriteBbp(b1);
     CHECK_WRITE(BBP1, status);
 

@@ -50,15 +50,15 @@ constexpr uint16_t SHARED_KEY_BASE = 0x6c00;
 constexpr uint16_t SHARED_KEY_MODE_BASE = 0x7000;
 
 // B/G min/max TX power
-constexpr int8_t kMinTxPower_BG = 0;
-constexpr int8_t kMaxTxPower_BG = 31;
-constexpr int8_t kMinTxPower_A = -7;
-constexpr int8_t kMaxTxPower_A = 15;
+constexpr int8_t kMinTxPower_BG = 0;   // Seemingly dBm unit, assuming 1 Tx chain
+constexpr int8_t kMaxTxPower_BG = 31;  //
+constexpr int8_t kMinTxPower_A = -7;   // Seemingly dBm unit, assuming 2 Tx chain
+constexpr int8_t kMaxTxPower_A = 15;   //
 
 // EIRP max power
-constexpr uint16_t kEirpMaxPower = 0x50;
+constexpr uint16_t kEirpMaxPower = 0x50;  // Seemingly 0.5 dBm unit, making 40 dBm
 // TX compensation max power
-constexpr uint16_t kTxCompMaxPower = 0x0c;
+constexpr uint16_t kTxCompMaxPower = 0x0c;  // Unit uncertain.
 
 // Device supports multiple rotating group keys for each BSS.
 constexpr int8_t kGroupKeysPerBss = 4;
@@ -823,11 +823,11 @@ constexpr uint16_t EEPROM_MAC_ADDR_2 = 0x0004;
 constexpr uint16_t EEPROM_NIC_CONF2 = 0x0021;
 constexpr uint16_t EEPROM_RSSI_A = 0x0025;
 constexpr uint16_t EEPROM_RSSI_A2 = 0x0026;
-constexpr uint16_t EEPROM_TXPOWER_BG1 = 0x0029;
+constexpr uint16_t EEPROM_TXPOWER_BG1 = 0x0029;  // Seemingly 0.5 dBm unit
 constexpr uint16_t EEPROM_TXPOWER_BG2 = 0x0030;
 constexpr uint16_t EEPROM_TXPOWER_A1 = 0x003c;
 constexpr uint16_t EEPROM_TXPOWER_A2 = 0x0053;
-constexpr uint16_t EEPROM_TXPOWER_BYRATE = 0x006f;
+constexpr uint16_t EEPROM_TXPOWER_BYRATE = 0x006f;  // Unit uncertain
 constexpr uint16_t EEPROM_BBP_START = 0x0078;
 
 constexpr size_t EEPROM_TXPOWER_BYRATE_SIZE = 9;
@@ -949,7 +949,9 @@ constexpr uint8_t MCU_FREQ_OFFSET = 0x74;
 
 class Bbp1 : public BbpRegister<1> {
    public:
+    // 2, 1, 0, 3 corresponds to -12, -6, 0, 6 dBm
     WLAN_BIT_FIELD(tx_power_ctrl, 0, 2);
+
     WLAN_BIT_FIELD(tx_antenna, 3, 2);
 };
 
