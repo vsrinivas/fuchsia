@@ -351,6 +351,12 @@ void BlockServer::InQueueDrainer() {
         }
         pending_count_.fetch_add(1);
         in_queue_.pop_front();
+        // Underlying block device drivers should not see block barriers
+        // which are already handled by the block midlayer.
+        //
+        // This may be altered in the future if block devices
+        // are capable of implementing hardware barriers.
+        msg->op.command &= ~(BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER);
         bp_.ops->queue(bp_.ctx, &msg->op);
     }
 }

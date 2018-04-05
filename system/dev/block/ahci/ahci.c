@@ -560,16 +560,6 @@ static int ahci_worker_thread(void* arg) {
                     break;
                 }
 
-                // If BARRIER_BEFORE and there are transactions running,
-                // pause the port and leave the txn in the queue.
-                // Do not set port->sync because no transaction needs
-                // to be completed when the port is resumed.
-                if ((txn->bop.command & BLOCK_FL_BARRIER_BEFORE) && port->running) {
-                    port->flags |= AHCI_PORT_FLAG_SYNC_PAUSED;
-                    port->sync = NULL;
-                    break;
-                }
-
                 // find a free command tag
                 int max = MIN(port->devinfo.max_cmd, (int)((dev->cap >> 8) & 0x1f));
                 int i = 0;
@@ -603,15 +593,6 @@ static int ahci_worker_thread(void* arg) {
                         block_complete(&txn->bop, st);
                         mtx_lock(&port->lock);
                         continue;
-                    }
-                    // If BARRIER_AFTER, pause the port until all running transactions,
-                    // including the one just issued, are complete. Do not set port->sync
-                    // because no transaction needs to be completed when the port
-                    // is resumed. (this transaction is completed normally)
-                    if (txn->bop.command & BLOCK_FL_BARRIER_AFTER) {
-                        ZX_DEBUG_ASSERT(port->running);
-                        port->flags |= AHCI_PORT_FLAG_SYNC_PAUSED;
-                        port->sync = NULL;
                     }
                 }
             }
