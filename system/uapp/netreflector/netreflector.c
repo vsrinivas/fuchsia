@@ -67,7 +67,7 @@ void send_pending_tx(zx_handle_t tx_fifo) {
     while (pending_tx != NULL) {
         eth_fifo_entry_t* e = pending_tx->e;
         e->cookie = pending_tx;
-        if ((status = zx_fifo_write(tx_fifo, e, sizeof(eth_fifo_entry_t), &n)) != ZX_OK) {
+        if ((status = zx_fifo_write_old(tx_fifo, e, sizeof(eth_fifo_entry_t), &n)) != ZX_OK) {
             fprintf(stderr, "netreflector: error reflecting packet %d\n", status);
             return;
         }
@@ -136,7 +136,7 @@ queue:
     e->flags = 0;
     uint32_t actual;
     zx_status_t status;
-    if ((status = zx_fifo_write(rx_fifo, e, sizeof(*e), &actual)) != ZX_OK) {
+    if ((status = zx_fifo_write_old(rx_fifo, e, sizeof(*e), &actual)) != ZX_OK) {
         fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
     }
 }
@@ -161,7 +161,7 @@ void handle(char* iobuf, eth_fifos_t* fifos) {
         if (packet.signal.observed & ZX_FIFO_READABLE) {
             uint8_t fifo_id = (uint8_t)packet.key;
             zx_handle_t fifo = (fifo_id == RX_FIFO ? fifos->rx_fifo : fifos->tx_fifo);
-            if ((status = zx_fifo_read(fifo, entries, sizeof(entries), &n)) != ZX_OK) {
+            if ((status = zx_fifo_read_old(fifo, entries, sizeof(entries), &n)) != ZX_OK) {
                 fprintf(stderr, "netreflector: error reading fifo %d\n", status);
                 continue;
             }
@@ -234,7 +234,7 @@ int main(int argc, char** argv) {
             .offset = n * BUFSIZE, .length = BUFSIZE, .flags = 0, .cookie = NULL,
         };
         uint32_t actual;
-        if ((status = zx_fifo_write(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
+        if ((status = zx_fifo_write_old(fifos.rx_fifo, &entry, sizeof(entry), &actual)) < 0) {
             fprintf(stderr, "netreflector: failed to queue rx packet: %d\n", status);
             return -1;
         }

@@ -43,7 +43,7 @@ void OutOfBandRespond(const zx::fifo& fifo, zx_status_t status, txnid_t txnid) {
     response.count = 0;
 
     uint32_t actual;
-    status = fifo.write(&response, sizeof(block_fifo_response_t), &actual);
+    status = fifo.write_old(&response, sizeof(block_fifo_response_t), &actual);
     if (status != ZX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }
@@ -146,8 +146,8 @@ void TransactionGroup::SetResponseReadyLocked() {
 
 void TransactionGroup::RespondLocked() {
     uint32_t actual;
-    zx_status_t status = zx_fifo_write(fifo_, &response_,
-                                       sizeof(block_fifo_response_t), &actual);
+    zx_status_t status = zx_fifo_write_old(fifo_, &response_,
+                                           sizeof(block_fifo_response_t), &actual);
     if (status != ZX_OK) {
         fprintf(stderr, "Block Server I/O error: Could not write response\n");
     }
@@ -223,8 +223,8 @@ zx_status_t BlockServer::Read(block_fifo_request_t* requests, uint32_t* count) {
     // terminate
     zx_status_t status;
     while (true) {
-        status = fifo_.read(requests, BLOCK_FIFO_MAX_DEPTH *
-                            sizeof(block_fifo_request_t), count);
+        status = fifo_.read_old(requests, BLOCK_FIFO_MAX_DEPTH *
+                                sizeof(block_fifo_request_t), count);
         zx_signals_t signals;
         zx_signals_t seen;
         switch (status) {

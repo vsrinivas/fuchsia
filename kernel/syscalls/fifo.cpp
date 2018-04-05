@@ -64,6 +64,11 @@ zx_status_t sys_fifo_write(zx_handle_t handle, user_in_ptr<const void> entries,
     return ZX_OK;
 }
 
+zx_status_t sys_fifo_write_old(zx_handle_t handle, user_in_ptr<const void> entries,
+                               size_t len, user_out_ptr<uint32_t> actual_out) {
+    return sys_fifo_write(handle, entries, len, actual_out);
+}
+
 zx_status_t sys_fifo_read(zx_handle_t handle, user_out_ptr<void> entries, size_t len,
                           user_out_ptr<uint32_t> actual_out) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -83,4 +88,9 @@ zx_status_t sys_fifo_read(zx_handle_t handle, user_out_ptr<void> entries, size_t
         return status;
 
     return ZX_OK;
+}
+
+zx_status_t sys_fifo_read_old(zx_handle_t handle, user_out_ptr<void> entries, size_t len,
+                              user_out_ptr<uint32_t> actual_out) {
+    return sys_fifo_read(handle, entries, len, actual_out);
 }

@@ -80,7 +80,7 @@ zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
     uint32_t actual;
     IORING_TRACE("eth:tx+ c=%p o=%u l=%u f=%u\n",
                  e.cookie, e.offset, e.length, e.flags);
-    return zx_fifo_write(eth->tx_fifo, &e, sizeof(e), &actual);
+    return zx_fifo_write_old(eth->tx_fifo, &e, sizeof(e), &actual);
 }
 
 zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
@@ -94,7 +94,7 @@ zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
     uint32_t actual;
     IORING_TRACE("eth:rx+ c=%p o=%u l=%u f=%u\n",
                  e.cookie, e.offset, e.length, e.flags);
-    return zx_fifo_write(eth->rx_fifo, &e, sizeof(e), &actual);
+    return zx_fifo_write_old(eth->rx_fifo, &e, sizeof(e), &actual);
 }
 
 zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
@@ -102,7 +102,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
     eth_fifo_entry_t entries[eth->tx_size];
     zx_status_t status;
     uint32_t count;
-    if ((status = zx_fifo_read(eth->tx_fifo, entries, sizeof(entries), &count)) < 0) {
+    if ((status = zx_fifo_read_old(eth->tx_fifo, entries, sizeof(entries), &count)) < 0) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             return ZX_OK;
         } else {
@@ -123,7 +123,7 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
     eth_fifo_entry_t entries[eth->rx_size];
     zx_status_t status;
     uint32_t count;
-    if ((status = zx_fifo_read(eth->rx_fifo, entries, sizeof(entries), &count)) < 0) {
+    if ((status = zx_fifo_read_old(eth->rx_fifo, entries, sizeof(entries), &count)) < 0) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             return ZX_OK;
         } else {

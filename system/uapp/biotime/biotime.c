@@ -219,7 +219,7 @@ static int bio_random_thread(void* arg) {
                 req.txnid, req.vmoid, req.opcode, req.length, req.vmo_offset, req.dev_offset);
 #endif
         uint32_t actual;
-        zx_status_t r = zx_fifo_write(fifo, &req, sizeof(req), &actual);
+        zx_status_t r = zx_fifo_write_old(fifo, &req, sizeof(req), &actual);
         if (r == ZX_ERR_SHOULD_WAIT) {
             r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
                                    ZX_TIME_INFINITE, NULL);
@@ -256,7 +256,7 @@ static zx_status_t bio_random(bio_random_args_t* a, uint64_t* _total, zx_time_t*
     while (count > 0) {
         block_fifo_response_t resp;
         uint32_t actual;
-        zx_status_t r = zx_fifo_read(fifo, &resp, sizeof(resp), &actual);
+        zx_status_t r = zx_fifo_read_old(fifo, &resp, sizeof(resp), &actual);
         if (r == ZX_ERR_SHOULD_WAIT) {
             r = zx_object_wait_one(fifo, ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
                                    ZX_TIME_INFINITE, NULL);

@@ -17,7 +17,7 @@ static zx_status_t do_write(zx_handle_t fifo, block_fifo_request_t* request, siz
     zx_status_t status;
     while (true) {
         uint32_t actual;
-        status = zx_fifo_write(fifo, request, sizeof(block_fifo_request_t) * count, &actual);
+        status = zx_fifo_write_old(fifo, request, sizeof(block_fifo_request_t) * count, &actual);
         if (status == ZX_ERR_SHOULD_WAIT) {
             zx_signals_t signals;
             if ((status = zx_object_wait_one(fifo,
@@ -44,7 +44,7 @@ static zx_status_t do_read(zx_handle_t fifo, block_fifo_response_t* response) {
     zx_status_t status;
     while (true) {
         uint32_t count;
-        status = zx_fifo_read(fifo, response, sizeof(block_fifo_response_t), &count);
+        status = zx_fifo_read_old(fifo, response, sizeof(block_fifo_response_t), &count);
         if (status == ZX_ERR_SHOULD_WAIT) {
             zx_signals_t signals;
             if ((status = zx_object_wait_one(fifo,

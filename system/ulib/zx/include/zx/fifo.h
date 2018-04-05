@@ -29,12 +29,20 @@ public:
     static zx_status_t create(uint32_t elem_count, uint32_t elem_size,
                               uint32_t options, fifo* out0, fifo* out1);
 
-    zx_status_t write(const void* buffer, size_t len, uint32_t* actual_entries) const {
-        return zx_fifo_write(get(), buffer, len, actual_entries);
+    zx_status_t write(const void* buffer, size_t len, uint32_t* actual_entries) const __DEPRECATE {
+        return zx_fifo_write_old(get(), buffer, len, actual_entries);
     }
 
-    zx_status_t read(void* buffer, size_t len, uint32_t* actual_entries) const {
-        return zx_fifo_read(get(), buffer, len, actual_entries);
+    zx_status_t write_old(const void* buffer, size_t len, uint32_t* actual_entries) const {
+        return zx_fifo_write_old(get(), buffer, len, actual_entries);
+    }
+
+    zx_status_t read(void* buffer, size_t len, uint32_t* actual_entries) const __DEPRECATE {
+        return zx_fifo_read_old(get(), buffer, len, actual_entries);
+    }
+
+    zx_status_t read_old(void* buffer, size_t len, uint32_t* actual_entries) const {
+        return zx_fifo_read_old(get(), buffer, len, actual_entries);
     }
 };
 

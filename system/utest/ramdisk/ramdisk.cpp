@@ -853,8 +853,8 @@ bool ramdisk_test_fifo_large_ops_count_shutdown(void) {
     // version of the server; as a consequence, it is preserved
     // to help detect regressions.
     uint32_t actual;
-    ZX_ASSERT(zx_fifo_write(fifo, &requests[0], sizeof(block_fifo_request_t) *
-                            requests.size(), &actual) == ZX_OK);
+    ZX_ASSERT(zx_fifo_write_old(fifo, &requests[0], sizeof(block_fifo_request_t) *
+                                requests.size(), &actual) == ZX_OK);
     usleep(100);
     ZX_ASSERT(zx_handle_close(fifo) == ZX_OK);
 

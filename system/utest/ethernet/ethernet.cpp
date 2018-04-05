@@ -234,7 +234,7 @@ public:
                 .cookie = nullptr,
             };
             uint32_t actual;
-            status = rx_.write(&entry, sizeof(entry), &actual);
+            status = rx_.write_old(&entry, sizeof(entry), &actual);
             if (status != ZX_OK) {
                 fprintf(stderr, "failed call to write(): %s\n", mxstrerror(status));
                 return status;
@@ -792,7 +792,7 @@ static bool EthernetDataTest_Send() {
 
     // Write to the TX fifo
     uint32_t actual = 0;
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->write(entry, sizeof(eth_fifo_entry_t), &actual));
+    ASSERT_EQ(ZX_OK, client.tx_fifo()->write_old(entry, sizeof(eth_fifo_entry_t), &actual));
     EXPECT_EQ(1u, actual);
 
     ExpectPacketRead(&sock, 32, buf, "");
@@ -802,7 +802,7 @@ static bool EthernetDataTest_Send() {
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     eth_fifo_entry_t return_entry;
-    ASSERT_EQ(ZX_OK, client.tx_fifo()->read(&return_entry, sizeof(eth_fifo_entry_t), &actual));
+    ASSERT_EQ(ZX_OK, client.tx_fifo()->read_old(&return_entry, sizeof(eth_fifo_entry_t), &actual));
     EXPECT_EQ(1u, actual);
 
     // Check the flags on the returned entry
@@ -850,7 +850,7 @@ static bool EthernetDataTest_Recv() {
     // Read the RX fifo
     eth_fifo_entry_t entry;
     uint32_t actual_entries = 0;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->read(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->read_old(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
     EXPECT_EQ(1, actual_entries);
 
     // Check the bytes in the VMO compared to what we sent through the socket
@@ -862,7 +862,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(obs & ZX_FIFO_WRITABLE);
 
     entry.length = 2048;
-    EXPECT_EQ(ZX_OK, client.rx_fifo()->write(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
+    EXPECT_EQ(ZX_OK, client.rx_fifo()->write_old(&entry, sizeof(eth_fifo_entry_t), &actual_entries));
     EXPECT_EQ(1, actual_entries);
 
     ASSERT_TRUE(EthernetCleanupHelper(&sock, &client));

@@ -282,7 +282,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
     uint32_t count;
 
     if (edev->rx_entry_count == 0) {
-        status = zx_fifo_read(edev->rx_fifo, edev->rx_entries, sizeof(edev->rx_entries), &count);
+        status = zx_fifo_read_old(edev->rx_fifo, edev->rx_entries, sizeof(edev->rx_entries), &count);
         if (status != ZX_OK) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 if ((edev->fail_rx_read++ % FAIL_REPORT_RATE) == 0) {
@@ -313,7 +313,7 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         e->flags = ETH_FIFO_RX_OK | extra;
     }
 
-    if ((status = zx_fifo_write(edev->rx_fifo, e, sizeof(*e), &count)) < 0) {
+    if ((status = zx_fifo_write_old(edev->rx_fifo, e, sizeof(*e), &count)) < 0) {
         if (status == ZX_ERR_SHOULD_WAIT) {
             if ((edev->fail_rx_write++ % FAIL_REPORT_RATE) == 0) {
                 zxlogf(ERROR, "eth [%s]: no rx_fifo space available (%u times)\n",
@@ -345,7 +345,7 @@ static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t cou
     zx_status_t status;
     uint32_t actual;
     // Writing should never fail, or fail to write all entries
-    status = zx_fifo_write(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * count, &actual);
+    status = zx_fifo_write_old(edev->tx_fifo, entries, sizeof(eth_fifo_entry_t) * count, &actual);
     if (status < 0) {
         zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
         return -1;
@@ -518,7 +518,7 @@ static int eth_tx_thread(void* arg) {
     uint32_t count;
 
     for (;;) {
-        if ((status = zx_fifo_read(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
+        if ((status = zx_fifo_read_old(edev->tx_fifo, entries, sizeof(entries), &count)) < 0) {
             if (status == ZX_ERR_SHOULD_WAIT) {
                 zx_signals_t observed;
                 if ((status = zx_object_wait_one(edev->tx_fifo,
