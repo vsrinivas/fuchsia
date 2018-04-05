@@ -14,12 +14,12 @@
 #include "peridot/bin/user_runner/user_runner_impl.h"
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
-    const bool disable_statistics, fxl::RefPtr<fxl::TaskRunner> task_runner,
+    const bool disable_statistics, async_t* async,
     component::ApplicationContext* const application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return modular::InitializeCobalt(task_runner, application_context);
+  return modular::InitializeCobalt(async, application_context);
 }
 
 int main(int argc, const char** argv) {
@@ -32,7 +32,7 @@ int main(int argc, const char** argv) {
       component::ApplicationContext::CreateFromStartupInfo();
 
   fxl::AutoCall<fxl::Closure> cobalt_cleanup = SetupCobalt(
-      test, std::move(loop.task_runner()), app_context.get());
+      test, std::move(loop.async()), app_context.get());
 
   modular::AppDriver<modular::UserRunnerImpl> driver(
       app_context->outgoing_services(),

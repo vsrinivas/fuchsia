@@ -4,6 +4,8 @@
 
 #include "peridot/lib/cobalt/cobalt.h"
 
+#include <lib/async/default.h>
+
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/clone.h"
@@ -86,28 +88,6 @@ bool Equals(const fidl::VectorPtr<ObservationValue>& v1,
 constexpr int32_t kFakeCobaltProjectId = 1;
 constexpr int32_t kFakeCobaltMetricId = 2;
 constexpr int32_t kFakeCobaltEncodingId = 3;
-
-class FakeTaskRunner : public fxl::TaskRunner {
- public:
-  inline static fxl::RefPtr<FakeTaskRunner> Create() {
-    return AdoptRef(new FakeTaskRunner());
-  }
-
-  void PostTask(fxl::Closure task) override {}
-
-  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time) override {
-  }
-
-  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay) override {}
-
-  bool RunsTasksOnCurrentThread() override {
-    runs_task_on_current_thread_called = true;
-    return true;
-  }
-
-  bool runs_task_on_current_thread_called = false;
-};
-
 
 class FakeCobaltEncoderImpl : public CobaltEncoder {
  public:
@@ -238,14 +218,10 @@ class FakeCobaltEncoderFactoryImpl : public CobaltEncoderFactory {
 
 class CobaltTest : public gtest::TestWithMessageLoop {
  public:
-  CobaltTest()
-      : app_context_(InitApplicationContext()),
-        task_runner_(FakeTaskRunner::Create()) {}
+  CobaltTest() : app_context_(InitApplicationContext()) {  }
   ~CobaltTest() override {}
 
   component::ApplicationContext* app_context() { return app_context_.get(); }
-
-  fxl::RefPtr<FakeTaskRunner> task_runner() { return task_runner_; }
 
   FakeCobaltEncoderImpl* cobalt_encoder() {
     return factory_impl_->cobalt_encoder();
@@ -276,7 +252,6 @@ class CobaltTest : public gtest::TestWithMessageLoop {
   std::unique_ptr<FakeCobaltEncoderImpl> cobalt_encoder_;
   std::unique_ptr<component::ApplicationContext> app_context_;
   fidl::BindingSet<CobaltEncoderFactory> factory_bindings_;
-  fxl::RefPtr<FakeTaskRunner> task_runner_;
   fidl::InterfaceRequest<component::ApplicationLauncher> app_launcher_request_;
   fidl::InterfaceRequest<component::ApplicationEnvironment>
       app_environment_request_;
@@ -285,8 +260,8 @@ class CobaltTest : public gtest::TestWithMessageLoop {
 
 TEST_F(CobaltTest, InitializeCobalt) {
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   EXPECT_NE(cobalt_context, nullptr);
   ac.call();
   EXPECT_EQ(cobalt_context, nullptr);
@@ -298,8 +273,8 @@ TEST_F(CobaltTest, ReportIndexObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 CloneType(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -311,8 +286,8 @@ TEST_F(CobaltTest, ReportIntObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 CloneType(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -324,8 +299,8 @@ TEST_F(CobaltTest, ReportDoubleObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 CloneType(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -337,8 +312,8 @@ TEST_F(CobaltTest, ReportStringObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 CloneType(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -355,8 +330,8 @@ TEST_F(CobaltTest, ReportIntBucketObservation) {
   CobaltObservation observation(kFakeCobaltMetricId, kFakeCobaltEncodingId,
                                 CloneType(value));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddObservation", value);
@@ -375,8 +350,8 @@ TEST_F(CobaltTest, ReportMultipartObservation) {
   CobaltObservation observation(static_cast<uint32_t>(kFakeCobaltMetricId),
                                 CloneType(parts));
   CobaltContext* cobalt_context = nullptr;
-  auto ac = InitializeCobalt(task_runner(), app_context(), kFakeCobaltProjectId,
-                             &cobalt_context);
+  auto ac = InitializeCobalt(async_get_default(), app_context(),
+                             kFakeCobaltProjectId, &cobalt_context);
   ReportObservation(observation, cobalt_context);
   RunLoopUntilIdle();
   cobalt_encoder()->ExpectCalledOnceWith("AddMultipartObservation", parts);

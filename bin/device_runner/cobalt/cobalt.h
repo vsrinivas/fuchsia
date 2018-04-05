@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
 #define PERIDOT_BIN_DEVICE_RUNNER_COBALT_COBALT_H_
 
+#include <lib/async/dispatcher.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace modular {
 
@@ -37,7 +38,7 @@ enum class ModularEvent : uint32_t {
 // Cobalt initialization. When cobalt is not needed, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* app_context);
 
 // Report a modular event to Cobalt.

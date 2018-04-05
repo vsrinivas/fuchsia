@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include <lib/async/dispatcher.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
@@ -45,12 +46,12 @@ struct AppParams {
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
     bool disable_statistics,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* application_context) {
   if (disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return InitializeCobalt(std::move(task_runner), application_context);
+  return InitializeCobalt(async, application_context);
 };
 
 // App is the main entry point of the Ledger application.
@@ -67,7 +68,7 @@ class App : public ledger_internal::LedgerController {
         application_context_(
             component::ApplicationContext::CreateFromStartupInfo()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
-                                    loop_.task_runner(),
+                                    loop_.async(),
                                     application_context_.get())) {
     FXL_DCHECK(application_context_);
 
@@ -76,7 +77,7 @@ class App : public ledger_internal::LedgerController {
   ~App() override {}
 
   bool Start() {
-    environment_ = std::make_unique<Environment>(loop_.task_runner());
+    environment_ = std::make_unique<Environment>(loop_.task_runner(), loop_.async());
     auto user_communicator_factory =
         std::make_unique<p2p_sync::UserCommunicatorFactory>(
             environment_.get(), application_context_.get());

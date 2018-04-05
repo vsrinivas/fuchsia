@@ -8,6 +8,8 @@
 
 #include <fuchsia/cpp/cobalt.h>
 #include <fuchsia/cpp/component.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/callback/waiter.h"
@@ -178,10 +180,10 @@ CobaltObservation& CobaltObservation::operator=(CobaltObservation&& rhs) {
   return *this;
 }
 
-CobaltContext::CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
+CobaltContext::CobaltContext(async_t* async,
                              component::ApplicationContext* app_context,
                              int32_t project_id)
-    : task_runner_(std::move(task_runner)),
+    : async_(async),
       app_context_(app_context),
       project_id_(project_id) {
   ConnectToCobaltApplication();
@@ -195,13 +197,13 @@ CobaltContext::~CobaltContext() {
 }
 
 void CobaltContext::ReportObservation(CobaltObservation observation) {
-  if (task_runner_->RunsTasksOnCurrentThread()) {
+  if (async_ == async_get_default()) {
     ReportObservationOnMainThread(std::move(observation));
     return;
   }
 
   // Hop to the main thread, and go back to the global object dispatcher.
-  task_runner_->PostTask([observation = std::move(observation), this]() {
+  async::PostTask(async_, [observation = std::move(observation), this]() {
       ::cobalt::ReportObservation(observation, this); });
 }
 
@@ -221,8 +223,9 @@ void CobaltContext::OnConnectionError() {
                                observations_in_transit_.end());
   observations_in_transit_.clear();
   encoder_.Unbind();
-  task_runner_->PostDelayedTask([this] { ConnectToCobaltApplication(); },
-                                backoff_.GetNext());
+  async::PostDelayedTask(async_,
+                        [this] { ConnectToCobaltApplication(); },
+                        zx::nsec(backoff_.GetNext().ToNanoseconds()));
 }
 
 void CobaltContext::ReportObservationOnMainThread(
@@ -268,14 +271,15 @@ void CobaltContext::SendObservations() {
     // A transient error happened, retry after a delay.
     // TODO(miguelfrde): issue if we delete the context while a retry is in
     // flight.
-    task_runner_->PostDelayedTask(
+    async::PostDelayedTask(
+        async_,
         [this]() {
           observations_to_send_.insert(observations_in_transit_.begin(),
                                  observations_in_transit_.end());
           observations_in_transit_.clear();
           SendObservations();
         },
-        backoff_.GetNext());
+        zx::nsec(backoff_.GetNext().ToNanoseconds()));
   });
 }
 
@@ -305,12 +309,12 @@ void CobaltContext::AddObservationCallback(CobaltObservation observation,
 }
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* app_context, int32_t project_id,
     CobaltContext** cobalt_context) {
   FXL_DCHECK(!*cobalt_context);
-  auto context = std::make_unique<CobaltContext>(std::move(task_runner),
-                                                 app_context, project_id);
+  auto context = std::make_unique<CobaltContext>(async, app_context,
+                                                 project_id);
   *cobalt_context = context.get();
   return fxl::MakeAutoCall<fxl::Closure>(fxl::MakeCopyable(
       [context = std::move(context), cobalt_context]() mutable {

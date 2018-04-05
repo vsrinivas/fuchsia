@@ -15,7 +15,6 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace cobalt {
 
@@ -47,8 +46,8 @@ class CobaltObservation {
 
 class CobaltContext {
  public:
-  CobaltContext(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                component::ApplicationContext* app_context, int32_t project_id);
+  CobaltContext(async_t* async, component::ApplicationContext* app_context,
+                int32_t project_id);
   ~CobaltContext();
 
   void ReportObservation(CobaltObservation observation);
@@ -61,7 +60,7 @@ class CobaltContext {
   void AddObservationCallback(CobaltObservation observation, Status status);
 
   backoff::ExponentialBackoff backoff_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   component::ApplicationContext* app_context_;
   CobaltEncoderPtr encoder_;
   const int32_t project_id_;
@@ -75,7 +74,7 @@ class CobaltContext {
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* app_context, int32_t project_id,
     CobaltContext** cobalt_context);
 

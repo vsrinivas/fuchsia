@@ -17,9 +17,9 @@ cobalt::CobaltContext* g_cobalt_context = nullptr;
 }  // namespace
 
 fxl::AutoCall<fxl::Closure> InitializeCobalt(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* app_context) {
-  return cobalt::InitializeCobalt(task_runner, app_context,
+  return cobalt::InitializeCobalt(async, app_context,
                                   kLedgerCobaltProjectId, &g_cobalt_context);
 }
 

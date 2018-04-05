@@ -7,6 +7,7 @@
 #include <string>
 
 #include <fs/pseudo-file.h>
+#include <lib/async/dispatcher.h>
 #include <trace-provider/provider.h>
 
 #include <fuchsia/cpp/component.h>
@@ -370,12 +371,12 @@ class DeviceRunnerApp : DeviceShellContext,
 
 fxl::AutoCall<fxl::Closure> SetupCobalt(
     Settings& settings,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     component::ApplicationContext* app_context) {
   if (settings.disable_statistics) {
     return fxl::MakeAutoCall<fxl::Closure>([] {});
   }
-  return InitializeCobalt(task_runner, app_context);
+  return InitializeCobalt(async, app_context);
 };
 
 }  // namespace
@@ -394,7 +395,7 @@ int main(int argc, const char** argv) {
   auto app_context = std::shared_ptr<component::ApplicationContext>(
       component::ApplicationContext::CreateFromStartupInfo());
   fxl::AutoCall<fxl::Closure> cobalt_cleanup =
-      SetupCobalt(settings, std::move(loop.task_runner()), app_context.get());
+      SetupCobalt(settings, std::move(loop.async()), app_context.get());
 
   modular::DeviceRunnerApp app(settings, app_context, [&loop, &cobalt_cleanup] {
     cobalt_cleanup.call();

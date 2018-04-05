@@ -39,5 +39,6 @@ source_set("unittests") {
   deps = [
     ":cobalt",
     "//garnet/lib/gtest",
+    "//zircon/public/lib/async-testutils"
   ]
 }
