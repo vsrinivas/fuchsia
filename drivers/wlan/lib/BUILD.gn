@@ -9,6 +9,7 @@ config("drivers_wlan_lib_config") {
 source_set("lib") {
   sources = [
     "include/wlan/async/dispatcher.h",
+    "include/wlan/wlanmac-ifc-proxy.h",
   ]
 
   public_configs = [ ":drivers_wlan_lib_config" ]
