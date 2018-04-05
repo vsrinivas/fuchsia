@@ -21,7 +21,7 @@ class EchoServerApp : public Echo {
           bindings_.AddBinding(
               this, fidl::InterfaceRequest<Echo>(std::move(request)));
         },
-        "echo2.Echo");
+        Echo::Name_);
   }
 
   ~EchoServerApp() {}

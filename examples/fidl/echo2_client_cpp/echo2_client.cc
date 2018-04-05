@@ -30,7 +30,7 @@ class EchoClientApp {
                                             controller_.NewRequest());
 
     echo_provider_.ConnectToService(echo_.NewRequest().TakeChannel(),
-                                    "echo2.Echo");
+                                    Echo::Name_);
   }
 
  private:

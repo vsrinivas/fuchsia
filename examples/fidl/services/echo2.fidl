@@ -4,6 +4,7 @@
 
 library echo2;
 
+[ServiceName="echo2.Echo"]
 interface Echo {
-  1: EchoString(string? value) -> (string? value);
+  1: EchoString(string? value) -> (string? response);
 };
