@@ -58,3 +58,12 @@ enum PresentationMode {
   TABLET = 2;
   TENT = 3;
 };
+
+// Tell client that the screen mode has changed, according to sensors.
+// N.B. There can be a race where the actual mode continues to change, after
+// the listener has been notified. The client must call GetPresentationMode(),
+// which will return the latest detected mode.
+interface PresentationModeListener {
+  1: OnModeChanged();
+};
+
