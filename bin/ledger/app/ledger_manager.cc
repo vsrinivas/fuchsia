@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <trace/event.h>
+
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -73,6 +75,8 @@ class LedgerManager::PageManagerContainer {
   // all awaiting callbacks and binds all pages in case of success.
   void SetPageManager(Status status,
                       std::unique_ptr<PageManager> page_manager) {
+    TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
+
     FXL_DCHECK(!page_manager_);
     FXL_DCHECK((status != Status::OK) == !page_manager);
     status_ = status;

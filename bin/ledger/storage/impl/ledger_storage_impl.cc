@@ -9,6 +9,7 @@
 
 #include <dirent.h>
 
+#include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/path.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -57,17 +58,19 @@ LedgerStorageImpl::~LedgerStorageImpl() {}
 void LedgerStorageImpl::CreatePageStorage(
     PageId page_id,
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "ledger_storage_create_page_storage");
   std::string path = GetPathFor(page_id);
   if (!files::CreateDirectory(path)) {
     FXL_LOG(ERROR) << "Failed to create the storage directory in " << path;
-    callback(Status::INTERNAL_IO_ERROR, nullptr);
+    timed_callback(Status::INTERNAL_IO_ERROR, nullptr);
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(
       task_runner_, coroutine_service_, encryption_service_, path,
       std::move(page_id));
   result->Init(
-      fxl::MakeCopyable([callback = std::move(callback),
+      fxl::MakeCopyable([callback = std::move(timed_callback),
                          result = std::move(result)](Status status) mutable {
         if (status != Status::OK) {
           FXL_LOG(ERROR) << "Failed to initialize PageStorage. Status: "
@@ -82,25 +85,28 @@ void LedgerStorageImpl::CreatePageStorage(
 void LedgerStorageImpl::GetPageStorage(
     PageId page_id,
     std::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
+  auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
+                                       "ledger_storage_get_page_storage");
   std::string path = GetPathFor(page_id);
-  if (files::IsDirectory(path)) {
-    auto result = std::make_unique<PageStorageImpl>(
-        task_runner_, coroutine_service_, encryption_service_, path,
-        std::move(page_id));
-    result->Init(
-        fxl::MakeCopyable([callback = std::move(callback),
-                           result = std::move(result)](Status status) mutable {
-          if (status != Status::OK) {
-            callback(status, nullptr);
-            return;
-          }
-          callback(status, std::move(result));
-        }));
+  if (!files::IsDirectory(path)) {
+    // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need
+    // to check in the cloud.
+    timed_callback(Status::NOT_FOUND, nullptr);
     return;
   }
-  // TODO(nellyv): Maybe the page exists but is not synchronized, yet. We need
-  // to check in the cloud.
-  callback(Status::NOT_FOUND, nullptr);
+
+  auto result = std::make_unique<PageStorageImpl>(
+      task_runner_, coroutine_service_, encryption_service_, path,
+      std::move(page_id));
+  result->Init(
+      fxl::MakeCopyable([callback = std::move(timed_callback),
+                         result = std::move(result)](Status status) mutable {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        callback(status, std::move(result));
+      }));
 }
 
 bool LedgerStorageImpl::DeletePageStorage(PageIdView page_id) {
