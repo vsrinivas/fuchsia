@@ -44,10 +44,10 @@ interface DeviceListener {
 interface DeviceService {
   1: ListPhys() -> (ListPhysResponse resp);
   2: ListIfaces() -> (ListIfacesResponse resp);
-  3: CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
-  4: DestroyIface(DestroyIfaceRequest req);
+  3: CreateIface(CreateIfaceRequest req) -> (int32 @status, CreateIfaceResponse? resp);
+  4: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
 
   // Each client may register one DeviceListener to be notified of device
   // events. A client is unregistered by closing the channel.
-  5: RegisterListener(DeviceListener listener);
+  5: RegisterListener(DeviceListener listener) -> (int32 @status);
 };

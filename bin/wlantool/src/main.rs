@@ -14,6 +14,7 @@ extern crate fidl_wlan_device as wlan;
 extern crate fidl_wlan_device_service as wlan_service;
 extern crate fuchsia_async as async;
 extern crate fuchsia_app as component;
+extern crate fuchsia_zircon as zx;
 extern crate futures;
 #[macro_use]
 extern crate structopt;
@@ -93,7 +94,11 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc)
             };
 
             wlan_svc.destroy_iface(&mut req)
-                .map(|()| println!("deleted iface {:?}", iface_id))
+                .map(move |status| {
+                    match zx::Status::ok(status) {
+                        Ok(()) =>println!("destroyed iface {:?}", iface_id),
+                        Err(s) => println!("error destroying iface: {:?}", s),
+                    }})
                 .map_err(|e| e.context("error destroying iface").into())
                 .into_future()
                 .right()

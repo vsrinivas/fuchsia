@@ -15,8 +15,9 @@ extern crate futures;
 extern crate fidl_wlan_device as wlan;
 extern crate fidl_wlan_device_service as wlan_service;
 
-use failure::{Error, ResultExt};
+use failure::{Error, Fail, ResultExt};
 use futures::prelude::*;
+use futures::future;
 use wlan_service::{
     DeviceListener,
     DeviceListenerImpl,
@@ -43,17 +44,17 @@ fn device_listener(svc: DeviceServiceProxy) -> impl DeviceListener {
 
         on_phy_removed: |_, id, _| {
             println!("wlancfg: phy removed: {}", id);
-            futures::future::ok(())
+            future::ok(())
         },
 
         on_iface_added: |_, phy_id, iface_id, _| {
             println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
-            futures::future::ok(())
+            future::ok(())
         },
 
         on_iface_removed: |_, phy_id, iface_id, _| {
             println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
-            futures::future::ok(())
+            future::ok(())
         },
     }
 }
@@ -74,11 +75,19 @@ fn main_res() -> Result<(), Error> {
     let local = async::Channel::from_channel(local).context("failed to make async channel")?;
 
     let mut remote_ptr = fidl::endpoints2::ClientEnd::<DeviceListenerMarker>::new(remote);
-    wlan_svc
+    let fut = wlan_svc
         .register_listener(&mut remote_ptr)
-        .context("failed to register listener")?;
+        .map_err(|e| Error::from(e).context("failed to register listener"))
+        .and_then(|status| {
+            zx::Status::ok(status)
+                .map_err(|e| Error::from(e).context("failed to register listener"))
+                .into_future()
+        })
+        .and_then(|_| {
+            device_listener(wlan_svc)
+                .serve(local)
+                .map_err(|e| e.context("Device listener failed"))
+        });
 
-    let listener_fut = device_listener(wlan_svc).serve(local);
-
-    executor.run_singlethreaded(listener_fut).map_err(Into::into)
+    executor.run_singlethreaded(fut).map_err(|e| e.into())
 }

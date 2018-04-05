@@ -84,6 +84,7 @@ struct PhyInfo {
 };
 
 struct QueryResponse {
+  int32 @status;
   PhyInfo info;
 };
 

@@ -9,6 +9,7 @@ use fidl;
 use futures::future::{self, FutureResult};
 use futures::{Future, FutureExt, Never, StreamExt};
 use wlan_service::{self, DeviceListenerProxy, DeviceService, DeviceServiceImpl};
+use zx;
 
 fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
 where
@@ -57,33 +58,35 @@ pub fn device_service(
             state
                 .lock()
                 .create_iface(req.phy_id, req.role)
-                .then(move |res| match res {
-                    Ok(id) => catch_and_log_err("create_iface", || {
-                        c.send(&mut wlan_service::CreateIfaceResponse { iface_id: id })
-                    }),
+                .then(move |res| catch_and_log_err("create_iface", || match res {
+                    Ok(id) => {
+                        c.send(&mut zx::Status::OK.into_raw(), &mut Some(Box::new(wlan_service::CreateIfaceResponse { iface_id: id })))
+                    },
                     Err(e) => {
                         error!("could not create iface: {:?}", e);
-                        future::ok(())
+                        c.send(&mut e.into_raw(), &mut None)
                     }
-                })
+                }))
         },
 
-        destroy_iface: |state, req, _| {
+        destroy_iface: |state, req, c| {
             debug!("destroy_iface req: {:?}", req);
             state
                 .lock()
                 .destroy_iface(req.phy_id, req.iface_id)
-                .map(move |_| info!("successfully destroyed iface {}", req.iface_id))
-                .recover(|e| error!("could not destroy iface: {:?}", e))
+                .then(move |res| catch_and_log_err("destroy_iface", || match res {
+                    Ok(()) => c.send(&mut zx::Status::OK.into_raw()),
+                    Err(e) => c.send(&mut e.into_raw())
+                }))
         },
 
-        register_listener: |state, listener, _| {
+        register_listener: |state, listener, c| {
             catch_and_log_err("register_listener", || {
                 debug!("register listener");
                 if let Ok(proxy) = listener.into_proxy() {
                     state.lock().add_listener(Box::new(proxy));
                 }
-                Ok(())
+                c.send(&mut zx::Status::OK.into_raw())
             })
         },
     }.serve(channel)
