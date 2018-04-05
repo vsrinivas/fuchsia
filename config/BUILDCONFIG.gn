@@ -126,14 +126,6 @@ if (is_fuchsia) {
   default_library_type = "static_library"
 }
 
-# TODO(mcgrathr): This variable is obsolete but still used
-# by //topaz/runtime/web_view/BUILD.gn; fix that and then remove it.
-current_toolchain_variant = toolchain_variant.suffix
-
-# TODO(mcgrathr): This variable is obsolete but still used
-# by //garnet/public/lib/fidl/build/*/*.gni; fix that and then remove it.
-current_base_toolchain = toolchain_variant.base
-
 # When we are in a variant of host_toolchain, change the value of
 # host_toolchain so that `if (current_toolchain == host_toolchain)` tests
 # still match, since that is the conventional way to detect being in host
