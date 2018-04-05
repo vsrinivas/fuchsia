@@ -4,6 +4,12 @@
 
 library media;
 
+const string kProblemInternal = "ProblemInternal";
+const string kProblemAssetNotFound = "ProblemAssetNotFound";
+const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
+const string kProblemMediaTypeNotSupported = "ProblemMediaTypeNotSupported";
+const string kProblemConnectionFailed = "ProblemConnectionFailed";
+
 // Models a problem preventing intended operation.
 //
 // A |Problem| is generally surfaced as part of a component's status, probably
@@ -15,11 +21,6 @@ library media;
 // issue that caused it to be exposed is resolved. By design, there is no
 // general means of dismissing a |Problem|.
 struct Problem {
-  const string kProblemInternal = "ProblemInternal";
-  const string kProblemAssetNotFound = "ProblemAssetNotFound";
-  const string kProblemContainerNotSupported = "ProblemContainerNotSupported";
-  const string kProblemMediaTypeNotSupported = "ProblemMediaTypeNotSupported";
-  const string kProblemConnectionFailed = "ProblemConnectionFailed";
 
   // The type of problem. This is a string for extensibility.
   string type;

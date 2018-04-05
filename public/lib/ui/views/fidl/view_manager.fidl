@@ -8,6 +8,9 @@ library views_v1;
 // import "lib/ui/views/fidl/view_trees.fidl";
 // import "lib/ui/views/fidl/views.fidl";
 
+// Maximum length for a view or view tree label.
+const uint32 kLabelMaxLength = 32;
+
 // The view manager manages trees of views which represent user interface
 // components.
 //
@@ -20,8 +23,6 @@ library views_v1;
 // Refer to |View| and |ViewTree| for more information about these objects.
 [ServiceName="views_v1::ViewManager"]
 interface ViewManager {
-  // Maximum length for a view or view tree label.
-  const uint32 kLabelMaxLength = 32;
 
   // Gets the scenic instance associated with this view manager.
   // All graphical content for this view manager's views and view trees

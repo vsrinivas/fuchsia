@@ -8,13 +8,13 @@ using component;
 
 // import "lib/app/fidl/service_provider.fidl";
 
+// Special value for GetKnownDeviceNames version_last_seen parameter to
+// get the current status immediately.
+const uint64 kInitialKnownDeviceNames = 0;
+
 // Primary netconnector service definition.
 [ServiceName="netconnector::NetConnector"]
 interface NetConnector {
-  // Special value for GetKnownDeviceNames version_last_seen parameter to
-  // get the current status immediately.
-  const uint64 kInitialKnownDeviceNames = 0;
-
   // Registers a running responding service. |service_name| identifies the
   // service and is the same name used in |ConnectToService|. |service_provider|
   // provides the service. This method is provided so that responding services

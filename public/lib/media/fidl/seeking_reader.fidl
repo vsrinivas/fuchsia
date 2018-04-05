@@ -6,10 +6,10 @@ library media;
 
 // import "lib/media/fidl/media_result.fidl";
 
+const uint64 kUnknownSize = 0xffffffffffffffff;
+
 // Reader with seek semantics.
 interface SeekingReader {
-  const uint64 kUnknownSize = 0xffffffffffffffff;
-
   // Gets the content size and whether the reader can seek. The |result|
   // callback parameter is |OK| unless there was a problem accessing the
   // content to be read. Other possible values:

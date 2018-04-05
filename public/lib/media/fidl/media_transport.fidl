@@ -118,6 +118,8 @@ interface MediaPacketProducer {
   2: Disconnect();
 };
 
+const uint64 kMaxBufferLen = 0x3FFFFFFFFFFFFFFF;
+
 // Models a stream consumer. A MediaPacketConsumer allows a client to send
 // packets directly to the consumer or to connect the consumer to a
 // MediaPacketProducer so packets flow from the producer to the consumer.
@@ -130,8 +132,6 @@ interface MediaPacketProducer {
 // producer and consumer. The producer then calls PushPacket on the consumer to
 // deliver packets.
 interface MediaPacketConsumer {
-  const uint64 kMaxBufferLen = 0x3FFFFFFFFFFFFFFF;
-
   // Gets the demand. The consumer is free to respond to this method when it
   // sees fit to do so. Demand can be communicated in the response to
   // SupplyPacket, so this method is only used when the demand update can't wait

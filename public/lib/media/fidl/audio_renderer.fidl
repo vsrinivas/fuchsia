@@ -6,14 +6,14 @@ library media;
 
 // import "lib/media/fidl/media_types.fidl";
 
+// A special value which will always cause an audio renderer to become
+// explicitly muted.
+const float32 kMutedGain = -160.0;
+
+// The maximum permitted above-unity gain.
+const float32 kMaxGain = 24.0;
+
 interface AudioRenderer {
-  // A special value which will always cause an audio renderer to become
-  // explicitly muted.
-  const float32 kMutedGain = -160.0;
-
-  // The maximum permitted above-unity gain.
-  const float32 kMaxGain = 24.0;
-
   // Sets the current gain/attenuation of the renderer, expressed in dB.  Legal
   // values are in the range [-inf, 24.0].  Any value less than or equal to the
   // constant kMutedGain will result in the renderer becoming explicitly muted
@@ -60,6 +60,17 @@ interface AudioRendererGainControl {
 interface AudioRendererMinLeadTimeChangedEvent {
   2: OnMinLeadTimeChanged(int64 min_lead_time_nsec);
 };
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Methods and constants related to gain control.
+//
+// Audio renderer's permit the application control of gain expressed in
+// decibels along with an independent, stateful, mute control.  The initial
+// default settings are 0.0dB and mute=false.
+//
+const uint32 kGainFlagGainValid = 0x01;
+const uint32 kGainFlagMuteValid = 0x02;
 
 interface AudioRenderer2 {
   //////////////////////////////////////////////////////////////////////////////
@@ -303,17 +314,6 @@ interface AudioRenderer2 {
   // TODO(johngro): Collapse these if we ever have optional retvals in FIDL
   303: Pause() -> (int64 reference_time, int64 media_time);
   304: PauseNoReply();
-
-  //////////////////////////////////////////////////////////////////////////////
-  //
-  // Methods and constants related to gain control.
-  //
-  // Audio renderer's permit the application control of gain expressed in
-  // decibels along with an independent, stateful, mute control.  The initial
-  // default settings are 0.0dB and mute=false.
-  //
-  const uint32 kGainFlagGainValid = 0x01;
-  const uint32 kGainFlagMuteValid = 0x02;
 
   // Immediately set the gain/mute of an audio renderer gain stage to the values
   // specified, subject to the gain/mute validity flags.  By default (eg, with

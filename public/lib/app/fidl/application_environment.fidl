@@ -8,15 +8,15 @@ library component;
 // import "lib/app/fidl/application_environment_controller.fidl";
 // import "lib/app/fidl/service_provider.fidl";
 
+// Maximum length for an environment label.
+const uint32 kLabelMaxLength = 32;
+
 // An interface for managing a set of applications.
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
 [ServiceName="component.ApplicationEnvironment"]
 interface ApplicationEnvironment {
-  // Maximum length for an environment label.
-  const uint32 kLabelMaxLength = 32;
-
   // Creates a new environment nested inside this environment.
   //
   // When applications are created inside the nested environment using the

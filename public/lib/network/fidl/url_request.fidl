@@ -7,38 +7,38 @@ library network;
 // import "lib/network/fidl/http_header.fidl";
 // import "lib/network/fidl/url_body.fidl";
 
+// Specify the cache behavior of the request.
+enum CacheMode {
+  // Default behavior.
+  DEFAULT = 0;
+
+  // The HTTP request will bypass the local cache and will have a
+  // 'Cache-Control: nocache' header added in that causes any proxy servers
+  // to also not satisfy the request from their cache.  This has the effect
+  // of forcing a full end-to-end fetch.
+  BYPASS_CACHE = 1;
+
+  // The HTTP request will fail if it cannot serve the requested resource
+  // from the cache (or some equivalent local store).
+  ONLY_FROM_CACHE = 2;
+};
+
+// Specify the mechanism used to return the response body.
+enum ResponseBodyMode {
+  // The complete response body should be returned in the |buffer| field of
+  // the response body.
+  BUFFER = 0;
+  // The complete response body should be returned in the |sized_buffer| field of
+  // the response body.
+  SIZED_BUFFER = 1;
+  // The response body should be streamed through the |stream| field of the
+  // response body.
+  STREAM = 2;
+  // The response body may be returned as a buffer or stream.
+  BUFFER_OR_STREAM = 3;
+};
+
 struct URLRequest {
-  // Specify the cache behavior of the request.
-  enum CacheMode {
-    // Default behavior.
-    DEFAULT = 0;
-
-    // The HTTP request will bypass the local cache and will have a
-    // 'Cache-Control: nocache' header added in that causes any proxy servers
-    // to also not satisfy the request from their cache.  This has the effect
-    // of forcing a full end-to-end fetch.
-    BYPASS_CACHE = 1;
-
-    // The HTTP request will fail if it cannot serve the requested resource
-    // from the cache (or some equivalent local store).
-    ONLY_FROM_CACHE = 2;
-  };
-
-  // Specify the mechanism used to return the response body.
-  enum ResponseBodyMode {
-    // The complete response body should be returned in the |buffer| field of
-    // the response body.
-    BUFFER = 0;
-    // The complete response body should be returned in the |sized_buffer| field of
-    // the response body.
-    SIZED_BUFFER = 1;
-    // The response body should be streamed through the |stream| field of the
-    // response body.
-    STREAM = 2;
-    // The response body may be returned as a buffer or stream.
-    BUFFER_OR_STREAM = 3;
-  };
-
   // The URL to load.
   string url;
 

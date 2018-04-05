@@ -81,12 +81,12 @@ enum MdnsResult : int32 {
   ALREADY_PUBLISHED_ON_SUBNET = -4;
 };
 
+// Special value for GetInstances version_last_seen parameter to get the
+// current instances immediately.
+const uint64 kInitialInstances = 0;
+
 // Represents a subscription.
 interface MdnsServiceSubscription {
-  // Special value for GetInstances version_last_seen parameter to get the
-  // current instances immediately.
-  const uint64 kInitialInstances = 0;
-
   // Gets the known service instances. To get the list immediately, call
   // |GetInstances(kInitialInstances)|. To get updates thereafter, pass the
   // version sent in the previous callback.
