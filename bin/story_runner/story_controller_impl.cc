@@ -681,15 +681,15 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       DaisyPtr daisy,
       ResultCall result_call)
-
       : Operation("StoryControllerImpl::StartModuleCall",
                   container,
                   std::move(result_call),
                   module_url),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()),
-        module_url_(module_url),
-        link_name_(link_name),
+        module_path_(fidl::Clone(module_path)),
+        key_{MakeModuleKey(module_path_)},
+        module_url_(std::move(module_url)),
+        link_name_(std::move(link_name)),
         module_manifest_(std::move(module_manifest)),
         create_chain_info_(std::move(create_chain_info)),
         module_source_(module_source),
@@ -749,11 +749,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->module_stopped = false;
     module_data_->daisy = std::move(daisy_);
 
-    CreateChainInfoPtr create_chain_info;
-    fidl::Clone(create_chain_info_, &create_chain_info);
     // Initialize |module_data_->chain_data|.
     new InitializeChainCall(&operation_queue_, story_controller_impl_,
-                            module_path_.Clone(), std::move(create_chain_info),
+                            fidl::Clone(module_path_), fidl::Clone(create_chain_info_),
                             [this, flow](ChainDataPtr chain_data) {
                               module_data_->chain_data = std::move(*chain_data);
                               MaybeWriteModuleData(flow);
@@ -766,7 +764,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // Read the module data.
     new ReadDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(),
-        MakeModuleKey(module_path_), true /* not_found_is_ok */, XdrModuleData,
+        key_, true /* not_found_is_ok */, XdrModuleData,
         [this, flow](ModuleDataPtr data) {
           // If what we're about to write is already present on the ledger, just
           // launch the module.
@@ -779,11 +777,8 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   }
 
   void WriteModuleData(FlowToken flow) {
-    std::string key{MakeModuleKey(module_path_)};
-    ModuleDataPtr module_data;
-    fidl::Clone(module_data_, &module_data);
     new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
-                                    std::move(key), std::move(module_data),
+                                    key_, fidl::Clone(module_data_),
                                     [this, flow] { Launch(flow); });
   }
 
@@ -797,6 +792,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   // Passed in:
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
+  const std::string key_;
   const fidl::StringPtr module_url_;
   fidl::StringPtr link_name_;
   ModuleManifestPtr module_manifest_;
@@ -861,16 +857,10 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-    ModuleManifestPtr module_manifest;
-    fidl::Clone(module_manifest_, &module_manifest);
-    CreateChainInfoPtr create_chain_info;
-    fidl::Clone(create_chain_info_, &create_chain_info);
-    SurfaceRelationPtr surface_relation;
-    fidl::Clone(surface_relation_, &surface_relation);
     new StartModuleCall(
         &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        link_name_, std::move(module_manifest), std::move(create_chain_info),
-        module_source_, std::move(surface_relation),
+        link_name_, fidl::Clone(module_manifest_), fidl::Clone(create_chain_info_),
+        module_source_, fidl::Clone(surface_relation_),
         std::move(incoming_services_), std::move(module_controller_request_),
         view_owner_.NewRequest(), std::move(daisy_),
         [this, flow] { Cont(flow); });
