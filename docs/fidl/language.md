@@ -1,9 +1,9 @@
-# FIDL 2.0: Language Specification
+# FIDL: Language Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
-(FIDL) v2.0 syntax.
+(FIDL) syntax.
 
-See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
+See [FIDL: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]

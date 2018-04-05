@@ -1,9 +1,9 @@
-# FIDL 2.0: Wire Format Specification
+# FIDL: Wire Format Specification
 
 This document is a specification of the Fuchsia Interface Definition Language
-(FIDL) v2.0 data structure encoding.
+(FIDL) data structure encoding.
 
-See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
+See [FIDL: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]
@@ -860,7 +860,7 @@ this by keeping track of the current nesting level during message validation.
 
 Complex objects are arrays, vectors, structures, or unions which contain
 pointers or handles which require fix-up. These are precisely the kinds of
-objects for which **encoding tables** must be generated. See [FIDL 2.0: C
+objects for which **encoding tables** must be generated. See [FIDL: C
 Language Bindings](../c-language-bindings.md) for information about encoding
 tables. Therefore limiting the nesting depth of complex objects has the effect
 of limiting the recursion depth for traversal of encoding tables.

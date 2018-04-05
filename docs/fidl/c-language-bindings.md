@@ -1,9 +1,9 @@
-# FIDL 2.0: C Language Bindings
+# FIDL: C Language Bindings
 
-This document is a description of the Fuchsia Interface Definition Language v2.0
+This document is a description of the Fuchsia Interface Definition Language
 (FIDL) implementation for C, including its libraries and code generator.
 
-See [FIDL 2.0: Overview](index.md) for more information about FIDL's overall
+See [FIDL: Overview](index.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 [TOC]
