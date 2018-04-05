@@ -135,7 +135,7 @@ func (d unsupportedDirectory) Touch(lastAccess, lastModified time.Time) error {
 	return fs.ErrNotSupported
 }
 func (d unsupportedDirectory) Unlink(target string) error {
-	log.Printf("pkgfs:unsupported(%s): dir unlink", string(d))
+	log.Printf("pkgfs:unsupported(%s): dir unlink %q", string(d), target)
 	return fs.ErrNotSupported
 }
 
