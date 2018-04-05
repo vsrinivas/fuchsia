@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <zircon/boot/bootdata.h>
+#include <stddef.h>
 
-extern bootdata_t* bootdata_return;
+void fail(const char* message);
+void *memcpy(void *dest, const void *src, size_t count);
+int strcmp(char const *cs, char const *ct);
 
-uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel_bootdata);

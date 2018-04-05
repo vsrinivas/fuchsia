@@ -36,10 +36,9 @@ FUNCTION(_start)
     mrs     cpuid, mpidr_el1
     ubfx    cpuid, cpuid, #0, #15 /* mask Aff0 and Aff1 fields */
     cbnz    cpuid, .Lno_save_bootinfo
-    /* save x0 and x1 in boot_structure_paddrs */
-    adrp    tmp, boot_structure_paddrs
-    str     x0, [tmp, #:lo12:boot_structure_paddrs]
-    str     x1, [tmp, #:lo12:boot_structure_paddrs + 8]
+    /* save x0 in bootdata_paddr */
+    adrp    tmp, bootdata_paddr
+    str     x0, [tmp, #:lo12:bootdata_paddr]
     /* save entry point physical address in kernel_entry_paddr */
     adrp    tmp, kernel_entry_paddr
     adr     tmp2, _start
@@ -259,10 +258,9 @@ END_FUNCTION(_start)
 DATA(arch_boot_el)
     .quad 0xdeadbeef00ff00ff
 END_DATA(arch_boot_el)
-DATA(boot_structure_paddrs)
+DATA(bootdata_paddr)
     .quad -1
-    .quad -1
-END_DATA(boot_structure_paddrs)
+END_DATA(bootdata_paddr)
 DATA(kernel_entry_paddr)
     .quad -1
 END_DATA(kernel_entry_paddr)

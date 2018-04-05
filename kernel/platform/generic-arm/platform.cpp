@@ -47,7 +47,6 @@
 #include <kernel/thread.h>
 #endif
 
-#include <libfdt.h>
 #include <mdi/mdi-defs.h>
 #include <mdi/mdi.h>
 #include <pdev/pdev.h>
@@ -56,7 +55,7 @@
 
 // Defined in start.S.
 extern paddr_t kernel_entry_paddr;
-extern paddr_t boot_structure_paddrs[2];
+extern paddr_t bootdata_paddr;
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
@@ -115,96 +114,6 @@ void platform_panic_start(void) {
 #if WITH_LIB_DEBUGLOG
         dlog_bluescreen_init();
 #endif
-    }
-}
-
-// Reads Linux device tree to initialize command line and return ramdisk location
-static void read_device_tree(void *fdt, zx_paddr_t ftd_paddr, void** ramdisk_base,
-                             size_t* ramdisk_size, size_t* mem_size) {
-    paddr_t ramdisk_start_phys = 0;
-    paddr_t ramdisk_end_phys = 0;
-
-    if (ramdisk_base)
-        *ramdisk_base = nullptr;
-    if (ramdisk_size)
-        *ramdisk_size = 0;
-    if (mem_size)
-        *mem_size = 0;
-
-    if (fdt_check_header(fdt) < 0) {
-        printf("%s fdt_check_header failed\n", __FUNCTION__);
-        return;
-    }
-
-    // mark the range used by the FDT as reserved, in case we need it later
-    dprintf(INFO, "FDT: device tree located at [%#" PRIx64 ", %#" PRIx64 "]\n",
-            ftd_paddr, ftd_paddr + fdt_totalsize(fdt) - 1);
-    boot_reserve_add_range(ftd_paddr, fdt_totalsize(fdt));
-
-    int offset = fdt_path_offset(fdt, "/chosen");
-    if (offset < 0) {
-        printf("%s: fdt_path_offset(/chosen) failed\n", __FUNCTION__);
-        return;
-    }
-
-    int length;
-    const char* bootargs =
-        static_cast<const char*>(fdt_getprop(fdt, offset, "bootargs", &length));
-    if (bootargs) {
-        printf("kernel command line: %s\n", bootargs);
-        cmdline_append(bootargs);
-    }
-
-    if (ramdisk_base && ramdisk_size) {
-        const void* ptr = fdt_getprop(fdt, offset, "linux,initrd-start", &length);
-        if (ptr) {
-            if (length == 4) {
-                ramdisk_start_phys = fdt32_to_cpu(*(uint32_t*)ptr);
-            } else if (length == 8) {
-                ramdisk_start_phys = fdt64_to_cpu(*(uint64_t*)ptr);
-            }
-        }
-        ptr = fdt_getprop(fdt, offset, "linux,initrd-end", &length);
-        if (ptr) {
-            if (length == 4) {
-                ramdisk_end_phys = fdt32_to_cpu(*(uint32_t*)ptr);
-            } else if (length == 8) {
-                ramdisk_end_phys = fdt64_to_cpu(*(uint64_t*)ptr);
-            }
-        }
-        // Some bootloaders pass initrd via cmdline, lets look there
-        //  if we haven't found it yet.
-        if (!(ramdisk_start_phys && ramdisk_end_phys)) {
-            const char* value = cmdline_get("initrd");
-            if (value != NULL) {
-                char* endptr;
-                ramdisk_start_phys = strtoll(value, &endptr, 16);
-                endptr++; //skip the comma
-                ramdisk_end_phys = strtoll(endptr, NULL, 16) + ramdisk_start_phys;
-            }
-        }
-
-        if (ramdisk_start_phys && ramdisk_end_phys) {
-            *ramdisk_base = paddr_to_physmap(ramdisk_start_phys);
-            size_t length = ramdisk_end_phys - ramdisk_start_phys;
-            *ramdisk_size = (length + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-        }
-    }
-
-    // look for memory size. currently only used for qemu build
-    if (mem_size) {
-        offset = fdt_path_offset(fdt, "/memory");
-        if (offset < 0) {
-            printf("%s: fdt_path_offset(/memory) failed\n", __FUNCTION__);
-            return;
-        }
-        int lenp;
-        const void* prop_ptr = fdt_getprop(fdt, offset, "reg", &lenp);
-        if (prop_ptr && lenp == 0x10) {
-            /* we're looking at a memory descriptor */
-            //uint64_t base = fdt64_to_cpu(*(uint64_t *)prop_ptr);
-            *mem_size = fdt64_to_cpu(*((const uint64_t*)prop_ptr + 1));
-        }
     }
 }
 
@@ -353,17 +262,6 @@ static inline bool is_bootdata_container(void* addr) {
     return header->type == BOOTDATA_CONTAINER;
 }
 
-static void ramdisk_from_bootdata_container(void* bootdata,
-                                            void** ramdisk_base,
-                                            size_t* ramdisk_size) {
-    bootdata_t* header = (bootdata_t*)bootdata;
-
-    DEBUG_ASSERT(header->type == BOOTDATA_CONTAINER);
-
-    *ramdisk_base = (void*)bootdata;
-    *ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
-}
-
 static void process_mdi_banks(mdi_node_ref& map, void (*func)(const mem_bank&)) {
     mdi_node_ref_t bank_node;
     if (mdi_first_child(&map, &bank_node) == ZX_OK) {
@@ -458,12 +356,12 @@ static void platform_mdi_init(const bootdata_t* section) {
     }
 }
 
-static uint32_t process_bootsection(bootdata_t* section) {
+static uint32_t process_bootsection(bootdata_t* section, size_t* arena_size) {
     switch (section->type) {
     case BOOTDATA_MDI:
         platform_mdi_init(section);
         break;
-    case BOOTDATA_CMDLINE:
+    case BOOTDATA_CMDLINE: {
         if (section->length < 1) {
             break;
         }
@@ -472,11 +370,27 @@ static uint32_t process_bootsection(bootdata_t* section) {
         cmdline_append(contents);
         break;
     }
+    case BOOTDATA_MEM_CONFIG: {
+        if (*arena_size) {
+            break;
+        }
+        bootdata_mem_range_t* mem_range = reinterpret_cast<bootdata_mem_range_t*>(section + 1);
+        uint32_t count = section->length / (uint32_t)sizeof(bootdata_mem_range_t);
+        for (uint32_t i = 0; i < count; i++) {
+            if (mem_range->type == BOOTDATA_MEM_RANGE_RAM) {
+                *arena_size = mem_range->length;
+                break;
+            }
+            mem_range++;
+        }
+        break;
+    }
+    }
 
     return section->type;
 }
 
-static void process_bootdata(bootdata_t* root) {
+static void process_bootdata(bootdata_t* root, size_t* arena_size) {
     DEBUG_ASSERT(root);
 
     if (root->type != BOOTDATA_CONTAINER) {
@@ -502,7 +416,7 @@ static void process_bootdata(bootdata_t* root) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
-        const uint32_t type = process_bootsection(section);
+        const uint32_t type = process_bootsection(section, arena_size);
         if (BOOTDATA_MDI == type) {
             mdi_found = true;
         }
@@ -516,69 +430,35 @@ static void process_bootdata(bootdata_t* root) {
 }
 
 void platform_early_init(void) {
-    // if the boot_structure_paddr variable is -1, it was not set
+    // if the bootdata_paddr variable is -1, it was not set
     // in start.S, so we are in a bad place.
-    if (boot_structure_paddrs[0] == -1UL) {
-        panic("no bootdata structure!\n");
+    if (bootdata_paddr == -1UL) {
+        panic("no bootdata_paddr!\n");
     }
 
-    void* boot_structure_kvaddr0 = (boot_structure_paddrs[0]
-                                        ? paddr_to_physmap(boot_structure_paddrs[0]) : NULL);
-    void* boot_structure_kvaddr1 = (boot_structure_paddrs[1]
-                                        ? paddr_to_physmap(boot_structure_paddrs[1]) : NULL);
+    void* bootdata_vaddr = paddr_to_physmap(bootdata_paddr);
 
     // initialize the boot memory reservation system
     boot_reserve_init();
 
     size_t arena_size = 0;
 
-    // The previous environment passes us a boot structure. It may be a
-    // device tree or a bootdata container. We attempt to detect the type of the
-    // container and handle it appropriately.
-    if (boot_structure_kvaddr0) {
-        if (is_bootdata_container(boot_structure_kvaddr0)) {
-            dprintf(INFO, "found bootdata in x0\n");
-            ramdisk_from_bootdata_container(boot_structure_kvaddr0, &ramdisk_base,
-                                            &ramdisk_size);
-        } else {
-            // assume we have a device tree
-            // on qemu we read arena size from the device tree
-            read_device_tree(boot_structure_kvaddr0, boot_structure_paddrs[0], &ramdisk_base,
-                             &ramdisk_size, &arena_size);
-            dprintf(INFO, "found device tree in x0\n");
+    if (bootdata_vaddr && is_bootdata_container(bootdata_vaddr)) {
+        bootdata_t* header = (bootdata_t*)bootdata_vaddr;
 
-            if (boot_structure_kvaddr1) {
-                if (is_bootdata_container(boot_structure_kvaddr1)) {
-                    dprintf(INFO, "found bootdata in x1\n");
-                    // use bootdata that was passed from the loader shim instead of
-                    ramdisk_base = boot_structure_kvaddr1;
-                }
-            }
-
-            // Some legacy bootloaders do not properly set linux,initrd-end
-            // Pull the ramdisk size directly from the bootdata container
-            //   now that we have the base to ensure that the size is valid.
-            ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
-                                            &ramdisk_size);
-        }
-    } else if (boot_structure_kvaddr1) {
-        if (is_bootdata_container(boot_structure_kvaddr1)) {
-            dprintf(INFO, "found bootdata in x1\n");
-            // use bootdata that was passed from the loader shim instead of
-            ramdisk_base = boot_structure_kvaddr1;
-            ramdisk_from_bootdata_container(ramdisk_base, &ramdisk_base,
-                                            &ramdisk_size);
-        }
+        ramdisk_base = header;
+        ramdisk_size = ROUNDUP(header->length + sizeof(*header), PAGE_SIZE);
+    } else {
+        panic("no bootdata!\n");
     }
-
 
     if (!ramdisk_base || !ramdisk_size) {
         panic("no ramdisk!\n");
     }
 
-    // walk the bootdata structure, looking for MDI and command line
+    // walk the bootdata structure, looking for MDI, command line and arena_size
     // if MDI is found, process it. this will likely initialize platform drivers
-    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
+    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base), &arena_size);
 
     // Serial port should be active now
 
