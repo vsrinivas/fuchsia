@@ -10,8 +10,8 @@
 #include <ddk/protocol/usb.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <sync/completion.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
@@ -150,7 +150,10 @@ constexpr zx::duration Device::kDefaultBusyWait;
 
 Device::Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in,
                std::vector<uint8_t>&& bulk_out)
-    : parent_(device), usb_(usb), rx_endpt_(bulk_in), tx_endpts_(std::move(bulk_out)),
+    : parent_(device),
+      usb_(usb),
+      rx_endpt_(bulk_in),
+      tx_endpts_(std::move(bulk_out)),
       dispatcher_(ralink_async_t()) {
     debugf("Device dev=%p bulk_in=%u\n", parent_, rx_endpt_);
 }
@@ -2983,7 +2986,8 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
            rx_desc.ba(), rx_desc.data(), rx_desc.nulldata(), rx_desc.frag(),
            rx_desc.unicast_to_me(), rx_desc.multicast());
     debugf(
-        "          broadcast=%u my_bss=%u crc_error=%u cipher_error=%u amsdu=%u htc=%u rssi=%u\n",
+        "          broadcast=%u my_bss=%u crc_error=%u cipher_error=%u amsdu=%u htc=%u "
+        "rssi=%u\n",
         rx_desc.broadcast(), rx_desc.my_bss(), rx_desc.crc_error(), rx_desc.cipher_error(),
         rx_desc.amsdu(), rx_desc.htc(), rx_desc.rssi());
     debugf(
@@ -3088,7 +3092,8 @@ static uint16_t ralink_phy_to_ddk_phy(uint8_t ralink_phy) {
         return WLAN_PHY_OFDM;
     case PhyMode::kHtMixMode:
     case PhyMode::kHtGreenfield:
-        // TODO(tkilbourn): set a bit somewhere indicating greenfield format, if we ever support it.
+        // TODO(tkilbourn): set a bit somewhere indicating greenfield format, if we ever support
+        // it.
         return WLAN_PHY_HT;
     default:
         warnf("received unknown PHY: %u\n", ralink_phy);
@@ -3267,9 +3272,7 @@ void Device::Unbind() {
 
     // Stop accepting new FIDL requests. Once the dispatcher is shut down,
     // remove the device.
-    dispatcher_.InitiateShutdown([this]{
-        device_remove(zxdev_);
-    });
+    dispatcher_.InitiateShutdown([this] { device_remove(zxdev_); });
 }
 
 void Device::Release() {
@@ -3296,12 +3299,13 @@ void Device::MacUnbind() {
 
 void Device::MacRelease() {
     debugfn();
-    // Do not delete this right now, as the wlanmac device shares a context with the wlanphy device.
-    // When the wlanphy is released, then the memory will be freed. We do forget that this device
-    // existed though.
+    // Do not delete this right now, as the wlanmac device shares a context with the wlanphy
+    // device. When the wlanphy is released, then the memory will be freed. We do forget that
+    // this device existed though.
     std::lock_guard<std::mutex> guard(lock_);
     wlanmac_dev_ = nullptr;
-    // Bump the iface id in case the phy isn't being released and we want to create another iface.
+    // Bump the iface id in case the phy isn't being released and we want to create another
+    // iface.
     iface_id_++;
 }
 
@@ -3333,9 +3337,7 @@ zx_status_t Device::AddMacDevice() {
 
 zx_status_t Device::Connect(const void* buf, size_t len) {
     debugfn();
-    if (buf == nullptr || len < sizeof(zx_handle_t)) {
-        return ZX_ERR_INVALID_ARGS;
-    }
+    if (buf == nullptr || len < sizeof(zx_handle_t)) { return ZX_ERR_INVALID_ARGS; }
 
     zx_handle_t hnd = *reinterpret_cast<const zx_handle_t*>(buf);
     zx::channel chan(hnd);
@@ -3389,17 +3391,16 @@ void Device::Query(QueryCallback callback) {
         // Basic rates are given in units of 0.5Mbps
         band5.basic_rates.reset(std::vector<uint8_t>{12, 18, 24, 36, 48, 72, 96, 108});
         band5.supported_channels.base_freq = 5000;
-        band5.supported_channels.channels.reset(
-                std::vector<uint8_t>{
-                    // clang-format off
+        band5.supported_channels.channels.reset(std::vector<uint8_t>{
+            // clang-format off
                     36,  38,  40,  42,  44,  46,  48,  50,
                     52,  54,  56,  58,  60,  62,  64,  100,
                     102, 104, 106, 108, 110, 112, 114, 116,
                     118, 120, 122, 124, 126, 128, 130, 132,
                     134, 136, 138, 140, 149, 151, 153, 155,
                     157, 159, 161, 165, 184, 188, 192, 196,
-                    // clang-format on
-                });
+            // clang-format on
+        });
 
         info.bands->push_back(std::move(band5));
     }
@@ -3409,8 +3410,7 @@ void Device::Query(QueryCallback callback) {
     callback(std::move(resp));
 }
 
-void Device::CreateIface(wlan_device::CreateIfaceRequest req,
-                         CreateIfaceCallback callback) {
+void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallback callback) {
     debugfn();
     wlan_device::CreateIfaceResponse resp;
 
@@ -3441,8 +3441,7 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req,
     callback(std::move(resp));
 }
 
-void Device::DestroyIface(wlan_device::DestroyIfaceRequest req,
-                          DestroyIfaceCallback callback) {
+void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCallback callback) {
     debugfn();
     wlan_device::DestroyIfaceResponse resp;
 
