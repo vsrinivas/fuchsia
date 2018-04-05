@@ -88,9 +88,6 @@ FIDL always looks for unqualified symbols within the scope of the current
 library. To reference symbols in other libraries, they must be qualified by
 prefixing the identifier with the library name or alias.
 
-Names may also require qualification when they refer to symbols which have been
-declared within the scope of a **struct**, **union**, **enum**, or **interface**.
-
 **objects.fidl:**
 
 ```
@@ -254,8 +251,6 @@ The ordinal index is **required** for each enum element. The underlying type of
 an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
 uint64**. If omitted, the underlying type is assumed to be **uint32**.
 
-Enums may be scoped within: **library, struct, union, interface**.
-
 ```
 // An enum declared at library scope.
 enum Beverage : uint8 {
@@ -272,15 +267,6 @@ enum Vessel {
     BOWL = 1;
     TUREEN = 2;
     JUG = 3;
-};
-
-// An enum declared within an interface scope.
-interface VendingMachine {
-    enum PaymentMethod {
-        CASH = 0;
-        CREDIT = 1;
-        HONOR_SYSTEM = 2;
-    };
 };
 ```
 
@@ -597,16 +583,9 @@ struct Record {
 Constant declarations introduce a name within their scope. The constant's type
 must be either a primitive or an enum.
 
-Constants may be scoped within: **library, struct, union, interface**.
-
 ```
 // a constant declared at library scope
 const int32 kFavoriteNumber = 42;
-
-// a constant declared within an interface scope
-interface VendingMachine {
-    const Beverage kFavoriteBeverage = WHISKEY;
-};
 ```
 
 ### Constant Expressions

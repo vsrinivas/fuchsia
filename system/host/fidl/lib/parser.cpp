@@ -637,7 +637,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     return std::make_unique<raw::ParameterList>(std::move(parameter_list));
 }
 
-std::unique_ptr<raw::InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod() {
+std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod() {
     auto ordinal = ParseNumericLiteral();
     if (!Ok())
         return Fail();
@@ -686,7 +686,7 @@ std::unique_ptr<raw::InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod()
     assert(method_name);
     assert(maybe_request || maybe_response);
 
-    return std::make_unique<raw::InterfaceMemberMethod>(std::move(ordinal),
+    return std::make_unique<raw::InterfaceMethod>(std::move(ordinal),
                                                         std::move(method_name),
                                                         std::move(maybe_request),
                                                         std::move(maybe_response));
@@ -694,9 +694,7 @@ std::unique_ptr<raw::InterfaceMemberMethod> Parser::ParseInterfaceMemberMethod()
 
 std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     std::vector<std::unique_ptr<raw::CompoundIdentifier>> superinterfaces;
-    std::vector<std::unique_ptr<raw::ConstDeclaration>> const_members;
-    std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_members;
-    std::vector<std::unique_ptr<raw::InterfaceMemberMethod>> method_members;
+    std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
 
     ConsumeToken(Token::Kind::Interface);
     if (!Ok())
@@ -720,7 +718,7 @@ std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std
     if (!Ok())
         return Fail();
 
-    auto parse_member = [&const_members, &enum_members, &method_members, this]() {
+    auto parse_member = [&methods, this]() {
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
             return More;
@@ -730,16 +728,8 @@ std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std
             ConsumeToken(Token::Kind::RightCurly);
             return Done;
 
-        case Token::Kind::Const:
-            const_members.emplace_back(ParseConstDeclaration(std::move(attributes)));
-            return More;
-
-        case Token::Kind::Enum:
-            enum_members.emplace_back(ParseEnumDeclaration(std::move(attributes)));
-            return More;
-
         case Token::Kind::NumericLiteral:
-            method_members.emplace_back(ParseInterfaceMemberMethod());
+            methods.emplace_back(ParseInterfaceMethod());
             return More;
         }
     };
@@ -755,8 +745,7 @@ std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std
         Fail();
 
     return std::make_unique<raw::InterfaceDeclaration>(std::move(attributes), std::move(identifier),
-                                                       std::move(superinterfaces), std::move(const_members),
-                                                       std::move(enum_members), std::move(method_members));
+                                                       std::move(superinterfaces), std::move(methods));
 }
 
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
@@ -781,8 +770,6 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
 }
 
 std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
-    std::vector<std::unique_ptr<raw::ConstDeclaration>> const_members;
-    std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_members;
     std::vector<std::unique_ptr<raw::StructMember>> members;
 
     ConsumeToken(Token::Kind::Struct);
@@ -795,7 +782,7 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(std::uniq
     if (!Ok())
         return Fail();
 
-    auto parse_member = [&const_members, &enum_members, &members, this]() {
+    auto parse_member = [&members, this]() {
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
             return More;
@@ -804,14 +791,6 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(std::uniq
         default:
             ConsumeToken(Token::Kind::RightCurly);
             return Done;
-
-        case Token::Kind::Const:
-            const_members.emplace_back(ParseConstDeclaration(std::move(attributes)));
-            return More;
-
-        case Token::Kind::Enum:
-            enum_members.emplace_back(ParseEnumDeclaration(std::move(attributes)));
-            return More;
 
         TOKEN_TYPE_CASES:
             members.emplace_back(ParseStructMember());
@@ -833,7 +812,6 @@ std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(std::uniq
         return Fail();
 
     return std::make_unique<raw::StructDeclaration>(std::move(attributes), std::move(identifier),
-                                                    std::move(const_members), std::move(enum_members),
                                                     std::move(members));
 }
 
@@ -849,8 +827,6 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
 }
 
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
-    std::vector<std::unique_ptr<raw::ConstDeclaration>> const_members;
-    std::vector<std::unique_ptr<raw::EnumDeclaration>> enum_members;
     std::vector<std::unique_ptr<raw::UnionMember>> members;
 
     ConsumeToken(Token::Kind::Union);
@@ -863,7 +839,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(std::unique
     if (!Ok())
         return Fail();
 
-    auto parse_member = [&const_members, &enum_members, &members, this]() {
+    auto parse_member = [&members, this]() {
         std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
         if (!Ok())
             return More;
@@ -872,14 +848,6 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(std::unique
         default:
             ConsumeToken(Token::Kind::RightCurly);
             return Done;
-
-        case Token::Kind::Const:
-            const_members.emplace_back(ParseConstDeclaration(std::move(attributes)));
-            return More;
-
-        case Token::Kind::Enum:
-            enum_members.emplace_back(ParseEnumDeclaration(std::move(attributes)));
-            return More;
 
         TOKEN_TYPE_CASES:
             members.emplace_back(ParseUnionMember());
@@ -901,7 +869,6 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(std::unique
         Fail();
 
     return std::make_unique<raw::UnionDeclaration>(std::move(attributes), std::move(identifier),
-                                                   std::move(const_members), std::move(enum_members),
                                                    std::move(members));
 }
 

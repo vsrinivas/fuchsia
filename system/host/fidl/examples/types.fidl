@@ -43,9 +43,9 @@ struct default_values {
     string s = "hello";
 };
 
-struct arrays {
-    const uint32 arrays_size = 32;
+const uint32 arrays_size = 32;
 
+struct arrays {
     array<bool>:1 b_0;
     array<int8>:1 i8_0;
     array<int16>:1 i16_0;
@@ -86,9 +86,9 @@ struct arrays {
     array<array<handle>:4>:arrays_size handle_2;
 };
 
-struct vectors {
-    const uint32 vectors_size = 32;
+const uint32 vectors_size = 32;
 
+struct vectors {
     vector<bool> b_0;
     vector<int8> i8_0;
     vector<int16> i16_0;
@@ -259,9 +259,9 @@ struct handles {
     handle<timer>? nullable_timer_handle;
 };
 
-struct strings {
-    const uint32 strings_size = 32;
+const uint32 strings_size = 32;
 
+struct strings {
     string s;
     string? nullable_s;
     string:4 size_0_s;

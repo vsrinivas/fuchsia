@@ -390,15 +390,8 @@ bool Library::ConsumeInterfaceDeclaration(
     auto attributes = std::move(interface_declaration->attributes);
     auto name = Name(this, interface_declaration->identifier->location);
 
-    for (auto& const_member : interface_declaration->const_members)
-        if (!ConsumeConstDeclaration(std::move(const_member)))
-            return false;
-    for (auto& enum_member : interface_declaration->enum_members)
-        if (!ConsumeEnumDeclaration(std::move(enum_member)))
-            return false;
-
     std::vector<Interface::Method> methods;
-    for (auto& method : interface_declaration->method_members) {
+    for (auto& method : interface_declaration->methods) {
         auto ordinal_literal = std::move(method->ordinal);
         uint32_t value;
         if (!ParseIntegerLiteral<decltype(value)>(ordinal_literal.get(), &value))
@@ -446,13 +439,6 @@ bool Library::ConsumeInterfaceDeclaration(
 bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
     auto attributes = std::move(struct_declaration->attributes);
     auto name = Name(this, struct_declaration->identifier->location);
-
-    for (auto& const_member : struct_declaration->const_members)
-        if (!ConsumeConstDeclaration(std::move(const_member)))
-            return false;
-    for (auto& enum_member : struct_declaration->enum_members)
-        if (!ConsumeEnumDeclaration(std::move(enum_member)))
-            return false;
 
     std::vector<Struct::Member> members;
     for (auto& member : struct_declaration->members) {
