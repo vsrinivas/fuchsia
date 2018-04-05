@@ -101,8 +101,9 @@ ifeq ($(call TOBOOL,$(USE_CLANG)),true)
 KERNEL_COMPILEFLAGS += -mcmodel=kernel
 endif
 
-# tell the compiler to leave x18 alone so we can use it to point
-# at the current cpu structure
-KERNEL_COMPILEFLAGS += -ffixed-x18
+# x18 is reserved in the Fuchsia userland ABI so it can be used
+# for things like -fsanitize=shadow-call-stack.  In the kernel,
+# it's reserved so we can use it to point at the per-CPU structure.
+ARCH_COMPILEFLAGS += -ffixed-x18
 
 include make/module.mk
