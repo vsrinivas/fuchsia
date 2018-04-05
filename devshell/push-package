@@ -65,9 +65,9 @@ function main {
     done
   "
   if [[ -n "${device}" ]]; then
-    fx-command-run ssh "${device}" "${cmd}"
+    (fx-command-run ssh -q "${device}" "${cmd}") 1>&-
   else
-    fx-command-run shell "${cmd}"
+    (fx-command-run shell "${cmd}") 1>&-
   fi
 }
 
