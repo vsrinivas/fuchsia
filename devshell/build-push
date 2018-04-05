@@ -1,0 +1,72 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### build Fuchsia
+
+## usage: fx build-push [ninja option,...] [--device|-d device] [target,...]
+##
+## Build ALL targets. After building all the targets, push the ones that were
+## supplied to this command. If no targets were specified push all of them.
+## The packages are pushed to the device specified. If no device is supplied
+## explictly this will push to the single connected device. If multiple devices
+## are connected and no device is specified, pushing will fail.
+
+# XXX TODO(US-415): after US-415 is closed, this command can pass a specific
+# build target to ninja rather than running the default build target.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+fx-config-read
+
+function kill_background_jobs {
+  still_running=$(jobs -p)
+  if [[ -n "${still_running}" ]]; then
+    kill "${still_running}" 2> /dev/null
+  fi
+  wait 2> /dev/null
+}
+trap kill_background_jobs EXIT
+
+function main {
+  local args=()
+  local push=1
+  local targets=()
+  local device_args=()
+  while (($#)); do
+    case "$1" in
+      -C|-f|-j|-k|-l|-d|-t|-w)
+        args+=("$1")
+        shift
+        args+=("$1")
+        ;;
+      -n|-v)
+        args+=("$1")
+        ;;
+      -d|--device)
+        shift
+        device_args+=("-d" "$1")
+        ;;
+      --no-push)
+        push=0
+        ;;
+      *)
+        targets+=("$1")
+    esac
+    shift
+  done
+
+  fx-command-run build "${args[@]}"
+
+  if [[ "${push}" -eq 0 ]]; then
+    return
+  fi
+
+  fx-command-run serve-updates "${device_args[@]}" &
+
+  fx-command-run push-package-no-publish "${device_args[@]}" "${targets[@]}"
+}
+
+
+main "$@"
+# See kill_background_jobs trap for cleanup of backgrounded processes.
