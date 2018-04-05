@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     RunTracingDisabledBenchmarks();
     handler.Start();
 
-    async::Task task(0u);
+    async::Task task(zx::time(0));
     task.set_handler([](async_t* async, zx_status_t status) {
         RunTracingEnabledBenchmarks();
         RunNoTraceBenchmarks();

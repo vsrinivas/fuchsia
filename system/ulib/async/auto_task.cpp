@@ -8,8 +8,8 @@
 
 namespace async {
 
-AutoTask::AutoTask(async_t* async, zx_time_t deadline, uint32_t flags)
-    : async_task_t{{ASYNC_STATE_INIT}, &AutoTask::CallHandler, deadline, flags, {}},
+AutoTask::AutoTask(async_t* async, zx::time deadline, uint32_t flags)
+    : async_task_t{{ASYNC_STATE_INIT}, &AutoTask::CallHandler, deadline.get(), flags, {}},
       async_(async) {
     ZX_DEBUG_ASSERT(async_);
 }

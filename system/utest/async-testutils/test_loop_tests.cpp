@@ -17,7 +17,7 @@ namespace {
 
 // Initializes |task| to update |var| to point to |value| at time |deadline|.
 void InitVariableUpdateTask(async::Task* task, int* var, int value, zx::time deadline) {
-    task->set_deadline(deadline.get());
+    task->set_deadline(deadline);
     task->set_handler([var, value](async_t*, zx_status_t status) {
         if (status == ZX_OK) {
             *var = value;
@@ -134,7 +134,7 @@ bool compounded_task_posting_test() {
     InitVariableUpdateTask(&taskB, &var, 2, zx::time(0) + zx::sec(2));
 
     async::Task taskA;
-    taskA.set_deadline(1u);
+    taskA.set_deadline(zx::time(1));
     taskA.set_handler([&taskB, &var](async_t* async, zx_status_t status) {
         if (status == ZX_OK) {
             var = 1;
@@ -337,7 +337,7 @@ bool mixed_task_and_wait_posting_test() {
     });
 
     async::Task taskA;
-    taskA.set_deadline(1u);
+    taskA.set_deadline(zx::time(1));
     taskA.set_handler([&waitB, &var](async_t* async, zx_status_t status) {
         if (status == ZX_OK) {
             var = 1;

@@ -47,7 +47,7 @@ struct Handler {
             handler_ran = true;
             last_status = status;
             last_signal = signal;
-            wait->set_deadline(wait->deadline() + 100u);
+            wait->set_deadline(wait->deadline() + zx::nsec(100));
             return status == ZX_OK ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
         });
     }
@@ -66,7 +66,7 @@ bool timeout_test() {
         .count = 0u,
         .reserved0 = 0u,
         .reserved1 = 0u};
-    const zx_time_t dummy_deadline = 100u;
+    const zx::time dummy_deadline(100);
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;
@@ -75,7 +75,7 @@ bool timeout_test() {
         async::WaitWithTimeout default_wait;
         EXPECT_EQ(ZX_HANDLE_INVALID, default_wait.object(), "default object");
         EXPECT_EQ(ZX_SIGNAL_NONE, default_wait.trigger(), "default trigger");
-        EXPECT_EQ(ZX_TIME_INFINITE, default_wait.deadline(), "default deadline");
+        EXPECT_EQ(ZX_TIME_INFINITE, default_wait.deadline().get(), "default deadline");
         EXPECT_EQ(0u, default_wait.flags(), "default flags");
 
         default_wait.set_object(dummy_handle);
@@ -83,7 +83,7 @@ bool timeout_test() {
         default_wait.set_trigger(dummy_trigger);
         EXPECT_EQ(dummy_trigger, default_wait.trigger(), "set trigger");
         default_wait.set_deadline(dummy_deadline);
-        EXPECT_EQ(dummy_deadline, default_wait.deadline(), "set deadline");
+        EXPECT_EQ(dummy_deadline.get(), default_wait.deadline().get(), "set deadline");
         default_wait.set_flags(dummy_flags);
         EXPECT_EQ(dummy_flags, default_wait.flags(), "set flags");
 
@@ -91,7 +91,7 @@ bool timeout_test() {
 
         // Begin waiting without timeout (will be canceled immediately).
         MockAsync async;
-        default_wait.set_deadline(ZX_TIME_INFINITE);
+        default_wait.set_deadline(zx::time::infinite());
         EXPECT_EQ(ZX_OK, default_wait.Begin(&async), "begin, valid args");
         EXPECT_NONNULL(async.last_begin_wait, "begin wait called");
         EXPECT_NULL(async.last_post_task, "post task not called");
@@ -111,7 +111,7 @@ bool timeout_test() {
         async::WaitWithTimeout explicit_wait(dummy_handle, dummy_trigger, dummy_deadline, dummy_flags);
         EXPECT_EQ(dummy_handle, explicit_wait.object(), "explicit object");
         EXPECT_EQ(dummy_trigger, explicit_wait.trigger(), "explicit trigger");
-        EXPECT_EQ(dummy_deadline, explicit_wait.deadline(), "explicit deadline");
+        EXPECT_EQ(dummy_deadline.get(), explicit_wait.deadline().get(), "explicit deadline");
         EXPECT_EQ(dummy_flags, explicit_wait.flags(), "explicit flags");
 
         EXPECT_FALSE(!!explicit_wait.handler(), "handler");
@@ -126,7 +126,7 @@ bool timeout_test() {
         EXPECT_EQ(dummy_handle, async.last_begin_wait->object, "handle");
         EXPECT_EQ(dummy_trigger, async.last_begin_wait->trigger, "trigger");
         EXPECT_EQ(dummy_flags, async.last_begin_wait->flags, "flags");
-        EXPECT_EQ(dummy_deadline, async.last_post_task->deadline, "deadline");
+        EXPECT_EQ(dummy_deadline.get(), async.last_post_task->deadline, "deadline");
         async_wait_t* wait_context = async.last_begin_wait;
         async_task_t* task_context = async.last_post_task;
         async.last_begin_wait = nullptr;
@@ -140,7 +140,7 @@ bool timeout_test() {
         EXPECT_EQ(&dummy_signal, handler.last_signal, "signal");
         EXPECT_NONNULL(async.last_cancel_task, "cancel task called");
         EXPECT_NONNULL(async.last_post_task, "post task called");
-        EXPECT_EQ(dummy_deadline + 100u, async.last_post_task->deadline, "deadline");
+        EXPECT_EQ(dummy_deadline.get() + 100u, async.last_post_task->deadline, "deadline");
         handler.handler_ran = false;
         async.last_cancel_task = nullptr;
         async.last_post_task = nullptr;
@@ -165,7 +165,7 @@ bool timeout_test() {
 bool begin_wait_cleans_up() {
     const zx_handle_t dummy_handle = static_cast<zx_handle_t>(1);
     const zx_signals_t dummy_trigger = ZX_USER_SIGNAL_0;
-    const zx_time_t dummy_deadline = 100u;
+    const zx::time dummy_deadline(100);
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;

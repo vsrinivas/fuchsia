@@ -8,6 +8,7 @@
 #include <lib/async/wait.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
+#include <lib/zx/time.h>
 
 namespace async {
 
@@ -42,7 +43,7 @@ public:
     // Initializes the properties of the wait with timeout operation.
     explicit WaitWithTimeout(zx_handle_t object = ZX_HANDLE_INVALID,
                              zx_signals_t trigger = ZX_SIGNAL_NONE,
-                             zx_time_t deadline = ZX_TIME_INFINITE,
+                             zx::time deadline = zx::time::infinite(),
                              uint32_t flags = 0u);
 
     // Destroys the wait with timeout operation.
@@ -66,8 +67,8 @@ public:
     void set_trigger(zx_signals_t trigger) { async_wait_t::trigger = trigger; }
 
     // The time when the timeout should occur.
-    zx_time_t deadline() const { return async_task_t::deadline; }
-    void set_deadline(zx_time_t deadline) { async_task_t::deadline = deadline; }
+    zx::time deadline() const { return zx::time(async_task_t::deadline); }
+    void set_deadline(zx::time deadline) { async_task_t::deadline = deadline.get(); }
 
     // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_wait_t::flags; }

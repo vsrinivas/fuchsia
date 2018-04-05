@@ -54,7 +54,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop \
-    system/ulib/fbl
+    system/ulib/fbl \
+    system/ulib/zx
 
 MODULE_LIBS := \
     system/ulib/async.default \

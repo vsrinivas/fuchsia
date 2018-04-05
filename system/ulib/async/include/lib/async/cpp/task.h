@@ -45,7 +45,7 @@ public:
                                                       zx_status_t status)>;
 
     // Initializes the properties of the task.
-    explicit Task(zx_time_t deadline = ZX_TIME_INFINITE, uint32_t flags = 0u);
+    explicit Task(zx::time deadline = zx::time::infinite(), uint32_t flags = 0u);
 
     // Destroys the task.
     //
@@ -60,8 +60,8 @@ public:
     void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // The time when the task should run.
-    zx_time_t deadline() const { return async_task_t::deadline; }
-    void set_deadline(zx_time_t deadline) { async_task_t::deadline = deadline; }
+    zx::time deadline() const { return zx::time(async_task_t::deadline); }
+    void set_deadline(zx::time deadline) { async_task_t::deadline = deadline.get(); }
 
     // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_task_t::flags; }

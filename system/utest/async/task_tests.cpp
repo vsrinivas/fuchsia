@@ -50,18 +50,18 @@ struct Handler {
 };
 
 bool task_test() {
-    const zx_time_t dummy_deadline = 1;
+    const zx::time dummy_deadline(1);
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;
 
     {
         async::Task default_task;
-        EXPECT_EQ(ZX_TIME_INFINITE, default_task.deadline(), "default deadline");
+        EXPECT_EQ(zx::time::infinite().get(), default_task.deadline().get(), "default deadline");
         EXPECT_EQ(0u, default_task.flags(), "default flags");
 
         default_task.set_deadline(dummy_deadline);
-        EXPECT_EQ(dummy_deadline, default_task.deadline(), "set deadline");
+        EXPECT_EQ(dummy_deadline.get(), default_task.deadline().get(), "set deadline");
         default_task.set_flags(dummy_flags);
         EXPECT_EQ(dummy_flags, default_task.flags(), "set flags");
 
@@ -70,7 +70,7 @@ bool task_test() {
 
     {
         async::Task explicit_task(dummy_deadline, dummy_flags);
-        EXPECT_EQ(dummy_deadline, explicit_task.deadline(), "explicit deadline");
+        EXPECT_EQ(dummy_deadline.get(), explicit_task.deadline().get(), "explicit deadline");
         EXPECT_EQ(dummy_flags, explicit_task.flags(), "explicit flags");
 
         // begin a repeating task
@@ -81,7 +81,7 @@ bool task_test() {
         MockAsync async;
         EXPECT_EQ(ZX_OK, explicit_task.Post(&async), "post, valid args");
         EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op, "op");
-        EXPECT_EQ(dummy_deadline, async.last_task->deadline, "deadline");
+        EXPECT_EQ(dummy_deadline.get(), async.last_task->deadline, "deadline");
         EXPECT_EQ(dummy_flags, async.last_task->flags, "flags");
 
         EXPECT_EQ(ASYNC_TASK_REPEAT,
@@ -99,7 +99,7 @@ bool task_test() {
 }
 
 bool auto_task_test() {
-    const zx_time_t dummy_deadline = 1;
+    const zx::time dummy_deadline(1);
     const uint32_t dummy_flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
 
     BEGIN_TEST;
@@ -109,11 +109,11 @@ bool auto_task_test() {
         async::AutoTask default_task(&async);
         EXPECT_EQ(&async, default_task.async());
         EXPECT_FALSE(default_task.is_pending());
-        EXPECT_EQ(ZX_TIME_INFINITE, default_task.deadline(), "default deadline");
+        EXPECT_EQ(ZX_TIME_INFINITE, default_task.deadline().get(), "default deadline");
         EXPECT_EQ(0u, default_task.flags(), "default flags");
 
         default_task.set_deadline(dummy_deadline);
-        EXPECT_EQ(dummy_deadline, default_task.deadline(), "set deadline");
+        EXPECT_EQ(dummy_deadline.get(), default_task.deadline().get(), "set deadline");
         default_task.set_flags(dummy_flags);
         EXPECT_EQ(dummy_flags, default_task.flags(), "set flags");
 
@@ -125,7 +125,7 @@ bool auto_task_test() {
         async::AutoTask explicit_task(&async, dummy_deadline, dummy_flags);
         EXPECT_EQ(&async, explicit_task.async());
         EXPECT_FALSE(explicit_task.is_pending());
-        EXPECT_EQ(dummy_deadline, explicit_task.deadline(), "explicit deadline");
+        EXPECT_EQ(dummy_deadline.get(), explicit_task.deadline().get(), "explicit deadline");
         EXPECT_EQ(dummy_flags, explicit_task.flags(), "explicit flags");
 
         // post a non-repeating task
@@ -136,7 +136,7 @@ bool auto_task_test() {
         EXPECT_EQ(ZX_OK, explicit_task.Post(), "post, valid args");
         EXPECT_TRUE(explicit_task.is_pending());
         EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op, "op");
-        EXPECT_EQ(dummy_deadline, async.last_task->deadline, "deadline");
+        EXPECT_EQ(dummy_deadline.get(), async.last_task->deadline, "deadline");
         EXPECT_EQ(dummy_flags, async.last_task->flags, "flags");
 
         EXPECT_EQ(ASYNC_TASK_FINISHED,
@@ -151,7 +151,7 @@ bool auto_task_test() {
         EXPECT_EQ(ZX_OK, explicit_task.Post(), "post, valid args");
         EXPECT_TRUE(explicit_task.is_pending());
         EXPECT_EQ(MockAsync::Op::POST_TASK, async.last_op, "op");
-        EXPECT_EQ(dummy_deadline, async.last_task->deadline, "deadline");
+        EXPECT_EQ(dummy_deadline.get(), async.last_task->deadline, "deadline");
         EXPECT_EQ(dummy_flags, async.last_task->flags, "flags");
 
         EXPECT_EQ(ASYNC_TASK_REPEAT,

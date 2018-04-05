@@ -21,8 +21,8 @@
 
 namespace {
 
-inline zx_time_t now() {
-    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+  inline zx::time Now() {
+    return zx::clock::get(ZX_CLOCK_MONOTONIC);
 }
 
 class TestWait {
@@ -99,8 +99,7 @@ protected:
 
 class TestTask {
 public:
-    TestTask(zx_time_t deadline)
-        : op(deadline) {
+    TestTask(zx::time deadline) : op(deadline) {
         op.set_handler(fbl::BindMember(this, &TestTask::Handle));
     }
 
@@ -120,7 +119,7 @@ protected:
 
 class QuitTask : public TestTask {
 public:
-    QuitTask(zx_time_t deadline = now())
+    QuitTask(zx::time deadline = Now())
         : TestTask(deadline) {}
 
 protected:
@@ -133,7 +132,7 @@ protected:
 
 class ResetQuitTask : public TestTask {
 public:
-    ResetQuitTask(zx_time_t deadline = now())
+    ResetQuitTask(zx::time deadline = Now())
         : TestTask(deadline) {}
 
     zx_status_t result = ZX_ERR_INTERNAL;
@@ -148,7 +147,7 @@ protected:
 
 class RepeatingTask : public TestTask {
 public:
-    RepeatingTask(zx_time_t deadline, zx_duration_t interval, uint32_t repeat_count)
+    RepeatingTask(zx::time deadline, zx::duration interval, uint32_t repeat_count)
         : TestTask(deadline), interval_(interval), repeat_count_(repeat_count) {}
 
     void set_finish_callback(fbl::Closure callback) {
@@ -156,7 +155,7 @@ public:
     }
 
 protected:
-    zx_duration_t interval_;
+    zx::duration interval_;
     uint32_t repeat_count_;
     fbl::Closure finish_callback_;
 
@@ -290,7 +289,7 @@ bool quit_test() {
     EXPECT_EQ(ZX_OK, loop.ResetQuit());
     EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "not quitting after reset");
 
-    EXPECT_EQ(ZX_OK, loop.Run(ZX_TIME_INFINITE, true /*once*/), "run tasks");
+    EXPECT_EQ(ZX_OK, loop.Run(zx::time::infinite(), true /*once*/), "run tasks");
 
     EXPECT_EQ(1u, reset_quit_task.run_count, "reset quit task ran");
     EXPECT_EQ(ZX_ERR_BAD_STATE, reset_quit_task.result, "can't reset quit while loop is running");
@@ -530,12 +529,12 @@ bool task_test() {
 
     async::Loop loop;
 
-    zx_time_t start_time = now();
-    TestTask task1(start_time + ZX_MSEC(1));
-    RepeatingTask task2(start_time + ZX_MSEC(1), ZX_MSEC(1), 3u);
+    zx::time start_time = Now();
+    TestTask task1(start_time + zx::msec(1));
+    RepeatingTask task2(start_time + zx::msec(1), zx::msec(1), 3u);
     TestTask task3(start_time);
-    QuitTask task4(start_time + ZX_MSEC(10));
-    TestTask task5(start_time + ZX_MSEC(10)); // posted after quit
+    QuitTask task4(start_time + zx::msec(10));
+    TestTask task5(start_time + zx::msec(10)); // posted after quit
 
     EXPECT_EQ(ZX_OK, task1.op.Post(loop.async()), "post 1");
     EXPECT_EQ(ZX_OK, task2.op.Post(loop.async()), "post 2");
@@ -586,17 +585,17 @@ bool task_shutdown_test() {
 
     async::Loop loop;
 
-    zx_time_t start_time = now();
-    TestTask task1(start_time + ZX_MSEC(1));
+    zx::time start_time = Now();
+    TestTask task1(start_time + zx::msec(1));
     task1.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    RepeatingTask task2(start_time + ZX_MSEC(1), ZX_MSEC(1000), 1u);
+    RepeatingTask task2(start_time + zx::msec(1), zx::msec(1000), 1u);
     task2.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task3(ZX_TIME_INFINITE);
+    TestTask task3(zx::time::infinite());
     task3.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task4(ZX_TIME_INFINITE);
+    TestTask task4(zx::time::infinite());
     task4.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task5(ZX_TIME_INFINITE);
-    QuitTask task6(start_time + ZX_MSEC(1));
+    TestTask task5(zx::time::infinite());
+    QuitTask task6(start_time + zx::msec(1));
 
     EXPECT_EQ(ZX_OK, task1.op.Post(loop.async()), "post 1");
     EXPECT_EQ(ZX_OK, task2.op.Post(loop.async()), "post 2");
@@ -638,7 +637,7 @@ bool task_shutdown_test() {
     EXPECT_EQ(1u, task6.run_count, "run count 6");
 
     // Try to add or cancel work after shutdown.
-    TestTask task7(ZX_TIME_INFINITE);
+    TestTask task7(zx::time::infinite());
     EXPECT_EQ(ZX_ERR_BAD_STATE, task7.op.Post(loop.async()), "post after shutdown");
     EXPECT_EQ(ZX_ERR_NOT_FOUND, task7.op.Cancel(loop.async()), "cancel after shutdown");
     EXPECT_EQ(0u, task7.run_count, "run count 7");
@@ -729,7 +728,7 @@ public:
                                                     fbl::memory_order_acquire));
 
         // Pretend to do work.
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        zx::nanosleep(zx::deadline_after(zx::msec(1)));
 
         // Decrement count of active threads.
         fbl::atomic_fetch_sub(&active_threads_, 1u, fbl::memory_order_acq_rel);
@@ -764,7 +763,7 @@ protected:
 
 class ThreadAssertTask : public TestTask {
 public:
-    ThreadAssertTask(zx_time_t deadline, ConcurrencyMeasure* measure)
+    ThreadAssertTask(zx::time deadline, ConcurrencyMeasure* measure)
         : TestTask(deadline), measure_(measure) {}
 
 protected:
@@ -913,9 +912,9 @@ bool threads_tasks_run_sequentially_test() {
 
     // Post a number of work items to run all at once.
     ThreadAssertTask* items[num_items];
-    zx_time_t start_time = now();
+    zx::time start_time = Now();
     for (size_t i = 0; i < num_items; i++) {
-        items[i] = new ThreadAssertTask(start_time + ZX_MSEC(i), &measure);
+        items[i] = new ThreadAssertTask(start_time + zx::msec(i), &measure);
         EXPECT_EQ(ZX_OK, items[i]->op.Post(loop.async()), "post task");
     }
 

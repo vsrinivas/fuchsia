@@ -21,8 +21,8 @@ void Loop::Shutdown() {
     async_loop_shutdown(loop_);
 }
 
-zx_status_t Loop::Run(zx_time_t deadline, bool once) {
-    return async_loop_run(loop_, deadline, once);
+zx_status_t Loop::Run(zx::time deadline, bool once) {
+    return async_loop_run(loop_, deadline.get(), once);
 }
 
 zx_status_t Loop::RunUntilIdle() {

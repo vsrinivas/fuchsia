@@ -13,8 +13,8 @@
 
 namespace {
 
-zx_time_t now() {
-    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+zx::time Now() {
+    return zx::clock::get(ZX_CLOCK_MONOTONIC);
 }
 
 } // namespace
@@ -25,15 +25,15 @@ int main(int argc, char** argv) {
 
     puts("Doing work for 30 seconds...");
 
-    zx_time_t start_time = now();
-    zx_time_t quit_time = start_time + ZX_SEC(30);
+    zx::time start_time = Now();
+    zx::time quit_time = start_time + zx::sec(30);
     async::Task task(start_time);
     task.set_handler([&task, &loop, quit_time](async_t* async, zx_status_t status) {
         TRACE_DURATION("example", "Doing Work!", "async", async, "status", status);
 
         // Simulate some kind of workload.
         puts("Doing work!");
-        zx_nanosleep(now() + ZX_MSEC(500));
+        zx::nanosleep(Now() + zx::msec(500));
 
         // Stop if quitting.
         if (task.deadline() > quit_time) {
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         }
 
         // Schedule more work in a little bit.
-        task.set_deadline(now() + ZX_MSEC(200));
+        task.set_deadline(Now() + zx::msec(200));
         return ASYNC_TASK_REPEAT;
     });
 

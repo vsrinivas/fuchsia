@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <threads.h>
 #include <zircon/compiler.h>
+#include <lib/zx/time.h>
 
 namespace async {
 
@@ -61,7 +62,7 @@ public:
     // Returns |ZX_ERR_TIMED_OUT| if the deadline expired.
     // Returns |ZX_ERR_CANCELED| if the loop quitted.
     // Returns |ZX_ERR_BAD_STATE| if the loop was shut down with |Shutdown()|.
-    zx_status_t Run(zx_time_t deadline = ZX_TIME_INFINITE, bool once = false);
+    zx_status_t Run(zx::time deadline = zx::time::infinite(), bool once = false);
 
     // Dispatches events until there are none remaining, and then returns
     // without waiting. This is useful for unit testing, because the behavior

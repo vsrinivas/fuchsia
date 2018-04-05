@@ -7,6 +7,7 @@
 #include <lib/async/task.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
+#include <lib/zx/time.h>
 
 namespace async {
 
@@ -34,7 +35,7 @@ public:
     // Initializes the properties of the task and binds it to an asynchronous
     // dispatcher.
     explicit AutoTask(async_t* async,
-                      zx_time_t deadline = ZX_TIME_INFINITE,
+                      zx::time deadline = zx::time::infinite(),
                       uint32_t flags = 0u);
 
     // Destroys the task.
@@ -55,8 +56,8 @@ public:
     void set_handler(Handler handler) { handler_ = fbl::move(handler); }
 
     // The time when the task should run.
-    zx_time_t deadline() const { return async_task_t::deadline; }
-    void set_deadline(zx_time_t deadline) { async_task_t::deadline = deadline; }
+    zx::time deadline() const { return zx::time(async_task_t::deadline); }
+    void set_deadline(zx::time deadline) { async_task_t::deadline = deadline.get(); }
 
     // Valid flags: |ASYNC_FLAG_HANDLE_SHUTDOWN|.
     uint32_t flags() const { return async_task_t::flags; }
