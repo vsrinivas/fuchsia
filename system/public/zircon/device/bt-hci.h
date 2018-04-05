@@ -22,7 +22,7 @@ typedef enum {
 
 #define BT_HCI_SNOOP_FLAG_RECV 0x04 // Host -> Controller
 
-inline uint8_t bt_hci_snoop_flags(bt_hci_snoop_type_t type, bool is_received) {
+static inline uint8_t bt_hci_snoop_flags(bt_hci_snoop_type_t type, bool is_received) {
   return (uint8_t)(type | (is_received ? BT_HCI_SNOOP_FLAG_RECV : 0x00));
 }
 
