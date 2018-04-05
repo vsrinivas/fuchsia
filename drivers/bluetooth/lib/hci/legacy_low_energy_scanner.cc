@@ -174,6 +174,11 @@ bool LegacyLowEnergyScanner::StopScan() {
   return true;
 }
 
+void LegacyLowEnergyScanner::StopScanPeriodForTesting() {
+  FXL_DCHECK(IsScanning());
+  StopScanInternal(false);
+}
+
 void LegacyLowEnergyScanner::StopScanInternal(bool stopped) {
   FXL_DCHECK(scan_cb_);
 

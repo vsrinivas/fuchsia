@@ -42,6 +42,9 @@ class LegacyLowEnergyScanner : public LowEnergyScanner {
                  const ScanStatusCallback& callback) override;
   bool StopScan() override;
 
+  // Used by tests to directly end a scan period without relying on a timeout.
+  void StopScanPeriodForTesting();
+
  private:
   struct PendingScanResult {
     explicit PendingScanResult(const common::DeviceAddress& address);
