@@ -2281,9 +2281,8 @@ zx_status_t Device::InitializeRfVal() {
     return ZX_OK;
 }
 
-// Uncertain units. Seemingly 0.5 dBm unit, per tx chain.
-constexpr uint8_t kRfPowerBound2_4Ghz = 0x27;
-constexpr uint8_t kRfPowerBound5Ghz = 0x2b;
+constexpr uint8_t kHwTxPowerPerChainMax = 20;  // dBm
+constexpr uint8_t kHwTxPowerPerChainMin = 0;   // dBm
 
 zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     zx_status_t status;
@@ -2304,11 +2303,12 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
-    if (rf_val.default_power1 > kRfPowerBound2_4Ghz) {
-        r49.set_tx(kRfPowerBound2_4Ghz);
-    } else {
-        r49.set_tx(rf_val.default_power1);
-    }
+
+    // See for EIRP table
+    // https://www.air802.com/fcc-rules-and-regulations.html
+    constexpr uint8_t target_eirp = 30;
+    uint8_t tx_power = GetPerChainTxPower(chan, target_eirp);
+    r49.set_tx(tx_power);
     status = WriteRfcsr(r49);
     CHECK_WRITE(RF49, status);
 
@@ -2540,19 +2540,20 @@ zx_status_t Device::ConfigureChannel5592(const wlan_channel_t& chan) {
         }
     }
 
-    uint8_t power_bound = chan.primary <= 14 ? kRfPowerBound2_4Ghz : kRfPowerBound5Ghz;
-    uint8_t power1 = (rf_val.default_power1 > power_bound) ? power_bound : rf_val.default_power1;
-    uint8_t power2 = (rf_val.default_power2 > power_bound) ? power_bound : rf_val.default_power2;
+    // TODO(porce): Study why this configuration is outside ConfigureTxpower()
     Rfcsr49 r49;
     status = ReadRfcsr(&r49);
     CHECK_READ(RF49, status);
-    r49.set_tx(power1);
+    constexpr uint8_t target_eirp = 30;
+    uint8_t tx_power1 = GetPerChainTxPower(chan, target_eirp);
+    r49.set_tx(tx_power1);
     status = WriteRfcsr(r49);
     CHECK_WRITE(RF49, status);
     Rfcsr50 r50;
     status = ReadRfcsr(&r50);
     CHECK_READ(RF50, status);
-    r50.set_tx(power2);
+    uint8_t tx_power2 = GetPerChainTxPower(chan, target_eirp);
+    r50.set_tx(tx_power2);
     status = WriteRfcsr(r50);
     CHECK_WRITE(RF50, status);
 
@@ -2849,6 +2850,30 @@ zx_status_t Device::ConfigureChannel(const wlan_channel_t& chan) {
     CHECK_READ(EXT_CH_BUSY_STA, status);
 
     return ZX_OK;
+}
+
+uint8_t Device::GetEirpRegUpperBound(const wlan_channel_t& chan) {
+    if (wlan::common::Is2Ghz(chan)) {
+        return 36;
+    } else if (chan.primary <= 48) {
+        return 30;
+    } else if (chan.primary <= 144) {
+        return 29;
+    } else {
+        return 36;
+    }
+}
+
+uint8_t Device::GetPerChainTxPower(const wlan_channel_t& chan, uint8_t eirp_target) {
+    uint8_t eirp_reg_upperbound = GetEirpRegUpperBound(chan);  // dBm
+    uint8_t antenna_gain = 3;                                  // dBi
+    uint8_t tx_chain_cnt_contribution = 3;                     // dB, for 2 tx chains
+
+    uint8_t result = eirp_target - antenna_gain - tx_chain_cnt_contribution;
+    result = std::min(result, eirp_reg_upperbound);
+    result = fbl::clamp(result, kHwTxPowerPerChainMin, kHwTxPowerPerChainMax);
+
+    return result;
 }
 
 namespace {

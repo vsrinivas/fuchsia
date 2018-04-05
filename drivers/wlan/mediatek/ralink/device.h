@@ -205,6 +205,9 @@ class Device : public wlan_device::Phy {
     zx_status_t ConfigureChannel5390(const wlan_channel_t& chan);
     zx_status_t ConfigureChannel5592(const wlan_channel_t& chan);
 
+    uint8_t GetEirpRegUpperBound(const wlan_channel_t& chan);
+    uint8_t GetPerChainTxPower(const wlan_channel_t& chan, uint8_t eirp_target);
+
     zx_status_t ConfigureTxPower(const wlan_channel_t& chan);
 
     template <typename R, typename Predicate>
