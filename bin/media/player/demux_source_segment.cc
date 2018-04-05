@@ -64,7 +64,7 @@ void DemuxSourceSegment::BuildGraph() {
   demux_node_ = graph().Add(demux_);
 
   const auto& streams = demux_->streams();
-  for (size_t index = 0; index < streams.size() - 1; ++index) {
+  for (size_t index = 0; index < streams.size(); ++index) {
     auto stream = streams[index];
     OnStreamUpdated(stream->index(), *stream->stream_type(),
                     demux_node_.output(stream->index()),

@@ -49,7 +49,7 @@ class Demux : public ActiveMultistreamSource {
   virtual void SetStatusCallback(StatusCallback callback) = 0;
 
   // Calls the callback when the initial streams and metadata have
-  // established. THE CALLBACK MAY BE CALLED ON AN ARBITRARY THREAD.
+  // established.
   virtual void WhenInitialized(std::function<void(Result)> callback) = 0;
 
   // Gets the stream collection. This method should not be called until the

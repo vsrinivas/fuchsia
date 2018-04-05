@@ -101,6 +101,11 @@ void HttpReader::ReadAt(size_t position,
       return;
     }
 
+    if (!can_seek_ && position != 0) {
+      callback(Result::kInvalidArgument, 0);
+      return;
+    }
+
     read_at_position_ = position;
     read_at_buffer_ = buffer;
 
@@ -233,7 +238,9 @@ void HttpReader::LoadAndReadFromSocket() {
       return;
     }
 
+    socket_ = std::move(response.body->stream());
     socket_position_ = read_at_position_;
+
     ReadFromSocket();
   });
 }

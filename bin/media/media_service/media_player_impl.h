@@ -7,10 +7,13 @@
 #include <unordered_map>
 
 #include <fuchsia/cpp/media.h>
+
+#include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
-#include "garnet/bin/media/util/callback_joiner.h"
+#include "garnet/bin/media/player/player.h"
+#include "garnet/bin/media/render/fidl_audio_renderer.h"
+#include "garnet/bin/media/render/fidl_video_renderer.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
-#include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -68,74 +71,39 @@ class MediaPlayerImpl
     kPlaying,   // Time is progressing.
   };
 
-  // Holds per-stream info. |renderer_handle_| remains set until the renderer is
-  // needed, at which point |renderer_handle_| is cleared and |sink_| is set.
-  // Media for which no renderer was supplied are not represented in
-  // |streams_by_medium_|.
-  struct Stream {
-    fidl::InterfaceHandle<MediaRenderer> renderer_handle_;
-    MediaSinkPtr sink_;
-    bool connected_ = false;
-  };
-
   MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
                   MediaComponentFactory* owner);
+
+  // Sets the current reader.
+  void SetReader(std::shared_ptr<Reader> reader);
 
   // Sets the video renderer.
   // TODO(dalesat): Remove after topaz transition.
   void SetVideoRenderer(fidl::InterfaceHandle<MediaRenderer> video_renderer);
 
-  // If |reader_handle_| is set, creates the source and calls |ConnectSinks|,
-  // otherwise does nothing.
-  void MaybeCreateSource();
-
   // Creates the renderer for |medium| if it doesn't exist already.
-  void MaybeCreateRenderer(MediaTypeMedium medium);
+  void MaybeCreateRenderer(StreamType::Medium medium);
 
   // Creates sinks as needed and connects enabled streams.
   void ConnectSinks();
 
   // Prepares a stream.
-  void PrepareStream(Stream* stream,
-                     size_t index,
+  void PrepareStream(size_t index,
                      const MediaType& input_media_type,
                      const std::function<void()>& callback);
 
   // Takes action based on current state.
   void Update();
 
-  // Sets the timeline transform.
-  void SetTimelineTransform(
-      float rate,
-      int64_t reference_time,
-      const TimelineConsumer::SetTimelineTransformCallback callback);
+  // Sets the timeline function.
+  void SetTimelineFunction(float rate,
+                           int64_t reference_time,
+                           fxl::Closure callback);
 
-  // Creates a TimelineTransform for the specified rate.
-  TimelineTransformPtr CreateTimelineTransform(float rate,
-                                               int64_t reference_time);
-
-  // Handles a status update from the source. When called with the default
-  // argument values, initiates source status updates.
-  void HandleSourceStatusUpdates(uint64_t version = kInitialStatus,
-                                 MediaSourceStatusPtr status = nullptr);
-
-  // Handles a status update from the control point. When called with the
-  // default argument values, initiates control point. status updates.
-  void HandleTimelineControlPointStatusUpdates(
-      uint64_t version = kInitialStatus,
-      MediaTimelineControlPointStatus* status = nullptr);
-
-  fidl::InterfaceHandle<SeekingReader> reader_handle_;
-  MediaSourcePtr source_;
-  fidl::VectorPtr<MediaType> stream_types_;
-  std::unordered_map<MediaTypeMedium, Stream> streams_by_medium_;
-  MediaTimelineControllerPtr timeline_controller_;
-  MediaTimelineControlPointPtr timeline_control_point_;
-  TimelineConsumerPtr timeline_consumer_;
-  bool reader_transition_pending_ = false;
+  Player player_;
   float gain_ = 1.0f;
-  fidl::InterfacePtr<AudioRenderer> audio_renderer_;
-  std::shared_ptr<VideoRendererImpl> video_renderer_impl_;
+  std::shared_ptr<FidlAudioRenderer> audio_renderer_;
+  std::shared_ptr<FidlVideoRenderer> video_renderer_;
 
   // The state we're currently in.
   State state_ = State::kWaiting;
@@ -144,14 +112,11 @@ class MediaPlayerImpl
   // called |Play| or |Pause| or because we've hit end-of-stream.
   State target_state_ = State::kFlushed;
 
-  // Whether we're currently at end-of-stream.
-  bool end_of_stream_ = false;
-
   // The position we want to seek to (because the client called Seek) or
   // kUnspecifiedTime, which indicates there's no desire to seek.
   int64_t target_position_ = kUnspecifiedTime;
 
-  // The subject time to be used for SetTimelineTransform. The value is
+  // The subject time to be used for SetTimelineFunction. The value is
   // kUnspecifiedTime if there's no need to seek or the position we want to
   // seek to if there is.
   int64_t transform_subject_time_ = kUnspecifiedTime;
@@ -159,10 +124,6 @@ class MediaPlayerImpl
   // The minimum program range PTS to be used for SetProgramRange.
   int64_t program_range_min_pts_ = kMinTime;
 
-  // A function that translates local time into presentation time in ns.
-  TimelineFunction timeline_function_;
-
-  MediaSourceStatusPtr source_status_;
   FidlPublisher<GetStatusCallback> status_publisher_;
 };
 

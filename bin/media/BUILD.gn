@@ -92,10 +92,6 @@ package("tests") {
     },
 
     {
-      name = "media_service_tests"
-    },
-
-    {
       name = "media_util_tests"
     },
 
