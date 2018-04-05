@@ -8,6 +8,8 @@ source_set("player") {
   sources = [
     "conversion_pipeline_builder.cc",
     "conversion_pipeline_builder.h",
+    "demux_source_segment.cc",
+    "demux_source_segment.h",
     "player.cc",
     "player.h",
     "segment.cc",
@@ -21,6 +23,7 @@ source_set("player") {
   deps = [
     "//garnet/bin/media/audio",
     "//garnet/bin/media/decode",
+    "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
     "//garnet/bin/media/util",
     "//garnet/public/lib/fidl/cpp",
