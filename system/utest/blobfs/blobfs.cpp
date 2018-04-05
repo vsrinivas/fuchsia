@@ -949,13 +949,6 @@ constexpr uint32_t max_blobs = FDIO_MAX_FD - 32;
 
 // Generate and open a new blob
 bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
-    {
-        fbl::AutoLock al(&bl->list_lock);
-
-        if (bl->blob_count >= max_blobs) {
-            return true;
-        }
-    }
     fbl::unique_ptr<blob_info_t> info;
     ASSERT_TRUE(GenerateBlob(1 + (rand_r(seed) % (1 << 16)), &info));
 
@@ -963,11 +956,16 @@ bool blob_create_helper(blob_list_t* bl, unsigned* seed) {
     fbl::unique_ptr<blob_state_t> state(new (&ac) blob_state(fbl::move(info)));
     ASSERT_EQ(ac.check(), true);
 
-    int fd = open(state->info->path, O_CREAT | O_RDWR);
-    ASSERT_GT(fd, 0, "Failed to create blob");
-    state->fd = fd;
     {
         fbl::AutoLock al(&bl->list_lock);
+
+        if (bl->blob_count >= max_blobs) {
+            return true;
+        }
+        int fd = open(state->info->path, O_CREAT | O_RDWR);
+        ASSERT_GT(fd, 0, "Failed to create blob");
+        state->fd = fd;
+
         bl->list.push_front(fbl::move(state));
         bl->blob_count++;
     }
