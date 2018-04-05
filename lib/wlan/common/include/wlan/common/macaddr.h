@@ -18,6 +18,8 @@ namespace common {
 // This macro provides memory safe C-style string.
 #define MACSTR(mac_addr) (mac_addr).ToString().c_str()
 
+// ISO/IEC 10039
+// See http://standards.ieee.org/develop/regauth/tut/macgrp.pdf
 constexpr size_t kMacAddrLen = 6;  // bytes
 
 struct MacAddr {
@@ -75,9 +77,27 @@ struct MacAddr {
 
     bool IsLocalAdmin() const { return byte[0] & 0x02; }
 
-    bool IsGroupAddr() const {
+    bool IsStdGroupAddr() const {
+        // IEEE 802.1D MAC bridge Standard MAC Group Addresses
         // IEEE range: 01:80:c2:00:00:00 - 01:80:c2:ff:ff:ff
-        return byte[0] == 0x01 && byte[1] == 0x80 && byte[2] == 0xc2;
+        if (byte[0] == 0x01 && byte[1] == 0x80 && byte[2] == 0xc2) {
+            return true;
+        }
+
+        // ISO 9542 MAC Group Addresses
+        if (byte[0] == 0x09 && byte[1] == 0x00 && byte[2] == 0x2b && byte[3] == 0x00
+            && byte[4] == 0x00 && (byte[5] == 0x04 || byte[5] == 0x05)) {
+            return true;
+        }
+
+        // TokenRing functional addresses not honored.
+
+        return false;
+    }
+
+    // IEEE 802.11-2016, 9.2.4.3.3
+    bool IsGroupAddr() const {
+        return IsMcast() || IsBcast();
     }
 
     // Overloaded initializers.

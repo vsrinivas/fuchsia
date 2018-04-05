@@ -30,7 +30,7 @@ TEST_F(MacAddrTest, Some) {
     EXPECT_EQ(true, bcast_addr.IsLocalAdmin());
     EXPECT_EQ(true, bcast_addr > kZeroMac);
     EXPECT_EQ(false, bcast_addr < kZeroMac);
-    EXPECT_EQ(false, bcast_addr.IsGroupAddr());
+    EXPECT_EQ(true, bcast_addr.IsGroupAddr());
 
     MacAddr addr2({0x48, 0x0f, 0xcf, 0x54, 0xb9, 0xb1});
     EXPECT_EQ(false, addr2.IsMcast());
