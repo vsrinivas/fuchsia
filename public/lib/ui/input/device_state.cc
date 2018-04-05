@@ -5,6 +5,9 @@
 #include "lib/ui/input/device_state.h"
 
 #include <fuchsia/cpp/input.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
@@ -18,16 +21,15 @@ int64_t InputEventTimestampNow() {
 
 namespace mozart {
 
-constexpr fxl::TimeDelta kKeyRepeatSlow = fxl::TimeDelta::FromMilliseconds(250);
-constexpr fxl::TimeDelta kKeyRepeatFast = fxl::TimeDelta::FromMilliseconds(75);
+constexpr zx::duration kKeyRepeatSlow = zx::msec(250);
+constexpr zx::duration kKeyRepeatFast = zx::msec(75);
 
 #pragma mark - KeyboardState
 
 KeyboardState::KeyboardState(DeviceState* device_state)
     : device_state_(device_state),
       keymap_(qwerty_map),
-      weak_ptr_factory_(this),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
+      weak_ptr_factory_(this) {
   char* keys = getenv("gfxconsole.keymap");
   if (keys && !strcmp(keys, "dvorak")) {
     keymap_ = dvorak_map;
@@ -169,13 +171,15 @@ void KeyboardState::Repeat(uint64_t sequence) {
   ScheduleRepeat(sequence, kKeyRepeatFast);
 }
 
-void KeyboardState::ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta) {
-  task_runner_->PostDelayedTask(
-      [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
-        if (weak)
-          weak->Repeat(sequence);
-      },
-      delta);
+void KeyboardState::ScheduleRepeat(uint64_t sequence, zx::duration delta) {
+  async::PostDelayedTask(
+    async_get_default(),
+    [ weak = weak_ptr_factory_.GetWeakPtr(), sequence ] {
+      if (weak)
+        weak->Repeat(sequence);
+    },
+    delta
+  );
 }
 
 #pragma mark - MouseState

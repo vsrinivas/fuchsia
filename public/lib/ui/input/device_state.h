@@ -8,6 +8,7 @@
 #include <hid/hid.h>
 #include <hid/usages.h>
 #include <stdint.h>
+#include <zx/time.h>
 
 #include <vector>
 
@@ -15,7 +16,6 @@
 #include <fuchsia/cpp/input.h>
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace mozart {
 
@@ -40,17 +40,17 @@ class KeyboardState : public State {
                  uint64_t modifiers,
                  uint64_t timestamp);
   void Repeat(uint64_t sequence);
-  void ScheduleRepeat(uint64_t sequence, fxl::TimeDelta delta);
+  void ScheduleRepeat(uint64_t sequence, zx::duration delta);
 
   DeviceState* device_state_;
   keychar_t* keymap_;  // assigned to a global static qwerty_map or dvorak_map
-  fxl::WeakPtrFactory<KeyboardState> weak_ptr_factory_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   std::vector<uint32_t> keys_;
   std::vector<uint32_t> repeat_keys_;
   uint64_t modifiers_ = 0;
   uint64_t repeat_sequence_ = 0;
+
+  fxl::WeakPtrFactory<KeyboardState> weak_ptr_factory_;
 };
 
 class MouseState : public State {
