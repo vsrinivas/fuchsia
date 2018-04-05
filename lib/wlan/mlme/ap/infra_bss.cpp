@@ -241,6 +241,24 @@ zx_status_t InfraBss::SendEthFrame(fbl::unique_ptr<Packet> packet) {
     return device_->SendEthernet(fbl::move(packet));
 }
 
+// TODO(hahnr): Send BUs when Beacon transmission was confirmed.
+zx_status_t InfraBss::SendNextBu() {
+    ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
+    if (bu_queue_.size() == 0) { return ZX_ERR_BAD_STATE; }
+
+    auto packet = bu_queue_.Dequeue();
+    ZX_DEBUG_ASSERT(packet->len() > sizeof(FrameControl));
+    if (packet->len() < sizeof(FrameControl)) { return ZX_ERR_BAD_STATE; }
+
+    // Set `more` bit if there are more BU available.
+    // IEEE Std 802.11-2016, 9.2.4.1.8
+    auto fc = packet->mut_field<FrameControl>(0);
+    fc->set_more_data(bu_queue_.size() > 0 ? 1 : 0);
+
+    debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
+    return device_->SendWlan(fbl::move(packet));
+}
+
 const common::MacAddr& InfraBss::bssid() const {
     return bssid_;
 }

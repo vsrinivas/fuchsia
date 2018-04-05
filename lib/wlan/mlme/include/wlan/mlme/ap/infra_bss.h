@@ -72,6 +72,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
+    zx_status_t SendNextBu();
 
     const common::MacAddr bssid_;
     DeviceInterface* device_;
@@ -80,6 +81,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     BssClientMap clients_;
     Sequence seq_;
     TrafficIndicationMap tim_;
+    // Queue which holds buffered non-GCR-SP frames when at least one client is dozing.
+    PacketQueue bu_queue_;
 
     wlan_channel_t chan_;
 };
