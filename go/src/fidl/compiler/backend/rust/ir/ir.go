@@ -96,6 +96,8 @@ type Root struct {
 	Interfaces   []Interface
 }
 
+// TODO(armansito): Add the ability to detect suffix clashes and maintain a list
+// of reserved suffixes.
 var reservedWords = map[string]bool{
 	"as":       true,
 	"box":      true,
@@ -175,17 +177,6 @@ var reservedWords = map[string]bool{
 	"response":   true,
 	"controller": true,
 	"async":      true,
-
-	// Names used by the FIDL bindings
-	"Server":                 true,
-	"Client":                 true,
-	"Dispatcher":             true,
-	"DispatchResponseFuture": true,
-	"DispatchFuture":         true,
-	"Proxy":                  true,
-	"Service":                true,
-	"NAME":                   true,
-	"VERSION":                true,
 }
 
 func isReservedWord(str string) bool {
