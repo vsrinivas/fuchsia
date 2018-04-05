@@ -32,6 +32,7 @@
 #define RALINK_DUMP_EEPROM 0
 #define RALINK_DUMP_RX 0
 #define RALINK_DUMP_TX 0
+#define RALINK_DUMP_TXPOWER 0
 
 #define CHECK_REG(reg, op, status)                                      \
     do {                                                                \
@@ -231,6 +232,17 @@ zx_status_t Device::Bind() {
         entry.second.default_power2 = extract_tx_power(byte_offset, is_5ghz, txpower2);
 
         count++;
+
+#if RALINK_DUMP_TXPOWER
+        auto rf_val = entry.second;
+        auto cal = entry.second.cal_values;
+        debugf(
+            "[ralink] RF Vals: chan:%3u [eeprom_tx_power_upperbound] 1:%3d 2:%3d 3:%3d "
+            "[calibration] "
+            "tx0 gain:%3u phase:%3u tx1 gain:%3u phase:%3u\n",
+            rf_val.channel, rf_val.default_power1, rf_val.default_power2, rf_val.default_power3,
+            cal.gain_cal_tx0, cal.phase_cal_tx0, cal.gain_cal_tx1, cal.phase_cal_tx1);
+#endif  // RALINK_DUMP_TXPOWER
     }
 
     if (rt_type_ == RT5390 || rt_type_ == RT5592) {
@@ -2312,6 +2324,14 @@ zx_status_t Device::ConfigureChannel5390(const wlan_channel_t& chan) {
     status = WriteRfcsr(r49);
     CHECK_WRITE(RF49, status);
 
+#if RALINK_DUMP_TXPOWER
+    debugf(
+        "[ralink] TxPower for chan:%s [sw_bound] 2GHz:%u [hw_bound] 1:%d "
+        "2:%d 3:%d rectified:%u [result] tx_power1:%u\n",
+        wlan::common::ChanStr(chan).c_str(), kRfPowerBound2_4Ghz, rf_val.default_power1,
+        rf_val.default_power2, rf_val.default_power3, rectified_hw_upperbound1, tx_power1);
+#endif  // RALINK_DUMP_TXPOWER
+
     Rfcsr1 r1;
     status = ReadRfcsr(&r1);
     CHECK_READ(RF1, status);
@@ -2872,6 +2892,14 @@ uint8_t Device::GetPerChainTxPower(const wlan_channel_t& chan, uint8_t eirp_targ
     uint8_t result = eirp_target - antenna_gain - tx_chain_cnt_contribution;
     result = std::min(result, eirp_reg_upperbound);
     result = fbl::clamp(result, kHwTxPowerPerChainMin, kHwTxPowerPerChainMax);
+
+#if RALINK_DUMP_TXPOWER
+    debugf(
+        "[ralink] TxPower for chan:%s [eirp] target:%u reg_ub:%u ant_gain:%u tx_chain_cnt:%u [hw] "
+        "ub:%u lb:%u [per-chain] result:%u\n",
+        wlan::common::ChanStr(chan).c_str(), eirp_target, eirp_reg_upperbound, antenna_gain,
+        tx_chain_cnt, hw_upperbound, hw_lowerbound, result);
+#endif  // RALINK_DUMP_TXPOWER
 
     return result;
 }
