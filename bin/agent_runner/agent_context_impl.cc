@@ -116,7 +116,7 @@ class AgentContextImpl::InitializeCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(InitializeCall);
 };
 
-// If |is_terminating| is set to true, the agent will be torn down irrespective
+// If |terminating| is set to true, the agent will be torn down irrespective
 // of whether there is an open-connection or running task. Returns |true| if the
 // agent was stopped, false otherwise (could be because agent has pending
 // tasks).
@@ -152,8 +152,19 @@ class AgentContextImpl::StopCall : Operation<bool> {
 
   void Stop(FlowToken flow) {
     agent_context_impl_->state_ = State::TERMINATING;
-    agent_context_impl_->app_client_->Teardown(kBasicTimeout,
-                                               [this, flow] { Kill(flow); });
+    // Calling Teardown() below will branch |flow| into normal and timeout
+    // paths. |flow| must go out of scope when either of the paths finishes.
+    //
+    // TODO(mesch): AppClient/AsyncHolder should implement this. See also
+    // StoryProviderImpl::StopStoryShellCall.
+    FlowTokenHolder branch{flow};
+    agent_context_impl_->app_client_->Teardown(
+        kBasicTimeout, [this, branch] {
+          std::unique_ptr<FlowToken> cont = branch.Continue();
+          if (cont) {
+            Kill(*cont);
+          }
+        });
   }
 
   void Kill(FlowToken flow) {
