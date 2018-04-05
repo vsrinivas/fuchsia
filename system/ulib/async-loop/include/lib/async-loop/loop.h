@@ -79,7 +79,7 @@ zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_loop_t** out_loop);
 
 // Gets the the message loop's asynchronous dispatch interface.
-inline async_t* async_loop_get_dispatcher(async_loop_t* loop) {
+static inline async_t* async_loop_get_dispatcher(async_loop_t* loop) {
     // Note: The loop's implementation inherits from async_t so we can upcast to it.
     return (async_t*)loop;
 }
@@ -89,7 +89,7 @@ inline async_t* async_loop_get_dispatcher(async_loop_t* loop) {
 // This function assumes the dispatcher is backed by an |async_loop_t| which was created
 // using |async_loop_create()|.  Its behavior is undefined if used with other dispatcher
 // implementations.
-inline async_loop_t* async_loop_from_dispatcher(async_t* async) {
+static inline async_loop_t* async_loop_from_dispatcher(async_t* async) {
     return (async_loop_t*)async;
 }
 
