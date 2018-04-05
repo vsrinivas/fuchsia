@@ -4,6 +4,7 @@
 
 #include "garnet/bin/guest/vmm/linux.h"
 
+#include <endian.h>
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -12,8 +13,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <array>
 
 #include "garnet/bin/guest/vmm/kernel.h"
+#include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/bits.h"
 #include "garnet/lib/machina/guest.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -58,6 +61,16 @@ static constexpr uintptr_t kDtbOffset = kRamdiskOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbOverlayOffset = kDtbOffset - PAGE_SIZE;
 static constexpr uintptr_t kDtbBootParamsOffset =
     kDtbOffset + sizeof(SetupData);
+
+struct MemRange {
+  uint32_t addr;
+  uint32_t size;
+};
+static constexpr std::array<MemRange, 3> kMemoryHoles = {
+    MemRange{machina::kPl031PhysBase, 0x10000},         // 4kb hole for RTC.
+    MemRange{machina::kPciMmioBarPhysBase, 0x1000000},  // 16mb hole for MMIO.
+    MemRange{machina::kPciEcamPhysBase, 0x1000000},     // 16mb hole for ECAM.
+};
 
 // clang-format off
 
@@ -303,6 +316,19 @@ static void device_tree_error_msg(const char* property_name) {
                  << "tree, space must be reserved in the device tree";
 }
 
+static zx_status_t add_memory_entry(void* dtb, int memory_off, MemRange range) {
+  // TODO(PD-125): Use 64bit values here.
+  uint32_t entry[2];
+  entry[0] = htobe32(range.addr);
+  entry[1] = htobe32(range.size);
+  int ret = fdt_appendprop(dtb, memory_off, "reg", entry, sizeof(entry));
+  if (ret < 0) {
+    device_tree_error_msg("reg");
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
 static zx_status_t load_device_tree(const int dtb_fd,
                                     const machina::PhysMem& phys_mem,
                                     const std::string& cmdline,
@@ -394,6 +420,46 @@ static zx_status_t load_device_tree(const int dtb_fd,
       device_tree_error_msg("enable-method");
       return ZX_ERR_BAD_STATE;
     }
+  }
+
+  int memory_off = fdt_path_offset(dtb, "/memory@0");
+  if (memory_off < 0) {
+    FXL_LOG(ERROR) << "Failed to find \"/memory\" in device tree";
+    return ZX_ERR_BAD_STATE;
+  }
+  // NOTE: The following assumes that kMemoryHoles is non-overlapping.
+  std::vector<MemRange> memory_map = {
+      {0, static_cast<uint32_t>(phys_mem.size())},
+  };
+  for (auto hole : kMemoryHoles) {
+    auto entry =
+        std::find_if(memory_map.begin(), memory_map.end(), [hole](auto range) {
+          return range.addr < hole.addr + hole.size &&
+                 range.addr + range.size > hole.addr;
+        });
+    if (entry == memory_map.end()) {
+      continue;
+    }
+    uint32_t entry_end = entry->addr + entry->size;
+    uint32_t hole_end = hole.addr + hole.size;
+    if (hole.addr == entry->addr) {
+      // The current entry is now degenerate (has size of 0), so we construct
+      // our new entry by modifying the current entry.
+      entry->addr = hole_end;
+      entry->size = entry_end - hole_end;
+      continue;
+    }
+    entry->size = hole.addr - entry->addr;
+    if (hole_end < entry_end) {
+      // Insert the new entry directly after the current entry to preserve the
+      // order of the memory map. This way it will be written to the device
+      // tree in the correct order.
+      memory_map.emplace(
+          entry + 1, MemRange{.addr = hole_end, .size = entry_end - hole_end});
+    }
+  }
+  for (auto entry : memory_map) {
+    add_memory_entry(dtb, memory_off, entry);
   }
 
   return ZX_OK;

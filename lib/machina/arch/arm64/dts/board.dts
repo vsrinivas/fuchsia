@@ -23,12 +23,7 @@
 
   memory@0 {
     device_type = "memory";
-    reg = <0x00000000 0x09010000>,
-          // 4kb hole for RTC
-          <0x09020000 0x06fe0000>,
-          // 16mb hole for MMIO
-          <0x11000000 0x2e000000>;
-          // 16mb hole for ECAM
+    // Memory will be populated at run-time.
   };
 
   psci {
