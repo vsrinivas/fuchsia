@@ -54,14 +54,16 @@ template("fidl") {
     fidl_go(target_name) {
       forward_variables_from(invoker, "*")
     }
-  # This case needs to be last
-  } else if (current_base_toolchain == target_toolchain) {
+
+    # This case needs to be last
+  } else if (is_fuchsia) {
     import("//garnet/public/lib/fidl/build/cpp/fidl_cpp.gni")
 
     fidl_cpp(target_name) {
       forward_variables_from(invoker, "*")
     }
   } else {
-    assert(false, "Unable to process FIDL target in toolchain $current_toolchain.")
+    assert(false,
+           "Unable to process FIDL target in toolchain $current_toolchain.")
   }
 }

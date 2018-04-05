@@ -13,8 +13,7 @@ import("//build/fidl/toolchain.gni")
 #   - sources.
 
 template("fidl_cpp") {
-  assert(current_base_toolchain == target_toolchain,
-         "This template can only be used in $target_toolchain.")
+  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
 
   not_needed(invoker,
              [
@@ -47,16 +46,15 @@ template("fidl_cpp") {
   file_stem = "$fidl_root_gen_dir/fuchsia/cpp/$library_name"
   coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
 
-  if (current_toolchain == current_base_toolchain) {
+  # Only do the generation in the base toolchain, since it would
+  # be identical in all variants.
+  if (current_toolchain == toolchain_variant.base) {
     fidl_root_gen_dir =
         get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
     json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
     compiled_action(generation_target_name) {
-      forward_variables_from(invoker,
-                            [
-                              "testonly",
-                            ])
+      forward_variables_from(invoker, [ "testonly" ])
 
       visibility = [ ":$main_target_name" ]
 
@@ -107,7 +105,7 @@ template("fidl_cpp") {
     public_configs = [ "//garnet/public/lib/fidl/build/cpp:fidl_gen_config" ]
 
     deps = [
-      ":$generation_target_name($current_base_toolchain)",
+      ":$generation_target_name(${toolchain_variant.base})",
       ":$main_target_name($fidl_toolchain)",
     ]
 
