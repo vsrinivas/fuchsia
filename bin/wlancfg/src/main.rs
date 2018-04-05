@@ -8,22 +8,18 @@
 
 extern crate failure;
 extern crate fidl;
+extern crate fidl_wlan_device as wlan;
+extern crate fidl_wlan_device_service as wlan_service;
 extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
-extern crate fidl_wlan_device as wlan;
-extern crate fidl_wlan_device_service as wlan_service;
 
 use failure::{Error, Fail, ResultExt};
-use futures::prelude::*;
 use futures::future;
-use wlan_service::{
-    DeviceListener,
-    DeviceListenerImpl,
-    DeviceListenerMarker,
-    DeviceServiceMarker,
-    DeviceServiceProxy};
+use futures::prelude::*;
+use wlan_service::{DeviceListener, DeviceListenerImpl, DeviceListenerMarker, DeviceServiceMarker,
+                   DeviceServiceProxy};
 
 fn device_listener(svc: DeviceServiceProxy) -> impl DeviceListener {
     DeviceListenerImpl {
