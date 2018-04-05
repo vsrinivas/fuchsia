@@ -843,11 +843,10 @@ void StoryProviderImpl::PreviousStories(PreviousStoriesCallback callback) {
   new ReadAllDataCall<modular_private::StoryData>(
       &operation_queue_, page(), kStoryKeyPrefix, XdrStoryData,
       [callback](fidl::VectorPtr<modular_private::StoryData> data) {
-        fidl::VectorPtr<fidl::StringPtr> result;
-        result.resize(0);
+        auto result = fidl::VectorPtr<modular::StoryInfo>::New(0);
 
         for (auto& story_data : *data) {
-          result.push_back(story_data.story_info.id);
+          result.push_back(std::move(story_data.story_info));
         }
 
         callback(std::move(result));

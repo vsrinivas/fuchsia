@@ -329,7 +329,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   void TestStoryProvider_PreviousStories() {
     story_provider_->PreviousStories(
-        [this](fidl::VectorPtr<fidl::StringPtr> stories) {
+        [this](fidl::VectorPtr<modular::StoryInfo> stories) {
           previous_stories_.Pass();
           TestStoryProvider_GetStoryInfo(std::move(stories));
         });
@@ -338,7 +338,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint get_story_info_{"StoryProvider.GetStoryInfo()"};
 
   void TestStoryProvider_GetStoryInfo(
-      fidl::VectorPtr<fidl::StringPtr> stories) {
+      fidl::VectorPtr<modular::StoryInfo> stories) {
     if (stories->empty()) {
       get_story_info_.Pass();
       TestStory1();
@@ -346,18 +346,19 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     }
 
     std::shared_ptr<unsigned int> count = std::make_shared<unsigned int>(0);
-    for (auto& story_id : *stories) {
+    for (auto& story_info : *stories) {
+      fidl::StringPtr id = story_info.id;
       story_provider_->GetStoryInfo(
-          story_id, [this, story_id, count,
-                     max = stories->size()](modular::StoryInfoPtr story_info) {
+          id, [this, count, id,
+                     max = stories->size()](modular::StoryInfoPtr new_story_info) {
             ++*count;
 
-            if (story_info) {
+            if (new_story_info) {
               FXL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << story_id << " " << story_info->url;
+                            << " " << id << " " << new_story_info->url;
             } else {
               FXL_LOG(INFO) << "Previous story " << *count << " of " << max
-                            << " " << story_id << " was deleted";
+                            << " " << id << " was deleted";
             }
 
             if (*count == max) {

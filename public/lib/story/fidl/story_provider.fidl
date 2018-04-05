@@ -48,10 +48,8 @@ interface StoryProvider {
   // exist, the interface request is closed.
   5: GetController(string story_id, request<StoryController> story_controller);
 
-  // Returns IDs of known stories. More information about the stories can be
-  // retrieved using GetStoryInfo(), or by GetController(), then
-  // StoryController.GetInfo().
-  6: PreviousStories() -> (vector<string> story_ids);
+  // Returns info of known stories.
+  6: PreviousStories() -> (vector<StoryInfo> story_infos);
 
   // Returns IDs of stories on the current device that are not in the INITIAL or
   // STOPPED state. More information about the stories can be retrieved using

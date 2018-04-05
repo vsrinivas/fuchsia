@@ -78,7 +78,7 @@ class StoryProviderMock : public StoryProvider {
 
   // |StoryProvider|
   void PreviousStories(PreviousStoriesCallback callback) override {
-    callback(fidl::VectorPtr<fidl::StringPtr>::New(0));
+    callback(fidl::VectorPtr<modular::StoryInfo>::New(0));
   }
 
   // |StoryProvider|
