@@ -4,12 +4,10 @@
 
 #include "peridot/bin/ledger/tests/integration/integration_test.h"
 
-#include <thread>
+#include <lib/async/cpp/task.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -38,23 +36,20 @@ void BaseIntegrationTest::SetUp() {
   ::testing::Test::SetUp();
   trace_provider_ =
       std::make_unique<trace::TraceProvider>(message_loop_.async());
-  socket_thread_ = fsl::CreateThread(&socket_task_runner_);
+  loop_.StartThread();
   if (server_id) {
     GetAppFactory()->SetServerId(*server_id);
   }
 }
 
 void BaseIntegrationTest::TearDown() {
-  socket_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  socket_thread_.join();
-
+  loop_.Shutdown();
   ::testing::Test::TearDown();
 }
 
 zx::socket BaseIntegrationTest::StreamDataToSocket(std::string data) {
   socket::SocketPair sockets;
-  socket_task_runner_->PostTask(fxl::MakeCopyable(
+  async::PostTask(loop_.async(), fxl::MakeCopyable(
       [socket = std::move(sockets.socket1), data = std::move(data)]() mutable {
         auto writer = new socket::StringSocketWriter();
         writer->Start(std::move(data), std::move(socket));

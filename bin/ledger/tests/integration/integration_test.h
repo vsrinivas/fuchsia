@@ -6,8 +6,8 @@
 #define PERIDOT_BIN_LEDGER_TESTS_INTEGRATION_INTEGRATION_TEST_H_
 
 #include <functional>
-#include <thread>
 
+#include <lib/async/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include <fuchsia/cpp/ledger.h>
@@ -48,9 +48,8 @@ class BaseIntegrationTest : public gtest::TestWithMessageLoop {
   virtual LedgerAppInstanceFactory* GetAppFactory() = 0;
 
  private:
-  // Thread used to run the network service and the token provider.
-  std::thread socket_thread_;
-  fxl::RefPtr<fxl::TaskRunner> socket_task_runner_;
+  // Loop used to run network service and token provider tasks.
+  async::Loop loop_;
 
   std::unique_ptr<trace::TraceProvider> trace_provider_;
 };
