@@ -9,48 +9,44 @@
 namespace async {
 
 Loop::Loop(const async_loop_config_t* config) {
-    zx_status_t status = async_loop_create(config, &async_);
+    zx_status_t status = async_loop_create(config, &loop_);
     ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
 }
 
 Loop::~Loop() {
-    async_loop_destroy(async_);
+    async_loop_destroy(loop_);
 }
 
 void Loop::Shutdown() {
-    async_loop_shutdown(async_);
+    async_loop_shutdown(loop_);
 }
 
 zx_status_t Loop::Run(zx_time_t deadline, bool once) {
-    return async_loop_run(async_, deadline, once);
+    return async_loop_run(loop_, deadline, once);
 }
 
 zx_status_t Loop::RunUntilIdle() {
-    return async_loop_run_until_idle(async_);
+    return async_loop_run_until_idle(loop_);
 }
 
 void Loop::Quit() {
-    async_loop_quit(async_);
+    async_loop_quit(loop_);
 }
 
 zx_status_t Loop::ResetQuit() {
-    return async_loop_reset_quit(async_);
+    return async_loop_reset_quit(loop_);
 }
 
 async_loop_state_t Loop::GetState() const {
-    return async_loop_get_state(async_);
-}
-
-bool Loop::IsCurrentThreadDefault() const {
-    return async_ == async_get_default();
+    return async_loop_get_state(loop_);
 }
 
 zx_status_t Loop::StartThread(const char* name, thrd_t* out_thread) {
-    return async_loop_start_thread(async_, name, out_thread);
+    return async_loop_start_thread(loop_, name, out_thread);
 }
 
 void Loop::JoinThreads() {
-    async_loop_join_threads(async_);
+    async_loop_join_threads(loop_);
 }
 
 } // namespace async

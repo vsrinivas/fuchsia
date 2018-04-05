@@ -35,8 +35,11 @@ public:
     // Implicitly calls |Shutdown()|.
     ~Loop();
 
-    // Gets the underlying dispatcher for this loop.
-    async_t* async() const { return async_; }
+    // Gets the underlying message loop structure.
+    async_loop_t* loop() const { return loop_; }
+
+    // Gets the loop's asynchronous dispatch interface.
+    async_t* async() const { return async_loop_get_dispatcher(loop_); }
 
     // Shuts down the message loop, notifies handlers which asked to handle shutdown.
     // The message loop must not currently be running on any threads other than
@@ -92,9 +95,6 @@ public:
     // Returns the current state of the message loop.
     async_loop_state_t GetState() const;
 
-    // Returns true if this loop is the current thread's default dispatcher.
-    bool IsCurrentThreadDefault() const;
-
     // Starts a message loop running on a new thread.
     // The thread will run until the loop quits.
     //
@@ -111,7 +111,7 @@ public:
     void JoinThreads();
 
 private:
-    async_t* async_;
+    async_loop_t* loop_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Loop);
 };

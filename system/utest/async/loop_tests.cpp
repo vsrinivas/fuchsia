@@ -126,7 +126,7 @@ public:
 protected:
     async_task_result_t Handle(async_t* async, zx_status_t status) override {
         TestTask::Handle(async, status);
-        async_loop_quit(async);
+        async_loop_quit(async_loop_from_dispatcher(async));
         return ASYNC_TASK_FINISHED;
     }
 };
@@ -141,7 +141,7 @@ public:
 protected:
     async_task_result_t Handle(async_t* async, zx_status_t status) override {
         TestTask::Handle(async, status);
-        result = async_loop_reset_quit(async);
+        result = async_loop_reset_quit(async_loop_from_dispatcher(async));
         return ASYNC_TASK_FINISHED;
     }
 };
@@ -208,27 +208,27 @@ private:
 bool c_api_basic_test() {
     BEGIN_TEST;
 
-    async_t* async;
-    ASSERT_EQ(ZX_OK, async_loop_create(nullptr, &async), "create");
-    ASSERT_NONNULL(async, "async");
+    async_loop_t* loop;
+    ASSERT_EQ(ZX_OK, async_loop_create(nullptr, &loop), "create");
+    ASSERT_NONNULL(loop, "loop");
 
-    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, async_loop_get_state(async), "runnable");
+    EXPECT_EQ(ASYNC_LOOP_RUNNABLE, async_loop_get_state(loop), "runnable");
 
-    async_loop_quit(async);
-    EXPECT_EQ(ASYNC_LOOP_QUIT, async_loop_get_state(async), "quitting");
-    async_loop_run(async, ZX_TIME_INFINITE, false);
-    EXPECT_EQ(ZX_OK, async_loop_reset_quit(async));
+    async_loop_quit(loop);
+    EXPECT_EQ(ASYNC_LOOP_QUIT, async_loop_get_state(loop), "quitting");
+    async_loop_run(loop, ZX_TIME_INFINITE, false);
+    EXPECT_EQ(ZX_OK, async_loop_reset_quit(loop));
 
     thrd_t thread{};
-    EXPECT_EQ(ZX_OK, async_loop_start_thread(async, "name", &thread), "thread start");
+    EXPECT_EQ(ZX_OK, async_loop_start_thread(loop, "name", &thread), "thread start");
     EXPECT_NE(thrd_t{}, thread, "thread ws initialized");
-    async_loop_quit(async);
-    async_loop_join_threads(async);
+    async_loop_quit(loop);
+    async_loop_join_threads(loop);
 
-    async_loop_shutdown(async);
-    EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, async_loop_get_state(async), "shutdown");
+    async_loop_shutdown(loop);
+    EXPECT_EQ(ASYNC_LOOP_SHUTDOWN, async_loop_get_state(loop), "shutdown");
 
-    async_loop_destroy(async);
+    async_loop_destroy(loop);
 
     END_TEST;
 }
@@ -736,7 +736,7 @@ public:
 
         // Quit when last item processed.
         if (1u + fbl::atomic_fetch_add(&count_, 1u, fbl::memory_order_acq_rel) == end_)
-            async_loop_quit(async);
+            async_loop_quit(async_loop_from_dispatcher(async));
     }
 
 private:

@@ -29,14 +29,15 @@ See [async/loop.h](include/async/loop.h) for details.
 #include <lib/async/time.h>      // for async_now()
 #include <lib/async/default.h>   // for async_get_default()
 
+static async_loop_t* g_loop;
+
 int main(int argc, char** argv) {
-    async_t* async;
-    async_loop_create(&kAsyncLoopConfigMakeDefault, &async);
+    async_loop_create(&kAsyncLoopConfigMakeDefault, &g_loop);
 
     do_stuff();
 
-    async_loop_run(async, ZX_TIME_INFINITE, false);
-    async_loop_destroy(async);
+    async_loop_run(g_loop, ZX_TIME_INFINITE, false);
+    async_loop_destroy(g_loop);
     return 0;
 }
 
@@ -45,7 +46,7 @@ async_task_result_t handler(async_t* async, async_task_t* task, zx_status_t stat
     free(task);
 
     // This example doesn't have much to do, so just quit here.
-    async_loop_quit(async_get_default());
+    async_loop_quit(g_loop);
     return ASYNC_TASK_FINISHED;
 }
 

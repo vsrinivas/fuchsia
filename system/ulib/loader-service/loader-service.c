@@ -345,18 +345,21 @@ zx_status_t loader_service_create(async_t* async,
     }
 
     if (!async) {
-        zx_status_t status = async_loop_create(NULL, &async);
+        async_loop_t* loop;
+        zx_status_t status = async_loop_create(NULL, &loop);
         if (status != ZX_OK) {
             free(svc);
             return status;
         }
 
-        status = async_loop_start_thread(async, "loader-service", NULL);
+        status = async_loop_start_thread(loop, "loader-service", NULL);
         if (status != ZX_OK) {
             free(svc);
-            async_loop_destroy(async);
+            async_loop_destroy(loop);
             return status;
         }
+
+        async = async_loop_get_dispatcher(loop);
     }
 
     svc->async = async;

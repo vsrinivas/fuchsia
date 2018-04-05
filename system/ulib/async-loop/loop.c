@@ -50,7 +50,7 @@ const async_loop_config_t kAsyncLoopConfigMakeDefault = {
 };
 
 typedef struct async_loop {
-    async_t async;              // must be first
+    async_t async;              // must be first (the loop inherits from async_t)
     async_loop_config_t config; // immutable
     zx_handle_t port;           // immutable
     zx_handle_t timer;          // immutable
@@ -110,8 +110,8 @@ static inline async_task_t* node_to_task(list_node_t* node) {
     return FROM_NODE(async_task_t, node);
 }
 
-zx_status_t async_loop_create(const async_loop_config_t* config, async_t** out_async) {
-    ZX_DEBUG_ASSERT(out_async);
+zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop) {
+    ZX_DEBUG_ASSERT(out_loop);
 
     async_loop_t* loop = calloc(1u, sizeof(async_loop_t));
     if (!loop)
@@ -137,23 +137,22 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_t** out_a
                                       ZX_WAIT_ASYNC_REPEATING);
     }
     if (status == ZX_OK) {
-        *out_async = &loop->async;
+        *out_loop = loop;
         if (loop->config.make_default_for_current_thread) {
             ZX_DEBUG_ASSERT(async_get_default() == NULL);
             async_set_default(&loop->async);
         }
     } else {
         loop->config.make_default_for_current_thread = false;
-        async_loop_destroy(&loop->async);
+        async_loop_destroy(loop);
     }
     return status;
 }
 
-void async_loop_destroy(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+void async_loop_destroy(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
-    async_loop_shutdown(async);
+    async_loop_shutdown(loop);
 
     zx_handle_close(loop->port);
     zx_handle_close(loop->timer);
@@ -161,8 +160,7 @@ void async_loop_destroy(async_t* async) {
     free(loop);
 }
 
-void async_loop_shutdown(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+void async_loop_shutdown(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
     async_loop_state_t prior_state =
@@ -172,7 +170,7 @@ void async_loop_shutdown(async_t* async) {
         return;
 
     async_loop_wake_threads(loop);
-    async_loop_join_threads(async);
+    async_loop_join_threads(loop);
 
     list_node_t* node;
     while ((node = list_remove_head(&loop->wait_list))) {
@@ -200,13 +198,12 @@ void async_loop_shutdown(async_t* async) {
     }
 
     if (loop->config.make_default_for_current_thread) {
-        ZX_DEBUG_ASSERT(async_get_default() == async);
+        ZX_DEBUG_ASSERT(async_get_default() == &loop->async);
         async_set_default(NULL);
     }
 }
 
-zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once) {
-    async_loop_t* loop = (async_loop_t*)async;
+zx_status_t async_loop_run(async_loop_t* loop, zx_time_t deadline, bool once) {
     ZX_DEBUG_ASSERT(loop);
 
     zx_status_t status;
@@ -218,8 +215,8 @@ zx_status_t async_loop_run(async_t* async, zx_time_t deadline, bool once) {
     return status;
 }
 
-zx_status_t async_loop_run_until_idle(async_t* async) {
-    zx_status_t status = async_loop_run(async, 0, false);
+zx_status_t async_loop_run_until_idle(async_loop_t* loop) {
+    zx_status_t status = async_loop_run(loop, 0, false);
     if (status == ZX_ERR_TIMED_OUT) {
         status = ZX_OK;
     }
@@ -385,8 +382,7 @@ static zx_status_t async_loop_dispatch_packet(async_loop_t* loop, async_receiver
     return ZX_OK;
 }
 
-void async_loop_quit(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+void async_loop_quit(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
     async_loop_state_t expected_state = ASYNC_LOOP_RUNNABLE;
@@ -415,8 +411,7 @@ static void async_loop_wake_threads(async_loop_t* loop) {
     }
 }
 
-zx_status_t async_loop_reset_quit(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+zx_status_t async_loop_reset_quit(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
     // Ensure that there are no active threads before resetting the quit state.
@@ -440,8 +435,7 @@ zx_status_t async_loop_reset_quit(async_t* async) {
     return ZX_ERR_BAD_STATE;
 }
 
-async_loop_state_t async_loop_get_state(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+async_loop_state_t async_loop_get_state(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
     return atomic_load_explicit(&loop->state, memory_order_acquire);
@@ -621,12 +615,12 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
 
 static void async_loop_invoke_prologue(async_loop_t* loop) {
     if (loop->config.prologue)
-        loop->config.prologue((async_t*)loop, loop->config.data);
+        loop->config.prologue(loop, loop->config.data);
 }
 
 static void async_loop_invoke_epilogue(async_loop_t* loop) {
     if (loop->config.epilogue)
-        loop->config.epilogue((async_t*)loop, loop->config.data);
+        loop->config.epilogue(loop, loop->config.data);
 }
 
 static async_wait_result_t async_loop_invoke_wait_handler(async_loop_t* loop,
@@ -660,14 +654,13 @@ static void async_loop_invoke_receiver_handler(async_loop_t* loop,
 }
 
 static int async_loop_run_thread(void* data) {
-    async_t* async = (async_t*)data;
-    async_set_default(async);
-    async_loop_run(async, ZX_TIME_INFINITE, false);
+    async_loop_t* loop = (async_loop_t*)data;
+    async_set_default(&loop->async);
+    async_loop_run(loop, ZX_TIME_INFINITE, false);
     return 0;
 }
 
-zx_status_t async_loop_start_thread(async_t* async, const char* name, thrd_t* out_thread) {
-    async_loop_t* loop = (async_loop_t*)async;
+zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name, thrd_t* out_thread) {
     ZX_DEBUG_ASSERT(loop);
 
     // This check is inherently racy.  The client should not be racing shutdown
@@ -680,7 +673,7 @@ zx_status_t async_loop_start_thread(async_t* async, const char* name, thrd_t* ou
     if (!rec)
         return ZX_ERR_NO_MEMORY;
 
-    if (thrd_create_with_name(&rec->thread, async_loop_run_thread, async, name) != thrd_success) {
+    if (thrd_create_with_name(&rec->thread, async_loop_run_thread, loop, name) != thrd_success) {
         free(rec);
         return ZX_ERR_NO_MEMORY;
     }
@@ -694,8 +687,7 @@ zx_status_t async_loop_start_thread(async_t* async, const char* name, thrd_t* ou
     return ZX_OK;
 }
 
-void async_loop_join_threads(async_t* async) {
-    async_loop_t* loop = (async_loop_t*)async;
+void async_loop_join_threads(async_loop_t* loop) {
     ZX_DEBUG_ASSERT(loop);
 
     mtx_lock(&loop->lock);
