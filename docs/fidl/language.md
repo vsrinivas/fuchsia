@@ -410,8 +410,9 @@ Handles are denoted:
 *   **`handle<H>?`** : nullable Zircon handle of
     type _H_
 
-_H_ can be one of[¹](#footnote1): **`channel, event, eventpair, fifo, job,
-process, port, resource, socket, thread, vmo`**
+_H_ can be one of: `channel, event, eventpair, fifo, job,
+process, port, resource, socket, thread, vmo`. New types will
+be added to the fidl language as they are added to Zircon.
 
 ```
 // A record which contains some handles.
@@ -615,11 +616,4 @@ constant expressions.
 
 ## Grammar
 
-[Grammar is here](grammar.md).
-
-## Notes
-
-### 1 {#footnote1}
-
-New handle types can easily be added to the language
-without affecting the  wire format since all handles are transferred the same way.
+A modified [EBNF description of the fidl grammar is here](grammar.md).

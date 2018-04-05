@@ -136,36 +136,36 @@ Requirements
 
 ## Where to Find the Code
 
-- [_The compiler_](../../system/host/fidl)
-- [_C bindings_](../../system/ulib/fidl)
-- [_C++ bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
-- [_Go bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/go)
-- [_Rust bindings_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
+- [The compiler](../../system/host/fidl)
+- [C bindings](../../system/ulib/fidl)
+- [C++ bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
+- [Go bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/go)
+- [Rust bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
 
 ## Constituent Parts of Specification
 
-FIDL Wire Format
+### FIDL Wire Format
 
 The FIDL wire format specified how FIDL messages are represented in memory for
 transmission over IPC.
 
-Main topic: [FIDL: Wire Format Specification]
+The fidl wire format is documented [FIDL: Wire Format Specification](here).
 
-FIDL Language
+### FIDL Language
 
 The FIDL language is the syntax by which interfaces are described in ***.fidl**
 files.
 
-Main topic: [FIDL: Language Specification]
+The fidl language is documented [FIDL: Language Specification](here).
 
-FIDL Compiler
+### FIDL Compiler
 
 The FIDL compiler generates code for programs to use and implement interfaces
 described by the FIDL language.
 
-Main topic: [FIDL: Compiler Specification]
+The fidl compiler is documented [FIDL: Compiler Specification](here).
 
-FIDL Bindings
+### FIDL Bindings
 
 FIDL bindings are language-specific runtime support libraries and code
 generators which provide APIs for manipulating FIDL data structures and
