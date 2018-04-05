@@ -273,7 +273,8 @@ impl ClientInner {
     ) -> Poll<MessageBuf, Error> {
         // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
         // one happens on this call.
-        let interest_id = InterestId::from_txid(id);
+        let txid = id;
+        let interest_id = InterestId::from_txid(txid);
 
         // Look to see if there are messages available
         if self.received_messages_count.load(Ordering::Acquire) > 0 {
@@ -319,19 +320,20 @@ impl ClientInner {
             }
 
             // TODO(cramertj) handle control messages (e.g. epitaph)
-            let recvd_id = response_header_tx_id(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            let recvd_txid = response_header_tx_id(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            let recvd_interest_id = InterestId::from_txid(recvd_txid);
 
             // If a message was received for the ID in question,
             // remove the message interest entry and return the response.
-            if recvd_id == id {
-                self.message_interests.lock().unwrap().remove(interest_id.as_raw_id());
+            if recvd_txid == txid {
+                self.message_interests.lock().unwrap().remove(recvd_interest_id.as_raw_id());
                 return Ok(Async::Ready(buf));
             }
 
             // Look for a message interest with the given ID.
             // If one is found, store the message so that it can be picked up later.
             let mut message_interests = self.message_interests.lock().unwrap();
-            if let Some(entry) = message_interests.get_mut(interest_id.as_raw_id()) {
+            if let Some(entry) = message_interests.get_mut(recvd_interest_id.as_raw_id()) {
                 let old_entry = mem::replace(entry, MessageInterest::Received(buf));
                 self.received_messages_count.fetch_add(1, Ordering::AcqRel);
                 if let MessageInterest::Waiting(waker) = old_entry {
