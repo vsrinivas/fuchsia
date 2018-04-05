@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/async_stub.cpp \
     $(LOCAL_DIR)/default_tests.cpp \
     $(LOCAL_DIR)/loop_tests.cpp \
     $(LOCAL_DIR)/main.c \
@@ -27,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/async-testutils \
     system/ulib/zx \
     system/ulib/zxcpp \
     system/ulib/fbl

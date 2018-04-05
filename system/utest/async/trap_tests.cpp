@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/trap.h>
-
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
-class MockAsync : public AsyncStub {
+class MockAsync : public async::AsyncStub {
 public:
     async_guest_bell_trap_t* last_trap = nullptr;
 

@@ -5,13 +5,16 @@
 #pragma once
 
 #include <lib/async/dispatcher.h>
+#include <lib/zx/time.h>
+
+namespace async {
 
 struct AsyncStub : public async_t {
 public:
     AsyncStub();
     virtual ~AsyncStub();
 
-    virtual zx_time_t Now();
+    virtual zx::time Now();
     virtual zx_status_t BeginWait(async_wait_t* wait);
     virtual zx_status_t CancelWait(async_wait_t* wait);
     virtual zx_status_t PostTask(async_task_t* task);
@@ -20,3 +23,5 @@ public:
                                     const zx_packet_user_t* data);
     virtual zx_status_t SetGuestBellTrap(async_guest_bell_trap_t* trap);
 };
+
+}  // namespace async

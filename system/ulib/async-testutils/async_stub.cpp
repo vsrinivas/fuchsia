@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "async_stub.h"
+#include <lib/async-testutils/async_stub.h>
+
+namespace async {
 
 namespace {
 
 zx_time_t stub_now(async_t* async) {
-    return static_cast<AsyncStub*>(async)->Now();
+    return (static_cast<AsyncStub*>(async)->Now()).get();
 }
 
 zx_status_t stub_begin_wait(async_t* async, async_wait_t* wait) {
@@ -47,13 +49,12 @@ const async_ops_t g_stub_ops = {
 
 } // namespace
 
-AsyncStub::AsyncStub()
-    : async_t{&g_stub_ops} {}
+AsyncStub::AsyncStub() : async_t{&g_stub_ops} {}
 
 AsyncStub::~AsyncStub() {}
 
-zx_time_t AsyncStub::Now() {
-    return 0u;
+zx::time AsyncStub::Now() {
+    return zx::time(0);
 }
 
 zx_status_t AsyncStub::BeginWait(async_wait_t* wait) {
@@ -80,3 +81,5 @@ zx_status_t AsyncStub::QueuePacket(async_receiver_t* receiver,
 zx_status_t AsyncStub::SetGuestBellTrap(async_guest_bell_trap_t* trap) {
     return ZX_ERR_NOT_SUPPORTED;
 }
+
+}  // namespace async

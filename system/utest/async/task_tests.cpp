@@ -4,14 +4,12 @@
 
 #include <lib/async/cpp/auto_task.h>
 #include <lib/async/cpp/task.h>
-
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
-class MockAsync : public AsyncStub {
+class MockAsync : public async::AsyncStub {
 public:
     enum class Op {
         NONE,
@@ -180,7 +178,7 @@ bool auto_task_test() {
 bool unsupported_post_task_test() {
     BEGIN_TEST;
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_task_t task{};
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_post_task(&async, &task), "valid args");
 
@@ -190,7 +188,7 @@ bool unsupported_post_task_test() {
 bool unsupported_cancel_task_test() {
     BEGIN_TEST;
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_task_t task{};
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_task(&async, &task), "valid args");
 

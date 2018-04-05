@@ -6,9 +6,8 @@
 
 #include <threads.h>
 
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
@@ -17,7 +16,7 @@ int default_test_thread(void*) {
 
     EXPECT_NULL(async_get_default(), "other thread's default is initially null");
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_set_default(&async);
     EXPECT_EQ(&async, async_get_default(), "other thread's default can be changed");
 
@@ -32,7 +31,7 @@ bool get_set_default_test() {
     EXPECT_NULL(async_get_default(), "default is initially null");
 
     // Default can be changed.
-    AsyncStub async;
+    async::AsyncStub async;
     async_set_default(&async);
     EXPECT_EQ(&async, async_get_default(), "default can be changed");
 

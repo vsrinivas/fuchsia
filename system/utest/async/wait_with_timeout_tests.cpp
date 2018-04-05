@@ -3,14 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/wait_with_timeout.h>
-
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
-class MockAsync : public AsyncStub {
+class MockAsync : public async::AsyncStub {
 public:
     async_wait_t* last_begin_wait = nullptr;
     async_wait_t* last_cancel_wait = nullptr;

@@ -4,13 +4,12 @@
 
 #include <lib/async/cpp/receiver.h>
 
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
-class MockAsync : public AsyncStub {
+class MockAsync : public async::AsyncStub {
 public:
     enum class Op {
         NONE,
@@ -98,7 +97,7 @@ bool wrapper_test() {
 bool unsupported_queue_packet_test() {
     BEGIN_TEST;
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_receiver_t receiver{};
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_queue_packet(&async, &receiver, nullptr), "valid args without data");
     zx_packet_user_t data;

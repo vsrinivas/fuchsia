@@ -40,50 +40,10 @@ inline void InsertTask(list_node_t* task_list, async_task_t* task) {
     list_add_after(node, TaskToNode(task));
 }
 
-// async_t operations via those of the TestLoopDispatcher wrapper.
-zx_time_t test_now(async_t* async) {
-  return (static_cast<TestLoopDispatcher*>(async)->Now()).get();
-}
-
-zx_status_t test_begin_wait(async_t* async, async_wait_t* wait) {
-    return static_cast<TestLoopDispatcher*>(async)->BeginWait(wait);
-}
-
-zx_status_t test_cancel_wait(async_t* async, async_wait_t* wait) {
-    return static_cast<TestLoopDispatcher*>(async)->CancelWait(wait);
-}
-
-zx_status_t test_post_task(async_t* async, async_task_t* task) {
-    return static_cast<TestLoopDispatcher*>(async)->PostTask(task);
-}
-
-zx_status_t test_cancel_task(async_t* async, async_task_t* task) {
-    return static_cast<TestLoopDispatcher*>(async)->CancelTask(task);
-}
-
-zx_status_t test_queue_packet(async_t* async, async_receiver_t* receiver,
-                              const zx_packet_user_t* data) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t test_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-const async_ops_t test_ops = {
-    .now = test_now,
-    .begin_wait = test_begin_wait,
-    .cancel_wait = test_cancel_wait,
-    .post_task = test_post_task,
-    .cancel_task = test_cancel_task,
-    .queue_packet = test_queue_packet,
-    .set_guest_bell_trap = test_set_guest_bell_trap,
-};
-
 } // namespace
 
 TestLoopDispatcher::TestLoopDispatcher(zx::time* current_time)
-    : async_t{&test_ops}, current_time_(current_time) {
+    : current_time_(current_time) {
     ZX_DEBUG_ASSERT(current_time);
     list_initialize(&wait_list_);
     list_initialize(&task_list_);

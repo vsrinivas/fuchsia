@@ -4,14 +4,12 @@
 
 #include <lib/async/cpp/auto_wait.h>
 #include <lib/async/cpp/wait.h>
-
+#include <lib/async-testutils/async_stub.h>
 #include <unittest/unittest.h>
-
-#include "async_stub.h"
 
 namespace {
 
-class MockAsync : public AsyncStub {
+class MockAsync : public async::AsyncStub {
 public:
     enum class Op {
         NONE,
@@ -215,7 +213,7 @@ bool auto_wait_test() {
 bool unsupported_begin_wait_test() {
     BEGIN_TEST;
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_wait_t wait{};
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_begin_wait(&async, &wait), "valid args");
 
@@ -225,7 +223,7 @@ bool unsupported_begin_wait_test() {
 bool unsupported_cancel_wait_test() {
     BEGIN_TEST;
 
-    AsyncStub async;
+    async::AsyncStub async;
     async_wait_t wait{};
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, async_cancel_wait(&async, &wait), "valid args");
 
