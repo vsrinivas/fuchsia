@@ -57,6 +57,10 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     wlan_channel_t Chan() const override { return chan_; }
 
    private:
+    // Maximum number of group addressed packets buffered while at least one client is dozing.
+    // TODO(NET-687): Find good BU limit.
+    static constexpr size_t kMaxGroupAddressedBu = 128;
+
     // FrameHandler implementation
     zx_status_t HandleDataFrame(const DataFrameHeader& hdr) override;
     zx_status_t HandleMgmtFrame(const MgmtFrameHeader& hdr) override;
@@ -72,6 +76,9 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
                                   fbl::unique_ptr<Timer>* out_timer);
+    // Returns `true` if a frame with the given destination should get buffered.
+    bool ShouldBufferFrame(const common::MacAddr& dest) const;
+    zx_status_t BufferFrame(fbl::unique_ptr<Packet> packet);
     zx_status_t SendNextBu();
 
     const common::MacAddr bssid_;

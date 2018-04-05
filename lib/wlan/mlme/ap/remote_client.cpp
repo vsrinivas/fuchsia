@@ -741,9 +741,13 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 }
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {
-    if (ps_pkt_queue_.size() >= kMaxPowerSavingQueueSize) { return ZX_ERR_NO_RESOURCES; }
+    // Drop oldest frame if queue reached its limit.
+    if (ps_pkt_queue_.size() >= kMaxPowerSavingQueueSize) {
+        ps_pkt_queue_.Dequeue();
+        warnf("[client] [%s] dropping oldest unicast frame\n", addr().ToString().c_str());
+    }
 
-    debugbss("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
+    debugps("[client] [%s] client is dozing; buffer outbound frame\n", addr().ToString().c_str());
 
     size_t hdr_len = sizeof(EthernetII);
     size_t frame_len = hdr_len + frame.body_len;

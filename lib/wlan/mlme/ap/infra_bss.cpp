@@ -182,6 +182,7 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
     }
 
     tim_.SetTrafficIndication(aid, bu_count > 0);
+    // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
     bcn_sender_->UpdateBeacon(tim_);
 }
 
@@ -207,6 +208,7 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
     }
 
     tim_.SetTrafficIndication(aid, false);
+    // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
     bcn_sender_->UpdateBeacon(tim_);
     return clients_.ReleaseAid(client);
 }
@@ -227,13 +229,45 @@ zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
     return ZX_OK;
 }
 
+bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
+    // Buffer non-GCR-SP frames when at least one client is dozing.
+    // Note: Currently group addressed service transmission is not supported and thus, every group
+    // message should get buffered.
+    // TODO(porce): Use MacAddr#IsGroupAddr() once wording got fixed to match IEEE 802.11.
+    return receiver_addr.IsMcast() && tim_.HasDozingClients();
+}
+
+zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
+    // Drop oldest frame if queue reached its limit.
+    if (bu_queue_.size() >= kMaxGroupAddressedBu) {
+        bu_queue_.Dequeue();
+        warnf("[infra-bss] [%s] dropping oldest group addressed frame\n",
+              bssid_.ToString().c_str());
+    }
+
+    debugps("[infra-bss] [%s] buffer outbound frame\n", bssid_.ToString().c_str());
+    bu_queue_.Enqueue(fbl::move(packet));
+    tim_.SetTrafficIndication(kGroupAdressedAid, true);
+    return ZX_OK;
+}
+
 zx_status_t InfraBss::SendDataFrame(fbl::unique_ptr<Packet> packet) {
-    // TODO(hahnr): Buffer non-GCR-SP frames when at least one client is dozing.
+    ZX_DEBUG_ASSERT(packet->len() >= sizeof(DataFrameHeader));
+    if (packet->len() < sizeof(DataFrameHeader)) { return ZX_ERR_INVALID_ARGS; }
+
+    auto hdr = packet->field<DataFrameHeader>(0);
+    if (ShouldBufferFrame(hdr->addr1)) { return BufferFrame(fbl::move(packet)); }
+
     return device_->SendWlan(fbl::move(packet));
 }
 
 zx_status_t InfraBss::SendMgmtFrame(fbl::unique_ptr<Packet> packet) {
-    // TODO(hahnr): Buffer non-GCR-SP frames when at least one client is dozing.
+    ZX_DEBUG_ASSERT(packet->len() >= sizeof(MgmtFrameHeader));
+    if (packet->len() < sizeof(MgmtFrameHeader)) { return ZX_ERR_INVALID_ARGS; }
+
+    auto hdr = packet->field<MgmtFrameHeader>(0);
+    if (ShouldBufferFrame(hdr->addr1)) { return BufferFrame(fbl::move(packet)); }
+
     return device_->SendWlan(fbl::move(packet));
 }
 

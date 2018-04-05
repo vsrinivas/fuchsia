@@ -77,9 +77,9 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t WriteHtCapabilities(ElementWriter* w);
     zx_status_t WriteHtOperation(ElementWriter* w);
 
-    // Maximum amount of packets buffered while the client is in power saving mode.
-    // Use `0` buffers to disable buffering until PS mode is ready
-    static constexpr size_t kMaxPowerSavingQueueSize = 0;
+    // Maximum number of packets buffered while the client is in power saving mode.
+    // TODO(NET-687): Find good BU limit.
+    static constexpr size_t kMaxPowerSavingQueueSize = 15;
 
     Listener* const listener_;
     DeviceInterface* const device_;

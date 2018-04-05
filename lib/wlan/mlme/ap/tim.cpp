@@ -40,6 +40,11 @@ zx_status_t TrafficIndicationMap::WritePartialVirtualBitmap(uint8_t* buf, size_t
     return ZX_OK;
 }
 
+bool TrafficIndicationMap::HasDozingClients() const {
+    bool empty = aid_bitmap_.Scan(1, aid_bitmap_.size(), false, nullptr);
+    return !empty;
+}
+
 size_t TrafficIndicationMap::N1() const {
     size_t first_set_bit = aid_bitmap_.Scan(1, aid_bitmap_.size(), false);
     if (first_set_bit == aid_bitmap_.size()) {

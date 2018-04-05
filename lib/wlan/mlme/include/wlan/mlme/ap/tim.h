@@ -23,6 +23,7 @@ class TrafficIndicationMap {
     // Write a Partial Virtual Bitmap into the given buffer.
     zx_status_t WritePartialVirtualBitmap(uint8_t* buf, size_t buf_len, size_t* bitmap_len,
                                           uint8_t* bitmap_offset) const;
+    bool HasDozingClients() const;
 
    private:
     // N1 and N2 specify the start and end offsets of a range of AIDs which have buffered traffic.

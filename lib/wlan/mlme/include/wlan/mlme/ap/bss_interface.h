@@ -19,6 +19,7 @@ class Buffer;
 class StartRequest;
 
 using aid_t = size_t;
+static constexpr aid_t kGroupAdressedAid = 0;
 static constexpr aid_t kMaxBssClients = 2008;
 
 class BssInterface {
