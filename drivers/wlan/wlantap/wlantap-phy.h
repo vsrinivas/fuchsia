@@ -14,6 +14,7 @@ namespace wlan {
 namespace wlantap {
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
+                      zx::channel event_channel,
                       std::unique_ptr<::wlantap::WlantapPhyConfig> ioctl_in, async_t* loop);
 
 } // namespace wlantap

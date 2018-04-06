@@ -187,6 +187,7 @@ struct WlantapMacImpl : WlantapMac {
         if (config->remote != expected_remote) {
             return ZX_ERR_INVALID_ARGS;
         }
+        self.listener_->WlantapMacConfigureBss(self.id_, config);
         return ZX_OK;
     }
 

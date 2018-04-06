@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rust_binary.gni")
+import("//build/package.gni")
+
+rust_binary("bin") {
+  name = "wlan-hw-sim"
+}
+
+package("wlan-hw-sim") {
+  deps = [
+    ":bin",
+    "//garnet/lib/rust/crates/wlantap-client"
+  ]
+
+  binary = "wlan-hw-sim"
+
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    }
+  ]
+}

@@ -78,8 +78,9 @@ struct WlantapCtl {
             return ZX_ERR_INVALID_ARGS;
         }
         auto& in = *static_cast<const wlantap_ioctl_create_wlanphy_t*>(in_buf);
-        // Immediately wrap the handle to make sure we don't leak it
-        zx::channel user_channel(in.handle);
+        // Immediately wrap the handles to make sure we don't leak them
+        zx::channel user_channel(in.channel);
+        zx::channel event_channel(in.event_channel);
 
         auto phy_config = ::wlantap::WlantapPhyConfig::New();
         const uint8_t* in_end = static_cast<const uint8_t*>(in_buf) + in_len;
@@ -95,6 +96,7 @@ struct WlantapCtl {
             return status;
         }
         status = wlan::wlantap::CreatePhy(device_, std::move(user_channel),
+                                          std::move(event_channel),
                                           std::move(phy_config), loop);
         if (status != ZX_OK) {
             zxlogf(ERROR, "could not create wlantap phy: %d\n", status);

@@ -8,6 +8,7 @@ members =  [
   "bin/log_listener",
   "bin/logger",
   "bin/power_manager",
+  "bin/wlan-hw-sim",
   "bin/wlancfg",
   "bin/wlanstack",
   "bin/wlantool",
@@ -24,9 +25,11 @@ members =  [
   "lib/rust/crates/fuchsia-wlan-dev",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
+  "lib/rust/crates/wlantap-client",
   "lib/rust/fidl_crates/fidl_bluetooth_host",
   "lib/rust/fidl_crates/fidl_wlan_device",
   "lib/rust/fidl_crates/fidl_wlan_device_service",
+  "lib/rust/fidl_crates/fidl_wlantap",
   "public/lib/fidl/rust/fidl",
   "public/rust/crates/fuchsia-ddk",
   "public/rust/crates/fuchsia-ddk/examples/ddk_toy",
@@ -96,6 +99,7 @@ fidl_views_v1 = { path = "public/rust/fidl_crates/fidl_views_v1" }
 fidl_views_v1_token = { path = "public/rust/fidl_crates/fidl_views_v1_token" }
 fidl_wlan_device = { path = "lib/rust/fidl_crates/fidl_wlan_device" }
 fidl_wlan_device_service = { path = "lib/rust/fidl_crates/fidl_wlan_device_service" }
+fidl_wlantap = { path = "lib/rust/fidl_crates/fidl_wlantap" }
 fidl_xi = { path = "public/rust/fidl_crates/fidl_xi" }
 fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
@@ -116,6 +120,7 @@ rand = { path = "../third_party/rust-mirrors/rand" }
 tokio-core = { path = "../third_party/rust-mirrors/tokio-core" }
 wlan-rsn = { path = "lib/rust/crates/wlan-rsn" }
 wlan-sme = { path = "lib/rust/crates/wlan-sme" }
+wlantap-client = { path = "lib/rust/crates/wlantap-client" }
 xi-core-lib = { path = "../third_party/rust-mirrors/xi-editor/rust/core-lib" }
 xi-rope = { path = "../third_party/rust-mirrors/xi-editor/rust/rope" }
 xi-rpc = { path = "../third_party/rust-mirrors/xi-editor/rust/rpc" }

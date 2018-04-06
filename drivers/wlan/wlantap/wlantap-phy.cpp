@@ -16,6 +16,138 @@ namespace wlan {
 namespace wlantap {
 namespace {
 
+template<typename T>
+zx_status_t EncodeFidlMessage(uint32_t ordinal, T* message, fidl::Encoder* encoder) {
+    encoder->Reset(ordinal);
+    encoder->Alloc(fidl::CodingTraits<T>::encoded_size);
+    message->Encode(encoder, sizeof(fidl_message_header_t));
+    auto encoded = encoder->GetMessage();
+    const char* err = nullptr;
+    zx_status_t status = fidl_validate(T::FidlType,
+                                       encoded.bytes().data() + sizeof(fidl_message_header_t),
+                                       encoded.bytes().actual() - sizeof(fidl_message_header_t),
+                                       0, &err);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: FIDL validation failed: %s (%d)\n", __func__, err, status);
+        return status;
+    }
+    return ZX_OK;
+}
+
+template<typename T>
+zx_status_t SendFidlMessage(uint32_t ordinal, T* message, fidl::Encoder* encoder,
+                            const zx::channel& channel) {
+    zx_status_t status = EncodeFidlMessage(ordinal, message, encoder);
+    if (status != ZX_OK) {
+        return status;
+    }
+    auto m = encoder->GetMessage();
+    status = channel.write(0, m.bytes().data(), m.bytes().actual(), nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: write to channel failed: %d\n", __func__, status);
+        return status;
+    }
+    return ZX_OK;
+}
+
+template<typename T, size_t N>
+::fidl::Array<T, N> ToFidlArray(const T (&c_array)[N]) {
+    ::fidl::Array<T, N> ret;
+    std::copy_n(&c_array[0], N, ret.begin());
+    return ret;
+};
+
+struct EventSender {
+    EventSender(zx::channel channel) : encoder_(0), channel_(std::move(channel)) { }
+
+    void SendTxEvent(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
+        tx_args_.wlanmac_id = wlanmac_id;
+        ConvertTxInfo(pkt->info, &tx_args_.packet.info);
+        auto& data = tx_args_.packet.data;
+        data->clear();
+        auto head = static_cast<const uint8_t*>(pkt->packet_head->data);
+        std::copy_n(head, pkt->packet_head->len, std::back_inserter(*data));
+        if (pkt->packet_tail != nullptr) {
+            auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data);
+            std::copy_n(tail + pkt->tail_offset, pkt->packet_tail->len - pkt->tail_offset,
+                        std::back_inserter(*data));
+        }
+        Send(EventOrdinal::Tx, &tx_args_);
+    }
+
+    void SendSetChannelEvent(uint16_t wlanmac_id, wlan_channel_t* channel) {
+        ::wlantap::SetChannelArgs args = {
+            .wlanmac_id = wlanmac_id,
+            .chan = {
+                    .primary = channel->primary,
+                    .cbw = channel->cbw,
+                    .secondary80 = channel->secondary80
+            }
+        };
+        Send(EventOrdinal::SetChannel, &args);
+    }
+
+    void SendConfigureBssEvent(uint16_t wlanmac_id, wlan_bss_config_t* config) {
+        ::wlantap::ConfigureBssArgs args = {
+            .wlanmac_id = wlanmac_id,
+            .config = {
+                    .bss_type = config->bss_type,
+                    .bssid = ToFidlArray(config->bssid),
+                    .remote = config->remote
+            }
+        };
+        Send(EventOrdinal::ConfigureBss, &args);
+    }
+
+    void SendSetKeyEvent(uint16_t wlanmac_id, wlan_key_config_t* config) {
+        set_key_args_.wlanmac_id = wlanmac_id;
+        set_key_args_.config.protection = config->protection;
+        set_key_args_.config.cipher_oui = ToFidlArray(config->cipher_oui);
+        set_key_args_.config.cipher_type = config->cipher_type;
+        set_key_args_.config.key_type = config->key_type;
+        set_key_args_.config.peer_addr = ToFidlArray(config->peer_addr);
+        set_key_args_.config.key_idx = config->key_idx;
+        auto& key = set_key_args_.config.key;
+        key->clear();
+        key->reserve(config->key_len);
+        std::copy_n(config->key, config->key_len, std::back_inserter(*key));
+        Send(EventOrdinal::SetKey, &set_key_args_);
+    }
+
+private:
+    // Must be in sync with wlantap.fidl
+    enum class EventOrdinal : uint32_t {
+        Tx = 3,
+        SetChannel = 4,
+        ConfigureBss = 5,
+        // TODO: ConfigureBeacon
+        SetKey = 7
+    };
+
+    template<typename T>
+    void Send(EventOrdinal ordinal, T* message) {
+        zx_status_t status = SendFidlMessage(static_cast<uint32_t>(ordinal), message, &encoder_,
+                                             channel_);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: failed to send FIDL message: %d\n", __func__, status);
+        }
+    }
+
+    static void ConvertTxInfo(const wlan_tx_info_t& in, ::wlantap::WlanTxInfo* out) {
+        out->tx_flags = in.tx_flags;
+        out->valid_fields = in.valid_fields;
+        out->phy = in.phy;
+        out->cbw = in.cbw;
+        out->data_rate = in.data_rate;
+        out->mcs = in.mcs;
+    }
+
+    fidl::Encoder encoder_;
+    zx::channel channel_;
+    // Messages that require memory allocation
+    ::wlantap::TxArgs tx_args_;
+    ::wlantap::SetKeyArgs set_key_args_;
+};
 
 template<typename T, size_t MAX_COUNT>
 class DevicePool {
@@ -65,11 +197,13 @@ constexpr size_t kMaxMacDevices = 4;
 
 struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listener {
     WlantapPhy(zx_device_t* device, zx::channel user_channel,
+               zx::channel events_channel,
                std::unique_ptr<::wlantap::WlantapPhyConfig> phy_config,
                async_t* loop)
       : phy_config_(std::move(phy_config)),
         phy_dispatcher_(loop),
-        user_channel_binding_(this, std::move(user_channel), loop)
+        user_channel_binding_(this, std::move(user_channel), loop),
+        event_sender_(std::move(events_channel))
     {
         user_channel_binding_.set_error_handler([this] {
             // Remove the device if the client closed the channel
@@ -191,33 +325,33 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
     // WlantapMac::Listener impl
 
     virtual void WlantapMacStart(uint16_t wlanmac_id) override {
-        //TODO: send to the client
         printf("WlantapMacStart id=%u\n", wlanmac_id);
     }
 
     virtual void WlantapMacStop(uint16_t wlanmac_id) override {
-        //TODO: send to the client
         printf("WlantapMacStop id=%u\n", wlanmac_id);
     }
 
     virtual void WlantapMacQueueTx(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) override {
-        //TODO: send to the client
         printf("WlantapMacQueueTx id=%u\n", wlanmac_id);
+        std::lock_guard<std::mutex> guard(event_sender_lock_);
+        event_sender_.SendTxEvent(wlanmac_id, pkt);
     }
 
     virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
-        //TODO: send to the client
-        printf("WlantapMacSetChannel id=%u\n", wlanmac_id);
+        std::lock_guard<std::mutex> guard(event_sender_lock_);
+        event_sender_.SendSetChannelEvent(wlanmac_id, channel);
     }
 
     virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, wlan_bss_config_t* config) override {
-        //TODO: send to the client
         printf("WlantapMacConfigureBss id=%u\n", wlanmac_id);
+        std::lock_guard<std::mutex> guard(event_sender_lock_);
+        event_sender_.SendConfigureBssEvent(wlanmac_id, config);
     }
 
     virtual void WlantapMacSetKey(uint16_t wlanmac_id, wlan_key_config_t* key_config) override {
-        //TODO: send to the client
-        printf("WlantapMacSetKey id=%u\n", wlanmac_id);
+        std::lock_guard<std::mutex> guard(event_sender_lock_);
+        event_sender_.SendSetKeyEvent(wlanmac_id, key_config);
     }
 
     zx_device_t* device_;
@@ -226,14 +360,17 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
     fidl::Binding<::wlantap::WlantapPhy> user_channel_binding_;
     std::mutex wlanmac_lock_;
     DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_ __TA_GUARDED(wlanmac_lock_);
+    std::mutex event_sender_lock_;
+    EventSender event_sender_ __TA_GUARDED(event_sender_lock_);
 };
 
 } // namespace
 
 zx_status_t CreatePhy(zx_device_t* wlantapctl, zx::channel user_channel,
+                      zx::channel event_channel,
                       std::unique_ptr<::wlantap::WlantapPhyConfig> config, async_t* loop) {
     auto phy = std::make_unique<WlantapPhy>(wlantapctl, std::move(user_channel),
-                                            std::move(config), loop);
+                                            std::move(event_channel), std::move(config), loop);
     static zx_protocol_device_t device_ops = {
         .version = DEVICE_OPS_VERSION,
         .unbind = &WlantapPhy::DdkUnbind,
