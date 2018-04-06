@@ -19,15 +19,6 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-function kill_background_jobs {
-  still_running=$(jobs -p)
-  if [[ -n "${still_running}" ]]; then
-    kill "${still_running}" 2> /dev/null
-  fi
-  wait 2> /dev/null
-}
-trap kill_background_jobs EXIT
-
 function main {
   local args=()
   local push=1
@@ -62,7 +53,12 @@ function main {
     return
   fi
 
-  fx-command-run serve-updates "${device_args[@]}" &
+  if [[ -z "$(pgrep amber-srv)" ]]; then
+    echo
+    echo "WARNING: It looks like amber-srv is not running."
+    echo "WARNING: You probably need to start \"fx serve-updates\""
+    echo
+  fi
 
   fx-command-run push-package-no-publish "${device_args[@]}" "${targets[@]}"
 }
