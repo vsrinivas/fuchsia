@@ -106,6 +106,30 @@ zx_status_t InfraBss::HandleDataFrame(const DataFrameHeader& hdr) {
     return ZX_OK;
 }
 
+zx_status_t InfraBss::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
+    // Lookup client associated with incoming unicast frame.
+    auto& dest_addr = frame.hdr->dest;
+    if (dest_addr.IsUcast()) {
+        if (clients_.Has(dest_addr)) {
+            ForwardCurrentFrameTo(clients_.GetClient(dest_addr));
+        } else {
+            warnf("[infra-bss] [%s] received ethernet frame from unknown client: %s\n",
+                  bssid_.ToString().c_str(), dest_addr.ToString().c_str());
+        }
+        return ZX_OK;
+    }
+
+    // Process multicast frames ourselves.
+    fbl::unique_ptr<Packet> out_frame;
+    auto status = EthToDataFrame(frame, &out_frame);
+    if (status != ZX_OK) {
+        errorf("[infra-bss] [%s] couldn't convert ethernet frame: %d\n", bssid_.ToString().c_str(),
+               status);
+        return status;
+    }
+    return SendDataFrame(fbl::move(out_frame));
+}
+
 zx_status_t InfraBss::HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                            const wlan_rx_info_t& rxinfo) {
     // If the client is already known, there is no work to be done here.
@@ -291,6 +315,51 @@ zx_status_t InfraBss::SendNextBu() {
 
     debugps("[infra-bss] [%s] sent group addressed BU\n", bssid_.ToString().c_str());
     return device_->SendWlan(fbl::move(packet));
+}
+
+zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
+                                     fbl::unique_ptr<Packet>* out_packet) {
+    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len;
+    auto buffer = GetBuffer(buf_len);
+    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
+
+    *out_packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
+    (*out_packet)->set_peer(Packet::Peer::kWlan);
+
+    auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
+    hdr->fc.clear();
+    hdr->fc.set_type(FrameType::kData);
+    hdr->fc.set_subtype(DataSubtype::kDataSubtype);
+    hdr->fc.set_from_ds(1);
+    // TODO(hahnr): Protect outgoing frames when RSNA is established.
+    hdr->sc.set_seq(NextSeq(*hdr));
+    hdr->addr1 = frame.hdr->dest;
+    hdr->addr2 = bssid_;
+    hdr->addr3 = frame.hdr->src;
+
+    auto llc = (*out_packet)->mut_field<LlcHeader>(hdr->len());
+    llc->dsap = kLlcSnapExtension;
+    llc->ssap = kLlcSnapExtension;
+    llc->control = kLlcUnnumberedInformation;
+    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
+    llc->protocol_id = frame.hdr->ether_type;
+    std::memcpy(llc->payload, frame.body, frame.body_len);
+
+    wlan_tx_info_t txinfo = {
+        // TODO(hahnr): Fill wlan_tx_info_t.
+    };
+
+    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len;
+    auto status = (*out_packet)->set_len(frame_len);
+    if (status != ZX_OK) {
+        errorf("[infra-bss] [%s] could not set data frame length to %zu: %d\n",
+               bssid_.ToString().c_str(), frame_len, status);
+        return status;
+    }
+
+    (*out_packet)->CopyCtrlFrom(txinfo);
+
+    return ZX_OK;
 }
 
 const common::MacAddr& InfraBss::bssid() const {

@@ -223,7 +223,7 @@ zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>
 
     // If the client is awake and not in power saving mode, convert and send frame immediately.
     fbl::unique_ptr<Packet> out_frame;
-    auto status = client_->ConvertEthernetToDataFrame(frame, &out_frame);
+    auto status = client_->bss()->EthToDataFrame(frame, &out_frame);
     if (status != ZX_OK) {
         errorf("[client] couldn't convert ethernet frame: %d\n", status);
         return status;
@@ -496,7 +496,7 @@ zx_status_t AssociatedState::SendNextBu() {
 
     // Convert Ethernet to Data frame.
     fbl::unique_ptr<Packet> data_packet;
-    status = client_->ConvertEthernetToDataFrame(eth_frame, &data_packet);
+    status = client_->bss()->EthToDataFrame(eth_frame, &data_packet);
     if (status != ZX_OK) {
         errorf("[client] [%s] couldn't convert ethernet frame: %d\n",
                client_->addr().ToString().c_str(), status);
@@ -776,51 +776,6 @@ zx_status_t RemoteClient::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_pack
 
 bool RemoteClient::HasBufferedFrames() const {
     return bu_queue_.size() > 0;
-}
-
-zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
-                                                     fbl::unique_ptr<Packet>* out_packet) {
-    const size_t buf_len = kDataFrameHdrLenMax + sizeof(LlcHeader) + frame.body_len;
-    auto buffer = GetBuffer(buf_len);
-    if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
-
-    *out_packet = fbl::make_unique<Packet>(std::move(buffer), buf_len);
-    (*out_packet)->set_peer(Packet::Peer::kWlan);
-
-    auto hdr = (*out_packet)->mut_field<DataFrameHeader>(0);
-    hdr->fc.clear();
-    hdr->fc.set_type(FrameType::kData);
-    hdr->fc.set_subtype(DataSubtype::kDataSubtype);
-    hdr->fc.set_from_ds(1);
-    // TODO(hahnr): Protect outgoing frames when RSNA is established.
-    hdr->sc.set_seq(bss_->NextSeq(*hdr));
-    hdr->addr1 = frame.hdr->dest;
-    hdr->addr2 = bss_->bssid();
-    hdr->addr3 = frame.hdr->src;
-
-    auto llc = (*out_packet)->mut_field<LlcHeader>(hdr->len());
-    llc->dsap = kLlcSnapExtension;
-    llc->ssap = kLlcSnapExtension;
-    llc->control = kLlcUnnumberedInformation;
-    std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = frame.hdr->ether_type;
-    std::memcpy(llc->payload, frame.body, frame.body_len);
-
-    wlan_tx_info_t txinfo = {
-        // TODO(hahnr): Fill wlan_tx_info_t.
-    };
-
-    auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len;
-    auto status = (*out_packet)->set_len(frame_len);
-    if (status != ZX_OK) {
-        errorf("[client] [%s] could not set data frame length to %zu: %d\n",
-               addr_.ToString().c_str(), frame_len, status);
-        return status;
-    }
-
-    (*out_packet)->CopyCtrlFrom(txinfo);
-
-    return ZX_OK;
 }
 
 void RemoteClient::ReportBuChange(size_t bu_count) {
