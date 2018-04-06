@@ -58,7 +58,10 @@ update_device_addr() {
   fi
 }
 
+# first is used to ensure that a ready message is always printed
 first=true
+# inwait is used to suppress repeating "no device found" messages
+inwait=false
 while true; do
   if ! kill -0 "${amber_srv_pid}" 2> /dev/null; then
     echo "Amber Server died, exiting"
@@ -68,10 +71,15 @@ while true; do
 
   update_device_addr
   if [[ -z "${device_addr}" ]]; then
-    echo "No device found, waiting..."
+    if [[ "${inwait}" != true ]]; then
+      echo "No device found, waiting..."
+      inwait=true
+    fi
     sleep 1
     continue
   fi
+
+  inwait=false
 
   # If the tunnel is still alive, then we'll just sleep a bit and continue
   if fx-command-run ssh -q -O check "${device_addr}" 2> /dev/null; then
