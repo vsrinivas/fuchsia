@@ -12,6 +12,10 @@ MODULE_GROUP := misc
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
+MODULE_STATIC_LIBS := \
+    system/ulib/framebuffer \
+    system/fidl/display
+
 MODULE_LIBS := \
     system/ulib/hid \
     system/ulib/zircon \
