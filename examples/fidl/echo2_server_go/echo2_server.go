@@ -23,12 +23,10 @@ func (echo *echoImpl) EchoString(inValue *string) (outValue *string, err error) 
 }
 
 func main() {
-	echoService := &bindings2.BindingSet{}
+	echoService := &echo2.EchoService{}
 	c := context.CreateFromStartupInfo()
 	c.OutgoingService.AddService(echo2.EchoName, func(c zx.Channel) error {
-		_, err := echoService.Add(&echo2.EchoStub{
-			Impl: &echoImpl{},
-		}, c, nil)
+		_, err := echoService.Add(&echoImpl{}, c, nil)
 		return err
 	})
 	c.Serve()

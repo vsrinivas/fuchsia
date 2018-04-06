@@ -7,6 +7,7 @@ package bindings2
 import (
 	"syscall/zx"
 	"testing"
+	"time"
 )
 
 type Test1Impl struct{}
@@ -23,9 +24,9 @@ func TestEcho(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := Test1Interface(Proxy{Channel: ch})
-	bindings := BindingSet{}
-	stub := &Test1Stub{Impl: &Test1Impl{}}
-	if _, err := bindings.Add(stub, sh, nil); err != nil {
+	server := Test1Service{}
+	clientKey, err := server.Add(&Test1Impl{}, sh, nil)
+	if err != nil {
 		t.Fatal(err)
 	}
 	go Serve()
@@ -40,7 +41,39 @@ func TestEcho(t *testing.T) {
 			t.Fatal("unexpected nil result")
 		}
 		if *r != str {
-			t.Fatal("expected %s, got %s", str, *r)
+			t.Fatalf("expected %s, got %s", str, *r)
+		}
+	})
+
+	t.Run("Event", func(t *testing.T) {
+		str := "Surprise!"
+		done := make(chan struct{})
+		// Spin up goroutine with waiting client.
+		go func() {
+			s, err := client.ExpectSurprise()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if s != str {
+				t.Fatalf("expected %s, got %s", str, s)
+			}
+			done <- struct{}{}
+		}()
+		// Spin up server goroutine which makes the call.
+		go func() {
+			pxy, ok := server.EventProxyFor(clientKey)
+			if !ok {
+				t.Fatalf("could not create proxy for key %d", clientKey)
+			}
+			if err := pxy.Surprise(str); err != nil {
+				t.Fatal(err)
+			}
+		}()
+		select {
+		case <-done:
+			return
+		case <-time.After(5 * time.Second):
+			t.Fatalf("test timed out")
 		}
 	})
 }

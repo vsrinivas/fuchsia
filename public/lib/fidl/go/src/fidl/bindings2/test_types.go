@@ -448,6 +448,23 @@ func (_ *Test1EchoResponse) InlineSize() int {
 	return 16
 }
 
+// Request for Surprise.
+// Surprise has no request.
+// Response for Surprise.
+type Test1SurpriseResponse struct {
+	Foo string
+}
+
+// Implements Payload.
+func (_ *Test1SurpriseResponse) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *Test1SurpriseResponse) InlineSize() int {
+	return 16
+}
+
 type Test1Interface Proxy
 
 func (p *Test1Interface) Echo(in *string) (*string, error) {
@@ -458,7 +475,13 @@ func (p *Test1Interface) Echo(in *string) (*string, error) {
 	err := ((*Proxy)(p)).Call(10, &req_, &resp_)
 	return resp_.Out, err
 }
+func (p *Test1Interface) ExpectSurprise() (string, error) {
+	resp_ := Test1SurpriseResponse{}
+	err := ((*Proxy)(p)).Recv(11, &resp_)
+	return resp_.Foo, err
+}
 
+// Test1 server interface.
 type Test1 interface {
 	Echo(in *string) (out *string, err_ error)
 }
@@ -487,4 +510,26 @@ func (s *Test1Stub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (Payload, e
 		return &out_, err_
 	}
 	return nil, ErrUnknownOrdinal
+}
+
+type Test1Service struct {
+	BindingSet
+}
+
+func (s *Test1Service) Add(impl Test1, c _zx.Channel, onError func(error)) (BindingKey, error) {
+	return s.BindingSet.Add(&Test1Stub{Impl: impl}, c, onError)
+}
+
+func (s *Test1Service) EventProxyFor(key BindingKey) (*Test1EventProxy, bool) {
+	pxy, err := s.BindingSet.ProxyFor(key)
+	return (*Test1EventProxy)(pxy), err
+}
+
+type Test1EventProxy Proxy
+
+func (p *Test1EventProxy) Surprise(foo string) error {
+	event_ := Test1SurpriseResponse{
+		Foo: foo,
+	}
+	return ((*Proxy)(p)).Send(11, &event_)
 }

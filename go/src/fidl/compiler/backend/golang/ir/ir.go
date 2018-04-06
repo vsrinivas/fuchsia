@@ -15,10 +15,13 @@ import (
 )
 
 const (
-	ProxySuffix   = "Interface"
-	StubSuffix    = "Stub"
-	RequestSuffix = "InterfaceRequest"
-	TagSuffix     = "Tag"
+	ProxySuffix       = "Interface"
+	StubSuffix        = "Stub"
+	EventProxySuffix  = "EventProxy"
+	ServiceSuffix     = "Service"
+	ServiceNameSuffix = "Name"
+	RequestSuffix     = "InterfaceRequest"
+	TagSuffix         = "Tag"
 
 	MessageHeaderSize = 16
 )
@@ -192,11 +195,20 @@ type Interface struct {
 	// StubName is the name of the stub type for this FIDL interface.
 	StubName string
 
+	// EventProxyName is the name of the event proxy type for this FIDL interface.
+	EventProxyName string
+
 	// RequestName is the name of the interface request type for this FIDL interface.
 	RequestName string
 
-	// ServiceName is the service name for this FIDL interface.
-	ServiceName string
+	// ServerName is the name of the server type for this FIDL interface.
+	ServerName string
+
+	// ServiceNameString is the string service name for this FIDL interface.
+	ServiceNameString string
+
+	// ServiceNameConstant is the name of the service name constant for this FIDL interface.
+	ServiceNameConstant string
 
 	// Methods is a list of methods for this FIDL interface.
 	Methods []Method
@@ -215,6 +227,14 @@ type Method struct {
 
 	// Response represents an optional golang struct containing the response parameters.
 	Response *Struct
+
+	// EventExpectName is the name of the method for the client-side event proxy.
+	// Only relevant if the method is an event.
+	EventExpectName string
+
+	// IsEvent is set to true if the method is an event. In this case, Response will always be
+	// non-nil while Request will always be nil. EventExpectName will also be non-empty.
+	IsEvent bool
 }
 
 // Root is the root of the golang backend IR structure.
@@ -575,8 +595,10 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
-		Name:    methodName,
-		Ordinal: val.Ordinal,
+		Name:            methodName,
+		Ordinal:         val.Ordinal,
+		EventExpectName: "Expect" + methodName,
+		IsEvent:         !val.HasRequest && val.HasResponse,
 	}
 	if val.HasRequest {
 		req := Struct{
@@ -607,11 +629,14 @@ func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Me
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		Name:        c.compileCompoundIdentifier(val.Name, ""),
-		ProxyName:   c.compileCompoundIdentifier(val.Name, ProxySuffix),
-		StubName:    c.compileCompoundIdentifier(val.Name, StubSuffix),
-		RequestName: c.compileCompoundIdentifier(val.Name, RequestSuffix),
-		ServiceName: val.GetAttribute("ServiceName"),
+		Name:                c.compileCompoundIdentifier(val.Name, ""),
+		ProxyName:           c.compileCompoundIdentifier(val.Name, ProxySuffix),
+		StubName:            c.compileCompoundIdentifier(val.Name, StubSuffix),
+		RequestName:         c.compileCompoundIdentifier(val.Name, RequestSuffix),
+		EventProxyName:      c.compileCompoundIdentifier(val.Name, EventProxySuffix),
+		ServerName:          c.compileCompoundIdentifier(val.Name, ServiceSuffix),
+		ServiceNameConstant: c.compileCompoundIdentifier(val.Name, ServiceNameSuffix),
+		ServiceNameString:   val.GetAttribute("ServiceName"),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))

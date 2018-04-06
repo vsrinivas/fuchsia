@@ -130,6 +130,7 @@ struct TestHandle2 {
 
 interface Test1 {
     10: Echo(string? in) -> (string? out);
+    11: -> Surprise(string foo);
 };
 
 struct TestInterface1 {

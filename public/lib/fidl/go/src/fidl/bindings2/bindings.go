@@ -187,6 +187,17 @@ func (b *BindingSet) Add(s Stub, c zx.Channel, onError func(error)) (BindingKey,
 	return key, nil
 }
 
+// ProxyFor returns an event proxy created from the channel of the binding referred
+// to by key.
+func (b *BindingSet) ProxyFor(key BindingKey) (*Proxy, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if binding, ok := b.Bindings[key]; ok {
+		return &Proxy{Channel: binding.Channel}, true
+	}
+	return nil, false
+}
+
 // Remove removes a Binding from the set.
 //
 // Returns true if a Binding was found and removed.
