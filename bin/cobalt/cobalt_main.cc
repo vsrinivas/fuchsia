@@ -500,7 +500,8 @@ class CobaltApp {
  public:
   CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
             std::chrono::seconds schedule_interval,
-            std::chrono::seconds min_interval);
+            std::chrono::seconds min_interval,
+            const std::string& product_name);
 
  private:
   static ClientSecret getClientSecret();
@@ -526,8 +527,10 @@ class CobaltApp {
 
 CobaltApp::CobaltApp(fxl::RefPtr<fxl::TaskRunner> task_runner,
                      std::chrono::seconds schedule_interval,
-                     std::chrono::seconds min_interval)
-    : context_(component::ApplicationContext::CreateFromStartupInfo()),
+                     std::chrono::seconds min_interval,
+                     const std::string& product_name)
+    : system_data_(product_name),
+      context_(component::ApplicationContext::CreateFromStartupInfo()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       shipping_manager_(
@@ -628,7 +631,7 @@ int main(int argc, const char** argv) {
                 << " seconds.";
 
   fsl::MessageLoop loop;
-  CobaltApp app(loop.task_runner(), schedule_interval, min_interval);
+  CobaltApp app(loop.task_runner(), schedule_interval, min_interval, "fuchsia");
   loop.Run();
   return 0;
 }
