@@ -20,12 +20,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <trace.h>
 
-const size_t BUFSIZE = (8 * 1024 * 1024);
+const size_t BUFSIZE = (3 * 1024 * 1024); // must be smaller than max allowed heap allocation
 const size_t ITER = (1UL * 1024 * 1024 * 1024 / BUFSIZE); // enough iterations to have to copy/set 1GB of memory
 
 __NO_INLINE static void bench_set_overhead() {
     uint32_t* buf = (uint32_t*)malloc(BUFSIZE);
+    if (buf == nullptr) {
+        TRACEF("error: malloc failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -44,6 +49,10 @@ __NO_INLINE static void bench_set_overhead() {
 
 __NO_INLINE static void bench_memset() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
+    if (buf == nullptr) {
+        TRACEF("error: memalign failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -64,6 +73,10 @@ __NO_INLINE static void bench_memset() {
 
 __NO_INLINE static void bench_memset_per_page() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
+        if (buf == nullptr) {
+        TRACEF("error: memalign failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -86,6 +99,10 @@ __NO_INLINE static void bench_memset_per_page() {
 
 __NO_INLINE static void bench_zero_page() {
     uint8_t* buf = (uint8_t*)memalign(PAGE_SIZE, BUFSIZE);
+        if (buf == nullptr) {
+        TRACEF("error: memalign failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -109,6 +126,10 @@ __NO_INLINE static void bench_zero_page() {
 template <typename T>
 __NO_INLINE static void bench_cset() {
     T* buf = (T*)malloc(BUFSIZE);
+    if (buf == nullptr) {
+        TRACEF("error: malloc failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -131,6 +152,10 @@ __NO_INLINE static void bench_cset() {
 
 __NO_INLINE static void bench_cset_wide() {
     uint32_t* buf = (uint32_t*)malloc(BUFSIZE);
+    if (buf == nullptr) {
+        TRACEF("error: malloc failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
@@ -160,6 +185,10 @@ __NO_INLINE static void bench_cset_wide() {
 
 __NO_INLINE static void bench_memcpy() {
     uint8_t* buf = (uint8_t*)calloc(1, BUFSIZE);
+    if (buf == nullptr) {
+        TRACEF("error: calloc failed\n");
+        return;
+    }
 
     spin_lock_saved_state_t state;
     arch_interrupt_save(&state, ARCH_DEFAULT_SPIN_LOCK_FLAG_INTERRUPTS);
