@@ -119,10 +119,10 @@ class ModuleResolverApp : ContextListener {
         std::move(query),
         [this, story_id](const modular::FindModulesResult& result) {
           std::vector<Proposal> new_proposals;
-          std::vector<modular::DaisyPtr> new_daisies;  // Only for comparison.
+          std::vector<modular::Daisy> new_daisies;  // Only for comparison.
           int proposal_count = 0;
           for (const auto& module : *result.modules) {
-            modular::DaisyPtr daisy;
+            modular::Daisy daisy;
             new_proposals.push_back(CreateProposalFromModuleResolverResult(
                 module, story_id, proposal_count++, &daisy));
             new_daisies.push_back(std::move(daisy));
@@ -170,7 +170,7 @@ class ModuleResolverApp : ContextListener {
       const modular::ModuleResolverResult& module_result,
       const std::string& story_id,
       int proposal_id,
-      modular::DaisyPtr* daisy_out) {
+      modular::Daisy* daisy_out) {
     modular::Daisy daisy;
     daisy.url = module_result.module_id;
     fidl::VectorPtr<modular::NounEntry> nouns;
@@ -194,7 +194,7 @@ class ModuleResolverApp : ContextListener {
     daisy.nouns = std::move(nouns);
 
     AddModule add_module;
-    fidl::Clone(daisy, daisy_out->get());
+    fidl::Clone(daisy, daisy_out);
     add_module.daisy = std::move(daisy);
     add_module.module_name = module_result.module_id;
     add_module.story_id = story_id;
@@ -261,7 +261,7 @@ class ModuleResolverApp : ContextListener {
   // NOTE(thatguy): This is only necessary because context can change
   // frequently but not result in new proposals, causing churn in the
   // "Next" section of suggestions at a high rate.
-  std::vector<modular::DaisyPtr> current_proposal_daisies_;
+  std::vector<modular::Daisy> current_proposal_daisies_;
 
   IntelligenceServicesPtr intelligence_services_;
 
