@@ -26,11 +26,11 @@ type DynamicIndex struct {
 	// installing is a map of merkleroot -> package name/version
 	installing map[string]pkg.Package
 
-	// needs is a map of blob merkleroot -> [package merkleroot] for packages that need blobs
-	needs map[string][]string
+	// needs is a map of blob merkleroot -> set[package merkleroot] for packages that need blobs
+	needs map[string]map[string]struct{}
 
-	// waiting is a map of package merkleroot -> [blob merkleroots]
-	waiting map[string][]string
+	// waiting is a map of package merkleroot -> set[blob merkleroots]
+	waiting map[string]map[string]struct{}
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
@@ -40,8 +40,8 @@ func NewDynamic(root string) *DynamicIndex {
 	return &DynamicIndex{
 		root:       root,
 		installing: make(map[string]pkg.Package),
-		needs:      make(map[string][]string),
-		waiting:    make(map[string][]string),
+		needs:      make(map[string]map[string]struct{}),
+		waiting:    make(map[string]map[string]struct{}),
 	}
 }
 
@@ -84,12 +84,17 @@ func (idx *DynamicIndex) PackagesDir() string {
 	return dir
 }
 
-func (idx *DynamicIndex) AddNeeds(root string, p pkg.Package, blobs []string) {
+func (idx *DynamicIndex) AddNeeds(root string, p pkg.Package, blobs map[string]struct{}) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
+
 	idx.installing[root] = p
-	for _, blob := range blobs {
-		idx.needs[blob] = append(idx.needs[blob], root)
+	for blob := range blobs {
+		if _, found := idx.needs[blob]; found {
+			idx.needs[blob][root] = struct{}{}
+		} else {
+			idx.needs[blob] = map[string]struct{}{root: struct{}{}}
+		}
 	}
 	idx.waiting[root] = blobs
 }
@@ -97,24 +102,18 @@ func (idx *DynamicIndex) AddNeeds(root string, p pkg.Package, blobs []string) {
 func (idx *DynamicIndex) Fulfill(need string) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
+
 	packageRoots := idx.needs[need]
 	delete(idx.needs, need)
-	for _, pkgRoot := range packageRoots {
-		oldWaiting := idx.waiting[pkgRoot]
-		if len(oldWaiting) == 1 {
+	for pkgRoot := range packageRoots {
+		waiting := idx.waiting[pkgRoot]
+		delete(waiting, need)
+		if len(waiting) == 0 {
 			delete(idx.waiting, pkgRoot)
 			idx.Add(idx.installing[pkgRoot], pkgRoot)
 			delete(idx.installing, pkgRoot)
 			continue
 		}
-
-		newWaiting := make([]string, 0, len(idx.waiting[pkgRoot])-1)
-		for i, blob := range oldWaiting {
-			if need != blob {
-				newWaiting = append(newWaiting, oldWaiting[i])
-			}
-		}
-		idx.waiting[pkgRoot] = newWaiting
 	}
 }
 

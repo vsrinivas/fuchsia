@@ -322,8 +322,7 @@ func importPackage(fs *Filesystem, root string) {
 		}
 	}
 
-	var needsCount int
-	var needBlobs []string
+	needBlobs := map[string]struct{}{}
 	for i := range files {
 		parts := bytes.SplitN(files[i], []byte{'='}, 2)
 		if len(parts) != 2 {
@@ -338,12 +337,10 @@ func importPackage(fs *Filesystem, root string) {
 			continue
 		}
 
-		needsCount++
-
-		needBlobs = append(needBlobs, root)
+		needBlobs[root] = struct{}{}
 	}
 
-	if needsCount == 0 {
+	if len(needBlobs) == 0 {
 		fs.index.Add(p, root)
 	} else {
 		fs.index.AddNeeds(root, p, needBlobs)
@@ -351,7 +348,7 @@ func importPackage(fs *Filesystem, root string) {
 
 	go func() {
 		log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needBlobs), p)
-		for _, root := range needBlobs {
+		for root := range needBlobs {
 			// TODO(jmatt) limit concurrency, send this to a worker routine?
 			fs.amberPxy.GetBlob(root)
 		}
