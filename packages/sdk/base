@@ -13,6 +13,6 @@
         "garnet/packages/prod/tracing"
     ],
     "labels": [
-        "//garnet/public/sdk:zircon_legacy"
+        "//garnet/public/sdk:garnet"
     ]
 }
