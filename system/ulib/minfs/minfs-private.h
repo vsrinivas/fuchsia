@@ -105,7 +105,7 @@ public:
     zx_status_t VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino);
 
     // instantiate a vnode with a new inode
-    zx_status_t VnodeNew(WriteTxn* txn, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
+    zx_status_t VnodeNew(WritebackWork* wb, fbl::RefPtr<VnodeMinfs>* out, uint32_t type);
 
     // Insert, lookup, and remove vnode from hash map
     void VnodeInsert(VnodeMinfs* vn) __TA_EXCLUDES(hash_lock_);
@@ -113,22 +113,24 @@ public:
     void VnodeReleaseLocked(VnodeMinfs* vn) __TA_REQUIRES(hash_lock_);
 
     // Allocate a new data block.
-    zx_status_t BlockNew(WriteTxn* txn, blk_t hint, blk_t* out_bno);
+    zx_status_t BlockNew(WritebackWork* wb, blk_t hint, blk_t* out_bno);
 
     // free block in block bitmap
-    zx_status_t BlockFree(WriteTxn* txn, blk_t bno);
+    zx_status_t BlockFree(WritebackWork* wb, blk_t bno);
 
     // free ino in inode bitmap, release all blocks held by inode
-    zx_status_t InoFree(VnodeMinfs* vn, WriteTxn* txn);
+    zx_status_t InoFree(VnodeMinfs* vn, WritebackWork* wb);
 
     // Writes back an inode into the inode table on persistent storage.
     // Does not modify inode bitmap.
-    zx_status_t InodeSync(WriteTxn* txn, ino_t ino, const minfs_inode_t* inode);
+    zx_status_t InodeSync(WritebackWork* wb, ino_t ino, const minfs_inode_t* inode);
 
     void ValidateBno(blk_t bno) const {
         ZX_DEBUG_ASSERT(bno != 0);
         ZX_DEBUG_ASSERT(bno < info_.block_count);
     }
+
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out);
 
     void EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 #ifdef __Fuchsia__
@@ -199,15 +201,19 @@ private:
     Minfs(fbl::unique_ptr<Bcache> bc_, const minfs_info_t* info_);
 
     // Find a free inode, allocate it in the inode bitmap, and write it back to disk
-    zx_status_t InoNew(WriteTxn* txn, const minfs_inode_t* inode,
+    zx_status_t InoNew(WritebackWork* wb, const minfs_inode_t* inode,
                        ino_t* ino_out);
 
-    // Enqueues an update for allocated inode/block counts
-    zx_status_t CountUpdate(WriteTxn* txn);
+    // Enqueues an update to the super block.
+    void WriteInfo(WritebackWork* wb);
+    // Enqueues an update to the block bitmap.
+    void WriteBlockBitmap(WritebackWork* wb, blk_t bno, blk_t count);
+    // Enqueues an update to the inode bitmap.
+    void WriteInodeBitmap(WritebackWork* wb, ino_t ino, ino_t count);
 
     // If possible, attempt to resize the MinFS partition.
-    zx_status_t AddInodes();
-    zx_status_t AddBlocks();
+    zx_status_t AddInodes(WritebackWork* wb);
+    zx_status_t AddBlocks(WritebackWork* wb);
 
     // Creates an unique identifier for this instance. This is to be called only during
     // "construction".
@@ -313,7 +319,7 @@ public:
 private:
     // Fsck can introspect Minfs
     friend class MinfsChecker;
-    friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WriteTxn* txn);
+    friend zx_status_t Minfs::InoFree(VnodeMinfs* vn, WritebackWork* wb);
 
     VnodeMinfs(Minfs* fs);
 
@@ -343,11 +349,11 @@ private:
     // Internal functions
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
     zx_status_t ReadExactInternal(void* data, size_t len, size_t off);
-    zx_status_t WriteInternal(WriteTxn* txn, const void* data, size_t len,
+    zx_status_t WriteInternal(WritebackWork* wb, const void* data, size_t len,
                               size_t off, size_t* actual);
-    zx_status_t WriteExactInternal(WriteTxn* txn, const void* data, size_t len,
+    zx_status_t WriteExactInternal(WritebackWork* wb, const void* data, size_t len,
                                    size_t off);
-    zx_status_t TruncateInternal(WriteTxn* txn, size_t len);
+    zx_status_t TruncateInternal(WritebackWork* wb, size_t len);
     // Lookup which can traverse '..'
     zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name);
 
@@ -384,7 +390,7 @@ private:
                             minfs_dirent_t* de, DirectoryOffset* offs);
     // Remove the link to a vnode (referring to inodes exclusively).
     // Has no impact on direntries (or parent inode).
-    void RemoveInodeLink(WriteTxn* txn);
+    void RemoveInodeLink(WritebackWork* wb);
 
     // Although file sizes don't need to be block-aligned, the underlying VMO is
     // always kept at a size which is a multiple of |kMinfsBlockSize|.
@@ -522,35 +528,35 @@ private:
     // Allocate an indirect or doubly indirect block at |offset| within the indirect vmo and clear
     // the in-memory block array
     // Assumes that vmo_indirect_ has already been initialized
-    zx_status_t AllocateIndirect(WriteTxn* txn, blk_t index, IndirectArgs* args);
+    zx_status_t AllocateIndirect(WritebackWork* wb, blk_t index, IndirectArgs* args);
 
     // Perform operation |op| on blocks as specified by |params|
     // The BlockOp methods should not be called directly
     // All BlockOp methods assume that vmo_indirect_ has been grown to the required size
-    zx_status_t BlockOp(WriteTxn* txn, blk_op_t op, bop_params_t* params);
-    zx_status_t BlockOpDirect(WriteTxn* txn, DirectArgs* params);
-    zx_status_t BlockOpIndirect(WriteTxn* txn, IndirectArgs* params);
-    zx_status_t BlockOpDindirect(WriteTxn* txn, DindirectArgs* params);
+    zx_status_t BlockOp(WritebackWork* wb, blk_op_t op, bop_params_t* params);
+    zx_status_t BlockOpDirect(WritebackWork* wb, DirectArgs* params);
+    zx_status_t BlockOpIndirect(WritebackWork* wb, IndirectArgs* params);
+    zx_status_t BlockOpDindirect(WritebackWork* wb, DindirectArgs* params);
 
     // Get the disk block 'bno' corresponding to the 'n' block
     // If 'txn' is non-null, new blocks are allocated for all un-allocated bnos.
     // This can be extended to retrieve multiple contiguous blocks in one call
-    zx_status_t BlockGet(WriteTxn* txn, blk_t n, blk_t* bno);
+    zx_status_t BlockGet(WritebackWork* wb, blk_t n, blk_t* bno);
     // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
     // of the file. Does not update mtime/atime.
     // This can be extended to return indices of deleted bnos, or to delete a specific number of
     // bnos
-    zx_status_t BlocksShrink(WriteTxn* txn, blk_t start);
+    zx_status_t BlocksShrink(WritebackWork* wb, blk_t start);
 
     // Update the vnode's inode and write it to disk.
-    void InodeSync(WriteTxn* txn, uint32_t flags);
+    void InodeSync(WritebackWork* wb, uint32_t flags);
 
     // Deletes this Vnode from disk, freeing the inode and blocks.
     //
     // Must only be called on Vnodes which
     // - Have no open fds
     // - Are fully unlinked (link count == 0)
-    void Purge(WriteTxn* txn);
+    void Purge(WritebackWork* wb);
 
 #ifdef __Fuchsia__
     void Sync(SyncCallback closure) final;

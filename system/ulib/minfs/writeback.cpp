@@ -94,15 +94,15 @@ size_t WriteTxn::BlkCount() const {
 
 #endif  // __Fuchsia__
 
-WritebackWork::WritebackWork(Bcache* bc) :
+WritebackWork::WritebackWork(Bcache* bc) : WriteTxn(bc),
 #ifdef __Fuchsia__
     closure_(nullptr),
 #endif
-    txn_(bc), node_count_(0) {}
+    node_count_(0) {}
 
 void WritebackWork::Reset() {
 #ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(txn_.Requests().size() == 0);
+    ZX_DEBUG_ASSERT(Requests().size() == 0);
     closure_ = nullptr;
 #endif
     while (0 < node_count_) {
@@ -114,8 +114,8 @@ void WritebackWork::Reset() {
 // Returns the number of blocks of the writeback buffer that have been
 // consumed
 size_t WritebackWork::Complete(zx_handle_t vmo, vmoid_t vmoid) {
-    size_t blk_count = txn_.BlkCount();
-    zx_status_t status = txn_.Flush(vmo, vmoid);
+    size_t blk_count = BlkCount();
+    zx_status_t status = Flush(vmo, vmoid);
     if (closure_) {
         closure_(status);
     }
@@ -129,7 +129,7 @@ void WritebackWork::SetClosure(SyncCallback closure) {
 }
 #else
 void WritebackWork::Complete() {
-    txn_.Flush();
+    Flush();
     Reset();
 }
 #endif  // __Fuchsia__
@@ -280,7 +280,7 @@ void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
 
     {
         TRACE_DURATION("minfs", "Allocating Writeback space");
-        size_t blocks = work->txn()->BlkCount();
+        size_t blocks = work->BlkCount();
         // TODO(smklein): Experimentally, all filesystem operations cause between
         // 0 and 10 blocks to be updated, though the writeback buffer has space
         // for thousands of blocks.
@@ -300,7 +300,7 @@ void WritebackBuffer::Enqueue(fbl::unique_ptr<WritebackWork> work) {
 
     {
         TRACE_DURATION("minfs", "Copying to Writeback buffer");
-        CopyToBufferLocked(work->txn());
+        CopyToBufferLocked(work.get());
     }
 
     work_queue_.push(fbl::move(work));
