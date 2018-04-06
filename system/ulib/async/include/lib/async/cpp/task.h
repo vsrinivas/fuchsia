@@ -13,16 +13,16 @@
 namespace async {
 
 // Posts a task to |async| immediately with a handler defined by |closure|.
-zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure);
+zx_status_t PostTask(async_t* async, fbl::Closure closure);
 
 // Posts a task to |async| with a handler defined by |closure| and a deadline
 // of |deadline|.
-zx_status_t PostTaskForTime(async_t* async, fbl::Function<void(void)> closure,
+zx_status_t PostTaskForTime(async_t* async, fbl::Closure closure,
                             zx::time deadline);
 
 // Posts a task to |async| with a handler defined by |closure| and a delay of
 // |delay|.
-zx_status_t PostDelayedTask(async_t* async, fbl::Function<void(void)> closure,
+zx_status_t PostDelayedTask(async_t* async, fbl::Closure closure,
                             zx::duration delay);
 
 // C++ wrapper for a pending task.

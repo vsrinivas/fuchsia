@@ -7,11 +7,11 @@
 
 namespace async {
 
-zx_status_t PostTask(async_t* async, fbl::Function<void(void)> closure) {
+zx_status_t PostTask(async_t* async, fbl::Closure closure) {
     return PostTaskForTime(async, fbl::move(closure), Now(async));
 }
 
-zx_status_t PostTaskForTime(async_t* async, fbl::Function<void(void)> closure,
+zx_status_t PostTaskForTime(async_t* async, fbl::Closure closure,
                             zx::time deadline) {
     async::Task* task = new async::Task(deadline.get(), ASYNC_FLAG_HANDLE_SHUTDOWN);
     task->set_handler([task, closure = fbl::move(closure)](async_t*, zx_status_t status) {
@@ -28,7 +28,7 @@ zx_status_t PostTaskForTime(async_t* async, fbl::Function<void(void)> closure,
     return status;
 }
 
-zx_status_t PostDelayedTask(async_t* async, fbl::Function<void(void)> closure,
+zx_status_t PostDelayedTask(async_t* async, fbl::Closure closure,
                             zx::duration delay) {
     return PostTaskForTime(async, fbl::move(closure), Now(async) + delay);
 }
