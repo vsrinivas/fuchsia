@@ -16,7 +16,7 @@
 enum
 {
     BTI_BOARD,
-    BTI_IOMUX,
+    BTI_USB_XHCI,
 };
 
 typedef struct {
@@ -32,3 +32,5 @@ typedef struct {
 
 
 zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus);
+zx_status_t imx_usb_init(imx8mevk_bus_t* bus);
+

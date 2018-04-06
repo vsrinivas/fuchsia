@@ -71,6 +71,11 @@ static int imx8mevk_start_thread(void* arg) {
         gpio_set_alt_function(&bus->gpio, 0, imx8mevk_pinmux[i]);
     }
 
+    if ((status = imx_usb_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+
     return ZX_OK;
 
 fail:

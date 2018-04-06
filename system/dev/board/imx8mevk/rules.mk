@@ -11,6 +11,8 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/imx8mevk.c \
     $(LOCAL_DIR)/imx8mevk-gpio.c \
+    $(LOCAL_DIR)/imx8mevk-usb.c \
+
 
 MODULE_STATIC_LIBS := \
     system/dev/soc/imx8m \
