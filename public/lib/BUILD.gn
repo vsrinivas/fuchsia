@@ -19,6 +19,8 @@ group("just_fidl") {
 fidl("fidl") {
   name = "modular"
 
+  sdk_candidate = true
+
   sources = [
     "action_log/fidl/component.fidl",
     "action_log/fidl/factory.fidl",

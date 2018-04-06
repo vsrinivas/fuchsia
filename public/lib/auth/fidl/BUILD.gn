@@ -9,6 +9,9 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 # TODO(alhaad/ukode): Also move these services to a separate repository.
 fidl("fidl") {
   name = "modular_auth"
+
+  sdk_candidate = true
+
   sources = [
     "account/account.fidl",
     "account_provider.fidl",
