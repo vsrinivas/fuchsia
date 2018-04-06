@@ -30,7 +30,8 @@ namespace fidl {
 
 class TablesGenerator {
 public:
-    explicit TablesGenerator(const flat::Library* library) : library_(library) {}
+    explicit TablesGenerator(const flat::Library* library)
+        : library_(library) {}
 
     ~TablesGenerator() = default;
 

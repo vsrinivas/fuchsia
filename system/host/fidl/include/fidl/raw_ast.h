@@ -264,9 +264,9 @@ struct ParameterList {
 
 struct InterfaceMethod {
     InterfaceMethod(std::unique_ptr<NumericLiteral> ordinal,
-                          std::unique_ptr<Identifier> identifier,
-                          std::unique_ptr<ParameterList> maybe_request,
-                          std::unique_ptr<ParameterList> maybe_response)
+                    std::unique_ptr<Identifier> identifier,
+                    std::unique_ptr<ParameterList> maybe_request,
+                    std::unique_ptr<ParameterList> maybe_response)
         : ordinal(std::move(ordinal)),
           identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)),

@@ -87,7 +87,7 @@ decltype(nullptr) Parser::Fail() {
         auto column_number = std::to_string(position.column);
 
         std::string squiggle(position.column, ' ');
-        squiggle +="^";
+        squiggle += "^";
         size_t squiggle_size = token_data.size();
         if (squiggle_size != 0u) {
             --squiggle_size;
@@ -106,7 +106,6 @@ decltype(nullptr) Parser::Fail() {
     }
     return nullptr;
 }
-
 
 std::unique_ptr<raw::Identifier> Parser::ParseIdentifier() {
     auto identifier = ConsumeToken(Token::Kind::Identifier);
@@ -687,9 +686,9 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod() {
     assert(maybe_request || maybe_response);
 
     return std::make_unique<raw::InterfaceMethod>(std::move(ordinal),
-                                                        std::move(method_name),
-                                                        std::move(maybe_request),
-                                                        std::move(maybe_response));
+                                                  std::move(method_name),
+                                                  std::move(maybe_request),
+                                                  std::move(maybe_response));
 }
 
 std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
