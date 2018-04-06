@@ -51,6 +51,7 @@ typedef struct {
     bool                needs_data_event;   // true if we still need to queue data event TRB
     bool                needs_status;       // true if we still need to queue status TRB
     bool                needs_transfer_trb; // true if we still need to queue transfer TRB
+    bool                needs_zlp;          // true if we still need to queue a zero length packet
 } xhci_transfer_state_t;
 
 typedef enum {
@@ -71,6 +72,7 @@ typedef struct {
     xhci_transfer_state_t* transfer_state;  // transfer state for current_req
     mtx_t lock;
     xhci_ep_state_t state;
+    uint16_t max_packet_size;
     uint8_t ep_type;
 } xhci_endpoint_t;
 

@@ -35,6 +35,8 @@ typedef struct usb_header {
     uint8_t ep_address;
     // number of bytes to transfer
     zx_off_t length;
+    // send zero length packet if length is multiple of max packet size
+    bool send_zlp;
 } usb_header_t;
 
 // response data

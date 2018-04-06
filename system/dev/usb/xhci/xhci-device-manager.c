@@ -549,6 +549,7 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id, usb_endpoint_de
     uint32_t index = xhci_endpoint_index(ep_desc->bEndpointAddress);
     xhci_endpoint_t* ep = &slot->eps[index];
     ep->ep_type = usb_ep_type(ep_desc);
+    ep->max_packet_size = usb_ep_max_packet(ep_desc);
 
     mtx_lock(&ep->lock);
 

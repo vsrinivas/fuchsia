@@ -213,6 +213,9 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     // See XHCI spec, section 4.11.5.2
     state->needs_transfer_trb = ep->ep_type == USB_ENDPOINT_BULK;
 
+    // send zero length packet if send_zlp is set and transfer is a multiple of max packet size
+    state->needs_zlp = req->header.send_zlp && (req->header.length % ep->max_packet_size) == 0;
+
     size_t length = req->header.length;
     uint32_t interrupter_target = 0;
 
@@ -297,7 +300,7 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
     size_t transfer_size = 0;
     bool first_packet = (state->phys_iter.offset == 0);
     while (free_trbs > 0 && (((transfer_size = usb_request_phys_iter_next(&state->phys_iter, &paddr)) > 0) ||
-                             state->needs_transfer_trb)) {
+                             state->needs_transfer_trb || state->needs_zlp)) {
         xhci_trb_t* trb = ring->current;
         xhci_clear_trb(trb);
         XHCI_WRITE64(&trb->ptr, paddr);
@@ -305,6 +308,9 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
                         transfer_size);
         // number of packets remaining after this one
         uint32_t td_size = --state->packet_count;
+        if (state->needs_zlp) {
+            td_size++;
+        }
         XHCI_SET_BITS32(&trb->status, XFER_TRB_TD_SIZE_START, XFER_TRB_TD_SIZE_BITS, td_size);
         XHCI_SET_BITS32(&trb->status, XFER_TRB_INTR_TARGET_START, XFER_TRB_INTR_TARGET_BITS,
                         interrupter_target);
@@ -337,6 +343,10 @@ static zx_status_t xhci_continue_transfer_locked(xhci_t* xhci, xhci_slot_t* slot
 
         first_packet = false;
         state->needs_transfer_trb = false;
+        if (transfer_size == 0) {
+            // ZLP (if there was one) has been sent
+            state->needs_zlp = false;
+        }
     }
 
     if (state->phys_iter.offset < header->length) {

@@ -204,38 +204,16 @@ static zx_status_t send_locked(ecm_ctx_t* ctx, ethmac_netbuf_t* netbuf) {
     uint8_t* byte_data = netbuf->data;
     size_t length = netbuf->len;
 
-    // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
-    // transmission when the endpoint max packet size is a factor of the total transmission size.
-    bool send_terminal_packet = (length % ctx->tx_endpoint.max_packet_size == 0);
-
     // Make sure that we can get all of the tx buffers we need to use
     usb_request_t* tx_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
     if (tx_req == NULL) {
         return ZX_ERR_SHOULD_WAIT;
-    }
-    usb_request_t* terminal_req;
-    if (send_terminal_packet) {
-        terminal_req = list_remove_head_type(&ctx->tx_txn_bufs, usb_request_t, node);
-        if (terminal_req == NULL) {
-            list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
-            return ZX_ERR_SHOULD_WAIT;
-        }
     }
 
     zx_nanosleep(zx_deadline_after(ZX_USEC(ctx->tx_endpoint_delay)));
     zx_status_t status;
     if ((status = queue_request(ctx, byte_data, length, tx_req)) != ZX_OK) {
         list_add_tail(&ctx->tx_txn_bufs, &tx_req->node);
-        if (send_terminal_packet) {
-            list_add_tail(&ctx->tx_txn_bufs, &terminal_req->node);
-        }
-        return status;
-    }
-
-    if (send_terminal_packet && (status = queue_request(ctx, byte_data, 0, tx_req)) != ZX_OK) {
-        // This leaves us in a very awkward situation, since failing to send the zero-length
-        // packet means the ethernet packet will be improperly terminated.
-        list_add_tail(&ctx->tx_txn_bufs, &terminal_req->node);
         return status;
     }
 
@@ -704,6 +682,10 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
             result = alloc_result;
             goto fail;
         }
+
+        // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
+        // transmission when the endpoint max packet size is a factor of the total transmission size
+        tx_buf->header.send_zlp = true;
 
         tx_buf->complete_cb = usb_write_complete;
         tx_buf->cookie = ecm_ctx;

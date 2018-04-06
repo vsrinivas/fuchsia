@@ -16,7 +16,7 @@
 static void dwc3_queue_setup_locked(dwc3_t* dwc) {
     io_buffer_cache_flush_invalidate(&dwc->ep0_buffer, 0, sizeof(usb_setup_t));
     dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_SETUP, io_buffer_phys(&dwc->ep0_buffer),
-                           sizeof(usb_setup_t));
+                           sizeof(usb_setup_t), false);
     dwc->ep0_state = EP0_STATE_SETUP;
 }
 
@@ -128,9 +128,9 @@ void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
     case EP0_STATE_WAIT_NRDY_OUT:
         if (ep_num == EP0_OUT) {
             if (dwc->cur_setup.wLength > 0) {
-                dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_3, 0, 0);
+                dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_3, 0, 0, false);
             } else {
-                dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_2, 0, 0);
+                dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_STATUS_2, 0, 0, false);
             }
             dwc->ep0_state = EP0_STATE_STATUS;
         }
@@ -138,9 +138,9 @@ void dwc3_ep0_xfer_not_ready(dwc3_t* dwc, unsigned ep_num, unsigned stage) {
     case EP0_STATE_WAIT_NRDY_IN:
         if (ep_num == EP0_IN) {
             if (dwc->cur_setup.wLength > 0) {
-                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_3, 0, 0);
+                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_3, 0, 0, false);
             } else {
-                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_2, 0, 0);
+                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_STATUS_2, 0, 0, false);
             }
             dwc->ep0_state = EP0_STATE_STATUS;
         }
@@ -171,7 +171,8 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
         bool is_out = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_OUT);
         if (setup->wLength > 0 && is_out) {
             // queue a read for the data phase
-            dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA, paddr, setup->wLength);
+            dwc3_ep_start_transfer(dwc, EP0_OUT, TRB_TRBCTL_CONTROL_DATA, paddr, setup->wLength,
+                                   false);
             dwc->ep0_state = EP0_STATE_DATA_OUT;
         } else {
             size_t actual;
@@ -187,7 +188,7 @@ void dwc3_ep0_xfer_complete(dwc3_t* dwc, unsigned ep_num) {
             if (setup->wLength > 0) {
                 // queue a write for the data phase
                 io_buffer_cache_flush(&dwc->ep0_buffer, 0, actual);
-                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA, paddr, actual);
+                dwc3_ep_start_transfer(dwc, EP0_IN, TRB_TRBCTL_CONTROL_DATA, paddr, actual, false);
                 dwc->ep0_state = EP0_STATE_DATA_IN;
             } else {
                 dwc->ep0_state = EP0_STATE_WAIT_NRDY_IN;

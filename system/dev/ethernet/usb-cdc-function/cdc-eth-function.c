@@ -225,18 +225,6 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
-    // transmission when the endpoint max packet size is a factor of the total transmission size.
-    usb_request_t* zlp_req = NULL;
-    if (length % cdc->bulk_max_packet == 0) {
-        zlp_req = list_remove_head_type(&cdc->bulk_in_reqs, usb_request_t, node);
-        if (zlp_req == NULL) {
-            list_add_tail(&cdc->bulk_in_reqs, &tx_req->node);
-            return ZX_ERR_SHOULD_WAIT;
-        }
-        zlp_req->header.length = 0;
-    }
-
     // Send data
     tx_req->header.length = length;
     ssize_t bytes_copied = usb_request_copyto(tx_req, byte_data, tx_req->header.length, 0);
@@ -244,17 +232,11 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
         zxlogf(LERROR, "%s: failed to copy data into send req (error %zd)\n", __FUNCTION__,
                 bytes_copied);
         list_add_tail(&cdc->bulk_in_reqs, &tx_req->node);
-        if (zlp_req) {
-            list_add_tail(&cdc->bulk_in_reqs, &zlp_req->node);
-        }
         return ZX_ERR_INTERNAL;
     }
 
     usb_function_queue(&cdc->function, tx_req);
-    // Send zero-length terminal packet, if needed
-    if (zlp_req) {
-        usb_function_queue(&cdc->function, zlp_req);
-    }
+
     return ZX_OK;
 }
 
@@ -639,6 +621,11 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         if (status != ZX_OK) {
             goto fail;
         }
+
+        // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
+        // transmission when the endpoint max packet size is a factor of the total transmission size
+        req->header.send_zlp = true;
+
         req->complete_cb = cdc_tx_complete;
         req->cookie = cdc;
         list_add_head(&cdc->bulk_in_reqs, &req->node);

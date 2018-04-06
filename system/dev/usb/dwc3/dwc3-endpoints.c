@@ -74,7 +74,7 @@ void dwc3_ep_fifo_release(dwc3_t* dwc, unsigned ep_num) {
 }
 
 void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_paddr_t buffer,
-                            size_t length) {
+                            size_t length, bool send_zlp) {
     zxlogf(LTRACE, "dwc3_ep_start_transfer ep %u type %u length %zu\n", ep_num, type, length);
 
     // special case: EP0_OUT and EP0_IN use the same fifo
@@ -91,8 +91,24 @@ void dwc3_ep_start_transfer(dwc3_t* dwc, unsigned ep_num, unsigned type, zx_padd
     trb->ptr_low = (uint32_t)buffer;
     trb->ptr_high = (uint32_t)(buffer >> 32);
     trb->status = TRB_BUFSIZ(length);
-    trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
+    if (send_zlp) {
+        trb->control = type | TRB_HWO;
+    } else {
+        trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
+    }
     io_buffer_cache_flush(&ep->fifo.buffer, (trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+
+    if (send_zlp) {
+        dwc3_trb_t* zlp_trb = ep->fifo.next++;
+        if (ep->fifo.next == ep->fifo.last) {
+            ep->fifo.next = ep->fifo.first;
+        }
+        zlp_trb->ptr_low = 0;
+        zlp_trb->ptr_high = 0;
+        zlp_trb->status = TRB_BUFSIZ(0);
+        zlp_trb->control = type | TRB_LST | TRB_IOC | TRB_HWO;
+        io_buffer_cache_flush(&ep->fifo.buffer, (zlp_trb - ep->fifo.first) * sizeof(*trb), sizeof(*trb));
+    }
 
     dwc3_cmd_ep_start_transfer(dwc, ep_num, dwc3_ep_trb_phys(ep, trb));
 }
@@ -116,7 +132,9 @@ static void dwc3_ep_queue_next_locked(dwc3_t* dwc, dwc3_endpoint_t* ep) {
         usb_request_physmap(req);
         usb_request_phys_iter_init(&iter, req, PAGE_SIZE);
         usb_request_phys_iter_next(&iter, &phys);
-        dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, req->header.length);
+        bool send_zlp = req->header.send_zlp && (req->header.length % ep->max_packet_size) == 0;
+        dwc3_ep_start_transfer(dwc, ep->ep_num, TRB_TRBCTL_NORMAL, phys, req->header.length,
+                               send_zlp);
     }
 }
 
