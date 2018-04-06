@@ -163,14 +163,12 @@ bool platform_serial_enabled() {
     return bootloader.uart.type != BOOTDATA_UART_NONE;
 }
 
-// This just initializes the default serial console to the legacy COM1 port.
+// This just initializes the default serial console to be disabled.
 // It's in a function rather than just a compile-time assignment to the
 // bootloader structure because our C++ compiler doesn't support non-trivial
 // designated initializers.
 void pc_init_debug_default_early() {
-    bootloader.uart.type = BOOTDATA_UART_PC_PORT;
-    bootloader.uart.base = 0x3f8;
-    bootloader.uart.irq = ISA_IRQ_SERIAL1;
+    bootloader.uart.type = BOOTDATA_UART_NONE;
 }
 
 void pc_init_debug_early() {
