@@ -26,11 +26,6 @@
 
 zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     LTRACEF("options %u\n", options);
-
-    // No options are supported.
-    if (options != 0u)
-        return ZX_ERR_INVALID_ARGS;
-
     auto up = ProcessDispatcher::GetCurrent();
     zx_status_t result = up->QueryPolicy(ZX_POL_NEW_PORT);
     if (result != ZX_OK)

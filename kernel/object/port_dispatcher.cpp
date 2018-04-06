@@ -53,7 +53,7 @@ private:
 namespace {
 constexpr size_t kMaxPendingPacketCount = 16 * 1024u;
 ArenaPortAllocator port_allocator;
-}  // namespace.
+} // namespace.
 
 zx_status_t ArenaPortAllocator::Init() {
     return arena_.Init("packets", kMaxPendingPacketCount);
@@ -166,7 +166,9 @@ PortAllocator* PortDispatcher::DefaultPortAllocator() {
 
 zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
                                    zx_rights_t* rights) {
-    DEBUG_ASSERT(options == 0);
+    if (options && options != PORT_BIND_TO_INTERRUPT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
     fbl::AllocChecker ac;
     auto disp = new (&ac) PortDispatcher(options);
     if (!ac.check())
@@ -177,8 +179,8 @@ zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* di
     return ZX_OK;
 }
 
-PortDispatcher::PortDispatcher(uint32_t /*options*/)
-    : zero_handles_(false) {
+PortDispatcher::PortDispatcher(uint32_t options)
+    : options_(options), zero_handles_(false) {
 }
 
 PortDispatcher::~PortDispatcher() {
@@ -197,7 +199,7 @@ void PortDispatcher::on_zero_handles() {
             auto eport = eports_.pop_back();
 
             // Tell the eport to unbind itself, then drop our ref to it.
-            get_lock()->Release();  // The eport may call our ::UnlinkExceptionPort
+            get_lock()->Release(); // The eport may call our ::UnlinkExceptionPort
             eport->OnPortZeroHandles();
             get_lock()->Acquire();
         }
@@ -223,6 +225,27 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
     if (status < 0)
         port_packet->Free();
     return status;
+}
+
+bool PortDispatcher::RemoveInterruptPacket(PortInterruptPacket* port_packet) {
+    AutoSpinLock al(&spinlock_);
+    if (port_packet->InContainer()) {
+        interrupt_packets_.erase(*port_packet);
+        return true;
+    }
+    return false;
+}
+
+bool PortDispatcher::QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp) {
+    AutoSpinLock al(&spinlock_);
+    if (port_packet->InContainer()) {
+        return false;
+    } else {
+        port_packet->timestamp = timestamp;
+        interrupt_packets_.push_back(port_packet);
+        sema_.Post();
+        return true;
+    }
 }
 
 zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
@@ -256,20 +279,28 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
     canary_.Assert();
 
     while (true) {
+        if (options_ == PORT_BIND_TO_INTERRUPT) {
+            AutoSpinLock al(&spinlock_);
+            PortInterruptPacket* port_interrupt_packet = interrupt_packets_.pop_front();
+            if (port_interrupt_packet != nullptr) {
+                *out_packet = {};
+                out_packet->key = port_interrupt_packet->key;
+                out_packet->type = ZX_PKT_TYPE_INTERRUPT;
+                out_packet->status = ZX_OK;
+                out_packet->interrupt.timestamp = port_interrupt_packet->timestamp;
+                return ZX_OK;
+            }
+        }
         {
             AutoLock al(get_lock());
-
             PortPacket* port_packet = packets_.pop_front();
-            if (port_packet == nullptr)
-                goto wait;
-
-            *out_packet = port_packet->packet;
-            FreePacket(port_packet);
+            if (port_packet != nullptr) {
+                *out_packet = port_packet->packet;
+                FreePacket(port_packet);
+                return ZX_OK;
+            }
         }
 
-        return ZX_OK;
-
-wait:
         zx_status_t st = sema_.Wait(deadline, nullptr);
         if (st != ZX_OK)
             return st;
@@ -378,7 +409,6 @@ bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {
 
     return packet_removed;
 }
-
 
 void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
     canary_.Assert();

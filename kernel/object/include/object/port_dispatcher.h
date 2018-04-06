@@ -105,6 +105,11 @@ struct PortPacket final : public fbl::DoublyLinkedListable<PortPacket*> {
     static size_t DiagnosticAllocationCount();
 };
 
+struct PortInterruptPacket final : public fbl::DoublyLinkedListable<PortInterruptPacket*> {
+    zx_time_t timestamp;
+    uint64_t key;
+};
+
 // Observers are weakly contained in state trackers until |remove_| member
 // is false at the end of one of OnInitialize(), OnStateChange() or OnCancel()
 // callbacks.
@@ -146,11 +151,14 @@ public:
     ~PortDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_PORT; }
 
+    bool can_bind_to_interrupt() const { return options_ & PORT_BIND_TO_INTERRUPT; }
     void on_zero_handles() final;
 
     zx_status_t Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count);
     zx_status_t QueueUser(const zx_port_packet_t& packet);
+    bool QueueInterruptPacket(PortInterruptPacket* port_packet, zx_time_t timestamp);
     zx_status_t Dequeue(zx_time_t deadline, zx_port_packet_t* packet);
+    bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
 
     // Decides who is going to destroy the observer. If it returns |true| it
     // is the duty of the caller. If it is false it is the duty of the port.
@@ -162,6 +170,9 @@ public:
     // Called under the handle table lock. Returns true if at least one packet was
     // removed from the queue.
     bool CancelQueued(const void* handle, uint64_t key);
+
+    // Bits for options passed to port_create
+    static constexpr uint32_t PORT_BIND_TO_INTERRUPT = (1u << 0);
 
 private:
     friend class ExceptionPort;
@@ -180,8 +191,12 @@ private:
     void UnlinkExceptionPort(ExceptionPort* eport);
 
     fbl::Canary<fbl::magic("PORT")> canary_;
+    const uint32_t options_;
     Semaphore sema_;
     bool zero_handles_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<PortPacket*> packets_ TA_GUARDED(get_lock());
     fbl::DoublyLinkedList<fbl::RefPtr<ExceptionPort>> eports_ TA_GUARDED(get_lock());
+    // Controls access to Interrupt DoublyLinkedList
+    SpinLock spinlock_;
+    fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
 };

@@ -454,11 +454,40 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
 
 zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
                          uint64_t key, uint32_t options) {
-    return ZX_ERR_NOT_SUPPORTED;
+    LTRACEF("handle %x\n", inth);
+    if (options) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status;
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    status = up->GetDispatcherWithRights(inth, ZX_RIGHT_READ, &interrupt);
+    if (status != ZX_OK)
+        return status;
+
+    fbl::RefPtr<PortDispatcher> port;
+    status = up->GetDispatcherWithRights(porth, ZX_RIGHT_WRITE, &port);
+    if (status != ZX_OK)
+        return status;
+
+    if (!port->can_bind_to_interrupt()) {
+        return ZX_ERR_WRONG_TYPE;
+    }
+
+    return interrupt->Bind(port, interrupt, key);
 }
 
-zx_status_t sys_interrupt_ack(zx_handle_t handle) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t sys_interrupt_ack(zx_handle_t inth) {
+    LTRACEF("handle %x\n", inth);
+
+    zx_status_t status;
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<InterruptDispatcher> interrupt;
+    status = up->GetDispatcherWithRights(inth, ZX_RIGHT_WRITE, &interrupt);
+    if (status != ZX_OK)
+        return status;
+    return interrupt->Ack();
 }
 
 zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
@@ -470,9 +499,6 @@ zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_t
     status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WAIT, &interrupt);
     if (status != ZX_OK)
         return status;
-
-    //TODO(braval): Check for this error
-    // **ZX_ERR_BAD_STATE** the interrupt object is bound to a port
 
     zx_time_t timestamp;
     status = interrupt->WaitForInterrupt(&timestamp);
