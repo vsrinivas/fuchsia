@@ -70,6 +70,72 @@ private:
     zx_duration_t value_ = 0;
 };
 
+class ticks {
+public:
+    constexpr ticks() = default;
+
+    explicit constexpr ticks(zx_ticks_t value) : value_(value) {}
+
+    // Constructs a tick object for the current tick counter in the system.
+    static ticks now() { return ticks(zx_ticks_get()); }
+
+    // Returns the number of ticks contained within one second.
+    static ticks per_second() { return ticks(zx_ticks_per_second()); }
+
+    // Acquires the number of ticks contained within this object.
+    constexpr zx_ticks_t get() const { return value_; }
+
+    constexpr ticks operator+(ticks other) const {
+        return ticks(value_ + other.value_);
+    }
+
+    constexpr ticks operator-(ticks other) const {
+        return ticks(value_ - other.value_);
+    }
+
+    constexpr ticks operator*(uint64_t multiplier) const {
+        return ticks(value_ * multiplier);
+    }
+
+    constexpr ticks operator/(uint64_t divisor) const {
+        return ticks(value_ / divisor);
+    }
+
+    constexpr uint64_t operator/(ticks other) const {
+        return value_ / other.value_;
+    }
+
+    ticks& operator+=(ticks other) {
+        value_ += other.value_;
+        return *this;
+    }
+
+    ticks& operator-=(ticks other) {
+      value_ -= other.value_;
+      return *this;
+    }
+
+    ticks& operator*=(uint64_t multiplier) {
+        value_ *= multiplier;
+        return *this;
+    }
+
+    ticks& operator/=(uint64_t divisor) {
+      value_ /= divisor;
+      return *this;
+    }
+
+    constexpr bool operator==(ticks other) const { return value_ == other.value_; }
+    constexpr bool operator!=(ticks other) const { return value_ != other.value_; }
+    constexpr bool operator<(ticks other) const { return value_ < other.value_; }
+    constexpr bool operator<=(ticks other) const { return value_ <= other.value_; }
+    constexpr bool operator>(ticks other) const { return value_ > other.value_; }
+    constexpr bool operator>=(ticks other) const { return value_ >= other.value_; }
+
+private:
+    zx_ticks_t value_ = 0;
+};
+
 class time {
 public:
     constexpr time() = default;

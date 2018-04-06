@@ -4,7 +4,10 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <unistd.h>
 
+#include <fbl/type_support.h>
+#include <lib/fzl/time.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -17,15 +20,10 @@
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
-
-#include <fbl/type_support.h>
-
+#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
-
-#include <unistd.h>
-#include <unittest/unittest.h>
 
 static zx_status_t validate_handle(zx_handle_t handle) {
     return zx_object_get_info(handle, ZX_INFO_HANDLE_VALID,
@@ -288,6 +286,36 @@ static bool time_test() {
     END_TEST;
 }
 
+static bool ticks_test() {
+    BEGIN_TEST;
+
+    ASSERT_EQ(zx::ticks().get(), 0);
+
+    zx::ticks before = zx::ticks::now();
+    ASSERT_GT(before.get(), 0);
+    zx::ticks after = before + zx::ticks(1);
+
+    ASSERT_LT(before.get(), after.get());
+    ASSERT_TRUE(before < after);
+    after -= zx::ticks(1);
+    ASSERT_EQ(before.get(), after.get());
+    ASSERT_TRUE(before == after);
+
+    ASSERT_EQ(zx::ticks::per_second().get(), zx_ticks_per_second());
+
+    // Compare a duration (nanoseconds) with the ticks equivalent.
+    zx::ticks second = zx::ticks::per_second();
+    ASSERT_EQ(fzl::TicksToNs(second).get(), zx::sec(1).get());
+    ASSERT_TRUE(fzl::TicksToNs(second) == zx::sec(1));
+
+    // Hopefully, we haven't moved backwards in time.
+    after = zx::ticks::now();
+    ASSERT_LE(before.get(), after.get());
+    ASSERT_TRUE(before <= after);
+
+    END_TEST;
+}
+
 template <typename T>
 static bool reference_thing(const T& p) {
     BEGIN_HELPER;
@@ -384,6 +412,7 @@ RUN_TEST(eventpair_test)
 RUN_TEST(vmar_test)
 RUN_TEST(port_test)
 RUN_TEST(time_test)
+RUN_TEST(ticks_test)
 RUN_TEST(thread_self_test)
 RUN_TEST(process_self_test)
 RUN_TEST(vmar_root_self_test)
