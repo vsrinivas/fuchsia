@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "scenic_dummy_system"
 
+  sdk_candidate = true
+
   sources = [
     "commands.fidl",
     "events.fidl",

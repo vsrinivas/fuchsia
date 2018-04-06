@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("v1") {
   name = "views_v1"
 
+  sdk_candidate = true
+
   sources = [
     "view_containers.fidl",
     "view_manager.fidl",
@@ -31,6 +33,8 @@ fidl("v1") {
 fidl("v2") {
   name = "views"
 
+  sdk_candidate = true
+
   sources = [
     "commands.fidl",
     "events.fidl",
@@ -46,6 +50,8 @@ fidl("v2") {
 
 fidl("view_token") {
   name = "views_v1_token"
+
+  sdk_candidate = true
 
   sources = [
     "view_token.fidl",

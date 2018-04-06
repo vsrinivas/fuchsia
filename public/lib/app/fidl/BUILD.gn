@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "component"
 
+  sdk_candidate = true
+
   sources = [
     "application_controller.fidl",
     "application_environment.fidl",

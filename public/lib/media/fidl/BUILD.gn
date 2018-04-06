@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "media"
 
+  sdk_candidate = true
+
   sources = [
     "audio_capturer.fidl",
     "audio_policy_service.fidl",

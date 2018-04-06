@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "images"
 
+  sdk_candidate = true
+
   sources = [
     "encoded_image.fidl",
     "image_info.fidl",
