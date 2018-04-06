@@ -494,7 +494,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
 std::ostringstream JSONGenerator::Produce() {
     indent_level_ = 0;
     GenerateObject([&]() {
-        GenerateObjectMember("name", library_->library_name_, Position::First);
+        GenerateObjectMember("version", StringView("0.0.1"), Position::First);
+
+        GenerateObjectMember("name", library_->library_name_);
 
         GenerateObjectPunctuation(Position::Subsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");

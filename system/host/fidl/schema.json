@@ -2,6 +2,7 @@
     "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
     "required": [
+        "version",
         "name",
         "const_declarations",
         "enum_declarations",
@@ -13,6 +14,9 @@
         "library_dependencies"
     ],
     "properties": {
+        "version": {
+            "$ref": "#/definitions/version"
+        },
         "name": {
             "$ref": "#/definitions/identifier"
         },
@@ -770,6 +774,11 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 4294967295
+        },
+        "version": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
         }
-    }
+    },
+    "additionalProperties": false
 }
