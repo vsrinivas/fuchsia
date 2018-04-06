@@ -48,6 +48,14 @@ FUNCTION(mexec_asm)
 // This is the address of the kernel that we eventueally want to jump to.
     mov     new_kernel_addr, x5
 
+    // If we were originally booted in EL2, transition back into EL2
+    cmp  boot_el, #2
+    b.lt cplt_transition_to_boot_el  // We booted in EL1, no need to transition up
+    adr  x0, cplt_transition_to_boot_el
+    hvc  #1     // Branch into an EL2 trampoline that bounces to cplt_transition_to_boot_el
+
+ cplt_transition_to_boot_el:
+
     // Clean/Invalidate the cache early on.
     // We want to make sure that there are no dirty cache entries hanging around
     // in the cache before we start the memcpy.
@@ -81,15 +89,8 @@ FUNCTION(mexec_asm)
 
 .Lfinish_copy:
 
-    // If we were originally booted in EL2, transition back into EL2
-    cmp  boot_el, #2
-    b.lt cplt_transition_to_boot_el  // We booted in EL1, no need to transition up
-    adr  x0, cplt_transition_to_boot_el
-    hvc  #1
-
     bl mexec_arch_clean_invalidate_cache_all
 
- cplt_transition_to_boot_el:
     // Restore the bootarguments for the next kernel.
     mov     x0, bootarg0
     mov     x1, bootarg1
