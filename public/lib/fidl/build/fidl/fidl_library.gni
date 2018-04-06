@@ -111,7 +111,7 @@ template("fidl_library") {
       ":*",
     ]
 
-    tool = "//zircon/public/tool/fidl2"
+    tool = "//zircon/public/tool/fidlc"
 
     inputs = [
       response_file,
