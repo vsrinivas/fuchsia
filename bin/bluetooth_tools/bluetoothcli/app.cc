@@ -7,10 +7,8 @@
 #include <iostream>
 
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <linenoise/linenoise.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
@@ -21,19 +19,21 @@
 
 namespace bluetoothcli {
 
-App::App()
+App::App(async_t* async, std::function<void()> quit_closure)
     : context_(component::ApplicationContext::CreateFromStartupInfo()),
       control_delegate_(this),
-      remote_device_delegate_(this) {
+      remote_device_delegate_(this),
+      quit_closure_(std::move(quit_closure)),
+      async_(async) {
   FXL_DCHECK(context_);
 
   control_ =
       context_->ConnectToEnvironmentService<bluetooth_control::Control>();
   FXL_DCHECK(control_);
 
-  control_.set_error_handler([] {
+  control_.set_error_handler([this]{
     CLI_LOG() << "Control disconnected";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    PostQuit();
   });
 
   commands::RegisterCommands(this, &command_dispatcher_);
@@ -56,12 +56,12 @@ App::App()
 void App::ReadNextInput() {
   bool call_complete_cb = true;
   auto complete_cb = [this] {
-    async::PostTask(async_get_default(), [this] { ReadNextInput(); });
+    async::PostTask(async_, [this] { ReadNextInput(); });
   };
 
   char* line = linenoise("bluetooth> ");
   if (!line) {
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+    Quit();
     return;
   }
 
@@ -117,6 +117,14 @@ void App::OnDeviceUpdated(bluetooth_control::RemoteDevice device) {
 
 void App::OnDeviceRemoved(::fidl::StringPtr identifier) {
   discovered_devices_.erase(identifier);
+}
+
+void App::Quit() const {
+  quit_closure_();
+}
+
+void App::PostQuit() const {
+  async::PostTask(async_, quit_closure_);
 }
 
 }  // namespace bluetoothcli

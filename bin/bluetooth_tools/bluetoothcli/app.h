@@ -18,7 +18,7 @@ namespace bluetoothcli {
 class App final : public bluetooth_control::ControlDelegate,
                   public bluetooth_control::RemoteDeviceDelegate {
  public:
-  App();
+  App(async_t* async, std::function<void()>quit_closure);
 
   void ReadNextInput();
 
@@ -34,6 +34,10 @@ class App final : public bluetooth_control::ControlDelegate,
   using DeviceMap =
       std::unordered_map<std::string, bluetooth_control::RemoteDevice>;
   const DeviceMap& discovered_devices() const { return discovered_devices_; }
+
+  async_t* async() const { return async_; }
+  void Quit() const;
+  void PostQuit() const;
 
  private:
   // bluetooth_control::ControlDelegate overrides:
@@ -64,6 +68,8 @@ class App final : public bluetooth_control::ControlDelegate,
       remote_device_delegate_;
 
   DeviceMap discovered_devices_;
+  std::function<void()> quit_closure_;
+  async_t* async_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
