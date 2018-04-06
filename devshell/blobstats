@@ -5,44 +5,19 @@
 
 ### compute some blobfs statistics from the build
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${DEVSHELL_DIR}/lib/vars.sh"
 fx-config-read
+
+case "$(uname -s)" in
+    Linux)
+        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        ;;
+    Darwin)
+        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        ;;
+esac
 
 cd "${FUCHSIA_BUILD_DIR}"
 
-echo "Top 50 Largest blobs:"
-find "./package" -not -empty -name final_package_manifest -exec cat {} \; |
-    cut -d = -f 2 |
-    sort |
-    uniq | xargs wc -c | sort -rn | head -n 50
-
-echo "De-duplicated blobs:"
-find "./package" -not -empty -name final_package_manifest -exec cat {} \; |
-    cut -d = -f 2 |
-    sort |
-    uniq -cd
-
-echo "De-duplicated blob storage savings:"
-find "./package" -not -empty -name final_package_manifest -exec cat {} \; |
-    cut -d = -f 2 |
-    sort |
-    uniq -cd | xargs -L 1 bash -c "count=\$0; file=\$1; size=\$(wc -c \$file | cut -d \\  -f 1 ); total=\$(( \$size * \$count )); printf '%5d%% %8d / %8d %s\\n' \$(( 100 - (\$size * 100 / \$total) )) \$size \$total \$file"
-
-echo "Total savings from deduplication:"
-actual=0
-for i in $(find "./package" -not -empty -name final_package_manifest -exec cat {} \; |
-    cut -d = -f 2 |
-    sort |
-    uniq | xargs -I % wc -c % | cut -d ' ' -f 1 ); do
-  let actual+=$i
-done
-
-total=0
-for i in $(find "./package" -not -empty -name final_package_manifest -exec cat {} \; |
-    cut -d = -f 2 |
-    sort |
-    uniq -c | xargs -L 1 bash -c "count=\$0; file=\$1; size=\$(wc -c \$file | cut -d \\  -f 1 ); echo \$((\$size * \$count))"
-); do
-  let total+=$i
-done
-printf "%5d%% %8d / %8d\n" $(( 100 - ($actual * 100 / $total) )) $actual $total
+exec "${PREBUILT_DART}" "${DEVSHELL_DIR}/blobstats.dart" "$@"
