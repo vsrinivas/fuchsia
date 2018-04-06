@@ -5,10 +5,9 @@
 #include "lib/ui/geometry/cpp/geometry_util.h"
 
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <limits>
-
-#include "lib/fxl/logging.h"
 
 namespace geometry {
 
@@ -19,7 +18,7 @@ static const float kIdentityMatrix[]{
     0.f, 0.f, 0.f, 1.f};
 
 void SetIdentityTransform(geometry::Transform* transform) {
-  FXL_DCHECK(transform->matrix.count() == 16);
+  ZX_DEBUG_ASSERT(transform->matrix.count() == 16);
   memcpy(static_cast<void*>(transform->matrix.mutable_data()), kIdentityMatrix,
          sizeof(kIdentityMatrix));
 }

@@ -7,6 +7,8 @@
 
 #include <fuchsia/cpp/geometry.h>
 
+#include <iosfwd>
+
 namespace geometry {
 
 std::ostream& operator<<(std::ostream& os, const geometry::Point& value);

@@ -4,9 +4,9 @@
 
 #include "lib/ui/geometry/cpp/formatting.h"
 
-#include <ostream>
+#include <zircon/assert.h>
 
-#include "lib/fxl/logging.h"
+#include <ostream>
 
 namespace geometry {
 
@@ -60,7 +60,7 @@ std::ostream& operator<<(std::ostream& os, const geometry::InsetF& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const geometry::Transform& value) {
-  FXL_DCHECK(value.matrix.count() == 16);
+  ZX_DEBUG_ASSERT(value.matrix.count() == 16);
   os << "[";
   for (size_t i = 0; i < 4; i++) {
     if (i != 0)

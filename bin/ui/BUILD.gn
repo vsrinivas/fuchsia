@@ -16,7 +16,7 @@ package("scenic_tests") {
     "presentation_mode/tests",
     "//garnet/lib/ui/gfx/tests",
     "//garnet/lib/ui/scenic/tests",
-    "//garnet/public/lib/ui/geometry/cpp:apptests",
+    "//garnet/public/lib/ui/geometry/cpp:tests",
   ]
 
   tests = [
