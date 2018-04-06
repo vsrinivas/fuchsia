@@ -473,7 +473,6 @@ if (current_toolchain == dart_toolchain) {
       }
 
       sdk_atom("${target_name}_sdk") {
-        print(get_label_info(":$target_name", "label_no_toolchain"))
         domain = "dart"
         name = atom_name
 
