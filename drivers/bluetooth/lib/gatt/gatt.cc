@@ -8,6 +8,7 @@
 
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
+#include "garnet/drivers/bluetooth/lib/gatt/generic_attribute_service.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
 #include "client.h"
@@ -36,6 +37,23 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
       FXL_DCHECK(!initialized_);
 
       local_services_ = std::make_unique<LocalServiceManager>();
+
+      // Forwards Service Changed payloads to clients.
+      auto send_indication_callback = [this](const std::string& peer_id,
+                                             att::Handle handle,
+                                             const common::ByteBuffer& value) {
+        auto iter = connections_.find(peer_id);
+        if (iter == connections_.end()) {
+          FXL_LOG(WARNING) << "gatt: Peer not registered: " << peer_id;
+          return;
+        }
+        iter->second.server()->SendNotification(handle, value.view(), true);
+      };
+
+      // Spin up Generic Attribute as the first service.
+      gatt_service_ = std::make_unique<GenericAttributeService>(
+          local_services_.get(), std::move(send_indication_callback));
+
       initialized_ = true;
 
       FXL_VLOG(1) << "gatt: initialized";
@@ -50,6 +68,7 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 
     initialized_ = false;
     connections_.clear();
+    gatt_service_ = nullptr;
     local_services_ = nullptr;
     remote_service_callbacks_.clear();
   }
@@ -230,6 +249,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   // The registry containing all local GATT services. This represents a single
   // ATT database.
   std::unique_ptr<LocalServiceManager> local_services_;
+
+  // Local GATT service (first in database) for clients to subscribe to service
+  // registration and removal.
+  std::unique_ptr<GenericAttributeService> gatt_service_;
 
   // Contains the state of all GATT profile connections and their services.
   std::unordered_map<std::string, internal::Connection> connections_;

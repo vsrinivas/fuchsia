@@ -23,6 +23,8 @@ constexpr uint16_t kClientCharacteristicConfig16 = 0x2902;
 constexpr uint16_t kServerCharacteristicConfig16 = 0x2903;
 constexpr uint16_t kCharacteristicFormat16 = 0x2904;
 constexpr uint16_t kCharacteristicAggregateFormat16 = 0x2905;
+constexpr uint16_t kGenericAttributeService16 = 0x1801;
+constexpr uint16_t kServiceChangedCharacteristic16 = 0x2a05;
 
 constexpr common::UUID kPrimaryService(kPrimaryService16);
 constexpr common::UUID kSecondaryService(kSecondaryService16);
@@ -39,6 +41,12 @@ constexpr common::UUID kServerCharacteristicConfig(
 constexpr common::UUID kCharacteristicFormat(kCharacteristicFormat16);
 constexpr common::UUID kCharacteristicAggregateFormat(
     kCharacteristicAggregateFormat16);
+
+// Defined Generic Attribute Profile Service (Vol 3, Part G, 7)
+constexpr ::btlib::common::UUID kGenericAttributeService(
+    kGenericAttributeService16);
+constexpr ::btlib::common::UUID kServiceChangedCharacteristic(
+    kServiceChangedCharacteristic16);
 
 }  // namespace types
 
