@@ -10,12 +10,9 @@ namespace magma {
 
 ZirconPlatformBusMapper::BusMapping::~BusMapping()
 {
-    auto bti = bus_transaction_initiator_.lock();
-    if (bti) {
-        zx_status_t status = zx_bti_unpin(bti->get(), page_addr_[0]);
-        if (status != ZX_OK) {
-            printf("zx_bti_unpin failed: %d\n", status);
-        }
+    zx_status_t status = pmt_.unpin();
+    if (status != ZX_OK) {
+        DLOG("zx_pmt_unpin failed: %d\n", status);
     }
 }
 
@@ -29,20 +26,24 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
     if ((page_count == 0) || (start_page_index + page_count) * PAGE_SIZE > buffer->size())
         return DRETP(nullptr, "Invalid range: %d, %d\n", start_page_index, page_count);
 
-    auto mapping =
-        std::make_unique<BusMapping>(start_page_index, page_count, bus_transaction_initiator_);
+    std::vector<uint64_t> page_addr(page_count);
+    zx::pmt pmt;
 
     zx_status_t status;
     {
         TRACE_DURATION("magma", "bti pin");
-        status = zx_bti_pin(bus_transaction_initiator_->get(),
-                            ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_PERM_EXECUTE,
-                            static_cast<ZirconPlatformBuffer*>(buffer)->handle(),
-                            start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                            mapping->Get().data(), page_count);
+        status = zx_bti_pin_new(bus_transaction_initiator_->get(),
+                                ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_PERM_EXECUTE,
+                                static_cast<ZirconPlatformBuffer*>(buffer)->handle(),
+                                start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
+                                page_addr.data(), page_count,
+                                pmt.reset_and_get_address());
     }
     if (status != ZX_OK)
         return DRETP(nullptr, "zx_bti_pin failed: %d", status);
+
+    auto mapping =
+        std::make_unique<BusMapping>(start_page_index, std::move(page_addr), std::move(pmt));
 
     return mapping;
 }

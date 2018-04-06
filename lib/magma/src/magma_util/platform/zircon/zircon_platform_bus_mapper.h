@@ -8,6 +8,7 @@
 #include "platform_bus_mapper.h"
 #include "zircon_platform_buffer.h"
 #include <vector>
+#include <zx/pmt.h>
 
 namespace magma {
 
@@ -23,10 +24,8 @@ public:
 
     class BusMapping : public PlatformBusMapper::BusMapping {
     public:
-        BusMapping(uint64_t page_offset, uint64_t page_count,
-                   std::weak_ptr<ZirconPlatformHandle> bus_transaction_initiator)
-            : page_offset_(page_offset), page_addr_(page_count),
-              bus_transaction_initiator_(bus_transaction_initiator)
+        BusMapping(uint64_t page_offset, std::vector<uint64_t> page_addr, zx::pmt pmt)
+            : page_offset_(page_offset), page_addr_(std::move(page_addr)), pmt_(std::move(pmt))
         {
         }
         ~BusMapping();
@@ -39,7 +38,7 @@ public:
     private:
         uint64_t page_offset_;
         std::vector<uint64_t> page_addr_;
-        std::weak_ptr<ZirconPlatformHandle> bus_transaction_initiator_;
+        zx::pmt pmt_;
     };
 
 private:
