@@ -5,8 +5,8 @@
 #include "garnet/bin/media/demux/http_reader.h"
 
 #include <fuchsia/cpp/network.h>
+#include <lib/async/default.h>
 
-#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/network/net_errors.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"
@@ -131,24 +131,31 @@ void HttpReader::ReadFromSocket() {
                                       read_at_bytes_remaining_, &byte_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE,
-          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
-            wait_id_ = 0;
-            if (status != ZX_OK) {
-              if (status != ZX_ERR_CANCELED) {
-                FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
-              }
+      waiter_ = std::make_unique<async::AutoWait>(
+          async_get_default(), socket_.get(),
+          ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-              FailReadAt(status);
-              return;
-            }
+      waiter_->set_handler([this](async_t* async, zx_status_t status,
+                                  const zx_packet_signal_t* signal) {
+        if (status != ZX_OK) {
+          if (status != ZX_ERR_CANCELED) {
+            FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
+          }
 
-            ReadFromSocket();
-          });
+          FailReadAt(status);
+          return ASYNC_WAIT_FINISHED;
+        }
+
+        ReadFromSocket();
+        return ASYNC_WAIT_FINISHED;
+      });
+
+      waiter_->Begin();
+
       break;
     }
+
+    waiter_.reset();
 
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;

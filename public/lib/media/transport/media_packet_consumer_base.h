@@ -7,10 +7,10 @@
 #include <atomic>
 
 #include <fuchsia/cpp/media.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "lib/media/transport/shared_buffer_set.h"
 
@@ -139,7 +139,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
 
     ~SuppliedPacketCounter();
 
-    fxl::RefPtr<fxl::TaskRunner>& task_runner() { return task_runner_; }
+    async_t* async() { return async_; }
 
     // Prevents any subsequent calls to the owner.
     void Detach() {
@@ -170,7 +170,7 @@ class MediaPacketConsumerBase : public MediaPacketConsumer {
    private:
     MediaPacketConsumerBase* owner_;
     // We keep the buffer set here, because it needs to outlive SuppliedPackets.
-    fxl::RefPtr<fxl::TaskRunner> task_runner_;
+    async_t* async_;
     SharedBufferSet buffer_set_;
     std::atomic_uint32_t packets_outstanding_;
 

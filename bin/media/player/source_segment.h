@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/player/segment.h"
 #include "lib/fxl/functional/closure.h"
@@ -26,11 +28,11 @@ class SourceSegment : public Segment {
 
   ~SourceSegment() override;
 
-  // Provides the graph, task runner and callbacks for this source segment.
+  // Provides the graph, async and callbacks for this source segment.
   // The player expects stream updates shortly after this method is called,
   // the last of which should have a |more| value of false.
   void Provision(Graph* graph,
-                 fxl::RefPtr<fxl::TaskRunner> task_runner,
+                 async_t* async,
                  fxl::Closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 

@@ -5,8 +5,8 @@
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -284,7 +284,8 @@ MediaPacketConsumerBase::SuppliedPacket::SuppliedPacket(
 
 MediaPacketConsumerBase::SuppliedPacket::~SuppliedPacket() {
   if (callback_) {
-    counter_->task_runner()->PostTask(
+    async::PostTask(
+        counter_->async(),
         [callback = callback_, counter = std::move(counter_),
          label = label_]() { callback(counter->OnPacketDeparture(label)); });
   }
@@ -296,8 +297,8 @@ MediaPacketConsumerBase::SuppliedPacketCounter::SuppliedPacketCounter(
       buffer_set_(ZX_VM_FLAG_PERM_READ),
       packets_outstanding_(0) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+  async_ = async_get_default();
+  FXL_DCHECK(async_);
 }
 
 MediaPacketConsumerBase::SuppliedPacketCounter::~SuppliedPacketCounter() {}

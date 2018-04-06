@@ -28,7 +28,7 @@ LpcmReformatterImpl::LpcmReformatterImpl(
     : MediaComponentFactory::Product<MediaTypeConverter>(this,
                                                          std::move(request),
                                                          owner),
-      graph_(owner->task_runner()),
+      graph_(async_get_default()),
       consumer_(FidlPacketConsumer::Create()),
       producer_(FidlPacketProducer::Create()) {
   FXL_DCHECK(input_media_type);

@@ -7,13 +7,13 @@
 #include <atomic>
 #include <memory>
 
+#include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/task.h>
 #include <zx/socket.h>
 
-#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/demux/reader.h"
-#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/util/incident.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -58,7 +58,7 @@ class FidlReader : public Reader,
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
   Incident ready_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   std::atomic_bool read_in_progress_;
   size_t read_at_position_;
@@ -68,7 +68,7 @@ class FidlReader : public Reader,
   ReadAtCallback read_at_callback_;
   zx::socket socket_;
   size_t socket_position_ = kUnknownSize;
-  FidlAsyncWaitID wait_id_ = 0;
+  std::unique_ptr<async::AutoWait> waiter_;
 };
 
 }  // namespace media

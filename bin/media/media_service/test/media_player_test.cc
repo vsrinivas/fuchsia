@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_service/test/fake_renderer.h"
@@ -10,7 +12,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
@@ -19,9 +21,11 @@ namespace test {
 
 class MediaPlayerTester {
  public:
-  MediaPlayerTester()
+  MediaPlayerTester(fxl::Closure quit_callback)
       : application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()) {
+            component::ApplicationContext::CreateFromStartupInfo()),
+        quit_callback_(quit_callback) {
+    FXL_DCHECK(quit_callback_);
     FXL_LOG(INFO) << "MediaPlayerTest starting";
 
     FXL_LOG(INFO) << "creating player";
@@ -77,7 +81,7 @@ class MediaPlayerTester {
         ended_ = true;
         FXL_LOG(INFO) << "MediaPlayerTest "
                       << (fake_renderer_.expected() ? "SUCCEEDED" : "FAILED");
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+        quit_callback_();
       }
     }
 
@@ -89,6 +93,7 @@ class MediaPlayerTester {
   }
 
   std::unique_ptr<component::ApplicationContext> application_context_;
+  fxl::Closure quit_callback_;
   FakeWavReader fake_reader_;
   FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;
@@ -99,9 +104,10 @@ class MediaPlayerTester {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  media::test::MediaPlayerTester app;
+  media::test::MediaPlayerTester app(
+      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
 
   loop.Run();
   return 0;

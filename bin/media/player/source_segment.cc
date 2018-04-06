@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/player/source_segment.h"
 
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -13,11 +15,11 @@ SourceSegment::SourceSegment() {}
 SourceSegment::~SourceSegment() {}
 
 void SourceSegment::Provision(Graph* graph,
-                              fxl::RefPtr<fxl::TaskRunner> task_runner,
+                              async_t* async,
                               fxl::Closure updateCallback,
                               StreamUpdateCallback stream_update_callback) {
   stream_update_callback_ = stream_update_callback;
-  Segment::Provision(graph, task_runner, updateCallback);
+  Segment::Provision(graph, async, updateCallback);
 }
 
 void SourceSegment::Deprovision() {
@@ -26,9 +28,9 @@ void SourceSegment::Deprovision() {
 }
 
 void SourceSegment::OnStreamUpdated(size_t index,
-                                   const StreamType& type,
-                                   OutputRef output,
-                                   bool more) {
+                                    const StreamType& type,
+                                    OutputRef output,
+                                    bool more) {
   FXL_DCHECK(stream_update_callback_)
       << "OnStreamUpdated() called on unprovisioned segment.";
 

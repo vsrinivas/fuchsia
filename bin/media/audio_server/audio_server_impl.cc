@@ -4,11 +4,13 @@
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/media/audio_server/audio_capturer_impl.h"
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_renderer1_impl.h"
 #include "garnet/bin/media/audio_server/audio_renderer2_impl.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace audio {
@@ -24,15 +26,14 @@ AudioServerImpl::AudioServerImpl(
         bindings_.AddBinding(this, std::move(request));
       });
 
-  // Stash a pointer to our task runner.
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+  // Stash a pointer to our async object.
+  async_ = async_get_default();
+  FXL_DCHECK(async_);
 
   // TODO(johngro) : See MG-940
   //
   // Eliminate this as soon as we have a more official way of
-  // meeting real-time latency requirements.  The main fsl::MessageLoop is
+  // meeting real-time latency requirements.  The main async_t is
   // responsible for receiving audio payloads sent by applications, so it has
   // real time requirements (just like the mixing threads do).  In a perfect
   // world, however, we would want to have this task run on a thread which is
@@ -40,8 +41,8 @@ AudioServerImpl::AudioServerImpl(
   // non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
-  task_runner_->PostTask(
-      []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
+  async::PostTask(
+      async_, []() { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); });
 
   // Set up our output manager.
   MediaResult res = device_manager_.Init();
@@ -98,7 +99,7 @@ void AudioServerImpl::DoPacketCleanup() {
   // Note: this is only safe because we know that we are executing on a single
   // threaded task runner.  Without this guarantee, it might be possible call
   // the send packet callbacks in a different order than the packets were sent
-  // in the first place.  If the task_runner for the audio server ever loses
+  // in the first place.  If the async object for the audio server ever loses
   // this serialization guarantee (because it becomes multi-threaded, for
   // example) we will need to introduce another lock (different from the cleanup
   // lock) in order to keep the cleanup tasks properly ordered while
@@ -132,8 +133,8 @@ void AudioServerImpl::SchedulePacketCleanup(
   packet_cleanup_queue_.push_back(std::move(packet));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(task_runner_);
-    task_runner_->PostTask([this]() { DoPacketCleanup(); });
+    FXL_DCHECK(async_);
+    async::PostTask(async_, [this]() { DoPacketCleanup(); });
     cleanup_scheduled_ = true;
   }
 }
@@ -145,8 +146,8 @@ void AudioServerImpl::ScheduleFlushCleanup(
   flush_cleanup_queue_.push_back(std::move(token));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(task_runner_);
-    task_runner_->PostTask([this]() { DoPacketCleanup(); });
+    FXL_DCHECK(async_);
+    async::PostTask(async_, [this]() { DoPacketCleanup(); });
     cleanup_scheduled_ = true;
   }
 }

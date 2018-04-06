@@ -8,7 +8,6 @@
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/transport/media_packet_producer_base.h"
 
 namespace media {
@@ -26,6 +25,8 @@ class FidlPacketProducer
 
   static std::shared_ptr<FidlPacketProducer> Create();
 
+  FidlPacketProducer();
+
   ~FidlPacketProducer() override;
 
   // Binds.
@@ -36,8 +37,7 @@ class FidlPacketProducer
       ConnectionStateChangedCallback callback);
 
   // Flushes and tells the connected consumer to flush.
-  void FlushConnection(bool hold_frame,
-                       FlushConnectionCallback callback);
+  void FlushConnection(bool hold_frame, FlushConnectionCallback callback);
 
   // ActiveSink implementation.
   std::shared_ptr<PayloadAllocator> allocator() override;
@@ -64,8 +64,6 @@ class FidlPacketProducer
   void OnFailure() override;
 
  private:
-  FidlPacketProducer();
-
   // Sends a packet to the consumer.
   void SendPacket(PacketPtr packet);
 
@@ -81,7 +79,7 @@ class FidlPacketProducer
 
   fidl::Binding<MediaPacketProducer> binding_;
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   ConnectionStateChangedCallback connectionStateChangedCallback_;
 };
 

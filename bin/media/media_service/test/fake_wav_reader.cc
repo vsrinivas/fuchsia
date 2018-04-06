@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/media_service/test/fake_wav_reader.h"
 
+#include <lib/async/default.h>
 #include <zx/socket.h>
 
 namespace media {
@@ -54,10 +55,6 @@ void FakeWavReader::Describe(DescribeCallback callback) {
 
 void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   if (socket_) {
-    if (wait_id_ != 0) {
-      GetDefaultAsyncWaiter()->CancelWait(wait_id_);
-      wait_id_ = 0;
-    }
     socket_.reset();
   }
 
@@ -84,24 +81,29 @@ void FakeWavReader::WriteToSocket() {
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE,
-          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
-            wait_id_ = 0;
-            if (status == ZX_ERR_CANCELED) {
-              // Run loop has aborted...the app is shutting down.
-              return;
-            }
+      waiter_ = std::make_unique<async::AutoWait>(
+          async_get_default(), socket_.get(),
+          ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
-            if (status != ZX_OK) {
-              FXL_LOG(ERROR) << "AsyncWait failed " << status;
-              socket_.reset();
-              return;
-            }
+      waiter_->set_handler([this](async_t* async, zx_status_t status,
+                                  const zx_packet_signal_t* signal) {
+        if (status == ZX_ERR_CANCELED) {
+          // Run loop has aborted...the app is shutting down.
+          return ASYNC_WAIT_FINISHED;
+        }
 
-            WriteToSocket();
-          });
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "AsyncWait failed " << status;
+          socket_.reset();
+          return ASYNC_WAIT_FINISHED;
+        }
+
+        WriteToSocket();
+        return ASYNC_WAIT_FINISHED;
+      });
+
+      waiter_->Begin();
+
       return;
     }
 

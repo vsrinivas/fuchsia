@@ -15,7 +15,6 @@
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "garnet/bin/media/framework/stages/transform_stage.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -112,7 +111,7 @@ DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStageImpl);
 class Graph {
  public:
   // Constructs a graph.
-  Graph(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  Graph(async_t* async);
 
   ~Graph();
 
@@ -208,7 +207,7 @@ class Graph {
   // Adds a stage to the graph.
   NodeRef Add(std::shared_ptr<StageImpl> stage);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   std::list<std::shared_ptr<StageImpl>> stages_;
   std::list<StageImpl*> sources_;

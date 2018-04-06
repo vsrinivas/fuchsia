@@ -6,7 +6,6 @@
 
 #include "garnet/bin/media/tts_service/tts_service_impl.h"
 #include "garnet/bin/media/tts_service/tts_speaker.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace media {
@@ -22,10 +21,9 @@ TtsServiceImpl::TtsServiceImpl(
         clients_.insert(new Client(this, std::move(request)));
       });
 
-  // Stash a pointer to our task runner.
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+  // Stash a pointer to our async_t.
+  async_ = async_get_default();
+  FXL_DCHECK(async_);
 }
 
 TtsServiceImpl::~TtsServiceImpl() {
@@ -67,14 +65,14 @@ void TtsServiceImpl::Client::Say(fidl::StringPtr words,
                                  uint64_t token,
                                  SayCallback cbk) {
   auto cleanup = fbl::MakeAutoCall([this] { Shutdown(); });
-  auto speaker = std::make_shared<TtsSpeaker>(owner_->task_runner_);
+  auto speaker = std::make_shared<TtsSpeaker>(owner_->async_);
 
   if (speaker->Init(owner_->application_context_) != ZX_OK) {
     return;
   }
 
-  fxl::Closure on_speak_complete =
-      [ this, speaker, token, say_callback = std::move(cbk) ]() {
+  fxl::Closure on_speak_complete = [this, speaker, token,
+                                    say_callback = std::move(cbk)]() {
     OnSpeakComplete(std::move(speaker), token, std::move(say_callback));
   };
 

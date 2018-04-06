@@ -6,7 +6,6 @@
 
 #include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/framework/models/active_source.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 namespace media {
@@ -19,6 +18,8 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
 
   static std::shared_ptr<FidlPacketConsumer> Create();
 
+  FidlPacketConsumer();
+
   ~FidlPacketConsumer() override;
 
   // Binds.
@@ -30,8 +31,6 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   void SetFlushRequestedCallback(FlushRequestedCallback callback);
 
  private:
-  FidlPacketConsumer();
-
   // MediaPacketConsumerBase overrides.
   void OnPacketSupplied(
       std::unique_ptr<SuppliedPacket> supplied_packet) override;
@@ -65,7 +64,7 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   };
 
   std::function<void()> unbind_handler_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   Demand downstream_demand_ = Demand::kNegative;
   FlushRequestedCallback flush_requested_callback_;
 };

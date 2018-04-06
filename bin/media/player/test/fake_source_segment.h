@@ -47,7 +47,7 @@ class FakeSourceSegment : public SourceSegment {
   // Protected calls exposed for testing.
   Graph& TEST_graph() { return graph(); }
 
-  fxl::RefPtr<fxl::TaskRunner> TEST_task_runner() { return task_runner(); }
+  async_t* TEST_async() { return async(); }
 
   void TEST_NotifyUpdate() { NotifyUpdate(); }
 

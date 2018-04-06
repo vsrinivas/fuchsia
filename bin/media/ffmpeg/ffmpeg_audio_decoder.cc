@@ -4,7 +4,6 @@
 
 #include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
 
-#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"

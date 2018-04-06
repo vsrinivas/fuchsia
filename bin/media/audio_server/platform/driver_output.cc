@@ -432,7 +432,7 @@ void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
   // clang-format off
-  manager_->ScheduleMessageLoopTask(
+  manager_->ScheduleMainThreadTask(
     [ manager = manager_,
       output = fbl::WrapRefPtr(this),
       plugged,

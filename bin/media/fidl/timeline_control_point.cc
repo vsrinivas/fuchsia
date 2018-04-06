@@ -4,7 +4,9 @@
 
 #include "garnet/bin/media/fidl/timeline_control_point.h"
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
@@ -21,9 +23,10 @@ namespace media {
   }
 
 TimelineControlPoint::TimelineControlPoint()
-    : control_point_binding_(this), consumer_binding_(this) {
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+    : control_point_binding_(this),
+      consumer_binding_(this),
+      async_(async_get_default()) {
+  FXL_DCHECK(async_);
 
   std::lock_guard<std::mutex> locker(mutex_);
   ClearPendingTimelineFunction(false);
@@ -95,7 +98,7 @@ void TimelineControlPoint::SnapshotCurrentFunction(int64_t reference_time,
 
   if (ReachedEndOfStream() && !end_of_stream_published_) {
     end_of_stream_published_ = true;
-    task_runner_->PostTask([this]() { status_publisher_.SendUpdates(); });
+    async::PostTask(async_, [this]() { status_publisher_.SendUpdates(); });
   }
 }
 
@@ -190,7 +193,7 @@ void TimelineControlPoint::SetTimelineTransformLocked(
       timeline_transform.reference_delta);
 
   if (progress_started_callback_ && !was_progressing && ProgressingInternal()) {
-    task_runner_->PostTask([this]() {
+    async::PostTask(async_, [this]() {
       if (progress_started_callback_) {
         progress_started_callback_();
       }
@@ -209,7 +212,7 @@ void TimelineControlPoint::ApplyPendingChanges(int64_t reference_time) {
 
   ++generation_;
 
-  task_runner_->PostTask([this]() { status_publisher_.SendUpdates(); });
+  async::PostTask(async_, [this]() { status_publisher_.SendUpdates(); });
 }
 
 void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
@@ -218,13 +221,13 @@ void TimelineControlPoint::ClearPendingTimelineFunction(bool completed) {
   if (set_timeline_transform_callback_) {
     SetTimelineTransformCallback callback = set_timeline_transform_callback_;
     set_timeline_transform_callback_ = nullptr;
-    task_runner_->PostTask(
-        [this, callback, completed]() { callback(completed); });
+    async::PostTask(async_,
+                    [this, callback, completed]() { callback(completed); });
   }
 }
 
 void TimelineControlPoint::PostReset() {
-  task_runner_->PostTask([this]() { Reset(); });
+  async::PostTask(async_, [this]() { Reset(); });
 }
 
 bool TimelineControlPoint::ProgressingInternal() {

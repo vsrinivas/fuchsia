@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -84,15 +86,15 @@ void StageImpl::Release() {
     }
   }
 
-  FXL_DCHECK(task_runner_);
-  task_runner_->PostTask([shared_this = shared_from_this()]() {
+  FXL_DCHECK(async_);
+  async::PostTask(async_, [shared_this = shared_from_this()]() {
     shared_this->RunTasks();
   });
 }
 
-void StageImpl::SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  FXL_DCHECK(task_runner);
-  task_runner_ = task_runner;
+void StageImpl::SetAsync(async_t* async) {
+  FXL_DCHECK(async);
+  async_ = async;
 }
 
 void StageImpl::PostTask(const fxl::Closure& task) {
@@ -108,16 +110,16 @@ void StageImpl::PostTask(const fxl::Closure& task) {
     }
   }
 
-  FXL_DCHECK(task_runner_);
-  task_runner_->PostTask([shared_this = shared_from_this()]() {
+  FXL_DCHECK(async_);
+  async::PostTask(async_, [shared_this = shared_from_this()]() {
     shared_this->RunTasks();
   });
 }
 
 void StageImpl::PostShutdownTask(fxl::Closure task) {
-  FXL_DCHECK(task_runner_);
-  task_runner_->PostTask(
-      [ shared_this = shared_from_this(), task ]() { task(); });
+  FXL_DCHECK(async_);
+  async::PostTask(async_,
+                  [shared_this = shared_from_this(), task]() { task(); });
 }
 
 void StageImpl::RunTasks() {

@@ -4,8 +4,6 @@
 
 #include "garnet/bin/media/media_service/media_component_factory.h"
 
-#include <zircon/syscalls.h>
-
 #include "garnet/bin/media/media_service/file_reader_impl.h"
 #include "garnet/bin/media/media_service/lpcm_reformatter_impl.h"
 #include "garnet/bin/media/media_service/media_decoder_impl.h"
@@ -16,15 +14,19 @@
 #include "garnet/bin/media/media_service/media_timeline_controller_impl.h"
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace media {
 
 MediaComponentFactory::MediaComponentFactory(
-    std::unique_ptr<component::ApplicationContext> context)
+    std::unique_ptr<component::ApplicationContext> context,
+    fxl::Closure quit_callback)
     : FactoryServiceBase(std::move(context)),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
+      quit_callback_(quit_callback),
+      async_(async_get_default()) {
+  FXL_DCHECK(quit_callback_);
+  FXL_DCHECK(async_);
+}
 
 MediaComponentFactory::~MediaComponentFactory() {}
 
@@ -99,8 +101,7 @@ std::shared_ptr<VideoRendererImpl> MediaComponentFactory::CreateVideoRenderer(
 }
 
 void MediaComponentFactory::OnLastProductRemoved() {
-  task_runner_->PostTask(
-      []() { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  quit_callback_();
 }
 
 }  // namespace media

@@ -10,7 +10,6 @@
 #include <fuchsia/cpp/media.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 namespace tts {
@@ -50,7 +49,7 @@ class TtsServiceImpl {
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   std::set<Client*> clients_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TtsServiceImpl);
 };
 

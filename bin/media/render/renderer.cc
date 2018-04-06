@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/render/renderer.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/media/timeline/timeline.h"
 
 namespace media {
@@ -14,14 +16,13 @@ Renderer::Renderer() {
 
 Renderer::~Renderer() {}
 
-void Renderer::Provision(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                         fxl::Closure update_callback) {
-  task_runner_ = task_runner;
+void Renderer::Provision(async_t* async, fxl::Closure update_callback) {
+  async_ = async;
   update_callback_ = update_callback;
 }
 
 void Renderer::Deprovision() {
-  task_runner_ = nullptr;
+  async_ = nullptr;
   update_callback_ = nullptr;
 }
 
@@ -88,10 +89,9 @@ void Renderer::UpdateTimeline(int64_t reference_time) {
 }
 
 void Renderer::UpdateTimelineAt(int64_t reference_time) {
-  task_runner()->PostTaskForTime(
-      [this, reference_time]() { UpdateTimeline(reference_time); },
-      fxl::TimePoint::FromEpochDelta(
-          fxl::TimeDelta::FromNanoseconds(reference_time)));
+  async::PostTaskForTime(
+      async_, [this, reference_time]() { UpdateTimeline(reference_time); },
+      zx::time(reference_time));
 }
 
 void Renderer::ApplyPendingChanges(int64_t reference_time) {

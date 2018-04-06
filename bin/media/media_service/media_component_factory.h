@@ -8,6 +8,7 @@
 
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/app/cpp/application_context.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 
 namespace media {
@@ -17,13 +18,10 @@ class VideoRendererImpl;
 class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
  public:
   MediaComponentFactory(
-      std::unique_ptr<component::ApplicationContext> application_context);
+      std::unique_ptr<component::ApplicationContext> application_context,
+      fxl::Closure quit_callback);
 
   ~MediaComponentFactory() override;
-
-  fxl::RefPtr<fxl::TaskRunner> task_runner() {
-    return task_runner_;
-  }
 
   void CreateMediaPlayer(fidl::InterfaceRequest<MediaPlayer> player);
 
@@ -64,7 +62,8 @@ class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
   // FactoryServiceBase override.
   void OnLastProductRemoved() override;
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::Closure quit_callback_;
+  async_t* async_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaComponentFactory);
 };

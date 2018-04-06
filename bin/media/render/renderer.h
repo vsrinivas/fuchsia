@@ -8,7 +8,6 @@
 
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
@@ -20,12 +19,11 @@ class Renderer : public ActiveSink {
 
   ~Renderer() override;
 
-  // Provides a task runner and update callback to the renderer. The callback
+  // Provides an async object and update callback to the renderer. The callback
   // should be called to notify of changes in the value returned by
   // end_of_stream(). Subclasses of Renderer may use this callback to signal
   // additional changes.
-  void Provision(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                 fxl::Closure update_callback);
+  void Provision(async_t* async, fxl::Closure update_callback);
 
   // Revokes the task runner and update callback provided in a previous call to
   // |Provision|.
@@ -55,10 +53,9 @@ class Renderer : public ActiveSink {
   bool end_of_stream() const;
 
  protected:
-  fxl::RefPtr<fxl::TaskRunner> task_runner() {
-    FXL_DCHECK(task_runner_)
-        << "task_runner() called on unprovisioned renderer.";
-    return task_runner_;
+  async_t* async() {
+    FXL_DCHECK(async_) << "async() called on unprovisioned renderer.";
+    return async_;
   }
 
   // Notifies of state updates (calls the update callback).
@@ -119,7 +116,7 @@ class Renderer : public ActiveSink {
     return pending_timeline_function_.reference_time() != kUnspecifiedTime;
   }
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   fxl::Closure update_callback_;
   TimelineFunction current_timeline_function_;
   TimelineFunction pending_timeline_function_;

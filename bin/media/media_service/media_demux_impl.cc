@@ -9,7 +9,6 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -29,10 +28,10 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
     : MediaComponentFactory::Product<MediaSource>(this,
                                                   std::move(request),
                                                   owner),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      graph_(owner->task_runner()) {
+      async_(async_get_default()),
+      graph_(async_get_default()) {
   FXL_DCHECK(reader);
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(async_);
 
   status_publisher_.SetCallbackRunner(
       [this](GetStatusCallback callback, uint64_t version) {
@@ -93,7 +92,7 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
   });
 
   demux_->WhenInitialized([this](Result result) {
-    task_runner_->PostTask([this, result]() { OnDemuxInitialized(result); });
+    async::PostTask(async_, [this, result]() { OnDemuxInitialized(result); });
   });
 }
 
@@ -173,7 +172,7 @@ void MediaDemuxImpl::Seek(int64_t position, SeekCallback callback) {
   RCHECK(init_complete_.occurred());
 
   demux_->Seek(position, [this, callback]() {
-    task_runner_->PostTask([callback]() { callback(); });
+    async::PostTask(async_, [callback]() { callback(); });
   });
 }
 

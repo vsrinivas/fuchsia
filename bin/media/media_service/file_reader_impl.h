@@ -7,9 +7,9 @@
 #include <memory>
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zx/socket.h>
 
-#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "garnet/bin/media/media_service/media_component_factory.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
@@ -49,7 +49,7 @@ class FileReaderImpl : public MediaComponentFactory::Product<SeekingReader>,
   MediaResult result_ = MediaResult::OK;
   uint64_t size_ = kUnknownSize;
   zx::socket socket_;
-  FidlAsyncWaitID wait_id_ = 0;
+  std::unique_ptr<async::AutoWait> waiter_;
   std::vector<char> buffer_;
   size_t remaining_buffer_bytes_count_ = 0;
   char* remaining_buffer_bytes_;

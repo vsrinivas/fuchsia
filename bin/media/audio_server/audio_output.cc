@@ -6,8 +6,6 @@
 
 #include "garnet/bin/media/audio_server/audio_device_manager.h"
 #include "garnet/bin/media/audio_server/audio_link.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 

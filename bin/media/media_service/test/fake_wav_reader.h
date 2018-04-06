@@ -7,9 +7,9 @@
 #include <vector>
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zx/socket.h>
 
-#include "garnet/bin/media/fidl/fidl_default_waiter.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
@@ -72,7 +72,7 @@ class FakeWavReader : public SeekingReader {
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
   zx::socket socket_;
-  FidlAsyncWaitID wait_id_ = 0;
+  std::unique_ptr<async::AutoWait> waiter_;
   uint64_t position_;
 };
 

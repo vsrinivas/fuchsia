@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/bin/media/tts_service/tts_service_impl.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   media::tts::TtsServiceImpl impl(
       component::ApplicationContext::CreateFromStartupInfo());

@@ -6,11 +6,11 @@
 
 #include <mutex>
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
@@ -73,7 +73,8 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void ClearEndOfStream();
 
   // MediaTimelineControlPoint implementation.
-  void GetStatus(uint64_t version_last_seen, GetStatusCallback callback) override;
+  void GetStatus(uint64_t version_last_seen,
+                 GetStatusCallback callback) override;
 
   void GetTimelineConsumer(
       fidl::InterfaceRequest<TimelineConsumer> timeline_consumer) override;
@@ -85,9 +86,8 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   void Prime(PrimeCallback callback) override;
 
   // TimelineConsumer implementation.
-  void SetTimelineTransform(
-      TimelineTransform timeline_transform,
-      SetTimelineTransformCallback callback) override;
+  void SetTimelineTransform(TimelineTransform timeline_transform,
+                            SetTimelineTransformCallback callback) override;
 
   void SetTimelineTransformNoReply(
       TimelineTransform timeline_transform) override;
@@ -129,7 +129,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
   ProgressStartedCallback progress_started_callback_;
 
   std::mutex mutex_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_ FXL_GUARDED_BY(mutex_);
+  async_t* async_ FXL_GUARDED_BY(mutex_);
   TimelineFunction current_timeline_function_ FXL_GUARDED_BY(mutex_);
   TimelineFunction pending_timeline_function_ FXL_GUARDED_BY(mutex_);
   SetTimelineTransformCallback set_timeline_transform_callback_

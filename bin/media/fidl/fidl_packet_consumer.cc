@@ -4,16 +4,16 @@
 
 #include "garnet/bin/media/fidl/fidl_packet_consumer.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
 // static
 std::shared_ptr<FidlPacketConsumer> FidlPacketConsumer::Create() {
-  return ThreadAwareSharedPtr(new FidlPacketConsumer(),
-                              fsl::MessageLoop::GetCurrent()->task_runner());
+  return std::make_shared<FidlPacketConsumer>();
 }
 
 FidlPacketConsumer::FidlPacketConsumer() {}
@@ -24,8 +24,8 @@ void FidlPacketConsumer::Bind(
     fidl::InterfaceRequest<MediaPacketConsumer> packet_consumer_request,
     const std::function<void()>& unbind_handler) {
   unbind_handler_ = unbind_handler;
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+  async_ = async_get_default();
+  FXL_DCHECK(async_);
   MediaPacketConsumerBase::Bind(std::move(packet_consumer_request));
 }
 
@@ -84,9 +84,8 @@ void FidlPacketConsumer::SetDownstreamDemand(Demand demand) {
   if (demand == Demand::kPositive &&
       supplied_packets_outstanding() >=
           current_demand().min_packets_outstanding) {
-    task_runner_->PostTask([
-      this, demand = supplied_packets_outstanding() + 1
-    ]() { SetDemand(demand); });
+    async::PostTask(async_, [this, demand = supplied_packets_outstanding() +
+                                            1]() { SetDemand(demand); });
   }
 }
 

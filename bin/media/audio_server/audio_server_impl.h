@@ -6,6 +6,8 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/task.h>
 
 #include <mutex>
 
@@ -17,10 +19,6 @@
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 namespace audio {
@@ -59,9 +57,9 @@ class AudioServerImpl : public AudioServer {
   void ScheduleFlushCleanup(fbl::unique_ptr<PendingFlushToken> token);
 
   // Schedule a closure to run on the server's main message loop.
-  void ScheduleMessageLoopTask(const fxl::Closure& task) {
-    FXL_DCHECK(task_runner_);
-    task_runner_->PostTask(task);
+  void ScheduleMainThreadTask(const fxl::Closure& task) {
+    FXL_DCHECK(async_);
+    async::PostTask(async_, task);
   }
 
   // Accessor for our encapsulated device manager.
@@ -74,10 +72,10 @@ class AudioServerImpl : public AudioServer {
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::BindingSet<AudioServer> bindings_;
 
-  // A reference to our message loop's task runner.  Allows us to post events to
+  // A reference to our thread's async object.  Allows us to post events to
   // be handled by our main application thread from things like the output
   // manager's thread pool.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   // State for dealing with devices.
   AudioDeviceManager device_manager_;

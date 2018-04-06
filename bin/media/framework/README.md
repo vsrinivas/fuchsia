@@ -28,7 +28,7 @@ point the graph is ready to move packets.
 Here's an example:
 
 ```
-Graph graph(default_task_runner);
+Graph graph(default_async);
 NodeRef demux = graph.Add(demux_node);
 NodeRef decoder = graph.Add(decoder_node);
 NodeRef renderer = graph.Add(renderer_node);

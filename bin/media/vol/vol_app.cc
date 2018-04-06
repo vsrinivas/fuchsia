@@ -7,12 +7,14 @@
 #include <iostream>
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/media/audio/perceived_level.h"
 
 namespace media {
@@ -51,9 +53,12 @@ std::ostream& operator<<(std::ostream& os, const AudioPolicyStatus& value) {
 
 class VolApp {
  public:
-  VolApp(int argc, const char** argv)
+  VolApp(int argc, const char** argv, fxl::Closure quit_callback)
       : application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()) {
+            component::ApplicationContext::CreateFromStartupInfo()),
+        quit_callback_(quit_callback) {
+    FXL_DCHECK(quit_callback);
+
     fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
     if (command_line.HasOption("help")) {
@@ -135,7 +140,7 @@ class VolApp {
     std::cout << "    enter        quit\n";
     std::cout << "\n";
 
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    quit_callback_();
   }
 
   bool Parse(const std::string& string_value, float* float_out) {
@@ -159,7 +164,7 @@ class VolApp {
         }
       } else {
         std::cout << *status << std::endl;
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+        quit_callback_();
         return;
       }
     }
@@ -204,7 +209,7 @@ class VolApp {
       case '\n':
       case 'q':
       case 'Q':
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
+        quit_callback_();
         std::cout << kShowCursor << "\n" << std::endl;
         return;
       default:
@@ -215,6 +220,7 @@ class VolApp {
   }
 
   std::unique_ptr<component::ApplicationContext> application_context_;
+  fxl::Closure quit_callback_;
   AudioPolicyServicePtr audio_policy_service_;
   bool interactive_ = true;
   bool mute_ = false;
@@ -229,8 +235,10 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
-  media::VolApp app(argc, argv);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  media::VolApp app(argc, argv, [&loop]() {
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+  });
   loop.Run();
   return 0;
 }

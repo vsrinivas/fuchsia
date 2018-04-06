@@ -789,7 +789,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // If we need to poke the server thread, do so.
     if (wakeup_server_thread) {
       // clang-format off
-      owner_->ScheduleMessageLoopTask([ thiz = fbl::WrapRefPtr(this) ]() {
+      owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
         thiz->FinishBuffersThunk();
       });
       // clang-format on
@@ -1172,7 +1172,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
   // clang-format off
-  owner_->ScheduleMessageLoopTask([ thiz = fbl::WrapRefPtr(this) ]() {
+  owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
     thiz->FinishAsyncStopThunk();
   });
   // clang-format on
@@ -1222,7 +1222,7 @@ void AudioCapturerImpl::ShutdownFromMixDomain() {
   state_.store(State::Shutdown);
 
   // clang-format off
-  owner_->ScheduleMessageLoopTask([ thiz = fbl::WrapRefPtr(this) ]() {
+  owner_->ScheduleMainThreadTask([ thiz = fbl::WrapRefPtr(this) ]() {
     thiz->Shutdown();
   });
   // clang-format on

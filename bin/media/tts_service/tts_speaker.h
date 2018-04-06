@@ -7,15 +7,16 @@
 #include <mutex>
 #include <thread>
 
-#include <lib/async-loop/cpp/loop.h>
 #include <fbl/vmo_mapper.h>
 #include <fuchsia/cpp/media.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/string.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
 namespace media {
@@ -23,7 +24,7 @@ namespace tts {
 
 class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
  public:
-  TtsSpeaker(fxl::RefPtr<fxl::TaskRunner> master_task_runner);
+  TtsSpeaker(async_t* master_async);
   ~TtsSpeaker() = default;
 
   zx_status_t Init(const std::unique_ptr<component::ApplicationContext>&
@@ -67,7 +68,7 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
   bool clock_started_ = false;
 
   async::Loop engine_loop_;
-  fxl::RefPtr<fxl::TaskRunner> master_task_runner_;
+  async_t* master_async_;
 
   media::AudioRenderer2Ptr audio_renderer_;
   fbl::VmoMapper shared_buf_;

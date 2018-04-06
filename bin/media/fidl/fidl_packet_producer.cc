@@ -4,9 +4,10 @@
 
 #include "garnet/bin/media/fidl/fidl_packet_producer.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -14,13 +15,12 @@ namespace media {
 
 // static
 std::shared_ptr<FidlPacketProducer> FidlPacketProducer::Create() {
-  return ThreadAwareSharedPtr(new FidlPacketProducer(),
-                              fsl::MessageLoop::GetCurrent()->task_runner());
+  return std::make_shared<FidlPacketProducer>();
 }
 
-FidlPacketProducer::FidlPacketProducer() : binding_(this) {
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+FidlPacketProducer::FidlPacketProducer()
+    : binding_(this), async_(async_get_default()) {
+  FXL_DCHECK(async_);
 }
 
 FidlPacketProducer::~FidlPacketProducer() {
@@ -41,9 +41,8 @@ void FidlPacketProducer::SetConnectionStateChangedCallback(
   connectionStateChangedCallback_ = callback;
 }
 
-void FidlPacketProducer::FlushConnection(
-    bool hold_frame,
-    FlushConnectionCallback callback) {
+void FidlPacketProducer::FlushConnection(bool hold_frame,
+                                         FlushConnectionCallback callback) {
   if (is_connected()) {
     FlushConsumer(hold_frame, callback);
   } else {
@@ -68,21 +67,21 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
   // We sample demand before posting the task that will SendPacket. By passing
   // 1 to CurrentDemand, we're asking what demand would be assuming we've
   // already sent the packet. Doing this before we post the task prevents a
-  // race between this thread and the task_runner_ (FIDL) thread. Also, we're
+  // race between this thread and the async_ (FIDL) thread. Also, we're
   // potentially reporting demand on two different threads (the calling thread
   // and the FIDL thread via SetDemand), so the stage has to deal with the
   // possible races (it does).
   Demand demand = end_of_stream ? Demand::kNegative : CurrentDemand(1);
 
-  task_runner_->PostTask(fxl::MakeCopyable([
-    weak_this = std::weak_ptr<FidlPacketProducer>(shared_from_this()),
-    packet = std::move(packet)
-  ]() mutable {
-    auto shared_this = weak_this.lock();
-    if (shared_this) {
-      shared_this->SendPacket(std::move(packet));
-    }
-  }));
+  async::PostTask(
+      async_, fxl::MakeCopyable([weak_this = std::weak_ptr<FidlPacketProducer>(
+                                     shared_from_this()),
+                                 packet = std::move(packet)]() mutable {
+        auto shared_this = weak_this.lock();
+        if (shared_this) {
+          shared_this->SendPacket(std::move(packet));
+        }
+      }));
 
   return demand;
 }
@@ -139,7 +138,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
                 fxl::To<MediaTypePtr>(packet->revised_stream_type()),
-                fxl::MakeCopyable([ this, packet = std::move(packet) ]() {
+                fxl::MakeCopyable([this, packet = std::move(packet)]() {
                   ActiveSinkStage* stage_ptr = stage();
                   if (stage_ptr) {
                     stage_ptr->SetDemand(CurrentDemand());

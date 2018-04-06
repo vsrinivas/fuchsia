@@ -5,12 +5,10 @@
 #include "garnet/bin/media/framework/graph.h"
 
 #include "garnet/bin/media/util/threadsafe_callback_joiner.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 
-Graph::Graph(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(task_runner) {}
+Graph::Graph(async_t* async) : async_(async) {}
 
 Graph::~Graph() {
   Reset();
@@ -181,14 +179,13 @@ void Graph::Reset() {
     stage->Acquire(joiner->NewCallback());
   }
 
-  joiner->WhenJoined(
-      task_runner_, [stages = std::move(stages_)]() mutable {
-        while (!stages.empty()) {
-          std::shared_ptr<StageImpl> stage = stages.front();
-          stages.pop_front();
-          stage->ShutDown();
-        }
-      });
+  joiner->WhenJoined(async_, [stages = std::move(stages_)]() mutable {
+    while (!stages.empty()) {
+      std::shared_ptr<StageImpl> stage = stages.front();
+      stages.pop_front();
+      stage->ShutDown();
+    }
+  });
 }
 
 void Graph::Prepare() {
@@ -240,20 +237,19 @@ void Graph::PostTask(const fxl::Closure& task,
     stages.push_back(node.stage_);
   }
 
-  joiner->WhenJoined(task_runner_,
-                     [ task, stages = std::move(stages) ]() {
-                       task();
-                       for (auto stage : stages) {
-                         stage->Release();
-                       }
-                     });
+  joiner->WhenJoined(async_, [task, stages = std::move(stages)]() {
+    task();
+    for (auto stage : stages) {
+      stage->Release();
+    }
+  });
 }
 
 NodeRef Graph::Add(std::shared_ptr<StageImpl> stage) {
   FXL_DCHECK(stage);
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(async_);
 
-  stage->SetTaskRunner(task_runner_);
+  stage->SetAsync(async_);
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {

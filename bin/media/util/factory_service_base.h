@@ -9,15 +9,15 @@
 #include <thread>
 #include <unordered_set>
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 template <typename Factory>
 class FactoryServiceBase {
@@ -25,13 +25,7 @@ class FactoryServiceBase {
   // Provides common behavior for all objects created by the factory service.
   class ProductBase : public std::enable_shared_from_this<ProductBase> {
    public:
-    virtual ~ProductBase() {
-      if (quit_on_destruct_) {
-        fsl::MessageLoop::GetCurrent()->PostQuitTask();
-      }
-    }
-
-    void QuitOnDestruct() { quit_on_destruct_ = true; }
+    virtual ~ProductBase() {}
 
    protected:
     explicit ProductBase(Factory* owner) : owner_(owner) { FXL_DCHECK(owner_); }
@@ -47,7 +41,6 @@ class FactoryServiceBase {
 
    private:
     Factory* owner_;
-    bool quit_on_destruct_ = false;
   };
 
   // A |ProductBase| that exposes FIDL interface |Interface| via a single
@@ -156,7 +149,7 @@ class FactoryServiceBase {
   FactoryServiceBase(
       std::unique_ptr<component::ApplicationContext> application_context)
       : application_context_(std::move(application_context)),
-        task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
+        async_(async_get_default()) {}
 
   virtual ~FactoryServiceBase() {}
 
@@ -197,7 +190,7 @@ class FactoryServiceBase {
 
  private:
   std::unique_ptr<component::ApplicationContext> application_context_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   mutable std::mutex mutex_;
   std::unordered_set<std::shared_ptr<ProductBase>> products_
       FXL_GUARDED_BY(mutex_);

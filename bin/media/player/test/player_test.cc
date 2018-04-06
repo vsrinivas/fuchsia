@@ -4,11 +4,12 @@
 
 #include "garnet/bin/media/player/player.h"
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/bin/media/framework/formatting.h"
 #include "garnet/bin/media/player/test/fake_sink_segment.h"
 #include "garnet/bin/media/player/test/fake_source_segment.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace media {
 namespace test {
@@ -78,8 +79,8 @@ void ExpectNoStreams(const Player& player) {
 
 // Tests that a fresh player responds to simple queries as expected.
 TEST(PlayerTest, FreshPlayer) {
-  fsl::MessageLoop loop;
-  Player player(fsl::MessageLoop::GetCurrent()->task_runner());
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  Player player(loop.async());
 
   EXPECT_FALSE(player.has_source_segment());
 
@@ -95,8 +96,8 @@ TEST(PlayerTest, FreshPlayer) {
 // Tests that SetSourceSegment calls back immediately if a null source segment
 // is set.
 TEST(PlayerTest, NullSourceSegment) {
-  fsl::MessageLoop loop;
-  Player player(fsl::MessageLoop::GetCurrent()->task_runner());
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  Player player(loop.async());
 
   bool set_source_segment_callback_called = false;
 
@@ -112,8 +113,8 @@ TEST(PlayerTest, NullSourceSegment) {
 // Tests the player by setting up a fake source segment and two fake sink
 // segments, exercising the player and then removing the segments.
 TEST(PlayerTest, FakeSegments) {
-  fsl::MessageLoop loop;
-  Player player(fsl::MessageLoop::GetCurrent()->task_runner());
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  Player player(loop.async());
 
   bool update_callback_called = false;
   player.SetUpdateCallback(

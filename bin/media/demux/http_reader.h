@@ -7,9 +7,9 @@
 #include <string>
 
 #include <fuchsia/cpp/network.h>
+#include <lib/async/cpp/auto_wait.h>
 
 #include "garnet/bin/media/demux/reader.h"
-#include "garnet/bin/media/fidl/fidl_async_waiter.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/app/cpp/application_context.h"
 
@@ -57,7 +57,7 @@ class HttpReader : public Reader {
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
   zx::socket socket_;
-  FidlAsyncWaitID wait_id_ = 0;
+  std::unique_ptr<async::AutoWait> waiter_;
   size_t socket_position_ = kUnknownSize;
   Incident ready_;
 

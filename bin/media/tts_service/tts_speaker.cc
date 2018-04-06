@@ -5,7 +5,6 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/tts_service/tts_speaker.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace media {
@@ -21,10 +20,8 @@ static constexpr uint32_t kFliteBytesPerFrame = 2;
 static constexpr uint32_t kLowWaterBytes =
     (kFliteFrameRate * kLowWaterMsec * kFliteBytesPerFrame) / 1000;
 
-TtsSpeaker::TtsSpeaker(fxl::RefPtr<fxl::TaskRunner> master_task_runner)
-    : master_task_runner_(std::move(master_task_runner)),
-      abort_playback_(false),
-      synthesis_complete_(false) {
+TtsSpeaker::TtsSpeaker(async_t* async)
+    : master_async_(async), abort_playback_(false), synthesis_complete_(false) {
   engine_loop_.StartThread();
 }
 
@@ -33,9 +30,8 @@ zx_status_t TtsSpeaker::Speak(fidl::StringPtr words,
   words_ = std::move(words);
   speak_complete_cbk_ = std::move(speak_complete_cbk);
 
-  async::PostTask(engine_loop_.async(), [thiz = shared_from_this()]() {
-    thiz->DoSpeak();
-  });
+  async::PostTask(engine_loop_.async(),
+                  [thiz = shared_from_this()]() { thiz->DoSpeak(); });
 
   return ZX_OK;
 }
@@ -57,11 +53,8 @@ zx_status_t TtsSpeaker::Init(
 
   zx::vmo shared_vmo;
   res = shared_buf_.CreateAndMap(
-      kSharedBufSize,
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      nullptr,
-      &shared_vmo,
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      kSharedBufSize, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+      &shared_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << res;
@@ -153,8 +146,7 @@ void TtsSpeaker::SendPendingAudio() {
           });
     } else if (todo == bytes_till_low_water) {
       audio_renderer_->SendPacket(
-          std::move(pkt),
-          [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {
+          std::move(pkt), [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {
             thiz->UpdateRdPtr(new_rd_pos);
           });
     } else {
@@ -238,15 +230,14 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
 
     // Looks like we need to wait for there to be some space.  Before we do so,
     // let the master thread know it needs to send the data we just produced.
-    master_task_runner_->PostTask([thiz = shared_from_this()]() {
+    async::PostTask(master_async_, [thiz = shared_from_this()]() {
       thiz->SendPendingAudio();
     });
 
     zx_signals_t pending;
     zx_status_t res;
 
-    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0,
-                                 zx::time::infinite(),
+    res = wakeup_event_.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(),
                                  &pending);
     if ((res != ZX_OK) || abort_playback_.load()) {
       return CST_AUDIO_STREAM_STOP;
@@ -257,7 +248,7 @@ int TtsSpeaker::ProduceAudioCbk(const cst_wave* wave,
   // of our synthesized audio right now.
   if (last) {
     synthesis_complete_.store(true);
-    master_task_runner_->PostTask([thiz = shared_from_this()]() {
+    async::PostTask(master_async_, [thiz = shared_from_this()]() {
       thiz->SendPendingAudio();
     });
   }
@@ -278,10 +269,10 @@ void TtsSpeaker::DoSpeak() {
   delete_voice(vox);
 
   if (abort_playback_.load()) {
-    master_task_runner_->PostTask([speak_complete_cbk =
-                                       std::move(speak_complete_cbk_)]() {
-      speak_complete_cbk();
-    });
+    async::PostTask(master_async_,
+                    [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
+                      speak_complete_cbk();
+                    });
   }
 }
 

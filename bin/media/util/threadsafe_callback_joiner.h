@@ -7,9 +7,10 @@
 #include <memory>
 #include <mutex>
 
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -47,13 +48,12 @@ class ThreadsafeCallbackJoiner
   fxl::Closure NewCallback();
 
   // Specifies a callback to be called when all child operations have completed.
-  // |task_runner| specifies the task runner on which to call |join_callback|.
+  // |async| specifies the task runner on which to call |join_callback|.
   // If no child operations are currently pending, the callback is posted
   // immediately. If child operations are pending, the callback is posted when
   // all child operations have completed. Only one callback at a time can be
   // registered with WhenJoined.
-  void WhenJoined(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                  const fxl::Closure& join_callback);
+  void WhenJoined(async_t* async, const fxl::Closure& join_callback);
 
   // Cancels a callback registered with WhenJoined if it hasn't run yet. The
   // return value indicates whether a callback was cancelled.
@@ -63,7 +63,7 @@ class ThreadsafeCallbackJoiner
   std::mutex mutex_;
   size_t counter_ = 0;
   fxl::Closure join_callback_;
-  fxl::RefPtr<fxl::TaskRunner> join_callback_runner_;
+  async_t* join_callback_async_;
 };
 
 }  // namespace media

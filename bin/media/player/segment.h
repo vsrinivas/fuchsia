@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/framework/metadata.h"
@@ -16,9 +17,9 @@ namespace media {
 // A graph segment.
 //
 // A graph segment is initially unprovisioned, meaning that the |graph| and
-// |task_runner| methods may not be called, and |provisioned| returns false.
+// |async| methods may not be called, and |provisioned| returns false.
 // When it's provisioned, the |DidProvision| method is called, at which time
-// the |graph| and |task_runner| methods are valid to call, and |provisioned|
+// the |graph| and |async| methods are valid to call, and |provisioned|
 // returns true. Before the segment is deprovisioned, the |WillDeprovision|
 // method is called.
 class Segment {
@@ -32,9 +33,7 @@ class Segment {
   // changes. The update callback is used to notify of changes to the value
   // returned by problem(). Subclasses of Segment may use this callback to
   // signal additional changes.
-  void Provision(Graph* graph,
-                 fxl::RefPtr<fxl::TaskRunner> task_runner,
-                 fxl::Closure update_callback);
+  void Provision(Graph* graph, async_t* async, fxl::Closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.
@@ -50,10 +49,9 @@ class Segment {
     return *graph_;
   }
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner() {
-    FXL_DCHECK(task_runner_)
-        << "task_runner() called on unprovisioned segment.";
-    return task_runner_;
+  async_t* async() {
+    FXL_DCHECK(async_) << "async() called on unprovisioned segment.";
+    return async_;
   }
 
   // Notifies the player of state updates (calls the update callback).
@@ -78,7 +76,7 @@ class Segment {
 
  private:
   Graph* graph_ = nullptr;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_ = nullptr;
   fxl::Closure update_callback_;
   ProblemPtr problem_;
 };

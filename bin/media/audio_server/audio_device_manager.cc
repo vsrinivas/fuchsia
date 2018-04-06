@@ -243,9 +243,9 @@ void AudioDeviceManager::RemoveCapturer(AudioCapturerImpl* capturer) {
   capturers_.erase(*capturer);
 }
 
-void AudioDeviceManager::ScheduleMessageLoopTask(const fxl::Closure& task) {
+void AudioDeviceManager::ScheduleMainThreadTask(const fxl::Closure& task) {
   FXL_DCHECK(server_);
-  server_->ScheduleMessageLoopTask(task);
+  server_->ScheduleMainThreadTask(task);
 }
 
 fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(

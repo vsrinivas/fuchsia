@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/util/threadsafe_callback_joiner.h"
 
+#include <lib/async/cpp/task.h>
+
 namespace media {
 
 std::ostream& operator<<(std::ostream& os, ThreadsafeCallbackJoiner* value) {
@@ -26,7 +28,7 @@ void ThreadsafeCallbackJoiner::Spawn() {
 
 void ThreadsafeCallbackJoiner::Complete() {
   fxl::Closure callback;
-  fxl::RefPtr<fxl::TaskRunner> runner;
+  async_t* async;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
@@ -37,11 +39,11 @@ void ThreadsafeCallbackJoiner::Complete() {
     }
 
     std::swap(callback, join_callback_);
-    std::swap(runner, join_callback_runner_);
+    std::swap(async, join_callback_async_);
   }
 
-  runner->PostTask(
-      [ shared_this = shared_from_this(), callback ]() { callback(); });
+  async::PostTask(
+      async, [shared_this = shared_from_this(), callback]() { callback(); });
 }
 
 fxl::Closure ThreadsafeCallbackJoiner::NewCallback() {
@@ -54,10 +56,9 @@ fxl::Closure ThreadsafeCallbackJoiner::NewCallback() {
   };
 }
 
-void ThreadsafeCallbackJoiner::WhenJoined(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
-    const fxl::Closure& join_callback) {
-  FXL_DCHECK(task_runner);
+void ThreadsafeCallbackJoiner::WhenJoined(async_t* async,
+                                          const fxl::Closure& join_callback) {
+  FXL_DCHECK(async);
   FXL_DCHECK(join_callback);
 
   {
@@ -65,12 +66,12 @@ void ThreadsafeCallbackJoiner::WhenJoined(
     FXL_DCHECK(!join_callback_);
     if (counter_ != 0) {
       join_callback_ = join_callback;
-      join_callback_runner_ = task_runner;
+      join_callback_async_ = async;
       return;
     }
   }
 
-  task_runner->PostTask([ shared_this = shared_from_this(), join_callback ]() {
+  async::PostTask(async, [shared_this = shared_from_this(), join_callback]() {
     join_callback();
   });
 }
@@ -80,7 +81,7 @@ bool ThreadsafeCallbackJoiner::Cancel() {
 
   if (join_callback_) {
     join_callback_ = nullptr;
-    join_callback_runner_ = nullptr;
+    join_callback_async_ = nullptr;
     return true;
   }
 

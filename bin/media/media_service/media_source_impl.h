@@ -15,7 +15,6 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 

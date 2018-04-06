@@ -4,17 +4,18 @@
 
 #pragma once
 
+#include <set>
+
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
-#include <set>
+#include <fuchsia/cpp/media.h>
 
 #include "garnet/bin/media/audio_server/audio_device.h"
 #include "garnet/bin/media/audio_server/audio_input.h"
 #include "garnet/bin/media/audio_server/audio_output.h"
 #include "garnet/bin/media/audio_server/audio_plug_detector.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
+#include "lib/fxl/functional/closure.h"
 
 namespace media {
 namespace audio {
@@ -72,7 +73,7 @@ class AudioDeviceManager {
   void RemoveCapturer(AudioCapturerImpl* capturer);
 
   // Schedule a closure to run on our encapsulating server's main message loop.
-  void ScheduleMessageLoopTask(const fxl::Closure& task);
+  void ScheduleMainThreadTask(const fxl::Closure& task);
 
   // Attempt to initialize an output and add it to the set of active outputs.
   MediaResult AddDevice(const fbl::RefPtr<AudioDevice>& device);

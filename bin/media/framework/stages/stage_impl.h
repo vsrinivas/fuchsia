@@ -8,6 +8,8 @@
 #include <mutex>
 #include <queue>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/media/framework/models/node.h"
 #include "garnet/bin/media/framework/models/stage.h"
 #include "garnet/bin/media/framework/packet.h"
@@ -16,7 +18,6 @@
 #include "garnet/bin/media/framework/stages/output.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -97,8 +98,8 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Releases the stage previously acquired via |Acquire|.
   void Release();
 
-  // Sets a |TaskRunner| for running tasks.
-  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  // Sets an |async_t| for running tasks .
+  void SetAsync(async_t* async);
 
   void PostTask(const fxl::Closure& task);
 
@@ -111,7 +112,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
 
  private:
   // Runs tasks in the task queue. This method is always called from
-  // |task_runner_|. A |StageImpl| funnels all task execution through
+  // |async_|. A |StageImpl| funnels all task execution through
   // |RunTasks|. The lambdas that call |RunTasks| capture a shared pointer to
   // the stage, so the stage can't be deleted from the time such a lambda is
   // created until it's done executing |RunTasks|. A stage that's no longer
@@ -120,7 +121,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // tasks.
   void RunTasks();
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   // Used for ensuring the stage is properly updated. This value is zero
   // initially, indicating that there's no need to update the stage. When the

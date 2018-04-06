@@ -7,16 +7,17 @@
 #include <limits>
 #include <string>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
 
 FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
-    : seeking_reader_(seeking_reader.Bind()) {
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+    : seeking_reader_(seeking_reader.Bind()), async_(async_get_default()) {
+  FXL_DCHECK(async_);
 
   read_in_progress_ = false;
 
@@ -31,11 +32,7 @@ FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
       });
 }
 
-FidlReader::~FidlReader() {
-  if (wait_id_ != 0) {
-    GetDefaultAsyncWaiter()->CancelWait(wait_id_);
-  }
-}
+FidlReader::~FidlReader() {}
 
 void FidlReader::Describe(DescribeCallback callback) {
   ready_.When([this, callback]() { callback(result_, size_, can_seek_); });
@@ -57,13 +54,13 @@ void FidlReader::ReadAt(size_t position,
   read_at_callback_ = callback;
 
   // ReadAt may be called on non-fidl threads, so we use the runner.
-  task_runner_->PostTask([weak_this =
-                              std::weak_ptr<FidlReader>(shared_from_this())]() {
-    auto shared_this = weak_this.lock();
-    if (shared_this) {
-      shared_this->ContinueReadAt();
-    }
-  });
+  async::PostTask(
+      async_, [weak_this = std::weak_ptr<FidlReader>(shared_from_this())]() {
+        auto shared_this = weak_this.lock();
+        if (shared_this) {
+          shared_this->ContinueReadAt();
+        }
+      });
 }
 
 void FidlReader::ContinueReadAt() {
@@ -82,6 +79,7 @@ void FidlReader::ContinueReadAt() {
     read_at_bytes_remaining_ = read_at_bytes_to_read_;
 
     if (read_at_position_ == socket_position_) {
+      FXL_DCHECK(socket_);
       ReadFromSocket();
       return;
     }
@@ -117,25 +115,31 @@ void FidlReader::ReadFromSocket() {
                                       read_at_bytes_remaining_, &byte_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait_id_ = GetDefaultAsyncWaiter()->AsyncWait(
-          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-          ZX_TIME_INFINITE,
-          [this](zx_status_t status, zx_signals_t pending, uint64_t count) {
-            wait_id_ = 0;
+      waiter_ = std::make_unique<async::AutoWait>(
+          async_get_default(), socket_.get(),
+          ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-            if (status != ZX_OK) {
-              if (status != ZX_ERR_CANCELED) {
-                FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
-              }
+      waiter_->set_handler([this](async_t* async, zx_status_t status,
+                                  const zx_packet_signal_t* signal) {
+        if (status != ZX_OK) {
+          if (status != ZX_ERR_CANCELED) {
+            FXL_LOG(ERROR) << "Wait failed, status " << status;
+          }
 
-              FailReadAt(status);
-              return;
-            }
+          FailReadAt(status);
+          return ASYNC_WAIT_FINISHED;
+        }
 
-            ReadFromSocket();
-          });
+        ReadFromSocket();
+        return ASYNC_WAIT_FINISHED;
+      });
+
+      waiter_->Begin();
+
       break;
     }
+
+    waiter_.reset();
 
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "zx::socket::read failed, status " << status;

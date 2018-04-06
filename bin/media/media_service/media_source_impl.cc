@@ -11,7 +11,6 @@
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
 #include "lib/fxl/logging.h"
 

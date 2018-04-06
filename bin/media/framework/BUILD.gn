@@ -62,6 +62,10 @@ source_set("framework") {
     "types/video_stream_type.h",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/async",
+  ]
+
   deps = [
     "//garnet/bin/media/util:host_compatible",
     "//garnet/public/lib/fsl",

@@ -7,6 +7,8 @@
 #include <thread>
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/ffmpeg/av_format_context.h"
@@ -15,11 +17,9 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 #include "garnet/bin/media/util/incident.h"
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -133,7 +133,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   std::vector<DemuxStream*> streams_;
   Incident init_complete_;
   Result result_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   // After Init, only the ffmpeg thread accesses these.
   AvFormatContextPtr format_context_;
@@ -150,9 +150,8 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
 }
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
-    : reader_(reader) {
-  task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
-  FXL_DCHECK(task_runner_);
+    : reader_(reader), async_(async_get_default()) {
+  FXL_DCHECK(async_);
   ffmpeg_thread_ = std::thread([this]() { Worker(); });
 }
 
@@ -251,7 +250,7 @@ void FfmpegDemuxImpl::Worker() {
   result_ = Result::kOk;
   init_complete_.Occur();
 
-  task_runner_->PostTask([this]() { SendStatus(); });
+  async::PostTask(async_, [this]() { SendStatus(); });
 
   while (true) {
     bool packet_requested;
@@ -282,8 +281,9 @@ void FfmpegDemuxImpl::Worker() {
       FXL_DCHECK(packet);
 
       // TODO(dalesat): Resolve the race that makes this necessary.
-      task_runner_->PostTask(fxl::MakeCopyable(
-          [this, stream_index, packet = std::move(packet)]() mutable {
+      async::PostTask(
+          async_, fxl::MakeCopyable([this, stream_index,
+                                     packet = std::move(packet)]() mutable {
             ActiveMultistreamSourceStage* stage_ptr = stage();
             if (stage_ptr) {
               stage_ptr->SupplyPacket(stream_index, std::move(packet));
@@ -403,7 +403,8 @@ void FfmpegDemuxImpl::ReportProblem(const std::string& type,
     problem_type_ = type;
     problem_details_ = details;
   }
-  task_runner_->PostTask([this]() { SendStatus(); });
+
+  async::PostTask(async_, [this]() { SendStatus(); });
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(

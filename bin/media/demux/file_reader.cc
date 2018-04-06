@@ -5,10 +5,11 @@
 #include "garnet/bin/media/demux/file_reader.h"
 
 #include <fcntl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <unistd.h>
 
 #include "garnet/bin/media/util/file_channel.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/file_descriptor.h"
 
 namespace media {
@@ -19,8 +20,9 @@ std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
 }
 
 FileReader::FileReader(fxl::UniqueFD fd)
-    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      fd_(std::move(fd)) {
+    : async_(async_get_default()), fd_(std::move(fd)) {
+  FXL_DCHECK(async_);
+
   result_ = fd_.is_valid() ? Result::kOk : Result::kNotFound;
 
   if (result_ == Result::kOk) {
@@ -71,7 +73,7 @@ void FileReader::ReadAt(size_t position,
     return;
   }
 
-  task_runner_->PostTask([ callback = std::move(callback), result ]() {
+  async::PostTask(async_, [callback = std::move(callback), result]() {
     callback(Result::kOk, result);
   });
 }

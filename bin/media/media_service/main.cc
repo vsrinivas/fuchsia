@@ -4,11 +4,12 @@
 
 #include <string>
 
+#include <fuchsia/cpp/media.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/media/media_service/media_component_factory.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/svc/cpp/services.h"
 
 const std::string kIsolateUrl = "media_service";
@@ -41,14 +42,17 @@ int main(int argc, const char** argv) {
     }
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   trace::TraceProvider trace_provider(loop.async());
 
   std::unique_ptr<component::ApplicationContext> application_context =
       component::ApplicationContext::CreateFromStartupInfo();
 
   if (transient) {
-    media::MediaComponentFactory factory(std::move(application_context));
+    media::MediaComponentFactory factory(
+        std::move(application_context), [&loop]() {
+          async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+        });
 
     factory.application_context()
         ->outgoing_services()

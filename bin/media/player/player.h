@@ -8,12 +8,12 @@
 #include <vector>
 
 #include <fuchsia/cpp/media.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/framework/metadata.h"
 #include "garnet/bin/media/player/sink_segment.h"
 #include "garnet/bin/media/player/source_segment.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
@@ -22,7 +22,7 @@ namespace media {
 // A graph that delivers content one origin to many destinations.
 class Player {
  public:
-  Player(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  Player(async_t* async);
 
   ~Player();
 
@@ -161,7 +161,7 @@ class Player {
   void ConnectAndPrepareStream(Stream* stream);
 
   Graph graph_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   fxl::Closure update_callback_;
   fxl::Closure set_source_segment_callback_;
   size_t set_source_segment_countdown_;

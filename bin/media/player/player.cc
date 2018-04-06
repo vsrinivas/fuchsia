@@ -4,6 +4,8 @@
 
 #include "garnet/bin/media/player/player.h"
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
 
@@ -14,8 +16,7 @@ static const Problem kMediaTypeNotSupported{kProblemMediaTypeNotSupported, ""};
 
 }  // namespace
 
-Player::Player(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : graph_(task_runner), task_runner_(task_runner) {}
+Player::Player(async_t* async) : graph_(async), async_(async) {}
 
 Player::~Player() {}
 
@@ -51,7 +52,7 @@ void Player::SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
   set_source_segment_callback_ = callback;
   set_source_segment_countdown_ = 1;
 
-  source_segment_->Provision(&graph_, task_runner_,
+  source_segment_->Provision(&graph_, async_,
                              [this]() {
                                // This callback notifies the player of changes
                                // to source_segment_'s problem() and/or
@@ -88,7 +89,7 @@ void Player::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
     return;
   }
 
-  sink_segment->Provision(&graph_, task_runner_, [this]() {
+  sink_segment->Provision(&graph_, async_, [this]() {
     // This callback notifies the player of changes to source_segment_'s
     // problem() and/or end_of_stream() values.
     NotifyUpdate();
