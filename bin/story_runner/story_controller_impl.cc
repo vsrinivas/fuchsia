@@ -1055,7 +1055,7 @@ class StoryControllerImpl::AddForCreateCall : Operation<> {
     //
     // just calls Done() when the last copy of it completes.
 
-    if (!create_link_info_) {
+    if (create_link_info_) {
       // There is no module path; this link exists outside the scope of a
       // module.
       LinkPathPtr link_path = LinkPath::New();
