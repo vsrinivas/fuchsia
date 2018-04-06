@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/thread_safe_binding_set.h>
 #include <mutex>
 #include <zx/channel.h>
+#include <zx/time.h>
 
 namespace wlan {
 namespace async {
@@ -53,7 +54,7 @@ class Dispatcher {
 
         // Submit a sentinel task. Since the event loop in our async_t is single-threaded,
         // the execution of this task will guarantee that all in-flight requests have finished.
-        auto task = new ::async::Task(zx_clock_get(ZX_CLOCK_MONOTONIC), ASYNC_FLAG_HANDLE_SHUTDOWN);
+        auto task = new ::async::Task(zx::clock::get(ZX_CLOCK_MONOTONIC), ASYNC_FLAG_HANDLE_SHUTDOWN);
         auto f = [task, ready_callback = std::move(ready_callback)]
                 (async_t* async, zx_status_t status) -> async_task_result_t {
             // We don't actually care about status here, since in any case we know that no more

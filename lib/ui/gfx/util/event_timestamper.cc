@@ -11,7 +11,7 @@ namespace scenic {
 namespace gfx {
 
 EventTimestamper::EventTimestamper()
-    : main_loop_(fsl::MessageLoop::GetCurrent()), task_(0u) {
+    : main_loop_(fsl::MessageLoop::GetCurrent()), task_(zx::time(0)) {
   FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
   task_.set_handler([](async_t*, zx_status_t) {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <garnet/examples/ui/video_display/fake_camera_source.h>
+#include <zx/time.h>
 
 namespace video_display {
 
@@ -129,7 +130,7 @@ zx_status_t FakeCameraSource::Start(FrameNotifyCallback callback) {
 }
 
 zx_status_t FakeCameraSource::Stop() {
-  task_.set_deadline(ZX_TIME_INFINITE);
+  task_.set_deadline(zx::time::infinite());
   return ZX_OK;
 }
 
@@ -165,7 +166,7 @@ void FakeCameraSource::SetNextCaptureTime() {
   FXL_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
   FXL_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
-  task_.set_deadline(next_frame_time);
+  task_.set_deadline(zx::time(next_frame_time));
   FXL_VLOG(4) << "FakeCameraSource: setting next frame to: " << next_frame_time
               << "   "
               << next_frame_time - (int64_t)zx_clock_get(ZX_CLOCK_MONOTONIC)

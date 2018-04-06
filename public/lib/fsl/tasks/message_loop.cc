@@ -215,7 +215,7 @@ void MessageLoop::Epilogue(async_loop_t*, void* data) {
 }
 
 MessageLoop::TaskRecord::TaskRecord(zx_time_t deadline, fxl::Closure closure)
-    : task_(deadline, ASYNC_FLAG_HANDLE_SHUTDOWN) {
+    : task_(zx::time(deadline), ASYNC_FLAG_HANDLE_SHUTDOWN) {
   task_.set_handler(
       [this, closure = std::move(closure)](async_t*, zx_status_t status) {
         if (status == ZX_OK)
@@ -233,7 +233,7 @@ MessageLoop::HandlerRecord::HandlerRecord(zx_handle_t object,
                                           MessageLoop* loop,
                                           MessageLoopHandler* handler,
                                           HandlerKey key)
-    : wait_(object, trigger, deadline, ASYNC_FLAG_HANDLE_SHUTDOWN),
+    : wait_(object, trigger, zx::time(deadline), ASYNC_FLAG_HANDLE_SHUTDOWN),
       loop_(loop),
       handler_(handler),
       key_(key) {

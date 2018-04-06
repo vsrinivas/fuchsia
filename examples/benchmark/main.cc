@@ -10,11 +10,12 @@
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+#include <zx/time.h>
 
 namespace {
 
-zx_time_t now() {
-  return zx_clock_get(ZX_CLOCK_MONOTONIC);
+zx::time Now() {
+  return zx::clock::get(ZX_CLOCK_MONOTONIC);
 }
 
 }  // namespace
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
 
   puts("Starting Benchmark...");
 
-  zx_time_t start_time = now();
+  zx::time start_time = Now();
   async::Task task(start_time);
 
   // Run the task for kIterationCount iterations.  We use a fixed number
@@ -46,7 +47,7 @@ int main(int argc, char** argv) {
         TRACE_DURATION("benchmark", "example");
 
         // Simulate some kind of workload.
-        zx_nanosleep(now() + ZX_USEC(1500));
+        zx::nanosleep(Now() + zx::usec(1500));
 
         if (++iteration >= kIterationCount) {
           loop.Quit();
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
         }
 
         // Schedule another benchmark.
-        task.set_deadline(now() + ZX_USEC(500));
+        task.set_deadline(Now() + zx::usec(500));
         TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
         return ASYNC_TASK_REPEAT;
       });

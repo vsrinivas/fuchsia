@@ -99,7 +99,7 @@ BluetoothManager::BluetoothManager()
       fbl::BindMember(this, &BluetoothManager::OnHostFound));
   FXL_DCHECK(device_watcher_);
 
-  init_timeout_task_.set_deadline(zx::deadline_after(kInitTimeout).get());
+  init_timeout_task_.set_deadline(zx::deadline_after(kInitTimeout));
   init_timeout_task_.set_handler(
       fbl::BindMember(this, &BluetoothManager::OnInitTimeout));
 
