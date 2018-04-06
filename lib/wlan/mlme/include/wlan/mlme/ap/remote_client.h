@@ -87,7 +87,7 @@ class RemoteClient : public RemoteClientInterface {
     const common::MacAddr addr_;
     const fbl::unique_ptr<Timer> timer_;
     // Queue which holds buffered `EthernetII` packets while the client is in power saving mode.
-    PacketQueue ps_pkt_queue_;
+    PacketQueue bu_queue_;
     fbl::unique_ptr<BaseState> state_;
 };
 

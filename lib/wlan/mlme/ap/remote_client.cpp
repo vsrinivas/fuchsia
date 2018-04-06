@@ -742,8 +742,8 @@ zx_status_t RemoteClient::SendDeauthentication(reason_code::ReasonCode reason_co
 
 zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<EthernetII>& frame) {
     // Drop oldest frame if queue reached its limit.
-    if (ps_pkt_queue_.size() >= kMaxPowerSavingQueueSize) {
-        ps_pkt_queue_.Dequeue();
+    if (bu_queue_.size() >= kMaxPowerSavingQueueSize) {
+        bu_queue_.Dequeue();
         warnf("[client] [%s] dropping oldest unicast frame\n", addr().ToString().c_str());
     }
 
@@ -758,24 +758,24 @@ zx_status_t RemoteClient::EnqueueEthernetFrame(const ImmutableBaseFrame<Ethernet
     auto packet = fbl::make_unique<Packet>(std::move(buffer), frame_len);
     memcpy(packet->mut_data(), frame.hdr, frame_len);
 
-    ps_pkt_queue_.Enqueue(fbl::move(packet));
-    ReportBuChange(ps_pkt_queue_.size());
+    bu_queue_.Enqueue(fbl::move(packet));
+    ReportBuChange(bu_queue_.size());
 
     return ZX_OK;
 }
 
 zx_status_t RemoteClient::DequeueEthernetFrame(fbl::unique_ptr<Packet>* out_packet) {
-    ZX_DEBUG_ASSERT(ps_pkt_queue_.size() > 0);
-    if (ps_pkt_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
+    ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
+    if (bu_queue_.size() == 0) { return ZX_ERR_NO_RESOURCES; }
 
-    *out_packet = ps_pkt_queue_.Dequeue();
-    ReportBuChange(ps_pkt_queue_.size());
+    *out_packet = bu_queue_.Dequeue();
+    ReportBuChange(bu_queue_.size());
 
     return ZX_OK;
 }
 
 bool RemoteClient::HasBufferedFrames() const {
-    return ps_pkt_queue_.size() > 0;
+    return bu_queue_.size() > 0;
 }
 
 zx_status_t RemoteClient::ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
