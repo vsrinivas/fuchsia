@@ -46,6 +46,11 @@ void fx_logger_set_min_severity(fx_logger_t* logger,
     return logger->SetSeverity(severity);
 }
 
+void fx_logger_activate_fallback(fx_logger_t* logger,
+                                 int fallback_fd) {
+    logger->ActivateFallback(fallback_fd);
+}
+
 zx_status_t fx_logger_create(const fx_logger_config_t* config,
                              fx_logger_t** out_logger) {
     if (config->num_tags > FX_LOG_MAX_TAGS) {

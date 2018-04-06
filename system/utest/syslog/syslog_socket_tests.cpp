@@ -4,10 +4,11 @@
 
 #include <fbl/string.h>
 #include <fbl/type_support.h>
+#include <fbl/unique_fd.h>
+#include <lib/zx/socket.h>
 #include <syslog/global.h>
 #include <syslog/wire_format.h>
 #include <unittest/unittest.h>
-#include <lib/zx/socket.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -43,6 +44,16 @@ public:
 };
 
 } // namespace
+
+bool ends_with(const char* str, const char* suffix) {
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+    if (str_len < suffix_len) {
+        return false;
+    }
+    str += str_len - suffix_len;
+    return strcmp(str, suffix) == 0;
+}
 
 bool output_compare_helper(zx::socket local, fx_log_severity_t severity,
                            const char* msg, const char** tags, int num_tags) {
@@ -157,6 +168,30 @@ bool test_log_write_with_multi_global_tag(void) {
     const char* tags[] = {"gtag", "gtag2", "tag"};
     output_compare_helper(fbl::move(local), FX_LOG_INFO, "10, just some string",
                           tags, 3);
+    END_TEST;
+}
+
+bool test_log_fallback(void) {
+    BEGIN_TEST;
+    Cleanup cleanup;
+    zx::socket local, remote;
+    EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+    const char* gtags[] = {"gtag", "gtag2"};
+    ASSERT_EQ(ZX_OK, init_helper(remote.release(), gtags, 2));
+
+    int pipefd[2];
+    EXPECT_EQ(pipe2(pipefd, O_NONBLOCK), 0, "");
+    fbl::unique_fd fd_to_close1(pipefd[0]);
+    fbl::unique_fd fd_to_close2(pipefd[1]);
+    fx_logger_activate_fallback(fx_log_get_logger(), pipefd[0]);
+
+    FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
+
+    char buf[256];
+    size_t n = read(pipefd[1], buf, sizeof(buf));
+    EXPECT_GT(n, 0u, "");
+    buf[n] = 0;
+    EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"), buf);
     END_TEST;
 }
 
@@ -310,6 +345,7 @@ RUN_TEST(test_log_severity)
 RUN_TEST(test_log_write_with_tag)
 RUN_TEST(test_log_write_with_global_tag)
 RUN_TEST(test_log_write_with_multi_global_tag)
+RUN_TEST(test_log_fallback)
 RUN_TEST(test_vlog_simple_write)
 RUN_TEST(test_vlog_write)
 RUN_TEST(test_vlog_write_with_tag)

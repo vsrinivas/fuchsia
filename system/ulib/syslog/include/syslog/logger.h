@@ -80,6 +80,17 @@ fx_log_severity_t fx_logger_get_min_severity(fx_logger_t* logger);
 void fx_logger_set_min_severity(fx_logger_t* logger,
                                 fx_log_severity_t severity);
 
+// Activates fallback mode and logger starts writing to |fallback_fd|.
+// There is no way to revert this action.
+//
+// This function does not take ownership of |fallback_fd| and it should not be
+// closed till this logger object is no longer in use. Logger will log to
+// stderr if -1 is provided.
+//
+// This function is thread unsafe.
+void fx_logger_activate_fallback(fx_logger_t* logger,
+                                 int fallback_fd);
+
 // Writes formatted message to a logger.
 // The message will be discarded if |severity| is less than the logger's
 // minimum log severity.
