@@ -35,7 +35,7 @@ class DartBuilder(Builder):
         # directory.
         deps = {}
         for dep in atom.deps:
-            name = str(dep.id.name)
+            name = str(dep.name)
             deps[name] = {
                 'path': '../%s' % name,
             }
