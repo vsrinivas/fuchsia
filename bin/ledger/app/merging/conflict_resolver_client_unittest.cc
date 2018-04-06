@@ -50,7 +50,7 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
 
     page_manager_ = std::make_unique<PageManager>(
         &environment_, std::move(page_storage), nullptr, std::move(resolver),
-        PageManager::PageStorageState::NEW);
+        PageManager::PageStorageState::NEEDS_SYNC);
   }
 
   storage::CommitId CreateCommit(

@@ -22,10 +22,21 @@ class LedgerImpl : public Ledger {
   // Delegate capable of actually performing the page operations.
   class Delegate {
    public:
+    // State of a new page. If the state is |NEW|, it is known that it doesn't
+    // have any content on the cloud or on another device.
+    enum class PageState {
+      // The page is new and has been created locally.
+      NEW,
+      // The page has been named by the client.
+      // well known name
+      NAMED,
+    };
+
     Delegate() {}
     virtual ~Delegate() = default;
 
     virtual void GetPage(convert::ExtendedStringView page_id,
+                         PageState page_state,
                          fidl::InterfaceRequest<Page> page_request,
                          std::function<void(Status)> callback) = 0;
 

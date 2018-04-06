@@ -37,11 +37,12 @@ namespace ledger {
 // |on_empty_callback|.
 class PageManager : public ledger_internal::PageDebug {
  public:
-  // Whether the page storage was just created (|NEW|) or already present
-  // locally (|EXISTING|).
-  enum PageStorageState {
-    NEW,
-    EXISTING,
+  // Whether the page storage needs to sync with the cloud provider before
+  // binding new pages (|NEEDS_SYNC|) or whether it is immediately available
+  // (|AVAILABLE|).
+  enum class PageStorageState {
+    AVAILABLE,
+    NEEDS_SYNC,
   };
 
   // Both |page_storage| and |page_sync| are owned by PageManager and are

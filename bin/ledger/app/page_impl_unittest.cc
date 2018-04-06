@@ -62,7 +62,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
 
     manager_ = std::make_unique<PageManager>(
         &environment_, std::move(fake_storage), nullptr, std::move(resolver),
-        PageManager::PageStorageState::NEW);
+        PageManager::PageStorageState::NEEDS_SYNC);
     Status status;
     manager_->BindPage(page_ptr_.NewRequest(),
                        callback::Capture(MakeQuitTask(), &status));

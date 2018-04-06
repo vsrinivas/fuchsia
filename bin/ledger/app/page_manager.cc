@@ -7,9 +7,9 @@
 #include <algorithm>
 
 #include <fuchsia/cpp/ledger.h>
+#include "garnet/lib/callback/trace_callback.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
-#include "garnet/lib/callback/trace_callback.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
@@ -36,7 +36,7 @@ PageManager::PageManager(Environment* environment,
     page_sync_->SetOnIdle([this] { CheckEmpty(); });
     page_sync_->SetOnBacklogDownloaded([this] { OnSyncBacklogDownloaded(); });
     page_sync_->Start();
-    if (state == PageManager::PageStorageState::NEW) {
+    if (state == PageManager::PageStorageState::NEEDS_SYNC) {
       // The page storage was created locally. We wait a bit in order to get the
       // initial state from the network before accepting requests.
       task_runner_.PostDelayedTask(
@@ -68,7 +68,8 @@ PageManager::~PageManager() {
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
                            std::function<void(Status)> on_done) {
-  auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_bind_page");
+  auto traced_on_done =
+      TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_bind_page");
   if (sync_backlog_downloaded_) {
     pages_
         .emplace(environment_->coroutine_service(), this, page_storage_.get(),
@@ -76,7 +77,8 @@ void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
         .Init(std::move(traced_on_done));
     return;
   }
-  page_requests_.emplace_back(std::move(page_request), std::move(traced_on_done));
+  page_requests_.emplace_back(std::move(page_request),
+                              std::move(traced_on_done));
 }
 
 void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,

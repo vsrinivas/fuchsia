@@ -96,6 +96,7 @@ class FakeLedgerSync : public cloud_sync::LedgerSync {
       storage::PageStorage* /*page_storage*/,
       storage::PageSyncClient* /*page_sync_client*/,
       fxl::Closure /*error_callback*/) override {
+    called = true;
     return nullptr;
   }
 

@@ -46,6 +46,7 @@ class LedgerManager : public LedgerImpl::Delegate,
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id,
+               PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
                std::function<void(Status)> callback) override;
   Status DeletePage(convert::ExtendedStringView page_id) override;
@@ -65,6 +66,7 @@ class LedgerManager : public LedgerImpl::Delegate,
   // Creates a page storage for the given |page_id| and completes the
   // PageManagerContainer.
   void CreatePageStorage(storage::PageId page_id,
+                         PageState page_state,
                          PageManagerContainer* container);
 
   // Adds a new PageManagerContainer for |page_id| and configures it so that it

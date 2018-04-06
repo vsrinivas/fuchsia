@@ -94,7 +94,7 @@ TEST_F(PageManagerTest, OnEmptyCallback) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();
@@ -143,7 +143,7 @@ TEST_F(PageManagerTest, DeletingPageManagerClosesConnections) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   auto page_manager = std::make_unique<PageManager>(
       &environment_, std::move(storage), nullptr, std::move(merger),
-      PageManager::PageStorageState::NEW);
+      PageManager::PageStorageState::NEEDS_SYNC);
 
   Status status;
   PagePtr page;
@@ -168,7 +168,7 @@ TEST_F(PageManagerTest, OnEmptyCallbackWithWatcher) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
   page_manager.set_on_empty([this, &on_empty_called] {
     on_empty_called = true;
     message_loop_.PostQuitTask();
@@ -226,7 +226,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
 
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -283,7 +283,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
 
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEW,
+                           PageManager::PageStorageState::NEEDS_SYNC,
                            fxl::TimeDelta::FromSeconds(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
@@ -318,7 +318,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
 
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(fake_page_sync), std::move(merger),
-                           PageManager::PageStorageState::NEW,
+                           PageManager::PageStorageState::NEEDS_SYNC,
                            fxl::TimeDelta::FromSeconds(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
@@ -348,7 +348,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
 
   PageManager page_manager(
       &environment_, std::move(storage), std::move(fake_page_sync),
-      std::move(merger), PageManager::PageStorageState::EXISTING,
+      std::move(merger), PageManager::PageStorageState::AVAILABLE,
       // Use a long timeout to ensure the test does not hit it.
       fxl::TimeDelta::FromSeconds(3600));
 
@@ -378,7 +378,7 @@ TEST_F(PageManagerTest, GetHeadCommitEntries) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
   Status status;
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
@@ -466,7 +466,7 @@ TEST_F(PageManagerTest, GetCommit) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
   Status status;
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),
@@ -528,7 +528,7 @@ TEST_F(PageManagerTest, GetCommitError) {
   auto merger = GetDummyResolver(&environment_, storage.get());
   PageManager page_manager(&environment_, std::move(storage), nullptr,
                            std::move(merger),
-                           PageManager::PageStorageState::NEW);
+                           PageManager::PageStorageState::NEEDS_SYNC);
   Status status;
   PagePtr page;
   page_manager.BindPage(page.NewRequest(),

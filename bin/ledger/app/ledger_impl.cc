@@ -36,7 +36,7 @@ LedgerImpl::~LedgerImpl() {}
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              GetRootPageCallback callback) {
   delegate_->GetPage(
-      kRootPageId, std::move(page_request),
+      kRootPageId, Delegate::PageState::NAMED, std::move(page_request),
       TRACE_CALLBACK(callback, "ledger", "ledger_get_root_page"));
 }
 
@@ -44,11 +44,13 @@ void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
 void LedgerImpl::GetPage(PageIdPtr id,
                          fidl::InterfaceRequest<Page> page_request,
                          GetPageCallback callback) {
+  Delegate::PageState page_state = Delegate::PageState::NAMED;
   if (!id) {
     id = fidl::MakeOptional(PageId());
     GenerateRandomId(&id->id);
+    page_state = Delegate::PageState::NEW;
   }
-  delegate_->GetPage(id->id, std::move(page_request),
+  delegate_->GetPage(id->id, page_state, std::move(page_request),
                      TRACE_CALLBACK(callback, "ledger", "ledger_get_page"));
 }
 

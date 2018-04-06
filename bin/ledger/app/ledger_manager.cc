@@ -145,6 +145,7 @@ void LedgerManager::BindLedger(fidl::InterfaceRequest<Ledger> ledger_request) {
 }
 
 void LedgerManager::GetPage(convert::ExtendedStringView page_id,
+                            PageState page_state,
                             fidl::InterfaceRequest<Page> page_request,
                             std::function<void(Status)> callback) {
   // If we have the page manager ready, just ask for a new page impl.
@@ -159,7 +160,7 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
 
   storage_->GetPageStorage(
       page_id.ToString(),
-      [this, page_id = page_id.ToString(), container](
+      [this, page_id = page_id.ToString(), page_state, container](
           storage::Status storage_status,
           std::unique_ptr<storage::PageStorage> page_storage) mutable {
         Status status = PageUtils::ConvertStatus(storage_status, Status::OK);
@@ -173,12 +174,12 @@ void LedgerManager::GetPage(convert::ExtendedStringView page_id,
           container->SetPageManager(
               Status::OK,
               NewPageManager(std::move(page_storage),
-                             PageManager::PageStorageState::EXISTING));
+                             PageManager::PageStorageState::AVAILABLE));
           return;
         }
 
         // If the page was not found locally, create it.
-        CreatePageStorage(std::move(page_id), container);
+        CreatePageStorage(std::move(page_id), page_state, container);
         return;
       });
 }
@@ -196,18 +197,22 @@ Status LedgerManager::DeletePage(convert::ExtendedStringView page_id) {
 }
 
 void LedgerManager::CreatePageStorage(storage::PageId page_id,
+                                      PageState page_state,
                                       PageManagerContainer* container) {
   storage_->CreatePageStorage(
-      page_id,
-      [this, container](storage::Status status,
-                        std::unique_ptr<storage::PageStorage> page_storage) {
+      page_id, [this, page_state, container](
+                   storage::Status status,
+                   std::unique_ptr<storage::PageStorage> page_storage) {
         if (status != storage::Status::OK) {
           container->SetPageManager(Status::INTERNAL_ERROR, nullptr);
           return;
         }
         container->SetPageManager(
-            Status::OK, NewPageManager(std::move(page_storage),
-                                       PageManager::PageStorageState::NEW));
+            Status::OK,
+            NewPageManager(std::move(page_storage),
+                           page_state == PageState::NEW
+                               ? PageManager::PageStorageState::AVAILABLE
+                               : PageManager::PageStorageState::NEEDS_SYNC));
       });
 }
 
