@@ -6,7 +6,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_NAME := fidl2
+MODULE_NAME := fidlc
 
 MODULE_TYPE := hostapp
 
