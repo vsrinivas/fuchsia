@@ -846,7 +846,7 @@ int fdio_status_to_errno(zx_status_t status) {
     case ZX_ERR_NOT_EMPTY: return ENOTEMPTY;
     case ZX_ERR_IO_REFUSED: return ECONNREFUSED;
     case ZX_ERR_IO_INVALID: return EIO;
-    case ZX_ERR_CANCELED: return ECANCELED;
+    case ZX_ERR_CANCELED: return EBADF;
     case ZX_ERR_PROTOCOL_NOT_SUPPORTED: return EPROTONOSUPPORT;
     case ZX_ERR_ADDRESS_UNREACHABLE: return ENETUNREACH;
     case ZX_ERR_ADDRESS_IN_USE: return EADDRINUSE;
