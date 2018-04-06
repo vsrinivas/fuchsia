@@ -30,8 +30,8 @@ namespace modular {
 SuggestionEngineImpl::SuggestionEngineImpl(
     component::ApplicationContext* app_context)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
-      next_processor_(debug_), context_listener_binding_(this) {
-
+      next_processor_(debug_),
+      context_listener_binding_(this) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -131,9 +131,8 @@ void SuggestionEngineImpl::RegisterFeedbackListener(
 }
 
 // |SuggestionProvider|
-void SuggestionEngineImpl::NotifyInteraction(
-    fidl::StringPtr suggestion_uuid,
-    Interaction interaction) {
+void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
+                                             Interaction interaction) {
   // Find the suggestion
   bool suggestion_in_ask = false;
   RankedSuggestion* suggestion = next_processor_.GetSuggestion(suggestion_uuid);
@@ -158,8 +157,8 @@ void SuggestionEngineImpl::NotifyInteraction(
 
     auto& proposal = suggestion->prototype->proposal;
     if (interaction.type == InteractionType::SELECTED) {
-      PerformActions(std::move(proposal.on_selected), suggestion->prototype->source_url,
-                     proposal.display.color);
+      PerformActions(std::move(proposal.on_selected),
+                     suggestion->prototype->source_url, proposal.display.color);
     }
 
     if (suggestion_in_ask) {
@@ -255,10 +254,9 @@ void SuggestionEngineImpl::CleanUpPreviousQuery() {
   query_suggestions_.RemoveAllSuggestions();
 }
 
-void SuggestionEngineImpl::PerformActions(
-    fidl::VectorPtr<Action> actions,
-    const std::string& source_url,
-    uint32_t story_color) {
+void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
+                                          const std::string& source_url,
+                                          uint32_t story_color) {
   // TODO(rosswang): If we're asked to add multiple modules, we probably
   // want to add them to the same story. We can't do that yet, but we need
   // to receive a StoryController anyway (not optional atm.).
@@ -325,22 +323,17 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
   extra_info->at(0).value = hex_color;
   auto& initial_data = create_story.initial_data;
   auto& module_id = create_story.module_id;
+  FXL_LOG(INFO) << "Creating story with module " << module_id;
   story_provider_->CreateStoryWithInfo(
       create_story.module_id, std::move(extra_info), std::move(initial_data),
-      [this, activity, module_id](fidl::StringPtr story_id) {
-        modular::StoryControllerPtr story_controller;
-        story_provider_->GetController(story_id, story_controller.NewRequest());
-        FXL_LOG(INFO) << "Creating story with module " << module_id;
-
-        story_controller->GetInfo(fxl::MakeCopyable(
-            // TODO(thatguy): We should not be std::move()ing
-            // story_controller *while we're calling it*.
-            [this, activity, controller = std::move(story_controller)](
-                modular::StoryInfo story_info, modular::StoryState state) {
+      [this, activity](fidl::StringPtr story_id) {
+        story_provider_->GetStoryInfo(
+            story_id, [this, activity](modular::StoryInfoPtr story_info) {
+              FXL_DCHECK(story_info);
               FXL_LOG(INFO)
-                  << "Requesting focus for story_id " << story_info.id;
-              focus_provider_ptr_->Request(story_info.id);
-            }));
+                  << "Requesting focus for story_id " << story_info->id;
+              focus_provider_ptr_->Request(story_info->id);
+            });
       });
 }
 
@@ -350,8 +343,7 @@ void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
   focus_provider_ptr_->Request(focus_story.story_id);
 }
 
-void SuggestionEngineImpl::PerformAddModuleToStoryAction(
-    const Action& action) {
+void SuggestionEngineImpl::PerformAddModuleToStoryAction(const Action& action) {
   if (story_provider_) {
     const auto& add_module_to_story = action.add_module_to_story();
     const auto& story_id = add_module_to_story.story_id;
@@ -402,19 +394,18 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                uint32_t story_color) {
   auto activity = debug_->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable([
-    this, activity, custom_action = std::move(custom_action), source_url,
-    story_color
-  ](fidl::VectorPtr<ActionPtr> actions) {
-    if (actions) {
-      fidl::VectorPtr<Action> non_null_actions;
-      for (auto& action : *actions) {
-        if (action)
-          non_null_actions.push_back(std::move(*action));
-      }
-      PerformActions(std::move(non_null_actions), source_url, story_color);
-    }
-  }));
+  custom_action->Execute(fxl::MakeCopyable(
+      [this, activity, custom_action = std::move(custom_action), source_url,
+       story_color](fidl::VectorPtr<ActionPtr> actions) {
+        if (actions) {
+          fidl::VectorPtr<Action> non_null_actions;
+          for (auto& action : *actions) {
+            if (action)
+              non_null_actions.push_back(std::move(*action));
+          }
+          PerformActions(std::move(non_null_actions), source_url, story_color);
+        }
+      }));
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
@@ -478,10 +469,11 @@ void SuggestionEngineImpl::HandleMediaUpdates(
     media_renderer_ = nullptr;
   } else {
     time_lord_->GetStatus(
-        version, [this, activity](
-                     uint64_t next_version,
-                     media::MediaTimelineControlPointStatus next_status) {
-          HandleMediaUpdates(next_version, fidl::MakeOptional(std::move(next_status)));
+        version,
+        [this, activity](uint64_t next_version,
+                         media::MediaTimelineControlPointStatus next_status) {
+          HandleMediaUpdates(next_version,
+                             fidl::MakeOptional(std::move(next_status)));
         });
   }
 }
