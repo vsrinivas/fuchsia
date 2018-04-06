@@ -9,6 +9,7 @@
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
@@ -16,7 +17,8 @@ namespace examples {
 
 class NetConnectorExampleImpl {
  public:
-  NetConnectorExampleImpl(NetConnectorExampleParams* params);
+  NetConnectorExampleImpl(NetConnectorExampleParams* params,
+                          fxl::Closure quit_callback);
 
   ~NetConnectorExampleImpl();
 
@@ -25,6 +27,7 @@ class NetConnectorExampleImpl {
 
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
+  fxl::Closure quit_callback_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   netconnector::MessageRelay message_relay_;
   std::vector<std::string>::const_iterator conversation_iter_;

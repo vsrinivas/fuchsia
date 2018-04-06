@@ -13,7 +13,6 @@
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/host_name.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
@@ -26,8 +25,10 @@ const std::string NetConnectorImpl::kFuchsiaServiceName = "_fuchsia._tcp.";
 // static
 const std::string NetConnectorImpl::kLocalDeviceName = "local";
 
-NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
+NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
+                                   fxl::Closure quit_callback)
     : params_(params),
+      quit_callback_(quit_callback),
       application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       // TODO(dalesat): Create a new RespondingServiceHost per user.
@@ -36,6 +37,8 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
       // created with that environment so that responding services are
       // launched in the correct environment.
       responding_service_host_(application_context_->environment()) {
+  FXL_DCHECK(quit_callback_);
+
   if (!params->listen()) {
     // Start the listener.
     NetConnectorPtr net_connector =
@@ -61,10 +64,10 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params)
               }
             }
 
-            fsl::MessageLoop::GetCurrent()->PostQuitTask();
+            quit_callback_();
           }));
     } else {
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      quit_callback_();
     }
 
     return;

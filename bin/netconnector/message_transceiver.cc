@@ -5,22 +5,23 @@
 #include "garnet/bin/netconnector/message_transceiver.h"
 
 #include <errno.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
 
 MessageTransceiver::MessageTransceiver(fxl::UniqueFD socket_fd)
     : socket_fd_(std::move(socket_fd)),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+      async_(async_get_default()),
       receive_buffer_(kRecvBufferSize) {
   FXL_DCHECK(socket_fd_.is_valid());
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(async_);
 
   message_relay_.SetMessageReceivedCallback(
       [this](std::vector<uint8_t> message) {
@@ -61,7 +62,7 @@ void MessageTransceiver::SendServiceName(const std::string& service_name) {
     return;
   }
 
-  PostSendTask([ this, service_name = service_name ]() {
+  PostSendTask([this, service_name = service_name]() {
     SendPacket(PacketType::kServiceName, service_name.data(),
                service_name.size());
   });
@@ -73,7 +74,7 @@ void MessageTransceiver::SendMessage(std::vector<uint8_t> message) {
     return;
   }
 
-  PostSendTask([ this, m = std::move(message) ]() {
+  PostSendTask([this, m = std::move(message)]() {
     SendPacket(PacketType::kMessage, m.data(), m.size());
   });
 }
@@ -82,7 +83,7 @@ void MessageTransceiver::CloseConnection() {
   if (socket_fd_.is_valid()) {
     CancelWaiters();
     socket_fd_.reset();
-    task_runner_->PostTask([this]() {
+    async::PostTask(async_, [this]() {
       channel_.reset();
       message_relay_.CloseChannel();
       OnConnectionClosed();
@@ -327,7 +328,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      task_runner_->PostTask([ this, version = version_ ]() {
+      async::PostTask(async_,[this, version = version_]() {
         OnVersionReceived(version);
         if (socket_fd_.is_valid() && channel_) {
           // We've postponed setting the channel on the relay until now, because
@@ -358,7 +359,7 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      task_runner_->PostTask([ this, service_name = ParsePayloadString() ]() {
+      async::PostTask(async_,[this, service_name = ParsePayloadString()]() {
         OnServiceNameReceived(service_name);
       });
       break;
@@ -371,9 +372,10 @@ void MessageTransceiver::OnReceivedPacketComplete() {
         return;
       }
 
-      task_runner_->PostTask([
-        this, payload = std::move(receive_packet_payload_)
-      ]() mutable { OnMessageReceived(std::move(payload)); });
+      async::PostTask(async_,
+          [this, payload = std::move(receive_packet_payload_)]() mutable {
+            OnMessageReceived(std::move(payload));
+          });
       break;
 
     default:

@@ -9,6 +9,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include <fuchsia/cpp/component.h>
+#include <fuchsia/cpp/mdns.h>
+#include <fuchsia/cpp/netconnector.h>
+
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "garnet/bin/netconnector/device_service_provider.h"
 #include "garnet/bin/netconnector/ip_port.h"
@@ -18,19 +22,16 @@
 #include "garnet/bin/netconnector/responding_service_host.h"
 #include "garnet/bin/netconnector/service_agent.h"
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
-#include <fuchsia/cpp/mdns.h>
-#include <fuchsia/cpp/netconnector.h>
 
 namespace netconnector {
 
 class NetConnectorImpl : public NetConnector {
  public:
-  NetConnectorImpl(NetConnectorParams* params);
+  NetConnectorImpl(NetConnectorParams* params, fxl::Closure quit_callback);
 
   ~NetConnectorImpl() override;
 
@@ -63,9 +64,8 @@ class NetConnectorImpl : public NetConnector {
       fidl::InterfaceRequest<component::ServiceProvider> service_provider)
       override;
 
-  void GetKnownDeviceNames(
-      uint64_t version_last_seen,
-      GetKnownDeviceNamesCallback callback) override;
+  void GetKnownDeviceNames(uint64_t version_last_seen,
+                           GetKnownDeviceNamesCallback callback) override;
 
  private:
   static const IpPort kPort;
@@ -80,6 +80,7 @@ class NetConnectorImpl : public NetConnector {
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
   NetConnectorParams* params_;
+  fxl::Closure quit_callback_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   std::string host_name_;
   fidl::BindingSet<NetConnector> bindings_;

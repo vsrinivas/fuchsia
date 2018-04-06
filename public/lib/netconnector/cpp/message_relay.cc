@@ -4,14 +4,14 @@
 
 #include "lib/netconnector/cpp/message_relay.h"
 
+#include <lib/async/default.h>
+
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace netconnector {
 
 MessageRelayBase::MessageRelayBase()
-  : read_wait_(async_get_default()),
-    write_wait_(async_get_default()) {}
+    : read_wait_(async_get_default()), write_wait_(async_get_default()) {}
 
 MessageRelayBase::~MessageRelayBase() {}
 
@@ -30,7 +30,7 @@ void MessageRelayBase::SetChannel(zx::channel channel) {
   write_wait_.set_object(channel_.get());
   write_wait_.set_trigger(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_PEER_CLOSED);
   write_wait_.set_handler(
-    fbl::BindMember(this, &MessageRelayBase::WriteChannelMessages));
+      fbl::BindMember(this, &MessageRelayBase::WriteChannelMessages));
 
   // We defer handling channel messages so that the caller doesn't get callbacks
   // during SetChannel.
@@ -60,7 +60,9 @@ void MessageRelayBase::CloseChannel() {
 }
 
 async_wait_result_t MessageRelayBase::ReadChannelMessages(
-    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
   while (channel_) {
     uint32_t actual_byte_count;
     uint32_t actual_handle_count;
@@ -110,7 +112,9 @@ async_wait_result_t MessageRelayBase::ReadChannelMessages(
 }
 
 async_wait_result_t MessageRelayBase::WriteChannelMessages(
-    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+    async_t* async,
+    zx_status_t status,
+    const zx_packet_signal_t* signal) {
   if (!channel_) {
     return ASYNC_WAIT_FINISHED;
   }
@@ -168,4 +172,4 @@ void MessageRelay::OnChannelClosed() {
   }
 }
 
-}  // namespace example
+}  // namespace netconnector

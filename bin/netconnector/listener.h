@@ -7,10 +7,11 @@
 #include <memory>
 #include <thread>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/netconnector/ip_port.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace netconnector {
 
@@ -37,7 +38,7 @@ class Listener {
 
   void Worker();
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   std::function<void(fxl::UniqueFD)> new_connection_callback_;
   fxl::UniqueFD socket_fd_;
   std::thread worker_thread_;

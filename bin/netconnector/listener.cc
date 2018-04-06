@@ -6,18 +6,18 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <sys/socket.h>
 
 #include "garnet/bin/netconnector/ip_port.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
 
-Listener::Listener()
-    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
+Listener::Listener() : async_(async_get_default()) {}
 
 Listener::~Listener() {
   Stop();
@@ -89,8 +89,9 @@ void Listener::Worker() {
       break;
     }
 
-    task_runner_->PostTask(
-        fxl::MakeCopyable([ this, fd = std::move(connection_fd) ]() mutable {
+    async::PostTask(
+        async_,
+        fxl::MakeCopyable([this, fd = std::move(connection_fd)]() mutable {
           new_connection_callback_(std::move(fd));
         }));
   }

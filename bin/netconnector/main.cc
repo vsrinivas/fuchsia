@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/bin/netconnector/netconnector_params.h"
@@ -17,7 +18,9 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  netconnector::NetConnectorImpl impl(&params);
+  netconnector::NetConnectorImpl impl(&params, [&loop]() {
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+  });
 
   loop.Run();
   return 0;

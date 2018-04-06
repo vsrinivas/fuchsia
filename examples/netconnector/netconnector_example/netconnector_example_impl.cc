@@ -4,12 +4,12 @@
 
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_impl.h"
 
+#include <lib/async/default.h>
 #include <zx/channel.h>
 
-#include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/netconnector.h>
+#include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
+#include "lib/fxl/logging.h"
 
 namespace examples {
 namespace {
@@ -21,8 +21,10 @@ static const std::vector<std::string> kConversation = {
 }  // namespace
 
 NetConnectorExampleImpl::NetConnectorExampleImpl(
-    NetConnectorExampleParams* params)
-    : application_context_(
+    NetConnectorExampleParams* params,
+    fxl::Closure quit_callback)
+    : quit_callback_(quit_callback),
+      application_context_(
           component::ApplicationContext::CreateFromStartupInfo()) {
   // The MessageRelay makes using the channel easier. Hook up its callbacks.
   message_relay_.SetMessageReceivedCallback(
@@ -38,7 +40,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
         FXL_LOG(ERROR) << "Channel closed unexpectedly, quitting";
       }
 
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      quit_callback_();
     });
   }
 

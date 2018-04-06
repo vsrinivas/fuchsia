@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cpp/netconnector.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_impl.h"
 #include "garnet/examples/netconnector/netconnector_example/netconnector_example_params.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
-#include <fuchsia/cpp/netconnector.h>
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -15,9 +17,11 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  examples::NetConnectorExampleImpl impl(&params);
+  examples::NetConnectorExampleImpl impl(&params, [&loop]() {
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+  });
 
   loop.Run();
   return 0;

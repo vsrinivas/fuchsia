@@ -7,12 +7,12 @@
 #include <queue>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
 #include <zx/channel.h>
 
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
 namespace netconnector {
@@ -170,7 +170,7 @@ class MessageTransceiver {
   std::string ParsePayloadString();
 
   fxl::UniqueFD socket_fd_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   zx::channel channel_;
   MessageRelay message_relay_;
 
