@@ -93,12 +93,12 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
 }
 
 // Configure a pin for an alternate function specified by fn
-static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, const uint32_t fn) {
+static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, const uint64_t fn) {
     aml_gpio_t* gpio = ctx;
 
     if (fn > ALT_FUNCTION_MAX) {
         zxlogf(ERROR, "aml_config_pinmux: pin mux alt config out of range"
-                " %u\n", fn);
+                " %lu\n", fn);
         return ZX_ERR_OUT_OF_RANGE;
     }
 

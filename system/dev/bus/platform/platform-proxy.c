@@ -114,7 +114,7 @@ static zx_status_t pdev_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
 }
 
-static zx_status_t pdev_gpio_set_alt_function(void* ctx, uint32_t index, uint32_t function) {
+static zx_status_t pdev_gpio_set_alt_function(void* ctx, uint32_t index, uint64_t function) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_GPIO_SET_ALT_FUNCTION,

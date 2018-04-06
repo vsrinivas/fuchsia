@@ -109,7 +109,7 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
 }
 
 // Configure a pin for an alternate function specified by function
-static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, uint32_t function) {
+static zx_status_t aml_gpio_set_alt_function(void* ctx, const uint32_t pin, uint64_t function) {
     aml_gpio_t* gpio = ctx;
 
     if (function > ALT_FUNCTION_MAX) {
