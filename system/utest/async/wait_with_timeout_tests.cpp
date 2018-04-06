@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/wait_with_timeout.h>
 #include <lib/async-testutils/async_stub.h>
+#include <lib/async/cpp/wait_with_timeout.h>
 #include <unittest/unittest.h>
 
 namespace {
@@ -146,8 +146,7 @@ bool timeout_test() {
         async.last_post_task = nullptr;
 
         // Handle timeout.
-        EXPECT_EQ(ASYNC_TASK_FINISHED, task_context->handler(&async, task_context, ZX_OK),
-                  "invoke timeout handler");
+        task_context->handler(&async, task_context, ZX_OK);
         EXPECT_TRUE(handler.handler_ran, "handler ran");
         EXPECT_EQ(ZX_ERR_TIMED_OUT, handler.last_status, "status");
         EXPECT_NULL(handler.last_signal, "signal");

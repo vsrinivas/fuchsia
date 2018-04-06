@@ -8,9 +8,9 @@
 
 #include <zircon/assert.h>
 
+#include <fbl/array.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <fbl/array.h>
 #include <trace/handler.h>
 
 #include "benchmarks.h"
@@ -63,15 +63,12 @@ int main(int argc, char** argv) {
     RunTracingDisabledBenchmarks();
     handler.Start();
 
-    async::Task task(zx::time(0));
-    task.set_handler([](async_t* async, zx_status_t status) {
+    async::PostTask(loop.async(), []() {
         RunTracingEnabledBenchmarks();
         RunNoTraceBenchmarks();
 
         trace_stop_engine(ZX_OK);
-        return ASYNC_TASK_FINISHED;
     });
-    task.Post(loop.async());
 
     loop.Run(); // run until quit
     return 0;

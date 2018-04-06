@@ -14,9 +14,10 @@ MODULE_NAME := async
 
 MODULE_TYPE := userlib
 
-MODULE_SRCS =
+MODULE_SRCS = \
+    $(LOCAL_DIR)/ops.c \
 
-MODULE_PACKAGE_SRCS := none
+MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/dispatcher.h \
     $(LOCAL_INC)/receiver.h \
@@ -41,7 +42,6 @@ MODULE_NAME := async-cpp
 MODULE_TYPE := userlib
 
 MODULE_SRCS = \
-    $(LOCAL_DIR)/auto_task.cpp \
     $(LOCAL_DIR)/auto_wait.cpp \
     $(LOCAL_DIR)/receiver.cpp \
     $(LOCAL_DIR)/task.cpp \
@@ -50,7 +50,6 @@ MODULE_SRCS = \
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
-    $(LOCAL_INC)/cpp/auto_task.h \
     $(LOCAL_INC)/cpp/auto_wait.h \
     $(LOCAL_INC)/cpp/receiver.h \
     $(LOCAL_INC)/cpp/task.h \

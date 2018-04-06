@@ -11,7 +11,7 @@ namespace async {
 WaitWithTimeout::WaitWithTimeout(zx_handle_t object, zx_signals_t trigger,
                                  zx::time deadline, uint32_t flags)
     : async_wait_t{{ASYNC_STATE_INIT}, &WaitWithTimeout::WaitHandler, object, trigger, flags, {}},
-      async_task_t{{ASYNC_STATE_INIT}, &WaitWithTimeout::TimeoutHandler, deadline.get(), 0u, {}} {}
+      async_task_t{{ASYNC_STATE_INIT}, &WaitWithTimeout::TimeoutHandler, deadline.get()} {}
 
 WaitWithTimeout::~WaitWithTimeout() = default;
 
@@ -67,9 +67,10 @@ async_wait_result_t WaitWithTimeout::WaitHandler(async_t* async, async_wait_t* w
     return result;
 }
 
-async_task_result_t WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t* task,
-                                                    zx_status_t status) {
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+void WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t* task,
+                                     zx_status_t status) {
+    if (status != ZX_OK)
+        return;
 
     auto self = static_cast<WaitWithTimeout*>(task);
     zx_status_t cancel_status = async_cancel_wait(async, self);
@@ -78,7 +79,6 @@ async_task_result_t WaitWithTimeout::TimeoutHandler(async_t* async, async_task_t
 
     async_wait_result_t result = self->handler_(async, ZX_ERR_TIMED_OUT, nullptr);
     ZX_DEBUG_ASSERT(result == ASYNC_WAIT_FINISHED);
-    return ASYNC_TASK_FINISHED;
 }
 
 } // namespace async

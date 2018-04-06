@@ -22,7 +22,6 @@ and structures declared in the following headers:
     - [async/wait.h](include/async/wait.h)
 
 - `libasync-cpp.a` provides C++ wrappers:
-    - [async/cpp/auto_task.h](include/async/cpp/auto_task.h)
     - [async/cpp/auto_wait.h](include/async/cpp/auto_wait.h)
     - [async/cpp/receiver.h](include/async/cpp/receiver.h)
     - [async/cpp/task.h](include/async/cpp/task.h)
@@ -115,11 +114,10 @@ typedef struct {
     void* data;
 } task_data_t;
 
-async_task_result_t handler(async_t* async, async_task_t* task, zx_status_t status) {
+void handler(async_t* async, async_task_t* task, zx_status_t status) {
     task_data_t* task_data = (task_data_t*)task;
     printf("task deadline elapsed: status=%d, data=%p", status, task_data->data);
     free(task_data);
-    return ASYNC_TASK_FINISHED;
 }
 
 zx_status_t schedule_work(void* data) {
@@ -127,7 +125,6 @@ zx_status_t schedule_work(void* data) {
     task_data_t* task_data = calloc(1, sizeof(task_data_t));
     task_data->task.handler = handler;
     task_data->task.deadline = async_now(async) + ZX_SEC(2);
-    task_data->task.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     task_data->data = data;
     return async_post_task(async, &task_data->task);
 }
@@ -158,6 +155,7 @@ void handler(async_t* async, async_receiver_t* receiver, zx_status_t status,
 }
 
 const async_receiver_t receiver = {
+    .state = ASYNC_STATE_INIT,
     .handler = handler;
 }
 
@@ -196,10 +194,10 @@ interface for use in C++.
 overhead of using fbl::Function<>.
 
 `AutoWait` in [async/cpp/auto_wait.h](include/async/cpp/auto_wait.h) is an RAII
-helper which cancels the wait when it goes out of scope.
+helper which automatically cancels the wait when it goes out of scope.
 
-`AutoTask` in [async/cpp/auto_task.h](include/async/cpp/auto_task.h) is an RAII
-helper which cancels the task when it goes out of scope.
+`AutoTask` in [async/cpp/task.h](include/async/cpp/task.h) is an RAII
+helper which automatically cancels the task when it goes out of scope.
 
 There is also a special `WaitWithTimeout` helper defined in
 [async/cpp/wait_with_timeout.h](include/async/cpp/wait_with_timeout.h)

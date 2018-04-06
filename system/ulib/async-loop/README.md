@@ -41,13 +41,12 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-async_task_result_t handler(async_t* async, async_task_t* task, zx_status_t status) {
+void handler(async_t* async, async_task_t* task, zx_status_t status) {
     printf("task deadline elapsed: status=%d", status);
     free(task);
 
     // This example doesn't have much to do, so just quit here.
     async_loop_quit(g_loop);
-    return ASYNC_TASK_FINISHED;
 }
 
 zx_status_t do_stuff() {

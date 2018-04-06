@@ -135,10 +135,7 @@ void TestLoopDispatcher::DispatchTasks() {
         list_delete(node);
 
         // Invoke the handler. Note that it might destroy itself.
-        async_task_result_t result = task->handler(this, task, ZX_OK);
-        if (result == ASYNC_TASK_REPEAT) {
-            InsertTask(&task_list_, task);
-        }
+        task->handler(this, task, ZX_OK);
     }
 
     // The following check fails when a task captures the TestLoop and advances
@@ -156,9 +153,7 @@ void TestLoopDispatcher::Shutdown() {
     }
     while ((node = list_remove_head(&task_list_))) {
         async_task_t* task = NodeToTask(node);
-        if (task->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
-            task->handler(this, task, ZX_ERR_CANCELED);
-        }
+        task->handler(this, task, ZX_ERR_CANCELED);
     }
 }
 

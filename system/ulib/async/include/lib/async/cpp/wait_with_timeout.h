@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <lib/async/task.h>
-#include <lib/async/wait.h>
 #include <fbl/function.h>
 #include <fbl/macros.h>
+#include <lib/async/task.h>
+#include <lib/async/wait.h>
 #include <lib/zx/time.h>
 
 namespace async {
@@ -89,8 +89,8 @@ private:
     static async_wait_result_t WaitHandler(async_t* async, async_wait_t* wait,
                                            zx_status_t status,
                                            const zx_packet_signal_t* signal);
-    static async_task_result_t TimeoutHandler(async_t* async, async_task_t* task,
-                                              zx_status_t status);
+    static void TimeoutHandler(async_t* async, async_task_t* task,
+                               zx_status_t status);
 
     Handler handler_;
 

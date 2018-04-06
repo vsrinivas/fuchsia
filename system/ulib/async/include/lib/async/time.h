@@ -6,9 +6,11 @@
 
 #include <lib/async/dispatcher.h>
 
+__BEGIN_CDECLS
+
 // Returns the current time in the dispatcher's timebase.
 // For most loops, this is generally obtained from |ZX_CLOCK_MONOTONIC|
 // but certain loops may use a different tiembase, notably for testing.
-inline zx_time_t async_now(async_t* async) {
-    return async->ops->now(async);
-}
+zx_time_t async_now(async_t* async);
+
+__END_CDECLS

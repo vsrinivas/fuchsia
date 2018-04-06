@@ -8,56 +8,46 @@
 
 __BEGIN_CDECLS
 
-// Receives packets containing user supplied data.
+// Handles receipt of packets containing user supplied data.
 //
-// Reports the |status| of the receiver.  If the status is |ZX_OK| then |data|
-// describes the contents of the packet which was received, otherwise |data|
-// is null.
-//
-// It is safe for the handler to destroy itself when there are no remaining
-// packets pending delivery to it.
+// The |status| is |ZX_OK| if the packet was successfully delivered and |data|
+// contains the information from the packet, otherwise |data| is null.
+// The |status| may also report errors which occurred during a call to
+// |async_queue_packet_or_report_error()|.
 typedef void(async_receiver_handler_t)(async_t* async,
                                        async_receiver_t* receiver,
                                        zx_status_t status,
                                        const zx_packet_user_t* data);
 
-// Context for packet receiver.
-// The same instance may be used to receive arbitrarily many queued packets.
+// Holds content for a packet receiver and its handler.
 //
-// It is customary to aggregate (in C) or subclass (in C++) this structure
-// to allow the receiver context to retain additional state for its handler.
+// After successfully posting packets to the receiver, the client is responsible
+// for retaining it in memory until all packets have been received by the handler
+// or the dispatcher has been shutdown.
 //
-// See also |async::Receiver|.
+// Multiple packets may be delivered to the same receiver concurrently.
 struct async_receiver {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;
+
     // The handler to invoke when a packet is received.
     async_receiver_handler_t* handler;
-    // Valid flags: None, set to zero.
-    uint32_t flags;
-    // Reserved for future use, set to zero.
-    uint32_t reserved;
 };
 
 // Enqueues a packet of data for delivery to a receiver.
 //
-// The client is responsible for allocating and retaining the packet context
-// until all packets have been delivered.
-//
 // The |data| will be copied into the packet.  May be NULL to create a
 // zero-initialized packet payload.
 //
-// When the dispatcher is shutting down (being destroyed), attempting to
-// queue new packets will fail.
-//
 // Returns |ZX_OK| if the packet was successfully enqueued.
-// Returns |ZX_ERR_BAD_STATE| if the dispatcher shut down.
+// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
-//
-// See |zx_port_queue()|.
-inline zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
-                                      const zx_packet_user_t* data) {
-    return async->ops->queue_packet(async, receiver, data);
-}
+zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
+                               const zx_packet_user_t* data);
+
+// Calls |async_queue_packet()|.
+// If the result is not |ZX_OK|, synchronously delivers the status to the receiver's handler.
+zx_status_t async_queue_packet_or_report_error(async_t* async, async_receiver_t* receiver,
+                                               const zx_packet_user_t* data);
 
 __END_CDECLS

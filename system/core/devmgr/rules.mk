@@ -35,6 +35,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     system/ulib/loader-service \
     system/ulib/memfs \
+    system/ulib/async \
     system/ulib/async-loop \
     third_party/ulib/lz4 \
     system/ulib/port \

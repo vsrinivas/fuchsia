@@ -8,16 +8,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/time.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-
-namespace {
-
-zx::time Now() {
-    return zx::clock::get(ZX_CLOCK_MONOTONIC);
-}
-
-} // namespace
 
 int main(int argc, char** argv) {
     async::Loop loop;
@@ -25,28 +18,29 @@ int main(int argc, char** argv) {
 
     puts("Doing work for 30 seconds...");
 
-    zx::time start_time = Now();
+    zx::time start_time = async::Now(loop.async());
     zx::time quit_time = start_time + zx::sec(30);
-    async::Task task(start_time);
-    task.set_handler([&task, &loop, quit_time](async_t* async, zx_status_t status) {
+
+    async::Task task([&loop, quit_time](async_t* async, async::Task* task, zx_status_t status) {
         TRACE_DURATION("example", "Doing Work!", "async", async, "status", status);
+        if (status != ZX_OK)
+            return;
 
         // Simulate some kind of workload.
         puts("Doing work!");
-        zx::nanosleep(Now() + zx::msec(500));
+        zx::nanosleep(zx::deadline_after(zx::msec(500)));
 
         // Stop if quitting.
-        if (task.deadline() > quit_time) {
+        zx::time now = async::Now(loop.async());
+        if (now > quit_time) {
             loop.Quit();
-            return ASYNC_TASK_FINISHED;
+            return;
         }
 
         // Schedule more work in a little bit.
-        task.set_deadline(Now() + zx::msec(200));
-        return ASYNC_TASK_REPEAT;
+        task->PostForTime(async, now + zx::msec(200));
     });
-
-    task.Post(loop.async());
+    task.PostForTime(loop.async(), start_time);
 
     loop.Run();
 

@@ -18,8 +18,8 @@ MODULE_NAME := trace-benchmark
 
 MODULE_STATIC_LIBS := \
     system/ulib/trace \
-    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async.cpp \
     system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/zxcpp \

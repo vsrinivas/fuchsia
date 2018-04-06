@@ -21,7 +21,7 @@
 
 namespace {
 
-  inline zx::time Now() {
+inline zx::time Now() {
     return zx::clock::get(ZX_CLOCK_MONOTONIC);
 }
 
@@ -99,9 +99,8 @@ protected:
 
 class TestTask {
 public:
-    TestTask(zx::time deadline) : op(deadline) {
-        op.set_handler(fbl::BindMember(this, &TestTask::Handle));
-    }
+    TestTask()
+        : op(fbl::BindMember(this, &TestTask::Handle)) {}
 
     virtual ~TestTask() = default;
 
@@ -110,45 +109,40 @@ public:
     zx_status_t last_status = ZX_ERR_INTERNAL;
 
 protected:
-    virtual async_task_result_t Handle(async_t* async, zx_status_t status) {
+    virtual void Handle(async_t* async, async::Task* task, zx_status_t status) {
         run_count++;
         last_status = status;
-        return ASYNC_TASK_FINISHED;
     }
 };
 
 class QuitTask : public TestTask {
 public:
-    QuitTask(zx::time deadline = Now())
-        : TestTask(deadline) {}
+    QuitTask() = default;
 
 protected:
-    async_task_result_t Handle(async_t* async, zx_status_t status) override {
-        TestTask::Handle(async, status);
+    void Handle(async_t* async, async::Task* task, zx_status_t status) override {
+        TestTask::Handle(async, task, status);
         async_loop_quit(async_loop_from_dispatcher(async));
-        return ASYNC_TASK_FINISHED;
     }
 };
 
 class ResetQuitTask : public TestTask {
 public:
-    ResetQuitTask(zx::time deadline = Now())
-        : TestTask(deadline) {}
+    ResetQuitTask() = default;
 
     zx_status_t result = ZX_ERR_INTERNAL;
 
 protected:
-    async_task_result_t Handle(async_t* async, zx_status_t status) override {
-        TestTask::Handle(async, status);
+    void Handle(async_t* async, async::Task* task, zx_status_t status) override {
+        TestTask::Handle(async, task, status);
         result = async_loop_reset_quit(async_loop_from_dispatcher(async));
-        return ASYNC_TASK_FINISHED;
     }
 };
 
 class RepeatingTask : public TestTask {
 public:
-    RepeatingTask(zx::time deadline, zx::duration interval, uint32_t repeat_count)
-        : TestTask(deadline), interval_(interval), repeat_count_(repeat_count) {}
+    RepeatingTask(zx::duration interval, uint32_t repeat_count)
+        : interval_(interval), repeat_count_(repeat_count) {}
 
     void set_finish_callback(fbl::Closure callback) {
         finish_callback_ = fbl::move(callback);
@@ -159,23 +153,23 @@ protected:
     uint32_t repeat_count_;
     fbl::Closure finish_callback_;
 
-    async_task_result_t Handle(async_t* async, zx_status_t status) override {
-        TestTask::Handle(async, status);
-        op.set_deadline(op.deadline() + interval_);
+    void Handle(async_t* async, async::Task* task, zx_status_t status) override {
+        TestTask::Handle(async, task, status);
         if (repeat_count_ == 0) {
             if (finish_callback_)
                 finish_callback_();
-            return ASYNC_TASK_FINISHED;
+        } else {
+            repeat_count_ -= 1;
+            if (status == ZX_OK)
+                task->PostForTime(async, task->last_deadline() + interval_);
         }
-        repeat_count_ -= 1;
-        return status == ZX_OK ? ASYNC_TASK_REPEAT : ASYNC_TASK_FINISHED;
     }
 };
 
 class TestReceiver {
 public:
-    TestReceiver() {
-        op.set_handler(fbl::BindMember(this, &TestReceiver::Handle));
+    TestReceiver()
+        : op(fbl::BindMember(this, &TestReceiver::Handle)) {
     }
 
     virtual ~TestReceiver() = default;
@@ -186,7 +180,8 @@ public:
     const zx_packet_user_t* last_data;
 
 protected:
-    virtual void Handle(async_t* async, zx_status_t status, const zx_packet_user_t* data) {
+    virtual void Handle(async_t* async, async::Receiver* receiver,
+                        zx_status_t status, const zx_packet_user_t* data) {
         run_count++;
         last_status = status;
         if (data) {
@@ -530,18 +525,18 @@ bool task_test() {
     async::Loop loop;
 
     zx::time start_time = Now();
-    TestTask task1(start_time + zx::msec(1));
-    RepeatingTask task2(start_time + zx::msec(1), zx::msec(1), 3u);
-    TestTask task3(start_time);
-    QuitTask task4(start_time + zx::msec(10));
-    TestTask task5(start_time + zx::msec(10)); // posted after quit
+    TestTask task1;
+    RepeatingTask task2(zx::msec(1), 3u);
+    TestTask task3;
+    QuitTask task4;
+    TestTask task5; // posted after quit
 
-    EXPECT_EQ(ZX_OK, task1.op.Post(loop.async()), "post 1");
-    EXPECT_EQ(ZX_OK, task2.op.Post(loop.async()), "post 2");
-    EXPECT_EQ(ZX_OK, task3.op.Post(loop.async()), "post 3");
-    task2.set_finish_callback([&loop, &task4, &task5] {
-        task4.op.Post(loop.async());
-        task5.op.Post(loop.async());
+    EXPECT_EQ(ZX_OK, task1.op.PostForTime(loop.async(), start_time + zx::msec(1)), "post 1");
+    EXPECT_EQ(ZX_OK, task2.op.PostForTime(loop.async(), start_time + zx::msec(1)), "post 2");
+    EXPECT_EQ(ZX_OK, task3.op.PostForTime(loop.async(), start_time), "post 3");
+    task2.set_finish_callback([&loop, &task4, &task5, start_time] {
+        task4.op.PostForTime(loop.async(), start_time + zx::msec(10));
+        task5.op.PostForTime(loop.async(), start_time + zx::msec(10));
     });
 
     // Cancel task 3.
@@ -561,10 +556,10 @@ bool task_test() {
 
     // Reset quit and keep running, now task5 should go ahead followed
     // by any subsequently posted tasks even if they have earlier deadlines.
-    QuitTask task6(start_time);
-    TestTask task7(start_time);
-    EXPECT_EQ(ZX_OK, task6.op.Post(loop.async()), "post 6");
-    EXPECT_EQ(ZX_OK, task7.op.Post(loop.async()), "post 7");
+    QuitTask task6;
+    TestTask task7;
+    EXPECT_EQ(ZX_OK, task6.op.PostForTime(loop.async(), start_time), "post 6");
+    EXPECT_EQ(ZX_OK, task7.op.PostForTime(loop.async(), start_time), "post 7");
     EXPECT_EQ(ZX_OK, loop.ResetQuit());
     EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "run loop");
     EXPECT_EQ(ASYNC_LOOP_QUIT, loop.GetState(), "quitting");
@@ -586,23 +581,17 @@ bool task_shutdown_test() {
     async::Loop loop;
 
     zx::time start_time = Now();
-    TestTask task1(start_time + zx::msec(1));
-    task1.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    RepeatingTask task2(start_time + zx::msec(1), zx::msec(1000), 1u);
-    task2.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task3(zx::time::infinite());
-    task3.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task4(zx::time::infinite());
-    task4.op.set_flags(ASYNC_FLAG_HANDLE_SHUTDOWN);
-    TestTask task5(zx::time::infinite());
-    QuitTask task6(start_time + zx::msec(1));
+    TestTask task1;
+    RepeatingTask task2(zx::msec(1000), 1u);
+    TestTask task3;
+    TestTask task4;
+    QuitTask task5;
 
-    EXPECT_EQ(ZX_OK, task1.op.Post(loop.async()), "post 1");
-    EXPECT_EQ(ZX_OK, task2.op.Post(loop.async()), "post 2");
-    EXPECT_EQ(ZX_OK, task3.op.Post(loop.async()), "post 3");
-    EXPECT_EQ(ZX_OK, task4.op.Post(loop.async()), "post 4");
-    EXPECT_EQ(ZX_OK, task5.op.Post(loop.async()), "post 5");
-    EXPECT_EQ(ZX_OK, task6.op.Post(loop.async()), "post 6");
+    EXPECT_EQ(ZX_OK, task1.op.PostForTime(loop.async(), start_time + zx::msec(1)), "post 1");
+    EXPECT_EQ(ZX_OK, task2.op.PostForTime(loop.async(), start_time + zx::msec(1)), "post 2");
+    EXPECT_EQ(ZX_OK, task3.op.PostForTime(loop.async(), zx::time::infinite()), "post 3");
+    EXPECT_EQ(ZX_OK, task4.op.PostForTime(loop.async(), zx::time::infinite()), "post 4");
+    EXPECT_EQ(ZX_OK, task5.op.PostForTime(loop.async(), start_time + zx::msec(1)), "post 5");
 
     // Run tasks which are due up to the time when the quit task runs.
     EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "run loop");
@@ -612,9 +601,8 @@ bool task_shutdown_test() {
     EXPECT_EQ(ZX_OK, task2.last_status, "status 2");
     EXPECT_EQ(0u, task3.run_count, "run count 3");
     EXPECT_EQ(0u, task4.run_count, "run count 4");
-    EXPECT_EQ(0u, task5.run_count, "run count 5");
-    EXPECT_EQ(1u, task6.run_count, "run count 6");
-    EXPECT_EQ(ZX_OK, task6.last_status, "status 6");
+    EXPECT_EQ(1u, task5.run_count, "run count 5");
+    EXPECT_EQ(ZX_OK, task5.last_status, "status 5");
 
     // Cancel task 4.
     EXPECT_EQ(ZX_OK, task4.op.Cancel(loop.async()), "cancel 4");
@@ -624,8 +612,7 @@ bool task_shutdown_test() {
     //   |task2| notified because it requested a repeat
     //   |task3| notified because it was not yet serviced
     //   |task4| not notified because it was canceled
-    //   |task5| not notified because it didn't ask to handle shutdown
-    //   |task6| not notified because it was serviced
+    //   |task5| not notified because it was serviced
     loop.Shutdown();
     EXPECT_EQ(1u, task1.run_count, "run count 1");
     EXPECT_EQ(2u, task2.run_count, "run count 2");
@@ -633,14 +620,13 @@ bool task_shutdown_test() {
     EXPECT_EQ(1u, task3.run_count, "run count 3");
     EXPECT_EQ(ZX_ERR_CANCELED, task3.last_status, "status 3");
     EXPECT_EQ(0u, task4.run_count, "run count 4");
-    EXPECT_EQ(0u, task5.run_count, "run count 5");
-    EXPECT_EQ(1u, task6.run_count, "run count 6");
+    EXPECT_EQ(1u, task5.run_count, "run count 5");
 
     // Try to add or cancel work after shutdown.
-    TestTask task7(zx::time::infinite());
-    EXPECT_EQ(ZX_ERR_BAD_STATE, task7.op.Post(loop.async()), "post after shutdown");
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, task7.op.Cancel(loop.async()), "cancel after shutdown");
-    EXPECT_EQ(0u, task7.run_count, "run count 7");
+    TestTask task6;
+    EXPECT_EQ(ZX_ERR_BAD_STATE, task6.op.PostForTime(loop.async(), zx::time::infinite()), "post after shutdown");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, task6.op.Cancel(loop.async()), "cancel after shutdown");
+    EXPECT_EQ(0u, task6.run_count, "run count 6");
 
     END_TEST;
 }
@@ -659,10 +645,10 @@ bool receiver_test() {
     TestReceiver receiver2;
     TestReceiver receiver3;
 
-    EXPECT_EQ(ZX_OK, receiver1.op.Queue(loop.async(), &data1), "queue 1");
-    EXPECT_EQ(ZX_OK, receiver1.op.Queue(loop.async(), &data3), "queue 1, again");
-    EXPECT_EQ(ZX_OK, receiver2.op.Queue(loop.async(), &data2), "queue 2");
-    EXPECT_EQ(ZX_OK, receiver3.op.Queue(loop.async()), "queue 3");
+    EXPECT_EQ(ZX_OK, receiver1.op.QueuePacket(loop.async(), &data1), "queue 1");
+    EXPECT_EQ(ZX_OK, receiver1.op.QueuePacket(loop.async(), &data3), "queue 1, again");
+    EXPECT_EQ(ZX_OK, receiver2.op.QueuePacket(loop.async(), &data2), "queue 2");
+    EXPECT_EQ(ZX_OK, receiver3.op.QueuePacket(loop.async()), "queue 3");
 
     EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(2u, receiver1.run_count, "run count 1");
@@ -689,7 +675,7 @@ bool receiver_shutdown_test() {
 
     // Try to add work after shutdown.
     TestReceiver receiver;
-    EXPECT_EQ(ZX_ERR_BAD_STATE, receiver.op.Queue(loop.async()), "queue after shutdown");
+    EXPECT_EQ(ZX_ERR_BAD_STATE, receiver.op.QueuePacket(loop.async()), "queue after shutdown");
     EXPECT_EQ(0u, receiver.run_count, "run count 1");
 
     END_TEST;
@@ -700,10 +686,9 @@ public:
     async_t* last_default_dispatcher;
 
 protected:
-    async_task_result_t Handle(async_t* async, zx_status_t status) override {
-        QuitTask::Handle(async, status);
+    void Handle(async_t* async, async::Task* task, zx_status_t status) override {
+        QuitTask::Handle(async, task, status);
         last_default_dispatcher = async_get_default();
-        return ASYNC_TASK_FINISHED;
     }
 };
 
@@ -763,16 +748,15 @@ protected:
 
 class ThreadAssertTask : public TestTask {
 public:
-    ThreadAssertTask(zx::time deadline, ConcurrencyMeasure* measure)
-        : TestTask(deadline), measure_(measure) {}
+    ThreadAssertTask(ConcurrencyMeasure* measure)
+        : measure_(measure) {}
 
 protected:
     ConcurrencyMeasure* measure_;
 
-    async_task_result_t Handle(async_t* async, zx_status_t status) override {
-        TestTask::Handle(async, status);
+    void Handle(async_t* async, async::Task* task, zx_status_t status) override {
+        TestTask::Handle(async, task, status);
         measure_->Tally(async);
-        return ASYNC_TASK_FINISHED;
     }
 };
 
@@ -788,10 +772,11 @@ protected:
     // (unlike the Waits and Tasks) so we must guard its state.
     fbl::Mutex mutex_;
 
-    void Handle(async_t* async, zx_status_t status, const zx_packet_user_t* data) override {
+    void Handle(async_t* async, async::Receiver* receiver,
+                zx_status_t status, const zx_packet_user_t* data) override {
         {
             fbl::AutoLock lock(&mutex_);
-            TestReceiver::Handle(async, status, data);
+            TestReceiver::Handle(async, receiver, status, data);
         }
         measure_->Tally(async);
     }
@@ -914,8 +899,8 @@ bool threads_tasks_run_sequentially_test() {
     ThreadAssertTask* items[num_items];
     zx::time start_time = Now();
     for (size_t i = 0; i < num_items; i++) {
-        items[i] = new ThreadAssertTask(start_time + zx::msec(i), &measure);
-        EXPECT_EQ(ZX_OK, items[i]->op.Post(loop.async()), "post task");
+        items[i] = new ThreadAssertTask(&measure);
+        EXPECT_EQ(ZX_OK, items[i]->op.PostForTime(loop.async(), start_time + zx::msec(i)), "post task");
     }
 
     // Wait until quitted.
@@ -954,7 +939,7 @@ bool threads_receivers_run_concurrently_test() {
     // Post a number of packets all at once.
     ThreadAssertReceiver receiver(&measure);
     for (size_t i = 0; i < num_items; i++) {
-        EXPECT_EQ(ZX_OK, receiver.op.Queue(loop.async()), "queue packet");
+        EXPECT_EQ(ZX_OK, receiver.op.QueuePacket(loop.async()), "queue packet");
     }
 
     // Wait until quitted.

@@ -8,11 +8,15 @@
 
 __BEGIN_CDECLS
 
-// Handles an asyncronous trap access.
+// Handles an asynchronous trap access.
 typedef void (*async_guest_bell_trap_handler_t)(async_t* async,
                                                 async_guest_bell_trap_t* trap,
                                                 const zx_packet_guest_bell_t* packet);
 
+// Context for a trap.
+// A separate instance must be used for each trap.
+//
+// See also |async::GuestBellTrapMethod|.
 struct async_guest_bell_trap {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;
@@ -31,8 +35,6 @@ struct async_guest_bell_trap {
 // Note that since it's currently not possible to remove a trap, it's up to the
 // caller to ensure that |trap| outlives the |async| that it has been registered
 // on.
-inline zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
-    return async->ops->set_guest_bell_trap(async, trap);
-}
+zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap);
 
 __END_CDECLS
