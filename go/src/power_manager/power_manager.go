@@ -52,10 +52,15 @@ func (pm *PowerManager) GetBatteryStatus() (power_manager.BatteryStatus, error) 
 }
 
 func (pm *PowerManager) Watch(watcher power_manager.PowerManagerWatcherInterface) error {
+	logger.Infof("Watch func called")
 	pm.mu.Lock()
 	pm.watchers = append(pm.watchers, watcher)
 	pm.mu.Unlock()
-	go watcher.OnChangeBatteryStatus(pm.batteryStatus)
+	go func() {
+		logger.Infof("calling watcher")
+		watcher.OnChangeBatteryStatus(pm.batteryStatus)
+		logger.Infof("watcher called")
+	}()
 	return nil
 }
 
