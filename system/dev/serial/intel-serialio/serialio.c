@@ -29,14 +29,6 @@ static zx_status_t intel_serialio_bind(void* ctx, zx_device_t* dev) {
     case INTEL_WILDCAT_POINT_SERIALIO_DMA_DID:
         res = intel_serialio_bind_dma(dev);
         break;
-    case INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID:
-    case INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID:
-    case INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID:
-    case INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID:
-    case INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID:
-    case INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID:
-        res = intel_serialio_bind_i2c(dev);
-        break;
     case INTEL_WILDCAT_POINT_SERIALIO_SDIO_DID:
         res = intel_serialio_bind_sdio(dev);
         break;

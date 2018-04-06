@@ -7,11 +7,10 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
+#include <hw/reg.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <hw/pci.h>
-#include <intel-serialio/reg.h>
-#include <intel-serialio/serialio.h>
 #include <zircon/device/i2c.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -22,8 +21,9 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include "controller.h"
-#include "slave.h"
+#include "binding.h"
+#include "intel-i2c-controller.h"
+#include "intel-i2c-slave.h"
 
 #define DEVIDLE_CONTROL 0x24c
 #define DEVIDLE_CONTROL_CMD_IN_PROGRESS 0
@@ -165,7 +165,7 @@ static zx_status_t intel_serialio_i2c_remove_slave(
     if (status < 0)
         goto remove_slave_finish;
     if (slave->chip_address_width != width) {
-        xprintf("Chip address width mismatch.\n");
+        zxlogf(ERROR, "Chip address width mismatch.\n");
         status = ZX_ERR_NOT_FOUND;
         goto remove_slave_finish;
     }
@@ -322,12 +322,12 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         uint64_t slots;
         status = zx_interrupt_wait(dev->irq_handle, &slots);
         if (status != ZX_OK) {
-            xprintf("i2c: error waiting for interrupt: %d\n", status);
+            zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
             continue;
         }
 
         uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
-        xprintf("Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
+        zxlogf(TRACE, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
         if (intr_stat & (1u << INTR_RX_UNDER)) {
             // If we hit an underflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
@@ -744,7 +744,7 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
     }
 }
 
-zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
+zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     pci_protocol_t pci;
     if (device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci))
         return ZX_ERR_NOT_SUPPORTED;
@@ -766,34 +766,34 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
     zx_status_t status = pci_map_bar(&pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                    (void**)&device->regs, &device->regs_size, &device->regs_handle);
     if (status != ZX_OK) {
-        xprintf("i2c: failed to mape pci bar 0: %d\n", status);
+        zxlogf(ERROR,"i2c: failed to mape pci bar 0: %d\n", status);
         goto fail;
     }
 
     // set msi irq mode
     status = pci_set_irq_mode(&pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
     if (status < 0) {
-        xprintf("i2c: failed to set irq mode: %d\n", status);
+        zxlogf(ERROR,"i2c: failed to set irq mode: %d\n", status);
         goto fail;
     }
 
     // get irq handle
     status = pci_map_interrupt(&pci, 0, &device->irq_handle);
     if (status != ZX_OK) {
-        xprintf("i2c: failed to get irq handle: %d\n", status);
+        zxlogf(ERROR,"i2c: failed to get irq handle: %d\n", status);
         goto fail;
     }
 
     status = zx_event_create(0, &device->event_handle);
     if (status != ZX_OK) {
-        xprintf("i2c: failed to create event handle: %d\n", status);
+        zxlogf(ERROR,"i2c: failed to create event handle: %d\n", status);
         goto fail;
     }
 
     // start irq thread
     int ret = thrd_create_with_name(&device->irq_thread, intel_serialio_i2c_irq_thread, device, "i2c-irq");
     if (ret != thrd_success) {
-        xprintf("i2c: failed to create irq thread: %d\n", ret);
+        zxlogf(ERROR,"i2c: failed to create irq thread: %d\n", ret);
         goto fail;
     }
 
@@ -850,7 +850,7 @@ zx_status_t intel_serialio_bind_i2c(zx_device_t* dev) {
         goto fail;
     }
 
-    xprintf(
+    zxlogf(INFO,
         "initialized intel serialio i2c driver, "
         "reg=%p regsize=%ld\n",
         device->regs, device->regs_size);
@@ -866,7 +866,23 @@ fail:
         zx_handle_close(device->irq_handle);
     if (device->event_handle != ZX_HANDLE_INVALID)
         zx_handle_close(device->event_handle);
-    free(device);
+    //free(device);
 
     return status;
 }
+
+static zx_driver_ops_t intel_i2c_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = intel_i2c_bind,
+};
+
+ZIRCON_DRIVER_BEGIN(intel_i2c, intel_i2c_driver_ops, "zircon", "0.1", 8)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C0_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
+ZIRCON_DRIVER_END(intel_i2c)

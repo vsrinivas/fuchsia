@@ -4,7 +4,7 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <intel-serialio/reg.h>
+#include <hw/reg.h>
 #include <zircon/types.h>
 #include <zircon/device/i2c.h>
 #include <zircon/listnode.h>
@@ -15,8 +15,8 @@
 #include <string.h>
 #include <threads.h>
 
-#include "controller.h"
-#include "slave.h"
+#include "intel-i2c-controller.h"
+#include "intel-i2c-slave.h"
 
 // Time out after 2 seconds.
 static const zx_duration_t timeout_ns = ZX_SEC(2);

@@ -13,8 +13,6 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/serialio.c \
     $(LOCAL_DIR)/dma/dma.c \
-    $(LOCAL_DIR)/i2c/controller.c \
-    $(LOCAL_DIR)/i2c/slave.c \
     $(LOCAL_DIR)/sdio/sdio.c \
     $(LOCAL_DIR)/spi/spi.c \
     $(LOCAL_DIR)/uart/uart.c
