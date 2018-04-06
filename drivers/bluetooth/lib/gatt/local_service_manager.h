@@ -54,6 +54,12 @@ using ClientConfigCallback = std::function<void(IdType service_id,
                                                 bool notify,
                                                 bool indicate)>;
 
+// Called with the ID and range of attributes handles spanned (inclusive) by a
+// service that was added or removed.
+using ServiceChangedCallback = std::function<void(IdType service_id,
+                                                  att::Handle start,
+                                                  att::Handle end)>;
+
 // LocalServiceManager allows clients to implement GATT services. This
 // internally maintains an attribute database and provides hooks for clients to
 // respond to read and write requests, send notifications/indications,
@@ -101,6 +107,10 @@ class LocalServiceManager final {
   // indications are now disabled.
   void DisconnectClient(const std::string& peer_id);
 
+  void set_service_changed_callback(ServiceChangedCallback callback) {
+    service_changed_callback_ = std::move(callback);
+  }
+
   fxl::RefPtr<att::Database> database() const { return db_; }
 
  private:
@@ -111,6 +121,8 @@ class LocalServiceManager final {
 
   // Mapping from service instance ids to ServiceData.
   std::unordered_map<IdType, std::unique_ptr<ServiceData>> services_;
+
+  ServiceChangedCallback service_changed_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LocalServiceManager);
 };

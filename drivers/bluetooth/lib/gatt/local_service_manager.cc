@@ -162,6 +162,7 @@ class LocalServiceManager::ServiceData final {
     FXL_DCHECK(grouping);
 
     start_handle_ = grouping->start_handle();
+    end_handle_ = grouping->end_handle();
 
     // Sort characteristics by UUID size (see Vol 3, Part G, 3.3.1).
     auto chrcs = service->ReleaseCharacteristics();
@@ -177,6 +178,7 @@ class LocalServiceManager::ServiceData final {
 
   inline IdType id() const { return id_; }
   inline att::Handle start_handle() const { return start_handle_; }
+  inline att::Handle end_handle() const { return end_handle_; }
 
   bool GetCharacteristicConfig(IdType chrc_id,
                                const std::string& peer_id,
@@ -481,6 +483,7 @@ class LocalServiceManager::ServiceData final {
 
   IdType id_;
   att::Handle start_handle_;
+  att::Handle end_handle_;
   ReadHandler read_handler_;
   WriteHandler write_handler_;
   ClientConfigCallback ccc_callback_;
@@ -547,6 +550,9 @@ IdType LocalServiceManager::RegisterService(ServicePtr service,
   IdType id = next_service_id_++;
 
   services_[id] = std::move(service_data);
+  if (service_changed_callback_) {
+    service_changed_callback_(id, grouping->start_handle(), grouping->end_handle());
+  }
 
   return id;
 }
@@ -556,12 +562,14 @@ bool LocalServiceManager::UnregisterService(IdType service_id) {
   if (iter == services_.end())
     return false;
 
-  // TODO(armansito): Trigger a "Service Changed" event with the removed handle
-  // range.
-
-  db_->RemoveGrouping(iter->second->start_handle());
+  const att::Handle start_handle = iter->second->start_handle();
+  const att::Handle end_handle = iter->second->end_handle();
+  db_->RemoveGrouping(start_handle);
   services_.erase(iter);
 
+  if (service_changed_callback_) {
+    service_changed_callback_(service_id, start_handle, end_handle);
+  }
   return true;
 }
 

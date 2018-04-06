@@ -824,6 +824,64 @@ TEST(GATT_LocalServiceManagerTest, WriteDescriptor) {
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
 }
 
+TEST(GATT_LocalServiceManagerTest, ServiceChanged) {
+  IdType expected_id;
+  att::Handle expected_start, expected_end;
+  int callback_count = 0;
+  ServiceChangedCallback service_changed_callback =
+    [&](IdType id, att::Handle start, att::Handle end) {
+      callback_count++;
+      EXPECT_EQ(expected_id, id);
+      EXPECT_EQ(expected_start, start);
+      EXPECT_EQ(expected_end, end);
+    };
+
+  LocalServiceManager mgr;
+
+  // Other tests add and remove services without the callback so there is
+  // already the expectation that they work.
+  mgr.set_service_changed_callback(std::move(service_changed_callback));
+
+  expected_id = 1u;
+  expected_start = 1u;
+  expected_end = 1u;
+  auto service = std::make_unique<Service>(true /* primary */, kTestType16);
+  auto id1 = RegisterService(&mgr, std::move(service));
+  EXPECT_NE(0u, id1);
+  EXPECT_EQ(1, callback_count);
+
+  expected_start = 2u;
+  expected_end = 2u;
+  service = std::make_unique<Service>(false /* primary */, kTestType32);
+
+  constexpr IdType kChrcId = 0;
+  constexpr uint8_t kChrcProps = Property::kRead;
+  constexpr common::UUID kTestChrcType((uint32_t)0xdeadbeef);
+  const att::AccessRequirements kReadReqs(true, true, true);
+  const att::AccessRequirements kWriteReqs, kUpdateReqs;
+  service->AddCharacteristic(
+      std::make_unique<Characteristic>(kChrcId, kTestChrcType, kChrcProps, 0,
+                                       kReadReqs, kWriteReqs, kUpdateReqs));
+  expected_id = 2u;
+  expected_start = 2u;
+  expected_end = 4u;
+  auto id2 = RegisterService(&mgr, std::move(service));
+  EXPECT_NE(0u, id2);
+  EXPECT_EQ(2, callback_count);
+
+  expected_id = id1;
+  expected_start = 1u;
+  expected_end = 1u;
+  EXPECT_TRUE(mgr.UnregisterService(id1));
+  EXPECT_EQ(3, callback_count);
+
+  expected_id = id2;
+  expected_start = 2u;
+  expected_end = 4u;
+  EXPECT_TRUE(mgr.UnregisterService(id2));
+  EXPECT_EQ(4, callback_count);
+}
+
 // TODO(armansito): Some functional groupings of tests above (such as
 // ReadCharacteristic, WriteCharacteristic, etc) should each use a common test
 // harness to reduce code duplication.
