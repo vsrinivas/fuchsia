@@ -21,13 +21,12 @@ Detector::Detector(size_t history_size)
 
 std::pair<bool, presentation::PresentationMode> Detector::Update(
     const input::SensorDescriptor& sensor,
-    input::InputReportPtr event) {
+    input::InputReport event) {
   FXL_CHECK(sensor.type == input::SensorType::ACCELEROMETER);
-  FXL_CHECK(event);
-  FXL_CHECK(event->sensor);
-  FXL_CHECK(event->sensor->is_vector());
+  FXL_CHECK(event.sensor);
+  FXL_CHECK(event.sensor->is_vector());
 
-  const fidl::Array<int16_t, 3>& vector = event->sensor->vector();
+  const fidl::Array<int16_t, 3>& vector = event.sensor->vector();
   AccelerometerData data{vector[0], vector[1], vector[2]};
 
   switch(sensor.loc) {

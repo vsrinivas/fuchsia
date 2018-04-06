@@ -66,31 +66,31 @@ TEST(NegativeData, MovingAverage) {
   EXPECT_EQ(mv.Average(), kMin);
 }
 
-input::InputReportPtr CreateVector(int16_t x, int16_t y, int16_t z) {
-  input::InputReportPtr report = input::InputReport::New();
-  report->sensor = input::SensorReport::New();
+input::InputReport CreateVector(int16_t x, int16_t y, int16_t z) {
+  input::InputReport report;
+  report.sensor = input::SensorReport::New();
   fidl::Array<int16_t, 3> data;
   data[0] = x;
   data[1] = y;
   data[2] = z;
-  report->sensor->set_vector(data);
+  report.sensor->set_vector(data);
   return report;
 }
 
 TEST(Closed, Detector) {
   Detector detector(/*history*/ 2);
 
-  input::InputReportPtr base_report = CreateVector(0, 0, kMaxVal);
+  input::InputReport base_report = CreateVector(0, 0, kMaxVal);
   std::pair<bool, presentation::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
-  input::InputReportPtr lid_report = CreateVector(0, 0, kMinVal);
+  input::InputReport lid_report = CreateVector(0, 0, kMinVal);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
   EXPECT_EQ(result.second, presentation::PresentationMode::CLOSED);
 
-  input::InputReportPtr base_shift = CreateVector(0, 0, kMinVal);
+  input::InputReport base_shift = CreateVector(0, 0, kMinVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
   EXPECT_FALSE(result.first);
 }
@@ -98,17 +98,17 @@ TEST(Closed, Detector) {
 TEST(Laptop, Detector) {
   Detector detector(/*history*/ 2);
 
-  input::InputReportPtr base_report = CreateVector(0, 0, kMaxVal);
+  input::InputReport base_report = CreateVector(0, 0, kMaxVal);
   std::pair<bool, presentation::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
-  input::InputReportPtr lid_report = CreateVector(0, kMaxVal, 0);
+  input::InputReport lid_report = CreateVector(0, kMaxVal, 0);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
   EXPECT_EQ(result.second, presentation::PresentationMode::LAPTOP);
 
-  input::InputReportPtr base_shift = CreateVector(0, 0, kMinVal);
+  input::InputReport base_shift = CreateVector(0, 0, kMinVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
   EXPECT_FALSE(result.first);
 }
@@ -116,17 +116,17 @@ TEST(Laptop, Detector) {
 TEST(Tablet, Detector) {
   Detector detector(/*history*/ 2);
 
-  input::InputReportPtr base_report = CreateVector(0, 0, kMinVal);
+  input::InputReport base_report = CreateVector(0, 0, kMinVal);
   std::pair<bool, presentation::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
-  input::InputReportPtr lid_report = CreateVector(0, 0, kMaxVal);
+  input::InputReport lid_report = CreateVector(0, 0, kMaxVal);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
   EXPECT_EQ(result.second, presentation::PresentationMode::TABLET);
 
-  input::InputReportPtr base_shift = CreateVector(0, 0, kMaxVal);
+  input::InputReport base_shift = CreateVector(0, 0, kMaxVal);
   result = detector.Update(kBaseSensor, std::move(base_shift));
   EXPECT_FALSE(result.first);
 }
@@ -134,17 +134,17 @@ TEST(Tablet, Detector) {
 TEST(Tent, Detector) {
   Detector detector(/*history*/ 2);
 
-  input::InputReportPtr base_report = CreateVector(0, kMaxVal, 0);
+  input::InputReport base_report = CreateVector(0, kMaxVal, 0);
   std::pair<bool, presentation::PresentationMode> result =
       detector.Update(kBaseSensor, std::move(base_report));
   EXPECT_FALSE(result.first);
 
-  input::InputReportPtr lid_report = CreateVector(0, kMinVal, 0);
+  input::InputReport lid_report = CreateVector(0, kMinVal, 0);
   result = detector.Update(kLidSensor, std::move(lid_report));
   EXPECT_TRUE(result.first);
   EXPECT_EQ(result.second, presentation::PresentationMode::TENT);
 
-  input::InputReportPtr base_shift = CreateVector(0, kMinVal, 0);
+  input::InputReport base_shift = CreateVector(0, kMinVal, 0);
   result = detector.Update(kBaseSensor, std::move(base_shift));
   EXPECT_FALSE(result.first);
 }

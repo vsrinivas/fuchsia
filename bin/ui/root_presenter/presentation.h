@@ -8,6 +8,12 @@
 #include <map>
 #include <memory>
 
+#include <fuchsia/cpp/geometry.h>
+#include <fuchsia/cpp/input.h>
+#include <fuchsia/cpp/presentation.h>
+#include <fuchsia/cpp/views_v1.h>
+
+#include "garnet/bin/ui/presentation_mode/detector.h"
 #include "garnet/bin/ui/root_presenter/display_rotater.h"
 #include "garnet/bin/ui/root_presenter/display_size_switcher.h"
 #include "garnet/bin/ui/root_presenter/display_usage_switcher.h"
@@ -18,15 +24,9 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include <fuchsia/cpp/geometry.h>
 #include "lib/ui/input/device_state.h"
-#include <fuchsia/cpp/input.h>
-#include <fuchsia/cpp/input.h>
 #include "lib/ui/input/input_device_impl.h"
-#include <fuchsia/cpp/presentation.h>
 #include "lib/ui/scenic/client/resources.h"
-#include <fuchsia/cpp/views_v1.h>
-#include <fuchsia/cpp/views_v1.h>
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
 // Redefines countof() using GLM_COUNTOF(), which currently provides a more
@@ -142,6 +142,14 @@ class Presentation : private views_v1::ViewTreeListener,
       input::KeyboardEvent event_to_capture,
       fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener) override;
 
+  // |Presentation|
+  void GetPresentationMode(GetPresentationModeCallback callback) override;
+
+  // |Presentation|
+  void SetPresentationModeListener(
+      fidl::InterfaceHandle<presentation::PresentationModeListener> listener)
+      override;
+
   void CreateViewTree(
       views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
@@ -151,6 +159,7 @@ class Presentation : private views_v1::ViewTreeListener,
   bool GlobalHooksHandleEvent(const input::InputEvent& event);
 
   void OnEvent(input::InputEvent event);
+  void OnSensorEvent(uint32_t device_id, input::InputReport event);
 
   void PresentScene();
   void Shutdown();
@@ -233,6 +242,12 @@ class Presentation : private views_v1::ViewTreeListener,
     presentation::KeyboardCaptureListenerPtr listener;
   };
   std::vector<KeyboardCaptureItem> captured_keybindings_;
+
+  // Listener for changes in presentation mode.
+  presentation::PresentationModeListenerPtr presentation_mode_listener_;
+  // Presentation mode, based on last N measurements
+  presentation::PresentationMode presentation_mode_;
+  std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 

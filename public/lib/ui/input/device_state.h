@@ -20,6 +20,12 @@
 namespace mozart {
 
 using OnEventCallback = std::function<void(input::InputEvent event)>;
+// In contrast to keyboard and mouse devices, which require extra state to
+// correctly interpret their data, sensor devices are simpler, so we just pass
+// through the raw InputReport. We do need a device_id to understand which
+// sensor the report came from.
+using OnSensorEventCallback =
+    std::function<void(uint32_t device_id, input::InputReport event)>;
 
 class DeviceState;
 
@@ -117,6 +123,9 @@ class DeviceState {
   DeviceState(uint32_t device_id,
               input::DeviceDescriptor* descriptor,
               OnEventCallback callback);
+  DeviceState(uint32_t device_id,
+              input::DeviceDescriptor* descriptor,
+              OnSensorEventCallback callback);
   ~DeviceState();
 
   void OnRegistered();
@@ -126,6 +135,7 @@ class DeviceState {
 
   uint32_t device_id() { return device_id_; }
   OnEventCallback callback() { return callback_; }
+  OnSensorEventCallback sensor_callback() { return sensor_callback_; }
 
   input::KeyboardDescriptor* keyboard_descriptor() {
     return descriptor_->keyboard.get();
@@ -146,12 +156,15 @@ class DeviceState {
  private:
   uint32_t device_id_;
   input::DeviceDescriptor* descriptor_;
-  OnEventCallback callback_;
+
   KeyboardState keyboard_;
   MouseState mouse_;
   StylusState stylus_;
   TouchscreenState touchscreen_;
+  OnEventCallback callback_;
+
   SensorState sensor_;
+  OnSensorEventCallback sensor_callback_;
 };
 
 }  // namespace mozart

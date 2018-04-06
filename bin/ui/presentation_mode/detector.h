@@ -43,7 +43,7 @@ class Detector final {
   // Otherwise return <false,_>, where the second value is undefined.
   std::pair<bool, presentation::PresentationMode> Update(
       const input::SensorDescriptor& sensor,
-      input::InputReportPtr event);
+      input::InputReport event);
 
  private:
   // Interpretation of X, Y, Z, based on reading words on the base (keyboard) or

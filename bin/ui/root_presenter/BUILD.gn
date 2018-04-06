@@ -26,6 +26,7 @@ executable("root_presenter") {
 
   deps = [
     "//garnet/bin/ui/input_reader",
+    "//garnet/bin/ui/presentation_mode",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",

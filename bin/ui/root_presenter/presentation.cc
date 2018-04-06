@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/root_presenter/presentation.h"
 
 #include <cmath>
+#include <utility>
 
 #if defined(countof)
 // Workaround for compiler error due to Zircon defining countof() as a macro.
@@ -374,10 +375,23 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
   FXL_VLOG(1) << "OnDeviceAdded: device_id=" << input_device->id();
 
   FXL_DCHECK(device_states_by_id_.count(input_device->id()) == 0);
-  std::unique_ptr<mozart::DeviceState> state =
-      std::make_unique<mozart::DeviceState>(
-          input_device->id(), input_device->descriptor(),
-          [this](input::InputEvent event) { OnEvent(std::move(event)); });
+
+  std::unique_ptr<mozart::DeviceState> state;
+  if (input_device->descriptor()->sensor) {
+    mozart::OnSensorEventCallback callback = [this](uint32_t device_id,
+                                                    input::InputReport event) {
+      OnSensorEvent(device_id, std::move(event));
+    };
+    state = std::make_unique<mozart::DeviceState>(
+        input_device->id(), input_device->descriptor(), callback);
+  } else {
+    mozart::OnEventCallback callback = [this](input::InputEvent event) {
+      OnEvent(std::move(event));
+    };
+    state = std::make_unique<mozart::DeviceState>(
+        input_device->id(), input_device->descriptor(), callback);
+  }
+
   mozart::DeviceState* state_ptr = state.get();
   auto device_pair = std::make_pair(input_device, std::move(state));
   state_ptr->OnRegistered();
@@ -438,6 +452,28 @@ void Presentation::CaptureKeyboardEvent(
   captured_keybindings_.push_back(
       KeyboardCaptureItem{std::move(event_to_capture), std::move(listener)});
 }
+
+void Presentation::GetPresentationMode(GetPresentationModeCallback callback) {
+  callback(presentation_mode_);
+}
+
+void Presentation::SetPresentationModeListener(
+    fidl::InterfaceHandle<presentation::PresentationModeListener> listener) {
+  if (presentation_mode_listener_) {
+    FXL_LOG(ERROR) << "Cannot listen to presentation mode; already listening.";
+    return;
+  }
+
+  if (presentation_mode_detector_ == nullptr) {
+    const size_t kDetectorHistoryLength = 5;
+    presentation_mode_detector_ =
+        std::make_unique<presentation_mode::Detector>(kDetectorHistoryLength);
+  }
+
+  presentation_mode_listener_.Bind(std::move(listener));
+  FXL_LOG(INFO) << "Presentation mode, now listening.";
+}
+
 
 bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
@@ -510,6 +546,28 @@ void Presentation::OnEvent(input::InputEvent event) {
   if (dispatch_event && input_dispatcher_)
     input_dispatcher_->DispatchEvent(std::move(event));
 }
+
+void Presentation::OnSensorEvent(uint32_t device_id, input::InputReport event) {
+  FXL_VLOG(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
+
+  FXL_DCHECK(device_states_by_id_.count(device_id) > 0);
+  FXL_DCHECK(device_states_by_id_[device_id].first);
+  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor());
+  FXL_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
+
+  if (presentation_mode_listener_) {
+    const input::SensorDescriptor* sensor_descriptor =
+        device_states_by_id_[device_id].first->descriptor()->sensor.get();
+    std::pair<bool, presentation::PresentationMode> update =
+        presentation_mode_detector_->Update(*sensor_descriptor,
+                                            std::move(event));
+    if (update.first && update.second != presentation_mode_) {
+      presentation_mode_ = update.second;
+      presentation_mode_listener_->OnModeChanged();
+    }
+  }
+}
+
 
 void Presentation::OnChildAttached(uint32_t child_key,
                                    views_v1::ViewInfo child_view_info,

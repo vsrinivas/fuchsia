@@ -47,6 +47,10 @@ interface Presentation {
   // it.
   6: CaptureKeyboardEvent(input.KeyboardEvent event_to_capture,
                           KeyboardCaptureListener listener);
+
+  // TODO(SCN-650): Determine better place for PresentationMode API.
+  8: GetPresentationMode() -> (PresentationMode mode);
+  9: SetPresentationModeListener(PresentationModeListener listener);
 };
 
 // Screen modes that can be detected via sensor data.

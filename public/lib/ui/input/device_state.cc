@@ -24,8 +24,6 @@ namespace mozart {
 constexpr zx::duration kKeyRepeatSlow = zx::msec(250);
 constexpr zx::duration kKeyRepeatFast = zx::msec(75);
 
-#pragma mark - KeyboardState
-
 KeyboardState::KeyboardState(DeviceState* device_state)
     : device_state_(device_state),
       keymap_(qwerty_map),
@@ -182,8 +180,6 @@ void KeyboardState::ScheduleRepeat(uint64_t sequence, zx::duration delta) {
   );
 }
 
-#pragma mark - MouseState
-
 void MouseState::OnRegistered() {}
 
 void MouseState::OnUnregistered() {}
@@ -241,8 +237,6 @@ void MouseState::Update(input::InputReport input_report,
     }
   }
 }
-
-#pragma mark - StylusState
 
 void StylusState::SendEvent(int64_t timestamp,
                             input::PointerEventPhase phase,
@@ -341,8 +335,6 @@ void StylusState::Update(input::InputReport input_report,
   }
 }
 
-#pragma mark - TouchscreenState
-
 void TouchscreenState::Update(input::InputReport input_report,
                               geometry::Size display_size) {
   FXL_DCHECK(input_report.touchscreen);
@@ -434,21 +426,36 @@ void TouchscreenState::Update(input::InputReport input_report,
 void SensorState::Update(input::InputReport input_report) {
   FXL_DCHECK(input_report.sensor);
   FXL_DCHECK(device_state_->sensor_descriptor());
+  // Every sensor report gets routed via unique device_id.
+  device_state_->sensor_callback()(device_state_->device_id(),
+                                   std::move(input_report));
 }
-
-#pragma mark - DeviceState
 
 DeviceState::DeviceState(uint32_t device_id,
                          input::DeviceDescriptor* descriptor,
                          OnEventCallback callback)
     : device_id_(device_id),
       descriptor_(descriptor),
-      callback_(callback),
       keyboard_(this),
       mouse_(this),
       stylus_(this),
       touchscreen_(this),
-      sensor_(this) {}
+      callback_(callback),
+      sensor_(this),
+      sensor_callback_(nullptr) {}
+
+DeviceState::DeviceState(uint32_t device_id,
+                         input::DeviceDescriptor* descriptor,
+                         OnSensorEventCallback callback)
+    : device_id_(device_id),
+      descriptor_(descriptor),
+      keyboard_(this),
+      mouse_(this),
+      stylus_(this),
+      touchscreen_(this),
+      callback_(nullptr),
+      sensor_(this),
+      sensor_callback_(callback) {}
 
 DeviceState::~DeviceState() {}
 
