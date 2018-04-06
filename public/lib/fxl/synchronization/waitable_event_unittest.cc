@@ -136,8 +136,6 @@ TEST(AutoResetWaitableEventTest, Timeouts) {
 
     // It should time out after *at least* the specified amount of time.
     EXPECT_GE(elapsed, timeout - kTimeoutTolerance);
-    // But we expect that it should time out soon after that amount of time.
-    EXPECT_LT(elapsed, timeout + kEpsilonTimeout);
   }
 }
 
