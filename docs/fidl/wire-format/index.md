@@ -584,7 +584,7 @@ interface Calculator {
     1: Add(int32 a, int32 b) -> (int32 sum);
     2: Divide(int32 dividend, int32 divisor) -> (int32 quotient, int32 remainder);
     3: Clear();
-    4: event Error(uint32 status_code);
+    4: -> Error(uint32 status_code);
 };
 ```
 
