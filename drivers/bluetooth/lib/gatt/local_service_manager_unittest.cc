@@ -867,10 +867,11 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
       last_indicate = indicate;
     };
 
+    const size_t last_service_count = mgr.database()->groupings().size();
     last_service_id = mgr.RegisterService(std::move(service), NopReadHandler,
                                           NopWriteHandler, ccc_callback);
     EXPECT_NE(0u, last_service_id);
-    EXPECT_EQ(1u, mgr.database()->groupings().size());
+    EXPECT_EQ(last_service_count + 1u, mgr.database()->groupings().size());
   }
 
   bool ReadCCC(const att::Attribute* attr,
