@@ -15,7 +15,7 @@ SizedVmo::SizedVmo(zx::vmo vmo, uint64_t size)
   FXL_DCHECK(vmo_ && IsSizeValid(vmo_, size_));
 }
 
-bool SizedVmo::FromTransport(SizedVmoTransport transport, SizedVmo* out) {
+bool SizedVmo::FromTransport(mem::Buffer transport, SizedVmo* out) {
   FXL_DCHECK(transport.vmo);
 
   if (!IsSizeValid(transport.vmo, transport.size)) {
@@ -36,7 +36,8 @@ bool SizedVmo::IsSizeValid(const zx::vmo& vmo, uint64_t size) {
   return vmo_size >= size;
 }
 
-SizedVmo::SizedVmo(SizedVmo&& other) : vmo_(std::move(other.vmo_)), size_(other.size_) {
+SizedVmo::SizedVmo(SizedVmo&& other)
+    : vmo_(std::move(other.vmo_)), size_(other.size_) {
   other.size_ = 0;
 }
 
@@ -49,8 +50,8 @@ SizedVmo& SizedVmo::operator=(SizedVmo&& other) {
   return *this;
 }
 
-SizedVmoTransport SizedVmo::ToTransport() && {
-  SizedVmoTransport result;
+mem::Buffer SizedVmo::ToTransport() && {
+  mem::Buffer result;
   if (!vmo_) {
     return result;
   }
@@ -61,8 +62,7 @@ SizedVmoTransport SizedVmo::ToTransport() && {
 }
 
 zx_status_t SizedVmo::Duplicate(zx_rights_t rights, SizedVmo* output) const {
-  zx_status_t status =
-      vmo_.duplicate(rights, &output->vmo_);
+  zx_status_t status = vmo_.duplicate(rights, &output->vmo_);
   if (status == ZX_OK) {
     output->size_ = size_;
   }

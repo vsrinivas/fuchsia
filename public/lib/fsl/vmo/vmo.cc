@@ -51,8 +51,7 @@ bool ContainerFromVmo(const zx::vmo& buffer,
     return true;
   }
 
-  zx_status_t status =
-      buffer.read(&(*container_ptr)[0], 0, num_bytes);
+  zx_status_t status = buffer.read(&(*container_ptr)[0], 0, num_bytes);
   if (status < 0) {
     FXL_LOG(WARNING) << "zx::vmo::read failed: " << status;
     return false;
@@ -72,8 +71,7 @@ bool StringFromVmo(const SizedVmo& shared_buffer, std::string* string_ptr) {
                                        shared_buffer.size(), string_ptr);
 }
 
-bool StringFromVmo(const SizedVmoTransport& vmo_transport,
-                   std::string* string_ptr) {
+bool StringFromVmo(const mem::Buffer& vmo_transport, std::string* string_ptr) {
   if (!SizedVmo::IsSizeValid(vmo_transport.vmo, vmo_transport.size)) {
     return false;
   }
@@ -91,7 +89,7 @@ bool VectorFromVmo(const SizedVmo& shared_buffer,
                                              shared_buffer.size(), vector_ptr);
 }
 
-bool VectorFromVmo(const SizedVmoTransport& vmo_transport,
+bool VectorFromVmo(const mem::Buffer& vmo_transport,
                    std::vector<char>* vector_ptr) {
   if (!SizedVmo::IsSizeValid(vmo_transport.vmo, vmo_transport.size)) {
     return false;
@@ -110,13 +108,13 @@ bool VectorFromVmo(const SizedVmo& shared_buffer,
       shared_buffer.vmo(), shared_buffer.size(), vector_ptr);
 }
 
-bool VectorFromVmo(const SizedVmoTransport& vmo_transport,
+bool VectorFromVmo(const mem::Buffer& vmo_transport,
                    std::vector<uint8_t>* vector_ptr) {
   if (!SizedVmo::IsSizeValid(vmo_transport.vmo, vmo_transport.size)) {
     return false;
   }
-  return ContainerFromVmo<std::vector<uint8_t>>(
-      vmo_transport.vmo, vmo_transport.size, vector_ptr);
+  return ContainerFromVmo<std::vector<uint8_t>>(vmo_transport.vmo,
+                                                vmo_transport.size, vector_ptr);
 }
 
 }  // namespace fsl

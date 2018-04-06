@@ -4,7 +4,7 @@
 
 library fonts;
 
-using fsl;
+using mem;
 
 enum FontSlant {
   UPRIGHT = 1;
@@ -27,7 +27,7 @@ struct FontRequest {
 };
 
 struct FontData {
-  fsl.SizedVmoTransport vmo;
+  mem.Buffer buffer;
 };
 
 struct FontResponse {

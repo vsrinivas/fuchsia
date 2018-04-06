@@ -9,8 +9,8 @@ fidl("fidl") {
 
   sources = [
     "application_controller.fidl",
-    "application_environment_controller.fidl",
     "application_environment.fidl",
+    "application_environment_controller.fidl",
     "application_launcher.fidl",
     "application_loader.fidl",
     "application_runner.fidl",
@@ -19,6 +19,6 @@ fidl("fidl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl/fidl",
+    "//garnet/public/lib/mem/fidl",
   ]
 }

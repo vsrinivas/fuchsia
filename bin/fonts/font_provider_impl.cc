@@ -135,7 +135,7 @@ void FontProviderImpl::GetFont(FontRequest request, GetFontCallback callback) {
   }
 
   FontData data;
-  data.vmo = std::move(duplicated_data).ToTransport();
+  data.buffer = std::move(duplicated_data).ToTransport();
   auto response = FontResponse::New();
   response->data = std::move(data);
   callback(std::move(response));

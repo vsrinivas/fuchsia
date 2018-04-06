@@ -45,7 +45,7 @@ members =  [
   "public/rust/fidl_crates/fidl_component",
   "public/rust/fidl_crates/fidl_device_settings",
   "public/rust/fidl_crates/fidl_echo2",
-  "public/rust/fidl_crates/fidl_fsl",
+  "public/rust/fidl_crates/fidl_mem",
   "public/rust/fidl_crates/fidl_geometry",
   "public/rust/fidl_crates/fidl_gfx",
   "public/rust/fidl_crates/fidl_images",
@@ -74,7 +74,7 @@ fidl_bluetooth_low_energy = { path = "public/rust/fidl_crates/fidl_bluetooth_low
 fidl_component = { path = "public/rust/fidl_crates/fidl_component" }
 fidl_device_settings = { path = "public/rust/fidl_crates/fidl_device_settings" }
 fidl_echo2 = { path = "public/rust/fidl_crates/fidl_echo2" }
-fidl_fsl = { path = "public/rust/fidl_crates/fidl_fsl" }
+fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_geometry = { path = "public/rust/fidl_crates/fidl_geometry" }
 fidl_gfx = { path = "public/rust/fidl_crates/fidl_gfx" }
 fidl_images = { path = "public/rust/fidl_crates/fidl_images" }

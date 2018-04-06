@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fsl;
+library mem;
 
-struct SizedVmoTransport {
+struct Buffer {
   // The vmo.
   handle<vmo> vmo;
+
   // The size of the data in the vmo. This size must be smaller than the
   // physical size of the vmo.
   uint64 size;

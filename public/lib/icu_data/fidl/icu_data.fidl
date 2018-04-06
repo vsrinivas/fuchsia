@@ -4,10 +4,10 @@
 
 library icu_data;
 
-// import "lib/fsl/fidl/sized_vmo_transport.fidl";
+using mem;
 
 struct ICUData {
-  fsl.SizedVmoTransport vmo;
+  mem.Buffer vmo;
 };
 
 [ServiceName="icu_data::ICUDataProvider"]

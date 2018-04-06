@@ -12,7 +12,7 @@ description = "Example client for the Fuchsia Network Service"
 [dependencies]
 failure = "0.1.1"
 fidl = "0.1"
-fidl_fsl = "0.1"
+fidl_mem = "0.1"
 fidl_network = "0.1"
 fuchsia-app = "0.1"
 fuchsia-async = "0.1"

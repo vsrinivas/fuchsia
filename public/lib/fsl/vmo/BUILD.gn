@@ -18,8 +18,8 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fsl/fidl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/mem/fidl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]

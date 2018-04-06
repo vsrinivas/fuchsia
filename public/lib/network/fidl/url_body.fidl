@@ -14,5 +14,5 @@ union URLBody {
   // A shared buffer that will contain the complete request or response body.
   handle<vmo> buffer;
   // A sized shared buffer that will contain the complete request or response body.
-  fsl.SizedVmoTransport sized_buffer;
+  mem.Buffer sized_buffer;
 };

@@ -5,9 +5,9 @@
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "fsl"
+  name = "mem"
 
   sources = [
-    "sized_vmo_transport.fidl",
+    "buffer.fidl",
   ]
 }
