@@ -8,12 +8,12 @@ package("garnet_bluetooth_examples") {
   system_image = true
 
   deps = [
-    "ble_battery_service",
+#    "ble_battery_service",
   ]
 
   binaries = [
-    {
-      name = "ble_battery_service"
-    },
+#    {
+#     name = "ble_battery_service"
+#   },
   ]
 }
