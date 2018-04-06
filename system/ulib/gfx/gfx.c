@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <err.h>
 #include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -577,10 +578,8 @@ void gfx_blend(gfx_surface* target, gfx_surface* source, unsigned srcx, unsigned
  * @brief  Ensure all graphics rendering is sent to display
  */
 void gfx_flush(gfx_surface* surface) {
-#if 0
     if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE)
-        arch_clean_cache_range((addr_t)surface->ptr, surface->len);
-#endif
+        zx_cache_flush(surface->ptr, surface->len, ZX_CACHE_FLUSH_DATA);
 
     if (surface->flush)
         surface->flush(0, surface->height - 1);
@@ -601,12 +600,11 @@ void gfx_flush_rows(struct gfx_surface* surface, unsigned start, unsigned end) {
     if (end >= surface->height)
         end = surface->height - 1;
 
-#if 0
     if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE) {
         uint32_t runlen = surface->stride * surface->pixelsize;
-        arch_clean_cache_range((addr_t)surface->ptr + start * runlen, (end - start + 1) * runlen);
+        zx_cache_flush(surface->ptr + start * runlen,
+                       (end - start + 1) * runlen, ZX_CACHE_FLUSH_DATA);
     }
-#endif
 
     if (surface->flush)
         surface->flush(start, end);

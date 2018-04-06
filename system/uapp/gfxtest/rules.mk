@@ -12,7 +12,10 @@ MODULE_GROUP := misc
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := system/ulib/gfx
+MODULE_STATIC_LIBS := \
+    system/ulib/gfx \
+    system/ulib/framebuffer \
+    system/fidl/display
 
 MODULE_LIBS := system/ulib/zircon system/ulib/fdio system/ulib/c
 
