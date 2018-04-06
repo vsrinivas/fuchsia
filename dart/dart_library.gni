@@ -393,10 +393,9 @@ if (current_toolchain == dart_toolchain) {
     #
 
     if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-      atom_name = target_name
-      if (defined(invoker.package_name)) {
-        atom_name = invoker.package_name
-      }
+      assert(defined(invoker.package_name),
+          "Dart libraries published in SDKs must have an explicit package name")
+      atom_name = invoker.package_name
 
       # Dependencies that should normally be included in any SDK containing this
       # target.
