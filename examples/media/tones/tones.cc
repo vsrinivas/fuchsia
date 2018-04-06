@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/examples/media/tones/tones.h"
+
 #include <cmath>
 #include <iostream>
 #include <limits>
 
-#include "garnet/examples/media/tones/tones.h"
-
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/media.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
+#include "lib/fxl/logging.h"
 
 // TODO(dalesat): Remove once the mixer supports floats.
 #define FLOAT_SAMPLES_SUPPORTED 0
@@ -18,10 +21,9 @@
 namespace examples {
 namespace {
 
-
 static constexpr uint32_t kChannelCount = 1;
-static constexpr uint32_t kFramesPerSecond  = 48000;
-static constexpr uint32_t kFramesPerBuffer  = 480;
+static constexpr uint32_t kFramesPerSecond = 48000;
+static constexpr uint32_t kFramesPerBuffer = 480;
 static constexpr uint32_t kTargetPayloadsInFlight = 2;
 static constexpr float kEffectivelySilentVolume = 0.001f;
 static constexpr float kNoteZeroFrequency = 110.0f;
@@ -63,17 +65,17 @@ void ConvertFloatToSigned16(float* source, int16_t* dest, size_t sample_count) {
 }
 
 static constexpr media::AudioSampleFormat kSampleFormat =
-  media::AudioSampleFormat::SIGNED_16;
+    media::AudioSampleFormat::SIGNED_16;
 static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(uint16_t);
 #else
 static constexpr media::AudioSampleFormat kSampleFormat =
-  media::AudioSampleFormat::FLOAT;
+    media::AudioSampleFormat::FLOAT;
 static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
 #endif
 
 static constexpr size_t kBytesPerBuffer = kBytesPerFrame * kFramesPerBuffer;
 static constexpr size_t kTotalMappingSize =
-  kBytesPerBuffer * kTargetPayloadsInFlight;
+    kBytesPerBuffer * kTargetPayloadsInFlight;
 
 static const std::map<int, float> notes_by_key_ = {
     {'a', Note(-4)}, {'z', Note(-3)}, {'s', Note(-2)}, {'x', Note(-1)},
@@ -84,16 +86,14 @@ static const std::map<int, float> notes_by_key_ = {
 
 }  // namespace
 
-Tones::Tones(bool interactive) : interactive_(interactive) {
+Tones::Tones(bool interactive, fxl::Closure quit_callback)
+    : interactive_(interactive), quit_callback_(quit_callback) {
   // Allocate our shared payload buffer and pass a handle to it over to the
   // renderer.
   zx::vmo payload_vmo;
   zx_status_t status = payload_buffer_.CreateAndMap(
-      kTotalMappingSize,
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      nullptr,
-      &payload_vmo,
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      kTotalMappingSize, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     std::cerr << "VmoMapper:::CreateAndMap failed - " << status;
@@ -102,7 +102,7 @@ Tones::Tones(bool interactive) : interactive_(interactive) {
 
   // Connect to the audio service and get a renderer.
   auto application_context =
-    component::ApplicationContext::CreateFromStartupInfo();
+      component::ApplicationContext::CreateFromStartupInfo();
 
   media::AudioServerPtr audio_server =
       application_context->ConnectToEnvironmentService<media::AudioServer>();
@@ -143,8 +143,7 @@ Tones::Tones(bool interactive) : interactive_(interactive) {
   }
 
   // Post a task to be called when we need to |Send|.
-  auto& task_runner = fsl::MessageLoop::GetCurrent()->task_runner();
-  task_runner->PostTask([this]() { Start(); });
+  async::PostTask(async_get_default(), [this]() { Start(); });
 
   WaitForKeystroke();
 }
@@ -153,7 +152,7 @@ Tones::~Tones() {}
 
 void Tones::Quit() {
   audio_renderer_.Unbind();
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  quit_callback_();
 }
 
 void Tones::WaitForKeystroke() {
@@ -205,8 +204,7 @@ void Tones::BuildScore() {
 
 void Tones::Start() {
   Send(kTargetPayloadsInFlight);
-  audio_renderer_->PlayNoReply(media::kNoTimestamp,
-                               media::kNoTimestamp);
+  audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
 }
 
 void Tones::Send(uint32_t amt) {
@@ -217,10 +215,10 @@ void Tones::Send(uint32_t amt) {
     packet.payload_size = kBytesPerBuffer;
 
     FXL_DCHECK((packet.payload_offset + packet.payload_size) <=
-                payload_buffer_.size());
+               payload_buffer_.size());
 
-    auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start())
-      + packet.payload_offset;
+    auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start()) +
+                       packet.payload_offset;
 
     // Fill it with audio.
 #if FLOAT_SAMPLES_SUPPORTED
@@ -228,8 +226,7 @@ void Tones::Send(uint32_t amt) {
 #else
     float buffer[kFramesPerBuffer * kChannelCount];
     FillBuffer(buffer);
-    ConvertFloatToSigned16(buffer,
-                           reinterpret_cast<int16_t*>(payload_ptr),
+    ConvertFloatToSigned16(buffer, reinterpret_cast<int16_t*>(payload_ptr),
                            kFramesPerBuffer * kChannelCount);
 #endif
 

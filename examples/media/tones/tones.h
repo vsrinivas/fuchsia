@@ -4,21 +4,23 @@
 
 #pragma once
 
-#include <fbl/vmo_mapper.h>
 #include <list>
 #include <map>
+
+#include <fbl/vmo_mapper.h>
+#include <fuchsia/cpp/media.h>
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
 
 namespace examples {
 
 class Tones {
  public:
-  Tones(bool interactive);
+  Tones(bool interactive, fxl::Closure quit_callback);
 
   ~Tones();
 
@@ -53,6 +55,7 @@ class Tones {
   }
 
   bool interactive_;
+  fxl::Closure quit_callback_;
   fsl::FDWaiter fd_waiter_;
   media::AudioRenderer2Ptr audio_renderer_;
   std::map<int64_t, float> frequencies_by_pts_;

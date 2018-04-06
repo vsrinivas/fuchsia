@@ -6,10 +6,10 @@
 
 #include <fbl/auto_call.h>
 #include <fcntl.h>
+#include <lib/async-loop/loop.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
@@ -119,7 +119,7 @@ void WavRecorder::Shutdown() {
     }
   }
 
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  quit_callback_();
 }
 
 bool WavRecorder::SetupPayloadBuffer() {

@@ -4,12 +4,13 @@
 
 #include "garnet/examples/media/simple_sine/simple_sine.h"
 
+#include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 #include <zircon/syscalls.h>
 
-#include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fxl/logging.h"
 #include <fuchsia/cpp/media.h>
+#include "lib/app/cpp/connect.h"
+#include "lib/fxl/logging.h"
 
 namespace {
 // TODO(mpuryear): Make frame rate, num_chans, payload size & num, frequency,
@@ -39,7 +40,10 @@ constexpr size_t kNumPacketsToSend =
 
 namespace examples {
 
-MediaApp::MediaApp() {}
+MediaApp::MediaApp(fxl::Closure quit_callback) : quit_callback_(quit_callback) {
+  FXL_DCHECK(quit_callback_);
+}
+
 MediaApp::~MediaApp() {}
 
 // Prepare for playback, submit initial data and start the presentation timeline
@@ -57,8 +61,7 @@ void MediaApp::Run(component::ApplicationContext* app_context) {
     SendPacket(CreateAudioPacket(payload_num));
   }
 
-  audio_renderer_->PlayNoReply(media::kNoTimestamp,
-                               media::kNoTimestamp);
+  audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
 }
 
 // Use ApplicationContext to acquire AudioServerPtr, MediaRendererPtr and
@@ -95,11 +98,8 @@ void MediaApp::SetMediaType() {
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
   zx_status_t status = payload_buffer_.CreateAndMap(
-      kTotalMappingSize,
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      nullptr,
-      &payload_vmo,
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      kTotalMappingSize, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
@@ -139,8 +139,8 @@ media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 // b. if all expected packets have completed, begin closing down the system.
 void MediaApp::SendPacket(media::AudioPacket packet) {
   ++num_packets_sent_;
-  audio_renderer_->SendPacket(
-      std::move(packet), [this]() { OnSendPacketComplete(); });
+  audio_renderer_->SendPacket(std::move(packet),
+                              [this]() { OnSendPacketComplete(); });
 }
 
 void MediaApp::OnSendPacketComplete() {
@@ -157,7 +157,7 @@ void MediaApp::OnSendPacketComplete() {
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp)
 void MediaApp::Shutdown() {
   payload_buffer_.Unmap();
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  quit_callback_();
 }
 
 }  // namespace examples

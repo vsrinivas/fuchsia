@@ -4,17 +4,20 @@
 
 #include <iostream>
 
-#include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/examples/media/simple_sine/simple_sine.h"
+#include "lib/app/cpp/application_context.h"
 
 int main(int argc, const char** argv) {
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   auto application_context =
       component::ApplicationContext::CreateFromStartupInfo();
-  examples::MediaApp media_app;
+  examples::MediaApp media_app(
+      [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
+
   media_app.Run(application_context.get());
 
   // We've set everything going. Wait for our message loop to return.

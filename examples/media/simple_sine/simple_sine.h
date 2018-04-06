@@ -5,16 +5,16 @@
 #pragma once
 
 #include <fbl/vmo_mapper.h>
+#include <fuchsia/cpp/media.h>
 
 #include "lib/app/cpp/application_context.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
+#include "lib/fxl/functional/closure.h"
 
 namespace examples {
 
 class MediaApp {
  public:
-  MediaApp();
+  MediaApp(fxl::Closure quit_callback);
   ~MediaApp();
 
   void Run(component::ApplicationContext* app_context);
@@ -31,6 +31,8 @@ class MediaApp {
   void OnSendPacketComplete();
 
   void Shutdown();
+
+  fxl::Closure quit_callback_;
 
   media::AudioRenderer2Ptr audio_renderer_;
 

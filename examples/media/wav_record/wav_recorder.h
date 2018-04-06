@@ -10,13 +10,20 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/command_line.h"
+#include "lib/fxl/functional/closure.h"
+#include "lib/fxl/logging.h"
 
 namespace examples {
 
 class WavRecorder : public media::AudioCapturerClient {
  public:
-  WavRecorder(fxl::CommandLine cmd_line)
-      : async_binding_(this), cmd_line_(std::move(cmd_line)) {}
+  WavRecorder(fxl::CommandLine cmd_line, fxl::Closure quit_callback)
+      : async_binding_(this),
+        cmd_line_(std::move(cmd_line)),
+        quit_callback_(quit_callback) {
+    FXL_DCHECK(quit_callback_);
+  }
+
   ~WavRecorder();
   void Run(component::ApplicationContext* app_context);
 
@@ -35,6 +42,7 @@ class WavRecorder : public media::AudioCapturerClient {
   media::audio::WavWriter<> wav_writer_;
 
   fxl::CommandLine cmd_line_;
+  fxl::Closure quit_callback_;
   const char* filename_ = "";
   bool verbose_ = false;
   bool loopback_ = false;

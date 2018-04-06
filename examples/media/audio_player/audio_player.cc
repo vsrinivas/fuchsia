@@ -4,26 +4,28 @@
 
 #include "garnet/examples/media/audio_player/audio_player.h"
 
-#include <fcntl.h>
-
 #include <iomanip>
 
+#include <fcntl.h>
 #include <fuchsia/cpp/media.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/default.h>
 
 #include "garnet/bin/media/util/file_channel.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/url/gurl.h"
 
 namespace examples {
 
-AudioPlayer::AudioPlayer(const AudioPlayerParams& params)
-    : quit_when_done_(!params.stay()) {
+AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
+                         fxl::Closure quit_callback)
+    : quit_callback_(quit_callback), quit_when_done_(!params.stay()) {
   FXL_DCHECK(params.is_valid());
+  FXL_DCHECK(quit_callback_);
 
   auto application_context =
       component::ApplicationContext::CreateFromStartupInfo();
@@ -66,7 +68,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
   if (status) {
     // Process status received from the player.
     if (status->end_of_stream && quit_when_done_) {
-      fsl::MessageLoop::GetCurrent()->PostQuitTask();
+      quit_callback_();
       FXL_LOG(INFO) << "Reached end-of-stream. Quitting.";
     }
 
@@ -76,7 +78,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
                        << status->problem->details;
         problem_shown_ = true;
         if (quit_when_done_) {
-          fsl::MessageLoop::GetCurrent()->PostQuitTask();
+          quit_callback_();
           FXL_LOG(INFO) << "Problem detected. Quitting.";
         }
       }

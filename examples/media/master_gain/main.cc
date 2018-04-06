@@ -5,11 +5,13 @@
 #include <iomanip>
 #include <iostream>
 
+#include <fuchsia/cpp/media.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
-#include <fuchsia/cpp/media.h>
 
 void usage(const char* prog_name) {
   std::cout << "Usage: " << prog_name << " [gain]\n";
@@ -37,7 +39,7 @@ int main(int argc, const char** argv) {
     set_gain = true;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   auto application_context =
       component::ApplicationContext::CreateFromStartupInfo();
@@ -49,10 +51,10 @@ int main(int argc, const char** argv) {
     audio_server->SetMasterGain(gain_target);
   }
 
-  audio_server->GetMasterGain([](float db_gain) {
+  audio_server->GetMasterGain([&loop](float db_gain) {
     std::cout << "Master gain is currently " << std::fixed
               << std::setprecision(2) << db_gain << " dB.\n";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
   });
 
   loop.Run();

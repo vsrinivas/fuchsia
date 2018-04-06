@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+
 #include "garnet/examples/media/audio_player/audio_player.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
@@ -14,9 +16,11 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  fsl::MessageLoop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  examples::AudioPlayer audio_player(params);
+  examples::AudioPlayer audio_player(params, [&loop]() {
+    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+  });
 
   loop.Run();
   return 0;
