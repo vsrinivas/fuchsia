@@ -3,7 +3,6 @@
         "garnet/packages/prod/vulkan"
     ],
     "packages": {
-        "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain",
-        "display-pipe": "//garnet/lib/magma:display-pipe"
+        "image-pipe-swapchain": "//garnet/lib/vulkan:image-pipe-swapchain"
     }
 }

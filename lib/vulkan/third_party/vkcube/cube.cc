@@ -2760,7 +2760,6 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
     auto application_context_ =
         component::ApplicationContext::CreateFromStartupInfo();
 
-#if defined(CUBE_USE_MOZART)
     demo->fuchsia_state->view_provider_service = std::make_unique<mozart::ViewProviderService>(
         application_context_.get(), [demo](mozart::ViewContext view_context) {
             auto resize_callback = [demo](
@@ -2787,28 +2786,6 @@ void demo_run_image_pipe(struct demo* demo, int argc, char** argv)
         }
         demo->fuchsia_state->loop.RunUntilIdle();
     }
-#else
-    demo->display =
-        application_context_->ConnectToEnvironmentService<display_pipe::DisplayProvider>();
-
-    demo->display->GetInfo([demo, &loop](display_pipe::DisplayInfoPtr info) {
-
-        demo->display->BindPipe(demo->pipe.NewRequest());
-
-        demo->width = info->width;
-        demo->height = info->height;
-        demo->fuchsia_state->image_pipe_handle =
-            demo->fuchsia_state->pipe.Unbind().TakeChannel().release();
-
-        demo_init_vk_swapchain(demo);
-        demo_prepare(demo);
-        while (!demo->quit) {
-            demo_update_magma_one_frame(demo);
-        }
-        demo->fuchsia_state->loop.QuitNow();
-        demo->fuchsia_state->loop.Run();
-    });
-#endif
 }
 
 #endif // defined(CUBE_USE_IMAGE_PIPE)

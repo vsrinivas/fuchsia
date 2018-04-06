@@ -188,21 +188,6 @@ package("vkcube") {
   }
 }
 
-package("display-pipe") {
-  system_image = true
-
-  if (target_cpu == "x64") {
-    deps = [
-      "//garnet/lib/magma/src/display_pipe:display_pipe_service",
-    ]
-    binaries = [
-      {
-        name = "display_pipe"
-      },
-    ]
-  }
-}
-
 # This config allows inclusion of headers via relative paths from src
 config("magma_src_include_config") {
   include_dirs = [ "src" ]

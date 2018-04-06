@@ -34,15 +34,12 @@
 #endif
 
 #if defined(CUBE_USE_IMAGE_PIPE)
-#include <fuchsia/cpp/display_pipe.h>
-
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/logging.h"
-#include "garnet/lib/magma/src/display_pipe/client/buffer.h"
 
 #include <fuchsia/cpp/gfx.h>
 #include "garnet/public/lib/ui/scenic/fidl_helpers.h"
@@ -88,11 +85,8 @@ typedef struct {
 struct FuchsiaState {
     fsl::MessageLoop loop;
     uint32_t image_pipe_handle = 0;
-    display_pipe::DisplayProviderPtr display;
     images::ImagePipePtr pipe;
-#if defined(CUBE_USE_MOZART)
     std::unique_ptr<mozart::ViewProviderService> view_provider_service;
-#endif
     uint32_t num_frames = 60;
     uint32_t elapsed_frames = 0;
     std::chrono::time_point<std::chrono::high_resolution_clock> t0{};
