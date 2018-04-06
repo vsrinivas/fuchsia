@@ -166,7 +166,7 @@
     <project name="third_party/netstack"
              path="third_party/netstack"
              remote="https://fuchsia.googlesource.com/third_party/netstack"
-             revision="6c8e502e18cd9a24325a423fbd2f0578945e8607"
+             revision="ed030e03c41b0e0555f44590fcfc503b6a9bfe47"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/processor-trace"
              path="third_party/processor-trace"

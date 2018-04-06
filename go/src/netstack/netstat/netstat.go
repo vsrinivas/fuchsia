@@ -38,6 +38,7 @@ type icmpOutput struct {
 
 type statsOutput struct {
 	icmp icmpOutput
+	ip   netstack.IpStats
 	tcp  netstack.TcpStats
 	udp  netstack.UdpStats
 }
@@ -48,7 +49,14 @@ func (h icmpHistogram) String() string {
 
 func (o *statsOutput) String() string {
 	return fmt.Sprintf(
-		`TCP:
+		`IP:
+	%d total packets received
+	%d with invalid addresses
+	%d incoming packets discarded
+	%d incoming packets delivered
+	%d requests sent out
+	%d outgoing packets with errors
+TCP:
 	%d ActiveConnectionOpenings
 	%d PassiveConnectionOpenings
 	%d FailedConnectionAttempts
@@ -72,6 +80,12 @@ ICMP:
 	%d ICMP messages failed
 	ICMP output histogram:
 %v`,
+		o.ip.PacketsReceived,
+		o.ip.InvalidAddressesReceived,
+		o.ip.PacketsDiscarded,
+		o.ip.PacketsDelivered,
+		o.ip.PacketsSent,
+		o.ip.OutgoingPacketErrors,
 		o.tcp.ActiveConnectionOpenings,
 		o.tcp.PassiveConnectionOpenings,
 		o.tcp.FailedConnectionAttempts,
@@ -122,6 +136,7 @@ func dumpStats(a *netstatApp) {
 		}
 	}
 	as, _ := a.netstack.GetAggregateStats()
+	stats.ip = as.IpStats
 	stats.tcp = as.TcpStats
 	stats.udp = as.UdpStats
 	fmt.Printf("%v\n", stats)

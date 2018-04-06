@@ -42,6 +42,24 @@ func TestICMPSentCount(t *testing.T) {
 	}
 }
 
+func TestIPOutputPresence(t *testing.T) {
+	out := output(t, "/system/bin/netstat", "-s")
+	metrics := []string{
+		"total packets received",
+		"with invalid addresses",
+		"incoming packets discarded",
+		"incoming packets delivered",
+		"requests sent out",
+		"outgoing packets with errors",
+	}
+
+	for _, m := range metrics {
+		if !strings.Contains(out, m) {
+			t.Errorf("IP metric %q not present", m)
+		}
+	}
+}
+
 func TestUDPOutputPresence(t *testing.T) {
 	out := output(t, "/system/bin/netstat", "-s")
 	metrics := []string{

@@ -255,6 +255,14 @@ func (ni *netstackImpl) GetAggregateStats() (stats nsfidl.AggregateStats, err er
 		UnknownProtocolReceivedPackets: s.UnknownProtocolRcvdPackets,
 		MalformedReceivedPackets:       s.MalformedRcvdPackets,
 		DroppedPackets:                 s.DroppedPackets,
+		IpStats: nsfidl.IpStats{
+			PacketsReceived:          s.IP.PacketsReceived,
+			InvalidAddressesReceived: s.IP.InvalidAddressesReceived,
+			PacketsDiscarded:         s.IP.PacketsDiscarded,
+			PacketsDelivered:         s.IP.PacketsDelivered,
+			PacketsSent:              s.IP.PacketsSent,
+			OutgoingPacketErrors:     s.IP.OutgoingPacketErrors,
+		},
 		TcpStats: nsfidl.TcpStats{
 			ActiveConnectionOpenings:  s.TCP.ActiveConnectionOpenings,
 			PassiveConnectionOpenings: s.TCP.PassiveConnectionOpenings,

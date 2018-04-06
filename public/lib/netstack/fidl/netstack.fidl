@@ -47,6 +47,15 @@ struct NetInterfaceStats {
   NetTrafficStats tx;
 };
 
+struct IpStats {
+  uint64 packets_received;
+  uint64 invalid_addresses_received;
+  uint64 packets_discarded;
+  uint64 packets_delivered;
+  uint64 packets_sent;
+  uint64 outgoing_packet_errors;
+};
+
 struct TcpStats {
   uint64 active_connection_openings;
   uint64 passive_connection_openings;
@@ -70,6 +79,7 @@ struct AggregateStats {
   uint64 unknown_protocol_received_packets;
   uint64 malformed_received_packets;
   uint64 dropped_packets;
+  IpStats ip_stats;
   TcpStats tcp_stats;
   UdpStats udp_stats;
 };
