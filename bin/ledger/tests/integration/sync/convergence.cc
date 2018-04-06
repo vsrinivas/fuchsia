@@ -32,7 +32,7 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const fsl::SizedVmoTransportPtr& vmo,
+::testing::AssertionResult VmoToDouble(const mem::BufferPtr& vmo,
                                        double* dbl) {
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()

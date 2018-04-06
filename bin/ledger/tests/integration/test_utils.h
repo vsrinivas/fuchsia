@@ -46,8 +46,8 @@ std::string SnapshotFetchPartial(ledger::PageSnapshotPtr* snapshot,
                                  int64_t offset,
                                  int64_t max_size);
 
-std::string ToString(const fsl::SizedVmoTransportPtr& vmo);
-fidl::VectorPtr<uint8_t> ToArray(const fsl::SizedVmoTransportPtr& vmo);
+std::string ToString(const mem::BufferPtr& vmo);
+fidl::VectorPtr<uint8_t> ToArray(const mem::BufferPtr& vmo);
 
 }  // namespace integration
 }  // namespace test

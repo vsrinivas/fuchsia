@@ -82,10 +82,10 @@ void PageImpl::CreateReferenceFromSocket(
                              std::move(timed_callback));
 }
 
-// CreateReferenceFromVmo(SizedVmoTransport data)
+// CreateReferenceFromVmo(Buffer data)
 //   => (Status status, Reference reference);
 void PageImpl::CreateReferenceFromVmo(
-    fsl::SizedVmoTransport data,
+    mem::Buffer data,
     CreateReferenceFromSocketCallback callback) {
   auto timed_callback =
       TRACE_CALLBACK(callback, "ledger", "page_create_reference_from_vmo");

@@ -15,7 +15,7 @@ fidl::VectorPtr<uint8_t> ToArray(const std::string& str) {
   return array;
 }
 
-std::string ToString(fsl::SizedVmoTransport value) {
+std::string ToString(mem::Buffer value) {
   fsl::SizedVmo vmo;
   std::string parsed_string;
   if (!fsl::SizedVmo::FromTransport(std::move(value), &vmo)) {
@@ -90,7 +90,7 @@ class ClipboardStorage::PeekCall : Operation<fidl::StringPtr> {
 
     snapshot_->Get(ToArray(kCurrentValueKey),
                    [this, flow](ledger::Status status,
-                                fsl::SizedVmoTransportPtr value) {
+                                mem::BufferPtr value) {
                      if (value) {
                        text_ = ToString(std::move(*value));
                      }

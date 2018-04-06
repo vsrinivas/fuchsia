@@ -310,7 +310,7 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
                       page_snapshot_->Get(
                           to_array(kLedgerCounterKey),
                           [this](ledger::Status status,
-                                 fsl::SizedVmoTransportPtr value) {
+                                 mem::BufferPtr value) {
                             // 5. If counter doesn't exist, initialize.
                             // Otherwise, increment.
                             if (status == ledger::Status::KEY_NOT_FOUND) {

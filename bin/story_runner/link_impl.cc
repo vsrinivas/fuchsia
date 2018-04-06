@@ -55,7 +55,7 @@ class LinkImpl::ReadLinkDataCall : Operation<fidl::StringPtr> {
   void Cont(FlowToken flow) {
     page_snapshot_->Get(
         to_array(link_key_),
-        [this, flow](ledger::Status status, fsl::SizedVmoTransportPtr value) {
+        [this, flow](ledger::Status status, mem::BufferPtr value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND) {
               // It's expected that the key is not found when the link is

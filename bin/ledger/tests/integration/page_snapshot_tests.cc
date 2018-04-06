@@ -43,7 +43,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -74,7 +74,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
 
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
 
@@ -107,7 +107,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -149,7 +149,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
 
   // Attempt to get an entry that is not in the page.
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->FetchPartial(convert::ToArray("favorite book"), 0, -1,
                          callback::Capture([] {}, &status, &value));
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -545,7 +545,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture([] {}, &status, &value));
   ASSERT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -582,7 +582,7 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   // Get a snapshot and read the value.
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("big data"),
                 callback::Capture([] {}, &status, &value));
   ASSERT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -605,7 +605,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   page.Unbind();
 
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());
@@ -643,7 +643,7 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
 
   ledger::PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   ledger::Status status;
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture([] {}, &status, &value));
   EXPECT_EQ(ZX_OK, snapshot.WaitForResponse());

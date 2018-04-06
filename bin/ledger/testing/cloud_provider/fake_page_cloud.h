@@ -33,7 +33,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   void GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                   GetCommitsCallback callback) override;
   void AddObject(fidl::VectorPtr<uint8_t> id,
-                 fsl::SizedVmoTransport data,
+                 mem::Buffer data,
                  AddObjectCallback callback) override;
   void GetObject(fidl::VectorPtr<uint8_t> id,
                  GetObjectCallback callback) override;

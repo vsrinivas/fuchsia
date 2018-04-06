@@ -164,7 +164,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   page->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr, &status);
   EXPECT_EQ(ledger::Status::OK, status);
-  fsl::SizedVmoTransportPtr value;
+  mem::BufferPtr value;
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(ledger::Status::OK, status);
   std::string value_as_string;

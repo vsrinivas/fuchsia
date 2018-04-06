@@ -179,7 +179,7 @@ void FakePageCloud::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
 }
 
 void FakePageCloud::AddObject(fidl::VectorPtr<uint8_t> id,
-                              fsl::SizedVmoTransport data,
+                              mem::Buffer data,
                               AddObjectCallback callback) {
   if (MustReturnError()) {
     callback(cloud_provider::Status::NETWORK_ERROR);

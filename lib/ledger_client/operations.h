@@ -64,7 +64,7 @@ class ReadDataCall : Operation<DataPtr> {
   void Cont(FlowToken flow) {
     page_snapshot_->Get(
         to_array(key_),
-        [this, flow](ledger::Status status, fsl::SizedVmoTransportPtr value) {
+        [this, flow](ledger::Status status, mem::BufferPtr value) {
           if (status != ledger::Status::OK) {
             if (status != ledger::Status::KEY_NOT_FOUND || !not_found_is_ok_) {
               FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "

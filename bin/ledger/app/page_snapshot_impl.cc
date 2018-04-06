@@ -26,10 +26,9 @@
 namespace ledger {
 namespace {
 
-// Transform a SizedVmo tp an optional SizedVmoTransport. Returns null when
+// Transform a SizedVmo to an optional Buffer. Returns null when
 // status is not OK, or a not-null transport otherwise.
-fsl::SizedVmoTransportPtr ToOptionalTransport(Status status,
-                                              fsl::SizedVmo vmo) {
+mem::BufferPtr ToOptionalTransport(Status status, fsl::SizedVmo vmo) {
   if (status != Status::OK) {
     return nullptr;
   }

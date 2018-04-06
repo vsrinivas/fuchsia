@@ -46,7 +46,7 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
   }
 
   void OnNewObject(fidl::VectorPtr<uint8_t> id,
-                   fsl::SizedVmoTransport data,
+                   mem::Buffer data,
                    OnNewObjectCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }

@@ -32,7 +32,7 @@
 
 namespace ledger {
 namespace {
-std::string ToString(const fsl::SizedVmoTransportPtr& vmo) {
+std::string ToString(const mem::BufferPtr& vmo) {
   std::string value;
   bool status = fsl::StringFromVmo(*vmo, &value);
   FXL_DCHECK(status);
@@ -1178,9 +1178,9 @@ TEST_F(PageImplTest, SnapshotGetSmall) {
   RunLoop();
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fsl::SizedVmoTransportPtr actual_value;
+  mem::BufferPtr actual_value;
   auto callback_get = [this, &actual_value](Status status,
-                                            fsl::SizedVmoTransportPtr value) {
+                                            mem::BufferPtr value) {
     EXPECT_EQ(Status::OK, status);
     actual_value = std::move(value);
     message_loop_.PostQuitTask();
@@ -1227,7 +1227,7 @@ TEST_F(PageImplTest, SnapshotGetLarge) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fsl::SizedVmoTransportPtr actual_value;
+  mem::BufferPtr actual_value;
   snapshot->Get(convert::ExtendedStringView(key).ToArray(),
                 callback::Capture(MakeQuitTask(), &status, &actual_value));
   RunLoop();
@@ -1260,7 +1260,7 @@ TEST_F(PageImplTest, SnapshotGetNeedsFetch) {
 
   PageSnapshotPtr snapshot = GetSnapshot();
 
-  fsl::SizedVmoTransportPtr actual_value;
+  mem::BufferPtr actual_value;
   snapshot->Get(convert::ToArray(key),
                 ::callback::Capture(postquit_callback, &status, &actual_value));
   RunLoop();
@@ -1291,11 +1291,11 @@ TEST_F(PageImplTest, SnapshotFetchPartial) {
   PageSnapshotPtr snapshot = GetSnapshot();
 
   Status status;
-  fsl::SizedVmoTransportPtr buffer;
+  mem::BufferPtr buffer;
   snapshot->FetchPartial(
       convert::ToArray(key), 2, 5,
       [this, &status, &buffer](Status received_status,
-                               fsl::SizedVmoTransportPtr received_buffer) {
+                               mem::BufferPtr received_buffer) {
         status = received_status;
         buffer = std::move(received_buffer);
         message_loop_.PostQuitTask();
@@ -1359,7 +1359,7 @@ TEST_F(PageImplTest, ParallelPut) {
   std::string actual_value1;
   auto callback_getvalue1 = [this, &actual_value1](
                                 Status status,
-                                fsl::SizedVmoTransportPtr returned_value) {
+                                mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value1 = ToString(returned_value);
     message_loop_.PostQuitTask();
@@ -1370,7 +1370,7 @@ TEST_F(PageImplTest, ParallelPut) {
   std::string actual_value2;
   auto callback_getvalue2 = [this, &actual_value2](
                                 Status status,
-                                fsl::SizedVmoTransportPtr returned_value) {
+                                mem::BufferPtr returned_value) {
     EXPECT_EQ(Status::OK, status);
     actual_value2 = ToString(returned_value);
     message_loop_.PostQuitTask();

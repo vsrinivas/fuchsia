@@ -147,6 +147,28 @@ class FakeCobaltEncoderImpl : public CobaltEncoder {
       fidl::VectorPtr<BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override {}
 
+  void StartTimer(
+      uint32_t metric_id,
+      uint32_t encoding_id,
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      uint32_t timeout_s,
+      StartTimerCallback callback) override{};
+
+  void EndTimer(
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      uint32_t timeout_s,
+      EndTimerCallback callback) override{};
+
+  void EndTimerMultiPart(
+      fidl::StringPtr timer_id,
+      uint64_t timestamp,
+      fidl::StringPtr part_name,
+      fidl::VectorPtr<ObservationValue> observations,
+      uint32_t timeout_s,
+      EndTimerMultiPartCallback callback) override{};
+
   void AddMultipartObservation(
       uint32_t metric_id,
       fidl::VectorPtr<ObservationValue> observation,

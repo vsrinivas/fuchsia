@@ -123,7 +123,7 @@ interface PageCloud {
       -> (Status @status, vector<Commit>? commits, vector<uint8>? position_token);
 
   // Uploads the given object to the cloud under the given id.
-  3: AddObject(vector<uint8> id, fsl.SizedVmoTransport data) -> (Status @status);
+  3: AddObject(vector<uint8> id, mem.Buffer buffer) -> (Status @status);
 
   // Retrieves the object of the given id from the cloud.
   //
@@ -167,7 +167,7 @@ interface PageCloudWatcher {
   //
   // No subsequent calls are made until the client calls the callback of the
   // previous one.
-  2: OnNewObject(vector<uint8> id, fsl.SizedVmoTransport data) -> ();
+  2: OnNewObject(vector<uint8> id, mem.Buffer buffer) -> ();
 
   // Called when an error occurs.
   //
