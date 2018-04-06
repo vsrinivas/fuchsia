@@ -12,7 +12,6 @@
 #include <zx/time.h>
 
 #include "garnet/bin/mdns/service/ip_address.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/netstack/c/netconfig.h"

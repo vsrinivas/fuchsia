@@ -14,7 +14,6 @@
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/standalone/ioctl_interface_monitor.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 
 namespace mdns {

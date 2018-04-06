@@ -10,13 +10,14 @@
 #include <unordered_map>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/mdns_transceiver.h"
 #include "garnet/bin/mdns/service/socket_address.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_point.h"
 
 namespace mdns {
@@ -266,10 +267,10 @@ class Mdns : public MdnsAgent::Host {
   void ReceiveResource(const DnsResource& resource,
                        MdnsResourceSection section);
 
-  // Runs tasks in |task_queue_| using |task_runner_|.
+  // Runs tasks in |task_queue_| using |async_|.
   void PostTask();
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
   MdnsTransceiver transceiver_;
   std::string original_host_name_;
   uint32_t next_host_name_deduplicator_ = 2;

@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/mdns/service/mdns.h"
+
 #include <iostream>
 #include <limits>
 #include <unordered_set>
 
-#include "garnet/bin/mdns/service/mdns.h"
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "garnet/bin/mdns/service/address_prober.h"
 #include "garnet/bin/mdns/service/address_responder.h"
@@ -18,13 +21,12 @@
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/service/resource_renewer.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
 namespace mdns {
 
-Mdns::Mdns() : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
+Mdns::Mdns() : async_(async_get_default()) {}
 
 Mdns::~Mdns() {}
 
@@ -422,7 +424,8 @@ void Mdns::PostTask() {
 
   posted_task_time_ = task_queue_.top().time_;
 
-  task_runner_->PostTaskForTime(
+  async::PostTaskForTime(
+      async_,
       [this]() {
         // Suppress recursive calls to this method.
         posted_task_time_ = fxl::TimePoint::Min();
@@ -442,7 +445,7 @@ void Mdns::PostTask() {
           PostTask();
         }
       },
-      posted_task_time_);
+      zx::time(posted_task_time_.ToEpochDelta().ToNanoseconds()));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

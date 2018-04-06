@@ -4,21 +4,23 @@
 
 #pragma once
 
+#include <fuchsia/cpp/mdns.h>
 #include <zx/channel.h>
 
 #include "garnet/bin/mdns/tool/mdns_params.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
-#include <fuchsia/cpp/mdns.h>
 
 namespace mdns {
 
 class MdnsImpl : public MdnsResponder {
  public:
   MdnsImpl(component::ApplicationContext* application_context,
-           MdnsParams* params);
+           MdnsParams* params,
+           fxl::Closure quit_callback);
 
   ~MdnsImpl() override;
 
@@ -52,6 +54,7 @@ class MdnsImpl : public MdnsResponder {
                       fidl::StringPtr subtype,
                       GetPublicationCallback callback) override;
 
+  fxl::Closure quit_callback_;
   MdnsServicePtr mdns_service_;
   ServiceSubscriber subscriber_;
   fidl::Binding<MdnsResponder> binding_;
