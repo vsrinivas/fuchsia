@@ -17,7 +17,6 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include "garnet/bin/appmgr/config.h"
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 #include "garnet/bin/appmgr/job_holder.h"
 #include "garnet/bin/appmgr/root_application_loader.h"
@@ -25,28 +24,15 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings.h"
 
-constexpr char kDefaultConfigPath[] = "/system/data/appmgr/initial.config";
-constexpr char kRootLabel[] = "root";
+constexpr char kRootLabel[] = "app";
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  std::string config_file;
-  command_line.GetOptionValue("config", &config_file);
-
-  const auto& positional_args = command_line.positional_args();
-  if (config_file.empty() && positional_args.empty())
-    config_file = kDefaultConfigPath;
-
-  component::Config config;
-  if (!config_file.empty()) {
-    config.ReadIfExistsFrom(config_file);
-  }
-
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   fs::ManagedVfs vfs(loop.async());
-  component::RootApplicationLoader root_loader(config.TakePath());
+  component::RootApplicationLoader root_loader;
   fbl::RefPtr<fs::PseudoDir> directory(fbl::AdoptRef(new fs::PseudoDir()));
   directory->AddEntry(
       component::ApplicationLoader::Name_,

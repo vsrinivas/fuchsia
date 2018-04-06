@@ -16,8 +16,6 @@ source_set("lib") {
     "application_namespace.h",
     "application_runner_holder.cc",
     "application_runner_holder.h",
-    "config.cc",
-    "config.h",
     "dynamic_library_loader.cc",
     "dynamic_library_loader.h",
     "job_holder.cc",

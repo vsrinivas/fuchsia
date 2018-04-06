@@ -18,10 +18,9 @@
 
 namespace component {
 
-RootApplicationLoader::RootApplicationLoader(std::vector<std::string> path)
-    : path_(std::move(path)) {}
+RootApplicationLoader::RootApplicationLoader() = default;
 
-RootApplicationLoader::~RootApplicationLoader() {}
+RootApplicationLoader::~RootApplicationLoader() = default;
 
 void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
                                             LoadApplicationCallback callback) {
@@ -50,8 +49,8 @@ void RootApplicationLoader::LoadApplication(fidl::StringPtr url,
           }
         }
       }
-      for (const auto& entry : path_) {
-        std::string qualified_path = fxl::Concatenate({entry, "/", path});
+      for (const auto& entry : { "/system/bin", "/system/pkgs" }) {
+        std::string qualified_path = fxl::Concatenate({fxl::StringView(entry), "/", path});
         fd.reset(open(qualified_path.c_str(), O_RDONLY));
         if (fd.is_valid()) {
           path = qualified_path;
