@@ -411,7 +411,7 @@ only module.
 		mkdir(filepath.Dir(*outDir))
 	}
 
-	createLayout("zircon_legacy", fuchsiaRoot, *outDir)
+	createLayout("garnet", fuchsiaRoot, *outDir)
 
 	for _, c := range components {
 		if *c.flag {
