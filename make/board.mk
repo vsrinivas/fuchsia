@@ -24,6 +24,11 @@ BOARD_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-bootdata.bin
 BOARD_COMBO_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-combo-bootdata.bin
 
 ifeq ($(PLATFORM_USE_SHIM),true)
+ifeq ($(TARGET),arm64)
+include kernel/target/arm64/boot-shim/rules.mk
+else
+$(error PLATFORM_USE_SHIM not supported for target $(TARGET))
+endif
 BOARD_BOOT_SHIM_OPTS := --header $(BOOT_SHIM_BIN) --header-align $(KERNEL_ALIGN)
 else
 BOARD_BOOT_SHIM_OPTS :=

@@ -10,8 +10,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// Include board specific definitions
+#include "boot-shim-config.h"
+
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
+#if HAS_DEVICE_TREE
 typedef enum {
     NODE_NONE,
     NODE_CHOSEN,
@@ -80,6 +84,7 @@ static void read_device_tree(void* device_tree, device_tree_context_t* ctx) {
     }
     dt_walk(&dt, node_callback, prop_callback, ctx);
 }
+#endif // HAS_DEVICE_TREE
 
 static void append_bootdata(bootdata_t* container, uint32_t type, void* payload, uint32_t length) {
     bootdata_t* dest = (bootdata_t*)((uintptr_t)container + container->length + sizeof(bootdata_t));
@@ -125,6 +130,7 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
     // We will do this relocation after we are done appending new bootdata items.
     bool relocate_kernel = (bootdata != NULL);
 
+#if HAS_DEVICE_TREE
     // Parse the Linux device tree to find our bootdata, kernel command line and RAM size
     device_tree_context_t ctx;
     ctx.node = NODE_NONE;
@@ -166,6 +172,7 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
     if (ctx.cmdline && ctx.cmdline_length) {
         append_bootdata(bootdata, BOOTDATA_CMDLINE, ctx.cmdline, ctx.cmdline_length);
     }
+#endif // HAS_DEVICE_TREE
 
     uintptr_t kernel_base;
 

@@ -17,11 +17,12 @@ include make/board.mk
 
 # qemu needs a shimmed kernel
 QEMU_ZIRCON := $(BUILDDIR)/qemu-zircon.bin
+QEMU_BOOT_SHIM := $(BUILDDIR)/qemu-boot-shim.bin
 
 # prepend shim to kernel image
-$(QEMU_ZIRCON): $(MKBOOTFS) $(BOOT_SHIM_BIN) $(OUTLKBIN)
+$(QEMU_ZIRCON): $(MKBOOTFS) $(QEMU_BOOT_SHIM) $(OUTLKBIN)
 	$(call BUILDECHO,generating $@)
-	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) --header $(BOOT_SHIM_BIN) --header-align $(KERNEL_ALIGN)
+	$(NOECHO)$(MKBOOTFS) -o $@ $(OUTLKBIN) --header $(QEMU_BOOT_SHIM) --header-align $(KERNEL_ALIGN)
 
 GENERATED += $(QEMU_ZIRCON)
 EXTRA_BUILDDEPS += $(QEMU_ZIRCON)

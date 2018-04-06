@@ -10,6 +10,7 @@ PLATFORM_VID := 7   # PDEV_VID_HARDKERNEL
 PLATFORM_PID := 1   # PDEV_PID_ODROID_C2
 PLATFORM_BOARD_NAME := odroidc2
 PLATFORM_MDI_SRCS := $(LOCAL_DIR)/odroidc2.mdi
+PLATFORM_USE_SHIM := true
 
 include make/board.mk
 
@@ -18,8 +19,9 @@ include make/board.mk
 HEADER_TOOL := $(LOCAL_DIR)/prepend-header.py
 KERNEL_LOAD_OFFSET := 0x10280000
 KERNEL_IMAGE := $(BUILDDIR)/odroidc2-zircon.bin
+ODROID_BOOT_SHIM := $(BUILDDIR)/odroidc2-boot-shim.bin
 
-$(KERNEL_IMAGE): $(HEADER_TOOL) $(OUTLKBIN) $(BOOT_SHIM_BIN)
-	$(NOECHO)$(HEADER_TOOL) --kernel $(OUTLKBIN) --shim $(BOOT_SHIM_BIN) --load_offset $(KERNEL_LOAD_OFFSET) --output $(KERNEL_IMAGE)
+$(KERNEL_IMAGE): $(HEADER_TOOL) $(OUTLKBIN) $(ODROID_BOOT_SHIM)
+	$(NOECHO)$(HEADER_TOOL) --kernel $(OUTLKBIN) --shim $(ODROID_BOOT_SHIM) --load_offset $(KERNEL_LOAD_OFFSET) --output $(KERNEL_IMAGE)
 
 EXTRA_KERNELDEPS += $(KERNEL_IMAGE)
