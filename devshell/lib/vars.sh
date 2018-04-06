@@ -77,12 +77,18 @@ FUCHSIA_ARCH='${arch}'"
 #     OR
 #   - $2 if it doesn't
 # else return ""
+# if -z is suppled as the third argument, get the netsvc
+# address instead of the netstack one
 function get-device-addr {
   device=""
   if [[ "$1" == "-d" || "$1" == "--device" ]]; then
     shift
     if [[ "$1" == *"-"* ]]; then
-      device="$(fx-command-run netaddr $1 --fuchsia)"
+      if [[ "$2" != "-z" ]]; then
+        device="$(fx-command-run netaddr $1 --fuchsia)"
+      else
+        device="$(fx-command-run netaddr $1)"
+      fi
     else
       device="$1"
     fi

@@ -4,7 +4,11 @@
 # found in the LICENSE file.
 
 ### start `boot` and `serve-updates` in a single command
-## usage: fx serve
+## usage: fx serve [-v] [-d device]
+##   -v enable more verbose output (must be first argument)
+##   -d target a specifc device
+##
+## If supplied '-v' it must be the first argument
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
@@ -18,8 +22,43 @@ kill_child_processes() {
 }
 trap kill_child_processes EXIT
 
-fx-command-run boot &
-fx-command-run serve-updates &
+boot_args=()
+serve_args=()
+device=""
+
+while (($#)); do
+  case "$1" in
+    -d|--device)
+      serve_args+=("$1")
+      shift
+      if [[ "$1" != *"-"* ]]; then
+        echo "Device argument must be a name, eg. 'acid-grab-stuck-line'"
+        exit 1
+      fi
+      serve_args+=("$1")
+      boot_args+=("-a")
+      device="$(get-device-addr --device $1 -z)"
+      if [[ ! -n "${device}" ]]; then
+        echo "'$1' does not resolve"
+        exit 1
+      fi
+      sep="%"
+      prefix="${device%%$sep*}"
+      device="${device:0:${#prefix}}"
+      boot_args+=("${device}")
+      ;;
+    -v)
+      serve_args+=("$1")
+      ;;
+    *)
+      boot_args+=("$1")
+      ;;
+  esac
+  shift
+done
+
+fx-command-run boot "${boot_args[@]}" &
+fx-command-run serve-updates "${serve_args[@]}" &
 
 child_pids=$(jobs -p)
 while true; do

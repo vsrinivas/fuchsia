@@ -35,11 +35,16 @@ usage() {
 netboot=false
 bootfs=false
 add_data=true
+ip_targ=()
 
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
     usage
+    ;;
+  -a)
+    shift
+    ip_targ=("-a" "$1")
     ;;
   --netboot)
     netboot=true
@@ -163,6 +168,7 @@ else
 fi
 
 exec "${ZIRCON_TOOLS_DIR}/bootserver" \
+  "${ip_targ[@]}" \
   "${disks[@]}" \
   "${ZIRCON_BUILD_DIR}/${zircon_bin}" \
   "${ramdisk}" \
