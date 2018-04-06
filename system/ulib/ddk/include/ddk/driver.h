@@ -160,7 +160,4 @@ enum {
 #include <ddk/protodefs.h>
 };
 
-typedef int ZX_PROTOCOL_ETHERMAC_deprecated_use_ETHERNET_IMPL __attribute__((deprecated));
-#define ZX_PROTOCOL_ETHERMAC ((ZX_PROTOCOL_ETHERMAC_deprecated_use_ETHERNET_IMPL)('pEMA'))
-
 __END_CDECLS;
