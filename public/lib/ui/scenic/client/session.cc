@@ -9,6 +9,10 @@
 
 namespace scenic_lib {
 
+constexpr size_t kCommandsPerMessage =
+    (ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t)
+                              - sizeof(fidl_vector_t)) / sizeof(ui::Command);
+
 Session::Session(ui::SessionPtr session,
                  fidl::InterfaceRequest<ui::SessionListener> session_listener)
     : session_(std::move(session)), session_listener_binding_(this) {
@@ -42,6 +46,8 @@ void Session::ReleaseResource(uint32_t resource_id) {
 
 void Session::Enqueue(gfx::Command command) {
   commands_.push_back(NewCommand(std::move(command)));
+  if (commands_->size() >= kCommandsPerMessage)
+    Flush();
 }
 
 void Session::EnqueueAcquireFence(zx::event fence) {
