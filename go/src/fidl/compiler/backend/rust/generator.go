@@ -29,7 +29,7 @@ func writeFile(outputFilename string,
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
 
-	srcPath := config.FidlStem + ".rs"
+	srcPath := config.OutputBase + ".rs"
 
 	tmpls := template.New("RustTemplates")
 	template.Must(tmpls.Parse(templates.SourceFile))

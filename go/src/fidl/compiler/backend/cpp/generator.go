@@ -84,13 +84,13 @@ func generateImplementation(implementationPath string, tmpls *template.Template,
 func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error {
 	tree := ir.Compile(fidl)
 
-	relStem, err := filepath.Rel(config.RootGenDir, config.FidlStem)
+	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)
 	if err != nil {
 		return err
 	}
 
-	headerPath := config.FidlStem + ".h"
-	implementationPath := config.FidlStem + ".cc"
+	headerPath := config.OutputBase + ".h"
+	implementationPath := config.OutputBase + ".cc"
 	tree.PrimaryHeader = relStem + ".h"
 
 	tmpls := template.New("CPPTemplates")

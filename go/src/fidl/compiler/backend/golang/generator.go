@@ -49,5 +49,5 @@ func (_ FidlGenerator) GenerateFidl(fidl types.Root, config *types.Config) error
 	template.Must(tmpls.Parse(templates.Struct))
 	template.Must(tmpls.Parse(templates.Union))
 
-	return writeGoLibrary(config.FidlStem, tmpls.Lookup("GenerateLibraryFile"), tree)
+	return writeGoLibrary(config.OutputBase, tmpls.Lookup("GenerateLibraryFile"), tree)
 }

@@ -41,7 +41,7 @@ template("fidl_dart") {
       ":*",
     ]
 
-    tool = "//garnet/go/src/fidl:fidl_backend"
+    tool = "//garnet/go/src/fidl:fidlgen"
 
     inputs = [
       json_representation,
@@ -52,13 +52,13 @@ template("fidl_dart") {
     ]
 
     args = [
-      "-fidl-json",
+      "--json",
       rebase_path(json_representation, root_build_dir),
-      "-fidl-stem",
+      "--output-base",
       rebase_path(file_stem, root_build_dir),
-      "--root-gen-dir",
+      "--include-base",
       rebase_path(root_gen_dir, root_build_dir),
-      "-generators",
+      "--generators",
       "dart",
     ]
 
