@@ -514,8 +514,8 @@ int main(int argc, char** argv) {
         }
 
         if (strcmp(BOOTLOADER_VERSION, adv_version)) {
-            log("%sWARNING: Bootloader version '%s' != '%s'. Please Upgrade%s",
-                ANSI(RED), adv_version, BOOTLOADER_VERSION, ANSI(RESET));
+            log("%sWARNING: Bootserver version '%s' != remote bootloader '%s'. Please Upgrade%s",
+                ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
             if (!strcmp(adv_version, "0.5.5")) {
                 use_filename_prefix = false;
             }
