@@ -18,6 +18,7 @@ enum {
     BTI_USB_XHCI,
     BTI_MALI,
     BTI_DISPLAY,
+    BTI_EMMC,
 };
 
 typedef struct {
@@ -44,3 +45,6 @@ zx_status_t vim_uart_init(vim_bus_t* bus);
 
 // vim-usb.c
 zx_status_t vim_usb_init(vim_bus_t* bus);
+
+// vim-sd-emmc.c
+zx_status_t vim_sd_emmc_init(vim_bus_t* bus);

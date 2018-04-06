@@ -171,3 +171,28 @@
 #define S912_AO_PWM_MISC_REG_AB     0x56
 #define S912_AO_PWM_DELTA_SIGMA_AB  0x57
 
+// Alternate Functions for EMMC/NAND
+#define S912_EMMC_NAND_D0       S912_GPIOBOOT(0)
+#define S912_EMMC_NAND_D0_FN    1
+#define S912_EMMC_NAND_D1       S912_GPIOBOOT(1)
+#define S912_EMMC_NAND_D1_FN    1
+#define S912_EMMC_NAND_D2       S912_GPIOBOOT(2)
+#define S912_EMMC_NAND_D2_FN    1
+#define S912_EMMC_NAND_D3       S912_GPIOBOOT(3)
+#define S912_EMMC_NAND_D3_FN    1
+#define S912_EMMC_NAND_D4       S912_GPIOBOOT(4)
+#define S912_EMMC_NAND_D4_FN    1
+#define S912_EMMC_NAND_D5       S912_GPIOBOOT(5)
+#define S912_EMMC_NAND_D5_FN    1
+#define S912_EMMC_NAND_D6       S912_GPIOBOOT(6)
+#define S912_EMMC_NAND_D6_FN    1
+#define S912_EMMC_NAND_D7       S912_GPIOBOOT(7)
+#define S912_EMMC_NAND_D7_FN    1
+#define S912_EMMC_CLK           S912_GPIOBOOT(8)
+#define S912_EMMC_CLK_FN        1
+#define S912_EMMC_RST           S912_GPIOBOOT(9)
+#define S912_EMMC_RST_FN        1
+#define S912_EMMC_CMD           S912_GPIOBOOT(10)
+#define S912_EMMC_CMD_FN        1
+#define S912_EMMC_DS            S912_GPIOBOOT(15)
+#define S912_EMMC_DS_FN         1
