@@ -75,4 +75,10 @@ __BEGIN_CDECLS;
 #define PDEV_VID_INTEL              8
 #define PDEV_DID_INTEL_CPU_TRACE    1 // Intel CPU tracing driver
 
+// NXP
+#define PDEV_VID_NXP                9
+#define PDEV_PID_IMX8MEVK           1
+
+#define PDEV_DID_IMX_GPIO           1
+
 __END_CDECLS;
