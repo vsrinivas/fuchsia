@@ -27,8 +27,6 @@ class FfmpegDecoderBase : public Decoder {
   std::unique_ptr<StreamType> output_stream_type() override;
 
   // Transform implementation.
-  fxl::RefPtr<fxl::TaskRunner> GetTaskRunner() override;
-
   void Flush() override;
 
   bool TransformPacket(const PacketPtr& input,
@@ -127,10 +125,6 @@ class FfmpegDecoderBase : public Decoder {
   ffmpeg::AvFramePtr av_frame_ptr_;
   int64_t next_pts_ = Packet::kUnknownPts;
   TimelineRate pts_rate_;
-
-  // The task runner to be used for running this node and its stage. We need
-  // a single-threaded task runner, because ffmpeg decoders are thread-hostile.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame. This is set only during

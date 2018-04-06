@@ -16,6 +16,8 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
  public:
   static std::shared_ptr<Decoder> Create(AvCodecContextPtr av_codec_context);
 
+  FfmpegVideoDecoder(AvCodecContextPtr av_codec_context);
+
   ~FfmpegVideoDecoder() override;
 
  protected:
@@ -31,8 +33,6 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
       const std::shared_ptr<PayloadAllocator>& allocator) override;
 
  private:
-  FfmpegVideoDecoder(AvCodecContextPtr av_codec_context);
-
   FfmpegVideoFrameLayout frame_layout_;
   std::unique_ptr<StreamType> revised_stream_type_;
 

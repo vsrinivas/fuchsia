@@ -6,6 +6,8 @@
 #include <map>
 #include <thread>
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "garnet/bin/media/ffmpeg/av_format_context.h"
 #include "garnet/bin/media/ffmpeg/av_io_context.h"
@@ -13,13 +15,11 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 #include "garnet/bin/media/util/incident.h"
 #include "garnet/bin/media/util/safe_clone.h"
-#include "garnet/bin/media/util/thread_aware_shared_ptr.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -146,9 +146,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
 // static
 std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<Reader> reader) {
-  return ThreadAwareSharedPtr<Demux>(
-      new FfmpegDemuxImpl(reader),
-      fsl::MessageLoop::GetCurrent()->task_runner());
+  return std::make_shared<FfmpegDemuxImpl>(reader);
 }
 
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<Reader> reader)
@@ -206,9 +204,9 @@ void FfmpegDemuxImpl::Worker() {
   if (result_ != Result::kOk) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
                    << static_cast<int>(result_);
-    ReportProblem(result_ == Result::kNotFound ? kProblemAssetNotFound
-                                               : kProblemInternal,
-                  "");
+    ReportProblem(
+        result_ == Result::kNotFound ? kProblemAssetNotFound : kProblemInternal,
+        "");
     init_complete_.Occur();
     return;
   }
@@ -228,8 +226,7 @@ void FfmpegDemuxImpl::Worker() {
   if (r < 0) {
     FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     result_ = Result::kInternalError;
-    ReportProblem(kProblemInternal,
-                  "avformat_find_stream_info failed");
+    ReportProblem(kProblemInternal, "avformat_find_stream_info failed");
     init_complete_.Occur();
     return;
   }
@@ -286,7 +283,7 @@ void FfmpegDemuxImpl::Worker() {
 
       // TODO(dalesat): Resolve the race that makes this necessary.
       task_runner_->PostTask(fxl::MakeCopyable(
-          [ this, stream_index, packet = std::move(packet) ]() mutable {
+          [this, stream_index, packet = std::move(packet)]() mutable {
             ActiveMultistreamSourceStage* stage_ptr = stage();
             if (stage_ptr) {
               stage_ptr->SupplyPacket(stream_index, std::move(packet));

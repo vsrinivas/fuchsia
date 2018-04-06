@@ -102,26 +102,9 @@ external events.
 
 ## Threading Model
 
-The framework has a highly flexible threading model based on FXL's `TaskRunner`
-class. Each node (and its hosting stage) has its own task queue that allows
-the execution of code in the node (and stage) to be effectively serialized.
-The node may call its `PostTask` to post tasks to this queue. 'Active' nodes
-and stages typically need to run code on other threads and will require e.g.
-mutexes, but the task queue minimizes the amount of work that needs to be done
-in this more complex threading environment.
-
-To run its internal task queue, each stage is given a `TaskRunner` on which to
-post tasks. Even if the task runner dispatches onto multiple threads, the tasks
-associated with a given node/stage pair run exclusive of all other such tasks.
-
-The framework doesn't implement any task runners. There are three ways that task
-runners get associated with a node/stage pair:
-
-1. The `Graph` constructor accepts a `TaskRunner` that will be used by default.
-2. The `Graph::Add` method allows the caller specify a `TaskRunner` for the node
-   being added.
-3. The node may insist on using a specific `TaskRunner` by overloading its
-  `GetTaskRunner` method.
+The framework is single-threaded. Individual nodes in a graph may employ
+additional threads, if desired, but all calls in and out of the framework
+use a single thread.
 
 ## Inputs, Output, Supply and Demand
 

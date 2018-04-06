@@ -16,6 +16,7 @@
 #include "garnet/bin/media/framework/stages/output.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
+#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
@@ -96,12 +97,7 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Releases the stage previously acquired via |Acquire|.
   void Release();
 
-  // Sets a |TaskRunner| for running tasks relating to this stage and the node
-  // it hosts. The stage ensures that only one task related to this stage runs
-  // at any given time. Before using the provided |TaskRunner|, the stage
-  // calls the node's |GetTaskRunner| method to determine if the node has a
-  // |TaskRunner| it would prefer to use. If so, it uses that one instead of
-  // |task_runner|.
+  // Sets a |TaskRunner| for running tasks.
   void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   void PostTask(const fxl::Closure& task);

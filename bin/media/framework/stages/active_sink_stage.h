@@ -49,8 +49,6 @@ class ActiveSinkStageImpl : public StageImpl, public ActiveSinkStage {
 
  private:
   // ActiveSinkStage implementation.
-  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
-
   void PostTask(const fxl::Closure& task) override;
 
   void SetDemand(Demand demand) override;

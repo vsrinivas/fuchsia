@@ -14,7 +14,6 @@
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -190,21 +189,6 @@ class FactoryServiceBase {
     if (products_.empty()) {
       OnLastProductRemoved();
     }
-  }
-
-  // Creates a new product (by calling |product_creator|) on a new thread. The
-  // thread is destroyed when the product is deleted.
-  template <typename ProductImpl>
-  void CreateProductOnNewThread(
-      const std::function<std::shared_ptr<ProductImpl>()>& product_creator) {
-    fxl::RefPtr<fxl::TaskRunner> task_runner;
-    std::thread thread = fsl::CreateThread(&task_runner);
-    task_runner->PostTask([this, product_creator]() {
-      std::shared_ptr<ProductImpl> product = product_creator();
-      product->QuitOnDestruct();
-      AddProduct(product);
-    });
-    thread.detach();
   }
 
   // Called when the number of products transitions from one to zero. The

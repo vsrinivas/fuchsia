@@ -102,11 +102,6 @@ void ActiveSourceStageImpl::FlushOutput(size_t index) {
   packets_.clear();
 }
 
-void ActiveSourceStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  StageImpl::SetTaskRunner(task_runner);
-}
-
 void ActiveSourceStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }

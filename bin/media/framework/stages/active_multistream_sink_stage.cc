@@ -79,10 +79,9 @@ void ActiveMultistreamSinkStageImpl::Update() {
   }
 }
 
-void ActiveMultistreamSinkStageImpl::FlushInput(
-    size_t index,
-    bool hold_frame,
-    DownstreamCallback callback) {
+void ActiveMultistreamSinkStageImpl::FlushInput(size_t index,
+                                                bool hold_frame,
+                                                DownstreamCallback callback) {
   FXL_DCHECK(sink_);
 
   sink_->Flush(hold_frame);
@@ -95,11 +94,6 @@ void ActiveMultistreamSinkStageImpl::FlushInput(
 
 void ActiveMultistreamSinkStageImpl::FlushOutput(size_t index) {
   FXL_CHECK(false) << "FlushOutput called on sink";
-}
-
-void ActiveMultistreamSinkStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  StageImpl::SetTaskRunner(task_runner);
 }
 
 void ActiveMultistreamSinkStageImpl::PostTask(const fxl::Closure& task) {

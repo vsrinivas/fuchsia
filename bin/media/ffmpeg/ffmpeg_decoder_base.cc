@@ -7,8 +7,6 @@
 #include <trace/event.h>
 
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -17,30 +15,15 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
       av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FXL_DCHECK(av_codec_context_);
-
-  // Ffmpeg decoders need to run on a single thread, so we create one here.
-  // The task runner for the thread is returned by |GetTaskRunner|, so all
-  // |PostTask| calls relating to this node go to this thread.
-  std::thread thread = fsl::CreateThread(&task_runner_, "ffmpeg decoder");
-  thread.detach();
-
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
   av_codec_context_->refcounted_frames = 1;
 }
 
-FfmpegDecoderBase::~FfmpegDecoderBase() {
-  // The destructor is called on the task runner we created in the constructor.
-  // We need to post a quit task so the thread is destroyed.
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
-}
+FfmpegDecoderBase::~FfmpegDecoderBase() {}
 
 std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
   return AvCodecContext::GetStreamType(*av_codec_context_);
-}
-
-fxl::RefPtr<fxl::TaskRunner> FfmpegDecoderBase::GetTaskRunner() {
-  return task_runner_;
 }
 
 void FfmpegDecoderBase::Flush() {

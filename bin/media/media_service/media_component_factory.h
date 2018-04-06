@@ -4,16 +4,11 @@
 
 #pragma once
 
+#include <fuchsia/cpp/media.h>
+
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace media {
 
@@ -26,8 +21,8 @@ class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
 
   ~MediaComponentFactory() override;
 
-  fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner() {
-    return multiproc_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner() {
+    return task_runner_;
   }
 
   void CreateMediaPlayer(fidl::InterfaceRequest<MediaPlayer> player);
@@ -70,7 +65,6 @@ class MediaComponentFactory : public FactoryServiceBase<MediaComponentFactory> {
   void OnLastProductRemoved() override;
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  fxl::RefPtr<fxl::TaskRunner> multiproc_task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaComponentFactory);
 };

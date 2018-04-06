@@ -9,8 +9,8 @@
 
 namespace media {
 
-Graph::Graph(fxl::RefPtr<fxl::TaskRunner> default_task_runner)
-    : default_task_runner_(default_task_runner) {}
+Graph::Graph(fxl::RefPtr<fxl::TaskRunner> task_runner)
+    : task_runner_(task_runner) {}
 
 Graph::~Graph() {
   Reset();
@@ -182,8 +182,7 @@ void Graph::Reset() {
   }
 
   joiner->WhenJoined(
-      fsl::MessageLoop::GetCurrent()->task_runner(), [stages = std::move(
-                                                          stages_)]() mutable {
+      task_runner_, [stages = std::move(stages_)]() mutable {
         while (!stages.empty()) {
           std::shared_ptr<StageImpl> stage = stages.front();
           stages.pop_front();
@@ -241,7 +240,7 @@ void Graph::PostTask(const fxl::Closure& task,
     stages.push_back(node.stage_);
   }
 
-  joiner->WhenJoined(fsl::MessageLoop::GetCurrent()->task_runner(),
+  joiner->WhenJoined(task_runner_,
                      [ task, stages = std::move(stages) ]() {
                        task();
                        for (auto stage : stages) {
@@ -250,12 +249,11 @@ void Graph::PostTask(const fxl::Closure& task,
                      });
 }
 
-NodeRef Graph::Add(std::shared_ptr<StageImpl> stage,
-                   fxl::RefPtr<fxl::TaskRunner> task_runner) {
+NodeRef Graph::Add(std::shared_ptr<StageImpl> stage) {
   FXL_DCHECK(stage);
-  FXL_DCHECK(task_runner || default_task_runner_);
+  FXL_DCHECK(task_runner_);
 
-  stage->SetTaskRunner(task_runner ? task_runner : default_task_runner_);
+  stage->SetTaskRunner(task_runner_);
   stages_.push_back(stage);
 
   if (stage->input_count() == 0) {

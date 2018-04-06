@@ -14,9 +14,7 @@ namespace media {
 // static
 std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(
     AvCodecContextPtr av_codec_context) {
-  FfmpegAudioDecoder* decoder =
-      new FfmpegAudioDecoder(std::move(av_codec_context));
-  return ThreadAwareSharedPtr<Decoder>(decoder, decoder->GetTaskRunner());
+  return std::make_shared<FfmpegAudioDecoder>(std::move(av_codec_context));
 }
 
 FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)

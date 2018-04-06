@@ -16,8 +16,7 @@ void StageImpl::OnShutDown() {}
 
 void StageImpl::UnprepareInput(size_t index) {}
 
-void StageImpl::UnprepareOutput(size_t index,
-                                UpstreamCallback callback) {}
+void StageImpl::UnprepareOutput(size_t index, UpstreamCallback callback) {}
 
 void StageImpl::ShutDown() {
   {
@@ -93,9 +92,7 @@ void StageImpl::Release() {
 
 void StageImpl::SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) {
   FXL_DCHECK(task_runner);
-  fxl::RefPtr<fxl::TaskRunner> node_task_runner =
-      GetGenericNode()->GetTaskRunner();
-  task_runner_ = node_task_runner ? node_task_runner : task_runner;
+  task_runner_ = task_runner;
 }
 
 void StageImpl::PostTask(const fxl::Closure& task) {

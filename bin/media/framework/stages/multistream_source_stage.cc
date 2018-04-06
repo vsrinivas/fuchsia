@@ -58,9 +58,8 @@ void MultistreamSourceStageImpl::PrepareOutput(
   }
 }
 
-void MultistreamSourceStageImpl::UnprepareOutput(
-    size_t index,
-    UpstreamCallback callback) {
+void MultistreamSourceStageImpl::UnprepareOutput(size_t index,
+                                                 UpstreamCallback callback) {
   FXL_DCHECK(index < outputs_.size());
   outputs_[index].SetCopyAllocator(nullptr);
 }
@@ -102,10 +101,9 @@ void MultistreamSourceStageImpl::Update() {
   }
 }
 
-void MultistreamSourceStageImpl::FlushInput(
-    size_t index,
-    bool hold_frame,
-    DownstreamCallback callback) {
+void MultistreamSourceStageImpl::FlushInput(size_t index,
+                                            bool hold_frame,
+                                            DownstreamCallback callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 
@@ -116,12 +114,6 @@ void MultistreamSourceStageImpl::FlushOutput(size_t index) {
   cached_packet_.reset();
   cached_packet_output_index_ = 0;
   ended_streams_ = 0;
-}
-
-void MultistreamSourceStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  fxl::RefPtr<fxl::TaskRunner> node_task_runner = source_->GetTaskRunner();
-  StageImpl::SetTaskRunner(node_task_runner ? node_task_runner : task_runner);
 }
 
 void MultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {

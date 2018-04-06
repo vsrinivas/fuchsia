@@ -111,19 +111,16 @@ DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStageImpl);
 // Host for a source, sink or transform.
 class Graph {
  public:
-  // Constructs a graph. If |default_task_runner| is null, every call to |Add|
-  // or |AddAndConnectAll| must supply a task runner.
-  Graph(fxl::RefPtr<fxl::TaskRunner> default_task_runner);
+  // Constructs a graph.
+  Graph(fxl::RefPtr<fxl::TaskRunner> task_runner);
 
   ~Graph();
 
-  // Adds a node to the graph. |task_runner| is required if no default task
-  // runner was provided in the graph constructor.
+  // Adds a node to the graph.
   template <typename T>
-  NodeRef Add(std::shared_ptr<T> t_ptr,
-              fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr) {
+  NodeRef Add(std::shared_ptr<T> t_ptr) {
     FXL_DCHECK(t_ptr);
-    return Add(internal::StageCreator<T>::Create(t_ptr), task_runner);
+    return Add(internal::StageCreator<T>::Create(t_ptr));
   }
 
   // Removes a node from the graph after disconnecting it from other nodes.
@@ -165,19 +162,14 @@ class Graph {
   // Adds all the nodes in t (which must all have one input and one output) and
   // connects them in sequence to the output connector. Returns the output
   // connector of the last node or the output parameter if it is empty.
-  // |task_runner| is required if no default task runner was provided in the
-  // graph constructor.
   template <typename T>
-  OutputRef AddAndConnectAll(
-      OutputRef output,
-      const T& t,
-      fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr) {
+  OutputRef AddAndConnectAll(OutputRef output, const T& t) {
     for (const auto& element : t) {
-      NodeRef node =
-          Add(internal::StageCreator<T>::Create(element), task_runner);
+      NodeRef node = Add(internal::StageCreator<T>::Create(element));
       Connect(output, node.input());
       output = node.output();
     }
+
     return output;
   }
 
@@ -214,10 +206,9 @@ class Graph {
 
  private:
   // Adds a stage to the graph.
-  NodeRef Add(std::shared_ptr<StageImpl> stage,
-              fxl::RefPtr<fxl::TaskRunner> task_runner);
+  NodeRef Add(std::shared_ptr<StageImpl> stage);
 
-  fxl::RefPtr<fxl::TaskRunner> default_task_runner_;
+  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   std::list<std::shared_ptr<StageImpl>> stages_;
   std::list<StageImpl*> sources_;

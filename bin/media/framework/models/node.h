@@ -10,19 +10,12 @@
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace media {
 
 class GenericNode {
  public:
   virtual ~GenericNode() {}
-
-  // Returns the task runner to use for this node. The default implementation
-  // returns nullptr, indicating that this node can use whatever task runner
-  // is provided for it, either via the |Graph| constructor or via the
-  // |Graph::Add| methods.
-  virtual fxl::RefPtr<fxl::TaskRunner> GetTaskRunner() { return nullptr; }
 
   void SetGenericStage(Stage* generic_stage) { generic_stage_ = generic_stage; }
 

@@ -51,8 +51,6 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
 
  private:
   // ActiveSourceStage implementation.
-  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
-
   void PostTask(const fxl::Closure& task) override;
 
   void SupplyPacket(PacketPtr packet) override;

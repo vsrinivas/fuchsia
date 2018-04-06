@@ -100,10 +100,9 @@ void ActiveMultistreamSourceStageImpl::Update() {
   }
 }
 
-void ActiveMultistreamSourceStageImpl::FlushInput(
-    size_t index,
-    bool hold_frame,
-    DownstreamCallback callback) {
+void ActiveMultistreamSourceStageImpl::FlushInput(size_t index,
+                                                  bool hold_frame,
+                                                  DownstreamCallback callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 
@@ -114,11 +113,6 @@ void ActiveMultistreamSourceStageImpl::FlushOutput(size_t index) {
   packets_per_output_[index].clear();
   ended_streams_ = 0;
   packet_request_outstanding_ = false;
-}
-
-void ActiveMultistreamSourceStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  StageImpl::SetTaskRunner(task_runner);
 }
 
 void ActiveMultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {

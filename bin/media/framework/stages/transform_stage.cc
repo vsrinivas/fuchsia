@@ -103,11 +103,6 @@ void TransformStageImpl::FlushOutput(size_t index) {
   input_packet_is_new_ = true;
 }
 
-void TransformStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  StageImpl::SetTaskRunner(task_runner);
-}
-
 void TransformStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }

@@ -52,8 +52,6 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
  private:
   // ActiveMultistreamSinkStage implementation.
-  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
-
   void PostTask(const fxl::Closure& task) override;
 
   size_t AllocateInput() override;

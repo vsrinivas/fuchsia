@@ -30,7 +30,7 @@ MediaDemuxImpl::MediaDemuxImpl(fidl::InterfaceHandle<SeekingReader> reader,
                                                   std::move(request),
                                                   owner),
       task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
-      graph_(owner->multiproc_task_runner()) {
+      graph_(owner->task_runner()) {
   FXL_DCHECK(reader);
   FXL_DCHECK(task_runner_);
 

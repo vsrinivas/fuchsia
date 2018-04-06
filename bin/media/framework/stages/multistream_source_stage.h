@@ -51,8 +51,6 @@ class MultistreamSourceStageImpl : public StageImpl,
 
  private:
   // MultistreamSourceStage implementation.
-  void SetTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner) override;
-
   void PostTask(const fxl::Closure& task) override;
 
   std::vector<Output> outputs_;

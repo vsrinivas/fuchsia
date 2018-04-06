@@ -16,7 +16,6 @@
 #include "garnet/bin/media/media_service/media_timeline_controller_impl.h"
 #include "garnet/bin/media/media_service/network_reader_impl.h"
 #include "garnet/bin/media/media_service/video_renderer_impl.h"
-#include "garnet/bin/media/util/multiproc_task_runner.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 
@@ -25,10 +24,7 @@ namespace media {
 MediaComponentFactory::MediaComponentFactory(
     std::unique_ptr<component::ApplicationContext> context)
     : FactoryServiceBase(std::move(context)),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
-  multiproc_task_runner_ =
-      AdoptRef(new MultiprocTaskRunner(zx_system_get_num_cpus()));
-}
+      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {}
 
 MediaComponentFactory::~MediaComponentFactory() {}
 
@@ -55,23 +51,15 @@ void MediaComponentFactory::CreateSink(
 void MediaComponentFactory::CreateDemux(
     fidl::InterfaceHandle<SeekingReader> reader,
     fidl::InterfaceRequest<MediaSource> request) {
-  CreateProductOnNewThread<MediaDemuxImpl>(fxl::MakeCopyable([
-    this, reader = std::move(reader), request = std::move(request)
-  ]() mutable {
-    return MediaDemuxImpl::Create(std::move(reader), std::move(request), this);
-  }));
+  AddProduct(
+      MediaDemuxImpl::Create(std::move(reader), std::move(request), this));
 }
 
 void MediaComponentFactory::CreateDecoder(
     MediaTypePtr input_media_type,
     fidl::InterfaceRequest<MediaTypeConverter> request) {
-  CreateProductOnNewThread<MediaDecoderImpl>(fxl::MakeCopyable([
-    this, input_media_type = std::move(input_media_type),
-    request = std::move(request)
-  ]() mutable {
-    return MediaDecoderImpl::Create(std::move(input_media_type),
-                                    std::move(request), this);
-  }));
+  AddProduct(MediaDecoderImpl::Create(std::move(input_media_type),
+                                      std::move(request), this));
 }
 
 void MediaComponentFactory::CreateTimelineController(
@@ -84,34 +72,22 @@ void MediaComponentFactory::CreateLpcmReformatter(
     MediaTypePtr input_media_type,
     AudioSampleFormat output_sample_format,
     fidl::InterfaceRequest<MediaTypeConverter> request) {
-  CreateProductOnNewThread<LpcmReformatterImpl>(fxl::MakeCopyable([
-    this, input_media_type = std::move(input_media_type), output_sample_format,
-    request = std::move(request)
-  ]() mutable {
-    return LpcmReformatterImpl::Create(std::move(input_media_type),
-                                       output_sample_format, std::move(request),
-                                       this);
-  }));
+  AddProduct(LpcmReformatterImpl::Create(std::move(input_media_type),
+                                         output_sample_format,
+                                         std::move(request), this));
 }
 
 void MediaComponentFactory::CreateHttpReader(
     const std::string& http_url,
     fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<NetworkReaderImpl>(fxl::MakeCopyable(
-      [ this, http_url = http_url, request = std::move(request) ]() mutable {
-        return NetworkReaderImpl::Create(http_url, std::move(request), this);
-      }));
+  AddProduct(NetworkReaderImpl::Create(http_url, std::move(request), this));
 }
 
 void MediaComponentFactory::CreateFileChannelReader(
     zx::channel file_channel,
     fidl::InterfaceRequest<SeekingReader> request) {
-  CreateProductOnNewThread<FileReaderImpl>(fxl::MakeCopyable([
-    this, file_channel = std::move(file_channel), request = std::move(request)
-  ]() mutable {
-    return FileReaderImpl::Create(std::move(file_channel), std::move(request),
-                                  this);
-  }));
+  AddProduct(FileReaderImpl::Create(std::move(file_channel), std::move(request),
+                                    this));
 }
 
 std::shared_ptr<VideoRendererImpl> MediaComponentFactory::CreateVideoRenderer(

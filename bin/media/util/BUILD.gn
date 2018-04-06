@@ -10,8 +10,6 @@ source_set("util") {
     "fidl_publisher.h",
     "file_channel.cc",
     "file_channel.h",
-    "multiproc_task_runner.cc",
-    "multiproc_task_runner.h",
   ]
 
   public_deps = [

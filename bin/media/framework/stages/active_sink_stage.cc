@@ -83,11 +83,6 @@ void ActiveSinkStageImpl::FlushOutput(size_t index) {
   FXL_CHECK(false) << "FlushOutput called on sink";
 }
 
-void ActiveSinkStageImpl::SetTaskRunner(
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  StageImpl::SetTaskRunner(task_runner);
-}
-
 void ActiveSinkStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }

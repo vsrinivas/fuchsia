@@ -8,6 +8,7 @@
 
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
+#include "lib/fxl/tasks/task_runner.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
