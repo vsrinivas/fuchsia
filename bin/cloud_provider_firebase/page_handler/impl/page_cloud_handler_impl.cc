@@ -4,6 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firebase/page_handler/impl/page_cloud_handler_impl.h"
 
+#include "garnet/lib/callback/trace_callback.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/logging.h"
@@ -31,14 +32,18 @@ void PageCloudHandlerImpl::AddCommits(
     const std::string& auth_token,
     std::vector<Commit> commits,
     const std::function<void(Status)>& callback) {
+  auto traced_callback =
+      TRACE_CALLBACK(callback, "cloud_provider_firebase", "add_commits");
+
   std::string encoded_batch;
   bool ok = EncodeCommits(commits, &encoded_batch);
   FXL_DCHECK(ok);
 
-  firebase_->Patch(kCommitRoot.ToString(), GetQueryParams(auth_token, ""),
-                   encoded_batch, [callback](firebase::Status status) {
-                     callback(ConvertFirebaseStatus(status));
-                   });
+  firebase_->Patch(
+      kCommitRoot.ToString(), GetQueryParams(auth_token, ""), encoded_batch,
+      [callback = std::move(traced_callback)](firebase::Status status) {
+        callback(ConvertFirebaseStatus(status));
+      });
 }
 
 void PageCloudHandlerImpl::WatchCommits(const std::string& auth_token,
@@ -57,9 +62,13 @@ void PageCloudHandlerImpl::GetCommits(
     const std::string& auth_token,
     const std::string& min_timestamp,
     std::function<void(Status, std::vector<Record>)> callback) {
+  auto traced_callback =
+      TRACE_CALLBACK(callback, "cloud_provider_firebase", "get_commits");
+
   firebase_->Get(
       kCommitRoot.ToString(), GetQueryParams(auth_token, min_timestamp),
-      [callback](firebase::Status status, const rapidjson::Value& value) {
+      [callback = std::move(traced_callback)](firebase::Status status,
+                                              const rapidjson::Value& value) {
         if (status != firebase::Status::OK) {
           callback(ConvertFirebaseStatus(status), std::vector<Record>());
           return;
@@ -86,12 +95,15 @@ void PageCloudHandlerImpl::AddObject(const std::string& auth_token,
                                      ObjectDigestView object_digest,
                                      fsl::SizedVmo data,
                                      std::function<void(Status)> callback) {
+  auto traced_callback =
+      TRACE_CALLBACK(callback, "cloud_provider_firebase", "add_objects");
+
   // Even though this yields path to be used in GCS, we use Firebase key
   // encoding, as it happens to produce valid GCS object names. To be revisited
   // when we redo the encoding in LE-118.
   cloud_storage_->UploadObject(
       auth_token, firebase::EncodeKey(object_digest), std::move(data),
-      [callback = std::move(callback)](gcs::Status status) {
+      [callback = std::move(traced_callback)](gcs::Status status) {
         callback(ConvertGcsStatus(status));
       });
 }
@@ -101,10 +113,13 @@ void PageCloudHandlerImpl::GetObject(
     ObjectDigestView object_digest,
     std::function<void(Status status, uint64_t size, zx::socket data)>
         callback) {
+  auto traced_callback =
+      TRACE_CALLBACK(callback, "cloud_provider_firebase", "get_object");
+
   cloud_storage_->DownloadObject(
       auth_token, firebase::EncodeKey(object_digest),
-      [callback = std::move(callback)](gcs::Status status, uint64_t size,
-                                       zx::socket data) {
+      [callback = std::move(traced_callback)](gcs::Status status, uint64_t size,
+                                              zx::socket data) {
         callback(ConvertGcsStatus(status), size, std::move(data));
       });
 }

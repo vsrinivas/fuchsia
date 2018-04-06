@@ -9,6 +9,7 @@
 #include <fuchsia/cpp/ledger.h>
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/rand.h"
+#include "garnet/lib/callback/trace_callback.h"
 #include "peridot/bin/ledger/app/page_utils.h"
 #include "peridot/bin/ledger/storage/impl/number_serialization.h"
 
@@ -67,14 +68,15 @@ PageManager::~PageManager() {
 
 void PageManager::BindPage(fidl::InterfaceRequest<Page> page_request,
                            std::function<void(Status)> on_done) {
+  auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_bind_page");
   if (sync_backlog_downloaded_) {
     pages_
         .emplace(environment_->coroutine_service(), this, page_storage_.get(),
                  merge_resolver_.get(), std::move(page_request), &watchers_)
-        .Init(std::move(on_done));
+        .Init(std::move(traced_on_done));
     return;
   }
-  page_requests_.emplace_back(std::move(page_request), std::move(on_done));
+  page_requests_.emplace_back(std::move(page_request), std::move(traced_on_done));
 }
 
 void PageManager::BindPageDebug(fidl::InterfaceRequest<PageDebug> page_debug,
