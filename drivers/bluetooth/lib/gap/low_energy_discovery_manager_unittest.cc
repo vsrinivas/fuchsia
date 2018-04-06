@@ -131,7 +131,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
         0x09, 0x09, 'D', 'e', 'v', 'i', 'c', 'e', ' ', '0');
     auto fake_device = std::make_unique<FakeDevice>(kAddress0, true, true);
     fake_device->SetAdvertisingData(kAdvData0);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Device 1
     const auto kAdvData1 = common::CreateStaticByteBuffer(
@@ -142,7 +142,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
         0x03, 0x03, 0x0d, 0x18);
     fake_device = std::make_unique<FakeDevice>(kAddress1, true, true);
     fake_device->SetAdvertisingData(kAdvData1);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Device 2
     const auto kAdvData2 = common::CreateStaticByteBuffer(
@@ -153,7 +153,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
         0x09, 0x09, 'D', 'e', 'v', 'i', 'c', 'e', ' ', '2');
     fake_device = std::make_unique<FakeDevice>(kAddress2, false, false);
     fake_device->SetAdvertisingData(kAdvData2);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Device 3
     const auto kAdvData3 = common::CreateStaticByteBuffer(
@@ -164,7 +164,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
         0x09, 0x09, 'D', 'e', 'v', 'i', 'c', 'e', ' ', '3');
     fake_device = std::make_unique<FakeDevice>(kAddress3, false, false);
     fake_device->SetAdvertisingData(kAdvData3);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
   }
 
   // Creates and returns a discovery session.

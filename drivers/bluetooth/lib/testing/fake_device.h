@@ -16,7 +16,7 @@
 namespace btlib {
 namespace testing {
 
-// FakeDevice is used to emulate remote Bluetooth devices.
+// FakeDevice is used to emulate a remote Bluetooth device.
 class FakeDevice {
  public:
   // NOTE: Setting |connectable| to true will result in a "Connectable and
@@ -29,6 +29,15 @@ class FakeDevice {
                       bool scannable = true);
 
   void SetAdvertisingData(const common::ByteBuffer& data);
+
+  bool has_advertising_reports() {
+    return (adv_data_.size() > 0) || (scan_rsp_.size() > 0);
+  };
+
+  bool has_inquiry_response() {
+    // All BR/EDR devices have inquiry responses.
+    return address().type() == common::DeviceAddress::Type::kBREDR;
+  };
 
   // |should_batch_reports| indicates to the FakeController that the SCAN_IND
   // report should be included in the same HCI LE Advertising Report Event
@@ -46,6 +55,10 @@ class FakeDevice {
   // Generates a LE Advertising Report Event payload containing the scan
   // response.
   common::DynamicByteBuffer CreateScanResponseReportEvent() const;
+
+  // Generates a Inquiry Response Event payload containing a inquiry result
+  // response.
+  common::DynamicByteBuffer CreateInquiryResponseEvent() const;
 
   const common::DeviceAddress& address() const { return address_; }
 
@@ -68,6 +81,10 @@ class FakeDevice {
 
   bool connected() const { return connected_; }
   void set_connected(bool connected) { connected_ = connected; }
+
+  void set_class_of_device(common::DeviceClass class_of_device) {
+    class_of_device_ = class_of_device;
+  }
 
   const hci::LEConnectionParameters& le_params() const { return le_params_; }
   void set_le_params(const hci::LEConnectionParameters& value) {
@@ -121,6 +138,9 @@ class FakeDevice {
 
   // Open connection handles.
   HandleSet logical_links_;
+
+  // Class of device
+  common::DeviceClass class_of_device_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeDevice);
 };

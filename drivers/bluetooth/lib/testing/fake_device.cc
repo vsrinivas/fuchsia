@@ -50,6 +50,34 @@ void FakeDevice::SetScanResponse(bool should_batch_reports,
   should_batch_reports_ = should_batch_reports;
 }
 
+common::DynamicByteBuffer FakeDevice::CreateInquiryResponseEvent() const {
+  FXL_DCHECK(address_.type() == common::DeviceAddress::Type::kBREDR);
+
+  size_t event_size = sizeof(hci::EventHeader) +
+                      sizeof(hci::InquiryResultEventParams) +
+                      sizeof(hci::InquiryResult);
+  common::DynamicByteBuffer buffer(event_size);
+
+  common::MutablePacketView<hci::EventHeader> event(
+      &buffer, event_size - sizeof(hci::EventHeader));
+
+  event.mutable_header()->event_code = hci::kInquiryResultEventCode;
+  event.mutable_header()->parameter_total_size =
+      event_size - sizeof(hci::EventHeader);
+
+  auto payload = event.mutable_payload<hci::InquiryResultEventParams>();
+  payload->num_responses = 1u;
+
+  auto inq_result = reinterpret_cast<hci::InquiryResult*>(payload->responses);
+  inq_result->bd_addr = address_.value();
+  inq_result->page_scan_repetition_mode = hci::PageScanRepetitionMode::kR0;
+  inq_result->class_of_device = class_of_device_;
+  // TODO(jamuraa): simultate devices with an actual clock offset?
+  inq_result->clock_offset = 0;
+
+  return buffer;
+}
+
 common::DynamicByteBuffer FakeDevice::CreateAdvertisingReportEvent(
     bool include_scan_rsp) const {
   size_t event_size =

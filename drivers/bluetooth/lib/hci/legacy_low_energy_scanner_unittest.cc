@@ -91,38 +91,38 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     auto fake_device = std::make_unique<FakeDevice>(kAddress0, true, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(true, scan_rsp);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_SCAN_IND, scan response is reported over multiple HCI
     // events.
     fake_device = std::make_unique<FakeDevice>(kAddress1, false, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(false, scan_rsp);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, empty scan response is reported over multiple HCI
     // events.
     fake_device = std::make_unique<FakeDevice>(kAddress2, true, true);
     fake_device->SetAdvertisingData(adv_data);
     fake_device->SetScanResponse(false, empty_data);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, empty adv data and non-empty scan response is reported
     // over multiple HCI events.
     fake_device = std::make_unique<FakeDevice>(kAddress3, true, true);
     fake_device->SetScanResponse(false, scan_rsp);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_IND, a scan response is never sent even though ADV_IND is
     // scannable.
     fake_device = std::make_unique<FakeDevice>(kAddress4, true, false);
     fake_device->SetAdvertisingData(adv_data);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
 
     // Generates ADV_NONCONN_IND
     fake_device = std::make_unique<FakeDevice>(kAddress5, false, false);
     fake_device->SetAdvertisingData(adv_data);
-    test_device()->AddLEDevice(std::move(fake_device));
+    test_device()->AddDevice(std::move(fake_device));
   }
 
   LegacyLowEnergyScanner* scanner() const { return scanner_.get(); }

@@ -97,7 +97,7 @@ using HCI_LowEnergyConnectorTest = LowEnergyConnectorTest;
 
 TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   EXPECT_FALSE(connector()->request_pending());
 
@@ -140,7 +140,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnection) {
 TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   fake_device->set_connect_status(StatusCode::kCommandDisallowed);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   EXPECT_FALSE(connector()->request_pending());
 
@@ -175,7 +175,7 @@ TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionStatusError) {
 TEST_F(HCI_LowEnergyConnectorTest, CreateConnectionEventError) {
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
   fake_device->set_connect_response(StatusCode::kConnectionRejectedSecurity);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   EXPECT_FALSE(connector()->request_pending());
 
@@ -212,7 +212,7 @@ TEST_F(HCI_LowEnergyConnectorTest, Cancel) {
 
   // Make sure the pending connect remains pending.
   fake_device->set_force_pending_connect(true);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   hci::Status status;
   ConnectionPtr conn;
@@ -285,7 +285,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
   EXPECT_FALSE(connector()->request_pending());
 
   auto fake_device = std::make_unique<FakeDevice>(kTestAddress, true, true);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   hci::Status status;
   ConnectionPtr conn;
@@ -376,7 +376,7 @@ TEST_F(HCI_LowEnergyConnectorTest, SendRequestAndDelete) {
 
   // Make sure the pending connect remains pending.
   fake_device->set_force_pending_connect(true);
-  test_device()->AddLEDevice(std::move(fake_device));
+  test_device()->AddDevice(std::move(fake_device));
 
   bool ret = connector()->CreateConnection(
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,

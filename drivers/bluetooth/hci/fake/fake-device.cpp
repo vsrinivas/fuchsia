@@ -24,6 +24,7 @@ namespace bthci_fake {
 
 const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
                               "00:00:00:00:00:01");
+const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, "00:00:00:00:00:02");
 
 Device::Device(zx_device_t* device) : parent_(device) {}
 
@@ -87,7 +88,13 @@ zx_status_t Device::Bind() {
       0x05, 0x09, 'F', 'a', 'k', 'e');
   auto device = std::make_unique<FakeDevice>(kAddress0, true, true);
   device->SetAdvertisingData(kAdvData0);
-  fake_device_->AddLEDevice(std::move(device));
+  fake_device_->AddDevice(std::move(device));
+
+  // A Sample BR/EDR remote device to interact with.
+  device = std::make_unique<FakeDevice>(kAddress1, false, false);
+  // A Toy Game
+  device->set_class_of_device(btlib::common::DeviceClass({0x14, 0x08, 0x00}));
+  fake_device_->AddDevice(std::move(device));
 
   loop_.StartThread("bthci-fake");
 

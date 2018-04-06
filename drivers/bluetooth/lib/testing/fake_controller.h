@@ -74,7 +74,7 @@ class FakeController : public FakeControllerBase,
     uint8_t le_total_num_acl_data_packets;
   };
 
-  // Current device scan state.
+  // Current device low energy scan state.
   struct LEScanState final {
     LEScanState();
 
@@ -136,9 +136,8 @@ class FakeController : public FakeControllerBase,
   // Returns the current Local Name.set in the controller
   const std::string& local_name() const { return local_name_; }
 
-  // Adds a fake remote device. This device will be used to during LE scan and
-  // connection procedures.
-  void AddLEDevice(std::unique_ptr<FakeDevice> le_device);
+  // Adds a fake remote device.
+  void AddDevice(std::unique_ptr<FakeDevice> device);
 
   // Sets a callback to be invoked when the scan state changes.
   using ScanStateCallback = std::function<void(bool enabled)>;
@@ -236,8 +235,11 @@ class FakeController : public FakeControllerBase,
   // error response and returns true. Returns false if no response was set.
   bool MaybeRespondWithDefaultStatus(hci::OpCode opcode);
 
-  // Sends LE advertising reports for known LE devices, if a scan is currently
-  // enabled.
+  // Sends Inquiry Response reports for known BR/EDR devices.
+  void SendInquiryResponses();
+
+  // Sends LE advertising reports for known devices with advertising data, if a
+  // scan is currently enabled.
   void SendAdvertisingReports();
 
   // Notifies |advertising_state_cb_|
@@ -296,8 +298,15 @@ class FakeController : public FakeControllerBase,
   // ID used for L2CAP LE signaling channel commands.
   uint8_t next_le_sig_id_;
 
+  // The number of results left in Inquiry Mode operation.
+  // If negative, no limit has been set.
+  int16_t inquiry_num_responses_left_;
+
+  // Used to setup default status responses (for simulating errors)
   std::unordered_map<hci::OpCode, hci::StatusCode> default_status_map_;
-  std::vector<std::unique_ptr<FakeDevice>> le_devices_;
+
+  // The set of fake devices that are visible.
+  std::vector<std::unique_ptr<FakeDevice>> devices_;
 
   ScanStateCallback scan_state_cb_;
   async_t* scan_state_cb_dispatcher_;

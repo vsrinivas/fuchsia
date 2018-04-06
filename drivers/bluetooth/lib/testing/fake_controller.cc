@@ -69,8 +69,8 @@ void FakeController::Settings::ApplyDualModeDefaults() {
   le_total_num_acl_data_packets = 1;
 
   SetBit(&lmp_features_page0, hci::LMPFeature::kLESupported);
+  SetBit(&lmp_features_page0, hci::LMPFeature::kSimultaneousLEAndBREDR);
   SetBit(&lmp_features_page0, hci::LMPFeature::kExtendedFeatures);
-  SetBit(&lmp_features_page1, hci::LMPFeature::kSimultaneousLEAndBREDR);
 
   AddBREDRSupportedCommands();
   AddLESupportedCommands();
@@ -79,7 +79,7 @@ void FakeController::Settings::ApplyDualModeDefaults() {
 void FakeController::Settings::ApplyLEOnlyDefaults() {
   ApplyDualModeDefaults();
 
-  UnsetBit(&lmp_features_page1, hci::LMPFeature::kSimultaneousLEAndBREDR);
+  UnsetBit(&lmp_features_page0, hci::LMPFeature::kSimultaneousLEAndBREDR);
   SetBit(&lmp_features_page0, hci::LMPFeature::kBREDRNotSupported);
 
   std::memset(supported_commands, 0, sizeof(supported_commands));
@@ -184,8 +184,8 @@ void FakeController::ClearDefaultResponseStatus(hci::OpCode opcode) {
   default_status_map_.erase(opcode);
 }
 
-void FakeController::AddLEDevice(std::unique_ptr<FakeDevice> le_device) {
-  le_devices_.push_back(std::move(le_device));
+void FakeController::AddDevice(std::unique_ptr<FakeDevice> device) {
+  devices_.push_back(std::move(device));
 }
 
 void FakeController::SetScanStateCallback(
@@ -230,7 +230,7 @@ void FakeController::SetLEConnectionParametersCallback(
 
 FakeDevice* FakeController::FindDeviceByAddress(
     const common::DeviceAddress& addr) {
-  for (auto& dev : le_devices_) {
+  for (auto& dev : devices_) {
     if (dev->address() == addr)
       return dev.get();
   }
@@ -239,7 +239,7 @@ FakeDevice* FakeController::FindDeviceByAddress(
 
 FakeDevice* FakeController::FindDeviceByConnHandle(
     hci::ConnectionHandle handle) {
-  for (auto& dev : le_devices_) {
+  for (auto& dev : devices_) {
     if (dev->HasLink(handle))
       return dev.get();
   }
@@ -485,11 +485,29 @@ bool FakeController::MaybeRespondWithDefaultStatus(hci::OpCode opcode) {
   return true;
 }
 
+void FakeController::SendInquiryResponses() {
+  // TODO(jamuraa): combine some of these into a single response event
+  for (const auto& device : devices_) {
+    if (!device->has_inquiry_response()) {
+      continue;
+    }
+
+    SendCommandChannelPacket(device->CreateInquiryResponseEvent());
+    inquiry_num_responses_left_--;
+    if (inquiry_num_responses_left_ == 0) {
+      break;
+    }
+  }
+}
+
 void FakeController::SendAdvertisingReports() {
-  if (!le_scan_state_.enabled || le_devices_.empty())
+  if (!le_scan_state_.enabled || devices_.empty())
     return;
 
-  for (const auto& device : le_devices_) {
+  for (const auto& device : devices_) {
+    if (!device->has_advertising_reports()) {
+      continue;
+    }
     // We want to send scan response packets only during an active scan and if
     // the device is scannable.
     bool need_scan_rsp =
@@ -513,8 +531,9 @@ void FakeController::SendAdvertisingReports() {
 }
 
 void FakeController::NotifyAdvertisingState() {
-  if (!advertising_state_cb_)
+  if (!advertising_state_cb_) {
     return;
+  }
 
   FXL_DCHECK(advertising_state_cb_dispatcher_);
   async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_);
@@ -1103,8 +1122,55 @@ void FakeController::OnCommandPacketReceived(
         SendAdvertisingReports();
       break;
     }
-    case hci::kReset:
+
+    case hci::kInquiry: {
+      const auto& in_params =
+          command_packet.payload<hci::InquiryCommandParams>();
+
+      if (in_params.lap != hci::kGIAC && in_params.lap != hci::kLIAC) {
+        RespondWithCommandStatus(opcode, hci::kInvalidHCICommandParameters);
+        break;
+      }
+
+      if (in_params.inquiry_length == 0x00 ||
+          in_params.inquiry_length > hci::kInquiryLengthMax) {
+        RespondWithCommandStatus(opcode, hci::kInvalidHCICommandParameters);
+        break;
+      }
+
+      inquiry_num_responses_left_ = in_params.num_responses;
+      if (in_params.num_responses == 0) {
+        inquiry_num_responses_left_ = -1;
+      }
+
+      RespondWithCommandStatus(opcode, hci::kSuccess);
+
+      FXL_LOG(INFO) << "FakeController: sending inquiry responses..";
+      SendInquiryResponses();
+
+      // TODO(jamuraa): do this after an appropriate amount of time?
+      hci::InquiryCompleteEventParams params;
+      params.status = hci::kSuccess;
+      SendEvent(hci::kInquiryCompleteEventCode,
+                common::BufferView(&params, sizeof(params)));
+      break;
+    }
+    case hci::kReset: {
+      // TODO(jamuraa): actually do some resetting of stuff here
+      RespondWithSuccess(opcode);
+      break;
+    }
     case hci::kWriteLEHostSupport: {
+      const auto& in_params =
+          command_packet.payload<hci::WriteLEHostSupportCommandParams>();
+
+      if (in_params.le_supported_host == hci::GenericEnableParam::kEnable) {
+        SetBit(&settings_.lmp_features_page1,
+               hci::LMPFeature::kLESupportedHost);
+      } else {
+        UnsetBit(&settings_.lmp_features_page1,
+                 hci::LMPFeature::kLESupportedHost);
+      }
       RespondWithSuccess(opcode);
       break;
     }
