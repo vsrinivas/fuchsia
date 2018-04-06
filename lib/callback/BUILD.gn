@@ -59,5 +59,6 @@ source_set("unittests") {
     ":callback",
     "//garnet/lib/gtest",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
   ]
 }

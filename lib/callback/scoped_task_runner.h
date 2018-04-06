@@ -5,7 +5,11 @@
 #ifndef GARNET_LIB_CALLBACK_SCOPED_TASK_RUNNER_H_
 #define GARNET_LIB_CALLBACK_SCOPED_TASK_RUNNER_H_
 
+#include <lib/async/dispatcher.h>
+#include <zx/time.h>
+
 #include "garnet/lib/callback/scoped_callback.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -13,14 +17,19 @@
 
 namespace callback {
 
-// An object with the same interface as |fxl::TaskRunner| that wraps an existing
-// |fxl::TaskRunner|, but that is neither copyable nor moveable and will never
-// run any task after being deleted.
+// An object that wraps the posting logic of an |async_t|, but that is
+// neither copyable nor moveable and will never run any task after being
+// deleted.
 // Because this class also acts as a WeakPtrFactory, it needs to be the last
 // member of a class.
 class ScopedTaskRunner {
  public:
+  explicit ScopedTaskRunner(async_t* async);
+
+  // TODO(joshuaseaton): Remove this constructor (and the associated
+  // implementation) once all instances have been removed.
   explicit ScopedTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
+
   ~ScopedTaskRunner();
 
   // Posts a task to run as soon as possible.
@@ -44,6 +53,7 @@ class ScopedTaskRunner {
   }
 
  private:
+  async_t* const async_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::WeakPtrFactory<ScopedTaskRunner> weak_factory_;
 

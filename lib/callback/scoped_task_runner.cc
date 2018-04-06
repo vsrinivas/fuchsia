@@ -6,29 +6,52 @@
 
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 namespace callback {
 
+ScopedTaskRunner::ScopedTaskRunner(async_t* async)
+    : async_(async), weak_factory_(this) {}
+
 ScopedTaskRunner::ScopedTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)), weak_factory_(this) {}
+    :  async_(nullptr), task_runner_(std::move(task_runner)), weak_factory_(this) {}
 
 ScopedTaskRunner::~ScopedTaskRunner() {}
 
 void ScopedTaskRunner::PostTask(fxl::Closure task) {
-  task_runner_->PostTask(MakeScoped(std::move(task)));
+  if (async_){
+    async::PostTask(async_, MakeScoped(std::move(task)));
+  } else {
+    task_runner_->PostTask(MakeScoped(std::move(task)));
+  }
 }
 
 void ScopedTaskRunner::PostTaskForTime(fxl::Closure task,
                                        fxl::TimePoint target_time) {
-  task_runner_->PostTaskForTime(MakeScoped(std::move(task)), target_time);
+  if (async_){
+    async::PostTaskForTime(async_, MakeScoped(std::move(task)),
+                           zx::time(target_time.ToEpochDelta().ToNanoseconds()));
+  } else {
+    task_runner_->PostTaskForTime(MakeScoped(std::move(task)), target_time);
+  }
 }
 
 void ScopedTaskRunner::PostDelayedTask(fxl::Closure task,
                                        fxl::TimeDelta delay) {
-  task_runner_->PostDelayedTask(MakeScoped(std::move(task)), delay);
+  if (async_){
+    async::PostDelayedTask(async_, MakeScoped(std::move(task)),
+                           zx::nsec(delay.ToNanoseconds()));
+  } else {
+    task_runner_->PostDelayedTask(MakeScoped(std::move(task)),delay);
+  }
 }
-
 bool ScopedTaskRunner::RunsTasksOnCurrentThread() {
-  return task_runner_->RunsTasksOnCurrentThread();
+  if (async_) {
+    return async_ == async_get_default();
+  } else {
+    return task_runner_->RunsTasksOnCurrentThread();
+  }
 }
 
 }  // namespace callback

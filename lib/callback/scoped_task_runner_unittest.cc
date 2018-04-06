@@ -4,8 +4,11 @@
 
 #include "garnet/lib/callback/scoped_task_runner.h"
 
+#include <lib/async/task.h>
+#include <lib/async-testutils/async_stub.h>
+
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
+
 
 namespace callback {
 namespace {
@@ -75,6 +78,59 @@ TEST(ScopedTaskRunner, CancelOnDeletion) {
   EXPECT_EQ(3u, base_task_runner->tasks.size());
   for (const auto& task : base_task_runner->tasks) {
     task();
+  }
+
+  EXPECT_EQ(0u, called);
+}
+
+
+inline void InvokeTaskHandler(async_t* async, async_task_t* task) {
+  task->handler(async, task, ZX_OK);
+}
+
+class FakeDispatcher : public async::AsyncStub {
+ public:
+  zx_status_t PostTask(async_task_t* task) override {
+    tasks.push_back(task);
+    return ZX_OK;
+  }
+  std::vector<async_task_t*> tasks;
+};
+
+TEST(ScopedTaskRunner, DelegateToDispatcher) {
+  FakeDispatcher async;
+
+  uint8_t called = 0;
+  auto increment_call = [&called] { ++called; };
+  ScopedTaskRunner task_runner(&async);
+  task_runner.PostTask(increment_call);
+  task_runner.PostDelayedTask(increment_call, fxl::TimeDelta::FromSeconds(0));
+  task_runner.PostTaskForTime(increment_call, fxl::TimePoint::Now());;
+
+  EXPECT_EQ(3u, async.tasks.size());
+  for (const auto& task : async.tasks) {
+    InvokeTaskHandler(&async, task);
+  }
+
+  EXPECT_EQ(3u, called);
+}
+
+TEST(ScopedTaskRunner, CancelOnDeletionII) {
+  FakeDispatcher async;
+
+  uint8_t called = 0;
+  auto increment_call = [&called] { ++called; };
+
+  {
+    ScopedTaskRunner task_runner(&async);
+    task_runner.PostTask(increment_call);
+    task_runner.PostDelayedTask(increment_call, fxl::TimeDelta::FromSeconds(0));
+    task_runner.PostTaskForTime(increment_call, fxl::TimePoint::Now());
+  }
+
+  EXPECT_EQ(3u, async.tasks.size());
+  for (const auto& task : async.tasks) {
+    InvokeTaskHandler(&async, task);
   }
 
   EXPECT_EQ(0u, called);
