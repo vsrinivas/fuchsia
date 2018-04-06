@@ -64,6 +64,8 @@ func Run(cfg *build.Config) error {
 		return err
 	}
 
+	log.Printf("meta.far written, starting blobs")
+
 	names := make(chan string, runtime.NumCPU())
 
 	var w sync.WaitGroup
@@ -78,11 +80,6 @@ func Run(cfg *build.Config) error {
 					if len(name) != 64 || strings.Contains(name, "/") {
 						log.Printf("Invalid package blob in archive: %s", name)
 						hadError.Store(true)
-						return
-					}
-
-					// skip blobs that the package manager does not request (it already has them)
-					if _, err := os.Stat(filepath.Join("/pkgfs/needs/blobs", name)); os.IsNotExist(err) {
 						return
 					}
 
@@ -144,11 +141,26 @@ func Run(cfg *build.Config) error {
 		}()
 	}
 
+	needs, err := filepath.Glob("/pkgfs/needs/blobs/*")
+	if err != nil {
+		return err
+	}
+	for i, need := range needs {
+		needs[i] = filepath.Base(need)
+	}
+
 	for _, name := range pkgArchive.List() {
 		if name == "meta.far" {
 			continue
 		}
-		names <- name
+
+		// skip blobs that are already present
+		for _, need := range needs {
+			if name == need {
+				names <- name
+				break
+			}
+		}
 	}
 	close(names)
 	w.Wait()
