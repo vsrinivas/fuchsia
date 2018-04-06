@@ -7,12 +7,33 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/media/framework/formatting.h"
+#include "garnet/bin/media/player/demux_source_segment.h"
+#include "garnet/bin/media/player/renderer_sink_segment.h"
+#include "garnet/bin/media/player/test/fake_audio_renderer.h"
+#include "garnet/bin/media/player/test/fake_demux.h"
 #include "garnet/bin/media/player/test/fake_sink_segment.h"
 #include "garnet/bin/media/player/test/fake_source_segment.h"
+#include "garnet/bin/media/player/test/fake_video_renderer.h"
 #include "gtest/gtest.h"
 
 namespace media {
 namespace test {
+
+std::ostream& operator<<(std::ostream& os, NodeRef value) {
+  if (!value) {
+    return os << "<none>";
+  }
+
+  os << value.GetGenericNode()->label();
+  for (size_t output_index = 0; output_index < value.output_count();
+       output_index++) {
+    os << "\n"
+       << begl << "[" << output_index << "] " << indent
+       << value.output(output_index).mate().node() << outdent;
+  }
+
+  return os;
+}
 
 void ExpectEqual(const StreamType* a, const StreamType* b) {
   if (!a) {
@@ -505,6 +526,115 @@ TEST(PlayerTest, FakeSegments) {
   EXPECT_EQ(nullptr, player.problem());
   EXPECT_NE(nullptr, player.graph());
   EXPECT_EQ(NodeRef(), player.source_node());
+}
+
+// Expects the player to have built a graph based on the fake demux and
+// renderers used with real source and sink segments.
+void ExpectRealSegmentsGraph(const Player& player) {
+  // Check the source (demux) node.
+  NodeRef source_node_ref = player.source_node();
+  EXPECT_TRUE(source_node_ref);
+  EXPECT_EQ(0u, source_node_ref.input_count());
+  EXPECT_EQ(2u, source_node_ref.output_count());
+  EXPECT_EQ("FakeDemux", source_node_ref.GetGenericNode()->label());
+
+  // Walk the audio segment. It has a decoder, an lpcm reformatter and a
+  // renderer.
+  NodeRef audio_decoder_node_ref = source_node_ref.output(0).mate().node();
+  EXPECT_TRUE(audio_decoder_node_ref);
+  EXPECT_EQ(1u, audio_decoder_node_ref.input_count());
+  EXPECT_EQ(1u, audio_decoder_node_ref.output_count());
+  EXPECT_TRUE(audio_decoder_node_ref.input().connected());
+  EXPECT_TRUE(audio_decoder_node_ref.input().prepared());
+  EXPECT_TRUE(audio_decoder_node_ref.output().connected());
+  EXPECT_EQ("FakeDecoder", audio_decoder_node_ref.GetGenericNode()->label());
+
+  NodeRef audio_reformatter_node_ref =
+      audio_decoder_node_ref.output().mate().node();
+  EXPECT_TRUE(audio_reformatter_node_ref);
+  EXPECT_EQ(1u, audio_reformatter_node_ref.input_count());
+  EXPECT_EQ(1u, audio_reformatter_node_ref.output_count());
+  EXPECT_TRUE(audio_reformatter_node_ref.input().connected());
+  EXPECT_TRUE(audio_reformatter_node_ref.input().prepared());
+  EXPECT_TRUE(audio_reformatter_node_ref.output().connected());
+  EXPECT_EQ("<not labelled>",
+            audio_reformatter_node_ref.GetGenericNode()->label());
+
+  NodeRef audio_renderer_node_ref =
+      audio_reformatter_node_ref.output().mate().node();
+  EXPECT_TRUE(audio_renderer_node_ref);
+  EXPECT_EQ(1u, audio_renderer_node_ref.input_count());
+  EXPECT_EQ(0u, audio_renderer_node_ref.output_count());
+  EXPECT_TRUE(audio_renderer_node_ref.input().connected());
+  EXPECT_TRUE(audio_renderer_node_ref.input().prepared());
+  EXPECT_EQ("FakeAudioRenderer",
+            audio_renderer_node_ref.GetGenericNode()->label());
+
+  // Walk the video segment. It has a decoder and a renderer.
+  NodeRef video_decoder_node_ref = source_node_ref.output(1).mate().node();
+  EXPECT_TRUE(video_decoder_node_ref);
+  EXPECT_EQ(1u, video_decoder_node_ref.input_count());
+  EXPECT_EQ(1u, video_decoder_node_ref.output_count());
+  EXPECT_TRUE(video_decoder_node_ref.input().connected());
+  EXPECT_TRUE(video_decoder_node_ref.input().prepared());
+  EXPECT_TRUE(video_decoder_node_ref.output().connected());
+  EXPECT_EQ("FakeDecoder", video_decoder_node_ref.GetGenericNode()->label());
+
+  NodeRef video_renderer_node_ref =
+      video_decoder_node_ref.output().mate().node();
+  EXPECT_TRUE(video_renderer_node_ref);
+  EXPECT_EQ(1u, video_renderer_node_ref.input_count());
+  EXPECT_EQ(0u, video_renderer_node_ref.output_count());
+  EXPECT_TRUE(video_renderer_node_ref.input().connected());
+  EXPECT_TRUE(video_renderer_node_ref.input().prepared());
+  EXPECT_EQ("FakeVideoRenderer",
+            video_renderer_node_ref.GetGenericNode()->label());
+
+  // std::cout << "\n" << source_node_ref << "\n\n";
+}
+
+// Tests a player with real segments constructed source-first.
+TEST(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  Player player(loop.async());
+
+  player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
+                          nullptr);
+
+  player.SetSinkSegment(
+      RendererSinkSegment::Create(FakeAudioRenderer::Create()),
+      StreamType::Medium::kAudio);
+  EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
+
+  player.SetSinkSegment(
+      RendererSinkSegment::Create(FakeVideoRenderer::Create()),
+      StreamType::Medium::kVideo);
+  EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
+
+  ExpectRealSegmentsGraph(player);
+}
+
+// Tests a player with real segments constructed sinks-first.
+TEST(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  Player player(loop.async());
+
+  player.SetSinkSegment(
+      RendererSinkSegment::Create(FakeAudioRenderer::Create()),
+      StreamType::Medium::kAudio);
+  EXPECT_FALSE(player.medium_connected(StreamType::Medium::kAudio));
+
+  player.SetSinkSegment(
+      RendererSinkSegment::Create(FakeVideoRenderer::Create()),
+      StreamType::Medium::kVideo);
+  EXPECT_FALSE(player.medium_connected(StreamType::Medium::kVideo));
+
+  player.SetSourceSegment(DemuxSourceSegment::Create(FakeDemux::Create()),
+                          nullptr);
+  EXPECT_TRUE(player.medium_connected(StreamType::Medium::kAudio));
+  EXPECT_TRUE(player.medium_connected(StreamType::Medium::kVideo));
+
+  ExpectRealSegmentsGraph(player);
 }
 
 }  // namespace test

@@ -40,15 +40,25 @@ test("tests") {
   output_name = "player_tests"
 
   sources = [
+    "test/fake_audio_renderer.cc",
+    "test/fake_audio_renderer.h",
+    "test/fake_decoder.cc",
+    "test/fake_decoder.h",
+    "test/fake_demux.cc",
+    "test/fake_demux.h",
     "test/fake_sink_segment.h",
     "test/fake_source_segment.h",
+    "test/fake_video_renderer.cc",
+    "test/fake_video_renderer.h",
     "test/player_test.cc",
   ]
 
   deps = [
     ":player",
+    "//garnet/bin/media/decode",
+    "//garnet/bin/media/demux",
     "//garnet/bin/media/framework",
-    "//garnet/bin/media/framework_create",
+    "//garnet/bin/media/render",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",
