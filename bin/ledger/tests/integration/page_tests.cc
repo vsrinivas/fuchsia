@@ -78,13 +78,6 @@ TEST_P(PageIntegrationTest, GetPage) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageId id = PageGetId(&page);
   instance->GetPage(fidl::MakeOptional(id), ledger::Status::OK);
-
-// TODO(etiennej): Reactivate after LE-87 is fixed.
-#if 0
-  // Search with a random id and expect a PAGE_NOT_FOUND result.
-  fidl::VectorPtr<uint8_t> test_id = RandomArray(16);
-  instance->GetPage(fidl::MakeOptional(test_id), ledger::Status::PAGE_NOT_FOUND);
-#endif
 }
 
 // Verifies that a page can be connected to twice.
@@ -115,12 +108,6 @@ TEST_P(PageIntegrationTest, DeletePage) {
   // Verify that deletion of the page closed the page connection.
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, page.WaitForResponse());
   EXPECT_TRUE(page_closed);
-
-// TODO(etiennej): Reactivate after LE-87 is fixed.
-#if 0
-  // Verify that the deleted page cannot be retrieved.
-  instance->GetPage(fidl::MakeOptional(id), ledger::Status::PAGE_NOT_FOUND);
-#endif
 
   // Delete the same page again and expect a PAGE_NOT_FOUND result.
   instance->DeletePage(id, ledger::Status::PAGE_NOT_FOUND);
