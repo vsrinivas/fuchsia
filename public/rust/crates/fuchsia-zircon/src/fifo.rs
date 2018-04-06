@@ -41,10 +41,15 @@ impl Fifo {
     ///
     /// Wraps
     /// [zx_fifo_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_write.md).
+    #[deprecated]
     pub fn write(&self, bytes: &[u8]) -> Result<u32, Status> {
+        self.write_old(bytes)
+    }
+
+    pub fn write_old(&self, bytes: &[u8]) -> Result<u32, Status> {
         let mut num_entries_written = 0;
         let status = unsafe {
-            sys::zx_fifo_write(self.raw_handle(), bytes.as_ptr(), bytes.len(),
+            sys::zx_fifo_write_old(self.raw_handle(), bytes.as_ptr(), bytes.len(),
                 &mut num_entries_written)
         };
         ok(status).map(|()| num_entries_written)
@@ -56,10 +61,15 @@ impl Fifo {
     ///
     /// Wraps
     /// [zx_fifo_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/fifo_read.md).
+    #[deprecated]
     pub fn read(&self, bytes: &mut [u8]) -> Result<u32, Status> {
+        self.read_old(bytes)
+    }
+
+    pub fn read_old(&self, bytes: &mut [u8]) -> Result<u32, Status> {
         let mut num_entries_read = 0;
         let status = unsafe {
-            sys::zx_fifo_read(self.raw_handle(), bytes.as_mut_ptr(), bytes.len(),
+            sys::zx_fifo_read_old(self.raw_handle(), bytes.as_mut_ptr(), bytes.len(),
                 &mut num_entries_read)
         };
         ok(status).map(|()| num_entries_read)
@@ -75,24 +85,24 @@ mod tests {
         let (fifo1, fifo2) = Fifo::create(4, 2).unwrap();
 
         // Trying to write less than one element should fail.
-        assert_eq!(fifo1.write(b""), Err(Status::OUT_OF_RANGE));
-        assert_eq!(fifo1.write(b"h"), Err(Status::OUT_OF_RANGE));
+        assert_eq!(fifo1.write_old(b""), Err(Status::OUT_OF_RANGE));
+        assert_eq!(fifo1.write_old(b"h"), Err(Status::OUT_OF_RANGE));
 
         // Should write one element "he" and ignore the last half-element as it rounds down.
-        assert_eq!(fifo1.write(b"hex").unwrap(), 1);
+        assert_eq!(fifo1.write_old(b"hex").unwrap(), 1);
 
         // Should write three elements "ll" "o " "wo" and drop the rest as it is full.
-        assert_eq!(fifo1.write(b"llo worlds").unwrap(), 3);
+        assert_eq!(fifo1.write_old(b"llo worlds").unwrap(), 3);
 
         // Now that the fifo is full any further attempts to write should fail.
-        assert_eq!(fifo1.write(b"blah blah"), Err(Status::SHOULD_WAIT));
+        assert_eq!(fifo1.write_old(b"blah blah"), Err(Status::SHOULD_WAIT));
 
         // Read all 4 entries from the other end.
         let mut read_vec = vec![0; 8];
-        assert_eq!(fifo2.read(&mut read_vec).unwrap(), 4);
+        assert_eq!(fifo2.read_old(&mut read_vec).unwrap(), 4);
         assert_eq!(read_vec, b"hello wo");
 
         // Reading again should fail as the fifo is empty.
-        assert_eq!(fifo2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
+        assert_eq!(fifo2.read_old(&mut read_vec), Err(Status::SHOULD_WAIT));
     }
 }

@@ -254,7 +254,7 @@ func (c *Client) Send(b Buffer) error {
 	c.sendbuf = append(c.sendbuf, c.arena.entry(b))
 	entries, entriesSize := fifoEntries(c.sendbuf)
 	var count uint32
-	status := zx.Sys_fifo_write(c.tx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_write_old(c.tx, entries, entriesSize, &count)
 	copy(c.sendbuf, c.sendbuf[count:])
 	c.sendbuf = c.sendbuf[:len(c.sendbuf)-int(count)]
 	if status != zx.ErrOk && status != zx.ErrShouldWait {
@@ -282,7 +282,7 @@ func (c *Client) txCompleteLocked() (bool, error) {
 	buf := c.tmpbuf[:c.txDepth]
 	entries, entriesSize := fifoEntries(buf)
 	var count uint32
-	status := zx.Sys_fifo_read(c.tx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_read_old(c.tx, entries, entriesSize, &count)
 	n := int(count)
 
 	c.txInFlight -= n
@@ -319,7 +319,7 @@ func (c *Client) Recv() (b Buffer, err error) {
 	}
 	entries, entriesSize := fifoEntries(c.recvbuf[:cap(c.recvbuf)])
 	var count uint32
-	status := zx.Sys_fifo_read(c.rx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_read_old(c.rx, entries, entriesSize, &count)
 	n := int(count)
 	c.recvbuf = c.recvbuf[:n]
 	c.rxInFlight -= n
@@ -343,7 +343,7 @@ func (c *Client) rxCompleteLocked() error {
 	}
 	entries, entriesSize := fifoEntries(buf)
 	var count uint32
-	status := zx.Sys_fifo_write(c.rx, entries, entriesSize, &count)
+	status := zx.Sys_fifo_write_old(c.rx, entries, entriesSize, &count)
 	for _, entry := range buf[count:] {
 		b := c.arena.bufferFromEntry(entry)
 		c.arena.free(c, b)
