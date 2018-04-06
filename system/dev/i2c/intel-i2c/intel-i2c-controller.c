@@ -325,6 +325,9 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
             zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
             continue;
         }
+        if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
+            break;
+        }
 
         uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
         zxlogf(TRACE, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
@@ -548,19 +551,35 @@ zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(
     return ZX_OK;
 }
 
+static void intel_serialio_i2c_unbind(void* ctx) {
+    intel_serialio_i2c_device_t* dev = ctx;
+    if (dev) {
+        zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p\n", dev->irq_handle,
+                dev->irq_thread);
+        if ((dev->irq_handle != ZX_HANDLE_INVALID) && dev->irq_thread) {
+            zx_interrupt_signal(dev->irq_handle, ZX_INTERRUPT_SLOT_USER, 0);
+            thrd_join(dev->irq_thread, NULL);
+        }
+        if (dev->zxdev) {
+            device_remove(dev->zxdev);
+        }
+    }
+}
+
 static void intel_serialio_i2c_release(void* ctx) {
     intel_serialio_i2c_device_t* dev = ctx;
-    zx_handle_close(dev->regs_handle);
-    zx_handle_close(dev->irq_handle);
-    zx_handle_close(dev->event_handle);
-
-    // TODO: Handle joining the irq thread
+    if (dev) {
+        zx_handle_close(dev->regs_handle);
+        zx_handle_close(dev->irq_handle);
+        zx_handle_close(dev->event_handle);
+    }
     free(dev);
 }
 
 static zx_protocol_device_t intel_serialio_i2c_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .ioctl = intel_serialio_i2c_ioctl,
+    .unbind = intel_serialio_i2c_unbind,
     .release = intel_serialio_i2c_release,
 };
 
@@ -801,12 +820,16 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     device->bus_freq = I2C_MAX_STANDARD_SPEED_HZ;
 
     status = intel_serialio_i2c_device_specific_init(device, device_id);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i2c: device specific init failed: %d\n", status);
         goto fail;
+    }
 
     status = intel_serialio_compute_bus_timing(device);
-    if (status < 0)
+    if (status < 0) {
+        zxlogf(ERROR, "i2c: compute bus timing failed: %d\n", status);
         goto fail;
+    }
 
     // Temporary hack until we have routed through the FMCN ACPI tables.
     if (vendor_id == INTEL_VID &&
@@ -832,8 +855,10 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     // Configure the I2C controller. We don't need to hold the lock because
     // nobody else can see this controller yet.
     status = intel_serialio_i2c_reset_controller(device);
-    if (status < 0)
+    if (status < 0) {
+        zxlogf(ERROR, "i2c: reset controller failed: %d\n", status);
         goto fail;
+    }
 
     char name[ZX_DEVICE_NAME_MAX];
     snprintf(name, sizeof(name), "i2c-bus-%04x", device_id);
@@ -847,6 +872,7 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
 
     status = device_add(dev, &args, &device->zxdev);
     if (status < 0) {
+        zxlogf(ERROR, "device add failed: %d\n", status);
         goto fail;
     }
 
@@ -859,15 +885,8 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
     return ZX_OK;
 
 fail:
-    // TODO: Handle joining the irq thread
-    if (device->regs_handle != ZX_HANDLE_INVALID)
-        zx_handle_close(device->regs_handle);
-    if (device->irq_handle != ZX_HANDLE_INVALID)
-        zx_handle_close(device->irq_handle);
-    if (device->event_handle != ZX_HANDLE_INVALID)
-        zx_handle_close(device->event_handle);
-    //free(device);
-
+    intel_serialio_i2c_unbind(device);
+    intel_serialio_i2c_release(device);
     return status;
 }
 
