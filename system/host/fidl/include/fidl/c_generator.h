@@ -26,8 +26,7 @@ namespace fidl {
 
 class CGenerator {
 public:
-    explicit CGenerator(const flat::Library* library)
-        : library_(library) {}
+    explicit CGenerator(const flat::Library* library) : library_(library) {}
 
     ~CGenerator() = default;
 
@@ -88,11 +87,16 @@ private:
     void GenerateStructDeclaration(StringView name, const std::vector<Member>& members);
     void GenerateTaggedUnionDeclaration(StringView name, const std::vector<Member>& members);
 
-    std::map<const flat::Decl*, NamedConst> NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
-    std::map<const flat::Decl*, NamedEnum> NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
-    std::map<const flat::Decl*, NamedInterface> NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
-    std::map<const flat::Decl*, NamedStruct> NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
-    std::map<const flat::Decl*, NamedUnion> NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
+    std::map<const flat::Decl*, NamedConst>
+    NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos);
+    std::map<const flat::Decl*, NamedEnum>
+    NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos);
+    std::map<const flat::Decl*, NamedInterface>
+    NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos);
+    std::map<const flat::Decl*, NamedStruct>
+    NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos);
+    std::map<const flat::Decl*, NamedUnion>
+    NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos);
 
     void ProduceConstForwardDeclaration(const NamedConst& named_const);
     void ProduceEnumForwardDeclaration(const NamedEnum& named_enum);

@@ -25,42 +25,44 @@
 namespace {
 
 [[noreturn]] void Usage() {
-    std::cout << "usage: fidlc [--c-header HEADER_PATH]\n"
-                 "             [--tables TABLES_PATH]\n"
-                 "             [--json JSON_PATH]\n"
-                 "             [--name LIBRARY_NAME]\n"
-                 "             [--files [FIDL_FILE...]...]\n"
-                 "\n"
-                 " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
-                 "   a C header at the given path.\n"
-                 "\n"
-                 " * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output\n"
-                 "   coding tables at the given path. The coding tables are required to encode and\n"
-                 "   decode messages from the C and C++ bindings.\n"
-                 "\n"
-                 " * `--json JSON_PATH`. If present, this flag instructs `fidlc` to output the\n"
-                 "   library's intermediate representation at the given path. The intermediate\n"
-                 "   representation is JSON that conforms to [a particular schema](../../system/host/fidl/schema.json).\n"
-                 "   The intermediate representation is used as input to the various backends.\n"
-                 "\n"
-                 " * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate\n"
-                 "   that the library being compiled has the given name. This flag is useful to\n"
-                 "   cross-check between the library's declaration in a build system and the\n"
-                 "   actual contents of the library.\n"
-                 "\n"
-                 " * `--files [FIDL_FILE...]...`. Each `--file [FIDL_FILE...]` chunk of arguments\n"
-                 "   describes a library, all of which must share the same top-level library name\n"
-                 "   declaration. Libraries must be presented in dependency order, with later\n"
-                 "   libraries able to use declarations from preceding libraries but not vice versa.\n"
-                 "   Output is only generated for the final library, not for each of its dependencies.\n"
-                 "\n"
-                 "All of the arguments can also be provided via a response file, denoted as\n"
-                 "`@responsefile`. The contents of the file at `responsefile` will be interpreted\n"
-                 "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
-                 "and must be the only argument.\n"
-                 "\n"
-                 "See <https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/compiler.md>\n"
-                 "for more information.\n";
+    std::cout
+        << "usage: fidlc [--c-header HEADER_PATH]\n"
+           "             [--tables TABLES_PATH]\n"
+           "             [--json JSON_PATH]\n"
+           "             [--name LIBRARY_NAME]\n"
+           "             [--files [FIDL_FILE...]...]\n"
+           "\n"
+           " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
+           "   a C header at the given path.\n"
+           "\n"
+           " * `--tables TABLES_PATH`. If present, this flag instructs `fidlc` to output\n"
+           "   coding tables at the given path. The coding tables are required to encode and\n"
+           "   decode messages from the C and C++ bindings.\n"
+           "\n"
+           " * `--json JSON_PATH`. If present, this flag instructs `fidlc` to output the\n"
+           "   library's intermediate representation at the given path. The intermediate\n"
+           "   representation is JSON that conforms to a particular schema (located at\n"
+           "   https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/schema.json).\n"
+           "   The intermediate representation is used as input to the various backends.\n"
+           "\n"
+           " * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate\n"
+           "   that the library being compiled has the given name. This flag is useful to\n"
+           "   cross-check between the library's declaration in a build system and the\n"
+           "   actual contents of the library.\n"
+           "\n"
+           " * `--files [FIDL_FILE...]...`. Each `--file [FIDL_FILE...]` chunk of arguments\n"
+           "   describes a library, all of which must share the same top-level library name\n"
+           "   declaration. Libraries must be presented in dependency order, with later\n"
+           "   libraries able to use declarations from preceding libraries but not vice versa.\n"
+           "   Output is only generated for the final library, not for each of its dependencies.\n"
+           "\n"
+           "All of the arguments can also be provided via a response file, denoted as\n"
+           "`@responsefile`. The contents of the file at `responsefile` will be interpreted\n"
+           "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
+           "and must be the only argument.\n"
+           "\n"
+           "See <https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/compiler.md>\n"
+           "for more information.\n";
     std::cout.flush();
     exit(1);
 }
@@ -113,8 +115,7 @@ private:
 
 class ResponseFileArguments : public Arguments {
 public:
-    ResponseFileArguments(fidl::StringView filename)
-        : file_(Open(filename, std::ios::in)) {
+    ResponseFileArguments(fidl::StringView filename) : file_(Open(filename, std::ios::in)) {
         ConsumeWhitespace();
     }
 
@@ -127,9 +128,7 @@ public:
         return argument;
     }
 
-    bool Remaining() const override {
-        return !file_.eof();
-    }
+    bool Remaining() const override { return !file_.eof(); }
 
 private:
     bool IsWhitespace() {
@@ -173,8 +172,7 @@ bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifie
     return true;
 }
 
-template <typename Generator>
-void Generate(Generator* generator, std::fstream file) {
+template <typename Generator> void Generate(Generator* generator, std::fstream file) {
     auto generated_output = generator->Produce();
     file << generated_output.str();
     file.flush();

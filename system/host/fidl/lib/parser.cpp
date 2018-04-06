@@ -6,33 +6,33 @@
 
 namespace fidl {
 
-#define TOKEN_PRIMITIVE_TYPE_CASES \
-    case Token::Kind::Bool:        \
-    case Token::Kind::Status:      \
-    case Token::Kind::Int8:        \
-    case Token::Kind::Int16:       \
-    case Token::Kind::Int32:       \
-    case Token::Kind::Int64:       \
-    case Token::Kind::Uint8:       \
-    case Token::Kind::Uint16:      \
-    case Token::Kind::Uint32:      \
-    case Token::Kind::Uint64:      \
-    case Token::Kind::Float32:     \
+#define TOKEN_PRIMITIVE_TYPE_CASES                                                                 \
+    case Token::Kind::Bool:                                                                        \
+    case Token::Kind::Status:                                                                      \
+    case Token::Kind::Int8:                                                                        \
+    case Token::Kind::Int16:                                                                       \
+    case Token::Kind::Int32:                                                                       \
+    case Token::Kind::Int64:                                                                       \
+    case Token::Kind::Uint8:                                                                       \
+    case Token::Kind::Uint16:                                                                      \
+    case Token::Kind::Uint32:                                                                      \
+    case Token::Kind::Uint64:                                                                      \
+    case Token::Kind::Float32:                                                                     \
     case Token::Kind::Float64
 
-#define TOKEN_TYPE_CASES          \
-    TOKEN_PRIMITIVE_TYPE_CASES:   \
-    case Token::Kind::Identifier: \
-    case Token::Kind::Array:      \
-    case Token::Kind::Vector:     \
-    case Token::Kind::String:     \
-    case Token::Kind::Handle:     \
+#define TOKEN_TYPE_CASES                                                                           \
+    TOKEN_PRIMITIVE_TYPE_CASES:                                                                    \
+    case Token::Kind::Identifier:                                                                  \
+    case Token::Kind::Array:                                                                       \
+    case Token::Kind::Vector:                                                                      \
+    case Token::Kind::String:                                                                      \
+    case Token::Kind::Handle:                                                                      \
     case Token::Kind::Request
 
-#define TOKEN_LITERAL_CASES           \
-    case Token::Kind::True:           \
-    case Token::Kind::False:          \
-    case Token::Kind::NumericLiteral: \
+#define TOKEN_LITERAL_CASES                                                                        \
+    case Token::Kind::True:                                                                        \
+    case Token::Kind::False:                                                                       \
+    case Token::Kind::NumericLiteral:                                                              \
     case Token::Kind::StringLiteral
 
 namespace {
@@ -510,7 +510,8 @@ std::unique_ptr<raw::Type> Parser::ParseType() {
     }
 }
 
-std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+std::unique_ptr<raw::ConstDeclaration>
+Parser::ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     ConsumeToken(Token::Kind::Const);
     if (!Ok())
         return Fail();
@@ -547,7 +548,8 @@ std::unique_ptr<raw::EnumMember> Parser::ParseEnumMember() {
     return std::make_unique<raw::EnumMember>(std::move(identifier), std::move(member_value));
 }
 
-std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+std::unique_ptr<raw::EnumDeclaration>
+Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     std::vector<std::unique_ptr<raw::EnumMember>> members;
 
     ConsumeToken(Token::Kind::Enum);
@@ -685,13 +687,13 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod() {
     assert(method_name);
     assert(maybe_request || maybe_response);
 
-    return std::make_unique<raw::InterfaceMethod>(std::move(ordinal),
-                                                  std::move(method_name),
+    return std::make_unique<raw::InterfaceMethod>(std::move(ordinal), std::move(method_name),
                                                   std::move(maybe_request),
                                                   std::move(maybe_response));
 }
 
-std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+std::unique_ptr<raw::InterfaceDeclaration>
+Parser::ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     std::vector<std::unique_ptr<raw::CompoundIdentifier>> superinterfaces;
     std::vector<std::unique_ptr<raw::InterfaceMethod>> methods;
 
@@ -744,7 +746,8 @@ std::unique_ptr<raw::InterfaceDeclaration> Parser::ParseInterfaceDeclaration(std
         Fail();
 
     return std::make_unique<raw::InterfaceDeclaration>(std::move(attributes), std::move(identifier),
-                                                       std::move(superinterfaces), std::move(methods));
+                                                       std::move(superinterfaces),
+                                                       std::move(methods));
 }
 
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
@@ -768,7 +771,8 @@ std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
                                                std::move(maybe_default_value));
 }
 
-std::unique_ptr<raw::StructDeclaration> Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+std::unique_ptr<raw::StructDeclaration>
+Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     std::vector<std::unique_ptr<raw::StructMember>> members;
 
     ConsumeToken(Token::Kind::Struct);
@@ -825,7 +829,8 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
     return std::make_unique<raw::UnionMember>(std::move(type), std::move(identifier));
 }
 
-std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
+std::unique_ptr<raw::UnionDeclaration>
+Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes) {
     std::vector<std::unique_ptr<raw::UnionMember>> members;
 
     ConsumeToken(Token::Kind::Union);
@@ -928,7 +933,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             return More;
 
         case Token::Kind::Interface:
-            interface_declaration_list.emplace_back(ParseInterfaceDeclaration(std::move(attributes)));
+            interface_declaration_list.emplace_back(
+                ParseInterfaceDeclaration(std::move(attributes)));
             return More;
 
         case Token::Kind::Struct:

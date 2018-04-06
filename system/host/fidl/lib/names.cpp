@@ -286,8 +286,7 @@ std::string NameInterface(const flat::Interface& interface) {
     return NameName(interface.name);
 }
 
-std::string NameMethod(StringView interface_name,
-                       const flat::Interface::Method& method) {
+std::string NameMethod(StringView interface_name, const flat::Interface::Method& method) {
     return std::string(interface_name) + NameIdentifier(method.name);
 }
 
@@ -355,7 +354,8 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
     return name;
 }
 
-std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name, types::Nullability nullability) {
+std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name,
+                                     types::Nullability nullability) {
     std::string name(library_name);
     name += "Interface";
     name += interface_name;
@@ -363,7 +363,8 @@ std::string NameCodedInterfaceHandle(StringView library_name, StringView interfa
     return name;
 }
 
-std::string NameCodedRequestHandle(StringView library_name, StringView interface_name, types::Nullability nullability) {
+std::string NameCodedRequestHandle(StringView library_name, StringView interface_name,
+                                   types::Nullability nullability) {
     std::string name(library_name);
     name += "Request";
     name += interface_name;
@@ -378,7 +379,8 @@ std::string NameCodedArray(StringView element_name, uint64_t size) {
     return name;
 }
 
-std::string NameCodedVector(StringView element_name, uint64_t max_size, types::Nullability nullability) {
+std::string NameCodedVector(StringView element_name, uint64_t max_size,
+                            types::Nullability nullability) {
     std::string name("Vector");
     name += element_name;
     name += NameSize(max_size);

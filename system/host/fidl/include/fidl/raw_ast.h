@@ -28,8 +28,7 @@ namespace fidl {
 namespace raw {
 
 struct Identifier {
-    explicit Identifier(SourceLocation location)
-        : location(location) {}
+    explicit Identifier(SourceLocation location) : location(location) {}
 
     SourceLocation location;
 };
@@ -51,34 +50,29 @@ struct Literal {
         False,
     };
 
-    explicit Literal(Kind kind)
-        : kind(kind) {}
+    explicit Literal(Kind kind) : kind(kind) {}
 
     const Kind kind;
 };
 
 struct StringLiteral : public Literal {
-    explicit StringLiteral(SourceLocation location)
-        : Literal(Kind::String), location(location) {}
+    explicit StringLiteral(SourceLocation location) : Literal(Kind::String), location(location) {}
 
     SourceLocation location;
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(SourceLocation location)
-        : Literal(Kind::Numeric), location(location) {}
+    NumericLiteral(SourceLocation location) : Literal(Kind::Numeric), location(location) {}
 
     SourceLocation location;
 };
 
 struct TrueLiteral : public Literal {
-    TrueLiteral()
-        : Literal(Kind::True) {}
+    TrueLiteral() : Literal(Kind::True) {}
 };
 
 struct FalseLiteral : public Literal {
-    FalseLiteral()
-        : Literal(Kind::False) {}
+    FalseLiteral() : Literal(Kind::False) {}
 };
 
 struct Constant {
@@ -89,8 +83,7 @@ struct Constant {
         Literal,
     };
 
-    explicit Constant(Kind kind)
-        : kind(kind) {}
+    explicit Constant(Kind kind) : kind(kind) {}
 
     const Kind kind;
 };
@@ -110,8 +103,7 @@ struct LiteralConstant : Constant {
 };
 
 struct Attribute {
-    Attribute(std::unique_ptr<Identifier> name,
-              std::unique_ptr<StringLiteral> value)
+    Attribute(std::unique_ptr<Identifier> name, std::unique_ptr<StringLiteral> value)
         : name(std::move(name)), value(std::move(value)) {}
 
     std::unique_ptr<Identifier> name;
@@ -138,8 +130,7 @@ struct Type {
         Identifier,
     };
 
-    explicit Type(Kind kind)
-        : kind(kind) {}
+    explicit Type(Kind kind) : kind(kind) {}
 
     const Kind kind;
 };
@@ -156,8 +147,7 @@ struct ArrayType : public Type {
 struct VectorType : public Type {
     VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                types::Nullability nullability)
-        : Type(Kind::Vector),
-          element_type(std::move(element_type)),
+        : Type(Kind::Vector), element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
@@ -183,7 +173,8 @@ struct HandleType : public Type {
 };
 
 struct RequestHandleType : public Type {
-    RequestHandleType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
+    RequestHandleType(std::unique_ptr<CompoundIdentifier> identifier,
+                      types::Nullability nullability)
         : Type(Kind::RequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
@@ -263,14 +254,11 @@ struct ParameterList {
 };
 
 struct InterfaceMethod {
-    InterfaceMethod(std::unique_ptr<NumericLiteral> ordinal,
-                    std::unique_ptr<Identifier> identifier,
+    InterfaceMethod(std::unique_ptr<NumericLiteral> ordinal, std::unique_ptr<Identifier> identifier,
                     std::unique_ptr<ParameterList> maybe_request,
                     std::unique_ptr<ParameterList> maybe_response)
-        : ordinal(std::move(ordinal)),
-          identifier(std::move(identifier)),
-          maybe_request(std::move(maybe_request)),
-          maybe_response(std::move(maybe_response)) {}
+        : ordinal(std::move(ordinal)), identifier(std::move(identifier)),
+          maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)) {}
 
     std::unique_ptr<NumericLiteral> ordinal;
     std::unique_ptr<Identifier> identifier;
@@ -336,8 +324,7 @@ struct UnionDeclaration {
 };
 
 struct File {
-    File(std::unique_ptr<Identifier> identifier,
-         std::vector<std::unique_ptr<Using>> using_list,
+    File(std::unique_ptr<Identifier> identifier, std::vector<std::unique_ptr<Using>> using_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,

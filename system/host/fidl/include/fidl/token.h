@@ -24,16 +24,14 @@ public:
 #include "fidl/token_definitions.inc"
     };
 
-    Token(SourceLocation location, Kind kind)
-        : location_(location), kind_(kind) {}
+    Token(SourceLocation location, Kind kind) : location_(location), kind_(kind) {}
 
-    Token()
-        : Token(SourceLocation(), Token::Kind::NotAToken) {}
+    Token() : Token(SourceLocation(), Token::Kind::NotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
-#define TOKEN(Name)               \
-    case fidl::Token::Kind::Name: \
+#define TOKEN(Name)                                                                                \
+    case fidl::Token::Kind::Name:                                                                  \
         return #Name;
 #include "fidl/token_definitions.inc"
         }

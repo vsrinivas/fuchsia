@@ -15,8 +15,7 @@ IdentifierTable::IdentifierTable() {
     };
 }
 
-Token IdentifierTable::MakeIdentifier(StringView source_data,
-                                      const SourceFile& source_file,
+Token IdentifierTable::MakeIdentifier(StringView source_data, const SourceFile& source_file,
                                       bool escaped_identifier) const {
     auto kind = Token::Kind::Identifier;
     if (!escaped_identifier) {

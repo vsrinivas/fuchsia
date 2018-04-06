@@ -43,8 +43,7 @@ private:
         }
     }
 
-    bool LookupHandleSubtype(const raw::Identifier* identifier,
-                             types::HandleSubtype* subtype_out);
+    bool LookupHandleSubtype(const raw::Identifier* identifier, types::HandleSubtype* subtype_out);
 
     decltype(nullptr) Fail();
 
@@ -73,21 +72,26 @@ private:
     std::unique_ptr<raw::RequestHandleType> ParseRequestHandleType();
     std::unique_ptr<raw::Type> ParseType();
 
-    std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    std::unique_ptr<raw::ConstDeclaration>
+    ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::EnumMember> ParseEnumMember();
-    std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    std::unique_ptr<raw::EnumDeclaration>
+    ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::Parameter> ParseParameter();
     std::unique_ptr<raw::ParameterList> ParseParameterList();
     std::unique_ptr<raw::InterfaceMethod> ParseInterfaceMethod();
-    std::unique_ptr<raw::InterfaceDeclaration> ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    std::unique_ptr<raw::InterfaceDeclaration>
+    ParseInterfaceDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::StructMember> ParseStructMember();
-    std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    std::unique_ptr<raw::StructDeclaration>
+    ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::UnionMember> ParseUnionMember();
-    std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes);
+    std::unique_ptr<raw::UnionDeclaration>
+    ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes);
 
     std::unique_ptr<raw::File> ParseFile();
 

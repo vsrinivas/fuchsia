@@ -30,8 +30,7 @@ namespace fidl {
 
 class TablesGenerator {
 public:
-    explicit TablesGenerator(const flat::Library* library)
-        : library_(library) {}
+    explicit TablesGenerator(const flat::Library* library) : library_(library) {}
 
     ~TablesGenerator() = default;
 
@@ -42,8 +41,7 @@ private:
     void GenerateFilePreamble();
     void GenerateFilePostamble();
 
-    template <typename Collection>
-    void GenerateArray(const Collection& collection);
+    template <typename Collection> void GenerateArray(const Collection& collection);
 
     void Generate(const coded::StructType& struct_type);
     void Generate(const coded::UnionType& union_type);
@@ -83,7 +81,8 @@ private:
     TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;
     TypeMap<flat::StringType, coded::StringType> string_type_map_;
 
-    std::map<const flat::Name*, std::unique_ptr<coded::Type>, flat::PtrCompare<flat::Name>> named_coded_types_;
+    std::map<const flat::Name*, std::unique_ptr<coded::Type>, flat::PtrCompare<flat::Name>>
+        named_coded_types_;
     std::vector<std::unique_ptr<coded::Type>> coded_types_;
 
     std::ostringstream tables_file_;

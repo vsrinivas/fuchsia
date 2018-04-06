@@ -45,10 +45,13 @@ std::string NameFields(StringView name);
 std::string NameCodedStruct(const flat::Struct* struct_decl);
 std::string NameCodedUnion(const flat::Union* union_decl);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
-std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name, types::Nullability nullability);
-std::string NameCodedRequestHandle(StringView library_name, StringView interface_name, types::Nullability nullability);
+std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name,
+                                     types::Nullability nullability);
+std::string NameCodedRequestHandle(StringView library_name, StringView interface_name,
+                                   types::Nullability nullability);
 std::string NameCodedArray(StringView element_name, uint64_t size);
-std::string NameCodedVector(StringView element_name, uint64_t max_size, types::Nullability nullability);
+std::string NameCodedVector(StringView element_name, uint64_t max_size,
+                            types::Nullability nullability);
 std::string NameCodedString(uint64_t max_size, types::Nullability nullability);
 
 } // namespace fidl

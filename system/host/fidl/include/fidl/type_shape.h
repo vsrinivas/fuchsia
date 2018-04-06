@@ -9,10 +9,8 @@
 
 class TypeShape {
 public:
-    constexpr TypeShape(uint32_t size, uint32_t alignment)
-        : size_(size), alignment_(alignment) {}
-    constexpr TypeShape()
-        : TypeShape(0u, 0u) {}
+    constexpr TypeShape(uint32_t size, uint32_t alignment) : size_(size), alignment_(alignment) {}
+    constexpr TypeShape() : TypeShape(0u, 0u) {}
 
     TypeShape(const TypeShape&) = default;
     TypeShape& operator=(const TypeShape&) = default;
@@ -28,10 +26,8 @@ private:
 class FieldShape {
 public:
     explicit FieldShape(TypeShape typeshape, uint32_t offset = 0u)
-        : typeshape_(typeshape),
-          offset_(offset) {}
-    FieldShape()
-        : FieldShape(TypeShape()) {}
+        : typeshape_(typeshape), offset_(offset) {}
+    FieldShape() : FieldShape(TypeShape()) {}
 
     TypeShape& Typeshape() { return typeshape_; }
     TypeShape Typeshape() const { return typeshape_; }

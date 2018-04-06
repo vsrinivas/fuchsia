@@ -19,8 +19,7 @@ namespace flat {
 
 namespace {
 
-template <typename T>
-class Scope {
+template <typename T> class Scope {
 public:
     bool Insert(const T& t) {
         auto iter = scope_.insert(t);
@@ -169,8 +168,7 @@ bool Library::Fail(StringView message) {
 }
 
 bool Library::Fail(const SourceLocation& location, StringView message) {
-    auto formatted_message = location.position() + ": " +
-                             std::string(message) + "\n";
+    auto formatted_message = location.position() + ": " + std::string(message) + "\n";
     error_reporter_->ReportError(std::move(formatted_message));
     return false;
 }
@@ -186,8 +184,7 @@ Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependenc
 }
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
-                                        SourceLocation location,
-                                        Name* name_out) {
+                                        SourceLocation location, Name* name_out) {
     if (compound_identifier->components.size() == 1) {
         *name_out = Name(this, compound_identifier->components[0]->location);
         return true;
@@ -247,7 +244,8 @@ bool Library::RegisterDecl(Decl* decl) {
     return true;
 }
 
-bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location, std::unique_ptr<Constant>* out_constant) {
+bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
+                              std::unique_ptr<Constant>* out_constant) {
     switch (raw_constant->kind) {
     case raw::Constant::Kind::Identifier: {
         auto identifier = static_cast<raw::IdentifierConstant*>(raw_constant.get());
@@ -267,7 +265,8 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
     return true;
 }
 
-bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location, std::unique_ptr<Type>* out_type) {
+bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location,
+                          std::unique_ptr<Type>* out_type) {
     switch (raw_type->kind) {
     case raw::Type::Kind::Array: {
         auto array_type = static_cast<raw::ArrayType*>(raw_type.get());
@@ -282,7 +281,8 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
             return Fail(location, "Unable to parse array element count");
         // TODO(kulakowski) Overflow checking.
         uint32_t size = element_count.Value() * element_type->size;
-        *out_type = std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
+        *out_type =
+            std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
         break;
     }
     case raw::Type::Kind::Vector: {
@@ -298,7 +298,8 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
             if (!ParseSize(std::move(constant), &element_count))
                 return Fail(location, "Unable to parse vector size bound");
         }
-        *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count), vector_type->nullability);
+        *out_type = std::make_unique<VectorType>(std::move(element_type), std::move(element_count),
+                                                 vector_type->nullability);
         break;
     }
     case raw::Type::Kind::String: {
@@ -311,7 +312,8 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
             if (!ParseSize(std::move(constant), &element_count))
                 return Fail(location, "Unable to parse string size bound");
         }
-        *out_type = std::make_unique<StringType>(std::move(element_count), string_type->nullability);
+        *out_type =
+            std::make_unique<StringType>(std::move(element_count), string_type->nullability);
         break;
     }
     case raw::Type::Kind::Handle: {
@@ -358,8 +360,8 @@ bool Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
     if (!ConsumeConstant(std::move(const_declaration->constant), location, &constant))
         return false;
 
-    const_declarations_.push_back(std::make_unique<Const>(std::move(attributes), std::move(name), std::move(type),
-                                                          std::move(constant)));
+    const_declarations_.push_back(std::make_unique<Const>(std::move(attributes), std::move(name),
+                                                          std::move(type), std::move(constant)));
     auto decl = const_declarations_.back().get();
     RegisterConst(decl);
     return RegisterDecl(decl);
@@ -381,7 +383,8 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
     auto attributes = std::move(enum_declaration->attributes);
     auto name = Name(this, enum_declaration->identifier->location);
 
-    enum_declarations_.push_back(std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
+    enum_declarations_.push_back(
+        std::make_unique<Enum>(std::move(attributes), std::move(name), type, std::move(members)));
     return RegisterDecl(enum_declarations_.back().get());
 }
 
@@ -428,11 +431,12 @@ bool Library::ConsumeInterfaceDeclaration(
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
 
-        methods.emplace_back(std::move(ordinal), std::move(method_name),
-                             std::move(maybe_request), std::move(maybe_response));
+        methods.emplace_back(std::move(ordinal), std::move(method_name), std::move(maybe_request),
+                             std::move(maybe_response));
     }
 
-    interface_declarations_.push_back(std::make_unique<Interface>(std::move(attributes), std::move(name), std::move(methods)));
+    interface_declarations_.push_back(
+        std::make_unique<Interface>(std::move(attributes), std::move(name), std::move(methods)));
     return RegisterDecl(interface_declarations_.back().get());
 }
 
@@ -448,15 +452,16 @@ bool Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
             return false;
         std::unique_ptr<Constant> maybe_default_value;
         if (member->maybe_default_value != nullptr) {
-            if (!ConsumeConstant(std::move(member->maybe_default_value), location, &maybe_default_value))
+            if (!ConsumeConstant(std::move(member->maybe_default_value), location,
+                                 &maybe_default_value))
                 return false;
         }
-        members.emplace_back(std::move(type),
-                             member->identifier->location,
+        members.emplace_back(std::move(type), member->identifier->location,
                              std::move(maybe_default_value));
     }
 
-    struct_declarations_.push_back(std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
+    struct_declarations_.push_back(
+        std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members)));
     return RegisterDecl(struct_declarations_.back().get());
 }
 
@@ -473,7 +478,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     auto attributes = std::move(union_declaration->attributes);
     auto name = Name(this, union_declaration->identifier->location);
 
-    union_declarations_.push_back(std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
+    union_declarations_.push_back(
+        std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
     return RegisterDecl(union_declarations_.back().get());
 }
 
@@ -485,7 +491,8 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
         StringView current_name = library_name_.data();
         StringView new_name = library_name.data();
         if (current_name != new_name) {
-            return Fail(library_name, "Two files in the library disagree about the name of the library");
+            return Fail(library_name,
+                        "Two files in the library disagree about the name of the library");
         }
     } else {
         library_name_ = library_name;
@@ -661,8 +668,7 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     if (decl == nullptr) {
         // This wasn't a named type. Thus we are looking up a
         // top-level constant, of string or primitive type.
-        assert(type->kind == Type::Kind::String ||
-               type->kind == Type::Kind::Primitive);
+        assert(type->kind == Type::Kind::String || type->kind == Type::Kind::Primitive);
         auto iter = constants_.find(&name);
         if (iter == constants_.end()) {
             return nullptr;
@@ -973,8 +979,7 @@ bool Library::CompileUnion(Union* union_declaration) {
 bool Library::Compile() {
     for (const auto& name_and_library : *dependencies_) {
         const Library* library = name_and_library.second.get();
-        constants_.insert(library->constants_.begin(),
-                          library->constants_.end());
+        constants_.insert(library->constants_.begin(), library->constants_.end());
     }
 
     if (!SortDeclarations()) {
@@ -1061,7 +1066,8 @@ bool Library::CompileHandleType(flat::HandleType* handle_type, TypeShape* out_ty
     return true;
 }
 
-bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type, TypeShape* out_typeshape) {
+bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type,
+                                       TypeShape* out_typeshape) {
     auto named_decl = LookupType(request_type->name);
     if (!named_decl || named_decl->kind != Decl::Kind::kInterface)
         return Fail(request_type->name, "Undefined reference in request handle name");
@@ -1070,8 +1076,7 @@ bool Library::CompileRequestHandleType(flat::RequestHandleType* request_type, Ty
     return true;
 }
 
-bool Library::CompilePrimitiveType(flat::PrimitiveType* primitive_type,
-                                   TypeShape* out_typeshape) {
+bool Library::CompilePrimitiveType(flat::PrimitiveType* primitive_type, TypeShape* out_typeshape) {
     *out_typeshape = PrimitiveTypeShape(primitive_type->subtype);
     return true;
 }
@@ -1087,7 +1092,8 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
     switch (named_decl->kind) {
     case Decl::Kind::kConst: {
         // A constant isn't a type!
-        return Fail(identifier_type->name, "The name of a constant was used where a type was expected");
+        return Fail(identifier_type->name,
+                    "The name of a constant was used where a type was expected");
     }
     case Decl::Kind::kEnum: {
         if (identifier_type->nullability == types::Nullability::Nullable) {
@@ -1118,9 +1124,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         }
         break;
     }
-    default: {
-        abort();
-    }
+    default: { abort(); }
     }
 
     identifier_type->size = typeshape.Size();
@@ -1174,8 +1178,7 @@ std::string Interface::MethodQName(const Method* method) const {
     return qname;
 }
 
-std::string Interface::MessageQName(const Method* method,
-                                    types::MessageKind kind) const {
+std::string Interface::MessageQName(const Method* method, types::MessageKind kind) const {
     std::string qname = MethodQName(method);
     switch (kind) {
     case types::MessageKind::kRequest:

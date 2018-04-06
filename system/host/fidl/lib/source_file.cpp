@@ -12,8 +12,7 @@
 namespace fidl {
 
 SourceFile::SourceFile(std::string filename, std::string data)
-    : filename_(std::move(filename)),
-      data_(std::move(data)) {
+    : filename_(std::move(filename)), data_(std::move(data)) {
     size_t size = 0u;
     auto start_of_line = data_.cbegin();
 
@@ -36,15 +35,12 @@ StringView SourceFile::LineContaining(StringView view, Position* position_out) c
         return std::less_equal<const char*>()(left, right);
     };
 
-    assert(ptr_order(data().data(), view.data()) &&
-           "The view is not part of this SourceFile");
-    assert(ptr_order(view.data() + view.size(),
-                     data().data() + data().size()) &&
+    assert(ptr_order(data().data(), view.data()) && "The view is not part of this SourceFile");
+    assert(ptr_order(view.data() + view.size(), data().data() + data().size()) &&
            "The view is not part of this SourceFile");
 
     auto is_in_line = [&view, &ptr_order](const StringView& current) {
-        return ptr_order(view.data() + view.size(),
-                         current.data() + current.size());
+        return ptr_order(view.data() + view.size(), current.data() + current.size());
     };
 
     auto line = std::find_if(lines_.cbegin(), lines_.cend(), is_in_line);

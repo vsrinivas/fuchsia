@@ -161,14 +161,16 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     }
 }
 
-CGenerator::Member CreateMember(const flat::Library* library, const flat::Type* type, StringView name) {
+CGenerator::Member CreateMember(const flat::Library* library, const flat::Type* type,
+                                StringView name) {
     auto type_name = NameFlatCType(type);
     std::vector<uint32_t> array_counts = ArrayCounts(library, type);
     return CGenerator::Member{type_name, name, std::move(array_counts)};
 }
 
 std::vector<CGenerator::Member>
-GenerateMembers(const flat::Library* library, const std::vector<flat::Union::Member>& union_members) {
+GenerateMembers(const flat::Library* library,
+                const std::vector<flat::Union::Member>& union_members) {
     std::vector<CGenerator::Member> members;
     members.reserve(union_members.size());
     for (const auto& union_member : union_members) {
@@ -247,7 +249,8 @@ void CGenerator::GenerateTaggedUnionDeclaration(StringView name,
 
 // TODO(TO-702) These should maybe check for global name
 // collisions? Otherwise, is there some other way they should fail?
-std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
+std::map<const flat::Decl*, CGenerator::NamedConst>
+CGenerator::NameConsts(const std::vector<std::unique_ptr<flat::Const>>& const_infos) {
     std::map<const flat::Decl*, NamedConst> named_consts;
     for (const auto& const_info : const_infos) {
         named_consts.emplace(const_info.get(), NamedConst{"", *const_info});
@@ -255,7 +258,8 @@ std::map<const flat::Decl*, CGenerator::NamedConst> CGenerator::NameConsts(const
     return named_consts;
 }
 
-std::map<const flat::Decl*, CGenerator::NamedEnum> CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
+std::map<const flat::Decl*, CGenerator::NamedEnum>
+CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
     std::map<const flat::Decl*, NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
         std::string enum_name = NameName(enum_info->name);
@@ -264,7 +268,8 @@ std::map<const flat::Decl*, CGenerator::NamedEnum> CGenerator::NameEnums(const s
     return named_enums;
 }
 
-std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
+std::map<const flat::Decl*, CGenerator::NamedInterface>
+CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& interface_infos) {
     std::map<const flat::Decl*, NamedInterface> named_interfaces;
     for (const auto& interface_info : interface_infos) {
         NamedInterface named_interface;
@@ -275,19 +280,27 @@ std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfac
             named_method.ordinal = method.ordinal.Value();
             named_method.ordinal_name = NameOrdinal(method_name);
             if (method.maybe_request != nullptr) {
-                std::string c_name = NameMessage(LibraryName(library_), method_name, types::MessageKind::kRequest);
+                std::string c_name =
+                    NameMessage(LibraryName(library_), method_name, types::MessageKind::kRequest);
                 std::string coded_name = NameTable(c_name);
-                named_method.request = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request->parameters});
+                named_method.request = std::make_unique<NamedMessage>(NamedMessage{
+                    std::move(c_name), std::move(coded_name), method.maybe_request->parameters});
             }
             if (method.maybe_response != nullptr) {
                 if (method.maybe_request == nullptr) {
-                    std::string c_name = NameMessage(LibraryName(library_), method_name, types::MessageKind::kEvent);
+                    std::string c_name =
+                        NameMessage(LibraryName(library_), method_name, types::MessageKind::kEvent);
                     std::string coded_name = NameTable(c_name);
-                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->parameters});
+                    named_method.response = std::make_unique<NamedMessage>(
+                        NamedMessage{std::move(c_name), std::move(coded_name),
+                                     method.maybe_response->parameters});
                 } else {
-                    std::string c_name = NameMessage(LibraryName(library_), method_name, types::MessageKind::kResponse);
+                    std::string c_name = NameMessage(LibraryName(library_), method_name,
+                                                     types::MessageKind::kResponse);
                     std::string coded_name = NameTable(c_name);
-                    named_method.response = std::make_unique<NamedMessage>(NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->parameters});
+                    named_method.response = std::make_unique<NamedMessage>(
+                        NamedMessage{std::move(c_name), std::move(coded_name),
+                                     method.maybe_response->parameters});
                 }
             }
             named_interface.methods.push_back(std::move(named_method));
@@ -297,17 +310,20 @@ std::map<const flat::Decl*, CGenerator::NamedInterface> CGenerator::NameInterfac
     return named_interfaces;
 }
 
-std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
+std::map<const flat::Decl*, CGenerator::NamedStruct>
+CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
     std::map<const flat::Decl*, NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
         std::string c_name = NameName(struct_info->name);
         std::string coded_name = NameName(struct_info->name) + "Coded";
-        named_structs.emplace(struct_info.get(), NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
+        named_structs.emplace(struct_info.get(),
+                              NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
     }
     return named_structs;
 }
 
-std::map<const flat::Decl*, CGenerator::NamedUnion> CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
+std::map<const flat::Decl*, CGenerator::NamedUnion>
+CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
     std::map<const flat::Decl*, NamedUnion> named_unions;
     for (const auto& union_info : union_infos) {
         std::string union_name = NameName(union_info->name);
@@ -326,8 +342,7 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
     for (const auto& member : named_enum.enum_info.members) {
         std::string member_name = named_enum.name + "_" + NameIdentifier(member.name);
         std::string member_value;
-        EnumValue(named_enum.enum_info.type, member.value.get(),
-                  library_, &member_value);
+        EnumValue(named_enum.enum_info.type, member.value.get(), library_, &member_value);
         GenerateIntegerDefine(member_name, subtype, std::move(member_value));
     }
 
@@ -336,7 +351,8 @@ void CGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) {
 
 void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_interface) {
     for (const auto& method_info : named_interface.methods) {
-        header_file_ << "#define " << method_info.ordinal_name << " ((uint32_t)" << method_info.ordinal << ")\n";
+        header_file_ << "#define " << method_info.ordinal_name << " ((uint32_t)"
+                     << method_info.ordinal << ")\n";
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
         if (method_info.response)
@@ -357,7 +373,8 @@ void CGenerator::ProduceInterfaceExternDeclaration(const NamedInterface& named_i
         if (method_info.request)
             header_file_ << "extern const fidl_type_t " << method_info.request->coded_name << ";\n";
         if (method_info.response)
-            header_file_ << "extern const fidl_type_t " << method_info.response->coded_name << ";\n";
+            header_file_ << "extern const fidl_type_t " << method_info.response->coded_name
+                         << ";\n";
     }
 }
 
@@ -405,7 +422,8 @@ void CGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
 }
 
 void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
-    std::vector<CGenerator::Member> members = GenerateMembers(library_, named_union.union_info.members);
+    std::vector<CGenerator::Member> members =
+        GenerateMembers(library_, named_union.union_info.members);
     GenerateTaggedUnionDeclaration(named_union.name, members);
 
     uint32_t tag = 0u;
@@ -424,11 +442,15 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
 std::ostringstream CGenerator::Produce() {
     GeneratePrologues();
 
-    std::map<const flat::Decl*, NamedConst> named_consts = NameConsts(library_->const_declarations_);
+    std::map<const flat::Decl*, NamedConst> named_consts =
+        NameConsts(library_->const_declarations_);
     std::map<const flat::Decl*, NamedEnum> named_enums = NameEnums(library_->enum_declarations_);
-    std::map<const flat::Decl*, NamedInterface> named_interfaces = NameInterfaces(library_->interface_declarations_);
-    std::map<const flat::Decl*, NamedStruct> named_structs = NameStructs(library_->struct_declarations_);
-    std::map<const flat::Decl*, NamedUnion> named_unions = NameUnions(library_->union_declarations_);
+    std::map<const flat::Decl*, NamedInterface> named_interfaces =
+        NameInterfaces(library_->interface_declarations_);
+    std::map<const flat::Decl*, NamedStruct> named_structs =
+        NameStructs(library_->struct_declarations_);
+    std::map<const flat::Decl*, NamedUnion> named_unions =
+        NameUnions(library_->union_declarations_);
 
     header_file_ << "\n// Forward declarations\n\n";
 
