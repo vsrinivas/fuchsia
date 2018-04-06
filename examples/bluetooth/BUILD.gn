@@ -9,11 +9,15 @@ package("garnet_bluetooth_examples") {
 
   deps = [
 #    "ble_battery_service",
+    "bt_beacon_reader",
   ]
 
   binaries = [
 #    {
 #     name = "ble_battery_service"
 #   },
+    {
+      name = "bt_beacon_reader"
+    },
   ]
 }
