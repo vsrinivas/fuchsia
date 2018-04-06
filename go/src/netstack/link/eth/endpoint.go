@@ -51,7 +51,13 @@ func (ep *linkEndpoint) WriteBuffer(r *stack.Route, payload *buffer.VectorisedVi
 	}
 
 	copy(ethHdr[0:], remoteLinkAddr)
-	copy(ethHdr[6:], ep.LinkAddr)
+	// Allow callers to preserve link-layer source address.
+	// Useful for transparent bridging.
+	if r.LocalLinkAddress != "" {
+		copy(ethHdr[6:], r.LocalLinkAddress)
+	} else {
+		copy(ethHdr[6:], ep.LinkAddr)
+	}
 	ethHdr[12] = uint8(protocol >> 8)
 	ethHdr[13] = uint8(protocol)
 
@@ -128,11 +134,12 @@ func (ep *linkEndpoint) dispatch(d stack.NetworkDispatcher) (err error) {
 		// TODO: optimization: consider unpacking the destination link addr
 		// and checking that we are a destination (including multicast support).
 
-		remoteLinkAddr := tcpip.LinkAddress(v[6:12])
+		dstLinkAddr := tcpip.LinkAddress(v[:6])
+		srcLinkAddr := tcpip.LinkAddress(v[6:12])
 		p := tcpip.NetworkProtocolNumber(uint16(v[12])<<8 | uint16(v[13]))
 
 		ep.vv.TrimFront(headerLength)
-		d.DeliverNetworkPacket(ep, remoteLinkAddr, p, &ep.vv)
+		d.DeliverNetworkPacket(ep, dstLinkAddr, srcLinkAddr, p, &ep.vv)
 	}
 
 	return nil

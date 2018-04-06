@@ -45,11 +45,11 @@ func (e *StatsEndpoint) Wrap(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 // DeliverNetworkPacket handles incoming packet from the lower layer.
 // It performs packet inspection, and extract a rich set of statistics,
 // and stores them to a FIDL data structure.
-func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, remoteLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) {
+func (e *StatsEndpoint) DeliverNetworkPacket(linkEP stack.LinkEndpoint, dstLinkAddr, remoteLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv *buffer.VectorisedView) {
 	e.Stats.Rx.PktsTotal += 1
 	e.Stats.Rx.BytesTotal += uint64(vv.Size())
 	e.analyzeTrafficStats(&e.Stats.Rx, protocol, vv.First(), vv.Size())
-	e.dispatcher.DeliverNetworkPacket(e, remoteLinkAddr, protocol, vv)
+	e.dispatcher.DeliverNetworkPacket(e, dstLinkAddr, remoteLinkAddr, protocol, vv)
 }
 
 // Attach implements registaion of lower endpoint and dispatcher.
