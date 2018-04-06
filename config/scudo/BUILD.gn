@@ -5,7 +5,7 @@
 import("//build/toolchain/variant.gni")
 
 declare_args() {
-  # Use the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
+  # Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
   # memory allocator for Fuchsia.
   use_scudo = false
 
@@ -21,17 +21,21 @@ declare_args() {
   ]
 }
 
-assert(!use_scudo || scudo_default_options == "",
-       "`scudo_default_options` does not affect `use_scudo builds`; " +
-           "use `select_variant` to choose `scudo` instead")
-
-# This config is added unconditionally by BUILDCONFIG.gn to pick up the
+# This group is added unconditionally by BUILDCONFIG.gn to pick up the
 # global `use_scudo` build argument.  For fine-grained control, leave
 # `use_scudo=false` and use `select_variant` to choose the `scudo`
 # variant for some components.
-config("default") {
+# This configuration will apply to the executable alone, and not any of its
+# deps. (So most code will not be compiled with Scudo, but executables will
+# be *linked* with it, which is the important thing.)
+# Enabling Scudo requires both a configuration change and an additional
+# dependency; we group them together here.
+group("default_for_executable") {
   if (use_scudo && is_fuchsia) {
-    configs = [ ":scudo" ]
+    public_configs = [ ":scudo" ]
+    deps = [
+      ":scudo_default_options",
+    ]
   }
 }
 
@@ -39,7 +43,9 @@ config("default") {
 # when `use_scudo` is set, as well as making that config (along with
 # the deps to propagate `scudo_default_options`) into a variant.
 variant("scudo") {
-  common_flags = [ "-fsanitize=scudo" ]
+  # The variant only works by linking Scudo in.
+  # i.e., we don't support code that relies on `#if __has_feature(scudo)`.
+  ldflags = [ "-fsanitize=scudo" ]
   deps = [
     ":scudo_default_options",
   ]
@@ -52,7 +58,7 @@ source_set("scudo_default_options") {
       "scudo_default_options.c",
     ]
     options_string = ""
-    foreach (option, scudo_default_options) {
+    foreach(option, scudo_default_options) {
       options_string += ":$option"
     }
     defines = [ "SCUDO_DEFAULT_OPTIONS=\"${options_string}\"" ]

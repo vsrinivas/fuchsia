@@ -173,10 +173,7 @@ if (is_fuchsia) {
   ]
 }
 
-default_common_binary_configs += [
-  "//build/config/lto:default",
-  "//build/config/scudo:default",
-]
+default_common_binary_configs += [ "//build/config/lto:default" ]
 
 # Add and remove configs specified by the variant.
 default_common_binary_configs += toolchain_variant.configs
@@ -192,6 +189,7 @@ default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
+default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
 
 if (toolchain_variant.is_pic_default) {
   default_common_binary_configs += [ "//build/config:shared_library_config" ]
@@ -876,12 +874,15 @@ template("executable") {
   _executable_name = target_name
   _variant_shared = false
   variant_target("executable") {
+    deps = []
     target_name = _executable_name
 
     # Explicitly forward visibility, implicitly forward everything else.
     # See comment in template("shared_library") above for details.
     forward_variables_from(invoker, [ "visibility" ])
     forward_variables_from(invoker, "*", [ "visibility" ])
+
+    deps += default_executable_deps
   }
 }
 
