@@ -270,7 +270,8 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
 
     if ((job_count_ == 0) && (process_count_ == 0)) {
         if (state_ == State::KILLING)
-            state_ = State::READY;
+            state_ = State::DEAD;
+
         if (!parent_) {
             // There are no userspace process left. From here, there's
             // no particular context as to whether this was

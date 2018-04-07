@@ -47,8 +47,7 @@ is returned.
 
 **ZX_ERR_NO_MEMORY**  (Temporary) Failure due to lack of memory.
 
-**ZX_ERR_BAD_STATE**  (Temporary) Failure due to the job object being in the
-middle of a *zx_task_kill()* operation.
+**ZX_ERR_BAD_STATE**  The parent job object is in the dead state.
 
 ## SEE ALSO
 

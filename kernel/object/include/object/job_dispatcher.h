@@ -37,6 +37,24 @@ protected:
     virtual ~JobEnumerator() = default;
 };
 
+// This class implements the Job object kernel interface. Each Job has a parent
+// Job and zero or more child Jobs and zero or more Child processes. This
+// creates a DAG (tree) that connects every living task in the system.
+// This is critically important because of the bottoms up refcount nature of
+// the system in which the scheduler keeps alive the thread and the thread keeeps
+// alive the process, so without the Job it would not be possible to enumerate
+// or control the tasks in the system for which there are no outstanding handles.
+//
+// The second important job of the Job is to apply policies that cannot otherwise
+// be easily enforced by capabilities, for example kernel object creation.
+//
+// The third one is to support exception propagation from the leaf tasks to
+// the root tasks.
+//
+// Obviously there is a special case for the 'root' Job which its parent is null
+// and in the current implementation will call platform_halt() when its process
+// and job count reaches zero. The root job is not exposed to user mode, instead
+// the single child Job of the root job is given to the userboot process.
 class JobDispatcher final : public SoloDispatcher {
 public:
     // Traits to belong to the parent's raw job list.
@@ -135,6 +153,7 @@ private:
     enum class State {
         READY,
         KILLING,
+        DEAD
     };
 
     using LiveRefsArray = fbl::Array<fbl::RefPtr<Dispatcher>>;
