@@ -59,7 +59,7 @@ function fx-prompt-info {
   # shell's environment.
   (
     fx-config-read
-    echo "${FUCHSIA_ARCH}-${FUCHSIA_VARIANT}"
+    echo "${FUCHSIA_BUILD_DIR##*/}"
   )
 }
 
@@ -154,4 +154,3 @@ if [[ -z "${ZSH_VERSION}" ]]; then
   }
   complete -o default -F __fx fx
 fi
-

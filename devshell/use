@@ -1,0 +1,29 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Re-use a previous build directory set up by `fx set`.
+
+## usage: fx use DIR
+##
+## Switches further `fx` commands to using a different build directory.
+## This only works if `fx set ... --build-dir DIR` succeeded previously
+## (and DIR has not been removed since).  The next `fx build` or other
+## such command will now refer to DIR.  The previous build directory is
+## left in place, so you can switch back again with `fx use` later.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
+
+function main {
+  if [[ $# -ne 1 ]]; then
+    fx-command-help
+    return 1
+  fi
+
+  local -r build_dir="$1"
+
+  fx-config-write "${build_dir}"
+}
+
+main "$@"
