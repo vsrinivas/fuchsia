@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[deny(warnings)]
+#![deny(warnings)]
 
 use failure::Error;
 use rand::{self, Rng};
@@ -45,7 +45,7 @@ pub fn create_and_bind_device() -> Result<(File, String), Error> {
     println!("at: {}, {}", file!(), line!());
     }
     println!("at: {}, {}", file!(), line!());
-    let dev = dev.ok_or(format_err!("could not open {:?}", devpath))?;
+    let dev = dev.ok_or_else(|| format_err!("could not open {:?}", devpath))?;
     println!("at: {}, {}", file!(), line!());
     bind_fake_device(&dev)?;
     println!("at: {}, {}", file!(), line!());
@@ -125,7 +125,7 @@ pub fn get_device_driver_name(device: &File) -> Result<OsString, Error> {
     // This is safe because the length of the output buffer is computed from the vector, and the
     // callee does not retain the pointers.
     let name_size = unsafe {
-        ioctl(&device,
+        ioctl(device,
               IOCTL_DEVICE_GET_DRIVER_NAME,
               ::std::ptr::null_mut() as *mut raw::c_void,
               0,
@@ -140,34 +140,10 @@ pub fn get_device_driver_name(device: &File) -> Result<OsString, Error> {
     Ok(ospath)
 }
 
-// Ioctl called used to get the topography of the bluetooth device. This is used to ensure
-// the driver got loaded by the right device.
-// TODO(bwb): move out to a generic crate
-pub fn get_device_driver_topo(device: &File) -> Result<OsString, Error> {
-    let mut topo = [0; 2048];
-
-    // This is safe because the length of the output buffer is computed from the vector, and the
-    // callee does not retain the pointers.
-    let size = unsafe {
-        ioctl(&device,
-              IOCTL_DEVICE_GET_TOPO_PATH,
-              ::std::ptr::null_mut() as *mut raw::c_void,
-              0,
-              topo.as_mut_ptr() as *mut raw::c_void,
-              topo.len())?
-    };
-
-    // Need to return an OsString with length equal to the return value of the ioctl, rather than
-    // the full length of the buffer.
-    let mut ospath = OsString::new();
-    ospath.push(OsStr::from_bytes(&topo[0..size as usize]));
-    Ok(ospath)
-}
-
 pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
     let mut handle = zircon::sys::ZX_HANDLE_INVALID;
     unsafe {
-        ioctl(&device,
+        ioctl(device,
               IOCTL_BT_HCI_GET_SNOOP_CHANNEL,
               ::std::ptr::null_mut() as *mut raw::c_void,
               0,
@@ -206,12 +182,6 @@ const IOCTL_DEVICE_GET_DRIVER_NAME: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     2
-);
-
-const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl!(
-    fdio_sys::IOCTL_KIND_DEFAULT,
-    fdio_sys::IOCTL_FAMILY_DEVICE,
-    4
 );
 
 // Bluetooth specific Ioctls

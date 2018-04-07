@@ -61,8 +61,8 @@ fn bt_host_lifecycle() {
     println!("at {}", line!());
 
     // Confirm device topology, host is under bt-hci
-    let device_topo = hci::get_device_driver_topo(&found_device).unwrap();
-    assert!(device_topo.to_string_lossy().contains("bt-hci"));
+    let device_topo = fdio::device_get_topo_path(&found_device).unwrap();
+    assert!(device_topo.contains("bt-hci"));
     println!("at {}", line!());
 
     // Remove the bt-hci device
