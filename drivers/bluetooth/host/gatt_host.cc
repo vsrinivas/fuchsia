@@ -21,7 +21,7 @@ GattHost::GattHost(std::string thrd_name)
     : btlib::common::TaskDomain<GattHost>(this, std::move(thrd_name)),
       weak_ptr_factory_(this) {
   // Initialize the profile to operate on our task runner.
-  gatt_ = gatt::GATT::Create(task_runner());
+  gatt_ = gatt::GATT::Create(task_runner(), dispatcher());
   FXL_DCHECK(gatt_);
 }
 

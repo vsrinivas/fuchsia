@@ -9,6 +9,8 @@ source_set("common") {
     "cancelable_callback.h",
     "cancelable_task.cc",
     "cancelable_task.h",
+    "create_thread.cc",
+    "create_thread.h",
     "device_address.cc",
     "device_address.h",
     "device_class.cc",
@@ -38,6 +40,7 @@ source_set("common") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

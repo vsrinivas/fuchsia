@@ -9,8 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/common/task_domain.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 #include "client.h"
 #include "connection.h"
 #include "server.h"
@@ -23,8 +21,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   using TaskDomainBase = common::TaskDomain<Impl, GATT>;
 
  public:
-  explicit Impl(fxl::RefPtr<fxl::TaskRunner> gatt_runner)
-      : TaskDomainBase(this, gatt_runner), initialized_(false) {}
+  explicit Impl(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
+                async_t* gatt_dispatcher)
+      : TaskDomainBase(this, gatt_runner, gatt_dispatcher),
+        initialized_(false) {}
 
   ~Impl() override {
     FXL_DCHECK(!initialized_) << "gatt: ShutDown() must have been called!";
@@ -87,27 +87,25 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
                        WriteHandler write_handler,
                        ClientConfigCallback ccc_callback,
                        fxl::RefPtr<fxl::TaskRunner> task_runner) override {
-    PostMessage(fxl::MakeCopyable(
-        [this, svc = std::move(service), id_cb = std::move(callback),
-         rh = std::move(read_handler), wh = std::move(write_handler),
-         cccc = std::move(ccc_callback), task_runner]() mutable {
-          IdType id;
+    PostMessage([this, svc = std::move(service), id_cb = std::move(callback),
+                 rh = std::move(read_handler), wh = std::move(write_handler),
+                 cccc = std::move(ccc_callback), task_runner]() mutable {
+      IdType id;
 
-          if (!initialized_) {
-            FXL_VLOG(1) << "gatt: Cannot register service after shutdown";
-            id = kInvalidId;
-          } else {
-            id = local_services_->RegisterService(
-                std::move(svc), std::move(rh), std::move(wh), std::move(cccc));
-          }
+      if (!initialized_) {
+        FXL_VLOG(1) << "gatt: Cannot register service after shutdown";
+        id = kInvalidId;
+      } else {
+        id = local_services_->RegisterService(std::move(svc), std::move(rh),
+                                              std::move(wh), std::move(cccc));
+      }
 
-          if (task_runner->RunsTasksOnCurrentThread()) {
-            id_cb(id);
-          } else {
-            task_runner->PostTask(
-                [id, id_cb = std::move(id_cb)] { id_cb(id); });
-          }
-        }));
+      if (task_runner->RunsTasksOnCurrentThread()) {
+        id_cb(id);
+      } else {
+        task_runner->PostTask([id, id_cb = std::move(id_cb)] { id_cb(id); });
+      }
+    });
   }
 
   void UnregisterService(IdType service_id) override {
@@ -184,9 +182,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 }  // namespace
 
 // static
-fbl::RefPtr<GATT> GATT::Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner) {
+fbl::RefPtr<GATT> GATT::Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
+                               async_t* gatt_dispatcher) {
   FXL_DCHECK(gatt_runner);
-  return AdoptRef(new Impl(gatt_runner));
+  return AdoptRef(new Impl(gatt_runner, gatt_dispatcher));
 }
 
 }  // namespace gatt

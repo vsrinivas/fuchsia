@@ -7,6 +7,7 @@
 #include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
@@ -37,7 +38,9 @@ namespace gatt {
 class GATT : public fbl::RefCounted<GATT> {
  public:
   // Constructs a GATT object.
-  static fbl::RefPtr<GATT> Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner);
+  // TODO(NET-695): Remove |gatt_runner| once nothing depends on it.
+  static fbl::RefPtr<GATT> Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
+                                  async_t* gatt_dispatcher);
 
   // Initialize/ShutDown the GATT profile. It is safe for the caller to drop its
   // reference after ShutDown.

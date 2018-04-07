@@ -8,10 +8,15 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
+
+#include "garnet/drivers/bluetooth/lib/common/create_thread.h"
 
 namespace btlib {
 namespace common {
@@ -81,6 +86,8 @@ namespace internal {
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_clean_up, CleanUp, void (T::*)(void));
 }  // namespace internal
 
+// TODO(NET-695): Remove all references to fsl::MessageLoop and fxl::TaskRunner
+// once nothing depends on them.
 template <typename T, typename RefCountedType = T>
 class TaskDomain {
  protected:
@@ -89,16 +96,25 @@ class TaskDomain {
   TaskDomain(T* obj, std::string name) : owns_thread_(true) {
     Init(obj);
 
-    std::thread thrd = fsl::CreateThread(&task_runner_, std::move(name));
+    std::thread thrd =
+        common::CreateThread(&task_runner_, &dispatcher_, std::move(name));
     FXL_DCHECK(task_runner_);
+    FXL_DCHECK(dispatcher_);
     thrd.detach();
   }
 
   // Initializes this domain by assigning the given |task_runner| to it.
-  TaskDomain(T* obj, fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : owns_thread_(false), task_runner_(task_runner) {
+  // TODO(armansito): For now this needs both a TaskRunner and async_t so that
+  // the dependency on TaskRunner can be removed in pieces.
+  TaskDomain(T* obj,
+             fxl::RefPtr<fxl::TaskRunner> task_runner,
+             async_t* dispatcher)
+      : owns_thread_(false),
+        task_runner_(task_runner),
+        dispatcher_(dispatcher) {
     Init(obj);
     FXL_DCHECK(task_runner_);
+    FXL_DCHECK(dispatcher_);
   }
 
   virtual ~TaskDomain() {
@@ -121,20 +137,17 @@ class TaskDomain {
   }
 
   fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+  async_t* dispatcher() const { return dispatcher_; }
 
-  void PostMessage(std::function<void()> func) {
-    if (alive_) {
-      if (task_runner_->RunsTasksOnCurrentThread()) {
+  void PostMessage(fbl::Function<void()> func) {
+    // |objref| is captured here to make sure |obj_| stays alive until |func|
+    // has run.
+    async::PostTask(dispatcher_, [this, func = std::move(func),
+                                  objref = fbl::WrapRefPtr(obj_)] {
+      if (alive_) {
         func();
-      } else {
-        task_runner_->PostTask(
-            [this, func = std::move(func), objref = fbl::WrapRefPtr(obj_)] {
-              if (alive_) {
-                func();
-              }
-            });
       }
-    }
+    });
   }
 
  private:
@@ -155,6 +168,7 @@ class TaskDomain {
   std::atomic_bool alive_;
   bool owns_thread_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TaskDomain);
 };

@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 
 namespace btlib {
 namespace common {
@@ -19,8 +18,9 @@ class TestObject : public fbl::RefCounted<TestObject>,
                    public TaskDomain<TestObject> {
  public:
   // TestObject gets handed a TaskRunner and does not own the thread.
-  explicit TestObject(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : TaskDomain<TestObject>(this, task_runner) {}
+  explicit TestObject(fxl::RefPtr<fxl::TaskRunner> task_runner,
+                      async_t* dispatcher)
+      : TaskDomain<TestObject>(this, task_runner, dispatcher) {}
 
   void ScheduleTask() {
     PostMessage([this] {
@@ -51,10 +51,12 @@ class TestObject : public fbl::RefCounted<TestObject>,
 
 TEST(TaskDomainTest, PostMessageAndCleanUp) {
   fxl::RefPtr<fxl::TaskRunner> thrd_runner;
-  std::thread thrd = fsl::CreateThread(&thrd_runner, "task_domain_unittest");
+  async_t* dispatcher;
+  std::thread thrd =
+      common::CreateThread(&thrd_runner, &dispatcher, "task_domain_unittest");
   ASSERT_TRUE(thrd_runner);
 
-  auto obj = fbl::AdoptRef(new TestObject(thrd_runner));
+  auto obj = fbl::AdoptRef(new TestObject(thrd_runner, dispatcher));
 
   // Schedule a task. This is expected to run on the |thrd_runner|.
   obj->ScheduleTask();
@@ -69,11 +71,17 @@ TEST(TaskDomainTest, PostMessageAndCleanUp) {
   // We schedule 3 tasks which will be run serially by |thrd_runner|. At the
   // time of the final quit task we expect the domain to be cleaned up which
   // should cause the second task to be dropped.
+
+  // #1: clean up task. This won't quit the loop as the TaskDomain does not own
+  // the thread.
   obj->ShutDown();
+
+  // #2: This should not run due to #1.
   obj->ScheduleTask();
 
+  // #3: This task quits the loop.
   bool done = false;
-  thrd_runner->PostTask([obj, &done] {
+  async::PostTask(dispatcher, [obj, &done] {
     fsl::MessageLoop::GetCurrent()->QuitNow();
 
     {
