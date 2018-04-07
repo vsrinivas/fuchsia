@@ -72,9 +72,16 @@ struct BandInfo {
 };
 
 struct PhyInfo {
-  // The id is not set by the device node, as it has no way of knowing what its id is, but this
-  // field may be used by external systems to provide an identifier for a WlanPhy.
+  // The following fields are not set by the phy itself, but by the service that monitors them.
+  // The phy id. This is not a stable identifier, but will not change while this phy's device node
+  // remains.
   uint16 id;
+  // The topological path of the phy in the device tree.
+  string? dev_path;
+
+  // The hardware MAC address for the phy. May not be the same as the MAC address used to
+  // communicate with external systems.
+  array<uint8>:6 hw_mac_address;
 
   vector<SupportedPhy>:8 supported_phys;
   vector<DriverFeature>:8 driver_features;

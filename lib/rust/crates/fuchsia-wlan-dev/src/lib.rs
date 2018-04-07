@@ -15,9 +15,9 @@ extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zircon;
 extern crate fidl_wlan_device as wlan;
 
+use failure::Error;
 use std::fmt;
 use std::fs::{File, OpenOptions};
-use std::io;
 use std::path::{Path, PathBuf};
 
 mod sys;
@@ -30,14 +30,17 @@ pub struct WlanPhy {
 
 impl WlanPhy {
     /// Opens the given path and creates a `WlanPhy` for that device node.
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let dev = OpenOptions::new().read(true).write(true).open(&path)?;
-        let mut path_buf = PathBuf::new();
-        path_buf.push(path);
         Ok(WlanPhy {
-            dev_path: path_buf,
+            dev_path: PathBuf::from(fdio::device_get_topo_path(&dev)?),
             dev_node: dev,
         })
+    }
+
+    /// Returns a reference to the topological path of the device.
+    pub fn path(&self) -> &Path {
+        &self.dev_path
     }
 
     /// Retrieves a zircon channel to the WLAN Phy device, for use with the WLAN Phy fidl service.

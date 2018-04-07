@@ -92,6 +92,11 @@ zx_status_t PhyDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
 namespace {
 wlan_device::PhyInfo get_info() {
     wlan_device::PhyInfo info;
+
+    // The "local" bit is set to prevent collisions with globally-administered MAC addresses.
+    static const uint8_t kTestMacAddr[] = { 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, };
+    memcpy(info.hw_mac_address.mutable_data(), kTestMacAddr, info.hw_mac_address.count());
+
     info.supported_phys.resize(0);
     info.driver_features.resize(0);
     info.mac_roles.resize(0);

@@ -21,7 +21,7 @@ use std::sync::Arc;
 struct PhyDevice {
     id: u16,
     proxy: wlan::PhyProxy,
-    _dev: wlan_dev::WlanPhy,
+    dev: wlan_dev::WlanPhy,
 }
 
 impl PhyDevice {
@@ -30,10 +30,7 @@ impl PhyDevice {
         Ok(PhyDevice {
             id,
             proxy: dev.connect()?,
-            // TODO(tkilbourn): see about removing this field. It will close the fd to the device,
-            // which means the refcount on the dev node goes down. Investigate how this works out
-            // in practice.
-            _dev: dev,
+            dev: dev,
         })
     }
 }
@@ -85,11 +82,13 @@ impl DeviceManager {
             .values()
             .map(|phy| {
                 let phy_id = phy.id;
+                let phy_path = phy.dev.path().to_string_lossy().into_owned();
                 // For now we query each device for every call to `list_phys`. We will need to
                 // decide how to handle queries for static vs dynamic data, caching response, etc.
                 phy.proxy.query().map_err(|_| ()).map(move |response| {
                     let mut info = response.info;
                     info.id = phy_id;
+                    info.dev_path = Some(phy_path);
                     info
                 })
             })
