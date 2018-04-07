@@ -9,7 +9,7 @@ ticks_per_second - Read the number of high-precision timer ticks in a second.
 ```
 #include <zircon/syscalls.h>
 
-uint64_t zx_ticks_per_second(void)
+zx_ticks_t zx_ticks_per_second(void)
 ```
 
 ## DESCRIPTION
@@ -35,12 +35,12 @@ second.
 ## EXAMPLES
 
 ```
-uint64_t ticks_per_second = zx_ticks_per_second();
-uint64_t ticks_start = zx_ticks_get();
+zx_ticks_t ticks_per_second = zx_ticks_per_second();
+zx_ticks_t ticks_start = zx_ticks_get();
 
 // do some more work
 
-uint64_t ticks_end = zx_ticks_get();
+zx_ticks_t ticks_end = zx_ticks_get();
 double elapsed_seconds = (ticks_end - ticks_start) / (double)ticks_per_second;
 
 ```

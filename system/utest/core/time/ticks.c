@@ -11,12 +11,12 @@
 static bool elapsed_time_using_ticks(void) {
     BEGIN_TEST;
 
-    uint64_t per_second = zx_ticks_per_second();
+    zx_ticks_t per_second = zx_ticks_per_second();
     ASSERT_GT(per_second, 0u, "Invalid ticks per second");
     unittest_printf("Ticks per second: %" PRIu64 "\n", per_second);
 
-    uint64_t x = zx_ticks_get();
-    uint64_t y = zx_ticks_get();
+    zx_ticks_t x = zx_ticks_get();
+    zx_ticks_t y = zx_ticks_get();
     ASSERT_GE(y, x, "Ticks went backwards");
 
     double seconds = (y - x) / (double)per_second;

@@ -165,15 +165,15 @@ static zx_time_t discrete_time_roundup(zx_time_t t) {
     return value;
 }
 
-uint64_t ticks_per_second(void) {
+zx_ticks_t ticks_per_second(void) {
     return tsc_ticks_per_ms * 1000;
 }
 
-uint64_t current_ticks(void) {
+zx_ticks_t current_ticks(void) {
     return rdtsc();
 }
 
-zx_time_t ticks_to_nanos(uint64_t ticks) {
+zx_time_t ticks_to_nanos(zx_ticks_t ticks) {
     return u64_mul_u64_fp32_64(ticks, ns_per_tsc);
 }
 
@@ -394,10 +394,10 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
         }
 
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
-        uint64_t end = rdtsc();
+        zx_ticks_t end = rdtsc();
         cpuid(0, &_ignored, &_ignored, &_ignored, &_ignored);
 
-        uint64_t tsc_ticks = end - start;
+        zx_ticks_t tsc_ticks = end - start;
         if (tsc_ticks < best_time) {
             best_time = tsc_ticks;
         }

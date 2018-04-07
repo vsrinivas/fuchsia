@@ -16,20 +16,20 @@
 
 #include "bench.h"
 
-static uint64_t ns_to_ticks(zx_time_t ns) {
+static zx_ticks_t ns_to_ticks(zx_time_t ns) {
     __uint128_t temp = (__uint128_t)ns * zx_ticks_per_second() / ZX_SEC(1);
-    return (uint64_t)temp;
+    return (zx_ticks_t)temp;
 }
 
-static zx_time_t ticks_to_ns(uint64_t ticks) {
+static zx_time_t ticks_to_ns(zx_ticks_t ticks) {
     __uint128_t temp = (__uint128_t)ticks * ZX_SEC(1) / zx_ticks_per_second();
     return (zx_time_t)temp;
 }
 
 // spin the cpu a bit to make sure the frequency is cranked to the top
 static void spin(zx_time_t nanosecs) {
-    uint64_t target_ticks = ns_to_ticks(nanosecs);
-    uint64_t t = zx_ticks_get();
+    zx_ticks_t target_ticks = ns_to_ticks(nanosecs);
+    zx_ticks_t t = zx_ticks_get();
 
     while (zx_ticks_get() - t < target_ticks)
         ;
@@ -39,7 +39,7 @@ template <typename T>
 inline zx_time_t time_it(T func) {
     spin(ZX_MSEC(10));
 
-    uint64_t ticks = zx_ticks_get();
+    zx_ticks_t ticks = zx_ticks_get();
     func();
     ticks = zx_ticks_get() - ticks;
 

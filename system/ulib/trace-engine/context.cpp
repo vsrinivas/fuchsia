@@ -893,7 +893,7 @@ void trace_context_write_flow_end_event_record(
 
 void trace_context_write_initialization_record(
     trace_context_t* context,
-    uint64_t ticks_per_second) {
+    zx_ticks_t ticks_per_second) {
     const size_t record_size = sizeof(trace::RecordHeader) +
                                trace::WordsToBytes(1);
     trace::Payload payload(context, record_size);

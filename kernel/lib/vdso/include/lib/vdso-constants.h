@@ -48,7 +48,7 @@ struct vdso_constants {
     uint32_t icache_line_size;
 
     // Conversion factor for zx_ticks_get return values to seconds.
-    uint64_t ticks_per_second;
+    zx_ticks_t ticks_per_second;
 
     // Total amount of physical memory in the system, in bytes.
     uint64_t physmem;

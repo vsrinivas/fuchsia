@@ -44,7 +44,7 @@ typedef struct {
 #define CPUPERF_BUFFER_FLAG_FULL (1u << 0)
 
     // zx_ticks_per_second in the kernel
-    uint64_t ticks_per_second;
+    zx_ticks_t ticks_per_second;
 
     // Offset into the buffer of the end of the data.
     uint64_t capture_end;

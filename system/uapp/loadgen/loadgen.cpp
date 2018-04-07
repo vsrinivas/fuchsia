@@ -93,8 +93,8 @@ int LoadGeneratorThread::Run() {
     // precision floating point math.
     while (!quit_) {
         double work_delay = MakeRandomDouble(min_work_msec(), max_work_msec());
-        uint64_t work_deadline_ticks = zx_ticks_get()
-                                     + static_cast<zx_time_t>(work_delay * ticks_per_msec);
+        zx_ticks_t work_deadline_ticks = zx_ticks_get()
+                                       + static_cast<zx_time_t>(work_delay * ticks_per_msec);
 
         while (!quit_ && (zx_ticks_get() < work_deadline_ticks)) {
             accumulator_ += MakeRandomDouble(kMinNum, kMaxNum);

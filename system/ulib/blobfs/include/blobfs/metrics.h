@@ -35,12 +35,12 @@ public:
         if (start_ == 0) {
             return 0;
         }
-        const uint64_t end = zx_ticks_get();
-        const uint64_t ticks_per_nsec = zx_ticks_per_second() / ZX_SEC(1);
+        const zx_ticks_t end = zx_ticks_get();
+        const zx_ticks_t ticks_per_nsec = zx_ticks_per_second() / ZX_SEC(1);
         return (end - start_) / ticks_per_nsec;
     }
 private:
-    uint64_t start_;
+    zx_ticks_t start_;
 };
 
 struct BlobfsMetrics {

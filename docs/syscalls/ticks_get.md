@@ -9,7 +9,7 @@ ticks_get - Read the number of high-precision timer ticks since boot.
 ```
 #include <zircon/syscalls.h>
 
-uint64_t zx_ticks_get(void)
+zx_ticks_t zx_ticks_get(void)
 ```
 
 ## DESCRIPTION

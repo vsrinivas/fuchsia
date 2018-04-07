@@ -221,7 +221,7 @@ const VDso* VDso::Create() {
                   "gen-rodso-code.sh is suspect");
     KernelVmoWindow<vdso_constants> constants_window(
         "vDSO constants", vdso->vmo()->vmo(), VDSO_DATA_CONSTANTS);
-    uint64_t per_second = ticks_per_second();
+    zx_ticks_t per_second = ticks_per_second();
 
     // Initialize the constants that should be visible to the vDSO.
     // Rather than assigning each member individually, do this with

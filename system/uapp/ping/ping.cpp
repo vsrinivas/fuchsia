@@ -94,7 +94,7 @@ int main(int argc, const char** argv) {
     uint16_t sequence = 1;
     packet_t packet;
     ssize_t r;
-    const uint64_t ticks_per_usec = zx_ticks_per_second() / 1000000;
+    const zx_ticks_t ticks_per_usec = zx_ticks_per_second() / 1000000;
 
     while (count-- > 0) {
         memset(&packet, 0, sizeof(packet));
@@ -105,7 +105,7 @@ int main(int argc, const char** argv) {
         constexpr char kMessage[] = "This is an echo message!";
         strcpy(reinterpret_cast<char *>(packet.payload), kMessage);
         // Netstack will overwrite the checksum
-        uint64_t before = zx_ticks_get();
+        zx_ticks_t before = zx_ticks_get();
         r = sendto(s, &packet, sizeof(packet.hdr) + strlen(kMessage) + 1, 0,
                    saddr, sizeof(*saddr));
         if (r < 0) {
@@ -136,7 +136,7 @@ int main(int argc, const char** argv) {
             fprintf(stderr, "ping: Could not read result of ping\n");
             return -1;
         }
-        uint64_t after = zx_ticks_get();
+        zx_ticks_t after = zx_ticks_get();
         int seq = ntohs(packet.hdr.un.echo.sequence);
         uint64_t usec = (after - before) / ticks_per_usec;
         printf("%" PRIu64 " bytes: icmp_seq=%d time=%" PRIu64 " us\n", r, seq, usec);

@@ -530,7 +530,7 @@ void trace_context_write_flow_end_event_record(
 // This function is thread-safe.
 void trace_context_write_initialization_record(
     trace_context_t* context,
-    uint64_t ticks_per_second);
+    zx_ticks_t ticks_per_second);
 
 // Writes a string record into the trace buffer.
 // Discards the record if it cannot be written.

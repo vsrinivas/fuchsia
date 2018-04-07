@@ -42,9 +42,9 @@ bool benchmark_banned(int fd, const char (&banned_fs)[len]) {
     return strncmp(banned_fs, name, len - 1) == 0;
 }
 
-inline void time_end(const char *str, uint64_t start) {
-    uint64_t end = zx_ticks_get();
-    uint64_t ticks_per_msec = zx_ticks_per_second() / 1000;
+inline void time_end(const char *str, zx_ticks_t start) {
+    zx_ticks_t end = zx_ticks_get();
+    zx_ticks_t ticks_per_msec = zx_ticks_per_second() / 1000;
     printf("Benchmark %s: [%10lu] msec\n", str, (end - start) / ticks_per_msec);
 }
 
@@ -72,7 +72,7 @@ bool benchmark_write_read(void) {
     ASSERT_EQ(ac.check(), true);
     memset(data.get(), kMagicByte, DataSize);
 
-    uint64_t start;
+    zx_ticks_t start;
     size_t count;
 
     for (int i = 0; i < kWriteReadCycles; i++) {
@@ -181,7 +181,7 @@ bool benchmark_path_walk(void) {
     printf("\nBenchmarking Long path walk (%lu components)\n", MaxComponents);
     char path[PATH_MAX];
     strcpy(path, MOUNT_POINT);
-    uint64_t start;
+    zx_ticks_t start;
 
     start = zx_ticks_get();
     ASSERT_TRUE(walk_down_path_components<MaxComponents>(path, mkdir_callback));
