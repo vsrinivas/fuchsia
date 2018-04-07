@@ -482,6 +482,8 @@ template("clang_toolchain_suite") {
         if (selector.variant == variant.name) {
           variant_used = true
           selectors_used[i] = true
+        } else if (selector.variant == false) {
+          selectors_used[i] = true
         }
         i = i + 1
       }
