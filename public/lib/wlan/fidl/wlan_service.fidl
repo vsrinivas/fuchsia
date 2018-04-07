@@ -19,7 +19,7 @@ struct Error {
 
 struct AP {
   vector<uint8> bssid;
-  string       ssid;
+  string       ssid; // TODO(NET-698): ssid should be []byte for unicode handling
   int32        last_rssi; // dBm (some vendors may not support dBm)
   bool         is_secure;
 };

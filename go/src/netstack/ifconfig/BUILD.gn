@@ -17,11 +17,16 @@ go_binary("ifconfig") {
       package = "github.com/google/netstack"
       source = "//third_party/netstack"
     },
+    {
+      package = "wlan/wlan"
+      source = "wlan"
+    },
   ]
 
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
     "//garnet/public/lib/netstack/fidl($go_toolchain)",
+    "//garnet/public/lib/wlan/fidl:service($go_toolchain)",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl",
   ]

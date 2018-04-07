@@ -14,11 +14,13 @@ import (
 	"app/context"
 
 	"fuchsia/go/netstack"
+	"fuchsia/go/wlan_service"
 )
 
 type netstackClientApp struct {
 	ctx      *context.Context
 	netstack *netstack.NetstackInterface
+	wlan     *wlan_service.WlanInterface
 }
 
 func (a *netstackClientApp) printAll() {
@@ -64,8 +66,7 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 	fmt.Printf("\t%s\n", flagsToString(iface.Flags))
 
 	if isWLAN(iface.Features) {
-		// TODO(eyw): Fill in the actual status by asking the wlanstack nicely
-		fmt.Printf("\tWLAN Status: %s\n", "TODO")
+		fmt.Printf("\tWLAN Status: %s\n", a.wlanStatus())
 	}
 
 	fmt.Printf("\tRX packets:%d\n", stats.Rx.PktsTotal)
@@ -180,6 +181,52 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface, startStop strin
 	}
 }
 
+func (a *netstackClientApp) wlanStatus() string {
+	if a.wlan == nil {
+		return "failed to query (FIDL service unintialized)"
+	}
+	res, err := a.wlan.Status()
+	if err != nil {
+		return fmt.Sprintf("failed to query (error: %v)", err)
+	} else if res.Error.Code != wlan_service.ErrCodeOk {
+		return fmt.Sprintf("failed to query (err: code(%v) desc(%v)", res.Error.Code, res.Error.Description)
+	} else {
+		status := wlanStateToStr(res.State)
+		if res.CurrentAp != nil {
+			ap := res.CurrentAp
+			isSecureStr := ""
+			if ap.IsSecure {
+				isSecureStr = "*"
+			}
+			status += fmt.Sprintf(" BSSID: %x SSID: %q Security: %v RSSI: %d",
+				ap.Bssid, ap.Ssid, isSecureStr, ap.LastRssi)
+		}
+		return status
+	}
+}
+
+func wlanStateToStr(state wlan_service.State) string {
+	switch state {
+	case wlan_service.StateBss:
+		return "starting-bss"
+	case wlan_service.StateQuerying:
+		return "querying"
+	case wlan_service.StateScanning:
+		return "scanning"
+	case wlan_service.StateJoining:
+		return "joining"
+	case wlan_service.StateAuthenticating:
+		return "authenticating"
+	case wlan_service.StateAssociating:
+		return "associating"
+	case wlan_service.StateAssociated:
+		return "associated"
+	default:
+		return "unknown"
+	}
+
+}
+
 func hwAddrToString(hwaddr []uint8) string {
 	str := ""
 	for i := 0; i < len(hwaddr); i++ {
@@ -279,6 +326,13 @@ func main() {
 	a.netstack = pxy
 	defer a.netstack.Close()
 	a.ctx.ConnectToEnvService(req)
+
+	reqWlan, pxyWlan, errWlan := wlan_service.NewWlanInterfaceRequest()
+	if errWlan == nil {
+		a.wlan = pxyWlan
+		defer a.wlan.Close()
+		a.ctx.ConnectToEnvService(reqWlan)
+	}
 
 	if len(os.Args) == 1 {
 		a.printAll()
