@@ -80,7 +80,7 @@ function help {
 
 function usage {
   cat <<END
-usage: fx [--config CONFIG] [-x] COMMAND [...]
+usage: fx [--config CONFIG_FILE | --dir BUILD_DIR] [-x] COMMAND [...]
 
 Run Fuchsia development commands. Must be run with either a current working
 directory that is contained in a Fuchsia source tree or the FUCHSIA_DIR
@@ -90,11 +90,13 @@ commands:
 $(help)
 
 optional arguments:
-  --config              Path to the config file use when running COMMAND.
+  --config=CONFIG_FILE  Path to the config file use when running COMMAND.
                         Defaults to FUCHSIA_CONFIG if set in the
                         environment and //.config otherwise.  The config
                         file determines which build directory (and therefore
                         build configuration) is used by COMMAND.
+  --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
+                        If specified, FILE is ignored.
   -x                    Print commands and their arguments as they are executed.
 
 optional shell extensions:
@@ -132,14 +134,39 @@ source "${vars_sh}"
 
 while [[ $# -ne 0 ]]; do
   case $1 in
+    --config=*|--dir=*)
+      # Turn --switch=value into --switch value.
+      arg="$1"
+      shift
+      set -- "${arg%%=*}" "${arg#*=}" "$@"
+      continue
+      ;;
     --config)
       if [[ $# -lt 2 ]]; then
         usage
-        echo >& 2 "error: Missing path to config file for --config argument"
+        echo >&2 "ERROR: Missing path to config file for --config argument"
         exit 1
       fi
       shift # Removes --config.
       export FUCHSIA_CONFIG="$1"
+      ;;
+    --dir)
+      if [[ $# -lt 2 ]]; then
+        usage
+        echo >&2 "ERROR: Missing path to build directory for --dir argument"
+        exit 1
+      fi
+      shift # Removes --dir.
+      export FUCHSIA_BUILD_DIR="$1"
+      if [[ "$FUCHSIA_BUILD_DIR" == //* ]]; then
+        FUCHSIA_BUILD_DIR="${fuchsia_dir}/${FUCHSIA_BUILD_DIR#//}"
+      fi
+      if [[ ! -d "$FUCHSIA_BUILD_DIR" ]]; then
+        echo >&2 "ERROR: Build directory $FUCHSIA_BUILD_DIR does not exist"
+        exit 1
+      fi
+      # This tells fx-config-read not to use the file.
+      export FUCHSIA_CONFIG=-
       ;;
     -x)
       export FUCHSIA_DEVSHELL_VERBOSITY=1
