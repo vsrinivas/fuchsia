@@ -8,4 +8,9 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
-SSH_AUTH_SOCK="" ssh -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"
+# Note: I know there are people who don't like the host-key message, but DO NOT
+# apply -q here, it silences error messages and makes network and configuration
+# failures much harder to diagnose when helping people. The control master will
+# mean you only get one per TCP socket, which is once per newly booted host.
+# It's not a huge burden compared to end user support.
+SSH_AUTH_SOCK="" exec ssh -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$@"

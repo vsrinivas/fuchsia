@@ -104,6 +104,19 @@ function fx-command-run {
   "${command_path}" "$@"
 }
 
+function fx-command-exec {
+  local -r command_name="$1"
+  local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
+
+  if [[ ! -f "${command_path}" ]]; then
+    echo >& 2 "error: Unknown command ${command_name}"
+    exit 1
+  fi
+
+  shift
+  exec "${command_path}" "$@"
+}
+
 function fx-print-command-help {
   local -r command_path="$1"
   if grep '^## ' "$command_path" > /dev/null; then

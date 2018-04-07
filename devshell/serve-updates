@@ -33,6 +33,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
+log() {
+  # This format matches bootserver so that `fx serve` ui is easier to read.
+  echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
+}
+
 if [[ -z "${amber_srv_pid}" ]]; then
   if [[ "${verbose}" = true ]]; then
     ${FUCHSIA_BUILD_DIR}/host_x64/amber-srv -d ${FUCHSIA_BUILD_DIR} &
@@ -45,7 +50,7 @@ fi
 # Allow a little slack for amber-srv to startup, that way the first kill -0 will catch a dead amber-srv.
 sleep 0.1
 if ! kill -0 "${amber_srv_pid}" 2> /dev/null; then
-  echo "Amber Server died, exiting"
+  log "Amber Server died, exiting"
   wait
   exit $?
 fi
@@ -58,44 +63,45 @@ update_device_addr() {
   fi
 }
 
-# first is used to ensure that a ready message is always printed
-first=true
-# inwait is used to suppress repeating "no device found" messages
-inwait=false
+# State is used to prevent too much output
+state="discover"
 while true; do
   if ! kill -0 "${amber_srv_pid}" 2> /dev/null; then
-    echo "Amber Server died, exiting"
+    log "Amber Server died, exiting"
     amber_srv_pid=
     exit 1
   fi
 
   update_device_addr
   if [[ -z "${device_addr}" ]]; then
-    if [[ "${inwait}" != true ]]; then
-      echo "No device found, waiting..."
-      inwait=true
+    if [[ "${state}" != "discover1" ]]; then
+      log "No device found, waiting..."
+      state="discover1"
     fi
     sleep 1
     continue
   fi
 
-  inwait=false
-
-  # If the tunnel is still alive, then we'll just sleep a bit and continue
-  if fx-command-run ssh -q -O check "${device_addr}" 2> /dev/null; then
-    if $first; then
-      echo "Ready to push packages!"
+  if [[ "$state" == "discover" || "$state" == "discover1" ]]; then
+    log "SSH Tunnel connecting to ${device_addr}..."
+    if fx-command-run ssh -f -o LogLevel=ERROR -o ExitOnForwardFailure=yes -R 8083:localhost:8083 "${device_addr}" "echo -n"; then
+      if [[ "$state" != "ready" ]]; then
+        log "Ready to push packages!"
+        state="ready"
+      fi
     fi
-    first=false
+
     sleep 1
-    continue
-  else
-    echo "SSH Tunnel lost, restarting..."
   fi
 
-  echo "SSH Tunnel connecting to ${device_addr}..."
-  fx-command-run ssh -q -R 8083:localhost:8083 "${device_addr}" -- 'echo "Ready to push packages!"'
-  first=false
+  if [[ "$state" == "ready" ]]; then
+    if fx-command-run ssh -O check "${device_addr}" 2> /dev/null; then
+      sleep 1
+    else
+      log "SSH Tunnel lost, restarting..."
+      state="discover"
+    fi
+  fi
 done
 
 # See EXIT trap above for cleanup that occurs

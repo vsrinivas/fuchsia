@@ -35,9 +35,9 @@ case $1 in
   ;;
 esac
 
-fx-command-run ssh -q "$(fx-command-run netaddr --fuchsia "${device}")" "$@"
-result=$?
-if [[ "${result}" -ne 0 ]]; then
-  echo "ssh exited with a non-zero status: ${result}."
-fi
-exit "${result}"
+# Note: I know there are people who don't like the host-key message, but DO NOT
+# apply -q here, it silences error messages and makes network and configuration
+# failures much harder to diagnose when helping people. The control master will
+# mean you only get one per TCP socket, which is once per newly booted host.
+# It's not a huge burden compared to end user support.
+fx-command-exec ssh "$(fx-command-run netaddr --fuchsia "${device}")" "$@"
