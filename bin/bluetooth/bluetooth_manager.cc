@@ -352,9 +352,10 @@ void BluetoothManager::CancelInitTimeout() {
 }
 
 void BluetoothManager::SetActiveAdapterInternal(Adapter* adapter) {
-  if (active_adapter_) {
-    // Tell the current active adapter to close all of its handles.
-    FXL_DCHECK(active_adapter_->host());
+  // Tell the current active adapter to close all of its handle, if there is an
+  // active adapter and its host interface handle is still bound. The host
+  // handle can be unbound if this was called by OnHostDisconnected().
+  if (active_adapter_ && active_adapter_->host()) {
     active_adapter_->host()->Close();
   }
 
