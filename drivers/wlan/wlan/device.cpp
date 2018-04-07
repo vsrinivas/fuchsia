@@ -435,9 +435,13 @@ zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
     return wlanmac_proxy_.ConfigureBss(0u, cfg);
 }
 
+zx_status_t Device::EnableBeaconing(bool enabled) {
+    return wlanmac_proxy_.EnableBeaconing(0u, enabled);
+}
+
 zx_status_t Device::ConfigureBeacon(fbl::unique_ptr<Packet> beacon) {
-    // Disable hardware Beacons if no Beacon frame was supplied.
-    if (beacon.get() == nullptr) { return wlanmac_proxy_.ConfigureBeacon(0u, nullptr); }
+    ZX_DEBUG_ASSERT(beacon.get() != nullptr);
+    if (beacon.get() == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
     wlan_tx_packet_t tx_packet;
     auto status = beacon->AsWlanTxPacket(&tx_packet);

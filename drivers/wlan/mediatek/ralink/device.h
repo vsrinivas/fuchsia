@@ -77,6 +77,7 @@ class Device : public wlan_device::Phy {
     zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
     zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config);
+    zx_status_t WlanmacEnableBeaconing(uint32_t options, bool enabled);
     zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
     zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
 

@@ -53,6 +53,10 @@ struct MockDevice : public DeviceInterface {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_status_t EnableBeaconing(bool enable) override final {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     zx_status_t SetKey(wlan_key_config_t* key_config) override final {
         return ZX_ERR_NOT_SUPPORTED;
     }

@@ -46,6 +46,9 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return ZX_OK;
     },
+    .enable_beaconing = [](void* ctx, uint32_t options, bool enabled) -> zx_status_t {
+        return ZX_OK;
+    },
     .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
         return ZX_OK;
     },

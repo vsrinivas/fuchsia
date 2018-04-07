@@ -64,6 +64,8 @@ struct MockDevice : public DeviceInterface {
 
     zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final { return ZX_OK; }
 
+    zx_status_t EnableBeaconing(bool enabled) override final { return ZX_OK; }
+
     zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) override final { return ZX_OK; }
 
     zx_status_t SetKey(wlan_key_config_t* key_config) override final { return ZX_OK; }

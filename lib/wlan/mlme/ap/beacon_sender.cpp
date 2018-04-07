@@ -26,18 +26,28 @@ BeaconSender::~BeaconSender() {
 void BeaconSender::Start(BssInterface* bss, const PsCfg& ps_cfg,
                          const wlan_mlme::StartRequest& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
+
     bss_ = bss;
     req.Clone(&req_);
+
+    auto status = device_->EnableBeaconing(true);
+    if (status != ZX_OK) {
+        errorf("[bcn-sender] [%s] could not start beacon sending: %d\n",
+               bss_->bssid().ToString().c_str(), status);
+        return;
+    }
+
     // TODO(hahnr): Delete once pre-TBTT is support which allows updating Beacon frames once per
     // Beacon interval and instead enable hardware beaconing only.
     UpdateBeacon(ps_cfg);
+
     debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }
 
 void BeaconSender::Stop() {
     if (!IsStarted()) { return; }
 
-    auto status = device_->ConfigureBeacon(nullptr);
+    auto status = device_->EnableBeaconing(false);
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not stop beacon sending: %d\n",
                bss_->bssid().ToString().c_str(), status);

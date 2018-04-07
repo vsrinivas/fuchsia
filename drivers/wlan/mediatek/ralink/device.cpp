@@ -138,6 +138,9 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBss(options, config);
     },
+    .enable_beaconing = [](void* ctx, uint32_t options, bool enabled) -> zx_status_t {
+        return DEV(ctx)->WlanmacEnableBeaconing(options, enabled);
+    },
     .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
         return DEV(ctx)->WlanmacConfigureBeacon(options, pkt);
     },
@@ -3986,9 +3989,13 @@ void DumpTxwi(BulkoutAggregation* aggr) {
            txwi1.tx_packet_id());
 }
 
+zx_status_t Device::WlanmacEnableBeaconing(uint32_t options, bool enabled) {
+    return EnableHwBcn(enabled);
+}
+
 zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
-    // Deactivate if no Beacon was supplied.
-    if (bcn_pkt == nullptr) { return EnableHwBcn(false); }
+    ZX_DEBUG_ASSERT(bcn_pkt != nullptr);
+    if (bcn_pkt == nullptr) { return ZX_ERR_INVALID_ARGS; }
 
     auto aggr_payload_len = GetBulkoutAggrPayloadLen(*bcn_pkt);
     size_t req_len = sizeof(TxInfo) + aggr_payload_len + GetBulkoutAggrTailLen();
