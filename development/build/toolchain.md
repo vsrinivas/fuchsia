@@ -39,11 +39,11 @@ variable, e.g.:
 ```bash
 ./scripts/build-zircon.sh
 
-gn gen --args='target_cpu="x64" fuchsia_packages="garnet/packages/sdk/base"' out/x64
+gn gen --args='target_cpu="x64" fuchsia_packages=["garnet/packages/sdk/base"]' out/x64
 ninja -C out/x64 zircon_sysroot
 FUCHSIA_x86_64_SYSROOT=`pwd`/out/x64/sdks/zircon_sysroot/sysroot
 
-gn gen --args='target_cpu="arm64" fuchsia_packages="garnet/packages/sdk/base"' out/arm64
+gn gen --args='target_cpu="arm64" fuchsia_packages=["garnet/packages/sdk/base"]' out/arm64
 ninja -C out/arm64 zircon_sysroot
 FUCHSIA_aarch64_SYSROOT=`pwd`/out/arm64/sdks/zircon_sysroot/sysroot
 ```

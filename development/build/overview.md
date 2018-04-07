@@ -68,7 +68,7 @@ packages to incorporate:
 # fuchsia_base is typically "default".
 # my_stuff is a possibly-empty list of extra packages to include.
 
-$ buildtools/gn gen out/x64 --args='fuchsia_packages="build/gn/fuchsia_base,build/gn/my_stuff"'
+$ buildtools/gn gen out/x64 --args='fuchsia_packages=["build/gn/fuchsia_base","build/gn/my_stuff"]'
 ```
 This will create an `out/x64` directory containing Ninja files.
 
