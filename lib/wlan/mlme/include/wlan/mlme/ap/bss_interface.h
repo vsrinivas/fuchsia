@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 
@@ -18,9 +19,42 @@ namespace wlan {
 class Buffer;
 class StartRequest;
 
-using aid_t = size_t;
-static constexpr aid_t kGroupAdressedAid = 0;
-static constexpr aid_t kMaxBssClients = 2008;
+// Power Saving configuration managing TIM and DTIM.
+class PsCfg {
+   public:
+    void SetDtimPeriod(uint8_t dtim_period) {
+        // DTIM period of 0 is reserved.
+        ZX_DEBUG_ASSERT(dtim_period > 0);
+
+        dtim_period_ = dtim_period;
+        dtim_count_ = dtim_period - 1;
+    }
+
+    uint8_t dtim_period() const { return dtim_period_; }
+
+    uint8_t dtim_count() const {
+        return dtim_count_;
+    }
+
+    TrafficIndicationMap* GetTim() { return &tim_; }
+
+    const TrafficIndicationMap* GetTim() const { return &tim_; }
+
+    uint8_t NextDtimCount() {
+        if (IsDtim()) {
+            dtim_count_ = dtim_period_ - 1;
+            return dtim_count_;
+        }
+        return --dtim_count_;
+    }
+
+    bool IsDtim() { return dtim_count_ == 0; }
+
+   private:
+    TrafficIndicationMap tim_;
+    uint8_t dtim_period_ = 1;
+    uint8_t dtim_count_ = 0;
+};
 
 class BssInterface {
    public:

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/macaddr_map.h>
 
@@ -18,8 +18,6 @@
 #include <list>
 
 namespace wlan {
-
-static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
 
 // Map which tracks clients and assigns AIDs.
 class BssClientMap {

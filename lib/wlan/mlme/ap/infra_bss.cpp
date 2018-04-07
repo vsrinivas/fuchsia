@@ -51,6 +51,17 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     }
     chan_ = chan;
 
+    ZX_DEBUG_ASSERT(req.dtim_period > 0);
+    if (req.dtim_period == 0) {
+        ps_cfg_.SetDtimPeriod(1);
+        warnf(
+            "[infra-bss] [%s] received start request with reserved DTIM period of 0; falling back "
+            "to DTIM period of 1\n",
+            bssid_.ToString().c_str());
+    } else {
+        ps_cfg_.SetDtimPeriod(req.dtim_period);
+    }
+
     debugbss("[infra-bss] [%s] starting BSS\n", bssid_.ToString().c_str());
     debugbss("    SSID: %s\n", req.ssid->data());
     debugbss("    Beacon Period: %u\n", req.beacon_period);
@@ -59,7 +70,7 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
 
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    bcn_sender_->Start(this, req);
+    bcn_sender_->Start(this, ps_cfg_, req);
 }
 
 void InfraBss::Stop() {
@@ -212,9 +223,9 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
         return;
     }
 
-    tim_.SetTrafficIndication(aid, bu_count > 0);
+    ps_cfg_.GetTim()->SetTrafficIndication(aid, bu_count > 0);
     // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
-    bcn_sender_->UpdateBeacon(tim_);
+    bcn_sender_->UpdateBeacon(ps_cfg_);
 }
 
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
@@ -238,9 +249,9 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    tim_.SetTrafficIndication(aid, false);
+    ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
     // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
-    bcn_sender_->UpdateBeacon(tim_);
+    bcn_sender_->UpdateBeacon(ps_cfg_);
     return clients_.ReleaseAid(client);
 }
 
@@ -265,7 +276,7 @@ bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
     // Note: Currently group addressed service transmission is not supported and thus, every group
     // message should get buffered.
     // TODO(porce): Use MacAddr#IsGroupAddr() once wording got fixed to match IEEE 802.11.
-    return receiver_addr.IsMcast() && tim_.HasDozingClients();
+    return receiver_addr.IsMcast() && ps_cfg_.GetTim()->HasDozingClients();
 }
 
 zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
@@ -278,7 +289,7 @@ zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
 
     debugps("[infra-bss] [%s] buffer outbound frame\n", bssid_.ToString().c_str());
     bu_queue_.Enqueue(fbl::move(packet));
-    tim_.SetTrafficIndication(kGroupAdressedAid, true);
+    ps_cfg_.GetTim()->SetTrafficIndication(kGroupAdressedAid, true);
     return ZX_OK;
 }
 

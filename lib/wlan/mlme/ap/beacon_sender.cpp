@@ -23,11 +23,14 @@ BeaconSender::~BeaconSender() {
     Stop();
 }
 
-void BeaconSender::Start(BssInterface* bss, const wlan_mlme::StartRequest& req) {
+void BeaconSender::Start(BssInterface* bss, const PsCfg& ps_cfg,
+                         const wlan_mlme::StartRequest& req) {
     ZX_DEBUG_ASSERT(!IsStarted());
     bss_ = bss;
     req.Clone(&req_);
-    WriteBeacon(nullptr);
+    // TODO(hahnr): Delete once pre-TBTT is support which allows updating Beacon frames once per
+    // Beacon interval and instead enable hardware beaconing only.
+    UpdateBeacon(ps_cfg);
     debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
 }
 
@@ -85,12 +88,7 @@ zx_status_t BeaconSender::HandleProbeRequest(const ImmutableMgmtFrame<ProbeReque
     return SendProbeResponse(frame);
 }
 
-zx_status_t BeaconSender::UpdateBeacon(const TrafficIndicationMap& tim) {
-    debugfn();
-    return WriteBeacon(&tim);
-}
-
-zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
+zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     debugfn();
     ZX_DEBUG_ASSERT(IsStarted());
     if (!IsStarted()) { return ZX_ERR_BAD_STATE; }
@@ -126,10 +124,8 @@ zx_status_t BeaconSender::WriteBeacon(const TrafficIndicationMap* tim) {
     status = WriteDsssParamSet(&w);
     if (status != ZX_OK) { return status; }
 
-    if (tim) {
-        status = WriteTim(&w, *tim);
-        if (status != ZX_OK) { return status; }
-    }
+    status = WriteTim(&w, ps_cfg);
+    if (status != ZX_OK) { return status; }
 
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
@@ -268,19 +264,24 @@ zx_status_t BeaconSender::WriteDsssParamSet(ElementWriter* w) {
     return ZX_OK;
 }
 
-zx_status_t BeaconSender::WriteTim(ElementWriter* w, const TrafficIndicationMap& tim) {
+zx_status_t BeaconSender::WriteTim(ElementWriter* w, const PsCfg& ps_cfg) {
     size_t bitmap_len;
     uint8_t bitmap_offset;
-    auto status = tim.WritePartialVirtualBitmap(pvb_, sizeof(pvb_), &bitmap_len, &bitmap_offset);
+    auto status =
+        ps_cfg.GetTim()->WritePartialVirtualBitmap(pvb_, sizeof(pvb_), &bitmap_len, &bitmap_offset);
     if (status != ZX_OK) {
         errorf("[bcn-sender] [%s] could not write Partial Virtual Bitmap: %d\n",
                bss_->bssid().ToString().c_str(), status);
         return status;
     }
 
-    // TODO(NET-579): Add support for DTIM count. For now always send DTIMs with no BU.
-    uint8_t dtim_count = 0;
-    uint8_t dtim_period = req_.dtim_period;
+    uint8_t dtim_count = ps_cfg.dtim_count();
+    uint8_t dtim_period = ps_cfg.dtim_period();
+    ZX_DEBUG_ASSERT(dtim_count != dtim_period);
+    if (dtim_count == dtim_period) {
+        warnf("[bcn-sender] [%s] illegal DTIM state", bss_->bssid().ToString().c_str());
+    }
+
     BitmapControl bmp_ctrl;
     bmp_ctrl.set_offset(bitmap_offset);
     // TODO(NET-579): Write group traffic indication to bitmap control.

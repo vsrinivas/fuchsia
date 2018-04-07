@@ -21,6 +21,12 @@ namespace wlan {
 
 class Packet;
 
+// TODO(hahnr): This isn't a great location for these definitions.
+using aid_t = size_t;
+static constexpr aid_t kGroupAdressedAid = 0;
+static constexpr aid_t kMaxBssClients = 2008;
+static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
+
 template <typename Body>
 MgmtFrame<Body> BuildMgmtFrame(fbl::unique_ptr<Packet>* packet, size_t body_payload_len = 0,
                                bool has_ht_ctrl = false);

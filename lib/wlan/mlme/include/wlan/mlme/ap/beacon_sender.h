@@ -14,7 +14,7 @@
 namespace wlan {
 
 class BssInterface;
-class TrafficIndicationMap;
+class PsCfg;
 
 // Configures the driver to send Beacon frames periodically.
 class BeaconSender : public FrameHandler {
@@ -22,19 +22,18 @@ class BeaconSender : public FrameHandler {
     BeaconSender(DeviceInterface* device);
     ~BeaconSender();
 
-    void Start(BssInterface* bss, const wlan_mlme::StartRequest& req);
+    void Start(BssInterface* bss, const PsCfg& ps_cfg, const wlan_mlme::StartRequest& req);
     void Stop();
-    zx_status_t UpdateBeacon(const TrafficIndicationMap& tim);
+    zx_status_t UpdateBeacon(const PsCfg& ps_cfg);
     zx_status_t HandleProbeRequest(const ImmutableMgmtFrame<ProbeRequest>& frame,
                                    const wlan_rx_info_t& rxinfo) override;
 
    private:
-    zx_status_t WriteBeacon(const TrafficIndicationMap* tim);
     zx_status_t SendProbeResponse(const ImmutableMgmtFrame<ProbeRequest>& frame);
     zx_status_t WriteSsid(ElementWriter* w);
     zx_status_t WriteSupportedRates(ElementWriter* w);
     zx_status_t WriteDsssParamSet(ElementWriter* w);
-    zx_status_t WriteTim(ElementWriter* w, const TrafficIndicationMap& tim);
+    zx_status_t WriteTim(ElementWriter* w, const PsCfg& ps_cfg);
     zx_status_t WriteExtendedSupportedRates(ElementWriter* w);
     zx_status_t WriteHtCapabilities(ElementWriter* w);
     zx_status_t WriteHtOperation(ElementWriter* w);

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <wlan/mlme/ap/bss_interface.h>
+#include <wlan/mlme/mac_frame.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>

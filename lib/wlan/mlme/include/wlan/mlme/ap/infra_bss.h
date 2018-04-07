@@ -93,9 +93,9 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_time_t started_at_;
     BssClientMap clients_;
     Sequence seq_;
-    TrafficIndicationMap tim_;
     // Queue which holds buffered non-GCR-SP frames when at least one client is dozing.
     PacketQueue bu_queue_;
+    PsCfg ps_cfg_;
     wlan_channel_t chan_;
 };
 
