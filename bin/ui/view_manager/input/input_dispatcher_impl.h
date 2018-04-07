@@ -6,6 +6,8 @@
 #define GARNET_BIN_UI_VIEW_MANAGER_INPUT_INPUT_DISPATCHER_IMPL_H_
 
 #include <queue>
+#include <set>
+#include <utility>
 
 #include <fuchsia/cpp/geometry.h>
 #include <fuchsia/cpp/input.h>
@@ -64,6 +66,12 @@ class InputDispatcherImpl : public input::InputDispatcher {
 
   std::vector<ViewHit> event_path_;
   uint64_t event_path_propagation_id_ = 0;
+
+  // Occasionally a touch gesture gets lost because the hit test returns empty.
+  // For those cases, we remember the pointer is "uncaptured" (identified by
+  // device ID and pointer ID), and retry a hit test next time, in case we find
+  // a target that can receive this gesture.
+  std::set<std::pair<uint32_t, uint32_t>> uncaptured_pointers;
 
   fidl::Binding<input::InputDispatcher> binding_;
 

@@ -124,6 +124,30 @@ void InputDispatcherImpl::ProcessNextEvent() {
       // keep track of which views have seen the ADD or REMOVE so that
       // they can be balanced correctly.
       const input::PointerEvent& pointer = event->pointer();
+
+      // When we can't deliver a gesture, we need to adapt how we move through
+      // the pointer state machine. We could find a new receiver (by having MOVE
+      // masquerade as DOWN), or we may never find a new receiver. For the
+      // latter case, don't deliver the final UP event; just schedule the next.
+      {
+        auto iter = uncaptured_pointers.find(
+            std::make_pair(pointer.device_id, pointer.pointer_id));
+        if (iter != uncaptured_pointers.end()) {
+          uncaptured_pointers.erase(iter);
+          switch (pointer.phase) {
+            case input::PointerEventPhase::MOVE:
+              pending_events_.front().pointer().phase =
+                  input::PointerEventPhase::DOWN;
+              break;
+            case input::PointerEventPhase::UP:
+              PopAndScheduleNextEvent();
+              return;
+            default:
+              break;
+          }
+        }
+      }
+
       if (pointer.phase == input::PointerEventPhase::DOWN) {
         geometry::PointF point;
         point.x = pointer.x;
@@ -131,13 +155,14 @@ void InputDispatcherImpl::ProcessNextEvent() {
         FXL_VLOG(1) << "HitTest: point=" << point;
         std::pair<geometry::Point3F, geometry::Point3F> ray =
             DefaultRayForHitTestingScreenPoint(point);
-        inspector_->HitTest(view_tree_token_, ray.first, ray.second,
-                            [weak = weak_factory_.GetWeakPtr(),
-                             point](std::vector<ViewHit> view_hits) mutable {
-                              if (weak)
-                                weak->OnHitTestResult(point,
-                                                      std::move(view_hits));
-                            });
+
+        ViewInspector::HitTestCallback callback =
+            [weak = weak_factory_.GetWeakPtr(),
+             point](std::vector<ViewHit> view_hits) mutable {
+              if (weak)
+                weak->OnHitTestResult(point, std::move(view_hits));
+            };
+        inspector_->HitTest(view_tree_token_, ray.first, ray.second, callback);
         return;
       }
     } else if (event->is_keyboard()) {
@@ -264,6 +289,12 @@ void InputDispatcherImpl::OnHitTestResult(const geometry::PointF& point,
   FXL_DCHECK(!pending_events_.empty());
 
   if (view_hits.empty()) {
+    const auto& event = pending_events_.front();
+    if (event.is_pointer()) {
+      const input::PointerEvent& pointer = event.pointer();
+      uncaptured_pointers.insert(
+          std::make_pair(pointer.device_id, pointer.pointer_id));
+    }
     PopAndScheduleNextEvent();
     return;
   }
