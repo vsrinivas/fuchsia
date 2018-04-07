@@ -14,9 +14,11 @@ declare_args() {
   # runtime).  *NOTE:* This affects only components using the `scudo`
   # variant (see GN build argument `select_variant`), and does not affect
   # anything when the `use_scudo` build flag is set instead.
-  scudo_default_options = "abort_on_error=1:" +  # get stacktrace on error
-                          "QuarantineSizeKb=0:" +  # disables quarantine
-                          "ThreadLocalQuarantineSizeKb=0" # disables quarantine
+  scudo_default_options = [
+    "abort_on_error=1",  # get stacktrace on error
+    "QuarantineSizeKb=0",  # disables quarantine
+    "ThreadLocalQuarantineSizeKb=0",  # disables quarantine
+  ]
 }
 
 assert(!use_scudo || scudo_default_options == "",
@@ -45,8 +47,14 @@ variant("scudo") {
 
 source_set("scudo_default_options") {
   visibility = [ ":*" ]
-  sources = [
-    "scudo_default_options.c",
-  ]
-  defines = [ "SCUDO_DEFAULT_OPTIONS=\"${scudo_default_options}\"" ]
+  if (scudo_default_options != []) {
+    sources = [
+      "scudo_default_options.c",
+    ]
+    options_string = ""
+    foreach (option, scudo_default_options) {
+      options_string += ":$option"
+    }
+    defines = [ "SCUDO_DEFAULT_OPTIONS=\"${options_string}\"" ]
+  }
 }
