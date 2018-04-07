@@ -1,0 +1,11 @@
+{
+  "imports": [
+    "garnet/packages/config/services"
+  ],
+  "resources": [
+    {
+      "bootfs_path": "data/sysmgr/wlancfg.config",
+      "file": "garnet/bin/wlancfg/wlancfg.config"
+    }
+  ]
+}
