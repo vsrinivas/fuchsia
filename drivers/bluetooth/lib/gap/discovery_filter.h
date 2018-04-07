@@ -97,6 +97,9 @@ class DiscoveryFilter final {
     manufacturer_code_ = manufacturer_code;
   }
 
+  // Sets this filter up for the "General Discovery" procedure.
+  void SetGeneralDiscoveryFlags();
+
   // Returns true, if the given LE scan result satisfies this filter. Otherwise
   // returns false. |advertising_data| should include scan response data, if
   // any.

@@ -634,6 +634,25 @@ TEST(GAP_DiscoveryFilterTest, Combined) {
   EXPECT_TRUE(filter.MatchLowEnergyResult(kAdvertisingData, true, kRSSI));
 }
 
+TEST(GAP_DiscoveryFilterTest, GeneralDiscoveryFlags) {
+  const auto kLimitedDiscoverableData = common::CreateStaticByteBuffer(
+      // Flags
+      0x02, 0x01, 0x01);
+  const auto kGeneralDiscoverableData = common::CreateStaticByteBuffer(
+      // Flags
+      0x02, 0x01, 0x02);
+  const auto kNonDiscoverableData = common::CreateStaticByteBuffer(
+      // Flags (all flags are set except for discoverability).
+      0x02, 0x01, 0xFC);
+
+  DiscoveryFilter filter;
+  filter.SetGeneralDiscoveryFlags();
+
+  EXPECT_TRUE(filter.MatchLowEnergyResult(kLimitedDiscoverableData, true, 0));
+  EXPECT_TRUE(filter.MatchLowEnergyResult(kGeneralDiscoverableData, true, 0));
+  EXPECT_FALSE(filter.MatchLowEnergyResult(kNonDiscoverableData, true, 0));
+}
+
 }  // namespace
 }  // namespace gap
 }  // namespace btlib

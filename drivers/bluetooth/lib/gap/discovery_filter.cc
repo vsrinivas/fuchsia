@@ -36,6 +36,11 @@ bool MatchUuids(const std::vector<common::UUID>& uuids,
 
 }  // namespace
 
+void DiscoveryFilter::SetGeneralDiscoveryFlags() {
+  set_flags(static_cast<uint8_t>(AdvFlag::kLEGeneralDiscoverableMode) |
+            static_cast<uint8_t>(AdvFlag::kLELimitedDiscoverableMode));
+}
+
 bool DiscoveryFilter::MatchLowEnergyResult(
     const common::ByteBuffer& advertising_data,
     bool connectable,

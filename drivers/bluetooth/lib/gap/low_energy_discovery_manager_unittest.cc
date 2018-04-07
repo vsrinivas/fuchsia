@@ -567,6 +567,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
         devices_session0.insert(device.address());
       };
   sessions.push_back(StartDiscoverySession());
+  sessions[0]->filter()->SetGeneralDiscoveryFlags();
   sessions[0]->SetResultCallback(result_cb);
 
   // Session 1 is interested in performing limited discovery.
@@ -616,29 +617,32 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, StartDiscoveryWithFilters) {
   EXPECT_TRUE(dev_list.find(addr) != dev_list.end())
   // At this point all sessions should have processed all devices at least once.
 
-  // Session 0: Should have seen all devices at least once.
+  // Session 0: Should have seen all devices except for device 3, which is
+  // non-discoverable.
   EXPECT_EQ(3u, devices_session0.size());
   EXPECT_CONTAINS(kAddress0, devices_session0);
   EXPECT_CONTAINS(kAddress1, devices_session0);
   EXPECT_CONTAINS(kAddress2, devices_session0);
 
-  // Session 1: Should have only seen Device 1.
+  // Session 1: Should have only seen device 1.
   EXPECT_EQ(1u, devices_session1.size());
   EXPECT_CONTAINS(kAddress1, devices_session1);
 
-  // Session 2: Should have only seen Devices 0 and 1
+  // Session 2: Should have only seen devices 0 and 1
   EXPECT_EQ(2u, devices_session2.size());
   EXPECT_CONTAINS(kAddress0, devices_session2);
   EXPECT_CONTAINS(kAddress1, devices_session2);
 
-  // Session 3: Should have only seen Devices 0 and 2
-  EXPECT_EQ(2u, devices_session3.size());
+  // Session 3: Should have only seen devices 0, 2, and 3
+  EXPECT_EQ(3u, devices_session3.size());
   EXPECT_CONTAINS(kAddress0, devices_session3);
   EXPECT_CONTAINS(kAddress2, devices_session3);
+  EXPECT_CONTAINS(kAddress3, devices_session3);
 
-  // Session 4: Should have only seen Device 2
-  EXPECT_EQ(1u, devices_session4.size());
+  // Session 4: Should have seen devices 2
+  EXPECT_EQ(2u, devices_session4.size());
   EXPECT_CONTAINS(kAddress2, devices_session4);
+  EXPECT_CONTAINS(kAddress3, devices_session4);
 
 #undef EXPECT_CONTAINS
 }
@@ -660,6 +664,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
         devices_session0.insert(device.address());
       };
   sessions.push_back(StartDiscoverySession());
+  sessions[0]->filter()->SetGeneralDiscoveryFlags();
   sessions[0]->SetResultCallback(result_cb);
 
   RunUntilIdle();
@@ -712,29 +717,32 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
   // without running the message loop; results for Sessions 1, 2, 3, and 4 should
   // have come from the cache.
 
-  // Session 0: Should have seen all devices at least once.
+  // Session 0: Should have seen all devices except for device 3, which is
+  // non-discoverable.
   EXPECT_EQ(3u, devices_session0.size());
   EXPECT_CONTAINS(kAddress0, devices_session0);
   EXPECT_CONTAINS(kAddress1, devices_session0);
   EXPECT_CONTAINS(kAddress2, devices_session0);
 
-  // Session 1: Should have only seen Device 1.
+  // Session 1: Should have only seen device 1.
   EXPECT_EQ(1u, devices_session1.size());
   EXPECT_CONTAINS(kAddress1, devices_session1);
 
-  // Session 2: Should have only seen Devices 0 and 1
+  // Session 2: Should have only seen devices 0 and 1
   EXPECT_EQ(2u, devices_session2.size());
   EXPECT_CONTAINS(kAddress0, devices_session2);
   EXPECT_CONTAINS(kAddress1, devices_session2);
 
-  // Session 3: Should have only seen Devices 0 and 2
-  EXPECT_EQ(2u, devices_session3.size());
+  // Session 3: Should have only seen devices 0, 2, and 3
+  EXPECT_EQ(3u, devices_session3.size());
   EXPECT_CONTAINS(kAddress0, devices_session3);
   EXPECT_CONTAINS(kAddress2, devices_session3);
+  EXPECT_CONTAINS(kAddress3, devices_session3);
 
-  // Session 4: Should have only seen Device 2
-  EXPECT_EQ(1u, devices_session4.size());
+  // Session 4: Should have seen devices 2 and 3
+  EXPECT_EQ(2u, devices_session4.size());
   EXPECT_CONTAINS(kAddress2, devices_session4);
+  EXPECT_CONTAINS(kAddress3, devices_session4);
 
 #undef EXPECT_CONTAINS
 }

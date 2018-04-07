@@ -75,7 +75,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 
   if (scan_session_) {
     // A scan is already in progress. Update its filter and report success.
-    scan_session_->ResetToDefault();
+    scan_session_->filter()->Reset();
     fidl_helpers::PopulateDiscoveryFilter(*filter, scan_session_->filter());
     callback(Status());
     return;

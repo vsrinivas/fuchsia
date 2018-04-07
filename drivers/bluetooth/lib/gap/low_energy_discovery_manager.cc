@@ -18,9 +18,6 @@ LowEnergyDiscoverySession::LowEnergyDiscoverySession(
     fxl::WeakPtr<LowEnergyDiscoveryManager> manager)
     : active_(true), manager_(manager) {
   FXL_DCHECK(manager_);
-
-  // Configured by default for the GAP General Discovery procedure.
-  SetGeneralDiscoverableFlags();
 }
 
 LowEnergyDiscoverySession::~LowEnergyDiscoverySession() {
@@ -48,13 +45,6 @@ void LowEnergyDiscoverySession::Stop() {
     manager_->RemoveSession(this);
   }
   active_ = false;
-}
-
-void LowEnergyDiscoverySession::ResetToDefault() {
-  filter_.Reset();
-
-  // Configured by default for the GAP General Discovery procedure.
-  SetGeneralDiscoverableFlags();
 }
 
 void LowEnergyDiscoverySession::NotifyDiscoveryResult(
