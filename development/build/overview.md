@@ -68,14 +68,14 @@ packages to incorporate:
 # fuchsia_base is typically "default".
 # my_stuff is a possibly-empty list of extra packages to include.
 
-$ build/gn/gen.py --packages build/gn/fuchsia_base,build/gn/my_stuff
+$ buildtools/gn gen out/x64 --args='fuchsia_packages="build/gn/fuchsia_base,build/gn/my_stuff"'
 ```
-This will create an `out/debug-<arch>` directory containing Ninja files.
+This will create an `out/x64` directory containing Ninja files.
 
 This is what gets run under the hood by `fx set`.
 
-For a list of all `gen.py` options, run `gen.py --help`.
-For documentation on the `--variants` flag, see [Variants](variants.md).
+For a list of all GN build arguments, run `buildtools/gn args out/x64 --list`.
+For documentation on the `select_variant` argument, see [Variants](variants.md).
 
 ### C
 
