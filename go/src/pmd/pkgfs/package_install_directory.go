@@ -346,10 +346,15 @@ func importPackage(fs *Filesystem, root string) {
 		fs.index.AddNeeds(root, p, needBlobs)
 	}
 
+	// in order to background the amber calls, we have to make a new copy of the
+	// blob list, as the index has taken write ownership over the map via AddNeeds
+	var needList = make([]string, 0, len(needBlobs))
+	for blob := range needBlobs {
+		needList = append(needList, blob)
+	}
 	go func() {
-		log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needBlobs), p)
-		for root := range needBlobs {
-			// TODO(jmatt) limit concurrency, send this to a worker routine?
+		log.Printf("pkgfs: asking amber to fetch %d blobs for %s", len(needList), p)
+		for _, root := range needList {
 			fs.amberPxy.GetBlob(root)
 		}
 	}()
