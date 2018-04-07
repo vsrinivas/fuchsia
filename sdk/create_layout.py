@@ -14,13 +14,13 @@ from layout_builder import Builder, process_manifest
 class CppBuilder(Builder):
 
     def __init__(self, output, overlay):
-        super(CppBuilder, self).__init__(domains=['c-pp', 'exe'])
+        super(CppBuilder, self).__init__(domains=['cpp', 'exe'])
         self.output = output
         self.is_overlay = overlay
 
 
-    def install_c_pp_atom(self, atom):
-        '''Installs an atom from the "c-pp" domain.'''
+    def install_cpp_atom(self, atom):
+        '''Installs an atom from the "cpp" domain.'''
         type = atom.tags['type']
         if type == 'compiled_shared':
             self.install_cpp_prebuilt_atom(atom)
@@ -31,7 +31,7 @@ class CppBuilder(Builder):
 
 
     def install_cpp_prebuilt_atom(self, atom):
-        '''Installs a prebuilt atom from the "c-pp" domain.'''
+        '''Installs a prebuilt atom from the "cpp" domain.'''
         if atom.tags['arch'] != 'target':
             print('Only libraries compiled for a target are supported, '
                   'skipping %s.' % atom.id)
@@ -60,7 +60,7 @@ class CppBuilder(Builder):
 
 
     def install_cpp_source_atom(self, atom):
-        '''Installs a source atom from the "c-pp" domain.'''
+        '''Installs a source atom from the "cpp" domain.'''
         if self.is_overlay:
             return
         for file in atom.files:

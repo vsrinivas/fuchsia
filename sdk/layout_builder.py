@@ -86,8 +86,7 @@ def _process_manifest_data(manifest, builder):
 
     # Pass the various atoms through the builder.
     for atom in atoms:
-        # TODO(DX-82): remove the character substitution step.
-        domain = atom.id.domain.replace('-', '_')
+        domain = atom.id.domain
         getattr(builder, 'install_%s_atom' % domain)(atom)
 
     # Wrap things up.

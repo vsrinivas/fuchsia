@@ -41,7 +41,7 @@ class LayoutBuilderTests(unittest.TestCase):
 
     @patch('layout_builder.Builder')
     def test_different_domains(self, builder):
-        builder.domains = ['c-pp']
+        builder.domains = ['cpp']
         manifest = _manifest([_atom('exe', 'foo')])
         self.assertFalse(_process_manifest_data(manifest, builder))
         builder.prepare.assert_not_called()
@@ -71,11 +71,11 @@ class LayoutBuilderTests(unittest.TestCase):
     def test_install_two_different(self, builder):
         builder.install_exe_atom = MagicMock()
         builder.install_c_pp_atom = MagicMock()
-        builder.domains = ['c-pp', 'exe']
-        manifest = _manifest([_atom('exe', 'foo'), _atom('c-pp', 'bar')])
+        builder.domains = ['cpp', 'exe']
+        manifest = _manifest([_atom('exe', 'foo'), _atom('cpp', 'bar')])
         self.assertTrue(_process_manifest_data(manifest, builder))
         self.assertTrue(builder.prepare.called)
-        self.assertEqual(builder.install_c_pp_atom.call_count, 1)
+        self.assertEqual(builder.install_cpp_atom.call_count, 1)
         self.assertEqual(builder.install_exe_atom.call_count, 1)
         self.assertTrue(builder.finalize.called)
 
