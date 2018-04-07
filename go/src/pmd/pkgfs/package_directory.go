@@ -186,9 +186,10 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 func (d *packageDir) Read() ([]fs.Dirent, error) {
 	// TODO(raggi): improve efficiency
-	dirs := map[string]struct{}{}
+	dirs := map[string]struct{}{"meta": struct{}{}}
 	dents := []fs.Dirent{}
 	dents = append(dents, dirDirEnt("."))
+	dents = append(dents, dirDirEnt("meta"))
 	for name := range d.contents {
 		if d.subdir != nil {
 			if !strings.HasPrefix(name, *d.subdir) {
@@ -205,7 +206,13 @@ func (d *packageDir) Read() ([]fs.Dirent, error) {
 			}
 
 		} else {
-			dents = append(dents, fileDirEnt(parts[0]))
+			// TODO(PKG-44): fix the potential for discrepancies here
+			// most of the time there are no pointers in contents for dirs, but the
+			// exception is the meta pointer which this would mistake for a file, so we
+			// must check for a name collision here too.
+			if _, ok := dirs[parts[0]]; !ok {
+				dents = append(dents, fileDirEnt(parts[0]))
+			}
 		}
 	}
 	return dents, nil
