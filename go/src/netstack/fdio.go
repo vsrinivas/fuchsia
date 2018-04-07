@@ -450,7 +450,13 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 }
 
 func (ios *iostate) loopControl(s *socketServer, cookie int64) {
-	defer func() { ios.controlLoopDone <- struct{}{} }()
+	synthesizeClose := true
+	defer func() {
+		if synthesizeClose {
+			zxsocket.Handler(0, zxsocket.ServerHandler(s.zxsocketHandler), cookie)
+		}
+		ios.controlLoopDone <- struct{}{}
+	}()
 
 	dataHandle := zx.Socket(ios.dataHandle)
 
@@ -482,10 +488,12 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 				return
 			}
 		default:
-			// ErrDisconnectNoCallback is given when we receive a close operation.
-			if err != fdio.ErrDisconnectNoCallback {
-				log.Printf("loopControl failed: %v", err) // TODO: communicate this
+			if err == fdio.ErrDisconnectNoCallback {
+				// We received OpClose.
+				synthesizeClose = false
+				return
 			}
+			log.Printf("loopControl failed: %v", err) // TODO: communicate this
 			continue
 		}
 	}
@@ -1153,7 +1161,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 				return
 			}
 			// SignalPeer CONNECTED first, then locally Signal CONNECTED.
-  			// This way the peer always detects CONNECTED signal before any data is written by
+			// This way the peer always detects CONNECTED signal before any data is written by
 			// loopSocketRead.
 			err := ios.dataHandle.SignalPeer(0, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED)
 			switch status := mxerror.Status(err); status {
