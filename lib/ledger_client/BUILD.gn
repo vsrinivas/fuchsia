@@ -51,6 +51,7 @@ source_set("page_client") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//peridot/bin/ledger/fidl",
+    "//peridot/lib/base64url",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
     "//peridot/public/lib/async/cpp:operation",

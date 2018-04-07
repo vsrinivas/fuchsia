@@ -69,14 +69,14 @@ void XdrStoryData(XdrContext* const xdr,
         data->story_page_id = nullptr;
       } else {
         data->story_page_id = ledger::PageId::New();
-        *data->story_page_id = MakePageId(page_id);
+        *data->story_page_id = PageIdFromBase64(page_id);
       }
       break;
     }
     case XdrOp::TO_JSON: {
       std::string page_id;
       if (data->story_page_id) {
-        page_id = to_string(data->story_page_id->id);
+        page_id = PageIdToBase64(*data->story_page_id);
       }
       xdr->Field(kStoryPageId, &page_id);
       break;
@@ -375,6 +375,8 @@ class StoryProviderImpl::GetControllerCall : Operation<> {
     FlowToken flow{this};
 
     // Use the existing controller, if possible.
+    // This won't race against itself because it's managed by an operation
+    // queue.
     auto i = story_controller_impls_->find(story_id_);
     if (i != story_controller_impls_->end()) {
       i->second.impl->Connect(std::move(request_));
@@ -439,7 +441,7 @@ class StoryProviderImpl::StopAllStoriesCall : Operation<> {
       // StopForTeardown(), then the StopCall in StopForTeardown() never
       // executes because the StoryController instance is deleted after the
       // DeleteCall finishes. This will then block unless it runs in a timeout.
-      it.second.impl->StopForTeardown([ this, story_id = it.first, flow ] {
+      it.second.impl->StopForTeardown([this, story_id = it.first, flow] {
         // It is okay to erase story_id because story provider binding has been
         // closed and this callback cannot be invoked synchronously.
         story_provider_impl_->story_controller_impls_.erase(story_id);
@@ -712,18 +714,18 @@ std::unique_ptr<AppClient<Lifecycle>> StoryProviderImpl::StartStoryShell(
 }
 
 void StoryProviderImpl::MaybeLoadStoryShellDelayed() {
-  async::PostDelayedTask(
-      async_get_default(),
-      [weak_this = weak_factory_.GetWeakPtr()] {
-        if (weak_this) {
-          new SyncCall(&weak_this->operation_queue_, [weak_this] {
-            if (weak_this) {
-              weak_this->MaybeLoadStoryShell();
-            }
-          });
-        }
-      },
-      zx::sec(5));
+  async::PostDelayedTask(async_get_default(),
+                         [weak_this = weak_factory_.GetWeakPtr()] {
+                           if (weak_this) {
+                             new SyncCall(&weak_this->operation_queue_,
+                                          [weak_this] {
+                                            if (weak_this) {
+                                              weak_this->MaybeLoadStoryShell();
+                                            }
+                                          });
+                           }
+                         },
+                         zx::sec(5));
 }
 
 void StoryProviderImpl::MaybeLoadStoryShell() {
@@ -922,7 +924,7 @@ void StoryProviderImpl::OnFocusChange(FocusInfoPtr info) {
   // Last focus time is recorded in the ledger, and story provider watchers are
   // notified through the page watcher.
   auto mutate = [time = zx_clock_get(ZX_CLOCK_UTC)](
-      modular_private::StoryData* const story_data) {
+                    modular_private::StoryData* const story_data) {
     story_data->story_info.last_focus_time = time;
     return true;
   };
