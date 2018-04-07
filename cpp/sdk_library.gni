@@ -82,7 +82,7 @@ template("sdk_library") {
                              "testonly",
                            ])
 
-    domain = "c-pp"
+    domain = "cpp"
     if (compute_name) {
       name_file = atom_name_file
     } else {

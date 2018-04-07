@@ -36,7 +36,7 @@
           "description": "The group of atoms this atom belongs to",
           "type": "string",
           "enum": [
-            "c-pp",
+            "cpp",
             "dart",
             "exe",
             "fidl"
@@ -158,14 +158,14 @@
       "additionalProperties": false
     },
     "cppTags": {
-      "description": "Tag definitions for the 'c-pp' domain",
+      "description": "Tag definitions for the 'cpp' domain",
       "type": "object",
       "properties": {
         "domain": {
           "description": "Marker for this type of tags",
           "type": "string",
           "enum": [
-            "c-pp"
+            "cpp"
           ]
         },
         "type": {

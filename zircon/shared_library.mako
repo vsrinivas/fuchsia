@@ -112,7 +112,7 @@ group("${data.name}") {
 }  # !toolchain_variant.is_pic_default
 
 sdk_atom("${data.name}_sdk") {
-  domain = "c-pp"
+  domain = "cpp"
   name = "${data.name}"
 
   tags = [

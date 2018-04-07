@@ -46,7 +46,7 @@ source_set("${data.name}") {
 }
 
 sdk_atom("${data.name}_sdk") {
-  domain = "c-pp"
+  domain = "cpp"
   name = "${data.name}"
 
   tags = [

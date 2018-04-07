@@ -48,8 +48,8 @@ def main():
                         action='store_true')
     args = parser.parse_args()
 
-    if len(args.domains) != 1 and args.domains[0] != 'c-pp':
-        print('Only the "c-pp" domain is supported at the moment.')
+    if len(args.domains) != 1 and args.domains[0] != 'cpp':
+        print('Only the "cpp" domain is supported at the moment.')
         return 1
 
     # Remove any existing output.
@@ -57,7 +57,7 @@ def main():
 
     with open(args.manifest, 'r') as manifest_file:
         manifest = json.load(manifest_file)
-    atoms = filter(lambda a: a['id']['domain'] == 'c-pp', manifest['atoms'])
+    atoms = filter(lambda a: a['id']['domain'] == 'cpp', manifest['atoms'])
 
     def get_atom_dir(atom_name):
         if args.old_school:

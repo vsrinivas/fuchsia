@@ -106,7 +106,7 @@ template("prebuilt_shared_library") {
     # the location that the build system expects.
     manifest_file = sdk_manifest_file
 
-    domain = "c-pp"
+    domain = "cpp"
     if (compute_name) {
       name_file = atom_name_file
     } else {

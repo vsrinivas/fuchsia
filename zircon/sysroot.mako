@@ -30,7 +30,7 @@ group("sysroot") {
 }
 
 sdk_atom("sysroot_sdk") {
-  domain = "c-pp"
+  domain = "cpp"
   name = "system"
 
   tags = [

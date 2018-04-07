@@ -30,7 +30,7 @@ import("sdk_molecule.gni")
 #
 #   domains (optional)
 #     If `export` is true, specifies the domains of SDK elements to export.
-#     Only the "c-pp" domain is currently supported.
+#     Only the "cpp" domain is currently supported.
 
 template("sdk") {
   main_target_name = target_name
