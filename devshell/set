@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### set build configuration
+### set up a build directory
 
 ## usage: fx set TARGET [[--build-dir] OUTDIR]
 ##               [--packages P1,P2,...]
@@ -18,7 +18,10 @@
 ## OUTDIR is the directory (relative to FUCHSIA_DIR) where the build
 ## output goes.  Defaults to "out/TARGET".
 ##
-## Sets build options and runs `gn gen OUTDIR` (via //build/gn/gen.py).
+## This is a wrapper around running `gn gen --check OUTDIR --args ...`.
+## If GN fails with an error, `fx set` does not change anything.
+## If GN succeeds, this also points subsequent `fx` commands at OUTDIR,
+## just as `fx use` does and ensures Goma is ready (if enabled).
 ##
 ## optional arguments:
 ##   --build-dir OUTDIR    Using this option is deprecated.  It's the same
@@ -92,14 +95,15 @@ function main {
       return 1
       ;;
   esac
-
-  local gen_args="${gen_args} --target_cpu ${arch}"
   shift
 
-  local variant=debug
+  local gn_cmd='gen'
+  local gn_switches='--check'
+  local gn_args="target_cpu=\"${arch}\""
   local packages=
   local extra_packages=
   local build_dir=
+  local variant=
   local use_goma
   local goma_dir
   local ensure_goma=1
@@ -111,19 +115,15 @@ function main {
           fx-command-help
           return 1
         fi
-        if [[ -z "${packages}" ]]; then
-          packages="$2"
-        else
-          packages="${packages},$2"
-        fi
+        packages+="${packages:+,}$2"
         shift
         ;;
       --netboot)
-        extra_packages="${extra_packages},build/packages/netboot"
+        extra_packages+=',build/packages/netboot'
         ;;
       --bootfs)
-        extra_packages="${extra_packages},build/packages/bootfs"
-        gen_args="${gen_args} --args bootfs_packages=true"
+        extra_packages+=',build/packages/bootfs'
+        gn_args+=' bootfs_packages=true'
         ;;
       # TODO(mcgrathr): Remove this after a deprecation period.
       --build-dir)
@@ -161,7 +161,7 @@ function main {
           fx-command-help
           return 1
         fi
-        gen_args="${gen_args} --variant $2"
+        variant+="\"$2\","
         shift
         ;;
       --args)
@@ -169,13 +169,14 @@ function main {
           fx-command-help
           return 1
         fi
-        gen_args="${gen_args} --args $2"
+        gn_args+=" $2"
         shift
         ;;
       --help-args)
-        gen_args="${gen_args} --help-args"
+        gn_cmd=args
+        gn_switches+=' --list'
         if [[ $# -ge 2 ]] && [[ "$2" != '--*' ]]; then
-          gen_args="${gen_args} $2"
+          gn_switches+="=$2"
           shift
         fi
         ;;
@@ -190,7 +191,7 @@ function main {
           fx-command-help
           return 1
         fi
-        gen_args="${gen_args} --ide=$2"
+        gn_switches+=" --ide=$2"
         shift
         ;;
       --*)
@@ -209,50 +210,19 @@ function main {
     shift
   done
 
-  if [[ -n "${packages}" ]]; then
-    gen_args="${gen_args} --packages ${packages}${extra_packages}"
-  else
-    local -r jiri_manifest="${FUCHSIA_DIR}/.jiri_manifest"
-
-    # TODO(pylaligand): remove this check once the Fuchsia population has moved
-    # away from that specific manifest.
-    if grep -q "\"fuchsia\"" "${jiri_manifest}"; then
-      echo -e "error: You are using the obsolete 'fuchsia' manifest."
-      echo -e "error: Please switch to the Topaz manifest instead: fx set-layer topaz"
-      return 1
-    fi
-
-    # TODO(abarth): We might want to make this logic more sophisticated once we
-    # have a mechanism for switching between layers or for selecting which
-    # layers to build from source.
-
-    # If multiple cases below trigger, gen.py will error out because gen.py
-    # doesn't support multiple --packages arguments. However, we shouldn't get
-    # into this situation because jiri would have already errored out due to the
-    # conflicting version requirements of importing 2+ layers at the same time.
-
-    if grep -q "manifest/garnet" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages garnet/packages/default${extra_packages}"
-    fi
-
-    if grep -q "manifest/peridot" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages peridot/packages/default${extra_packages}"
-    fi
-
-    if grep -q "manifest/topaz" "${jiri_manifest}"; then
-      gen_args="${gen_args} --packages topaz/packages/default${extra_packages}"
-    fi
-
-    if [[ `cat ${jiri_manifest}` =~ vendor/([a-zA-Z0-9_-]+) ]]; then
-      local -r name="${BASH_REMATCH[1]}"
-      gen_args="${gen_args} --packages vendor/${name}/packages/default${extra_packages}"
-    fi
+  if [[ -z "${packages}" ]]; then
+    # This is the default logic GN would use, but we have to append
+    # $extra_packages, so repeat it here.
+    local layers
+    layers="$(${FUCHSIA_DIR}/build/gn/guess_layer.py)" || return 1
+    readonly layers
+    local layer
+    for layer in $layers; do
+      packages+="${packages:+,}$layer/packages/default"
+    done
   fi
 
-  # This is presumably gen.py's default, but always force it so this
-  # code doesn't have to know what gen.py's default logic is.
   build_dir="${build_dir:-out/${arch}}"
-  gen_args="${gen_args} --build-dir ${build_dir}"
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -z "${goma_dir}" ]]; then
@@ -268,15 +238,28 @@ function main {
     fi
   fi
 
-  # Add --goma or --ccache as appropriate.
+  # Add goma or ccache settings as appropriate.
   if [[ "${use_goma}" -eq 1 ]]; then
-    gen_args="${gen_args} --goma ${goma_dir}"
+    gn_args+=" use_goma=true goma_dir=\"${goma_dir}\""
   elif [[ "${ccache}" -eq 1 ]]; then
-    gen_args="${gen_args} --ccache"
+    gn_args+=" use_ccache=true"
   fi
 
-  # If this fails, we won't update .config.
-  "${FUCHSIA_DIR}/build/gn/gen.py" ${gen_args} "$@" || return $?
+  gn_args+=" fuchsia_packages=\"${packages}${extra_packages}\""
+
+  if [[ -n "${variant}" ]]; then
+    gn_args+=" select_variant=[${variant}]"
+  fi
+
+  # Using a subshell with -x prints out the gn command precisely with shell
+  # quoting so a cut&paste to the command line works.  Always show the real
+  # meaning of what this script does so everyone learns how GN works.
+  (
+    set -x
+    "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" ${gn_switches} \
+                                  --args="${gn_args}" "$@"
+  # If GN failed, don't update .config.
+  ) || return
 
   fx-config-write "${build_dir}"
 
