@@ -15,8 +15,11 @@
 ##
 ## where TARGET is x64 or arm64
 ##
-## OUTDIR is the directory (relative to FUCHSIA_DIR) where the build
-## output goes.  Defaults to "out/TARGET".
+## OUTDIR is the directory where the build output goes.
+## If it begins with `//` or `out/` then it's taken as relative to FUCHSIA_DIR.
+## Otherwise it should be an absolute path or a path relative to the current
+## working directory that winds up in `FUCHSIA_DIR/out`.
+## It defaults to `out/TARGET`.
 ##
 ## This is a wrapper around running `gn gen --check OUTDIR --args ...`.
 ## If GN fails with an error, `fx set` does not change anything.
@@ -223,7 +226,36 @@ function main {
     done
   fi
 
-  build_dir="${build_dir:-out/${arch}}"
+  # Remove any trailing slash from build directory name.
+  build_dir="${build_dir%/}"
+
+  local config_build_dir
+  case "$build_dir" in
+    '')
+      # Default is "//out/$target_cpu".  Store it as relative.
+      config_build_dir="out/${arch}"
+      build_dir="${FUCHSIA_DIR}/${config_build_dir}"
+      ;;
+    //*|out/*)
+      # GN-style "source-relative" path or relative out/something.
+      config_build_dir="${build_dir#//}"
+      build_dir="${FUCHSIA_DIR}/${config_build_dir}"
+      ;;
+    *)
+      # Absolute or relative path.  Canonicalize it to source-relative.
+      local abs_build_dir
+      abs_build_dir="$(cd "${build_dir%/*}"; pwd)/${build_dir##*/}" || {
+        echo >&2 "ERROR: Missing parent directories for ${build_dir}"
+        return 1
+      }
+      if [[ "$abs_build_dir" == "${FUCHSIA_DIR}"/out/* ]]; then
+        config_build_dir="${abs_build_dir#${FUCHSIA_DIR}/}"
+      else
+        echo >&2 "WARNING: ${abs_build_dir} is not a subdirectory of ${FUCHSIA_DIR}/out"
+        config_build_dir="$abs_build_dir"
+      fi
+      ;;
+  esac
 
   # If a goma directory wasn't specified explicitly then default to "~/goma".
   if [[ -z "${goma_dir}" ]]; then
@@ -267,7 +299,7 @@ function main {
   # If GN failed, don't update .config.
   ) || return
 
-  fx-config-write "${build_dir}"
+  fx-config-write "${config_build_dir}"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
     if ! [[ $("${goma_dir}/gomacc" port) =~ ^[0-9]+$ ]]; then

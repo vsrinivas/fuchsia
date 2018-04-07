@@ -47,9 +47,14 @@ function fx-config-read {
 
 function fx-config-write {
   local -r build_dir="$1"
+  if [[ "$build_dir" == /* ]]; then
+    local -r args_file="${build_dir}/args.gn"
+  else
+    local -r args_file="${FUCHSIA_DIR}/${build_dir}/args.gn"
+  fi
   # Glean the architecture from the args.gn file written by `gn gen`.
   local arch=$(
-    sed -n '/target_cpu/s/[^"]*"\([^"]*\).*$/\1/p' "${build_dir}/args.gn"
+    sed -n '/target_cpu/s/[^"]*"\([^"]*\).*$/\1/p' "$args_file"
   ) || return $?
   if [[ -z "$arch" ]]; then
     # Hand-invoked gn might not have had target_cpu in args.gn.
@@ -61,7 +66,7 @@ function fx-config-write {
         arch=aarch64
         ;;
       *)
-        echo >&2 "Cannot guess default target_cpu from ${build_dir}/args.gn"
+        echo >&2 "Cannot guess default target_cpu from $args_file"
         return 1
         ;;
     esac
