@@ -50,6 +50,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
 
     zx_status_t EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                fbl::unique_ptr<Packet>* out_packet) override;
+    void OnPreTbtt() override;
 
     bool IsHTReady() const override;
     bool IsCbw40RxReady() const override;
@@ -94,7 +95,6 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     TrafficIndicationMap tim_;
     // Queue which holds buffered non-GCR-SP frames when at least one client is dozing.
     PacketQueue bu_queue_;
-
     wlan_channel_t chan_;
 };
 

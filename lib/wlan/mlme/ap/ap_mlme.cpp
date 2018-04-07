@@ -5,6 +5,7 @@
 #include <wlan/mlme/ap/ap_mlme.h>
 
 #include <wlan/common/logging.h>
+#include <wlan/protocol/mac.h>
 #include <fbl/ref_ptr.h>
 
 namespace wlan {
@@ -94,6 +95,10 @@ zx_status_t ApMlme::PostChannelChange() {
     debugfn();
     // TODO(hahnr): Implement.
     return ZX_OK;
+}
+
+void ApMlme::HwIndication(uint32_t ind) {
+    if (ind == WLAN_INDICATION_PRE_TBTT) { bss_->OnPreTbtt(); }
 }
 
 }  // namespace wlan

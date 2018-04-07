@@ -320,8 +320,10 @@ void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
 }
 
 void Device::WlanmacIndication(uint32_t ind) {
-    // TODO(hahnr): Forward to dispatcher.
-    warnf("not implemented yet!");
+    debugf("WlanmacIndication %u\n", ind);
+
+    std::lock_guard<std::mutex> lock(lock_);
+    dispatcher_.HwIndication(ind);
 }
 
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {

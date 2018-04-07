@@ -28,6 +28,8 @@ class Dispatcher {
     // Called after a channel change is complete. The DeviceState channel will reflect the channel,
     // whether it changed or not.
     zx_status_t PostChannelChange();
+    // Called when the hardware reports an indication such as Pre-TBTT.
+    void HwIndication(uint32_t ind);
 
    private:
     // MAC frame handlers

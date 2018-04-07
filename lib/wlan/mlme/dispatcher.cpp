@@ -537,4 +537,9 @@ zx_status_t Dispatcher::PostChannelChange() {
     return ZX_OK;
 }
 
+void Dispatcher::HwIndication(uint32_t ind) {
+    debugfn();
+    if (mlme_ != nullptr) { mlme_->HwIndication(ind); }
+}
+
 }  // namespace wlan

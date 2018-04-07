@@ -362,6 +362,10 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
     return ZX_OK;
 }
 
+void InfraBss::OnPreTbtt() {
+    // TODO(hahnr): Implement.
+}
+
 const common::MacAddr& InfraBss::bssid() const {
     return bssid_;
 }
