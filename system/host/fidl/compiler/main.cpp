@@ -24,13 +24,14 @@
 
 namespace {
 
-[[noreturn]] void Usage() {
+void Usage() {
     std::cout
         << "usage: fidlc [--c-header HEADER_PATH]\n"
            "             [--tables TABLES_PATH]\n"
            "             [--json JSON_PATH]\n"
            "             [--name LIBRARY_NAME]\n"
            "             [--files [FIDL_FILE...]...]\n"
+           "             [--help]\n"
            "\n"
            " * `--c-header HEADER_PATH`. If present, this flag instructs `fidlc` to output\n"
            "   a C header at the given path.\n"
@@ -56,6 +57,8 @@ namespace {
            "   libraries able to use declarations from preceding libraries but not vice versa.\n"
            "   Output is only generated for the final library, not for each of its dependencies.\n"
            "\n"
+           " * `--help`. Prints this help, and exit immediately.\n"
+           "\n"
            "All of the arguments can also be provided via a response file, denoted as\n"
            "`@responsefile`. The contents of the file at `responsefile` will be interpreted\n"
            "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
@@ -64,6 +67,22 @@ namespace {
            "See <https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/compiler.md>\n"
            "for more information.\n";
     std::cout.flush();
+}
+
+[[noreturn]] void FailWithUsage(const char* message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
+    Usage();
+    exit(1);
+}
+
+[[noreturn]] void Fail(const char* message, ...) {
+    va_list args;
+    va_start(args, message);
+    vfprintf(stderr, message, args);
+    va_end(args);
     exit(1);
 }
 
@@ -71,7 +90,7 @@ std::fstream Open(std::string filename, std::ios::openmode mode) {
     std::fstream stream;
     stream.open(filename, mode);
     if (!stream.is_open()) {
-        Usage();
+        Fail("Could not open file: %s\n", filename.data());
     }
     return stream;
 }
@@ -91,7 +110,7 @@ public:
 
     std::string Claim() override {
         if (count_ < 1) {
-            Usage();
+            FailWithUsage("Missing part of an argument\n");
         }
         std::string argument = arguments_[0];
         --count_;
@@ -102,9 +121,6 @@ public:
     bool Remaining() const override { return count_ > 0; }
 
     bool HeadIsResponseFile() {
-        if (count_ != 1) {
-            return false;
-        }
         return arguments_[0][0] == '@';
     }
 
@@ -193,8 +209,8 @@ int main(int argc, char* argv[]) {
     if (argv_args->HeadIsResponseFile()) {
         std::string response = args->Claim();
         if (argv_args->Remaining()) {
-            // Response file must be the last argument.
-            Usage();
+            // Response file must be the only argument.
+            FailWithUsage("Response files must be the only argument to %s.\n", argv[0]);
         }
         // Drop the leading '@'.
         fidl::StringView response_file = response.data() + 1;
@@ -209,7 +225,10 @@ int main(int argc, char* argv[]) {
         // Try to parse an output type.
         std::string behavior_argument = args->Claim();
         std::fstream output_file;
-        if (behavior_argument == "--c-header") {
+        if (behavior_argument == "--help") {
+            Usage();
+            exit(0);
+        } else if (behavior_argument == "--c-header") {
             outputs.emplace(Behavior::CHeader, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--tables") {
             outputs.emplace(Behavior::Tables, Open(args->Claim(), std::ios::out));
@@ -221,7 +240,7 @@ int main(int argc, char* argv[]) {
             // Start parsing filenames.
             break;
         } else {
-            Usage();
+            FailWithUsage("Unknown argument: %s\n", behavior_argument.data());
         }
     }
 
@@ -234,8 +253,7 @@ int main(int argc, char* argv[]) {
             source_managers.emplace_back();
         } else {
             if (!source_managers.back().CreateSource(arg.data())) {
-                fprintf(stderr, "Couldn't read in source data from %s\n", arg.data());
-                return 1;
+                Fail("Couldn't read in source data from %s\n", arg.data());
             }
         }
     }
@@ -264,21 +282,18 @@ int main(int argc, char* argv[]) {
         auto iter = compiled_libraries.insert(std::move(name_and_library));
         if (!iter.second) {
             auto name = iter.first->first;
-            fprintf(stderr, "Mulitple libraries with the same name: '%.*s'\n",
-                    static_cast<int>(name.size()), name.data());
-            return 1;
+            Fail("Mulitple libraries with the same name: '%.*s'\n",
+                 static_cast<int>(name.size()), name.data());
         }
     }
     if (final_library == nullptr) {
-        fputs("No library was produced.\n", stderr);
-        return 1;
+        Fail("No library was produced.\n");
     }
 
     if (!library_name.empty() && final_library->name() != library_name) {
         auto name = final_library->name();
-        fprintf(stderr, "Generated library '%.*s' did not match --name argument: %s\n",
-                static_cast<int>(name.size()), name.data(), library_name.c_str());
-        return 1;
+        Fail("Generated library '%.*s' did not match --name argument: %s\n",
+             static_cast<int>(name.size()), name.data(), library_name.c_str());
     }
 
     // We recompile dependencies, and only emit output for the final
