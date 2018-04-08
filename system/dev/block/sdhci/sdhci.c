@@ -43,7 +43,7 @@
 
 #define HI32(val)   (((val) >> 32) & 0xffffffff)
 #define LO32(val)   ((val) & 0xffffffff)
-#define SDMMC_COMMAND(c) ((c) << 24)
+#define SDHCI_CMD_IDX(c) ((c) << 24)
 
 typedef struct sdhci_adma64_desc {
     union {
@@ -135,19 +135,59 @@ static const uint32_t normal_interrupts = (
     SDHCI_IRQ_BUFF_WRITE_READY
 );
 
-static bool sdmmc_cmd_rsp_busy(uint32_t cmd) {
-    uint32_t resp = cmd & SDMMC_RESP_MASK;
-    return resp == SDMMC_RESP_LEN_48B;
+static bool sdmmc_cmd_rsp_busy(uint32_t cmd_flags) {
+    return cmd_flags & SDMMC_RESP_LEN_48B;
 }
 
-static bool sdmmc_cmd_has_data(uint32_t resp_type) {
-    return resp_type & SDMMC_RESP_DATA_PRESENT;
+static bool sdmmc_cmd_has_data(uint32_t cmd_flags) {
+    return cmd_flags & SDMMC_RESP_DATA_PRESENT;
 }
 
 static bool sdhci_supports_adma2_64bit(sdhci_device_t* dev) {
     return (dev->info.caps & SDMMC_HOST_CAP_ADMA2) &&
            (dev->info.caps & SDMMC_HOST_CAP_64BIT) &&
            !(dev->quirks & SDHCI_QUIRK_NO_DMA);
+}
+
+static uint32_t sdhci_prepare_cmd(sdmmc_req_t* req) {
+    uint32_t cmd = SDHCI_CMD_IDX(req->cmd_idx);
+    uint32_t cmd_flags = req->cmd_flags;
+    uint32_t sdmmc_sdhci_map[][2] = { {SDMMC_RESP_CRC_CHECK, SDHCI_CMD_RESP_CRC_CHECK},
+                                      {SDMMC_RESP_CMD_IDX_CHECK, SDHCI_CMD_RESP_CMD_IDX_CHECK},
+                                      {SDMMC_RESP_DATA_PRESENT, SDHCI_CMD_RESP_DATA_PRESENT},
+                                      {SDMMC_CMD_DMA_EN, SDHCI_CMD_DMA_EN},
+                                      {SDMMC_CMD_BLKCNT_EN, SDHCI_CMD_BLKCNT_EN},
+                                      {SDMMC_CMD_AUTO12, SDHCI_CMD_AUTO12},
+                                      {SDMMC_CMD_AUTO23, SDHCI_CMD_AUTO23},
+                                      {SDMMC_CMD_READ, SDHCI_CMD_READ},
+                                      {SDMMC_CMD_MULTI_BLK, SDHCI_CMD_MULTI_BLK}
+                                    };
+    if (cmd_flags & SDMMC_RESP_LEN_EMPTY) {
+        cmd |= SDHCI_CMD_RESP_LEN_EMPTY;
+    } else if (cmd_flags & SDMMC_RESP_LEN_136) {
+        cmd |= SDHCI_CMD_RESP_LEN_136;
+    } else if (cmd_flags & SDMMC_RESP_LEN_48) {
+        cmd |= SDHCI_CMD_RESP_LEN_48;
+    } else if (cmd_flags & SDMMC_RESP_LEN_48B) {
+        cmd |= SDHCI_CMD_RESP_LEN_48B;
+    }
+
+    if (cmd_flags & SDMMC_CMD_TYPE_NORMAL) {
+        cmd |= SDHCI_CMD_TYPE_NORMAL;
+    } else if (cmd_flags & SDMMC_CMD_TYPE_SUSPEND) {
+        cmd |= SDHCI_CMD_TYPE_SUSPEND;
+    } else if (cmd_flags & SDMMC_CMD_TYPE_RESUME) {
+        cmd |= SDHCI_CMD_TYPE_RESUME;
+    } else if (cmd_flags & SDMMC_CMD_TYPE_ABORT) {
+        cmd |= SDHCI_CMD_TYPE_ABORT;
+    }
+
+    for (unsigned i = 0; i < sizeof(sdmmc_sdhci_map)/sizeof(*sdmmc_sdhci_map); i++) {
+        if (cmd_flags & sdmmc_sdhci_map[i][0]) {
+            cmd |= sdmmc_sdhci_map[i][1];
+        }
+    }
+    return cmd;
 }
 
 static zx_status_t sdhci_wait_for_reset(sdhci_device_t* dev, const uint32_t mask, zx_time_t timeout) {
@@ -166,7 +206,7 @@ static zx_status_t sdhci_wait_for_reset(sdhci_device_t* dev, const uint32_t mask
 
 static void sdhci_complete_request_locked(sdhci_device_t* dev, sdmmc_req_t* req,
                                           zx_status_t status) {
-    zxlogf(TRACE, "sdhci: complete cmd 0x%08x status %d\n", req->cmd, status);
+    zxlogf(TRACE, "sdhci: complete cmd 0x%08x status %d\n", req->cmd_idx, status);
 
     // Disable irqs when no pending transfer
     dev->regs->irqen = 0;
@@ -190,10 +230,10 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
 
     sdmmc_req_t* req = dev->cmd_req;
     volatile struct sdhci_regs* regs = dev->regs;
-    uint32_t cmd = SDMMC_COMMAND(req->cmd) | req->resp_type;
+    uint32_t cmd = sdhci_prepare_cmd(req);
 
     // Read the response data.
-    if (cmd & SDMMC_RESP_LEN_136) {
+    if (cmd & SDHCI_CMD_RESP_LEN_136) {
         if (dev->quirks & SDHCI_QUIRK_STRIP_RESPONSE_CRC) {
             req->response[0] = (regs->resp3 << 8) | ((regs->resp2 >> 24) & 0xFF);
             req->response[1] = (regs->resp2 << 8) | ((regs->resp1 >> 24) & 0xFF);
@@ -210,7 +250,7 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
             req->response[2] = regs->resp2;
             req->response[3] = regs->resp3;
         }
-    } else if (cmd & (SDMMC_RESP_LEN_48 | SDMMC_RESP_LEN_48B)) {
+    } else if (cmd & (SDHCI_CMD_RESP_LEN_48 | SDHCI_CMD_RESP_LEN_48B)) {
         req->response[0] = regs->resp0;
         req->response[1] = regs->resp1;
     }
@@ -226,14 +266,14 @@ static void sdhci_cmd_stage_complete_locked(sdhci_device_t* dev) {
 static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
     zxlogf(TRACE, "sdhci: got BUFF_READ_READY interrupt\n");
 
-    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->resp_type)) {
+    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->cmd_flags)) {
         zxlogf(TRACE, "sdhci: spurious BUFF_READ_READY interrupt!\n");
         return;
     }
 
     sdmmc_req_t* req = dev->data_req;
 
-    if (dev->data_req->cmd == MMC_SEND_TUNING_BLOCK) {
+    if (dev->data_req->cmd_idx == MMC_SEND_TUNING_BLOCK) {
         // tuning command is done here
         sdhci_complete_request_locked(dev, dev->data_req, ZX_OK);
     } else {
@@ -250,7 +290,7 @@ static void sdhci_data_stage_read_ready_locked(sdhci_device_t* dev) {
 static void sdhci_data_stage_write_ready_locked(sdhci_device_t* dev) {
     zxlogf(TRACE, "sdhci: got BUFF_WRITE_READY interrupt\n");
 
-    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->resp_type)) {
+    if (!dev->data_req || !sdmmc_cmd_has_data(dev->data_req->cmd_flags)) {
         zxlogf(TRACE, "sdhci: spurious BUFF_WRITE_READY interrupt!\n");
         return;
     }
@@ -440,8 +480,8 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
     const uint32_t arg = req->arg;
     const uint16_t blkcnt = req->blockcount;
     const uint16_t blksiz = req->blocksize;
-    uint32_t cmd = SDMMC_COMMAND(req->cmd) | req->resp_type;
-    bool has_data = sdmmc_cmd_has_data(req->resp_type);
+    uint32_t cmd = sdhci_prepare_cmd(req);
+    bool has_data = sdmmc_cmd_has_data(req->cmd_flags);
 
     if (req->use_dma && !sdhci_supports_adma2_64bit(dev)) {
         zxlogf(TRACE, "sdhci: host does not support DMA\n");
@@ -449,15 +489,15 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
     }
 
     zxlogf(TRACE, "sdhci: start_req cmd=0x%08x (data %d dma %d bsy %d) blkcnt %u blksiz %u\n",
-                  cmd, has_data, req->use_dma, sdmmc_cmd_rsp_busy(cmd), blkcnt, blksiz);
+                  cmd, has_data, req->use_dma, sdmmc_cmd_rsp_busy(req->cmd_flags), blkcnt, blksiz);
 
     // Every command requires that the Command Inhibit is unset.
     uint32_t inhibit_mask = SDHCI_STATE_CMD_INHIBIT;
 
     // Busy type commands must also wait for the DATA Inhibit to be 0 UNLESS
     // it's an abort command which can be issued with the data lines active.
-    if (((cmd & SDMMC_RESP_LEN_48B) == SDMMC_RESP_LEN_48B) &&
-        ((cmd & SDMMC_CMD_TYPE_ABORT) == 0)) {
+    if (((cmd & SDHCI_CMD_RESP_LEN_48B) == SDHCI_CMD_RESP_LEN_48B) &&
+        ((cmd & SDHCI_CMD_TYPE_ABORT) == 0)) {
         inhibit_mask |= SDHCI_STATE_DAT_INHIBIT;
     }
 
@@ -484,8 +524,8 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
             cmd |= SDHCI_XFERMODE_DMA_ENABLE;
         }
 
-        if (cmd & SDMMC_CMD_MULTI_BLK) {
-            cmd |= SDMMC_CMD_AUTO12;
+        if (cmd & SDHCI_CMD_MULTI_BLK) {
+            cmd |= SDHCI_CMD_AUTO12;
         }
     }
 
@@ -504,7 +544,7 @@ static zx_status_t sdhci_start_req_locked(sdhci_device_t* dev, sdmmc_req_t* req)
     regs->cmd = cmd;
 
     dev->cmd_req = req;
-    if (has_data || sdmmc_cmd_rsp_busy(cmd)) {
+    if (has_data || sdmmc_cmd_rsp_busy(req->cmd_flags)) {
         dev->data_req = req;
     } else {
         dev->data_req = NULL;
@@ -791,9 +831,9 @@ static zx_status_t sdhci_perform_tuning(void* ctx) {
     // TODO no other commands should run during tuning
 
     sdmmc_req_t req = {
-        .cmd = MMC_SEND_TUNING_BLOCK,
+        .cmd_idx = MMC_SEND_TUNING_BLOCK,
+        .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
         .arg = 0,
-        .resp_type = MMC_SEND_TUNING_BLOCK_RESP,
         .blockcount = 0,
         .blocksize = (dev->regs->ctrl0 & SDHCI_HOSTCTRL_EXT_DATA_WIDTH) ? 128 : 64,
     };

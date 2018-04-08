@@ -4,6 +4,33 @@
 
 #pragma once
 
+
+//Fields of command register
+
+#define SDHCI_CMD_IDX(c) ((c) << 24)
+#define SDHCI_RESP_MASK              (0x3 << 16)
+#define SDHCI_CMD_RESP_LEN_EMPTY     (0x0 << 16)
+#define SDHCI_CMD_RESP_LEN_136       (0x1 << 16)
+#define SDHCI_CMD_RESP_LEN_48        (0x2 << 16)
+#define SDHCI_CMD_RESP_LEN_48B       (0x3 << 16)
+
+#define SDHCI_CMD_RESP_CRC_CHECK     (0x1 << 19)
+#define SDHCI_CMD_RESP_CMD_IDX_CHECK (0x1 << 20)
+#define SDHCI_CMD_RESP_DATA_PRESENT  (0x1 << 21)
+
+#define SDHCI_CMD_TYPE_NORMAL    (0x0 << 22)
+#define SDHCI_CMD_TYPE_SUSPEND   (0x1 << 22)
+#define SDHCI_CMD_TYPE_RESUME    (0x2 << 22)
+#define SDHCI_CMD_TYPE_ABORT     (0x3 << 22)
+
+#define SDHCI_CMD_DMA_EN    (1 << 0)
+#define SDHCI_CMD_BLKCNT_EN (1 << 1)
+#define SDHCI_CMD_AUTO12    (1 << 2)
+#define SDHCI_CMD_AUTO23    (2 << 2)
+#define SDHCI_CMD_READ      (1 << 4)
+#define SDHCI_CMD_MULTI_BLK (1 << 5)
+
+
 typedef struct sdhci_regs {
     uint32_t arg2;          // 00h
     uint32_t blkcntsiz;     // 04h
