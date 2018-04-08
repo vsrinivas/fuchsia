@@ -99,10 +99,12 @@ Presentation::~Presentation() {}
 void Presentation::Present(
     views_v1_token::ViewOwnerPtr view_owner,
     fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-    fxl::Closure shutdown_callback) {
+    YieldCallback yield_callback,
+    ShutdownCallback shutdown_callback) {
   FXL_DCHECK(view_owner);
   FXL_DCHECK(!display_model_initialized_);
 
+  yield_callback_ = std::move(yield_callback);
   shutdown_callback_ = std::move(shutdown_callback);
 
   scenic_->GetDisplayInfo(fxl::MakeCopyable([
@@ -480,7 +482,8 @@ bool Presentation::GlobalHooksHandleEvent(const input::InputEvent& event) {
   return display_rotater_.OnEvent(event, this) ||
          display_usage_switcher_.OnEvent(event, this) ||
          display_size_switcher_.OnEvent(event, this) ||
-         perspective_demo_mode_.OnEvent(event, this);
+         perspective_demo_mode_.OnEvent(event, this) ||
+         presentation_switcher_.OnEvent(event, this);
 }
 
 void Presentation::OnEvent(input::InputEvent event) {

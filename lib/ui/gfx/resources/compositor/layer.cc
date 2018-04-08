@@ -48,11 +48,8 @@ bool Layer::SetColor(const escher::vec4& color) {
 
 bool Layer::Detach() {
   if (layer_stack_) {
-    // Can't set layer-stack after detaching, because we might be destroyed (if
-    // our ref-count hits zero).
-    auto layer_stack = layer_stack_;
-    layer_stack_ = nullptr;
-    layer_stack->RemoveLayer(this);
+    layer_stack_->RemoveLayer(this);
+    FXL_DCHECK(!layer_stack_);  // removed by RemoveLayer().
   }
   return true;
 }
