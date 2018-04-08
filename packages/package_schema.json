@@ -22,13 +22,6 @@
       "additionalProperties": {
         "$ref": "#/definitions/gnLabel"
       }
-    },
-    "resources": {
-      "description": "A list of files to add to the final image",
-      "type": "array",
-      "items": {
-        "$ref": "#/definitions/resource"
-      }
     }
   },
   "additionalProperties": false,
@@ -37,25 +30,6 @@
       "description": "An absolute GN label",
       "type": "string",
       "pattern": "^/(/[^/]+)+(:[^/]+)?(\\(/(/[^/]+)+(:[^/]+)?\\))?$"
-    },
-    "resource": {
-      "description": "A file to add to the final system image",
-      "type": "object",
-      "properties": {
-        "bootfs_path": {
-          "description": "Path of the file on the target",
-          "type": "string"
-        },
-        "file": {
-          "description": "Location of the file relative to the root of the Fuchsia tree",
-          "type": "string"
-        }
-      },
-      "required": [
-        "bootfs_path",
-        "file"
-      ],
-      "additionalProperties": false
     }
   }
 }
