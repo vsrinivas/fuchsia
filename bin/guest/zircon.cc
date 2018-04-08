@@ -251,15 +251,10 @@ static zx_status_t create_bootdata(const machina::PhysMem& phys_mem,
 static zx_status_t read_bootdata(const machina::PhysMem& phys_mem,
                                  uintptr_t* guest_ip) {
   auto kernel_hdr = phys_mem.as<zircon_kernel_t>(kKernelOffset);
-
-  if (!is_bootdata(&kernel_hdr->hdr_file)) {
-    *guest_ip = kKernelOffset;
-    return ZX_OK;
-  } else if (kernel_hdr->hdr_kernel.type != BOOTDATA_KERNEL) {
+  if (kernel_hdr->hdr_kernel.type != BOOTDATA_KERNEL) {
     FXL_LOG(ERROR) << "Invalid Zircon kernel header";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
-
   *guest_ip = kernel_hdr->data_kernel.entry64;
   return ZX_OK;
 }
