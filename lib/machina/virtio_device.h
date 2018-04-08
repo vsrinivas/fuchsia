@@ -212,7 +212,7 @@ class VirtioDeviceBase : public VirtioDevice {
 
  protected:
   // Mutex for accessing device configuration fields.
-  fbl::Mutex config_mutex_;
+  mutable fbl::Mutex config_mutex_;
   ConfigType config_ __TA_GUARDED(config_mutex_) = {};
 
  private:

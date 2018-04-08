@@ -52,6 +52,14 @@ class VirtioVsockTest : public testing::Test {
     EXPECT_EQ(header->flags, flags);
   }
 
+  void DoReceive(virtio_vsock_hdr_t* rx_header, size_t rx_size) {
+    ASSERT_EQ(
+        rx_queue_.BuildDescriptor().AppendWritable(rx_header, rx_size).Build(),
+        ZX_OK);
+
+    loop_.RunUntilIdle();
+  }
+
   void DoSend(uint32_t host_port,
               uint32_t guest_port,
               uint16_t type,
@@ -73,44 +81,32 @@ class VirtioVsockTest : public testing::Test {
   }
 
   void HostConnectOnPortRequest(uint32_t host_port, zx::socket socket) {
-    virtio_vsock_hdr_t rx_header = {};
-    ASSERT_EQ(rx_queue_.BuildDescriptor()
-                  .AppendWritable(&rx_header, sizeof(rx_header))
-                  .Build(),
-              ZX_OK);
-
     ASSERT_EQ(vsock_.Connect(kVirtioVsockHostCid, host_port,
                              kVirtioVsockGuestPort, std::move(socket)),
               ZX_OK);
 
-    loop_.RunUntilIdle();
-
+    virtio_vsock_hdr_t rx_header = {};
+    DoReceive(&rx_header, sizeof(rx_header));
     VerifyHeader(&rx_header, host_port, kVirtioVsockGuestPort, 0,
                  VIRTIO_VSOCK_OP_REQUEST, 0);
   }
 
   void HostConnectOnPortResponse(uint32_t host_port) {
-    DoSend(host_port, kVirtioVsockGuestPort + 200, VIRTIO_VSOCK_TYPE_STREAM,
+    DoSend(host_port, kVirtioVsockGuestPort, VIRTIO_VSOCK_TYPE_STREAM,
            VIRTIO_VSOCK_OP_RESPONSE);
   }
 
   void HostReadOnPort(uint32_t host_port, zx::socket* socket) {
-    uint8_t rx_buffer[sizeof(virtio_vsock_hdr_t) + kDataSize] = {};
-    ASSERT_EQ(rx_queue_.BuildDescriptor()
-                  .AppendWritable(rx_buffer, sizeof(rx_buffer))
-                  .Build(),
-              ZX_OK);
-
     uint8_t expected_data[kDataSize] = {1, 9, 8, 5};
     size_t actual;
     ASSERT_EQ(socket->write(0, expected_data, sizeof(expected_data), &actual),
               ZX_OK);
     EXPECT_EQ(actual, kDataSize);
 
-    loop_.RunUntilIdle();
-
+    uint8_t rx_buffer[sizeof(virtio_vsock_hdr_t) + kDataSize] = {};
     auto rx_header = reinterpret_cast<virtio_vsock_hdr_t*>(rx_buffer);
-    VerifyHeader(rx_header, host_port, kVirtioVsockGuestPort + 200, 4,
+    DoReceive(rx_header, sizeof(rx_buffer));
+    VerifyHeader(rx_header, host_port, kVirtioVsockGuestPort, 4,
                  VIRTIO_VSOCK_OP_RW, 0);
 
     auto rx_data = rx_buffer + sizeof(*rx_header);
@@ -158,14 +154,8 @@ class VirtioVsockTest : public testing::Test {
 
   void HostShutdownOnPort(uint32_t host_port, uint32_t flags) {
     virtio_vsock_hdr_t rx_header = {};
-    ASSERT_EQ(rx_queue_.BuildDescriptor()
-                  .AppendWritable(&rx_header, sizeof(rx_header))
-                  .Build(),
-              ZX_OK);
-
-    loop_.RunUntilIdle();
-
-    VerifyHeader(&rx_header, host_port, kVirtioVsockGuestPort + 200, 0,
+    DoReceive(&rx_header, sizeof(rx_header));
+    VerifyHeader(&rx_header, host_port, kVirtioVsockGuestPort, 0,
                  VIRTIO_VSOCK_OP_SHUTDOWN, flags);
   }
 
@@ -176,13 +166,7 @@ class VirtioVsockTest : public testing::Test {
 
   void GuestConnectOnPortResponse(uint32_t host_port, uint16_t op) {
     virtio_vsock_hdr_t rx_header = {};
-    ASSERT_EQ(rx_queue_.BuildDescriptor()
-                  .AppendWritable(&rx_header, sizeof(rx_header))
-                  .Build(),
-              ZX_OK);
-
-    loop_.RunUntilIdle();
-
+    DoReceive(&rx_header, sizeof(rx_header));
     VerifyHeader(&rx_header, host_port, kVirtioVsockGuestPort + 200, 0, op, 0);
     if (op == VIRTIO_VSOCK_OP_RST) {
       EXPECT_EQ(rx_header.buf_alloc, 0u);
@@ -224,27 +208,20 @@ TEST_F(VirtioVsockTest, ConnectRefused) {
   HostConnectOnPortRequest(kVirtioVsockHostPort, std::move(sockets[1]));
 
   // Test connection reset.
-  virtio_vsock_hdr_t tx_header = {
-      .dst_cid = kVirtioVsockHostCid,
-      .dst_port = kVirtioVsockHostPort,
-      .type = VIRTIO_VSOCK_TYPE_STREAM,
-      .op = VIRTIO_VSOCK_OP_RST,
-  };
-  ASSERT_EQ(tx_queue_.BuildDescriptor()
-                .AppendReadable(&tx_header, sizeof(tx_header))
-                .Build(),
-            ZX_OK);
-
-  loop_.RunUntilIdle();
-
-  EXPECT_FALSE(vsock_.HasConnection(kVirtioVsockHostCid, kVirtioVsockHostPort));
+  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_TYPE_STREAM,
+         VIRTIO_VSOCK_OP_RST);
+  EXPECT_FALSE(vsock_.HasConnection(kVirtioVsockHostCid, kVirtioVsockHostPort,
+                                    kVirtioVsockGuestPort));
 }
 
 TEST_F(VirtioVsockTest, Listen) {
   zx::socket sockets[2];
   ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort,
-                          std::move(sockets[1])),
+  auto acceptor = [&sockets](zx::socket* socket) {
+    *socket = std::move(sockets[1]);
+    return ZX_OK;
+  };
+  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort, acceptor),
             ZX_OK);
 
   GuestConnectOnPort(kVirtioVsockHostPort);
@@ -254,36 +231,55 @@ TEST_F(VirtioVsockTest, ListenMultipleTimes) {
   zx::socket sockets[4];
   ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
   ASSERT_EQ(zx::socket::create(0, &sockets[2], &sockets[3]), ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort + 1,
-                          std::move(sockets[1])),
-            ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort + 2,
-                          std::move(sockets[3])),
-            ZX_OK);
+  auto acceptor_1 = [&sockets](zx::socket* socket) {
+    *socket = std::move(sockets[1]);
+    return ZX_OK;
+  };
+  auto acceptor_2 = [&sockets](zx::socket* socket) {
+    *socket = std::move(sockets[3]);
+    return ZX_OK;
+  };
+  ASSERT_EQ(
+      vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort + 1, acceptor_1),
+      ZX_OK);
+  ASSERT_EQ(
+      vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort + 2, acceptor_2),
+      ZX_OK);
 
   GuestConnectOnPort(kVirtioVsockHostPort + 1);
   GuestConnectOnPort(kVirtioVsockHostPort + 2);
 }
 
 TEST_F(VirtioVsockTest, ListenMultipleTimesSamePort) {
-  zx::socket sockets[2];
+  size_t index = 1;
+  zx::socket sockets[4];
   ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort,
-                          std::move(sockets[1])),
+  ASSERT_EQ(zx::socket::create(0, &sockets[2], &sockets[3]), ZX_OK);
+  auto acceptor = [&index, &sockets](zx::socket* socket) {
+    *socket = std::move(sockets[index]);
+    index += 2;
+    return ZX_OK;
+  };
+  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort, acceptor),
             ZX_OK);
 
   GuestConnectOnPort(kVirtioVsockHostPort);
 
   // Test connection request.
   GuestConnectOnPortRequest(kVirtioVsockHostPort);
-  GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST);
+
+  EXPECT_TRUE(vsock_.HasConnection(kVirtioVsockHostCid, kVirtioVsockHostPort,
+                                   kVirtioVsockGuestPort + 200));
 }
 
 TEST_F(VirtioVsockTest, ListenRefused) {
   zx::socket sockets[2];
   ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort,
-                          std::move(sockets[1])),
+  auto acceptor = [&sockets](zx::socket* socket) {
+    *socket = std::move(sockets[1]);
+    return ZX_OK;
+  };
+  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort, acceptor),
             ZX_OK);
 
   GuestConnectOnPortRequest(kVirtioVsockHostPort + 1);
@@ -298,6 +294,20 @@ TEST_F(VirtioVsockTest, ConnectToNonListeningPort) {
 
   GuestConnectOnPortRequest(kVirtioVsockHostPort);
   GuestConnectOnPortResponse(kVirtioVsockHostPort, VIRTIO_VSOCK_OP_RST);
+}
+
+TEST_F(VirtioVsockTest, AcceptFailed) {
+  auto acceptor = [](zx::socket* socket_out) { return ZX_ERR_UNAVAILABLE; };
+  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort, acceptor),
+            ZX_OK);
+
+  GuestConnectOnPortRequest(kVirtioVsockHostPort);
+
+  // Test acceptor failure.
+  virtio_vsock_hdr_t rx_header = {};
+  DoReceive(&rx_header, sizeof(rx_header));
+  VerifyHeader(&rx_header, kVirtioVsockHostPort, kVirtioVsockGuestPort + 200, 0,
+               VIRTIO_VSOCK_OP_RST, 0);
 }
 
 TEST_F(VirtioVsockTest, Reset) {
@@ -342,9 +352,13 @@ TEST_F(VirtioVsockTest, WriteAfterShutdown) {
             ZX_OK);
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND);
 
-  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestPort + 200,
-         VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RW);
-  EXPECT_FALSE(vsock_.HasConnection(kVirtioVsockHostCid, kVirtioVsockHostPort));
+  // Test write after shutdown.
+  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_TYPE_STREAM,
+         VIRTIO_VSOCK_OP_RW);
+  virtio_vsock_hdr_t rx_header = {};
+  DoReceive(&rx_header, sizeof(rx_header));
+  VerifyHeader(&rx_header, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
+               VIRTIO_VSOCK_OP_RST, 0);
 }
 
 TEST_F(VirtioVsockTest, Read) {
@@ -397,14 +411,8 @@ TEST_F(VirtioVsockTest, CreditRequest) {
          VIRTIO_VSOCK_OP_CREDIT_REQUEST);
 
   virtio_vsock_hdr_t rx_header = {};
-  ASSERT_EQ(rx_queue_.BuildDescriptor()
-                .AppendWritable(&rx_header, sizeof(rx_header))
-                .Build(),
-            ZX_OK);
-
-  loop_.RunUntilIdle();
-
-  VerifyHeader(&rx_header, kVirtioVsockHostPort, kVirtioVsockGuestPort + 200, 0,
+  DoReceive(&rx_header, sizeof(rx_header));
+  VerifyHeader(&rx_header, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
                VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
   EXPECT_GT(rx_header.buf_alloc, 0u);
   EXPECT_EQ(rx_header.fwd_cnt, 0u);
@@ -413,8 +421,11 @@ TEST_F(VirtioVsockTest, CreditRequest) {
 TEST_F(VirtioVsockTest, UnsupportedSocketType) {
   zx::socket sockets[2];
   ASSERT_EQ(zx::socket::create(0, &sockets[0], &sockets[1]), ZX_OK);
-  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort,
-                          std::move(sockets[1])),
+  auto acceptor = [&sockets](zx::socket* socket) {
+    *socket = std::move(sockets[1]);
+    return ZX_OK;
+  };
+  ASSERT_EQ(vsock_.Listen(kVirtioVsockHostCid, kVirtioVsockHostPort, acceptor),
             ZX_OK);
 
   // Test connection request with invalid type.
@@ -422,17 +433,11 @@ TEST_F(VirtioVsockTest, UnsupportedSocketType) {
          VIRTIO_VSOCK_OP_REQUEST);
 
   virtio_vsock_hdr_t rx_header = {};
-  ASSERT_EQ(rx_queue_.BuildDescriptor()
-                .AppendWritable(&rx_header, sizeof(rx_header))
-                .Build(),
-            ZX_OK);
-
-  loop_.RunUntilIdle();
-
+  DoReceive(&rx_header, sizeof(rx_header));
   EXPECT_EQ(rx_header.src_cid, kVirtioVsockHostCid);
-  EXPECT_EQ(rx_header.dst_cid, 0u);
+  EXPECT_EQ(rx_header.dst_cid, kVirtioVsockGuestCid);
   EXPECT_EQ(rx_header.src_port, kVirtioVsockHostPort);
-  EXPECT_EQ(rx_header.dst_port, 0u);
+  EXPECT_EQ(rx_header.dst_port, kVirtioVsockGuestPort);
   EXPECT_EQ(rx_header.type, VIRTIO_VSOCK_TYPE_STREAM);
   EXPECT_EQ(rx_header.op, VIRTIO_VSOCK_OP_RST);
   EXPECT_EQ(rx_header.flags, 0u);

@@ -8,7 +8,7 @@ namespace machina {
 
 template <VirtioVsock::StreamFunc F>
 zx_status_t VirtioVsock::Stream<F>::WaitOnQueue(VirtioVsock* vsock) {
-  zx_status_t status = queue_wait_.Wait(fbl::BindMember(vsock, F));
+  zx_status_t status = waiter_.Wait(fbl::BindMember(vsock, F));
   return status == ZX_ERR_ALREADY_BOUND ? ZX_OK : status;
 }
 
@@ -24,8 +24,15 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem,
   config_.guest_cid = guest_cid;
 }
 
-bool VirtioVsock::HasConnection(uint32_t cid, uint32_t port) const {
-  Key key{cid, port};
+uint32_t VirtioVsock::guest_cid() const {
+  fbl::AutoLock lock(&config_mutex_);
+  return config_.guest_cid;
+}
+
+bool VirtioVsock::HasConnection(uint32_t src_cid,
+                                uint32_t src_port,
+                                uint32_t dst_port) const {
+  ConnectionKey key{src_cid, src_port, dst_port};
   fbl::AutoLock lock(&mutex_);
   return connections_.find(key) != connections_.end();
 }
@@ -34,18 +41,14 @@ zx_status_t VirtioVsock::Connect(uint32_t src_cid,
                                  uint32_t src_port,
                                  uint32_t dst_port,
                                  zx::socket socket) {
-  uint32_t dst_cid;
-  {
-    fbl::AutoLock lock(&config_mutex_);
-    dst_cid = config_.guest_cid;
-  }
-
-  Key key{src_cid, src_port};
-  auto conn = fbl::make_unique<Connection>();
+  ConnectionKey key{src_cid, src_port, dst_port};
+  auto conn = fbl::make_unique<Connection>(async_);
   conn->op = VIRTIO_VSOCK_OP_REQUEST;
-  conn->dst_cid = dst_cid;
-  conn->dst_port = dst_port;
   conn->socket = std::move(socket);
+  zx_status_t status = SetupConnection(key, conn.get());
+  if (status != ZX_OK) {
+    return status;
+  }
 
   fbl::AutoLock lock(&mutex_);
   return AddConnectionLocked(key, std::move(conn));
@@ -53,18 +56,25 @@ zx_status_t VirtioVsock::Connect(uint32_t src_cid,
 
 zx_status_t VirtioVsock::Listen(uint32_t cid,
                                 uint32_t port,
-                                zx::socket socket) {
-  Key key{cid, port};
-  auto conn = fbl::make_unique<Connection>();
-  conn->op = VIRTIO_VSOCK_OP_RESPONSE;
-  conn->socket = std::move(socket);
-
+                                ConnectionAcceptor acceptor) {
+  ListenerKey key{cid, port};
   fbl::AutoLock lock(&mutex_);
-  return AddConnectionLocked(key, std::move(conn));
+  bool inserted;
+  std::tie(std::ignore, inserted) =
+      listeners_.emplace(key, std::move(acceptor));
+  if (!inserted) {
+    FXL_LOG(ERROR) << "Listener already exists";
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+  zx_status_t status = tx_stream_.WaitOnQueue(this);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on queue " << status;
+    return status;
+  }
+  return ZX_OK;
 }
 
-zx_status_t VirtioVsock::AddConnectionLocked(Key key,
-                                             fbl::unique_ptr<Connection> conn) {
+zx_status_t VirtioVsock::SetupConnection(ConnectionKey key, Connection* conn) {
   conn->rx_wait.set_object(conn->socket.get());
   conn->rx_wait.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED |
                             ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
@@ -72,6 +82,13 @@ zx_status_t VirtioVsock::AddConnectionLocked(Key key,
                                         const zx_packet_signal_t* signal) {
     return OnSocketReady(async, status, signal, key);
   });
+  // We require a separate waiter due to the way zx_object_wait_async works with
+  // ZX_WAIT_ASYNC_ONCE. If the socket was just created, it's transmit buffer
+  // would be empty, and therefore ZX_SOCKET_WRITABLE would be asserted. When
+  // invoke zx_object_wait_async, it will see that this signal is asserted and
+  // create a port packet immediately and stop listening for further signals.
+  // This masks our ability to listen for any other signals, therefore we split
+  // waiting on ZX_SOCKET_WRITABLE.
   conn->tx_wait.set_object(conn->socket.get());
   conn->tx_wait.set_trigger(ZX_SOCKET_WRITABLE);
   conn->tx_wait.set_handler([this, key](async_t* async, zx_status_t status,
@@ -79,39 +96,39 @@ zx_status_t VirtioVsock::AddConnectionLocked(Key key,
     return OnSocketReady(async, status, signal, key);
   });
 
-  zx_status_t status;
-  switch (conn->op) {
-    case VIRTIO_VSOCK_OP_REQUEST:
-      status = conn->rx_wait.Begin(async_);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to wait on socket " << status;
-        return status;
-      }
-      status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to wait on queue " << status;
-        return status;
-      }
-      break;
-    case VIRTIO_VSOCK_OP_RESPONSE:
-      status = WaitOnQueueLocked(key, &writable_, &tx_stream_);
-      if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to wait on queue " << status;
-        return status;
-      }
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
+  zx_status_t status = conn->rx_wait.Begin();
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on socket " << status;
+    return status;
   }
-
-  bool inserted;
-  std::tie(std::ignore, inserted) = connections_.emplace(key, std::move(conn));
-  return inserted ? ZX_OK : ZX_ERR_ALREADY_EXISTS;
+  return ZX_OK;
 }
 
-VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(Key key) {
+zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key,
+                                             fbl::unique_ptr<Connection> conn) {
+  bool inserted;
+  std::tie(std::ignore, inserted) = connections_.emplace(key, std::move(conn));
+  if (!inserted) {
+    FXL_LOG(ERROR) << "Connection already exists";
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+  zx_status_t status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on queue " << status;
+    return status;
+  }
+  return ZX_OK;
+}
+
+VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
   auto it = connections_.find(key);
   return it == connections_.end() ? nullptr : it->second.get();
+}
+
+VirtioVsock::ConnectionAcceptor* VirtioVsock::GetAcceptorLocked(
+    ListenerKey key) {
+  auto it = listeners_.find(key);
+  return it == listeners_.end() ? nullptr : &it->second;
 }
 
 virtio_vsock_hdr_t* VirtioVsock::GetHeaderLocked(VirtioQueue* queue,
@@ -136,25 +153,25 @@ virtio_vsock_hdr_t* VirtioVsock::GetHeaderLocked(VirtioQueue* queue,
 }
 
 template <VirtioVsock::StreamFunc F>
-zx_status_t VirtioVsock::WaitOnQueueLocked(Key key,
-                                           KeySet* keys,
+zx_status_t VirtioVsock::WaitOnQueueLocked(ConnectionKey key,
+                                           ConnectionSet* keys,
                                            Stream<F>* stream) {
   keys->insert(key);
   return stream->WaitOnQueue(this);
 }
 
 void VirtioVsock::WaitOnSocketLocked(zx_status_t status,
-                                     Key key,
-                                     async::Wait* wait) {
-  if (status == ZX_OK) {
-    status = wait->Begin(async_);
+                                     ConnectionKey key,
+                                     async::AutoWait* wait) {
+  if (status == ZX_OK && !wait->is_pending()) {
+    status = wait->Begin();
   }
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       FXL_LOG(ERROR) << "Failed to wait on socket " << status;
     }
     if (status != ZX_ERR_ALREADY_EXISTS) {
-      wait->Cancel(async_);
+      wait->Cancel();
       connections_.erase(key);
     }
   }
@@ -163,7 +180,7 @@ void VirtioVsock::WaitOnSocketLocked(zx_status_t status,
 async_wait_result_t VirtioVsock::OnSocketReady(async_t* async,
                                                zx_status_t status,
                                                const zx_packet_signal_t* signal,
-                                               Key key) {
+                                               ConnectionKey key) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed while waiting on socket " << status;
     return ASYNC_WAIT_FINISHED;
@@ -222,11 +239,30 @@ async_wait_result_t VirtioVsock::OnSocketReady(async_t* async,
   return status == ZX_OK ? ASYNC_WAIT_FINISHED : ASYNC_WAIT_AGAIN;
 }
 
+static zx_status_t set_credit(virtio_vsock_hdr_t* header,
+                              const zx::socket& socket) {
+  size_t max = 0;
+  zx_status_t status =
+      socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max, sizeof(max));
+  if (status != ZX_OK) {
+    return status;
+  }
+  size_t used = 0;
+  status = socket.get_property(ZX_PROP_SOCKET_TX_BUF_SIZE, &used, sizeof(used));
+  if (status != ZX_OK) {
+    return status;
+  }
+  header->buf_alloc = max;
+  header->fwd_cnt = used;
+  return ZX_OK;
+}
+
 void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   if (status != ZX_OK) {
     return;
   }
 
+  uint32_t remote_cid = guest_cid();
   virtio_desc_t desc;
   fbl::AutoLock lock(&mutex_);
   for (auto i = readable_.begin(), end = readable_.end(); i != end;
@@ -241,10 +277,10 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
       return;
     }
     *header = {
-        .src_cid = i->cid,
-        .src_port = i->port,
-        .dst_cid = conn->dst_cid,
-        .dst_port = conn->dst_port,
+        .src_cid = i->local_cid,
+        .src_port = i->local_port,
+        .dst_cid = remote_cid,
+        .dst_port = i->remote_port,
         .type = VIRTIO_VSOCK_TYPE_STREAM,
         .op = conn->op,
     };
@@ -255,6 +291,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     if (conn->op == VIRTIO_VSOCK_OP_RW &&
         conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
       conn->op = VIRTIO_VSOCK_OP_RST;
+      FXL_LOG(ERROR) << "Receive was shutdown";
     }
 
     switch (conn->op) {
@@ -262,6 +299,9 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
         // We are sending a connection request, therefore we move to waiting
         // for response.
         status = WaitOnQueueLocked(*i, &writable_, &tx_stream_);
+        if (status == ZX_OK) {
+          status = set_credit(header, conn->socket);
+        }
         conn->op = VIRTIO_VSOCK_OP_RESPONSE;
         break;
       case VIRTIO_VSOCK_OP_RESPONSE:
@@ -272,16 +312,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
       case VIRTIO_VSOCK_OP_CREDIT_UPDATE: {
         // We are sending a credit update, therefore we move to ready to
         // read/write.
-        size_t max = 0;
-        size_t used = 0;
-        status = conn->socket.get_property(ZX_PROP_SOCKET_TX_BUF_MAX, &max,
-                                           sizeof(max));
-        if (status == ZX_OK) {
-          status = conn->socket.get_property(ZX_PROP_SOCKET_TX_BUF_SIZE, &used,
-                                             sizeof(used));
-        }
-        header->buf_alloc = max;
-        header->fwd_cnt = used;
+        status = set_credit(header, conn->socket);
         conn->op = VIRTIO_VSOCK_OP_RW;
         break;
       }
@@ -331,7 +362,12 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   }
 }
 
-uint32_t zx_shutdown_flags(uint32_t f) {
+static void set_shutdown(virtio_vsock_hdr_t* header) {
+  header->op = VIRTIO_VSOCK_OP_SHUTDOWN;
+  header->flags = VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH;
+}
+
+static uint32_t shutdown_flags(uint32_t f) {
   return (f & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV ? ZX_SOCKET_SHUTDOWN_READ : 0) |
          (f & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND ? ZX_SOCKET_SHUTDOWN_WRITE : 0);
 }
@@ -349,51 +385,75 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
       FXL_LOG(ERROR) << "Failed to get header from write queue";
       return;
     } else if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
-      header->op = VIRTIO_VSOCK_OP_SHUTDOWN;
-      header->flags = VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH;
+      set_shutdown(header);
       FXL_LOG(ERROR) << "Only stream sockets are supported";
     }
     uint32_t used = sizeof(*header);
-    Key key{static_cast<uint32_t>(header->dst_cid), header->dst_port};
-    Connection* conn = GetConnectionLocked(key);
-    if (conn == nullptr) {
-      // Build a connection to send a connection reset.
-      auto new_conn = fbl::make_unique<Connection>();
-      new_conn->op = VIRTIO_VSOCK_OP_RESPONSE;
-      new_conn->dst_cid = header->src_cid;
-      new_conn->dst_port = header->src_port;
+    ConnectionKey key{
+        static_cast<uint32_t>(header->dst_cid),
+        header->dst_port,
+        header->src_port,
+    };
 
-      conn = new_conn.get();
-      status = AddConnectionLocked(key, std::move(new_conn));
-      header->op = VIRTIO_VSOCK_OP_SHUTDOWN;
-      header->flags = VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH;
-    } else if (writable_.find(key) == writable_.end()) {
-      // There was a write, but the socket is not ready.
-      continue;
+    Connection* conn = nullptr;
+    ConnectionAcceptor* acceptor = nullptr;
+    switch (header->op) {
+      case VIRTIO_VSOCK_OP_REQUEST:
+        // We received a connection request, therefore we lookup the acceptor.
+        acceptor = GetAcceptorLocked(key.listener_key());
+        if (acceptor == nullptr) {
+          // Build a connection to send a connection reset.
+          auto new_conn = fbl::make_unique<Connection>(async_);
+          conn = new_conn.get();
+          status = AddConnectionLocked(key, std::move(new_conn));
+          set_shutdown(header);
+          FXL_LOG(ERROR) << "Listener does not exist";
+        }
+        break;
+      default:
+        // For any other operation, we lookup the existing connection.
+        conn = GetConnectionLocked(key);
+        if (conn == nullptr) {
+          // Build a connection to send a connection reset.
+          auto new_conn = fbl::make_unique<Connection>(async_);
+          conn = new_conn.get();
+          status = AddConnectionLocked(key, std::move(new_conn));
+          set_shutdown(header);
+          FXL_LOG(ERROR) << "Connection does not exist";
+        } else if (writable_.find(key) == writable_.end()) {
+          // There was a write, but the socket is not ready.
+          continue;
+        } else if (conn->op == VIRTIO_VSOCK_OP_RW &&
+                   conn->flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
+          // We are receiving a write, but send was shutdown.
+          set_shutdown(header);
+          FXL_LOG(ERROR) << "Send was shutdown";
+        }
+        break;
     }
 
     switch (header->op) {
-      case VIRTIO_VSOCK_OP_REQUEST:
+      case VIRTIO_VSOCK_OP_REQUEST: {
         // We received a connection request.
-        if (conn->op == VIRTIO_VSOCK_OP_RESPONSE) {
-          // We were expecting a connection request, therefore we move to
-          // sending a response.
-          conn->op = VIRTIO_VSOCK_OP_RESPONSE;
-          conn->dst_cid = header->src_cid;
-          conn->dst_port = header->src_port;
+        auto new_conn = fbl::make_unique<Connection>(async_);
+        conn = new_conn.get();
+        new_conn->op = VIRTIO_VSOCK_OP_RESPONSE;
+        status = (*acceptor)(&new_conn->socket);
+        if (status != ZX_OK) {
+          new_conn->op = VIRTIO_VSOCK_OP_RST;
         } else {
-          // We were not expecting a connection request, therefore we move to
-          // sending a reset.
-          conn->op = VIRTIO_VSOCK_OP_RST;
+          status = SetupConnection(key, new_conn.get());
+          if (status != ZX_OK) {
+            break;
+          }
         }
-        status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
+        status = AddConnectionLocked(key, std::move(new_conn));
         break;
+      }
       case VIRTIO_VSOCK_OP_RESPONSE:
         // We received a connection response, therefore we move to ready to
         // read/write.
         conn->op = VIRTIO_VSOCK_OP_RW;
-        conn->dst_cid = header->src_cid;
-        conn->dst_port = header->src_port;
         WaitOnSocketLocked(status, key, &conn->rx_wait);
         break;
       case VIRTIO_VSOCK_OP_RW:
@@ -411,6 +471,9 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
           }
           status = tx_queue()->ReadDesc(desc.next, &desc);
         } while (status == ZX_OK);
+        break;
+      case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
+        // We received a credit update, which we ignore.
         break;
       case VIRTIO_VSOCK_OP_CREDIT_REQUEST:
         // We received a credit request, therefore we move to sending a credit
@@ -430,24 +493,27 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         if (header->flags == VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH) {
           conn->op = VIRTIO_VSOCK_OP_RST;
           status = WaitOnQueueLocked(key, &readable_, &rx_stream_);
-        }
-        if (header->flags != 0 && status == ZX_OK) {
-          uint32_t flags = zx_shutdown_flags(header->flags);
+        } else if (header->flags != 0) {
+          uint32_t flags = shutdown_flags(header->flags);
           status = conn->socket.write(flags, nullptr, 0, nullptr);
         }
         break;
     }
 
-    // When handling a listen socket, we always want to keep it in the writable
-    // set for subsequent connections.
-    if (conn->op != VIRTIO_VSOCK_OP_RESPONSE) {
-      writable_.erase(key);
-    }
-    if (conn->socket.is_valid()) {
+    writable_.erase(key);
+    if (conn != nullptr && conn->socket.is_valid()) {
       WaitOnSocketLocked(status, key, &conn->tx_wait);
     }
     tx_queue()->Return(index, used);
   } while (tx_queue()->NextAvail(&index) == ZX_OK);
+
+  // If there are listeners, wait on the transmit queue.
+  if (!listeners_.empty()) {
+    zx_status_t status = tx_stream_.WaitOnQueue(this);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to wait on queue " << status;
+    }
+  }
 }
 
 }  // namespace machina
