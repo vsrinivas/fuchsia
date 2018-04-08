@@ -34,7 +34,6 @@ MODULE_DEPS += \
 	kernel/dev/iommu/dummy \
 	kernel/lib/bitmap \
 	kernel/object \
-	third_party/lib/fdt \
 
 KERNEL_DEFINES += \
 	ARM_ISA_ARMV8=1 \
