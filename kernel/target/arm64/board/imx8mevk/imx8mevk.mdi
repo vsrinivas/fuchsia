@@ -1,31 +1,6 @@
 include "system/public/zircon/mdi/zircon.mdi"
 
-cpu-map = {
-    clusters = {
-        {
-            cpu-count = 4
-        }
-    }
-}
-
-const MEMBASE = 0x40000000
-
-mem-map = {
-    bank = {
-        base-phys = MEMBASE
-        length = 0xc0000000
-    }
-}
-
 const PERIPH_VIRT = 0xffffffffc0000000
-
-periph-mem-map = {
-    bank = {
-        base-virt = PERIPH_VIRT
-        base-phys = 0x0
-        length = 0x40000000
-    }
-}
 
 kernel = {
     arm-nxp-imx-uart = {

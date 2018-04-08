@@ -2,7 +2,6 @@
 
 // Top level nodes
 list    kernel                            MDI_KERNEL                            1
-list    cpu-map                           MDI_CPU_MAP                           2
 
 // Common definitions
 string  name                              MDI_NAME                              10
@@ -10,19 +9,6 @@ uint64  base-virt                         MDI_BASE_VIRT                         
 uint64  base-phys                         MDI_BASE_PHYS                         12  // physical base address
 uint64  length                            MDI_LENGTH                            13
 uint32  irq                               MDI_IRQ                               14  // IRQ number
-
-// CPU topology
-//string  cpu-map.clusters.name
-list    cpu-map.clusters                  MDI_CPU_CLUSTERS                      100
-uint8   cpu-map.clusters.cpu-count        MDI_CPU_COUNT                         101
-
-// memory map
-list    mem-map                           MDI_MEM_MAP                           200
-list    mem-map.bank                      MDI_MEM_MAP_BANK                      201
-list    periph-mem-map                    MDI_PERIPH_MEM_MAP                    202
-list    periph-mem-map.bank               MDI_PERIPH_MEM_MAP_BANK               203
-list    boot-reserve-mem-map              MDI_BOOT_RESERVE_MEM_MAP              204
-list    boot-reserve-mem-map.bank         MDI_BOOT_RESERVE_MEM_MAP_BANK         205
 
 // Kernel Drivers
 

@@ -76,16 +76,20 @@ struct mem_bank {
 // save a list of peripheral memory banks
 const size_t MAX_PERIPH_BANKS = 4;
 static mem_bank periph_banks[MAX_PERIPH_BANKS];
+static size_t num_periph_banks = 0;
 
-// all of the configured memory arenas from the mdi/fdt
+// all of the configured memory arenas from the bootdata
 // at the moment, only support 1 arena
 static pmm_arena_info_t mem_arena = {
     /* .name */ "sdram",
     /* .flags */ PMM_ARENA_FLAG_KMAP,
     /* .priority */ 0,
-    /* .base */ 0, // filled in by MDI
-    /* .size */ 0, // filled in by MDI/FDT
+    /* .base */ 0, // filled in by bootdata
+    /* .size */ 0, // filled in by bootdata
 };
+
+// kernel drivers node in the MDI
+static mdi_node_ref_t kernel_drivers;
 
 static volatile int panic_started;
 
@@ -125,38 +129,6 @@ void* platform_get_ramdisk(size_t* size) {
         *size = 0;
         return nullptr;
     }
-}
-
-static void platform_cpu_early_init(mdi_node_ref_t* cpu_map) {
-    mdi_node_ref_t clusters;
-
-    if (mdi_find_node(cpu_map, MDI_CPU_CLUSTERS, &clusters) != ZX_OK) {
-        panic("platform_cpu_early_init couldn't find clusters\n");
-        return;
-    }
-
-    mdi_node_ref_t cluster;
-
-    mdi_each_child(&clusters, &cluster) {
-        mdi_node_ref_t node;
-        uint8_t cpu_count;
-
-        if (mdi_find_node(&cluster, MDI_CPU_COUNT, &node) != ZX_OK) {
-            panic("platform_cpu_early_init couldn't find cluster cpu-count\n");
-            return;
-        }
-        if (mdi_node_uint8(&node, &cpu_count) != ZX_OK) {
-            panic("platform_cpu_early_init could not read cluster id\n");
-            return;
-        }
-
-        if (cpu_cluster_count >= SMP_CPU_MAX_CLUSTERS) {
-            panic("platform_cpu_early_init: MDI contains more than SMP_CPU_MAX_CLUSTERS clusters\n");
-            return;
-        }
-        cpu_cluster_cpus[cpu_cluster_count++] = cpu_count;
-    }
-    arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
 }
 
 void platform_halt_cpu(void) {
@@ -262,101 +234,61 @@ static inline bool is_bootdata_container(void* addr) {
     return header->type == BOOTDATA_CONTAINER;
 }
 
-static void process_mdi_banks(mdi_node_ref& map, void (*func)(const mem_bank&)) {
-    mdi_node_ref_t bank_node;
-    if (mdi_first_child(&map, &bank_node) == ZX_OK) {
-        size_t bank_num = 0;
-        do {
-            mem_bank bank = {};
-            bank.num = bank_num;
-
-            mdi_node_ref ref;
-            if (mdi_find_node(&bank_node, MDI_BASE_PHYS, &ref) == ZX_OK) {
-                mdi_node_uint64(&ref, &bank.base_phys);
-            }
-            if (mdi_find_node(&bank_node, MDI_BASE_VIRT, &ref) == ZX_OK) {
-                mdi_node_uint64(&ref, &bank.base_virt);
-            }
-            if (mdi_find_node(&bank_node, MDI_LENGTH, &ref) == ZX_OK) {
-                mdi_node_uint64(&ref, &bank.length);
-            }
-
-            func(bank);
-
-            bank_num++;
-        } while (mdi_next_child(&bank_node, &bank_node) == ZX_OK);
-    }
-}
-
 static void platform_mdi_init(const bootdata_t* section) {
     mdi_node_ref_t root;
-    mdi_node_ref_t cpu_map;
-    mdi_node_ref_t kernel_drivers;
 
-    const void* ramdisk_end = reinterpret_cast<uint8_t*>(ramdisk_base) + ramdisk_size;
-    const void* section_ptr = reinterpret_cast<const void*>(section);
-    const size_t length = reinterpret_cast<uintptr_t>(ramdisk_end) - reinterpret_cast<uintptr_t>(section_ptr);
-
-    if (mdi_init(section_ptr, length, &root) != ZX_OK) {
+    if (mdi_init(section, section->length + sizeof(*section), &root) != ZX_OK) {
         panic("mdi_init failed\n");
     }
 
-    // search top level nodes for CPU info
-    if (mdi_find_node(&root, MDI_CPU_MAP, &cpu_map) != ZX_OK) {
-        panic("platform_mdi_init couldn't find cpu-map\n");
-    }
-
-    platform_cpu_early_init(&cpu_map);
-
-    // handle mapping peripheral banks
-    mdi_node_ref_t mem_map;
-    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            if (b.length == 0 || !is_kernel_address(b.base_virt))
-                return;
-
-            auto status = arm64_boot_map_v(b.base_virt, b.base_phys, b.length, MMU_INITIAL_MAP_DEVICE);
-            ASSERT(status == ZX_OK);
-
-            ASSERT(b.num < fbl::count_of(periph_banks));
-            periph_banks[b.num] = b;
-        });
-    }
-
-    // bring up kernel drivers
+    // find kernel drivers node and save it for later
     if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
         panic("platform_mdi_init couldn't find kernel-drivers\n");
     }
-    pdev_init(&kernel_drivers);
+}
 
-    // should be able to printf from here on out
+static void process_mem_range(const bootdata_mem_range_t* mem_range) {
+    switch (mem_range->type) {
+    case BOOTDATA_MEM_RANGE_RAM:
+        if (mem_arena.size == 0) {
+            mem_arena.base = mem_range->paddr;
+            mem_arena.size = mem_range->length;
+            dprintf(INFO, "mem_arena.base %#" PRIx64 " size %#" PRIx64 "\n", mem_arena.base,
+                    mem_arena.size);
+        } else {
+            // if mem_area.base is already set, then just update the size
+            mem_arena.size = mem_range->length;
+            dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", mem_arena.size);
+        }
+        break;
+    case BOOTDATA_MEM_RANGE_PERIPHERAL: {
+        size_t num = num_periph_banks++;
+        mem_bank* b = &periph_banks[num];
+        ASSERT(num_periph_banks <= MAX_PERIPH_BANKS);
+        ASSERT(mem_range->length && is_kernel_address(mem_range->vaddr));
 
-    // save a copy of the main memory arenas
-    if (mdi_find_node(&root, MDI_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            dprintf(INFO, "mem bank %zu: base %#" PRIx64 " length %#" PRIx64 "\n", b.num, b.base_phys, b.length);
-            ASSERT(b.num == 0); // can only deal with one arena right now
-            mem_arena.base = b.base_phys;
-            mem_arena.size = b.length;
-        });
+        b->num = num;
+        b->base_phys = mem_range->paddr;
+        b->base_virt = mem_range->vaddr;
+        b->length = mem_range->length;
+
+        auto status = arm64_boot_map_v(b->base_virt, b->base_phys, b->length,
+                                       MMU_INITIAL_MAP_DEVICE);
+        ASSERT(status == ZX_OK);
+        break;
     }
-    if (mdi_find_node(&root, MDI_BOOT_RESERVE_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            dprintf(INFO, "boot reserve mem range %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
-                    b.num, b.base_phys, b.base_virt, b.length);
-
-            boot_reserve_add_range(b.base_phys, b.length);
-        });
-    }
-    if (mdi_find_node(&root, MDI_PERIPH_MEM_MAP, &mem_map) == ZX_OK) {
-        process_mdi_banks(mem_map, [](const auto& b) {
-            dprintf(INFO, "periph mem bank %zu: phys base %#" PRIx64 " virt base %#" PRIx64 " length %#" PRIx64 "\n",
-                    b.num, b.base_phys, b.base_virt, b.length);
-        });
+    case BOOTDATA_MEM_RANGE_RESERVED:
+        dprintf(INFO, "boot reserve mem range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
+                mem_range->paddr, mem_range->length);
+        boot_reserve_add_range(mem_range->paddr, mem_range->length);
+        break;
+    default:
+        panic("bad mem_range->type in process_mem_range\n");
+        break;
     }
 }
 
-static uint32_t process_bootsection(bootdata_t* section, size_t* arena_size) {
+static uint32_t process_bootsection(bootdata_t* section) {
     switch (section->type) {
     case BOOTDATA_MDI:
         platform_mdi_init(section);
@@ -371,18 +303,20 @@ static uint32_t process_bootsection(bootdata_t* section, size_t* arena_size) {
         break;
     }
     case BOOTDATA_MEM_CONFIG: {
-        if (*arena_size) {
-            break;
-        }
         bootdata_mem_range_t* mem_range = reinterpret_cast<bootdata_mem_range_t*>(section + 1);
         uint32_t count = section->length / (uint32_t)sizeof(bootdata_mem_range_t);
         for (uint32_t i = 0; i < count; i++) {
-            if (mem_range->type == BOOTDATA_MEM_RANGE_RAM) {
-                *arena_size = mem_range->length;
-                break;
-            }
-            mem_range++;
+            process_mem_range(mem_range++);
         }
+        break;
+    }
+    case BOOTDATA_CPU_CONFIG: {
+        bootdata_cpu_config_t* cpu_config = reinterpret_cast<bootdata_cpu_config_t*>(section + 1);
+        cpu_cluster_count = cpu_config->cluster_count;
+        for (uint32_t i = 0; i < cpu_cluster_count; i++) {
+            cpu_cluster_cpus[i] = cpu_config->clusters[i].cpu_count;
+        }
+        arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
         break;
     }
     }
@@ -390,7 +324,7 @@ static uint32_t process_bootsection(bootdata_t* section, size_t* arena_size) {
     return section->type;
 }
 
-static void process_bootdata(bootdata_t* root, size_t* arena_size) {
+static void process_bootdata(bootdata_t* root) {
     DEBUG_ASSERT(root);
 
     if (root->type != BOOTDATA_CONTAINER) {
@@ -416,7 +350,7 @@ static void process_bootdata(bootdata_t* root, size_t* arena_size) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
-        const uint32_t type = process_bootsection(section, arena_size);
+        const uint32_t type = process_bootsection(section);
         if (BOOTDATA_MDI == type) {
             mdi_found = true;
         }
@@ -441,8 +375,6 @@ void platform_early_init(void) {
     // initialize the boot memory reservation system
     boot_reserve_init();
 
-    size_t arena_size = 0;
-
     if (bootdata_vaddr && is_bootdata_container(bootdata_vaddr)) {
         bootdata_t* header = (bootdata_t*)bootdata_vaddr;
 
@@ -456,9 +388,11 @@ void platform_early_init(void) {
         panic("no ramdisk!\n");
     }
 
-    // walk the bootdata structure, looking for MDI, command line and arena_size
-    // if MDI is found, process it. this will likely initialize platform drivers
-    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base), &arena_size);
+    // walk the bootdata structure and process all the entries
+    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
+
+    // bring up kernel drivers after we have mapped our peripheral ranges
+    pdev_init(&kernel_drivers);
 
     // Serial port should be active now
 
@@ -475,12 +409,6 @@ void platform_early_init(void) {
     dprintf(INFO, "reserving ramdisk phys range [%#" PRIx64 ", %#" PRIx64 "]\n",
             ramdisk_start_phys, ramdisk_end_phys - 1);
     boot_reserve_add_range(ramdisk_start_phys, ramdisk_size);
-
-    /* add the main memory arena */
-    if (arena_size) {
-        dprintf(INFO, "overriding mem arena 0 size from FDT: %#zx\n", arena_size);
-        mem_arena.size = arena_size;
-    }
 
     // check if a memory limit was passed in via kernel.memory-limit-mb and
     // find memory ranges to use if one is found.

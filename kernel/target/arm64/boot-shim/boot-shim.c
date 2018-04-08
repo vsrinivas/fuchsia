@@ -86,7 +86,8 @@ static void read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 }
 #endif // HAS_DEVICE_TREE
 
-static void append_bootdata(bootdata_t* container, uint32_t type, void* payload, uint32_t length) {
+static void append_bootdata(bootdata_t* container, uint32_t type, const void* payload,
+                            uint32_t length) {
     bootdata_t* dest = (bootdata_t*)((uintptr_t)container + container->length + sizeof(bootdata_t));
 
     dest->type = type;
@@ -151,8 +152,20 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
             fail("could not find bootdata in device tree\n");
         }
     }
+#endif // HAS_DEVICE_TREE
 
-    // look for optional RAM size
+    // append cpu configuration from boot-shim-config.h
+    append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, &cpu_config,
+                    sizeof(bootdata_cpu_config_t) +
+                    sizeof(bootdata_cpu_cluster_t) * cpu_config.cluster_count);
+
+    // append memory configuration from boot-shim-config.h
+    append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, &mem_config,
+                    sizeof(bootdata_mem_range_t) * countof(mem_config));
+
+#if HAS_DEVICE_TREE
+    // look for optional RAM size in device tree
+    // do this last so device tree can override value in boot-shim-config.h
     if (ctx.memory) {
         bootdata_mem_range_t mem_range;
         mem_range.paddr = 0;

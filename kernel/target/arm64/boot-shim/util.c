@@ -55,6 +55,5 @@ int strcmp(char const *cs, char const *ct) {
 
 void fail(const char* message) {
     uart_puts(message);
-    __builtin_trap();
     while (1) {}
 }

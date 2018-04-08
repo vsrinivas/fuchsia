@@ -1,41 +1,5 @@
 include "system/public/zircon/mdi/zircon.mdi"
 
-cpu-map = {
-    clusters = {
-        {
-            cpu-count = 4
-        }
-    }
-}
-
-mem-map = {
-    bank = {
-        base-phys = 0
-        length = 0x80000000 // 2GB
-    }
-}
-
-periph-mem-map = {
-    bank = {
-        base-virt = 0xfffffffff5800000
-        base-phys = 0xf5800000
-        length = 0x0a800000
-    }
-}
-
-boot-reserve-mem-map = {
-    // linux,secmon
-    bank = {
-        base-phys = 0
-        length = 0x400000
-    }
-    // linux,secos
-    bank = {
-        base-phys = 0x05300000
-        length = 0x2000000
-    }
-}
-
 kernel = {
     s905-uart = {
         irq = 225
