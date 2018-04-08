@@ -15,45 +15,11 @@ extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
 
+mod device;
+
 use failure::{Error, Fail, ResultExt};
-use futures::future;
 use futures::prelude::*;
-use wlan_service::{DeviceListener, DeviceListenerImpl, DeviceListenerMarker, DeviceServiceMarker,
-                   DeviceServiceProxy};
-
-fn device_listener(svc: DeviceServiceProxy) -> impl DeviceListener {
-    DeviceListenerImpl {
-        state: svc,
-        on_phy_added: |svc, id, _| {
-            println!("wlancfg: phy added: {}", id);
-            // For now, just create a Client iface on the new phy.
-            // TODO(tkilbourn): get info about this phy, then consult a configuration file to determine
-            // what interfaces to create.
-            let mut req = wlan_service::CreateIfaceRequest {
-                phy_id: id,
-                role: wlan::MacRole::Client,
-            };
-            svc.create_iface(&mut req)
-                .map(|_| ())
-                .recover(|e| eprintln!("error creating iface: {:?}", e))
-        },
-
-        on_phy_removed: |_, id, _| {
-            println!("wlancfg: phy removed: {}", id);
-            future::ok(())
-        },
-
-        on_iface_added: |_, phy_id, iface_id, _| {
-            println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
-            future::ok(())
-        },
-
-        on_iface_removed: |_, phy_id, iface_id, _| {
-            println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
-            future::ok(())
-        },
-    }
-}
+use wlan_service::{DeviceListener, DeviceListenerMarker, DeviceServiceMarker};
 
 fn main() {
     if let Err(e) = main_res() {
@@ -80,7 +46,7 @@ fn main_res() -> Result<(), Error> {
                 .into_future()
         })
         .and_then(|_| {
-            device_listener(wlan_svc)
+            device::device_listener(device::Listener::new(wlan_svc))
                 .serve(local)
                 .map_err(|e| e.context("Device listener failed"))
         });
