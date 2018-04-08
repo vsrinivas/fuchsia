@@ -3,12 +3,7 @@
         "peridot/packages/prod/modular"
     ],
     "packages": {
-        "modular_benchmarks": "//peridot/tests/benchmark:modular_benchmarks"
-    },
-    "resources": [
-        {
-            "bootfs_path": "test/modular_tests/run_modular_benchmarks.sh",
-            "file": "peridot/tests/benchmark/run_modular_benchmarks.sh"
-        }
-    ]
+        "modular_benchmarks": "//peridot/tests/benchmark:modular_benchmarks",
+        "run_modular_benchmarks": "//peridot/tests/benchmark:run_modular_benchmarks"
+    }
 }

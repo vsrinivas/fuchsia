@@ -8,11 +8,5 @@
         "dev_user_shell": "//peridot/bin/user_runner:dev_user_shell",
         "modular_tests": "//peridot/tests:modular_tests",
         "modular_unittests": "//peridot:modular_unittests"
-    },
-    "resources": [
-        {
-            "bootfs_path": "test/run_modular_tests.sh",
-            "file": "peridot/tests/run_modular_tests.sh"
-        }
-    ]
+    }
 }

@@ -139,3 +139,15 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
   ]
 }
+
+package("config") {
+  testonly = true
+  system_image = true
+  package_name = "device_runner_config"
+  resources = [
+    {
+      dest = "sysmgr/device_runner.config"
+      path = rebase_path("config/device_runner.config")
+    },
+  ]
+}

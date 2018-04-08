@@ -4,11 +4,10 @@
 
 import("//build/package.gni")
 
-visibility = [ "//peridot/*" ]
-
 package("modular_benchmarks") {
   testonly = true
   system_image = true
+  visibility = [ "//peridot/*" ]
 
   deps = [
     ":run_modular_benchmarks",
@@ -31,11 +30,24 @@ package("modular_benchmarks") {
   ]
 }
 
-copy("run_modular_benchmarks") {
+copy("run_modular_benchmarks.sh") {
+  visibility = [ ":*" ]
   sources = [
     "run_modular_benchmarks.sh",
   ]
   outputs = [
     "$root_out_dir/run_modular_benchmarks.sh",
+  ]
+}
+
+package("run_modular_benchmarks") {
+  system_image = true
+  testonly = true
+  deps = [ ":run_modular_benchmarks.sh" ]
+  tests = [
+    {
+      name = "run_modular_benchmarks.sh"
+      dest = "modular_tests/$name"
+    },
   ]
 }

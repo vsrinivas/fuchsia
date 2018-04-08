@@ -43,6 +43,7 @@ package("modular_tests") {
 
   deps = [
     ":modular_tests.json",
+    ":run_modular_tests.sh",
     "chain",
     "clipboard",
     "common",
@@ -70,6 +71,9 @@ package("modular_tests") {
   ]
 
   tests = [
+    {
+      name = "run_modular_tests.sh"
+    },
     {
       name = "chain_test_module"
       dest = "modular_tests/chain_test_module"
@@ -202,10 +206,21 @@ package("modular_tests") {
 }
 
 copy("modular_tests.json") {
+  visibility = [ ":*" ]
   sources = [
     "modular_tests.json",
   ]
   outputs = [
     "$root_out_dir/modular_tests.json",
+  ]
+}
+
+copy("run_modular_tests.sh") {
+  visibility = [ ":*" ]
+  sources = [
+    "run_modular_tests.sh",
+  ]
+  outputs = [
+    "$root_out_dir/run_modular_tests.sh",
   ]
 }
