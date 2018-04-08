@@ -143,10 +143,15 @@ void magma_signal_semaphore(magma_semaphore_t semaphore);
 // Resets |semaphore|.
 void magma_reset_semaphore(magma_semaphore_t semaphore);
 
-// Waits for |semaphore| to be signaled.  Returns MAGMA_STATUS_TIMED_OUT if the timeout
-// expires first.
+// Waits for all or one of |semaphores| to be signaled.  Returns MAGMA_STATUS_TIMED_OUT if
+// |timeout_ms| expires first. Does not reset any semaphores.
+magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
+                                     uint64_t timeout_ms, bool wait_all);
+
+// DEPRECATED: use magma_wait_semaphores instead.
 magma_status_t magma_wait_semaphore(magma_semaphore_t semaphore, uint64_t timeout);
 
+// DEPRECATED: use magma_wait_semaphores instead.
 magma_status_t magma_wait_semaphore_no_reset(magma_semaphore_t semaphore, uint32_t flags,
                                              uint64_t timeout);
 
