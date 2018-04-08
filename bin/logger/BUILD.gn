@@ -11,7 +11,7 @@ rust_binary("bin") {
   name = "logger"
 }
 
-executable("logger_integration_tests") {
+executable("logger_integration_cpp_tests") {
   testonly = true
 
   sources = [
@@ -43,7 +43,8 @@ package("logger_tests") {
 
   deps = [
     ":bin",
-    ":logger_integration_tests",
+    ":logger_integration_cpp_tests",
+    "test/go/src/logger_integration_test:logger_integration_go_tests",
   ]
 
   tests = [
@@ -51,7 +52,10 @@ package("logger_tests") {
       name = "logger-bin-unit-test"
     },
     {
-      name = "logger_integration_tests"
+      name = "logger_integration_cpp_tests"
+    },
+    {
+      name = "logger_integration_go_tests"
     },
   ]
 }
