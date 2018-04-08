@@ -22,7 +22,6 @@
 
 // PCI configuration constants.
 #define PCI_BAR_ASPACE_MASK         0x0001u
-#define PCI_BAR_ASPACE_PIO          0x0001u
 #define PCI_BAR_ASPACE_MMIO         0x0000u
 #define PCI_VENDOR_ID_INTEL         0x8086u
 #define PCI_DEVICE_ID_INTEL_Q35     0x29c0u
@@ -258,8 +257,6 @@ class PciBus {
   InterruptController* interrupt_controller_ = nullptr;
   // Embedded root complex device.
   PciDevice root_complex_;
-  // Next pio window to be allocated to connected devices.
-  uint32_t pio_base_ = 0x8000;
   // Next mmio window to be allocated to connected devices.
   uint32_t mmio_base_ = kPciMmioBarPhysBase;
   // Pointer to the next open PCI slot.

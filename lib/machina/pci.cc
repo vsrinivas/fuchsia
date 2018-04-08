@@ -40,7 +40,6 @@ constexpr uint16_t kPciConfigAddressPortTop = 3;
 constexpr uint16_t kPciConfigDataPortBase = 4;
 constexpr uint16_t kPciConfigDataPortTop = 7;
 
-constexpr uint32_t kPioAddressMask = ~bit_mask<uint32_t>(2);
 constexpr uint32_t kMmioAddressMask = ~bit_mask<uint32_t>(4);
 
 // PCI capabilities register layout.
@@ -59,8 +58,6 @@ constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {
 
 uint32_t PciBar::aspace() const {
   switch (trap_type) {
-    case TrapType::PIO_SYNC:
-      return PCI_BAR_ASPACE_PIO;
     case TrapType::MMIO_SYNC:
     case TrapType::MMIO_BELL:
       return PCI_BAR_ASPACE_MMIO;
@@ -71,8 +68,6 @@ uint32_t PciBar::aspace() const {
 
 uint32_t PciBar::base() const {
   switch (aspace()) {
-    case PCI_BAR_ASPACE_PIO:
-      return addr & kPioAddressMask;
     case PCI_BAR_ASPACE_MMIO:
       return addr & kMmioAddressMask;
     default:
@@ -176,19 +171,9 @@ zx_status_t PciBus::Connect(PciDevice* device) {
       break;
 
     device->bus_ = this;
-    if (device->bar_[bar_num].aspace() == PCI_BAR_ASPACE_PIO) {
-      // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.2.5.1
-      //
-      // This design implies that all address spaces used are a power of two in
-      // size and are naturally aligned.
-      bar->size = round_up_pow2(bar->size);
-      bar->addr = align(pio_base_, bar->size);
-      pio_base_ = bar->addr + bar->size;
-    } else {
-      bar->size = static_cast<uint16_t>(align(bar->size, PAGE_SIZE));
-      bar->addr = mmio_base_;
-      mmio_base_ += bar->size;
-    }
+    bar->size = static_cast<uint16_t>(align(bar->size, PAGE_SIZE));
+    bar->addr = mmio_base_;
+    mmio_base_ += bar->size;
   }
 
   device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
