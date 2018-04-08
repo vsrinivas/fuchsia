@@ -14,9 +14,15 @@ extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate futures;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
 
+mod config;
 mod device;
 
+use config::Config;
 use failure::{Error, Fail, ResultExt};
 use futures::prelude::*;
 use wlan_service::{DeviceListener, DeviceListenerMarker, DeviceServiceMarker};
@@ -29,6 +35,8 @@ fn main() {
 }
 
 fn main_res() -> Result<(), Error> {
+    let cfg = Config::load_from_file()?;
+
     let mut executor = async::Executor::new().context("error creating event loop")?;
     let wlan_svc = app::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
@@ -46,7 +54,7 @@ fn main_res() -> Result<(), Error> {
                 .into_future()
         })
         .and_then(|_| {
-            device::device_listener(device::Listener::new(wlan_svc))
+            device::device_listener(device::Listener::new(wlan_svc, cfg))
                 .serve(local)
                 .map_err(|e| e.context("Device listener failed"))
         });

@@ -18,4 +18,18 @@ package("wlancfg") {
   ]
 
   binary = "wlancfg"
+
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+
+  resources = [
+    {
+        path = rebase_path("config/default.json")
+        dest = "default.json"
+    },
+  ]
 }

@@ -2,34 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::future;
+use config::{self, Config};
 use futures::prelude::*;
+use futures::{future, stream};
 use wlan;
 use wlan_service::{self, DeviceListener, DeviceListenerImpl, DeviceServiceProxy};
 
 #[derive(Debug)]
 pub struct Listener {
     proxy: DeviceServiceProxy,
+    config: Config,
 }
 
 impl Listener {
-    pub fn new(proxy: DeviceServiceProxy) -> Self {
-        Listener { proxy }
+    pub fn new(proxy: DeviceServiceProxy, config: Config) -> Self {
+        Listener { proxy, config }
     }
 
     fn on_phy_added(&mut self, id: u16) -> impl Future<Item = (), Error = Never> {
         println!("wlancfg: phy {} added", id);
-        // For now, just create a Client iface on the new phy.
-        // TODO(tkilbourn): get info about this phy, then consult a configuration file to determine
-        // what interfaces to create.
-        let mut req = wlan_service::CreateIfaceRequest {
-            phy_id: id,
-            role: wlan::MacRole::Client,
-        };
-        self.proxy
-            .create_iface(&mut req)
+
+        // For now we just look for the wildcard phy configuration.
+        let mut roles_to_create = vec![];
+        if let Some(roles) = self.config.phy.get("*") {
+            println!("using default wlan config entry for phy {}", id);
+            roles_to_create.extend(&*roles);
+        } else {
+            println!("no matches for wlan phy {}", id);
+        }
+
+        roles_to_create
+            .iter()
+            .map(|role: &config::Role| {
+                println!("Creating {:?} iface for phy {}", role, id);
+                let mut req = wlan_service::CreateIfaceRequest {
+                    phy_id: id,
+                    role: wlan::MacRole::from(*role),
+                };
+                self.proxy
+                    .create_iface(&mut req)
+                    .map(|_| ())
+                    .recover(|e| eprintln!("error creating iface: {:?}", e))
+            })
+            .collect::<stream::FuturesUnordered<_>>()
+            .collect()
             .map(|_| ())
-            .recover(|e| eprintln!("error creating iface: {:?}", e))
     }
 
     fn on_phy_removed(&mut self, id: u16) -> impl Future<Item = (), Error = Never> {
