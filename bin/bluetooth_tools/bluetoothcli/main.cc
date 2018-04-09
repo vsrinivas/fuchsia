@@ -25,7 +25,7 @@ void LinenoiseCompletionCallback(const char* buf, linenoiseCompletions* lc) {
 int main(int argc, char* argv[]) {
   async::Loop loop;
 
-  bluetoothcli::App app(loop.async(), [&loop](){loop.Quit();});
+  bluetoothcli::App app(&loop);
   g_app = &app;
 
   linenoiseSetCompletionCallback(LinenoiseCompletionCallback);

@@ -65,7 +65,7 @@ bool HandleActiveAdapter(const App* app,
   return true;
 }
 
-bool HandleExit(const App* app,
+bool HandleExit(App* app,
                 const fxl::CommandLine& cmd_line,
                 const fxl::Closure& complete_cb) {
   app->Quit();

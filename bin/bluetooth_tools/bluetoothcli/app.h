@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include <fuchsia/cpp/bluetooth_control.h>
-
+#include <lib/async-loop/cpp/loop.h>
 #include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
@@ -18,7 +18,7 @@ namespace bluetoothcli {
 class App final : public bluetooth_control::ControlDelegate,
                   public bluetooth_control::RemoteDeviceDelegate {
  public:
-  App(async_t* async, std::function<void()>quit_closure);
+  App(async::Loop* loop);
 
   void ReadNextInput();
 
@@ -35,9 +35,9 @@ class App final : public bluetooth_control::ControlDelegate,
       std::unordered_map<std::string, bluetooth_control::RemoteDevice>;
   const DeviceMap& discovered_devices() const { return discovered_devices_; }
 
-  async_t* async() const { return async_; }
-  void Quit() const;
-  void PostQuit() const;
+  async_t* async() const { return loop_->async(); }
+  void Quit();
+  void PostQuit();
 
  private:
   // bluetooth_control::ControlDelegate overrides:
@@ -69,7 +69,7 @@ class App final : public bluetooth_control::ControlDelegate,
 
   DeviceMap discovered_devices_;
   std::function<void()> quit_closure_;
-  async_t* async_;
+  async::Loop* loop_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

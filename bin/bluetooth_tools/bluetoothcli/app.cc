@@ -19,12 +19,11 @@
 
 namespace bluetoothcli {
 
-App::App(async_t* async, std::function<void()> quit_closure)
+App::App(async::Loop* loop)
     : context_(component::ApplicationContext::CreateFromStartupInfo()),
       control_delegate_(this),
       remote_device_delegate_(this),
-      quit_closure_(std::move(quit_closure)),
-      async_(async) {
+      loop_(loop) {
   FXL_DCHECK(context_);
 
   control_ =
@@ -56,7 +55,7 @@ App::App(async_t* async, std::function<void()> quit_closure)
 void App::ReadNextInput() {
   bool call_complete_cb = true;
   auto complete_cb = [this] {
-    async::PostTask(async_, [this] { ReadNextInput(); });
+    async::PostTask(async(), [this] { ReadNextInput(); });
   };
 
   char* line = linenoise("bluetooth> ");
@@ -119,12 +118,12 @@ void App::OnDeviceRemoved(::fidl::StringPtr identifier) {
   discovered_devices_.erase(identifier);
 }
 
-void App::Quit() const {
-  quit_closure_();
+void App::Quit() {
+  loop_->Quit();
 }
 
-void App::PostQuit() const {
-  async::PostTask(async_, quit_closure_);
+void App::PostQuit() {
+  async::PostTask(async(), [this] {Quit();} );
 }
 
 }  // namespace bluetoothcli
