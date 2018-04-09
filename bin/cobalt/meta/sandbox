@@ -1,3 +1,4 @@
 {
+    "pkgfs": [ "packages" ],
     "features": [ "root-ssl-certificates" ]
 }

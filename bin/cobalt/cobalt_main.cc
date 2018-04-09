@@ -15,6 +15,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "config/cobalt_config.pb.h"
+#include "garnet/bin/cobalt/product_hack.h"
 #include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -629,7 +630,8 @@ int main(int argc, const char** argv) {
                 << " seconds.";
 
   fsl::MessageLoop loop;
-  CobaltApp app(loop.async(), schedule_interval, min_interval, "fuchsia");
+  CobaltApp app(loop.async(), schedule_interval, min_interval,
+                cobalt::hack::GetLayer());
   loop.Run();
   return 0;
 }

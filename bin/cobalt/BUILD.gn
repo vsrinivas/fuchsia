@@ -87,6 +87,7 @@ executable("bin") {
 
   sources = [
     "cobalt_main.cc",
+    "product_hack.h",
   ]
 
   deps = [
