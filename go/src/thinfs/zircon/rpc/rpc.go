@@ -248,6 +248,7 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
 			f2.Close()
 		}
+		msg.Handle[0] = zx.HANDLE_INVALID
 		return fdio.ErrIndirect.Status
 	case fdio.OpClose:
 		err := f.Close()
@@ -323,12 +324,10 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 			err := f.SetOpenFlags(fs.OpenFlags(uflags))
 			return errorToRIO(err)
 		default:
-			msg.DiscardHandles()
 			return zx.ErrNotSupported
 		}
 	default:
 		println("ThinFS FILE UNKNOWN OP: ", msg.Op())
-		msg.DiscardHandles()
 		return zx.ErrNotSupported
 	}
 	return zx.ErrNotSupported
@@ -433,6 +432,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 				d.Close()
 			}
 		}
+		msg.Handle[0] = zx.HANDLE_INVALID
 		return fdio.ErrIndirect.Status
 	case fdio.OpClone:
 		d2, err := dir.Dup()
@@ -453,6 +453,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
 			d2.Close()
 		}
+		msg.Handle[0] = zx.HANDLE_INVALID
 		return fdio.ErrIndirect.Status
 	case fdio.OpClose:
 		err := dir.Close()
@@ -526,7 +527,6 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		msg.Datalen = 0
 		return errorToRIO(err)
 	case fdio.OpRename:
-		defer msg.DiscardHandles()
 		if len(inputData) < 4 { // Src + null + dst + null
 			return zx.ErrInvalidArgs
 		}
@@ -609,16 +609,19 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		return errorToRIO(dir.Touch(atime, mtime))
 	default:
 		println("ThinFS DIR UNKNOWN OP: ", msg.Op())
-		msg.DiscardHandles()
 		return zx.ErrNotSupported
 	}
 	return zx.ErrNotSupported
 }
 
 func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) zx.Status {
+	// Dispatching must take ownership of handles and explicitly set handles in msg
+	// to 0 in order to avoid them being closed after dispatching. This guard
+	// extensively prevents leaked handles from dispatching.
+	defer msg.DiscardHandles()
+
+	// Incoming number of handles must match message type
 	if msg.Hcount != msg.OpHandleCount() {
-		// Incoming number of handles must match message type
-		msg.DiscardHandles()
 		return zx.ErrIO
 	}
 
@@ -630,6 +633,7 @@ func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) zx.Sta
 		// Removing object that has already been removed
 		return zx.ErrOk
 	}
+
 	switch obj := obj.(type) {
 	case fs.File:
 		return vfs.processOpFile(msg, obj, cookie)
@@ -637,7 +641,6 @@ func (vfs *ThinVFS) fdioServer(msg *fdio.Msg, rh zx.Handle, cookie int64) zx.Sta
 		return vfs.processOpDirectory(msg, rh, obj, cookie)
 	default:
 		fmt.Printf("cookie %d resulted in unexpected type %T\n", cookie, obj)
-		msg.DiscardHandles()
 		return zx.ErrInternal
 	}
 }
