@@ -8,6 +8,9 @@
 #include <array>
 #include <thread>
 
+#include <lib/async-loop/cpp/loop.h>
+
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
@@ -48,7 +51,7 @@ class IOLoop {
 
   // Does not take ownership of any of the parameters. Care should be taken to
   // make sure that |delegate| and |fd| outlive this object.
-  IOLoop(int fd, Delegate* delegate);
+  IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop);
 
   // The destructor calls Quit() and thus it may block.
   virtual ~IOLoop();
@@ -68,15 +71,9 @@ class IOLoop {
   bool quit_called() const { return quit_called_; }
   int fd() const { return fd_; }
   Delegate* delegate() const { return delegate_; }
-  const fxl::RefPtr<fxl::TaskRunner>& origin_task_runner() const {
-    return origin_task_runner_;
-  }
-  const fxl::RefPtr<fxl::TaskRunner>& read_task_runner() const {
-    return read_task_runner_;
-  }
-  const fxl::RefPtr<fxl::TaskRunner>& write_task_runner() const {
-    return write_task_runner_;
-  }
+  async_t* origin_dispatcher() const { return origin_loop_->async(); }
+  async_t* read_dispatcher() const { return read_loop_.async(); }
+  async_t* write_dispatcher() const { return write_loop_.async(); }
 
   // Helper method for StartReadTask, only called from the read thread.
   // Process one read request.
@@ -88,10 +85,6 @@ class IOLoop {
 
  private:
   IOLoop() = default;
-
-  // Posts an asynchronous task on to listen for an incoming packet. This
-  // initiates a loop that always reads for incoming packets. Called from Run().
-  void StartReadLoop();
 
   // True if Quit() was called. This tells the |read_thread| to terminate its
   // loop as soon as any blocking call to read returns.
@@ -106,17 +99,13 @@ class IOLoop {
   // True, if Run() has been called.
   bool is_running_;
 
-  // The origin task runner used to post delegate events to the thread that
-  // created this object.
-  fxl::RefPtr<fxl::TaskRunner> origin_task_runner_;
+  // The origin loop used to post delegate events to the thread that created
+  // this object.
+  async::Loop* origin_loop_;
 
-  // The task runners for the I/O threads.
-  fxl::RefPtr<fxl::TaskRunner> read_task_runner_;
-  fxl::RefPtr<fxl::TaskRunner> write_task_runner_;
-
-  // The I/O threads.
-  std::thread read_thread_;
-  std::thread write_thread_;
+  // The message loops for running on two threads for I/O respectively.
+  async::Loop read_loop_;
+  async::Loop write_loop_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IOLoop);
 };

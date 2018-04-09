@@ -6,20 +6,20 @@
 
 #include <unistd.h>
 
-#include "garnet/lib/debugger_utils/util.h"
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
+#include "garnet/lib/debugger_utils/util.h"
 #include "lib/fxl/logging.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace debugserver {
 
-RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate)
-    : IOLoop(in_fd, delegate) {
+RspIOLoop::RspIOLoop(int in_fd, Delegate* delegate, async::Loop* loop)
+    : IOLoop(in_fd, delegate, loop) {
 }
 
 void RspIOLoop::OnReadTask() {
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent()->task_runner().get() ==
-             read_task_runner().get());
+  FXL_DCHECK(async_get_default() == read_dispatcher());
 
   ssize_t read_size = read(fd(), in_buffer_.data(), kMaxBufferSize);
 
@@ -45,12 +45,13 @@ void RspIOLoop::OnReadTask() {
   // into the closure as |in_buffer_| can get modified before the closure
   // runs.
   // TODO(armansito): Pass a weakptr to |delegate_|?
-  origin_task_runner()->PostTask([ bytes_read = bytes_read.ToString(), this ] {
+  async::PostTask(origin_dispatcher(), [ bytes_read = bytes_read.ToString(), this ] {
     delegate()->OnBytesRead(bytes_read);
   });
 
-  if (!quit_called())
-    read_task_runner()->PostTask(std::bind(&RspIOLoop::OnReadTask, this));
+  if (!quit_called()) {
+    async::PostTask(read_dispatcher(), std::bind(&RspIOLoop::OnReadTask, this));
+  }
 }
 
 }  // namespace debugserver

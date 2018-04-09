@@ -6,36 +6,38 @@
 
 #include <unistd.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fsl/handles/object_info.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
+#include <lib/async/cpp/task.h>
 
 #include "garnet/lib/debugger_utils/util.h"
+#include "lib/fxl/logging.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace debugserver {
 
-IOLoop::IOLoop(int fd, Delegate* delegate)
-    : quit_called_(false), fd_(fd), delegate_(delegate), is_running_(false) {
+IOLoop::IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop)
+    : quit_called_(false), fd_(fd), delegate_(delegate), is_running_(false),
+      origin_loop_(origin_loop) {
   FXL_DCHECK(fd_ >= 0);
   FXL_DCHECK(delegate_);
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-
-  origin_task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
+  FXL_DCHECK(origin_loop_);
+  read_loop_.StartThread();
+  write_loop_.StartThread();
 }
 
 IOLoop::~IOLoop() {
   Quit();
+  read_loop_.Shutdown();
+  write_loop_.Shutdown();
 }
 
 void IOLoop::Run() {
   FXL_DCHECK(!is_running_);
 
   is_running_ = true;
-  read_thread_ = fsl::CreateThread(&read_task_runner_, "i/o loop read task");
-  write_thread_ = fsl::CreateThread(&write_task_runner_, "i/o loop write task");
-
-  StartReadLoop();
+  // Posts an asynchronous task on to listen for an incoming packet. This
+  // initiates a loop that always reads for incoming packets. Called from
+  // Run().
+  async::PostTask(read_loop_.async(), std::bind(&IOLoop::OnReadTask, this));
 }
 
 void IOLoop::Quit() {
@@ -45,34 +47,18 @@ void IOLoop::Quit() {
 
   quit_called_ = true;
 
-  auto quit_task = [] {
-    // Tell the thread-local message loop to quit.
-    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-  };
-  read_task_runner_->PostTask(quit_task);
-  write_task_runner_->PostTask(quit_task);
-
-  if (read_thread_.joinable())
-    read_thread_.join();
-  if (write_thread_.joinable())
-    write_thread_.join();
+  async::PostTask(read_loop_.async(), [this] { origin_loop_->Quit(); });
+  async::PostTask(write_loop_.async(), [this] { origin_loop_->Quit(); });
+  read_loop_.JoinThreads();
+  write_loop_.JoinThreads();
 
   FXL_LOG(INFO) << "Socket I/O loop exited";
-}
-
-void IOLoop::StartReadLoop() {
-  // Make sure the call is coming from the origin thread.
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent()->task_runner().get() ==
-             origin_task_runner_.get());
-
-  read_task_runner_->PostTask(std::bind(&IOLoop::OnReadTask, this));
 }
 
 void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
   // We copy the data into the closure.
   // TODO(armansito): Pass a refptr/weaktpr to |this|?
-  write_task_runner_->PostTask([ this, bytes = bytes.ToString() ] {
+  async::PostTask(write_loop_.async(), [ this, bytes = bytes.ToString() ] {
     ssize_t bytes_written = write(fd_, bytes.data(), bytes.size());
 
     // This cast isn't really safe, then again it should be virtually
@@ -89,13 +75,15 @@ void IOLoop::PostWriteTask(const fxl::StringView& bytes) {
 }
 
 void IOLoop::ReportError() {
-  // TODO(armansito): Pass a refptr/weakptr to |this|?
-  origin_task_runner_->PostTask([this] { delegate_->OnIOError(); });
+  // We copy the data into the closure.
+  // TODO(armansito): Pass a refptr/weaktpr to |this|?
+  async::PostTask(origin_loop_->async(), [this] { delegate_->OnIOError(); });
 }
 
 void IOLoop::ReportDisconnected() {
-  // TODO(armansito): Pass a refptr/weakptr to |this|?
-  origin_task_runner_->PostTask([this] { delegate_->OnDisconnected(); });
+  // We copy the data into the closure.
+  // TODO(armansito): Pass a refptr/weaktpr to |this|?
+  async::PostTask(origin_loop_->async(), [this] { delegate_->OnDisconnected(); });
 }
 
 }  // namespace debugserver

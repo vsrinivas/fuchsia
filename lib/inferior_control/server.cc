@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -36,12 +38,12 @@ void Server::SetCurrentThread(Thread* thread) {
 
 void Server::QuitMessageLoop(bool status) {
   run_status_ = status;
-  message_loop_.QuitNow();
+  message_loop_.Quit();
 }
 
 void Server::PostQuitMessageLoop(bool status) {
   run_status_ = status;
-  message_loop_.PostQuitTask();
+  async::PostTask(message_loop_.async(), [this] { message_loop_.Quit(); });
 }
 
 }  // namespace debugserver

@@ -6,6 +6,8 @@
 
 #include <array>
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/lib/inferior_control/io_loop.h"
 
 namespace debugserver {
@@ -14,7 +16,7 @@ namespace debugserver {
 
 class RspIOLoop final : public IOLoop {
  public:
-  RspIOLoop(int in_fd, Delegate* delegate);
+  RspIOLoop(int in_fd, Delegate* delegate, async::Loop* loop);
 
  private:
   // Maximum number of characters in the inbound buffer.

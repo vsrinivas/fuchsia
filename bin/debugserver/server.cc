@@ -85,7 +85,8 @@ bool RspServer::Run() {
   // |client_sock_| should be ready to be consumed now.
   FXL_DCHECK(client_sock_.is_valid());
 
-  io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this);
+  io_loop_ = std::make_unique<RspIOLoop>(client_sock_.get(), this,
+                                         &message_loop_);
   io_loop_->Run();
 
   // Start the main loop.
