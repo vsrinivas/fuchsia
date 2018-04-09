@@ -77,11 +77,12 @@ InputInterpreter::InputInterpreter(std::string name,
 InputInterpreter::~InputInterpreter() {}
 
 bool InputInterpreter::Initialize() {
-  int protocol;
-  if (!hid_decoder_.Init(&protocol))
+  if (!hid_decoder_.Init())
     return false;
 
-  if (protocol == INPUT_PROTO_KBD) {
+  auto protocol = hid_decoder_.protocol();
+
+  if (protocol == HidDecoder::Protocol::Keyboard) {
     FXL_VLOG(2) << "Device " << name() << " has keyboard";
     has_keyboard_ = true;
     keyboard_descriptor_ = input::KeyboardDescriptor::New();
@@ -94,10 +95,12 @@ bool InputInterpreter::Initialize() {
 
     keyboard_report_ = input::InputReport::New();
     keyboard_report_->keyboard = input::KeyboardReport::New();
-  } else if (protocol == INPUT_PROTO_MOUSE) {
+  } else if (protocol == HidDecoder::Protocol::Mouse ||
+             protocol == HidDecoder::Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
-    mouse_device_type_ = MouseDeviceType::BOOT;
+    mouse_device_type_ = (protocol == HidDecoder::Protocol::Mouse) ?
+      MouseDeviceType::BOOT : MouseDeviceType::GAMEPAD;
 
     mouse_descriptor_ = input::MouseDescriptor::New();
     mouse_descriptor_->rel_x.range.min = INT32_MIN;
@@ -114,199 +117,182 @@ bool InputInterpreter::Initialize() {
 
     mouse_report_ = input::InputReport::New();
     mouse_report_->mouse = input::MouseReport::New();
-  } else if (protocol == INPUT_PROTO_NONE) {
-    size_t report_desc_len;
-    if (!hid_decoder_.GetReportDescriptionLength(&report_desc_len))
-      return false;
+  } else if (protocol == HidDecoder::Protocol::Acer12Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = input::StylusDescriptor::New();
 
-    std::vector<uint8_t> desc(report_desc_len);
-    if (!hid_decoder_.GetReportDescription(desc.data(), desc.size()))
-      return false;
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = ACER12_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
 
-    if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has stylus";
-      has_stylus_ = true;
-      stylus_descriptor_ = input::StylusDescriptor::New();
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = ACER12_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
 
-      stylus_descriptor_->x.range.min = 0;
-      stylus_descriptor_->x.range.max = ACER12_STYLUS_X_MAX;
-      stylus_descriptor_->x.resolution = 1;
+    stylus_descriptor_->is_invertible = false;
 
-      stylus_descriptor_->y.range.min = 0;
-      stylus_descriptor_->y.range.max = ACER12_STYLUS_Y_MAX;
-      stylus_descriptor_->y.resolution = 1;
+    stylus_descriptor_->buttons |= input::kStylusBarrel;
 
-      stylus_descriptor_->is_invertible = false;
+    stylus_report_ = input::InputReport::New();
+    stylus_report_->stylus = input::StylusReport::New();
 
-      stylus_descriptor_->buttons |= input::kStylusBarrel;
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
-      stylus_report_ = input::InputReport::New();
-      stylus_report_->stylus = input::StylusReport::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = ACER12_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
 
-      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
-      has_touchscreen_ = true;
-      touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = ACER12_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
 
-      touchscreen_descriptor_->x.range.min = 0;
-      touchscreen_descriptor_->x.range.max = ACER12_X_MAX;
-      touchscreen_descriptor_->x.resolution = 1;
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
 
-      touchscreen_descriptor_->y.range.min = 0;
-      touchscreen_descriptor_->y.range.max = ACER12_Y_MAX;
-      touchscreen_descriptor_->y.resolution = 1;
+    touchscreen_report_ = input::InputReport::New();
+    touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
-      // TODO(jpoichet) do not hardcode this
-      touchscreen_descriptor_->max_finger_id = 255;
+    touch_device_type_ = TouchDeviceType::ACER12;
+  } else if (protocol == HidDecoder::Protocol::SamsungTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
-      touchscreen_report_ = input::InputReport::New();
-      touchscreen_report_->touchscreen = input::TouchscreenReport::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = SAMSUNG_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
 
-      touch_device_type_ = TouchDeviceType::ACER12;
-    } else if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-      // TODO(cpu): remove this hack from this layer.
-      hid_decoder_.apply_samsung_touch_hack();
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = SAMSUNG_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
 
-      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
-      has_touchscreen_ = true;
-      touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
 
-      touchscreen_descriptor_->x.range.min = 0;
-      touchscreen_descriptor_->x.range.max = SAMSUNG_X_MAX;
-      touchscreen_descriptor_->x.resolution = 1;
-
-      touchscreen_descriptor_->y.range.min = 0;
-      touchscreen_descriptor_->y.range.max = SAMSUNG_Y_MAX;
-      touchscreen_descriptor_->y.resolution = 1;
-
-      // TODO(jpoichet) do not hardcode this
-      touchscreen_descriptor_->max_finger_id = 255;
-
-      touchscreen_report_ = input::InputReport::New();
-      touchscreen_report_->touchscreen = input::TouchscreenReport::New();
+    touchscreen_report_ = input::InputReport::New();
+    touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
       touch_device_type_ = TouchDeviceType::SAMSUNG;
-    } else if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
-      // TODO(cpu): Add support for stylus.
+  } else if (protocol == HidDecoder::Protocol::ParadiseV1Touch) {
+    // TODO(cpu): Add support for stylus.
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
-      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
-      has_touchscreen_ = true;
-      touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
 
-      touchscreen_descriptor_->x.range.min = 0;
-      touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
-      touchscreen_descriptor_->x.resolution = 1;
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
 
-      touchscreen_descriptor_->y.range.min = 0;
-      touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
-      touchscreen_descriptor_->y.resolution = 1;
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
 
-      // TODO(cpu) do not hardcode |max_finger_id|.
-      touchscreen_descriptor_->max_finger_id = 255;
+    touchscreen_report_ = input::InputReport::New();
+    touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
-      touchscreen_report_ = input::InputReport::New();
-      touchscreen_report_->touchscreen = input::TouchscreenReport::New();
+    touch_device_type_ = TouchDeviceType::PARADISEv1;
+  } else if (protocol == HidDecoder::Protocol::ParadiseV2Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
-      touch_device_type_ = TouchDeviceType::PARADISEv1;
-    } else if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
-      has_touchscreen_ = true;
-      touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
 
-      touchscreen_descriptor_->x.range.min = 0;
-      touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
-      touchscreen_descriptor_->x.resolution = 1;
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
 
-      touchscreen_descriptor_->y.range.min = 0;
-      touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
-      touchscreen_descriptor_->y.resolution = 1;
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
 
-      // TODO(cpu) do not hardcode |max_finger_id|.
-      touchscreen_descriptor_->max_finger_id = 255;
+    touchscreen_report_ = input::InputReport::New();
+    touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
-      touchscreen_report_ = input::InputReport::New();
-      touchscreen_report_->touchscreen = input::TouchscreenReport::New();
+    touch_device_type_ = TouchDeviceType::PARADISEv2;
+  } else if (protocol == HidDecoder::Protocol::ParadiseV1TouchPad) {
+    FXL_VLOG(2) << "Device " << name() << " has touchpad";
+    has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::PARADISEv1;
 
-      touch_device_type_ = TouchDeviceType::PARADISEv2;
-    } else if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has touchpad";
-      has_mouse_ = true;
-      mouse_device_type_ = MouseDeviceType::PARADISEv1;
+    mouse_descriptor_ = input::MouseDescriptor::New();
 
-      mouse_descriptor_ = input::MouseDescriptor::New();
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
 
-      mouse_descriptor_->rel_x.range.min = INT32_MIN;
-      mouse_descriptor_->rel_x.range.max = INT32_MAX;
-      mouse_descriptor_->rel_x.resolution = 1;
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
 
-      mouse_descriptor_->rel_y.range.min = INT32_MIN;
-      mouse_descriptor_->rel_y.range.max = INT32_MAX;
-      mouse_descriptor_->rel_y.resolution = 1;
+    mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
 
-      mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
+    mouse_report_ = input::InputReport::New();
+    mouse_report_->mouse = input::MouseReport::New();
+  } else if (protocol == HidDecoder::Protocol::ParadiseV2TouchPad) {
+    FXL_VLOG(2) << "Device " << name() << " has touchpad";
+    has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::PARADISEv2;
 
-      mouse_report_ = input::InputReport::New();
-      mouse_report_->mouse = input::MouseReport::New();
-    } else if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has touchpad";
-      has_mouse_ = true;
-      mouse_device_type_ = MouseDeviceType::PARADISEv2;
+    mouse_descriptor_ = input::MouseDescriptor::New();
 
-      mouse_descriptor_ = input::MouseDescriptor::New();
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
 
-      mouse_descriptor_->rel_x.range.min = INT32_MIN;
-      mouse_descriptor_->rel_x.range.max = INT32_MAX;
-      mouse_descriptor_->rel_x.resolution = 1;
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
 
-      mouse_descriptor_->rel_y.range.min = INT32_MIN;
-      mouse_descriptor_->rel_y.range.max = INT32_MAX;
-      mouse_descriptor_->rel_y.resolution = 1;
+    mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
 
-      mouse_descriptor_->buttons |= input::kMouseButtonPrimary;
+    mouse_report_ = input::InputReport::New();
+    mouse_report_->mouse = input::MouseReport::New();
+  } else if (protocol == HidDecoder::Protocol::EgalaxTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
 
-      mouse_report_ = input::InputReport::New();
-      mouse_report_->mouse = input::MouseReport::New();
-    } else if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has touchscreen";
-      has_touchscreen_ = true;
-      touchscreen_descriptor_ = input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EGALAX_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
 
-      touchscreen_descriptor_->x.range.min = 0;
-      touchscreen_descriptor_->x.range.max = EGALAX_X_MAX;
-      touchscreen_descriptor_->x.resolution = 1;
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EGALAX_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
 
-      touchscreen_descriptor_->y.range.min = 0;
-      touchscreen_descriptor_->y.range.max = EGALAX_Y_MAX;
-      touchscreen_descriptor_->y.resolution = 1;
+    touchscreen_descriptor_->max_finger_id = 1;
 
-      touchscreen_descriptor_->max_finger_id = 1;
+    touchscreen_report_ = input::InputReport::New();
+    touchscreen_report_->touchscreen = input::TouchscreenReport::New();
 
-      touchscreen_report_ = input::InputReport::New();
-      touchscreen_report_->touchscreen = input::TouchscreenReport::New();
+    touch_device_type_ = TouchDeviceType::EGALAX;
+  } else if (protocol == HidDecoder::Protocol::ParadiseSensor) {
+    FXL_VLOG(2) << "Device " << name() << " has motion sensors";
+    sensor_device_type_ = SensorDeviceType::PARADISE;
+    has_sensors_ = true;
 
-      touch_device_type_ = TouchDeviceType::EGALAX;
-    } else if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
-      FXL_VLOG(2) << "Device " << name() << " has motion sensors";
-      sensor_device_type_ = SensorDeviceType::PARADISE;
-      has_sensors_ = true;
+    input::SensorDescriptorPtr acc_base = input::SensorDescriptor::New();
+    acc_base->type = input::SensorType::ACCELEROMETER;
+    acc_base->loc = input::SensorLocation::BASE;
+    sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
 
-      input::SensorDescriptorPtr acc_base = input::SensorDescriptor::New();
-      acc_base->type = input::SensorType::ACCELEROMETER;
-      acc_base->loc = input::SensorLocation::BASE;
-      sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
+    input::SensorDescriptorPtr acc_lid = input::SensorDescriptor::New();
+    acc_lid->type = input::SensorType::ACCELEROMETER;
+    acc_lid->loc = input::SensorLocation::LID;
+    sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
 
-      input::SensorDescriptorPtr acc_lid = input::SensorDescriptor::New();
-      acc_lid->type = input::SensorType::ACCELEROMETER;
-      acc_lid->loc = input::SensorLocation::LID;
-      sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
-
-      sensor_report_ = input::InputReport::New();
-      sensor_report_->sensor = input::SensorReport::New();
-    } else {
-      FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
-      return false;
-    }
+    sensor_report_ = input::InputReport::New();
+    sensor_report_->sensor = input::SensorReport::New();
   } else {
-    FXL_VLOG(2) << "Device " << name() << " has unsupported HID protocol";
+    FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
     return false;
   }
 
@@ -357,11 +343,15 @@ void InputInterpreter::NotifyRegistry() {
 bool InputInterpreter::Read(bool discard) {
   // If positive |rc| is the number of bytes read. If negative the error
   // while reading.
-  int rc;
-  auto report = hid_decoder_.Read(&rc);
+  int rc = 1;
+  auto report = hid_decoder_.use_legacy_mode() ?
+    hid_decoder_.Read(&rc) : std::vector<uint8_t>(1,1);
+
+  // TODO(cpu): remove legacy mode, so no raw HidDecoder::Read(int*) is
+  // issued from this code.
 
   if (rc < 1) {
-    FXL_LOG(ERROR) << "Failed to read from input: " << rc;
+    FXL_LOG(ERROR) << "Failed to read from input: " << rc << " for " << name();
     // TODO(cpu) check whether the device was actually closed or not.
     return false;
   }
@@ -393,6 +383,18 @@ bool InputInterpreter::Read(bool discard) {
         if (!discard) {
           input_device_->DispatchReport(CloneReport(mouse_report_));
         }
+      }
+      break;
+    case MouseDeviceType::GAMEPAD:
+      // TODO(cpu): remove this once we have a good way to test gamepad.
+      HidDecoder::HidGamepadSimple gamepad;
+      if (!hid_decoder_.Read(&gamepad)) {
+        FXL_LOG(ERROR) << " failed reading from gamepad ";
+        return false;
+      }
+      ParseGamepadMouseReport(&gamepad);
+      if (!discard) {
+        input_device_->DispatchReport(CloneReport(mouse_report_));
       }
       break;
     case MouseDeviceType::NONE:
@@ -500,6 +502,16 @@ void InputInterpreter::ParseMouseReport(uint8_t* r, size_t len) {
   mouse_report_->mouse->rel_y = report->rel_y;
   mouse_report_->mouse->pressed_buttons = report->buttons;
   FXL_VLOG(2) << name() << " parsed: " << *mouse_report_;
+}
+
+void InputInterpreter::ParseGamepadMouseReport(
+  // TODO(cpu): remove this once we have a better way to test gamepads.
+  const HidDecoder::HidGamepadSimple* gamepad) {
+  mouse_report_->event_time = InputEventTimestampNow();
+
+  mouse_report_->mouse->rel_x = gamepad->left_x;
+  mouse_report_->mouse->rel_y = gamepad->left_y;
+  mouse_report_->mouse->pressed_buttons = gamepad->hat_switch;
 }
 
 bool InputInterpreter::ParseAcer12StylusReport(uint8_t* r, size_t len) {
@@ -742,4 +754,5 @@ bool InputInterpreter::ParseParadiseSensorReport(uint8_t* r, size_t len) {
               << "): " << *sensor_report_;
   return true;
 }
+
 }  // namespace mozart

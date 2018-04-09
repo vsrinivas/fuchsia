@@ -62,7 +62,12 @@ class InputInterpreter {
     EGALAX
   };
 
-  enum class MouseDeviceType { NONE, BOOT, PARADISEv1, PARADISEv2 };
+  enum class MouseDeviceType {
+    NONE,
+    BOOT,
+    PARADISEv1,
+    PARADISEv2,
+    GAMEPAD };
 
   enum class SensorDeviceType {
     NONE,
@@ -77,6 +82,7 @@ class InputInterpreter {
 
   void ParseKeyboardReport(uint8_t* report, size_t len);
   void ParseMouseReport(uint8_t* report, size_t len);
+  void ParseGamepadMouseReport(const HidDecoder::HidGamepadSimple* gamepad);
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
