@@ -201,9 +201,9 @@ void AudioCapturerImpl::SetMediaType(MediaType media_type) {
     case AudioSampleFormat::UNSIGNED_8:
     case AudioSampleFormat::SIGNED_16:
     case AudioSampleFormat::SIGNED_24_IN_32:
+    case AudioSampleFormat::FLOAT:
       break;
 
-    case AudioSampleFormat::FLOAT:
     default:
       FXL_LOG(ERROR) << "Bad sample format " << details.sample_format;
       return;
