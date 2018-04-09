@@ -33,8 +33,9 @@ template <unsigned int N, typename T> T align(T t) {
 
 }  // namespace
 
-Dispatcher::Dispatcher(DeviceInterface* device) : device_(device) {
+Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme) : device_(device) {
     debugfn();
+    if (mlme != nullptr) { mlme_.swap(mlme); }
 }
 
 Dispatcher::~Dispatcher() {}

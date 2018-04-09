@@ -17,7 +17,7 @@ namespace wlan {
 
 class Dispatcher {
    public:
-    explicit Dispatcher(DeviceInterface* device);
+    explicit Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme = nullptr);
     ~Dispatcher();
 
     zx_status_t HandlePacket(const Packet* packet);

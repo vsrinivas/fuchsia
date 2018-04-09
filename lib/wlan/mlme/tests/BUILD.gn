@@ -8,6 +8,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":common_tests",
+    ":dispatcher_tests",
     ":mac_tests",
     ":scanner_tests",
   ]
@@ -67,6 +68,24 @@ executable("scanner_tests") {
   configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
 }
 
+executable("dispatcher_tests") {
+  output_name = "wlan_dispatcher_unittest"
+
+  testonly = true
+
+  sources = [
+    "dispatcher_unittest.cpp",
+  ]
+
+  deps = [
+    ":test_main",
+    "//garnet/lib/wlan/mlme",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme:wlan_mlme_config" ]
+}
+
 executable("common_tests") {
   output_name = "wlan_common_unittest"
 
@@ -103,6 +122,10 @@ package("wlan_tests") {
   tests = [
     {
       name = "wlan_mac_unittest"
+    },
+
+    {
+      name = "wlan_dispatcher_unittest"
     },
 
     {
