@@ -33,6 +33,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/mmu.h>
 #include <arch/arm64/mp.h>
+#include <arch/arm64/periphmap.h>
 #include <arch/mp.h>
 
 #include <vm/vm_aspace.h>
@@ -65,18 +66,6 @@ static uint cpu_cluster_cpus[SMP_CPU_MAX_CLUSTERS] = {0};
 
 static bool halt_on_panic = false;
 static bool uart_disabled = false;
-
-struct mem_bank {
-    size_t num;
-    uint64_t base_phys;
-    uint64_t base_virt;
-    uint64_t length;
-};
-
-// save a list of peripheral memory banks
-const size_t MAX_PERIPH_BANKS = 4;
-static mem_bank periph_banks[MAX_PERIPH_BANKS];
-static size_t num_periph_banks = 0;
 
 // all of the configured memory arenas from the bootdata
 // at the moment, only support 1 arena
@@ -275,18 +264,7 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
         }
         break;
     case BOOTDATA_MEM_RANGE_PERIPHERAL: {
-        size_t num = num_periph_banks++;
-        mem_bank* b = &periph_banks[num];
-        ASSERT(num_periph_banks <= MAX_PERIPH_BANKS);
-        ASSERT(mem_range->length && is_kernel_address(mem_range->vaddr));
-
-        b->num = num;
-        b->base_phys = mem_range->paddr;
-        b->base_virt = mem_range->vaddr;
-        b->length = mem_range->length;
-
-        auto status = arm64_boot_map_v(b->base_virt, b->base_phys, b->length,
-                                       MMU_INITIAL_MAP_DEVICE);
+        auto status = add_periph_range(mem_range->paddr, mem_range->length);
         ASSERT(status == ZX_OK);
         break;
     }
@@ -361,7 +339,6 @@ static void process_bootdata(bootdata_t* root) {
     }
 
     while (offset < length) {
-
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
@@ -456,12 +433,7 @@ void platform_init(void) {
 
 // after the fact create a region to reserve the peripheral map(s)
 static void platform_init_postvm(uint level) {
-    for (auto& b : periph_banks) {
-        if (b.length == 0)
-            break;
-
-        VmAspace::kernel_aspace()->ReserveSpace("periph", b.length, b.base_virt);
-    }
+    reserve_periph_ranges();
 }
 
 LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);

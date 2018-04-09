@@ -218,9 +218,6 @@ typedef struct {
 #define BOOTDATA_MEM_RANGE_RESERVED     3
 typedef struct {
     uint64_t    paddr;
-    // TODO(voydanoff) remove vaddr after the kernel is able to choose peripheral
-    // virtual base address on its own.
-    uint64_t    vaddr;
     uint64_t    length;
     uint32_t    type;
     uint32_t    reserved;

@@ -186,7 +186,6 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
     if (ctx.memory) {
         bootdata_mem_range_t mem_range;
         mem_range.paddr = 0;
-        mem_range.vaddr = 0;
         mem_range.length = ctx.memory;
         mem_range.type = BOOTDATA_MEM_RANGE_RAM;
 

@@ -9,6 +9,7 @@
 #include <trace.h>
 #include <string.h>
 #include <lib/cbuf.h>
+#include <arch/arm64/periphmap.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
 #include <mdi/mdi.h>
@@ -75,13 +76,13 @@ static void s912_hdcp_init(mdi_node_ref_t* node, uint level)
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_HDMI_HDCP_PRESET_BASE_VIRT:
+        case MDI_HDMI_HDCP_PRESET_BASE_PHYS:
             got_preset = !mdi_node_uint64(&child, &preset_base);
             break;
-        case MDI_HDMI_HDCP_HIU_BASE_VIRT:
+        case MDI_HDMI_HDCP_HIU_BASE_PHYS:
             got_hiu = !mdi_node_uint64(&child, &hiu_base);
             break;
-        case MDI_HDMI_HDCP_HDMITX_BASE_VIRT:
+        case MDI_HDMI_HDCP_HDMITX_BASE_PHYS:
             got_hdmitx = !mdi_node_uint64(&child, &hdmitx_base);
             break;
         }
@@ -96,6 +97,12 @@ static void s912_hdcp_init(mdi_node_ref_t* node, uint level)
     if (!got_hdmitx) {
         panic("amlogc hdcp: MDI_HDMI_HDCP_HDMITXBASE_VIRT not defined\n");
     }
+
+    // get virtual addresses of our peripheral bases
+    preset_base = periph_paddr_to_vaddr(preset_base);
+    hiu_base = periph_paddr_to_vaddr(hiu_base);
+    hdmitx_base = periph_paddr_to_vaddr(hdmitx_base);
+    ASSERT(preset_base && hiu_base && hdmitx_base);
 
     // enable clocks
     SET_BIT32(HHI, HHI_HDMI_CLK_CNTL, 0x0100, 16, 0);

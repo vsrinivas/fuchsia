@@ -5,6 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/periphmap.h>
 #include <assert.h>
 #include <bits.h>
 #include <dev/interrupt.h>
@@ -400,16 +401,17 @@ static const struct pdev_interrupt_ops gic_ops = {
 };
 
 static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
-    uint64_t gic_base_virt = 0;
+    uint64_t gic_base_phys = 0;
+    uint64_t mx8_gpr_phys = 0;
 
     LTRACE_ENTRY;
 
-    bool got_gic_base_virt = false;
+    bool got_gic_base_phys = false;
     bool got_gicd_offset = false;
     bool got_gicr_offset = false;
     bool got_gicr_stride = false;
     bool got_ipi_base = false;
-    bool got_mx8_gpr_virt = false;
+    bool got_mx8_gpr_phys = false;
 
     bool optional = false;
 
@@ -423,8 +425,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_BASE_VIRT:
-            got_gic_base_virt = !mdi_node_uint64(&child, &gic_base_virt);
+        case MDI_BASE_PHYS:
+            got_gic_base_phys = !mdi_node_uint64(&child, &gic_base_phys);
             break;
         case MDI_ARM_GIC_V3_GICD_OFFSET:
             got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv3_gicd_offset);
@@ -438,8 +440,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         case MDI_ARM_GIC_V3_IPI_BASE:
             got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
             break;
-        case MDI_ARM_GIC_V3_MX8_GPR_VIRT:
-            got_mx8_gpr_virt = !mdi_node_uint64(&child, &mx8_gpr_virt);
+        case MDI_ARM_GIC_V3_MX8_GPR_PHYS:
+            got_mx8_gpr_phys = !mdi_node_uint64(&child, &mx8_gpr_phys);
             break;
         case MDI_ARM_GIC_V3_OPTIONAL:
             mdi_node_boolean(&child, &optional);
@@ -447,8 +449,8 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         }
     }
 
-    if (!got_gic_base_virt) {
-        printf("arm-gic-v3: gic_base_virt not defined\n");
+    if (!got_gic_base_phys) {
+        printf("arm-gic-v3: gic_base_phys not defined\n");
         return;
     }
     if (!got_gicd_offset) {
@@ -467,11 +469,14 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         printf("arm-gic-v3: ipi_base not defined\n");
         return;
     }
-    if (got_mx8_gpr_virt) {
+    if (got_mx8_gpr_phys) {
         printf("arm-gic-v3: Applying Errata e11171 for NXP MX8!\n");
+        mx8_gpr_virt = periph_paddr_to_vaddr(mx8_gpr_phys);
+        ASSERT(mx8_gpr_virt);
     }
 
-    arm_gicv3_gic_base = (uint64_t)gic_base_virt;
+    arm_gicv3_gic_base = periph_paddr_to_vaddr(gic_base_phys);
+    ASSERT(arm_gicv3_gic_base);
 
     if (gic_init() != ZX_OK) {
         if (optional) {

@@ -20,7 +20,6 @@ static const bootdata_mem_range_t mem_config[] = {
     },
     {
         .type = BOOTDATA_MEM_RANGE_PERIPHERAL,
-        .vaddr = 0xfffffffff9800000,
         .paddr = 0xf9800000,
         .length = 0x06800000,
     },

@@ -1,16 +1,13 @@
 include "system/public/zircon/mdi/zircon.mdi"
 
-const PERIPH_VIRT = 0xffffffffc0000000
 const PERIPH_PHYS = 0xc0000000
 
 kernel = {
     s905-uart = {
-        base-virt = PERIPH_VIRT + 0x81004c0
         base-phys = PERIPH_PHYS + 0x81004c0
         irq = 225
     }
     arm-gic-v2 = {
-        base-virt = PERIPH_VIRT + 0x4300000
         base-phys = PERIPH_PHYS + 0x4300000
         gicd-offset = 0x1000
         gicc-offset = 0x2000

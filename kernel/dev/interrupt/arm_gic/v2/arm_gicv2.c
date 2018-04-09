@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <arch/ops.h>
+#include <arch/arm64/periphmap.h>
 #include <assert.h>
 #include <bits.h>
 #include <debug.h>
@@ -342,11 +343,10 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     if (level != LK_INIT_LEVEL_PLATFORM_EARLY)
         return;
 
-    uint64_t gic_base_virt = 0;
+    uint64_t gic_base_phys = 0;
     uint64_t msi_frame_phys = 0;
-    uint64_t msi_frame_virt = 0;
 
-    bool got_gic_base_virt = false;
+    bool got_gic_base_phys = false;
     bool got_gicd_offset = false;
     bool got_gicc_offset = false;
     bool got_ipi_base = false;
@@ -355,8 +355,8 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_BASE_VIRT:
-            got_gic_base_virt = mdi_node_uint64(&child, &gic_base_virt) == ZX_OK;
+        case MDI_BASE_PHYS:
+            got_gic_base_phys = mdi_node_uint64(&child, &gic_base_phys) == ZX_OK;
             break;
         case MDI_ARM_GIC_V2_GICD_OFFSET:
             got_gicd_offset = mdi_node_uint64(&child, &arm_gicv2_gicd_offset) == ZX_OK;
@@ -376,17 +376,14 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         case MDI_ARM_GIC_V2_MSI_FRAME_PHYS:
             mdi_node_uint64(&child, &msi_frame_phys);
             break;
-        case MDI_ARM_GIC_V2_MSI_FRAME_VIRT:
-            mdi_node_uint64(&child, &msi_frame_virt);
-            break;
         case MDI_ARM_GIC_V2_OPTIONAL:
             mdi_node_boolean(&child, &optional);
             break;
         }
     }
 
-    if (!got_gic_base_virt) {
-        printf("arm-gic-v2: gic_base_virt not defined\n");
+    if (!got_gic_base_phys) {
+        printf("arm-gic-v2: gic_base_phys not defined\n");
         return;
     }
     if (!got_gicd_offset) {
@@ -401,12 +398,9 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
         printf("arm-gic-v2: ipi_base not defined\n");
         return;
     }
-    if ((msi_frame_phys == 0) != (msi_frame_virt == 0)) {
-        printf("arm-gic-v2: only one of msi_frame_phys or virt is defined\n");
-        return;
-    }
 
-    arm_gicv2_gic_base = (uint64_t)(gic_base_virt);
+    arm_gicv2_gic_base = periph_paddr_to_vaddr(gic_base_phys);
+    ASSERT(arm_gicv2_gic_base);
 
     if (arm_gic_init() != ZX_OK) {
         if (optional) {
@@ -420,13 +414,14 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     dprintf(SPEW, "detected GICv2\n");
 
     // pass the list of physical and virtual addresses for the GICv2m register apertures
-    if (msi_frame_phys && msi_frame_virt) {
+    if (msi_frame_phys) {
         // the following arrays must be static because arm_gicv2m_init stashes the pointer
         static paddr_t GICV2M_REG_FRAMES[] = {0};
         static vaddr_t GICV2M_REG_FRAMES_VIRT[] = {0};
 
         GICV2M_REG_FRAMES[0] = msi_frame_phys;
-        GICV2M_REG_FRAMES_VIRT[0] = msi_frame_virt;
+        GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(msi_frame_phys);
+        ASSERT(GICV2M_REG_FRAMES_VIRT[0]);
         arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, countof(GICV2M_REG_FRAMES));
     }
     pdev_register_interrupts(&gic_ops);

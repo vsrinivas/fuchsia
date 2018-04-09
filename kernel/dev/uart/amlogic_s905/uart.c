@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <trace.h>
 #include <string.h>
+#include <arch/arm64/periphmap.h>
 #include <lib/cbuf.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
@@ -281,7 +282,7 @@ static void s905_uart_init_early(mdi_node_ref_t* node, uint level)
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-            case MDI_BASE_VIRT:
+            case MDI_BASE_PHYS:
                 if(mdi_node_uint64(&child, &s905_uart_base) != ZX_OK)
                     return;
                 break;
@@ -294,6 +295,9 @@ static void s905_uart_init_early(mdi_node_ref_t* node, uint level)
     }
     if ((s905_uart_base == 0) || (s905_uart_irq == 0))
         return;
+
+    s905_uart_base = periph_paddr_to_vaddr(s905_uart_base);
+    ASSERT(s905_uart_base);
 
     pdev_register_uart(&s905_uart_ops);
 }

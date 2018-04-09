@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arm64/periphmap.h>
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <mdi/mdi.h>
@@ -48,10 +49,10 @@ static void hisi_power_init(mdi_node_ref_t* node, uint level) {
     mdi_node_ref_t child;
     mdi_each_child(node, &child) {
         switch (mdi_id(&child)) {
-        case MDI_HISI_POWER_SCTRL_BASE_VIRT:
+        case MDI_HISI_POWER_SCTRL_BASE_PHYS:
             got_sctrl = !mdi_node_uint64(&child, &sctrl_base);
             break;
-        case MDI_HISI_POWER_PMU_BASE_VIRT:
+        case MDI_HISI_POWER_PMU_BASE_PHYS:
             got_pmu = !mdi_node_uint64(&child, &pmu_base);
             break;
         }
@@ -63,6 +64,11 @@ static void hisi_power_init(mdi_node_ref_t* node, uint level) {
     if (!got_pmu) {
         panic("hisi power uart: MDI_HISI_POWER_PMU_BASE_VIRT not defined\n");
     }
+
+    // get virtual addresses of our peripheral bases
+    sctrl_base = periph_paddr_to_vaddr(sctrl_base);
+    pmu_base = periph_paddr_to_vaddr(pmu_base);
+    ASSERT(sctrl_base && pmu_base);
 
     pdev_register_power(&hisi_power_ops);
 }

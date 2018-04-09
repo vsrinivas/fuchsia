@@ -1,22 +1,18 @@
 include "system/public/zircon/mdi/zircon.mdi"
 
-const PERIPH_VIRT = 0xffffffffc0000000
-
 kernel = {
     arm-nxp-imx-uart = {
         base-phys = 0x30860000
-        base-virt = PERIPH_VIRT + 0x30860000
         irq = 58
     }
     arm-gic-v3 = {
         base-phys = 0x38800000
-        base-virt = PERIPH_VIRT + 0x38800000
         gicd-offset = 0x00000
         gicr-offset = 0x80000
         gicr-stride = 0x20000
         ipi-base = 9
         // Used for Errata e11171
-        mx8-gpr-virt = PERIPH_VIRT + 0x30340000
+        mx8-gpr-phys = 0x30340000
     }
     arm-psci = {
         use-smc = true
