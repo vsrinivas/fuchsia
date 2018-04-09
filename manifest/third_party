@@ -85,7 +85,8 @@
     <project name="third_party/glslang"
              path="third_party/shaderc/third_party/glslang"
              remote="https://fuchsia.googlesource.com/third_party/glslang"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="11b5c31108fad9a10288dc35ea23fbcaad243f6b"/>
     <project name="third_party/go"
              remote="https://fuchsia.googlesource.com/third_party/go"
              gerrithost="https://fuchsia-review.googlesource.com"
@@ -214,7 +215,8 @@
     <project name="third_party/shaderc"
              path="third_party/shaderc"
              remote="https://fuchsia.googlesource.com/third_party/shaderc"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="2a0f3a3e348072ad6a9e53874188146b895705ba"/>
     <project name="third_party/shaderc/googletest"
              path="third_party/shaderc/third_party/googletest"
              remote="https://fuchsia.googlesource.com/third_party/googletest"
@@ -222,11 +224,13 @@
     <project name="third_party/spirv-headers"
              path="third_party/shaderc/third_party/spirv-tools/external/spirv-headers"
              remote="https://fuchsia.googlesource.com/third_party/spirv-headers"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="12f8de9f04327336b699b1b80aa390ae7f9ddbf4"/>
     <project name="third_party/spirv-tools"
              path="third_party/shaderc/third_party/spirv-tools"
              remote="https://fuchsia.googlesource.com/third_party/spirv-tools"
-             gerrithost="https://fuchsia-review.googlesource.com"/>
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="3020104ff25a0f661e7818bd49fbf5f23e0b0e98"/>
     <project name="third_party/openssh-portable"
              path="third_party/openssh-portable"
              remote="https://fuchsia.googlesource.com/third_party/openssh-portable"
