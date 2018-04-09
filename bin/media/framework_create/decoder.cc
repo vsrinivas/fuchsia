@@ -5,7 +5,10 @@
 #include "garnet/bin/media/decode/decoder.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_decoder.h"
 
-namespace media {
+using media::Result;
+using media::StreamType;
+
+namespace media_player {
 
 Result Decoder::Create(const StreamType& stream_type,
                        std::shared_ptr<Decoder>* decoder_out) {
@@ -18,4 +21,4 @@ Result Decoder::Create(const StreamType& stream_type,
   return result;
 }
 
-}  // namespace media
+}  // namespace media_player

@@ -11,7 +11,9 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::PacketPtr;
+
+namespace media_player {
 
 // static
 std::shared_ptr<FidlPacketProducer> FidlPacketProducer::Create() {
@@ -50,7 +52,7 @@ void FidlPacketProducer::FlushConnection(bool hold_frame,
   }
 }
 
-std::shared_ptr<PayloadAllocator> FidlPacketProducer::allocator() {
+std::shared_ptr<media::PayloadAllocator> FidlPacketProducer::allocator() {
   return shared_from_this();
 }
 
@@ -87,7 +89,7 @@ Demand FidlPacketProducer::SupplyPacket(PacketPtr packet) {
 }
 
 void FidlPacketProducer::Connect(
-    fidl::InterfaceHandle<MediaPacketConsumer> consumer,
+    fidl::InterfaceHandle<media::MediaPacketConsumer> consumer,
     ConnectCallback callback) {
   FXL_DCHECK(consumer);
   MediaPacketProducerBase::Connect(consumer.Bind(), callback);
@@ -137,7 +139,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
 
   ProducePacket(packet->payload(), packet->size(), packet->pts(),
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
-                fxl::To<MediaTypePtr>(packet->revised_stream_type()),
+                fxl::To<media::MediaTypePtr>(packet->revised_stream_type()),
                 fxl::MakeCopyable([this, packet = std::move(packet)]() {
                   ActiveSinkStage* stage_ptr = stage();
                   if (stage_ptr) {
@@ -185,4 +187,4 @@ Demand FidlPacketProducer::CurrentDemand(
              : Demand::kNegative;
 }
 
-}  // namespace media
+}  // namespace media_player

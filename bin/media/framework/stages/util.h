@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_UTIL_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_UTIL_H_
 
 #include <vector>
 
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
-namespace media {
+namespace media_player {
 
 bool HasPositiveDemand(const std::vector<Output>& outputs);
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_UTIL_H_

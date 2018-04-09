@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_PRODUCER_H_
+#define GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_PRODUCER_H_
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 #include "garnet/bin/media/framework/models/active_sink.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/transport/media_packet_producer_base.h"
 
-namespace media {
+namespace media_player {
 
 // Implements MediaPacketProducer to forward a stream across fidl.
 class FidlPacketProducer
-    : public MediaPacketProducerBase,
-      public MediaPacketProducer,
+    : public media::MediaPacketProducerBase,
+      public media::MediaPacketProducer,
       public ActiveSink,
-      public PayloadAllocator,
+      public media::PayloadAllocator,
       public std::enable_shared_from_this<FidlPacketProducer> {
  public:
   using ConnectionStateChangedCallback = std::function<void()>;
@@ -30,7 +32,7 @@ class FidlPacketProducer
   ~FidlPacketProducer() override;
 
   // Binds.
-  void Bind(fidl::InterfaceRequest<MediaPacketProducer> request);
+  void Bind(fidl::InterfaceRequest<media::MediaPacketProducer> request);
 
   // Sets a callback called whenever the connection state changes.
   void SetConnectionStateChangedCallback(
@@ -40,12 +42,12 @@ class FidlPacketProducer
   void FlushConnection(bool hold_frame, FlushConnectionCallback callback);
 
   // ActiveSink implementation.
-  std::shared_ptr<PayloadAllocator> allocator() override;
+  std::shared_ptr<media::PayloadAllocator> allocator() override;
 
-  Demand SupplyPacket(PacketPtr packet) override;
+  Demand SupplyPacket(media::PacketPtr packet) override;
 
   // MediaPacketProducer implementation.
-  void Connect(fidl::InterfaceHandle<MediaPacketConsumer> consumer,
+  void Connect(fidl::InterfaceHandle<media::MediaPacketConsumer> consumer,
                ConnectCallback callback) override;
 
   void Disconnect() override;
@@ -65,7 +67,7 @@ class FidlPacketProducer
 
  private:
   // Sends a packet to the consumer.
-  void SendPacket(PacketPtr packet);
+  void SendPacket(media::PacketPtr packet);
 
   // Shuts down the producer.
   void Reset();
@@ -77,10 +79,12 @@ class FidlPacketProducer
   // additional packet was outstanding.
   Demand CurrentDemand(uint32_t additional_packets_outstanding = 0);
 
-  fidl::Binding<MediaPacketProducer> binding_;
+  fidl::Binding<media::MediaPacketProducer> binding_;
 
   async_t* async_;
   ConnectionStateChangedCallback connectionStateChangedCallback_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_PRODUCER_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_RENDER_FIDL_VIDEO_RENDERER_H_
+#define GARNET_BIN_MEDIA_RENDER_FIDL_VIDEO_RENDERER_H_
 
 #include <queue>
 #include <unordered_map>
@@ -14,7 +15,7 @@
 #include "lib/ui/scenic/client/host_image_cycler.h"
 #include "lib/ui/view_framework/base_view.h"
 
-namespace media {
+namespace media_player {
 
 // AudioRenderer that renders video via FIDL services.
 class FidlVideoRenderer
@@ -30,16 +31,16 @@ class FidlVideoRenderer
   // VideoRendererInProc implementation.
   void Flush(bool hold_frame) override;
 
-  std::shared_ptr<PayloadAllocator> allocator() override;
+  std::shared_ptr<media::PayloadAllocator> allocator() override;
 
-  Demand SupplyPacket(PacketPtr packet) override;
+  Demand SupplyPacket(media::PacketPtr packet) override;
 
-  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
-      override {
+  const std::vector<std::unique_ptr<media::StreamTypeSet>>&
+  GetSupportedStreamTypes() override {
     return supported_stream_types_;
   }
 
-  void SetStreamType(const StreamType& stream_type) override;
+  void SetStreamType(const media::StreamType& stream_type) override;
 
   void Prime(fxl::Closure callback) override;
 
@@ -93,7 +94,7 @@ class FidlVideoRenderer
   void DiscardOldPackets();
 
   // Checks |packet| for a revised stream type and updates state accordingly.
-  void CheckForRevisedStreamType(const PacketPtr& packet);
+  void CheckForRevisedStreamType(const media::PacketPtr& packet);
 
   // Calls Invalidate on all registered views.
   void InvalidateViews();
@@ -104,12 +105,12 @@ class FidlVideoRenderer
            (packet_queue_.size() + (held_packet_ ? 1 : 0) < kPacketDemand);
   }
 
-  std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  std::queue<PacketPtr> packet_queue_;
+  std::vector<std::unique_ptr<media::StreamTypeSet>> supported_stream_types_;
+  std::queue<media::PacketPtr> packet_queue_;
   bool flushed_ = true;
-  PacketPtr held_packet_;
-  int64_t pts_ns_ = Packet::kUnknownPts;
-  VideoConverter converter_;
+  media::PacketPtr held_packet_;
+  int64_t pts_ns_ = media::Packet::kUnknownPts;
+  media::VideoConverter converter_;
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fxl::Closure prime_callback_;
   fxl::Closure geometry_update_callback_;
@@ -117,4 +118,6 @@ class FidlVideoRenderer
   FXL_DISALLOW_COPY_AND_ASSIGN(FidlVideoRenderer);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_RENDER_FIDL_VIDEO_RENDERER_H_

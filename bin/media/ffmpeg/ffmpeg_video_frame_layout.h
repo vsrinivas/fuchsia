@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_FRAME_LAYOUT_H_
+#define GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_FRAME_LAYOUT_H_
 
 #include <vector>
 
@@ -11,7 +12,7 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace media {
+namespace media_player {
 
 // Maintains frame buffer layout compatible with ffmpeg video decoders, updating
 // as needed based on the codec context.
@@ -19,8 +20,8 @@ class FfmpegVideoFrameLayout {
  public:
   // Determines frame layout compatible with ffmpeg, returning the minimum
   // payload size required to accommodate a decoded frame.
-  static size_t LayoutFrame(VideoStreamType::PixelFormat pixel_format,
-                            const VideoStreamType::Extent& coded_size,
+  static size_t LayoutFrame(media::VideoStreamType::PixelFormat pixel_format,
+                            const media::VideoStreamType::Extent& coded_size,
                             std::vector<uint32_t>* line_stride_out,
                             std::vector<uint32_t>* plane_offset_out);
 
@@ -49,4 +50,6 @@ class FfmpegVideoFrameLayout {
   int coded_height_ = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_FRAME_LAYOUT_H_

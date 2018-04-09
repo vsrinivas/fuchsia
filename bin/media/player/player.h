@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_PLAYER_H_
+#define GARNET_BIN_MEDIA_PLAYER_PLAYER_H_
 
 #include <unordered_map>
 #include <vector>
@@ -17,7 +18,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
+namespace media_player {
 
 // A graph that delivers content one origin to many destinations.
 class Player {
@@ -43,13 +44,13 @@ class Player {
   // Sets the current sink segment for the specified medium. |sink_segment| may
   // be null, indicating there is no sink segment for the specified medium.
   void SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
-                      StreamType::Medium medium);
+                      media::StreamType::Medium medium);
 
   // Indicates whether the player has a source segment.
   bool has_source_segment() const { return !!source_segment_; }
 
   // Indicates whether the player has a sink segment for the specified medium.
-  bool has_sink_segment(StreamType::Medium medium) const {
+  bool has_sink_segment(media::StreamType::Medium medium) const {
     if (GetParkedSinkSegment(medium)) {
       return true;
     }
@@ -60,14 +61,14 @@ class Player {
 
   // Indicates whether the currently-loaded content has a stream with the
   // specified medium.
-  bool content_has_medium(StreamType::Medium medium) const {
+  bool content_has_medium(media::StreamType::Medium medium) const {
     return !!GetStream(medium);
   }
 
   // Indicates whether the indicated medium is connected to a sink segment. This
   // will be false if no sink segment for the specified medium has been supplied
   // or the provided sink segment could not handle the stream type.
-  bool medium_connected(StreamType::Medium medium) const {
+  bool medium_connected(media::StreamType::Medium medium) const {
     const Stream* stream = GetStream(medium);
     return stream && stream->sink_segment_ &&
            stream->sink_segment_->connected();
@@ -80,10 +81,12 @@ class Player {
   void Flush(bool hold_frame);
 
   // Sets the timeline function.
-  void SetTimelineFunction(TimelineFunction timeline_function,
+  void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback);
 
-  const TimelineFunction& timeline_function() { return timeline_function_; }
+  const media::TimelineFunction& timeline_function() {
+    return timeline_function_;
+  }
 
   // Sets a program range for the renderers.
   void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts);
@@ -114,11 +117,11 @@ class Player {
   }
 
  private:
-  static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
+  static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
 
   struct Stream {
     std::unique_ptr<SinkSegment> sink_segment_;
-    std::unique_ptr<StreamType> stream_type_;
+    std::unique_ptr<media::StreamType> stream_type_;
     OutputRef output_;
   };
 
@@ -127,18 +130,20 @@ class Player {
 
   // Gets the stream for the specified medium. Returns nullptr if there is no
   // stream for that medium.
-  const Stream* GetStream(StreamType::Medium medium) const;
+  const Stream* GetStream(media::StreamType::Medium medium) const;
 
   // Gets the stream for the specified medium. Returns nullptr if there is no
   // stream for that medium.
-  Stream* GetStream(StreamType::Medium medium);
+  Stream* GetStream(media::StreamType::Medium medium);
 
   // Sets a parked sink segment for the specified medium. Returns nullptr if
   // there is no parked sink segment for that medium.
-  SinkSegment* GetParkedSinkSegment(StreamType::Medium medium) const;
+  SinkSegment* GetParkedSinkSegment(media::StreamType::Medium medium) const;
 
   // Called when the source segment signals that a stream has been updated.
-  void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output);
+  void OnStreamUpdated(size_t index,
+                       const media::StreamType& type,
+                       OutputRef output);
 
   // Called when the source segment signals that a stream has been removed.
   void OnStreamRemoval(size_t index);
@@ -152,7 +157,8 @@ class Player {
   // Takes a sink segment for the specified medium from |parked_sink_segments_|
   // or a stream. Returns null if no sink segment has been registered for the
   // specified medium.
-  std::unique_ptr<SinkSegment> TakeSinkSegment(StreamType::Medium medium);
+  std::unique_ptr<SinkSegment> TakeSinkSegment(
+      media::StreamType::Medium medium);
 
   // Takes the sink segment from a stream.
   std::unique_ptr<SinkSegment> TakeSinkSegment(Stream* stream);
@@ -167,9 +173,11 @@ class Player {
   size_t set_source_segment_countdown_;
   std::unique_ptr<SourceSegment> source_segment_;
   std::vector<Stream> streams_;
-  std::unordered_map<StreamType::Medium, std::unique_ptr<SinkSegment>>
+  std::unordered_map<media::StreamType::Medium, std::unique_ptr<SinkSegment>>
       parked_sink_segments_;
-  TimelineFunction timeline_function_;
+  media::TimelineFunction timeline_function_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_PLAYER_H_

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_H_
+#define GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_H_
 
 #include <memory>
 
 #include "garnet/bin/media/decode/decoder.h"
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for ffmpeg-based decoders, just the create function.
 // We don't want the base class implementation here, because we don't want
@@ -16,10 +17,12 @@ namespace media {
 class FfmpegDecoder : public Decoder {
  public:
   // Creates an ffmpeg-based Decoder object for a given media type.
-  static Result Create(const StreamType& stream_type,
-                       std::shared_ptr<Decoder>* decoder_out);
+  static media::Result Create(const media::StreamType& stream_type,
+                              std::shared_ptr<Decoder>* decoder_out);
 
   ~FfmpegDecoder() override {}
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_H_

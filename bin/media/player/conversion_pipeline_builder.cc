@@ -8,7 +8,14 @@
 #include "garnet/bin/media/decode/decoder.h"
 #include "garnet/bin/media/framework/formatting.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::AudioStreamTypeSet;
+using media::Result;
+using media::StreamType;
+using media::StreamTypeSet;
+using media::VideoStreamType;
+
+namespace media_player {
 
 namespace {
 
@@ -326,4 +333,4 @@ bool BuildConversionPipeline(
   }
 }
 
-}  // namespace media
+}  // namespace media_player

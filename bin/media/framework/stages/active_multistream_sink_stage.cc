@@ -4,7 +4,9 @@
 
 #include "garnet/bin/media/framework/stages/active_multistream_sink_stage.h"
 
-namespace media {
+using media::PayloadAllocator;
+
+namespace media_player {
 
 ActiveMultistreamSinkStageImpl::ActiveMultistreamSinkStageImpl(
     std::shared_ptr<ActiveMultistreamSink> sink)
@@ -162,4 +164,4 @@ void ActiveMultistreamSinkStageImpl::UpdateDemand(size_t input_index,
   NeedsUpdate();
 }
 
-}  // namespace media
+}  // namespace media_player

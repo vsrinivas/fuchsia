@@ -6,7 +6,7 @@
 
 #include "garnet/bin/media/util/threadsafe_callback_joiner.h"
 
-namespace media {
+namespace media_player {
 
 Graph::Graph(async_t* async) : async_(async) {}
 
@@ -173,7 +173,7 @@ void Graph::Reset() {
   sources_.clear();
   sinks_.clear();
 
-  auto joiner = ThreadsafeCallbackJoiner::Create();
+  auto joiner = media::ThreadsafeCallbackJoiner::Create();
 
   for (auto& stage : stages_) {
     stage->Acquire(joiner->NewCallback());
@@ -229,7 +229,7 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame) {
 
 void Graph::PostTask(const fxl::Closure& task,
                      std::initializer_list<NodeRef> nodes) {
-  auto joiner = ThreadsafeCallbackJoiner::Create();
+  auto joiner = media::ThreadsafeCallbackJoiner::Create();
 
   std::vector<StageImpl*> stages;
   for (NodeRef node : nodes) {
@@ -263,4 +263,4 @@ NodeRef Graph::Add(std::shared_ptr<StageImpl> stage) {
   return NodeRef(stage.get());
 }
 
-}  // namespace media
+}  // namespace media_player

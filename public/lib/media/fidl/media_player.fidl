@@ -2,20 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
+library media_player;
 
-// import "lib/media/fidl/audio_renderer.fidl";
-// import "lib/media/fidl/media_metadata.fidl";
-// import "lib/media/fidl/media_renderer.fidl";
-// import "lib/media/fidl/problem.fidl";
-// import "lib/media/fidl/seeking_reader.fidl";
-// import "lib/media/fidl/timelines.fidl";
-// import "lib/ui/geometry/fidl/geometry.fidl";
-// import "lib/ui/views/fidl/view_manager.fidl";
-// import "lib/ui/views/fidl/view_token.fidl";
+using media;
+using views_v1_token;
 
 // Plays media.
-[ServiceName="media::MediaPlayer"]
+[ServiceName="media_player::MediaPlayer"]
 interface MediaPlayer {
   // Sets an HTTP URL to read from.
   1: SetHttpSource(string http_url);
@@ -53,7 +46,7 @@ interface MediaPlayer {
   // new player for which none of the SetXxxSource methods or SetAudioRenderer
   // itself have been called. This method is ignored otherwise. If the
   // audio_renderer parameter is null, the SetGain method does nothing.
-  10: SetAudioRenderer(AudioRenderer? audio_renderer, MediaRenderer media_renderer);
+  10: SetAudioRenderer(media.AudioRenderer? audio_renderer, media.MediaRenderer media_renderer);
 
   // Adds a new binding to this MediaPlayer.
   11: AddBinding(request<MediaPlayer> media_player);
@@ -63,7 +56,7 @@ interface MediaPlayer {
 struct MediaPlayerStatus {
   // Transform translating local time to presentation time. Reverse translation
   // (presentation time to local time) is only valid when media is playing.
-  TimelineTransform? timeline_transform;
+  media.TimelineTransform? timeline_transform;
 
   // Indicates whether presentation has reached end-of-stream.
   bool end_of_stream;

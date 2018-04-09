@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_INPUT_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_INPUT_H_
 
 #include <atomic>
 
 #include "garnet/bin/media/framework/models/demand.h"
 #include "garnet/bin/media/framework/packet.h"
 
-namespace media {
+namespace media_player {
 
 class StageImpl;
 class Engine;
@@ -53,14 +54,14 @@ class Input {
   Demand demand() const;
 
   // Updates packet. Called only by the upstream |Output|.
-  void PutPacket(PacketPtr packet);
+  void PutPacket(media::PacketPtr packet);
 
   // A packet supplied from upstream.
-  const PacketPtr& packet() { return packet_; }
+  const media::PacketPtr& packet() { return packet_; }
 
   // Takes ownership of the packet supplied from upstream and sets the demand
   // to the indicated value.
-  PacketPtr TakePacket(Demand demand);
+  media::PacketPtr TakePacket(Demand demand);
 
   // Updates mate's demand if |packet()| is empty. Called only by the downstream
   // stage.
@@ -81,8 +82,10 @@ class Input {
   size_t index_;
   Output* mate_ = nullptr;
   bool prepared_ = false;
-  PacketPtr packet_;
+  media::PacketPtr packet_;
   std::atomic<State> state_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_INPUT_H_

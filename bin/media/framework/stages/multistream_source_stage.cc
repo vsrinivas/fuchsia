@@ -6,7 +6,9 @@
 
 #include "garnet/bin/media/framework/stages/util.h"
 
-namespace media {
+using media::PayloadAllocator;
+
+namespace media_player {
 
 MultistreamSourceStageImpl::MultistreamSourceStageImpl(
     std::shared_ptr<MultistreamSource> source)
@@ -120,4 +122,4 @@ void MultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
-}  // namespace media
+}  // namespace media_player

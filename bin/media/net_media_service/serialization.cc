@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 Serializer::Serializer() {}
 
@@ -192,4 +192,4 @@ Deserializer& operator>>(Deserializer& deserializer, std::string& value) {
   return deserializer;
 }
 
-}  // namespace media
+}  // namespace media_player

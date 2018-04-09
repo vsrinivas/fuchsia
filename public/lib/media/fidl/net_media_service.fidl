@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
-
-// import "lib/media/fidl/media_player.fidl";
+library media_player;
 
 // Network media service definition.
-[ServiceName="media::NetMediaService"]
+[ServiceName="media_player::NetMediaService"]
 interface NetMediaService {
   // Publishes a MediaPlayer for remote access.
   1: PublishMediaPlayer(string service_name, MediaPlayer media_player);

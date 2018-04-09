@@ -12,11 +12,14 @@
 #include "garnet/bin/media/util/file_channel.h"
 #include "lib/fxl/files/file_descriptor.h"
 
-namespace media {
+using media::Result;
+
+namespace media_player {
 
 // static
 std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
-  return std::make_shared<FileReader>(FdFromChannel(std::move(file_channel)));
+  return std::make_shared<FileReader>(
+      media::FdFromChannel(std::move(file_channel)));
 }
 
 FileReader::FileReader(fxl::UniqueFD fd)
@@ -78,4 +81,4 @@ void FileReader::ReadAt(size_t position,
   });
 }
 
-}  // namespace media
+}  // namespace media_player

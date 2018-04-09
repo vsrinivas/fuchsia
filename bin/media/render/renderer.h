@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_RENDER_RENDERER_H_
+#define GARNET_BIN_MEDIA_RENDER_RENDERER_H_
 
 #include <limits>
 
@@ -10,7 +11,7 @@
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for sinks that render packets.
 class Renderer : public ActiveSink {
@@ -31,17 +32,17 @@ class Renderer : public ActiveSink {
 
   // Returns the types of the streams the renderer is able
   // to consume.
-  virtual const std::vector<std::unique_ptr<StreamTypeSet>>&
+  virtual const std::vector<std::unique_ptr<media::StreamTypeSet>>&
   GetSupportedStreamTypes() = 0;
 
   // Sets the type of stream the renderer will consume.
-  virtual void SetStreamType(const StreamType& stream_type) = 0;
+  virtual void SetStreamType(const media::StreamType& stream_type) = 0;
 
   // Prepares renderer for playback by satisfying initial demand.
   virtual void Prime(fxl::Closure callback) = 0;
 
   // Sets the timeline function.
-  virtual void SetTimelineFunction(TimelineFunction timeline_function,
+  virtual void SetTimelineFunction(media::TimelineFunction timeline_function,
                                    fxl::Closure callback);
 
   // Sets a program range for this renderer.
@@ -82,13 +83,13 @@ class Renderer : public ActiveSink {
   void UpdateTimelineAt(int64_t reference_time);
 
   // Gets the current timeline function.
-  const TimelineFunction& current_timeline_function() {
+  const media::TimelineFunction& current_timeline_function() {
     return current_timeline_function_;
   }
 
   // Indicates whether the end of stream packet has been encountered.
   bool end_of_stream_pending() const {
-    return end_of_stream_pts_ != kUnspecifiedTime;
+    return end_of_stream_pts_ != media::kUnspecifiedTime;
   }
 
   // Returns the minimum PTS for the specified program.
@@ -113,18 +114,21 @@ class Renderer : public ActiveSink {
 
   // Determines if an unrealized timeline function is currently pending.
   bool TimelineFunctionPending() {
-    return pending_timeline_function_.reference_time() != kUnspecifiedTime;
+    return pending_timeline_function_.reference_time() !=
+           media::kUnspecifiedTime;
   }
 
   async_t* async_;
   fxl::Closure update_callback_;
-  TimelineFunction current_timeline_function_;
-  TimelineFunction pending_timeline_function_;
-  int64_t end_of_stream_pts_ = kUnspecifiedTime;
+  media::TimelineFunction current_timeline_function_;
+  media::TimelineFunction pending_timeline_function_;
+  int64_t end_of_stream_pts_ = media::kUnspecifiedTime;
   bool end_of_stream_published_ = false;
   fxl::Closure set_timeline_function_callback_;
   int64_t program_0_min_pts_ = std::numeric_limits<int64_t>::min();
   int64_t program_0_max_pts_ = std::numeric_limits<int64_t>::max();
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_RENDER_RENDERER_H_

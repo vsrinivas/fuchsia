@@ -6,7 +6,9 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::Result;
+
+namespace media_player {
 
 // static
 std::shared_ptr<ReaderCache> ReaderCache::Create(
@@ -292,4 +294,4 @@ void ReaderCache::Intake::Continue() {
                            });
 }
 
-}  // namespace media
+}  // namespace media_player

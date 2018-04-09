@@ -14,7 +14,12 @@ extern "C" {
 #include "third_party/ffmpeg/libavutil/imgutils.h"
 }
 
-namespace media {
+using media::Packet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+using media::VideoStreamType;
+
+namespace media_player {
 
 // static
 std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(
@@ -42,7 +47,7 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   FXL_DCHECK(context());
   FXL_DCHECK(packet->pts() != Packet::kUnknownPts);
 
-  if (pts_rate() == TimelineRate::Zero) {
+  if (pts_rate() == media::TimelineRate::Zero) {
     set_pts_rate(packet->pts_rate());
   } else {
     packet->SetPtsRate(pts_rate());
@@ -159,4 +164,4 @@ PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
   return packet;
 }
 
-}  // namespace media
+}  // namespace media_player

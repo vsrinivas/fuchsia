@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 SparseByteBuffer::Hole::Hole() {}
 
@@ -193,4 +193,4 @@ bool operator!=(const SparseByteBuffer::Region& a,
   return a.iter_ != b.iter_;
 }
 
-}  // namespace media
+}  // namespace media_player

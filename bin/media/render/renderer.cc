@@ -8,7 +8,13 @@
 
 #include "lib/media/timeline/timeline.h"
 
-namespace media {
+using media::kUnspecifiedTime;
+using media::StreamType;
+using media::StreamTypeSet;
+using media::Timeline;
+using media::TimelineFunction;
+
+namespace media_player {
 
 Renderer::Renderer() {
   ClearPendingTimelineFunction();
@@ -115,4 +121,4 @@ void Renderer::ClearPendingTimelineFunction() {
   }
 }
 
-}  // namespace media
+}  // namespace media_player

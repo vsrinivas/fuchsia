@@ -7,13 +7,17 @@
 #include <limits>
 #include <string>
 
+#include <fuchsia/cpp/media.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::MediaResult;
+using media::Result;
+
+namespace media_player {
 
 FidlReader::FidlReader(fidl::InterfaceHandle<SeekingReader> seeking_reader)
     : seeking_reader_(seeking_reader.Bind()), async_(async_get_default()) {
@@ -116,11 +120,9 @@ void FidlReader::ReadFromSocket() {
 
     if (status == ZX_ERR_SHOULD_WAIT) {
       waiter_ = std::make_unique<async::Wait>(
-          socket_.get(),
-          ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
+          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async,
-                                  async::Wait* wait,
+      waiter_->set_handler([this](async_t* async, async::Wait* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
@@ -186,4 +188,4 @@ void FidlReader::FailReadAt(zx_status_t status) {
   CompleteReadAt(result_);
 }
 
-}  // namespace media
+}  // namespace media_player

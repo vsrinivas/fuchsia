@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_MESSAGES_H_
+#define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_MESSAGES_H_
 
 #include <memory>
 
+#include <fuchsia/cpp/media_player.h>
 #include "garnet/bin/media/net_media_service/serialization.h"
-#include <fuchsia/cpp/media.h>
 
-namespace media {
+namespace media_player {
 
 // The definitions below are for messages that are serialized and exchanged
 // between a media player and a control point. The proxy resides at the
@@ -125,7 +126,7 @@ Serializer& operator<<(
 Serializer& operator<<(Serializer& serializer,
                        const MediaPlayerStatusPtr& value);
 Serializer& operator<<(Serializer& serializer,
-                       const TimelineTransformPtr& value);
+                       const media::TimelineTransformPtr& value);
 Serializer& operator<<(Serializer& serializer, const MediaMetadataPtr& value);
 Serializer& operator<<(Serializer& serializer, const ProblemPtr& value);
 Serializer& operator<<(Serializer& serializer,
@@ -155,7 +156,7 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer,
                          MediaPlayerStatusPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
-                         TimelineTransformPtr& value);
+                         media::TimelineTransformPtr& value);
 Deserializer& operator>>(Deserializer& deserializer, MediaMetadataPtr& value);
 Deserializer& operator>>(Deserializer& deserializer, ProblemPtr& value);
 Deserializer& operator>>(Deserializer& deserializer,
@@ -163,4 +164,6 @@ Deserializer& operator>>(Deserializer& deserializer,
 Deserializer& operator>>(Deserializer& deserializer,
                          std::unique_ptr<MediaPlayerOutMessage>& value);
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_MESSAGES_H_

@@ -16,7 +16,14 @@
 #include "garnet/bin/media/player/test/fake_video_renderer.h"
 #include "gtest/gtest.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::begl;
+using media::indent;
+using media::outdent;
+using media::StreamType;
+using media::VideoStreamType;
+
+namespace media_player {
 namespace test {
 
 std::ostream& operator<<(std::ostream& os, NodeRef value) {
@@ -397,7 +404,7 @@ TEST(PlayerTest, FakeSegments) {
   // Test SetTimelineFunction.
   EXPECT_FALSE(audio_sink_segment_raw->set_timeline_function_called_);
   EXPECT_FALSE(video_sink_segment_raw->set_timeline_function_called_);
-  TimelineFunction timeline_function(1, 2, 3, 4);
+  media::TimelineFunction timeline_function(1, 2, 3, 4);
   bool set_timeline_function_callback_called = false;
   player.SetTimelineFunction(timeline_function,
                              [&set_timeline_function_callback_called]() {
@@ -638,4 +645,4 @@ TEST(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
 }
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player

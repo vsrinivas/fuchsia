@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_GRAPH_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_GRAPH_H_
 
 #include <list>
 
@@ -16,7 +17,7 @@
 #include "garnet/bin/media/framework/stages/transform_stage.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace media {
+namespace media_player {
 
 namespace internal {
 
@@ -216,4 +217,6 @@ class Graph {
   Engine engine_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_GRAPH_H_

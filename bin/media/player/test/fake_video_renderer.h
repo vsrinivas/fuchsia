@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_VIDEO_RENDERER_H_
+#define GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_VIDEO_RENDERER_H_
 
 #include "garnet/bin/media/render/renderer.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 namespace test {
 
 class FakeVideoRenderer : public Renderer {
@@ -23,22 +24,26 @@ class FakeVideoRenderer : public Renderer {
   // Renderer implementation.
   void Flush(bool hold_frame) override{};
 
-  std::shared_ptr<PayloadAllocator> allocator() override { return nullptr; }
+  std::shared_ptr<media::PayloadAllocator> allocator() override {
+    return nullptr;
+  }
 
-  Demand SupplyPacket(PacketPtr packet) override { return Demand::kPositive; }
+  Demand SupplyPacket(media::PacketPtr packet) override {
+    return Demand::kPositive;
+  }
 
-  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
-      override {
+  const std::vector<std::unique_ptr<media::StreamTypeSet>>&
+  GetSupportedStreamTypes() override {
     return supported_stream_types_;
   }
 
-  void SetStreamType(const StreamType& stream_type) override {
+  void SetStreamType(const media::StreamType& stream_type) override {
     stream_type_ = stream_type.Clone();
   }
 
   void Prime(fxl::Closure callback) override { callback(); }
 
-  void SetTimelineFunction(TimelineFunction timeline_function,
+  void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback) override {
     callback();
   }
@@ -48,9 +53,11 @@ class FakeVideoRenderer : public Renderer {
                        int64_t max_pts) override {}
 
  private:
-  std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
-  std::unique_ptr<StreamType> stream_type_;
+  std::vector<std::unique_ptr<media::StreamTypeSet>> supported_stream_types_;
+  std::unique_ptr<media::StreamType> stream_type_;
 };
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_VIDEO_RENDERER_H_

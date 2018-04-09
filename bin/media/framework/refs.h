@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_REFS_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_REFS_H_
 
 #include <cstddef>
 
-namespace media {
+namespace media_player {
 
 class Graph;
 class StageImpl;
@@ -168,4 +169,6 @@ class OutputRef {
   friend Engine;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_REFS_H_

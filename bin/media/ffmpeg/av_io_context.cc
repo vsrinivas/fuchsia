@@ -13,7 +13,9 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
 
-namespace media {
+using media::Result;
+
+namespace media_player {
 
 void AVIOContextDeleter::operator()(AVIOContext* context) const {
   AvIoContextOpaque* av_io_context =
@@ -174,4 +176,4 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
   return position_;
 }
 
-}  // namespace media
+}  // namespace media_player

@@ -9,7 +9,10 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::StreamType;
+using media::TimelineFunction;
+
+namespace media_player {
 
 // static
 std::unique_ptr<RendererSinkSegment> RendererSinkSegment::Create(
@@ -112,4 +115,4 @@ void RendererSinkSegment::SetProgramRange(uint64_t program,
   renderer_->SetProgramRange(program, min_pts, max_pts);
 }
 
-}  // namespace media
+}  // namespace media_player

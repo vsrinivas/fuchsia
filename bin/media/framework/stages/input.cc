@@ -9,7 +9,9 @@
 #include "garnet/bin/media/framework/engine.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
-namespace media {
+using media::PacketPtr;
+
+namespace media_player {
 
 Input::Input(StageImpl* stage, size_t index)
     : stage_(stage), index_(index), state_(State::kRefusesPacket) {
@@ -94,4 +96,4 @@ void Input::Flush() {
   TakePacket(Demand::kNegative);
 }
 
-}  // namespace media
+}  // namespace media_player

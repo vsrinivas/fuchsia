@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_
 
 #include <list>
 #include <mutex>
@@ -13,7 +14,7 @@
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
+namespace media_player {
 
 // A stage that hosts an ActiveMultistreamSink.
 class ActiveMultistreamSinkStageImpl : public StageImpl,
@@ -32,10 +33,10 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
   Output& output(size_t index) override;
 
-  std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
+  std::shared_ptr<media::PayloadAllocator> PrepareInput(size_t index) override;
 
   void PrepareOutput(size_t index,
-                     std::shared_ptr<PayloadAllocator> allocator,
+                     std::shared_ptr<media::PayloadAllocator> allocator,
                      UpstreamCallback callback) override;
 
   void FlushInput(size_t index,
@@ -76,4 +77,6 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
   std::list<size_t> pending_inputs_ FXL_GUARDED_BY(mutex_);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_

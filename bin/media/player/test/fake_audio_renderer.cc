@@ -5,7 +5,12 @@
 #include "garnet/bin/media/player/test/fake_audio_renderer.h"
 #include "garnet/bin/media/framework/types/audio_stream_type.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::AudioStreamTypeSet;
+using media::Range;
+using media::StreamType;
+
+namespace media_player {
 namespace test {
 
 // static
@@ -21,4 +26,4 @@ FakeAudioRenderer::FakeAudioRenderer() {
 }
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player

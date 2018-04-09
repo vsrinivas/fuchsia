@@ -7,6 +7,7 @@
 #include <thread>
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -22,7 +23,13 @@
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
+using media::Packet;
+using media::PacketPtr;
+using media::Result;
+using media::StreamType;
+using media::TimelineRate;
+
+namespace media_player {
 
 class FfmpegDemuxImpl : public FfmpegDemux {
  public:
@@ -389,7 +396,7 @@ void FfmpegDemuxImpl::SendStatus() {
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
-    metadata = SafeClone(metadata_);
+    metadata = media::SafeClone(metadata_);
     problem_type = problem_type_;
     problem_details = problem_details_;
   }
@@ -431,4 +438,4 @@ TimelineRate FfmpegDemuxImpl::FfmpegDemuxStream::pts_rate() const {
   return pts_rate_;
 }
 
-}  // namespace media
+}  // namespace media_player

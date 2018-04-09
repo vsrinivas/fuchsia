@@ -6,7 +6,10 @@
 
 #include "garnet/bin/media/framework/stages/util.h"
 
-namespace media {
+using media::PacketPtr;
+using media::PayloadAllocator;
+
+namespace media_player {
 
 ActiveMultistreamSourceStageImpl::ActiveMultistreamSourceStageImpl(
     std::shared_ptr<ActiveMultistreamSource> source)
@@ -174,4 +177,4 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
   }
 }
 
-}  // namespace media
+}  // namespace media_player

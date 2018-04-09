@@ -9,7 +9,10 @@
 #include "garnet/bin/media/util/callback_joiner.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::StreamType;
+using media::TimelineFunction;
+
+namespace media_player {
 namespace {
 
 static const Problem kMediaTypeNotSupported{kProblemMediaTypeNotSupported, ""};
@@ -108,7 +111,7 @@ void Player::SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
 }
 
 void Player::Prime(fxl::Closure callback) {
-  std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
+  auto callback_joiner = media::CallbackJoiner::Create();
 
   for (auto& stream : streams_) {
     if (stream.sink_segment_) {
@@ -130,19 +133,19 @@ void Player::SetTimelineFunction(TimelineFunction timeline_function,
   FXL_DCHECK(timeline_function.reference_delta() != 0);
 
   int64_t reference_time = timeline_function.reference_time();
-  if (reference_time == kUnspecifiedTime) {
-    reference_time = Timeline::local_now() + kMinimumLeadTime;
+  if (reference_time == media::kUnspecifiedTime) {
+    reference_time = media::Timeline::local_now() + kMinimumLeadTime;
   }
 
   int64_t subject_time = timeline_function.subject_time();
-  if (subject_time == kUnspecifiedTime) {
+  if (subject_time == media::kUnspecifiedTime) {
     subject_time = timeline_function_(reference_time);
   }
 
   timeline_function_ =
       TimelineFunction(subject_time, reference_time, timeline_function.rate());
 
-  std::shared_ptr<CallbackJoiner> callback_joiner = CallbackJoiner::Create();
+  auto callback_joiner = media::CallbackJoiner::Create();
 
   for (auto& stream : streams_) {
     if (stream.sink_segment_) {
@@ -379,4 +382,4 @@ void Player::ConnectAndPrepareStream(Stream* stream) {
       });
 }
 
-}  // namespace media
+}  // namespace media_player

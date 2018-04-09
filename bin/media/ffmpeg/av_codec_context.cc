@@ -15,7 +15,14 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace media {
+using media::AudioStreamType;
+using media::Bytes;
+using media::StreamType;
+using media::SubpictureStreamType;
+using media::TextStreamType;
+using media::VideoStreamType;
+
+namespace media_player {
 
 namespace {
 
@@ -529,4 +536,4 @@ AvCodecContextPtr AvCodecContext::Create(const StreamType& stream_type) {
   }
 }
 
-}  // namespace media
+}  // namespace media_player

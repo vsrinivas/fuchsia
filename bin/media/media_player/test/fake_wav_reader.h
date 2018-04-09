@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_
 
 #include <vector>
 
-#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 // Fake SeekingReader that 'reads' a synthetic wav file.
 class FakeWavReader : public SeekingReader {
@@ -76,4 +77,6 @@ class FakeWavReader : public SeekingReader {
   uint64_t position_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_WAV_READER_H_

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_AV_PACKET_H_
+#define GARNET_BIN_MEDIA_FFMPEG_AV_PACKET_H_
 
 extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace media {
+namespace media_player {
 namespace ffmpeg {
 
 struct AVPacketDeleter {
@@ -27,4 +28,6 @@ struct AvPacket {
 };
 
 }  // namespace ffmpeg
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_AV_PACKET_H_

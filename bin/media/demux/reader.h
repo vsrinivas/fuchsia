@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_READER_H_
+#define GARNET_BIN_MEDIA_DEMUX_READER_H_
 
 #include <functional>
 #include <limits>
@@ -10,14 +11,15 @@
 
 #include "garnet/bin/media/framework/result.h"
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for objects that read raw data on behalf of demuxes.
 class Reader {
  public:
   using DescribeCallback =
-      std::function<void(Result result, size_t size, bool can_seek)>;
-  using ReadAtCallback = std::function<void(Result result, size_t bytes_read)>;
+      std::function<void(media::Result result, size_t size, bool can_seek)>;
+  using ReadAtCallback =
+      std::function<void(media::Result result, size_t bytes_read)>;
 
   static constexpr size_t kUnknownSize = std::numeric_limits<size_t>::max();
 
@@ -37,4 +39,6 @@ class Reader {
                       ReadAtCallback callback) = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_READER_H_

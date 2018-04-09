@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/framework/engine.h"
 
-namespace media {
+namespace media_player {
 
 Engine::Engine() {}
 
@@ -17,7 +17,7 @@ void Engine::PrepareInput(Input* input) {
     FXL_DCHECK(input);
     FXL_DCHECK(output);
     FXL_DCHECK(!input->prepared());
-    std::shared_ptr<PayloadAllocator> allocator =
+    std::shared_ptr<media::PayloadAllocator> allocator =
         input->stage()->PrepareInput(input->index());
     input->set_prepared(true);
     output->stage()->PrepareOutput(output->index(), allocator, callback);
@@ -42,15 +42,14 @@ void Engine::FlushOutput(Output* output, bool hold_frame) {
     return;
   }
 
-  VisitDownstream(
-      output, [hold_frame](Output* output, Input* input,
-                           StageImpl::DownstreamCallback callback) {
-        FXL_DCHECK(output);
-        FXL_DCHECK(input);
-        FXL_DCHECK(input->prepared());
-        output->stage()->FlushOutput(output->index());
-        input->stage()->FlushInput(input->index(), hold_frame, callback);
-      });
+  VisitDownstream(output, [hold_frame](Output* output, Input* input,
+                                       StageImpl::DownstreamCallback callback) {
+    FXL_DCHECK(output);
+    FXL_DCHECK(input);
+    FXL_DCHECK(input->prepared());
+    output->stage()->FlushOutput(output->index());
+    input->stage()->FlushInput(input->index(), hold_frame, callback);
+  });
 }
 
 void Engine::VisitUpstream(Input* input, const UpstreamVisitor& visitor) {
@@ -95,4 +94,4 @@ void Engine::VisitDownstream(Output* output, const DownstreamVisitor& visitor) {
   }
 }
 
-}  // namespace media
+}  // namespace media_player

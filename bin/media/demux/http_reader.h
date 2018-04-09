@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_HTTP_READER_H_
+#define GARNET_BIN_MEDIA_DEMUX_HTTP_READER_H_
 
 #include <string>
 
@@ -13,7 +14,7 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/app/cpp/application_context.h"
 
-namespace media {
+namespace media_player {
 
 // Reads from a file on behalf of a demux.
 class HttpReader : public Reader {
@@ -40,20 +41,20 @@ class HttpReader : public Reader {
   void ReadFromSocket();
 
   // Completes a pending ReadAt.
-  void CompleteReadAt(Result result, size_t bytes_read);
+  void CompleteReadAt(media::Result result, size_t bytes_read);
 
   // Fails the pending ReadAt.
   void FailReadAt(zx_status_t status);
 
   // Fails the pending ReadAt.
-  void FailReadAt(Result result);
+  void FailReadAt(media::Result result);
 
   // Performs an HTTP load and reads from the resulting socket.
   void LoadAndReadFromSocket();
 
   std::string url_;
   network::URLLoaderPtr url_loader_;
-  Result result_ = Result::kOk;
+  media::Result result_ = media::Result::kOk;
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
   zx::socket socket_;
@@ -69,4 +70,6 @@ class HttpReader : public Reader {
   ReadAtCallback read_at_callback_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_HTTP_READER_H_

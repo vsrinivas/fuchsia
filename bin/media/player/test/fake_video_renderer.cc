@@ -5,7 +5,11 @@
 #include "garnet/bin/media/player/test/fake_video_renderer.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
-namespace media {
+using media::Range;
+using media::StreamType;
+using media::VideoStreamTypeSet;
+
+namespace media_player {
 namespace test {
 
 // static
@@ -20,4 +24,4 @@ FakeVideoRenderer::FakeVideoRenderer() {
 }
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player

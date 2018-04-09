@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_MODELS_NODE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_MODELS_NODE_H_
 
 #include <atomic>
 
@@ -11,7 +12,7 @@
 #include "garnet/bin/media/framework/payload_allocator.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace media {
+namespace media_player {
 
 class GenericNode {
  public:
@@ -52,4 +53,6 @@ class Node : public GenericNode {
   TStage* stage() { return reinterpret_cast<TStage*>(generic_stage()); }
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_MODELS_NODE_H_

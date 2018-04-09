@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace media {
+namespace media_player {
 namespace {
 
 // Tests that a Serializer behaves as expected in initial state.
@@ -102,4 +102,4 @@ TEST(SerializationTest, RoundTrip) {
 }
 
 }  // namespace
-}  // namespace media
+}  // namespace media_player

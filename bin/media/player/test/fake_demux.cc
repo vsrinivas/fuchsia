@@ -8,7 +8,12 @@
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::StreamType;
+using media::TimelineRate;
+using media::VideoStreamType;
+
+namespace media_player {
 namespace test {
 
 // static
@@ -36,4 +41,4 @@ FakeDemux::FakeDemux() {
 }
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_FORMATTING_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_FORMATTING_H_
 
 #include <ostream>
 
@@ -49,7 +50,6 @@ inline std::ostream& outdent(std::ostream& os) {
 // The following overloads don't add newlines.
 
 std::ostream& operator<<(std::ostream& os, Result value);
-std::ostream& operator<<(std::ostream& os, Demand value);
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value);
 std::ostream& operator<<(std::ostream& os, StreamType::Medium value);
 std::ostream& operator<<(std::ostream& os, AudioStreamType::SampleFormat value);
@@ -118,3 +118,13 @@ std::ostream& operator<<(std::ostream& os, AsInlineVector<T> value) {
 }
 
 }  // namespace media
+
+namespace media_player {
+
+// The following overloads don't add newlines.
+
+std::ostream& operator<<(std::ostream& os, Demand value);
+
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_FORMATTING_H_

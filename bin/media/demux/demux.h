@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_DEMUX_H_
+#define GARNET_BIN_MEDIA_DEMUX_DEMUX_H_
 
 #include <memory>
 #include <vector>
@@ -14,7 +15,7 @@
 #include "garnet/bin/media/framework/result.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for sources that parse input from a reader and
 // produce one or more output streams.
@@ -35,9 +36,9 @@ class Demux : public ActiveMultistreamSource {
 
     virtual size_t index() const = 0;
 
-    virtual std::unique_ptr<StreamType> stream_type() const = 0;
+    virtual std::unique_ptr<media::StreamType> stream_type() const = 0;
 
-    virtual TimelineRate pts_rate() const = 0;
+    virtual media::TimelineRate pts_rate() const = 0;
   };
 
   // Creates a Demux object for a given reader.
@@ -50,7 +51,7 @@ class Demux : public ActiveMultistreamSource {
 
   // Calls the callback when the initial streams and metadata have
   // established.
-  virtual void WhenInitialized(std::function<void(Result)> callback) = 0;
+  virtual void WhenInitialized(std::function<void(media::Result)> callback) = 0;
 
   // Gets the stream collection. This method should not be called until the
   // WhenInitialized callback has been called.
@@ -61,4 +62,6 @@ class Demux : public ActiveMultistreamSource {
   virtual void Seek(int64_t position, SeekCallback callback) = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_DEMUX_H_

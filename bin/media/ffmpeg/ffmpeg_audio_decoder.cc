@@ -8,7 +8,11 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
+using media::Packet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+
+namespace media_player {
 
 // static
 std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(
@@ -21,15 +25,16 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   FXL_DCHECK(context());
   FXL_DCHECK(context()->channels > 0);
 
-  std::unique_ptr<StreamType> stream_type = output_stream_type();
+  std::unique_ptr<media::StreamType> stream_type = output_stream_type();
   FXL_DCHECK(stream_type);
   FXL_DCHECK(stream_type->audio());
-  set_pts_rate(TimelineRate(stream_type->audio()->frames_per_second(), 1));
+  set_pts_rate(
+      media::TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
   if (av_sample_fmt_is_planar(context()->sample_fmt)) {
     // Prepare for interleaving.
     stream_type_ = std::move(stream_type);
-    lpcm_util_ = LpcmUtil::Create(*stream_type_->audio());
+    lpcm_util_ = media::LpcmUtil::Create(*stream_type_->audio());
   }
 }
 
@@ -161,4 +166,4 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   }
 }
 
-}  // namespace media
+}  // namespace media_player

@@ -9,7 +9,7 @@
 
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 
-namespace media {
+namespace media_player {
 
 // static
 std::shared_ptr<FidlPacketConsumer> FidlPacketConsumer::Create() {
@@ -75,7 +75,7 @@ bool FidlPacketConsumer::can_accept_allocator() const {
 }
 
 void FidlPacketConsumer::set_allocator(
-    std::shared_ptr<PayloadAllocator> allocator) {
+    std::shared_ptr<media::PayloadAllocator> allocator) {
   FXL_DLOG(ERROR) << "set_allocator called on FidlPacketConsumer";
 }
 
@@ -91,16 +91,17 @@ void FidlPacketConsumer::SetDownstreamDemand(Demand demand) {
 
 FidlPacketConsumer::PacketImpl::PacketImpl(
     std::unique_ptr<SuppliedPacket> supplied_packet)
-    : Packet(supplied_packet->packet().pts,
-             TimelineRate(supplied_packet->packet().pts_rate_ticks,
-                          supplied_packet->packet().pts_rate_seconds),
-             supplied_packet->packet().flags & kFlagKeyframe,
-             supplied_packet->packet().flags & kFlagEos,
-             supplied_packet->payload_size(),
-             supplied_packet->payload()),
+    : media::Packet(
+          supplied_packet->packet().pts,
+          media::TimelineRate(supplied_packet->packet().pts_rate_ticks,
+                              supplied_packet->packet().pts_rate_seconds),
+          supplied_packet->packet().flags & media::kFlagKeyframe,
+          supplied_packet->packet().flags & media::kFlagEos,
+          supplied_packet->payload_size(),
+          supplied_packet->payload()),
       supplied_packet_(std::move(supplied_packet)) {
   if (supplied_packet_->packet().revised_media_type) {
-    SetRevisedStreamType(fxl::To<std::unique_ptr<StreamType>>(
+    SetRevisedStreamType(fxl::To<std::unique_ptr<media::StreamType>>(
         *supplied_packet_->packet().revised_media_type));
   }
 }
@@ -109,4 +110,4 @@ uint64_t FidlPacketConsumer::PacketImpl::GetLabel() {
   return supplied_packet_->label();
 }
 
-}  // namespace media
+}  // namespace media_player

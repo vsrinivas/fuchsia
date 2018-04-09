@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_OUTPUT_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_OUTPUT_H_
 
 #include "garnet/bin/media/framework/models/demand.h"
 #include "garnet/bin/media/framework/packet.h"
 #include "garnet/bin/media/framework/payload_allocator.h"
 
-namespace media {
+namespace media_player {
 
 class StageImpl;
 class Engine;
@@ -42,7 +43,8 @@ class Output {
   // Sets the allocator the output must use to copy the payload of output
   // packets. This is used when the connected input insists that a specific
   // allocator be used, but the stage can't use it.
-  void SetCopyAllocator(std::shared_ptr<PayloadAllocator> copy_allocator);
+  void SetCopyAllocator(
+      std::shared_ptr<media::PayloadAllocator> copy_allocator);
 
   // Demand signalled from downstream, or kNegative if the downstream input
   // is currently holding a packet.
@@ -50,13 +52,15 @@ class Output {
 
   // Supplies a packet to mate. Called only by StageImpl::Update
   // implementations.
-  void SupplyPacket(PacketPtr packet) const;
+  void SupplyPacket(media::PacketPtr packet) const;
 
  private:
   StageImpl* stage_;
   size_t index_;
   Input* mate_ = nullptr;
-  std::shared_ptr<PayloadAllocator> copy_allocator_ = nullptr;
+  std::shared_ptr<media::PayloadAllocator> copy_allocator_ = nullptr;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_OUTPUT_H_

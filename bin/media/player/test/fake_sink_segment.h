@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SINK_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SINK_SEGMENT_H_
 
 #include "garnet/bin/media/player/sink_segment.h"
 
-namespace media {
+namespace media_player {
 
 // A sink segment for testing the player.
 class FakeSinkSegment : public SinkSegment {
@@ -28,7 +29,7 @@ class FakeSinkSegment : public SinkSegment {
 
   void WillDeprovision() override { will_deprovision_called_ = true; }
 
-  void Connect(const StreamType& type,
+  void Connect(const media::StreamType& type,
                OutputRef output,
                fxl::Closure callback) override {
     connect_called_ = true;
@@ -50,7 +51,7 @@ class FakeSinkSegment : public SinkSegment {
     prime_call_param_callback_ = callback;
   }
 
-  void SetTimelineFunction(TimelineFunction timeline_function,
+  void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback) override {
     set_timeline_function_called_ = true;
     set_timeline_function_call_param_timeline_function_ = timeline_function;
@@ -92,7 +93,7 @@ class FakeSinkSegment : public SinkSegment {
   bool will_deprovision_called_ = false;
 
   bool connect_called_ = false;
-  const StreamType* connect_call_param_type_;
+  const media::StreamType* connect_call_param_type_;
   OutputRef connect_call_param_output_;
   fxl::Closure connect_call_param_callback_;
 
@@ -108,7 +109,7 @@ class FakeSinkSegment : public SinkSegment {
   fxl::Closure prime_call_param_callback_;
 
   bool set_timeline_function_called_ = false;
-  TimelineFunction set_timeline_function_call_param_timeline_function_;
+  media::TimelineFunction set_timeline_function_call_param_timeline_function_;
   fxl::Closure set_timeline_function_call_param_callback_;
 
   bool set_program_range_called_ = false;
@@ -119,4 +120,6 @@ class FakeSinkSegment : public SinkSegment {
   bool end_of_stream_ = false;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SINK_SEGMENT_H_

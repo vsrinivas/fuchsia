@@ -10,7 +10,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  media::NetMediaServiceImpl impl(
+  media_player::NetMediaServiceImpl impl(
       component::ApplicationContext::CreateFromStartupInfo());
 
   loop.Run();

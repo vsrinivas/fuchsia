@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_SPARSE_BYTE_BUFFER_H_
+#define GARNET_BIN_MEDIA_DEMUX_SPARSE_BYTE_BUFFER_H_
 
 #include <map>
 #include <vector>
 
-namespace media {
+namespace media_player {
 
 class SparseByteBuffer {
  public:
@@ -99,4 +100,6 @@ bool operator==(const SparseByteBuffer::Region& a,
 bool operator!=(const SparseByteBuffer::Region& a,
                 const SparseByteBuffer::Region& b);
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_SPARSE_BYTE_BUFFER_H_

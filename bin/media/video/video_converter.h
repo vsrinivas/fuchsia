@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_VIDEO_VIDEO_CONVERTER_H_
+#define GARNET_BIN_MEDIA_VIDEO_VIDEO_CONVERTER_H_
 
 #include <memory>
 
-#include "garnet/bin/media/framework/types/video_stream_type.h"
-#include <fuchsia/cpp/media.h>
 #include <fuchsia/cpp/geometry.h>
+#include <fuchsia/cpp/media.h>
+#include "garnet/bin/media/framework/types/video_stream_type.h"
 
 namespace media {
 
@@ -52,3 +53,5 @@ class VideoConverter {
 };
 
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_VIDEO_VIDEO_CONVERTER_H_

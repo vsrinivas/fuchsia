@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_FIDL_READER_H_
+#define GARNET_BIN_MEDIA_DEMUX_FIDL_READER_H_
 
 #include <atomic>
 #include <memory>
 
-#include <fuchsia/cpp/media.h>
-#include <lib/async/cpp/wait.h>
+#include <fuchsia/cpp/media_player.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
 
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/util/incident.h"
 
-namespace media {
+namespace media_player {
 
 // Reads raw data from a SeekingReader service.
 class FidlReader : public Reader,
@@ -48,13 +49,13 @@ class FidlReader : public Reader,
   void ReadFromSocket();
 
   // Completes a ReadAt operation by calling the read_at_callback_.
-  void CompleteReadAt(Result result, size_t bytes_read = 0);
+  void CompleteReadAt(media::Result result, size_t bytes_read = 0);
 
   // Shuts down the consumer handle and calls CompleteReadAt.
   void FailReadAt(zx_status_t status);
 
   SeekingReaderPtr seeking_reader_;
-  Result result_ = Result::kOk;
+  media::Result result_ = media::Result::kOk;
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
   Incident ready_;
@@ -71,4 +72,6 @@ class FidlReader : public Reader,
   std::unique_ptr<async::Wait> waiter_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_FIDL_READER_H_

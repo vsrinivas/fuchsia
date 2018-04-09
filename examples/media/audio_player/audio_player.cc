@@ -19,6 +19,11 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/url/gurl.h"
 
+using media_player::MediaPlayer;
+using media_player::MediaPlayerStatus;
+using media_player::MediaPlayerStatusPtr;
+using media_player::NetMediaService;
+
 namespace examples {
 
 AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
@@ -31,14 +36,13 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
       component::ApplicationContext::CreateFromStartupInfo();
 
   media_player_ =
-      application_context->ConnectToEnvironmentService<media::MediaPlayer>();
+      application_context->ConnectToEnvironmentService<MediaPlayer>();
 
   if (!params.service_name().empty()) {
     auto net_media_service =
-        application_context
-            ->ConnectToEnvironmentService<media::NetMediaService>();
+        application_context->ConnectToEnvironmentService<NetMediaService>();
 
-    fidl::InterfaceHandle<media::MediaPlayer> media_player_handle;
+    fidl::InterfaceHandle<MediaPlayer> media_player_handle;
     media_player_->AddBinding(media_player_handle.NewRequest());
 
     net_media_service->PublishMediaPlayer(params.service_name(),
@@ -64,7 +68,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 AudioPlayer::~AudioPlayer() {}
 
 void AudioPlayer::HandleStatusUpdates(uint64_t version,
-                                      media::MediaPlayerStatusPtr status) {
+                                      MediaPlayerStatusPtr status) {
   if (status) {
     // Process status received from the player.
     if (status->end_of_stream && quit_when_done_) {
@@ -114,7 +118,7 @@ void AudioPlayer::HandleStatusUpdates(uint64_t version,
 
   // Request a status update.
   media_player_->GetStatus(
-      version, [this](uint64_t version, media::MediaPlayerStatus status) {
+      version, [this](uint64_t version, MediaPlayerStatus status) {
         HandleStatusUpdates(version, fidl::MakeOptional(std::move(status)));
       });
 }

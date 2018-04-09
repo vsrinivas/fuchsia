@@ -6,12 +6,12 @@
 
 #include <fcntl.h>
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/util/file_channel.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/url/gurl.h"
 
-namespace media {
+namespace media_player {
 
 // static
 std::shared_ptr<MediaPlayerNetPublisher> MediaPlayerNetPublisher::Create(
@@ -43,4 +43,4 @@ MediaPlayerNetPublisher::~MediaPlayerNetPublisher() {
   media_player_.Unbind();
 }
 
-}  // namespace media
+}  // namespace media_player

@@ -7,7 +7,9 @@
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::VideoStreamType;
+
+namespace media_player {
 
 namespace {
 
@@ -108,4 +110,4 @@ bool FfmpegVideoFrameLayout::Update(const AVCodecContext& context) {
   return true;
 }
 
-}  // namespace media
+}  // namespace media_player

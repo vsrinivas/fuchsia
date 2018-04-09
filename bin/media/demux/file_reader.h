@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_FILE_READER_H_
+#define GARNET_BIN_MEDIA_DEMUX_FILE_READER_H_
 
 #include <lib/async/dispatcher.h>
 #include <zx/channel.h>
@@ -10,7 +11,7 @@
 #include "garnet/bin/media/demux/reader.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace media {
+namespace media_player {
 
 // Reads from a file on behalf of a demux.
 class FileReader : public Reader {
@@ -32,8 +33,10 @@ class FileReader : public Reader {
  private:
   async_t* async_;
   fxl::UniqueFD fd_;
-  Result result_ = Result::kOk;
+  media::Result result_ = media::Result::kOk;
   uint64_t size_ = kUnknownSize;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_FILE_READER_H_

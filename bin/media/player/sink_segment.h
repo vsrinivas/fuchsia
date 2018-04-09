@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_SINK_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_SINK_SEGMENT_H_
 
 #include "garnet/bin/media/framework/graph.h"
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/player/segment.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
+namespace media_player {
 
 // A graph segment that delivers an elementary stream to one or more
 // destinations.
@@ -25,7 +26,7 @@ class SinkSegment : public Segment {
   // Connects (or reconnects) this sink segment to the specified output and
   // sets the stream type. After the callback is called, success can be
   // determined by calling |connected|.
-  virtual void Connect(const StreamType& type,
+  virtual void Connect(const media::StreamType& type,
                        OutputRef output,
                        fxl::Closure callback) = 0;
 
@@ -49,7 +50,7 @@ class SinkSegment : public Segment {
   virtual void Prime(fxl::Closure callback) = 0;
 
   // Sets the timeline function.
-  virtual void SetTimelineFunction(TimelineFunction timeline_function,
+  virtual void SetTimelineFunction(media::TimelineFunction timeline_function,
                                    fxl::Closure callback) = 0;
 
   // Sets a program range for this sink segment.
@@ -61,4 +62,6 @@ class SinkSegment : public Segment {
   virtual bool end_of_stream() const = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_SINK_SEGMENT_H_

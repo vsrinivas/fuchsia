@@ -5,10 +5,10 @@
 #include "garnet/bin/media/demux/demux.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_demux.h"
 
-namespace media {
+namespace media_player {
 
 std::shared_ptr<Demux> Demux::Create(std::shared_ptr<Reader> reader) {
   return FfmpegDemux::Create(reader);
 }
 
-}  // namespace media
+}  // namespace media_player

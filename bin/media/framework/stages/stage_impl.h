@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_STAGE_IMPL_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_STAGE_IMPL_H_
 
 #include <atomic>
 #include <mutex>
@@ -19,7 +20,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
+namespace media_player {
 
 // Host for a source, sink or transform.
 class StageImpl : public std::enable_shared_from_this<StageImpl> {
@@ -50,14 +51,15 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   // Prepares the input for operation. Returns nullptr unless the connected
   // output must use a specific allocator, in which case it returns that
   // allocator.
-  virtual std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) = 0;
+  virtual std::shared_ptr<media::PayloadAllocator> PrepareInput(
+      size_t index) = 0;
 
   // Prepares the output for operation, passing an allocator that must be used
   // by the output or nullptr if there is no such requirement. The callback is
   // used to indicate what inputs are ready to be prepared as a consequence of
   // preparing the output.
   virtual void PrepareOutput(size_t index,
-                             std::shared_ptr<PayloadAllocator> allocator,
+                             std::shared_ptr<media::PayloadAllocator> allocator,
                              UpstreamCallback callback) = 0;
 
   // Unprepares the input. The default implementation does nothing.
@@ -139,4 +141,6 @@ class StageImpl : public std::enable_shared_from_this<StageImpl> {
   bool tasks_suspended_ FXL_GUARDED_BY(tasks_mutex_) = false;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_STAGE_IMPL_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_AV_IO_CONTEXT_H_
+#define GARNET_BIN_MEDIA_FFMPEG_AV_IO_CONTEXT_H_
 
 #include <condition_variable>
 #include <mutex>
@@ -14,7 +15,7 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avio.h"
 }
 
-namespace media {
+namespace media_player {
 
 struct AVIOContextDeleter {
   void operator()(AVIOContext* context) const;
@@ -25,8 +26,8 @@ using AvIoContextPtr = std::unique_ptr<AVIOContext, AVIOContextDeleter>;
 class AvIoContext {
  public:
   // Creates an ffmpeg avio_context for a given reader.
-  static Result Create(std::shared_ptr<Reader> reader,
-                       AvIoContextPtr* context_ptr_out);
+  static media::Result Create(std::shared_ptr<Reader> reader,
+                              AvIoContextPtr* context_ptr_out);
 };
 
 // 'Opaque' context bound to ffmpeg AVIOContext.
@@ -83,7 +84,7 @@ class AvIoContextOpaque {
   }
 
   std::shared_ptr<Reader> reader_;
-  Result describe_result_;
+  media::Result describe_result_;
   int64_t size_;
   bool can_seek_;
   int64_t position_ = 0;
@@ -94,4 +95,6 @@ class AvIoContextOpaque {
   friend class AvIoContext;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_AV_IO_CONTEXT_H_

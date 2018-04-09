@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_METADATA_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_METADATA_H_
 
 #include <memory>
 #include <string>
@@ -10,7 +11,7 @@
 #include "garnet/bin/media/util/safe_clone.h"
 #include "lib/fxl/macros.h"
 
-namespace media {
+namespace media_player {
 
 class Metadata;
 
@@ -67,4 +68,6 @@ class Metadata {
   FXL_DISALLOW_COPY_AND_ASSIGN(Metadata);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_METADATA_H_

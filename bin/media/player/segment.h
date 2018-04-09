@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_SEGMENT_H_
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 #include <lib/async/dispatcher.h>
 
 #include "garnet/bin/media/framework/graph.h"
@@ -12,7 +14,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 // A graph segment.
 //
@@ -81,4 +83,6 @@ class Segment {
   ProblemPtr problem_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_SEGMENT_H_

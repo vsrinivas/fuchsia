@@ -7,7 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/zx/socket.h>
 
-namespace media {
+namespace media_player {
 
 FakeWavReader::FakeWavReader() : binding_(this) {
   WriteHeader();
@@ -50,7 +50,7 @@ void FakeWavReader::Bind(fidl::InterfaceRequest<SeekingReader> request) {
 }
 
 void FakeWavReader::Describe(DescribeCallback callback) {
-  callback(MediaResult::OK, size_, true);
+  callback(media::MediaResult::OK, size_, true);
 }
 
 void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
@@ -61,7 +61,7 @@ void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   zx::socket other_socket;
   zx_status_t status = zx::socket::create(0u, &socket_, &other_socket);
   FXL_DCHECK(status == ZX_OK);
-  callback(MediaResult::OK, std::move(other_socket));
+  callback(media::MediaResult::OK, std::move(other_socket));
 
   position_ = position;
 
@@ -82,8 +82,7 @@ void FakeWavReader::WriteToSocket() {
 
     if (status == ZX_ERR_SHOULD_WAIT) {
       waiter_ = std::make_unique<async::Wait>(
-          socket_.get(),
-          ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
+          socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
       waiter_->set_handler([this](async_t* async, async::Wait* wait,
                                   zx_status_t status,
@@ -147,4 +146,4 @@ uint8_t FakeWavReader::GetByte(size_t position) {
   return static_cast<uint8_t>(position ^ (position >> 8));
 }
 
-}  // namespace media
+}  // namespace media_player

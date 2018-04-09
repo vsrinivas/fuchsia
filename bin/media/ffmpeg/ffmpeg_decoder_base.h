@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_BASE_H_
+#define GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_BASE_H_
 
 #include <limits>
 
@@ -14,7 +15,7 @@ extern "C" {
 #include "third_party/ffmpeg/libavcodec/avcodec.h"
 }
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for ffmpeg-based decoders.
 class FfmpegDecoderBase : public Decoder {
@@ -24,24 +25,25 @@ class FfmpegDecoderBase : public Decoder {
   ~FfmpegDecoderBase() override;
 
   // Decoder implementation.
-  std::unique_ptr<StreamType> output_stream_type() override;
+  std::unique_ptr<media::StreamType> output_stream_type() override;
 
   // Transform implementation.
   void Flush() override;
 
-  bool TransformPacket(const PacketPtr& input,
-                       bool new_input,
-                       const std::shared_ptr<PayloadAllocator>& allocator,
-                       PacketPtr* output) override;
+  bool TransformPacket(
+      const media::PacketPtr& input,
+      bool new_input,
+      const std::shared_ptr<media::PayloadAllocator>& allocator,
+      media::PacketPtr* output) override;
 
  protected:
-  class DecoderPacket : public Packet {
+  class DecoderPacket : public media::Packet {
    public:
-    static PacketPtr Create(int64_t pts,
-                            TimelineRate pts_rate,
-                            bool keyframe,
-                            AVBufferRef* av_buffer_ref,
-                            FfmpegDecoderBase* owner) {
+    static media::PacketPtr Create(int64_t pts,
+                                   media::TimelineRate pts_rate,
+                                   bool keyframe,
+                                   AVBufferRef* av_buffer_ref,
+                                   FfmpegDecoderBase* owner) {
       return std::make_shared<DecoderPacket>(pts, pts_rate, keyframe,
                                              av_buffer_ref, owner);
     }
@@ -49,16 +51,16 @@ class FfmpegDecoderBase : public Decoder {
     ~DecoderPacket() override;
 
     DecoderPacket(int64_t pts,
-                  TimelineRate pts_rate,
+                  media::TimelineRate pts_rate,
                   bool keyframe,
                   AVBufferRef* av_buffer_ref,
                   FfmpegDecoderBase* owner)
-        : Packet(pts,
-                 pts_rate,
-                 keyframe,
-                 false,
-                 static_cast<size_t>(av_buffer_ref->size),
-                 av_buffer_ref->data),
+        : media::Packet(pts,
+                        pts_rate,
+                        keyframe,
+                        false,
+                        static_cast<size_t>(av_buffer_ref->size),
+                        av_buffer_ref->data),
           av_buffer_ref_(av_buffer_ref),
           owner_(owner) {
       FXL_DCHECK(av_buffer_ref->size >= 0);
@@ -71,19 +73,19 @@ class FfmpegDecoderBase : public Decoder {
 
   // Called when a new input packet is about to be processed. The default
   // implementation does nothing.
-  virtual void OnNewInputPacket(const PacketPtr& packet);
+  virtual void OnNewInputPacket(const media::PacketPtr& packet);
 
   // Fills in |av_frame|, probably using an |AVBuffer| allocated via
   // CreateAVBuffer. |av_codec_context| may be distinct from context() and
   // should be used when a codec context is required.
   virtual int BuildAVFrame(const AVCodecContext& av_codec_context,
                            AVFrame* av_frame,
-                           PayloadAllocator* allocator) = 0;
+                           media::PayloadAllocator* allocator) = 0;
 
   // Creates a Packet from av_frame.
-  virtual PacketPtr CreateOutputPacket(
+  virtual media::PacketPtr CreateOutputPacket(
       const AVFrame& av_frame,
-      const std::shared_ptr<PayloadAllocator>& allocator) = 0;
+      const std::shared_ptr<media::PayloadAllocator>& allocator) = 0;
 
   // The ffmpeg codec context.
   const AvCodecContextPtr& context() { return av_codec_context_; }
@@ -96,15 +98,15 @@ class FfmpegDecoderBase : public Decoder {
   void set_next_pts(int64_t value) { next_pts_ = value; }
 
   // Gets the current PTS rate value.
-  TimelineRate pts_rate() { return pts_rate_; }
+  media::TimelineRate pts_rate() { return pts_rate_; }
 
   // Gets the PTS rate value.
-  void set_pts_rate(TimelineRate value) { pts_rate_ = value; }
+  void set_pts_rate(media::TimelineRate value) { pts_rate_ = value; }
 
   // Creates an AVBuffer.
   AVBufferRef* CreateAVBuffer(uint8_t* payload_buffer,
                               size_t payload_buffer_size,
-                              PayloadAllocator* allocator) {
+                              media::PayloadAllocator* allocator) {
     FXL_DCHECK(payload_buffer_size <=
                static_cast<size_t>(std::numeric_limits<int>::max()));
     return av_buffer_create(payload_buffer,
@@ -122,14 +124,16 @@ class FfmpegDecoderBase : public Decoder {
   static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);
 
   AvCodecContextPtr av_codec_context_;
-  ffmpeg::AvFramePtr av_frame_ptr_;
-  int64_t next_pts_ = Packet::kUnknownPts;
-  TimelineRate pts_rate_;
+  media::ffmpeg::AvFramePtr av_frame_ptr_;
+  int64_t next_pts_ = media::Packet::kUnknownPts;
+  media::TimelineRate pts_rate_;
 
   // The allocator used by avcodec_send_packet and avcodec_receive_frame to
   // provide context for AllocateBufferForAvFrame. This is set only during
   // those calls.
-  std::shared_ptr<PayloadAllocator> allocator_;
+  std::shared_ptr<media::PayloadAllocator> allocator_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DECODER_BASE_H_

@@ -9,11 +9,15 @@
 #include "garnet/bin/media/ffmpeg/av_codec_context.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::Packet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+
+namespace media_player {
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
     : av_codec_context_(std::move(av_codec_context)),
-      av_frame_ptr_(ffmpeg::AvFrame::Create()) {
+      av_frame_ptr_(media::ffmpeg::AvFrame::Create()) {
   FXL_DCHECK(av_codec_context_);
   av_codec_context_->opaque = this;
   av_codec_context_->get_buffer2 = AllocateBufferForAvFrame;
@@ -22,7 +26,7 @@ FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
 
 FfmpegDecoderBase::~FfmpegDecoderBase() {}
 
-std::unique_ptr<StreamType> FfmpegDecoderBase::output_stream_type() {
+std::unique_ptr<media::StreamType> FfmpegDecoderBase::output_stream_type() {
   return AvCodecContext::GetStreamType(*av_codec_context_);
 }
 
@@ -171,4 +175,4 @@ FfmpegDecoderBase::DecoderPacket::~DecoderPacket() {
   });
 }
 
-}  // namespace media
+}  // namespace media_player

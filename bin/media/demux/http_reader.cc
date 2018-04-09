@@ -11,7 +11,9 @@
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::Result;
+
+namespace media_player {
 namespace {
 
 const char* kContentLengthHeaderName = "Content-Length";
@@ -137,11 +139,9 @@ void HttpReader::ReadFromSocket() {
 
     if (status == ZX_ERR_SHOULD_WAIT) {
       waiter_ = std::make_unique<async::Wait>(
-          socket_.get(),
-          ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
+          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async,
-                                  async::Wait* wait,
+      waiter_->set_handler([this](async_t* async, async::Wait* wait,
                                   zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
@@ -246,4 +246,4 @@ void HttpReader::LoadAndReadFromSocket() {
   });
 }
 
-}  // namespace media
+}  // namespace media_player

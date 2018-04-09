@@ -5,6 +5,7 @@
 #include "garnet/bin/media/media_player/media_player_impl.h"
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 #include <lib/async/default.h>
 
 #include "garnet/bin/media/demux/fidl_reader.h"
@@ -23,7 +24,17 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
-namespace media {
+using media::AudioRenderer;
+using media::AudioRenderer2Ptr;
+using media::AudioServer;
+using media::kMaxTime;
+using media::kUnspecifiedTime;
+using media::MediaRenderer;
+using media::SafeClone;
+using media::StreamType;
+using media::Timeline;
+
+namespace media_player {
 
 // static
 std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
@@ -320,8 +331,8 @@ void MediaPlayerImpl::SetTimelineFunction(float rate,
                                           int64_t reference_time,
                                           fxl::Closure callback) {
   player_.SetTimelineFunction(
-      TimelineFunction(transform_subject_time_, reference_time,
-                       TimelineRate(rate)),
+      media::TimelineFunction(transform_subject_time_, reference_time,
+                              media::TimelineRate(rate)),
       callback);
   transform_subject_time_ = kUnspecifiedTime;
   status_publisher_.SendUpdates();
@@ -414,4 +425,4 @@ void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-}  // namespace media
+}  // namespace media_player

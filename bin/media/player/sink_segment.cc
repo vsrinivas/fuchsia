@@ -6,10 +6,10 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 SinkSegment::SinkSegment() {}
 
 SinkSegment::~SinkSegment() {}
 
-}  // namespace media
+}  // namespace media_player

@@ -9,6 +9,9 @@
 #include "garnet/bin/media/framework/types/text_stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
+using media_player::MediaMetadata;
+using media_player::MediaMetadataPtr;
+
 namespace fxl {
 
 namespace {
@@ -567,22 +570,22 @@ TypeConverter<std::unique_ptr<media::StreamTypeSet>,
   return nullptr;
 }
 
-media::MediaMetadataPtr
-TypeConverter<media::MediaMetadataPtr, std::unique_ptr<media::Metadata>>::
-    Convert(const std::unique_ptr<media::Metadata>& input) {
-  return input == nullptr ? nullptr : fxl::To<media::MediaMetadataPtr>(*input);
+MediaMetadataPtr
+TypeConverter<MediaMetadataPtr, std::unique_ptr<media_player::Metadata>>::
+    Convert(const std::unique_ptr<media_player::Metadata>& input) {
+  return input == nullptr ? nullptr : fxl::To<MediaMetadataPtr>(*input);
 }
 
-media::MediaMetadataPtr
-TypeConverter<media::MediaMetadataPtr, const media::Metadata*>::Convert(
-    const media::Metadata* input) {
-  return input == nullptr ? nullptr : fxl::To<media::MediaMetadataPtr>(*input);
+MediaMetadataPtr
+TypeConverter<MediaMetadataPtr, const media_player::Metadata*>::Convert(
+    const media_player::Metadata* input) {
+  return input == nullptr ? nullptr : fxl::To<MediaMetadataPtr>(*input);
 }
 
-media::MediaMetadataPtr
-TypeConverter<media::MediaMetadataPtr, media::Metadata>::Convert(
-    const media::Metadata& input) {
-  media::MediaMetadataPtr result = media::MediaMetadata::New();
+MediaMetadataPtr
+TypeConverter<MediaMetadataPtr, media_player::Metadata>::Convert(
+    const media_player::Metadata& input) {
+  auto result = media_player::MediaMetadata::New();
   result->duration = input.duration_ns();
   result->title = input.title().empty() ? fidl::StringPtr()
                                         : fidl::StringPtr(input.title());
@@ -601,16 +604,16 @@ TypeConverter<media::MediaMetadataPtr, media::Metadata>::Convert(
   return result;
 }
 
-std::unique_ptr<media::Metadata> TypeConverter<
-    std::unique_ptr<media::Metadata>,
-    media::MediaMetadataPtr>::Convert(const media::MediaMetadataPtr& input) {
+std::unique_ptr<media_player::Metadata>
+TypeConverter<std::unique_ptr<media_player::Metadata>,
+              MediaMetadataPtr>::Convert(const MediaMetadataPtr& input) {
   if (!input) {
     return nullptr;
   }
 
-  return media::Metadata::Create(input->duration, input->title, input->artist,
-                                 input->album, input->publisher, input->genre,
-                                 input->composer);
+  return media_player::Metadata::Create(
+      input->duration, input->title, input->artist, input->album,
+      input->publisher, input->genre, input->composer);
 }
 
 fidl::VectorPtr<uint8_t>

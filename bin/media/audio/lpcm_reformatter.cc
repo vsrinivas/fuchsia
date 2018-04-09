@@ -6,7 +6,13 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::Packet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+using media::StreamType;
+
+namespace media_player {
 
 // LpcmReformatter implementation that accepts samples of type TIn and
 // produces samples of type TOut.
@@ -296,4 +302,4 @@ bool LpcmReformatterImpl<TIn, TOut>::TransformPacket(
   return true;
 }
 
-}  // namespace media
+}  // namespace media_player

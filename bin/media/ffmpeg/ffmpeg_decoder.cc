@@ -8,9 +8,11 @@
 #include "garnet/bin/media/ffmpeg/ffmpeg_audio_decoder.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_video_decoder.h"
 
-namespace media {
+using media::Result;
 
-Result FfmpegDecoder::Create(const StreamType& stream_type,
+namespace media_player {
+
+Result FfmpegDecoder::Create(const media::StreamType& stream_type,
                              std::shared_ptr<Decoder>* decoder_out) {
   FXL_DCHECK(decoder_out);
 
@@ -48,4 +50,4 @@ Result FfmpegDecoder::Create(const StreamType& stream_type,
   return Result::kOk;
 }
 
-}  // namespace media
+}  // namespace media_player

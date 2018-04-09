@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
+#define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
 
+#include <fuchsia/cpp/media_player.h>
 #include "garnet/bin/media/util/factory_service_base.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
 
-namespace media {
+namespace media_player {
 
 class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
                             public NetMediaService {
@@ -35,4 +36,6 @@ class NetMediaServiceImpl : public FactoryServiceBase<NetMediaServiceImpl>,
   FXL_DISALLOW_COPY_AND_ASSIGN(NetMediaServiceImpl);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_

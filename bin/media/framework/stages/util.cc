@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/framework/stages/util.h"
 
-namespace media {
+namespace media_player {
 
 bool HasPositiveDemand(const std::vector<Output>& outputs) {
   for (const Output& output : outputs) {
@@ -16,4 +16,4 @@ bool HasPositiveDemand(const std::vector<Output>& outputs) {
   return false;
 }
 
-}  // namespace media
+}  // namespace media_player

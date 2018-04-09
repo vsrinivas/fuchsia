@@ -5,6 +5,8 @@
 #include <string>
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
@@ -50,27 +52,29 @@ int main(int argc, const char** argv) {
       component::ApplicationContext::CreateFromStartupInfo();
 
   if (transient) {
-    std::unique_ptr<media::MediaPlayerImpl> player;
-    application_context->outgoing_services()->AddService<media::MediaPlayer>(
-        [application_context = application_context.get(), &player,
-         &loop](fidl::InterfaceRequest<media::MediaPlayer> request) {
-          player = media::MediaPlayerImpl::Create(
-              std::move(request), application_context, [&loop]() {
-                async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
-              });
-        });
-
+    std::unique_ptr<media_player::MediaPlayerImpl> player;
+    application_context->outgoing_services()
+        ->AddService<media_player::MediaPlayer>(
+            [application_context = application_context.get(), &player,
+             &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
+              player = media_player::MediaPlayerImpl::Create(
+                  std::move(request), application_context, [&loop]() {
+                    async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+                  });
+            });
     loop.Run();
   } else {
     component::ApplicationLauncherPtr launcher;
     application_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 
-    application_context->outgoing_services()->AddService<media::MediaPlayer>(
-        [&launcher](fidl::InterfaceRequest<media::MediaPlayer> request) {
-          ConnectToIsolate<media::MediaPlayer>(std::move(request),
-                                               launcher.get());
-        });
+    application_context->outgoing_services()
+        ->AddService<media_player::MediaPlayer>(
+            [&launcher](
+                fidl::InterfaceRequest<media_player::MediaPlayer> request) {
+              ConnectToIsolate<media_player::MediaPlayer>(std::move(request),
+                                                          launcher.get());
+            });
 
     loop.Run();
   }

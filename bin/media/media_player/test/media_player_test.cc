@@ -16,7 +16,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
+namespace media_player {
 namespace test {
 
 class MediaPlayerTester {
@@ -32,7 +32,7 @@ class MediaPlayerTester {
     media_player_ =
         application_context_->ConnectToEnvironmentService<MediaPlayer>();
 
-    fake_renderer_.SetPtsRate(TimelineRate(48000, 1));
+    fake_renderer_.SetPtsRate(media::TimelineRate(48000, 1));
 
     fake_renderer_.ExpectPackets({{0, false, 4096, 0x20c39d1e31991800},
                                   {1024, false, 4096, 0xeaf137125d313800},
@@ -57,8 +57,8 @@ class MediaPlayerTester {
         fake_reader_ptr.NewRequest();
     fake_reader_.Bind(std::move(reader_request));
 
-    MediaRendererPtr fake_renderer_ptr;
-    fidl::InterfaceRequest<MediaRenderer> renderer_request =
+    media::MediaRendererPtr fake_renderer_ptr;
+    fidl::InterfaceRequest<media::MediaRenderer> renderer_request =
         fake_renderer_ptr.NewRequest();
     fake_renderer_.Bind(std::move(renderer_request));
 
@@ -74,7 +74,7 @@ class MediaPlayerTester {
   }
 
  private:
-  void HandleStatusUpdates(uint64_t version = kInitialStatus,
+  void HandleStatusUpdates(uint64_t version = media::kInitialStatus,
                            MediaPlayerStatusPtr status = nullptr) {
     if (status) {
       if (status->end_of_stream) {
@@ -95,18 +95,18 @@ class MediaPlayerTester {
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::Closure quit_callback_;
   FakeWavReader fake_reader_;
-  FakeRenderer fake_renderer_;
+  media::FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;
   bool ended_ = false;
 };
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  media::test::MediaPlayerTester app(
+  media_player::test::MediaPlayerTester app(
       [&loop]() { async::PostTask(loop.async(), [&loop]() { loop.Quit(); }); });
 
   loop.Run();

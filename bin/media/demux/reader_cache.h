@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_DEMUX_READER_CACHE_H_
+#define GARNET_BIN_MEDIA_DEMUX_READER_CACHE_H_
 
 #include <atomic>
 #include <map>
@@ -14,7 +15,7 @@
 #include "garnet/bin/media/util/incident.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
+namespace media_player {
 
 // Store for reading.
 //
@@ -83,7 +84,7 @@ class ReaderCache : public Reader {
     void CopyFrom(uint8_t* source, size_t byte_count);
 
     // Completes the request with the indicated result.
-    void Complete(Result result);
+    void Complete(media::Result result);
 
    private:
     std::atomic_bool in_progress_;
@@ -109,7 +110,7 @@ class ReaderCache : public Reader {
     ~Store();
 
     // Initializes the store.
-    void Initialize(Result result, size_t size, bool can_seek);
+    void Initialize(media::Result result, size_t size, bool can_seek);
 
     // Calls the callback immediately with description values.
     void Describe(DescribeCallback callback);
@@ -125,7 +126,7 @@ class ReaderCache : public Reader {
     void PutIntakeBuffer(size_t position, std::vector<uint8_t>&& buffer);
 
     // Reports an intake error.
-    void ReportIntakeError(Result result);
+    void ReportIntakeError(media::Result result);
 
    private:
     // Attempts to progress satisfaction of the current read request.
@@ -137,7 +138,7 @@ class ReaderCache : public Reader {
     bool can_seek_ = false;
 
     mutable std::mutex mutex_;
-    Result result_ FXL_GUARDED_BY(mutex_) = Result::kOk;
+    media::Result result_ FXL_GUARDED_BY(mutex_) = media::Result::kOk;
     SparseByteBuffer sparse_byte_buffer_ FXL_GUARDED_BY(mutex_);
     SparseByteBuffer::Hole intake_hole_ FXL_GUARDED_BY(mutex_);
     SparseByteBuffer::Hole read_hole_ FXL_GUARDED_BY(mutex_);
@@ -173,4 +174,6 @@ class ReaderCache : public Reader {
   ThreadsafeIncident describe_is_complete_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_DEMUX_READER_CACHE_H_

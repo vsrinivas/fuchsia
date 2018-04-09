@@ -9,7 +9,7 @@
 #include "garnet/bin/media/util/safe_clone.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 // static
 std::unique_ptr<DemuxSourceSegment> DemuxSourceSegment::Create(
@@ -24,7 +24,7 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
   demux_->SetStatusCallback([this](const std::unique_ptr<Metadata>& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {
-    metadata_ = SafeClone(metadata);
+    metadata_ = media::SafeClone(metadata);
     NotifyUpdate();
 
     if (problem_type.empty()) {
@@ -35,7 +35,7 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
   });
 
   demux_->WhenInitialized(
-      [this](Result result) { demux_initialized_.Occur(); });
+      [this](media::Result result) { demux_initialized_.Occur(); });
 }
 
 DemuxSourceSegment::~DemuxSourceSegment() {}
@@ -82,4 +82,4 @@ void DemuxSourceSegment::Seek(int64_t position, fxl::Closure callback) {
   demux_->Seek(position, callback);
 }
 
-}  // namespace media
+}  // namespace media_player

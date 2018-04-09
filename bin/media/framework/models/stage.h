@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_MODELS_STAGE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_MODELS_STAGE_H_
 
 #include "lib/fxl/functional/closure.h"
 
-namespace media {
+namespace media_player {
 
 // Host for node, from the perspective of the node.
 class Stage {
@@ -18,4 +19,6 @@ class Stage {
   virtual void PostTask(const fxl::Closure& task) = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_MODELS_STAGE_H_

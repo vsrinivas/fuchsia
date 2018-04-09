@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 StageImpl::StageImpl() : update_counter_(0) {}
 
@@ -141,4 +141,4 @@ void StageImpl::RunTasks() {
   tasks_mutex_.unlock();
 }
 
-}  // namespace media
+}  // namespace media_player

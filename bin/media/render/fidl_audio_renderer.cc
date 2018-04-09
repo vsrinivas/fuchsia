@@ -11,7 +11,18 @@
 
 #include "garnet/bin/media/framework/formatting.h"
 
-namespace media {
+using media::AudioRenderer2Ptr;
+using media::AudioStreamType;
+using media::AudioStreamTypeSet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+using media::Range;
+using media::StreamType;
+using media::StreamTypeSet;
+using media::Timeline;
+using media::TimelineRate;
+
+namespace media_player {
 
 // static
 std::shared_ptr<FidlAudioRenderer> FidlAudioRenderer::Create(
@@ -36,14 +47,14 @@ FidlAudioRenderer::FidlAudioRenderer(AudioRenderer2Ptr audio_renderer)
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kUnsigned8,
-      Range<uint32_t>(kMinChannelCount, kMaxChannelCount),
-      Range<uint32_t>(kMinFramesPerSecond, kMaxFramesPerSecond)));
+      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
+      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
 
   supported_stream_types_.push_back(AudioStreamTypeSet::Create(
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kSigned16,
-      Range<uint32_t>(kMinChannelCount, kMaxChannelCount),
-      Range<uint32_t>(kMinFramesPerSecond, kMaxFramesPerSecond)));
+      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
+      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {}
@@ -51,7 +62,7 @@ FidlAudioRenderer::~FidlAudioRenderer() {}
 void FidlAudioRenderer::Flush(bool hold_frame_not_used) {
   flushed_ = true;
   last_supplied_pts_ = 0;
-  SetEndOfStreamPts(kUnspecifiedTime);
+  SetEndOfStreamPts(media::kUnspecifiedTime);
   audio_renderer_->FlushNoReply();
 }
 
@@ -86,7 +97,7 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
     packet.reset();
     UpdateTimeline(Timeline::local_now());
   } else {
-    AudioPacket audioPacket;
+    media::AudioPacket audioPacket;
     audioPacket.timestamp = start_pts;
     audioPacket.payload_offset = buffer_.OffsetFromPtr(packet->payload());
     audioPacket.payload_size = packet->size();
@@ -110,9 +121,9 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
 void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   FXL_DCHECK(stream_type.audio());
 
-  AudioPcmFormat format;
+  media::AudioPcmFormat format;
   format.sample_format =
-      fxl::To<AudioSampleFormat>(stream_type.audio()->sample_format());
+      fxl::To<media::AudioSampleFormat>(stream_type.audio()->sample_format());
   format.channels = stream_type.audio()->channels();
   format.frames_per_second = stream_type.audio()->frames_per_second();
 
@@ -155,8 +166,9 @@ void FidlAudioRenderer::Prime(fxl::Closure callback) {
   stage()->SetDemand(current_demand());
 }
 
-void FidlAudioRenderer::SetTimelineFunction(TimelineFunction timeline_function,
-                                            fxl::Closure callback) {
+void FidlAudioRenderer::SetTimelineFunction(
+    media::TimelineFunction timeline_function,
+    fxl::Closure callback) {
   // AudioRenderer2 only supports 0/1 (paused) or 1/1 (normal playback rate).
   // TODO(dalesat): Remove this DCHECK when AudioRenderer2 supports other rates,
   // build an SRC into this class, or prohibit other rates entirely.
@@ -206,4 +218,4 @@ Demand FidlAudioRenderer::current_demand() {
              : Demand::kNegative;
 }
 
-}  // namespace media
+}  // namespace media_player

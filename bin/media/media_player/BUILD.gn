@@ -36,6 +36,7 @@ executable("media_player_bin") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/fidl:media_player",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/view_framework",
     "//garnet/public/lib/ui/views/fidl:v1",
@@ -63,6 +64,7 @@ executable("tests") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/fidl:media_player",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/media/transport",
   ]

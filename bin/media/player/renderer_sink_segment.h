@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_RENDERER_SINK_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_RENDERER_SINK_SEGMENT_H_
 
 #include "garnet/bin/media/player/sink_segment.h"
 #include "garnet/bin/media/render/renderer.h"
 
-namespace media {
+namespace media_player {
 
 // A graph segment that delivers an elementary stream to a renderer.
 class RendererSinkSegment : public SinkSegment {
@@ -24,7 +25,7 @@ class RendererSinkSegment : public SinkSegment {
 
   void WillDeprovision() override;
 
-  void Connect(const StreamType& type,
+  void Connect(const media::StreamType& type,
                OutputRef output,
                fxl::Closure callback) override;
 
@@ -38,7 +39,7 @@ class RendererSinkSegment : public SinkSegment {
 
   void Prime(fxl::Closure callback) override;
 
-  void SetTimelineFunction(TimelineFunction timeline_function,
+  void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fxl::Closure callback) override;
 
   void SetProgramRange(uint64_t program,
@@ -53,4 +54,6 @@ class RendererSinkSegment : public SinkSegment {
   OutputRef connected_output_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_RENDERER_SINK_SEGMENT_H_

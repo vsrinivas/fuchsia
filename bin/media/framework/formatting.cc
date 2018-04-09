@@ -42,18 +42,6 @@ std::ostream& operator<<(std::ostream& os, Result value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, Demand value) {
-  switch (value) {
-    case Demand::kNegative:
-      return os << "kNegative";
-    case Demand::kNeutral:
-      return os << "kNeutral";
-    case Demand::kPositive:
-      return os << "kPositive";
-  }
-  return os;
-}
-
 std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
   if (!value) {
     return os << "<nullptr>";
@@ -369,3 +357,19 @@ std::ostream& operator<<(std::ostream& os, Range<bool> value) {
 }
 
 }  // namespace media
+
+namespace media_player {
+
+std::ostream& operator<<(std::ostream& os, Demand value) {
+  switch (value) {
+    case Demand::kNegative:
+      return os << "kNegative";
+    case Demand::kNeutral:
+      return os << "kNeutral";
+    case Demand::kPositive:
+      return os << "kPositive";
+  }
+  return os;
+}
+
+}  // namespace media_player

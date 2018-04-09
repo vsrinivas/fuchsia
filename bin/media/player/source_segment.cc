@@ -8,7 +8,9 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::StreamType;
+
+namespace media_player {
 
 SourceSegment::SourceSegment() {}
 
@@ -44,4 +46,4 @@ void SourceSegment::OnStreamRemoved(size_t index, bool more) {
   stream_update_callback_(index, nullptr, OutputRef(), more);
 }
 
-}  // namespace media
+}  // namespace media_player

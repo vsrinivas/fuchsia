@@ -8,7 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 Segment::Segment() {}
 
@@ -59,4 +59,4 @@ void Segment::ReportNoProblem() {
   NotifyUpdate();
 }
 
-}  // namespace media
+}  // namespace media_player

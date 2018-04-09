@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-namespace media {
+namespace media_player {
 namespace {
 
 static const size_t kSize = 1000u;
@@ -283,4 +283,4 @@ TEST(SparseByteBufferTest, HoleHints) {
 }
 
 }  // namespace
-}  // namespace media
+}  // namespace media_player

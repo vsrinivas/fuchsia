@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PROXY_H_
+#define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PROXY_H_
 
 #include <memory>
 #include <string>
@@ -13,7 +14,7 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/netconnector/cpp/message_relay.h"
 
-namespace media {
+namespace media_player {
 
 // Proxy that allows a client to control a remote media player.
 class MediaPlayerNetProxy
@@ -47,13 +48,13 @@ class MediaPlayerNetProxy
 
   void SetGain(float gain) override;
 
-  void CreateView(
-      fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request) override;
+  void CreateView(fidl::InterfaceHandle<views_v1::ViewManager> view_manager,
+                  fidl::InterfaceRequest<views_v1_token::ViewOwner>
+                      view_owner_request) override;
 
   void SetAudioRenderer(
-      fidl::InterfaceHandle<AudioRenderer> audio_renderer,
-      fidl::InterfaceHandle<MediaRenderer> media_renderer) override;
+      fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
+      fidl::InterfaceHandle<media::MediaRenderer> media_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
@@ -68,11 +69,13 @@ class MediaPlayerNetProxy
   void HandleReceivedMessage(std::vector<uint8_t> message);
 
   netconnector::MessageRelay message_relay_;
-  FidlPublisher<GetStatusCallback> status_publisher_;
+  media::FidlPublisher<GetStatusCallback> status_publisher_;
   MediaPlayerStatusPtr status_;
-  TimelineFunction remote_to_local_;
+  media::TimelineFunction remote_to_local_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetProxy);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PROXY_H_

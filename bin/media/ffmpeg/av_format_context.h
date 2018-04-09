@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_AV_FORMAT_CONTEXT_H_
+#define GARNET_BIN_MEDIA_FFMPEG_AV_FORMAT_CONTEXT_H_
 
 #include "garnet/bin/media/ffmpeg/av_io_context.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_init.h"
@@ -11,7 +12,7 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace media {
+namespace media_player {
 
 struct AVFormatContextDeleter {
   inline void operator()(AVFormatContext* ptr) const {
@@ -41,4 +42,6 @@ struct AvFormatContext {
   }
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_AV_FORMAT_CONTEXT_H_

@@ -7,7 +7,11 @@
 #include "garnet/bin/media/framework/engine.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
-namespace media {
+using media::Packet;
+using media::PacketPtr;
+using media::PayloadAllocator;
+
+namespace media_player {
 
 Output::Output(StageImpl* stage, size_t index) : stage_(stage), index_(index) {}
 
@@ -59,4 +63,4 @@ void Output::SupplyPacket(PacketPtr packet) const {
   mate_->PutPacket(std::move(packet));
 }
 
-}  // namespace media
+}  // namespace media_player

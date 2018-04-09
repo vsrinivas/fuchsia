@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_CONSUMER_H_
+#define GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_CONSUMER_H_
 
 #include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/framework/models/active_source.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 
-namespace media {
+namespace media_player {
 
 // Implements MediaPacketConsumer to receive a stream from across fidl.
-class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
+class FidlPacketConsumer : public media::MediaPacketConsumerBase,
+                           public ActiveSource {
  public:
   using FlushRequestedCallback =
       std::function<void(bool hold_frame, FlushCallback)>;
@@ -44,14 +46,16 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   // ActiveSource implementation.
   bool can_accept_allocator() const override;
 
-  void set_allocator(std::shared_ptr<PayloadAllocator> allocator) override;
+  void set_allocator(
+      std::shared_ptr<media::PayloadAllocator> allocator) override;
 
   void SetDownstreamDemand(Demand demand) override;
 
   // Specialized packet implementation.
-  class PacketImpl : public Packet {
+  class PacketImpl : public media::Packet {
    public:
-    static PacketPtr Create(std::unique_ptr<SuppliedPacket> supplied_packet) {
+    static media::PacketPtr Create(
+        std::unique_ptr<SuppliedPacket> supplied_packet) {
       return std::make_shared<PacketImpl>(std::move(supplied_packet));
     }
 
@@ -69,4 +73,6 @@ class FidlPacketConsumer : public MediaPacketConsumerBase, public ActiveSource {
   FlushRequestedCallback flush_requested_callback_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FIDL_FIDL_PACKET_CONSUMER_H_

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_DEMUX_H_
+#define GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_DEMUX_H_
 
 #include "garnet/bin/media/demux/demux.h"
 
-namespace media {
+namespace media_player {
 namespace test {
 
 class FakeDemux : public Demux {
@@ -30,8 +31,8 @@ class FakeDemux : public Demux {
     status_callback_ = callback;
   }
 
-  void WhenInitialized(std::function<void(Result)> callback) override {
-    callback(Result::kOk);
+  void WhenInitialized(std::function<void(media::Result)> callback) override {
+    callback(media::Result::kOk);
   }
 
   const std::vector<DemuxStream*>& streams() const override { return streams_; }
@@ -42,8 +43,8 @@ class FakeDemux : public Demux {
   class DemuxStreamImpl : public DemuxStream {
    public:
     DemuxStreamImpl(size_t index,
-                    std::unique_ptr<StreamType> stream_type,
-                    TimelineRate pts_rate)
+                    std::unique_ptr<media::StreamType> stream_type,
+                    media::TimelineRate pts_rate)
         : index_(index),
           stream_type_(std::move(stream_type)),
           pts_rate_(pts_rate) {}
@@ -52,16 +53,16 @@ class FakeDemux : public Demux {
 
     size_t index() const override { return index_; }
 
-    std::unique_ptr<StreamType> stream_type() const override {
+    std::unique_ptr<media::StreamType> stream_type() const override {
       return stream_type_->Clone();
     }
 
-    TimelineRate pts_rate() const override { return pts_rate_; }
+    media::TimelineRate pts_rate() const override { return pts_rate_; }
 
    private:
     size_t index_;
-    std::unique_ptr<StreamType> stream_type_;
-    TimelineRate pts_rate_;
+    std::unique_ptr<media::StreamType> stream_type_;
+    media::TimelineRate pts_rate_;
   };
 
   StatusCallback status_callback_;
@@ -70,4 +71,6 @@ class FakeDemux : public Demux {
 };
 
 }  // namespace test
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_DEMUX_H_

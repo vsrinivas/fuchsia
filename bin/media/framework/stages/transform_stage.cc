@@ -4,7 +4,9 @@
 
 #include "garnet/bin/media/framework/stages/transform_stage.h"
 
-namespace media {
+using media::PayloadAllocator;
+
+namespace media_player {
 
 TransformStageImpl::TransformStageImpl(std::shared_ptr<Transform> transform)
     : input_(this, 0),
@@ -71,7 +73,7 @@ void TransformStageImpl::Update() {
   FXL_DCHECK(allocator_);
 
   while (input_.packet() && output_.demand() != Demand::kNegative) {
-    PacketPtr output_packet;
+    media::PacketPtr output_packet;
     if (transform_->TransformPacket(input_.packet(), input_packet_is_new_,
                                     allocator_, &output_packet)) {
       input_.TakePacket(Demand::kNegative);
@@ -107,4 +109,4 @@ void TransformStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
-}  // namespace media
+}  // namespace media_player

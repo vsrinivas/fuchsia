@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_DEMUX_SOURCE_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_DEMUX_SOURCE_SEGMENT_H_
 
 #include <memory>
 #include <vector>
@@ -11,7 +12,7 @@
 #include "garnet/bin/media/player/source_segment.h"
 #include "garnet/bin/media/util/incident.h"
 
-namespace media {
+namespace media_player {
 
 // A source segment employing a demux.
 class DemuxSourceSegment : public SourceSegment {
@@ -47,4 +48,6 @@ class DemuxSourceSegment : public SourceSegment {
   Incident demux_initialized_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_DEMUX_SOURCE_SEGMENT_H_

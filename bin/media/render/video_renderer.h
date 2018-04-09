@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_RENDER_VIDEO_RENDERER_H_
+#define GARNET_BIN_MEDIA_RENDER_VIDEO_RENDERER_H_
 
 #include <fuchsia/cpp/geometry.h>
 
 #include "garnet/bin/media/render/renderer.h"
 
-namespace media {
+namespace media_player {
 
 // Abstract base class for sinks that render packets.
 // TODO(dalesat): Rename this.
@@ -25,4 +26,6 @@ class VideoRendererInProc : public Renderer {
   virtual geometry::Size pixel_aspect_ratio() const = 0;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_RENDER_VIDEO_RENDERER_H_

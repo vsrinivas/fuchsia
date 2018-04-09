@@ -11,7 +11,12 @@
 #include "garnet/bin/media/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+using media::PacketPtr;
+using media::Range;
+using media::StreamType;
+using media::StreamTypeSet;
+
+namespace media_player {
 
 // static
 std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create() {
@@ -19,7 +24,7 @@ std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create() {
 }
 
 FidlVideoRenderer::FidlVideoRenderer() {
-  supported_stream_types_.push_back(VideoStreamTypeSet::Create(
+  supported_stream_types_.push_back(media::VideoStreamTypeSet::Create(
       {StreamType::kVideoEncodingUncompressed},
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
       Range<uint32_t>(0, std::numeric_limits<uint32_t>::max())));
@@ -40,19 +45,19 @@ void FidlVideoRenderer::Flush(bool hold_frame) {
     }
   }
 
-  SetEndOfStreamPts(kUnspecifiedTime);
+  SetEndOfStreamPts(media::kUnspecifiedTime);
 
   InvalidateViews();
 }
 
-std::shared_ptr<PayloadAllocator> FidlVideoRenderer::allocator() {
+std::shared_ptr<media::PayloadAllocator> FidlVideoRenderer::allocator() {
   return nullptr;
 }
 
 Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
   FXL_DCHECK(packet);
 
-  int64_t packet_pts_ns = packet->GetPts(TimelineRate::NsPerSecond);
+  int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
 
   if (packet->end_of_stream()) {
     SetEndOfStreamPts(packet_pts_ns);
@@ -183,7 +188,8 @@ void FidlVideoRenderer::DiscardOldPackets() {
   // We keep at least one packet around even if it's old, so we can show an
   // old frame rather than no frame when we starve.
   while (packet_queue_.size() > 1 &&
-         packet_queue_.front()->GetPts(TimelineRate::NsPerSecond) < pts_ns_) {
+         packet_queue_.front()->GetPts(media::TimelineRate::NsPerSecond) <
+             pts_ns_) {
     // TODO(dalesat): Add hysteresis.
     packet_queue_.pop();
     // Make sure the front of the queue has been checked for revised media
@@ -265,4 +271,4 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   }
 }
 
-}  // namespace media
+}  // namespace media_player

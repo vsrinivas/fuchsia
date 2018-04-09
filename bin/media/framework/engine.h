@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_ENGINE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_ENGINE_H_
 
 #include <vector>
 
@@ -10,7 +11,7 @@
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace media {
+namespace media_player {
 
 // Implements prepare, unprepare and flush.
 // TODO(dalesat): This class no longer makes sense and should be refactored out.
@@ -32,10 +33,8 @@ class Engine {
   void FlushOutput(Output* output, bool hold_frame);
 
  private:
-  using UpstreamVisitor =
-      std::function<void(Input* input,
-                         Output* output,
-                         StageImpl::UpstreamCallback callback)>;
+  using UpstreamVisitor = std::function<
+      void(Input* input, Output* output, StageImpl::UpstreamCallback callback)>;
   using DownstreamVisitor =
       std::function<void(Output* output,
                          Input* input,
@@ -46,4 +45,6 @@ class Engine {
   void VisitDownstream(Output* output, const DownstreamVisitor& visitor);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_ENGINE_H_

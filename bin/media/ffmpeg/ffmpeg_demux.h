@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DEMUX_H_
+#define GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DEMUX_H_
 
 #include <memory>
 
 #include "garnet/bin/media/demux/demux.h"
 
-namespace media {
+namespace media_player {
 
 class FfmpegDemux : public Demux {
  public:
@@ -17,4 +18,6 @@ class FfmpegDemux : public Demux {
   ~FfmpegDemux() override {}
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_FFMPEG_DEMUX_H_

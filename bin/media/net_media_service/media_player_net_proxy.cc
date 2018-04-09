@@ -13,7 +13,9 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
-namespace media {
+using media::Timeline;
+
+namespace media_player {
 
 // static
 std::shared_ptr<MediaPlayerNetProxy> MediaPlayerNetProxy::Create(
@@ -125,8 +127,8 @@ void MediaPlayerNetProxy::CreateView(
 }
 
 void MediaPlayerNetProxy::SetAudioRenderer(
-    fidl::InterfaceHandle<AudioRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
+    fidl::InterfaceHandle<media::MediaRenderer> media_renderer) {
   FXL_LOG(ERROR)
       << "SetAudioRenderer called on MediaPlayer proxy - not supported.";
   UnbindAndReleaseFromOwner();
@@ -173,7 +175,7 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
 
       // Create a function that translates remote system time to local system
       // time. We assume that both clocks run at the same rate (hence 1, 1).
-      remote_to_local_ = TimelineFunction(
+      remote_to_local_ = media::TimelineFunction(
           local_then, message->time_check_response_->responder_time_, 1, 1);
     } break;
 
@@ -191,4 +193,4 @@ void MediaPlayerNetProxy::HandleReceivedMessage(
   }
 }
 
-}  // namespace media
+}  // namespace media_player

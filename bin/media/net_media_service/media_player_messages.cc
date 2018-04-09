@@ -6,7 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 // static
 std::unique_ptr<MediaPlayerInMessage> MediaPlayerInMessage::TimeCheckRequest(
@@ -163,7 +163,7 @@ Serializer& operator<<(Serializer& serializer,
 }
 
 Serializer& operator<<(Serializer& serializer,
-                       const TimelineTransformPtr& value) {
+                       const media::TimelineTransformPtr& value) {
   FXL_DCHECK(value);
   return serializer << value->reference_time << value->subject_time
                     << value->reference_delta << value->subject_delta;
@@ -325,8 +325,8 @@ Deserializer& operator>>(Deserializer& deserializer,
 }
 
 Deserializer& operator>>(Deserializer& deserializer,
-                         TimelineTransformPtr& value) {
-  value = TimelineTransform::New();
+                         media::TimelineTransformPtr& value) {
+  value = media::TimelineTransform::New();
   deserializer >> value->reference_time >> value->subject_time >>
       value->reference_delta >> value->subject_delta;
   if (!deserializer.healthy()) {
@@ -416,4 +416,4 @@ Deserializer& operator>>(Deserializer& deserializer,
   return deserializer;
 }
 
-}  // namespace media
+}  // namespace media_player

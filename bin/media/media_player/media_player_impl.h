@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_MEDIA_PLAYER_IMPL_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_MEDIA_PLAYER_IMPL_H_
 
 #include <unordered_map>
 
@@ -19,7 +20,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
-namespace media {
+namespace media_player {
 
 // Fidl agent that renders streams.
 class MediaPlayerImpl : public MediaPlayer {
@@ -59,13 +60,13 @@ class MediaPlayerImpl : public MediaPlayer {
                       view_owner_request) override;
 
   void SetAudioRenderer(
-      fidl::InterfaceHandle<AudioRenderer> audio_renderer,
-      fidl::InterfaceHandle<MediaRenderer> media_renderer) override;
+      fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
+      fidl::InterfaceHandle<media::MediaRenderer> media_renderer) override;
 
   void AddBinding(fidl::InterfaceRequest<MediaPlayer> request) override;
 
  private:
-  static constexpr int64_t kMinimumLeadTime = Timeline::ns_from_ms(30);
+  static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
 
   // Internal state.
   enum class State {
@@ -80,14 +81,14 @@ class MediaPlayerImpl : public MediaPlayer {
   void SetReader(std::shared_ptr<Reader> reader);
 
   // Creates the renderer for |medium| if it doesn't exist already.
-  void MaybeCreateRenderer(StreamType::Medium medium);
+  void MaybeCreateRenderer(media::StreamType::Medium medium);
 
   // Creates sinks as needed and connects enabled streams.
   void ConnectSinks();
 
   // Prepares a stream.
   void PrepareStream(size_t index,
-                     const MediaType& input_media_type,
+                     const media::MediaType& input_media_type,
                      const std::function<void()>& callback);
 
   // Takes action based on current state.
@@ -102,6 +103,7 @@ class MediaPlayerImpl : public MediaPlayer {
   fxl::Closure quit_callback_;
   fidl::BindingSet<MediaPlayer> bindings_;
   Player player_;
+
   float gain_ = 1.0f;
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;
   std::shared_ptr<FidlVideoRenderer> video_renderer_;
@@ -115,17 +117,19 @@ class MediaPlayerImpl : public MediaPlayer {
 
   // The position we want to seek to (because the client called Seek) or
   // kUnspecifiedTime, which indicates there's no desire to seek.
-  int64_t target_position_ = kUnspecifiedTime;
+  int64_t target_position_ = media::kUnspecifiedTime;
 
   // The subject time to be used for SetTimelineFunction. The value is
   // kUnspecifiedTime if there's no need to seek or the position we want to
   // seek to if there is.
-  int64_t transform_subject_time_ = kUnspecifiedTime;
+  int64_t transform_subject_time_ = media::kUnspecifiedTime;
 
   // The minimum program range PTS to be used for SetProgramRange.
-  int64_t program_range_min_pts_ = kMinTime;
+  int64_t program_range_min_pts_ = media::kMinTime;
 
-  FidlPublisher<GetStatusCallback> status_publisher_;
+  media::FidlPublisher<GetStatusCallback> status_publisher_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_MEDIA_PLAYER_IMPL_H_

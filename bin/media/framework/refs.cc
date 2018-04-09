@@ -9,7 +9,7 @@
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
+namespace media_player {
 
 size_t NodeRef::input_count() const {
   FXL_DCHECK(stage_);
@@ -82,4 +82,4 @@ InputRef OutputRef::mate() const {
   return InputRef(output_->mate());
 }
 
-}  // namespace media
+}  // namespace media_player

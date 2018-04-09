@@ -4,7 +4,10 @@
 
 #include "garnet/bin/media/framework/stages/active_source_stage.h"
 
-namespace media {
+using media::PacketPtr;
+using media::PayloadAllocator;
+
+namespace media_player {
 
 ActiveSourceStageImpl::ActiveSourceStageImpl(
     std::shared_ptr<ActiveSource> source)
@@ -123,4 +126,4 @@ void ActiveSourceStageImpl::SupplyPacket(PacketPtr packet) {
   }
 }
 
-}  // namespace media
+}  // namespace media_player

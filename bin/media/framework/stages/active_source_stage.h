@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
 
 #include <deque>
 #include <mutex>
@@ -11,7 +12,7 @@
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
-namespace media {
+namespace media_player {
 
 // A stage that hosts an ActiveSource.
 class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
@@ -29,10 +30,10 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
 
   Output& output(size_t index) override;
 
-  std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
+  std::shared_ptr<media::PayloadAllocator> PrepareInput(size_t index) override;
 
   void PrepareOutput(size_t index,
-                     std::shared_ptr<PayloadAllocator> allocator,
+                     std::shared_ptr<media::PayloadAllocator> allocator,
                      UpstreamCallback callback) override;
 
   void UnprepareOutput(size_t index, UpstreamCallback callback) override;
@@ -53,14 +54,16 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   // ActiveSourceStage implementation.
   void PostTask(const fxl::Closure& task) override;
 
-  void SupplyPacket(PacketPtr packet) override;
+  void SupplyPacket(media::PacketPtr packet) override;
 
   Output output_;
   std::shared_ptr<ActiveSource> source_;
   bool prepared_;
 
   mutable std::mutex mutex_;
-  std::deque<PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
+  std::deque<media::PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_

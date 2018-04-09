@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/framework/metadata.h"
 
-namespace media {
+namespace media_player {
 
 // static
 std::unique_ptr<Metadata> Metadata::Create(uint64_t duration_ns,
@@ -35,4 +35,4 @@ Metadata::Metadata(uint64_t duration_ns,
 
 Metadata::~Metadata() {}
 
-}  // namespace media
+}  // namespace media_player

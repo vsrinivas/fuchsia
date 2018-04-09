@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_SOURCE_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_SOURCE_SEGMENT_H_
 
 #include <lib/async/dispatcher.h>
 
@@ -10,7 +11,7 @@
 #include "garnet/bin/media/player/segment.h"
 #include "lib/fxl/functional/closure.h"
 
-namespace media {
+namespace media_player {
 
 // A graph segment that produces elementary streams.
 //
@@ -21,8 +22,10 @@ namespace media {
 // concerned with metadata.
 class SourceSegment : public Segment {
  public:
-  using StreamUpdateCallback = std::function<
-      void(size_t index, const StreamType* type, OutputRef output, bool more)>;
+  using StreamUpdateCallback = std::function<void(size_t index,
+                                                  const media::StreamType* type,
+                                                  OutputRef output,
+                                                  bool more)>;
 
   SourceSegment();
 
@@ -57,7 +60,7 @@ class SourceSegment : public Segment {
  protected:
   // Called by subclasses when a stream is updated.
   void OnStreamUpdated(size_t index,
-                       const StreamType& type,
+                       const media::StreamType& type,
                        OutputRef output,
                        bool more);
 
@@ -67,4 +70,6 @@ class SourceSegment : public Segment {
   StreamUpdateCallback stream_update_callback_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_SOURCE_SEGMENT_H_

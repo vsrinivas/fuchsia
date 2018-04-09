@@ -4,7 +4,9 @@
 
 #include "garnet/bin/media/framework/stages/active_sink_stage.h"
 
-namespace media {
+using media::PayloadAllocator;
+
+namespace media_player {
 
 ActiveSinkStageImpl::ActiveSinkStageImpl(std::shared_ptr<ActiveSink> sink)
     : input_(this, 0), sink_(sink) {
@@ -105,4 +107,4 @@ void ActiveSinkStageImpl::SetDemand(Demand demand) {
   }
 }
 
-}  // namespace media
+}  // namespace media_player

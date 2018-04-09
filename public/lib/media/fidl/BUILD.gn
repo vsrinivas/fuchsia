@@ -14,21 +14,29 @@ fidl("fidl") {
     "audio_renderer.fidl",
     "audio_server.fidl",
     "media_capturer.fidl",
-    "media_metadata.fidl",
-    "media_player.fidl",
     "media_renderer.fidl",
     "media_result.fidl",
-    "media_source.fidl",
     "media_transport.fidl",
     "media_types.fidl",
-    "net_media_service.fidl",
-    "problem.fidl",
-    "seeking_reader.fidl",
     "timeline_controller.fidl",
     "timelines.fidl",
   ]
+}
+
+fidl("media_player") {
+  name = "media_player"
+
+  sources = [
+    "media_metadata.fidl",
+    "media_player.fidl",
+    "media_source.fidl",
+    "net_media_service.fidl",
+    "problem.fidl",
+    "seeking_reader.fidl",
+  ]
 
   public_deps = [
+    ":fidl",
     "//garnet/public/lib/ui/views/fidl:v1",
   ]
 }

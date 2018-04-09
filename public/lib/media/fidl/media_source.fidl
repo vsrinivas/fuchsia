@@ -2,20 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
+library media_player;
 
-// import "lib/media/fidl/media_metadata.fidl";
-// import "lib/media/fidl/media_transport.fidl";
-// import "lib/media/fidl/media_types.fidl";
-// import "lib/media/fidl/problem.fidl";
+using media;
 
 // Produces media streams delivered from a specified origin.
 interface MediaSource {
   // Describes the source.
-  1: Describe() -> (vector<MediaType> stream_types);
+  1: Describe() -> (vector<media.MediaType> stream_types);
 
   // Gets the packet producer for the specified stream.
-  2: GetPacketProducer(uint32 stream_index, request<MediaPacketProducer> packet_producer);
+  2: GetPacketProducer(uint32 stream_index, request<media.MediaPacketProducer> packet_producer);
 
   // Gets the status. To get the status immediately, call
   // GetStatus(kInitialStatus). To get updates thereafter, pass the version

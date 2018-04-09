@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_DECODER_H_
+#define GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_DECODER_H_
 
 #include "garnet/bin/media/ffmpeg/ffmpeg_decoder_base.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_video_frame_layout.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
+namespace media_player {
 
 // Decoder implementation employing and ffmpeg video decoder.
 // TODO(dalesat): Complete this.
@@ -22,24 +23,26 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
 
  protected:
   // FfmpegDecoderBase overrides.
-  void OnNewInputPacket(const PacketPtr& packet) override;
+  void OnNewInputPacket(const media::PacketPtr& packet) override;
 
   int BuildAVFrame(const AVCodecContext& av_codec_context,
                    AVFrame* av_frame,
-                   PayloadAllocator* allocator) override;
+                   media::PayloadAllocator* allocator) override;
 
-  PacketPtr CreateOutputPacket(
+  media::PacketPtr CreateOutputPacket(
       const AVFrame& av_frame,
-      const std::shared_ptr<PayloadAllocator>& allocator) override;
+      const std::shared_ptr<media::PayloadAllocator>& allocator) override;
 
  private:
   FfmpegVideoFrameLayout frame_layout_;
-  std::unique_ptr<StreamType> revised_stream_type_;
+  std::unique_ptr<media::StreamType> revised_stream_type_;
 
   // TODO(dalesat): For investigation only...remove these three fields.
   bool first_frame_ = true;
   AVColorSpace colorspace_;
-  VideoStreamType::Extent coded_size_;
+  media::VideoStreamType::Extent coded_size_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FFMPEG_FFMPEG_VIDEO_DECODER_H_

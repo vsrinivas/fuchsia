@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SOURCE_SEGMENT_H_
+#define GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SOURCE_SEGMENT_H_
 
 #include "garnet/bin/media/player/source_segment.h"
 
-namespace media {
+namespace media_player {
 
 // A source segment for testing the player.
 class FakeSourceSegment : public SourceSegment {
@@ -60,7 +61,7 @@ class FakeSourceSegment : public SourceSegment {
   bool TEST_provisioned() { return provisioned(); }
 
   void TEST_OnStreamUpdated(size_t index,
-                            const StreamType& type,
+                            const media::StreamType& type,
                             OutputRef output,
                             bool more) {
     OnStreamUpdated(index, type, output, more);
@@ -87,4 +88,6 @@ class FakeSourceSegment : public SourceSegment {
   fxl::Closure seek_call_param_callback_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_PLAYER_TEST_FAKE_SOURCE_SEGMENT_H_

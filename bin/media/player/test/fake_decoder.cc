@@ -8,7 +8,12 @@
 #include "garnet/bin/media/framework/types/stream_type.h"
 #include "garnet/bin/media/framework/types/video_stream_type.h"
 
-namespace media {
+using media::AudioStreamType;
+using media::Result;
+using media::StreamType;
+using media::VideoStreamType;
+
+namespace media_player {
 namespace test {
 
 // static
@@ -48,4 +53,4 @@ Result Decoder::Create(const StreamType& stream_type,
   return Result::kOk;
 }
 
-}  // namespace media
+}  // namespace media_player

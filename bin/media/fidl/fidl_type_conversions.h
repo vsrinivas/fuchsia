@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FIDL_FIDL_TYPE_CONVERSIONS_H_
+#define GARNET_BIN_MEDIA_FIDL_FIDL_TYPE_CONVERSIONS_H_
 
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/media_player.h>
 
 #include "garnet/bin/media/framework/metadata.h"
 #include "garnet/bin/media/framework/result.h"
@@ -140,27 +142,30 @@ struct TypeConverter<std::unique_ptr<media::StreamTypeSet>,
 };
 
 template <>
-struct TypeConverter<media::MediaMetadataPtr,
-                     std::unique_ptr<media::Metadata>> {
-  static media::MediaMetadataPtr Convert(
-      const std::unique_ptr<media::Metadata>& input);
+struct TypeConverter<media_player::MediaMetadataPtr,
+                     std::unique_ptr<media_player::Metadata>> {
+  static media_player::MediaMetadataPtr Convert(
+      const std::unique_ptr<media_player::Metadata>& input);
 };
 
 template <>
-struct TypeConverter<media::MediaMetadataPtr, const media::Metadata*> {
-  static media::MediaMetadataPtr Convert(const media::Metadata* input);
+struct TypeConverter<media_player::MediaMetadataPtr,
+                     const media_player::Metadata*> {
+  static media_player::MediaMetadataPtr Convert(
+      const media_player::Metadata* input);
 };
 
 template <>
-struct TypeConverter<media::MediaMetadataPtr, media::Metadata> {
-  static media::MediaMetadataPtr Convert(const media::Metadata& input);
+struct TypeConverter<media_player::MediaMetadataPtr, media_player::Metadata> {
+  static media_player::MediaMetadataPtr Convert(
+      const media_player::Metadata& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media::Metadata>,
-                     media::MediaMetadataPtr> {
-  static std::unique_ptr<media::Metadata> Convert(
-      const media::MediaMetadataPtr& input);
+struct TypeConverter<std::unique_ptr<media_player::Metadata>,
+                     media_player::MediaMetadataPtr> {
+  static std::unique_ptr<media_player::Metadata> Convert(
+      const media_player::MediaMetadataPtr& input);
 };
 
 template <>
@@ -176,3 +181,5 @@ struct TypeConverter<std::unique_ptr<media::Bytes>, fidl::VectorPtr<uint8_t>> {
 };
 
 }  // namespace fxl
+
+#endif  // GARNET_BIN_MEDIA_FIDL_FIDL_TYPE_CONVERSIONS_H_

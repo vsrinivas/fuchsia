@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
+#define GARNET_BIN_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_
 
 #include <vector>
 
 #include "garnet/bin/media/framework/models/multistream_source.h"
 #include "garnet/bin/media/framework/stages/stage_impl.h"
 
-namespace media {
+namespace media_player {
 
 // A stage that hosts a MultistreamSource.
 // TODO(dalesat): May need to grow the list of outputs dynamically.
@@ -29,10 +30,10 @@ class MultistreamSourceStageImpl : public StageImpl,
 
   Output& output(size_t index) override;
 
-  std::shared_ptr<PayloadAllocator> PrepareInput(size_t index) override;
+  std::shared_ptr<media::PayloadAllocator> PrepareInput(size_t index) override;
 
   void PrepareOutput(size_t index,
-                     std::shared_ptr<PayloadAllocator> allocator,
+                     std::shared_ptr<media::PayloadAllocator> allocator,
                      UpstreamCallback callback) override;
 
   void UnprepareOutput(size_t index, UpstreamCallback callback) override;
@@ -55,9 +56,11 @@ class MultistreamSourceStageImpl : public StageImpl,
 
   std::vector<Output> outputs_;
   std::shared_ptr<MultistreamSource> source_;
-  PacketPtr cached_packet_;
+  media::PacketPtr cached_packet_;
   size_t cached_packet_output_index_;
   size_t ended_streams_;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_FRAMEWORK_STAGES_MULTISTREAM_SOURCE_STAGE_H_

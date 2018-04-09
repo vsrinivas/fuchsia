@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PUBLISHER_H_
+#define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PUBLISHER_H_
 
+#include <fuchsia/cpp/media.h>
 #include "garnet/bin/media/net_media_service/media_player_net_stub.h"
 #include "garnet/bin/media/net_media_service/net_media_service_impl.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
 #include "lib/netconnector/cpp/net_stub_responder.h"
 
-namespace media {
+namespace media_player {
 
 // Publishes a MediaPlayer.
 //
@@ -36,4 +37,6 @@ class MediaPlayerNetPublisher : public NetMediaServiceImpl::ProductBase {
   FXL_DISALLOW_COPY_AND_ASSIGN(MediaPlayerNetPublisher);
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_MEDIA_PLAYER_NET_PUBLISHER_H_

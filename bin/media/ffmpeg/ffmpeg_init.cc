@@ -8,7 +8,7 @@ extern "C" {
 #include "third_party/ffmpeg/libavformat/avformat.h"
 }
 
-namespace media {
+namespace media_player {
 
 void InitFfmpeg() {
   static bool initialized = []() {
@@ -19,4 +19,4 @@ void InitFfmpeg() {
   (void)initialized;
 }
 
-}  // namespace media
+}  // namespace media_player
