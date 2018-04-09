@@ -68,6 +68,37 @@ class StatusAccumulator {
   S result_status_;
 };
 
+// AnyAccumulator is the accumulator for the AnyWaiter class.
+// It continues until an |Update| call matches |success_status|.
+template <typename S, typename V>
+class AnyAccumulator {
+ public:
+  AnyAccumulator(S success_status, S default_status, V default_value)
+      : success_status_(success_status),
+        result_status_(default_status),
+        value_(std::move(default_value)) {}
+
+  bool PrepareCall() { return true; }
+
+  bool Update(bool /*token*/, S status, V value) {
+    if (status == success_status_) {
+      value_ = std::move(value);
+    }
+    result_status_ = std::move(status);
+    // Continue until we get a success.
+    return result_status_ != success_status_;
+  }
+
+  std::pair<S, V> Result() {
+    return std::make_pair(result_status_, std::move(value_));
+  }
+
+ private:
+  const S success_status_;
+  S result_status_;
+  V value_;
+};
+
 template <typename S, typename V>
 class PromiseAccumulator {
  public:
@@ -231,6 +262,37 @@ class StatusWaiter : public BaseWaiter<internal::StatusAccumulator<S>, S, S> {
   explicit StatusWaiter(S success_status)
       : BaseWaiter<internal::StatusAccumulator<S>, S, S>(
             internal::StatusAccumulator<S>(success_status)) {}
+};
+
+// AnyWaiter is used to wait many asynchronous calls and returns the first
+// successful result. It will return |default_status| and |default_value| only
+// if no callback was called with a |success_status| status.
+template <class S, class V>
+class AnyWaiter
+    : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V> {
+ public:
+  // Creates a new waiter. |success_status| and |default_value| will be
+  // returned to the callback in |Finalize| if |NewCallback| is not called.
+  static fxl::RefPtr<AnyWaiter<S, V>> Create(S success_status,
+                                             S default_status,
+                                             V default_value = V()) {
+    return fxl::AdoptRef(new AnyWaiter<S, V>(success_status, default_status,
+                                             std::move(default_value)));
+  }
+
+  void Finalize(std::function<void(S, V)> callback) {
+    BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>::Finalize(
+        [callback = std::move(callback)](std::pair<S, V> result) {
+          callback(result.first, std::move(result.second));
+        });
+  }
+
+ private:
+  AnyWaiter(S success_status, S default_status, V default_value)
+      : BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S, V>, S, V>(
+            internal::AnyAccumulator<S, V>(success_status,
+                                           default_status,
+                                           std::move(default_value))) {}
 };
 
 // Promise is used to wait on a single asynchronous call. A typical usage

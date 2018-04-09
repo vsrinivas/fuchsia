@@ -4,6 +4,7 @@
 
 #include "garnet/lib/callback/waiter.h"
 #include "garnet/lib/callback/capture.h"
+#include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
 
 namespace callback {
@@ -190,6 +191,59 @@ TEST(Waiter, Cancel) {
   waiter->Cancel();
   callback();
   EXPECT_FALSE(called);
+}
+
+TEST(AnyWaiter, FailureThenSuccess) {
+  auto waiter = AnyWaiter<bool, int>::Create(true, false);
+
+  auto cb1 = waiter->NewCallback();
+  auto cb2 = waiter->NewCallback();
+  auto cb3 = waiter->NewCallback();
+  bool called;
+  int status, result;
+  waiter->Finalize(Capture(SetWhenCalled(&called), &status, &result));
+  EXPECT_FALSE(called);
+  cb1(false, 1);
+  EXPECT_FALSE(called);
+  cb2(true, 2);
+  EXPECT_TRUE(called);
+  EXPECT_EQ(true, status);
+  EXPECT_EQ(2, result);
+
+  called = false;
+  cb3(true, 2);
+  EXPECT_FALSE(called);
+}
+
+TEST(AnyWaiter, AllFailure) {
+  auto waiter = AnyWaiter<bool, int>::Create(true, false, -1);
+
+  auto cb1 = waiter->NewCallback();
+  auto cb2 = waiter->NewCallback();
+  auto cb3 = waiter->NewCallback();
+  bool called;
+  int status, result;
+  waiter->Finalize(Capture(SetWhenCalled(&called), &status, &result));
+  EXPECT_FALSE(called);
+  cb1(false, 1);
+  EXPECT_FALSE(called);
+  cb2(false, 2);
+  EXPECT_FALSE(called);
+  cb3(false, 3);
+  EXPECT_TRUE(called);
+  EXPECT_EQ(false, status);
+  EXPECT_EQ(-1, result);
+}
+
+TEST(AnyWaiter, Default) {
+  auto waiter = AnyWaiter<bool, int>::Create(true, false, -1);
+
+  bool called;
+  int status, result;
+  waiter->Finalize(Capture(SetWhenCalled(&called), &status, &result));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(false, status);
+  EXPECT_EQ(-1, result);
 }
 
 }  //  namespace
