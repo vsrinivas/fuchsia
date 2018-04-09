@@ -89,7 +89,7 @@ class FidlVideoRenderer
   void GetRgbaFrame(uint8_t* rgba_buffer,
                     const geometry::Size& rgba_buffer_size);
 
-  // Discards packets that are older than pts_.
+  // Discards packets that are older than pts_ns_.
   void DiscardOldPackets();
 
   // Checks |packet| for a revised stream type and updates state accordingly.
@@ -100,14 +100,15 @@ class FidlVideoRenderer
 
   // Determines whether we need more packets.
   bool need_more_packets() const {
-    return !end_of_stream_pending() &&
+    return !flushed_ && !end_of_stream_pending() &&
            (packet_queue_.size() + (held_packet_ ? 1 : 0) < kPacketDemand);
   }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   std::queue<PacketPtr> packet_queue_;
+  bool flushed_ = true;
   PacketPtr held_packet_;
-  int64_t pts_ = Packet::kUnknownPts;
+  int64_t pts_ns_ = Packet::kUnknownPts;
   VideoConverter converter_;
   std::unordered_map<View*, std::unique_ptr<View>> views_;
   fxl::Closure prime_callback_;

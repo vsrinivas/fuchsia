@@ -28,6 +28,8 @@ FidlVideoRenderer::FidlVideoRenderer() {
 FidlVideoRenderer::~FidlVideoRenderer() {}
 
 void FidlVideoRenderer::Flush(bool hold_frame) {
+  flushed_ = true;
+
   if (!packet_queue_.empty()) {
     if (hold_frame) {
       held_packet_ = std::move(packet_queue_.front());
@@ -72,7 +74,7 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
 
   // Discard empty packets so they don't confuse the selection logic.
   // Discard packets that fall outside the program range.
-  if (packet->payload() == nullptr || packet_pts_ns < min_pts(0)) {
+  if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0)) {
     return need_more_packets() ? Demand::kPositive : Demand::kNegative;
   }
 
@@ -108,14 +110,15 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
 }
 
 void FidlVideoRenderer::Prime(fxl::Closure callback) {
+  flushed_ = false;
+
   if (packet_queue_.size() >= kPacketDemand || end_of_stream_pending()) {
     callback();
     return;
   }
 
-  stage()->SetDemand(Demand::kPositive);
-
   prime_callback_ = callback;
+  stage()->SetDemand(Demand::kPositive);
 }
 
 geometry::Size FidlVideoRenderer::video_size() const {
@@ -146,7 +149,7 @@ void FidlVideoRenderer::CreateView(
 void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
   UpdateTimeline(reference_time);
 
-  pts_ = current_timeline_function()(reference_time);
+  pts_ns_ = current_timeline_function()(reference_time);
 
   DiscardOldPackets();
 
@@ -179,7 +182,8 @@ void FidlVideoRenderer::OnProgressStarted() {
 void FidlVideoRenderer::DiscardOldPackets() {
   // We keep at least one packet around even if it's old, so we can show an
   // old frame rather than no frame when we starve.
-  while (packet_queue_.size() > 1 && packet_queue_.front()->pts() < pts_) {
+  while (packet_queue_.size() > 1 &&
+         packet_queue_.front()->GetPts(TimelineRate::NsPerSecond) < pts_ns_) {
     // TODO(dalesat): Add hysteresis.
     packet_queue_.pop();
     // Make sure the front of the queue has been checked for revised media

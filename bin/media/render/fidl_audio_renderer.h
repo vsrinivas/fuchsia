@@ -54,14 +54,25 @@ class FidlAudioRenderer
   void ReleasePayloadBuffer(void* buffer) override;
 
  private:
+  // Returns the current demand.
   Demand current_demand();
+
+  // Converts a pts in |pts_rate_| units to ns.
+  int64_t to_ns(int64_t pts) {
+    return pts * (TimelineRate::NsPerSecond / pts_rate_);
+  }
+
+  // Converts a pts in ns to |pts_rate_| units.
+  int64_t from_ns(int64_t pts) {
+    return pts * (pts_rate_ / TimelineRate::NsPerSecond);
+  }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   AudioRenderer2Ptr audio_renderer_;
   MappedSharedBuffer buffer_;
   FifoAllocator allocator_;
   TimelineRate pts_rate_;
-  int64_t pts_;
+  int64_t last_supplied_pts_ = 0;
   fxl::Closure prime_callback_;
   uint32_t bytes_per_frame_;
   bool flushed_ = true;

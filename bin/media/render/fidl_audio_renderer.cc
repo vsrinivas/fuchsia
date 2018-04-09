@@ -50,6 +50,7 @@ FidlAudioRenderer::~FidlAudioRenderer() {}
 
 void FidlAudioRenderer::Flush(bool hold_frame_not_used) {
   flushed_ = true;
+  last_supplied_pts_ = 0;
   SetEndOfStreamPts(kUnspecifiedTime);
   audio_renderer_->FlushNoReply();
 }
@@ -62,15 +63,23 @@ Demand FidlAudioRenderer::SupplyPacket(PacketPtr packet) {
 
   int64_t start_pts = packet->GetPts(pts_rate_);
   int64_t end_pts = start_pts + packet->size() / bytes_per_frame_;
-  if (flushed_ || end_pts < min_pts(0) || start_pts > max_pts(0)) {
+  if (flushed_ || end_pts < from_ns(min_pts(0)) ||
+      start_pts > from_ns(max_pts(0))) {
     // Discard this packet.
     return current_demand();
   }
 
-  pts_ = end_pts;
+  last_supplied_pts_ = end_pts;
 
   if (packet->end_of_stream()) {
     SetEndOfStreamPts(packet->GetPts(TimelineRate::NsPerSecond));
+
+    if (prime_callback_) {
+      // We won't get any more packets, so we're as primed as we're going to
+      // get.
+      prime_callback_();
+      prime_callback_ = nullptr;
+    }
   }
 
   if (packet->size() == 0) {
@@ -160,8 +169,7 @@ void FidlAudioRenderer::SetTimelineFunction(TimelineFunction timeline_function,
   if (timeline_function.subject_delta() == 0) {
     audio_renderer_->PauseNoReply();
   } else {
-    int64_t presentation_time = timeline_function.subject_time() *
-                                (pts_rate_ / TimelineRate::NsPerSecond);
+    int64_t presentation_time = from_ns(timeline_function.subject_time());
     audio_renderer_->PlayNoReply(timeline_function.reference_time(),
                                  presentation_time);
   }
@@ -191,9 +199,9 @@ Demand FidlAudioRenderer::current_demand() {
   int64_t presentation_time_ns =
       current_timeline_function()(Timeline::local_now());
 
-  int64_t last_sent_ns = pts_ * (TimelineRate::NsPerSecond / pts_rate_);
+  int64_t last_supplied_ns = to_ns(last_supplied_pts_);
 
-  return (presentation_time_ns + min_lead_time_ns_ > last_sent_ns)
+  return (presentation_time_ns + min_lead_time_ns_ > last_supplied_ns)
              ? Demand::kPositive
              : Demand::kNegative;
 }
