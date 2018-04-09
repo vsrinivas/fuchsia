@@ -21,13 +21,13 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/bin/guest/third_party/fdt",
     "//garnet/lib/machina",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mdi",
-    "//zircon/third_party/lib/fdt",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
