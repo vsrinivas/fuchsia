@@ -4,12 +4,11 @@
 
 #pragma once
 
-#include <string>
-
 #include <fbl/atomic.h>
+#include <fuchsia/cpp/media.h>
 #include <stdint.h>
 #include <zircon/types.h>
-
+#include <string>
 #include "lib/fxl/files/unique_fd.h"
 
 namespace media {
@@ -44,6 +43,7 @@ template <bool enabled = true>
 class WavWriter {
  public:
   bool Initialize(const char* const file_name,
+                  AudioSampleFormat sample_format,
                   uint32_t channel_count,
                   uint32_t frame_rate,
                   uint32_t bits_per_sample);
@@ -55,6 +55,7 @@ class WavWriter {
   bool Delete();
 
  private:
+  AudioSampleFormat sample_format_;
   uint32_t channel_count_ = 0;
   uint32_t frame_rate_ = 0;
   uint32_t bits_per_sample_ = 0;
@@ -69,7 +70,11 @@ class WavWriter {
 template <>
 class WavWriter<false> {
  public:
-  bool Initialize(const char* const, uint32_t, uint32_t, uint32_t) {
+  bool Initialize(const char* const,
+                  AudioSampleFormat,
+                  uint32_t,
+                  uint32_t,
+                  uint32_t) {
     return true;
   };
   bool Write(void* const, uint32_t) { return true; };

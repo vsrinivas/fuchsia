@@ -143,7 +143,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     }
 
     int64_t fill_target =
-      fifo_frames + cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
+        fifo_frames + cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
 
     // Are we in the middle of an underflow cooldown?  If so, check to see if we
     // have recovered yet.
@@ -321,7 +321,7 @@ void DriverOutput::OnDriverGetFormatsComplete() {
     return;
   }
 
-  wav_writer_.Initialize(nullptr, pref_chan, pref_fps,
+  wav_writer_.Initialize(nullptr, pref_fmt, pref_chan, pref_fps,
                          driver_->bytes_per_frame() * 8 / pref_chan);
 
   // Success, wait until configuration completes.
@@ -344,12 +344,10 @@ void DriverOutput::OnDriverConfigComplete() {
   // Now that our driver is completely configured, we should have all the info
   // we need in order to compute the minimum clock lead time requrirement for
   // this output.
-  int64_t fifo_depth_nsec = TimelineRate::Scale(driver_->fifo_depth_frames(),
-                                                ZX_SEC(1),
-                                                driver_->frames_per_sec());
-  min_clock_lead_time_nsec_ = driver_->external_delay_nsec() +
-                              fifo_depth_nsec +
-                              kDefaultHighWaterNsec;
+  int64_t fifo_depth_nsec = TimelineRate::Scale(
+      driver_->fifo_depth_frames(), ZX_SEC(1), driver_->frames_per_sec());
+  min_clock_lead_time_nsec_ =
+      driver_->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec;
 
   // Fill our brand new ring buffer with silence
   FXL_CHECK(driver_ring_buffer() != nullptr);

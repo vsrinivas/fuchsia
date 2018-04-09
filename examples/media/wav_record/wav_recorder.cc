@@ -27,6 +27,7 @@ static const std::string kShowUsageOption2 = "help";
 static const std::string kVerboseOption = "v";
 static const std::string kLoopbackOption = "loopback";
 static const std::string kAsyncModeOption = "async-mode";
+static const std::string kFloatFormatOption = "float";
 static const std::string kFrameRateOption = "frame-rate";
 static const std::string kChannelsOption = "channels";
 
@@ -53,7 +54,7 @@ void WavRecorder::Run(component::ApplicationContext* app_context) {
   verbose_ = cmd_line_.HasOption(kVerboseOption);
   loopback_ = cmd_line_.HasOption(kLoopbackOption);
 
-  if (pos_args.size() != 1) {
+  if (pos_args.size() < 1) {
     Usage();
     return;
   }
@@ -86,7 +87,8 @@ void WavRecorder::Usage() {
   printf("Usage: %s [options] <filename>\n", cmd_line_.argv0().c_str());
   printf("  --%s : be verbose\n", kVerboseOption.c_str());
   printf("  --%s : record from loopback\n", kLoopbackOption.c_str());
-  printf("  --%s : capture using \"async-mode\"\n", kAsyncModeOption.c_str());
+  printf("  --%s : capture using 'async-mode'\n", kAsyncModeOption.c_str());
+  printf("  --%s : use floating-point format\n", kFloatFormatOption.c_str());
   printf("  --%s=<rate> : desired capture frame rate, on the range [%u, %u].\n",
          kFrameRateOption.c_str(), media::kMinLpcmFramesPerSecond,
          media::kMaxLpcmFramesPerSecond);
@@ -179,13 +181,16 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
   }
 
   const auto& fmt = type.details.audio();
-  sample_format_ = fmt.sample_format;
+
+  sample_format_ = cmd_line_.HasOption(kFloatFormatOption)
+                       ? media::AudioSampleFormat::FLOAT
+                       : media::AudioSampleFormat::SIGNED_16;
   channel_count_ = fmt.channels;
   frames_per_second_ = fmt.frames_per_second;
 
   bool change_format = false;
-  if (sample_format_ != media::AudioSampleFormat::SIGNED_16) {
-    sample_format_ = media::AudioSampleFormat::SIGNED_16;
+
+  if (fmt.sample_format != sample_format_) {
     change_format = true;
   }
 
@@ -229,11 +234,15 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
     }
   }
 
-  bytes_per_frame_ = channel_count_ * sizeof(int16_t);
+  uint32_t bytes_per_sample =
+      (sample_format_ == media::AudioSampleFormat::FLOAT) ? sizeof(float)
+                                                          : sizeof(int16_t);
+  bytes_per_frame_ = channel_count_ * bytes_per_sample;
+  uint32_t bits_per_sample = bytes_per_sample * 8;
 
   // Write the inital WAV header
-  if (!wav_writer_.Initialize(filename_, channel_count_, frames_per_second_,
-                              16)) {
+  if (!wav_writer_.Initialize(filename_, sample_format_, channel_count_,
+                              frames_per_second_, bits_per_sample)) {
     return;
   }
 
@@ -284,7 +293,9 @@ void WavRecorder::OnDefaultFormatFetched(media::MediaType type) {
                                  capture_frames_per_chunk_);
   }
 
-  printf("Recording 16-bit signed %u Hz %u channel LPCM from %s into \"%s\"\n",
+  printf("Recording %s, %u Hz, %u channel linear PCM from %s into '%s'\n",
+         sample_format_ == media::AudioSampleFormat::FLOAT ? "32-bit float"
+                                                           : "16-bit signed",
          frames_per_second_, channel_count_,
          loopback_ ? "loopback" : "default input", filename_);
 

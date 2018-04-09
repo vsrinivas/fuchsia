@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-
 #include <endian.h>
 #include <fcntl.h>
 #include <fdio/io.h>
@@ -40,6 +39,7 @@ constexpr uint32_t WAVE_FOUR_CC = make_fourcc('W', 'A', 'V', 'E');
 constexpr uint32_t FMT_FOUR_CC  = make_fourcc('f', 'm', 't', ' ');
 constexpr uint32_t DATA_FOUR_CC = make_fourcc('d', 'a', 't', 'a');
 constexpr uint16_t FORMAT_LPCM  = 0x0001;
+constexpr uint16_t FORMAT_FLOAT = 0x0003;
 // clang-format on
 
 // The RIFF file specification (and the child specification for WAV content)
@@ -88,7 +88,7 @@ struct __PACKED WavHeader {
   uint32_t wave_four_cc = WAVE_FOUR_CC;
   uint32_t fmt_four_cc = FMT_FOUR_CC;
   uint32_t fmt_chunk_len = sizeof(WavHeader) - offsetof(WavHeader, format);
-  uint16_t format = FORMAT_LPCM;
+  uint16_t format = 0;
   uint16_t channel_count = 0;
   uint32_t frame_rate = 0;
   uint32_t average_byte_rate = 0;
@@ -129,6 +129,7 @@ constexpr const uint32_t kWavHeaderOverhead =
 // to write any audio samples we are given.
 // This private function assumes the given file_desc is valid.
 zx_status_t WriteNewHeader(int file_desc,
+                           AudioSampleFormat sample_format,
                            uint32_t channel_count,
                            uint32_t frame_rate,
                            uint16_t bits_per_sample) {
@@ -145,7 +146,13 @@ zx_status_t WriteNewHeader(int file_desc,
     return ZX_ERR_IO;
   }
 
+  if (sample_format == AudioSampleFormat::FLOAT) {
+    FXL_DCHECK(bits_per_sample == 32);
+  }
+
   WavHeader wave_header;
+  wave_header.format =
+      (sample_format == AudioSampleFormat::FLOAT) ? FORMAT_FLOAT : FORMAT_LPCM;
   wave_header.channel_count = channel_count;
   wave_header.frame_rate = frame_rate;
   wave_header.frame_size = (bits_per_sample >> 3) * channel_count;
@@ -221,11 +228,11 @@ fbl::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
 
 // Create the audio file; save the RIFF chunk and 'fmt ' / 'data' sub-chunks.
 // If this object already had a file open, the header is not updated.
-// TODO(mpuryear): pass in sample type, so we can support 32-bit int and float.
-// Also, leverage utility code elsewhere for bytes-per-sample lookup, for either
-// FIDL-defined sample types and/or driver defined sample packings
+// TODO(mpuryear): leverage utility code elsewhere for bytes-per-sample lookup,
+// for either FIDL-defined sample types and/or driver defined sample packings.
 template <bool enabled>
 bool WavWriter<enabled>::Initialize(const char* const file_name,
+                                    AudioSampleFormat sample_format,
                                     uint32_t channel_count,
                                     uint32_t frame_rate,
                                     uint32_t bits_per_sample) {
@@ -247,23 +254,26 @@ bool WavWriter<enabled>::Initialize(const char* const file_name,
   }
 
   // Save the media format params
+  sample_format_ = sample_format;
   channel_count_ = channel_count;
-  bits_per_sample_ = bits_per_sample;
   frame_rate_ = frame_rate;
+  bits_per_sample_ = bits_per_sample;
   payload_written_ = 0;
 
   // Write inital WAV header
-  zx_status_t status = WriteNewHeader(file_.get(), channel_count_, frame_rate_,
-                                      bits_per_sample_);
+  zx_status_t status =
+      WriteNewHeader(file_.get(), sample_format_, channel_count_, frame_rate_,
+                     bits_per_sample_);
   if (status != ZX_OK) {
     Delete();
     FXL_LOG(WARNING) << "Failed (" << status << ") writing initial header for "
                      << std::quoted(file_name_);
     return false;
   }
-  FXL_LOG(INFO) << "WavWriter[" << this << "] recording " << bits_per_sample_
-                << "-bit " << frame_rate_ << " Hz " << channel_count_
-                << "-chan PCM to " << std::quoted(file_name_);
+  FXL_LOG(INFO) << "WavWriter[" << this << "] recording Format "
+                << sample_format_ << ", " << bits_per_sample_ << "-bit, "
+                << frame_rate_ << " Hz, " << channel_count_ << "-chan PCM to "
+                << std::quoted(file_name_);
   return true;
 }
 

@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-
 #include <audio-utils/audio-input.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -189,8 +188,9 @@ void FxProcessor::Startup(media::AudioServerPtr audio_server) {
   FXL_DCHECK((input_->ring_buffer_bytes() % input_->frame_sz()) == 0);
   input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
-  if (!wav_writer_.Initialize("/tmp/fx.wav", input_->channel_cnt(),
-                              input_->frame_rate(), 16)) {
+  if (!wav_writer_.Initialize(
+          "/tmp/fx.wav", media::AudioSampleFormat::SIGNED_16,
+          input_->channel_cnt(), input_->frame_rate(), 16)) {
     printf("Unable to initialize WAV file for recording.\n");
     return;
   }
