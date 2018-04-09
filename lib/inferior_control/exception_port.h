@@ -11,6 +11,7 @@
 #include <thread>
 #include <unordered_map>
 
+#include <lib/async/dispatcher.h>
 #include <lib/zx/port.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -87,9 +88,9 @@ class ExceptionPort final {
   // its loop as soon as zx_port_wait returns.
   std::atomic_bool keep_running_;
 
-  // The origin task runner used to post observer callback events to the thread
+  // The origin dispatcher to post observer callback events to the thread
   // that created this object.
-  fxl::RefPtr<fxl::TaskRunner> origin_task_runner_;
+  async_t* const  origin_dispatcher_;
 
   // The exception port handle and a mutex for synchronizing access to it.
   // |io_thread_| only ever reads from |eport_handle_| but a call to Quit() can

@@ -7,6 +7,8 @@
 #include <cinttypes>
 #include <string>
 
+#include <lib/async/default.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
@@ -49,9 +51,9 @@ std::string IOPortPacketTypeToString(const zx_port_packet_t& pkt) {
 // static
 ExceptionPort::Key ExceptionPort::g_key_counter = 0;
 
-ExceptionPort::ExceptionPort() : keep_running_(false) {
-  FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-  origin_task_runner_ = fsl::MessageLoop::GetCurrent()->task_runner();
+ExceptionPort::ExceptionPort()
+  : keep_running_(false), origin_dispatcher_(async_get_default()) {
+  FXL_DCHECK(origin_dispatcher_);
 }
 
 ExceptionPort::~ExceptionPort() {
@@ -223,7 +225,7 @@ void ExceptionPort::Worker() {
     }
 
     // Handle the exception/signal on the main thread.
-    origin_task_runner_->PostTask([packet, this] {
+    async::PostTask(origin_dispatcher_, [packet, this] {
       const auto& iter = callbacks_.find(packet.key);
       if (iter == callbacks_.end()) {
         FXL_VLOG(1) << "No handler registered for exception";
