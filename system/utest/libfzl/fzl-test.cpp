@@ -44,8 +44,35 @@ bool TimeTest() {
     zx::ticks tps = zx::ticks::per_second();
     zx::duration nps = zx::sec(1);
 
-    zx::ticks tick_loss = fbl::max(zx::ticks(tps.get() / nps.get()), zx::ticks(1));
-    zx::duration duration_loss = fbl::max(zx::duration(nps.get() / tps.get()), zx::duration(1));
+    // The following tests check converting from:
+    //  - ticks --> nanoseconds --> ticks
+    //  - nanoseconds --> ticks --> nanoseconds
+    //
+    // This conversion is inherently lossy if the number of ticks/ns (or
+    // ns/tick) is not an exact integer -- which is almost always the case.
+    //
+    // To convert N nanoseconds to ticks, we'd logically multiply by
+    // "ticks/sec" / "ns/second". However, by converting N into the ticks
+    // equivalent T, we may be losing the fractional component of this number: N
+    // may actually be represented by T +/- a partial tick.
+    //
+    // In most situations, where ticks are higher precision than nanoseconds,
+    // there will actually be even more loss in the other direction: when
+    // converting from ticks to nanoseconds, we may potentially lose as many as
+    // "ticks/second / ns/second" ticks.
+    //
+    // To ensure our error margins account for this loss, where we lose
+    // minimally a "partial unit" and maximally an integer ratio of the units,
+    // we calculate acceptable loss as:
+    //
+    // loss = max(1 + ratio, 1)
+    //
+    // Where we add one to the ratio to "round up to the nearest integer ratio" while
+    // doing the conversion.
+    zx::ticks tick_loss = fbl::max(zx::ticks(1 + (tps.get() / nps.get())),
+                                   zx::ticks(1));
+    zx::duration duration_loss = fbl::max(zx::duration(1 + (nps.get() / tps.get())),
+                                          zx::duration(1));
 
     ASSERT_TRUE(TickConverter(zx::ticks(0), zx::ticks(0)));
     ASSERT_TRUE(TickConverter(zx::ticks(50), tick_loss));
