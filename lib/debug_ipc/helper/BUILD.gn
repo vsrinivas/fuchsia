@@ -6,6 +6,8 @@
 # but that aren't directly related to the protocol.
 static_library("helper") {
   sources = [
+    "message_loop.cc",
+    "message_loop.h",
     "stream_buffer.cc",
     "stream_buffer.h",
   ]
@@ -14,6 +16,20 @@ static_library("helper") {
     #"//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
   ]
+
+  if (current_toolchain == host_toolchain) {
+    # Host toolchain.
+  } else {
+    # Target toolchain.
+    sources += [
+      "message_loop_zircon.cc",
+      "message_loop_zircon.h",
+    ]
+    public_deps += [
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
 }
 
 # Unit tests for this directory. These are intended to be referenced by unit
@@ -21,6 +37,7 @@ static_library("helper") {
 source_set("tests") {
   testonly = true
   sources = [
+    "message_loop_unittest.cc",
     "stream_buffer_unittest.cc",
   ]
 

@@ -40,11 +40,14 @@ package("zxdb") {
 }
 
 install_host_tools("host") {
+  testonly = true
   deps = [
     ":bin",
+    ":unittests",
   ]
   outputs = [
     "zxdb",
+    "zxdb_tests",
   ]
 }
 
@@ -69,9 +72,16 @@ executable("unittests") {
   deps = [
     "//garnet/bin/zxdb/client:tests",
     "//garnet/bin/zxdb/console:tests",
+    "//garnet/lib/debug_ipc:tests",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(brettw) when host support for the helper (message loops, etc.) is
+  # available, this should be an unconditional dependency.
+  if (current_toolchain != host_toolchain) {
+    deps += [ "//garnet/lib/debug_ipc/helper:tests" ]
+  }
 }
 
 package("zxdb_tests") {
