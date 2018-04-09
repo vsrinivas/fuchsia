@@ -608,7 +608,7 @@ syscall mmap_device_io
     returns (zx_status_t);
 
 syscall vmo_create_contiguous
-    (rsrc_handle: zx_handle_t, size: size_t, alignment_log2: uint32_t)
+    (bti: zx_handle_t, size: size_t, alignment_log2: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
 syscall vmo_create_physical

@@ -161,22 +161,26 @@ zx_status_t sys_interrupt_signal(zx_handle_t handle, uint32_t slot, zx_time_t ti
 #endif
 }
 
-zx_status_t sys_vmo_create_contiguous(zx_handle_t hrsrc, size_t size,
-                                      uint32_t alignment_log2,
+zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t alignment_log2,
                                       user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
 
-    if (size == 0) return ZX_ERR_INVALID_ARGS;
-    if (alignment_log2 == 0)
-        alignment_log2 = PAGE_SIZE_SHIFT;
-    // catch obviously wrong values
-    if (alignment_log2 < PAGE_SIZE_SHIFT ||
-            alignment_log2 >= (8 * sizeof(uint64_t)))
+    if (size == 0) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    // TODO(ZX-971): finer grained validation
-    zx_status_t status;
-    if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
+    if (alignment_log2 == 0) {
+        alignment_log2 = PAGE_SIZE_SHIFT;
+    }
+    // catch obviously wrong values
+    if (alignment_log2 < PAGE_SIZE_SHIFT || alignment_log2 >= (8 * sizeof(uint64_t))) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+    fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
+    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    if (status != ZX_OK) {
         return status;
     }
 
