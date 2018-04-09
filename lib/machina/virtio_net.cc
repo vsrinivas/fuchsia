@@ -166,7 +166,7 @@ async_wait_result_t VirtioNet::Stream::OnFifoReadable(
   uint32_t num_entries_read;
   eth_fifo_entry_t entries[fifo_entries_.size()];
   status = zx_fifo_read_old(fifo_, static_cast<void*>(entries), sizeof(entries),
-                        &num_entries_read);
+                            &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
     return ASYNC_WAIT_AGAIN;
   }
