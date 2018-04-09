@@ -56,6 +56,10 @@
 // Content: bootdata_kernel_t
 #define BOOTDATA_KERNEL           (0x4c4e524b) // KRNL
 
+// A Zircon Partition Map
+// Content: bootdata_partition_map_t
+#define BOOTDATA_PARTITION_MAP    (0x54524150) // PART
+
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
 
@@ -179,6 +183,31 @@ typedef struct {
     bootdata_t hdr_kernel;
     bootdata_kernel_t data_kernel;
 } zircon_kernel_t;
+
+#define BOOTDATA_PART_NAME_LEN 32
+#define BOOTDATA_PART_GUID_LEN 16
+
+typedef struct {
+    uint8_t type_guid[BOOTDATA_PART_GUID_LEN];
+    uint8_t uniq_guid[BOOTDATA_PART_GUID_LEN];
+    uint64_t first_block;
+    uint64_t last_block;
+    uint64_t flags;
+    char name[BOOTDATA_PART_NAME_LEN];
+} bootdata_partition_t;
+
+typedef struct {
+    uint64_t block_count;
+    uint64_t block_size;
+    // pdev_vid/pid/did are used to match partition map to
+    // appropriate block device on the platform bus
+    uint32_t pdev_vid;
+    uint32_t pdev_pid;
+    uint32_t pdev_did;
+    uint32_t partition_count;
+    char guid[BOOTDATA_PART_GUID_LEN];
+    bootdata_partition_t partitions[];
+} bootdata_partition_map_t;
 
 typedef struct {
     uint64_t base;
