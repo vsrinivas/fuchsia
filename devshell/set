@@ -12,6 +12,7 @@
 ##               [--goma|--no-goma] [--no-ensure-goma]
 ##               [--goma-dir DIR]
 ##               [--ccache|--no-ccache]
+##               [--release]
 ##
 ## where TARGET is x64 or arm64
 ##
@@ -69,7 +70,8 @@
 ##                         variable is set to a directory.
 ##   --ide                 Pass --ide=VALUE to gn when generating to create project
 ##                         files usable with that IDE. Useful values include "vs"
-##                          for Visual Studio or "xcode" for Xcode.
+##                         for Visual Studio or "xcode" for Xcode.
+##   --release             an alias for "--args=is_debug=false"
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 
@@ -156,6 +158,9 @@ function main {
           return 1
         fi
         shift
+        ;;
+      --release)
+        gn_args+=" is_debug=false"
         ;;
       --variant)
         if [[ $# -lt 2 ]]; then
