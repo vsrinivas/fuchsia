@@ -1,12 +1,5 @@
 {
-    "resources": [
-        {
-            "bootfs_path": "data/build/last-update",
-            "file": "garnet/last-update"
-        },
-        {
-            "bootfs_path": "data/build/snapshot",
-            "file": ".jiri_root/update_history/latest"
-        }
-    ]
+    "packages": {
+        "build_info": "//garnet:build_info"
+    }
 }

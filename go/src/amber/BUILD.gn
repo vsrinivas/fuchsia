@@ -216,3 +216,14 @@ copy("amber-srv-keys") {
     "$root_out_dir/{{source_file_part}}",
   ]
 }
+
+package("config") {
+  system_image = true
+  package_name = "amber_config"
+  resources = [
+    {
+      dest = "sysmgr/amber.config"
+      path = rebase_path("startup.config")
+    },
+  ]
+}

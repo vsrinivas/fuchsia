@@ -2,10 +2,7 @@
     "imports": [
         "garnet/packages/config/network"
     ],
-    "resources": [
-        {
-            "bootfs_path": "data/sysmgr/amber.config",
-            "file": "garnet/go/src/amber/startup.config"
-        }
-    ]
+    "packages": {
+        "amber_config": "//garnet/go/src/amber:config"
+    }
 }

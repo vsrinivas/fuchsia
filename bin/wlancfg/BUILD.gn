@@ -33,3 +33,14 @@ package("wlancfg") {
     },
   ]
 }
+
+package("config") {
+  system_image = true
+  package_name = "wlancfg_config"
+  resources = [
+    {
+      dest = "sysmgr/wlancfg.config"
+      path = rebase_path("wlancfg.config")
+    },
+  ]
+}

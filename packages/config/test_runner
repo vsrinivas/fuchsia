@@ -2,10 +2,7 @@
     "imports": [
         "garnet/packages/config/network"
     ],
-    "resources": [
-        {
-            "bootfs_path": "data/sysmgr/test_runner.config",
-            "file": "garnet/bin/test_runner/config/test_runner.config"
-        }
-    ]
+    "packages": {
+        "test_runner_config": "//garnet/bin/sysmgr:test_runner_config"
+    }
 }

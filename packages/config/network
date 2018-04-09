@@ -2,10 +2,7 @@
     "imports": [
         "garnet/packages/config/services"
     ],
-    "resources": [
-        {
-            "bootfs_path": "data/sysmgr/network.config",
-            "file": "garnet/bin/sysmgr/config/network.config"
-        }
-    ]
+    "packages": {
+        "network_config": "//garnet/bin/sysmgr:network_config"
+    }
 }

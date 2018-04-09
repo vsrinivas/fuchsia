@@ -35,8 +35,34 @@ package("sysmgr") {
 
   binary = "sysmgr"
 
-  meta = [ {
-        path = rebase_path("meta/sandbox")
-        dest = "sandbox"
-      } ]
+  meta = [
+    {
+      path = rebase_path("meta/sandbox")
+      dest = "sandbox"
+    },
+  ]
+}
+
+template("config_package") {
+  package(target_name) {
+    system_image = true
+    resources = [
+      {
+        dest = "sysmgr/${invoker.name}"
+        path = rebase_path("config/${invoker.name}")
+      },
+    ]
+  }
+}
+
+config_package("network_config") {
+  name = "network.config"
+}
+
+config_package("services_config") {
+  name = "services.config"
+}
+
+config_package("test_runner_config") {
+  name = "test_runner.config"
 }

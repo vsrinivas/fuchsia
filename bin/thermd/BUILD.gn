@@ -43,3 +43,14 @@ package("thermd") {
     system_image = true
   }
 }
+
+package("config") {
+  system_image = true
+  package_name = "thermd_config"
+  resources = [
+    {
+      dest = "sysmgr/thermd.config"
+      path = rebase_path("thermd.config")
+    },
+  ]
+}

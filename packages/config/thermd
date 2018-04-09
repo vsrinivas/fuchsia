@@ -1,11 +1,8 @@
 {
-  "imports": [
-    "garnet/packages/config/services"
-  ],
-  "resources": [
-    {
-      "bootfs_path": "data/sysmgr/thermd.config",
-      "file": "garnet/bin/thermd/thermd.config"
+    "imports": [
+      "garnet/packages/config/services"
+    ],
+    "packages": {
+        "thermd_config": "//garnet/bin/thermd:config"
     }
-  ]
 }

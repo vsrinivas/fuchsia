@@ -1,0 +1,18 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("build_info") {
+  resources = [
+    {
+      dest = "build/last-update"
+      path = rebase_path("last-update")
+    },
+    {
+      dest = "build/snapshot"
+      path = rebase_path("//.jiri_root/update_history/latest")
+    },
+  ]
+}
