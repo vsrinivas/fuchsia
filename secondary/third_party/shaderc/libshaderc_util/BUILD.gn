@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("libshaderc_util") {
+  deps = [
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+  ]
+  include_dirs = [
+    "//third_party/shaderc/libshaderc_util/include",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/spirv-tools/include",
+  ]
+  sources = [
+    "include/libshaderc_util/compiler.h",
+    "include/libshaderc_util/counting_includer.h",
+    "include/libshaderc_util/file_finder.h",
+    "include/libshaderc_util/format.h",
+    "include/libshaderc_util/io.h",
+    "include/libshaderc_util/message.h",
+    "include/libshaderc_util/mutex.h",
+    "include/libshaderc_util/resources.h",
+    "include/libshaderc_util/resources.inc",
+    "include/libshaderc_util/shader_stage.h",
+    "include/libshaderc_util/spirv_tools_wrapper.h",
+    "include/libshaderc_util/string_piece.h",
+    "include/libshaderc_util/universal_unistd.h",
+    "include/libshaderc_util/version_profile.h",
+    "src/compiler.cc",
+    "src/file_finder.cc",
+    "src/io.cc",
+    "src/message.cc",
+    "src/resources.cc",
+    "src/shader_stage.cc",
+    "src/spirv_tools_wrapper.cc",
+    "src/version_profile.cc",
+  ]
+}

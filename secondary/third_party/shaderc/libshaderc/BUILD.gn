@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("libshaderc") {
+  deps = [
+    "//third_party/shaderc/libshaderc_util",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+    "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+  ]
+  include_dirs = [
+    "//third_party/shaderc/libshaderc/include",
+    "//third_party/shaderc/libshaderc_util/include",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/spirv-tools/include",
+  ]
+  sources = [
+    "include/shaderc/shaderc.h",
+    "include/shaderc/shaderc.hpp",
+    "src/shaderc_private.h",
+    "src/shaderc.cc",
+  ]
+}
