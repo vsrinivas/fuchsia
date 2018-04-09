@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_server/test/audio_result.h"
+#include "garnet/bin/media/audio_server/test/mixer_tests_shared.h"
 #include "gtest/gtest.h"
 
 namespace media {
@@ -158,7 +159,8 @@ TEST(Recap, DynamicRange) {
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n      Input Gain       Mixed Result          Usable Range\n");
-  printf("\n     -0.000133  %10.6lf ( > %9.6lf)   %5.2lf (%5.2lf)",
+  printf("\n     %9.6lf  %10.6lf ( > %9.6lf)   %5.2lf (%5.2lf)",
+         GainScaleToDb(AudioResult::kScaleEpsilon),
          AudioResult::LevelEpsilonDown, AudioResult::kPrevLevelEpsilonDown,
          AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
   printf("\n    -60.0000    %8.4lf   (+/- %6.4lf  )   %5.2lf (%5.2lf)",

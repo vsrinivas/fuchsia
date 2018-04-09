@@ -16,18 +16,17 @@ namespace audio {
 fbl::RefPtr<AudioRenderer2Impl> AudioRenderer2Impl::Create(
     fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
     AudioServerImpl* owner) {
-  return fbl::AdoptRef(new AudioRenderer2Impl(std::move(audio_renderer_request),
-                                              owner));
+  return fbl::AdoptRef(
+      new AudioRenderer2Impl(std::move(audio_renderer_request), owner));
 }
 
 AudioRenderer2Impl::AudioRenderer2Impl(
     fidl::InterfaceRequest<AudioRenderer2> audio_renderer_request,
     AudioServerImpl* owner)
-  : owner_(owner),
-    audio_renderer_binding_(this, std::move(audio_renderer_request)),
-    pts_ticks_per_second_(1000000000, 1),
-    ref_clock_to_frac_frames_(0, 0, { 0, 1 }) {
-
+    : owner_(owner),
+      audio_renderer_binding_(this, std::move(audio_renderer_request)),
+      pts_ticks_per_second_(1000000000, 1),
+      ref_clock_to_frac_frames_(0, 0, {0, 1}) {
   audio_renderer_binding_.set_error_handler([this]() {
     audio_renderer_binding_.Unbind();
     Shutdown();
@@ -64,10 +63,9 @@ void AudioRenderer2Impl::Shutdown() {
   payload_buffer_.reset();
 }
 
-void AudioRenderer2Impl::SnapshotCurrentTimelineFunction(
-    int64_t reference_time,
-    TimelineFunction* out,
-    uint32_t* generation) {
+void AudioRenderer2Impl::SnapshotCurrentTimelineFunction(int64_t reference_time,
+                                                         TimelineFunction* out,
+                                                         uint32_t* generation) {
   FXL_DCHECK(out != nullptr);
   FXL_DCHECK(generation != nullptr);
 
@@ -118,10 +116,10 @@ bool AudioRenderer2Impl::ValidateConfig() {
     // The user has not explicitly set a continuity threshold.  Default to 1/2
     // of a PTS tick expressed in fractional input frames, rounded up.
     pts_continuity_threshold_frac_frame_ =
-      (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
+        (frac_frames_per_pts_tick_.Scale(1) + 1) >> 1;
   } else {
     pts_continuity_threshold_frac_frame_ =
-      static_cast<double>(frac_fps) * pts_continuity_threshold_;
+        static_cast<double>(frac_fps) * pts_continuity_threshold_;
   }
 
   // Compute the number of fractional frames per reference clock tick.
@@ -164,35 +162,33 @@ void AudioRenderer2Impl::SetPcmFormat(AudioPcmFormat format) {
   switch (format.sample_format) {
     case AudioSampleFormat::UNSIGNED_8:
     case AudioSampleFormat::SIGNED_16:
+    case AudioSampleFormat::FLOAT:
       break;
 
-    // TODO(johngro): Add more sample formats (24 bit, float, etc..) as the
+    // TODO(johngro): Add more sample formats (24 bit, etc..) as the
     // mixer core learns to handle them.
     default:
-      FXL_LOG(ERROR) << "Unsupported sample format ("
-                     << format.sample_format
+      FXL_LOG(ERROR) << "Unsupported sample format (" << format.sample_format
                      << ") in AudioRenderer::SetPcmFormat.";
       return;
   }
 
   if ((format.channels < kMinChannelCount) ||
       (format.channels > kMaxChannelCount)) {
-      FXL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Invalid channel count (" << format.channels
         << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << kMinChannelCount << ", "
-        << kMaxChannelCount << "]";
-      return;
+        << kMinChannelCount << ", " << kMaxChannelCount << "]";
+    return;
   }
 
   if ((format.frames_per_second < kMinFramesPerSecond) ||
       (format.frames_per_second > kMaxFramesPerSecond)) {
-      FXL_LOG(ERROR)
+    FXL_LOG(ERROR)
         << "Invalid frame rate (" << format.frames_per_second
         << ") in AudioRenderer::SetPcmFormat.  Must be on the range ["
-        << kMinFramesPerSecond << ", "
-        << kMaxFramesPerSecond << "]";
-      return;
+        << kMinFramesPerSecond << ", " << kMaxFramesPerSecond << "]";
+    return;
   }
 
   // Everything checks out.  Discard any existing links we are holding
@@ -238,7 +234,7 @@ void AudioRenderer2Impl::SetPayloadBuffer(zx::vmo payload_buffer) {
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
-      << "Attempted to set payload buffer while in the operational mode.";
+        << "Attempted to set payload buffer while in the operational mode.";
     return;
   }
 
@@ -266,22 +262,18 @@ void AudioRenderer2Impl::SetPtsUnits(uint32_t tick_per_second_numerator,
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
-      << "Attempted to set PTS units while in the operational mode.";
+        << "Attempted to set PTS units while in the operational mode.";
     return;
   }
 
   if (!tick_per_second_numerator || !tick_per_second_denominator) {
-    FXL_LOG(ERROR)
-      << "Bad PTS ticks per second ("
-      << tick_per_second_numerator
-      << "/"
-      << tick_per_second_denominator
-      << ")";
+    FXL_LOG(ERROR) << "Bad PTS ticks per second (" << tick_per_second_numerator
+                   << "/" << tick_per_second_denominator << ")";
     return;
   }
 
-  pts_ticks_per_second_ = TimelineRate(tick_per_second_numerator,
-                                       tick_per_second_denominator);
+  pts_ticks_per_second_ =
+      TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
 
   // Things went well, cancel the cleanup hook.  If our config had been
   // validated previously, it will have to be revalidated as we move into the
@@ -295,13 +287,13 @@ void AudioRenderer2Impl::SetPtsContinuityThreshold(float threshold_seconds) {
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
-      << "Attempted to set PTS cont threshold while in the operational mode.";
+        << "Attempted to set PTS cont threshold while in the operational mode.";
     return;
   }
 
   if (threshold_seconds < 0.0) {
-    FXL_LOG(ERROR)
-      << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
+    FXL_LOG(ERROR) << "Invalid PTS continuity threshold (" << threshold_seconds
+                   << ")";
     return;
   }
 
@@ -320,7 +312,7 @@ void AudioRenderer2Impl::SetReferenceClock(zx::handle ref_clock) {
 
   if (IsOperating()) {
     FXL_LOG(ERROR)
-      << "Attempted to set reference clock while in the operational mode.";
+        << "Attempted to set reference clock while in the operational mode.";
     return;
   }
 
@@ -379,7 +371,7 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
   // startup, and after each flush operation).
   if (!pts_to_frac_frames_valid_) {
     ComputePtsToFracFrames(
-      (packet.timestamp == kNoTimestamp) ? 0 : packet.timestamp);
+        (packet.timestamp == kNoTimestamp) ? 0 : packet.timestamp);
   }
 
   // Now compute the starting PTS expressed in fractional input frames.  If no
@@ -393,8 +385,8 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
     int64_t packet_ffpts = pts_to_frac_frames_.Apply(packet.timestamp);
     int64_t delta = std::abs(packet_ffpts - next_frac_frame_pts_);
     start_pts = (delta < pts_continuity_threshold_frac_frame_)
-              ? next_frac_frame_pts_
-              : packet_ffpts;
+                    ? next_frac_frame_pts_
+                    : packet_ffpts;
   }
 
   // Snap the starting pts to an input frame boundary.
@@ -408,13 +400,9 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
   start_pts &= mask;
 
   // Create the packet.
-  auto packet_ref = fbl::AdoptRef<AudioPacketRef>(new AudioPacketRefV2(
-        payload_buffer_,
-        callback,
-        std::move(packet),
-        owner_,
-        frame_count << kPtsFractionalBits,
-        start_pts));
+  auto packet_ref = fbl::AdoptRef<AudioPacketRef>(
+      new AudioPacketRefV2(payload_buffer_, callback, std::move(packet), owner_,
+                           frame_count << kPtsFractionalBits, start_pts));
 
   // The end pts is the value we will use for the next packet's start PTS, if
   // the user does not provide an explicit PTS.
@@ -508,9 +496,8 @@ void AudioRenderer2Impl::Play(int64_t reference_time,
     // usually be pretty small since internal requirements for lead times tend
     // to be small, (while external requirements can be huge).
     constexpr int64_t lead_time_padding = ZX_MSEC(20);
-    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC)
-                   + lead_time_padding
-                   + min_clock_lead_nsec_;
+    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + lead_time_padding +
+                     min_clock_lead_nsec_;
   }
 
   // If the user did not specify a media time, use the media time of the first
@@ -608,7 +595,7 @@ void AudioRenderer2Impl::Pause(PauseCallback callback) {
   // at and report back.
   if (callback != nullptr) {
     int64_t paused_media_time =
-      pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_);
+        pts_to_frac_frames_.ApplyInverse(pause_time_frac_frames_);
     callback(ref_clock_now, paused_media_time);
   }
 
@@ -616,7 +603,9 @@ void AudioRenderer2Impl::Pause(PauseCallback callback) {
   cleanup.cancel();
 }
 
-void AudioRenderer2Impl::PauseNoReply() { Pause(nullptr); }
+void AudioRenderer2Impl::PauseNoReply() {
+  Pause(nullptr);
+}
 
 void AudioRenderer2Impl::SetGainMute(float gain,
                                      bool mute,
@@ -677,8 +666,7 @@ void AudioRenderer2Impl::EnableMinLeadTimeEvents(
   ReportNewMinClockLeadTime();
 }
 
-void AudioRenderer2Impl::GetMinLeadTime(
-    GetMinLeadTimeCallback callback) {
+void AudioRenderer2Impl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   callback(min_clock_lead_nsec_);
 }
 
@@ -689,28 +677,32 @@ void AudioRenderer2Impl::ReportNewMinClockLeadTime() {
 }
 
 AudioRenderer2Impl::AudioPacketRefV2::AudioPacketRefV2(
-        fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
-        AudioRenderer2::SendPacketCallback callback,
-        AudioPacket packet,
-        AudioServerImpl* server,
-        uint32_t frac_frame_len,
-        int64_t start_pts)
-  : AudioPacketRef(server, frac_frame_len, start_pts),
-    vmo_ref_(std::move(vmo_ref)),
-    callback_(callback),
-    packet_(std::move(packet)) {
+    fbl::RefPtr<fbl::RefCountedVmoMapper> vmo_ref,
+    AudioRenderer2::SendPacketCallback callback,
+    AudioPacket packet,
+    AudioServerImpl* server,
+    uint32_t frac_frame_len,
+    int64_t start_pts)
+    : AudioPacketRef(server, frac_frame_len, start_pts),
+      vmo_ref_(std::move(vmo_ref)),
+      callback_(callback),
+      packet_(std::move(packet)) {
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
 // Shorthand to save horizontal space for the thunks which follow.
 void AudioRenderer2Impl::GainControlBinding::SetGainMute(
-    float gain, bool mute, uint32_t flags,
+    float gain,
+    bool mute,
+    uint32_t flags,
     SetGainMuteCallback callback) {
   owner_->SetGainMute(gain, mute, flags, callback);
 }
 
 void AudioRenderer2Impl::GainControlBinding::SetGainMuteNoReply(
-    float gain, bool mute, uint32_t flags) {
+    float gain,
+    bool mute,
+    uint32_t flags) {
   owner_->SetGainMuteNoReply(gain, mute, flags);
 }
 

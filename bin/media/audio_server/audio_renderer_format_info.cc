@@ -10,8 +10,7 @@
 namespace media {
 namespace audio {
 
-AudioRendererFormatInfo::AudioRendererFormatInfo(
-    AudioMediaTypeDetails format)
+AudioRendererFormatInfo::AudioRendererFormatInfo(AudioMediaTypeDetails format)
     : format_(std::move(format)) {
   // Precompute some useful timing/format stuff.
   //
@@ -34,6 +33,7 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
       break;
 
     case AudioSampleFormat::SIGNED_24_IN_32:
+    case AudioSampleFormat::FLOAT:
       bytes_per_frame_ = 4;
       break;
 

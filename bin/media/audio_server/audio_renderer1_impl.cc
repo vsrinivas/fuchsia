@@ -43,6 +43,13 @@ static const struct {
         .min_frames_per_second = media::kMinLpcmFramesPerSecond,
         .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
     },
+    {
+        .sample_format = AudioSampleFormat::FLOAT,
+        .min_channels = media::kMinLpcmChannelCount,
+        .max_channels = media::kMaxLpcmChannelCount,
+        .min_frames_per_second = media::kMinLpcmFramesPerSecond,
+        .max_frames_per_second = media::kMaxLpcmFramesPerSecond,
+    },
 };
 
 AudioRenderer1Impl::AudioRenderer1Impl(
