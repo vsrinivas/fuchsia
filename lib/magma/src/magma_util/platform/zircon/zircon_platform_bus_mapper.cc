@@ -5,6 +5,7 @@
 #include "zircon_platform_bus_mapper.h"
 #include "platform_trace.h"
 #include <ddk/driver.h>
+#include <lib/zx/process.h>
 
 namespace magma {
 
@@ -39,8 +40,15 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
                                 page_addr.data(), page_count,
                                 pmt.reset_and_get_address());
     }
-    if (status != ZX_OK)
-        return DRETP(nullptr, "zx_bti_pin failed: %d", status);
+    if (status != ZX_OK) {
+        zx_info_task_stats_t task_stats = {};
+        zx::process::self().get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr,
+                                     nullptr);
+        return DRETP(nullptr, "zx_bti_pin failed: %d page_count: 0x%x mem_mapped_bytes: 0x%lx "
+                              "mem_private_bytes: 0x%lx mem_shared_bytes: 0x%lx",
+                     status, page_count, task_stats.mem_mapped_bytes, task_stats.mem_private_bytes,
+                     task_stats.mem_shared_bytes);
+    }
 
     auto mapping =
         std::make_unique<BusMapping>(start_page_index, std::move(page_addr), std::move(pmt));
