@@ -45,7 +45,7 @@ class CppBuilder(Builder):
                 if os.path.isfile(dest):
                     raise Exception('File already exists: %s.' % dest)
                 self.make_dir(dest)
-                shutil.copyfile(file.source, dest)
+                shutil.copy2(file.source, dest)
             elif self.is_overlay:
                 # Only binaries get installed in overlay mode.
                 continue
@@ -53,7 +53,7 @@ class CppBuilder(Builder):
                 dest = os.path.join(self.output, 'pkg', atom.id.name,
                                     destination)
                 self.make_dir(dest)
-                shutil.copyfile(file.source, dest)
+                shutil.copy2(file.source, dest)
             else:
                 raise Exception('Error: unknow file extension "%s" for %s.' %
                                 (extension, atom.id))
@@ -67,7 +67,7 @@ class CppBuilder(Builder):
             dest = os.path.join(self.output, 'pkg', atom.id.name,
                                 file.destination)
             self.make_dir(dest)
-            shutil.copyfile(file.source, dest)
+            shutil.copy2(file.source, dest)
 
 
     def install_exe_atom(self, atom):
@@ -85,7 +85,7 @@ class CppBuilder(Builder):
         file = files[0]
         destination = os.path.join(self.output, 'tools', file.destination)
         self.make_dir(destination)
-        shutil.copyfile(file.source, destination)
+        shutil.copy2(file.source, destination)
 
 
 def main():
