@@ -98,7 +98,7 @@ function main {
   shift
 
   local gn_cmd='gen'
-  local gn_switches='--check'
+  local -a gn_switches=(--check)
   local gn_args="target_cpu=\"${arch}\""
   local packages=
   local extra_packages=
@@ -174,10 +174,11 @@ function main {
         ;;
       --help-args)
         gn_cmd=args
-        gn_switches+=' --list'
         if [[ $# -ge 2 ]] && [[ "$2" != '--*' ]]; then
-          gn_switches+="=$2"
+          gn_switches+=("--list=$2")
           shift
+        else
+          gn_switches+=(--list)
         fi
         ;;
       --ccache)
@@ -191,7 +192,7 @@ function main {
           fx-command-help
           return 1
         fi
-        gn_switches+=" --ide=$2"
+        gn_switches+=("--ide=$2")
         shift
         ;;
       --*)
@@ -261,8 +262,8 @@ function main {
   # meaning of what this script does so everyone learns how GN works.
   (
     set -x
-    "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" ${gn_switches} \
-                                  --args="${gn_args}" "$@"
+    "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
+                                   "${gn_switches[@]}" --args="${gn_args}" "$@"
   # If GN failed, don't update .config.
   ) || return
 
