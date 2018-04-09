@@ -320,6 +320,27 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Backtrace -------------------------------------------------------------------
+
+void WriteRequest(const BacktraceRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kBacktrace, transaction_id);
+  writer->WriteBytes(&request, sizeof(BacktraceRequest));
+}
+
+bool ReadReply(MessageReader* reader,
+               BacktraceReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  Deserialize(reader, &reply->frames);
+  return true;
+}
+
 // Notifications ---------------------------------------------------------------
 
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {

@@ -16,12 +16,68 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
+#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 namespace {
+
+void ListFrames(ConsoleContext* context, Thread* thread) {
+  int active_frame_id = context->GetActiveFrameIdForThread(thread);
+
+  OutputBuffer out;
+
+  const auto& frames = thread->GetFrames();
+  for (int i = 0; i < static_cast<int>(frames.size()); i++) {
+    if (i == active_frame_id)
+      out.Append(">");
+    else
+      out.Append(" ");
+    out.Append(DescribeFrame(frames[i].get(), i));
+    out.Append("\n");
+  }
+  Console::get()->Output(std::move(out));
+}
+
+void ScheduleListFrames(Thread* thread) {
+  thread->SyncFrames(
+      [thread]() { ListFrames(&Console::get()->context(), thread); });
+}
+
+// Returns true if processing should stop (either a frame command or an error),
+// false to continue processing to the nex noun type.
+bool HandleFrame(ConsoleContext* context, const Command& cmd, Err* err) {
+  if (!cmd.HasNoun(Noun::kFrame))
+    return false;
+
+  if (!cmd.thread()) {
+    *err = Err(ErrType::kInput, "There is no thread to have frames.");
+    return true;
+  }
+
+  if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
+    // Just "frame", this lists available frames.
+    if (cmd.thread()->HasAllFrames())
+      ListFrames(context, cmd.thread());
+    else
+      ScheduleListFrames(cmd.thread());
+    return true;
+  }
+
+  // Explicit index provided, this switches the current context. The thread
+  // should be already resolved to a valid pointer if it was specified on the
+  // command line (otherwise the command would have been rejected before here).
+  FXL_DCHECK(cmd.frame());
+  context->SetActiveFrameForThread(cmd.frame());
+  // Setting the active thread also sets the active thread and target.
+  context->SetActiveThreadForTarget(cmd.thread());
+  context->SetActiveTarget(cmd.target());
+  Console::get()->Output(DescribeFrame(
+      cmd.frame(), context->GetActiveFrameIdForThread(cmd.thread())));
+  return true;
+}
 
 // Prints the thread list for the given process to the console.
 void ListThreads(ConsoleContext* context, Process* process) {
@@ -54,28 +110,28 @@ void ListThreads(ConsoleContext* context, Process* process) {
 // misleading and show out-of-date thread names which the developer might be
 // relying on. Therefore, force a sync of the thread list from the target
 // (which should be fast) before displaying the thread list.
-void ScheduleListThreads(ConsoleContext* context, Target* target) {
-  Process* process = target->GetProcess();
-  if (!process) {
-    Console::get()->Output(
-        Err(ErrType::kInput, "Process not running, no threads."));
-    return;
-  }
-
+void ScheduleListThreads(Process* process) {
   // Since the Process issues the callback, it's OK to capture the pointer.
   process->SyncThreads(
       [process]() { ListThreads(&Console::get()->context(), process); });
 }
 
-// Returns true if the thread noun was specified and therefore handled.
-bool HandleThread(ConsoleContext* context, const Command& cmd) {
+// Returns true if processing should stop (either a thread command or an error),
+// false to continue processing to the nex noun type.
+bool HandleThread(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kThread))
     return false;
+
+  Process* process = cmd.target()->GetProcess();
+  if (!process) {
+    *err = Err(ErrType::kInput, "Process not running, no threads.");
+    return true;
+  }
 
   if (cmd.GetNounIndex(Noun::kThread) == Command::kNoIndex) {
     // Just "thread" or "process 2 thread" specified, this lists available
     // threads.
-    ScheduleListThreads(context, cmd.target());
+    ScheduleListThreads(process);
     return true;
   }
 
@@ -86,6 +142,7 @@ bool HandleThread(ConsoleContext* context, const Command& cmd) {
   context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
   context->SetActiveTarget(cmd.target());
+  Console::get()->Output(DescribeThread(context, cmd.thread(), false));
   return true;
 }
 
@@ -114,8 +171,9 @@ void ListProcesses(ConsoleContext* context) {
   Console::get()->Output(std::move(out));
 }
 
-// Returns true if the process noun was specified and therefore handled.
-bool HandleProcess(ConsoleContext* context, const Command& cmd) {
+// Returns true if processing should stop (either a thread command or an error),
+// false to continue processing to the nex noun type.
+bool HandleProcess(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kProcess))
     return false;
 
@@ -200,10 +258,11 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
     return result;
 
   // Work backwards in specificity (frame -> thread -> process).
-  // TODO(brettw) frame.
-  if (HandleThread(context, cmd))
+  if (HandleFrame(context, cmd, &result))
     return result;
-  if (HandleProcess(context, cmd))
+  if (HandleThread(context, cmd, &result))
+    return result;
+  if (HandleProcess(context, cmd, &result))
     return result;
 
   return result;

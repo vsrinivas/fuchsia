@@ -59,6 +59,9 @@ class DebuggedThread {
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(debug_ipc::ResumeRequest::How how);
 
+  // Fills in the backtrace if available. Otherwise fills in nothing.
+  void GetBacktrace(std::vector<debug_ipc::StackFrame>* frames) const;
+
  private:
   enum class AfterBreakpointStep {
     kContinue,  // Resume execution.

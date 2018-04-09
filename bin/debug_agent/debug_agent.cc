@@ -8,6 +8,7 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
+#include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/launcher.h"
 #include "garnet/bin/debug_agent/object_util.h"
 #include "garnet/bin/debug_agent/process_info.h"
@@ -249,11 +250,27 @@ void DebugAgent::OnRemoveBreakpoint(
     proc->OnRemoveBreakpoint(request, reply);
 }
 
+void DebugAgent::OnBacktrace(const debug_ipc::BacktraceRequest& request,
+                             debug_ipc::BacktraceReply* reply) {
+  DebuggedThread* thread = GetDebuggedThread(
+      request.process_koid, request.thread_koid);
+  if (thread)
+    thread->GetBacktrace(&reply->frames);
+}
+
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   auto found = procs_.find(koid);
   if (found == procs_.end())
     return nullptr;
   return found->second.get();
+}
+
+DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
+                                              zx_koid_t thread_koid) {
+  DebuggedProcess* process = GetDebuggedProcess(process_koid);
+  if (!process)
+    return nullptr;
+  return process->GetThread(thread_koid);
 }
 
 DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t koid,

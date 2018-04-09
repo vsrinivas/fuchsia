@@ -17,11 +17,35 @@ namespace zxdb {
 namespace {
 
 const char kFrameShortHelp[] =
-    "frame / f: ";
+    "frame / f: Select or list stack frames.";
 const char kFrameHelp[] =
-    R"(frame
+    R"(frame [ <id> [ <command> ... ] ]
 
-  TODO write me.
+  Selects or lists stack frames. Stack frames are only available for threads
+  that are stopped. Selecting or listing frames for running threads will
+  fail.
+
+  By itself, "frame" will list the stack frames in the current thread.
+
+  With an ID following it ("frame 3"), selects that frame as the current
+  active frame. This frame will apply by default for subsequent commands.
+
+  With an ID and another command following it ("frame 3 print"), modifies the
+  frame for that command only. This allows interrogating stack frames
+  regardless of which is the active one.
+
+Examples
+
+  f
+  frame
+    Lists all stack frames in the current thread.
+
+  f 1
+  frame 1
+    Selects frame 1 to be the active frame in the current thread.
+
+  process 2 thread 1 frame 3
+    Selects the specified process, thread, and frame.
 )";
 
 const char kThreadShortHelp[] =
@@ -43,9 +67,11 @@ const char kThreadHelp[] =
 
 Examples
 
+  t
   thread
       Lists all threads in the current process.
 
+  t 1
   thread 1
       Selects thread 1 to be the active thread in the current process.
 

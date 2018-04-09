@@ -14,6 +14,7 @@
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
+#include "garnet/bin/debug_agent/unwind.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
@@ -129,6 +130,20 @@ void DebuggedThread::Resume(debug_ipc::ResumeRequest::How how) {
     suspend_reason_ = SuspendReason::kNone;
     thread_.resume(0);
   }
+}
+
+void DebuggedThread::GetBacktrace(
+    std::vector<debug_ipc::StackFrame>* frames) const {
+  // This call will fail if the thread isn't in a state to get its backtrace.
+  zx_thread_state_general_regs regs;
+  zx_status_t status = thread_.read_state(
+      ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs));
+  if (status != ZX_OK)
+    return;
+
+  constexpr size_t kMaxStackDepth = 256;
+  UnwindStack(process_->process(), thread_, *arch::IPInRegs(&regs),
+              *arch::SPInRegs(&regs), kMaxStackDepth, frames);
 }
 
 void DebuggedThread::UpdateForSoftwareBreakpoint(

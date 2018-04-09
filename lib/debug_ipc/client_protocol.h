@@ -107,6 +107,14 @@ bool ReadReply(MessageReader* reader,
                RemoveBreakpointReply* reply,
                uint32_t* transaction_id);
 
+// Backtrace.
+void WriteRequest(const BacktraceRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               BacktraceReply* reply,
+               uint32_t* transaction_id);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

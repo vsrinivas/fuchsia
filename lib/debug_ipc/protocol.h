@@ -33,6 +33,7 @@ struct MsgHeader {
     kReadMemory,
     kAddOrChangeBreakpoint,
     kRemoveBreakpoint,
+    kBacktrace,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyProcessExiting,
@@ -168,6 +169,17 @@ struct RemoveBreakpointRequest {
 };
 struct RemoveBreakpointReply {
 };
+
+struct BacktraceRequest {
+  uint64_t process_koid = 0;
+  uint32_t thread_koid = 0;
+};
+struct BacktraceReply {
+  // Will be empty if the thread doesn't exist or isn't stopped.
+  std::vector<StackFrame> frames;
+};
+
+// Notifications ---------------------------------------------------------------
 
 // Data for process destroyed messages (process created messages are in
 // response to launch commands so is just the reply to that message).

@@ -8,6 +8,8 @@
 #include <vector>
 #include <zx/thread.h>
 
+#include "garnet/lib/debug_ipc/records.h"
+
 namespace debug_agent {
 
 zx_status_t UnwindStack(const zx::process& process,
@@ -15,6 +17,6 @@ zx_status_t UnwindStack(const zx::process& process,
                         uint64_t ip,
                         uint64_t sp,
                         size_t max_depth,
-                        std::vector<uint64_t>* stack);
+                        std::vector<debug_ipc::StackFrame>* stack);
 
 }  // namespace debug_agent

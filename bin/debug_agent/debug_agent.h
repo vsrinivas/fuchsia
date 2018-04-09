@@ -63,9 +63,14 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
       debug_ipc::AddOrChangeBreakpointReply* reply) override;
   void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
                           debug_ipc::RemoveBreakpointReply* reply) override;
+  void OnBacktrace(const debug_ipc::BacktraceRequest& request,
+                   debug_ipc::BacktraceReply* reply) override;
 
-  // Returns the debugged process for the given koid or null if not found.
+  // Returns the debugged process/thread for the given koid(s) or null if not
+  // found.
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
+  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid,
+                                    zx_koid_t thread_koid);
 
   // Returns a pointer to the newly created object.
   DebuggedProcess* AddDebuggedProcess(zx_koid_t koid, zx::process proc);

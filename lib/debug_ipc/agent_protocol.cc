@@ -285,6 +285,25 @@ void WriteReply(const RemoveBreakpointReply& reply,
   writer->WriteHeader(MsgHeader::Type::kRemoveBreakpoint, transaction_id);
 }
 
+// Backtrace -------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 BacktraceRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(BacktraceRequest), request);
+}
+
+void WriteReply(const BacktraceReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kBacktrace, transaction_id);
+  Serialize(reply.frames, writer);
+}
+
 // Notifications ---------------------------------------------------------------
 
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {

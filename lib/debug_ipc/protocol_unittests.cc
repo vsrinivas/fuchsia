@@ -351,6 +351,38 @@ TEST(Protocol, RemoveBreakpointReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 }
 
+// Backtrace -------------------------------------------------------------------
+
+TEST(Protocol, BacktraceRequest) {
+  BacktraceRequest initial;
+  initial.process_koid = 1234;
+  initial.thread_koid = 8976;
+
+  BacktraceRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+}
+
+TEST(Protocol, BacktraceReply) {
+  BacktraceReply initial;
+  initial.frames.resize(2);
+  initial.frames[0].ip = 1234;
+  initial.frames[0].sp = 9875;
+  initial.frames[1].ip = 71562341;
+  initial.frames[1].sp = 89236413;
+
+  BacktraceReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(2u, second.frames.size());
+  EXPECT_EQ(initial.frames[0].ip, second.frames[0].ip);
+  EXPECT_EQ(initial.frames[0].sp, second.frames[0].sp);
+  EXPECT_EQ(initial.frames[1].ip, second.frames[1].ip);
+  EXPECT_EQ(initial.frames[1].sp, second.frames[1].sp);
+}
+
 // Notifications ---------------------------------------------------------------
 
 TEST(Protocol, NotifyThread) {

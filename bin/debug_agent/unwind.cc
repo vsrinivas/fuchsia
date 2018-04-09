@@ -42,7 +42,7 @@ zx_status_t UnwindStack(const zx::process& process,
                         uint64_t ip,
                         uint64_t sp,
                         size_t max_depth,
-                        std::vector<uint64_t>* stack) {
+                        std::vector<debug_ipc::StackFrame>* stack) {
   // Get the modules sorted by load address.
   ModuleVector modules;
   zx_status_t status = GetModulesForProcess(process, &modules);
@@ -67,19 +67,22 @@ zx_status_t UnwindStack(const zx::process& process,
   if (unw_init_remote(&cursor, remote_aspace, fuchsia) < 0)
     return ZX_ERR_INTERNAL;
 
-  stack->push_back(ip);
-  while (sp >= 0x1000000 && stack->size() < max_depth) {
+  debug_ipc::StackFrame frame;
+  frame.ip = ip;
+  frame.sp = sp;
+  stack->push_back(frame);
+  while (frame.sp >= 0x1000000 && stack->size() < max_depth) {
     int ret = unw_step(&cursor);
     if (ret <= 0)
       break;
 
     unw_word_t val;
     unw_get_reg(&cursor, UNW_REG_IP, &val);
-    ip = val;
+    frame.ip = val;
     unw_get_reg(&cursor, UNW_REG_SP, &val);
-    sp = val;
+    frame.sp = val;
 
-    stack->push_back(ip);
+    stack->push_back(frame);
   }
 
   return ZX_OK;

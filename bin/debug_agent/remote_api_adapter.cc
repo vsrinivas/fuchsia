@@ -91,6 +91,7 @@ void RemoteAPIAdapter::OnHandleReadable() {
     DISPATCH(Detach);
     DISPATCH(AddOrChangeBreakpoint);
     DISPATCH(RemoveBreakpoint);
+    DISPATCH(Backtrace);
 
     // Attach is special (see remote_api.h): forward the raw data instead of
     // a deserizlied version.

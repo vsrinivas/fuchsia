@@ -16,6 +16,7 @@ namespace zxdb {
 class Command;
 class ConsoleContext;
 class Err;
+class Frame;
 class Thread;
 
 // Ensures the target is currently running (it has a current Process associated
@@ -49,6 +50,7 @@ std::string DescribeTarget(const ConsoleContext* context, const Target* target,
                            bool columns);
 std::string DescribeThread(const ConsoleContext* context, const Thread* thread,
                            bool columns);
+std::string DescribeFrame(const Frame* frame, int id);
 std::string DescribeBreakpoint(const ConsoleContext* context,
                                const Breakpoint* breakpoint,
                                bool columns);

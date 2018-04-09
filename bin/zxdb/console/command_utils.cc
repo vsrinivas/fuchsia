@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -217,6 +218,13 @@ std::string DescribeThread(const ConsoleContext* context, const Thread* thread,
   return fxl::StringPrintf(format_string, context->IdForThread(thread),
                            state.c_str(), thread->GetKoid(),
                            thread->GetName().c_str());
+}
+
+// Unlike the other describe command, this takes an ID because normally
+// you know the index when calling into here, and it's inefficient to look up.
+std::string DescribeFrame(const Frame* frame, int id) {
+  // This will need symbols hooked up.
+  return fxl::StringPrintf("Frame %d @ 0x%" PRIx64, id, frame->GetIP());
 }
 
 std::string DescribeBreakpoint(const ConsoleContext* context,

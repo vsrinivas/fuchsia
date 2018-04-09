@@ -14,6 +14,7 @@ namespace zxdb {
 
 class Breakpoint;
 class Command;
+class Frame;
 class Session;
 
 // The context for console commands. In a model-view-controller UI, this would
@@ -34,6 +35,7 @@ class ConsoleContext
   // Returns the ID for the object. Asserts and returns 0 if not found.
   int IdForTarget(const Target* target) const;
   int IdForThread(const Thread* thread) const;
+  int IdForFrame(const Frame* frame) const;
   int IdForBreakpoint(const Breakpoint* breakpoint) const;
 
   // The active target will always exist except during setup and teardown.
@@ -46,6 +48,12 @@ class ConsoleContext
   void SetActiveThreadForTarget(const Thread* thread);
   int GetActiveThreadIdForTarget(const Target* target);
 
+  // Frames are a little bit different than threads and targets since they
+  // have an intrinsic numbering supplied by the Thread object (the index into
+  // the backtrace).
+  void SetActiveFrameForThread(const Frame* frame);
+  int GetActiveFrameIdForThread(const Thread* thread);
+
   // Sets the active breakpoint. Can be null/0 if there is no active breakpoint
   // (set to null to clear).
   void SetActiveBreakpoint(const Breakpoint* breakpoint);
@@ -55,9 +63,14 @@ class ConsoleContext
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.
   // Returns an error if any of the referenced IDs are invalid.
-  Err FillOutCommand(Command* cmd);
+  Err FillOutCommand(Command* cmd) const;
 
  private:
+  struct ThreadRecord {
+    Thread* thread = nullptr;
+    int active_frame_id = 0;
+  };
+
   struct TargetRecord {
     int target_id = 0;
     Target* target = nullptr;
@@ -68,7 +81,7 @@ class ConsoleContext
     // the process is not running).
     int active_thread_id = 0;
 
-    std::map<int, Thread*> id_to_thread;
+    std::map<int, ThreadRecord> id_to_thread;
     std::map<const Thread*, int> thread_to_id;
   };
 
@@ -89,13 +102,30 @@ class ConsoleContext
 
   // ThreadObserver implementation:
   void OnThreadStopped(Thread* thread,
-                       debug_ipc::NotifyException::Type type,
-                       uint64_t address) override;
+                       debug_ipc::NotifyException::Type type) override;
+  void OnThreadFramesInvalidated(Thread* thread) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.
   TargetRecord* GetTargetRecord(int target_id);
+  const TargetRecord* GetTargetRecord(int target_id) const;
   TargetRecord* GetTargetRecord(const Target* target);
+
+  ThreadRecord* GetThreadRecord(const Thread* thread);
+
+  // Backends for parts of FillOutCommand.
+  //
+  // For the variants that take an input pointer, the pointer may be null if
+  // there is nothing of that type.
+  //
+  // For the variants that take an output pointer, the pointer will be stored
+  // if the corresponding item (target/thread) is found, otherwise it will be
+  // unchanged.
+  Err FillOutTarget(Command* cmd, TargetRecord const** out_target_record) const;
+  Err FillOutThread(Command* cmd, const TargetRecord* target_record,
+                    ThreadRecord const** out_thread_record) const;
+  Err FillOutFrame(Command* cmd, const ThreadRecord* thread_record) const;
+  Err FillOutBreakpoint(Command* cmd) const;
 
   Session* const session_;
 
