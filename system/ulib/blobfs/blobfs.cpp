@@ -955,7 +955,10 @@ Blobfs::Blobfs(fbl::unique_fd fd, const blobfs_info_t* info)
 
 Blobfs::~Blobfs() {
     writeback_ = nullptr;
-    ZX_ASSERT(hash_.is_empty());
+
+    // TODO(ZX-1923): This assertion should be re-instated when unmounting
+    // is capable of closing all priors before completion.
+    // ZX_ASSERT(hash_.is_empty());
 
     if (fifo_client_ != nullptr) {
         FreeTxnId();
