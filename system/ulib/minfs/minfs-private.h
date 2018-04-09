@@ -267,6 +267,10 @@ public:
     void SetIno(ino_t ino);
     static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
+    // fs::Vnode interface (invoked publicly).
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
+
     // fbl::Recyclable interface.
     void fbl_recycle() final;
 
@@ -282,9 +286,7 @@ private:
 
     // fs::Vnode interface.
     zx_status_t ValidateFlags(uint32_t flags) final;
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name) final;
-    zx_status_t Close() final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,
                       size_t* out_actual) final;

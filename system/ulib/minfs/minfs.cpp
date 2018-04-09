@@ -976,6 +976,11 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
         return status;
     }
 
+    if ((status = vn->Open(0, nullptr)) != ZX_OK) {
+        FS_TRACE_ERROR("minfs: cannot open root inode\n");
+        return status;
+    }
+
     ZX_DEBUG_ASSERT(vn->IsDirectory());
     *root_out = fbl::move(vn);
     return ZX_OK;

@@ -1052,7 +1052,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     return ZX_OK;
 }
 
-zx_status_t Blobfs::GetRootBlob(fbl::RefPtr<VnodeBlob>* out) {
+zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeBlob> vn =
         fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(this)));
@@ -1061,8 +1061,12 @@ zx_status_t Blobfs::GetRootBlob(fbl::RefPtr<VnodeBlob>* out) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    *out = fbl::move(vn);
+    zx_status_t status = vn->Open(0, nullptr);
+    if (status != ZX_OK) {
+        return status;
+    }
 
+    *out = fbl::move(vn);
     return ZX_OK;
 }
 
@@ -1123,7 +1127,7 @@ zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
         fs->CollectMetrics();
     }
 
-    if ((status = fs->GetRootBlob(out)) != ZX_OK) {
+    if ((status = fs->OpenRootNode(out)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not get root blob\n");
         return status;
     }

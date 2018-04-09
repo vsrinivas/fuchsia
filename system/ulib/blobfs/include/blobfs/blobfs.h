@@ -120,6 +120,9 @@ public:
     // Constructs actual blobs
     VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest);
 
+    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t Close() final;
+
     void fbl_recycle() final;
     virtual ~VnodeBlob();
     void CompleteSync();
@@ -188,8 +191,6 @@ private:
     zx_status_t Unlink(fbl::StringPiece name, bool must_be_dir) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
     void Sync(SyncCallback closure) final;
-    zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Close() final;
 
     // Read both VMOs into memory, if we haven't already.
     //
@@ -280,8 +281,9 @@ public:
     zx_status_t Unmount();
     virtual ~Blobfs();
 
-    // Returns the root blob
-    zx_status_t GetRootBlob(fbl::RefPtr<VnodeBlob>* out);
+    // Invokes "open" on the root directory.
+    // Acts as a special-case to bootstrap filesystem mounting.
+    zx_status_t OpenRootNode(fbl::RefPtr<VnodeBlob>* out);
 
     // Searches for a blob by name.
     // - If a readable blob with the same name exists, return it.
