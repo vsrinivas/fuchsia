@@ -157,13 +157,13 @@ func TestEncodingIdentity(t *testing.T) {
 		}
 		testIdentity(t, &TestHandle1{
 			A: zx.Handle(22),
-			B: zx.HANDLE_INVALID,
+			B: zx.HandleInvalid,
 			C: vmo,
-			D: zx.VMO(zx.HANDLE_INVALID),
+			D: zx.VMO(zx.HandleInvalid),
 		}, 16, &TestHandle1{})
 		testIdentity(t, &TestHandle2{
 			A: []zx.Handle{zx.Handle(vmo)},
-			B: []zx.VMO{zx.VMO(zx.HANDLE_INVALID)},
+			B: []zx.VMO{zx.VMO(zx.HandleInvalid)},
 		}, 48, &TestHandle2{})
 		vmo.Close()
 	})
@@ -176,10 +176,10 @@ func TestEncodingIdentity(t *testing.T) {
 		}
 		testIdentity(t, &TestInterface1{
 			A: Test1Interface(Proxy{Channel: h0}),
-			B: Test1Interface(Proxy{Channel: zx.Channel(zx.HANDLE_INVALID)}),
+			B: Test1Interface(Proxy{Channel: zx.Channel(zx.HandleInvalid)}),
 			C: Test1InterfaceRequest(InterfaceRequest{Channel: h1}),
 			D: Test1InterfaceRequest(InterfaceRequest{
-				Channel: zx.Channel(zx.HANDLE_INVALID),
+				Channel: zx.Channel(zx.HandleInvalid),
 			}),
 		}, 16, &TestInterface1{})
 	})

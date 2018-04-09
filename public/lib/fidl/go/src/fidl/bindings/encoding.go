@@ -496,7 +496,7 @@ func (e *encoder) marshalHandle(v reflect.Value, n nestedTypeData) error {
 	// The underlying type of all the handles is a uint32, so we're
 	// safe calling Uint(). This will panic if that is no longer true.
 	raw := zx.Handle(v.Uint())
-	if raw == zx.HANDLE_INVALID {
+	if raw == zx.HandleInvalid {
 		if !n.nullable {
 			return ErrUnexpectedNullHandle
 		}
@@ -890,7 +890,7 @@ func (d *decoder) unmarshalHandle(v reflect.Value, n nestedTypeData) error {
 		if !n.nullable {
 			return ErrUnexpectedNullHandle
 		}
-		v.SetUint(uint64(zx.HANDLE_INVALID))
+		v.SetUint(uint64(zx.HandleInvalid))
 	case uint64(handlePresent):
 		if len(d.handles) == 0 {
 			return ErrNotEnoughHandles

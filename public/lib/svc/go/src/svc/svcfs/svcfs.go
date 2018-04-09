@@ -67,7 +67,7 @@ func (n *Namespace) handler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Sta
 	switch op {
 	case fdio.OpOpen:
 		h := msg.Handle[0]
-		if h == zx.HANDLE_INVALID {
+		if h == zx.HandleInvalid {
 			return zx.ErrBadState
 		}
 
@@ -96,7 +96,7 @@ func (n *Namespace) handler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Sta
 
 	case fdio.OpClone:
 		h := msg.Handle[0]
-		if h == zx.HANDLE_INVALID {
+		if h == zx.HandleInvalid {
 			return zx.ErrBadState
 		}
 

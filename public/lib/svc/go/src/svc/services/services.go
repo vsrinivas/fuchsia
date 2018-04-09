@@ -29,7 +29,7 @@ func NewProvider() *Provider {
 func (p *Provider) NewRequest() (zx.Channel, error) {
 	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
-		return zx.Channel(zx.HANDLE_INVALID), err
+		return zx.Channel(zx.HandleInvalid), err
 	}
 	if p.directory.Handle().IsValid() {
 		p.directory.Close()
@@ -45,7 +45,7 @@ func (p *Provider) Bind(dir *zx.Channel) {
 		p.directory.Close()
 	}
 	p.directory = *dir
-	*dir = zx.Channel(zx.HANDLE_INVALID)
+	*dir = zx.Channel(zx.HandleInvalid)
 }
 
 // Close closes the channel held in the Provider object.

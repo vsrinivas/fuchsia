@@ -32,7 +32,7 @@ func main() {
 	}
 
 	h := mxruntime.GetStartupHandle(mxruntime.HandleInfo{Type: mxruntime.HandleUser0, Arg: 0})
-	if h == zx.HANDLE_INVALID {
+	if h == zx.HandleInvalid {
 		log.Fatalf("pkgfs: mount failed, no serving handle supplied in startup arguments")
 	}
 

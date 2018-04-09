@@ -39,13 +39,13 @@ const (
 func getServiceRoot() zx.Handle {
 	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
-		return zx.HANDLE_INVALID
+		return zx.HandleInvalid
 	}
 
 	// TODO: Use "/svc" once that actually works.
 	err = fdio.ServiceConnect("/svc/.", zx.Handle(c0))
 	if err != nil {
-		return zx.HANDLE_INVALID
+		return zx.HandleInvalid
 	}
 	return zx.Handle(c1)
 }

@@ -248,7 +248,7 @@ func (vfs *ThinVFS) processOpFile(msg *fdio.Msg, f fs.File, cookie int64) zx.Sta
 		if err := vfs.AddHandler(msg.Handle[0], f2); err != nil {
 			f2.Close()
 		}
-		msg.Handle[0] = zx.HANDLE_INVALID
+		msg.Handle[0] = zx.HandleInvalid
 		return fdio.ErrIndirect.Status
 	case fdio.OpClose:
 		err := f.Close()
@@ -432,7 +432,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 				d.Close()
 			}
 		}
-		msg.Handle[0] = zx.HANDLE_INVALID
+		msg.Handle[0] = zx.HandleInvalid
 		return fdio.ErrIndirect.Status
 	case fdio.OpClone:
 		d2, err := dir.Dup()
@@ -453,7 +453,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 		if err := vfs.AddHandler(msg.Handle[0], &directoryWrapper{d: d2}); err != nil {
 			d2.Close()
 		}
-		msg.Handle[0] = zx.HANDLE_INVALID
+		msg.Handle[0] = zx.HandleInvalid
 		return fdio.ErrIndirect.Status
 	case fdio.OpClose:
 		err := dir.Close()
