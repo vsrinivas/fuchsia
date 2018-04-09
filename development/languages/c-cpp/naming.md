@@ -4,7 +4,11 @@ Naming C/C++ objects
 ## Include paths
 
 The following guidelines apply to libraries which are meant to be used
-extensively, e.g. in an upper layer of the Fuchsia codebase or via an SDK.
+extensively, e.g. in an upper layer of the Fuchsia codebase or via an SDK,
+where "upper layer of the Fuchsia codebase" means "garnet" and above
+(peridot, topaz, vendor/foo).
+
+There are three categories of headers: system, fuchsia, other.
 
 #### For system headers
 
@@ -21,6 +25,7 @@ defines), shared definitions and data structures between kernel and userspace
 ###### Notes
 
 - Headers may be installed straight under `zircon/`.
+- This does not include things like wrappers on syscall interfaces like zx.
 
 ###### Examples
 
@@ -36,14 +41,14 @@ defines), shared definitions and data structures between kernel and userspace
 
 ###### Rationale
 
-These are libraries very specific to Fuchsia but not particularly to the kernel.
+These are libraries that define a low level ABI/API in Fuchsia but are not
+specific to the kernel.
 
 ###### Notes
 
-- We will possibly install FIDL-generated code for Fuchsia APIs in that very
-  namespace, as well as C/C++ wrapper libraries around these APIs.
+- FIDL-generated code for Fuchsia APIs in that very namespace,
+  as well as C/C++ wrapper libraries around these APIs are installed here.
 - Headers may be installed straight under `fuchsia/`.
-- There are no known uses of this format as of this writing.
 
 ###### Examples
 
@@ -59,9 +64,10 @@ These are libraries very specific to Fuchsia but not particularly to the kernel.
 
 ###### Rationale
 
-Some libraries in that space are not necessarily Fuchsia-specific, so we are
-using a rather bland namespace that will likely not cause any collisions in the
-outside world.
+Some libraries in that space are not necessarily Fuchsia-specific, or they
+may be Fuchsia-specific but do not fall into either of the above categories.
+We use a rather bland namespace that will likely not cause any collisions in
+the outside world: "lib".
 
 ###### Notes
 
@@ -72,3 +78,4 @@ outside world.
 
 - `lib/app/cpp/application_context.h`
 - `lib/fbl/array.h`
+- `lib/zx/event.h`
