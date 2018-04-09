@@ -96,6 +96,12 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
         return status;
     }
 
+    // Create must be called with the BTI's lock held, so this is safe to
+    // invoke.
+    [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        pmo->bti_->AddPmoLocked(pmo.get());
+    }();
+
     *dispatcher = fbl::move(pmo);
     *rights = ZX_DEFAULT_PMT_RIGHTS;
     return ZX_OK;
@@ -270,7 +276,13 @@ PinnedMemoryTokenDispatcher::~PinnedMemoryTokenDispatcher() {
         vmo_->Unpin(offset_, size_);
     }
 
-    bti_->RemovePmo(this);
+    // RemovePmo is the only method that will remove dll_pmt_ from a list, and
+    // it's only called here.  dll_pmt_ is only added to a list at the end of
+    // Create, before any reference to the pmt has been given out.
+    // Because of this, it's safe to check InContainer without holding a lock.
+    if (dll_pmt_.InContainer()) {
+        bti_->RemovePmo(this);
+    }
 }
 
 PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
@@ -282,7 +294,6 @@ PinnedMemoryTokenDispatcher::PinnedMemoryTokenDispatcher(
       bti_(fbl::move(bti)), mapped_addrs_(fbl::move(mapped_addrs)) {
 
     InvalidateMappedAddrsLocked();
-    bti_->AddPmoLocked(this);
 }
 
 zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results,
