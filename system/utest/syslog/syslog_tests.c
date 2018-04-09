@@ -63,7 +63,7 @@ bool test_log_simple_write(void) {
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOG(INFO, NULL, "test message");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "test message\n"), buf);
@@ -80,7 +80,7 @@ bool test_log_write(void) {
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOGF(INFO, NULL, "%d, %s", 10, "just some number");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "INFO: 10, just some number\n"), buf);
@@ -97,7 +97,7 @@ bool test_log_preprocessed_message(void) {
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
     FX_LOG(INFO, NULL, "%d, %s");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "INFO: %d, %s\n"), buf);
@@ -131,7 +131,7 @@ bool test_log_write_with_tag(void) {
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], NULL, 0), "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[tag] INFO: 10, just some string\n"), buf);
@@ -148,7 +148,7 @@ bool test_log_write_with_global_tag(void) {
   EXPECT_EQ(ZX_OK, init_helper(pipefd[0], (const char* []){"gtag"}, 1), "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[gtag, tag] INFO: 10, just some string\n"), buf);
@@ -166,7 +166,7 @@ bool test_log_write_with_multi_global_tag(void) {
             "");
   FX_LOGF(INFO, "tag", "%d, %s", 10, "just some string");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "[gtag, gtag2, tag] INFO: 10, just some string\n"),
@@ -194,7 +194,7 @@ bool test_msg_length_limit(void) {
   char buf[2048] = {0};
   memset(msg, 'a', sizeof(msg) - 1);
   FX_LOGF(INFO, NULL, "%s", msg);
-  size_t n = read(pipefd[1], &buf, sizeof(buf));
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   msg[n] = 0;
   EXPECT_TRUE(ends_with(buf, "a...\n"), buf);
@@ -202,7 +202,7 @@ bool test_msg_length_limit(void) {
   msg[0] = '%';
   msg[1] = 's';
   FX_LOG(INFO, NULL, msg);
-  n = read(pipefd[1], &buf, sizeof(buf));
+  n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   msg[n] = 0;
   EXPECT_TRUE(ends_with(buf, "a...\n"), buf);
@@ -220,7 +220,7 @@ bool test_vlog_simple_write(void) {
   FX_LOG_SET_VERBOSITY(1);
   FX_VLOG(1, NULL, "test message");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "VLOG(1): test message\n"), buf);
@@ -238,7 +238,7 @@ bool test_vlog_write(void) {
   FX_LOG_SET_VERBOSITY(1);
   FX_VLOGF(1, NULL, "%d, %s", 10, "just some number");
   char buf[256];
-  size_t n = read(pipefd[1], &buf, 256);
+  size_t n = read(pipefd[1], buf, sizeof(buf));
   EXPECT_GT(n, 0u, "");
   buf[n] = 0;
   EXPECT_TRUE(ends_with(buf, "VLOG(1): 10, just some number\n"), buf);
