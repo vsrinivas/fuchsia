@@ -116,18 +116,13 @@ typedef struct fidl_message_header {
     uint32_t flags;
     uint32_t ordinal;
 } fidl_message_header_t;
-
-enum {
-    // Specified that the message body is contained in the VMO which
-    // was passed as the last handle in the handle table.
-    FIDL_MSG_VMO = 0x00000001,
-};
 ```
 
+
 Represents the initial part of every request or response message sent over a
-channel. The header is immediately followed by the body of the payload unless
-the **FIDL_MSG_VMO** flag is set, in which case the body is in the associated
-VMO.
+channel. The header is immediately followed by the body of the payload.
+Currently, there are no flags to be set, and so `flags` must be zero.
+
 
 # fidl_string
 

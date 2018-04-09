@@ -504,16 +504,11 @@ to the selected option.
         responses.
 *   Flags control the interpretation of the message. All unused bits must be set
     to zero.
-    *   <strong><code>FIDL_MSG_VMO = 0x00000001</code></strong> : Specifies that
-        the message body is contained in the VMO which was passed as the
-        <strong>last</strong> handle in the handle table.
+    *   Currently there are no flags, so all bits must be zero.
 
 Messages which are sent directly through Zircon channels have a maximum total
 size (header + body) which is defined by the kernel <em>(currently 64 KB,
-eventual intent may be 16 KB).</em> Arbitrarily large messages can be
-transferred by writing the message body into a Zircon VMO, setting the
-<strong><code>FIDL_MSG_VMO</code></strong> flag in the message header, and
-sending the VMO through the channel along with the header.
+eventual intent may be 16 KB).</em>
 
 It is possible to extend interfaces by declaring additional methods with unique
 ordinals. The language also supports creating derived interfaces provided the
