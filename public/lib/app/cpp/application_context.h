@@ -11,9 +11,6 @@
 
 #include "lib/app/cpp/service_provider_impl.h"
 #include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/svc/cpp/service_namespace.h"

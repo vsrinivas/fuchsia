@@ -7,6 +7,7 @@
     "packages": {
         "echo2_client_cpp": "//garnet/examples/fidl/echo2_client_cpp",
         "echo2_client_go": "//garnet/examples/fidl/echo2_client_go",
+        "echo2_server_c": "//garnet/examples/fidl/echo2_server_c",
         "echo2_server_cpp": "//garnet/examples/fidl/echo2_server_cpp",
         "echo2_server_go": "//garnet/examples/fidl/echo2_server_go"
     }
