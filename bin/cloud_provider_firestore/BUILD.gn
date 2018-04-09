@@ -19,21 +19,6 @@ package("cloud_provider_firestore") {
   ]
 }
 
-package("firestore_demo") {
-  deps = [
-    "demo",
-  ]
-
-  binary = "firestore_demo"
-
-  meta = [
-    {
-      path = rebase_path("demo/meta/sandbox")
-      dest = "sandbox"
-    },
-  ]
-}
-
 executable("unittests") {
   testonly = true
 
