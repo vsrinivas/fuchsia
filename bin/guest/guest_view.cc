@@ -7,6 +7,9 @@
 #include <semaphore.h>
 
 #include <fuchsia/cpp/views_v1.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 #include "lib/fsl/tasks/message_loop.h"
 
 // static
@@ -21,8 +24,7 @@ zx_status_t ScenicScanout::Create(
 ScenicScanout::ScenicScanout(component::ApplicationContext* application_context,
                              machina::InputDispatcher* input_dispatcher)
     : input_dispatcher_(input_dispatcher),
-      application_context_(application_context),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()) {
+      application_context_(application_context) {
   // The actual framebuffer can't be created until we've connected to the
   // mozart service.
   SetReady(false);
@@ -53,7 +55,7 @@ void ScenicScanout::CreateView(
 }
 
 void ScenicScanout::InvalidateRegion(const machina::GpuRect& rect) {
-  task_runner_->PostTask([this] { view_->InvalidateScene(); });
+  async::PostTask(async_get_default(), [this] { view_->InvalidateScene(); });
 }
 
 GuestView::GuestView(

@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_GUEST_GUEST_VIEW_H_
 #define GARNET_BIN_GUEST_GUEST_VIEW_H_
 
+#include <lib/async/dispatcher.h>
 #include <zircon/types.h>
 
 #include <fuchsia/cpp/views_v1.h>
@@ -50,7 +51,6 @@ class ScenicScanout : public machina::GpuScanout,
  private:
   machina::InputDispatcher* input_dispatcher_;
   component::ApplicationContext* application_context_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fidl::BindingSet<ViewProvider> bindings_;
   fbl::unique_ptr<GuestView> view_;
 };
