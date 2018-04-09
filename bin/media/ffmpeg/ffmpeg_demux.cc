@@ -257,8 +257,9 @@ void FfmpegDemuxImpl::Worker() {
     int64_t seek_position;
     SeekCallback seek_callback;
 
-    if (!Wait(&packet_requested, &seek_position, &seek_callback))
+    if (!Wait(&packet_requested, &seek_position, &seek_callback)) {
       return;
+    }
 
     if (seek_position != kNotSeeking) {
       // AVSEEK_FLAG_BACKWARD tells the demux to search backward from the
@@ -271,8 +272,9 @@ void FfmpegDemuxImpl::Worker() {
       if (r < 0) {
         FXL_LOG(WARNING) << "av_seek_frame failed, result " << r;
       }
+
       next_stream_to_end_ = -1;
-      seek_callback();
+      async::PostTask(async_, [seek_callback]() { seek_callback(); });
     }
 
     if (packet_requested) {
@@ -280,7 +282,6 @@ void FfmpegDemuxImpl::Worker() {
       PacketPtr packet = PullPacket(&stream_index);
       FXL_DCHECK(packet);
 
-      // TODO(dalesat): Resolve the race that makes this necessary.
       async::PostTask(
           async_, fxl::MakeCopyable([this, stream_index,
                                      packet = std::move(packet)]() mutable {
