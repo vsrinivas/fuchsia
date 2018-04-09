@@ -6,7 +6,7 @@
 #define GARNET_LIB_MACHINA_VIRTIO_QUEUE_WAITER_H_
 
 #include <fbl/function.h>
-#include <lib/async/cpp/wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <zircon/types.h>
 
 #include "garnet/lib/machina/virtio_queue.h"
@@ -28,8 +28,7 @@ class VirtioQueueWaiter {
                               zx_status_t status,
                               const zx_packet_signal_t* signal);
 
-  async_t* const async_;
-  async::Wait wait_;
+  async::AutoWait wait_;
   VirtioQueue* const queue_;
   Callback callback_;
 };

@@ -9,19 +9,17 @@
 namespace machina {
 
 VirtioQueueWaiter::VirtioQueueWaiter(async_t* async, VirtioQueue* queue)
-    : async_(async), queue_(queue) {
-  FXL_DCHECK(async_ != nullptr && queue_ != nullptr);
-  wait_.set_object(queue->event());
-  wait_.set_trigger(VirtioQueue::SIGNAL_QUEUE_AVAIL);
+    : wait_(async, queue->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
+      queue_(queue) {
   wait_.set_handler(fbl::BindMember(this, &VirtioQueueWaiter::Handler));
 }
 
 zx_status_t VirtioQueueWaiter::Wait(Callback callback) {
-  if (callback_) {
+  if (wait_.is_pending()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   callback_ = fbl::move(callback);
-  zx_status_t status = wait_.Begin(async_);
+  zx_status_t status = wait_.Begin();
   if (status != ZX_OK) {
     callback_ = nullptr;
   }
@@ -29,7 +27,7 @@ zx_status_t VirtioQueueWaiter::Wait(Callback callback) {
 }
 
 void VirtioQueueWaiter::Cancel() {
-  wait_.Cancel(async_);
+  wait_.Cancel();
   callback_ = nullptr;
 }
 
