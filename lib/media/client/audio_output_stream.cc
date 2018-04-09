@@ -85,7 +85,7 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
   FXL_DCHECK(media_renderer_);
 
   media::AudioMediaTypeDetails details;
-  details.sample_format = media::AudioSampleFormat::SIGNED_16;
+  details.sample_format = media::AudioSampleFormat::FLOAT;
   details.channels = num_channels;
   details.frames_per_second = sample_rate;
 
@@ -103,7 +103,7 @@ bool AudioOutputStream::SetMediaType(int num_channels, int sample_rate) {
 
 bool AudioOutputStream::CreateMemoryMapping() {
   zx_status_t status =
-      zx::vmo::create(total_mapping_samples_ * sizeof(int16_t), 0, &vmo_);
+      zx::vmo::create(total_mapping_samples_ * sizeof(float), 0, &vmo_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx::vmo::create failed - " << status;
     return false;
@@ -111,13 +111,13 @@ bool AudioOutputStream::CreateMemoryMapping() {
 
   uintptr_t mapped_address;
   status = zx::vmar::root_self().map(
-      0, vmo_, 0, total_mapping_samples_ * sizeof(int16_t),
+      0, vmo_, 0, total_mapping_samples_ * sizeof(float),
       ZX_VM_FLAG_PERM_WRITE | ZX_VM_FLAG_PERM_READ, &mapped_address);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_vmar_map failed - " << status;
     return false;
   }
-  buffer_ = reinterpret_cast<int16_t*>(mapped_address);
+  buffer_ = reinterpret_cast<float*>(mapped_address);
 
   zx::vmo duplicate_vmo;
   status = vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
@@ -156,16 +156,8 @@ void AudioOutputStream::PullFromClientBuffer(float* client_buffer,
                                              int num_samples) {
   FXL_DCHECK(current_sample_offset_ + num_samples <= total_mapping_samples_);
 
-  constexpr float kAmplitudeScalar = std::numeric_limits<int16_t>::max();
-
   for (int idx = 0; idx < num_samples; ++idx) {
-    // TODO(MTWN-44): We pass int16 samples to the mixer, so here we (round and)
-    // clamp potentially out-of-bounds values into range. Once renderer accepts
-    // float data, pass values thru untouched (no rounding/clamping/conversion).
-    int value = round(client_buffer[idx] * kAmplitudeScalar);
-    buffer_[idx + current_sample_offset_] =
-        fbl::clamp<int>(value, std::numeric_limits<int16_t>::min(),
-                        std::numeric_limits<int16_t>::max());
+    buffer_[idx + current_sample_offset_] = client_buffer[idx];
   }
   current_sample_offset_ =
       (current_sample_offset_ + num_samples) % total_mapping_samples_;
@@ -250,7 +242,7 @@ int AudioOutputStream::Write(float* client_buffer,
   }
 
   // PullFromClientBuffer updates current_sample_offset_, so capture it here.
-  size_t current_byte_offset = current_sample_offset_ * sizeof(int16_t);
+  size_t current_byte_offset = current_sample_offset_ * sizeof(float);
   PullFromClientBuffer(client_buffer, num_samples);
 
   // On first packet, establish a timeline starting at given presentation time.
@@ -262,7 +254,7 @@ int AudioOutputStream::Write(float* client_buffer,
   }
 
   if (!SendMediaPacket(CreateMediaPacket(subject_time, current_byte_offset,
-                                         num_samples * sizeof(int16_t)))) {
+                                         num_samples * sizeof(float)))) {
     Stop();
     FXL_LOG(ERROR) << "SendMediaPacket failed";
     return ZX_ERR_CONNECTION_ABORTED;

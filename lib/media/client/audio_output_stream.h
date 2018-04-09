@@ -48,7 +48,7 @@ class AudioOutputStream {
 
   zx::vmo vmo_;
   int total_mapping_samples_ = 0;
-  int16_t* buffer_ = nullptr;
+  float* buffer_ = nullptr;
 
   AudioOutputDevice* device_ = nullptr;
   int num_channels_ = 0;
