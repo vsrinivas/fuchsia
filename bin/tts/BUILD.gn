@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("tts_service") {
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "tts_service"
+
   sources = [
     "main.cc",
     "tts_service_impl.cc",
@@ -13,7 +17,16 @@ executable("tts_service") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/tts/fidl",
     "//third_party/flite",
     "//zircon/public/lib/zx",
   ]
+}
+
+package("tts_service") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "tts_service"
 }

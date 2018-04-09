@@ -4,11 +4,10 @@
 
 #include <fbl/auto_call.h>
 
-#include "garnet/bin/media/tts_service/tts_service_impl.h"
-#include "garnet/bin/media/tts_service/tts_speaker.h"
+#include "garnet/bin/tts/tts_service_impl.h"
+#include "garnet/bin/tts/tts_speaker.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
-namespace media {
 namespace tts {
 
 TtsServiceImpl::TtsServiceImpl(
@@ -104,4 +103,3 @@ void TtsServiceImpl::Client::OnSpeakComplete(
 }
 
 }  // namespace tts
-}  // namespace media

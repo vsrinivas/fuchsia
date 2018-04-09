@@ -4,12 +4,12 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/media/tts_service/tts_service_impl.h"
+#include "garnet/bin/tts/tts_service_impl.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  media::tts::TtsServiceImpl impl(
+  tts::TtsServiceImpl impl(
       component::ApplicationContext::CreateFromStartupInfo());
 
   if (impl.Init() != ZX_OK)

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/tts.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
@@ -21,14 +21,14 @@ class TtsClient {
 
  private:
   fxl::Closure quit_callback_;
-  media::TtsServicePtr tts_service_;
+  tts::TtsServicePtr tts_service_;
 };
 
 TtsClient::TtsClient(fxl::Closure quit_callback)
     : quit_callback_(quit_callback) {
   FXL_DCHECK(quit_callback_);
   auto app_ctx = component::ApplicationContext::CreateFromStartupInfo();
-  tts_service_ = app_ctx->ConnectToEnvironmentService<media::TtsService>();
+  tts_service_ = app_ctx->ConnectToEnvironmentService<tts::TtsService>();
   tts_service_.set_error_handler([this]() {
     printf("Connection error when trying to talk to the TtsService\n");
     quit_callback_();

@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_TTS_TTS_SPEAKER_H_
+#define GARNET_BIN_TTS_TTS_SPEAKER_H_
 
 #include <mutex>
 #include <thread>
 
 #include <fbl/vmo_mapper.h>
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/tts.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zircon/types.h>
 
@@ -19,7 +21,6 @@
 #include "lib/fxl/synchronization/thread_annotations.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 
-namespace media {
 namespace tts {
 
 class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
@@ -88,4 +89,5 @@ class TtsSpeaker : public std::enable_shared_from_this<TtsSpeaker> {
 };
 
 }  // namespace tts
-}  // namespace media
+
+#endif  // GARNET_BIN_TTS_TTS_SPEAKER_H_

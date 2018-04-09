@@ -4,10 +4,9 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "garnet/bin/media/tts_service/tts_speaker.h"
+#include "garnet/bin/tts/tts_speaker.h"
 #include "lib/fxl/functional/make_copyable.h"
 
-namespace media {
 namespace tts {
 
 static constexpr uint64_t kSharedBufSize = 64 << 10;
@@ -277,4 +276,3 @@ void TtsSpeaker::DoSpeak() {
 }
 
 }  // namespace tts
-}  // namespace media

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_
+#define GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_
 
 #include <memory>
 #include <set>
 
-#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/tts.h>
 
 #include "lib/app/cpp/application_context.h"
 
-namespace media {
 namespace tts {
 
 class TtsSpeaker;
@@ -54,4 +54,5 @@ class TtsServiceImpl {
 };
 
 }  // namespace tts
-}  // namespace media
+
+#endif  // GARNET_BIN_TTS_TTS_SERVICE_IMPL_H_

@@ -25,18 +25,12 @@ package("audio_server") {
 
   binary = "audio_server"
 
-  meta = [ {
-        path = rebase_path("audio_server/meta/sandbox")
-        dest = "sandbox"
-      } ]
-}
-
-package("tts_service") {
-  deps = [
-    "//garnet/bin/media/tts_service",
+  meta = [
+    {
+      path = rebase_path("audio_server/meta/sandbox")
+      dest = "sandbox"
+    },
   ]
-
-  binary = "tts_service"
 }
 
 package("media_client") {
@@ -46,9 +40,11 @@ package("media_client") {
     "//garnet/public/lib/media/c",
   ]
 
-  libraries = [ {
-        name = "libmedia_client.so"
-      } ]
+  libraries = [
+    {
+      name = "libmedia_client.so"
+    },
+  ]
 }
 
 package("tests") {

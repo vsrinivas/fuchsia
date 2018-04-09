@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library media;
+library tts;
 
-[ServiceName="media::TtsService"]
+[ServiceName="tts::TtsService"]
 interface TtsService {
   // Speak the string of words provided.  Return the provided token to the
   // caller when the speaking has finished.
