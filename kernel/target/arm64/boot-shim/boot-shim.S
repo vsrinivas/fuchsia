@@ -7,6 +7,10 @@
 #include <asm.h>
 #include <arch/asm_macros.h>
 
+#define SCTLR_I     (1 << 12)   // Instruction cache enable
+#define SCTLR_C     (1 << 2)    // Cache enable
+#define SCTLR_M     (1 << 0)    // MMU enable
+
 // scratch register, not saved across function calls
 tmp             .req x16
 
@@ -14,8 +18,30 @@ tmp             .req x16
 
 .section .text.boot0,"ax"
 FUNCTION(_start)
-    // x0 points to device tree at entry
+    // x0 typically points to device tree at entry
 
+   // what EL are we running at?
+    mrs     tmp, CurrentEL
+    cmp     tmp, #(1 << 2)
+    beq     cache_disable_el1
+
+    // Disable caches and MMU (EL2 version)
+    mrs     tmp, sctlr_el2
+    bic     tmp, tmp, #SCTLR_I
+    bic     tmp, tmp, #SCTLR_C
+    bic     tmp, tmp, #SCTLR_M
+    msr     sctlr_el2, tmp
+    b       cache_disable_done
+
+cache_disable_el1:
+    // Disable caches and MMU (EL1 version)
+    mrs     tmp, sctlr_el1
+    bic     tmp, tmp, #SCTLR_I
+    bic     tmp, tmp, #SCTLR_C
+    bic     tmp, tmp, #SCTLR_M
+    msr     sctlr_el1, tmp
+
+cache_disable_done:
     // compute beginning of kernel bootdata container
     adr     x1, _start
     add     x1, x1, #KERNEL_ALIGN
