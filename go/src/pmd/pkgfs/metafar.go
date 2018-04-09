@@ -2,10 +2,9 @@ package pkgfs
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"thinfs/fs"
@@ -13,27 +12,13 @@ import (
 	"fuchsia.googlesource.com/far"
 )
 
-func GetMetaFar(name, version, blob string, fs *Filesystem) (*metaFar, error) {
-	f, err := os.Open(filepath.Join(fs.blobfs.Root, blob))
-	if err != nil {
-		return nil, err
-	}
-	fr, err := far.NewReader(f)
-	if err != nil {
-		return nil, err
-	}
-
-	mf := &metaFar{
+func newMetaFar(name, version, blob string, fs *Filesystem) *metaFar {
+	return &metaFar{
 		name:    name,
 		version: version,
 		blob:    blob,
 		fs:      fs,
-
-		rc: 1,
-		fr: fr,
 	}
-
-	return mf, nil
 }
 
 // metaFar is a shared reference to an open meta.far or one or more of it's contents.
@@ -42,20 +27,28 @@ type metaFar struct {
 	blob          string
 
 	fs *Filesystem
-
-	// reference count of handles to this meta.far
-	rc uint64
-	fr *far.Reader
 }
 
-func (mf *metaFar) AddRef() {
-	atomic.AddUint64(&mf.rc, 1)
-}
-
-func (mf *metaFar) Deref() {
-	if atomic.AddUint64(&mf.rc, ^uint64(0)) == 0 {
-		mf.fr.Close()
+func (mf *metaFar) open() (*far.Reader, error) {
+	f, err := mf.fs.blobfs.Open(mf.blob)
+	if err != nil {
+		return nil, err
 	}
+
+	fr, err := far.NewReader(f)
+	if err != nil {
+		f.Close()
+	}
+	return fr, err
+}
+
+func (mf *metaFar) list() ([]string, error) {
+	fr, err := mf.open()
+	if err != nil {
+		return nil, err
+	}
+	defer fr.Close()
+	return fr.List(), nil
 }
 
 type metaFarDir struct {
@@ -66,58 +59,34 @@ type metaFarDir struct {
 	path string
 }
 
-func newMetaFarDir(name, version, blob string, fs *Filesystem) (*metaFarDir, error) {
-	mf, err := GetMetaFar(name, version, blob, fs)
-	if err != nil {
-		debugLog(fmt.Sprintf("pkgfs:newMetaFarDir: %s", err))
-		return nil, err
-	}
+func newMetaFarDir(name, version, blob string, fs *Filesystem) *metaFarDir {
 	return &metaFarDir{
 		unsupportedDirectory(fmt.Sprintf("pkgfs:meta.far:%s/%s@%s", name, version, blob)),
-		mf,
+		newMetaFar(name, version, blob, fs),
 		"meta",
-	}, nil
+	}
 }
 
-func newMetaFarDirAt(name, version, blob string, fs *Filesystem, path string) (*metaFarDir, error) {
-	mf, err := newMetaFarDir(name, version, blob, fs)
-	if err != nil {
-		debugLog(fmt.Sprintf("pkgfs:newMetaFarDirAt: %s", err))
-		return nil, err
-	}
+func newMetaFarDirAt(name, version, blob string, fs *Filesystem, path string) *metaFarDir {
+	mf := newMetaFarDir(name, version, blob, fs)
 	mf.path = filepath.Join("meta", path)
-	return mf, nil
+	return mf
 }
 
 func (d *metaFarDir) Close() error {
 	debugLog("pkgfs:metaFarDir:close %q/%q@%s", d.name, d.version, d.blob)
-	if d.metaFar == nil {
-		return fs.ErrNotOpen
-	}
-	d.Deref()
-	d.metaFar = nil
 	return nil
 }
 
 func (d *metaFarDir) Dup() (fs.Directory, error) {
-	if d.metaFar == nil {
-		return nil, fs.ErrNotOpen
-	}
-	d.AddRef()
 	return d, nil
 }
 
 func (d *metaFarDir) Reopen(flags fs.OpenFlags) (fs.Directory, error) {
-	if d.metaFar == nil {
-		return nil, fs.ErrNotOpen
-	}
 	return d, nil
 }
 
 func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
-	if d.metaFar == nil {
-		return nil, nil, nil, fs.ErrNotOpen
-	}
 	name = clean(name)
 	debugLog("pkgfs:metaFarDir:open %q", name)
 
@@ -132,24 +101,22 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 
-	for _, lname := range d.fr.List() {
+	contents, err := d.metaFar.list()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	for _, lname := range contents {
 		if name == lname {
 			mff, err := newMetaFarFile(d.name, d.version, d.blob, d.fs, name)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			return mff, nil, nil, nil
+			return mff, nil, nil, err
 		}
 	}
 
 	dname := name + "/"
-	for _, lname := range d.fr.List() {
+	for _, lname := range contents {
 		if strings.HasPrefix(lname, dname) {
-			mfd, err := newMetaFarDirAt(d.name, d.version, d.blob, d.fs, name)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			return nil, mfd, nil, nil
+			return nil, newMetaFarDirAt(d.name, d.version, d.blob, d.fs, name), nil, nil
 		}
 	}
 
@@ -159,15 +126,18 @@ func (d *metaFarDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 
 func (d *metaFarDir) Read() ([]fs.Dirent, error) {
 	debugLog("pkgfs:metaFarDir:read %q %q", d.blob, d.path)
-	if d.metaFar == nil {
-		return nil, fs.ErrNotOpen
+
+	contents, err := d.metaFar.list()
+	if err != nil {
+		return nil, goErrToFSErr(err)
 	}
 
 	// TODO(raggi): improve efficiency
 	dirs := map[string]struct{}{}
 	dents := []fs.Dirent{}
 	dents = append(dents, dirDirEnt("."))
-	for _, name := range d.fr.List() {
+
+	for _, name := range contents {
 		if !strings.HasPrefix(name, d.path+"/") {
 			continue
 		}
@@ -189,17 +159,20 @@ func (d *metaFarDir) Read() ([]fs.Dirent, error) {
 
 func (d *metaFarDir) Stat() (int64, time.Time, time.Time, error) {
 	debugLog("pkgfs:metaFarDir:stat %q/%q@%s", d.name, d.version, d.blob)
-	if d.metaFar == nil {
-		return 0, time.Time{}, time.Time{}, fs.ErrNotOpen
-	}
 	// TODO(raggi): forward stat values from the index
-	return int64(len(d.fr.List())), d.fs.mountTime, d.fs.mountTime, nil
+	contents, err := d.metaFar.list()
+	if err != nil {
+		return 0, time.Time{}, time.Time{}, goErrToFSErr(err)
+	}
+	return int64(len(contents)), d.fs.mountTime, d.fs.mountTime, nil
 }
 
 type metaFarFile struct {
 	unsupportedFile
 
 	*metaFar
+	fr *far.Reader
+	er io.ReaderAt
 
 	off  int64
 	path string
@@ -208,39 +181,51 @@ type metaFarFile struct {
 func newMetaFarFile(name, version, blob string, fs *Filesystem, path string) (*metaFarFile, error) {
 	debugLog("pkgfs:metaFarFile:new %q/%s", blob, path)
 
-	mf, err := GetMetaFar(name, version, blob, fs)
+	mf := newMetaFar(name, version, blob, fs)
+	fr, err := mf.open()
 	if err != nil {
-		return nil, err
+		return nil, goErrToFSErr(err)
+	}
+	er, err := fr.Open(path)
+	if err != nil {
+		fr.Close()
+		return nil, goErrToFSErr(err)
 	}
 
-	mff := &metaFarFile{
+	return &metaFarFile{
 		unsupportedFile(fmt.Sprintf("pkgfs:metaFarFile:%s/%s/%s", name, version, path)),
 		mf,
+		fr,
+		er,
 		0,
 		path,
-	}
-	return mff, nil
+	}, nil
 }
 
 func (f *metaFarFile) Close() error {
 	debugLog("pkgfs:metaFarFile:close %q/%s", f.blob, f.path)
-	if f.metaFar == nil {
-		return fs.ErrNotOpen
-	}
-	f.Deref()
-	f.metaFar = nil
+	f.fr.Close()
 	return nil
 }
 
 func (f *metaFarFile) Dup() (fs.File, error) {
 	debugLog("pkgfs:metaFarFile:dup %q/%s", f.blob, f.path)
-	if f.metaFar == nil {
-		return nil, fs.ErrNotOpen
+
+	fr, err := f.metaFar.open()
+	if err != nil {
+		return nil, goErrToFSErr(err)
 	}
-	f.metaFar.AddRef()
+	er, err := fr.Open(f.path)
+	if err != nil {
+		fr.Close()
+		return nil, goErrToFSErr(err)
+	}
+
 	return &metaFarFile{
 		f.unsupportedFile,
 		f.metaFar,
+		fr,
+		er,
 		0,
 		f.path,
 	}, nil
@@ -248,43 +233,29 @@ func (f *metaFarFile) Dup() (fs.File, error) {
 
 func (f *metaFarFile) Reopen(flags fs.OpenFlags) (fs.File, error) {
 	debugLog("pkgfs:metaFarFile:reopen %q/%s", f.blob, f.path)
-	if f.metaFar == nil {
-		return nil, fs.ErrNotOpen
-	}
 	f.off = 0
 	return f, nil
 }
 
 func (f *metaFarFile) Read(p []byte, off int64, whence int) (int, error) {
 	debugLog("pkgfs:metaFarFile:read %q/%s - %d %d", f.blob, f.path, off, whence)
-	if f.metaFar == nil {
-		return 0, fs.ErrNotOpen
-	}
-	// TODO(raggi): this could allocate less/be far more efficient
 
-	ra, err := f.fr.Open(f.path)
-	if err != nil {
-		debugLog("pkgfs:metaFarFile:read %q/%s - %s", f.blob, f.path, err)
-		return 0, goErrToFSErr(err)
-	}
+	// TODO(raggi): this could allocate less/be far more efficient
 
 	switch whence {
 	case fs.WhenceFromCurrent:
 		f.off += off
-		n, err := ra.ReadAt(p, f.off)
+		n, err := f.er.ReadAt(p, f.off)
 		f.off += int64(n)
 		return n, goErrToFSErr(err)
 	case fs.WhenceFromStart:
-		return ra.ReadAt(p, off)
+		return f.er.ReadAt(p, off)
 	}
 	return 0, fs.ErrNotSupported
 }
 
 func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 	debugLog("pkgfs:metaFarFile:seek %q/%s", f.blob, f.path)
-	if f.metaFar == nil {
-		return 0, fs.ErrNotOpen
-	}
 	var err error
 	var n int64
 	switch whence {
@@ -305,8 +276,5 @@ func (f *metaFarFile) Seek(offset int64, whence int) (int64, error) {
 
 func (f *metaFarFile) Stat() (int64, time.Time, time.Time, error) {
 	debugLog("pkgfs:metaFarFile:stat")
-	if f.metaFar == nil {
-		return 0, time.Time{}, time.Time{}, fs.ErrNotOpen
-	}
 	return int64(f.fr.GetSize(f.path)), time.Time{}, time.Time{}, nil
 }

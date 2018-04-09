@@ -149,8 +149,8 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if name == "meta" {
-		mfd, err := newMetaFarDir(d.name, d.version, d.contents[name], d.fs)
-		return nil, mfd, nil, err
+		mfd := newMetaFarDir(d.name, d.version, d.contents[name], d.fs)
+		return nil, mfd, nil, nil
 	}
 
 	if strings.HasPrefix(name, "meta/") {
@@ -158,11 +158,7 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 			return nil, nil, nil, fs.ErrNotFound
 		}
 
-		mfd, err := newMetaFarDir(d.name, d.version, d.contents["meta"], d.fs)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		defer mfd.Close()
+		mfd := newMetaFarDir(d.name, d.version, d.contents["meta"], d.fs)
 		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}
 
