@@ -6,15 +6,16 @@
 #define GARNET_LIB_NETWORK_WRAPPER_FAKE_NETWORK_WRAPPER_H_
 
 #include <fuchsia/cpp/network.h>
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace network_wrapper {
 
 class FakeNetworkWrapper : public NetworkWrapper {
  public:
-  explicit FakeNetworkWrapper(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit FakeNetworkWrapper(async_t* async);
   ~FakeNetworkWrapper() override;
 
   network::URLRequest* GetRequest();
@@ -34,7 +35,7 @@ class FakeNetworkWrapper : public NetworkWrapper {
 
   std::unique_ptr<network::URLRequest> request_received_;
   std::unique_ptr<network::URLResponse> response_to_return_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeNetworkWrapper);
 };

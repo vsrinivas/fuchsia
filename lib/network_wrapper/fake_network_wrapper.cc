@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/cancellable_helper.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/socket/strings.h"
@@ -13,8 +15,7 @@
 
 namespace network_wrapper {
 
-FakeNetworkWrapper::FakeNetworkWrapper(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+FakeNetworkWrapper::FakeNetworkWrapper(async_t* async) : async_(async) {}
 
 FakeNetworkWrapper::~FakeNetworkWrapper() {}
 
@@ -56,7 +57,7 @@ fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
     return cancellable;
   }
 
-  task_runner_->PostTask([this, cancelled_ptr,
+  async::PostTask(async_, [this, cancelled_ptr,
                           callback = cancellable->WrapCallback(callback),
                           request_factory = std::move(request_factory)] {
     if (!*cancelled_ptr) {
