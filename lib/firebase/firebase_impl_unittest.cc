@@ -27,7 +27,7 @@ namespace {
 class FirebaseImplTest : public gtest::TestWithMessageLoop, public WatchClient {
  public:
   FirebaseImplTest()
-      : fake_network_wrapper_(message_loop_.task_runner()),
+      : fake_network_wrapper_(message_loop_.async()),
         firebase_(&fake_network_wrapper_, "example", "pre/fix") {}
   ~FirebaseImplTest() override {}
 

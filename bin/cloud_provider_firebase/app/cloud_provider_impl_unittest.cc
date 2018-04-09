@@ -37,7 +37,7 @@ std::unique_ptr<firebase_auth::FirebaseAuth> InitFirebaseAuth(
 class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest()
-      : network_wrapper_(message_loop_.task_runner()),
+      : network_wrapper_(message_loop_.async()),
         cloud_provider_impl_(
             message_loop_.task_runner(),
             &network_wrapper_,

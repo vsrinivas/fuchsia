@@ -57,7 +57,7 @@ constexpr fxl::StringView kWrongKeyTestConfig =
 class ServiceAccountTokenProviderTest : public gtest::TestWithMessageLoop {
  public:
   ServiceAccountTokenProviderTest()
-      : network_wrapper_(message_loop_.task_runner()),
+      : network_wrapper_(message_loop_.async()),
         token_provider_(&network_wrapper_, "user_id") {}
 
  protected:
