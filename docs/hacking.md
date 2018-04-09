@@ -60,6 +60,9 @@ To disable reboot-on-panic, pass the kernel commandline argument
 For kernel development it's not uncommon to need to monitor or break things
 before the gfxconsole comes up.
 
+To force-enable log output to the legacy serial console on an x86 machine, pass
+"kernel.serial=legacy".
+
 To enable the early console before the graphical console comes up use the
 ``gfxconsole.early`` cmdline option. More information can be found in
 [kernel_cmdline.md](kernel_cmdline.md).
