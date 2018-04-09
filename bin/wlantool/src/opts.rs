@@ -37,6 +37,13 @@ pub enum PhyCmd {
     #[structopt(name = "list")]
     /// lists phy devices
     List,
+    #[structopt(name = "query")]
+    /// queries a phy device
+    Query {
+        #[structopt(raw(required = "true"))]
+        /// id of the phy to query
+        phy_id: u16,
+    },
 }
 
 #[derive(StructOpt, Copy, Clone, Debug)]

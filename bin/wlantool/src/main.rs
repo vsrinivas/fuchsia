@@ -62,7 +62,17 @@ fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error 
                 .and_then(|response| {
                     println!("response: {:?}", response);
                     Ok(())
-                })
+                }).left()
+        },
+        opts::PhyCmd::Query { phy_id } => {
+            let mut req = wlan_service::QueryPhyRequest { phy_id };
+            wlan_svc
+                .query_phy(&mut req)
+                .map_err(|e| e.context("error querying phy").into())
+                .and_then(|response| {
+                    println!("response: {:?}", response);
+                    Ok(())
+                }).right()
         }
     }
 }

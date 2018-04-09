@@ -46,6 +46,19 @@ pub fn device_service(
                 })
         },
 
+        query_phy: |state, req, c| {
+            debug!("query_phy req: {:?}", req);
+            state.lock().query_phy(req.phy_id).then(move |res| {
+                catch_and_log_err("query_phy", || match res {
+                    Ok(info) => c.send(
+                        &mut zx::Status::OK.into_raw(),
+                        &mut Some(Box::new(wlan_service::QueryPhyResponse { info })),
+                    ),
+                    Err(e) => c.send(&mut e.into_raw(), &mut None),
+                })
+            })
+        },
+
         list_ifaces: |_, c| {
             catch_and_log_err("list_ifaces", || {
                 debug!("list_ifaces (stub)");

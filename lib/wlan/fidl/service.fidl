@@ -10,6 +10,14 @@ struct ListPhysResponse {
     vector<wlan_device.PhyInfo> phys;
 };
 
+struct QueryPhyRequest {
+    uint16 phy_id;
+};
+
+struct QueryPhyResponse {
+    wlan_device.PhyInfo info;
+};
+
 struct ListIfacesResponse {
     vector<wlan_device.IfaceInfo> ifaces;
 };
@@ -28,7 +36,7 @@ struct DestroyIfaceRequest {
     uint16 iface_id;
 };
 
-// TODO(tkilbourn): replace this with FIDL2 events
+// TODO(tkilbourn): replace this with FIDL events
 interface DeviceListener {
     // Called when a phy device is added
     1: OnPhyAdded(uint16 id);
@@ -42,12 +50,21 @@ interface DeviceListener {
 
 [ServiceName="wlan::DeviceService"]
 interface DeviceService {
+  // Phy methods
   1: ListPhys() -> (ListPhysResponse resp);
-  2: ListIfaces() -> (ListIfacesResponse resp);
-  3: CreateIface(CreateIfaceRequest req) -> (int32 @status, CreateIfaceResponse? resp);
-  4: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
+  2: QueryPhy(QueryPhyRequest req) -> (int32 @status, QueryPhyResponse? resp);
+  // 3-15: reserved
 
-  // Each client may register one DeviceListener to be notified of device
-  // events. A client is unregistered by closing the channel.
-  5: RegisterListener(DeviceListener listener) -> (int32 @status);
+  // Iface methods
+  16: ListIfaces() -> (ListIfacesResponse resp);
+  // 17: reserved for QueryIface
+  18: CreateIface(CreateIfaceRequest req) -> (int32 @status, CreateIfaceResponse? resp);
+  // 19: reserved for StartIface
+  // 20: reserved for StopIface
+  21: DestroyIface(DestroyIfaceRequest req) -> (int32 @status);
+
+  // Register a DeviceListener to be notified of device events. A listener is
+  // unregistered by closing the channel.
+  // XXX: This is a temporary method until events are implemented.
+  256: RegisterListener(DeviceListener listener) -> (int32 @status);
 };

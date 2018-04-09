@@ -30,7 +30,7 @@ impl PhyDevice {
         Ok(PhyDevice {
             id,
             proxy: dev.connect()?,
-            dev: dev,
+            dev,
         })
     }
 }
@@ -77,6 +77,8 @@ impl DeviceManager {
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
+    // TODO(tkilbourn): this should return a simplified view of the Phy compared to query_phy. For
+    // now we just return the whole PhyInfo for each device.
     pub fn list_phys(&self) -> impl Stream<Item = wlan::PhyInfo, Error = ()> {
         self.phys
             .values()
@@ -93,6 +95,27 @@ impl DeviceManager {
                 })
             })
             .collect::<stream::FuturesUnordered<_>>()
+    }
+
+    pub fn query_phy(&self, id: u16) -> impl Future<Item = wlan::PhyInfo, Error = zx::Status> {
+        let phy = match self.phys.get(&id) {
+            Some(p) => p,
+            None => return future::err(zx::Status::NOT_FOUND).left(),
+        };
+        let phy_id = phy.id;
+        let phy_path = phy.dev.path().to_string_lossy().into_owned();
+        phy.proxy
+            .query()
+            .map_err(|_| zx::Status::INTERNAL)
+            .and_then(move |response| {
+                zx::Status::ok(response.status).into_future().map(move |()| {
+                    let mut info = response.info;
+                    info.id = phy_id;
+                    info.dev_path = Some(phy_path);
+                    info
+                })
+            })
+            .right()
     }
 
     /// Creates an interface on the phy with the given id.
