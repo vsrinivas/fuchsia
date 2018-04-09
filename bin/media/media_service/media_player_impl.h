@@ -9,24 +9,29 @@
 #include <fuchsia/cpp/media.h>
 
 #include "garnet/bin/media/demux/reader.h"
-#include "garnet/bin/media/media_service/media_component_factory.h"
 #include "garnet/bin/media/player/player.h"
 #include "garnet/bin/media/render/fidl_audio_renderer.h"
 #include "garnet/bin/media/render/fidl_video_renderer.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
+#include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media {
 
-// Fidl agent that renders streams derived from a SeekingReader.
-class MediaPlayerImpl
-    : public MediaComponentFactory::MultiClientProduct<MediaPlayer>,
-      public MediaPlayer {
+// Fidl agent that renders streams.
+class MediaPlayerImpl : public MediaPlayer {
  public:
-  static std::shared_ptr<MediaPlayerImpl> Create(
+  static std::unique_ptr<MediaPlayerImpl> Create(
       fidl::InterfaceRequest<MediaPlayer> request,
-      MediaComponentFactory* owner);
+      component::ApplicationContext* application_context,
+      fxl::Closure quit_callback);
+
+  MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
+                  component::ApplicationContext* application_context,
+                  fxl::Closure quit_callback);
 
   ~MediaPlayerImpl() override;
 
@@ -71,15 +76,8 @@ class MediaPlayerImpl
     kPlaying,   // Time is progressing.
   };
 
-  MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                  MediaComponentFactory* owner);
-
   // Sets the current reader.
   void SetReader(std::shared_ptr<Reader> reader);
-
-  // Sets the video renderer.
-  // TODO(dalesat): Remove after topaz transition.
-  void SetVideoRenderer(fidl::InterfaceHandle<MediaRenderer> video_renderer);
 
   // Creates the renderer for |medium| if it doesn't exist already.
   void MaybeCreateRenderer(StreamType::Medium medium);
@@ -100,6 +98,9 @@ class MediaPlayerImpl
                            int64_t reference_time,
                            fxl::Closure callback);
 
+  component::ApplicationContext* application_context_;
+  fxl::Closure quit_callback_;
+  fidl::BindingSet<MediaPlayer> bindings_;
   Player player_;
   float gain_ = 1.0f;
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;

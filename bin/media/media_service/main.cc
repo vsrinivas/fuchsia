@@ -9,7 +9,8 @@
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/bin/media/media_service/media_component_factory.h"
+#include "garnet/bin/media/media_service/media_player_impl.h"
+#include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
 
 const std::string kIsolateUrl = "media_service";
@@ -49,17 +50,15 @@ int main(int argc, const char** argv) {
       component::ApplicationContext::CreateFromStartupInfo();
 
   if (transient) {
-    media::MediaComponentFactory factory(
-        std::move(application_context), [&loop]() {
-          async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+    std::unique_ptr<media::MediaPlayerImpl> player;
+    application_context->outgoing_services()->AddService<media::MediaPlayer>(
+        [application_context = application_context.get(), &player,
+         &loop](fidl::InterfaceRequest<media::MediaPlayer> request) {
+          player = media::MediaPlayerImpl::Create(
+              std::move(request), application_context, [&loop]() {
+                async::PostTask(loop.async(), [&loop]() { loop.Quit(); });
+              });
         });
-
-    factory.application_context()
-        ->outgoing_services()
-        ->AddService<media::MediaPlayer>(
-            [&factory](fidl::InterfaceRequest<media::MediaPlayer> request) {
-              factory.CreateMediaPlayer(std::move(request));
-            });
 
     loop.Run();
   } else {

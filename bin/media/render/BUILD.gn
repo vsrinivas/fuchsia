@@ -17,7 +17,7 @@ source_set("render") {
   deps = [
     "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework",
-    "//garnet/bin/media/video:video_converter",
+    "//garnet/bin/media/video",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/media/timeline",

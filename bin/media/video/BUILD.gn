@@ -2,39 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("video") {
-  sources = [
-    "video_frame_source.cc",
-    "video_frame_source.h",
-  ]
-
-  deps = [
-    ":video_converter",
-    "//garnet/bin/media/fidl",
-    "//garnet/bin/media/framework",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/media/fidl",
-    "//garnet/public/lib/media/timeline",
-    "//garnet/public/lib/media/transport",
-    "//garnet/public/lib/ui/geometry/cpp",
-    "//garnet/public/lib/ui/view_framework",
-    "//zircon/public/lib/trace",
-  ]
-}
-
 config("optimize_video_converter") {
   cflags = [ "-O3" ]
 }
 
-source_set("video_converter") {
+source_set("video") {
   sources = [
     "video_converter.cc",
     "video_converter.h",
   ]
 
   deps = [
-    "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//zircon/public/lib/trace",

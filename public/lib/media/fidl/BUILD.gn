@@ -19,17 +19,14 @@ fidl("fidl") {
     "media_player.fidl",
     "media_renderer.fidl",
     "media_result.fidl",
-    "media_sink.fidl",
     "media_source.fidl",
     "media_transport.fidl",
-    "media_type_converter.fidl",
     "media_types.fidl",
     "net_media_service.fidl",
     "problem.fidl",
     "seeking_reader.fidl",
     "timeline_controller.fidl",
     "timelines.fidl",
-    "video_renderer.fidl",
   ]
 
   public_deps = [

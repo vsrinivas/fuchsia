@@ -18,7 +18,6 @@
 #include "garnet/bin/media/render/fidl_audio_renderer.h"
 #include "garnet/bin/media/render/fidl_video_renderer.h"
 #include "garnet/bin/media/util/safe_clone.h"
-#include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
@@ -27,20 +26,28 @@
 namespace media {
 
 // static
-std::shared_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
+std::unique_ptr<MediaPlayerImpl> MediaPlayerImpl::Create(
     fidl::InterfaceRequest<MediaPlayer> request,
-    MediaComponentFactory* owner) {
-  return std::shared_ptr<MediaPlayerImpl>(
-      new MediaPlayerImpl(std::move(request), owner));
+    component::ApplicationContext* application_context,
+    fxl::Closure quit_callback) {
+  return std::make_unique<MediaPlayerImpl>(std::move(request),
+                                           application_context, quit_callback);
 }
 
-MediaPlayerImpl::MediaPlayerImpl(fidl::InterfaceRequest<MediaPlayer> request,
-                                 MediaComponentFactory* owner)
-    : MediaComponentFactory::MultiClientProduct<MediaPlayer>(this,
-                                                             std::move(request),
-                                                             owner),
+MediaPlayerImpl::MediaPlayerImpl(
+    fidl::InterfaceRequest<MediaPlayer> request,
+    component::ApplicationContext* application_context,
+    fxl::Closure quit_callback)
+    : application_context_(application_context),
+      quit_callback_(quit_callback),
       player_(async_get_default()) {
-  FXL_DCHECK(owner);
+  FXL_DCHECK(request);
+  FXL_DCHECK(application_context_);
+  FXL_DCHECK(quit_callback_);
+
+  AddBinding(std::move(request));
+
+  bindings_.set_empty_set_handler([this]() { quit_callback_(); });
 
   player_.SetUpdateCallback([this]() {
     status_publisher_.SendUpdates();
@@ -97,7 +104,8 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   switch (medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
-        auto audio_server = owner()->ConnectToEnvironmentService<AudioServer>();
+        auto audio_server =
+            application_context_->ConnectToEnvironmentService<AudioServer>();
         AudioRenderer2Ptr audio_renderer;
         audio_server->CreateRendererV2(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
@@ -320,7 +328,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate,
 }
 
 void MediaPlayerImpl::SetHttpSource(fidl::StringPtr http_url) {
-  SetReader(HttpReader::Create(owner()->application_context(), http_url));
+  SetReader(HttpReader::Create(application_context_, http_url));
 }
 
 void MediaPlayerImpl::SetFileSource(zx::channel file_channel) {
@@ -402,7 +410,8 @@ void MediaPlayerImpl::SetAudioRenderer(
 }
 
 void MediaPlayerImpl::AddBinding(fidl::InterfaceRequest<MediaPlayer> request) {
-  MultiClientProduct::AddBinding(std::move(request));
+  FXL_DCHECK(request);
+  bindings_.AddBinding(this, std::move(request));
 }
 
 }  // namespace media
