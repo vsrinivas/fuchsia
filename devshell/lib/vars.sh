@@ -60,7 +60,9 @@ function fx-config-glean-arch {
   fi
   if [[ -z "$arch" ]]; then
     # Hand-invoked gn might not have had target_cpu in args.gn.
-    case "$(uname -m)" in
+    # Since gn defaults target_cpu to host_cpu, we need to do the same.
+    local -r host_cpu=$(uname -m)
+    case "$host_cpu" in
       x86_64)
         arch=x64
         ;;
@@ -68,7 +70,7 @@ function fx-config-glean-arch {
         arch=aarch64
         ;;
       *)
-        echo >&2 "ERROR: Cannot guess default target_cpu from $args_file"
+        echo >&2 "ERROR: Cannot default target_cpu to this host's cpu: $host_cpu"
         return 1
         ;;
     esac
