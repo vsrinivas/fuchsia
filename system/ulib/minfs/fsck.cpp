@@ -24,6 +24,7 @@ class MinfsChecker {
 public:
     MinfsChecker();
     zx_status_t Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info);
+    void CheckReserved();
     zx_status_t CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
     zx_status_t CheckForUnusedBlocks() const;
     zx_status_t CheckForUnusedInodes() const;
@@ -407,6 +408,26 @@ zx_status_t MinfsChecker::CheckFile(minfs_inode_t* inode, ino_t ino) {
     return ZX_OK;
 }
 
+void MinfsChecker::CheckReserved() {
+    // Check reserved inode '0'.
+    if (fs_->inode_map_.Get(0, 1)) {
+        checked_inodes_.Set(0, 1);
+        alloc_inodes_++;
+    } else {
+        FS_TRACE_WARN("check: reserved inode#0: not marked in-use\n");
+        conforming_ = false;
+    }
+
+    // Check reserved data block '0'.
+    if (fs_->block_map_.Get(0, 1)) {
+        checked_blocks_.Set(0, 1);
+        alloc_blocks_++;
+    } else {
+        FS_TRACE_WARN("check: reserved block#0: not marked in-use\n");
+        conforming_ = false;
+    }
+}
+
 zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot) {
     minfs_inode_t inode;
     zx_status_t status;
@@ -462,7 +483,8 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
 
 zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
     unsigned missing = 0;
-    for (unsigned n = fs_->info_.dat_block; n < fs_->info_.block_count; n++) {
+
+    for (unsigned n = 0; n < fs_->info_.block_count; n++) {
         if (fs_->block_map_.Get(n, n + 1)) {
             if (!checked_blocks_.Get(n, n + 1)) {
                 missing++;
@@ -479,7 +501,7 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
 
 zx_status_t MinfsChecker::CheckForUnusedInodes() const {
     unsigned missing = 0;
-    for (unsigned n = 1; n < fs_->info_.inode_count; n++) {
+    for (unsigned n = 0; n < fs_->info_.inode_count; n++) {
         if (fs_->inode_map_.Get(n, n + 1)) {
             if (!checked_inodes_.Get(n, n + 1)) {
                 missing++;
@@ -551,6 +573,7 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* i
         return status;
     }
     fs_ = fs;
+
     return ZX_OK;
 }
 
@@ -574,6 +597,8 @@ zx_status_t minfs_check(fbl::unique_ptr<Bcache> bc) {
         FS_TRACE_ERROR("minfs_check: Init failure: %d\n", status);
         return status;
     }
+
+    chk.CheckReserved();
 
     //TODO: check root not a directory
     if ((status = chk.CheckInode(1, 1, 0)) != ZX_OK) {

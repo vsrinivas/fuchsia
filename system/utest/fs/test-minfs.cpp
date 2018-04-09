@@ -38,9 +38,9 @@ bool QueryInfo(size_t expected_nodes) {
     ASSERT_EQ(info->total_bytes, 8 * 1024 * 1024);
 
     // TODO(ZX-1372): Adjust this once minfs accounting on truncate is fixed.
-    ASSERT_EQ(info->used_bytes, minfs::kMinfsBlockSize);
+    ASSERT_EQ(info->used_bytes, 2 * minfs::kMinfsBlockSize);
     ASSERT_EQ(info->total_nodes, 32 * 1024);
-    ASSERT_EQ(info->used_nodes, expected_nodes + 1);
+    ASSERT_EQ(info->used_nodes, expected_nodes + 2);
     return true;
 }
 

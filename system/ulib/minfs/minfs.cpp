@@ -1165,13 +1165,13 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
     // update inode bitmap
     ibm.Set(0, 1);
     ibm.Set(kMinfsRootIno, kMinfsRootIno + 1);
-    info.alloc_inode_count++;
+    info.alloc_inode_count += 2;
 
     // update block bitmap:
     // Reserve the 0th data block (as a 'null' value)
     // Reserve the 1st data block (for root directory)
     abm.Set(0, 2);
-    info.alloc_block_count++;
+    info.alloc_block_count += 2;
 
     // write allocation bitmap
     for (uint32_t n = 0; n < abmblks; n++) {
