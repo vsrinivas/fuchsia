@@ -16,7 +16,7 @@ zx_ticks_t _zx_ticks_get(void) {
     uint32_t ticks_low;
     uint32_t ticks_high;
     __asm__ volatile("rdtsc" : "=a" (ticks_low), "=d" (ticks_high));
-    return ((uint64_t)ticks_high << 32) | ticks_low;
+    return ((zx_ticks_t)ticks_high << 32) | ticks_low;
 #else
 #error Unsupported architecture
 #endif
