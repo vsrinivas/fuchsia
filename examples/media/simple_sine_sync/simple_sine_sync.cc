@@ -3,33 +3,27 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
-
+#include <fuchsia/cpp/media.h>
 #include <math.h>
-
 #include <zircon/syscalls.h>
-
 #include "lib/app/cpp/environment_services.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
-#include <fuchsia/cpp/media.h>
 
 namespace {
 // Set the renderer format to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
 constexpr float kRendererFrameRate = 44100.0f;
 constexpr size_t kNumChannels = 2;
-constexpr size_t kSampleSize = sizeof(int16_t);
+
 // For this example, feed audio to the system in payloads of 10 milliseconds.
 constexpr size_t kMSecsPerPayload = 10;
 constexpr size_t kFramesPerPayload =
     kMSecsPerPayload * kRendererFrameRate / 1000;
-constexpr size_t kPayloadSize = kFramesPerPayload * kNumChannels * kSampleSize;
 constexpr size_t kTotalMappingFrames = kRendererFrameRate;
-constexpr size_t kTotalMappingSize =
-    kTotalMappingFrames * kNumChannels * kSampleSize;
-constexpr size_t kNumPayloads = kTotalMappingSize / kPayloadSize;
+constexpr size_t kNumPayloads = kTotalMappingFrames / kFramesPerPayload;
 // Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
 constexpr float kFrequency = 439.0f;
-constexpr float kAmplitudeScalar = 0.125f * std::numeric_limits<int16_t>::max();
+constexpr float kAmplitudeScalar = 0.125f;
 constexpr float kFrequencyScalar = kFrequency * 2 * M_PI / kRendererFrameRate;
 // Loop for 2 seconds.
 constexpr size_t kTotalDurationSecs = 2;
@@ -45,6 +39,10 @@ MediaApp::~MediaApp() {}
 
 // Prepare for playback, compute playback data, supply media packets, start.
 int MediaApp::Run() {
+  sample_size_ = use_float_ ? sizeof(float) : sizeof(int16_t);
+  payload_size_ = kFramesPerPayload * kNumChannels * sample_size_;
+  total_mapping_size_ = kTotalMappingFrames * kNumChannels * sample_size_;
+
   if (verbose_) {
     printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
@@ -78,7 +76,7 @@ int MediaApp::Run() {
 
   if ((min_lead_time > 0) && verbose_) {
     printf("Adjusted high and low water marks by min lead time %.3lfms\n",
-        min_lead_time / 1000000.0);
+           min_lead_time / 1000000.0);
 
     printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
@@ -86,8 +84,8 @@ int MediaApp::Run() {
 
   constexpr zx_duration_t nsec_per_payload = ZX_MSEC(kMSecsPerPayload);
   uint32_t initial_payloads = std::min<uint32_t>(
-    (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload,
-    kNumPacketsToSend);
+      (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload,
+      kNumPacketsToSend);
 
   while (num_packets_sent_ < initial_payloads) {
     SendAudioPacket(CreateAudioPacket(num_packets_sent_));
@@ -95,10 +93,8 @@ int MediaApp::Run() {
 
   int64_t ref_start_time;
   int64_t media_start_time;
-  audio_renderer_->Play(media::kNoTimestamp,
-                        media::kNoTimestamp,
-                        &ref_start_time,
-                        &media_start_time);
+  audio_renderer_->Play(media::kNoTimestamp, media::kNoTimestamp,
+                        &ref_start_time, &media_start_time);
   start_time_known_ = true;
 
   // TODO(johngro): This program is making the assumption that the platform's
@@ -133,12 +129,13 @@ bool MediaApp::AcquireRenderer() {
   return audio_server->CreateRendererV2(audio_renderer_.NewRequest());
 }
 
-// Set the AudioRenderer's audio format to stereo 48kHz 16-bit (LPCM).
+// Set the AudioRenderer's audio format to stereo 48kHz.
 void MediaApp::SetMediaType() {
   FXL_DCHECK(audio_renderer_);
 
   media::AudioPcmFormat format;
-  format.sample_format = media::AudioSampleFormat::SIGNED_16;
+  format.sample_format = use_float_ ? media::AudioSampleFormat::FLOAT
+                                    : media::AudioSampleFormat::SIGNED_16;
   format.channels = kNumChannels;
   format.frames_per_second = kRendererFrameRate;
 
@@ -151,11 +148,8 @@ void MediaApp::SetMediaType() {
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
   zx_status_t status = payload_buffer_.CreateAndMap(
-      kTotalMappingSize,
-      ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
-      nullptr,
-      &payload_vmo,
-      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      total_mapping_size_, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+      nullptr, &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
@@ -169,13 +163,19 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
 void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
-  int16_t* audio_buffer = reinterpret_cast<int16_t*>(buffer);
-
   for (size_t frame = 0; frame < num_frames; ++frame) {
-    int16_t val = static_cast<int16_t>(round(
-        kAmplitudeScalar * sin(static_cast<float>(frame) * kFrequencyScalar)));
+    float val =
+        kAmplitudeScalar * sin(static_cast<float>(frame) * kFrequencyScalar);
+
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
-      audio_buffer[frame * kNumChannels + chan_num] = val;
+      if (use_float_) {
+        float* float_buffer = reinterpret_cast<float*>(buffer);
+        float_buffer[frame * kNumChannels + chan_num] = val;
+      } else {
+        int16_t* int_buffer = reinterpret_cast<int16_t*>(buffer);
+        int_buffer[frame * kNumChannels + chan_num] = static_cast<int16_t>(
+            round(val * std::numeric_limits<int16_t>::max()));
+      }
     }
   }
 }
@@ -183,17 +183,19 @@ void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
 // Create a packet for this payload.
 media::AudioPacket MediaApp::CreateAudioPacket(size_t payload_num) {
   media::AudioPacket packet;
-  packet.payload_offset = (payload_num % kNumPayloads) * kPayloadSize;
-  packet.payload_size = kPayloadSize;
+  packet.payload_offset = (payload_num % kNumPayloads) * payload_size_;
+  packet.payload_size = payload_size_;
   return packet;
 }
 
 // Submit a packet, incrementing our count of packets sent.
 bool MediaApp::SendAudioPacket(media::AudioPacket packet) {
   if (verbose_) {
-    const float delay = (start_time_known_
-                      ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_
-                      : 0) / 1000000;
+    const float delay =
+        (start_time_known_
+             ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time_
+             : 0) /
+        1000000;
     printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
   }
 
@@ -232,8 +234,8 @@ bool MediaApp::RefillBuffer() {
 }
 
 void MediaApp::WaitForPackets(size_t num_packets) {
-  const zx_duration_t audio_submitted
-    = ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
+  const zx_duration_t audio_submitted =
+      ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
 
   FXL_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
   zx_time_t wake_time = start_time_ + audio_submitted;

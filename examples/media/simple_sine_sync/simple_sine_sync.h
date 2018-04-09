@@ -7,7 +7,6 @@
 #include <fbl/vmo_mapper.h>
 
 #include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
 namespace examples {
 
@@ -23,6 +22,7 @@ class MediaApp {
   void set_high_water_mark_ms(int64_t value) {
     high_water_mark_ = ZX_MSEC(value);
   }
+  void set_float(bool enable_float) { use_float_ = enable_float; }
 
   int Run();
 
@@ -31,6 +31,7 @@ class MediaApp {
   void SetMediaType();
 
   zx_status_t CreateMemoryMapping();
+
   void WriteAudioIntoBuffer(void* buffer, size_t num_frames);
 
   bool RefillBuffer();
@@ -43,6 +44,9 @@ class MediaApp {
   media::AudioRenderer2SyncPtr audio_renderer_;
 
   fbl::VmoMapper payload_buffer_;
+  size_t sample_size_;
+  size_t payload_size_;
+  size_t total_mapping_size_;
   size_t num_packets_sent_ = 0u;
   zx_time_t start_time_;
   bool start_time_known_ = false;
@@ -50,6 +54,7 @@ class MediaApp {
   bool verbose_ = false;
   zx_duration_t low_water_mark_;
   zx_duration_t high_water_mark_;
+  bool use_float_ = false;
 };
 
 }  // namespace examples

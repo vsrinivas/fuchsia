@@ -16,6 +16,8 @@ constexpr char kLowWaterMarkDefaultValue[] = "30";
 
 constexpr char kHighWaterMarkSwitch[] = "sleep";
 constexpr char kHighWaterMarkDefaultValue[] = "50";
+
+constexpr char kFloatFormatSwitch[] = "float";
 }  // namespace
 
 int main(int argc, const char** argv) {
@@ -23,8 +25,9 @@ int main(int argc, const char** argv) {
 
   examples::MediaApp media_app;
 
-  if (command_line.HasOption("v") || command_line.HasOption("verbose"))
+  if (command_line.HasOption("v") || command_line.HasOption("verbose")) {
     media_app.set_verbose(true);
+  }
 
   std::string low_water_mark_ms = command_line.GetOptionValueWithDefault(
       kLowWaterMarkSwitch, kLowWaterMarkDefaultValue);
@@ -35,6 +38,10 @@ int main(int argc, const char** argv) {
       kHighWaterMarkSwitch, kHighWaterMarkDefaultValue);
   media_app.set_high_water_mark_ms(
       fxl::StringToNumber<int64_t>(high_water_mark_ms));
+
+  if (command_line.HasOption(kFloatFormatSwitch)) {
+    media_app.set_float(true);
+  }
 
   return media_app.Run();
 }
