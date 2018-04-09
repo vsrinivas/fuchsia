@@ -275,6 +275,7 @@ typedef struct wlan_tx_packet {
 
 enum {
     WLAN_INDICATION_PRE_TBTT = 1,
+    WLAN_INDICATION_BCN_TX_COMPLETE = 2,
 };
 
 typedef struct wlanmac_ifc {
