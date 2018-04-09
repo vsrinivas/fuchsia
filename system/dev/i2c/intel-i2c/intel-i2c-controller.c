@@ -692,6 +692,7 @@ static zx_status_t intel_serialio_i2c_device_specific_init(
                 INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID,
                 INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID,
                 INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID,
+                INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID,
             },
             .reset_offset = 0x204,
             .controller_clock_frequency = 120 * 1000 * 1000,
@@ -895,7 +896,7 @@ static zx_driver_ops_t intel_i2c_driver_ops = {
     .bind = intel_i2c_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(intel_i2c, intel_i2c_driver_ops, "zircon", "0.1", 8)
+ZIRCON_DRIVER_BEGIN(intel_i2c, intel_i2c_driver_ops, "zircon", "0.1", 9)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, 0x8086),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_WILDCAT_POINT_SERIALIO_I2C0_DID),
@@ -904,4 +905,5 @@ ZIRCON_DRIVER_BEGIN(intel_i2c, intel_i2c_driver_ops, "zircon", "0.1", 8)
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C1_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C2_DID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C3_DID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID),
 ZIRCON_DRIVER_END(intel_i2c)
