@@ -12,6 +12,7 @@
 
 #include "peridot/bin/suggestion_engine/ranker.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
+#include "peridot/bin/suggestion_engine/suggestion_filter.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 
 namespace modular {
@@ -28,7 +29,11 @@ class RankedSuggestionsList {
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
 
-  void Rank(const UserInput& query = UserInput());
+  void SetActiveFilters(
+      std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters);
+
+  void SetPassiveFilters(
+      std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters);
 
   void AddSuggestion(SuggestionPrototype* const prototype);
 
@@ -49,10 +54,13 @@ class RankedSuggestionsList {
     return suggestions_;
   }
 
+  void Refresh(const UserInput& query = UserInput());
+
  private:
   RankedSuggestion* GetMatchingSuggestion(MatchPredicate matchFunction) const;
   bool RemoveMatchingSuggestion(MatchPredicate matchFunction);
   void DoStableSort();
+  void Rank(const UserInput& query = UserInput());
 
   // The sorted vector of RankedSuggestions, sorted by
   // |ranking_function_|. The vector is re-sorted whenever its
@@ -62,7 +70,14 @@ class RankedSuggestionsList {
   // may be expensive.
   std::vector<std::unique_ptr<RankedSuggestion>> suggestions_;
 
+  // A list to store the filtered suggestions by passive filters
+  std::vector<std::unique_ptr<RankedSuggestion>> hidden_suggestions_;
+
   std::unique_ptr<Ranker> ranker_;
+
+  // The Suggestion Filters associated with this List of Ranked Suggestions
+  std::vector<std::unique_ptr<SuggestionFilter>> suggestion_active_filters_;
+  std::vector<std::unique_ptr<SuggestionFilter>> suggestion_passive_filters_;
 };
 
 }  // namespace modular

@@ -9,7 +9,6 @@
 
 #include <modular/cpp/fidl.h>
 #include "lib/fidl/cpp/binding.h"
-#include <modular/cpp/fidl.h>
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/decision_policy.h"
@@ -43,6 +42,10 @@ class NextProcessor {
                    const std::string& story_id, Proposal proposal);
   void RemoveProposal(const std::string& component_url,
                       const std::string& proposal_id);
+
+  void SetFilters(
+      std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
+      std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters);
 
   void SetRanker(std::unique_ptr<Ranker> ranker);
 

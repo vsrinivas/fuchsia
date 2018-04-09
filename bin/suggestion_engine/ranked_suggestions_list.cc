@@ -31,6 +31,16 @@ RankedSuggestionsList::RankedSuggestionsList() {}
 
 RankedSuggestionsList::~RankedSuggestionsList() = default;
 
+void RankedSuggestionsList::SetActiveFilters(
+    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters) {
+  suggestion_active_filters_ = std::move(active_filters);
+}
+
+void RankedSuggestionsList::SetPassiveFilters(
+    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+  suggestion_passive_filters_ = std::move(passive_filters);
+}
+
 void RankedSuggestionsList::SetRanker(std::unique_ptr<Ranker> ranker) {
   ranker_ = std::move(ranker);
 }
@@ -39,8 +49,9 @@ RankedSuggestion* RankedSuggestionsList::GetMatchingSuggestion(
     MatchPredicate matchFunction) const {
   auto findIter =
       std::find_if(suggestions_.begin(), suggestions_.end(), matchFunction);
-  if (findIter != suggestions_.end())
+  if (findIter != suggestions_.end()) {
     return findIter->get();
+  }
   return nullptr;
 }
 
@@ -101,6 +112,46 @@ RankedSuggestion* RankedSuggestionsList::GetSuggestion(
 
 void RankedSuggestionsList::RemoveAllSuggestions() {
   suggestions_.clear();
+}
+
+void RankedSuggestionsList::Refresh(const UserInput& query) {
+  // Create a union of both hidden and non-hidden suggestions
+  std::vector<std::unique_ptr<RankedSuggestion>> all_suggestions;
+  for (std::unique_ptr<RankedSuggestion>& each_suggestion : suggestions_) {
+    all_suggestions.push_back(std::move(each_suggestion));
+  }
+  for (std::unique_ptr<RankedSuggestion>& each_suggestion :
+       hidden_suggestions_) {
+    all_suggestions.push_back(std::move(each_suggestion));
+  }
+
+  // Clear both the hidden and non-hidden suggestions vectors
+  suggestions_.clear();
+  hidden_suggestions_.clear();
+
+  // apply the active filters that modify the entire suggestions list
+  for (const auto& active_filter : suggestion_active_filters_) {
+    active_filter->Filter(nullptr, &all_suggestions);
+  }
+
+  // apply the passive filters that hide some of the suggestions
+  for (auto& suggestion : all_suggestions) {
+    bool should_filter = false;
+    for (const auto& passive_filter : suggestion_passive_filters_) {
+      if (passive_filter->Filter(suggestion, nullptr)) {
+        should_filter = true;
+        break;
+      }
+    }
+    if (should_filter) {
+      hidden_suggestions_.push_back(std::move(suggestion));
+    } else {
+      suggestions_.push_back(std::move(suggestion));
+    }
+  }
+
+  // Rerank and sort the updated suggestions_ list
+  Rank(query);
 }
 
 // Start of private sorting methods.

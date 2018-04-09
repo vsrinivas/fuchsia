@@ -45,7 +45,7 @@ void QueryProcessor::ExecuteQuery(
   //   2. Update the context engine with the new query
   //   3. Set up the ask variables in suggestion engine
   //   4. Get suggestions from each of the QueryHandlers
-  //   5. Rank the suggestions as received
+  //   5. Filter and Rank the suggestions as received
   //   6. Send "done" to SuggestionListener
 
   // Step 1
@@ -87,6 +87,13 @@ void QueryProcessor::RegisterQueryHandler(
     fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
   auto query_handler = query_handler_handle.Bind();
   query_handlers_.emplace_back(std::move(query_handler), url);
+}
+
+void QueryProcessor::SetFilters(
+    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
+    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+  suggestions_.SetActiveFilters(std::move(active_filters));
+  suggestions_.SetPassiveFilters(std::move(passive_filters));
 }
 
 void QueryProcessor::SetRanker(std::unique_ptr<Ranker> ranker) {
@@ -149,7 +156,7 @@ void QueryProcessor::OnQueryResponse(
   for (size_t i = 0; i < response.proposals->size(); ++i) {
     AddProposal(handler_url, std::move(response.proposals->at(i)));
   }
-  suggestions_.Rank(input);
+  suggestions_.Refresh(input);
 
   // Update the QueryListener with new results
   NotifyOfResults();

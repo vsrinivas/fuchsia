@@ -50,6 +50,10 @@ class QueryProcessor {
   void RegisterQueryHandler(fidl::StringPtr url,
                             fidl::InterfaceHandle<QueryHandler> query_handler);
 
+  void SetFilters(
+      std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
+      std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters);
+
   void SetRanker(std::unique_ptr<Ranker> ranker);
 
   // Returns a query suggestion with the given id.

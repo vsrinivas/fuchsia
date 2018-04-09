@@ -83,6 +83,13 @@ void NextProcessor::RemoveProposalFromList(const std::string& component_url,
   }
 }
 
+void NextProcessor::SetFilters(
+    std::vector<std::unique_ptr<SuggestionFilter>>&& active_filters,
+    std::vector<std::unique_ptr<SuggestionFilter>>&& passive_filters) {
+  suggestions_.SetActiveFilters(std::move(active_filters));
+  suggestions_.SetPassiveFilters(std::move(passive_filters));
+}
+
 void NextProcessor::SetRanker(std::unique_ptr<Ranker> ranker) {
   suggestions_.SetRanker(std::move(ranker));
 }
@@ -98,7 +105,7 @@ RankedSuggestion* NextProcessor::GetSuggestion(
 }
 
 void NextProcessor::UpdateRanking() {
-  suggestions_.Rank();
+  suggestions_.Refresh();
   NotifyAllOfResults();
   debug_->OnNextUpdate(&suggestions_);
   NotifyOfProcessingChange(false);
@@ -106,8 +113,9 @@ void NextProcessor::UpdateRanking() {
 
 void NextProcessor::NotifyAllOfResults() {
   for (const auto& it : listeners_) {
-    if (it.first)
+    if (it.first) {
       NotifyOfResults(it.first, it.second);
+    }
   }
 }
 
@@ -116,8 +124,9 @@ void NextProcessor::NotifyOfProcessingChange(const bool processing) {
     processing_ = processing;
     // Notify all listeners that the processing state has changed
     for (const auto& it : listeners_) {
-      if (it.first)
+      if (it.first) {
         it.first->OnProcessingChange(processing_);
+      }
     }
   }
 }
