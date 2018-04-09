@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -19,12 +20,29 @@
 using digest::Digest;
 using digest::MerkleTree;
 
+static void usage(char** argv) {
+    fprintf(stderr, "Usage: %s [-o OUTPUT] FILE...\n", argv[0]);
+    exit(1);
+}
+
 int main(int argc, char** argv) {
-    if (argc == 1) {
-        fprintf(stderr, "[-] missing input file.\n");
-        fprintf(stderr, "usage: %s <filename>\n", argv[0]);
-        return 1;
+    FILE* outf = stdout;
+    if (argc < 2) {
+        usage(argv);
     }
+    int argi = 1;
+    if (!strcmp(argv[1], "-o")) {
+        if (argc < 4) {
+            usage(argv);
+        }
+        argi = 3;
+        outf = fopen(argv[2], "w");
+        if (!outf) {
+            perror(argv[2]);
+            return 1;
+        }
+    }
+
     // Buffer one intermediate node's worth at a time.
     struct stat info;
     fbl::AllocChecker ac;
@@ -32,8 +50,8 @@ int main(int argc, char** argv) {
     fbl::unique_ptr<uint8_t[]> tree(nullptr);
     char strbuf[Digest::kLength * 2 + 1];
     Digest digest;
-    for (size_t i = 1; i < argc; ++i) {
-        const char* arg = argv[i];
+    for (; argi < argc; ++argi) {
+        const char* arg = argv[argi];
         if (stat(arg, &info) < 0) {
             perror("stat");
             fprintf(stderr, "[-] Unable to stat '%s'.\n", arg);
@@ -84,7 +102,8 @@ int main(int argc, char** argv) {
             fprintf(stderr, "[-] Unable to print Merkle tree root: %d\n", rc);
             return 1;
         }
-        printf("%s - %s\n", strbuf, arg);
+        fprintf(outf, "%s - %s\n", strbuf, arg);
     }
+
     return 0;
 }
