@@ -70,6 +70,7 @@ zx_status_t WriteTxn::Flush() {
 
 size_t WriteTxn::BlkStart() const {
     ZX_DEBUG_ASSERT(IsReady());
+    ZX_DEBUG_ASSERT(requests_.size() > 0);
     return requests_[0].vmo_offset;
 }
 
@@ -279,11 +280,10 @@ int WritebackBuffer::WritebackThread(void* arg) {
             auto work = b->work_queue_.pop();
             TRACE_DURATION("blobfs", "WritebackBuffer::WritebackThread", "work ptr", work.get());
 
-            size_t blk_start = work->txn()->BlkStart();
             size_t blk_count = work->txn()->BlkCount();
 
             if (blk_count > 0) {
-                ZX_ASSERT(blk_start == b->start_);
+                ZX_ASSERT(work->txn()->BlkStart() == b->start_);
                 ZX_ASSERT(blk_count <= b->len_);
             }
 
