@@ -13,9 +13,9 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netinet/if_ether.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
-#include <netinet/ip.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,7 +30,7 @@ typedef struct {
     bool setting_promisc;
     bool promisc_on;
     bool dump_regs;
-    char *filter_macs;
+    char* filter_macs;
     int n_filter_macs;
 } ethtool_options_t;
 
@@ -51,8 +51,8 @@ int usage(void) {
 // Str should be nn.nn.nn.nn.nn.nn where nn is decimal 0..255 and there are ETH_MAC_SIZE (6) nn's
 // Function returns non-zero if this isn't the case. (It's not fully paranoid, but shouldn't crash.)
 // If input is good, first nn goes into mac[0], etc.
-int parse_address(char *mac, const char *str) {
-    char *next_string;
+int parse_address(char* mac, const char* str) {
+    char* next_string;
     for (int i = 0; i < 5; i++) {
         mac[i] = (char)strtol(str, &next_string, 10);
         if (next_string[0] != '.') {
@@ -82,7 +82,7 @@ int parse_args(int argc, const char** argv, ethtool_options_t* options) {
     argc--;
     argv++;
 
-    char *remainder;
+    char* remainder;
     options->pause_secs = strtol(argv[0], &remainder, 10);
     if (options->pause_secs < 0 || remainder[0] != 0) {
         return usage();
@@ -115,7 +115,7 @@ int parse_args(int argc, const char** argv, ethtool_options_t* options) {
         argv++;
         options->n_filter_macs = argc;
         options->filter_macs = calloc(1, ETH_MAC_SIZE * argc);
-        char *addr_ptr = options->filter_macs;
+        char* addr_ptr = options->filter_macs;
         while (argc--) {
             if (parse_address(addr_ptr, *(argv++))) {
                 return usage();
@@ -125,7 +125,6 @@ int parse_args(int argc, const char** argv, ethtool_options_t* options) {
     } else { // Includes --help, -h, --HELF, --42, etc.
         return usage();
     }
-
 
     if (promisc_on && promisc_off) {
         return usage();
@@ -138,7 +137,7 @@ int parse_args(int argc, const char** argv, ethtool_options_t* options) {
     return 0;
 }
 
-int initialize_ethernet(ethtool_options_t *options) {
+int initialize_ethernet(ethtool_options_t* options) {
     int fd;
     if ((fd = open(options->device, O_RDWR)) < 0) {
         fprintf(stderr, "ethtool: cannot open '%s': %d\n", options->device, fd);
@@ -191,6 +190,7 @@ int main(int argc, const char** argv) {
         if ((r = ioctl_ethernet_set_promisc(fd, &options.promisc_on)) < 0) {
             fprintf(stderr, "ethtool: failed to set promiscuous mode to %s: %zd\n",
                     options.promisc_on ? "on" : "off", r);
+            return -1;
         } else {
             fprintf(stderr, "ethtool: set %s promiscuous mode to %s\n",
                     options.device, options.promisc_on ? "on" : "off");
@@ -202,6 +202,7 @@ int main(int argc, const char** argv) {
         config.op = ETH_MULTICAST_TEST_FILTER;
         if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
             fprintf(stderr, "ethtool: failed to config multicast test\n");
+            return -1;
         }
         config.op = ETH_MULTICAST_ADD_MAC;
         for (int i = 0; i < options.n_filter_macs; i++) {
@@ -210,6 +211,7 @@ int main(int argc, const char** argv) {
                    config.mac[2], config.mac[3], config.mac[4], config.mac[5]);
             if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
                 fprintf(stderr, "ethtool: failed to add multicast addr\n");
+                return -1;
             }
         }
     }
@@ -219,6 +221,7 @@ int main(int argc, const char** argv) {
         config.op = ETH_MULTICAST_DUMP_REGS;
         if ((r = ioctl_ethernet_config_multicast(fd, &config)) < 0) {
             fprintf(stderr, "ethtool: failed to request reg dump\n");
+            return -1;
         }
     }
     zx_nanosleep(zx_deadline_after(ZX_SEC(options.pause_secs)));
