@@ -28,7 +28,6 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
     LTRACE_ENTRY;
     DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
 
-    bool is_contiguous;
     if (vmo->is_paged()) {
         // Commit the VMO range, in case it's not already committed.
         zx_status_t status = vmo->CommitRange(offset, size, nullptr);
@@ -44,21 +43,6 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
             LTRACEF("vmo->Pin failed: %d\n", status);
             return status;
         }
-
-        uint64_t expected_addr = 0;
-        auto check_contiguous = [](void* context, size_t offset, size_t index, paddr_t pa) {
-            auto expected_addr = static_cast<uint64_t*>(context);
-            if (index != 0 && pa != *expected_addr) {
-                return ZX_ERR_NOT_FOUND;
-            }
-            *expected_addr = pa + PAGE_SIZE;
-            return ZX_OK;
-        };
-        status = vmo->Lookup(offset, size, 0, check_contiguous, &expected_addr);
-        is_contiguous = (status == ZX_OK);
-    } else {
-        // This is a physical VMO
-        is_contiguous = true;
     }
 
     // Set up a cleanup function to undo the pin if we need to fail this
@@ -79,9 +63,10 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
         return ZX_ERR_NO_MEMORY;
     }
 
+    bool is_contiguous = vmo->is_contiguous();
     auto pmo = fbl::AdoptRef(new (&ac) PinnedMemoryTokenDispatcher(fbl::move(bti), fbl::move(vmo),
-                                                                    offset, size, is_contiguous,
-                                                                    fbl::move(addr_array)));
+                                                                   offset, size, is_contiguous,
+                                                                   fbl::move(addr_array)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -115,39 +100,20 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
     const uint64_t bti_id = bti_->bti_id();
     const size_t min_contig = bti_->minimum_contiguity();
     if (is_contiguous_) {
-        constexpr dev_vaddr_t kInvalidAddr = 1;
+        dev_vaddr_t vaddr;
+        size_t mapped_len;
 
-        dev_vaddr_t vaddr_base = kInvalidAddr;
         // Usermode drivers assume that if they requested a contiguous buffer in
         // memory, then the physical addresses will be contiguous.  Return an
         // error if we can't acutally map the address contiguously.
-        size_t remaining = size_;
-        size_t curr_offset = offset_;
-        while (remaining > 0) {
-            dev_vaddr_t vaddr;
-            size_t mapped_len;
-            zx_status_t status = bti_->iommu()->Map(bti_id, vmo_, curr_offset, remaining, perms,
-                                                    &vaddr, &mapped_len);
-            if (status != ZX_OK) {
-                if (vaddr_base != kInvalidAddr) {
-                    bti_->iommu()->Unmap(bti_id, vaddr_base, curr_offset - offset_);
-                }
-                return status;
-            }
-            if (vaddr_base == kInvalidAddr) {
-                vaddr_base = vaddr;
-            } else if (vaddr != vaddr_base + curr_offset - offset_) {
-                bti_->iommu()->Unmap(bti_id, vaddr_base, curr_offset - offset_);
-                bti_->iommu()->Unmap(bti_id, vaddr, mapped_len);
-                return ZX_ERR_INTERNAL;
-            }
-
-            curr_offset += mapped_len;
-            remaining -= mapped_len;
+        zx_status_t status = bti_->iommu()->MapContiguous(bti_id, vmo_, offset_, size_, perms,
+                                                          &vaddr, &mapped_len);
+        if (status != ZX_OK) {
+            return status;
         }
 
-        mapped_addrs_[0] = vaddr_base;
-
+        DEBUG_ASSERT(vaddr % min_contig == 0);
+        mapped_addrs_[0] = vaddr;
         for (size_t i = 1; i < mapped_addrs_.size(); ++i) {
             mapped_addrs_[i] = mapped_addrs_[i - 1] + min_contig;
         }
