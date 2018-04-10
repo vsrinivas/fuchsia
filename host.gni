@@ -29,8 +29,9 @@ declare_args() {
 #     It does not need to use explicit toolchain suffixes; the only target
 #     using the deps will be instantiated only in host_toolchain.
 #
+#   testonly (optional)
 #   visibility (optional)
-#     [label pattern list] Standard GN meaning.
+#     Standard GN meaning.
 #
 # Example of usage:
 #
@@ -51,6 +52,7 @@ template("install_host_tools") {
       forward_variables_from(invoker,
                              [
                                "deps",
+                               "testonly",
                                "visibility",
                              ])
       if (defined(visibility)) {
@@ -77,7 +79,11 @@ template("install_host_tools") {
       deps = [
         ":$target_name($toolchain)",
       ]
-      forward_variables_from(invoker, [ "visibility" ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
       not_needed(invoker,
                  [
                    "deps",
