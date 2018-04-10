@@ -37,10 +37,9 @@ bool FfmpegDecoderBase::TransformPacket(
     bool new_input,
     const std::shared_ptr<PayloadAllocator>& allocator,
     PacketPtr* output) {
-  TRACE_DURATION(
-      "motown", "DecodePacket", "type",
-      (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
-                                                           : "audio"));
+  TRACE_DURATION("motown", (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO
+                                ? "DecodeVideoPacket"
+                                : "DecodeAudioPacket"));
   FXL_DCHECK(input);
   FXL_DCHECK(allocator);
   FXL_DCHECK(output);
