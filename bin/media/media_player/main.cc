@@ -9,14 +9,14 @@
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 
-#include "garnet/bin/media/media_service/media_player_impl.h"
+#include "garnet/bin/media/media_player/media_player_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/svc/cpp/services.h"
 
-const std::string kIsolateUrl = "media_service";
+const std::string kIsolateUrl = "media_player";
 const std::string kIsolateArgument = "--transient";
 
-// Connects to the requested service in a media_service isolate.
+// Connects to the requested service in a media_player isolate.
 template <typename Interface>
 void ConnectToIsolate(fidl::InterfaceRequest<Interface> request,
                       component::ApplicationLauncher* launcher) {

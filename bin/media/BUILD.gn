@@ -7,7 +7,7 @@ import("//build/package.gni")
 group("services") {
   public_deps = [
     "//garnet/bin/media/audio_policy_service",
-    "//garnet/bin/media/media_service",
+    "//garnet/bin/media/media_player",
     "//garnet/bin/media/net_media_service",
   ]
 }
@@ -57,7 +57,7 @@ package("tests") {
     "//garnet/bin/media/audio:tests",
     "//garnet/bin/media/audio_server:tests",
     "//garnet/bin/media/demux:tests",
-    "//garnet/bin/media/media_service:tests",
+    "//garnet/bin/media/media_player:tests",
     "//garnet/bin/media/net_media_service:tests",
     "//garnet/bin/media/player:tests",
     "//garnet/bin/media/util:tests",

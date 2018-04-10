@@ -7,8 +7,8 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/media/fidl/fidl_formatting.h"
-#include "garnet/bin/media/media_service/test/fake_renderer.h"
-#include "garnet/bin/media/media_service/test/fake_wav_reader.h"
+#include "garnet/bin/media/media_player/test/fake_renderer.h"
+#include "garnet/bin/media/media_player/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"

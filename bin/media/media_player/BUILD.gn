@@ -4,16 +4,16 @@
 
 import("//build/package.gni")
 
-package("media_service") {
+package("media_player") {
   deps = [
-    ":media_service_bin",
+    ":media_player_bin",
   ]
 
-  binary = "media_service"
+  binary = "media_player"
 }
 
-executable("media_service_bin") {
-  output_name = "media_service"
+executable("media_player_bin") {
+  output_name = "media_player"
 
   sources = [
     "main.cc",
@@ -44,7 +44,7 @@ executable("media_service_bin") {
 }
 
 executable("tests") {
-  output_name = "media_service_tests"
+  output_name = "media_player_tests"
 
   testonly = true
 
@@ -57,7 +57,7 @@ executable("tests") {
   ]
 
   deps = [
-    ":media_service",
+    ":media_player",
     "//garnet/bin/media/fidl",
     "//garnet/bin/media/framework_create",
     "//garnet/public/lib/app/cpp",

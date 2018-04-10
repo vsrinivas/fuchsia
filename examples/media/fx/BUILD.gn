@@ -8,7 +8,6 @@ executable("fx") {
   ]
 
   deps = [
-    "//garnet/bin/media/media_service",
     "//garnet/lib/media/wav_writer",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
