@@ -16,6 +16,7 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "peridot/lib/module_manifest_source/package_util.h"
 
 // This function finds the ModulePackageIndexer fidl service that the
 // module_resolver runs.
@@ -57,11 +58,6 @@ int main(int argc, const char** argv) {
   }
 
   auto service_path = FindModulePackageIndexerService();
-  const auto& package_name = command_line.positional_args()[0];
-  const auto& package_version = command_line.positional_args()[1];
-  auto module_manifest_path =
-      fxl::StringPrintf("/pkgfs/packages/%s/%s/meta/module.json",
-                        package_name.c_str(), package_version.c_str());
 
   module_manifest_source::ModulePackageIndexerPtr indexer;
   auto req_handle = indexer.NewRequest().TakeChannel();
@@ -70,7 +66,11 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  indexer->IndexManifest(package_name, module_manifest_path);
+  const auto& package_name = command_line.positional_args()[0];
+  const auto& package_version = command_line.positional_args()[1];
+  indexer->IndexManifest(
+      package_name,
+      modular::GetModuleManifestPathFromPackage(package_name, package_version));
 
   return 0;
 }

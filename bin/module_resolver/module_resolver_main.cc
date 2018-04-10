@@ -17,7 +17,6 @@
 #include "lib/fxl/macros.h"
 #include "peridot/bin/module_resolver/module_resolver_impl.h"
 #include "peridot/lib/fidl/equals.h"
-#include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/firebase_source.h"
 #include "peridot/lib/module_manifest_source/module_package_source.h"
 #include "peridot/public/lib/entity/cpp/json.h"

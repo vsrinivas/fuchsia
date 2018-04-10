@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_MODULE_MANIFEST_PUSH_PACKAGE_SOURCE_H_
-#define PERIDOT_LIB_MODULE_MANIFEST_PUSH_PACKAGE_SOURCE_H_
+#ifndef PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
+#define PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_
 
 #include <functional>
 #include <map>
@@ -14,11 +14,14 @@
 #include "garnet/public/lib/app/cpp/application_context.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/tasks/task_runner.h"
-#include "peridot/lib/module_manifest_source/directory_source.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {
 
+// This source exposes a |ModuleManifestIndexer| service to this application's
+// debug service. New manifests are published using that interfaces. When this
+// source starts up, it gets its initial set of module packages to index by
+// reading the module package index directory located under /system/data/.
 class ModulePackageSource : public ModuleManifestSource,
                             module_manifest_source::ModulePackageIndexer {
  public:
@@ -38,8 +41,6 @@ class ModulePackageSource : public ModuleManifestSource,
 
   const std::string dir_;
   NewEntryFn new_entry_fn_;
-  std::unique_ptr<modular::DirectoryModuleManifestSource> initial_manifest_dir_;
-
   fidl::BindingSet<module_manifest_source::ModulePackageIndexer>
       indexer_bindings_;
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
@@ -51,4 +52,4 @@ class ModulePackageSource : public ModuleManifestSource,
 
 }  // namespace modular
 
-#endif  // PERIDOT_LIB_MODULE_MANIFEST_PUSH_PACKAGE_SOURCE_H_
+#endif  // PERIDOT_LIB_MODULE_MANIFEST_SOURCE_MODULE_PACKAGE_SOURCE_H_

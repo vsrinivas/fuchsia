@@ -4,21 +4,26 @@
 
 #include "peridot/lib/module_manifest_source/module_package_source.h"
 
+#include <dirent.h>
 #include <fs/service.h>
+#include <sys/types.h>
 
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "lib/fxl/strings/split_string.h"
+#include "lib/fxl/strings/string_printf.h"
 #include "peridot/lib/module_manifest_source/json.h"
+#include "peridot/lib/module_manifest_source/package_util.h"
 
 namespace modular {
 namespace {
 // NOTE: This must match the path specified in
-// peridot/build/module_repository/manifest_package.gni
-constexpr char kReadOnlyModuleRepositoryPath[] =
-    "/system/data/initial_module_manifests";
+// //peridot/build/manifest_manifest.gni
+constexpr char kInitialModulePackagesIndexDir[] =
+    "/system/data/initial_module_packages";
 }  // namespace
 
 ModulePackageSource::ModulePackageSource(
@@ -67,20 +72,50 @@ void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
       }));
 }
 
+// TODO(vardhan): Move this into garnet's fxl.
+void IterateDirectory(fxl::StringView dirname,
+                      std::function<void(fxl::StringView)> callback) {
+  DIR* fd = opendir(dirname.data());
+  if (fd == NULL) {
+    perror("Could not open module package index directory: ");
+    return;
+  }
+  struct dirent* dp = NULL;
+  while ((dp = readdir(fd)) != NULL) {
+    if (dp->d_name[0] != '.') {
+      callback(dp->d_name);
+    }
+  }
+  closedir(fd);
+}
+
 void ModulePackageSource::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
                                 IdleFn idle_fn,
                                 NewEntryFn new_fn,
                                 RemovedEntryFn removed_fn) {
-  if (initial_manifest_dir_) {
-    initial_manifest_dir_.reset();
-  }
-  initial_manifest_dir_ =
-      std::make_unique<modular::DirectoryModuleManifestSource>(
-          kReadOnlyModuleRepositoryPath, false /* create */);
-  initial_manifest_dir_->Watch(task_runner, idle_fn, new_fn, removed_fn);
-
   task_runner_ = task_runner;
   new_entry_fn_ = new_fn;
+
+  IterateDirectory(
+      kInitialModulePackagesIndexDir, [this](fxl::StringView filename) {
+        std::string contents;
+        if (!files::ReadFileToString(
+                fxl::StringPrintf("%s/%s", kInitialModulePackagesIndexDir,
+                                  filename.data()),
+                &contents)) {
+          FXL_LOG(ERROR) << "Could not read module package index: "
+                         << filename.data();
+        }
+        auto module_pkgs = fxl::SplitString(
+            contents, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+        for (auto module_pkg_view : module_pkgs) {
+          auto module_pkg = module_pkg_view.ToString();
+          // TODO(vardhan): We only index module package with version=0.
+          IndexManifest(module_pkg,
+                        GetModuleManifestPathFromPackage(module_pkg, "0"));
+        }
+      });
+
   idle_fn();
 }
 

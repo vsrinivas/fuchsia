@@ -87,6 +87,17 @@ source_set("firebase_source") {
   ]
 }
 
+source_set("package_util") {
+  sources = [
+    "package_util.cc",
+    "package_util.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 source_set("module_package_source") {
   sources = [
     "module_package_source.cc",
@@ -94,9 +105,9 @@ source_set("module_package_source") {
   ]
 
   public_deps = [
-    ":directory_source",
     ":json",
     ":module_manifest_source",
+    ":package_util",
     "fidl",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fxl",
