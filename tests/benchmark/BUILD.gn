@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 package("modular_benchmarks") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
   visibility = [ "//peridot/*" ]
 
   deps = [

@@ -7,7 +7,7 @@ import("//build/package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 package("device_runner_monitor") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

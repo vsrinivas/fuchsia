@@ -7,7 +7,7 @@ import("//build/package.gni")
 visibility = [ "//peridot/*" ]
 
 package("ledger") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "app",
@@ -22,7 +22,7 @@ package("ledger") {
 
 package("ledger_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":ledger_unittests",

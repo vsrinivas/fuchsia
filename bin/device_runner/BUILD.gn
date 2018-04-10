@@ -7,7 +7,7 @@ import("//build/package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 package("device_runner") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":device_runner_bin",
@@ -21,7 +21,7 @@ package("device_runner") {
 }
 
 package("dev_device_shell") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":dev_device_shell_bin",

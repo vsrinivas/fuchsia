@@ -13,7 +13,7 @@ config("internal") {
 
 package("maxwell_agents") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "//peridot/bin/acquirers",
@@ -61,7 +61,7 @@ executable("maxwell_unittests") {
 
 package("maxwell_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":maxwell_unittests",
@@ -123,7 +123,7 @@ executable("modular_unittests_bin") {
 
 package("modular_unittests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":modular_unittests_bin",

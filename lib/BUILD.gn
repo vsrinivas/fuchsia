@@ -25,7 +25,7 @@ executable("unittests") {
 
 package("peridot_lib_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":unittests",

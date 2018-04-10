@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 package("dev_story_shell") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":dev_story_shell_bin",
