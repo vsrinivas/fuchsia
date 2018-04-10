@@ -26,7 +26,7 @@ function main {
   local device_args=()
   while (($#)); do
     case "$1" in
-      -C|-f|-j|-k|-l|-d|-t|-w)
+      -C|-f|-j|-k|-l|-t|-w)
         args+=("$1")
         shift
         args+=("$1")
@@ -34,12 +34,20 @@ function main {
       -n|-v)
         args+=("$1")
         ;;
-      -d|--device)
+      --device)
         shift
         device_args+=("-d" "$1")
         ;;
       --no-push)
         push=0
+        ;;
+      -d)
+        shift
+        if [[ "$1" == *"-"* ]]; then
+          device_args+=("-d" "$1")
+        else
+          args+=("-d" $1)
+        fi
         ;;
       *)
         targets+=("$1")
