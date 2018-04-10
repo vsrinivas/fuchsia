@@ -5,9 +5,8 @@
 pub mod kde;
 
 use nom::IResult::{Done, Incomplete};
-use nom::{le_u16, le_u8, ErrorKind, IResult, Needed};
+use nom::{IResult, Needed};
 use rsne;
-use std::mem;
 use {Error, Result};
 
 #[derive(Debug)]

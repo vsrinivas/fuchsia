@@ -78,8 +78,8 @@ pub fn new(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use akm::{Akm, PSK, SAE};
-    use cipher::{CCMP_128, Cipher, WEP_40, TKIP};
+    use akm::{Akm, PSK};
+    use cipher::{CCMP_128, Cipher, TKIP};
     use hex::FromHex;
     use suite_selector::{Factory, OUI};
 

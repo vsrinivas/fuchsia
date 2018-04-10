@@ -35,7 +35,7 @@ impl Algorithm for NistAes {
             return Err(Error::InvalidAesKeywrapDataLength(p.len()));
         }
         let keysize = NistAes::keysize(key.len())?;
-        let mut cipher = AesNiEncryptor::new(keysize, key);
+        let cipher = AesNiEncryptor::new(keysize, key);
         let mut b = vec![0u8; cipher.block_size()];
 
         // 1) Initialize variables
@@ -77,7 +77,7 @@ impl Algorithm for NistAes {
         }
 
         let keysize = NistAes::keysize(key.len())?;
-        let mut cipher = AesNiDecryptor::new(keysize, key);
+        let cipher = AesNiDecryptor::new(keysize, key);
         let mut b = vec![0u8; cipher.block_size()];
 
         // 1) Initialize variables

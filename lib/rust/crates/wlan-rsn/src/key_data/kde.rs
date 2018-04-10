@@ -4,14 +4,14 @@
 
 use super::Element;
 use nom::IResult::{Done, Incomplete};
-use nom::{le_u16, le_u8, ErrorKind, IResult, Needed};
-use rsne;
+use nom::{IResult, Needed, le_u8};
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
 const GTK_DATA_TYPE: u8 = 1;
 
+// IEEE Std 802.11-2016, 12.7.2, Figure 12-34
 #[derive(Default, Debug)]
 pub struct Header {
     pub type_: u8,

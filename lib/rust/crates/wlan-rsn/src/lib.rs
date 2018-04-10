@@ -8,6 +8,7 @@ extern crate bitfield;
 extern crate byteorder;
 extern crate bytes;
 extern crate crypto;
+extern crate eapol;
 #[macro_use]
 extern crate failure;
 extern crate futures;
@@ -28,6 +29,7 @@ mod key;
 mod key_data;
 mod keywrap;
 mod pmkid;
+mod rsna;
 pub mod rsne;
 mod suite_selector;
 
@@ -50,7 +52,7 @@ pub enum Error {
     #[fail(display = "passphrase contains invalid character: {:x}", _0)]
     InvalidPassphraseChar(u8),
     #[fail(display = "the config `{:?}` is incompatible with the auth method `{:?}`", _0, _1)]
-    IncompatibleConfig(auth::config::Config, String),
+    IncompatibleConfig(auth::Config, String),
     #[fail(display = "invalid bit size; must be a multiple of 8 but was {}", _0)]
     InvalidBitSize(usize),
     #[fail(display = "nonce could not be generated")]
@@ -63,18 +65,24 @@ pub enum Error {
     PtkHierarchyUnsupportedCipherError,
     #[fail(display = "error invalid key size for AES keywrap: {}", _0)]
     InvalidAesKeywrapKeySize(usize),
-    #[fail(
-        display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}", _0
-    )]
+    #[fail(display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}",
+           _0)]
     InvalidAesKeywrapDataLength(usize),
     #[fail(display = "error wrong key for AES Keywrap unwrapping")]
     WrongAesKeywrapKey,
-    #[fail(
-        display = "invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0
-    )]
+    #[fail(display = "invalid key data length; must be at least 16 bytes and a multiple of 8: {}",
+           _0)]
     InvaidKeyDataLength(usize),
     #[fail(display = "invalid key data; error code: {:?}", _0)]
     InvalidKeyData(nom::IError),
+    #[fail(display = "unknown authentication method")]
+    UnknownAuthenticationMethod,
+    #[fail(display = "no AKM negotiated")]
+    InvalidNegotiatedAkm,
+    #[fail(display = "unknown key exchange method")]
+    UnknownKeyExchange,
+    #[fail(display = "cannot initiate Fourway Handshake as Supplicant")]
+    UnexpectedInitiationRequest,
 }
 
 impl From<std::io::Error> for Error {

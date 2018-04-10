@@ -10,6 +10,7 @@ license = "BSD-3-Clause"
 bitfield="0.12"
 byteorder = "1.1"
 bytes = "0.4"
+eapol = "0.1"
 failure = "0.1"
 futures = { version = "0.2.1", features = ["nightly"] }
 hex = "0.3"

@@ -1,13 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#[allow(dead_code)]
+
+use Result;
 use bytes::{BufMut, BytesMut, LittleEndian};
 use crypto_utils::prf;
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
 use time;
-use Result;
 
 pub struct NonceReader {
     key_counter: BigUint,

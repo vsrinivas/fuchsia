@@ -5,9 +5,6 @@
 use crypto::hmac::Hmac;
 use crypto::pbkdf2;
 use crypto::sha1::Sha1;
-use futures;
-use futures::task;
-use futures::Async::Ready;
 use {Error, Result};
 
 /// Keys derived from a passphrase provide comparably low levels of security.
@@ -16,10 +13,6 @@ use {Error, Result};
 #[derive(Debug)]
 pub struct Psk {
     config: Config,
-}
-
-pub(crate) fn new(config: Config) -> Result<Psk> {
-    Ok(Psk { config })
 }
 
 #[derive(Debug)]
@@ -52,36 +45,34 @@ impl Config {
     }
 }
 
-impl futures::Future for Psk {
-    type Item = Vec<u8>;
-    type Error = Error;
+impl Psk {
+    pub(crate) fn new(config: Config) -> Result<Psk> {
+        Ok(Psk { config })
+    }
 
-    fn poll(&mut self, _: &mut task::Context) -> futures::Poll<Self::Item, Self::Error> {
+    pub fn compute(&self) -> Vec<u8> {
         // IEEE Std 802.11-2016, J.4.1
         let size: usize = 256 / 8;
         let mut out_key: Vec<u8> = vec![0; size];
         let mut hmac = Hmac::new(Sha1::new(), &self.config.passphrase[..]);
         pbkdf2::pbkdf2(&mut hmac, &self.config.ssid[..], 4096, &mut out_key[..]);
-        Ok(Ready(out_key))
+        out_key
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::Future;
     use hex::FromHex;
 
     fn assert_psk(password: &str, ssid: &str, expected: &str) {
         let cfg_result = Config::new(password.as_bytes(), ssid.as_bytes());
         assert_eq!(cfg_result.is_ok(), true);
 
-        let psk_result = new(cfg_result.unwrap());
+        let psk_result = Psk::new(cfg_result.unwrap());
         assert_eq!(psk_result.is_ok(), true);
-        let mut psk = psk_result.unwrap();
-        let future_result = futures::executor::block_on(psk);
-        assert_eq!(future_result.is_ok(), true);
-        let actual = future_result.unwrap();
+        let psk = psk_result.unwrap();
+        let actual = psk.compute();
         let expected = Vec::from_hex(expected).unwrap();
         assert_eq!(actual, expected);
     }

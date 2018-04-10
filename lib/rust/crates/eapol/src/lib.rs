@@ -8,6 +8,7 @@
 extern crate bitfield;
 extern crate byteorder;
 extern crate bytes;
+extern crate failure;
 #[macro_use]
 extern crate nom;
 extern crate test;
@@ -15,6 +16,19 @@ extern crate test;
 use byteorder::BigEndian;
 use bytes::{BufMut, Bytes, BytesMut};
 use nom::{be_u16, be_u64, be_u8};
+
+pub trait FrameReceiver {
+    fn on_eapol_frame(&self, frame: &Frame) -> Result<(), failure::Error>;
+}
+
+pub trait KeyFrameReceiver {
+    fn on_eapol_key_frame(&self, frame: &KeyFrame) -> Result<(), failure::Error>;
+}
+
+#[derive(Debug)]
+pub enum Frame {
+    Key(KeyFrame)
+}
 
 // IEEE Std 802.1X-2010, 11.9, Table 11-5
 pub enum KeyDescriptor {
@@ -76,11 +90,11 @@ pub struct KeyFrame {
     pub key_info: KeyInformation,
     pub key_len: u16,
     pub key_replay_counter: u64,
-    pub key_nonce: Bytes, // 32 octets
-    pub key_iv: Bytes,    // 16 octets
+    pub key_nonce: Bytes, /* 32 octets */
+    pub key_iv: Bytes, /* 16 octets */
     pub key_rsc: u64,
     // 8 octests reserved.
-    pub key_mic: Bytes, // AKM dependent size
+    pub key_mic: Bytes, /* AKM dependent size */
     pub key_data_len: u16,
     pub key_data: Bytes,
 }
