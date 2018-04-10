@@ -5,19 +5,19 @@
 #ifndef GARNET_LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 #define GARNET_LIB_NETWORK_WRAPPER_NETWORK_WRAPPER_IMPL_H_
 
+#include <fuchsia/cpp/network.h>
+
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
-#include "lib/fxl/tasks/task_runner.h"
-#include <fuchsia/cpp/network.h>
 
 namespace network_wrapper {
 
 class NetworkWrapperImpl : public NetworkWrapper {
  public:
   NetworkWrapperImpl(
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      async_t* async,
       std::unique_ptr<backoff::Backoff> backoff,
       std::function<network::NetworkServicePtr()> network_service_factory);
   ~NetworkWrapperImpl() override;
