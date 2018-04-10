@@ -160,22 +160,35 @@ static ACPI_STATUS pci_child_data_callback(ACPI_HANDLE object,
         return AE_CTRL_TERMINATE;
     }
 
-    // get device type (only looking for i2c-hid and tpm right now)
+    auxdata_i2c_device_t* data = ctx->data + ctx->i;
+    data->protocol_id = ZX_PROTOCOL_I2C;
+
     ACPI_DEVICE_INFO* info = NULL;
     ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
     if (acpi_status == AE_OK) {
         // These length fields count the trailing NUL.
+        // Publish HID
         if ((info->Valid & ACPI_VALID_HID) && info->HardwareId.Length <= HID_LENGTH + 1) {
-            if (!strncmp(info->HardwareId.String, GOOGLE_TPM_HID_STRING, HID_LENGTH)) {
-                ctx->data->protocol_id = ZX_PROTOCOL_TPM;
+            const char* hid = info->HardwareId.String;
+            if (!strncmp(hid, GOOGLE_TPM_HID_STRING, HID_LENGTH)) {
+                data->protocol_id = ZX_PROTOCOL_TPM;
             }
+            data->props[data->propcount].id = BIND_ACPI_HID_0_3;
+            data->props[data->propcount++].value = htobe32(*((uint32_t*)(hid)));
+            data->props[data->propcount].id = BIND_ACPI_HID_4_7;
+            data->props[data->propcount++].value = htobe32(*((uint32_t*)(hid + 4)));
         }
+        // Check for I2C HID devices via CID
         if ((info->Valid & ACPI_VALID_CID) && info->CompatibleIdList.Count > 0) {
-            ACPI_PNP_DEVICE_ID* id = &info->CompatibleIdList.Ids[0];
-            if (id->Length <= CID_LENGTH + 1) {
-                if (!strncmp(id->String, I2C_HID_CID_STRING, CID_LENGTH)) {
-                    ctx->data->protocol_id = ZX_PROTOCOL_I2C_HID;
+            ACPI_PNP_DEVICE_ID* cid = &info->CompatibleIdList.Ids[0];
+            if (cid->Length <= CID_LENGTH + 1) {
+                if (!strncmp(cid->String, I2C_HID_CID_STRING, CID_LENGTH)) {
+                    data->protocol_id = ZX_PROTOCOL_I2C_HID;
                 }
+                data->props[data->propcount].id = BIND_ACPI_CID_0_3;
+                data->props[data->propcount++].value = htobe32(*((uint32_t*)(cid->String)));
+                data->props[data->propcount].id = BIND_ACPI_CID_4_7;
+                data->props[data->propcount++].value = htobe32(*((uint32_t*)(cid->String + 4)));
             }
         }
         ACPI_FREE(info);
@@ -226,6 +239,8 @@ static zx_status_t pciroot_op_get_auxdata(void* context, const char* args,
     if (pci_node == NULL) {
         return ZX_ERR_NOT_FOUND;
     }
+
+    memset(data, 0, bytes);
 
     // Look for as many children as can fit in the provided buffer
     pci_child_auxdata_ctx_t ctx = {
