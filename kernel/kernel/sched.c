@@ -221,14 +221,19 @@ static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
     mp_set_cpu_busy(cpu);
 }
 
+/* using the per cpu run queue bitmap, find the highest populated queue */
+static uint highest_run_queue(const struct percpu* c) {
+    return HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
+           (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
+}
+
 static thread_t* sched_get_top_thread(cpu_num_t cpu) {
     /* pop the head of the highest priority queue with any threads
      * queued up on the passed in cpu.
      */
     struct percpu* c = &percpu[cpu];
     if (likely(c->run_queue_bitmap)) {
-        uint highest_queue = HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
-                             (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
+        uint highest_queue = highest_run_queue(c);
 
         thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
@@ -576,9 +581,58 @@ void sched_migrate(thread_t* t) {
     }
 }
 
+// the effective priority of a thread has changed, do what is necessary to move the thread
+// from different queues and inform us if we need to reschedule
+static void sched_priority_changed(thread_t* t, int old_prio,
+                                   bool* local_resched, cpu_mask_t* accum_cpu_mask) {
+    switch (t->state) {
+    case THREAD_RUNNING:
+        if (t->effec_priority < old_prio) {
+            // we're currently running and dropped our effective priority, might want to resched
+            if (t == get_current_thread()) {
+                *local_resched |= true;
+            } else {
+                *accum_cpu_mask |= cpu_num_to_mask(t->curr_cpu);
+            }
+        }
+        break;
+    case THREAD_READY:
+        // it's sitting in a run queue somewhere, remove and add back to the proper queue on that cpu
+        DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
+        list_delete(&t->queue_node);
+
+        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
+
+        // clear the old cpu's queue bitmap if that was the last entry
+        struct percpu* c = &percpu[t->curr_cpu];
+        if (list_is_empty(&c->run_queue[old_prio])) {
+            c->run_queue_bitmap &= ~(1u << old_prio);
+        }
+
+        // insert ourself into the new queue
+        if (t->effec_priority > old_prio) {
+            insert_in_run_queue_head(t->curr_cpu, t);
+
+            // we may now be higher priority than the current thread on this cpu, reschedule
+            if (t->curr_cpu == arch_curr_cpu_num()) {
+                *local_resched |= true;
+            } else {
+                *accum_cpu_mask |= cpu_num_to_mask(t->curr_cpu);
+            }
+        } else {
+            insert_in_run_queue_tail(t->curr_cpu, t);
+        }
+
+        break;
+    default:
+        // the other states do not matter, exit
+        return;
+    }
+}
+
 /* set the priority to the higher value of what it was before and the newly inherited value */
 /* pri < 0 disables priority inheritance and goes back to the naturally computed values */
-void sched_inherit_priority(thread_t* t, int pri, bool *local_resched) {
+void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (pri > HIGHEST_PRIORITY)
@@ -599,45 +653,7 @@ void sched_inherit_priority(thread_t* t, int pri, bool *local_resched) {
 
     // see if we need to do something based on the state of the thread
     cpu_mask_t accum_cpu_mask = 0;
-    switch (t->state) {
-    case THREAD_RUNNING:
-        if (t->effec_priority < old_ep) {
-            // we're currently running and dropped our effective priority, might want to resched
-            if (t == get_current_thread()) {
-                *local_resched |= true;
-            } else {
-                accum_cpu_mask = cpu_num_to_mask(t->curr_cpu);
-            }
-        }
-        break;
-    case THREAD_READY:
-        // it's sitting in a run queue somewhere, remove and add back to the proper queue on that cpu
-        DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
-        list_delete(&t->queue_node);
-
-        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
-
-        struct percpu* c = &percpu[t->curr_cpu];
-        if (list_is_empty(&c->run_queue[old_ep])) {
-            c->run_queue_bitmap &= ~(1u << old_ep);
-        }
-
-        if (t->effec_priority > old_ep) {
-            insert_in_run_queue_head(t->curr_cpu, t);
-            if (t->curr_cpu == arch_curr_cpu_num()) {
-                *local_resched |= true;
-            } else {
-                accum_cpu_mask = cpu_num_to_mask(t->curr_cpu);
-            }
-        } else {
-            insert_in_run_queue_tail(t->curr_cpu, t);
-        }
-
-        break;
-    default:
-        // the other states do not matter, exit
-        return;
-    }
+    sched_priority_changed(t, old_ep, local_resched, &accum_cpu_mask);
 
     // send some ipis based on the previous code
     if (accum_cpu_mask) {
