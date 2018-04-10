@@ -33,12 +33,12 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
     zx_status_t status;
     {
         TRACE_DURATION("magma", "bti pin");
-        status = zx_bti_pin_new(bus_transaction_initiator_->get(),
-                                ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_PERM_EXECUTE,
-                                static_cast<ZirconPlatformBuffer*>(buffer)->handle(),
-                                start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
-                                page_addr.data(), page_count,
-                                pmt.reset_and_get_address());
+        status = zx_bti_pin(bus_transaction_initiator_->get(),
+                            ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_PERM_EXECUTE,
+                            static_cast<ZirconPlatformBuffer*>(buffer)->handle(),
+                            start_page_index * PAGE_SIZE, page_count * PAGE_SIZE,
+                            page_addr.data(), page_count,
+                            pmt.reset_and_get_address());
     }
     if (status != ZX_OK) {
         zx_info_task_stats_t task_stats = {};
