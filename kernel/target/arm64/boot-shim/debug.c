@@ -21,7 +21,7 @@ static void uart_pputc(char c)
 }
 #elif VIM2_PRINT
 static volatile uint32_t* uart_wfifo = (uint32_t *)0xc81004c0;
-static volatile uint32_t* uart_status = (uint32_t *)0xc81004c0;
+static volatile uint32_t* uart_status = (uint32_t *)0xc81004cc;
 
 static void uart_pputc(char c)
 {
