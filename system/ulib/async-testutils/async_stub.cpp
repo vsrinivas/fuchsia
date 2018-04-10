@@ -33,8 +33,10 @@ zx_status_t stub_queue_packet(async_t* async, async_receiver_t* receiver,
     return static_cast<AsyncStub*>(async)->QueuePacket(receiver, data);
 }
 
-zx_status_t stub_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
-    return static_cast<AsyncStub*>(async)->SetGuestBellTrap(trap);
+zx_status_t stub_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap,
+                                     zx_handle_t guest, zx_vaddr_t addr, size_t length) {
+    return static_cast<AsyncStub*>(async)->SetGuestBellTrap(
+        trap, zx::unowned_guest::wrap(guest), addr, length);
 }
 
 const async_ops_t g_stub_ops = {
@@ -49,7 +51,8 @@ const async_ops_t g_stub_ops = {
 
 } // namespace
 
-AsyncStub::AsyncStub() : async_t{&g_stub_ops} {}
+AsyncStub::AsyncStub()
+    : async_t{&g_stub_ops} {}
 
 AsyncStub::~AsyncStub() {}
 
@@ -78,8 +81,10 @@ zx_status_t AsyncStub::QueuePacket(async_receiver_t* receiver,
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AsyncStub::SetGuestBellTrap(async_guest_bell_trap_t* trap) {
+zx_status_t AsyncStub::SetGuestBellTrap(async_guest_bell_trap_t* trap,
+                                        const zx::guest& guest,
+                                        zx_vaddr_t addr, size_t length) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-}  // namespace async
+} // namespace async

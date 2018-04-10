@@ -400,22 +400,24 @@ zx_status_t loader_service_create_fd(async_t* async,
     return status;
 }
 
-static async_wait_result_t loader_service_handler(async_t* async,
-                                                  async_wait_t* wait,
-                                                  zx_status_t status,
-                                                  const zx_packet_signal_t* signal) {
+static void loader_service_handler(async_t* async,
+                                   async_wait_t* wait,
+                                   zx_status_t status,
+                                   const zx_packet_signal_t* signal) {
     loader_service_session_t* session = (loader_service_session_t*)wait;
     if (status != ZX_OK)
         goto stop;
     status = loader_service_rpc(wait->object, session);
     if (status != ZX_OK)
         goto stop;
-    return ASYNC_WAIT_AGAIN;
+    status = async_begin_wait(async, wait);
+    if (status != ZX_OK)
+        goto stop;
+    return;
 stop:
     zx_handle_close(wait->object);
     free(wait);
     loader_service_deref(session->svc); // Balanced in |loader_service_attach|.
-    return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
@@ -436,7 +438,6 @@ zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
     session->wait.handler = loader_service_handler;
     session->wait.object = h;
     session->wait.trigger = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-    session->wait.flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     session->svc = svc;
 
     status = async_begin_wait(svc->async, &session->wait);

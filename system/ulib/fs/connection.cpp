@@ -125,45 +125,17 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
                        zx::channel channel, uint32_t flags)
     : vfs_(vfs), vnode_(fbl::move(vnode)), channel_(fbl::move(channel)),
-      wait_(ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-            ASYNC_FLAG_HANDLE_SHUTDOWN),
+      wait_(this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       flags_(flags) {
     ZX_DEBUG_ASSERT(vfs);
     ZX_DEBUG_ASSERT(vnode_);
     ZX_DEBUG_ASSERT(channel_);
-
-    wait_.set_handler([this](async_t* async, zx_status_t status,
-                             const zx_packet_signal_t* signal) {
-        ZX_DEBUG_ASSERT(is_waiting());
-
-        // Handle the message.
-        if (status == ZX_OK && (signal->observed & ZX_CHANNEL_READABLE)) {
-            status = CallHandler();
-            switch (status) {
-            case ZX_OK:
-                return ASYNC_WAIT_AGAIN;
-            case ERR_DISPATCHER_ASYNC:
-                return ASYNC_WAIT_FINISHED;
-            }
-        }
-        wait_.set_object(ZX_HANDLE_INVALID);
-
-        // Give the dispatcher a chance to clean up.
-        if (status != ERR_DISPATCHER_DONE) {
-            CallClose();
-        }
-
-        // Tell the VFS that the connection closed remotely.
-        // This might have the side-effect of destroying this object.
-        vfs_->OnConnectionClosedRemotely(this);
-        return ASYNC_WAIT_FINISHED;
-    });
 }
 
 Connection::~Connection() {
     // Stop waiting and clean up if still connected.
     if (is_waiting()) {
-        zx_status_t status = wait_.Cancel(vfs_->async());
+        zx_status_t status = wait_.Cancel();
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Could not cancel wait: status=%d", status);
         wait_.set_object(ZX_HANDLE_INVALID);
 
@@ -186,6 +158,35 @@ zx_status_t Connection::Serve() {
         wait_.set_object(ZX_HANDLE_INVALID);
     }
     return status;
+}
+
+void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
+                               const zx_packet_signal_t* signal) {
+    ZX_DEBUG_ASSERT(is_waiting());
+
+    // Handle the message.
+    if (status == ZX_OK && (signal->observed & ZX_CHANNEL_READABLE)) {
+        status = CallHandler();
+        if (status == ERR_DISPATCHER_ASYNC) {
+            return;
+        }
+        if (status == ZX_OK) {
+            status = wait_.Begin(async);
+            if (status == ZX_OK) {
+                return;
+            }
+        }
+    }
+    wait_.set_object(ZX_HANDLE_INVALID);
+
+    // Give the dispatcher a chance to clean up.
+    if (status != ERR_DISPATCHER_DONE) {
+        CallClose();
+    }
+
+    // Tell the VFS that the connection closed remotely.
+    // This might have the side-effect of destroying this object.
+    vfs_->OnConnectionClosedRemotely(this);
 }
 
 zx_status_t Connection::CallHandler() {

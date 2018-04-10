@@ -16,9 +16,9 @@
 
 #ifdef __cplusplus
 
+#include <fbl/function.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
-#include <fbl/function.h>
 
 namespace trace {
 
@@ -41,10 +41,10 @@ public:
     void Stop();
 
 private:
-    async_wait_result_t Handle(async_t* async, zx_status_t status,
-                               const zx_packet_signal_t* signal);
+    void Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
+                const zx_packet_signal_t* signal);
+    void BeginWait(async_t* async);
 
-    async_t* async_ = nullptr;
     fbl::Closure callback_;
     zx::event event_;
     async::WaitMethod<TraceObserver, &TraceObserver::Handle> wait_{this};

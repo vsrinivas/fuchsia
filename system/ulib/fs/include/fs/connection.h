@@ -55,6 +55,9 @@ public:
     zx_status_t Serve();
 
 private:
+    void HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal);
+
     zx_status_t CallHandler();
 
     // Sends an explicit close message to the underlying vnode.
@@ -75,7 +78,7 @@ private:
 
     // Asynchronous wait for incoming messages.
     // The object field is |ZX_HANDLE_INVALID| when not actively waiting.
-    async::Wait wait_;
+    async::WaitMethod<Connection, &Connection::HandleSignals> wait_;
 
     // Open flags such as |ZX_FS_RIGHT_READABLE|, and other bits.
     uint32_t flags_;

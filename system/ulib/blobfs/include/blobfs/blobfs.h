@@ -145,8 +145,8 @@ private:
     // Monitors the current VMO, keeping a reference to the Vnode
     // alive while the |out| VMO (and any clones it may have) are open.
     zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out);
-    async_wait_result_t HandleNoClones(async_t* async, zx_status_t status,
-                                       const zx_packet_signal_t* signal);
+    void HandleNoClones(async_t* async, async::WaitBase* wait,
+                        zx_status_t status, const zx_packet_signal_t* signal);
 
     void QueueUnlink();
 

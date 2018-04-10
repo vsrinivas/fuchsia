@@ -24,13 +24,6 @@ zx_status_t async_post_task(async_t* async, async_task_t* task) {
     return async->ops->post_task(async, task);
 }
 
-zx_status_t async_post_task_or_report_error(async_t* async, async_task_t* task) {
-    zx_status_t status = async_post_task(async, task);
-    if (status != ZX_OK)
-        task->handler(async, task, status);
-    return status;
-}
-
 zx_status_t async_cancel_task(async_t* async, async_task_t* task) {
     return async->ops->cancel_task(async, task);
 }
@@ -40,14 +33,7 @@ zx_status_t async_queue_packet(async_t* async, async_receiver_t* receiver,
     return async->ops->queue_packet(async, receiver, data);
 }
 
-zx_status_t async_queue_packet_or_report_error(async_t* async, async_receiver_t* receiver,
-                                               const zx_packet_user_t* data) {
-    zx_status_t status = async->ops->queue_packet(async, receiver, data);
-    if (status != ZX_OK)
-        receiver->handler(async, receiver, status, NULL);
-    return status;
-}
-
-zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
-    return async->ops->set_guest_bell_trap(async, trap);
+zx_status_t async_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap,
+                                      zx_handle_t guest, zx_vaddr_t addr, size_t length) {
+    return async->ops->set_guest_bell_trap(async, trap, guest, addr, length);
 }

@@ -232,12 +232,12 @@ void vfs_global_init(VnodeDir* root) {
 
 void vfs_watch_exit(zx_handle_t event) {
     memfs::global_shutdown.set_handler([event](async_t* async,
+                                               async::Wait* wait,
                                                zx_status_t status,
                                                const zx_packet_signal_t* signal) {
         memfs::root_vfs.UninstallAll(ZX_TIME_INFINITE);
         memfs::system_vfs.UninstallAll(ZX_TIME_INFINITE);
         zx_object_signal(event, 0, FSHOST_SIGNAL_EXIT_DONE);
-        return ASYNC_WAIT_FINISHED;
     });
 
     memfs::global_shutdown.set_object(event);

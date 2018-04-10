@@ -16,11 +16,9 @@
 namespace {
 
 // Initializes |task| to update |var| to point to |value| when it fires.
-void InitVariableUpdateTask(async::Task* task, int* var, int value) {
-    task->set_handler([var, value](async_t*, async::Task* task, zx_status_t status) {
-        if (status == ZX_OK) {
-            *var = value;
-        }
+void InitVariableUpdateTask(async::TaskClosure* task, int* var, int value) {
+    task->set_handler([var, value]() {
+        *var = value;
     });
 }
 
@@ -29,12 +27,11 @@ void InitVariableUpdateTask(async::Task* task, int* var, int value) {
 void InitVariableUpdateWait(async::Wait* wait, int* var, int value, zx::event* event) {
     wait->set_object(event->get());
     wait->set_trigger(ZX_USER_SIGNAL_0);
-    wait->set_handler([var, value](async_t*, zx_status_t status,
-                                   const zx_packet_signal_t*) {
+    wait->set_handler([var, value](async_t*, async::Wait*,
+                                   zx_status_t status, const zx_packet_signal_t*) {
         if (status == ZX_OK) {
             *var = value;
         }
-        return ASYNC_WAIT_FINISHED;
     });
 }
 
@@ -75,7 +72,7 @@ bool simple_task_posting_test() {
     BEGIN_TEST;
 
     // |taskA|: updates |var| to 1 with a deadline of t = 2.
-    async::Task taskA;
+    async::TaskClosure taskA;
     InitVariableUpdateTask(&taskA, &var, 1);
     EXPECT_EQ(ZX_OK, taskA.PostForTime(async, zx::time(0) + zx::sec(2)));
     loop.RunUntilIdle();
@@ -103,10 +100,10 @@ bool task_with_same_deadlines_test() {
 
     // |taskA|: updates |var| to 1 with a deadline of t = 3.
     // |taskB|: updates |var| to 2 with a deadline of t = 3.
-    async::Task taskA;
+    async::TaskClosure taskA;
     InitVariableUpdateTask(&taskA, &var, 1);
     EXPECT_EQ(ZX_OK, taskA.PostForTime(async, zx::time(0) + zx::sec(3)));
-    async::Task taskB;
+    async::TaskClosure taskB;
     InitVariableUpdateTask(&taskB, &var, 2);
     EXPECT_EQ(ZX_OK, taskB.PostForTime(async, zx::time(0) + zx::sec(3)));
 
@@ -128,15 +125,13 @@ bool compounded_task_posting_test() {
     BEGIN_TEST;
     // |taskA|: updates |var| to 1 and posts |taskB| at t = 1.
     // |taskB|: updates |var| to 2 at t = 3.
-    async::Task taskB;
+    async::TaskClosure taskB;
     InitVariableUpdateTask(&taskB, &var, 2);
 
-    async::Task taskA;
-    taskA.set_handler([&taskB, &var](async_t* async, async::Task* task, zx_status_t status) {
-        if (status == ZX_OK) {
-            var = 1;
-            EXPECT_EQ(ZX_OK, taskB.PostForTime(async, zx::time(0) + zx::sec(2)));
-        }
+    async::TaskClosure taskA;
+    taskA.set_handler([&async, &taskB, &var]() {
+        var = 1;
+        EXPECT_EQ(ZX_OK, taskB.PostForTime(async, zx::time(0) + zx::sec(2)));
     });
 
     EXPECT_EQ(ZX_OK, taskA.PostForTime(async, zx::time(1)));
@@ -159,11 +154,11 @@ bool task_canceling_test() {
     async::TestLoop loop;
     async_t* async = loop.async();
     int var = 0;
-    async::Task taskA;
+    async::TaskClosure taskA;
     InitVariableUpdateTask(&taskA, &var, 2);
-    async::Task taskB;
+    async::TaskClosure taskB;
     InitVariableUpdateTask(&taskB, &var, 1);
-    async::Task taskC;
+    async::TaskClosure taskC;
     InitVariableUpdateTask(&taskC, &var, 3);
     BEGIN_TEST;
 
@@ -172,7 +167,7 @@ bool task_canceling_test() {
     EXPECT_EQ(ZX_OK, taskC.PostForTime(async, zx::time(0) + zx::sec(3)));
 
     loop.AdvanceTimeBy(zx::sec(2));
-    EXPECT_EQ(ZX_OK, taskB.Cancel(async));
+    EXPECT_EQ(ZX_OK, taskB.Cancel());
     loop.RunUntilIdle();
 
     // t = 2; both |taskA| and |taskB| would be due, but since |taskB| was cancelled
@@ -180,7 +175,7 @@ bool task_canceling_test() {
     // unchanged.
     EXPECT_EQ(2, var);
 
-    EXPECT_EQ(ZX_OK, taskC.Cancel(async));
+    EXPECT_EQ(ZX_OK, taskC.Cancel());
     loop.AdvanceTimeBy(zx::sec(1));
     loop.RunUntilIdle();
 
@@ -236,13 +231,12 @@ bool compounded_wait_posting_test() {
     async::Wait waitA;
     waitA.set_object(event.get());
     waitA.set_trigger(ZX_USER_SIGNAL_1);
-    waitA.set_handler([&waitB, &var](async_t* async, zx_status_t status,
-                                     const zx_packet_signal_t*) {
+    waitA.set_handler([&waitB, &var](async_t* async, async::Wait* wait,
+                                     zx_status_t status, const zx_packet_signal_t*) {
         if (status == ZX_OK) {
             var = 1;
             EXPECT_EQ(ZX_OK, waitB.Begin(async));
         }
-        return ASYNC_WAIT_FINISHED;
     });
     EXPECT_EQ(ZX_OK, waitA.Begin(async));
     EXPECT_EQ(0, var);
@@ -284,7 +278,7 @@ bool wait_canceling_test() {
     EXPECT_EQ(ZX_OK, waitB.Begin(async));
     EXPECT_EQ(ZX_OK, waitC.Begin(async));
 
-    EXPECT_EQ(ZX_OK, waitB.Cancel(async));
+    EXPECT_EQ(ZX_OK, waitB.Cancel());
 
     // Have |eventA| and |eventB| fire: |waitB| was canceled, so only |waitA|'s
     // shoud have been called: |var| should be 1.
@@ -296,7 +290,7 @@ bool wait_canceling_test() {
     // If |eventC| fires before the canceling of |waitC|, |waitC|'s handler
     // should still not be called.
     EXPECT_EQ(ZX_OK, eventC.signal(0u, ZX_USER_SIGNAL_0));
-    EXPECT_EQ(ZX_OK, waitC.Cancel(async));
+    EXPECT_EQ(ZX_OK, waitC.Cancel());
     loop.RunUntilIdle();
     EXPECT_EQ(1, var);
 
@@ -317,27 +311,24 @@ bool mixed_task_and_wait_posting_test() {
     // |taskA|: update var to 1 and begin |waitB| with a deadline of t = 1;
     // |waitB|: update var to 2 and post |taskC| on seeing |ZX_USER_SIGNAL_0|;
     // |taskC|: update var to 3 with a deadline of t = 3;
-    async::Task taskC;
+    async::TaskClosure taskC;
     InitVariableUpdateTask(&taskC, &var, 3);
 
     async::Wait waitB;
     waitB.set_object(event.get());
     waitB.set_trigger(ZX_USER_SIGNAL_0);
-    waitB.set_handler([&taskC, &var](async_t* async, zx_status_t status,
-                                     const zx_packet_signal_t*) {
+    waitB.set_handler([&taskC, &var](async_t* async, async::Wait* wait,
+                                     zx_status_t status, const zx_packet_signal_t*) {
         if (status == ZX_OK) {
             var = 2;
             EXPECT_EQ(ZX_OK, taskC.PostForTime(async, zx::time(0) + zx::sec(2)));
         }
-        return ASYNC_WAIT_FINISHED;
     });
 
-    async::Task taskA;
-    taskA.set_handler([&waitB, &var](async_t* async, async::Task* task, zx_status_t status) {
-        if (status == ZX_OK) {
-            var = 1;
-            EXPECT_EQ(ZX_OK, waitB.Begin(async));
-        }
+    async::TaskClosure taskA;
+    taskA.set_handler([&async, &waitB, &var]() {
+        var = 1;
+        EXPECT_EQ(ZX_OK, waitB.Begin(async));
     });
     EXPECT_EQ(ZX_OK, taskA.PostForTime(async, zx::time(1)));
     EXPECT_EQ(0, var);

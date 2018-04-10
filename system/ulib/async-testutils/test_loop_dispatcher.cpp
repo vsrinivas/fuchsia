@@ -103,21 +103,9 @@ zx_status_t TestLoopDispatcher::DispatchNextWait() {
     }
     async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
     list_delete(WaitToNode(wait));
-    async_wait_result_t result = wait->handler(this, wait, status, &packet.signal);
 
-    if (result == ASYNC_WAIT_AGAIN) {
-        status = zx_object_wait_async(wait->object, port_.get(),
-                                      reinterpret_cast<uintptr_t>(wait),
-                                      wait->trigger, ZX_WAIT_ASYNC_ONCE);
-        if (status != ZX_OK) {
-            wait->handler(this, wait, status, NULL);
-            result = ASYNC_WAIT_FINISHED;
-        }
-    }
-
-    if (result == ASYNC_WAIT_AGAIN) {
-        list_add_head(&wait_list_, WaitToNode(wait));
-    }
+    // Invoke the handler. Note that it might destroy itself.
+    wait->handler(this, wait, status, &packet.signal);
     return ZX_OK;
 }
 
@@ -147,9 +135,7 @@ void TestLoopDispatcher::Shutdown() {
     list_node_t* node;
     while ((node = list_remove_head(&wait_list_))) {
         async_wait_t* wait = NodeToWait(node);
-        if (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
-            wait->handler(this, wait, ZX_ERR_CANCELED, NULL);
-        }
+        wait->handler(this, wait, ZX_ERR_CANCELED, NULL);
     }
     while ((node = list_remove_head(&task_list_))) {
         async_task_t* task = NodeToTask(node);

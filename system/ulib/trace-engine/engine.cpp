@@ -98,9 +98,8 @@ constexpr zx_signals_t SIGNAL_CONTEXT_RELEASED = ZX_USER_SIGNAL_1;
 // engine is running.  Use of these structures is guarded by the engine lock.
 async_wait_t g_event_wait;
 
-async_wait_result_t handle_event(async_t* async, async_wait_t* wait,
-                                 zx_status_t status,
-                                 const zx_packet_signal_t* signal);
+void handle_event(async_t* async, async_wait_t* wait,
+                  zx_status_t status, const zx_packet_signal_t* signal);
 
 // must hold g_engine_mutex
 inline void update_disposition_locked(zx_status_t disposition) {
@@ -154,9 +153,7 @@ zx_status_t trace_start_engine(async_t* async,
         .handler = &handle_event,
         .object = event.get(),
         .trigger = (SIGNAL_ALL_OBSERVERS_STARTED |
-                    SIGNAL_CONTEXT_RELEASED),
-        .flags = ASYNC_FLAG_HANDLE_SHUTDOWN,
-        .reserved = 0};
+                    SIGNAL_CONTEXT_RELEASED)};
     status = async_begin_wait(async, &g_event_wait);
     if (status != ZX_OK)
         return status;
@@ -222,8 +219,7 @@ namespace {
 // Handle status == ZX_ERR_CANCELED passed to handle_event().
 // Returns true if processing can continue (all holders of the trace context
 // have released it), false if not.
-// Upon a return of false callers are expected to shut down the trace engine,
-// i.e., return ASYNC_WAIT_FINISHED.
+// Upon a return of false callers are expected to shut down the trace engine.
 
 bool handle_async_dispatcher_shutdown() {
     // Stop the engine, in case it hasn't noticed yet.
@@ -307,39 +303,44 @@ void handle_context_released(async_t* async) {
     // to shutdown.
 }
 
-async_wait_result_t handle_event(async_t* async, async_wait_t* wait,
-                                 zx_status_t status,
-                                 const zx_packet_signal_t* signal) {
+void handle_event(async_t* async, async_wait_t* wait,
+                  zx_status_t status, const zx_packet_signal_t* signal) {
     // Note: This function may get both SIGNAL_ALL_OBSERVERS_STARTED
     // and SIGNAL_CONTEXT_RELEASED at the same time.
 
     // Assume we want to wait for the next event.
-    async_wait_result_t result = ASYNC_WAIT_AGAIN;
+    for (;;) {
+        bool wait_again = true;
 
-    // Handle the case where the asynchronous dispatcher is being shut down.
-    if (status != ZX_OK) {
-        ZX_DEBUG_ASSERT(status == ZX_ERR_CANCELED);
-        if (!handle_async_dispatcher_shutdown())
-            return ASYNC_WAIT_FINISHED;
-        // Still want to process SIGNAL_CONTEXT_RELEASED if present,
-        // so we don't return just yet.
-        result = ASYNC_WAIT_FINISHED;
+        // Handle the case where the asynchronous dispatcher is being shut down.
+        if (status != ZX_OK) {
+            ZX_DEBUG_ASSERT(status == ZX_ERR_CANCELED);
+            if (!handle_async_dispatcher_shutdown())
+                return;
+            // Still want to process SIGNAL_CONTEXT_RELEASED if present,
+            // so we don't return just yet.
+            wait_again = false;
+        }
+
+        // If async dispatcher is being shut down, ignore any started observers.
+        if (status == ZX_OK &&
+            (signal->observed & SIGNAL_ALL_OBSERVERS_STARTED)) {
+            handle_all_observers_started();
+        }
+
+        // Also cleanup if async dispatcher is being shut down.
+        if (status != ZX_OK ||
+            (signal->observed & SIGNAL_CONTEXT_RELEASED)) {
+            handle_context_released(async);
+            wait_again = false;
+        }
+
+        if (!wait_again)
+            return;
+        status = async_begin_wait(async, &g_event_wait);
+        if (status == ZX_OK)
+            return;
     }
-
-    // If async dispatcher is being shut down, ignore any started observers.
-    if (status == ZX_OK &&
-        (signal->observed & SIGNAL_ALL_OBSERVERS_STARTED)) {
-        handle_all_observers_started();
-    }
-
-    // Also cleanup if async dispatcher is being shut down.
-    if (status != ZX_OK ||
-        (signal->observed & SIGNAL_CONTEXT_RELEASED)) {
-        handle_context_released(async);
-        result = ASYNC_WAIT_FINISHED;
-    }
-
-    return result;
 }
 
 } // namespace

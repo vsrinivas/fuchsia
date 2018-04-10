@@ -16,8 +16,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/time_tests.cpp \
     $(LOCAL_DIR)/task_tests.cpp \
     $(LOCAL_DIR)/trap_tests.cpp \
-    $(LOCAL_DIR)/wait_tests.cpp \
-    $(LOCAL_DIR)/wait_with_timeout_tests.cpp
+    $(LOCAL_DIR)/wait_tests.cpp
 
 MODULE_NAME := async-test
 

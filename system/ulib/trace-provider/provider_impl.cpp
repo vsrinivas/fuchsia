@@ -51,30 +51,33 @@ TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl,
       wait_(this, channel_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
     zx_status_t status = wait_.Begin(impl_->async_);
-    ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_BAD_STATE);
+    if (status != ZX_OK) {
+        Close();
+    }
 }
 
 TraceProviderImpl::Connection::~Connection() {
     Close();
 }
 
-async_wait_result_t TraceProviderImpl::Connection::Handle(
-    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+void TraceProviderImpl::Connection::Handle(
+    async_t* async, async::WaitBase* wait, zx_status_t status,
+    const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         printf("TraceProvider wait failed: status=%d\n", status);
-        return ASYNC_WAIT_FINISHED;
-    }
-
-    if (signal->observed & ZX_CHANNEL_READABLE) {
-        if (ReadMessage())
-            return ASYNC_WAIT_AGAIN;
-        printf("TraceProvider received invalid FIDL message or failed to send reply.\n");
+    } else if (signal->observed & ZX_CHANNEL_READABLE) {
+        if (ReadMessage()) {
+            if (wait_.Begin(async) == ZX_OK) {
+                return;
+            }
+        } else {
+            printf("TraceProvider received invalid FIDL message or failed to send reply.\n");
+        }
     } else {
         ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
     }
 
     Close();
-    return ASYNC_WAIT_FINISHED;
 }
 
 bool TraceProviderImpl::Connection::ReadMessage() {
@@ -139,7 +142,7 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
 void TraceProviderImpl::Connection::Close() {
     if (channel_) {
-        wait_.Cancel(impl_->async_);
+        wait_.Cancel();
         channel_.reset();
         impl_->Stop();
     }

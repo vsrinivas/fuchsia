@@ -37,7 +37,7 @@ public:
     void DispatchTasks();
 
     // Dispatch all waits and task - with deadlines less than or equal to
-    // |current_time| - with the |ASYNC_FLAG_HANDLE_SHUTDOWN| flag.
+    // |current_time|.
     void Shutdown();
 
 private:

@@ -435,13 +435,12 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
     return ZX_OK;
 }
 
-async_wait_result_t VnodeBlob::HandleNoClones(async_t* async, zx_status_t status,
-                                              const zx_packet_signal_t* signal) {
+void VnodeBlob::HandleNoClones(async_t* async, async::WaitBase* wait,
+                               zx_status_t status, const zx_packet_signal_t* signal) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT((signal->observed & ZX_VMO_ZERO_CHILDREN) != 0);
     clone_watcher_.set_object(ZX_HANDLE_INVALID);
     clone_ref_ = nullptr;
-    return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t VnodeBlob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {

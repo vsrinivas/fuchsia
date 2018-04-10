@@ -21,10 +21,9 @@ int main(int argc, char** argv) {
     zx::time start_time = async::Now(loop.async());
     zx::time quit_time = start_time + zx::sec(30);
 
-    async::Task task([&loop, quit_time](async_t* async, async::Task* task, zx_status_t status) {
-        TRACE_DURATION("example", "Doing Work!", "async", async, "status", status);
-        if (status != ZX_OK)
-            return;
+    int iteration = 0;
+    async::TaskClosure task([&loop, &task, &iteration, quit_time] {
+        TRACE_DURATION("example", "Doing Work!", "iteration", ++iteration);
 
         // Simulate some kind of workload.
         puts("Doing work!");
@@ -38,7 +37,7 @@ int main(int argc, char** argv) {
         }
 
         // Schedule more work in a little bit.
-        task->PostForTime(async, now + zx::msec(200));
+        task.PostForTime(loop.async(), now + zx::msec(200));
     });
     task.PostForTime(loop.async(), start_time);
 

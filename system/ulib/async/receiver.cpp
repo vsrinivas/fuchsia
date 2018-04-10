@@ -6,27 +6,23 @@
 
 namespace async {
 
-Receiver::Receiver()
-    : receiver_{{ASYNC_STATE_INIT}, &Receiver::CallHandler} {}
+ReceiverBase::ReceiverBase(async_receiver_handler_t* handler)
+    : receiver_{{ASYNC_STATE_INIT}, handler} {}
 
-Receiver::Receiver(Handler handler)
-    : receiver_{{ASYNC_STATE_INIT}, &Receiver::CallHandler},
-      handler_(static_cast<Handler&&>(handler)) {}
+ReceiverBase::~ReceiverBase() = default;
 
-Receiver::~Receiver() = default;
-
-zx_status_t Receiver::QueuePacket(async_t* async, const zx_packet_user_t* data) {
+zx_status_t ReceiverBase::QueuePacket(async_t* async, const zx_packet_user_t* data) {
     return async_queue_packet(async, &receiver_, data);
 }
 
-zx_status_t Receiver::QueuePacketOrReportError(async_t* async, const zx_packet_user_t* data) {
-    return async_queue_packet_or_report_error(async, &receiver_, data);
-}
+Receiver::Receiver(Handler handler)
+    : ReceiverBase(&Receiver::CallHandler), handler_(fbl::move(handler)) {}
+
+Receiver::~Receiver() = default;
 
 void Receiver::CallHandler(async_t* async, async_receiver_t* receiver,
                            zx_status_t status, const zx_packet_user_t* data) {
-    static_assert(offsetof(Receiver, receiver_) == 0, "");
-    auto self = reinterpret_cast<Receiver*>(receiver);
+    auto self = Dispatch<Receiver>(receiver);
     self->handler_(async, self, status, data);
 }
 

@@ -37,63 +37,16 @@ zx_status_t PostDelayedTask(async_t* async, fbl::Closure handler, zx::duration d
 
 zx_status_t PostTaskForTime(async_t* async, fbl::Closure handler, zx::time deadline) {
     auto* task = new internal::RetainedTask(static_cast<fbl::Closure&&>(handler), deadline);
-    return async_post_task_or_report_error(async, task);
+    zx_status_t status = async_post_task(async, task);
+    if (status != ZX_OK)
+        delete task;
+    return status;
 }
 
-Task::Task()
-    : task_{{ASYNC_STATE_INIT}, &Task::CallHandler, ZX_TIME_INFINITE} {}
+TaskBase::TaskBase(async_task_handler_t* handler)
+    : task_{{ASYNC_STATE_INIT}, handler, ZX_TIME_INFINITE} {}
 
-Task::Task(Handler handler)
-    : task_{{ASYNC_STATE_INIT}, &Task::CallHandler, ZX_TIME_INFINITE},
-      handler_(static_cast<Handler&&>(handler)) {}
-
-Task::~Task() = default;
-
-zx_status_t Task::Post(async_t* async) {
-    return PostForTime(async, async::Now(async));
-}
-
-zx_status_t Task::PostOrReportError(async_t* async) {
-    return PostForTimeOrReportError(async, async::Now(async));
-}
-
-zx_status_t Task::PostDelayed(async_t* async, zx::duration delay) {
-    return PostForTime(async, async::Now(async) + delay);
-}
-
-zx_status_t Task::PostDelayedOrReportError(async_t* async, zx::duration delay) {
-    return PostForTimeOrReportError(async, async::Now(async) + delay);
-}
-
-zx_status_t Task::PostForTime(async_t* async, zx::time deadline) {
-    task_.deadline = deadline.get();
-    return async_post_task(async, &task_);
-}
-
-zx_status_t Task::PostForTimeOrReportError(async_t* async, zx::time deadline) {
-    task_.deadline = deadline.get();
-    return async_post_task_or_report_error(async, &task_);
-}
-
-zx_status_t Task::Cancel(async_t* async) {
-    return async_cancel_task(async, &task_);
-}
-
-void Task::CallHandler(async_t* async, async_task_t* task,
-                       zx_status_t status) {
-    static_assert(offsetof(Task, task_) == 0, "");
-    auto self = reinterpret_cast<Task*>(task);
-    self->handler_(async, self, status);
-}
-
-AutoTask::AutoTask()
-    : task_{{ASYNC_STATE_INIT}, &AutoTask::CallHandler, ZX_TIME_INFINITE} {}
-
-AutoTask::AutoTask(Handler handler)
-    : task_{{ASYNC_STATE_INIT}, &AutoTask::CallHandler, ZX_TIME_INFINITE},
-      handler_(static_cast<Handler&&>(handler)) {}
-
-AutoTask::~AutoTask() {
+TaskBase::~TaskBase() {
     if (async_) {
         // Failure to cancel here may result in a dangling pointer...
         zx_status_t status = async_cancel_task(async_, &task_);
@@ -101,23 +54,15 @@ AutoTask::~AutoTask() {
     }
 }
 
-zx_status_t AutoTask::Post(async_t* async) {
+zx_status_t TaskBase::Post(async_t* async) {
     return PostForTime(async, async::Now(async));
 }
 
-zx_status_t AutoTask::PostOrReportError(async_t* async) {
-    return PostForTimeOrReportError(async, async::Now(async));
-}
-
-zx_status_t AutoTask::PostDelayed(async_t* async, zx::duration delay) {
+zx_status_t TaskBase::PostDelayed(async_t* async, zx::duration delay) {
     return PostForTime(async, async::Now(async) + delay);
 }
 
-zx_status_t AutoTask::PostDelayedOrReportError(async_t* async, zx::duration delay) {
-    return PostForTimeOrReportError(async, async::Now(async) + delay);
-}
-
-zx_status_t AutoTask::PostForTime(async_t* async, zx::time deadline) {
+zx_status_t TaskBase::PostForTime(async_t* async, zx::time deadline) {
     if (async_)
         return ZX_ERR_ALREADY_EXISTS;
 
@@ -126,22 +71,11 @@ zx_status_t AutoTask::PostForTime(async_t* async, zx::time deadline) {
     zx_status_t status = async_post_task(async, &task_);
     if (status != ZX_OK) {
         async_ = nullptr;
-        task_.handler = nullptr;
     }
     return status;
 }
 
-zx_status_t AutoTask::PostForTimeOrReportError(async_t* async, zx::time deadline) {
-    if (async_)
-        return ZX_ERR_ALREADY_EXISTS;
-
-    async_ = async;
-    task_.deadline = deadline.get();
-    // If an error occurs, the handler will clear |async_| itself.
-    return async_post_task_or_report_error(async, &task_);
-}
-
-zx_status_t AutoTask::Cancel() {
+zx_status_t TaskBase::Cancel() {
     if (!async_)
         return ZX_ERR_NOT_FOUND;
 
@@ -150,11 +84,26 @@ zx_status_t AutoTask::Cancel() {
     return async_cancel_task(async, &task_);
 }
 
-void AutoTask::CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
-    static_assert(offsetof(AutoTask, task_) == 0, "");
-    auto self = reinterpret_cast<AutoTask*>(task);
-    self->async_ = nullptr;
+Task::Task(Handler handler)
+    : TaskBase(&Task::CallHandler), handler_(fbl::move(handler)) {}
+
+Task::~Task() = default;
+
+void Task::CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+    auto self = Dispatch<Task>(task);
     self->handler_(async, self, status);
+}
+
+TaskClosure::TaskClosure(fbl::Closure handler)
+    : TaskBase(&TaskClosure::CallHandler), handler_(fbl::move(handler)) {}
+
+TaskClosure::~TaskClosure() = default;
+
+void TaskClosure::CallHandler(async_t* async, async_task_t* task, zx_status_t status) {
+    auto self = Dispatch<TaskClosure>(task); // must do this if status is not ok
+    if (status == ZX_OK) {
+        self->handler_();
+    }
 }
 
 } // namespace async

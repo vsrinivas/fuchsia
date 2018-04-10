@@ -31,9 +31,10 @@ private:
         ~Connection();
 
     private:
-        async_wait_result_t Handle(async_t* async,
-                                   zx_status_t status,
-                                   const zx_packet_signal_t* signal);
+        void Handle(async_t* async,
+                    async::WaitBase* wait,
+                    zx_status_t status,
+                    const zx_packet_signal_t* signal);
 
         bool ReadMessage();
         bool DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes,

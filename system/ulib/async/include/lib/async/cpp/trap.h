@@ -4,51 +4,115 @@
 
 #pragma once
 
-#include <lib/async/dispatcher.h>
-#include <lib/async/trap.h>
 #include <fbl/function.h>
-#include <fbl/macros.h>
+#include <lib/async/trap.h>
+#include <lib/zx/guest.h>
 
 namespace async {
 
-// C++ wrapper for an async trap handler.
-template <class Class,
-          void (Class::*method)(async_t* async, const zx_packet_guest_bell_t* bell)>
-class GuestBellTrapMethod : private async_guest_bell_trap_t {
+// Holds context for a bell trap and its handler.
+//
+// After successfully posting setting the trap, the client is responsible for retaining
+// the structure in memory (and unmodified) until the guest has been destroyed or the
+// dispatcher shuts down.  There is no way to cancel a trap which has been set.
+//
+// Concrete implementations: |async::GuestBellTrap|, |async::GuestBellTrapMethod|.
+// Please do not create subclasses of GuestBellTrapBase outside of this library.
+class GuestBellTrapBase {
+protected:
+    explicit GuestBellTrapBase(async_guest_bell_trap_handler_t* handler);
+    ~GuestBellTrapBase();
+
+    GuestBellTrapBase(const GuestBellTrapBase&) = delete;
+    GuestBellTrapBase(GuestBellTrapBase&&) = delete;
+    GuestBellTrapBase& operator=(const GuestBellTrapBase&) = delete;
+    GuestBellTrapBase& operator=(GuestBellTrapBase&&) = delete;
+
 public:
-    explicit GuestBellTrapMethod(Class* ptr,
-                                 zx_handle_t guest = ZX_HANDLE_INVALID,
-                                 zx_vaddr_t addr = 0,
-                                 size_t length = 0)
-        : async_guest_bell_trap_t{{ASYNC_STATE_INIT}, &GuestBellTrapMethod::CallHandler,
-                                  guest, addr, length},
-          ptr_(ptr) {}
+    // Sets a bell trap in the guest to be handled asynchronously via a handler.
+    //
+    // |guest| is the handle of the guest the trap will be set on.
+    // |addr| is the base address for the trap in the guest's physical address space.
+    // |length| is the size of the trap in the guest's physical address space.
+    //
+    // Returns |ZX_OK| if the trap was successfully set.
+    // Returns |ZX_ERR_ACCESS_DENIED| if the guest does not have |ZX_RIGHT_WRITE|.
+    // Returns |ZX_ERR_ALREADY_EXISTS| if a bell trap with the same |addr| exists.
+    // Returns |ZX_ERR_INVALID_ARGS| if |addr| or |length| are invalid.
+    // Returns |ZX_ERR_OUT_OF_RANGE| if |addr| or |length| are out of range of the
+    // address space.
+    // Returns |ZX_ERR_WRONG_TYPE| if |guest| is not a handle to a guest.
+    // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
+    // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
+    //
+    // This operation is thread-safe.
+    zx_status_t SetTrap(async_t* async, const zx::guest& guest,
+                        zx_vaddr_t addr, size_t length);
 
-    // The guest to trap on.
-    zx_handle_t guest() const { return async_guest_bell_trap_t::guest; }
-    void set_guest(zx_handle_t guest) { async_guest_bell_trap_t::guest = guest; }
-
-    // The base address for the trap in guest physical address space.
-    zx_vaddr_t addr() const { return async_guest_bell_trap_t::addr; }
-    void set_addr(zx_vaddr_t addr) { async_guest_bell_trap_t::addr = addr; }
-
-    // The size of the trap in guest physical address space..
-    size_t length() const { return async_guest_bell_trap_t::length; }
-    void set_length(size_t length) { async_guest_bell_trap_t::length = length; }
-
-    zx_status_t Begin(async_t* async) {
-        return async_set_guest_bell_trap(async, this);
+protected:
+    template <typename T>
+    static T* Dispatch(async_guest_bell_trap_t* trap) {
+        static_assert(offsetof(GuestBellTrapBase, trap_) == 0, "");
+        auto self = reinterpret_cast<GuestBellTrapBase*>(trap);
+        return static_cast<T*>(self);
     }
 
 private:
+    async_guest_bell_trap_t trap_;
+};
+
+// A bell trap whose handler is bound to a |async::Task::Handler| function.
+//
+// Prefer using |async::GuestBellTrapMethod| instead for binding to a fixed class member
+// function since it is more efficient to dispatch.
+class GuestBellTrap final : public GuestBellTrapBase {
+public:
+    // Handles an asynchronous trap access.
+    //
+    // The |status| is |ZX_OK| if the bell was received and |bell| contains the
+    // information from the packet, otherwise |bell| is null.
+    using Handler = fbl::Function<void(async_t* async, async::GuestBellTrap* trap,
+                                       zx_status_t status, const zx_packet_guest_bell_t* bell)>;
+
+    explicit GuestBellTrap(Handler handler = nullptr);
+    ~GuestBellTrap();
+
+    void set_handler(Handler handler) { handler_ = fbl::move(handler); }
+    bool has_handler() const { return !!handler_; }
+
+private:
     static void CallHandler(async_t* async, async_guest_bell_trap_t* trap,
-                            const zx_packet_guest_bell_t* bell) {
-        return (static_cast<GuestBellTrapMethod*>(trap)->ptr_->*method)(async, bell);
+                            zx_status_t status, const zx_packet_guest_bell_t* bell);
+
+    Handler handler_;
+};
+
+// A bell trap whose handler is bound to a fixed class member function.
+//
+// Usage:
+//
+// class Foo {
+//     void Handle(async_t* async, async::GuestBellTrapBase* trap, zx_status_t status,
+//                 const zx_packet_guest_bell_t* bell) { ... }
+//     async::GuestBellTrapMethod<Foo, &Foo::Handle> trap_{this};
+// };
+template <class Class,
+          void (Class::*method)(async_t* async, async::GuestBellTrapBase* trap,
+                                zx_status_t status, const zx_packet_guest_bell_t* bell)>
+class GuestBellTrapMethod final : public GuestBellTrapBase {
+public:
+    explicit GuestBellTrapMethod(Class* instance)
+        : GuestBellTrapBase(&GuestBellTrapMethod::CallHandler),
+          instance_(instance) {}
+
+private:
+    static void CallHandler(async_t* async, async_guest_bell_trap_t* trap,
+                            zx_status_t status, const zx_packet_guest_bell_t* bell) {
+        auto self = Dispatch<GuestBellTrapMethod>(trap);
+        (self->instance_->*method)(async, self, status, bell);
     }
 
-    Class* const ptr_;
-
-    DISALLOW_COPY_ASSIGN_AND_MOVE(GuestBellTrapMethod);
+    Class* const instance_;
 };
 
 } // namespace async

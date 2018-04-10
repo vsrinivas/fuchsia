@@ -22,12 +22,10 @@ and structures declared in the following headers:
     - [async/wait.h](include/async/wait.h)
 
 - `libasync-cpp.a` provides C++ wrappers:
-    - [async/cpp/auto_wait.h](include/async/cpp/auto_wait.h)
     - [async/cpp/receiver.h](include/async/cpp/receiver.h)
     - [async/cpp/task.h](include/async/cpp/task.h)
     - [async/cpp/time.h](include/async/cpp/time.h)
     - [async/cpp/trap.h](include/async/cpp/trap.h)
-    - [async/cpp/wait_with_timeout.h](include/async/cpp/wait_with_timeout.h)
     - [async/cpp/wait.h](include/async/cpp/wait.h)
 
 - `libasync-default.so` provides functions for getting or setting a thread-local
@@ -42,9 +40,7 @@ implementation of `async_t`.
 
 To asynchronously wait for signals, the client prepares an `async_wait_t`
 structure then calls `async_begin_wait()` to register it with the dispatcher.
-When the wait completes, the dispatcher invokes the handler.  If the handler
-returns |ASYNC_WAIT_AGAIN| and no error occurred then the wait is automatically
-restarted, otherwise the wait ends.
+When the wait completes, the dispatcher invokes the handler.
 
 The client can register handlers from any thread but dispatch will occur
 on a thread of the dispatcher's choosing depending on its implementation.
@@ -59,11 +55,10 @@ See [async/wait.h](include/async/wait.h) for details.
 #include <lib/async/wait.h>     // for async_begin_wait()
 #include <lib/async/default.h>  // for async_get_default()
 
-async_wait_result_t handler(async_t* async, async_wait_t* wait,
-                            zx_status_t status, const zx_packet_signal_t* signal) {
+void handler(async_t* async, async_wait_t* wait,
+             zx_status_t status, const zx_packet_signal_t* signal) {
     printf("signal received: status=%d, observed=%d", status, signal ? signal->observed : 0);
     free(wait);
-    return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
@@ -72,7 +67,6 @@ zx_status_t await(zx_handle_t object, zx_signals_t trigger, void* data) {
     wait->handler = handler;
     wait->object = object;
     wait->trigger = trigger;
-    wait->flags = ASYNC_FLAG_HANDLE_SHUTDOWN;
     return async_begin_wait(async, handle, wait);
 }
 ```
@@ -187,22 +181,11 @@ See [async/default.h](include/async/default.h) for details.
 ## Using the C++ helpers
 
 `libasync-cpp.a` includes helper classes such as `Wait`, `Task`, and `Receiver`
-which wrap the C API with a more convenient fbl::Function<> callback based
-interface for use in C++.
+which wrap the C API with a more convenient type safe interface for use
+in C++.
 
-`WaitMethod` is similar to `Wait` but more efficient, because it avoids the
-overhead of using fbl::Function<>.
-
-`AutoWait` in [async/cpp/auto_wait.h](include/async/cpp/auto_wait.h) is an RAII
-helper which automatically cancels the wait when it goes out of scope.
-
-`AutoTask` in [async/cpp/task.h](include/async/cpp/task.h) is an RAII
-helper which automatically cancels the task when it goes out of scope.
-
-There is also a special `WaitWithTimeout` helper defined in
-[async/cpp/wait_with_timeout.h](include/async/cpp/wait_with_timeout.h)
-which combines a wait operation together with a pending task that invokes the
-handler when the specified deadline has been exceeded.
+Note that the C API can of course be used directly from C++ for special
+situations which may not be well addressed by the wrappers.
 
 ## Implementing a dispatcher
 

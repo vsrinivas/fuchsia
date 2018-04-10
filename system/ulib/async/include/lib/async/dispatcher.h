@@ -30,31 +30,19 @@ typedef struct {
 #define ASYNC_STATE_INIT \
     { 0u, 0u }
 
-// Flags for asynchronous operations.
-enum {
-    // Asks the dispatcher to notify the handler when the dispatcher itself
-    // is being shut down so that the handler can release its resources.
-    //
-    // The dispatcher will invoke the handler with a status of
-    // |ZX_ERR_CANCELED| to indicate that it is being shut down.
-    //
-    // This flag only applies to pending waits and tasks; receivers will
-    // not be notified of shutdown.
-    ASYNC_FLAG_HANDLE_SHUTDOWN = 1 << 0,
-};
-
 // Asynchronous dispatcher interface.
 //
 // Clients should prefer using the |async_*| inline functions declared in the
 // other header files.  See the documentation of those inline functions for
 // details about each method's purpose and behavior.
 //
-// This interface consists of four groups of methods:
+// This interface consists of several groups of methods:
 //
 // - Timing: |now|
 // - Waiting for signals: |begin_wait|, |cancel_wait|
 // - Posting tasks: |post_task|, |cancel_task|
 // - Queuing packets: |queue_packet|
+// - Virtual machine operations: |set_guest_bell_trap|
 //
 // Implementations of this interface are not required to support all of these methods.
 // Unsupported methods must have valid (non-null) function pointers, must have
@@ -74,7 +62,8 @@ typedef struct async_ops {
     zx_status_t (*cancel_task)(async_t* async, async_task_t* task);
     zx_status_t (*queue_packet)(async_t* async, async_receiver_t* receiver,
                                 const zx_packet_user_t* data);
-    zx_status_t (*set_guest_bell_trap)(async_t* async, async_guest_bell_trap_t* trap);
+    zx_status_t (*set_guest_bell_trap)(async_t* async, async_guest_bell_trap_t* trap,
+                                       zx_handle_t guest, zx_vaddr_t addr, size_t length);
 } async_ops_t;
 struct async_dispatcher {
     const async_ops_t* ops;

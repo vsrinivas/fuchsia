@@ -28,8 +28,10 @@ static zx_status_t async_loop_post_task(async_t* async, async_task_t* task);
 static zx_status_t async_loop_cancel_task(async_t* async, async_task_t* task);
 static zx_status_t async_loop_queue_packet(async_t* async, async_receiver_t* receiver,
                                            const zx_packet_user_t* data);
+static zx_status_t async_loop_set_guest_bell_trap(
+    async_t* async, async_guest_bell_trap_t* trap,
+    zx_handle_t guest, zx_vaddr_t addr, size_t length);
 
-static zx_status_t async_loop_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap);
 static const async_ops_t async_loop_ops = {
     .now = async_loop_now,
     .begin_wait = async_loop_begin_wait,
@@ -75,15 +77,13 @@ static zx_status_t async_loop_dispatch_packet(async_loop_t* loop, async_receiver
                                               zx_status_t status, const zx_packet_user_t* data);
 static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
                                                        async_guest_bell_trap_t* trap,
+                                                       zx_status_t status,
                                                        const zx_packet_guest_bell_t* bell);
 static void async_loop_wake_threads(async_loop_t* loop);
-static zx_status_t async_loop_wait_async(async_loop_t* loop, async_wait_t* wait);
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task);
 static void async_loop_restart_timer_locked(async_loop_t* loop);
 static void async_loop_invoke_prologue(async_loop_t* loop);
 static void async_loop_invoke_epilogue(async_loop_t* loop);
-static async_wait_result_t async_loop_invoke_wait_handler(async_loop_t* loop, async_wait_t* wait,
-                                                          zx_status_t status, const zx_packet_signal_t* signal);
 
 static_assert(sizeof(list_node_t) <= sizeof(async_state_t),
               "async_state_t too small");
@@ -172,10 +172,7 @@ void async_loop_shutdown(async_loop_t* loop) {
     list_node_t* node;
     while ((node = list_remove_head(&loop->wait_list))) {
         async_wait_t* wait = node_to_wait(node);
-        ZX_DEBUG_ASSERT(wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN);
-        async_loop_invoke_prologue(loop);
-        async_loop_invoke_wait_handler(loop, wait, ZX_ERR_CANCELED, NULL);
-        async_loop_invoke_epilogue(loop);
+        async_loop_dispatch_wait(loop, wait, ZX_ERR_CANCELED, NULL);
     }
     while ((node = list_remove_head(&loop->due_list))) {
         async_task_t* task = node_to_task(node);
@@ -238,6 +235,9 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
         // Handle wait completion packets.
         if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE) {
             async_wait_t* wait = (void*)(uintptr_t)packet.key;
+            mtx_lock(&loop->lock);
+            list_delete(wait_to_node(wait));
+            mtx_unlock(&loop->lock);
             return async_loop_dispatch_wait(loop, wait, packet.status, &packet.signal);
         }
 
@@ -250,7 +250,8 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
         // Handle guest bell trap packets.
         if (packet.type == ZX_PKT_TYPE_GUEST_BELL) {
             async_guest_bell_trap_t* trap = (void*)(uintptr_t)packet.key;
-            return async_loop_dispatch_guest_bell_trap(loop, trap, &packet.guest_bell);
+            return async_loop_dispatch_guest_bell_trap(
+                loop, trap, packet.status, &packet.guest_bell);
         }
     }
 
@@ -260,9 +261,10 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
 
 static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
                                                        async_guest_bell_trap_t* trap,
+                                                       zx_status_t status,
                                                        const zx_packet_guest_bell_t* bell) {
     async_loop_invoke_prologue(loop);
-    trap->handler((async_t*)loop, trap, bell);
+    trap->handler((async_t*)loop, trap, status, bell);
     async_loop_invoke_epilogue(loop);
     return ZX_OK;
 }
@@ -270,31 +272,7 @@ static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
 static zx_status_t async_loop_dispatch_wait(async_loop_t* loop, async_wait_t* wait,
                                             zx_status_t status, const zx_packet_signal_t* signal) {
     async_loop_invoke_prologue(loop);
-
-    // We must dequeue the handler before invoking it since it might destroy itself.
-    if (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
-        mtx_lock(&loop->lock);
-        list_delete(wait_to_node(wait));
-        mtx_unlock(&loop->lock);
-    }
-
-    // Invoke the handler.  Note that it might destroy itself.
-    async_wait_result_t result = async_loop_invoke_wait_handler(loop, wait, status, signal);
-    if (result == ASYNC_WAIT_AGAIN) {
-        status = async_loop_wait_async(loop, wait);
-        if (status != ZX_OK) {
-            async_loop_invoke_wait_handler(loop, wait, status, NULL);
-            result = ASYNC_WAIT_FINISHED;
-        }
-    }
-
-    // Requeue the handler if it still wants to observe shutdown.
-    if (result == ASYNC_WAIT_AGAIN && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
-        mtx_lock(&loop->lock);
-        list_add_head(&loop->wait_list, wait_to_node(wait));
-        mtx_unlock(&loop->lock);
-    }
-
+    wait->handler((async_t*)loop, wait, status, signal);
     async_loop_invoke_epilogue(loop);
     return ZX_OK;
 }
@@ -443,25 +421,15 @@ static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {
     if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
         return ZX_ERR_BAD_STATE;
 
-    if (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN) {
-        // Add the wait object to the wait_list before we begin waiting, so
-        // a dispatcher can safely remove the waiter from the list if the
-        // handler is invoked.
-        mtx_lock(&loop->lock);
+    mtx_lock(&loop->lock);
+
+    zx_status_t status = zx_object_wait_async(
+        wait->object, loop->port, (uintptr_t)wait, wait->trigger, ZX_WAIT_ASYNC_ONCE);
+    if (status == ZX_OK) {
         list_add_head(&loop->wait_list, wait_to_node(wait));
-        mtx_unlock(&loop->lock);
     }
 
-    zx_status_t status = async_loop_wait_async(loop, wait);
-
-    if (status != ZX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
-        // In this rare condition, the wait failed, but we already added
-        // the waiter to the wait_list. Since a dispatched handler will
-        // never be invoked on the wait object, we remove it ourselves.
-        mtx_lock(&loop->lock);
-        list_delete(wait_to_node(wait));
-        mtx_unlock(&loop->lock);
-    }
+    mtx_unlock(&loop->lock);
     return status;
 }
 
@@ -475,7 +443,7 @@ static zx_status_t async_loop_cancel_wait(async_t* async, async_wait_t* wait) {
     // invoked again past this point.
     zx_status_t status = zx_port_cancel(loop->port, wait->object,
                                         (uintptr_t)wait);
-    if (status == ZX_OK && (wait->flags & ASYNC_FLAG_HANDLE_SHUTDOWN)) {
+    if (status == ZX_OK) {
         mtx_lock(&loop->lock);
         list_delete(wait_to_node(wait));
         mtx_unlock(&loop->lock);
@@ -555,7 +523,9 @@ static zx_status_t async_loop_queue_packet(async_t* async, async_receiver_t* rec
     return zx_port_queue(loop->port, &packet, 0u);
 }
 
-static zx_status_t async_loop_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* trap) {
+static zx_status_t async_loop_set_guest_bell_trap(
+    async_t* async, async_guest_bell_trap_t* trap,
+    zx_handle_t guest, zx_vaddr_t addr, size_t length) {
     async_loop_t* loop = (async_loop_t*)async;
     ZX_DEBUG_ASSERT(loop);
     ZX_DEBUG_ASSERT(trap);
@@ -563,13 +533,8 @@ static zx_status_t async_loop_set_guest_bell_trap(async_t* async, async_guest_be
     if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
         return ZX_ERR_BAD_STATE;
 
-    return zx_guest_set_trap(trap->guest, ZX_GUEST_TRAP_BELL, trap->addr,
-                             trap->length, loop->port, (uintptr_t)trap);
-}
-
-static zx_status_t async_loop_wait_async(async_loop_t* loop, async_wait_t* wait) {
-    return zx_object_wait_async(wait->object, loop->port, (uintptr_t)wait, wait->trigger,
-                                ZX_WAIT_ASYNC_ONCE);
+    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_BELL, addr,
+                             length, loop->port, (uintptr_t)trap);
 }
 
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task) {
@@ -612,18 +577,6 @@ static void async_loop_invoke_prologue(async_loop_t* loop) {
 static void async_loop_invoke_epilogue(async_loop_t* loop) {
     if (loop->config.epilogue)
         loop->config.epilogue(loop, loop->config.data);
-}
-
-static async_wait_result_t async_loop_invoke_wait_handler(async_loop_t* loop,
-                                                          async_wait_t* wait,
-                                                          zx_status_t status,
-                                                          const zx_packet_signal_t* signal) {
-    async_wait_result_t result = wait->handler((async_t*)loop, wait, status, signal);
-
-    ZX_ASSERT_MSG(result == ASYNC_WAIT_FINISHED ||
-                      (result == ASYNC_WAIT_AGAIN && status == ZX_OK),
-                  "result=%d, status=%d", result, status);
-    return result;
 }
 
 static int async_loop_run_thread(void* data) {

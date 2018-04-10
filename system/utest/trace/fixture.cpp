@@ -48,7 +48,7 @@ public:
         // Asynchronously start the engine.
         zx_status_t status = trace_start_engine(loop_.async(), this,
                                                 buffer_.get(), buffer_.size());
-        ZX_DEBUG_ASSERT(status == ZX_OK);
+        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
     }
 
     void StopTracing(bool hard_shutdown) {
@@ -60,11 +60,11 @@ public:
         // tearing down the loop.  The trace engine should stop itself.
         if (!hard_shutdown) {
             zx_status_t status = trace_stop_engine(ZX_OK);
-            ZX_DEBUG_ASSERT(status == ZX_OK);
+            ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
 
             status = trace_stopped_.wait_one(ZX_EVENT_SIGNALED,
                                              zx::deadline_after(zx::msec(1000)), nullptr);
-            ZX_DEBUG_ASSERT(status == ZX_OK);
+            ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
         }
 
         // Shut down the loop (implicily joins the thread we started earlier).

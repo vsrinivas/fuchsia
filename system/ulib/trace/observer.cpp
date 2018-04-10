@@ -20,35 +20,34 @@ void TraceObserver::Start(async_t* async, fbl::Closure callback) {
     ZX_DEBUG_ASSERT(callback);
 
     Stop();
-    async_ = async;
     callback_ = fbl::move(callback);
 
     zx_status_t status = zx::event::create(0u, &event_);
     ZX_ASSERT(status == ZX_OK);
+    trace_register_observer(event_.get());
 
     wait_.set_object(event_.get());
     wait_.set_trigger(ZX_EVENT_SIGNALED);
-    status = wait_.Begin(async_);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-
-    trace_register_observer(event_.get());
+    BeginWait(async);
 }
 
 void TraceObserver::Stop() {
-    if (!async_)
-        return;
-
-    trace_unregister_observer(event_.get());
-
-    zx_status_t status = wait_.Cancel(async_);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
-
-    async_ = nullptr;
+    wait_.Cancel();
     callback_ = nullptr;
+
+    if (event_) {
+        trace_unregister_observer(event_.get());
+        event_.reset();
+    }
 }
 
-async_wait_result_t TraceObserver::Handle(async_t* async, zx_status_t status,
-                                          const zx_packet_signal_t* signal) {
+void TraceObserver::Handle(async_t* async, async::WaitBase* wait, zx_status_t status,
+                           const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        Stop();
+        return;
+    }
+
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ZX_DEBUG_ASSERT(signal->observed & ZX_EVENT_SIGNALED);
 
@@ -64,7 +63,14 @@ async_wait_result_t TraceObserver::Handle(async_t* async, zx_status_t status,
     // Tell engine we're done.
     trace_notify_observer_updated(event_.get());
 
-    return ASYNC_WAIT_AGAIN;
+    // Wait again!
+    BeginWait(async);
+}
+
+void TraceObserver::BeginWait(async_t* async) {
+    zx_status_t status = wait_.Begin(async);
+    if (status != ZX_OK)
+        Stop();
 }
 
 } // namespace trace

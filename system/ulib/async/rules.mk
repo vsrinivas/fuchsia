@@ -44,19 +44,18 @@ MODULE_NAME := async-cpp
 MODULE_TYPE := userlib
 
 MODULE_SRCS = \
-    $(LOCAL_DIR)/auto_wait.cpp \
     $(LOCAL_DIR)/receiver.cpp \
     $(LOCAL_DIR)/task.cpp \
-    $(LOCAL_DIR)/wait.cpp \
-    $(LOCAL_DIR)/wait_with_timeout.cpp
+    $(LOCAL_DIR)/trap.cpp \
+    $(LOCAL_DIR)/wait.cpp
 
 MODULE_PACKAGE_SRCS := $(MODULE_SRCS)
 MODULE_PACKAGE_INCS := \
-    $(LOCAL_INC)/cpp/auto_wait.h \
     $(LOCAL_INC)/cpp/receiver.h \
     $(LOCAL_INC)/cpp/task.h \
-    $(LOCAL_INC)/cpp/wait.h \
-    $(LOCAL_INC)/cpp/wait_with_timeout.h
+    $(LOCAL_INC)/cpp/time.h \
+    $(LOCAL_INC)/cpp/trap.h \
+    $(LOCAL_INC)/cpp/wait.h
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \

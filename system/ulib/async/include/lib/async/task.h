@@ -13,8 +13,6 @@ __BEGIN_CDECLS
 // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
 // the task's handler ran or the task was canceled.
-// The |status| may also report errors which occurred during a call to
-// |async_post_task_or_report_error()|.
 typedef void(async_task_handler_t)(async_t* async,
                                    async_task_t* task,
                                    zx_status_t status);
@@ -22,8 +20,9 @@ typedef void(async_task_handler_t)(async_t* async,
 // Holds context for a task and its handler.
 //
 // After successfully posting the task, the client is responsible for retaining
-// it in memory until the task's handler runs or the task is successfully canceled.
-// Thereafter, the task may be posted again or destroyed.
+// the structure in memory (and unmodified) until the task's handler runs, the task
+// is successfully canceled, or the dispatcher shuts down.  Thereafter, the task
+// may be posted again or destroyed.
 struct async_task {
     // Private state owned by the dispatcher, initialize to zero with |ASYNC_STATE_INIT|.
     async_state_t state;
@@ -49,15 +48,7 @@ struct async_task {
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 //
 // This operation is thread-safe.
-//
-// TODO(ZX-976): Strict serial ordering of task dispatch isn't always needed.
-// We should consider adding support for multiple independent task queues or
-// similar mechanisms.
 zx_status_t async_post_task(async_t* async, async_task_t* task);
-
-// Calls |async_post_task()|.
-// If the result is not |ZX_OK|, synchronously delivers the status to the task's handler.
-zx_status_t async_post_task_or_report_error(async_t* async, async_task_t* task);
 
 // Cancels the task associated with |task|.
 //
