@@ -159,9 +159,7 @@ fx run -g
 
 #### Enabling Network
 
-Note: Networking support within QEMU is only available under x86_64.
-
-First, [configure](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU-x86_64-only)
+First, [configure](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU)
 a virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
