@@ -30,6 +30,7 @@
 #include <reg.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/physmap.h>
@@ -171,17 +172,93 @@ void pc_init_debug_default_early() {
     bootloader.uart.type = BOOTDATA_UART_NONE;
 }
 
-void pc_init_debug_early() {
+static void handle_serial_cmdline() {
     const char* serial_mode = cmdline_get("kernel.serial");
-    if (serial_mode != NULL) {
-        if (!strcmp(serial_mode, "none")) {
-            bootloader.uart.type = BOOTDATA_UART_NONE;
-        } else if (!strcmp(serial_mode, "legacy")) {
-            bootloader.uart.type = BOOTDATA_UART_PC_PORT;
-            bootloader.uart.base = 0x3f8;
-            bootloader.uart.irq = ISA_IRQ_SERIAL1;
-        }
+    if (serial_mode == NULL) {
+        return;
     }
+    if (!strcmp(serial_mode, "none")) {
+        bootloader.uart.type = BOOTDATA_UART_NONE;
+        return;
+    }
+    if (!strcmp(serial_mode, "legacy")) {
+        bootloader.uart.type = BOOTDATA_UART_PC_PORT;
+        bootloader.uart.base = 0x3f8;
+        bootloader.uart.irq = ISA_IRQ_SERIAL1;
+        return;
+    }
+
+    // type can be "ioport" or "mmio"
+    constexpr size_t kMaxTypeLen = 6 + 1;
+    char type_buf[kMaxTypeLen];
+    // Addr can be up to 32 characters (numeric in any base strtoul will take),
+    // and + 1 for \0
+    constexpr size_t kMaxAddrLen = 32 + 1;
+    char addr_buf[kMaxAddrLen];
+
+    char* endptr;
+    const char* addr_start;
+    const char* irq_start;
+    size_t addr_len, type_len;
+    unsigned long irq_val;
+
+    addr_start = strchr(serial_mode, ',');
+    if (addr_start == nullptr) {
+        goto bail;
+    }
+    addr_start++;
+    irq_start = strchr(addr_start, ',');
+    if (irq_start == nullptr) {
+        goto bail;
+    }
+    irq_start++;
+
+    // Parse out the type part
+    type_len = addr_start - serial_mode - 1;
+    if (type_len + 1 > kMaxTypeLen) {
+        goto bail;
+    }
+    memcpy(type_buf, serial_mode, type_len);
+    type_buf[type_len] = 0;
+    if (!strcmp(type_buf, "ioport")) {
+        bootloader.uart.type = BOOTDATA_UART_PC_PORT;
+    } else if (!strcmp(type_buf, "mmio")) {
+        bootloader.uart.type = BOOTDATA_UART_PC_MMIO;
+    } else {
+        goto bail;
+    }
+
+    // Parse out the address part
+    addr_len = irq_start - addr_start - 1;
+    if (addr_len + 1 > kMaxAddrLen) {
+        goto bail;
+    }
+    memcpy(addr_buf, addr_start, addr_len);
+    addr_buf[addr_len] = 0;
+    bootloader.uart.base = strtoul(addr_buf, &endptr, 0);
+    if (endptr != addr_buf + addr_len) {
+        goto bail;
+    }
+
+    // Parse out the IRQ part
+    irq_val = strtoul(irq_start, &endptr, 0);
+    if (*endptr != '\0' || irq_val > UINT32_MAX) {
+        goto bail;
+    }
+    // For now, we don't support non-ISA IRQs
+    if (irq_val >= NUM_ISA_IRQS) {
+        goto bail;
+    }
+    bootloader.uart.irq = static_cast<uint32_t>(irq_val);
+    return;
+
+bail:
+    bootloader.uart.type = BOOTDATA_UART_NONE;
+    return;
+}
+
+void pc_init_debug_early() {
+    handle_serial_cmdline();
 
     switch (bootloader.uart.type) {
     case BOOTDATA_UART_PC_PORT:

@@ -205,7 +205,18 @@ This controls what serial port is used.  If provided, it overrides the serial
 port described by the system's bootdata.
 
 If set to "none", the kernel debug serial port will be disabled.
-On x64, if set to "legacy", the legacy COM1 interface is used.
+
+### x64 specific values
+
+On x64, some additional values are supported for configuring 8250-like UARTs:
+- If set to "legacy", the legacy COM1 interface is used.
+- A port-io UART can be specified using "ioport,\<portno>,\<irq>".
+- An MMIO UART can be specified using "mmio,\<physaddr>,\<irq>".
+
+For example, "ioport,0x3f8,4" would describe the legacy COM1 interface.
+
+All numbers may be in any base accepted by *strtoul*().
+
 All other values are currently undefined.
 
 ## kernel.shell=\<bool>
