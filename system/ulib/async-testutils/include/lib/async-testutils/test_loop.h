@@ -7,7 +7,6 @@
 #include "test_loop_dispatcher.h"
 
 #include <lib/async/dispatcher.h>
-#include <lib/zx/time.h>
 
 namespace async {
 
@@ -20,32 +19,39 @@ public:
     async_t* async() { return &dispatcher_; }
 
     // Returns the current fake clock time.
-    zx::time Now() const { return current_time_; }
+    zx::time Now() { return dispatcher_.Now(); }
 
-    // Advances the fake clock by |delta|.
-    void AdvanceTimeBy(zx::duration delta) { current_time_ += delta; }
+    // Advances the fake clock time to |time|, if |time| is greater than the
+    // current time; else, nothing happens.
+    void AdvanceTimeTo(zx::time time) { dispatcher_.AdvanceTimeTo(time); }
 
-    // Quits the message loop. No due or further tasks and waits will be
-    // dispatched upon running.
-    void Quit() { has_quit_ = true; }
+    // Advances the fake clock time by |delta|.
+    void AdvanceTimeBy(zx::duration delta) { AdvanceTimeTo(Now() + delta); }
 
-    // Resets the quit state of the message loop: due tasks and waits will once
-    // again be dispatched upon running.
-    void ResetQuit() { has_quit_ = false; }
+    // Quits the message loop. If called while running, it will immediately
+    // exit and dispatch no further tasks or waits; if called before running,
+    // then next call to run will immediately exit. Further calls to run will
+    // dispatch as usual.
+    void Quit() { dispatcher_.Quit(); }
 
-    // Dispatches all waits and all tasks with deadlines up to the current fake
-    // clock time.
-    // Returns |ZX_OK| if the loop has finished dispatching and is now idle.
-    // Returns |ZX_ERR_CANCELED| if the loop has quit.
-    zx_status_t RunUntilIdle();
+    // Dispatches all waits and all tasks with deadlines up until |deadline|,
+    // progressively advancing the fake clock.
+    // Returns true iff any tasks or waits were invoked during the run.
+    bool RunUntil(zx::time deadline) { return dispatcher_.RunUntil(deadline); }
+
+    // Dispatches all waits and all tasks with deadlines up until |duration|
+    // from the the current time, progressively advancing the fake clock.
+    // Returns true iff any tasks or waits were invoked during the run.
+    bool RunFor(zx::duration duration) { return RunUntil(Now() + duration); }
+
+    // Dispatches all waits and all tasks with deadlines up until the current
+    // time, progressively advancing the fake clock.
+    // Returns true iff any tasks or waits were invoked during the run.
+    bool RunUntilIdle() { return RunUntil(Now()); }
 
 private:
-    zx::time current_time_;
-
     // Encapsulation of the async_t dispatch methods.
     TestLoopDispatcher dispatcher_;
-
-    bool has_quit_ = false;
 };
 
 } // namespace async
