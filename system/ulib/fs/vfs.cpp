@@ -411,7 +411,7 @@ zx_status_t Vfs::ServeConnection(fbl::unique_ptr<Connection> connection) {
 void Vfs::OnConnectionClosedRemotely(Connection* connection) {
     ZX_DEBUG_ASSERT(connection);
 
-    UnregisterAndDestroyConnection(connection);
+    UnregisterConnection(connection);
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
@@ -434,11 +434,11 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
 }
 
 void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
-    // The connection will be destroyed by |UnregisterAndDestroyConnection()|
+    // The connection will be destroyed by |UnregisterConnection()|.
     __UNUSED auto ptr = connection.release();
 }
 
-void Vfs::UnregisterAndDestroyConnection(Connection* connection) {
+void Vfs::UnregisterConnection(Connection* connection) {
     delete connection;
 }
 

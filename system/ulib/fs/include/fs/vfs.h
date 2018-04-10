@@ -233,8 +233,8 @@ protected:
     // Starts tracking the lifetime of the connection.
     virtual void RegisterConnection(fbl::unique_ptr<Connection> connection);
 
-    // Stops tracking the lifetime of the connection and destroys it.
-    virtual void UnregisterAndDestroyConnection(Connection* connection);
+    // Stops tracking the lifetime of the connection.
+    virtual void UnregisterConnection(Connection* connection);
 
 #endif // ifdef __Fuchsia__
 };

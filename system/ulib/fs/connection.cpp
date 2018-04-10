@@ -122,11 +122,13 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
 
 } // namespace
 
+constexpr zx_signals_t kWakeSignals = ZX_CHANNEL_READABLE |
+                                      ZX_CHANNEL_PEER_CLOSED | kLocalTeardownSignal;
+
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
                        zx::channel channel, uint32_t flags)
     : vfs_(vfs), vnode_(fbl::move(vnode)), channel_(fbl::move(channel)),
-      wait_(this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
-      flags_(flags) {
+      wait_(this, ZX_HANDLE_INVALID, kWakeSignals), flags_(flags) {
     ZX_DEBUG_ASSERT(vfs);
     ZX_DEBUG_ASSERT(vnode_);
     ZX_DEBUG_ASSERT(channel_);
@@ -134,11 +136,13 @@ Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode,
 
 Connection::~Connection() {
     // Stop waiting and clean up if still connected.
-    if (is_waiting()) {
+    if (wait_.is_pending()) {
         zx_status_t status = wait_.Cancel();
         ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "Could not cancel wait: status=%d", status);
-        wait_.set_object(ZX_HANDLE_INVALID);
+    }
 
+    // Invoke a "close" call to the underlying object if we haven't already.
+    if (is_open()) {
         CallClose();
     }
 
@@ -150,38 +154,41 @@ Connection::~Connection() {
 }
 
 zx_status_t Connection::Serve() {
-    ZX_DEBUG_ASSERT(!is_waiting());
-
     wait_.set_object(channel_.get());
-    zx_status_t status = wait_.Begin(vfs_->async());
-    if (status != ZX_OK) {
-        wait_.set_object(ZX_HANDLE_INVALID);
-    }
-    return status;
+    return wait_.Begin(vfs_->async());
 }
 
 void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
                                const zx_packet_signal_t* signal) {
-    ZX_DEBUG_ASSERT(is_waiting());
+    ZX_DEBUG_ASSERT(is_open());
 
-    // Handle the message.
-    if (status == ZX_OK && (signal->observed & ZX_CHANNEL_READABLE)) {
-        status = CallHandler();
-        if (status == ERR_DISPATCHER_ASYNC) {
-            return;
-        }
-        if (status == ZX_OK) {
-            status = wait_.Begin(async);
-            if (status == ZX_OK) {
+    if (status == ZX_OK) {
+        if (signal->observed & kLocalTeardownSignal) {
+            // Short-circuit locally destroyed connections, rather than servicing
+            // requests on their behalf. This prevents new requests from being
+            // opened while filesystems are torn down.
+            status = ZX_ERR_PEER_CLOSED;
+        } else if (signal->observed & ZX_CHANNEL_READABLE) {
+            // Handle the message.
+            status = CallHandler();
+            switch (status) {
+            case ERR_DISPATCHER_ASYNC:
                 return;
+            case ZX_OK:
+                status = wait_.Begin(async);
+                if (status == ZX_OK) {
+                    return;
+                }
+                break;
             }
         }
     }
-    wait_.set_object(ZX_HANDLE_INVALID);
 
     // Give the dispatcher a chance to clean up.
     if (status != ERR_DISPATCHER_DONE) {
         CallClose();
+    } else {
+        set_closed();
     }
 
     // Tell the VFS that the connection closed remotely.
@@ -196,6 +203,7 @@ zx_status_t Connection::CallHandler() {
 void Connection::CallClose() {
     channel_.reset();
     CallHandler();
+    set_closed();
 }
 
 zx_status_t Connection::HandleMessageThunk(zxrio_msg_t* msg, void* cookie) {
@@ -905,15 +913,15 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
         }
         bool fidl = ZXRIO_FIDL_MSG(msg->op);
         zx_txid_t txid = msg->txid;
-        Vnode::SyncCallback closure([this, txid, fidl](zx_status_t status) {
+        Vnode::SyncCallback closure([this, txid, fidl] (zx_status_t status) {
             zxrio_msg_t msg;
             memset(&msg, 0, ZXRIO_HDR_SZ);
             msg.txid = txid;
             msg.op = fidl ? ZXFIDL_SYNC : ZXRIO_SYNC;
             zxrio_write_response(channel_.get(), status, &msg);
 
-            // Reset the wait object
-            ZX_ASSERT(wait_.Begin(vfs_->async()) == ZX_OK);
+            // Try to reset the wait object
+            ZX_ASSERT_MSG(wait_.Begin(vfs_->async()) == ZX_OK, "Dispatch loop unexpectedly ended");
         });
 
         vnode_->Sync(fbl::move(closure));
