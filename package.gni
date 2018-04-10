@@ -36,6 +36,9 @@ declare_args() {
 #
 #     Defaults to false.
 #
+#   deprecated_system_image (bool, optional)
+#     New alias for system_image to reflect its deprecated status, per PKG-46.
+#
 #   boot_firmware_image (bool, optional)
 #     If true, the package is a boot firmware package instead of a regular
 #     package. A boot firmware package may contain only resources which are
@@ -162,6 +165,7 @@ template("package") {
       # packages.
       fuchsia_package = !bootfs_packages
       system_image = false
+      deprecated_system_image = false
       boot_firmware_image = false
       binaries = []
       drivers = []
@@ -174,6 +178,10 @@ template("package") {
       forward_variables_from(invoker, "*")
     }
     pkg_out_dir = "$root_build_dir/package/${pkg.package_name}"
+
+    if (pkg.deprecated_system_image) {
+      pkg.system_image = true
+    }
 
     shared_toolchain_out_dir =
         get_label_info("//lib($shlib_toolchain)", "root_out_dir")
