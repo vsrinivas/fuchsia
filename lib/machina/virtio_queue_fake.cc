@@ -4,9 +4,10 @@
 
 #include "garnet/lib/machina/virtio_queue_fake.h"
 
+#include <fbl/alloc_checker.h>
 #include <string.h>
 
-#include <fbl/alloc_checker.h>
+#include "lib/fxl/logging.h"
 
 namespace machina {
 
@@ -60,6 +61,12 @@ zx_status_t VirtioQueueFake::Init(uint16_t queue_size) {
   queue_->set_desc_addr(reinterpret_cast<uintptr_t>(desc_buf_.get()));
   queue_->set_avail_addr(reinterpret_cast<uintptr_t>(avail_ring_buf_.get()));
   queue_->set_used_addr(reinterpret_cast<uintptr_t>(used_ring_buf_.get()));
+
+  // Disable interrupt generation.
+  queue_->UpdateRing<void>([](virtio_queue_t* ring) {
+    ring->used->flags = 1;
+    *const_cast<uint16_t*>(ring->used_event) = 0xffff;
+  });
   return ZX_OK;
 }
 
@@ -112,6 +119,16 @@ void VirtioQueueFake::WriteToAvail(uint16_t desc) {
   auto avail = const_cast<volatile vring_avail*>(queue_->ring()->avail);
   uint16_t& avail_idx = const_cast<uint16_t&>(queue_->ring()->avail->idx);
   avail->ring[avail_idx++ % queue_size_] = desc;
+}
+
+bool VirtioQueueFake::HasUsed() const {
+  return queue_->ring()->used->idx != used_index_;
+}
+
+struct vring_used_elem VirtioQueueFake::NextUsed() {
+  FXL_DCHECK(HasUsed());
+  return const_cast<struct vring_used_elem&>(
+      queue_->ring()->used->ring[used_index_++ % queue_size_]);
 }
 
 zx_status_t DescBuilder::Build(uint16_t* desc) {

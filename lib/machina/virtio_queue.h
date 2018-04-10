@@ -10,7 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <lib/async/cpp/wait.h>
+#include <lib/async/cpp/auto_wait.h>
 #include <lib/zx/event.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
@@ -216,8 +216,7 @@ class VirtioQueue {
   // when one is available.
   //
   // TODO(PD-103): Use a c++ style function object here.
-  zx_status_t PollAsync(async_t* async,
-                        async::Wait* wait,
+  zx_status_t PollAsync(async::AutoWait* wait,
                         virtio_queue_poll_fn_t handler,
                         void* ctx);
 

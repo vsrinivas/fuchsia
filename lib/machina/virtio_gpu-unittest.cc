@@ -10,6 +10,7 @@
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
 #include "gtest/gtest.h"
+#include "lib/fsl/tasks/message_loop.h"
 
 namespace machina {
 namespace {
@@ -35,14 +36,20 @@ struct BackingPages
 
 class VirtioGpuTest {
  public:
-  VirtioGpuTest() : gpu_(phys_mem_), control_queue_(gpu_.control_queue()) {}
+  VirtioGpuTest()
+      : gpu_(phys_mem_, loop_.async()), control_queue_(gpu_.control_queue()) {}
 
   zx_status_t Init() {
     zx_status_t status = control_queue_.Init(kQueueSize);
     if (status != ZX_OK)
       return status;
+    status = gpu_.Init();
+    if (status != ZX_OK)
+      return status;
     return CreateScanout(kDisplayWidth, kDisplayHeight);
   }
+
+  void RunUntilIdle() { loop_.RunUntilIdle(); }
 
   VirtioGpu& gpu() { return gpu_; }
 
@@ -80,24 +87,19 @@ class VirtioGpuTest {
     request.width = width;
     request.height = height;
 
-    uint16_t desc = 0;
     virtio_gpu_ctrl_hdr_t response = {};
     zx_status_t status = control_queue()
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
                              .AppendWritable(&response, sizeof(response))
-                             .Build(&desc);
+                             .Build();
     if (status != ZX_OK) {
       return status;
     }
 
-    uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
-    EXPECT_EQ(sizeof(response), used);
-    if (status != ZX_OK) {
-      return status;
-    }
-
+    loop_.RunUntilIdle();
+    EXPECT_TRUE(control_queue_.HasUsed());
+    EXPECT_EQ(sizeof(response), control_queue_.NextUsed().len);
     return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
   }
 
@@ -137,25 +139,20 @@ class VirtioGpuTest {
     entry.length = size;
     backing_pages->push_front(fbl::move(backing));
 
-    uint16_t desc = 0;
     virtio_gpu_ctrl_hdr_t response = {};
     zx_status_t status = control_queue()
                              .BuildDescriptor()
                              .AppendReadable(&request, sizeof(request))
                              .AppendReadable(&entry, sizeof(entry))
                              .AppendWritable(&response, sizeof(response))
-                             .Build(&desc);
+                             .Build();
     if (status != ZX_OK) {
       return status;
     }
 
-    uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
-    EXPECT_EQ(sizeof(response), used);
-    if (status != ZX_OK) {
-      return status;
-    }
-
+    loop_.RunUntilIdle();
+    EXPECT_TRUE(control_queue_.HasUsed());
+    EXPECT_EQ(sizeof(response), control_queue_.NextUsed().len);
     return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
   }
 
@@ -179,12 +176,9 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
-    EXPECT_EQ(sizeof(response), used);
-    if (status != ZX_OK)
-      return status;
-
+    loop_.RunUntilIdle();
+    EXPECT_TRUE(control_queue_.HasUsed());
+    EXPECT_EQ(sizeof(response), control_queue_.NextUsed().len);
     return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
   }
 
@@ -207,16 +201,14 @@ class VirtioGpuTest {
     if (status != ZX_OK)
       return status;
 
-    uint32_t used = 0;
-    status = gpu_.HandleGpuCommand(gpu_.control_queue(), desc, &used);
-    EXPECT_EQ(sizeof(response), used);
-    if (status != ZX_OK)
-      return status;
-
+    loop_.RunUntilIdle();
+    EXPECT_TRUE(control_queue_.HasUsed());
+    EXPECT_EQ(sizeof(response), control_queue_.NextUsed().len);
     return response.type == VIRTIO_GPU_RESP_OK_NODATA ? ZX_OK : response.type;
   }
 
  private:
+  fsl::MessageLoop loop_;
   PhysMemFake phys_mem_;
   VirtioGpu gpu_;
   GpuScanout scanout_;
@@ -231,26 +223,22 @@ class VirtioGpuTest {
 };
 
 TEST(VirtioGpuTest, HandleGetDisplayInfo) {
-  uint16_t desc;
   VirtioGpuTest test;
   ASSERT_EQ(test.Init(), ZX_OK);
 
   virtio_gpu_ctrl_hdr_t request = {};
+  request.type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
   virtio_gpu_resp_display_info_t response = {};
   ASSERT_EQ(test.control_queue()
                 .BuildDescriptor()
                 .AppendReadable(&request, sizeof(request))
                 .AppendWritable(&response, sizeof(response))
-                .Build(&desc),
+                .Build(),
             ZX_OK);
 
-  uint32_t used = 0;
-  request.type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO;
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
-
-  EXPECT_EQ(sizeof(response), used);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(sizeof(response), test.control_queue().NextUsed().len);
   EXPECT_EQ(response.hdr.type, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
   EXPECT_EQ(response.pmodes[0].r.x, 0u);
   EXPECT_EQ(response.pmodes[0].r.y, 0u);
@@ -293,11 +281,9 @@ TEST(VirtioGpuTest, SetScanoutToInvalidResource) {
                 .Build(&desc),
             ZX_OK);
 
-  uint32_t used = 0;
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
-  EXPECT_EQ(sizeof(response), used);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(sizeof(response), test.control_queue().NextUsed().len);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
 }
 
@@ -334,11 +320,9 @@ TEST(VirtioGpuTest, HandleTransfer2D) {
     memset(entry.buffer.get(), 0xff, entry.len);
   }
 
-  uint32_t used = 0;
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
-  EXPECT_EQ(sizeof(response), used);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(sizeof(response), test.control_queue().NextUsed().len);
   ASSERT_EQ(response.type, VIRTIO_GPU_RESP_OK_NODATA);
 
   // Send a flush command to draw bytes to our scanout buffer.
@@ -384,10 +368,9 @@ TEST(VirtioGpuTest, DrawCursor) {
                 .AppendWritable(&response, sizeof(response))
                 .Build(&desc),
             ZX_OK);
-  uint32_t used = 0;
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(sizeof(response), test.control_queue().NextUsed().len);
 
   // Update cursor.
   const uint32_t cursor_pos_x = 64;
@@ -404,10 +387,9 @@ TEST(VirtioGpuTest, DrawCursor) {
                 .Build(&desc),
             ZX_OK);
 
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
-  EXPECT_EQ(0u, used);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(0u, test.control_queue().NextUsed().len);
 
   // Verify cursor is drawn to the scanout.
   uint32_t* scanout = reinterpret_cast<uint32_t*>(test.scanout_buffer());
@@ -430,10 +412,9 @@ TEST(VirtioGpuTest, DrawCursor) {
                 .AppendReadable(&request, sizeof(request))
                 .Build(&desc),
             ZX_OK);
-  ASSERT_EQ(
-      test.gpu().HandleGpuCommand(test.gpu().control_queue(), desc, &used),
-      ZX_OK);
-  EXPECT_EQ(0u, used);
+  test.RunUntilIdle();
+  EXPECT_TRUE(test.control_queue().HasUsed());
+  EXPECT_EQ(0u, test.control_queue().NextUsed().len);
 }
 
 }  // namespace

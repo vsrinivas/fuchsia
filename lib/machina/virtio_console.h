@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_CONSOLE_H_
 
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
 #include <virtio/console.h>
 #include <virtio/virtio_ids.h>

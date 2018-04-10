@@ -415,7 +415,7 @@ int main(int argc, char** argv) {
   machina::VirtioAbsolutePointer touch(
       input_dispatcher.Touch(), guest.phys_mem(), "machina-touch",
       "serial-number", kGuestViewDisplayWidth, kGuestViewDisplayHeight);
-  machina::VirtioGpu gpu(guest.phys_mem());
+  machina::VirtioGpu gpu(guest.phys_mem(), guest.device_async());
   fbl::unique_ptr<machina::GpuScanout> gpu_scanout;
 
   if (cfg.display() != GuestDisplay::NONE) {
@@ -472,7 +472,7 @@ int main(int argc, char** argv) {
       }
     }
     if (status == ZX_OK) {
-      status = gpu.Init(guest.device_async());
+      status = gpu.Init();
       if (status != ZX_OK) {
         return status;
       }

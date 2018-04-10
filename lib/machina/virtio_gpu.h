@@ -33,14 +33,14 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
                                           VIRTIO_GPU_Q_COUNT,
                                           virtio_gpu_config_t> {
  public:
-  VirtioGpu(const PhysMem& phys_mem);
+  VirtioGpu(const PhysMem& phys_mem, async_t* async);
   ~VirtioGpu() override;
 
   VirtioQueue* control_queue() { return queue(VIRTIO_GPU_Q_CONTROLQ); }
   VirtioQueue* cursor_queue() { return queue(VIRTIO_GPU_Q_CURSORQ); }
 
   // Begins processing any descriptors that become available in the queues.
-  zx_status_t Init(async_t* async);
+  zx_status_t Init();
 
   // Adds a scanout to the GPU.
   //
@@ -111,8 +111,8 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
                      kNumHashTableBuckets>;
 
   ResourceTable resources_;
-  async::Wait control_queue_wait_;
-  async::Wait cursor_queue_wait_;
+  async::AutoWait control_queue_wait_;
+  async::AutoWait cursor_queue_wait_;
 };
 
 }  // namespace machina

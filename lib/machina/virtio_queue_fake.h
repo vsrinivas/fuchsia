@@ -26,7 +26,7 @@ class DescBuilder {
     return Append(reinterpret_cast<void*>(addr), size, writeable);
   }
 
-  // Adds a buffer to the chain that is flagged as device writeable.
+  // Adds a buffer to the chain that is flagged as device writable.
   DescBuilder& AppendWritable(void* addr, size_t size) {
     return Append(addr, size, true);
   }
@@ -34,7 +34,7 @@ class DescBuilder {
     return Append(addr, size, true);
   }
 
-  // Adds a buffer to the chain that is flagged as device writeable.
+  // Adds a buffer to the chain that is flagged as device readable.
   DescBuilder& AppendReadable(void* addr, size_t size) {
     return Append(addr, size, false);
   }
@@ -102,6 +102,15 @@ class VirtioQueueFake {
 
   DescBuilder BuildDescriptor() { return DescBuilder(this); }
 
+  // Returns |true| if the queue has returned descriptors in the used ring.
+  bool HasUsed() const;
+
+  // Returns the used element structure for the next used descriptor.
+  //
+  // The caller must validate that entries are available with |HasUsed| before
+  // calling this method.
+  struct vring_used_elem NextUsed();
+
  private:
   uint16_t queue_size_;
   VirtioQueue* queue_;
@@ -111,6 +120,8 @@ class VirtioQueueFake {
 
   // The next entry in the descriptor table that is available.
   uint16_t next_free_desc_ = 0;
+  // Index into the |used| ring for returned descriptors.
+  uint16_t used_index_ = 0;
 };
 
 }  // namespace machina
