@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <assert.h>
+#include <ddk/protocol/display-controller.h>
+#include <ddk/protocol/intel-gpu-core.h>
 #include <hwreg/bitfields.h>
 #include <zircon/pixelformat.h>
 
@@ -64,17 +67,30 @@ public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
-    void set_linear_stride(uint32_t stride, zx_pixel_format_t format) {
-        set_stride(stride / (kLinearStrideChunkSize / ZX_PIXEL_FORMAT_BYTES(format)));
+
+    void set_stride(uint32_t tiling, uint32_t width, zx_pixel_format_t format) {
+        uint32_t chunk_size = get_chunk_size(tiling, format);
+        set_stride(fbl::round_up(width * ZX_PIXEL_FORMAT_BYTES(format), chunk_size) / chunk_size);
     }
 
-    static uint32_t compute_linear_stride(uint32_t width, zx_pixel_format_t format) {
-        ZX_ASSERT(kLinearStrideChunkSize % ZX_PIXEL_FORMAT_BYTES(format) == 0);
-        return fbl::round_up(width, kLinearStrideChunkSize / ZX_PIXEL_FORMAT_BYTES(format));
+    static uint32_t compute_pixel_stride(uint32_t tiling, uint32_t width,
+                                         zx_pixel_format_t format) {
+        uint32_t chunk_size = get_chunk_size(tiling, format);
+        return fbl::round_up(width, chunk_size / ZX_PIXEL_FORMAT_BYTES(format));
     }
 
 private:
-    static constexpr uint32_t kLinearStrideChunkSize = 64;
+    static uint32_t get_chunk_size(uint32_t tiling, zx_pixel_format_t format) {
+        switch (tiling) {
+        case IMAGE_TYPE_SIMPLE: return 64;
+        case IMAGE_TYPE_X_TILED: return 512;
+        case IMAGE_TYPE_Y_LEGACY_TILED: return 128;
+        case IMAGE_TYPE_YF_TILED: return ZX_PIXEL_FORMAT_BYTES(format) == 1 ? 64 : 128;
+        default:
+            ZX_ASSERT(false);
+            return 0;
+        }
+    }
 };
 
 // PLANE_SIZE

@@ -691,7 +691,12 @@ zx_status_t Controller::GetDisplayInfo(int32_t display_id, display_info_t* info)
 }
 
 zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_t offset) {
-    if (image->type != IMAGE_TYPE_SIMPLE || offset % PAGE_SIZE != 0) {
+    if (!(image->type == IMAGE_TYPE_SIMPLE || image->type == IMAGE_TYPE_X_TILED
+                || image->type == IMAGE_TYPE_Y_LEGACY_TILED
+                || image->type == IMAGE_TYPE_YF_TILED)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (offset % PAGE_SIZE != 0) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -703,7 +708,8 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
     }
 
     uint32_t length = image->height * ZX_PIXEL_FORMAT_BYTES(image->pixel_format) *
-            registers::PlaneSurfaceStride::compute_linear_stride(image->width, image->pixel_format);
+            registers::PlaneSurfaceStride::compute_pixel_stride(image->type, image->width,
+                                                                image->pixel_format);
     fbl::unique_ptr<GttRegion> gtt_region;
     zx_status_t status = gtt_.AllocRegion(length,
                                           registers::PlaneSurface::kLinearAlignment,
@@ -740,8 +746,7 @@ bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t 
             return false;
         }
         if (config->image.width != config->h_active || config->image.height != config->v_active
-                || config->image.pixel_format != ZX_PIXEL_FORMAT_ARGB_8888
-                || config->image.type != IMAGE_TYPE_SIMPLE) {
+                || config->image.pixel_format != ZX_PIXEL_FORMAT_ARGB_8888) {
             return false;
         }
     }
@@ -767,7 +772,7 @@ void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t 
 }
 
 uint32_t Controller::ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
-    return registers::PlaneSurfaceStride::compute_linear_stride(width, format);
+    return registers::PlaneSurfaceStride::compute_pixel_stride(IMAGE_TYPE_SIMPLE, width, format);
 }
 
 zx_status_t Controller::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
@@ -960,7 +965,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
                 registers::PipeRegs pipe_regs(display->pipe());
 
                 auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
-                plane_stride.set_linear_stride(stride, format);
+                plane_stride.set_stride(IMAGE_TYPE_SIMPLE, stride, format);
                 plane_stride.WriteTo(mmio_space_.get());
 
                 auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());

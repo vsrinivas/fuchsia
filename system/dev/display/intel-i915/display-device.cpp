@@ -156,8 +156,9 @@ bool DisplayDevice::Init() {
 #endif // USE_FB_TEST_PATTERN
     Flush();
 
+    image_type_ = IMAGE_TYPE_SIMPLE;
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_linear_stride(info_.stride, info_.format);
+    plane_stride.set_stride(image_type_, info_.stride, info_.format);
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
@@ -180,7 +181,7 @@ bool DisplayDevice::Resume() {
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
-    plane_stride.set_linear_stride(info_.stride, info_.format);
+    plane_stride.set_stride(image_type_, info_.stride, info_.format);
     plane_stride.WriteTo(controller_->mmio_space());
 
     auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(controller_->mmio_space());
@@ -202,6 +203,25 @@ void DisplayDevice::ApplyConfiguration(display_config_t* config) {
     }
 
     registers::PipeRegs pipe_regs(pipe());
+
+    image_type_ = config->image.type;
+
+    auto stride_reg = pipe_regs.PlaneSurfaceStride().FromValue(0);
+    stride_reg.set_stride(config->image.type, config->image.width, config->image.pixel_format);
+    stride_reg.WriteTo(controller_->mmio_space());
+
+    auto plane_ctrl = pipe_regs.PlaneControl().ReadFrom(controller_->mmio_space());
+    if (config->image.type == IMAGE_TYPE_SIMPLE) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kLinear);
+    } else if (config->image.type == IMAGE_TYPE_X_TILED) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingX);
+    } else if (config->image.type == IMAGE_TYPE_Y_LEGACY_TILED) {
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYLegacy);
+    } else {
+        ZX_ASSERT(config->image.type == IMAGE_TYPE_YF_TILED);
+        plane_ctrl.set_tiled_surface(plane_ctrl.kTilingYF);
+    }
+    plane_ctrl.WriteTo(controller_->mmio_space());
 
     uint32_t base_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(config->image.handle));
 

@@ -477,7 +477,8 @@ bool HdmiDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
     info->width = timing_params.horizontal_addressable;
     info->height = timing_params.vertical_addressable;
     info->format = ZX_PIXEL_FORMAT_ARGB_8888;
-    info->stride = registers::PlaneSurfaceStride::compute_linear_stride(info->width, info->format);
+    info->stride = registers::PlaneSurfaceStride::compute_pixel_stride(IMAGE_TYPE_SIMPLE,
+                                                                       info->width, info->format);
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
     return true;

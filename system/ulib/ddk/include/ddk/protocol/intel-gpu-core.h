@@ -9,6 +9,10 @@
 
 __BEGIN_CDECLS;
 
+#define IMAGE_TYPE_X_TILED 1
+#define IMAGE_TYPE_Y_LEGACY_TILED 2
+#define IMAGE_TYPE_YF_TILED 3
+
 typedef void (*zx_intel_gpu_core_interrupt_callback_t)(void* data,
                                                        uint32_t master_interrupt_control);
 

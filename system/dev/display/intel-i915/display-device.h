@@ -88,6 +88,7 @@ private:
 
     bool inited_;
     zx_display_info_t info_;
+    uint32_t image_type_;
     edid::Edid edid_;
     bool is_enabled_;
 };

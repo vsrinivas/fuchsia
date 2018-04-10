@@ -953,7 +953,8 @@ bool DpDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
     info->width = timing.horizontal_addressable;
     info->height = timing.vertical_addressable;
     info->format = kPixelFormat;
-    info->stride = registers::PlaneSurfaceStride::compute_linear_stride(info->width, info->format);
+    info->stride = registers::PlaneSurfaceStride::compute_pixel_stride(IMAGE_TYPE_SIMPLE,
+                                                                       info->width, info->format);
     info->pixelsize = ZX_PIXEL_FORMAT_BYTES(info->format);
 
     return true;
