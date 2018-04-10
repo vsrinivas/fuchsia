@@ -36,9 +36,6 @@ typedef struct vm_page {
             VmObject* obj;   // unused currently
 
             uint8_t pin_count : VM_PAGE_OBJECT_PIN_COUNT_BITS;
-            // If true, one pin slot is used by the VmObject to keep a run
-            // contiguous.
-            bool contiguous_pin : 1;
         } object;
 
         uint8_t pad[24]; // pad out to 32 bytes

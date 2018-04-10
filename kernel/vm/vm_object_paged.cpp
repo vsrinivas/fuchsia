@@ -47,7 +47,6 @@ void InitializeVmPage(vm_page_t* p) {
     DEBUG_ASSERT(p->state == VM_PAGE_STATE_ALLOC);
     p->state = VM_PAGE_STATE_OBJECT;
     p->object.pin_count = 0;
-    p->object.contiguous_pin = 0;
 }
 
 // round up the size to the next page size boundary and make sure we dont wrap
@@ -80,8 +79,8 @@ VmObjectPaged::~VmObjectPaged() {
     LTRACEF("%p\n", this);
 
     page_list_.ForEveryPage(
-        [](const auto p, uint64_t off) {
-            if (p->object.contiguous_pin) {
+        [this](const auto p, uint64_t off) {
+            if (this->is_contiguous()) {
                 p->object.pin_count--;
             }
             ASSERT(p->object.pin_count == 0);
@@ -170,7 +169,6 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
         // Mark the pages as pinned, so they can't be physically rearranged
         // underneath us.
         p->object.pin_count++;
-        p->object.contiguous_pin = true;
     }
 
     cleanup_phys_pages.cancel();
