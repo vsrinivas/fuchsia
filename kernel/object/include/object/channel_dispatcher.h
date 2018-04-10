@@ -54,6 +54,11 @@ public:
     zx_status_t ResumeInterruptedCall(MessageWaiter* waiter, zx_time_t deadline,
                                       fbl::unique_ptr<MessagePacket>* reply);
 
+    // Returns the maximum depth this channel endpoint will queue
+    // messages to. This value is accessible to userspace via the
+    // ZX_PROP_CHANNEL_TX_MSG_MAX object property.
+    size_t TxMessageMax() const;
+
     // MessageWaiter's state is guarded by the lock of the
     // owning ChannelDispatcher, and Deliver(), Signal(), Cancel(),
     // and EndWait() methods must only be called under

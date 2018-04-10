@@ -325,6 +325,24 @@ static bool socket_buffer_test(void) {
     END_TEST;
 }
 
+static bool channel_depth_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t channels[2];
+    ASSERT_EQ(zx_channel_create(0, &channels[0], &channels[1]), ZX_OK, "");
+
+    for (int idx = 0; idx < 2; ++idx) {
+        size_t depth = 0u;
+        zx_status_t status = zx_object_get_property(channels[idx], ZX_PROP_CHANNEL_TX_MSG_MAX,
+                                                    &depth, sizeof(depth));
+        ASSERT_EQ(status, ZX_OK, "");
+        // For now, just check that the depth is non-zero.
+        ASSERT_NE(depth, 0u, "");
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
@@ -332,6 +350,7 @@ RUN_TEST(vmo_name_test);
 RUN_TEST(importance_smoke_test);
 RUN_TEST(bad_importance_value_fails);
 RUN_TEST(socket_buffer_test);
+RUN_TEST(channel_depth_test);
 END_TEST_CASE(property_tests)
 
 int main(int argc, char** argv) {

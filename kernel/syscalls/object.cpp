@@ -690,6 +690,21 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
                 return status;
             return ZX_OK;
         }
+        case ZX_PROP_CHANNEL_TX_MSG_MAX: {
+            if (size < sizeof(size_t)) {
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            }
+            auto channel = DownCastDispatcher<ChannelDispatcher>(&dispatcher);
+            if (channel == nullptr) {
+                return ZX_ERR_WRONG_TYPE;
+            }
+            size_t depth = channel->TxMessageMax();
+            zx_status_t status = _value.reinterpret<size_t>().copy_to_user(depth);
+            if (status != ZX_OK) {
+                return status;
+            }
+            return ZX_OK;
+        }
         default:
             return ZX_ERR_INVALID_ARGS;
     }

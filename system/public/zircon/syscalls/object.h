@@ -377,6 +377,10 @@ typedef struct zx_info_resource {
 #define ZX_PROP_SOCKET_TX_BUF_MAX           10u
 #define ZX_PROP_SOCKET_TX_BUF_SIZE          11u
 
+// Argument is a size_t, describing the number of packets a channel
+// endpoint can have pending in its tx direction.
+#define ZX_PROP_CHANNEL_TX_MSG_MAX          12u
+
 // Describes how important a job is.
 typedef int32_t zx_job_importance_t;
 

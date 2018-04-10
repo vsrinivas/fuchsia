@@ -144,6 +144,17 @@ Allowed operations: **get**
 
 The size of the transmit buffer of a socket, in bytes.
 
+### ZX_PROP_CHANNEL_TX_MSG_MAX
+
+*handle* type: **Channel**
+
+*value* type: **size_t**
+
+Allowed operations: **get**
+
+The maximum number of packets a channel endpoint can have pending in
+its outgoing direction.
+
 ## RETURN VALUE
 
 **zx_object_get_property**() returns **ZX_OK** on success. In the event of
