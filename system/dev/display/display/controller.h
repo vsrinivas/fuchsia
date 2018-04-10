@@ -20,11 +20,13 @@
 #include <lib/zx/vmo.h>
 
 #include "id-map.h"
+#include "image.h"
 
 namespace display {
 
 class ClientProxy;
 class Controller;
+class DisplayConfig;
 
 class DisplayInfo : public IdMappable<fbl::unique_ptr<DisplayInfo>> {
 public:
@@ -32,6 +34,7 @@ public:
 
     // TODO(stevensd): extract a list of all valid timings
     edid::timing_params_t preferred_timing;
+    fbl::DoublyLinkedList<fbl::RefPtr<Image>> images;
 };
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
@@ -52,10 +55,15 @@ public:
     void OnClientClosed(ClientProxy* client);
     void ShowActiveDisplay();
 
+    void OnConfigApplied(DisplayConfig* configs[], int32_t count);
+
+    void ReleaseImage(Image* image);
+
     display_controller_protocol_ops_t* ops() { return ops_.ops; }
     void* ops_ctx() { return ops_.ctx; }
     async::Loop& loop() { return loop_; }
     bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
+    mtx_t* mtx() { return &mtx_; }
 private:
     // mtx_ is a global lock on state shared among clients.
     mtx_t mtx_;

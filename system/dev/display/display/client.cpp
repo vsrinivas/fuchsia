@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
+#include <fbl/limits.h>
 #include <lib/edid/edid.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/message.h>
@@ -28,6 +29,11 @@ zx_status_t decode_message(fidl::Message* msg) {
     const fidl_type_t* table = nullptr;
     switch (msg->ordinal()) {
     SELECT_TABLE_CASE(display_ControllerSetControllerCallback);
+    SELECT_TABLE_CASE(display_ControllerImportVmoImage);
+    SELECT_TABLE_CASE(display_ControllerReleaseImage);
+    SELECT_TABLE_CASE(display_ControllerSetDisplayImage);
+    SELECT_TABLE_CASE(display_ControllerCheckConfig);
+    SELECT_TABLE_CASE(display_ControllerApplyConfig);
     }
     if (table != nullptr) {
         const char* err;
@@ -79,6 +85,11 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
 
     switch (msg.ordinal()) {
     HANDLE_REQUEST_CASE(SetControllerCallback);
+    HANDLE_REQUEST_CASE(ImportVmoImage);
+    HANDLE_REQUEST_CASE(ReleaseImage);
+    HANDLE_REQUEST_CASE(SetDisplayImage);
+    HANDLE_REQUEST_CASE(CheckConfig);
+    HANDLE_REQUEST_CASE(ApplyConfig);
     default:
         zxlogf(INFO, "Unknown ordinal %d\n", msg.ordinal());
     }
@@ -111,6 +122,178 @@ void Client::HandleSetControllerCallback(const display_ControllerSetControllerCa
         added[i] = iter->id;
     }
     NotifyDisplaysChanged(added, static_cast<uint32_t>(configs_.size()), nullptr, 0);
+}
+
+void Client::HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
+                                  fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<display_ControllerImportVmoImageResponse>();
+    *resp_table = &display_ControllerImportVmoImageResponseTable;
+
+    zx::vmo vmo(req->vmo);
+
+    // Clients are probably doing something horribly wrong if we've overflowed image
+    // ids, so just fail when that happens.
+    if (next_image_id_ < 0) {
+        resp->res = ZX_ERR_NO_RESOURCES;
+        return;
+    }
+
+    image_t dc_image;
+    dc_image.height = req->image_config.height;
+    dc_image.width = req->image_config.width;
+    dc_image.pixel_format = req->image_config.pixel_format;
+    dc_image.type = req->image_config.type;
+    resp->res = DC_IMPL_CALL(import_vmo_image, &dc_image, vmo.get(), req->offset);
+
+    if (resp->res == ZX_OK) {
+        fbl::AllocChecker ac;
+        auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, fbl::move(vmo)));
+        if (!ac.check()) {
+            DC_IMPL_CALL(release_image, &dc_image);
+
+            resp->res = ZX_ERR_NO_MEMORY;
+            return;
+        }
+
+        image->id = next_image_id_++;
+        resp->image_id = image->id;
+        images_.insert(fbl::move(image));
+    }
+}
+
+void Client::HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto image = images_.erase(req->image_id);
+    if (!image) {
+        return;
+    }
+
+    bool current_config_change = false;
+    for (auto& config : configs_) {
+        if (config.pending_image == image) {
+            config.pending_image->DiscardAcquire();
+            config.pending_image = nullptr;
+            config.has_pending_image = false;
+        }
+        if (config.displayed_image == image) {
+            config.displayed_image->StartRetire();
+            config.displayed_image = nullptr;
+            current_config_change = true;
+        }
+    }
+
+    if (current_config_change) {
+        ApplyConfig();
+    }
+}
+
+void Client::HandleSetDisplayImage(const display_ControllerSetDisplayImageRequest* req,
+                                   fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display);
+    if (!config.IsValid()) {
+        zxlogf(INFO, "SetDisplayImage ordinal with invalid display\n");
+        return;
+    }
+    if (req->image_id < 0) {
+        config->has_pending_image = true;
+        config->pending_image = nullptr;
+        pending_config_valid_ = false;
+    } else {
+        auto image = images_.find(req->image_id);
+        if (image.IsValid() && image->Acquire()) {
+            config->has_pending_image = true;
+
+            config->pending_image = image.CopyPointer();
+            config->pending_wait_event_id = req->wait_event_id;
+            config->pending_present_event_id = req->present_event_id;
+            config->pending_signal_event_id = req->signal_event_id;
+
+            pending_config_valid_ = false;
+        } else {
+            zxlogf(INFO, "SetDisplayImage with %s image\n", image.IsValid() ? "invl" : "busy");
+        }
+    }
+}
+
+void Client::HandleCheckConfig(const display_ControllerCheckConfigRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<display_ControllerCheckConfigResponse>();
+    *resp_table = &display_ControllerCheckConfigResponseTable;
+
+    pending_config_valid_ = CheckConfig();
+
+    resp->valid = pending_config_valid_;
+
+    if (req->discard) {
+        for (auto& config : configs_) {
+            config.pending_image->DiscardAcquire();
+            config.pending_image = nullptr;
+            config.has_pending_image = false;
+        }
+        pending_config_valid_ = true;
+    }
+}
+
+void Client::HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    if (!pending_config_valid_) {
+        pending_config_valid_ = CheckConfig();
+        if (!pending_config_valid_) {
+            zxlogf(INFO, "Tried to apply invalid config\n");
+            return;
+        }
+    }
+
+    for (auto& display_config : configs_) {
+        if (!display_config.pending_image) {
+            continue;
+        }
+
+        if (display_config.pending_image != nullptr) {
+            display_config.current.image = display_config.pending_image->info();
+        }
+        display_config.displayed_image = display_config.pending_image;
+    }
+
+    ApplyConfig();
+}
+
+bool Client::CheckConfig() {
+    display_config_t* configs[configs_.size()];
+    int idx = 0;
+    for (auto& display_config : configs_) {
+        if (display_config.has_pending_image) {
+            if (display_config.pending_image != nullptr) {
+                display_config.pending.image = display_config.pending_image->info();
+                configs[idx++] = &display_config.pending;
+            }
+        } else if (display_config.displayed_image != nullptr) {
+            configs[idx++] = &display_config.current;
+        }
+    }
+
+    return DC_IMPL_CALL(check_configuration, configs, idx);
+}
+
+void Client::ApplyConfig() {
+    display_config_t* configs[configs_.size()];
+    int idx = 0;
+    for (auto& display_config : configs_) {
+        // Skip the display since there's nothing to show
+        if (display_config.displayed_image == nullptr) {
+            continue;
+        }
+        configs[idx++] = &display_config.current;
+    }
+
+    DisplayConfig* dc_configs[configs_.size()];
+    int dc_idx = 0;
+    for (auto& c : configs_) {
+        dc_configs[dc_idx++] = &c;
+    }
+    controller_->OnConfigApplied(dc_configs, dc_idx);
+
+    DC_IMPL_CALL(apply_configuration, configs, idx);
 }
 
 void Client::NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
@@ -199,6 +382,8 @@ zx_status_t Client::InitApiConnection(zx::handle* client_handle) {
     api_wait_.set_object(server_handle_.get());
     api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
     if ((status = api_wait_.Begin(controller_->loop().async())) != ZX_OK) {
+        // Clear the object, since that's used to detect whether or not api_wait_ is inited.
+        api_wait_.set_object(ZX_HANDLE_INVALID);
         zxlogf(ERROR, "Failed to start waiting %d\n", status);
         return status;
     }
@@ -209,10 +394,30 @@ zx_status_t Client::InitApiConnection(zx::handle* client_handle) {
 void Client::Reset() {
     ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN
             || controller_->current_thread_is_loop());
+    pending_config_valid_ = false;
 
-    api_wait_.Cancel();
+    if (api_wait_.object() != ZX_HANDLE_INVALID) {
+        api_wait_.Cancel();
+        api_wait_.set_object(ZX_HANDLE_INVALID);
+    }
     server_handle_.reset();
     callback_handle_.reset();
+
+    for (auto& config : configs_) {
+        if (config.pending_image) {
+            config.pending_image->DiscardAcquire();
+            config.pending_image = nullptr;
+            config.has_pending_image = false;
+        }
+        if (config.displayed_image) {
+            config.displayed_image->StartRetire();
+            config.displayed_image = nullptr;
+        }
+    }
+
+    ApplyConfig();
+
+    images_.clear();
 
     proxy_->OnClientDead();
 }

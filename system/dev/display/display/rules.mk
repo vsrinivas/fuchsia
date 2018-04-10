@@ -12,6 +12,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/client.cpp \
     $(LOCAL_DIR)/controller.cpp \
+    $(LOCAL_DIR)/image.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \

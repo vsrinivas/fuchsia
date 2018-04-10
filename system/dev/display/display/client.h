@@ -17,10 +17,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/builder.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 
 #include "controller.h"
 #include "display/c/fidl.h"
 #include "id-map.h"
+#include "image.h"
 
 namespace display {
 
@@ -28,6 +30,17 @@ class DisplayConfig : public IdMappable<fbl::unique_ptr<DisplayConfig>> {
 public:
     display_config_t current;
     display_config_t pending;
+
+    int32_t pending_wait_event_id;
+    int32_t pending_present_event_id;
+    int32_t pending_signal_event_id;
+
+    // The image given to SetDisplayImage which hasn't been applied yet.
+    bool has_pending_image;
+    fbl::RefPtr<Image> pending_image;
+
+    // The image which has most recently been sent to the display controller impl
+    fbl::RefPtr<Image> displayed_image;
 
     fbl::unique_ptr<zx_pixel_format_t[]> pixel_formats;
     uint32_t pixel_format_count;
@@ -54,6 +67,16 @@ public:
 private:
     void HandleSetControllerCallback(const display_ControllerSetControllerCallbackRequest* req,
                                      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
+                              fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
+                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetDisplayImage(const display_ControllerSetDisplayImageRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleCheckConfig(const display_ControllerCheckConfigRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
 
 
     Controller* controller_;
@@ -62,8 +85,11 @@ private:
     zx::channel server_handle_;
     zx::channel callback_handle_;
     int32_t next_txn_ = 0x0;
+    int32_t next_image_id_ = 0x0;
 
+    Image::Map images_;
     DisplayConfig::Map configs_;
+    bool pending_config_valid_ = false;
 
     void HandleControllerApi(async_t* async, async::WaitBase* self,
                              zx_status_t status, const zx_packet_signal_t* signal);
@@ -71,6 +97,8 @@ private:
 
     void NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
                                const int32_t* displays_removed, uint32_t removed_count);
+    void ApplyConfig();
+    bool CheckConfig();
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the

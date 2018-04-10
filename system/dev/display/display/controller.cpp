@@ -44,6 +44,12 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
         auto target = displays_.erase(displays_removed[i]);
         if (target) {
             removed_success[removed_success_count++] = displays_removed[i];
+
+            while (!target->images.is_empty()) {
+                auto image = target->images.pop_front();
+                image->StartRetire();
+                image->OnRetire();
+            }
         } else {
             zxlogf(TRACE, "Unknown display %d removed\n", displays_removed[i]);
         }
@@ -89,6 +95,53 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
 }
 
 void Controller::OnDisplayVsync(int32_t display_id, void* handle) {
+    fbl::AutoLock lock(&mtx_);
+    fbl::DoublyLinkedList<fbl::RefPtr<Image>>* images = nullptr;
+    for (auto& display_config : displays_) {
+        if (display_config.id == display_id) {
+            images = &display_config.images;
+            break;
+        }
+    }
+
+    if (images) {
+        while (!images->is_empty()) {
+            auto& image = images->front();
+            if (image.info().handle == handle) {
+                break;
+            } else {
+                image.OnRetire();
+                images->pop_front();
+            }
+        }
+    }
+}
+
+void Controller::OnConfigApplied(DisplayConfig* configs[], int32_t count) {
+    fbl::AutoLock lock(&mtx_);
+    for (int i = 0; i < count; i++) {
+        auto* config = configs[i];
+        if (config->displayed_image) {
+            auto display = displays_.find(config->id);
+            if (display.IsValid()) {
+                // This can happen if we reapply a display's current configuration or if
+                // we switch display owners rapidly. The fact that this is being put back in
+                // the queue means we don't want to retire the image yet. So at worst this
+                // will delay the image's retire by a few frames.
+                if (static_cast<fbl::DoublyLinkedListable<fbl::RefPtr<Image>>*>(
+                            config->displayed_image.get())->InContainer()) {
+                    display->images.erase(*config->displayed_image);
+                } else {
+                    config->displayed_image->StartPresent();
+                }
+                display->images.push_back(config->displayed_image);
+            }
+        }
+    }
+}
+
+void Controller::ReleaseImage(Image* image) {
+    ops_.ops->release_image(ops_.ctx, &image->info());
 }
 
 void Controller::OnClientClosed(ClientProxy* client) {
