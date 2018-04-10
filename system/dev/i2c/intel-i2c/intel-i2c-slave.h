@@ -17,8 +17,6 @@ typedef struct intel_serialio_i2c_slave_device {
     uint8_t chip_address_width;
     uint16_t chip_address;
 
-    zx_device_prop_t props[3];
-
     struct list_node slave_list_node;
 } intel_serialio_i2c_slave_device_t;
 

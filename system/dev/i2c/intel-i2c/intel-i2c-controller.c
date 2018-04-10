@@ -63,8 +63,10 @@ static zx_status_t intel_serialio_i2c_find_slave(
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t intel_serialio_i2c_add_slave(
-    intel_serialio_i2c_device_t* device, uint8_t width, uint16_t address) {
+static zx_status_t intel_serialio_i2c_add_slave(intel_serialio_i2c_device_t* device,
+                                                uint8_t width, uint16_t address,
+                                                uint32_t protocol_id,
+                                                zx_device_prop_t* moreprops, uint32_t propcount) {
     zx_status_t status;
 
     if ((width != I2C_7BIT_ADDRESS && width != I2C_10BIT_ADDRESS) ||
@@ -114,9 +116,18 @@ static zx_status_t intel_serialio_i2c_add_slave(
 
     pci_config_read16(&pci, PCI_CONFIG_VENDOR_ID, &vendor_id);
     pci_config_read16(&pci, PCI_CONFIG_DEVICE_ID, &device_id);
-    slave->props[count++] = (zx_device_prop_t){BIND_PCI_VID, 0, vendor_id};
-    slave->props[count++] = (zx_device_prop_t){BIND_PCI_DID, 0, device_id};
-    slave->props[count++] = (zx_device_prop_t){BIND_I2C_ADDR, 0, address};
+
+    zx_device_prop_t props[8];
+    if (countof(props) < 3 + propcount) {
+        zxlogf(ERROR, "i2c: slave at 0x%02x has too many props! (%u)\n", address, propcount);
+        status = ZX_ERR_INVALID_ARGS;
+        goto fail;
+    }
+    props[count++] = (zx_device_prop_t){BIND_PCI_VID, 0, vendor_id};
+    props[count++] = (zx_device_prop_t){BIND_PCI_DID, 0, device_id};
+    props[count++] = (zx_device_prop_t){BIND_I2C_ADDR, 0, address};
+    memcpy(&props[count], moreprops, sizeof(zx_device_prop_t) * propcount);
+    count += propcount;
 
     char name[sizeof(address) * 2 + 2] = {
             [sizeof(name) - 1] = '\0',
@@ -128,7 +139,8 @@ static zx_status_t intel_serialio_i2c_add_slave(
         .name = name,
         .ctx = slave,
         .ops = &intel_serialio_i2c_slave_device_proto,
-        .props = slave->props,
+        .proto_id = protocol_id,
+        .props = props,
         .prop_count = count,
     };
 
@@ -293,7 +305,7 @@ static zx_status_t intel_serialio_i2c_ioctl(
             return ZX_ERR_INVALID_ARGS;
 
         return intel_serialio_i2c_add_slave(device, args->chip_address_width,
-                                            args->chip_address);
+                                            args->chip_address, ZX_PROTOCOL_I2C, NULL, 0);
     }
     case IOCTL_I2C_BUS_REMOVE_SLAVE: {
         const i2c_ioctl_remove_slave_args_t* args = in_buf;
@@ -330,7 +342,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
         }
 
         uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
-        zxlogf(TRACE, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
+        zxlogf(SPEW, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
         if (intr_stat & (1u << INTR_RX_UNDER)) {
             // If we hit an underflow, it's a bug.
             zx_object_signal(dev->event_handle, 0, ERROR_DETECTED_SIGNAL);
@@ -744,9 +756,9 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
     uint32_t count = actual / sizeof(auxdata_i2c_device_t);
     uint32_t bus_speed = 0;
     while (count--) {
-        zxlogf(SPEW, "i2c: got child bus_master=%d ten_bit=%d address=0x%x bus_speed=%u"
+        zxlogf(TRACE, "i2c: got child[%u] bus_master=%d ten_bit=%d address=0x%x bus_speed=%u"
                      " protocol_id=0x%08x\n",
-               child->bus_master, child->ten_bit, child->address, child->bus_speed,
+               count, child->bus_master, child->ten_bit, child->address, child->bus_speed,
                child->protocol_id);
 
         if (bus_speed && bus_speed != child->bus_speed) {
@@ -759,7 +771,7 @@ static void intel_serialio_add_devices(intel_serialio_i2c_device_t* parent,
         }
         intel_serialio_i2c_add_slave(parent,
                 child->ten_bit ? I2C_10BIT_ADDRESS : I2C_7BIT_ADDRESS,
-                child->address);
+                child->address, child->protocol_id, child->props, child->propcount);
         child += 1;
     }
 }
