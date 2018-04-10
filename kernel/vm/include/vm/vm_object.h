@@ -67,12 +67,6 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // find a contiguous run of physical pages to back the range of the object
-    virtual zx_status_t CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
-                                              uint8_t alignment_log2) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
     // free a range of the vmo back to the default state
     virtual zx_status_t DecommitRange(uint64_t offset, uint64_t len, uint64_t* decommitted) {
         return ZX_ERR_NOT_SUPPORTED;

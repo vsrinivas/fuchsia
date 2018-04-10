@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/console.h>
@@ -102,6 +103,74 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::
 
     *obj = fbl::move(vmo);
 
+    return ZX_OK;
+}
+
+zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t size,
+                                            uint8_t alignment_log2, fbl::RefPtr<VmObject>* obj) {
+    DEBUG_ASSERT(alignment_log2 < sizeof(uint64_t) * 8);
+    // make sure size is page aligned
+    zx_status_t status = RoundSize(size, &size);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fbl::AllocChecker ac;
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    if (size == 0) {
+        *obj = fbl::move(vmo);
+        return ZX_OK;
+    }
+
+    // allocate the pages
+    list_node page_list;
+    list_initialize(&page_list);
+
+    size_t num_pages = size / PAGE_SIZE;
+    size_t allocated = pmm_alloc_contiguous(num_pages, pmm_alloc_flags, alignment_log2, nullptr, &page_list);
+    if (allocated != num_pages) {
+        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", num_pages, allocated);
+        pmm_free(&page_list);
+        return ZX_ERR_NO_MEMORY;
+    }
+    auto cleanup_phys_pages = fbl::MakeAutoCall([&page_list]() {
+        pmm_free(&page_list);
+    });
+
+    DEBUG_ASSERT(list_length(&page_list) == allocated);
+
+    // add them to the appropriate range of the object
+    VmObjectPaged* vmop = static_cast<VmObjectPaged*>(vmo.get());
+    for (uint64_t off = 0; off < size; off += PAGE_SIZE) {
+        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
+        ASSERT(p);
+
+        InitializeVmPage(p);
+
+        // TODO: remove once pmm returns zeroed pages
+        ZeroPage(p);
+
+        // We don't need thread-safety analysis here, since this VMO has not
+        // been shared anywhere yet.
+        [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+            status = vmop->page_list_.AddPage(p, off);
+        }();
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        // Mark the pages as pinned, so they can't be physically rearranged
+        // underneath us.
+        p->object.pin_count++;
+        p->object.contiguous_pin = true;
+    }
+
+    cleanup_phys_pages.cancel();
+    *obj = fbl::move(vmo);
     return ZX_OK;
 }
 
@@ -507,90 +576,6 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len, uint64_t* 
     }
 
     DEBUG_ASSERT(list_is_empty(&page_list));
-
-    // for now we only support committing as much as we were asked for
-    DEBUG_ASSERT(!committed || *committed == count * PAGE_SIZE);
-
-    return ZX_OK;
-}
-
-zx_status_t VmObjectPaged::CommitRangeContiguous(uint64_t offset, uint64_t len, uint64_t* committed,
-                                                 uint8_t alignment_log2) {
-    canary_.Assert();
-    LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 ", alignment %hhu\n", offset, len, alignment_log2);
-
-    if (committed)
-        *committed = 0;
-
-    AutoLock a(&lock_);
-
-    // This function does not support cloned VMOs.
-    if (unlikely(parent_)) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // trim the size
-    uint64_t new_len;
-    if (!TrimRange(offset, len, size_, &new_len))
-        return ZX_ERR_OUT_OF_RANGE;
-
-    // was in range, just zero length
-    if (new_len == 0)
-        return ZX_OK;
-
-    // compute a page aligned end to do our searches in to make sure we cover all the pages
-    uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
-    DEBUG_ASSERT(end > offset);
-
-    // make a pass through the list, making sure we have an empty run on the object
-    size_t count = 0;
-    for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        if (!page_list_.GetPage(o))
-            count++;
-    }
-
-    DEBUG_ASSERT(count == new_len / PAGE_SIZE);
-    if (count != new_len / PAGE_SIZE) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    // allocate count number of pages
-    list_node page_list;
-    list_initialize(&page_list);
-
-    size_t allocated = pmm_alloc_contiguous(count, pmm_alloc_flags_, alignment_log2, nullptr, &page_list);
-    if (allocated < count) {
-        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", count, allocated);
-        pmm_free(&page_list);
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    DEBUG_ASSERT(list_length(&page_list) == allocated);
-
-    // unmap all of the pages in this range on all the mapping regions
-    RangeChangeUpdateLocked(offset, end - offset);
-
-    // add them to the appropriate range of the object
-    for (uint64_t o = offset; o < end; o += PAGE_SIZE) {
-        vm_page_t* p = list_remove_head_type(&page_list, vm_page_t, free.node);
-        ASSERT(p);
-
-        InitializeVmPage(p);
-
-        // TODO: remove once pmm returns zeroed pages
-        ZeroPage(p);
-
-        auto status = page_list_.AddPage(p, o);
-        DEBUG_ASSERT(status == ZX_OK);
-
-        // Mark the pages as pinned, so they can't be physically rearranged
-        // underneath us.
-        p->object.pin_count++;
-        p->object.contiguous_pin = true;
-
-        if (committed)
-            *committed += PAGE_SIZE;
-    }
 
     // for now we only support committing as much as we were asked for
     DEBUG_ASSERT(!committed || *committed == count * PAGE_SIZE);

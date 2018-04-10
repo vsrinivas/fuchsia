@@ -436,21 +436,10 @@ zx_status_t VmAspace::AllocContiguous(const char* name, size_t size, void** ptr,
 
     // create a vm object to back it
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
+    zx_status_t status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, size, align_pow2, &vmo);
     if (status != ZX_OK)
         return status;
     vmo->set_name(name, strlen(name));
-
-    // always immediately commit memory to the object
-    uint64_t committed;
-    status = vmo->CommitRangeContiguous(0, size, &committed, align_pow2);
-    if (status < 0)
-        return status;
-    if (static_cast<size_t>(committed) < size) {
-        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
-                static_cast<size_t>(committed) / PAGE_SIZE);
-        return ZX_ERR_NO_MEMORY;
-    }
 
     return MapObjectInternal(fbl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                              arch_mmu_flags);

@@ -184,30 +184,22 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
         return status;
     }
 
-    size = ROUNDUP_PAGE_SIZE(size);
+    auto align_log2_arg = static_cast<uint8_t>(alignment_log2);
+
     // create a vm object
     fbl::RefPtr<VmObject> vmo;
-    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, size, &vmo);
-    if (status != ZX_OK)
+    status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, size, align_log2_arg, &vmo);
+    if (status != ZX_OK) {
         return status;
-
-    // always immediately commit memory to the object
-    uint64_t committed;
-    // CommitRangeContiguous takes a uint8_t for the alignment
-    auto align_log2_arg = static_cast<uint8_t>(alignment_log2);
-    status = vmo->CommitRangeContiguous(0, size, &committed, align_log2_arg);
-    if (status < 0 || (size_t)committed < size) {
-        LTRACEF("failed to allocate enough pages (asked for %zu, got %zu)\n", size / PAGE_SIZE,
-                (size_t)committed / PAGE_SIZE);
-        return ZX_ERR_NO_MEMORY;
     }
 
     // create a Vm Object dispatcher
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
     zx_status_t result = VmObjectDispatcher::Create(fbl::move(vmo), &dispatcher, &rights);
-    if (result != ZX_OK)
+    if (result != ZX_OK) {
         return result;
+    }
 
     // create a handle and attach the dispatcher to it
     return out->make(fbl::move(dispatcher), rights);
