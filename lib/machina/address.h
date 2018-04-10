@@ -93,8 +93,6 @@ static constexpr uint64_t kPicSize                          = 0x2;
 // PIT ports.
 static constexpr uint64_t kPitBase                          = 0x40;
 static constexpr uint64_t kPitSize                          = 0x4;
-static constexpr uint64_t kPitChannel0                      = 0x40;
-static constexpr uint64_t kPitControlPort                   = 0x43;
 
 // PM1 ports.
 static constexpr uint64_t kPm1EventPort                     = 0x1000;
