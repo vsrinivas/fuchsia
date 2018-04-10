@@ -35,7 +35,7 @@ static int node_callback(int depth, const char *name, void *cookie) {
 
     if (!strcmp(name, "chosen")) {
         ctx->node = NODE_CHOSEN;
-    } else if (!strcmp(name, "memory")) {
+    } else if (!strcmp(name, "memory") || !strcmp(name, "memory@00000000")) {
         ctx->node = NODE_MEMORY;
     } else {
         ctx->node = NODE_NONE;
