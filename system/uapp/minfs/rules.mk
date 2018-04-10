@@ -13,19 +13,19 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/minfs \
-    system/ulib/fs \
-    system/ulib/async.cpp \
     system/ulib/async \
-    system/ulib/async-loop.cpp \
     system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
+    system/ulib/async.cpp \
     system/ulib/block-client \
-    system/ulib/trace-provider \
+    system/ulib/fbl \
+    system/ulib/fs \
+    system/ulib/minfs \
+    system/ulib/sync \
     system/ulib/trace \
+    system/ulib/trace-provider \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
-    system/ulib/sync \
 
 MODULE_LIBS := \
     system/ulib/async.default \

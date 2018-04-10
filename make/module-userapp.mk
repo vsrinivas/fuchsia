@@ -50,7 +50,7 @@ $(MODULE_USERAPP_OBJECT): $(USER_SCRT1_OBJ) $(MODULE_OBJS) $(MODULE_EXTRA_OBJS) 
 	@$(MKDIR)
 	$(call BUILDECHO,linking userapp $@)
 	$(NOECHO)$(USER_LD) $(GLOBAL_LDFLAGS) $(ARCH_LDFLAGS) $(_LDFLAGS) \
-		$(_OBJS) $(_LIBS) $(LIBGCC) -o $@
+		$(_OBJS) --start-group $(_LIBS) --end-group $(LIBGCC) -o $@
 
 EXTRA_IDFILES += $(MODULE_USERAPP_OBJECT).id
 
