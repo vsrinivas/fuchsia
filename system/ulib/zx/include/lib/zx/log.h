@@ -28,11 +28,6 @@ public:
 
     static zx_status_t create(uint32_t flags, log* result);
 
-    // TODO(kulakowski) Remove this after this rolls up the stack.
-    static zx_status_t create(log* result, uint32_t flags) {
-        return create(flags, result);
-    }
-
     zx_status_t write(uint32_t len, const void* buffer, uint32_t flags) const {
         return zx_log_write(get(), len, buffer, flags);
     }
