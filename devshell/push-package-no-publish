@@ -3,10 +3,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+### push already published packages to a device
+
 ## usage: fx push-package-no-publish [-d|--device <device_address>] [pkg1 pkg2 ...]
 ##
 ## Push packages to a device. One or more package names may be supplied. If no
-## package name is suppled all pakages in the build output will be pushed. The
+## package name is suppled all packages in the build output will be pushed. The
 ## target must be reachable from the host and most already know the host's IP
 ## address. This assumes the package has already been published.
 ##
