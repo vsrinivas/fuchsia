@@ -206,6 +206,36 @@ public:
         connection->ReleaseBuffer(&abi_buffer);
     }
 
+    void CommitLargeBuffer()
+    {
+        FakeConnectionOwner owner;
+        auto connection = MsdArmConnection::Create(0, &owner);
+        EXPECT_TRUE(connection);
+        constexpr uint64_t kBufferSize = 1ul << 35; // 32 GB
+
+        std::shared_ptr<MsdArmBuffer> buffer(
+            MsdArmBuffer::Create(kBufferSize, "test-buffer").release());
+        EXPECT_TRUE(buffer);
+        MsdArmAbiBuffer abi_buffer(buffer);
+
+        constexpr uint64_t kGpuOffset[] = {1000, 1100};
+
+        EXPECT_TRUE(connection->AddMapping(
+            std::make_unique<GpuMapping>(kGpuOffset[0] * PAGE_SIZE, 0, PAGE_SIZE * 100, 0,
+                                         connection.get(), connection->GetBuffer(&abi_buffer))));
+
+        // Committing 1 page should be fine.
+        EXPECT_TRUE(connection->CommitMemoryForBuffer(&abi_buffer, 0, 1));
+
+        // MockBusMapper will fail committing the entire region.
+        EXPECT_TRUE(connection->AddMapping(
+            std::make_unique<GpuMapping>(kGpuOffset[1] * PAGE_SIZE, 0, kBufferSize, 0,
+                                         connection.get(), connection->GetBuffer(&abi_buffer))));
+
+        EXPECT_FALSE(connection->CommitMemoryForBuffer(&abi_buffer, 0, kBufferSize / PAGE_SIZE));
+        connection->ReleaseBuffer(&abi_buffer);
+    }
+
     void GrowableMemory()
     {
         FakeConnectionOwner owner;
@@ -354,6 +384,12 @@ TEST(TestConnection, CommitMemory)
 {
     TestConnection test;
     test.CommitMemory();
+}
+
+TEST(TestConnection, CommitLargeBuffer)
+{
+    TestConnection test;
+    test.CommitLargeBuffer();
 }
 
 TEST(TestConnection, Notification)

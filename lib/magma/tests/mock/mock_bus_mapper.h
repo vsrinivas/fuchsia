@@ -34,6 +34,9 @@ public:
     MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t start_page_index,
                     uint32_t page_count) override
     {
+        // Prevent mapping unreasonably large numbers of pages.
+        if (page_count > (1ul << 33) / PAGE_SIZE)
+            return nullptr;
         auto mapping = std::make_unique<BusMapping>(start_page_index, page_count);
         for (auto& addr : mapping->page_addr_) {
             addr = start_addr_;
