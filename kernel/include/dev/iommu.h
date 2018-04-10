@@ -60,6 +60,13 @@ public:
                             uint64_t offset, size_t size, uint32_t perms,
                             dev_vaddr_t* vaddr, size_t* mapped_len) = 0;
 
+    // Same as Map, but with additional guarantee that this will never return a
+    // partial mapping.  It will either return a single contiguous mapping or
+    // return a failure.
+    virtual zx_status_t MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo,
+                                      uint64_t offset, size_t size, uint32_t perms,
+                                      dev_vaddr_t* vaddr, size_t* mapped_len) = 0;
+
     // Revoke access to the range of addresses [vaddr, vaddr + size) for the
     // device identified by |bus_txn_id|.
     //
