@@ -3,7 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("fuchsia-zircon") {
   with_unit_tests = true
+}
+
+rustc_library("fuchsia-zircon-rustc") {
+  name = "fuchsia_zircon"
+  version = "0.3.4"
+  with_unit_tests = true
+  deps = [
+    "fuchsia-zircon-sys:fuchsia-zircon-sys-rustc",
+    "//third_party/rust-crates/rustc_deps:bitflags",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
 }
