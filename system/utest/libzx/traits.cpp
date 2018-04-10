@@ -214,7 +214,7 @@ bool traits_test() {
 
     {
         zx::log log;
-        ASSERT_EQ(zx::log::create(&log, 0u), ZX_OK);
+        ASSERT_EQ(zx::log::create(0u, &log), ZX_OK);
         duplicating(log);
         user_signaling(log);
         waiting(log);

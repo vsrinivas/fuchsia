@@ -8,7 +8,7 @@
 
 namespace zx {
 
-zx_status_t log::create(log* result, uint32_t flags) {
+zx_status_t log::create(uint32_t flags, log* result) {
     zx_status_t status;
     zx_handle_t h;
     if ((status = zx_log_create(flags, &h)) < 0) {
