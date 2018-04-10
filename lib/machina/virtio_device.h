@@ -17,7 +17,7 @@
 namespace machina {
 
 // Set of features that are supported by the bus transparently for all devices.
-static constexpr uint32_t kVirtioBusFeatures = 1u << VIRTIO_F_RING_EVENT_IDX;
+static constexpr uint32_t kVirtioBusFeatures = 0;
 
 class VirtioDevice;
 
