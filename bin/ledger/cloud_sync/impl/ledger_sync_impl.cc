@@ -51,7 +51,7 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
         }
       });
   auto page_sync = std::make_unique<PageSyncImpl>(
-      environment_->main_runner(), page_storage, page_sync_client,
+      environment_->async(), page_storage, page_sync_client,
       encryption_service_, std::move(page_cloud),
       std::make_unique<backoff::ExponentialBackoff>(),
       std::make_unique<backoff::ExponentialBackoff>(), error_callback,

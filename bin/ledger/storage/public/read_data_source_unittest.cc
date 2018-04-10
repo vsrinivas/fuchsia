@@ -9,7 +9,6 @@
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace storage {
 namespace {
@@ -17,11 +16,11 @@ namespace {
 // Data source which returns the given content byte-by-byte in separate chunks.
 class SplittingDataSource : public DataSource {
  public:
-  SplittingDataSource(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  SplittingDataSource(async_t* async,
                       std::string content)
       : content_(std::move(content)),
         index_(0),
-        task_runner_(std::move(task_runner)) {}
+        task_runner_(async) {}
 
   uint64_t GetSize() override { return content_.size(); };
 
@@ -57,7 +56,7 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::unique_ptr<DataSource::DataChunk> content;
   ReadDataSource(
       &container,
-      std::make_unique<SplittingDataSource>(message_loop_.task_runner(),
+      std::make_unique<SplittingDataSource>(message_loop_.async(),
                                             expected_content),
       callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
@@ -76,7 +75,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
     callback::ManagedContainer container;
     ReadDataSource(
         &container,
-        std::make_unique<SplittingDataSource>(message_loop_.task_runner(),
+        std::make_unique<SplittingDataSource>(message_loop_.async(),
                                               expected_content),
         callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   }

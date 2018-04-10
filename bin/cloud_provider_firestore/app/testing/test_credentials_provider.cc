@@ -6,9 +6,8 @@
 
 namespace cloud_provider_firestore {
 
-TestCredentialsProvider::TestCredentialsProvider(
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+TestCredentialsProvider::TestCredentialsProvider(async_t* async)
+    : task_runner_(async) {}
 
 TestCredentialsProvider::~TestCredentialsProvider() {}
 

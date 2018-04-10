@@ -29,7 +29,7 @@ UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
       watcher_binding_(this),
-      task_runner_(environment_->main_runner()) {
+      task_runner_(environment_->async()) {
   FXL_DCHECK(on_version_mismatch_);
 }
 

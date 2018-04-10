@@ -9,10 +9,11 @@
 #include <queue>
 
 #include <fuchsia/cpp/cloud_provider.h>
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_upload.h"
@@ -55,7 +56,7 @@ class PageSyncImpl : public PageSync,
                      public PageDownload::Delegate,
                      public PageUpload::Delegate {
  public:
-  PageSyncImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  PageSyncImpl(async_t* async,
                storage::PageStorage* storage,
                storage::PageSyncClient* sync_client,
                encryption::EncryptionService* encryption_service,

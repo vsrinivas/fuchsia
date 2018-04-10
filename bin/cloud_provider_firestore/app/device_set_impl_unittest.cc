@@ -21,7 +21,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
                           public cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()
-      : test_credentials_provider_(message_loop_.task_runner()),
+      : test_credentials_provider_(message_loop_.async()),
         device_set_impl_("user_path",
                          &test_credentials_provider_,
                          &firestore_service_,

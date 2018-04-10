@@ -23,7 +23,7 @@ namespace {
 class PageCloudImplTest : public gtest::TestWithMessageLoop {
  public:
   PageCloudImplTest()
-      : test_credentials_provider_(message_loop_.task_runner()),
+      : test_credentials_provider_(message_loop_.async()),
         page_cloud_impl_("page_path",
                          &test_credentials_provider_,
                          &firestore_service_,

@@ -17,7 +17,7 @@ namespace cloud_provider_firestore {
 
 class TestCredentialsProvider : public CredentialsProvider {
  public:
-  explicit TestCredentialsProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestCredentialsProvider(async_t* async);
   ~TestCredentialsProvider() override;
 
   void GetCredentials(

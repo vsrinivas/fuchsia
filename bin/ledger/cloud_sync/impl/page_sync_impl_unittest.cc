@@ -73,7 +73,7 @@ class PageSyncImplTest : public gtest::TestWithMessageLoop {
         std::make_unique<TestSyncStateWatcher>();
     state_watcher_ = watcher.get();
     page_sync_ = std::make_unique<PageSyncImpl>(
-        message_loop_.task_runner(), &storage_, &storage_, &encryption_service_,
+        message_loop_.async(), &storage_, &storage_, &encryption_service_,
         std::move(page_cloud_ptr_),
         std::make_unique<TestBackoff>(&download_backoff_get_next_calls_),
         std::make_unique<TestBackoff>(&upload_backoff_get_next_calls_),

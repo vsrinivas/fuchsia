@@ -26,7 +26,7 @@ PageManager::PageManager(Environment* environment,
       page_sync_(std::move(page_sync)),
       merge_resolver_(std::move(merge_resolver)),
       sync_timeout_(sync_timeout),
-      task_runner_(environment->main_runner()) {
+      task_runner_(environment->async()) {
   pages_.set_on_empty([this] { CheckEmpty(); });
   snapshots_.set_on_empty([this] { CheckEmpty(); });
   page_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });

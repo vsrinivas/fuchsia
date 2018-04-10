@@ -33,7 +33,7 @@ MergeResolver::MergeResolver(fxl::Closure on_destroyed,
       storage_(storage),
       backoff_(std::move(backoff)),
       on_destroyed_(std::move(on_destroyed)),
-      task_runner_(environment->main_runner()) {
+      task_runner_(environment->async()) {
   storage_->AddCommitWatcher(this);
   PostCheckConflicts(DelayedStatus::DONT_DELAY);
 }

@@ -41,7 +41,7 @@ class BasePageDownloadTest : public gtest::TestWithMessageLoop,
       : storage_(&message_loop_),
         encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
-        task_runner_(message_loop_.task_runner()) {
+        task_runner_(message_loop_.async()) {
     page_download_ = std::make_unique<PageDownload>(
         &task_runner_, &storage_, &storage_, &encryption_service_,
         &page_cloud_ptr_, this, std::make_unique<backoff::TestBackoff>());

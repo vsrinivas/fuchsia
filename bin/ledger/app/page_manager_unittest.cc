@@ -70,8 +70,7 @@ class FakePageSync : public sync_coordinator::PageSyncEmptyImpl {
 class PageManagerTest : public gtest::TestWithMessageLoop {
  public:
   PageManagerTest()
-      : environment_(fsl::MessageLoop::GetCurrent()->task_runner(),
-                     async_get_default()) {}
+      : environment_(message_loop_.task_runner(), message_loop_.async()) {}
   ~PageManagerTest() override {}
 
  protected:
