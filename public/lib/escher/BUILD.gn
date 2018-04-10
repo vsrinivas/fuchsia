@@ -241,6 +241,7 @@ source_set("escher") {
     "util/enum_count.h",
     "util/epsilon_compare.h",
     "util/hash.h",
+    "util/hashable.h",
     "util/hasher.h",
     "util/hash_fnv_1a.h",
     "util/hash_map.h",

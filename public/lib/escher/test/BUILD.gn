@@ -21,6 +21,7 @@ executable("escher_unittests") {
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
     "util/hash_unittest.cc",
+    "util/hashable_unittest.cc",
     "util/hashmap_unittest.cc",
     "vk/buffer_unittest.cc",
   ]

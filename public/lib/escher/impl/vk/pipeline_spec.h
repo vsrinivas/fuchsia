@@ -18,7 +18,7 @@ class PipelineSpec {
   // pipeline cache.
   PipelineSpec();
 
-  struct Hash {
+  struct HashMapHasher {
     size_t operator()(const PipelineSpec& spec) const { return spec.hash_; }
   };
 

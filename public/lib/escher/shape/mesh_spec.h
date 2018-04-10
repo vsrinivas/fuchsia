@@ -44,7 +44,7 @@ size_t GetMeshAttributeSize(MeshAttribute attr);
 struct MeshSpec {
   MeshAttributes flags;
 
-  struct Hash {
+  struct HashMapHasher {
     std::size_t operator()(const MeshSpec& spec) const {
       return static_cast<std::uint32_t>(spec.flags);
     }

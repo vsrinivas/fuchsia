@@ -11,7 +11,7 @@ namespace escher {
 namespace impl {
 
 // Used to look up cached Vulkan pipelines that are compatible with the params.
-#pragma pack(push, 1)  // As required by escher::Hash<ModelPipelineSpec>
+#pragma pack(push, 1)  // As required by HashMapHasher<ModelPipelineSpec>
 struct ModelPipelineSpec {
   enum class ClipperState {
     // The current object clips subsequent objects to its bounds, until the

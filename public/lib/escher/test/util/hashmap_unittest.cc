@@ -24,7 +24,7 @@ struct HashMapCollisionKey {
            unhashed_int == other.unhashed_int;
   }
 
-  struct Hash {
+  struct HashMapHasher {
     size_t operator()(const HashMapCollisionKey& key) const {
       ++hash_count;
       Hasher h;
@@ -51,7 +51,7 @@ TEST(HashMap, CollisionsOK) {
   key1.unhashed_int = kVal1;
   key2.unhashed_int = kVal2;
 
-  HashMapCollisionKey::Hash key_hasher;
+  HashMapCollisionKey::HashMapHasher key_hasher;
   EXPECT_EQ(key_hasher(key1), key_hasher(key2));
   EXPECT_EQ(key_hasher.hash_count, 2U);
 

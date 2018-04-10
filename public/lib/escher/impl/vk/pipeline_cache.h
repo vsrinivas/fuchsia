@@ -26,7 +26,7 @@ class PipelineCache {
  private:
   std::unordered_map<PipelineSpec,
                      std::shared_future<PipelinePtr>,
-                     PipelineSpec::Hash>
+                     PipelineSpec::HashMapHasher>
       map_;
   std::mutex mutex_;
 

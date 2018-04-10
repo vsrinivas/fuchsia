@@ -8,6 +8,7 @@
 
 #include "lib/escher/util/hash.h"
 #include "lib/escher/util/hash_fnv_1a.h"
+#include "lib/fxl/logging.h"
 
 namespace escher {
 
@@ -19,7 +20,12 @@ class Hasher {
       : value_(initial_hash) {}
 
   // Return the current Hash value.
-  Hash value() const { return value_; }
+  Hash value() const {
+    // Elsewhere in the code, it will be useful to use a hash-val of zero to
+    // mean "lazily compute and return a hash value".
+    FXL_DCHECK(value_ != 0);
+    return value_;
+  }
 
   template <typename T>
   inline void data(const T* data, size_t count) {
@@ -79,11 +85,13 @@ class Hasher {
     u64(reinterpret_cast<uintptr_t>(ptr));
   }
 
-  inline void string(const char* str) {
+  inline void const_chars(const char* str) {
     char c;
     while ((c = *str++) != '\0')
       u32(uint8_t(c));
   }
+
+  inline void string(const std::string& str) { data(str.data(), str.length()); }
 
  private:
   uint64_t value_;
