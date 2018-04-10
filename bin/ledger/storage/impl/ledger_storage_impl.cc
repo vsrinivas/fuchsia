@@ -41,12 +41,12 @@ std::string GetId(fxl::StringView bytes) {
 }  // namespace
 
 LedgerStorageImpl::LedgerStorageImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     coroutine::CoroutineService* coroutine_service,
     encryption::EncryptionService* encryption_service,
     const std::string& base_storage_dir,
     const std::string& ledger_name)
-    : task_runner_(std::move(task_runner)),
+    : async_(async),
       coroutine_service_(coroutine_service),
       encryption_service_(encryption_service) {
   storage_dir_ = fxl::Concatenate({base_storage_dir, "/", kSerializationVersion,
@@ -67,7 +67,7 @@ void LedgerStorageImpl::CreatePageStorage(
     return;
   }
   auto result = std::make_unique<PageStorageImpl>(
-      task_runner_, coroutine_service_, encryption_service_, path,
+      async_, coroutine_service_, encryption_service_, path,
       std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),
@@ -96,7 +96,7 @@ void LedgerStorageImpl::GetPageStorage(
   }
 
   auto result = std::make_unique<PageStorageImpl>(
-      task_runner_, coroutine_service_, encryption_service_, path,
+      async_, coroutine_service_, encryption_service_, path,
       std::move(page_id));
   result->Init(
       fxl::MakeCopyable([callback = std::move(timed_callback),

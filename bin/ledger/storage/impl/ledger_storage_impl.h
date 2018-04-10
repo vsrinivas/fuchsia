@@ -7,7 +7,8 @@
 
 #include <string>
 
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/public/ledger_storage.h"
@@ -16,7 +17,7 @@ namespace storage {
 
 class LedgerStorageImpl : public LedgerStorage {
  public:
-  LedgerStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  LedgerStorageImpl(async_t* async,
                     coroutine::CoroutineService* coroutine_service,
                     encryption::EncryptionService* encryption_service,
                     const std::string& base_storage_dir,
@@ -40,7 +41,7 @@ class LedgerStorageImpl : public LedgerStorage {
  private:
   std::string GetPathFor(PageIdView page_id);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   coroutine::CoroutineService* const coroutine_service_;
   encryption::EncryptionService* const encryption_service_;
   std::string storage_dir_;

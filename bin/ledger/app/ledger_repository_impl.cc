@@ -67,7 +67,7 @@ void LedgerRepositoryImpl::GetLedger(
         encryption_service_factory_.MakeEncryptionService(name_as_string);
     std::unique_ptr<storage::LedgerStorage> ledger_storage =
         std::make_unique<storage::LedgerStorageImpl>(
-            environment_->main_runner(), environment_->coroutine_service(),
+            environment_->async(), environment_->coroutine_service(),
             encryption_service.get(), base_storage_dir_, name_as_string);
     std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
     if (user_sync_) {

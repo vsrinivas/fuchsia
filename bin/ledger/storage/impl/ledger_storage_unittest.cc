@@ -23,7 +23,7 @@ class LedgerStorageTest : public gtest::TestWithMessageLoop {
  public:
   LedgerStorageTest()
       : encryption_service_(message_loop_.async()),
-        storage_(message_loop_.task_runner(),
+        storage_(message_loop_.async(),
                  &coroutine_service_,
                  &encryption_service_,
                  tmp_dir_.path(),

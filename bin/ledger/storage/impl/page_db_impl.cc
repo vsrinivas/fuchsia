@@ -111,9 +111,8 @@ class JournalEntryIterator final : public Iterator<const EntryChange> {
 
 }  // namespace
 
-PageDbImpl::PageDbImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                       std::string db_path)
-    : db_(std::move(task_runner), std::move(db_path)) {}
+PageDbImpl::PageDbImpl(async_t* async, std::string db_path)
+    : db_(async, std::move(db_path)) {}
 
 PageDbImpl::~PageDbImpl() {}
 

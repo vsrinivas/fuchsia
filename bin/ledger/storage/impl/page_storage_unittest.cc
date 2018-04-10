@@ -12,6 +12,8 @@
 #include <set>
 #include <thread>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/callback/synchronous_task.h"
@@ -64,13 +66,13 @@ class PageStorageImplAccessorForTest {
   }
 
   static std::unique_ptr<PageStorageImpl> CreateStorage(
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      async_t* async,
       coroutine::CoroutineService* coroutine_service,
       encryption::EncryptionService* encryption_service,
       std::unique_ptr<PageDb> page_db,
       PageId page_id) {
     return std::unique_ptr<PageStorageImpl>(new PageStorageImpl(
-        std::move(task_runner), coroutine_service, encryption_service,
+        async, coroutine_service, encryption_service,
         std::move(page_db), std::move(page_id)));
   }
 };
@@ -89,18 +91,18 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
 // DataSource that returns an error on the callback to Get().
 class FakeErrorDataSource : public DataSource {
  public:
-  explicit FakeErrorDataSource(fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : task_runner_(std::move(task_runner)) {}
+  explicit FakeErrorDataSource(async_t* async) : async_(async) {}
 
   uint64_t GetSize() override { return 1; }
 
   void Get(std::function<void(std::unique_ptr<DataChunk>, Status)> callback)
       override {
-    task_runner_->PostTask(
-        [callback] { callback(nullptr, DataSource::Status::ERROR); });
+    async::PostTask(
+      async_,
+      [callback] { callback(nullptr, DataSource::Status::ERROR); });
   }
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 };
 
 class FakeCommitWatcher : public CommitWatcher {
@@ -192,7 +194,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     tmp_dir_ = files::ScopedTempDir();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
-        message_loop_.task_runner(), &coroutine_service_, &encryption_service_,
+        message_loop_.async(), &coroutine_service_, &encryption_service_,
         tmp_dir_.path(), id);
 
     bool called;
@@ -968,7 +970,7 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   std::unique_ptr<PageStorageImpl> test_storage =
       PageStorageImplAccessorForTest::CreateStorage(
-          message_loop_.task_runner(), &coroutine_service_,
+          message_loop_.async(), &coroutine_service_,
           &encryption_service_, std::make_unique<FakePageDbImpl>(),
           RandomString(10));
 
@@ -1123,7 +1125,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 
 TEST_F(PageStorageTest, AddObjectFromLocalError) {
   auto data_source =
-      std::make_unique<FakeErrorDataSource>(message_loop_.task_runner());
+      std::make_unique<FakeErrorDataSource>(message_loop_.async());
   bool called;
   Status status;
   ObjectIdentifier object_identifier;

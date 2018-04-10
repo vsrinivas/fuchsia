@@ -9,16 +9,16 @@
 
 #include <utility>
 
+#include <lib/async/dispatcher.h>
+
 #include "leveldb/db.h"
 #include "leveldb/write_batch.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace storage {
 
 class LevelDb : public Db {
  public:
-  explicit LevelDb(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                   std::string db_path);
+  explicit LevelDb(async_t* async, std::string db_path);
 
   ~LevelDb() override;
 
@@ -52,7 +52,7 @@ class LevelDb : public Db {
           iterator) override;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   const std::string db_path_;
   std::unique_ptr<leveldb::DB> db_;
 

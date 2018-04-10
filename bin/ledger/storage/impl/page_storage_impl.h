@@ -10,12 +10,13 @@
 #include <queue>
 #include <set>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/managed_container.h"
 #include "garnet/lib/callback/operation_serializer.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"
 #include "peridot/bin/ledger/storage/impl/page_db_impl.h"
@@ -29,7 +30,7 @@ namespace storage {
 
 class PageStorageImpl : public PageStorage {
  public:
-  PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  PageStorageImpl(async_t* async,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
                   std::string page_dir,
@@ -147,7 +148,7 @@ class PageStorageImpl : public PageStorage {
  private:
   friend class PageStorageImplAccessorForTest;
 
-  PageStorageImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  PageStorageImpl(async_t* async,
                   coroutine::CoroutineService* coroutine_service,
                   encryption::EncryptionService* encryption_service,
                   std::unique_ptr<PageDb> page_db,
@@ -244,7 +245,7 @@ class PageStorageImpl : public PageStorage {
                       std::unique_ptr<DataSource::DataChunk> data,
                       ChangeSource source);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner;
+  async_t* const async_;
   coroutine::CoroutineService* const coroutine_service_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
