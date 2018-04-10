@@ -10,7 +10,7 @@ etc.
 ## Example usage
 
 ```
-./scripts/run-zircon-x86-64 -c userboot=bin/core-tests
+./scripts/run-zircon-x64 -c userboot=bin/core-tests
 ```
 
 ## Notes

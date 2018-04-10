@@ -429,7 +429,7 @@ This option sets the default boot device to netboot, use a local zircon.bin or t
 
 Pass each option using -c, for example:
 ```
-./scripts/run-zircon-x86-64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
+./scripts/run-zircon-x64 -c gfxconsole.font=18x32 -c gfxconsole.early=false
 ```
 
 ## in GigaBoot20x6, when netbooting
