@@ -439,7 +439,7 @@ private:
             op->context_id, op->commands_size, op->command_data(), op->semaphore_count,
             op->semaphores);
         if (!status)
-            SetError(status);
+            SetError(status.get());
         return true;
     }
 
@@ -458,7 +458,7 @@ private:
             delegate_->PageFlip(op->buffer_id, op->wait_semaphore_count, op->signal_semaphore_count,
                                 op->semaphore_ids, std::move(buffer_presented_semaphore));
         if (!status)
-            SetError(status);
+            SetError(status.get());
         return true;
     }
 

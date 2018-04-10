@@ -48,6 +48,7 @@ source_set("magma_util_tests") {
     "test_macros.cc",
     "test_semaphore_port.cc",
     "test_sleep.cc",
+    "test_status.cc",
   ]
 
   deps = [

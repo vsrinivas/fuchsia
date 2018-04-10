@@ -17,7 +17,7 @@ public:
 
     bool ok() const { return status_ == MAGMA_STATUS_OK; }
 
-    operator bool() const { return ok(); }
+    explicit operator bool() const { return ok(); }
 
 private:
     magma_status_t status_;
