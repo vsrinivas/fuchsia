@@ -221,6 +221,20 @@ static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) {
     mp_set_cpu_busy(cpu);
 }
 
+/* remove the thread from the run queue it's in */
+static void remove_from_run_queue(thread_t* t, int prio_queue) {
+    DEBUG_ASSERT(t->state == THREAD_READY);
+    DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
+
+    list_delete(&t->queue_node);
+
+    // clear the old cpu's queue bitmap if that was the last entry
+    struct percpu* c = &percpu[t->curr_cpu];
+    if (list_is_empty(&c->run_queue[prio_queue])) {
+        c->run_queue_bitmap &= ~(1u << prio_queue);
+    }
+}
+
 /* using the per cpu run queue bitmap, find the highest populated queue */
 static uint highest_run_queue(const struct percpu* c) {
     return HIGHEST_PRIORITY - __builtin_clz(c->run_queue_bitmap) -
@@ -556,14 +570,7 @@ void sched_migrate(thread_t* t) {
 
         // it's sitting in a run queue somewhere, so pull it out of that one and find a new home
         DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
-        list_delete(&t->queue_node);
-
-        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
-
-        struct percpu* c = &percpu[t->curr_cpu];
-        if (list_is_empty(&c->run_queue[t->effec_priority])) {
-            c->run_queue_bitmap &= ~(1u << t->effec_priority);
-        }
+        remove_from_run_queue(t, t->effec_priority);
 
         find_cpu_and_insert(t, &local_resched, &accum_cpu_mask);
         break;
@@ -599,15 +606,7 @@ static void sched_priority_changed(thread_t* t, int old_prio,
     case THREAD_READY:
         // it's sitting in a run queue somewhere, remove and add back to the proper queue on that cpu
         DEBUG_ASSERT_MSG(list_in_list(&t->queue_node), "thread %p name %s curr_cpu %u\n", t, t->name, t->curr_cpu);
-        list_delete(&t->queue_node);
-
-        DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
-
-        // clear the old cpu's queue bitmap if that was the last entry
-        struct percpu* c = &percpu[t->curr_cpu];
-        if (list_is_empty(&c->run_queue[old_prio])) {
-            c->run_queue_bitmap &= ~(1u << old_prio);
-        }
+        remove_from_run_queue(t, old_prio);
 
         // insert ourself into the new queue
         if (t->effec_priority > old_prio) {
