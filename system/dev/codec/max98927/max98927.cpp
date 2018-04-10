@@ -155,6 +155,29 @@ void MAX98927Device::Test() {
     zxlogf(INFO, "max98927: test tone done\n");
 }
 
+void MAX98927Device::Enable() {
+    // PCM config - slave mode
+    WriteReg(PCM_MASTER_MODE, 0);
+
+    // PCM config - 48kHz 16-bits TDM0
+    WriteReg(PCM_SAMPLE_RATE_SETUP_1, PCM_SAMPLE_RATE_SETUP_1_DIG_IF_SR(0x8));
+    WriteReg(PCM_SAMPLE_RATE_SETUP_2, PCM_SAMPLE_RATE_SETUP_2_SPK_SR(0x8) |
+                                      PCM_SAMPLE_RATE_SETUP_2_IVADC_SR(0x8));
+    WriteReg(PCM_MODE_CFG, PCM_MODE_CFG_CHANSZ_16BITS | PCM_MODE_CFG_FORMAT_TDM0);
+    WriteReg(PCM_CLOCK_SETUP, 0x6);
+
+    // Enable TX channels
+    WriteReg(PCM_RX_EN_A, 0x3);
+
+    // Set speaker source to DAI
+    WriteReg(SPK_SRC_SEL, 0);
+
+    // The datasheet recommends GLOBAL_ENABLE then AMP_ENABLE, but
+    // the part errors when the bits are toggled in that order.
+    WriteReg(AMP_ENABLE, AMP_ENABLE_EN);
+    WriteReg(GLOBAL_ENABLE, GLOBAL_ENABLE_EN);
+}
+
 zx_status_t MAX98927Device::Initialize() {
     // Reset device
     WriteReg(SOFTWARE_RESET, SOFTWARE_RESET_RST);
@@ -170,9 +193,9 @@ zx_status_t MAX98927Device::Initialize() {
     // Default monomix input channel 1 is PCM RX channel 1
     WriteReg(PCM_SPK_MONOMIX_B, PCM_SPK_MONOMIX_B_CFG_CH1_SRC(1));
 
-    // Default volume (+10dB)
-    WriteReg(AMP_VOL_CTRL, 0x2C);
-    WriteReg(SPK_GAIN, SPK_GAIN_PCM(SPK_GAIN_15DB));
+    // Default volume (-13dB)
+    WriteReg(AMP_VOL_CTRL, 0x00);
+    WriteReg(SPK_GAIN, SPK_GAIN_PCM(SPK_GAIN_3DB));
 
     // Enable DC blocking filter
     WriteReg(AMP_DSP_CFG, AMP_DSP_CFG_DCBLK_EN);

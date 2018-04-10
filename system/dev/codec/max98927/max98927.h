@@ -32,6 +32,9 @@ private:
     // Play a test tone
     void Test();
 
+    // Enable the device
+    void Enable();
+
     // Methods to read/write registers
     uint8_t ReadReg(uint16_t addr);
     void WriteReg(uint16_t addr, uint8_t val);

@@ -98,6 +98,7 @@ constexpr uint8_t PCM_MODE_CFG_CHANSZ_16BITS    = (1 << 6);
 constexpr uint8_t PCM_MODE_CFG_CHANSZ_24BITS    = (2 << 6);
 constexpr uint8_t PCM_MODE_CFG_CHANSZ_32BITS    = (3 << 6);
 constexpr uint8_t PCM_MODE_CFG_FORMAT_I2S       = (0 << 3);
+constexpr uint8_t PCM_MODE_CFG_FORMAT_TDM0      = (3 << 3);
 constexpr uint8_t PCM_MODE_CFG_BLKEDGE_FALLING  = (1 << 2);
 constexpr uint8_t PCM_MODE_CFG_LRCLKPOL_FALLING = (1 << 1);
 constexpr uint8_t PCM_MODE_CFG_TX_EXTRA_HIZ     = (1 << 0);
