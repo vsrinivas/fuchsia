@@ -49,3 +49,10 @@ ln -s `pwd`/scripts/fx ~/bin
 
 or just run the tool directly as `scripts/fx`. Make sure you have **jiri** in
 your PATH.
+
+## Who works on the code
+
+In the root of every repository and in many other directories are
+MAINTAINERS files. These list email addresses of individuals
+responsible for code under the current directory. See
+[maintainers.md](maintainers.md) for more discussion.
