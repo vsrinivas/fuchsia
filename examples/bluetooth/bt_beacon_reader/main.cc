@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fsl/tasks/message_loop.h"
-
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include "lib/fxl/command_line.h"
 
@@ -13,7 +12,7 @@ int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   bool just_tilts = command_line.HasOption("tilt");
 
-  fsl::MessageLoop message_loop;
+  async::Loop message_loop(&kAsyncLoopConfigMakeDefault);
 
   bt_beacon_reader::App app(just_tilts);
 
