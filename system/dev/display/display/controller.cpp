@@ -114,6 +114,7 @@ void Controller::OnDisplayVsync(int32_t display_id, void* handle) {
     if (images) {
         while (!images->is_empty()) {
             auto& image = images->front();
+            image.OnPresent();
             if (image.info().handle == handle) {
                 break;
             } else {

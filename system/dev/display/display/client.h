@@ -21,6 +21,7 @@
 
 #include "controller.h"
 #include "display/c/fidl.h"
+#include "fence.h"
 #include "id-map.h"
 #include "image.h"
 
@@ -39,6 +40,8 @@ public:
     bool has_pending_image;
     fbl::RefPtr<Image> pending_image;
 
+    // Image which are waiting to be displayed
+    fbl::DoublyLinkedList<fbl::RefPtr<Image>> waiting_images;
     // The image which has most recently been sent to the display controller impl
     fbl::RefPtr<Image> displayed_image;
 
@@ -49,7 +52,7 @@ public:
 // The Client class manages all state associated with an open display client
 // connection. Over than initialization, all methods of this class execute on
 // on the controller's looper, so no synchronization is necessary.
-class Client {
+class Client : private FenceCallback {
 public:
     Client(Controller* controller, ClientProxy* proxy, bool is_vc);
     ~Client();
@@ -62,6 +65,9 @@ public:
                            uint32_t removed_count);
     void SetOwnership(bool is_owner);
 
+    void OnFenceFired(FenceReference* fence) override;
+    void OnRefForFenceDead(Fence* fence) override;
+
     // Resets state associated with the remote client. Note that this does not fully reset
     // the class, as the Client instance can get re-inited with InitApiConnection.
     void Reset();
@@ -71,6 +77,10 @@ private:
     void HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleReleaseImage(const display_ControllerReleaseImageRequest* req,
+                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleImportEvent(const display_ControllerImportEventRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleReleaseEvent(const display_ControllerReleaseEventRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetDisplayImage(const display_ControllerSetDisplayImageRequest* req,
                                fidl::Builder* resp_builder, const fidl_type_t** resp_table);
@@ -95,6 +105,11 @@ private:
     DisplayConfig::Map configs_;
     bool pending_config_valid_ = false;
     bool is_owner_ = false;
+    bool config_applied_ = false;
+
+    Fence::Map fences_ __TA_GUARDED(fence_mtx_);
+    // Mutex held when creating or destroying fences.
+    mtx_t fence_mtx_;
 
     void HandleControllerApi(async_t* async, async::WaitBase* self,
                              zx_status_t status, const zx_packet_signal_t* signal);
@@ -104,6 +119,8 @@ private:
                                const int32_t* displays_removed, uint32_t removed_count);
     void ApplyConfig();
     bool CheckConfig();
+
+    fbl::RefPtr<FenceReference> GetFence(int32_t id);
 };
 
 // ClientProxy manages interactions between its Client instance and the ddk and the

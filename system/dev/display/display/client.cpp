@@ -31,6 +31,8 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(display_ControllerSetControllerCallback);
     SELECT_TABLE_CASE(display_ControllerImportVmoImage);
     SELECT_TABLE_CASE(display_ControllerReleaseImage);
+    SELECT_TABLE_CASE(display_ControllerImportEvent);
+    SELECT_TABLE_CASE(display_ControllerReleaseEvent);
     SELECT_TABLE_CASE(display_ControllerSetDisplayImage);
     SELECT_TABLE_CASE(display_ControllerCheckConfig);
     SELECT_TABLE_CASE(display_ControllerApplyConfig);
@@ -88,6 +90,8 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetControllerCallback);
     HANDLE_REQUEST_CASE(ImportVmoImage);
     HANDLE_REQUEST_CASE(ReleaseImage);
+    HANDLE_REQUEST_CASE(ImportEvent);
+    HANDLE_REQUEST_CASE(ReleaseEvent);
     HANDLE_REQUEST_CASE(SetDisplayImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
@@ -189,15 +193,67 @@ void Client::HandleReleaseImage(const display_ControllerReleaseImageRequest* req
             config.pending_image = nullptr;
             config.has_pending_image = false;
         }
+        for (auto& waiting : config.waiting_images) {
+            if (waiting.id == image->id) {
+                config.waiting_images.erase(waiting);
+                image->EarlyRetire();
+                break;
+            }
+        }
         if (config.displayed_image == image) {
-            config.displayed_image->StartRetire();
+            {
+                fbl::AutoLock lock(controller_->mtx());
+                config.displayed_image->StartRetire();
+            }
+
             config.displayed_image = nullptr;
             current_config_change = true;
+            config_applied_ = false;
         }
     }
 
     if (is_owner_ && current_config_change) {
         ApplyConfig();
+    }
+}
+
+void Client::HandleImportEvent(const display_ControllerImportEventRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    zx::event event(req->event);
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    bool success = false;
+
+    fbl::AutoLock lock(&fence_mtx_);
+
+    // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
+    if (req->id >= 0) {
+        auto fence = fences_.find(req->id);
+        if (!fence.IsValid()) {
+            fbl::AllocChecker ac;
+            auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, controller_->loop().async(),
+                                                           req->id, fbl::move(event)));
+            if (ac.check() && new_fence->CreateRef()) {
+                fences_.insert_or_find(fbl::move(new_fence));
+                success = true;
+            }
+        } else {
+            success = fence->CreateRef();
+        }
+    }
+
+    if (!success) {
+        zxlogf(ERROR, "Failed to import event#%d (%d)\n", req->id, status);
+        Reset();
+    }
+}
+
+void Client::HandleReleaseEvent(const display_ControllerReleaseEventRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    // Hold a ref to prevent double locking if this destroys the fence.
+    auto fence_ref = GetFence(req->id);
+    if (fence_ref) {
+        fbl::AutoLock lock(&fence_mtx_);
+        fences_.find(req->id)->ClearRef();
     }
 }
 
@@ -259,19 +315,31 @@ void Client::HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
     }
 
     for (auto& display_config : configs_) {
-        if (!display_config.pending_image) {
+        if (!display_config.has_pending_image) {
             continue;
         }
 
-        if (display_config.pending_image != nullptr) {
-            display_config.current.image = display_config.pending_image->info();
+        if (display_config.pending_image) {
+            display_config.pending_image->PrepareFences(
+                    GetFence(display_config.pending_wait_event_id),
+                    GetFence(display_config.pending_present_event_id),
+                    GetFence(display_config.pending_signal_event_id));
+            display_config.waiting_images.push_back(fbl::move(display_config.pending_image));
+        } else {
+            // We're setting a blank image which is immedately ready, so clear all images.
+            display_config.waiting_images.clear();
+            if (display_config.displayed_image != nullptr) {
+                {
+                    fbl::AutoLock lock(controller_->mtx());
+                    display_config.displayed_image->StartRetire();
+                }
+                display_config.displayed_image = nullptr;
+                config_applied_ = false;
+            }
         }
-        display_config.displayed_image = display_config.pending_image;
     }
 
-    if (is_owner_) {
-        ApplyConfig();
-    }
+    ApplyConfig();
 }
 
 void Client::HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
@@ -293,6 +361,9 @@ bool Client::CheckConfig() {
                 display_config.pending.image = display_config.pending_image->info();
                 configs[idx++] = &display_config.pending;
             }
+        } else if (!display_config.waiting_images.is_empty()) {
+            display_config.pending.image = display_config.waiting_images.back().info();
+            configs[idx++] = &display_config.pending;
         } else if (display_config.displayed_image != nullptr) {
             configs[idx++] = &display_config.current;
         }
@@ -302,11 +373,33 @@ bool Client::CheckConfig() {
 }
 
 void Client::ApplyConfig() {
-    ZX_DEBUG_ASSERT(is_owner_);
-
     display_config_t* configs[configs_.size()];
     int idx = 0;
     for (auto& display_config : configs_) {
+        // Find the newest image which is ready
+        int32_t new_image = -1;
+        if (!display_config.waiting_images.is_empty()) {
+            for (auto iter = --display_config.waiting_images.cend(); iter.IsValid(); --iter) {
+                if (iter->IsReady()) {
+                    new_image = iter->id;
+                    break;
+                }
+            }
+        }
+        if (new_image != -1) {
+            if (display_config.displayed_image != nullptr) {
+                fbl::AutoLock lock(controller_->mtx());
+                display_config.displayed_image->StartRetire();
+            }
+            while (display_config.waiting_images.front().id != new_image) {
+                auto early_retire = display_config.waiting_images.pop_front();
+                early_retire->EarlyRetire();
+            }
+            display_config.displayed_image = display_config.waiting_images.pop_front();
+            display_config.current.image = display_config.displayed_image->info();
+            config_applied_ = false;
+        }
+
         // Skip the display since there's nothing to show
         if (display_config.displayed_image == nullptr) {
             continue;
@@ -314,14 +407,17 @@ void Client::ApplyConfig() {
         configs[idx++] = &display_config.current;
     }
 
-    DisplayConfig* dc_configs[configs_.size()];
-    int dc_idx = 0;
-    for (auto& c : configs_) {
-        dc_configs[dc_idx++] = &c;
-    }
-    controller_->OnConfigApplied(dc_configs, dc_idx);
+    if (is_owner_ && !config_applied_) {
+        config_applied_ = true;
+        DisplayConfig* dc_configs[configs_.size()];
+        int dc_idx = 0;
+        for (auto& c : configs_) {
+            dc_configs[dc_idx++] = &c;
+        }
+        controller_->OnConfigApplied(dc_configs, dc_idx);
 
-    DC_IMPL_CALL(apply_configuration, configs, idx);
+        DC_IMPL_CALL(apply_configuration, configs, idx);
+    }
 }
 
 void Client::NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added_count,
@@ -385,6 +481,7 @@ void Client::SetOwnership(bool is_owner) {
     ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
 
     is_owner_ = is_owner;
+    config_applied_ = false;
 
     if (callback_handle_) {
         display_ControllerCallbackOnClientOwnershipChangeRequest msg;
@@ -398,9 +495,7 @@ void Client::SetOwnership(bool is_owner) {
         }
     }
 
-    if (is_owner) {
-        ApplyConfig();
-    }
+    ApplyConfig();
 
 }
 
@@ -439,7 +534,34 @@ zx_status_t Client::InitApiConnection(zx::handle* client_handle) {
         return status;
     }
 
+    mtx_init(&fence_mtx_, mtx_plain);
+
     return ZX_OK;
+}
+
+fbl::RefPtr<FenceReference> Client::GetFence(int32_t id) {
+    if (id < 0) {
+        return nullptr;
+    }
+    fbl::AutoLock lock(&fence_mtx_);
+    auto fence = fences_.find(id);
+    return fence.IsValid() ? fence->GetReference() : nullptr;
+}
+
+void Client::OnFenceFired(FenceReference* fence) {
+    for (auto& display_config : configs_) {
+        for (auto& waiting : display_config.waiting_images) {
+            waiting.OnFenceReady(fence);
+        }
+    }
+    ApplyConfig();
+}
+
+void Client::OnRefForFenceDead(Fence* fence) {
+    fbl::AutoLock lock(&fence_mtx_);
+    if (fence->OnRefDead()) {
+        fences_.erase(fence->id);
+    }
 }
 
 void Client::Reset() {
@@ -454,21 +576,40 @@ void Client::Reset() {
     server_handle_.reset();
     callback_handle_.reset();
 
+    // Use a temporary list to prevent double locking when resetting
+    fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
+    {
+        fbl::AutoLock lock(&fence_mtx_);
+        while (!fences_.is_empty()) {
+            fences.push_front(fences_.erase(fences_.begin()));
+        }
+    }
+    while (!fences.is_empty()) {
+        fences.pop_front()->Reset();
+    }
+
     for (auto& config : configs_) {
         if (config.pending_image) {
             config.pending_image->DiscardAcquire();
             config.pending_image = nullptr;
             config.has_pending_image = false;
         }
+        for (auto& waiting : config.waiting_images) {
+            waiting.EarlyRetire();
+        }
+        config.waiting_images.clear();
+
         if (config.displayed_image) {
-            config.displayed_image->StartRetire();
+            {
+                fbl::AutoLock lock(controller_->mtx());
+                config.displayed_image->StartRetire();
+            }
             config.displayed_image = nullptr;
+            config_applied_ = false;
         }
     }
 
-    if (is_owner_) {
-        ApplyConfig();
-    }
+    ApplyConfig();
 
     images_.clear();
 
