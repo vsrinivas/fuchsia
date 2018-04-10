@@ -41,7 +41,7 @@ def main():
     shim = args.shim
     out = args.output
     load_offset = args.load_offset
-    kernel_size = fstat(kernel.fileno()).st_size
+    kernel_size = fstat(kernel.fileno()).st_size + HEADER_SIZE # add 64K for shim
 
     # write our Linux compatible header
     out.write(pack('I', 0x91005a4d))    # mrs	x19, mpidr_el1 ('MZ' magic)
@@ -59,6 +59,8 @@ def main():
 
     # followed by the shim
     out.write(shim.read())
+
+    pad_file(out, HEADER_SIZE);
 
     # and finally the kernel
     out.write(kernel.read())

@@ -165,7 +165,7 @@ sudo cp "/tmp/sd_fuse_fuchsia/meson64_odroidc2.dtb" \
 
 # Create a boot script (boot.scr)
 sudo mkimage -A arm64 -T script -C none \
-        -d "$ZIRCON_DIR/kernel/target/arm64/odroidc2/boot.cmd" \
+        -d "$ZIRCON_DIR/kernel/target/arm64/board/odroidc2/boot.cmd" \
         "${MOUNT_PATH}/boot.scr"
 
 # Make sure all writes are committed to disk.
