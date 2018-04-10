@@ -40,12 +40,12 @@ package("thermd") {
     ]
   } else {
     # An empty system_image package is really nothing at all.
-    system_image = true
+    deprecated_system_image = true
   }
 }
 
 package("config") {
-  system_image = true
+  deprecated_system_image = true
   package_name = "thermd_config"
   resources = [
     {

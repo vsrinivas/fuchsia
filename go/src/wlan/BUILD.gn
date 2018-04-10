@@ -190,7 +190,7 @@ package("wlanstack") {
 }
 
 package("wlantool") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":wlantool_bin",
@@ -204,7 +204,7 @@ package("wlantool") {
 }
 
 package("wlanstack_test") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":eapol_crypto_test_bin",

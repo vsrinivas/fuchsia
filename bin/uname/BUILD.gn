@@ -15,7 +15,7 @@ executable("bin") {
 }
 
 package("uname") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

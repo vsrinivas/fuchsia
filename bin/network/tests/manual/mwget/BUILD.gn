@@ -21,7 +21,7 @@ executable("bin") {
 }
 
 package("mwget") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

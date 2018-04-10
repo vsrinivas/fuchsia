@@ -109,7 +109,7 @@ package("amber") {
 }
 
 package("amber_tools") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":amber_ctl",
@@ -188,7 +188,7 @@ foreach(test, test_targets) {
 }
 
 package("amber_tests") {
-  system_image = true
+  deprecated_system_image = true
   testonly = true
 
   deps = []
@@ -218,7 +218,7 @@ copy("amber-srv-keys") {
 }
 
 package("config") {
-  system_image = true
+  deprecated_system_image = true
   package_name = "amber_config"
   resources = [
     {

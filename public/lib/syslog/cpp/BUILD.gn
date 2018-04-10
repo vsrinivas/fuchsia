@@ -34,7 +34,7 @@ executable("syslog_cpp_unittests") {
 
 package("tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "syslog_cpp_tests"
 

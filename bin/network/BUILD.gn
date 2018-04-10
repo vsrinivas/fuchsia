@@ -97,7 +97,7 @@ executable("network_service_tests_bin") {
 
 package("network_service_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":network_service_tests_bin",

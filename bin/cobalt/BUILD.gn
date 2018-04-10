@@ -47,7 +47,7 @@ package("cobalt_system_metrics") {
 
 package("cobalt_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":cobalt_testapp",

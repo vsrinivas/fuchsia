@@ -70,7 +70,7 @@ foreach(entry, icd_list) {
 }
 
 package("magma") {
-  system_image = true
+  deprecated_system_image = true
   if (magma_enable_developer_build) {
     testonly = true
   }
@@ -159,7 +159,7 @@ package("magma") {
 }
 
 package("magma-tools") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":tools",
@@ -173,7 +173,7 @@ package("magma-tools") {
 }
 
 package("vkcube") {
-  system_image = true
+  deprecated_system_image = true
 
   if (have_libvulkan) {
     deps = [

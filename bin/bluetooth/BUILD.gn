@@ -54,7 +54,7 @@ executable("bluetooth_unittests") {
 
 package("bluetooth_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "bluetooth_tests"
 

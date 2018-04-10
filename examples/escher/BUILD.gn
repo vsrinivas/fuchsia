@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 package("escher_examples") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "waterfall",

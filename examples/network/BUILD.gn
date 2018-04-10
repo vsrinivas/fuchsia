@@ -14,7 +14,7 @@ group("examples") {
 }
 
 package("nc") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "third_party/openbsd-netcat:nc",

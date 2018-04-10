@@ -22,7 +22,7 @@ driver_module("passthrough_driver") {
 }
 
 package("bthci_passthrough") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":passthrough_driver",

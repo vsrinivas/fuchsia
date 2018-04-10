@@ -6,7 +6,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
 package("bthci_fake") {
-  system_image = true
+  deprecated_system_image = true
   testonly = true
 
   deps = [

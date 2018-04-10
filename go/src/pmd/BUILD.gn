@@ -70,7 +70,7 @@ foreach(testpkg, test_packages) {
 }
 
 package("pkgsvr") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":pkgsvr_bin",
@@ -84,7 +84,7 @@ package("pkgsvr") {
 }
 
 package("installblob") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":installblob_bin",
@@ -98,7 +98,7 @@ package("installblob") {
 }
 
 package("pmd_tests") {
-  system_image = true
+  deprecated_system_image = true
   testonly = true
 
   deps = []

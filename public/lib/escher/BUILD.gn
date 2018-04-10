@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 package("escher_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "test:escher_unittests",

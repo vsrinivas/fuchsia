@@ -7,7 +7,7 @@ import("//build/package.gni")
 
 package("magma-test-build-only") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = []
 
@@ -33,7 +33,7 @@ package("magma-test-build-only") {
 
 package("magma-nonhardware-tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = []
   tests = []
@@ -86,7 +86,7 @@ package("magma-nonhardware-tests") {
 
 package("magma-test") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = []
   tests = []

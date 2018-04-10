@@ -15,7 +15,7 @@ go_test("go_lib_fidl2_test") {
 }
 
 package("go_lib_fidl2_tests") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":go_lib_fidl2_test",

@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 package("bluetooth_tools") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "bluetoothcli",

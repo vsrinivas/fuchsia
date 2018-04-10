@@ -65,7 +65,7 @@ executable("guest_unittests") {
 
 package("guest_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":guest_unittests",

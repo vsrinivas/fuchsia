@@ -95,7 +95,7 @@ copy("run_zircon_benchmarks") {
 
 package("zircon_benchmarks") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

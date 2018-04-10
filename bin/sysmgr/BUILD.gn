@@ -45,7 +45,7 @@ package("sysmgr") {
 
 template("config_package") {
   package(target_name) {
-    system_image = true
+    deprecated_system_image = true
     resources = [
       {
         dest = "sysmgr/${invoker.name}"

@@ -20,7 +20,7 @@ group("ui") {
 }
 
 package("hello_scenic") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "hello_scenic",
@@ -34,7 +34,7 @@ package("hello_scenic") {
 }
 
 package("hello_spaces") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "hello_spaces",
@@ -47,7 +47,7 @@ package("hello_spaces") {
   ]
 }
 package("hello_pose_buffer") {
-  system_image = true
+  deprecated_system_image = true
   deps = [
     "hello_pose_buffer",
   ]
@@ -91,7 +91,7 @@ package("shapes_view") {
 }
 
 package("sketchy_client") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "sketchy",

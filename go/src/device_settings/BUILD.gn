@@ -23,7 +23,7 @@ go_test("device_settings_integration_test") {
 
 package("device_settings_gotests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":device_settings_integration_test",

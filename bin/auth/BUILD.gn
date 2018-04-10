@@ -21,7 +21,7 @@ package("token_manager") {
 
 package("oauth_examples") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "//garnet/bin/auth/testing/e2e_manual:google_oauth_demo",
@@ -36,7 +36,7 @@ package("oauth_examples") {
 
 package("tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "token_manager_tests"
 

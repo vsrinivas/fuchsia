@@ -16,7 +16,7 @@ go_test("go_far_test") {
 }
 
 package("go_far_tests") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":go_far_test",

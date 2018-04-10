@@ -11,7 +11,7 @@ rust_binary("echo2_client_rust_bin") {
 }
 
 package("echo2_client_rust") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":echo2_client_rust_bin"

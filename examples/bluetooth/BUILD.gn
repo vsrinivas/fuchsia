@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 package("garnet_bluetooth_examples") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
 #    "ble_battery_service",

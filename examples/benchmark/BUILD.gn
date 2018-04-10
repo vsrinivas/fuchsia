@@ -17,7 +17,7 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":benchmark_example",

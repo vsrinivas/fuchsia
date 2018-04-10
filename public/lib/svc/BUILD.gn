@@ -46,7 +46,7 @@ test("svc_unittests") {
 
 package("package") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "svc"
 

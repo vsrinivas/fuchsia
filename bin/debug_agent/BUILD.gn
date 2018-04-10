@@ -69,7 +69,7 @@ executable("bin") {
 }
 
 package("debug_agent") {
-  system_image = true
+  deprecated_system_image = true
   deps = [
     ":bin",
   ]
@@ -103,7 +103,7 @@ executable("unittests") {
 
 package("debug_agent_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "debug_agent_tests"
 

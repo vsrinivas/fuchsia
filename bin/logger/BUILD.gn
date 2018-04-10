@@ -38,7 +38,7 @@ package("logger") {
 }
 
 package("logger_tests") {
-  system_image = true
+  deprecated_system_image = true
   testonly = true
 
   deps = [

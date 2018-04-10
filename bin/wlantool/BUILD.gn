@@ -10,7 +10,7 @@ rust_binary("bin") {
 }
 
 package("wlantool2") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

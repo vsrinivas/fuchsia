@@ -20,7 +20,7 @@ sdk_executable("bin") {
 }
 
 package("far") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

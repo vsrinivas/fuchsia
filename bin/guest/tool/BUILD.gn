@@ -28,7 +28,7 @@ executable("bin") {
 }
 
 package("tool") {
-  system_image = true
+  deprecated_system_image = true
   package_name = "guest-tool"
 
   deps = [

@@ -6,7 +6,7 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 import("//build/package.gni")
 
 package("netconnector") {
-  system_image = true
+  deprecated_system_image = true
   package_name = "netconnector_examples"
 
   deps = [

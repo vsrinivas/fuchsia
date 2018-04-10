@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("image-pipe-swapchain") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "src/swapchain",
@@ -22,7 +22,7 @@ package("image-pipe-swapchain") {
 
 package("image-pipe-swapchain-tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "tests/unit:test_image_pipe_swapchain",

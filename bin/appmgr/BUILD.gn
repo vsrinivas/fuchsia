@@ -78,7 +78,7 @@ executable("tests") {
 }
 
 package("appmgr") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",
@@ -92,7 +92,7 @@ package("appmgr") {
 
 package("appmgr_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":tests",

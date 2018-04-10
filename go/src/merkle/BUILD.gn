@@ -16,7 +16,7 @@ go_test("go_merkle_test") {
 }
 
 package("go_merkle_tests") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":go_merkle_test",

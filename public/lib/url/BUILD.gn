@@ -63,7 +63,7 @@ executable("url_apptests") {
 
 package("url_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":url_apptests",

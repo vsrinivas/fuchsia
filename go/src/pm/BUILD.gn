@@ -31,7 +31,7 @@ go_binary("pm_bin") {
 }
 
 package("pm") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":pm_bin",

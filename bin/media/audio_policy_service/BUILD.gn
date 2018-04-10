@@ -5,7 +5,7 @@
 import("//build/package.gni")
 
 package("audio_policy_service") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

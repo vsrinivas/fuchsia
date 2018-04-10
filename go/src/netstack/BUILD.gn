@@ -27,7 +27,7 @@ package("netstack") {
 }
 
 package("netstack_tools") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     "ifconfig",
@@ -55,7 +55,7 @@ package("netstack_tools") {
 
 package("netstack_gotests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":netstack_netiface_test",

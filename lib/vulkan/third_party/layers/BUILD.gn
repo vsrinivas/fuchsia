@@ -23,7 +23,7 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 import("//build/package.gni")
 
 package("screenshot_layer") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":VkLayer_screenshot",
@@ -41,7 +41,7 @@ package("screenshot_layer") {
 }
 
 package("rfb_layer") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":VkLayer_rfb",

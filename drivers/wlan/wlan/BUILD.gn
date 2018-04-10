@@ -32,7 +32,7 @@ driver_module("wlan_driver") {
 }
 
 package("wlan") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":wlan_driver",

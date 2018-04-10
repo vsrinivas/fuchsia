@@ -48,7 +48,7 @@ copy("btintel-firmware") {
 }
 
 package("btintel") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":btintel_driver",

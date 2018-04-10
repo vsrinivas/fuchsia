@@ -45,7 +45,7 @@ install_host_tools("host_insntrace_print") {
 }
 
 package("insntrace") {
-  system_image = true
+  deprecated_system_image = true
 
   deps = [
     ":bin",

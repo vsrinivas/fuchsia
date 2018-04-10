@@ -35,7 +35,7 @@ package("wlancfg") {
 }
 
 package("config") {
-  system_image = true
+  deprecated_system_image = true
   package_name = "wlancfg_config"
   resources = [
     {

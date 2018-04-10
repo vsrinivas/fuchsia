@@ -28,7 +28,7 @@ executable("bin") {
 }
 
 package("zxdb") {
-  system_image = true
+  deprecated_system_image = true
   deps = [
     ":bin",
   ]
@@ -76,7 +76,7 @@ executable("unittests") {
 
 package("zxdb_tests") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
 
   package_name = "zxdb_tests"
 
