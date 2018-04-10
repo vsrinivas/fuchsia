@@ -42,7 +42,7 @@ fn default_log_filter_options() -> LogFilterOptions {
 
 fn help(name: &str) -> String {
     format!(
-        "Usage: {} [flags]
+        r"Usage: {} [flags]
         Flags:
         --tag <string>:
             Tag to filter on. Multiple tags can be specified by using multiple --tag flags.
@@ -289,8 +289,8 @@ fn main() {
 mod tests {
     extern crate tempdir;
 
-    use super::*;
     use self::tempdir::TempDir;
+    use super::*;
 
     use std::fs::File;
     use std::io::Read;
@@ -329,7 +329,7 @@ mod tests {
             expected.push_str(&format!("[00076.352234][123][321][] {}: hello\n", level));
         }
 
-        //test tags
+        // test tags
         message.severity = 0;
         message.tags = vec!["tag1".to_string()];
         l.log(&message);
@@ -339,13 +339,13 @@ mod tests {
         l.log(&message);
         expected.push_str("[00076.352234][123][321][tag1, tag2] INFO: hello\n");
 
-        //test time
+        // test time
         message.time = 636253000631621;
         l.log(&message);
         let s = "[636253.000631][123][321][tag1, tag2] INFO: hello\n";
         expected.push_str(s);
 
-        //test dropped logs
+        // test dropped logs
         message.dropped_logs = 1;
         l.log(&message);
         expected.push_str(s);
@@ -354,7 +354,7 @@ mod tests {
         // will not print log count again
         expected.push_str(s);
 
-        //change pid and test
+        // change pid and test
         message.pid = 1234;
         l.log(&message);
         expected.push_str("[636253.000631][1234][321][tag1, tag2] INFO: hello\n");
