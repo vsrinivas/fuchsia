@@ -88,6 +88,11 @@ static pmm_arena_info_t mem_arena = {
     /* .size */ 0, // filled in by bootdata
 };
 
+// bootdata to save for mexec
+// TODO(voydanoff): more generic way of doing this that can be shared with PC platform
+static uint8_t mexec_bootdata[4096];
+static size_t mexec_bootdata_length = 0;
+
 // kernel drivers node in the MDI
 static mdi_node_ref_t kernel_drivers;
 
@@ -247,6 +252,14 @@ static void platform_mdi_init(const bootdata_t* section) {
     }
 }
 
+static void save_mexec_bootdata(bootdata_t* section) {
+    size_t length = BOOTDATA_ALIGN(section->length + sizeof(bootdata_t));
+    ASSERT(sizeof(mexec_bootdata) - mexec_bootdata_length >= length);
+
+    memcpy(&mexec_bootdata[mexec_bootdata_length], section, length);
+    mexec_bootdata_length += length;
+}
+
 static void process_mem_range(const bootdata_mem_range_t* mem_range) {
     switch (mem_range->type) {
     case BOOTDATA_MEM_RANGE_RAM:
@@ -308,6 +321,7 @@ static uint32_t process_bootsection(bootdata_t* section) {
         for (uint32_t i = 0; i < count; i++) {
             process_mem_range(mem_range++);
         }
+        save_mexec_bootdata(section);
         break;
     }
     case BOOTDATA_CPU_CONFIG: {
@@ -317,6 +331,7 @@ static uint32_t process_bootsection(bootdata_t* section) {
             cpu_cluster_cpus[i] = cpu_config->clusters[i].cpu_count;
         }
         arch_init_cpu_map(cpu_cluster_count, cpu_cluster_cpus);
+        save_mexec_bootdata(section);
         break;
     }
     }
@@ -553,6 +568,23 @@ size_t platform_recover_crashlog(size_t len, void* cookie,
 }
 
 zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
+    size_t offset = 0;
+
+    // copy certain bootdata sections provided by the bootloader or boot shim
+    // to the mexec bootdata
+    while (offset < mexec_bootdata_length) {
+        bootdata_t* section = reinterpret_cast<bootdata_t*>(mexec_bootdata + offset);
+        if (section->type == BOOTDATA_MEM_CONFIG || section->type == BOOTDATA_CPU_CONFIG) {
+            zx_status_t status;
+            status = bootdata_append_section(bootdata, len, reinterpret_cast<uint8_t*>(section + 1),
+                                             section->length, section->type, section->extra,
+                                             section->flags);
+            if (status != ZX_OK) return status;
+        }
+
+        offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
+    }
+
     return ZX_OK;
 }
 
