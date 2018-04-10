@@ -52,9 +52,12 @@ function fx-config-read {
 function fx-config-glean-arch {
   local -r args_file="$1"
   # Glean the architecture from the args.gn file written by `gn gen`.
-  local arch=$(
-    sed -n '/target_cpu/s/[^"]*"\([^"]*\).*$/\1/p' "$args_file"
-  ) || return $?
+  local arch=''
+  if [[ -r "$args_file" ]]; then
+    arch=$(
+      sed -n '/target_cpu/s/[^"]*"\([^"]*\).*$/\1/p' "$args_file"
+    ) || return $?
+  fi
   if [[ -z "$arch" ]]; then
     # Hand-invoked gn might not have had target_cpu in args.gn.
     case "$(uname -m)" in
