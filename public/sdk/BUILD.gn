@@ -27,5 +27,6 @@ sdk("garnet") {
     "//garnet/public/lib/media/c:c_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-default:async-default_sdk",
+    "//zircon/public/sysroot:sysroot_sdk",
   ]
 }
