@@ -7,7 +7,7 @@
 
 #include <functional>
 
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 
 #include <fuchsia/cpp/ledger.h>

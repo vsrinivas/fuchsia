@@ -9,7 +9,7 @@
 
 #include <fuchsia/cpp/cloud_provider.h>
 #include <fuchsia/cpp/cloud_provider_firebase.h>
-#include <lib/async/cpp/loop.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/memory/ref_ptr.h"
