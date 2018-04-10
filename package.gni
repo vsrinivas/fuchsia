@@ -20,8 +20,9 @@ declare_args() {
 #
 #   fuchsia_package (bool, optional)
 #     If true, the package is constructed and signed ready for distribution and
-#     inclusion in /pkgfs. system_image supersedes fuchsia_package. Eventually all
-#     packages should be fuchsia_package.
+#     inclusion in /pkgfs. system_image supersedes fuchsia_package.
+#
+#     TODO(PKG-46) Eventually all packages should be fuchsia_package..
 #
 #     Defaults to false.
 #
