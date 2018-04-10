@@ -3,6 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/rust/rust_library.gni")
+import("//build/rust/rustc_library.gni")
 
 rust_library("fuchsia-zircon-sys") {
+}
+
+rustc_library("fuchsia-zircon-sys-rustc") {
+  name = "fuchsia_zircon_sys"
+  version = "0.3.4"
 }
