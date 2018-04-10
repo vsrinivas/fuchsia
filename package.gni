@@ -14,24 +14,23 @@ import("//build/config/clang/clang.gni")
 #
 #   fuchsia_package (bool, optional)
 #     If true, the package is constructed and signed ready for distribution and
-#     inclusion in /pkgfs. system_image supersedes fuchsia_package.
+#     inclusion in /pkgfs. deprecated_system_image supersedes fuchsia_package.
 #
-#     TODO(PKG-46) Eventually all packages should be fuchsia_package..
-#
-#     Defaults to false.
-#
-#   system_image (bool, optional)
-#     If true, the package is stored in the system boot image rather than in a
-#     Fuchsia Archive.
-#
-#     If this package uses the |drivers| parameter, the system_image must be set
-#     to true because we are not yet sophisticated enough to load drivers out of
-#     archives.
+#     TODO(PKG-46) Eventually all packages should be fuchsia_package.
 #
 #     Defaults to false.
 #
 #   deprecated_system_image (bool, optional)
-#     New alias for system_image to reflect its deprecated status, per PKG-46.
+#     If true, the package is stored in the system boot image rather than in a
+#     Fuchsia Archive.
+#
+#     If this package uses the |drivers| parameter, the deprecated_system_image must be set
+#     to true because we are not yet sophisticated enough to load drivers out of
+#     archives.
+#
+#     TODO(PKG-46) Eventually no packages should be deprecated_system_image.
+#
+#     Defaults to false.
 #
 #   boot_firmware_image (bool, optional)
 #     If true, the package is a boot firmware package instead of a regular
@@ -43,7 +42,7 @@ import("//build/config/clang/clang.gni")
 #     entry is typically a source file and is placed in the "meta/" directory of
 #     the assembled package.
 #
-#     Requires |system_image| to be false.
+#     Requires |deprecated_system_image| to be false.
 #
 #     Entries in a scope in the meta list:
 #
@@ -62,7 +61,7 @@ import("//build/config/clang/clang.gni")
 #     $root_build_dir. The binary will be placed in the assembled package at
 #     "bin/app" and will be executed by default when running the package.
 #
-#     Requires |system_image| to be false.
+#     Requires |deprecated_system_image| to be false.
 #
 #   binaries (optional)
 #     List of scopes defining the binaries in the package. A binary is typically
@@ -104,7 +103,7 @@ import("//build/config/clang/clang.gni")
 #     produced by the build system and is placed in the "driver" directory
 #     of the assembled package.
 #
-#     Requires |system_image| to be true.
+#     Requires |deprecated_system_image| to be true.
 #
 #     Entries in a scope in the drivers list:
 #
@@ -155,7 +154,6 @@ template("package") {
   if (current_toolchain == target_toolchain) {
     pkg = {
       fuchsia_package = true
-      system_image = false
       deprecated_system_image = false
       boot_firmware_image = false
       binaries = []
@@ -170,20 +168,16 @@ template("package") {
     }
     pkg_out_dir = "$root_build_dir/package/${pkg.package_name}"
 
-    if (pkg.deprecated_system_image) {
-      pkg.system_image = true
-    }
-
     shared_toolchain_out_dir =
         get_label_info("//lib($shlib_toolchain)", "root_out_dir")
     not_needed([ "shared_toolchain_out_dir" ])
 
-    assert(pkg.drivers == [] || pkg.system_image)
+    assert(pkg.drivers == [] || pkg.deprecated_system_image)
 
     if (pkg.boot_firmware_image) {
       assert(!pkg.fuchsia_package,
              "boot firmware packages cannot be true fuchsia packages")
-      assert(!pkg.system_image,
+      assert(!pkg.deprecated_system_image,
              "boot firmware packages cannot be system images")
       assert(pkg.binaries == [],
              "boot firmware packages cannot contain binaries")
@@ -244,7 +238,7 @@ template("package") {
     extra_inputs = []
 
     foreach(entry, pkg.meta) {
-      assert(!pkg.system_image, "Metadata cannot be used in system packages.")
+      assert(!pkg.deprecated_system_image, "Metadata cannot be used in system packages.")
       source = entry.path
       dest = "meta/${entry.dest}"
       contents += [ "$dest=$source" ]
@@ -252,7 +246,7 @@ template("package") {
     }
     if (defined(pkg.binary)) {
       assert(
-          !pkg.system_image,
+          !pkg.deprecated_system_image,
           "Binary requires the package to be archived. Consider using 'binaries' for system packages.")
       source = rebase_path("$root_build_dir/${pkg.binary}")
       contents += [ "bin/app=$source" ]
@@ -260,7 +254,7 @@ template("package") {
     }
     foreach(binary, pkg.binaries) {
       assert(
-          (pkg.system_image || pkg.fuchsia_package),
+          (pkg.deprecated_system_image || pkg.fuchsia_package),
           "Binaries cannot be used in archived packages. Consider using 'binary'.")
 
       # Binary paths are relative to the root of the build dir.
@@ -327,7 +321,7 @@ template("package") {
       extra_inputs += [ source ]
     }
 
-    if (pkg.system_image || pkg.boot_firmware_image) {
+    if (pkg.deprecated_system_image || pkg.boot_firmware_image) {
       action(manifest_target_name) {
         script = "//build/gn/write_manifest.py"
         outputs = [
