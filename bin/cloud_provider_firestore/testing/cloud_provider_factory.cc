@@ -7,6 +7,8 @@
 #include <utility>
 
 #include <fuchsia/cpp/network.h>
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/threading/create_thread.h"
@@ -23,12 +25,12 @@ class CloudProviderFactory::TokenProviderContainer {
  public:
   TokenProviderContainer(
       component::ApplicationContext* application_context,
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      async_t* async,
       std::string credentials_path,
       fidl::InterfaceRequest<modular_auth::TokenProvider> request)
       : application_context_(application_context),
         network_wrapper_(
-            std::move(task_runner),
+            async,
             std::make_unique<backoff::ExponentialBackoff>(),
             [this] {
               return application_context_
@@ -62,13 +64,11 @@ CloudProviderFactory::CloudProviderFactory(
       credentials_path_(std::move(credentials_path)) {}
 
 CloudProviderFactory::~CloudProviderFactory() {
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
-  services_thread_.join();
+  services_loop_.Shutdown();
 }
 
 void CloudProviderFactory::Init() {
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
+  services_loop_.StartThread();
   component::Services child_services;
   component::ApplicationLaunchInfo launch_info;
   launch_info.url = kAppUrl;
@@ -87,9 +87,9 @@ void CloudProviderFactory::MakeCloudProvider(
                      << "only with unauthenticated server instances.";
   }
   modular_auth::TokenProviderPtr token_provider;
-  services_task_runner_->PostTask(fxl::MakeCopyable(
+  async::PostTask(services_loop_.async(), fxl::MakeCopyable(
       [ this, request = token_provider.NewRequest() ]() mutable {
-        token_providers_.emplace(application_context_, services_task_runner_,
+        token_providers_.emplace(application_context_, services_loop_.async(),
                                  credentials_path_, std::move(request));
       }));
 

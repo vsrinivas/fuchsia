@@ -4,8 +4,8 @@
 
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/network.h>
+#include <lib/async/default.h>
 
-#include <fuchsia/cpp/modular.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/app_driver/cpp/app_driver.h"
@@ -50,7 +50,7 @@ class ModuleResolverApp : ContextListener {
       resolver_impl_->AddSource(
           "firebase_mods",
           std::make_unique<modular::FirebaseModuleManifestSource>(
-              fsl::MessageLoop::GetCurrent()->task_runner(),
+              async_get_default(),
               [context]() {
                 network::NetworkServicePtr network_service;
                 context->ConnectToEnvironmentService(

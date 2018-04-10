@@ -36,7 +36,7 @@ namespace modular {
 class FirebaseModuleManifestSource : public ModuleManifestSource {
  public:
   FirebaseModuleManifestSource(
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      async_t* async,
       std::function<network::NetworkServicePtr()> network_service_factory,
       std::string db_id,
       std::string prefix);

@@ -162,14 +162,14 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
 };
 
 FirebaseModuleManifestSource::FirebaseModuleManifestSource(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     std::function<network::NetworkServicePtr()> network_service_factory,
     std::string db_id,
     std::string prefix)
     : db_id_(db_id),
       prefix_(prefix),
       network_wrapper_(new network_wrapper::NetworkWrapperImpl(
-          std::move(task_runner),
+          async,
           std::make_unique<backoff::ExponentialBackoff>(),
           std::move(network_service_factory))),
       client_(
