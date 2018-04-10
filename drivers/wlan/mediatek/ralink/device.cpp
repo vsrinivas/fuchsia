@@ -2927,22 +2927,20 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
     status = WriteBbp(b1);
     CHECK_WRITE(BBP1, status);
 
-    uint16_t eeprom_val = 0;
-    uint16_t offset = 0;
+    // Reading of EEPOM from EEPOM_TXPOWER_BYRATE + offset, where
+    // offset is in [0, 8] is all 0x6666.
+    // Instead of using the value from the EEPROM, use a constant value,
+    // with kTxCompMaxPower.
+    constexpr uint16_t eeprom_val = kTxCompMaxPower | kTxCompMaxPower << 4 | kTxCompMaxPower << 8 |
+                                    kTxCompMaxPower << 12;  // 0xcccc
 
     // TX_PWR_CFG_0
     TxPwrCfg0 tpc0;
     status = ReadRegister(&tpc0);
     CHECK_READ(TX_PWR_CFG_0, status);
 
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
-
     tpc0.set_tx_pwr_cck_1(CompensateTx(eeprom_val & 0xff));
     tpc0.set_tx_pwr_cck_5(CompensateTx((eeprom_val >> 8) & 0xff));
-
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
 
     tpc0.set_tx_pwr_ofdm_6(CompensateTx(eeprom_val & 0xff));
     tpc0.set_tx_pwr_ofdm_12(CompensateTx((eeprom_val >> 8) & 0xff));
@@ -2955,14 +2953,8 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
     status = ReadRegister(&tpc1);
     CHECK_READ(TX_PWR_CFG_1, status);
 
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
-
     tpc1.set_tx_pwr_ofdm_24(CompensateTx(eeprom_val & 0xff));
     tpc1.set_tx_pwr_ofdm_48(CompensateTx((eeprom_val >> 8) & 0xff));
-
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
 
     tpc1.set_tx_pwr_mcs_0(CompensateTx(eeprom_val & 0xff));
     tpc1.set_tx_pwr_mcs_2(CompensateTx((eeprom_val >> 8) & 0xff));
@@ -2975,14 +2967,8 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
     status = ReadRegister(&tpc2);
     CHECK_READ(TX_PWR_CFG_2, status);
 
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
-
     tpc2.set_tx_pwr_mcs_4(CompensateTx(eeprom_val & 0xff));
     tpc2.set_tx_pwr_mcs_6(CompensateTx((eeprom_val >> 8) & 0xff));
-
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
 
     tpc2.set_tx_pwr_mcs_8(CompensateTx(eeprom_val & 0xff));
     tpc2.set_tx_pwr_mcs_10(CompensateTx((eeprom_val >> 8) & 0xff));
@@ -2995,14 +2981,8 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
     status = ReadRegister(&tpc3);
     CHECK_READ(TX_PWR_CFG_3, status);
 
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
-
     tpc3.set_tx_pwr_mcs_12(CompensateTx(eeprom_val & 0xff));
     tpc3.set_tx_pwr_mcs_14(CompensateTx((eeprom_val >> 8) & 0xff));
-
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
 
     tpc3.set_tx_pwr_stbc_0(CompensateTx(eeprom_val & 0xff));
     tpc3.set_tx_pwr_stbc_2(CompensateTx((eeprom_val >> 8) & 0xff));
@@ -3012,9 +2992,6 @@ zx_status_t Device::ConfigureTxPower(const wlan_channel_t& chan) {
 
     // TX_PWR_CFG_4
     TxPwrCfg4 tpc4;
-
-    status = ReadEepromField(EEPROM_TXPOWER_BYRATE + offset++, &eeprom_val);
-    CHECK_READ(EEPROM_TXPOWER, status);
 
     tpc4.set_tx_pwr_stbc_4(CompensateTx(eeprom_val & 0xff));
     tpc4.set_tx_pwr_stbc_6(CompensateTx((eeprom_val >> 8) & 0xff));
