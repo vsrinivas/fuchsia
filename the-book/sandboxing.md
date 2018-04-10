@@ -61,11 +61,11 @@ If a process requires access to additional resources (e.g., device drivers), the
 package can request access to additional names by including a
 [sandbox metadata file](package_metadata.md#sandbox) in its package. For
 example, the following `meta/sandbox` file requests direct access to the
-framebuffer driver:
+input driver:
 
 ```
 {
-    "dev": [ "class/framebuffer" ]
+    "dev": [ "class/input" ]
 }
 ```
 
