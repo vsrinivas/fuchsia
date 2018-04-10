@@ -25,7 +25,7 @@ void LogImporter::Start() {
   if (log_)
     return;
 
-  zx_status_t status = zx::log::create(&log_, ZX_LOG_FLAG_READABLE);
+  zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
     return;
