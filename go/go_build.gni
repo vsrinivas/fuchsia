@@ -6,14 +6,6 @@ import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 import("//build/sdk/sdk_atom.gni")
 
-declare_args() {
-  # target_gen_dir is, for example with garnet, gen/garnet/go/src/foo/bar,
-  # whereas we need gen/go/src/garnet/foo/bar. To use, specify the following
-  # in your gn file: "${root_go_gen_dir}/$layer/path_relative_to_go_src.
-  # E.g., output_file = "$root_go_gen_dir/garnet/ktrace/gen_records/gen_records.go"
-  root_go_gen_dir = "${root_gen_dir}/go/src"
-}
-
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
 #
