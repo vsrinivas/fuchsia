@@ -10,6 +10,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// uncomment to dump device tree at boot
+// #define PRINT_DEVICE_TREE
+
 // Include board specific definitions
 #include "boot-shim-config.h"
 
@@ -31,6 +34,12 @@ typedef struct {
 } device_tree_context_t;
 
 static int node_callback(int depth, const char *name, void *cookie) {
+#ifdef PRINT_DEVICE_TREE
+    uart_puts("node: ");
+    uart_puts(name);
+    uart_puts("\n");
+#endif
+
     device_tree_context_t* ctx = cookie;
 
     if (!strcmp(name, "chosen")) {
@@ -45,6 +54,14 @@ static int node_callback(int depth, const char *name, void *cookie) {
 }
 
 static int prop_callback(const char *name, uint8_t *data, uint32_t size, void *cookie) {
+#ifdef PRINT_DEVICE_TREE
+    uart_puts("    prop: ");
+    uart_puts(name);
+    uart_puts(" size: ");
+    uart_print_hex(size);
+    uart_puts("\n");
+#endif
+
     device_tree_context_t* ctx = cookie;
 
     if (ctx->node == NODE_CHOSEN) {
