@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -184,12 +183,9 @@ func (f *installFile) open() error {
 		return fs.ErrInvalidArgs
 	}
 
-	if f.fs.blobfs.HasBlob(f.name) {
-		return fs.ErrAlreadyExists
-	}
-
 	var err error
-	f.blob, err = os.Create(f.fs.blobfs.PathOf(f.name))
+	// TODO(raggi): propagate flags instead to allow for resumption and so on
+	f.blob, err = os.OpenFile(f.fs.blobfs.PathOf(f.name), os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		return goErrToFSErr(err)
 	}
@@ -307,14 +303,20 @@ func importPackage(fs *Filesystem, root string) {
 	// readable"
 	mayHaveBlob := func(root string) bool { return true }
 	if len(files) > 20 {
-		infos, err := ioutil.ReadDir(fs.blobfs.Root)
+		d, err := os.Open(fs.blobfs.Root)
+		if err != nil {
+			log.Printf("pkgfs: error open(%q): %s", fs.blobfs.Root, err)
+			return
+		}
+		dnames, err := d.Readdirnames(-1)
+		d.Close()
 		if err != nil {
 			log.Printf("pkgfs: error readdir(%q): %s", fs.blobfs.Root, err)
 			return
 		}
 		names := map[string]struct{}{}
-		for _, info := range infos {
-			names[info.Name()] = struct{}{}
+		for _, name := range dnames {
+			names[name] = struct{}{}
 		}
 		mayHaveBlob = func(root string) bool {
 			_, found := names[root]
