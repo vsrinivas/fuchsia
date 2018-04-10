@@ -11,7 +11,7 @@
 cp -f ./prebuilt/configs/config.mk ./prebuilt/config.mk
 
 echo "Downloading Toolchain"
-./scripts/download-toolchain
+./scripts/download-prebuilt
 
 # save config.mk to the configs directory so it will be
 # cached along with the downloaded toolchain

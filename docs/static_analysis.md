@@ -11,7 +11,7 @@ This document describes:
 Assuming you already obtained a local copy of Fuchsia workspace according to the instructions written in [get_source.md](https://fuchsia.googlesource.com/docs/+/master/getting_source.md) and the source tree of fuchsia is located at `$LOCAL_DIR/fuchsia` and current working directory is `$LOCAL_DIR/fuchsia/zircon`. The Clang Static Analayzer can be run on Zircon by following commands:
 
 ```sh
-./scripts/download-toolchain
+./scripts/download-prebuilt
 ./scripts/analyze-zircon
 ```
 

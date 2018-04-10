@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used by scripts/download-prebuilt to control cipd.  When
+# cipd is not available, it uses zircon.versions instead to deduce URLs to
+# download directly from Google Storage.
+#
+# This file is the source of truth and the bits in CIPD are the canonical
+# bits.  They're also copied to Google Storage with URLs derived from the
+# CIPD package name (shown below, with $ substituions for platform) and
+# instance ID (which is the SHA1 of the file).  zircon.versions is
+# generated from this file by querying CIPD to gather the instance IDs.
+#
+# NOTE! NOTE! NOTE!  After changing this file in any way, always run
+# scripts/update-prebuilt-versions to update the zircon.versions file with
+# specific instance IDs for each version listed here.  The two files must
+# be kept in lock-step so that scripts/download-prebuilt gets the same
+# contents whether it uses cipd or direct downloads.
+
+# These lines tell scripts/update-prebuilt-versions what to look for.
+$VerifiedPlatform linux-amd64
+$VerifiedPlatform mac-amd64
+#MatchedPlatform linux-arm64
+
+# Clang
+@Subdir clang
+fuchsia/clang/${platform} git_revision:0916ed75b2698f7ec638ea19b477352b72263e8a
+
+# GCC
+@Subdir gcc
+fuchsia/gcc/${platform} git_revision:b824b5a2484202f6eabbe118b1cf7682ce77b76e,b5d3ac25628b1a16409a9816623c34a45377d400
+
+# sysroot
+@Subdir sysroot
+fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6

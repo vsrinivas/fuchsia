@@ -56,7 +56,7 @@ If you're developing on Linux or macOS, there are prebuilt toolchain binaries av
 Just run this script from your Zircon working directory:
 
 ```
-./scripts/download-toolchain
+./scripts/download-prebuilt
 ```
 
 If you would like to build the toolchains yourself, follow the instructions later

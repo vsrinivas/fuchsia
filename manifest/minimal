@@ -7,8 +7,8 @@
              gerrithost="https://fuchsia-review.googlesource.com"/>
   </projects>
   <hooks>
-    <hook name="download-toolchain"
+    <hook name="download-prebuilt"
           project="zircon"
-          action="scripts/download-toolchain"/>
+          action="scripts/download-prebuilt"/>
   </hooks>
 </manifest>

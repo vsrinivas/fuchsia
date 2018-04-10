@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+readonly SCRIPT_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+readonly ZIRCON_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+readonly PREBUILTS_DIR="$(cd "${ZIRCON_ROOT}/prebuilt" && pwd)"
+readonly DOWNLOAD_DIR="${PREBUILTS_DIR}/downloads"
+readonly ENSURE_FILE="${PREBUILTS_DIR}/zircon.ensure"
+readonly VERSIONS_FILE="${PREBUILTS_DIR}/zircon.versions"
+readonly URL_PREFIX="https://storage.googleapis.com/fuchsia"
+
+# This script assumes that ENSURE_FILE and VERSIONS_FILE match up.
+# The update-prebuilt-versions script ensures that they do.  When a
+# cipd binary is available, ENSURE_FILE controls the downloads.
+# Otherwise, VERSIONS_FILE controls the downloads.  In both cases we
+# write $DOWNLOAD_DIR/$PACKAGE.stamp files with the versions from
+# VERSIONS_FILE on faith that that's what we just unpacked.
+
+case "$#:$1" in
+0:)
+  mode=update
+  ;;
+1:--verify)
+  mode=verify
+  ;;
+1:--list)
+  mode=list
+  ;;
+*)
+  echo >&2 "Usage: $0 [--verify|--list]"
+  exit 1
+  ;;
+esac
+
+case "$(uname)-$(uname -m)" in
+Darwin-x86_64)
+  PLATFORM=mac-amd64
+  ;;
+Linux-x86_64)
+  PLATFORM=linux-amd64
+  ;;
+Linux-aarch64)
+  PLATFORM=linux-arm64
+  ;;
+*)
+  echo 'Unknown operating system.'
+  exit 1
+  ;;
+esac
+readonly PLATFORM
+
+update_stamp() {
+  local -r package="$1" version="$2"
+  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  echo "$version" > "$stamp"
+}
+
+verify_stamp() {
+  local verbose=false
+  if [[ "$1" = "--verbose" ]]; then
+    verbose=true
+    shift
+  fi
+  local -r package="$1" version="$2"
+  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  local stamp_version
+  if [[ -r "$stamp" ]]; then
+    stamp_version="$(< "$stamp")"
+  else
+    stamp_version="missing"
+  fi
+  if [[ "$stamp_version" = "$version" ]]; then
+    return 0
+  fi
+  if $verbose; then
+    echo >&2 "WARNING: unpacked $package $stamp_version != current $version"
+  fi
+  return 1
+}
+
+list_package() {
+  local -r package="$1" version="$2"
+  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  local stamp_version
+  if [[ -r "$stamp" ]]; then
+    stamp_version="$(< "$stamp")"
+  else
+    stamp_version="missing"
+  fi
+  local installed="${stamp_version:-missing}"
+  if [[ "$installed" = "$version" ]]; then
+    installed="current"
+  fi
+  echo "$package/$PLATFORM" "installed=$installed" "current=$version"
+}
+
+verify_file() {
+  local -r file="$1"
+  local -r sum="$2"
+  shasum --binary --check --status <<EOF
+$sum *$file
+EOF
+}
+
+download_package() {
+  local -r package="$1" version="$2"
+  local -r dir="${DOWNLOAD_DIR}/${package}"
+  local -r zip="${dir}.zip"
+  local -r url="${URL_PREFIX}/${package}/${PLATFORM}/${version}"
+
+  # If the stamp file says it's already in place, do nothing more.
+  verify_stamp "$package" "$version" && return
+
+  rm -f -- "$zip"
+  echo "Downloading $url"
+  curl --progress-bar -continue-at=- --location \
+       --create-dirs --output "$zip" "$url" || return
+
+  verify_file "$zip" "$version" || {
+    echo >&2 "*** VERIFICATION ERROR ***"
+    echo >&2 "*** VERIFICATION ERROR *** $zip from $url"
+    echo >&2 "*** VERIFICATION ERROR *** Not using the file!"
+    return 1
+  }
+
+  rm -rf -- "$dir"
+  echo "Unpacking $zip"
+  unzip -q -d "$dir" "$zip" || return
+
+  update_stamp "$package" "$version"
+}
+
+for_each_package() {
+  local package version status=0
+  while read package version; do
+    case "$package" in
+    ''|\#*)
+      continue
+      ;;
+    */${PLATFORM})
+      package="${package%/*}"
+      "$@" "$package" "$version" || status=$?
+      ;;
+    esac
+  done
+  return $status
+}
+
+find_cipd() {
+  # If cipd is in the PATH, just take it.  Otherwise, if the Zircon
+  # checkout is part of a jiri checkout that includes //buildtools,
+  # then find cipd there.
+  type -p cipd || type -p "${ZIRCON_ROOT}/../buildtools/cipd"
+}
+
+update_via_cipd() {
+  local -r CIPD="$1"
+
+  "$CIPD" ensure -ensure-file "${PREBUILTS_DIR}/zircon.ensure" \
+                 -root "$DOWNLOAD_DIR" \
+                 -log-level warning
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo >&2 "$0: $CIPD failed.  For direct downloads, remove cipd from PATH."
+    return $rc
+  fi
+
+  "$(dirname $0)/update-prebuilt-versions" --verify || {
+    echo >&2 "$0: update-prebuilt-versions not run after ensure file changed!"
+    return 2
+  }
+
+  # Now update the .stamp files so that --verify will be happy.
+  for_each_package update_stamp < "$VERSIONS_FILE"
+}
+
+write_sysroot_path() {
+  local -r package="$1" version="$2"
+  if [[ "$package" = sysroot ]]; then
+    echo "SYSROOT_${PLATFORM}_PATH = \$(LKMAKEROOT)/prebuilt/downloads/sysroot"
+  fi
+}
+
+write_config_mk() {
+  local -r config_mk="${PREBUILTS_DIR}/config.mk"
+  rm -f -- "$config_mk"
+  echo > "$config_mk" "# Generated by $0.  DO NOT EDIT!"'
+
+PREBUILT_CHECK := $(shell $(LKMAKEROOT)/scripts/download-prebuilt --verify)
+ifneq (,$(strip $(PREBUILT_CHECK)))
+$(warning)
+$(warning $(PREBUILT_CHECK))
+$(warning run scripts/download-prebuilt)
+$(warning)
+endif
+
+ARCH_x86_64_TOOLCHAIN_PREFIX = $(LKMAKEROOT)/prebuilt/downloads/gcc/bin/x86_64-elf-
+ARCH_arm64_TOOLCHAIN_PREFIX = $(LKMAKEROOT)/prebuilt/downloads/gcc/bin/aarch64-elf-
+CLANG_TOOLCHAIN_PREFIX = $(LKMAKEROOT)/prebuilt/downloads/clang/bin/
+'
+
+  for_each_package write_sysroot_path < "$VERSIONS_FILE" >> "$config_mk"
+}
+
+update() {
+  local CIPD
+  if CIPD="$(find_cipd)"; then
+    # We have CIPD, so use it.
+    update_via_cipd "$CIPD"
+  else
+    # We don't have CIPD, so don't use it.
+    for_each_package download_package < "$VERSIONS_FILE"
+  fi
+  write_config_mk
+}
+
+verify() {
+  for_each_package verify_stamp --verbose < "$VERSIONS_FILE"
+}
+
+list() {
+  for_each_package list_package < "$VERSIONS_FILE"
+}
+
+$mode
