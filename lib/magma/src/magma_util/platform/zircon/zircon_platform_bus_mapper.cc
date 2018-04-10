@@ -41,13 +41,23 @@ ZirconPlatformBusMapper::MapPageRangeBus(magma::PlatformBuffer* buffer, uint32_t
                             pmt.reset_and_get_address());
     }
     if (status != ZX_OK) {
+        zx_info_kmem_stats_t kmem_stats;
+        zx_object_get_info(get_root_resource(), ZX_INFO_KMEM_STATS, &kmem_stats, sizeof(kmem_stats),
+                           nullptr, nullptr);
         zx_info_task_stats_t task_stats = {};
         zx::process::self().get_info(ZX_INFO_TASK_STATS, &task_stats, sizeof(task_stats), nullptr,
                                      nullptr);
-        return DRETP(nullptr, "zx_bti_pin failed: %d page_count: 0x%x mem_mapped_bytes: 0x%lx "
-                              "mem_private_bytes: 0x%lx mem_shared_bytes: 0x%lx",
-                     status, page_count, task_stats.mem_mapped_bytes, task_stats.mem_private_bytes,
-                     task_stats.mem_shared_bytes);
+        magma::log(magma::LOG_WARNING,
+                   "Failed to pin 0x%x pages (0x%lx bytes) with status %d. Out of Memory?\n"
+                   "mem_mapped_bytes: 0x%lx mem_private_bytes: 0x%lx mem_shared_bytes: 0x%lx\n"
+                   "total_bytes: 0x%lx free_bytes 0x%lx: wired_bytes: 0x%lx vmo_bytes: 0x%lx\n"
+                   "mmu_overhead_bytes: 0x%lx other_bytes: 0x%lx\n",
+                   page_count, static_cast<uint64_t>(page_count) * PAGE_SIZE, status,
+                   task_stats.mem_mapped_bytes, task_stats.mem_private_bytes,
+                   task_stats.mem_shared_bytes, kmem_stats.total_bytes, kmem_stats.free_bytes,
+                   kmem_stats.wired_bytes, kmem_stats.vmo_bytes, kmem_stats.mmu_overhead_bytes,
+                   kmem_stats.other_bytes);
+        return nullptr;
     }
 
     auto mapping =
