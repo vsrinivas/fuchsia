@@ -9,6 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
+    $(LOCAL_DIR)/traits.cpp \
     $(LOCAL_DIR)/zx-test.cpp \
 
 MODULE_NAME := libzx-test

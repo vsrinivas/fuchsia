@@ -25,7 +25,6 @@ class pmt;
 // - job
 // - vmo
 // - bti
-// - log
 // - resource
 // - timer
 template <typename T> struct object_traits {
@@ -58,7 +57,7 @@ template <> struct object_traits<fifo> {
 
 template <> struct object_traits<log> {
     static constexpr bool supports_duplication = true;
-    static constexpr bool supports_user_signal = false;
+    static constexpr bool supports_user_signal = true;
     static constexpr bool supports_wait = true;
     static constexpr bool has_peer_handle = false;
 };
