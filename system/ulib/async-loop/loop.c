@@ -523,14 +523,16 @@ static zx_status_t async_loop_cancel_task(async_t* async, async_task_t* task) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    if (!loop->dispatching_tasks &&
-        node->prev == &loop->task_list &&
-        node->next != &loop->task_list &&
-        node_to_task(node->next)->deadline > task->deadline) {
-        // The head task was canceled and following task has a later deadline.
-        async_loop_restart_timer_locked(loop);
-    }
+    // Determine whether the head task was canceled and following task has
+    // a later deadline.  If so, we will bump the timer along to that deadline.
+    bool must_restart = !loop->dispatching_tasks &&
+                        node->prev == &loop->task_list &&
+                        node->next != &loop->task_list &&
+                        node_to_task(node->next)->deadline > task->deadline;
     list_delete(node);
+    if (must_restart)
+        async_loop_restart_timer_locked(loop);
+
     mtx_unlock(&loop->lock);
     return ZX_OK;
 }
