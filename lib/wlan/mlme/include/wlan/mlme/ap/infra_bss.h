@@ -51,6 +51,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     zx_status_t EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                fbl::unique_ptr<Packet>* out_packet) override;
     void OnPreTbtt() override;
+    void OnBcnTxComplete() override;
 
     bool IsHTReady() const override;
     bool IsCbw40RxReady() const override;

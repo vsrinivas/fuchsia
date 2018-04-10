@@ -55,7 +55,9 @@ class BssInterface {
     virtual zx_status_t SendDataFrame(fbl::unique_ptr<Packet> packet) = 0;
     virtual zx_status_t SendEthFrame(fbl::unique_ptr<Packet> packet) = 0;
 
+    // Indications reported from lower MAC layer.
     virtual void OnPreTbtt() = 0;
+    virtual void OnBcnTxComplete() = 0;
 
     virtual wlan_channel_t Chan() const = 0;
 };

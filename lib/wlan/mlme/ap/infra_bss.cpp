@@ -365,6 +365,10 @@ void InfraBss::OnPreTbtt() {
     // TODO(hahnr): Implement.
 }
 
+void InfraBss::OnBcnTxComplete() {
+    // TODO(hahnr): Implement.
+}
+
 const common::MacAddr& InfraBss::bssid() const {
     return bssid_;
 }

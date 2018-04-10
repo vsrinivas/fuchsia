@@ -98,7 +98,11 @@ zx_status_t ApMlme::PostChannelChange() {
 }
 
 void ApMlme::HwIndication(uint32_t ind) {
-    if (ind == WLAN_INDICATION_PRE_TBTT) { bss_->OnPreTbtt(); }
+    if (ind == WLAN_INDICATION_PRE_TBTT) {
+        bss_->OnPreTbtt();
+    } else if (ind == WLAN_INDICATION_BCN_TX_COMPLETE) {
+        bss_->OnBcnTxComplete();
+    }
 }
 
 }  // namespace wlan
