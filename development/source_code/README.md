@@ -53,6 +53,7 @@ your PATH.
 ## Who works on the code
 
 In the root of every repository and in many other directories are
-MAINTAINERS files. These list email addresses of individuals
-responsible for code under the current directory. See
-[maintainers.md](maintainers.md) for more discussion.
+MAINTAINERS files. These list email addresses of individuals who are
+familiar with and can provide code review for the contents of the
+containing directory. See [maintainers.md](maintainers.md) for more
+discussion.

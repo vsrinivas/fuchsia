@@ -7,12 +7,13 @@ have their own `MAINTAINERS` files.
 
 ## Contents
 
-Each file lists a number of individuals (via their email address)
-responsible for the contents of that directory. We strive to always
-have at least two individuals in a given file. Anything with just one
-is either too fine grained to deserve its own, or is in need of
-someone else to learn enough about the code to feel comfortable
-approving changes to it or answering questions about it.
+Each file lists a number of individuals (via their email address) who
+are familiar with and can provide code review for the contents of that
+directory. We strive to always have at least two individuals in a
+given file. Anything with just one is either too fine grained to
+deserve its own, or is in need of someone else to learn enough about
+the code to feel comfortable approving changes to it or answering
+questions about it.
 
 ## Responsibilities
 
