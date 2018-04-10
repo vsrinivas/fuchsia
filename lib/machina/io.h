@@ -8,6 +8,7 @@
 #include <fbl/canary.h>
 #include <fbl/intrusive_single_list.h>
 #include <lib/async/cpp/trap.h>
+#include <trace/event.h>
 #include <zircon/types.h>
 
 namespace machina {
@@ -79,12 +80,18 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
 
   zx_status_t Read(uint64_t addr, IoValue* value) const {
     canary_.Assert();
-    return handler_->Read(addr - base_ + offset_, value);
+    const uint64_t address = addr - base_ + offset_;
+    TRACE_DURATION("machina", "io_read", "address", address, "access_size",
+                   value->access_size);
+    return handler_->Read(address, value);
   }
 
   zx_status_t Write(uint64_t addr, const IoValue& value) {
     canary_.Assert();
-    return handler_->Write(addr - base_ + offset_, value);
+    const uint64_t address = addr - base_ + offset_;
+    TRACE_DURATION("machina", "io_write", "address", address, "access_size",
+                   value.access_size);
+    return handler_->Write(address, value);
   }
 
   zx_status_t SetTrap(Guest* guest);

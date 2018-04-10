@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
+#include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
 #include "garnet/lib/machina/bits.h"
@@ -472,6 +473,8 @@ VirtioPci::VirtioPci(VirtioDevice* device)
 zx_status_t VirtioPci::ReadBar(uint8_t bar,
                                uint64_t offset,
                                IoValue* value) const {
+  TRACE_DURATION("machina", "pci_readbar", "bar", bar, "offset", offset,
+                 "access_size", value->access_size);
   switch (bar) {
     case kVirtioPciBar:
       return ConfigBarRead(offset, value);
@@ -483,6 +486,8 @@ zx_status_t VirtioPci::ReadBar(uint8_t bar,
 zx_status_t VirtioPci::WriteBar(uint8_t bar,
                                 uint64_t offset,
                                 const IoValue& value) {
+  TRACE_DURATION("machina", "pci_writebar", "bar", bar, "offset", offset,
+                 "access_size", value.access_size);
   switch (bar) {
     case kVirtioPciBar:
       return ConfigBarWrite(offset, value);

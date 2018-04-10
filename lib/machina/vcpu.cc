@@ -10,6 +10,7 @@
 
 #include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
+#include <trace/event.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -31,6 +32,9 @@ thread_local Vcpu* thread_vcpu = nullptr;
 static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
                                  uint64_t trap_key,
                                  uint64_t* reg) {
+  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size",
+                 mem.access_size);
+
   machina::IoValue mmio = {mem.access_size, {.u64 = mem.data}};
   IoMapping* mapping = IoMapping::FromPortKey(trap_key);
   if (!mem.read) {
@@ -51,6 +55,9 @@ static zx_status_t HandleMmioArm(const zx_packet_guest_mem_t& mem,
 static zx_status_t HandleMmioX86(const zx_packet_guest_mem_t& mem,
                                  uint64_t trap_key,
                                  const machina::Instruction* inst) {
+  TRACE_DURATION("machina", "mmio", "addr", mem.addr, "access_size",
+                 inst->access_size);
+
   zx_status_t status;
   IoValue mmio = {inst->access_size, {.u64 = 0}};
   switch (inst->type) {
@@ -319,6 +326,9 @@ zx_status_t Vcpu::HandleMem(const zx_packet_guest_mem_t& mem,
 #if __x86_64__
 zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io,
                               uint64_t trap_key) {
+  TRACE_DURATION("machina", "pio_in", "port", io.port, "access_size",
+                 io.access_size);
+
   IoValue value = {};
   value.access_size = io.access_size;
   zx_status_t status = IoMapping::FromPortKey(trap_key)->Read(io.port, &value);
@@ -343,6 +353,9 @@ zx_status_t Vcpu::HandleInput(const zx_packet_guest_io_t& io,
 
 zx_status_t Vcpu::HandleOutput(const zx_packet_guest_io_t& io,
                                uint64_t trap_key) {
+  TRACE_DURATION("machina", "pio_out", "port", io.port, "access_size",
+                 io.access_size);
+
   IoValue value;
   value.access_size = io.access_size;
   value.u32 = io.u32;

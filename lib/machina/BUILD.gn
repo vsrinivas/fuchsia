@@ -98,6 +98,8 @@ shared_library("machina") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/virtio",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/zx",
   ]
 

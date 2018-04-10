@@ -12,6 +12,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <trace-engine/types.h>
+#include <trace/event.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
 #include <zircon/compiler.h>
@@ -59,6 +61,15 @@ zx_status_t VirtioBlock::Start() {
 zx_status_t VirtioBlock::HandleBlockRequest(VirtioQueue* queue,
                                             uint16_t head,
                                             uint32_t* used) {
+  // Attempt to correlate the processing of descriptors with a previous kick.
+  // As noted in virtio_device.cc this should be considered best-effort only.
+  const trace_async_id_t unset_id = 0;
+  const trace_async_id_t flow_id = trace_flow_id(0)->exchange(unset_id);
+  TRACE_DURATION("machina", "virtio_block_request", "flow_id", flow_id);
+  if (flow_id != unset_id) {
+    TRACE_FLOW_END("machina", "io_queue_signal", flow_id);
+  }
+
   uint8_t block_status = VIRTIO_BLK_S_OK;
   uint8_t* block_status_ptr = nullptr;
   const virtio_blk_req_t* req = nullptr;

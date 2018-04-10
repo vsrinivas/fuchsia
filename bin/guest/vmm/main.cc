@@ -17,6 +17,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async/cpp/task.h>
+#include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -198,6 +199,7 @@ static zx_status_t read_guest_cfg(const char* cfg_path,
 
 int main(int argc, char** argv) {
   fsl::MessageLoop loop;
+  trace::TraceProvider trace_provider(loop.async());
   std::unique_ptr<component::ApplicationContext> application_context =
       component::ApplicationContext::CreateFromStartupInfo();
 

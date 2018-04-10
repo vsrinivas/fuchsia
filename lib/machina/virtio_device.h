@@ -5,8 +5,12 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_DEVICE_H_
 #define GARNET_LIB_MACHINA_VIRTIO_DEVICE_H_
 
+#include <atomic>
+
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <trace-engine/types.h>
+#include <trace/event.h>
 #include <virtio/virtio.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -94,15 +98,15 @@ class VirtioDevice {
                uint16_t num_queues,
                const PhysMem& phys_mem);
 
+  // Handles kicks from the driver that a queue needs attention.
+  virtual zx_status_t Kick(uint16_t kicked_queue);
+
  private:
   // Temporarily expose our state to the PCI transport until the proper
   // accessor methods are defined.
   friend class VirtioPci;
 
   fbl::Mutex mutex_;
-
-  // Handle kicks from the driver that a queue needs attention.
-  zx_status_t Kick(uint16_t queue_sel);
 
   // Device feature bits.
   //
@@ -212,8 +216,39 @@ class VirtioDeviceBase : public VirtioDevice {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  zx_status_t Kick(uint16_t kicked_queue) override {
+    if (kicked_queue >= NUM_QUEUES) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    // Generate a flow ID that will be later read by the queue request handler
+    // to trace correlation from kicks generated from PCI bus traps/interrupts
+    // to their corresponding descriptor processing in the queue handler. As
+    // there is no exact mapping between kicks and descriptors in the queue,
+    // correlation tracing should only be considered best-effort and may provide
+    // inaccurate correlations if new kicks happen while the queue is not empty.
+    const trace_async_id_t flow_id =
+        (static_cast<trace_async_id_t>(VIRTIO_ID) << 56) +
+        (static_cast<trace_async_id_t>(kicked_queue) << 40) + TRACE_NONCE();
+    TRACE_DURATION("machina", "io_queue_kick", "device_id", VIRTIO_ID,
+                   "kicked_queue", kicked_queue, "flow_id", flow_id);
+
+    // Only emplace a new flow ID if there is no other still in flight.
+    trace_async_id_t unset = 0;
+    if (trace_flow_id(kicked_queue)->compare_exchange_strong(unset, flow_id)) {
+      TRACE_FLOW_BEGIN("machina", "io_queue_signal", flow_id);
+    }
+
+    // Perform the actual kick.
+    return VirtioDevice::Kick(kicked_queue);
+  }
+
   VirtioQueue* queue(uint16_t sel) {
     return sel >= NUM_QUEUES ? nullptr : &queues_[sel];
+  }
+
+  std::atomic<trace_async_id_t>* trace_flow_id(uint16_t sel) {
+    return sel >= NUM_QUEUES ? nullptr : &trace_flow_ids_[sel];
   }
 
  protected:
@@ -223,6 +258,9 @@ class VirtioDeviceBase : public VirtioDevice {
 
  private:
   VirtioQueue queues_[NUM_QUEUES];
+
+  // One flow ID slot for each device queue, used for IO correlation tracing.
+  std::atomic<trace_async_id_t> trace_flow_ids_[NUM_QUEUES] = {};
 };
 
 }  // namespace machina

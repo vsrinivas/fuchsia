@@ -14,6 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/watcher.h>
+#include <trace/event.h>
 #include <virtio/virtio_ids.h>
 #include <virtio/virtio_ring.h>
 #include <zircon/compiler.h>
@@ -54,7 +55,11 @@ class FdioBlockDispatcher : public BlockDispatcher {
   }
 
   zx_status_t Read(off_t disk_offset, void* buf, size_t size) override {
+    TRACE_DURATION("machina", "io_block_read", "offset", disk_offset, "buf",
+                   buf, "size", size);
+
     fbl::AutoLock lock(&file_mutex_);
+
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
     if (off < 0)
       return ZX_ERR_IO;
@@ -66,7 +71,11 @@ class FdioBlockDispatcher : public BlockDispatcher {
   }
 
   zx_status_t Write(off_t disk_offset, const void* buf, size_t size) override {
+    TRACE_DURATION("machina", "io_block_write", "offset", disk_offset, "buf",
+                   buf, "size", size);
+
     fbl::AutoLock lock(&file_mutex_);
+
     off_t off = lseek(fd_, disk_offset, SEEK_SET);
     if (off < 0)
       return ZX_ERR_IO;
