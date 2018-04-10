@@ -8,13 +8,13 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <fuchsia/cpp/cloud_provider_firebase.h>
 #include <fuchsia/cpp/modular_auth.h>
+
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firebase/app/device_set_impl.h"
 #include "peridot/bin/cloud_provider_firebase/app/page_cloud_impl.h"
 #include "peridot/lib/firebase/firebase_impl.h"
@@ -29,7 +29,6 @@ namespace cloud_provider_firebase {
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
   CloudProviderImpl(
-      fxl::RefPtr<fxl::TaskRunner> main_runner,
       network_wrapper::NetworkWrapper* network_wrapper,
       std::string user_id,
       Config config,
@@ -50,7 +49,6 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
       fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
       GetPageCloudCallback callback) override;
 
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
   network_wrapper::NetworkWrapper* const network_wrapper_;
   const std::string user_id_;
   const std::string server_id_;

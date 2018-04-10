@@ -23,7 +23,7 @@ class FirebaseAuthImplTest : public gtest::TestWithMessageLoop {
   FirebaseAuthImplTest()
       : token_provider_(message_loop_.task_runner()),
         token_provider_binding_(&token_provider_),
-        firebase_auth_(message_loop_.task_runner(),
+        firebase_auth_(message_loop_.async(),
                        "api_key",
                        token_provider_binding_.NewBinding().Bind(),
                        InitBackoff()) {}

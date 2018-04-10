@@ -8,6 +8,8 @@
 #include <memory>
 #include <thread>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
@@ -60,7 +62,7 @@ using EmptyResponseCall = SingleResponseCall<google::protobuf::Empty>;
 class FirestoreServiceImpl : public FirestoreService {
  public:
   FirestoreServiceImpl(std::string server_id,
-                       fxl::RefPtr<fxl::TaskRunner> main_runner,
+                       async_t* async,
                        std::shared_ptr<grpc::Channel> channel);
 
   ~FirestoreServiceImpl() override;
@@ -112,7 +114,7 @@ class FirestoreServiceImpl : public FirestoreService {
   const std::string database_path_;
   const std::string root_path_;
 
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  async_t* const async_;
   std::thread polling_thread_;
 
   std::unique_ptr<google::firestore::v1beta1::Firestore::Stub> firestore_;

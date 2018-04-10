@@ -8,6 +8,8 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <fuchsia/cpp/cloud_provider_firebase.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
 #include "garnet/lib/network_wrapper/network_wrapper.h"
@@ -19,7 +21,7 @@ namespace cloud_provider_firebase {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
+  explicit FactoryImpl(async_t* async,
                        network_wrapper::NetworkWrapper* network_wrapper);
 
   ~FactoryImpl() override;
@@ -32,7 +34,7 @@ class FactoryImpl : public Factory {
       fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider,
       GetCloudProviderCallback callback) override;
 
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  async_t* const async_;
   network_wrapper::NetworkWrapper* const network_wrapper_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;

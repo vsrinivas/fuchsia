@@ -4,6 +4,9 @@
 
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
+
 namespace cloud_provider_firestore {
 
 namespace {
@@ -55,12 +58,12 @@ void MakeCall(
 
 FirestoreServiceImpl::FirestoreServiceImpl(
     std::string server_id,
-    fxl::RefPtr<fxl::TaskRunner> main_runner,
+    async_t* async,
     std::shared_ptr<grpc::Channel> channel)
     : server_id_(std::move(server_id)),
       database_path_("projects/" + server_id_ + "/databases/(default)"),
       root_path_(database_path_ + "/documents"),
-      main_runner_(std::move(main_runner)),
+      async_(async),
       firestore_(google::firestore::v1beta1::Firestore::NewStub(channel)) {
   polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
@@ -72,7 +75,7 @@ void FirestoreServiceImpl::GetDocument(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   DocumentResponseCall& call = document_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
@@ -87,7 +90,7 @@ void FirestoreServiceImpl::ListDocuments(
     std::function<void(grpc::Status,
                        google::firestore::v1beta1::ListDocumentsResponse)>
         callback) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
@@ -101,7 +104,7 @@ void FirestoreServiceImpl::CreateDocument(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status, google::firestore::v1beta1::Document)>
         callback) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   DocumentResponseCall& call = document_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
@@ -115,7 +118,7 @@ void FirestoreServiceImpl::DeleteDocument(
     google::firestore::v1beta1::DeleteDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status)> callback) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   EmptyResponseCall& call = empty_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader =
@@ -130,7 +133,7 @@ void FirestoreServiceImpl::Commit(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     std::function<void(grpc::Status,
                        google::firestore::v1beta1::CommitResponse)> callback) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   CommitResponseCall& call = commit_response_calls_.emplace();
   call.context.set_credentials(call_credentials);
   auto response_reader = firestore_->AsyncCommit(&call.context, request, &cq_);
@@ -142,7 +145,7 @@ void FirestoreServiceImpl::Commit(
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     ListenCallClient* client) {
-  FXL_DCHECK(main_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(async_ == async_get_default());
   auto context = std::make_unique<grpc::ClientContext>();
   context->set_credentials(call_credentials);
 
@@ -164,7 +167,7 @@ void FirestoreServiceImpl::ShutDown(fxl::Closure callback) {
   // exiting, completing the calls that were active when we initated the
   // CompletionQueue shut down. These must be processed before we call the
   // client callback, so post the client callback on the main thread too.
-  main_runner_->PostTask(std::move(callback));
+  async::PostTask(async_, std::move(callback));
 }
 
 void FirestoreServiceImpl::Poll() {
@@ -173,7 +176,7 @@ void FirestoreServiceImpl::Poll() {
   while (cq_.Next(&tag, &ok)) {
     FXL_DCHECK(tag);
     auto callable = reinterpret_cast<std::function<void(bool)>*>(tag);
-    main_runner_->PostTask([callable, ok] { (*callable)(ok); });
+    async::PostTask(async_, [callable, ok] { (*callable)(ok); });
   }
 }
 

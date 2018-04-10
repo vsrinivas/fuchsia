@@ -9,10 +9,11 @@
 #include <memory>
 #include <string>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/backoff/backoff.h"
 #include "garnet/lib/callback/scoped_task_runner.h"
 #include <fuchsia/cpp/modular_auth.h>
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
 namespace firebase_auth {
@@ -30,7 +31,7 @@ namespace firebase_auth {
 // callbacks with status TOKEN_PROVIDER_DISCONNECTED when this happens.
 class FirebaseAuthImpl : public FirebaseAuth {
  public:
-  FirebaseAuthImpl(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  FirebaseAuthImpl(async_t* async,
                    std::string api_key,
                    modular_auth::TokenProviderPtr token_provider,
                    std::unique_ptr<backoff::Backoff> backoff);

@@ -8,18 +8,19 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <fuchsia/cpp/cloud_provider_firestore.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/auto_cleanable.h"
 #include "garnet/lib/callback/cancellable.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/cloud_provider_firestore/app/cloud_provider_impl.h"
 
 namespace cloud_provider_firestore {
 
 class FactoryImpl : public Factory {
  public:
-  explicit FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner);
+  explicit FactoryImpl(async_t* async);
 
   ~FactoryImpl() override;
 
@@ -38,7 +39,7 @@ class FactoryImpl : public Factory {
           cloud_provider_request,
       GetCloudProviderCallback callback) override;
 
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
+  async_t* const async_;
   callback::CancellableContainer token_requests_;
   callback::AutoCleanableSet<CloudProviderImpl> providers_;
 

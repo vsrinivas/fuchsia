@@ -17,7 +17,7 @@ class CloudProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudProviderImplTest() {
     auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
-        message_loop_.task_runner());
+        message_loop_.async());
     firebase_auth_ = firebase_auth.get();
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();

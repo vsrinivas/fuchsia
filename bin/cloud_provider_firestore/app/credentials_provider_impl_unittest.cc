@@ -18,7 +18,7 @@ class CredentialsProviderImplTest : public gtest::TestWithMessageLoop {
  public:
   CredentialsProviderImplTest() {
     auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(
-        message_loop_.task_runner());
+        message_loop_.async());
     firebase_auth_ = firebase_auth.get();
     credentials_provider_ =
         std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));

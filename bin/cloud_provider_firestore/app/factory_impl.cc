@@ -21,8 +21,7 @@ std::shared_ptr<grpc::Channel> MakeChannel() {
 }
 }  // namespace
 
-FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner)
-    : main_runner_(std::move(main_runner)) {}
+FactoryImpl::FactoryImpl(async_t* async) : async_(async) {}
 
 FactoryImpl::~FactoryImpl() {}
 
@@ -46,7 +45,7 @@ void FactoryImpl::GetCloudProvider(
     GetCloudProviderCallback callback) {
   auto token_provider_ptr = token_provider.Bind();
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      main_runner_, config.api_key, std::move(token_provider_ptr),
+      async_, config.api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto token_request =
@@ -64,7 +63,7 @@ void FactoryImpl::GetCloudProvider(
             }
 
             auto firestore_service = std::make_unique<FirestoreServiceImpl>(
-                config.server_id, main_runner_, MakeChannel());
+                config.server_id, async_, MakeChannel());
 
             providers_.emplace(user_id, std::move(firebase_auth),
                                std::move(firestore_service),

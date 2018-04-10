@@ -27,7 +27,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
                           cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()
-      : firebase_auth_(message_loop_.task_runner()),
+      : firebase_auth_(message_loop_.async()),
         device_set_impl_(
             &firebase_auth_,
             InitCloudDeviceSet(&cloud_device_set_, message_loop_.task_runner()),

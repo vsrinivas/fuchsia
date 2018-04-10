@@ -6,13 +6,14 @@
 
 #include <utility>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/cancellable_helper.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace firebase_auth {
 
-TestFirebaseAuth::TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+TestFirebaseAuth::TestFirebaseAuth(async_t* async) : async_(async) {}
 
 void TestFirebaseAuth::set_error_handler(fxl::Closure on_error) {
   error_handler_ = on_error;
@@ -22,7 +23,7 @@ fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseToken(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  task_runner_->PostTask(
+  async::PostTask(async_,
       [this, callback = cancellable->WrapCallback(callback)] {
         callback(status_to_return, token_to_return);
       });
@@ -33,7 +34,7 @@ fxl::RefPtr<callback::Cancellable> TestFirebaseAuth::GetFirebaseUserId(
     std::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
 
-  task_runner_->PostTask(
+  async::PostTask(async_,
       [this, callback = cancellable->WrapCallback(callback)] {
         callback(status_to_return, user_id_to_return);
       });

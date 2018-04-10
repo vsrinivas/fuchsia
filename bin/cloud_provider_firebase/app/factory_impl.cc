@@ -10,9 +10,9 @@
 
 namespace cloud_provider_firebase {
 
-FactoryImpl::FactoryImpl(fxl::RefPtr<fxl::TaskRunner> main_runner,
+FactoryImpl::FactoryImpl(async_t* async,
                          network_wrapper::NetworkWrapper* network_wrapper)
-    : main_runner_(std::move(main_runner)), network_wrapper_(network_wrapper) {}
+    : async_(async), network_wrapper_(network_wrapper) {}
 
 FactoryImpl::~FactoryImpl() {}
 
@@ -23,7 +23,7 @@ void FactoryImpl::GetCloudProvider(
     GetCloudProviderCallback callback) {
   auto token_provider_ptr = token_provider.Bind();
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      main_runner_, config.api_key, std::move(token_provider_ptr),
+      async_, config.api_key, std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
   firebase_auth::FirebaseAuthImpl* firebase_auth_ptr = firebase_auth.get();
   auto request = firebase_auth_ptr->GetFirebaseUserId(fxl::MakeCopyable([
@@ -37,7 +37,7 @@ void FactoryImpl::GetCloudProvider(
       return;
     }
 
-    providers_.emplace(main_runner_, network_wrapper_, user_id,
+    providers_.emplace(network_wrapper_, user_id,
                        std::move(config), std::move(firebase_auth),
                        std::move(cloud_provider));
     callback(cloud_provider::Status::OK);

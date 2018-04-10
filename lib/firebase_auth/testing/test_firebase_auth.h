@@ -7,13 +7,13 @@
 
 #include "peridot/lib/firebase_auth/firebase_auth.h"
 
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
 
 namespace firebase_auth {
 
 class TestFirebaseAuth : public FirebaseAuth {
  public:
-  explicit TestFirebaseAuth(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestFirebaseAuth(async_t* async);
 
   // FirebaseAuth:
   void set_error_handler(fxl::Closure on_error) override;
@@ -33,7 +33,7 @@ class TestFirebaseAuth : public FirebaseAuth {
   std::string user_id_to_return;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 
   fxl::Closure error_handler_;
 };

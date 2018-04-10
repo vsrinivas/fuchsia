@@ -25,7 +25,7 @@ class PageCloudImplTest : public gtest::TestWithMessageLoop,
                           cloud_provider::PageCloudWatcher {
  public:
   PageCloudImplTest()
-      : firebase_auth_(message_loop_.task_runner()), watcher_binding_(this) {
+      : firebase_auth_(message_loop_.async()), watcher_binding_(this) {
     auto handler =
         std::make_unique<TestPageCloudHandler>(message_loop_.task_runner());
     handler_ = handler.get();

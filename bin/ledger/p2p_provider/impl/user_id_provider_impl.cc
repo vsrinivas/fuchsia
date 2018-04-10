@@ -18,7 +18,7 @@ UserIdProviderImpl::UserIdProviderImpl(
     modular_auth::TokenProviderPtr token_provider_ptr)
     : user_directory_(std::move(user_directory)) {
   firebase_auth_ = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      environment->main_runner(), modular::kFirebaseApiKey,
+      environment->async(), modular::kFirebaseApiKey,
       std::move(token_provider_ptr),
       std::make_unique<backoff::ExponentialBackoff>());
 }

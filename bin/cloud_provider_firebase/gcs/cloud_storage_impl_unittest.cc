@@ -41,8 +41,7 @@ class CloudStorageImplTest : public gtest::TestWithMessageLoop {
  public:
   CloudStorageImplTest()
       : fake_network_wrapper_(message_loop_.async()),
-        gcs_(message_loop_.task_runner(),
-             &fake_network_wrapper_,
+        gcs_(&fake_network_wrapper_,
              "project",
              "prefix") {}
   ~CloudStorageImplTest() override {}

@@ -17,14 +17,12 @@
 namespace cloud_provider_firebase {
 
 CloudProviderImpl::CloudProviderImpl(
-    fxl::RefPtr<fxl::TaskRunner> main_runner,
     network_wrapper::NetworkWrapper* network_wrapper,
     std::string user_id,
     Config config,
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
     fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
-    : main_runner_(std::move(main_runner)),
-      network_wrapper_(network_wrapper),
+    : network_wrapper_(network_wrapper),
       user_id_(std::move(user_id)),
       server_id_(config.server_id),
       firebase_auth_(std::move(firebase_auth)),
@@ -74,7 +72,7 @@ void CloudProviderImpl::GetPageCloud(
 
   std::string app_gcs_prefix = GetGcsPrefixForApp(user_id_, app_id_str);
   auto cloud_storage = std::make_unique<gcs::CloudStorageImpl>(
-      main_runner_, network_wrapper_, server_id_,
+      network_wrapper_, server_id_,
       GetGcsPrefixForPage(app_gcs_prefix, page_id_str));
 
   auto handler =

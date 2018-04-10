@@ -12,14 +12,14 @@
 namespace firebase_auth {
 
 FirebaseAuthImpl::FirebaseAuthImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     std::string api_key,
     modular_auth::TokenProviderPtr token_provider,
     std::unique_ptr<backoff::Backoff> backoff)
     : api_key_(std::move(api_key)),
       token_provider_(std::move(token_provider)),
       backoff_(std::move(backoff)),
-      task_runner_(std::move(task_runner)) {}
+      task_runner_(async) {}
 
 void FirebaseAuthImpl::set_error_handler(fxl::Closure on_error) {
   token_provider_.set_error_handler(std::move(on_error));

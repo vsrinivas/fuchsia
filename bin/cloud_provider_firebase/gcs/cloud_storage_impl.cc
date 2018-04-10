@@ -76,12 +76,10 @@ std::string GetUrlPrefix(const std::string& firebase_id,
 }  // namespace
 
 CloudStorageImpl::CloudStorageImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
     network_wrapper::NetworkWrapper* network_wrapper,
     const std::string& firebase_id,
     const std::string& cloud_prefix)
-    : task_runner_(std::move(task_runner)),
-      network_wrapper_(network_wrapper),
+    : network_wrapper_(network_wrapper),
       url_prefix_(GetUrlPrefix(firebase_id, cloud_prefix)) {}
 
 CloudStorageImpl::~CloudStorageImpl() {}
@@ -94,7 +92,7 @@ void CloudStorageImpl::UploadObject(std::string auth_token,
 
   auto request_factory = fxl::MakeCopyable([
     auth_token = std::move(auth_token), url = std::move(url),
-    task_runner = task_runner_, data = std::move(data)
+    data = std::move(data)
   ] {
     network::URLRequest request;
     request.url = url;
