@@ -9,21 +9,40 @@ namespace cloud_provider_firestore {
 ListenCall::ListenCall(ListenCallClient* client,
                        std::unique_ptr<grpc::ClientContext> context,
                        std::unique_ptr<ListenStream> stream)
-    : context_(std::move(context)),
-      client_(client),
-      stream_(std::move(stream)) {
-  on_connected_ = [this](bool ok) {
-    pending_cq_operations_--;
+    : client_(client),
+      context_(std::move(context)),
+      stream_(std::move(stream)),
+      stream_controller_(stream_.get()),
+      stream_reader_(stream_.get()),
+      stream_writer_(stream_.get()) {
+  // Configure reading from the stream.
+  stream_reader_.SetOnError([this] { FinishIfNeeded(); });
+  stream_reader_.SetOnMessage(
+      [this](google::firestore::v1beta1::ListenResponse response) {
+        if (CheckEmpty()) {
+          return;
+        }
+
+        client_->OnResponse(std::move(response));
+        if (finish_requested_) {
+          return;
+        }
+        stream_reader_.Read();
+      });
+
+  // Configure writing to the stream.
+  stream_writer_.SetOnError([this] { FinishIfNeeded(); });
+  stream_writer_.SetOnSuccess([this] { CheckEmpty(); });
+
+  // Finally, start the stream.
+  stream_controller_.StartCall([this](bool ok) {
     if (!ok) {
       FXL_LOG(ERROR) << "Failed to establish the stream.";
       HandleFinished(grpc::Status(grpc::StatusCode::UNKNOWN, "unknown"));
       return;
     }
 
-    // If the stream was successfully connected, but the client went away in the
-    // meantime, we should close it.
-    if (!client_) {
-      FinishIfNeeded();
+    if (CheckEmpty()) {
       return;
     }
 
@@ -31,63 +50,12 @@ ListenCall::ListenCall(ListenCallClient* client,
     // reading the server stream.
     connected_ = true;
     client_->OnConnected();
-    ReadNext();
-  };
-
-  on_read_ = [this](bool ok) {
-    pending_cq_operations_--;
-    if (!client_) {
-      CheckEmpty();
-      return;
-    }
-
-    if (!ok) {
-      FXL_LOG(ERROR) << "Read failed, closing the stream.";
-      FinishIfNeeded();
-      return;
-    }
-
-    client_->OnResponse(std::move(response_));
-    ReadNext();
-  };
-
-  on_write_ = [this](bool ok) {
-    pending_cq_operations_--;
-    if (!client_) {
-      CheckEmpty();
-      return;
-    }
-
-    if (!ok) {
-      FXL_LOG(ERROR) << "Write failed, closing the stream.";
-      FinishIfNeeded();
-    }
-  };
-
-  on_finish_ = [this](bool ok) {
-    pending_cq_operations_--;
-    if (!client_) {
-      CheckEmpty();
-      return;
-    }
-
-    if (!ok) {
-      FXL_LOG(ERROR) << "Failed to retrieve the final status of the stream";
-      HandleFinished(grpc::Status(grpc::StatusCode::UNKNOWN, "unknown"));
-      return;
-    }
-
-    HandleFinished(status_);
-  };
-
-  stream_->StartCall(&on_connected_);
-  pending_cq_operations_++;
+    stream_reader_.Read();
+  });
 }
 
 ListenCall::~ListenCall() {
-  // The class cannot go away while completion queue operations are pending, as
-  // they reference member function objects as operation tags.
-  FXL_DCHECK(pending_cq_operations_ == 0);
+  FXL_DCHECK(IsEmpty());
 }
 
 void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
@@ -95,8 +63,7 @@ void ListenCall::Write(google::firestore::v1beta1::ListenRequest request) {
   // and before the Finish() call was made.
   FXL_DCHECK(connected_);
   FXL_DCHECK(!finish_requested_);
-  stream_->Write(request, &on_write_);
-  pending_cq_operations_++;
+  stream_writer_.Write(std::move(request));
 }
 
 void ListenCall::OnHandlerGone() {
@@ -108,29 +75,33 @@ void ListenCall::OnHandlerGone() {
   CheckEmpty();
 }
 
-void ListenCall::ReadNext() {
-  // It's only valid to perform a read after the connection was established,
-  // and before the Finish() call was made.
-  FXL_DCHECK(connected_);
-  FXL_DCHECK(!finish_requested_);
-  stream_->Read(&response_, &on_read_);
-  pending_cq_operations_++;
-}
-
 void ListenCall::FinishIfNeeded() {
   if (!finish_requested_ && client_) {
     Finish();
-  } else {
-    CheckEmpty();
+    return;
   }
+
+  CheckEmpty();
 }
 
 void ListenCall::Finish() {
   FXL_DCHECK(!finish_requested_);
   finish_requested_ = true;
 
-  stream_->Finish(&status_, &on_finish_);
-  pending_cq_operations_++;
+  stream_controller_.Finish([this](bool ok, grpc::Status status) {
+    if (!client_) {
+      CheckEmpty();
+      return;
+    }
+
+    if (!ok) {
+      FXL_LOG(ERROR) << "Failed to retrieve the final status of the stream";
+      HandleFinished(grpc::Status(grpc::StatusCode::UNKNOWN, "unknown"));
+      return;
+    }
+
+    HandleFinished(status);
+  });
 }
 
 void ListenCall::HandleFinished(grpc::Status status) {
@@ -142,9 +113,20 @@ void ListenCall::HandleFinished(grpc::Status status) {
   CheckEmpty();
 }
 
-void ListenCall::CheckEmpty() {
-  if (on_empty_ && pending_cq_operations_ == 0 && client_ == nullptr) {
+bool ListenCall::IsEmpty() {
+  return client_ == nullptr && stream_controller_.IsEmpty() &&
+         stream_reader_.IsEmpty() && stream_writer_.IsEmpty();
+}
+
+bool ListenCall::CheckEmpty() {
+  if (!IsEmpty()) {
+    return false;
+  }
+
+  if (on_empty_) {
     on_empty_();
   }
+  return true;
 }
+
 }  // namespace cloud_provider_firestore

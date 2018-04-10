@@ -15,6 +15,9 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call_client.h"
+#include "peridot/bin/cloud_provider_firestore/grpc/stream_controller.h"
+#include "peridot/bin/cloud_provider_firestore/grpc/stream_reader.h"
+#include "peridot/bin/cloud_provider_firestore/grpc/stream_writer.h"
 
 namespace cloud_provider_firestore {
 
@@ -25,8 +28,6 @@ using ListenStream = grpc::ClientAsyncReaderWriterInterface<
 class ListenCall {
  public:
   // Creates a new instance.
-  //
-  // |stream_factory| is used within the constructor and not retained.
   ListenCall(ListenCallClient* client,
              std::unique_ptr<grpc::ClientContext> context,
              std::unique_ptr<ListenStream> stream);
@@ -39,46 +40,36 @@ class ListenCall {
   void OnHandlerGone();
 
  private:
-  void ReadNext();
-
   void FinishIfNeeded();
 
   void Finish();
 
   void HandleFinished(grpc::Status status);
 
-  void CheckEmpty();
+  bool IsEmpty();
 
-  // Context used to make the remote call.
-  std::unique_ptr<grpc::ClientContext> context_;
+  bool CheckEmpty();
 
   // Pointer to the client of the call. It is unset when the call handler is
   // deleted.
   ListenCallClient* client_;
 
+  // Context used to make the remote call.
+  std::unique_ptr<grpc::ClientContext> context_;
+
+  // gRPC stream handler.
+  std::unique_ptr<ListenStream> stream_;
+
+  StreamController<ListenStream> stream_controller_;
+  StreamReader<ListenStream, google::firestore::v1beta1::ListenResponse>
+      stream_reader_;
+  StreamWriter<ListenStream, google::firestore::v1beta1::ListenRequest>
+      stream_writer_;
+
   fxl::Closure on_empty_;
 
   bool connected_ = false;
   bool finish_requested_ = false;
-
-  // Count of pending async tasks posted on the completion queue. The class
-  // cannot be deleted until the count is 0, because the posted tasks reference
-  // member callables as completion tags.
-  int pending_cq_operations_ = 0;
-
-  std::function<void(bool)> on_connected_;
-  std::function<void(bool)> on_read_;
-  std::function<void(bool)> on_write_;
-  std::function<void(bool)> on_finish_;
-
-  // Most recent response from the response stream.
-  google::firestore::v1beta1::ListenResponse response_;
-
-  // Final status of the stream set by the server.
-  grpc::Status status_;
-
-  // gRPC stream handler.
-  std::unique_ptr<ListenStream> stream_;
 };
 
 class ListenCallHandlerImpl : public ListenCallHandler {

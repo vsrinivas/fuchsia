@@ -19,6 +19,7 @@ source_set("firestore") {
   public_deps = [
     "//garnet/lib/callback",
     "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/grpc",
     "//peridot/public/lib/cloud_provider/fidl",
     "//third_party/googleapis/google/firestore/v1beta1",
     "//third_party/googleapis/google/firestore/v1beta1:service",
