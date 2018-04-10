@@ -65,8 +65,10 @@ zx_status_t RoundSize(uint64_t size, uint64_t* out_size) {
 
 } // namespace
 
-VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent)
-    : VmObject(fbl::move(parent)), size_(size), pmm_alloc_flags_(pmm_alloc_flags) {
+VmObjectPaged::VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent,
+                             bool is_contiguous)
+    : VmObject(fbl::move(parent)), size_(size), pmm_alloc_flags_(pmm_alloc_flags),
+      is_contiguous_(is_contiguous) {
     LTRACEF("%p\n", this);
 
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -97,7 +99,8 @@ zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags, uint64_t size, fbl::
         return status;
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr));
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr,
+                                                               false /* is_contiguous */));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -116,7 +119,8 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     }
 
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr));
+    auto vmo = fbl::AdoptRef<VmObject>(new (&ac) VmObjectPaged(pmm_alloc_flags, size, nullptr,
+                                                               true /* is_contiguous */));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -186,7 +190,8 @@ zx_status_t VmObjectPaged::CloneCOW(uint64_t offset, uint64_t size, bool copy_na
 
     // allocate the clone up front outside of our lock
     fbl::AllocChecker ac;
-    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, size, fbl::WrapRefPtr(this)));
+    auto vmo = fbl::AdoptRef<VmObjectPaged>(new (&ac) VmObjectPaged(pmm_alloc_flags_, size, fbl::WrapRefPtr(this),
+                                                                    false /* is_contiguous */));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -589,6 +594,10 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len, uint64_t
 
     if (decommitted)
         *decommitted = 0;
+
+    if (is_contiguous_) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     AutoLock a(&lock_);
 

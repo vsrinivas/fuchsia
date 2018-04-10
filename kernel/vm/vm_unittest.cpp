@@ -322,6 +322,7 @@ static bool vmo_create_test() {
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_TRUE(vmo, "");
+    EXPECT_FALSE(static_cast<VmObjectPaged*>(vmo.get())->is_contiguous(), "vmo is not contig\n");
     END_TEST;
 }
 
@@ -481,6 +482,8 @@ static bool vmo_create_contiguous_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     EXPECT_TRUE(vmo, "vmobject creation\n");
 
+    EXPECT_TRUE(static_cast<VmObjectPaged*>(vmo.get())->is_contiguous(), "vmo is contig\n");
+
     paddr_t last_pa;
     auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
         paddr_t* last_pa = static_cast<paddr_t*>(ctx);
@@ -508,11 +511,11 @@ static bool vmo_contiguous_decommit_test() {
 
     uint64_t n;
     status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE, &n);
-    ASSERT_EQ(status, ZX_ERR_BAD_STATE, "decommit fails due to pinned pages\n");
+    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
     status = vmo->DecommitRange(0, 4 * PAGE_SIZE, &n);
-    ASSERT_EQ(status, ZX_ERR_BAD_STATE, "decommit fails due to pinned pages\n");
+    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
     status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE, &n);
-    ASSERT_EQ(status, ZX_ERR_BAD_STATE, "decommit fails due to pinned pages\n");
+    ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED, "decommit fails due to pinned pages\n");
 
     // Make sure all pages are still present and contiguous
     paddr_t last_pa;

@@ -63,7 +63,8 @@ value is returned.
 **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid
 operation, or *size* is zero and *op* is a cache operation.
 
-**ZX_ERR_NOT_SUPPORTED**  *op* was *ZX_VMO_OP_LOCK* or *ZX_VMO_OP_UNLOCK*.
+**ZX_ERR_NOT_SUPPORTED**  *op* was *ZX_VMO_OP_LOCK* or *ZX_VMO_OP_UNLOCK*, or
+*op* was *ZX_VMO_OP_DECOMMIT* and the underlying VMO does not allow decommiting.
 
 ## SEE ALSO
 

@@ -45,6 +45,7 @@ public:
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
     bool is_paged() const override { return true; }
+    bool is_contiguous() const { return is_contiguous_; }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 
@@ -94,7 +95,8 @@ public:
 
 private:
     // private constructor (use Create())
-    explicit VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent);
+    VmObjectPaged(uint32_t pmm_alloc_flags, uint64_t size, fbl::RefPtr<VmObject> parent,
+                  bool is_contiguous);
 
     // private destructor, only called from refptr
     ~VmObjectPaged() override;
@@ -134,6 +136,7 @@ private:
     uint64_t parent_offset_ TA_GUARDED(lock_) = 0;
     uint32_t pmm_alloc_flags_ TA_GUARDED(lock_) = PMM_ALLOC_FLAG_ANY;
     uint32_t cache_policy_ TA_GUARDED(lock_) = ARCH_MMU_FLAG_CACHED;
+    const bool is_contiguous_;
 
     // a tree of pages
     VmPageList page_list_ TA_GUARDED(lock_);
