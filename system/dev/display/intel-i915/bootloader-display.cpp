@@ -33,29 +33,7 @@ bool BootloaderDisplay::QueryDevice(edid::Edid* edid, zx_display_info_t* di) {
         return false;
     }
 
-    // Create a fake EDID that only advertises one the bootloader fb size. Really hacky,
-    // but that's all we can do if we don't know enough to read a real EDID.
-    uint8_t header[8] = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
-    memcpy(&fake_base_edid_.header, header, fbl::count_of(header));
-
-    fake_base_edid_.edid_version = 1;
-    fake_base_edid_.edid_revision = 3;
-
-    fake_base_edid_.preferred_timing.horizontal_addressable_low = di->width & 0xff;
-    fake_base_edid_.preferred_timing.set_horizontal_addressable_high(
-            static_cast<uint8_t>(di->width >> 8));
-    fake_base_edid_.preferred_timing.vertical_addressable_low = di->height & 0xff;
-    fake_base_edid_.preferred_timing.set_vertical_addressable_high(
-            static_cast<uint8_t>(di->height >> 8));
-    fake_base_edid_.preferred_timing.pixel_clock_10khz =
-            static_cast<uint16_t>(di->width * di->height * 30 / 10000);
-
-    fake_base_edid_.num_extensions = 0;
-    uint8_t sum = 0;
-    for (unsigned i = 0; i < edid::kBlockSize; i++) {
-        sum = static_cast<uint8_t>(sum + reinterpret_cast<uint8_t*>(&fake_base_edid_)[i]);
-    }
-    fake_base_edid_.checksum_byte = static_cast<uint8_t>(0 - sum);
+    edid::BaseEdid::PopulateSimpleEdid(&fake_base_edid_, di->width, di->height);
 
     const char* err_msg;
     return edid->Init(reinterpret_cast<uint8_t*>(&fake_base_edid_),

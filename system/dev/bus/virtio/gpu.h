@@ -7,9 +7,10 @@
 #include <semaphore.h>
 #include <stdlib.h>
 
-#include <ddk/protocol/display.h>
+#include <ddk/protocol/display-controller.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
+#include <lib/edid/edid.h>
 
 #include "device.h"
 #include "ring.h"
@@ -29,7 +30,6 @@ public:
     void IrqRingUpdate() override;
     void IrqConfigChange() override;
 
-    void* framebuffer() { return io_buffer_virt(&fb_); }
     const virtio_gpu_resp_display_info::virtio_gpu_display_one* pmode() const { return &pmode_; }
 
     void Flush();
@@ -38,10 +38,20 @@ public:
 
 private:
     // DDK driver hooks
-    static zx_status_t virtio_gpu_set_mode(void* ctx, zx_display_info_t* info);
-    static zx_status_t virtio_gpu_get_mode(void* ctx, zx_display_info_t* info);
-    static zx_status_t virtio_gpu_get_framebuffer(void* ctx, void** framebuffer);
-    static void virtio_gpu_flush(void* ctx);
+    static void virtio_gpu_set_display_controller_cb(
+            void* ctx, void* cb_ctx, display_controller_cb_t* cb);
+    static zx_status_t virtio_gpu_get_display_info(void* ctx, uint64_t id, display_info_t* info);
+    static zx_status_t virtio_gpu_import_vmo_image(
+            void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
+    static void virtio_gpu_release_image(void* ctx, image_t* image);
+    static bool virtio_gpu_check_configuration(
+            void* ctx, display_config_t** display_configs, uint32_t display_count);
+    static void virtio_gpu_apply_configuration(
+            void* ctx, display_config_t** display_configs, uint32_t display_count);
+    static uint32_t virtio_gpu_compute_linear_stride(
+            void* ctx, uint32_t width, zx_pixel_format_t format);
+    static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
+
 
     // Internal routines
     template <typename RequestType, typename ResponseType>
@@ -61,7 +71,7 @@ private:
     Ring vring_ = {this};
 
     // display protocol ops
-    display_protocol_ops_t display_proto_ops_ = {};
+    display_controller_protocol_ops_t display_proto_ops_ = {};
 
     // gpu op
     io_buffer_t gpu_req_;
@@ -70,12 +80,7 @@ private:
     virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
     int pmode_id_ = -1;
 
-    // Resource id that is set as scanout
-    uint32_t display_resource_id_ = 0;
-
-    uint32_t next_resource_id_ = -1;
-
-    io_buffer_t fb_;
+    uint32_t next_resource_id_ = 1;
 
     fbl::Mutex request_lock_;
     sem_t request_sem_;
@@ -87,6 +92,15 @@ private:
     fbl::Mutex flush_lock_;
     cnd_t flush_cond_ = {};
     bool flush_pending_ = false;
+
+    display_controller_cb_t* dc_cb_;
+    void* dc_cb_ctx_;
+
+    struct imported_image* current_fb_;
+    struct imported_image* displayed_fb_;
+
+    edid::BaseEdid edid_;
+    zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };
 
 } // namespace virtio
