@@ -36,7 +36,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/pci.c \
     $(LOCAL_DIR)/power.c \
     $(LOCAL_DIR)/powerbtn.c \
-    $(LOCAL_DIR)/processor.c \
     $(LOCAL_DIR)/resources.c \
     $(LOCAL_DIR)/util.c \
 
@@ -44,7 +43,6 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/hid \
-    system/ulib/acpisvc-client \
     third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \
     system/ulib/zxcpp \
@@ -58,7 +56,7 @@ MODULE_LIBS := \
 
 else # !ARCH=x86
 
-MODULE_NAME := acpisvc
+MODULE_NAME := bus-acpi
 
 MODULE_TYPE := userapp
 MODULE_GROUP := core

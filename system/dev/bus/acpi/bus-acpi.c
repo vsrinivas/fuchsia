@@ -29,7 +29,6 @@
 #include "pci.h"
 #include "powerbtn.h"
 #include "power.h"
-#include "processor.h"
 #include "resources.h"
 
 #define MAX_NAMESPACE_DEPTH 100
