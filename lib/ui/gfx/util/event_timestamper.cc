@@ -11,13 +11,12 @@ namespace scenic {
 namespace gfx {
 
 EventTimestamper::EventTimestamper()
-    : main_loop_(fsl::MessageLoop::GetCurrent()), task_(zx::time(0)) {
+    : main_loop_(fsl::MessageLoop::GetCurrent()),
+      task_([](async_t*, async::Task*, zx_status_t) {
+        zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+      }) {
   FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
-  task_.set_handler([](async_t*, zx_status_t) {
-    zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-    return ASYNC_TASK_FINISHED;
-  });
 
   IncreaseBackgroundThreadPriority();
 }

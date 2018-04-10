@@ -150,7 +150,7 @@ class BluetoothManager final {
   void OnRemoteDeviceUpdated(const bluetooth_control::RemoteDevice& device);
 
   // Called when |init_timeout_task_| expires.
-  async_task_result_t OnInitTimeout(async_t* async, zx_status_t status);
+  void OnInitTimeout(async_t* async, async::Task* task, zx_status_t status);
 
   // Cancels |init_timeout_task_|.
   void CancelInitTimeout();

@@ -14,12 +14,12 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -193,7 +193,7 @@ class CommandChannel final {
 
     // Starts the transaction timer, which will call timeout_cb if it's not
     // completed in time.
-    void Start(fxl::Closure timeout_cb, zx::duration timeout);
+    void Start(async::AutoTask::Handler timeout_cb, zx::duration timeout);
 
     // Completes the transaction with |event|.
     void Complete(std::unique_ptr<EventPacket> event);
@@ -215,7 +215,7 @@ class CommandChannel final {
     EventCode complete_event_code_;
     CommandCallback callback_;
     fxl::RefPtr<fxl::TaskRunner> task_runner_;
-    std::unique_ptr<common::CancelableTask> timeout_;
+    async::AutoTask timeout_task_;
     EventHandlerId handler_id_;
 
     FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TransactionData);

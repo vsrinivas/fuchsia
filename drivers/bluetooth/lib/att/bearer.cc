@@ -149,7 +149,7 @@ Bearer::TransactionQueue::TransactionQueue(TransactionQueue&& other)
 
 Bearer::PendingTransactionPtr Bearer::TransactionQueue::ClearCurrent() {
   FXL_DCHECK(current_);
-  FXL_DCHECK(timeout_task_.posted());
+  FXL_DCHECK(timeout_task_.is_pending());
 
   timeout_task_.Cancel();
 
@@ -161,7 +161,7 @@ void Bearer::TransactionQueue::Enqueue(PendingTransactionPtr transaction) {
 }
 
 void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
-                                           fxl::Closure timeout_cb,
+                                           async::AutoTask::Handler timeout_cb,
                                            uint32_t timeout_ms) {
   FXL_DCHECK(chan);
 
@@ -172,8 +172,9 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   // Advance to the next transaction.
   current_ = queue_.pop_front();
   if (current()) {
-    FXL_DCHECK(!timeout_task_.posted());
-    timeout_task_.Post(std::move(timeout_cb), zx::msec(timeout_ms));
+    FXL_DCHECK(!timeout_task_.is_pending());
+    timeout_task_.set_handler(std::move(timeout_cb));
+    timeout_task_.PostDelayed(async_get_default(), zx::msec(timeout_ms));
     chan->Send(std::move(current()->pdu));
   }
 }
@@ -449,7 +450,10 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
   FXL_DCHECK(tq);
 
   tq->TrySendNext(chan_.get(),
-                  [this] { ShutDownInternal(true /* due_to_timeout */); },
+                  [this](async_t*, async::AutoTask*, zx_status_t status) {
+                    if (status == ZX_OK)
+                      ShutDownInternal(true /* due_to_timeout */);
+                  },
                   transaction_timeout_ms_);
 }
 

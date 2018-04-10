@@ -10,7 +10,7 @@
 #include <fbl/vector.h>
 #include <garnet/examples/ui/video_display/buffer.h>
 #include <garnet/examples/ui/video_display/camera_interface_base.h>
-#include <lib/async/cpp/auto_task.h>
+#include <lib/async/cpp/task.h>
 #include <lib/media/timeline/timeline_function.h>
 #include <zircon/device/camera.h>
 #include <zx/vmar.h>
@@ -41,7 +41,7 @@ class ColorSource {
 // camera_client.h.
 class FakeCameraSource : public CameraInterfaceBase {
  public:
-  FakeCameraSource() : task_(fsl::MessageLoop::GetCurrent()->async()) {}
+  FakeCameraSource() {}
   ~FakeCameraSource() {}
 
   // Open the interface.  Does nothing, and ignores the input argument.
@@ -82,7 +82,7 @@ class FakeCameraSource : public CameraInterfaceBase {
  private:
   void SignalBufferFilled(uint32_t index);
 
-  void SetNextCaptureTime();
+  void PostNextCaptureTask();
 
   // Checks which buffer can be written to,
   // writes it then signals it ready

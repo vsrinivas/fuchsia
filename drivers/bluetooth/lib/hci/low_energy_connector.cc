@@ -32,6 +32,9 @@ LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
     : task_runner_(task_runner),
       hci_(hci),
       delegate_(std::move(delegate)),
+      request_timeout_task_(
+          fbl::BindMember(this,
+                          &LowEnergyConnector::OnCreateConnectionTimeout)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(hci_);
@@ -70,7 +73,7 @@ bool LowEnergyConnector::CreateConnection(
   if (request_pending())
     return false;
 
-  FXL_DCHECK(!request_timeout_task_.posted());
+  FXL_DCHECK(!request_timeout_task_.is_pending());
   pending_request_ = PendingRequest(peer_address, status_callback);
 
   auto request = CommandPacket::New(kLECreateConnection,
@@ -117,16 +120,8 @@ bool LowEnergyConnector::CreateConnection(
     // timeout period. NOTE: The request will complete when the controller
     // asynchronously notifies us of with a LE Connection Complete event.
     self->request_timeout_task_.Cancel();
-
-    // TODO: optionally pass async_t?
-    self->request_timeout_task_.Post(
-        [self] {
-          // If |self| was destroyed then this callback should have been
-          // canceled.
-          FXL_DCHECK(self);
-          self->OnCreateConnectionTimeout();
-        },
-        zx::msec(timeout_ms));
+    self->request_timeout_task_.PostDelayed(async_get_default(),
+                                            zx::msec(timeout_ms));
   };
 
   hci_->command_channel()->SendCommand(std::move(request), task_runner_,
@@ -256,7 +251,12 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
   status_cb(status, std::move(link));
 }
 
-void LowEnergyConnector::OnCreateConnectionTimeout() {
+void LowEnergyConnector::OnCreateConnectionTimeout(async_t*,
+                                                   async::AutoTask*,
+                                                   zx_status_t status) {
+  if (status != ZX_OK)
+    return;
+
   FXL_DCHECK(pending_request_);
   FXL_LOG(INFO) << "LE Create Connection timed out: canceling request";
 

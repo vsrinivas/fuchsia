@@ -8,11 +8,12 @@
 #include <memory>
 #include <unordered_map>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/packet.h"
 #include "garnet/drivers/bluetooth/lib/att/status.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
 #include "garnet/drivers/bluetooth/lib/common/linked_list.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
@@ -220,7 +221,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     // Tries to initiate the next transaction. Sends the PDU over |chan| if
     // successful.
     void TrySendNext(l2cap::Channel* chan,
-                     fxl::Closure timeout_cb,
+                     async::AutoTask::Handler timeout_cb,
                      uint32_t timeout_ms);
 
     // Adds |next| to the transaction queue.
@@ -235,7 +236,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
    private:
     common::LinkedList<PendingTransaction> queue_;
     PendingTransactionPtr current_;
-    common::CancelableTask timeout_task_;
+    async::AutoTask timeout_task_;
   };
 
   bool SendInternal(common::ByteBufferPtr pdu,

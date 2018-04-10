@@ -107,7 +107,6 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
     return static_cast<internal::IncomingTaskQueue*>(task_runner_.get());
   }
 
-  class TaskRecord;
   class HandlerRecord;
 
   async_loop_config_t loop_config_;

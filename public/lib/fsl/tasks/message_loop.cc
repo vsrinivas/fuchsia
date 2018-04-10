@@ -19,17 +19,6 @@ thread_local MessageLoop* g_current;
 
 }  // namespace
 
-class MessageLoop::TaskRecord {
- public:
-  TaskRecord(zx_time_t deadline, fxl::Closure closure);
-  ~TaskRecord();
-
-  async::Task& task() { return task_; }
-
- private:
-  async::Task task_;
-};
-
 class MessageLoop::HandlerRecord {
  public:
   HandlerRecord(zx_handle_t object,
@@ -86,19 +75,11 @@ MessageLoop* MessageLoop::GetCurrent() {
 }
 
 void MessageLoop::PostTask(fxl::Closure task, fxl::TimePoint target_time) {
-  // TODO(jeffbrown): Consider allocating tasks from a pool.
-  auto record = new TaskRecord(target_time.ToEpochDelta().ToNanoseconds(),
-                               std::move(task));
-
-  zx_status_t status = record->task().Post(loop_.async());
-  if (status == ZX_ERR_BAD_STATE) {
-    // Suppress request when shutting down.
-    delete record;
-    return;
-  }
-
-  // The record will be destroyed when the task runs.
-  FXL_CHECK(status == ZX_OK) << "Failed to post task: status=" << status;
+  zx_status_t status = async::PostTaskForTime(
+      loop_.async(), [task = std::move(task)] { task(); },
+      zx::time(target_time.ToEpochDelta().ToNanoseconds()));
+  FXL_CHECK(status == ZX_OK || status == ZX_ERR_BAD_STATE)
+      << "Failed to post task: status=" << status;
 }
 
 MessageLoop::HandlerKey MessageLoop::AddHandler(MessageLoopHandler* handler,
@@ -213,19 +194,6 @@ void MessageLoop::Epilogue(async_loop_t*, void* data) {
   if (loop->after_task_callback_)
     loop->after_task_callback_();
 }
-
-MessageLoop::TaskRecord::TaskRecord(zx_time_t deadline, fxl::Closure closure)
-    : task_(zx::time(deadline), ASYNC_FLAG_HANDLE_SHUTDOWN) {
-  task_.set_handler(
-      [this, closure = std::move(closure)](async_t*, zx_status_t status) {
-        if (status == ZX_OK)
-          closure();
-        delete this;
-        return ASYNC_TASK_FINISHED;
-      });
-}
-
-MessageLoop::TaskRecord::~TaskRecord() = default;
 
 MessageLoop::HandlerRecord::HandlerRecord(zx_handle_t object,
                                           zx_signals_t trigger,

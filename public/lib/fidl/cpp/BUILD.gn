@@ -52,6 +52,7 @@ source_set("cpp") {
   ]
 
   public_deps = [
+    "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",

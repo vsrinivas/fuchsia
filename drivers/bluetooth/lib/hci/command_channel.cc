@@ -73,18 +73,18 @@ CommandChannel::TransactionData::~TransactionData() {
   Complete(std::move(event));
 }
 
-void CommandChannel::TransactionData::Start(fxl::Closure callback, zx::duration duration) {
+void CommandChannel::TransactionData::Start(async::AutoTask::Handler timeout_cb,
+                                            zx::duration timeout) {
   // Transactions should only ever be started once.
-  FXL_DCHECK(!timeout_);
+  FXL_DCHECK(!timeout_task_.is_pending());
 
-  timeout_ = std::make_unique<common::CancelableTask>();
-  timeout_->Post(callback, duration);
+  timeout_task_.set_handler(std::move(timeout_cb));
+  timeout_task_.PostDelayed(async_get_default(), timeout);
 }
 
-void CommandChannel::TransactionData::Complete(std::unique_ptr<EventPacket> event) {
-  if (timeout_) {
-    timeout_->Cancel();
-  }
+void CommandChannel::TransactionData::Complete(
+    std::unique_ptr<EventPacket> event) {
+  timeout_task_.Cancel();
   if (!callback_) {
     return;
   }
@@ -362,14 +362,16 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
 
   auto& transaction = cmd.data;
 
-  transaction->Start(
-      [this, id = cmd.data->id()]() {
-        FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
-                       << " timed out, shutting down.";
-        ShutDownInternal();
-        // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
-      },
-      zx::msec(command_timeout_ms_));
+  transaction->Start([ this, id = cmd.data->id() ](async_t*, async::AutoTask*,
+                                                   zx_status_t status) {
+    if (status == ZX_OK) {
+      FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
+                     << " timed out, shutting down.";
+      ShutDownInternal();
+      // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
+    }
+  },
+                     zx::msec(command_timeout_ms_));
 
   MaybeAddTransactionHandler(transaction.get());
 
@@ -421,7 +423,6 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
 }
 
 void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
-
   hci::EventCode event_code = event->event_code();
 
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());

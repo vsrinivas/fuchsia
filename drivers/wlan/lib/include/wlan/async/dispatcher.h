@@ -54,19 +54,10 @@ class Dispatcher {
 
         // Submit a sentinel task. Since the event loop in our async_t is single-threaded,
         // the execution of this task will guarantee that all in-flight requests have finished.
-        auto task = new ::async::Task(zx::clock::get(ZX_CLOCK_MONOTONIC), ASYNC_FLAG_HANDLE_SHUTDOWN);
-        auto f = [task, ready_callback = std::move(ready_callback)]
-                (async_t* async, zx_status_t status) -> async_task_result_t {
-            // We don't actually care about status here, since in any case we know that no more
-            // async tasks will run.
-            if (ready_callback) {
-                ready_callback();
-            }
-            delete task;
-            return ASYNC_TASK_FINISHED;
-        };
-        task->set_handler(f);
-        ZX_DEBUG_ASSERT(task->Post(async_) == ZX_OK);
+        if (ready_callback) {
+            zx_status_t status = ::async::PostTask(async_, std::move(ready_callback));
+            ZX_DEBUG_ASSERT(status == ZX_OK);
+        }
     }
 
    private:

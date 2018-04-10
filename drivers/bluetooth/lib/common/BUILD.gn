@@ -7,8 +7,6 @@ source_set("common") {
     "byte_buffer.cc",
     "byte_buffer.h",
     "cancelable_callback.h",
-    "cancelable_task.cc",
-    "cancelable_task.h",
     "create_thread.cc",
     "create_thread.h",
     "device_address.cc",
@@ -52,7 +50,6 @@ source_set("tests") {
   sources = [
     "byte_buffer_unittest.cc",
     "cancelable_callback_unittest.cc",
-    "cancelable_task_unittest.cc",
     "device_address_unittest.cc",
     "device_class_unittest.cc",
     "manufacturer_names_unittest.cc",

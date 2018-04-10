@@ -113,24 +113,23 @@ zx_status_t FakeCameraSource::Start(FrameNotifyCallback callback) {
   frame_count_ = 0;
   // Define a re-occuring task that is triggered at the appropriate
   // framerate.  This will give frames at a steady cadence.
-  task_.set_handler([this](async_t* async, zx_status_t status) {
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "FakeCameraSource had a Autotask error, ("
-                     << zx_status_get_string(status) << ").  Exiting.";
-      return ASYNC_TASK_FINISHED;
-    }
-    this->ProduceFrame();
-    return ASYNC_TASK_REPEAT;
-  });
+  task_.set_handler(
+      [this](async_t* async, async::AutoTask* task, zx_status_t status) {
+        if (status != ZX_OK) {
+          FXL_LOG(ERROR) << "FakeCameraSource had a Autotask error, ("
+                         << zx_status_get_string(status) << ").  Exiting.";
+          return;
+        }
+        this->ProduceFrame();
+      });
 
   // Set the first time at which we will generate a frame:
-  SetNextCaptureTime();
-  task_.Post();
+  PostNextCaptureTask();
   return ZX_OK;
 }
 
 zx_status_t FakeCameraSource::Stop() {
-  task_.set_deadline(zx::time::infinite());
+  task_.Cancel();
   return ZX_OK;
 }
 
@@ -160,13 +159,13 @@ void FakeCameraSource::SignalBufferFilled(uint32_t index) {
   }
 }
 
-void FakeCameraSource::SetNextCaptureTime() {
+void FakeCameraSource::PostNextCaptureTask() {
   // Set the next frame time to be start + frame_count / frames per second.
   int64_t next_frame_time = frame_to_timestamp_.Apply(frame_count_++);
   FXL_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
   FXL_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
-  task_.set_deadline(zx::time(next_frame_time));
+  task_.PostForTime(async_get_default(), zx::time(next_frame_time));
   FXL_VLOG(4) << "FakeCameraSource: setting next frame to: " << next_frame_time
               << "   "
               << next_frame_time - (int64_t)zx_clock_get(ZX_CLOCK_MONOTONIC)
@@ -198,7 +197,7 @@ void FakeCameraSource::ProduceFrame() {
   }
   // If no buffers are available, quietly fail to fill.
   // Schedule next frame:
-  SetNextCaptureTime();
+  PostNextCaptureTask();
 }
 
 }  // namespace video_display

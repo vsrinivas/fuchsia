@@ -93,17 +93,18 @@ void Adapter::OnDeviceDiscovered(bluetooth_control::RemoteDevice device) {
 };
 
 BluetoothManager::BluetoothManager()
-    : initializing_(true), active_adapter_(nullptr), weak_ptr_factory_(this) {
+    : initializing_(true),
+      active_adapter_(nullptr),
+      init_timeout_task_(
+          fbl::BindMember(this, &BluetoothManager::OnInitTimeout)),
+      weak_ptr_factory_(this) {
   device_watcher_ = fsl::DeviceWatcher::Create(
       kBluetoothDeviceDir,
       fbl::BindMember(this, &BluetoothManager::OnHostFound));
   FXL_DCHECK(device_watcher_);
 
-  init_timeout_task_.set_deadline(zx::deadline_after(kInitTimeout));
-  init_timeout_task_.set_handler(
-      fbl::BindMember(this, &BluetoothManager::OnInitTimeout));
-
-  zx_status_t status = init_timeout_task_.Post(async_get_default());
+  zx_status_t status =
+      init_timeout_task_.PostDelayed(async_get_default(), kInitTimeout);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "bluetooth: Failed to post init timeout task: "
                    << zx_status_get_string(status);
@@ -328,8 +329,9 @@ void BluetoothManager::OnRemoteDeviceUpdated(
   }
 }
 
-async_task_result_t BluetoothManager::OnInitTimeout(async_t*,
-                                                    zx_status_t status) {
+void BluetoothManager::OnInitTimeout(async_t*,
+                                     async::Task*,
+                                     zx_status_t status) {
   FXL_DCHECK(initializing_);
 
   if (status == ZX_OK) {
@@ -339,8 +341,6 @@ async_task_result_t BluetoothManager::OnInitTimeout(async_t*,
                 << zx_status_get_string(status);
     initializing_ = false;
   }
-
-  return ASYNC_TASK_FINISHED;
 }
 
 void BluetoothManager::CancelInitTimeout() {

@@ -6,7 +6,8 @@
 
 #include <memory>
 
-#include "garnet/drivers/bluetooth/lib/common/cancelable_task.h"
+#include <lib/async/cpp/task.h>
+
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
@@ -91,7 +92,7 @@ class LowEnergyConnector {
 
   // Returns true if a connection timeout has been posted. Returns false if it
   // was not posted or was canceled. This is intended for unit tests.
-  bool timeout_posted() const { return request_timeout_task_.posted(); }
+  bool timeout_posted() const { return request_timeout_task_.is_pending(); }
 
  private:
   struct PendingRequest {
@@ -115,7 +116,9 @@ class LowEnergyConnector {
   void OnCreateConnectionComplete(Status status, ConnectionPtr link);
 
   // Called when a LE Create Connection request has timed out.
-  void OnCreateConnectionTimeout();
+  void OnCreateConnectionTimeout(async_t*,
+                                 async::AutoTask*,
+                                 zx_status_t status);
 
   // Task runner for all asynchronous tasks.
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
@@ -133,7 +136,7 @@ class LowEnergyConnector {
   // Task that runs when a request to create connection times out. We do not
   // rely on CommandChannel's timer since that request completes when we receive
   // the HCI Command Status event.
-  common::CancelableTask request_timeout_task_;
+  async::AutoTask request_timeout_task_;
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;
