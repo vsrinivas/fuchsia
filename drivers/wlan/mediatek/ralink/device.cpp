@@ -3222,6 +3222,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
         Rxwi3 rxwi3(letoh32(data32[Rxwi3::addr()]));
         RxDesc rx_desc(*(uint32_t*)(data + 4 + rx_info.usb_dma_rx_pkt_len()));
 
+#if RALINK_DUMP_RX
         {  // TODO(porce): If a warning takes place, it means there is room
            // for improvement on the best understanding how the USB read chunk
            // structure, which is experimentally learned.
@@ -3230,12 +3231,15 @@ void Device::HandleRxComplete(usb_request_t* request) {
             auto len3 = rxwi0.mpdu_total_byte_count();
             auto len4 = rx_desc.l2pad() == 1 ? 2 : 0;
             if (len1 != len2 + 8 || len1 % 4 != 0) {
-                debugf(
-                    "[ralink] USB read size incongruous: response.actual %zu usb_dma_rx_pkt_len "
-                    "%u rx_hdr_size %zu mpdu_total_byte_count %u l2pad_len %u\n",
-                    len1, len2, rx_hdr_size, len3, len4);
+                debugf("[ralink] USB read size incongruous: response.actual %zu
+                       usb_dma_rx_pkt_len
+                       "
+                       "%u rx_hdr_size %zu mpdu_total_byte_count %u l2pad_len %u\n",
+                       len1, len2, rx_hdr_size, len3, len4);
             }
         }
+
+#endif  // RALINK_DUMP_RX
 
         dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
         if (wlanmac_proxy_ != nullptr) {
