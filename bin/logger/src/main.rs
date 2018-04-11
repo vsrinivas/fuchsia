@@ -230,6 +230,8 @@ fn main_wrapper() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
     use super::*;
 
     use fidl_logger::{
@@ -249,7 +251,7 @@ mod tests {
 
     struct LogListenerState {
         expected: Vec<LogMessage>,
-        done: Arc<Mutex<bool>>,
+        done: Arc<AtomicBool>,
     }
 
     fn copy_log_message(log_message: &LogMessage) -> LogMessage {
@@ -294,7 +296,7 @@ mod tests {
                 ll.expected.retain(|e| e != &msg);
                 assert_eq!(ll.expected.len(), len-1, "expected: {:?},\nmsg: {:?}", ll.expected, msg);
                 if ll.expected.len() == 0 {
-                    *ll.done.lock() = true;
+                    ll.done.store(true, Ordering::Relaxed);
                 }
                 fok(())
             },
@@ -376,7 +378,7 @@ mod tests {
         lm1.severity = FX_LOG_WARNING;
         let mut lm3 = copy_log_message(&lm2);
         lm3.pid = 2;
-        let done = Arc::new(Mutex::new(false));
+        let done = Arc::new(AtomicBool::new(false));
         let ls = LogListenerState {
             expected: vec![lm1, lm2, lm3],
             done: done.clone(),
@@ -388,13 +390,13 @@ mod tests {
 
         let tries = 10;
         for _ in 0..tries {
-            if *done.lock() {
+            if done.load(Ordering::Relaxed) {
                 break;
             }
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert!(*done.lock(), "task should have completed by now");
+        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
     }
 
     fn filter_test_helper(
@@ -404,7 +406,7 @@ mod tests {
     ) {
         let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
         log_sink_proxy.connect(&mut sout).expect("unable to connect");
-        let done = Arc::new(Mutex::new(false));
+        let done = Arc::new(AtomicBool::new(false));
         let ls = LogListenerState {
             expected: expected,
             done: done.clone(),
@@ -416,13 +418,13 @@ mod tests {
 
         let tries = 100;
         for _ in 0..tries {
-            if *done.lock() {
+            if done.load(Ordering::Relaxed) {
                 break;
             }
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert!(*done.lock(), "task should have completed by now");
+        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
     }
 
     #[test]

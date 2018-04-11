@@ -153,9 +153,9 @@ mod tests {
     use super::*;
 
     use std::slice;
-    use zx::prelude::*;
     use std::sync::Arc;
-    use parking_lot::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use zx::prelude::*;
 
     #[repr(C, packed)]
     pub struct fx_log_metadata_t_packed {
@@ -236,13 +236,11 @@ mod tests {
             msg: String::from("BBBBB"),
         };
         expected_p.tags.push(String::from("AAAAA"));
-        let calltimes = Arc::new(Mutex::new(0));
+        let calltimes = Arc::new(AtomicUsize::new(0));
         let c = calltimes.clone();
         let f = ls.for_each(move |msg| {
             assert_eq!(msg, expected_p);
-            let mut n = *c.lock();
-            n = n + 1;
-            *c.lock() = n;
+            c.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }).map(|_s| ());
 
@@ -252,25 +250,25 @@ mod tests {
 
         let tries = 100;
         for _ in 0..tries {
-            if *calltimes.lock() == 1 {
+            if calltimes.load(Ordering::Relaxed) == 1 {
                 break;
             }
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert_eq!(1, *calltimes.lock());
+        assert_eq!(1, calltimes.load(Ordering::Relaxed));
 
         // write one more time
         sin.write(to_u8_slice(&p)).unwrap();
 
         for _ in 0..tries {
-            if *calltimes.lock() == 2 {
+            if calltimes.load(Ordering::Relaxed) == 2 {
                 break;
             }
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert_eq!(2, *calltimes.lock());
+        assert_eq!(2, calltimes.load(Ordering::Relaxed));
     }
 
     #[test]
