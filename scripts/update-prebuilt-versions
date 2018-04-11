@@ -25,16 +25,24 @@ case "$#:$1" in
   ;;
 esac
 
-readonly CIPD="$(type -p cipd)" || {
+
+find_cipd() {
+  # If cipd is in the PATH, just take it.  Otherwise, if the Zircon
+  # checkout is part of a jiri checkout that includes //buildtools,
+  # then find cipd there.
+  type -p cipd || type -p "${ZIRCON_ROOT}/../buildtools/cipd"
+}
+
+readonly CIPD="$(find_cipd)" || {
   echo >&2 "$0: Need cipd in the PATH"
 }
 
 resolve_one_package() {
   local -r package="$1" version="$2"
   local result
-  result="$(cipd resolve "fuchsia/$package" -version "$version")" || {
+  result="$($CIPD resolve "fuchsia/$package" -version "$version")" || {
     local rc=$?
-    echo >&2 "$0: CIPD cannot resolve fuchsia/$package -version $version"
+    echo >&2 "$0: cipd cannot resolve fuchsia/$package -version $version"
     return $rc
   }
   echo "${package} ${result##*:}"
