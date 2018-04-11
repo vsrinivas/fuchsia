@@ -30,14 +30,16 @@ using digest::Digest;
 namespace blobfs {
 
 void VnodeBlob::fbl_recycle() {
-    // If the blob was not purged, it is still in the hash, so we need to remove it here
     if (GetState() != kBlobStatePurged) {
-        blobfs_->VnodeRelease(this);
+        // Relocate blobs which haven't been deleted to the closed cache.
+        blobfs_->VnodeReleaseSoft(this);
+    } else {
+        // Destroy blobs which have been purged.
+        delete this;
     }
-    delete this;
 }
 
-VnodeBlob::~VnodeBlob() {
+void VnodeBlob::TearDown() {
     ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
     if (blob_ != nullptr) {
         block_fifo_request_t request;
@@ -46,6 +48,11 @@ VnodeBlob::~VnodeBlob() {
         request.opcode = BLOCKIO_CLOSE_VMO;
         blobfs_->Txn(&request, 1);
     }
+    blob_ = nullptr;
+}
+
+VnodeBlob::~VnodeBlob() {
+    TearDown();
 }
 
 zx_status_t VnodeBlob::ValidateFlags(uint32_t flags) {

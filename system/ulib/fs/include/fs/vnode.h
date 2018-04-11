@@ -9,14 +9,16 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <fbl/atomic.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/ref_counted.h>
+#include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
 #include <fdio/io.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
+#include <fs/ref_counted.h>
 #include <fs/vfs.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -45,7 +47,7 @@ inline bool vfs_valid_name(fbl::StringPiece name) {
 // The lower half of flags (VFS_FLAG_RESERVED_MASK) is reserved
 // for usage by fs::Vnode, but the upper half of flags may
 // be used by subclasses of Vnode.
-class Vnode : public fbl::RefCounted<Vnode>, public fbl::Recyclable<Vnode> {
+class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 public:
     virtual ~Vnode();
     virtual void fbl_recycle() { delete this; }

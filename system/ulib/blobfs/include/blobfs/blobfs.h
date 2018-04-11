@@ -124,6 +124,7 @@ public:
     zx_status_t Close() final;
 
     void fbl_recycle() final;
+    void TearDown();
     virtual ~VnodeBlob();
     void CompleteSync();
 private:
@@ -386,19 +387,27 @@ public:
         writeback_->Enqueue(fbl::move(work));
     }
 
-    void VnodeRelease(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_) {
-        fbl::AutoLock lock(&hash_lock_);
-        VnodeReleaseLocked(vn);
-    }
+    // Does a single pass of all blobs, creating uninitialized Vnode
+    // objects for them all.
+    //
+    // By executing this function at mount, we can quickly assert
+    // either the presence or absence of a blob on the system without
+    // further scanning.
+    zx_status_t InitializeVnodes() __TA_EXCLUDES(hash_lock_);
 
-    void VnodeReleaseLocked(VnodeBlob* vn) __TA_REQUIRES(hash_lock_) {
-        hash_.erase(vn->GetKey());
-    }
+    // Remove the Vnode without storing it in the closed Vnode cache. This
+    // function should be used when purging a blob, as it will prevent
+    // additional lookups of VnodeBlob from being made.
+    //
+    // Precondition: The blob must exist in |open_hash_|.
+    void VnodeReleaseHard(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_);
 
-    void VnodeInsert(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_) {
-        fbl::AutoLock lock(&hash_lock_);
-        hash_.insert(vn);
-    }
+    // Resurrect a Vnode with no strong references, and relocate
+    // it from |open_hash_| into |closed_hash_|.
+    //
+    // Precondition: The blob must exist in the |open_hash_| with
+    // no strong references.
+    void VnodeReleaseSoft(VnodeBlob* vn) __TA_EXCLUDES(hash_lock_);
 
 private:
     friend class BlobfsChecker;
@@ -406,6 +415,21 @@ private:
     Blobfs(fbl::unique_fd fd, const blobfs_info_t* info);
     zx_status_t LoadBitmaps();
     fbl::unique_ptr<WritebackBuffer> writeback_;
+
+    // Inserts a Vnode into the |closed_hash_|, tears down
+    // cache Vnode state, and leaks a reference to the Vnode.
+    //
+    // This prevents the vnode from ever being torn down, unless
+    // it is re-acquired from |closed_hash_| and released manually
+    // (with an identifier to not relocate the Vnode into the cache).
+    void VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) __TA_REQUIRES(hash_lock_);
+
+    // Upgrades a Vnode which exists in the |closed_hash_| into |open_hash_|,
+    // and acquire the strong reference the Vnode which was leaked by
+    // |VnodeInsertClosedLocked()|, if it exists.
+    //
+    // Precondition: The Vnode must not exist in |open_hash_|.
+    fbl::RefPtr<VnodeBlob> VnodeUpgradeLocked(const uint8_t* key) __TA_REQUIRES(hash_lock_);
 
     // Finds space for a block in memory. Does not update disk.
     zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
@@ -439,7 +463,8 @@ private:
                                            MerkleRootTraits,
                                            VnodeBlob::TypeWavlTraits>;
     fbl::Mutex hash_lock_;
-    WAVLTreeByMerkle hash_ __TA_GUARDED(hash_lock_){}; // Map of all 'in use' blobs
+    WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){}; // All 'in use' blobs.
+    WAVLTreeByMerkle closed_hash_ __TA_GUARDED(hash_lock_){}; // All 'closed' blobs.
 
     async_t* async_ = {};
     fbl::unique_fd blockfd_;

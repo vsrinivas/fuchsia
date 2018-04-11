@@ -63,6 +63,52 @@ public:
     void ValidateRelease() const {}
 };
 
+template<bool EnableAdoptionValidator>
+inline void AddRefDefault(fbl::atomic_int& ref_count,
+                          AdoptionValidator<EnableAdoptionValidator> adoption_validator) {
+    adoption_validator.ValidateAddRef();
+    const int rc = ref_count.fetch_add(1, memory_order_relaxed);
+    if (EnableAdoptionValidator) {
+        // This assertion will fire if someone calls AddRef() on a
+        // ref-counted object that has reached ref_count_ == 0 but has not
+        // been destroyed yet. This could happen by manually calling
+        // AddRef(), or re-wrapping such a pointer with WrapRefPtr() or
+        // RefPtr<T>(T*) (both of which call AddRef()). If the object has
+        // already been destroyed, the magic check in
+        // adoption_validator_.ValidateAddRef() should have caught it before
+        // this point.
+        ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
+    }
+}
+
+inline bool AddRefMaybeInDestructorDefault(fbl::atomic_int& ref_count) {
+    int old = ref_count.load(memory_order_acquire);
+    do {
+        if (old == 0)
+            return false;
+    } while (!ref_count.compare_exchange_weak(
+        &old, old + 1, memory_order_acquire, memory_order_acquire));
+    return true;
+}
+
+template <bool EnableAdoptionValidator>
+inline bool ReleaseRefDefault(fbl::atomic_int& ref_count,
+                              AdoptionValidator<EnableAdoptionValidator>
+                              adoption_validator) {
+    adoption_validator.ValidateRelease();
+    const int rc = ref_count.fetch_sub(1, memory_order_release);
+    if (EnableAdoptionValidator) {
+        // This assertion will fire if someone manually calls Release()
+        // on a ref-counted object too many times.
+        ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
+    }
+    if (rc == 1) {
+        atomic_thread_fence(memory_order_acquire);
+        return true;
+    }
+    return false;
+}
+
 template <bool EnableAdoptionValidator>
 class RefCountedBase {
 protected:
@@ -70,19 +116,7 @@ protected:
         : ref_count_(1) {}
     ~RefCountedBase() {}
     void AddRef() const {
-        adoption_validator_.ValidateAddRef();
-        const int rc = ref_count_.fetch_add(1, memory_order_relaxed);
-        if (EnableAdoptionValidator) {
-            // This assertion will fire if someone calls AddRef() on a
-            // ref-counted object that has reached ref_count_ == 0 but has not
-            // been destroyed yet. This could happen by manually calling
-            // AddRef(), or re-wrapping such a pointer with WrapRefPtr() or
-            // RefPtr<T>(T*) (both of which call AddRef()). If the object has
-            // already been destroyed, the magic check in
-            // adoption_validator_.ValidateAddRef() should have caught it before
-            // this point.
-            ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
-        }
+        AddRefDefault<EnableAdoptionValidator>(ref_count_, adoption_validator_);
     }
 
     // This method should not be used. See MakeRefPtrUpgradeFromRaw()
@@ -99,29 +133,12 @@ protected:
     // so the loop does not have to do a separate load.
     //
     bool AddRefMaybeInDestructor() {
-        int old = ref_count_.load(memory_order_acquire);
-        do {
-            if (old == 0)
-                return false;
-        } while (!ref_count_.compare_exchange_weak(
-            &old, old + 1, memory_order_acquire, memory_order_acquire));
-        return true;
+        return AddRefMaybeInDestructorDefault(ref_count_);
     }
 
     // Returns true if the object should self-delete.
     bool Release() const __WARN_UNUSED_RESULT {
-        adoption_validator_.ValidateRelease();
-        const int rc = ref_count_.fetch_sub(1, memory_order_release);
-        if (EnableAdoptionValidator) {
-            // This assertion will fire if someone manually calls Release()
-            // on a ref-counted object too many times.
-            ZX_DEBUG_ASSERT_MSG(rc >= 1, "count %d < 1\n", rc);
-        }
-        if (rc == 1) {
-            atomic_thread_fence(memory_order_acquire);
-            return true;
-        }
-        return false;
+        return ReleaseRefDefault<EnableAdoptionValidator>(ref_count_, adoption_validator_);
     }
 
     void Adopt() const {
