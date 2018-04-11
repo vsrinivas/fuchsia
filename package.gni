@@ -269,7 +269,7 @@ template("package") {
     }
     foreach(binary, pkg.binaries) {
       assert(
-          pkg.system_image,
+          (pkg.system_image || pkg.fuchsia_package),
           "Binaries cannot be used in archived packages. Consider using 'binary'.")
 
       # Binary paths are relative to the root of the build dir.
