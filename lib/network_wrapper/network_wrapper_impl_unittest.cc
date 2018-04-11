@@ -113,7 +113,7 @@ class DestroyWatcher : public fxl::RefCountedThreadSafe<DestroyWatcher> {
 class NetworkWrapperImplTest : public gtest::TestWithMessageLoop {
  public:
   NetworkWrapperImplTest()
-      : network_service_(message_loop_.async(),
+      : network_service_(message_loop_.task_runner(),
                          std::make_unique<backoff::TestBackoff>(),
                          [this] { return NewNetworkService(); }) {}
 
