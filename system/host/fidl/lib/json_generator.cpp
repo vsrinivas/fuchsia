@@ -320,19 +320,13 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 
 void JSONGenerator::Generate(const flat::Name& value) {
     // These look like (when there is a library)
-    //     LIB/DECL-DECL-ID
     //     LIB/ID
     // or (when there is not)
-    //     DECL-DECL-ID
     //     ID
     std::string encoded_string;
     if (LibraryName(value.library()) != LibraryName(library_)) {
         encoded_string += LibraryName(value.library());
         encoded_string += "/";
-    }
-    for (auto decl : value.nested_decls()) {
-        encoded_string += std::string(decl.data());
-        encoded_string += "-";
     }
     encoded_string += std::string(value.name().data());
     Generate(encoded_string);

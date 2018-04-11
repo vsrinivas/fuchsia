@@ -35,29 +35,18 @@ StringView LibraryName(const Library* library);
 struct Name {
     Name() : name_(SourceLocation()) {}
 
-    Name(const Library* library, std::vector<SourceLocation> nested_decls, SourceLocation name)
-        : library_(library), nested_decls_(std::move(nested_decls)), name_(name) {}
-
-    Name(const Library* library, SourceLocation name) : Name(library, {}, name) {}
+    Name(const Library* library, SourceLocation name)
+        : library_(library), name_(name) {}
 
     Name(Name&&) = default;
     Name& operator=(Name&&) = default;
 
     const Library* library() const { return library_; }
-    const std::vector<SourceLocation>& nested_decls() const { return nested_decls_; }
     SourceLocation name() const { return name_; }
 
     bool operator==(const Name& other) const {
         if (LibraryName(library_) != LibraryName(other.library_)) {
             return false;
-        }
-        if (nested_decls_.size() != other.nested_decls_.size()) {
-            return false;
-        }
-        for (size_t idx = 0u; idx < nested_decls_.size(); ++idx) {
-            if (nested_decls_[idx].data() != other.nested_decls_[idx].data()) {
-                return false;
-            }
         }
         return name_.data() == other.name_.data();
     }
@@ -66,9 +55,6 @@ struct Name {
     bool operator<(const Name& other) const {
         if (LibraryName(library_) != LibraryName(other.library_)) {
             return LibraryName(library_) < LibraryName(other.library_);
-        }
-        if (nested_decls_.size() != other.nested_decls_.size()) {
-            return nested_decls_.size() < other.nested_decls_.size();
         }
         for (size_t idx = 0u; idx < nested_decls_.size(); ++idx) {
             if (nested_decls_[idx].data() != other.nested_decls_[idx].data()) {

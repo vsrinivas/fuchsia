@@ -201,7 +201,7 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         }
         const std::unique_ptr<Library>& library = iter->second;
         auto decl_name = components[1]->location;
-        *name_out = Name(library.get(), {}, decl_name);
+        *name_out = Name(library.get(), decl_name);
         return true;
     }
 
