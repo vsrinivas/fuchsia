@@ -113,8 +113,7 @@ zx_status_t InfraBss::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame
         if (clients_.Has(dest_addr)) {
             ForwardCurrentFrameTo(clients_.GetClient(dest_addr));
         } else {
-            warnf("[infra-bss] [%s] received ethernet frame from unknown client: %s\n",
-                  bssid_.ToString().c_str(), dest_addr.ToString().c_str());
+            // TODO(hahnr): Add warning once bridge is more mature.
         }
         return ZX_OK;
     }

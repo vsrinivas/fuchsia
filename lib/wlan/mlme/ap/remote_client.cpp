@@ -415,11 +415,6 @@ void AssociatedState::HandleTimeout() {
 void AssociatedState::UpdatePowerSaveMode(const FrameControl& fc) {
     if (fc.pwr_mgmt() != dozing_) {
         dozing_ = fc.pwr_mgmt();
-        if (dozing_) {
-            debugbss("[client] [%s] client is now dozing\n", client_->addr().ToString().c_str());
-        } else {
-            debugbss("[client] [%s] client woke up\n", client_->addr().ToString().c_str());
-        }
 
         if (dozing_) {
             debugps("[client] [%s] client is now dozing\n", client_->addr().ToString().c_str());

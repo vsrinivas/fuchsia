@@ -79,7 +79,7 @@ class RemoteClient : public RemoteClientInterface {
 
     // Maximum number of packets buffered while the client is in power saving mode.
     // TODO(NET-687): Find good BU limit.
-    static constexpr size_t kMaxPowerSavingQueueSize = 15;
+    static constexpr size_t kMaxPowerSavingQueueSize = 30;
 
     Listener* const listener_;
     DeviceInterface* const device_;
