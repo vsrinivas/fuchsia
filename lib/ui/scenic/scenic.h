@@ -78,6 +78,9 @@ class Scenic : public ui::Scenic {
   void TakeScreenshot(fidl::StringPtr filename,
                       ui::Scenic::TakeScreenshotCallback callback) override;
 
+  void GetOwnershipEvent(
+      ui::Scenic::GetOwnershipEventCallback callback) override;
+
   size_t next_session_id_ = 1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scenic);

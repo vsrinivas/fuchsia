@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "lib/fxl/macros.h"
+#include "lib/zx/event.h"
 
 namespace scenic {
 namespace gfx {
@@ -17,7 +18,7 @@ namespace gfx {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
-  Display(uint32_t width_in_px, uint32_t height_in_px);
+  Display(uint32_t width_in_px, uint32_t height_in_px, zx::event ownership_event);
 
   // Obtain the time of the last Vsync, in nanoseconds.
   zx_time_t GetLastVsyncTime();
@@ -32,6 +33,7 @@ class Display {
 
   uint32_t width_in_px() { return width_in_px_; };
   uint32_t height_in_px() { return height_in_px_; };
+  const zx::event& ownership_event() { return ownership_event_; };
 
  private:
   // Temporary friendship to allow FrameScheduler to feed back the Vsync timings
@@ -43,6 +45,7 @@ class Display {
   zx_time_t last_vsync_time_;
   const uint32_t width_in_px_;
   const uint32_t height_in_px_;
+  zx::event ownership_event_;
 
   bool claimed_ = false;
 

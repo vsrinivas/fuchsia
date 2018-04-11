@@ -1,3 +1,3 @@
 {
-    "dev": [ "class/input", "class/framebuffer" ]
+    "dev": [ "class/input" ]
 }

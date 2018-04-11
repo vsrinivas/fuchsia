@@ -27,6 +27,8 @@ class GfxSystem : public TempSystemDelegate {
   void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) override;
   void TakeScreenshot(fidl::StringPtr filename,
                       ui::Scenic::TakeScreenshotCallback callback) override;
+  void GetOwnershipEvent(
+      ui::Scenic::GetOwnershipEventCallback callback) override;
 
  protected:
   // Protected so test classes can expose.
@@ -41,6 +43,8 @@ class GfxSystem : public TempSystemDelegate {
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   void GetDisplayInfoImmediately(ui::Scenic::GetDisplayInfoCallback callback);
+  void GetOwnershipEventImmediately(
+      ui::Scenic::GetOwnershipEventCallback callback);
 
   // TODO(MZ-452): Remove this when we externalize Displays.
   bool initialized_ = false;

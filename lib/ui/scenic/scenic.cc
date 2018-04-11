@@ -100,4 +100,11 @@ void Scenic::TakeScreenshot(fidl::StringPtr filename,
   delegate->TakeScreenshot(filename, callback);
 }
 
+void Scenic::GetOwnershipEvent(ui::Scenic::GetOwnershipEventCallback callback) {
+  FXL_DCHECK(systems_[System::kGfx]);
+  TempSystemDelegate* delegate =
+      reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
+  delegate->GetOwnershipEvent(callback);
+}
+
 }  // namespace scenic

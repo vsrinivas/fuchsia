@@ -135,5 +135,29 @@ void GfxSystem::TakeScreenshot(fidl::StringPtr filename,
   screenshotter.TakeScreenshot(filename.get(), callback);
 }
 
+void GfxSystem::GetOwnershipEventImmediately(
+    ui::Scenic::GetOwnershipEventCallback callback) {
+  FXL_DCHECK(initialized_);
+  Display* display = engine_->display_manager()->default_display();
+  FXL_CHECK(display) << "There must be a default display.";
+
+  static_assert(ui::displayNotOwnedSignal == ZX_USER_SIGNAL_0, "Bad constant");
+  static_assert(ui::displayOwnedSignal == ZX_USER_SIGNAL_1, "Bad constant");
+
+  zx::event dup;
+  display->ownership_event().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &dup);
+  callback(std::move(dup));
+}
+
+void GfxSystem::GetOwnershipEvent(
+    ui::Scenic::GetOwnershipEventCallback callback) {
+  if (initialized_) {
+    GetOwnershipEventImmediately(callback);
+  } else {
+    run_after_initialized_.push_back(
+        [this, callback]() { GetOwnershipEventImmediately(callback); });
+  }
+}
+
 }  // namespace gfx
 }  // namespace scenic

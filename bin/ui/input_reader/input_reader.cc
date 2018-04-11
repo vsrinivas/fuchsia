@@ -7,18 +7,14 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <fuchsia/cpp/ui.h>
 #include <lib/async/default.h>
-#include <zircon/device/display.h>
 
 #include "lib/fsl/tasks/message_loop.h"
 
 namespace mozart {
 
 constexpr char kInputDevPath[] = "/dev/class/input";
-constexpr char kFramebuffPath[] = "/dev/class/framebuffer";
-// The path to the virtual console should come from some system header
-// see  MZ-432.
-constexpr char kVirtConsole[] = "000";
 
 struct InputReader::DeviceInfo {
   std::unique_ptr<InputInterpreter> interpreter;
@@ -39,37 +35,19 @@ void InputReader::Start() {
       kInputDevPath, [this](int dir_fd, std::string filename) {
         DeviceAdded(InputInterpreter::Open(dir_fd, filename, registry_));
       });
-
-  console_watcher_ = fsl::DeviceWatcher::Create(
-      kFramebuffPath, [this](int dir_fd, std::string) {
-        WatchDisplayOwnershipChanges(dir_fd);
-      });
 }
 
 // Register to receive notifications that display ownership has changed
-void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
-  // Open gfx console's device and receive display_watcher through its ioctl
-  int gfx_console_fd = openat(dir_fd, kVirtConsole, O_RDWR);
-  if (gfx_console_fd >= 0) {
-    ssize_t result = ioctl_display_get_ownership_change_event(
-        gfx_console_fd, &display_ownership_event_);
-    if (result == sizeof(display_ownership_event_)) {
-      // Add handler to listen for signals on this event
-      zx_signals_t signals = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1;
-      display_ownership_waiter_.set_object(display_ownership_event_);
-      display_ownership_waiter_.set_trigger(signals);
-      zx_status_t status =
-          display_ownership_waiter_.Begin(async_get_default());
-      FXL_CHECK(status == ZX_OK);
-    } else {
-      FXL_DLOG(ERROR)
-          << "IOCTL_DISPLAY_GET_OWNERSHIP_CHANGE_EVENT failed: result="
-          << result;
-    }
-    close(gfx_console_fd);
-  } else {
-    FXL_DLOG(ERROR) << "Failed to open " << kVirtConsole << ": errno=" << errno;
-  }
+void InputReader::SetOwnershipEvent(zx::event event) {
+  display_ownership_event_ = event.release();
+
+  // Add handler to listen for signals on this event
+  zx_signals_t signals = ui::displayOwnedSignal | ui::displayNotOwnedSignal;
+  display_ownership_waiter_.set_object(display_ownership_event_);
+  display_ownership_waiter_.set_trigger(signals);
+  zx_status_t status =
+      display_ownership_waiter_.Begin(async_get_default());
+  FXL_CHECK(status == ZX_OK);
 }
 
 void InputReader::DeviceRemoved(zx_handle_t handle) {
@@ -139,14 +117,14 @@ void InputReader::OnDisplayHandleReady(
   }
 
   zx_signals_t pending = signal->observed;
-  if (pending & ZX_USER_SIGNAL_0) {
+  if (pending & ui::displayNotOwnedSignal) {
     display_owned_ = false;
-    display_ownership_waiter_.set_trigger(ZX_USER_SIGNAL_1);
+    display_ownership_waiter_.set_trigger(ui::displayOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
-  } else if (pending & ZX_USER_SIGNAL_1) {
+  } else if (pending & ui::displayOwnedSignal) {
     display_owned_ = true;
-    display_ownership_waiter_.set_trigger(ZX_USER_SIGNAL_0);
+    display_ownership_waiter_.set_trigger(ui::displayNotOwnedSignal);
     auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
   }

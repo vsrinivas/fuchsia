@@ -35,7 +35,8 @@ class DisplayManager {
   }
 
  private:
-  void CreateDefaultDisplay(uint32_t width_in_px, uint32_t height_in_px);
+  void CreateDefaultDisplay(uint32_t width_in_px, uint32_t height_in_px,
+                            zx::event ownership_event);
 
   DisplayWatcher display_watcher_;
   std::unique_ptr<Display> default_display_;

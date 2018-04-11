@@ -106,6 +106,8 @@ class TempSystemDelegate : public System {
   virtual void GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) = 0;
   virtual void TakeScreenshot(fidl::StringPtr filename,
                               ui::Scenic::TakeScreenshotCallback callback) = 0;
+  virtual void GetOwnershipEvent(
+      ui::Scenic::GetOwnershipEventCallback callback) = 0;
 };
 
 }  // namespace scenic

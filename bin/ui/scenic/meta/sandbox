@@ -1,3 +1,4 @@
 {
-    "features": [ "vulkan", "system-temp" ]
+    "features": [ "vulkan", "system-temp" ],
+    "dev": [ "class/framebuffer" ]
 }

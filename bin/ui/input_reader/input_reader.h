@@ -33,6 +33,7 @@ class InputReader {
   ~InputReader();
 
   void Start();
+  void SetOwnershipEvent(zx::event event);
 
  private:
   struct DeviceInfo;
