@@ -15,7 +15,12 @@
 namespace machina {
 
 VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue)
-    : device_(device), async_(async), queue_(queue), queue_wait_(async, queue) {
+    : device_(device),
+      async_(async),
+      queue_(queue),
+      queue_wait_(async,
+                  queue,
+                  fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {
   fifo_writable_wait_.set_handler(
       fbl::BindMember(this, &VirtioNet::Stream::OnFifoWritable));
   fifo_readable_wait_.set_handler(
@@ -47,8 +52,7 @@ zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo,
 }
 
 zx_status_t VirtioNet::Stream::WaitOnQueue() {
-  return queue_wait_.Wait(
-      fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady));
+  return queue_wait_.Begin();
 }
 
 void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {

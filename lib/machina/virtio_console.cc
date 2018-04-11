@@ -17,7 +17,12 @@ namespace machina {
 VirtioConsole::Stream::Stream(async_t* async,
                               VirtioQueue* queue,
                               zx_handle_t socket)
-    : async_(async), socket_(socket), queue_(queue), queue_wait_(async, queue) {
+    : async_(async),
+      socket_(socket),
+      queue_(queue),
+      queue_wait_(async,
+                  queue,
+                  fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady)) {
   socket_wait_.set_handler(
       fbl::BindMember(this, &VirtioConsole::Stream::OnSocketReady));
 }
@@ -31,8 +36,7 @@ void VirtioConsole::Stream::Stop() {
 }
 
 zx_status_t VirtioConsole::Stream::WaitOnQueue() {
-  return queue_wait_.Wait(
-      fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady));
+  return queue_wait_.Begin();
 }
 
 void VirtioConsole::Stream::OnQueueReady(zx_status_t status, uint16_t index) {

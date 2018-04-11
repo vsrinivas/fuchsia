@@ -7,9 +7,14 @@
 namespace machina {
 
 template <VirtioVsock::StreamFunc F>
-zx_status_t VirtioVsock::Stream<F>::WaitOnQueue(VirtioVsock* vsock) {
-  zx_status_t status = waiter_.Wait(fbl::BindMember(vsock, F));
-  return status == ZX_ERR_ALREADY_BOUND ? ZX_OK : status;
+VirtioVsock::Stream<F>::Stream(async_t* async,
+                               VirtioQueue* queue,
+                               VirtioVsock* vsock)
+    : waiter_(async, queue, fbl::BindMember(vsock, F)) {}
+
+template <VirtioVsock::StreamFunc F>
+zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
+  return waiter_.Begin();
 }
 
 VirtioVsock::VirtioVsock(const PhysMem& phys_mem,
@@ -17,8 +22,8 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem,
                          uint32_t guest_cid)
     : VirtioDeviceBase(phys_mem),
       async_(async),
-      rx_stream_(async, rx_queue()),
-      tx_stream_(async, tx_queue()) {
+      rx_stream_(async, rx_queue(), this),
+      tx_stream_(async, tx_queue(), this) {
   FXL_DCHECK(guest_cid > kVirtioVsockHostCid || guest_cid < UINT32_MAX)
       << "CID is within reserved range";
   config_.guest_cid = guest_cid;
@@ -66,7 +71,7 @@ zx_status_t VirtioVsock::Listen(uint32_t cid,
     FXL_LOG(ERROR) << "Listener already exists";
     return ZX_ERR_ALREADY_EXISTS;
   }
-  zx_status_t status = tx_stream_.WaitOnQueue(this);
+  zx_status_t status = tx_stream_.WaitOnQueue();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait on queue " << status;
     return status;
@@ -157,7 +162,7 @@ zx_status_t VirtioVsock::WaitOnQueueLocked(ConnectionKey key,
                                            ConnectionSet* keys,
                                            Stream<F>* stream) {
   keys->insert(key);
-  return stream->WaitOnQueue(this);
+  return stream->WaitOnQueue();
 }
 
 void VirtioVsock::WaitOnSocketLocked(zx_status_t status,
@@ -509,7 +514,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
 
   // If there are listeners, wait on the transmit queue.
   if (!listeners_.empty()) {
-    zx_status_t status = tx_stream_.WaitOnQueue(this);
+    zx_status_t status = tx_stream_.WaitOnQueue();
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to wait on queue " << status;
     }

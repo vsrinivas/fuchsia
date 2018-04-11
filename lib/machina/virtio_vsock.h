@@ -116,10 +116,9 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
   template <StreamFunc F>
   class Stream {
    public:
-    Stream(async_t* async, VirtioQueue* queue) : waiter_(async, queue) {}
-    ~Stream() { waiter_.Cancel(); }
+    Stream(async_t* async, VirtioQueue* queue, VirtioVsock* device);
 
-    zx_status_t WaitOnQueue(VirtioVsock* vsock);
+    zx_status_t WaitOnQueue();
 
    private:
     VirtioQueueWaiter waiter_;
