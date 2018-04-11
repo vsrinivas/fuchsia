@@ -324,9 +324,11 @@ static zx_status_t load_device_tree(const int fd,
 
 static std::string linux_cmdline(std::string cmdline) {
 #if __x86_64__
-  fxl::StringAppendf(&cmdline, " acpi_rsdp=%#lx", machina::kAcpiOffset);
-#endif
+  return fxl::StringPrintf("acpi_rsdp=%#lx %s", machina::kAcpiOffset,
+                           cmdline.c_str());
+#else
   return cmdline;
+#endif
 }
 
 zx_status_t setup_linux(const GuestConfig cfg,
@@ -356,7 +358,7 @@ zx_status_t setup_linux(const GuestConfig cfg,
     }
   }
 
-  std::string cmdline = linux_cmdline(cfg.cmdline());
+  const std::string cmdline = linux_cmdline(cfg.cmdline());
   if (is_boot_params(phys_mem)) {
     status = read_boot_params(phys_mem, guest_ip);
     if (status != ZX_OK) {
