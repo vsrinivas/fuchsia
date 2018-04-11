@@ -229,7 +229,10 @@ zx_status_t sys_system_mexec(zx_handle_t kernel_vmo, zx_handle_t bootimage_vmo) 
 
     // for kernels that are bootdata based (eg, x86-64), the location
     // to find the entrypoint depends on the bootdata format
-    uintptr_t entry64_addr = 0x100040;
+    paddr_t entry64_addr = (get_kernel_base_phys() +
+                            sizeof(bootdata_t) + // BOOTDATA_CONTAINER header
+                            sizeof(bootdata_t) + // BOOTDATA_KERNEL header
+                            offsetof(bootdata_kernel_t, entry64));
 
     paddr_t new_bootimage_addr;
     uint8_t* bootimage_buffer;
