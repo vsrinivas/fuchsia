@@ -215,9 +215,3 @@ mutexes, condition variables, etc, implemented in terms of Futexes.
 See: [futex_wait](syscalls/futex_wait.md),
 [futex_wake](syscalls/futex_wake.md),
 [futex_requeue](syscalls/futex_requeue.md).
-
-## Zircon Device Index
-
-The Zircon Device Index (MDI) is a read-only binary data structure passed from the bootloader
-that contains configuration information for the kernel and various drivers in zircon.
-See [mdi](mdi.md).

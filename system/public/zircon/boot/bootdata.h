@@ -49,9 +49,6 @@
 // compression is a raw disk image rather than BOOTFS format.
 #define BOOTDATA_RAMDISK          (0x4b534452) // RDSK
 
-// MDI data.  The "extra" field is unused and set to 0.
-#define BOOTDATA_MDI              (0x3149444d) // MDI1
-
 // A Zircon Kernel Image
 // Content: bootdata_kernel_t
 #define BOOTDATA_KERNEL           (0x4c4e524b) // KRNL

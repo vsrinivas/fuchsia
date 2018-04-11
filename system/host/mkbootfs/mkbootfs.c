@@ -1058,7 +1058,6 @@ int dump_bootdata(const char* fn) {
         case BOOTDATA_##type:                                       \
             printf("%08zx: %08x %s\n", off, hdr.length, #type);     \
             break
-        BOOTDATA_CASE(MDI);
         BOOTDATA_CASE(KERNEL);
         BOOTDATA_CASE(CMDLINE);
         BOOTDATA_CASE(ACPI_RSDP);
