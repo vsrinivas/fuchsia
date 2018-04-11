@@ -23,6 +23,9 @@ FUNCTION_LABEL(mexec_asm)
     mov %rsi, %r9    /* CR3 for Safe page tables */
     mov %rdi, %r8    /* Bootimage Address */
 
+    // The old SP is in the old kernel virtual address space, so don't use it.
+    xor %esp, %esp
+
     /* Switch to the safe identity mapped page tables */
     mov  %r9, %cr3
 
@@ -31,30 +34,6 @@ FUNCTION_LABEL(mexec_asm)
     mov MEMMOV_OPS_SRC_OFFSET (%r12), %rsi
     mov MEMMOV_OPS_LEN_OFFSET (%r12), %rcx
 
-    call .Lmexec_memmove
-
-    /* Move the address of the bootdata into the appropriate register */
-    mov %r8, %rsi
-
-    /* Zero out some registers */
-    xor %ebx, %ebx
-    xor %edi, %edi
-    xor %ebp, %ebp
-
-    /* Grab 64bit entrypoint from provided location */
-    mov (%r10), %rax
-    xor %rbx, %rbx
-
-    /* Clear interrupts */
-    cli
-
-    /* See you on the other side! */
-    jmp *%rax
-
-    /* Crash, we should never reach here */
-    ud2
-
-.Lmexec_memmove:
     /* Move RCX bytes from RSI to RDI */
     cld               /* Clear the direction flag so that we're copying forward */
                       /* by default when we start */
@@ -79,6 +58,26 @@ FUNCTION_LABEL(mexec_asm)
 
     cld               /* Clear the direction flag since we may have polluted it */
                       /* if we did a copy backwards */
-    ret
 
+    /* Move the address of the bootdata into the appropriate register */
+    mov %r8, %rsi
+
+    /* Zero out some registers */
+    xor %ebx, %ebx
+    xor %edi, %edi
+    xor %ebp, %ebp
+
+    /* Grab 64bit entrypoint from provided location */
+    mov (%r10), %rax
+
+    /* Clear interrupts */
+    cli
+
+    /* See you on the other side! */
+    jmp *%rax
+
+    /* Crash, we should never reach here */
+    ud2
+
+END_DATA(mexec_asm)
 DATA(mexec_asm_end)
