@@ -42,7 +42,7 @@ class FirebaseModuleManifestSource : public ModuleManifestSource {
       std::string prefix);
   ~FirebaseModuleManifestSource() override;
 
-  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  void Watch(async_t* async,
              IdleFn idle_fn,
              NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;

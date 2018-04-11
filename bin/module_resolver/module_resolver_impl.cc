@@ -44,7 +44,7 @@ void ModuleResolverImpl::AddSource(
   auto ptr = repo.get();
   sources_.emplace(name, std::move(repo));
 
-  ptr->Watch(fsl::MessageLoop::GetCurrent()->task_runner(),
+  ptr->Watch(async_get_default(),
              [this, name]() { OnSourceIdle(name); },
              [this, name](std::string id, modular::ModuleManifest entry) {
                OnNewManifestEntry(name, std::move(id), std::move(entry));

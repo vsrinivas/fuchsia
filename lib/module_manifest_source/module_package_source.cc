@@ -8,6 +8,8 @@
 #include <fs/service.h>
 #include <sys/types.h>
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -44,7 +46,7 @@ ModulePackageSource::~ModulePackageSource() {}
 
 void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
                                         fidl::StringPtr module_manifest_path) {
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(async_);
   FXL_DCHECK(new_entry_fn_);
 
   std::string data;
@@ -61,7 +63,8 @@ void ModulePackageSource::IndexManifest(fidl::StringPtr package_name,
     return;
   }
 
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       fxl::MakeCopyable([weak_this = weak_factory_.GetWeakPtr(), package_name,
                          entry = std::move(entry)]() mutable {
         if (!weak_this) {
@@ -89,11 +92,11 @@ void IterateDirectory(fxl::StringView dirname,
   closedir(fd);
 }
 
-void ModulePackageSource::Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+void ModulePackageSource::Watch(async_t* async,
                                 IdleFn idle_fn,
                                 NewEntryFn new_fn,
                                 RemovedEntryFn removed_fn) {
-  task_runner_ = task_runner;
+  async_ = async;
   new_entry_fn_ = new_fn;
 
   IterateDirectory(

@@ -13,7 +13,6 @@
 #include <fuchsia/cpp/module_manifest_source.h>
 #include "garnet/public/lib/app/cpp/application_context.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {
@@ -29,7 +28,7 @@ class ModulePackageSource : public ModuleManifestSource,
   ~ModulePackageSource() override;
 
   // |ModuleManifestSource|
-  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  void Watch(async_t* async,
              IdleFn idle_fn,
              NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override;
@@ -43,7 +42,7 @@ class ModulePackageSource : public ModuleManifestSource,
   NewEntryFn new_entry_fn_;
   fidl::BindingSet<module_manifest_source::ModulePackageIndexer>
       indexer_bindings_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* async_;
 
   fxl::WeakPtrFactory<ModulePackageSource> weak_factory_;
 

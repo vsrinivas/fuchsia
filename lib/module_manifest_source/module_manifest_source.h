@@ -10,7 +10,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/modular.h>
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
 
 namespace modular {
 
@@ -24,19 +24,19 @@ class ModuleManifestSource {
   virtual ~ModuleManifestSource() = 0;
 
   // Watches the source for new or removed Module manifest entries.  Posts
-  // tasks to |task_runner| calling |new_fn| for each entry in new files and
+  // tasks to |async| calling |new_fn| for each entry in new files and
   // |removed_fn| for entries that have been removed. Calls |idle_fn| once all
   // existing entries at the time of calling Watch() have been read and sent to
   // |new_fn|.
   //
   // Destroying |this| stops watching and guarantees neither |new_fn| or
   // |removed_fn| will be called. Caller is responsible for ensuring
-  // |task_runner| remains alive as long as |this| is alive.
+  // |async| remains alive as long as |this| is alive.
   //
   // |new_fn| takes a string Entry id and the Entry itself.
   //
   // |removed_fn| takes only the string Entry id.
-  virtual void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  virtual void Watch(async_t* async,
                      IdleFn idle_fn,
                      NewEntryFn new_fn,
                      RemovedEntryFn removed_fn) = 0;

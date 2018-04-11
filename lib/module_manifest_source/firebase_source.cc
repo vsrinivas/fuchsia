@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <thread>
 
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "garnet/lib/network_wrapper/network_wrapper_impl.h"
 #include "lib/fxl/logging.h"
@@ -45,12 +47,12 @@ void XdrEntry(modular::XdrContext* const xdr,
 
 class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
  public:
-  Watcher(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  Watcher(async_t* async,
           ModuleManifestSource::IdleFn idle_fn,
           ModuleManifestSource::NewEntryFn new_fn,
           ModuleManifestSource::RemovedEntryFn removed_fn,
           fxl::WeakPtr<FirebaseModuleManifestSource> owner)
-      : task_runner_(task_runner),
+      : async_(async),
         idle_fn_(idle_fn),
         new_fn_(new_fn),
         removed_fn_(removed_fn),
@@ -119,13 +121,14 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     // Try to reconnect.
     FXL_LOG(INFO) << "Reconnecting to Firebase in " << reconnect_wait_seconds_
                   << " seconds.";
-    task_runner_->PostDelayedTask(
+    async::PostDelayedTask(
+        async_,
         [ owner = owner_, this ]() {
           if (!owner)
             return;
           owner->StartWatching(this);
         },
-        fxl::TimeDelta::FromSeconds(reconnect_wait_seconds_));
+        zx::sec(reconnect_wait_seconds_));
   }
 
   void ProcessEntry(const std::string& name, const rapidjson::Value& value) {
@@ -150,7 +153,7 @@ class FirebaseModuleManifestSource::Watcher : public firebase::WatchClient {
     new_fn_(name, std::move(entry));
   }
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 
   ModuleManifestSource::IdleFn idle_fn_;
   ModuleManifestSource::NewEntryFn new_fn_;
@@ -183,12 +186,12 @@ FirebaseModuleManifestSource::~FirebaseModuleManifestSource() {
 }
 
 void FirebaseModuleManifestSource::Watch(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     IdleFn idle_fn,
     NewEntryFn new_fn,
     RemovedEntryFn removed_fn) {
   auto watcher = std::make_unique<Watcher>(
-      task_runner, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
+      async, std::move(idle_fn), std::move(new_fn), std::move(removed_fn),
       weak_factory_.GetWeakPtr());
 
   StartWatching(watcher.get());

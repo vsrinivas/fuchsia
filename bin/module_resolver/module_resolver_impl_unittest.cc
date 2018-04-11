@@ -155,7 +155,7 @@ class TestManifestSource : public modular::ModuleManifestSource {
   RemovedEntryFn remove;
 
  private:
-  void Watch(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  void Watch(async_t* async,
              IdleFn idle_fn,
              NewEntryFn new_fn,
              RemovedEntryFn removed_fn) override {
