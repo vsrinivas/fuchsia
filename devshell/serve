@@ -17,8 +17,8 @@ kill_child_processes() {
   child_pids=$(jobs -p)
   if [[ -n "${child_pids}" ]]; then
     kill "${child_pids}" 2> /dev/null
+    wait "${child_pids}" 2> /dev/null
   fi
-  wait 2> /dev/null
 }
 trap kill_child_processes EXIT
 
@@ -57,16 +57,17 @@ while (($#)); do
   shift
 done
 
-fx-command-run boot "${boot_args[@]}" &
-fx-command-run serve-updates "${serve_args[@]}" &
+fx-command-exec boot "${boot_args[@]}" &
+boot_pid=$!
+fx-command-exec serve-updates "${serve_args[@]}" &
+serve_pid=$!
 
-child_pids=$(jobs -p)
 while true; do
   sleep 1
 
   # If any child exits, then exit the whole process, causing other children to
   # be cleaned up by the exit trap.
-  for pid in "${child_pids}"; do
+  for pid in "${boot_pid}" "${serve_pid}"; do
     if ! kill -0 $pid 2> /dev/null; then
       exit
     fi

@@ -27,9 +27,9 @@ cleanup() {
   if [[ -n "${amber_srv_pid}" ]]; then
     if kill -0 "${amber_srv_pid}" 2> /dev/null; then
       kill -TERM "${amber_srv_pid}" 2> /dev/null
+      wait "${amber_srv_pid}" 2> /dev/null
     fi
   fi
-  wait 2> /dev/null
 }
 trap cleanup EXIT
 
