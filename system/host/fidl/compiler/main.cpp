@@ -121,6 +121,9 @@ public:
     bool Remaining() const override { return count_ > 0; }
 
     bool HeadIsResponseFile() {
+        if (count_ == 0) {
+            return false;
+        }
         return arguments_[0][0] == '@';
     }
 
@@ -201,6 +204,11 @@ int main(int argc, char* argv[]) {
 
     // Parse the program name.
     argv_args->Claim();
+
+    if (!argv_args->Remaining()) {
+        Usage();
+        exit(0);
+    }
 
     // Check for a response file. After this, |args| is either argv or
     // the response file contents.
