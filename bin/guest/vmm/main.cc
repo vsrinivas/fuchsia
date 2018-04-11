@@ -147,15 +147,9 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 static zx_status_t setup_zircon_framebuffer(
     machina::VirtioGpu* gpu, fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Try software framebuffer.
-  zx_status_t status = machina::FramebufferScanout::Create(
-      "/dev/class/framebuffer/000", scanout);
+  zx_status_t status = machina::FramebufferScanout::Create(scanout);
   if (status != ZX_OK) {
-    // Try hardware framebuffer.
-    status =
-        machina::FramebufferScanout::Create("/dev/class/display/000", scanout);
-    if (status != ZX_OK) {
-      return status;
-    }
+    return status;
   }
   return gpu->AddScanout(scanout->get());
 }
@@ -169,7 +163,7 @@ static zx_status_t setup_scenic_framebuffer(
   // detection APIs may not properly detect it. Just verify we can stat
   // the path to ensure _something_ is there.
   struct stat buf;
-  if (stat("/dev/class/display/000", &buf)) {
+  if (stat("/dev/class/display-controller/000", &buf)) {
     return ZX_ERR_NO_RESOURCES;
   }
   fbl::unique_ptr<ScenicScanout> scenic_scanout;

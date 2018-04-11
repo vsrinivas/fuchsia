@@ -1,9 +1,8 @@
 {
   "dev": [
     "class/block",
-    "class/display",
+    "class/display-controller",
     "class/ethernet",
-    "class/framebuffer",
     "class/input",
     "misc"
   ]
