@@ -145,7 +145,8 @@ static zx_status_t poll_balloon_stats(machina::VirtioBalloon* balloon,
 }
 
 static zx_status_t setup_zircon_framebuffer(
-    machina::VirtioGpu* gpu, fbl::unique_ptr<machina::GpuScanout>* scanout) {
+    machina::VirtioGpu* gpu,
+    fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Try software framebuffer.
   zx_status_t status = machina::FramebufferScanout::Create(
       "/dev/class/framebuffer/000", scanout);
@@ -161,7 +162,8 @@ static zx_status_t setup_zircon_framebuffer(
 }
 
 static zx_status_t setup_scenic_framebuffer(
-    component::ApplicationContext* application_context, machina::VirtioGpu* gpu,
+    component::ApplicationContext* application_context,
+    machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Check if we have a display. Since this is a device file, many file
@@ -179,7 +181,9 @@ static zx_status_t setup_scenic_framebuffer(
   return gpu->AddScanout(scanout->get());
 }
 
-static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
+static zx_status_t read_guest_cfg(const char* cfg_path,
+                                  int argc,
+                                  char** argv,
                                   GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
   std::string cfg_str;
