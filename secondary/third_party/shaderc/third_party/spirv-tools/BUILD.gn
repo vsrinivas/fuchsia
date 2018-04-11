@@ -230,18 +230,19 @@ action("generators_include_file") {
 action("debug_info_include_file") {
   script = "utils/generate_language_headers.py"
   debug_info_grammar = "source/extinst.debuginfo.grammar.json"
-  base_output_filename="DebugInfo"
-  output_file = "$target_gen_dir/DebugInfo"
+  base_filename="DebugInfo"
+  output_path = "$target_gen_dir/DebugInfo"
+  output_path_with_h = "$target_gen_dir/DebugInfo.h"
   args = [
-    "--extinst-name=" + base_output_filename,
+    "--extinst-name=" + base_filename,
     "--extinst-grammar=" + rebase_path(debug_info_grammar, root_build_dir),
-    "--extinst-output-base=" + rebase_path(output_file, root_build_dir),
+    "--extinst-output-base=" + rebase_path(output_path, root_build_dir),
   ]
   sources = [
     debug_info_grammar,
   ]
   outputs = [
-    output_file,
+    output_path_with_h,
   ]
 }
 action("vendor_tables_debug_info") {
