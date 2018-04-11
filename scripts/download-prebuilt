@@ -78,7 +78,7 @@ verify_stamp() {
     return 0
   fi
   if $verbose; then
-    echo >&2 "WARNING: unpacked $package $stamp_version != current $version"
+    echo "WARNING: unpacked $package $stamp_version != current $version"
   fi
   return 1
 }
