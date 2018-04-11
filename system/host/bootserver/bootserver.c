@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
     char cmdline[4096];
     char* cmdnext = cmdline;
     char* nodename = NULL;
-    int r, s, n = 1;
+    int r, s = 1;
     int num_fvms = 0;
     const char* efi_image = NULL;
     const char* kernc_image = NULL;
@@ -436,9 +436,8 @@ int main(int argc, char** argv) {
         log("cannot create socket %d", s);
         return -1;
     }
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &n, sizeof(n));
     if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
-        log("cannot bind to %s %d: %s\n",
+        log("cannot bind to %s %d: %s\nthere may be another bootserver running\n",
             sockaddr_str(&addr),
             errno, strerror(errno));
         return -1;
