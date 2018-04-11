@@ -700,17 +700,15 @@ static bool channel_call(void) {
         ASSERT_EQ(thrd_create(&ccargs[n].t, call_client, &ccargs[n]), thrd_success, "");
     }
 
-    // wait for all tests to finish or timeout
-    struct timespec until;
-    clock_gettime(CLOCK_REALTIME, &until);
-    until.tv_sec += 5;
+    // Wait for all tests to finish. There is no timeout, we leave that to
+    // the test harness.
     int r = 0;
     while (r == 0) {
         mtx_lock(&call_test_lock);
         if (call_test_done == waitfor) {
             r = -1;
         } else {
-            r = cnd_timedwait(&call_test_cvar, &call_test_lock, &until);
+            r = cnd_timedwait(&call_test_cvar, &call_test_lock, NULL);
             EXPECT_EQ(r, thrd_success, "wait failed");
         }
         mtx_unlock(&call_test_lock);
