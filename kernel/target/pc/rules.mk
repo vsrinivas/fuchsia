@@ -19,6 +19,7 @@ MODULE_DEPS := \
 include make/module.mk
 
 # build kernel-bootdata for fuchisa build
+# TODO: remove this once Fuchsia build no longer needs this
 KERNEL_BOOTDATA := $(BUILDDIR)/pc-kernel-bootdata.bin
 $(KERNEL_BOOTDATA): $(MKBOOTFS)
 	$(call BUILDECHO,generating $@)

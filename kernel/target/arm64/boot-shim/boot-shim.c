@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <ddk/protocol/platform-defs.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/boot/driver-config.h>
 

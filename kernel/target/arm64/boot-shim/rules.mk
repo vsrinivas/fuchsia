@@ -22,6 +22,7 @@ BOOT_SHIM_BIN := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-boot-shim.bin
 KERNEL_ALIGN := 65536
 SHIM_DEFINES := -DKERNEL_ALIGN=$(KERNEL_ALIGN)
 SHIM_INCLUDES := -Ikernel/include -Ikernel/arch/arm64/include -Isystem/public
+SHIM_INCLUDES += -Isystem/ulib/ddk/include  # for ddk/protocol/platform-defs.h
 SHIM_CFLAGS := $(NO_SAFESTACK) $(NO_SANITIZERS)
 
 # for including target specific headers

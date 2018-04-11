@@ -79,6 +79,12 @@ static const dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_phys = 30,
 };
 
+static const bootdata_platform_id_t platform_id = {
+    .vid = PDEV_VID_KHADAS,
+    .pid = PDEV_PID_VIM,
+    .board_name = "vim",
+};
+
 static void append_board_bootdata(bootdata_t* bootdata) {
     // add CPU configuration
     append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, 0, &cpu_config,
@@ -98,4 +104,7 @@ static void append_board_bootdata(bootdata_t* bootdata) {
                     sizeof(psci_driver));
     append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
                     sizeof(timer_driver));
+
+    // add platform ID
+    append_bootdata(bootdata, BOOTDATA_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }

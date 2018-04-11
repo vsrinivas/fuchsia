@@ -83,6 +83,12 @@ static const dcfg_amlogic_hdcp_driver_t hdcp_driver = {
     .hdmitx_phys = 0xc883a000,
 };
 
+static const bootdata_platform_id_t platform_id = {
+    .vid = PDEV_VID_KHADAS,
+    .pid = PDEV_PID_VIM2,
+    .board_name = "vim2",
+};
+
 static void append_board_bootdata(bootdata_t* bootdata) {
     // add CPU configuration
     append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, 0, &cpu_config,
@@ -104,4 +110,8 @@ static void append_board_bootdata(bootdata_t* bootdata) {
                     sizeof(timer_driver));
     append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_AMLOGIC_HDCP, &hdcp_driver,
                     sizeof(hdcp_driver));
+
+
+    // add platform ID
+    append_bootdata(bootdata, BOOTDATA_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
 }

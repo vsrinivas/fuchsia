@@ -4,17 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-ifeq ($(PLATFORM_VID),)
-$(error PLATFORM_VID not defined)
-endif
-ifeq ($(PLATFORM_PID),)
-$(error PLATFORM_PID not defined)
-endif
 ifeq ($(PLATFORM_BOARD_NAME),)
 $(error PLATFORM_BOARD_NAME not defined)
 endif
 
-BOARD_PLATFORM_ID := --vid $(PLATFORM_VID) --pid $(PLATFORM_PID) --board $(PLATFORM_BOARD_NAME)
 BOARD_KERNEL_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-kernel-bootdata.bin
 BOARD_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-bootdata.bin
 BOARD_COMBO_BOOTDATA := $(BUILDDIR)/$(PLATFORM_BOARD_NAME)-combo-bootdata.bin
@@ -32,7 +25,6 @@ endif
 
 # capture board specific variables for the build rules
 $(BOARD_KERNEL_BOOTDATA): BOARD_KERNEL_BOOTDATA:=$(BOARD_KERNEL_BOOTDATA)
-$(BOARD_KERNEL_BOOTDATA): BOARD_PLATFORM_ID:=$(BOARD_PLATFORM_ID)
 $(BOARD_BOOTDATA): BOARD_BOOTDATA:=$(BOARD_BOOTDATA)
 $(BOARD_BOOTDATA): BOARD_KERNEL_BOOTDATA:=$(BOARD_KERNEL_BOOTDATA)
 $(BOARD_COMBO_BOOTDATA): BOARD_COMBO_BOOTDATA:=$(BOARD_COMBO_BOOTDATA)
@@ -40,12 +32,14 @@ $(BOARD_COMBO_BOOTDATA): BOARD_BOOTDATA:=$(BOARD_BOOTDATA)
 $(BOARD_COMBO_BOOTDATA): BOARD_BOOT_SHIM_OPTS:=$(BOARD_BOOT_SHIM_OPTS)
 
 # kernel bootdata for fuchsia build
+# TODO: remove this once Fuchsia build no longer needs this
 $(BOARD_KERNEL_BOOTDATA): $(MKBOOTFS)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) -o $@ $(BOARD_PLATFORM_ID)
+	$(NOECHO)$(MKBOOTFS) -o $@ --empty
 
 # full bootdata (kernel bootdata + bootfs)
+# TODO: replace this with common bootdata for all boards
 $(BOARD_BOOTDATA): $(MKBOOTFS) $(BOARD_KERNEL_BOOTDATA) $(USER_BOOTDATA)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
@@ -64,13 +58,10 @@ GENERATED += $(BOARD_KERNEL_BOOTDATA) $(BOARD_BOOTDATA) $(BOARD_COMBO_BOOTDATA)
 EXTRA_BUILDDEPS += $(BOARD_KERNEL_BOOTDATA) $(BOARD_BOOTDATA) $(BOARD_COMBO_BOOTDATA)
 
 # clear variables that were passed in to us
-PLATFORM_VID :=
-PLATFORM_PID :=
 PLATFORM_BOARD_NAME :=
 PLATFORM_USE_SHIM :=
 
 # clear variables we set here
-BOARD_PLATFORM_ID :=
 BOARD_KERNEL_BOOTDATA :=
 BOARD_BOOTDATA :=
 BOARD_COMBO_BOOTDATA :=

@@ -264,6 +264,8 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
 static void process_bootsection(bootdata_t* section) {
     switch (section->type) {
     case BOOTDATA_KERNEL_DRIVER:
+    case BOOTDATA_PLATFORM_ID:
+        // we don't process these here, but we need to save them for mexec
         save_mexec_bootdata(section);
         break;
     case BOOTDATA_CMDLINE: {
