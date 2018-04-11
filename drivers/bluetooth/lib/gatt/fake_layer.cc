@@ -29,8 +29,7 @@ void FakeLayer::RegisterService(ServicePtr service,
                                 ServiceIdCallback callback,
                                 ReadHandler read_handler,
                                 WriteHandler write_handler,
-                                ClientConfigCallback ccc_callback,
-                                fxl::RefPtr<fxl::TaskRunner> task_runner) {
+                                ClientConfigCallback ccc_callback) {
   // TODO: implement
 }
 

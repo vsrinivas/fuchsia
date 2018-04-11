@@ -5,10 +5,9 @@
 #include "task_domain.h"
 
 #include <fbl/ref_counted.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
-
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace btlib {
 namespace common {
@@ -17,14 +16,13 @@ namespace {
 class TestObject : public fbl::RefCounted<TestObject>,
                    public TaskDomain<TestObject> {
  public:
-  // TestObject gets handed a TaskRunner and does not own the thread.
-  explicit TestObject(fxl::RefPtr<fxl::TaskRunner> task_runner,
-                      async_t* dispatcher)
-      : TaskDomain<TestObject>(this, task_runner, dispatcher) {}
+  // TestObject gets handed a an async dispatcher and does not own the thread.
+  explicit TestObject(async_t* dispatcher)
+      : TaskDomain<TestObject>(this, dispatcher) {}
 
   void ScheduleTask() {
     PostMessage([this] {
-      EXPECT_TRUE(task_runner()->RunsTasksOnCurrentThread());
+      AssertOnDispatcherThread();
 
       {
         std::lock_guard<std::mutex> lock(mtx);
@@ -38,7 +36,7 @@ class TestObject : public fbl::RefCounted<TestObject>,
   void ShutDown() { TaskDomain<TestObject>::ScheduleCleanUp(); }
 
   void CleanUp() {
-    EXPECT_TRUE(task_runner()->RunsTasksOnCurrentThread());
+    AssertOnDispatcherThread();
     cleaned_up = true;
   }
 
@@ -50,13 +48,10 @@ class TestObject : public fbl::RefCounted<TestObject>,
 };
 
 TEST(TaskDomainTest, PostMessageAndCleanUp) {
-  fxl::RefPtr<fxl::TaskRunner> thrd_runner;
-  async_t* dispatcher;
-  std::thread thrd =
-      common::CreateThread(&thrd_runner, &dispatcher, "task_domain_unittest");
-  ASSERT_TRUE(thrd_runner);
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
+  loop.StartThread("task_domain_unittest");
 
-  auto obj = fbl::AdoptRef(new TestObject(thrd_runner, dispatcher));
+  auto obj = fbl::AdoptRef(new TestObject(loop.async()));
 
   // Schedule a task. This is expected to run on the |thrd_runner|.
   obj->ScheduleTask();
@@ -79,27 +74,12 @@ TEST(TaskDomainTest, PostMessageAndCleanUp) {
   // #2: This should not run due to #1.
   obj->ScheduleTask();
 
-  // #3: This task quits the loop.
-  bool done = false;
-  async::PostTask(dispatcher, [obj, &done] {
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-
-    {
-      std::lock_guard<std::mutex> lock(obj->mtx);
-      done = true;
-    }
-
-    obj->cv.notify_one();
-  });
-
-  // Wait for the shut down task to finish running.
-  obj->cv.wait(lock, [&done] { return done; });
+  // #3: This task quits the loop and blocks until all tasks have finished
+  // running.
+  loop.Shutdown();
 
   EXPECT_TRUE(obj->cleaned_up);
   EXPECT_FALSE(obj->task_done);
-
-  if (thrd.joinable())
-    thrd.join();
 }
 
 }  // namespace

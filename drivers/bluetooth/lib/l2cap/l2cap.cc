@@ -38,6 +38,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   // Called on the L2CAP runner as a result of ScheduleCleanUp().
   void CleanUp() {
+    AssertOnDispatcherThread();
     FXL_VLOG(1) << "l2cap: Shutting down";
     chanmgr_ = nullptr;
   }

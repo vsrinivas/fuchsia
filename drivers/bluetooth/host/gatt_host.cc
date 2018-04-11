@@ -6,8 +6,6 @@
 
 #include "fidl/gatt_server_server.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 using namespace btlib;
 
 namespace bthost {
@@ -21,7 +19,7 @@ GattHost::GattHost(std::string thrd_name)
     : btlib::common::TaskDomain<GattHost>(this, std::move(thrd_name)),
       weak_ptr_factory_(this) {
   // Initialize the profile to operate on our task runner.
-  gatt_ = gatt::GATT::Create(task_runner(), dispatcher());
+  gatt_ = gatt::GATT::Create(dispatcher());
   FXL_DCHECK(gatt_);
 }
 
@@ -42,7 +40,7 @@ void GattHost::ShutDown() {
 }
 
 void GattHost::CleanUp() {
-  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  AssertOnDispatcherThread();
 
   // This closes all remaining FIDL channels.
   servers_.clear();
@@ -50,14 +48,13 @@ void GattHost::CleanUp() {
 
 void GattHost::BindGattServer(
     fidl::InterfaceRequest<bluetooth_gatt::Server> request) {
-  // TODO(armansito): Stop using MakeCopyable! (NET-425)
-  PostMessage(fxl::MakeCopyable([this, request = std::move(request)]() mutable {
+  PostMessage([this, request = std::move(request)]() mutable {
     AddServer(std::make_unique<GattServerServer>(gatt_, std::move(request)));
-  }));
+  });
 }
 
 void GattHost::AddServer(std::unique_ptr<Server> server) {
-  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  AssertOnDispatcherThread();
   FXL_DCHECK(server);
 
   auto self = weak_ptr_factory_.GetWeakPtr();

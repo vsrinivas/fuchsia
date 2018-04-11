@@ -332,47 +332,46 @@ void GattServerServer::PublishService(
       self->OnCharacteristicConfig(svc_id, id, peer_id, notify, indicate);
   };
 
-  auto id_cb = fxl::MakeCopyable(
-      [self, delegate = std::move(delegate),
-       service_iface = std::move(service_iface),
-       callback = std::move(callback)](btlib::gatt::IdType id) mutable {
-        if (!self)
-          return;
+  auto id_cb = [self, delegate = std::move(delegate),
+                service_iface = std::move(service_iface),
+                callback =
+                    std::move(callback)](btlib::gatt::IdType id) mutable {
+    if (!self)
+      return;
 
-        if (!id) {
-          // TODO(armansito): Report a more detailed string if registration
-          // fails due to duplicate ids.
-          auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
-                                                  "Failed to publish service");
-          callback(std::move(error));
-          return;
-        }
+    if (!id) {
+      // TODO(armansito): Report a more detailed string if registration
+      // fails due to duplicate ids.
+      auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
+                                              "Failed to publish service");
+      callback(std::move(error));
+      return;
+    }
 
-        FXL_DCHECK(self->services_.find(id) == self->services_.end());
+    FXL_DCHECK(self->services_.find(id) == self->services_.end());
 
-        // This will be called if either the delegate or the service connection
-        // closes.
-        auto connection_error_cb = [self, id] {
-          FXL_VLOG(1) << "Removing GATT service (id: " << id << ")";
-          if (self)
-            self->RemoveService(id);
-        };
+    // This will be called if either the delegate or the service connection
+    // closes.
+    auto connection_error_cb = [self, id] {
+      FXL_VLOG(1) << "Removing GATT service (id: " << id << ")";
+      if (self)
+        self->RemoveService(id);
+    };
 
-        auto delegate_ptr = delegate.Bind();
-        delegate_ptr.set_error_handler(connection_error_cb);
+    auto delegate_ptr = delegate.Bind();
+    delegate_ptr.set_error_handler(connection_error_cb);
 
-        auto service_server = std::make_unique<ServiceImpl>(
-            self.get(), id, std::move(delegate_ptr), std::move(service_iface));
-        service_server->set_error_handler(connection_error_cb);
-        self->services_[id] = std::move(service_server);
+    auto service_server = std::make_unique<ServiceImpl>(
+        self.get(), id, std::move(delegate_ptr), std::move(service_iface));
+    service_server->set_error_handler(connection_error_cb);
+    self->services_[id] = std::move(service_server);
 
-        callback(Status());
-      });
+    callback(Status());
+  };
 
   gatt()->RegisterService(std::move(service), std::move(id_cb),
                           std::move(read_handler), std::move(write_handler),
-                          std::move(ccc_callback),
-                          fsl::MessageLoop::GetCurrent()->task_runner());
+                          std::move(ccc_callback));
 }
 
 void GattServerServer::OnReadRequest(

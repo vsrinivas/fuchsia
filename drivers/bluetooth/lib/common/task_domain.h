@@ -103,17 +103,11 @@ class TaskDomain {
     thrd.detach();
   }
 
-  // Initializes this domain by assigning the given |task_runner| to it.
-  // TODO(armansito): For now this needs both a TaskRunner and async_t so that
-  // the dependency on TaskRunner can be removed in pieces.
-  TaskDomain(T* obj,
-             fxl::RefPtr<fxl::TaskRunner> task_runner,
-             async_t* dispatcher)
-      : owns_thread_(false),
-        task_runner_(task_runner),
-        dispatcher_(dispatcher) {
+  // Initializes this domain by assigning the given |dispatcher| to it.
+  TaskDomain(T* obj, async_t* dispatcher)
+      : owns_thread_(false), dispatcher_(dispatcher) {
     Init(obj);
-    FXL_DCHECK(task_runner_);
+
     FXL_DCHECK(dispatcher_);
   }
 
@@ -136,7 +130,6 @@ class TaskDomain {
     });
   }
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
   async_t* dispatcher() const { return dispatcher_; }
 
   void PostMessage(fbl::Closure func) {
@@ -148,6 +141,13 @@ class TaskDomain {
         func();
       }
     });
+  }
+
+  // Asserts that this domain's dispatcher is assigned as the current thread's
+  // default. This is purely intended for debug assertions and should not be
+  // used for any other purpose.
+  inline void AssertOnDispatcherThread() const {
+    FXL_DCHECK(async_get_default() == dispatcher());
   }
 
  private:

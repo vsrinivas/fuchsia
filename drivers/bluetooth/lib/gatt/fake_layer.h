@@ -28,8 +28,7 @@ class FakeLayer final : public GATT {
                        ServiceIdCallback callback,
                        ReadHandler read_handler,
                        WriteHandler write_handler,
-                       ClientConfigCallback ccc_callback,
-                       fxl::RefPtr<fxl::TaskRunner> task_runner) override;
+                       ClientConfigCallback ccc_callback) override;
   void UnregisterService(IdType service_id) override;
   void SendNotification(IdType service_id,
                         IdType chrc_id,

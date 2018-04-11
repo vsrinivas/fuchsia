@@ -21,10 +21,8 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
   using TaskDomainBase = common::TaskDomain<Impl, GATT>;
 
  public:
-  explicit Impl(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
-                async_t* gatt_dispatcher)
-      : TaskDomainBase(this, gatt_runner, gatt_dispatcher),
-        initialized_(false) {}
+  explicit Impl(async_t* gatt_dispatcher)
+      : TaskDomainBase(this, gatt_dispatcher), initialized_(false) {}
 
   ~Impl() override {
     FXL_DCHECK(!initialized_) << "gatt: ShutDown() must have been called!";
@@ -46,7 +44,6 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 
   // Called on the GATT runner as a result of ScheduleCleanUp().
   void CleanUp() {
-    FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
     FXL_VLOG(1) << "gatt: shutting down";
 
     initialized_ = false;
@@ -85,11 +82,10 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
                        ServiceIdCallback callback,
                        ReadHandler read_handler,
                        WriteHandler write_handler,
-                       ClientConfigCallback ccc_callback,
-                       fxl::RefPtr<fxl::TaskRunner> task_runner) override {
+                       ClientConfigCallback ccc_callback) override {
     PostMessage([this, svc = std::move(service), id_cb = std::move(callback),
                  rh = std::move(read_handler), wh = std::move(write_handler),
-                 cccc = std::move(ccc_callback), task_runner]() mutable {
+                 cccc = std::move(ccc_callback)]() mutable {
       IdType id;
 
       if (!initialized_) {
@@ -100,16 +96,11 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
                                               std::move(wh), std::move(cccc));
       }
 
-      if (task_runner->RunsTasksOnCurrentThread()) {
-        id_cb(id);
-      } else {
-        task_runner->PostTask([id, id_cb = std::move(id_cb)] { id_cb(id); });
-      }
+      id_cb(id);
     });
   }
 
   void UnregisterService(IdType service_id) override {
-    FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
     PostMessage([this, service_id] {
       if (!initialized_)
         return;
@@ -124,8 +115,6 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
                         std::string peer_id,
                         ::fidl::VectorPtr<uint8_t> value,
                         bool indicate) override {
-    FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
-
     std::vector<uint8_t> vec;
     value->swap(vec);
 
@@ -182,10 +171,8 @@ class Impl final : public GATT, common::TaskDomain<Impl, GATT> {
 }  // namespace
 
 // static
-fbl::RefPtr<GATT> GATT::Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
-                               async_t* gatt_dispatcher) {
-  FXL_DCHECK(gatt_runner);
-  return AdoptRef(new Impl(gatt_runner, gatt_dispatcher));
+fbl::RefPtr<GATT> GATT::Create(async_t* gatt_dispatcher) {
+  return AdoptRef(new Impl(gatt_dispatcher));
 }
 
 }  // namespace gatt

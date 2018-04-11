@@ -15,7 +15,6 @@
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 
@@ -31,16 +30,14 @@ namespace gatt {
 //   * All client and server data bearers
 //   * L2CAP ATT fixed channels
 //
-// GATT requires a TaskRunner on initialization which will be used to serially
-// dispatch all internal GATT tasks.
+// GATT requires an async dispatcher on initialization which will be used to
+// serialize all internal GATT tasks.
 //
 // All public functions are asynchronous and thread-safe.
 class GATT : public fbl::RefCounted<GATT> {
  public:
   // Constructs a GATT object.
-  // TODO(NET-695): Remove |gatt_runner| once nothing depends on it.
-  static fbl::RefPtr<GATT> Create(fxl::RefPtr<fxl::TaskRunner> gatt_runner,
-                                  async_t* gatt_dispatcher);
+  static fbl::RefPtr<GATT> Create(async_t* gatt_dispatcher);
 
   // Initialize/ShutDown the GATT profile. It is safe for the caller to drop its
   // reference after ShutDown.
@@ -80,21 +77,21 @@ class GATT : public fbl::RefCounted<GATT> {
   //
   // The provided handlers will be called to handle remote initiated
   // transactions targeting the service. These handlers will be run on the
-  // on the GATT task runner.
+  // on the GATT dispatcher.
   //
   // This method returns an opaque identifier on successful registration,
-  // which can be used by the caller to refer to the service in the future.
+  // which can be used by the caller to refer to the service in the future. This
+  // ID will be returned via |callback| which run on the GATT dispatcher.
   //
   // Returns |kInvalidId| on failure. Registration can fail if the attribute
   // database has run out of handles or if the hierarchy contains
   // characteristics or descriptors with repeated IDs.
-  using ServiceIdCallback = std::function<void(IdType)>;
+  using ServiceIdCallback = fbl::Function<void(IdType)>;
   virtual void RegisterService(ServicePtr service,
                                ServiceIdCallback callback,
                                ReadHandler read_handler,
                                WriteHandler write_handler,
-                               ClientConfigCallback ccc_callback,
-                               fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
+                               ClientConfigCallback ccc_callback) = 0;
 
   // Unregisters the GATT service hierarchy identified by |service_id|. Has no
   // effect if |service_id| is not a registered id.
