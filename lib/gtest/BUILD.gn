@@ -6,11 +6,13 @@ source_set("gtest") {
   testonly = true
 
   sources = [
+    "test_with_loop.cc",
     "test_with_message_loop.cc",
     "test_with_message_loop.h",
   ]
 
   public_deps = [
+    "//zircon/public/lib/async-testutils",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -22,6 +24,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "test_with_loop_unittest.cc",
     "test_with_message_loop_unittest.cc",
   ]
 
