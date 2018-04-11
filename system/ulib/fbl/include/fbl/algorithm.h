@@ -53,22 +53,28 @@ constexpr bool is_pow2(T val) {
 // round_up rounds up val until it is divisible by multiple.
 // Zero is divisible by all multiples.
 template<class T, class U,
+         class L = typename conditional<sizeof(T) >= sizeof(U), T, U>::type,
          class = typename enable_if<is_unsigned_integer<T>::value>::type,
          class = typename enable_if<is_unsigned_integer<U>::value>::type>
-constexpr const T round_up(const T& val, const U& multiple) {
+constexpr const L round_up(const T& val_, const U& multiple_) {
+    const L val = static_cast<L>(val_);
+    const L multiple = static_cast<L>(multiple_);
     return val == 0 ? 0 :
-            is_pow2<U>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1) :
+            is_pow2<L>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1) :
                 ((val + (multiple - 1)) / multiple) * multiple;
 }
 
 // round_down rounds down val until it is divisible by multiple.
 // Zero is divisible by all multiples.
 template<class T, class U,
+         class L = typename conditional<sizeof(T) >= sizeof(U), T, U>::type,
          class = typename enable_if<is_unsigned_integer<T>::value>::type,
          class = typename enable_if<is_unsigned_integer<U>::value>::type>
-constexpr const T round_down(const T& val, const U& multiple) {
+constexpr const L round_down(const T& val_, const U& multiple_) {
+    const L val = static_cast<L>(val_);
+    const L multiple = static_cast<L>(multiple_);
     return val == 0 ? 0 :
-            is_pow2<U>(multiple) ? val & ~(multiple - 1) :
+            is_pow2<L>(multiple) ? val & ~(multiple - 1) :
                 (val / multiple) * multiple;
 }
 
