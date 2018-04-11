@@ -152,12 +152,12 @@ class NetworkWrapperImpl::RunningRequest {
 };
 
 NetworkWrapperImpl::NetworkWrapperImpl(
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* async,
     std::unique_ptr<backoff::Backoff> backoff,
     std::function<network::NetworkServicePtr()> network_service_factory)
     : backoff_(std::move(backoff)),
       network_service_factory_(std::move(network_service_factory)),
-      task_runner_(std::move(task_runner)) {}
+      task_runner_(async) {}
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
