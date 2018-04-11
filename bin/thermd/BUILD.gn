@@ -39,7 +39,7 @@ package("thermd") {
       },
     ]
   } else {
-    # An empty system_image package is really nothing at all.
+    # An empty deprecated_system_image package is really nothing at all.
     deprecated_system_image = true
   }
 }
