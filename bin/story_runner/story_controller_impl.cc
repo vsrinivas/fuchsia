@@ -632,13 +632,21 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
         for (const auto& i : *module_path_) {
           mapping->link_path.module_path.push_back(i);
         }
-        mapping->link_path.link_name = key;
+        // If |key| is null it is specifying the default link path, and we
+        // allow it for now for backwards compatibility: MI4-739. We create a
+        // verbosely-named local Link (rather than relying on LinkPath's
+        // two-element struct) so that it'll be easier to change LinkPaths to
+        // be string-arrays.
+        if (key.is_null()) {
+          mapping->link_path.link_name = "<deprecated_default_link>";
+        } else {
+          mapping->link_path.link_name = key;
+        }
 
         // We create N ConnectLinkCall operations. We rely on the fact that
         // once all refcounted instances of |flow| are destroyed, the
         // InitializeChainCall will automatically finish.
         LinkPathPtr link_path = LinkPath::New();
-        ;
         mapping->link_path.Clone(link_path.get());
         new ConnectLinkCall(
             &operation_queue_, story_controller_impl_, std::move(link_path),
@@ -1592,6 +1600,13 @@ class StoryControllerImpl::ResolveModulesCall
     for (const auto& entry : *daisy_->nouns) {
       const auto& name = entry.name;
       const auto& noun = entry.noun;
+
+      if (name.is_null() && daisy_->url.is_null()) {
+        // It is not allowed to have a null noun name (left in for backwards
+        // compatibility with old code: MI4-739) and rely on verb-based
+        // resolution.
+        return;
+      }
 
       if (noun.is_json()) {
         auto noun_constraint = ResolverNounConstraint::New();

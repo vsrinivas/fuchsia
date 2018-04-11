@@ -57,6 +57,8 @@ struct ChainData {
 };
 
 struct ChainKeyToLinkData {
-  string key;
+  // A null key is allowed for backwards compatibility with default links.
+  // MI4-739
+  string? key;
   LinkPath link_path;
 };

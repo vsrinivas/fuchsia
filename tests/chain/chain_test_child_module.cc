@@ -83,6 +83,19 @@ class TestApp {
         link_three_correct_.Pass();
       }
 
+      VerifyDefaultLink();
+    });
+  }
+
+  TestPoint default_link_correct_{"Default Link value is correct."};
+  void VerifyDefaultLink() {
+    // Check that we did get a default link as specified by the Daisy. MI4-739
+    module_context_->GetLink(nullptr, default_link_.NewRequest());
+    default_link_->Get(nullptr, [this](fidl::StringPtr content) {
+      if (content == "1337") {
+        default_link_correct_.Pass();
+      }
+
       module_context_->Done();
     });
   }
@@ -96,6 +109,7 @@ class TestApp {
   LinkPtr link_one_;
   LinkPtr link_two_;
   LinkPtr link_three_;
+  LinkPtr default_link_;
 
   EntityPtr entity_;
 

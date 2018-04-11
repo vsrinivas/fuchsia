@@ -59,7 +59,7 @@ class TestApp : public ModuleWatcher {
  private:
   void EmbedModule() {
     daisy_.url = kChildModuleUrl;
-    daisy_.nouns.resize(3);
+    daisy_.nouns.resize(4);
 
     // We'll put three nouns "one", "two" and "three" on the Daisy. The first
     // is used to match the Module, because we know that it expectes a noun
@@ -91,6 +91,13 @@ class TestApp : public ModuleWatcher {
     daisy_.nouns->at(2) = NounEntry();
     daisy_.nouns->at(2).name = "three";
     daisy_.nouns->at(2).noun = std::move(noun);
+
+    // This noun doesn't have a name, and will appear as the root or default
+    // link for the child mod. This is for backwards compatibility. MI4-739
+    noun = Noun();
+    noun.set_json("1337");
+    daisy_.nouns->at(3) = NounEntry();
+    daisy_.nouns->at(3).noun = std::move(noun);
 
     // Sync to avoid race conditions between writing
     link_one_->Sync([this] {

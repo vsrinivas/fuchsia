@@ -27,11 +27,6 @@ interface ModuleResolver {
       (FindModulesResult result);
 };
 
-struct ResolverNounConstraintEntry {
-  string key;
-  ResolverNounConstraint constraint;
-};
-
 // Mirrors the information present in a Daisy. Where a Daisy is meant to
 // interface between Modules and the Framework, this structure is specific to
 // the interface between the Framework and the ModuleResolver.
@@ -49,6 +44,13 @@ struct ResolverQuery {
   string? url;
 
   vector<ResolverNounConstraintEntry>? noun_constraints;
+};
+
+struct ResolverNounConstraintEntry {
+  // A null key is allowed for backwards compatibility reasons, and is only
+  // allowed if |ResolverQuery.url| is given. MI4-739
+  string? key;
+  ResolverNounConstraint constraint;
 };
 
 union ResolverNounConstraint {

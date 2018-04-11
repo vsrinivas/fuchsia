@@ -398,7 +398,7 @@ class ModuleResolverImpl::FindModulesCall
     auto& create_chain_info = result->create_chain_info;  // For convenience.
     for (const auto& query_noun : *query.noun_constraints) {
       const auto& noun = query_noun.constraint;
-      std::string name = query_noun.key;
+      fidl::StringPtr name = query_noun.key;
       auto it = noun_mapping.find(query_noun.key);
       if (it != noun_mapping.end()) {
         name = it->second;
