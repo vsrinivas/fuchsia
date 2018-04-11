@@ -38,7 +38,10 @@ class AudioResult {
 
   static constexpr double kLevelToleranceSource16 = 0.00000068542196;
   static constexpr double kLevelToleranceOutput16 = 0.00000068541681;
-  static constexpr double kLevelToleranceInterp16 = 0.00000080781106;
+
+  // Compared to unity accuracy (kLevelToleranceSource16), LinearSampler boosts
+  // low-frequencies slightly during significant up-sampling (e.g. 1:2).
+  static constexpr double kLevelToleranceInterp16 = 0.000038069078;
   static constexpr double kLevelToleranceMix16 = 0.00017031199;
 
   static constexpr double kLevelToleranceSourceFloat = 0.00000099668031;
@@ -106,10 +109,21 @@ class AudioResult {
   // for in-depth testing and diagnostics to be done outside CQ.
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointUnity;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointDown;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearDown;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp;
+      FreqRespPointDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespPointDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp2;
+
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespLinearUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespLinearDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs>
+      FreqRespLinearDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp2;
 
   // Val-being-checked (in dBFS) must be greater than or equal to this value.
   // For these 1:1 and N:1 ratios, PointSampler's frequency response is ideal
@@ -129,29 +143,62 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointDown;
+      kPrevFreqRespPointDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearDown;
+      kPrevFreqRespPointDown2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearUp;
+      kPrevFreqRespPointUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespPointUp2;
+
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevFreqRespLinearUp2;
 
   //
   // Distortion is measured at a single reference frequency (kReferenceFreq).
   // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
   // signal (nominally 1kHz) to the combined power of all OTHER frequencies.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUnity;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown;
-  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUp2;
+
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> SinadLinearUp2;
 
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevSinadPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointDown;
+      kPrevSinadPointDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearDown;
+      kPrevSinadPointDown2;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearUp;
+      kPrevSinadPointUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadPointUp2;
+
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs>
+      kPrevSinadLinearUp2;
 
   //
   // Dynamic Range (gain integrity and system response at low volume levels) is

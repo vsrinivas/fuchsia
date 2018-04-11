@@ -10,6 +10,9 @@ namespace media {
 namespace audio {
 namespace test {
 
+// Convenience abbreviation within this source file to shorten names
+using Resampler = media::audio::Mixer::Resampler;
+
 //
 // Pass-thru Noise-Floor tests
 //
@@ -28,11 +31,14 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   MixerPtr mixer;
 
   if (std::is_same<T, uint8_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
+    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
+                        Resampler::SampleAndHold);
   } else if (std::is_same<T, int16_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
+    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                        Resampler::SampleAndHold);
   } else if (std::is_same<T, float>::value) {
-    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000);
+    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
+                        Resampler::SampleAndHold);
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
@@ -193,6 +199,14 @@ void MeasureFreqRespSinad(MixerPtr mixer,
                           uint32_t step_size,
                           double* level_db,
                           double* sinad_db) {
+  if (!std::isnan(level_db[0])) {
+    // This run already has test frequency response and SINAD test results for
+    // this sampler and resampling ratio, so don't waste time/cycles redoing it.
+    return;
+  }
+  // Set to a valid (worst-case) value; no need to recompute, in any outcome.
+  level_db[0] = -INFINITY;
+
   const uint32_t src_buf_size =
       step_size * (kFreqTestBufSize >> kPtsFractionalBits);
 
@@ -245,416 +259,289 @@ void MeasureFreqRespSinad(MixerPtr mixer,
   }
 }
 
-// Measure summary Freq Response & SINAD for Point sampler, no rate conversion.
-TEST(FrequencyResponse, Point_Unity) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
-  constexpr uint32_t step_size = Mixer::FRAC_ONE;  // 48k->48k
+void EvaluateFreqRespResults(double* freq_resp_results,
+                             const double* freq_resp_limits) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
 
-  MeasureFreqRespSinad(std::move(mixer), step_size,
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq]) << freq;
+    EXPECT_LE(freq_resp_results[freq],
+              0.0 + AudioResult::kLevelToleranceInterp16)
+        << freq;
+  }
+}
+
+void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
+  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
+                           ? FrequencySet::kReferenceFreqs.size()
+                           : FrequencySet::kSummaryIdxs.size();
+
+  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    uint32_t freq = FrequencySet::UseFullFrequencySet
+                        ? idx
+                        : FrequencySet::kSummaryIdxs[idx];
+    EXPECT_GE(sinad_results[freq], sinad_limits[freq]) << freq;
+  }
+}
+
+void TestUnitySampleRatio(Resampler sampler_type,
+                          double* freq_resp_results,
+                          double* sinad_results) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                               sampler_type);
+  constexpr uint32_t step_size = Mixer::FRAC_ONE;  // 48k -> 48k
+
+  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+                       sinad_results);
+}
+
+void TestDownSampleRatio1(Resampler sampler_type,
+                          double* freq_resp_results,
+                          double* sinad_results) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 96000, 1, 48000,
+                               sampler_type);
+  constexpr uint32_t step_size = Mixer::FRAC_ONE << 1;  // 96k -> 48k
+
+  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+                       sinad_results);
+}
+
+void TestDownSampleRatio2(Resampler sampler_type,
+                          double* freq_resp_results,
+                          double* sinad_results) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 88200, 1, 48000,
+                               sampler_type);
+  constexpr uint32_t step_size = 0x1D67;  // 88.2k -> 48k
+
+  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+                       sinad_results);
+}
+
+void TestUpSampleRatio1(Resampler sampler_type,
+                        double* freq_resp_results,
+                        double* sinad_results) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000,
+                               sampler_type);
+  constexpr uint32_t step_size = 0x0EB3;  // 44.1k -> 48k
+
+  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+                       sinad_results);
+}
+
+void TestUpSampleRatio2(Resampler sampler_type,
+                        double* freq_resp_results,
+                        double* sinad_results) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 48000,
+                               sampler_type);
+  constexpr uint32_t step_size = Mixer::FRAC_ONE >> 1;  // 24k -> 48k
+
+  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+                       sinad_results);
+}
+
+// Measure Freq Response for Point sampler, no rate conversion.
+TEST(FrequencyResponse, Point_Unity) {
+  TestUnitySampleRatio(Resampler::SampleAndHold,
                        AudioResult::FreqRespPointUnity.data(),
                        AudioResult::SinadPointUnity.data());
 
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
-  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(AudioResult::FreqRespPointUnity[freq],
-              AudioResult::kPrevFreqRespPointUnity[freq])
-        << freq;
-    EXPECT_LE(AudioResult::FreqRespPointUnity[freq],
-              0.0 + AudioResult::kLevelToleranceInterp16)
-        << freq;
-
-    EXPECT_TRUE((AudioResult::kPrevSinadPointUnity[freq] == -INFINITY) ||
-                (AudioResult::SinadPointUnity[freq] >=
-                 AudioResult::kPrevSinadPointUnity[freq]))
-        << freq;
-  }
+  EvaluateFreqRespResults(AudioResult::FreqRespPointUnity.data(),
+                          AudioResult::kPrevFreqRespPointUnity.data());
 }
 
-// Measure summary Freq Response & SINAD for Point sampler, down-sampling.
-TEST(FrequencyResponse, Point_DownSamp) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 96000, 1, 48000);
-  constexpr uint32_t step_size = Mixer::FRAC_ONE << 1;  // 96k -> 48k
+// Measure SINAD for Point sampler, no rate conversion.
+TEST(Sinad, Point_Unity) {
+  TestUnitySampleRatio(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointUnity.data(),
+                       AudioResult::SinadPointUnity.data());
 
-  MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespPointDown.data(),
-                       AudioResult::SinadPointDown.data());
-
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
-  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(AudioResult::FreqRespPointDown[freq],
-              AudioResult::kPrevFreqRespPointDown[freq])
-        << freq;
-    EXPECT_LE(AudioResult::FreqRespPointDown[freq],
-              0.0 + AudioResult::kLevelToleranceInterp16)
-        << freq;
-
-    EXPECT_GE(AudioResult::SinadPointDown[freq],
-              AudioResult::kPrevSinadPointDown[freq])
-        << freq;
-  }
+  EvaluateSinadResults(AudioResult::SinadPointUnity.data(),
+                       AudioResult::kPrevSinadPointUnity.data());
 }
 
-// Measure summary Freq Response & SINAD for Linear sampler, down-sampling.
-TEST(FrequencyResponse, Linear_DownSamp) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 88200, 1, 48000);
-  constexpr uint32_t step_size = 0x1D67;  // 88.2k -> 48k
+// Measure Freq Response for Point sampler, first down-sampling ratio.
+TEST(FrequencyResponse, Point_DownSamp1) {
+  TestDownSampleRatio1(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown1.data(),
+                       AudioResult::SinadPointDown1.data());
 
-  MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespLinearDown.data(),
-                       AudioResult::SinadLinearDown.data());
-
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
-  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(AudioResult::FreqRespLinearDown[freq],
-              AudioResult::kPrevFreqRespLinearDown[freq])
-        << freq;
-    EXPECT_LE(AudioResult::FreqRespLinearDown[freq],
-              0.0 + AudioResult::kLevelToleranceInterp16)
-        << freq;
-
-    EXPECT_GE(AudioResult::SinadLinearDown[freq],
-              AudioResult::kPrevSinadLinearDown[freq])
-        << freq;
-  }
+  EvaluateFreqRespResults(AudioResult::FreqRespPointDown1.data(),
+                          AudioResult::kPrevFreqRespPointDown1.data());
 }
 
-// Measure summary Freq Response & SINAD for Linear sampler, up-sampling.
-TEST(FrequencyResponse, Linear_UpSamp) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000);
-  constexpr uint32_t step_size = 0x0EB3;  // 44.1k -> 48k
+// Measure SINAD for Point sampler, first down-sampling ratio.
+TEST(Sinad, Point_DownSamp1) {
+  TestDownSampleRatio1(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown1.data(),
+                       AudioResult::SinadPointDown1.data());
 
-  MeasureFreqRespSinad(std::move(mixer), step_size,
-                       AudioResult::FreqRespLinearUp.data(),
-                       AudioResult::SinadLinearUp.data());
-
-  uint32_t num_freqs = FrequencySet::UseFullFrequencySet
-                           ? FrequencySet::kReferenceFreqs.size()
-                           : FrequencySet::kSummaryIdxs.size();
-  for (uint32_t idx = 0; idx < num_freqs; ++idx) {
-    uint32_t freq = FrequencySet::UseFullFrequencySet
-                        ? idx
-                        : FrequencySet::kSummaryIdxs[idx];
-    EXPECT_GE(AudioResult::FreqRespLinearUp[freq],
-              AudioResult::kPrevFreqRespLinearUp[freq])
-        << freq;
-    EXPECT_LE(AudioResult::FreqRespLinearUp[freq],
-              0.0 + AudioResult::kLevelToleranceInterp16)
-        << freq;
-
-    EXPECT_GE(AudioResult::SinadLinearUp[freq],
-              AudioResult::kPrevSinadLinearUp[freq])
-        << freq;
-  }
+  EvaluateSinadResults(AudioResult::SinadPointDown1.data(),
+                       AudioResult::kPrevSinadPointDown1.data());
 }
 
-// Ideal dynamic range measurement is exactly equal to the reduction in gain.
-// Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
-void MeasureSummaryDynamicRange(Gain::AScale scale,
-                                double* level_db,
-                                double* sinad_db) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
-  constexpr double amplitude = std::numeric_limits<int16_t>::max();
+// Measure Freq Response for Point sampler, second down-sampling ratio.
+TEST(FrequencyResponse, Point_DownSamp2) {
+  TestDownSampleRatio2(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown2.data(),
+                       AudioResult::SinadPointDown2.data());
 
-  std::vector<int16_t> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize);
-
-  // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude);
-
-  uint32_t dst_offset = 0;
-  int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, scale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
-            frac_src_offset);
-
-  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                   &magn_signal, &magn_other);
-
-  *level_db = ValToDb(magn_signal / amplitude);
-  *sinad_db = ValToDb(magn_signal / magn_other);
+  EvaluateFreqRespResults(AudioResult::FreqRespPointDown2.data(),
+                          AudioResult::kPrevFreqRespPointDown2.data());
 }
 
-// Measure dynamic range at two gain settings: less than 1.0 by the smallest
-// increment possible, as well as the smallest increment detectable (the
-// closest-to-1.0 gain that actually causes incoming data values to change).
-TEST(DynamicRange, Epsilon) {
-  double unity_level_db, unity_sinad_db, level_db, sinad_db;
+// Measure SINAD for Point sampler, second down-sampling ratio.
+TEST(Sinad, Point_DownSamp2) {
+  TestDownSampleRatio2(Resampler::SampleAndHold,
+                       AudioResult::FreqRespPointDown2.data(),
+                       AudioResult::SinadPointDown2.data());
 
-  MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
-                             &unity_sinad_db);
-  EXPECT_GE(unity_level_db, -AudioResult::kLevelToleranceSource16);
-  EXPECT_LE(unity_level_db, AudioResult::kLevelToleranceSource16);
-  EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSource16);
-
-  // At this gain_scale, we should not observe an effect different than unity.
-  static_assert(AudioResult::kScaleEpsilon < Gain::kUnityScale - 1,
-                "kScaleEpsilon should be less than kUnityScale - 1");
-  MeasureSummaryDynamicRange(Gain::kUnityScale - 1, &level_db, &sinad_db);
-  EXPECT_EQ(level_db, unity_level_db);
-  EXPECT_EQ(sinad_db, unity_sinad_db);
-
-  // kScaleEpsilon: nearest-unity scale at which we observe effects on signals.
-  // At this 'detectable reduction' scale, level and noise floor appear reduced.
-  MeasureSummaryDynamicRange(AudioResult::kScaleEpsilon,
-                             &AudioResult::LevelEpsilonDown,
-                             &AudioResult::SinadEpsilonDown);
-  EXPECT_GE(
-      AudioResult::LevelEpsilonDown,
-      AudioResult::kPrevLevelEpsilonDown - AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LE(
-      AudioResult::LevelEpsilonDown,
-      AudioResult::kPrevLevelEpsilonDown + AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
-
-  EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
+  EvaluateSinadResults(AudioResult::SinadPointDown2.data(),
+                       AudioResult::kPrevSinadPointDown2.data());
 }
 
-// Measure dynamic range (signal level, noise floor) when gain is -60dB.
-TEST(DynamicRange, 60Down) {
-  Gain gain;
+// Measure Freq Response for Point sampler, first up-sampling ratio.
+TEST(FrequencyResponse, Point_UpSamp1) {
+  TestUpSampleRatio1(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp1.data(),
+                     AudioResult::SinadPointUp1.data());
 
-  gain.SetRendererGain(-60.0f);
-  const Gain::AScale scale = gain.GetGainScale(0.0f);
-
-  MeasureSummaryDynamicRange(scale, &AudioResult::Level60Down,
-                             &AudioResult::Sinad60Down);
-
-  EXPECT_GE(AudioResult::Level60Down,
-            -60.0 - AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LE(AudioResult::Level60Down,
-            -60.0 + AudioResult::kPrevDynRangeTolerance);
-  EXPECT_GE(AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
-
-  // Validate level & floor in equivalent gain combination (per-stream, master).
-  gain.SetRendererGain(0.0f);
-  const Gain::AScale scale2 = gain.GetGainScale(-60.0f);
-
-  double level_db, sinad_db;
-  MeasureSummaryDynamicRange(scale2, &level_db, &sinad_db);
-
-  EXPECT_EQ(level_db, AudioResult::Level60Down);
-  EXPECT_EQ(sinad_db, AudioResult::Sinad60Down);
+  EvaluateFreqRespResults(AudioResult::FreqRespPointUp1.data(),
+                          AudioResult::kPrevFreqRespPointUp1.data());
 }
 
-// Test our mix level and noise floor, when rechannelizing mono into stereo.
-TEST(DynamicRange, MonoToStereo) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 2, 48000);
+// Measure SINAD for Point sampler, first up-sampling ratio.
+TEST(Sinad, Point_UpSamp1) {
+  TestUpSampleRatio1(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp1.data(),
+                     AudioResult::SinadPointUp1.data());
 
-  std::vector<int16_t> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize * 2);
-  std::vector<int32_t> left(kFreqTestBufSize);
-
-  // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  std::numeric_limits<int16_t>::max());
-
-  uint32_t dst_offset = 0;
-  int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
-            frac_src_offset);
-
-  // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
-  // Only need to analyze left side, since we verified that right is identical.
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    EXPECT_EQ(accum[idx * 2], accum[(idx * 2) + 1]);
-    left[idx] = accum[idx * 2];
-  }
-
-  double magn_left_signal, magn_left_other, level_left_db, sinad_left_db;
-  MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                   &magn_left_signal, &magn_left_other);
-
-  level_left_db =
-      ValToDb(magn_left_signal / std::numeric_limits<int16_t>::max());
-  sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
-
-  EXPECT_GE(level_left_db, 0 - AudioResult::kLevelToleranceSource16);
-  EXPECT_LE(level_left_db, 0 + AudioResult::kLevelToleranceSource16);
-
-  EXPECT_GE(sinad_left_db, AudioResult::kPrevFloorSource16);
+  EvaluateSinadResults(AudioResult::SinadPointUp1.data(),
+                       AudioResult::kPrevSinadPointUp1.data());
 }
 
-// Test our mix level and noise floor, when rechannelizing stereo into mono.
-TEST(DynamicRange, StereoToMono) {
-  MixerPtr mixer =
-      SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 1, 48000);
+// Measure Freq Response for Point sampler, second up-sampling ratio.
+TEST(FrequencyResponse, Point_UpSamp2) {
+  TestUpSampleRatio2(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp2.data(),
+                     AudioResult::SinadPointUp2.data());
 
-  std::vector<int16_t> mono(kFreqTestBufSize);
-  std::vector<int16_t> source(kFreqTestBufSize * 2);
-  std::vector<int32_t> accum(kFreqTestBufSize);
-
-  // Populate mono source buffer; copy it into stereo source buffer
-  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  std::numeric_limits<int16_t>::max());
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source[idx * 2] = mono[idx];
-  }
-
-  // Populate mono source buffer; copy it into stereo source buffer
-  OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  std::numeric_limits<int16_t>::max(), M_PI / 2);
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    source[(idx * 2) + 1] = mono[idx];
-  }
-
-  uint32_t dst_offset = 0;
-  int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
-            frac_src_offset);
-
-  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other, level_mono_db;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                   &magn_signal, &magn_other);
-
-  level_mono_db = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
-  AudioResult::FloorStereoMono =
-      ValToDb(std::numeric_limits<int16_t>::max() / magn_other);
-
-  // We added identical signals, so accuracy should be high. However, noise
-  // floor is doubled as well, so we expect 6dB reduction in sinad.
-  EXPECT_GE(level_mono_db, AudioResult::kPrevLevelStereoMono -
-                               AudioResult::kPrevStereoMonoTolerance);
-  EXPECT_LE(level_mono_db, AudioResult::kPrevLevelStereoMono +
-                               AudioResult::kPrevStereoMonoTolerance);
-
-  EXPECT_GE(AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
+  EvaluateFreqRespResults(AudioResult::FreqRespPointUp2.data(),
+                          AudioResult::kPrevFreqRespPointUp2.data());
 }
 
-// Test mix level and noise floor, when accumulating sources.
-// Mix 2 full-scale streams with gain exactly 50% (renderer 100%, master 50%),
-// then measure level and sinad. On systems with robust gain processing, a
-// post-SUM master gain stage reduces noise along with level, for the same noise
-// floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
-template <typename T>
-void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
-  MixerPtr mixer;
-  double amplitude;
+// Measure SINAD for Point sampler, second up-sampling ratio.
+TEST(Sinad, Point_UpSamp2) {
+  TestUpSampleRatio2(Resampler::SampleAndHold,
+                     AudioResult::FreqRespPointUp2.data(),
+                     AudioResult::SinadPointUp2.data());
 
-  if (std::is_same<T, uint8_t>::value) {
-    mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000);
-    amplitude = std::numeric_limits<int8_t>::max();
-  } else if (std::is_same<T, float>::value) {
-    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000);
-    amplitude = static_cast<double>(-std::numeric_limits<int16_t>::max()) /
-                std::numeric_limits<int16_t>::min();
-  } else {
-    mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000);
-    amplitude = std::numeric_limits<int16_t>::max();
-  }
-  std::vector<T> source(kFreqTestBufSize);
-  std::vector<int32_t> accum(kFreqTestBufSize);
-
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude);
-  uint32_t dst_offset = 0;
-  int32_t frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale >> 1, false);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
-            frac_src_offset);
-
-  // Accumulate the same (reference-frequency) wave
-  dst_offset = 0;
-  frac_src_offset = 0;
-  mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-             kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset,
-             Mixer::FRAC_ONE, Gain::kUnityScale >> 1, true);
-  EXPECT_EQ(kFreqTestBufSize, dst_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits),
-            frac_src_offset);
-
-  // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other;
-  MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                   &magn_signal, &magn_other);
-
-  *level_mix_db = ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
-  *sinad_mix_db = ValToDb(magn_signal / magn_other);
+  EvaluateSinadResults(AudioResult::SinadPointUp2.data(),
+                       AudioResult::kPrevSinadPointUp2.data());
 }
 
-// Test our mix level and noise floor, when accumulating 8-bit sources.
-TEST(DynamicRange, Mix_8) {
-  MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
+// Measure Freq Response for Point sampler, no rate conversion.
+TEST(FrequencyResponse, Linear_Unity) {
+  TestUnitySampleRatio(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearUnity.data(),
+                       AudioResult::SinadLinearUnity.data());
 
-  EXPECT_GE(AudioResult::LevelMix8, -AudioResult::kLevelToleranceMix8);
-  EXPECT_LE(AudioResult::LevelMix8, AudioResult::kLevelToleranceMix8);
-
-  // When summing two full-scale streams, signal should be approx +6dBFS, and
-  // (8-bit) noise floor should be approx -43dBFS. If architecture contains
-  // post-SUM master gain, after 50% gain we would expect sinad of ~ 49 dB.
-  // Today master gain is combined with renderer gain, making it pre-Sum.
-  // Because 8-bit sources are normalized up to 16-bit level, they can take
-  // advantage of fractional "footroom"; hence we still expect sinad of ~ 49dB.
-  EXPECT_GE(AudioResult::FloorMix8, AudioResult::kPrevFloorMix8);
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearUnity.data(),
+                          AudioResult::kPrevFreqRespLinearUnity.data());
 }
 
-// Test our mix level and noise floor, when accumulating 16-bit sources.
-TEST(DynamicRange, Mix_16) {
-  MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
+// Measure SINAD for Point sampler, no rate conversion.
+TEST(Sinad, Linear_Unity) {
+  TestUnitySampleRatio(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearUnity.data(),
+                       AudioResult::SinadLinearUnity.data());
 
-  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kLevelToleranceMix16);
-  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kLevelToleranceMix16);
-
-  // When summing two full-scale streams, signal should be approx +6dBFS, and
-  // (16-bit) noise floor should be approx -92dBFS. If architecture contains
-  // post-SUM master gain, after 50% gain we would expect sinad of ~ 98 dB.
-  // Today master gain is combined with renderer gain, making it pre-Sum. Noise
-  // is summed along with signal; therefore we expect sinad of ~ 90dB.
-  EXPECT_GE(AudioResult::FloorMix16, AudioResult::kPrevFloorMix16);
+  EvaluateSinadResults(AudioResult::SinadLinearUnity.data(),
+                       AudioResult::kPrevSinadLinearUnity.data());
 }
 
-// Test our mix level and noise floor, when accumulating float sources.
-TEST(DynamicRange, Mix_Float) {
-  MeasureMixFloor<float>(&AudioResult::LevelMixFloat,
-                         &AudioResult::FloorMixFloat);
+// Measure Freq Response for Linear sampler, first down-sampling ratio.
+TEST(FrequencyResponse, Linear_DownSamp1) {
+  TestDownSampleRatio1(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown1.data(),
+                       AudioResult::SinadLinearDown1.data());
 
-  EXPECT_GE(AudioResult::LevelMixFloat, -AudioResult::kLevelToleranceMixFloat);
-  EXPECT_LE(AudioResult::LevelMixFloat, AudioResult::kLevelToleranceMixFloat);
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearDown1.data(),
+                          AudioResult::kPrevFreqRespLinearDown1.data());
+}
 
-  // When summing two full-scale streams, signal should be approx +6dBFS, and
-  // noise floor should be approx -92dBFS. If architecture contains post-SUM
-  // master gain, after 50% gain we would expect sinad of ~ 98 dB. Today master
-  // gain is combined with renderer gain, making it pre-Sum. Noise is summed
-  // along with signal; therefore we expect sinad of ~ 90dB.
-  EXPECT_GE(AudioResult::FloorMixFloat, AudioResult::kPrevFloorMixFloat);
+// Measure SINAD for Linear sampler, first down-sampling ratio.
+TEST(Sinad, Linear_DownSamp1) {
+  TestDownSampleRatio1(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown1.data(),
+                       AudioResult::SinadLinearDown1.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearDown1.data(),
+                       AudioResult::kPrevSinadLinearDown1.data());
+}
+
+// Measure Freq Response for Linear sampler, second down-sampling ratio.
+TEST(FrequencyResponse, Linear_DownSamp2) {
+  TestDownSampleRatio2(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown2.data(),
+                       AudioResult::SinadLinearDown2.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearDown2.data(),
+                          AudioResult::kPrevFreqRespLinearDown2.data());
+}
+
+// Measure SINAD for Linear sampler, second down-sampling ratio.
+TEST(Sinad, Linear_DownSamp2) {
+  TestDownSampleRatio2(Resampler::LinearInterpolation,
+                       AudioResult::FreqRespLinearDown2.data(),
+                       AudioResult::SinadLinearDown2.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearDown2.data(),
+                       AudioResult::kPrevSinadLinearDown2.data());
+}
+
+// Measure Freq Response for Linear sampler, first up-sampling ratio.
+TEST(FrequencyResponse, Linear_UpSamp1) {
+  TestUpSampleRatio1(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp1.data(),
+                     AudioResult::SinadLinearUp1.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearUp1.data(),
+                          AudioResult::kPrevFreqRespLinearUp1.data());
+}
+
+// Measure SINAD for Linear sampler, first up-sampling ratio.
+TEST(Sinad, Linear_UpSamp1) {
+  TestUpSampleRatio1(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp1.data(),
+                     AudioResult::SinadLinearUp1.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearUp1.data(),
+                       AudioResult::kPrevSinadLinearUp1.data());
+}
+
+// Measure Freq Response for Linear sampler, second up-sampling ratio.
+TEST(FrequencyResponse, Linear_UpSamp2) {
+  TestUpSampleRatio2(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp2.data(),
+                     AudioResult::SinadLinearUp2.data());
+
+  EvaluateFreqRespResults(AudioResult::FreqRespLinearUp2.data(),
+                          AudioResult::kPrevFreqRespLinearUp2.data());
+}
+
+// Measure SINAD for Linear sampler, second up-sampling ratio.
+TEST(Sinad, Linear_UpSamp2) {
+  TestUpSampleRatio2(Resampler::LinearInterpolation,
+                     AudioResult::FreqRespLinearUp2.data(),
+                     AudioResult::SinadLinearUp2.data());
+
+  EvaluateSinadResults(AudioResult::SinadLinearUp2.data(),
+                       AudioResult::kPrevSinadLinearUp2.data());
 }
 
 }  // namespace test
