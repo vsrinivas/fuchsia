@@ -23,7 +23,7 @@ void LinenoiseCompletionCallback(const char* buf, linenoiseCompletions* lc) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   bluetoothcli::App app(&loop);
   g_app = &app;
