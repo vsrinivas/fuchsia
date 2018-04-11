@@ -22,6 +22,8 @@ MODULE_PACKAGE_INCS := \
     $(LOCAL_INC)/dispatcher.h \
     $(LOCAL_INC)/receiver.h \
     $(LOCAL_INC)/task.h \
+    $(LOCAL_INC)/time.h \
+    $(LOCAL_INC)/trap.h \
     $(LOCAL_INC)/wait.h \
 
 MODULE_LIBS := \
