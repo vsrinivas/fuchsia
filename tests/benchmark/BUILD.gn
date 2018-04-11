@@ -41,7 +41,7 @@ copy("run_modular_benchmarks.sh") {
 }
 
 package("run_modular_benchmarks") {
-  system_image = true
+  deprecated_system_image = true
   testonly = true
   deps = [ ":run_modular_benchmarks.sh" ]
   tests = [

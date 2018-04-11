@@ -142,7 +142,7 @@ source_set("unittests") {
 
 package("config") {
   testonly = true
-  system_image = true
+  deprecated_system_image = true
   package_name = "device_runner_config"
   resources = [
     {
