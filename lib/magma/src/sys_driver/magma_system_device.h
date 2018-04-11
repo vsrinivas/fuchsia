@@ -60,19 +60,6 @@ public:
         present_buffer_callback_ = callback;
     }
 
-    void PageFlip(MagmaSystemConnection* connection, std::shared_ptr<MagmaSystemBuffer> buf,
-                  magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
-                  uint32_t signal_semaphore_count,
-                  std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
-                  std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore);
-
-    // Returns the last flipped buffer.
-    std::shared_ptr<MagmaSystemBuffer> PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
-                                                         magma_system_image_descriptor* image_desc,
-                                                         bool enable);
-
-    bool page_flip_enabled() { return page_flip_enable_; }
-
     // Takes ownership of handle and either wraps it up in new MagmaSystemBuffer or
     // closes it and returns an existing MagmaSystemBuffer backed by the same memory
     std::shared_ptr<MagmaSystemBuffer> ImportBuffer(uint32_t handle);
@@ -100,17 +87,6 @@ private:
 
     std::unordered_map<uint64_t, std::weak_ptr<MagmaSystemBuffer>> buffer_map_;
     std::mutex buffer_map_mutex_;
-
-    bool page_flip_enable_ = true;
-    std::mutex page_flip_mutex_;
-
-    struct DeferredFlip {
-        std::vector<std::shared_ptr<MagmaSystemSemaphore>> wait;
-        std::vector<std::shared_ptr<MagmaSystemSemaphore>> signal;
-    };
-    std::vector<DeferredFlip> deferred_flip_semaphores_;
-    std::vector<uint64_t> deferred_flip_buffers_;
-    std::shared_ptr<MagmaSystemBuffer> last_flipped_buffer_;
 
     struct Connection {
         std::thread thread;

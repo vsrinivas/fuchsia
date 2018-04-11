@@ -141,21 +141,6 @@ magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_hand
     return MAGMA_STATUS_OK;
 }
 
-magma_status_t magma_display_get_size(int fd, magma_display_size* size_out)
-{
-    return MAGMA_STATUS_INTERNAL_ERROR;
-}
-
-magma_status_t magma_display_page_flip(magma_connection_t* connection, uint64_t buffer_id,
-                                       uint32_t wait_semaphore_count,
-                                       const magma_semaphore_t* wait_semaphores,
-                                       uint32_t signal_semaphore_count,
-                                       const magma_semaphore_t* signal_semaphores,
-                                       magma_semaphore_t buffer_presented_semaphore)
-{
-    return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_create_semaphore(magma_connection_t* connection,
                                       magma_semaphore_t* semaphore_out)
 {

@@ -14,12 +14,11 @@ MagmaSystemConnection::MagmaSystemConnection(std::weak_ptr<MagmaSystemDevice> we
 {
     DASSERT(msd_connection_);
 
-    has_display_capability_ = capabilities & MAGMA_CAPABILITY_DISPLAY;
     has_render_capability_ = capabilities & MAGMA_CAPABILITY_RENDERING;
 
     // should already be enforced in MagmaSystemDevice
-    DASSERT(has_render_capability_ || has_display_capability_);
-    DASSERT((capabilities & ~(MAGMA_CAPABILITY_DISPLAY | MAGMA_CAPABILITY_RENDERING)) == 0);
+    DASSERT(has_render_capability_);
+    DASSERT((capabilities & ~(MAGMA_CAPABILITY_RENDERING)) == 0);
 }
 
 MagmaSystemConnection::~MagmaSystemConnection()
@@ -310,39 +309,4 @@ std::shared_ptr<MagmaSystemSemaphore> MagmaSystemConnection::LookupSemaphore(uin
     if (iter == semaphore_map_.end())
         return nullptr;
     return iter->second.semaphore;
-}
-
-magma::Status MagmaSystemConnection::PageFlip(
-    uint64_t id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-    uint64_t* semaphore_ids, std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)
-{
-    if (!has_display_capability_)
-        return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED,
-                        "Attempting to pageflip without display capability");
-
-    auto buf = LookupBuffer(id);
-    if (!buf)
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Attempting to page flip with invalid buffer");
-
-    std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores(wait_semaphore_count +
-                                                                  signal_semaphore_count);
-    for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
-        auto semaphore = LookupSemaphoreForContext(semaphore_ids[i]);
-        if (!semaphore)
-            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "wait semaphore id not found 0x%" PRIx64,
-                            semaphore_ids[i]);
-        semaphores[i] = semaphore;
-    }
-
-    auto device = device_.lock();
-    if (!device)
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
-                        "Attempting to page flip, failed to lock device");
-
-    magma_system_image_descriptor image_desc{MAGMA_IMAGE_TILING_OPTIMAL};
-
-    device->PageFlip(this, buf, &image_desc, wait_semaphore_count, signal_semaphore_count,
-                     std::move(semaphores), std::move(buffer_presented_semaphore));
-
-    return MAGMA_STATUS_OK;
 }

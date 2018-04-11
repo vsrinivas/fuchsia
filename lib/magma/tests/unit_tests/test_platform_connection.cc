@@ -90,16 +90,6 @@ public:
         EXPECT_EQ(ipc_connection_->GetError(), 0);
     }
 
-    void TestPageFlip()
-    {
-        uint64_t semaphore_ids[]{0, 1, 2};
-        test_semaphore = magma::PlatformSemaphore::Create();
-        uint32_t buffer_presented_handle;
-        EXPECT_TRUE(test_semaphore->duplicate_handle(&buffer_presented_handle));
-        ipc_connection_->PageFlip(test_buffer_id, 2, 1, semaphore_ids, buffer_presented_handle);
-        EXPECT_EQ(ipc_connection_->GetError(), 0);
-    }
-
     void TestGetError()
     {
         EXPECT_EQ(ipc_connection_->GetError(), 0);
@@ -231,22 +221,6 @@ public:
     magma::Status WaitRendering(uint64_t buffer_id) override
     {
         EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
-        TestPlatformConnection::test_complete = true;
-        return MAGMA_STATUS_OK;
-    }
-
-    magma::Status
-    PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-             uint64_t* semaphore_ids,
-             std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) override
-    {
-        EXPECT_EQ(buffer_id, TestPlatformConnection::test_buffer_id);
-        EXPECT_EQ(2u, wait_semaphore_count);
-        EXPECT_EQ(1u, signal_semaphore_count);
-        for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
-            EXPECT_EQ(i, semaphore_ids[i]);
-        }
-        EXPECT_EQ(buffer_presented_semaphore->id(), TestPlatformConnection::test_semaphore->id());
         TestPlatformConnection::test_complete = true;
         return MAGMA_STATUS_OK;
     }
@@ -397,13 +371,6 @@ TEST(PlatformConnection, WaitRendering)
     auto Test = TestPlatformConnection::Create();
     ASSERT_NE(Test, nullptr);
     Test->TestWaitRendering();
-}
-
-TEST(PlatformConnection, PageFlip)
-{
-    auto Test = TestPlatformConnection::Create();
-    ASSERT_NE(Test, nullptr);
-    Test->TestPageFlip();
 }
 
 TEST(PlatformConnection, MapUnmapBuffer)

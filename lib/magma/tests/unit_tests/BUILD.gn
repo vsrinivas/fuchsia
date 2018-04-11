@@ -81,21 +81,6 @@ source_set("magma_platform_tests") {
   ]
 }
 
-executable("magma_display_unit_tests") {
-  testonly = true
-
-  sources = [
-    "main.cc",
-    "test_ioctl.cc",
-  ]
-
-  deps = [
-    "$magma_build_root/src/magma_util",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fdio",
-  ]
-}
-
 # Requires hardware
 source_set("magma_platform_hardware_tests") {
   testonly = true

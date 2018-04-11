@@ -6,7 +6,6 @@ while [ ! -e /dev/class/gpu/000 ]; do
 done
 echo [UNIT TEST START=]
 /system/test/magma_unit_tests
-/system/test/magma_display_unit_tests
 /system/test/msd_intel_gen_nonhardware_tests
 ### Mesa tests
 /system/test/mesa_unit_tests

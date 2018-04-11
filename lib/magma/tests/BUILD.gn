@@ -98,16 +98,12 @@ package("magma-test") {
   if (build_msd_arm_mali || build_intel_gen) {
     deps += [
       "integration",
-      "unit_tests:magma_display_unit_tests",
       "unit_tests:magma_unit_tests",
     ]
 
     tests += [
       {
         name = "magma_abi_conformance_tests"
-      },
-      {
-        name = "magma_display_unit_tests"
       },
     ]
   }

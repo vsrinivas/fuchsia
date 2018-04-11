@@ -24,8 +24,6 @@ public:
     {
         if (capability == MAGMA_CAPABILITY_RENDERING)
             fd_ = open("/dev/class/gpu/000", O_RDONLY);
-        else if (capability == MAGMA_CAPABILITY_DISPLAY)
-            fd_ = open("/dev/class/display/000", O_RDONLY);
 
         DASSERT(fd_ >= 0);
         connection_ = magma_create_connection(fd(), capability);
@@ -252,82 +250,6 @@ private:
     magma_connection_t* connection_;
 };
 
-class TestDisplayConnection : public TestConnection {
-public:
-    TestDisplayConnection() : TestConnection(MAGMA_CAPABILITY_DISPLAY) {}
-
-    bool Display(uint32_t num_buffers, uint32_t num_frames)
-    {
-        magma_status_t status;
-        magma_display_size display_size;
-
-        status = magma_display_get_size(fd(), &display_size);
-        if (status != MAGMA_STATUS_OK)
-            return DRETF(false, "magma_display_get_size returned %d", status);
-
-        std::vector<magma_buffer_t> buffers;
-        std::vector<magma_semaphore_t> wait_semaphores;
-        std::vector<magma_semaphore_t> signal_semaphores;
-        std::vector<magma_semaphore_t> buffer_presented_semaphores;
-
-        for (uint32_t i = 0; i < num_buffers; i++) {
-            magma_buffer_t buffer;
-            uint64_t actual_size;
-
-            status = magma_create_buffer(connection(), display_size.width * 4 * display_size.height,
-                                         &actual_size, &buffer);
-            if (status != MAGMA_STATUS_OK)
-                return DRETF(false, "magma_alloc returned %d", status);
-
-            buffers.push_back(buffer);
-
-            magma_semaphore_t semaphore;
-            status = magma_create_semaphore(connection(), &semaphore);
-            if (status != MAGMA_STATUS_OK)
-                return DRETF(false, "magma_create_semaphore returned %d", status);
-
-            wait_semaphores.push_back(semaphore);
-
-            status = magma_create_semaphore(connection(), &semaphore);
-            if (status != MAGMA_STATUS_OK)
-                return DRETF(false, "magma_create_semaphore returned %d", status);
-
-            signal_semaphores.push_back(semaphore);
-
-            status = magma_create_semaphore(connection(), &semaphore);
-            if (status != MAGMA_STATUS_OK)
-                return DRETF(false, "magma_create_semaphore returned %d", status);
-
-            buffer_presented_semaphores.push_back(semaphore);
-        }
-
-        for (uint32_t frame = 0; frame < num_frames; frame++) {
-            uint32_t index = frame % buffers.size();
-
-            status = magma_display_page_flip(connection(), buffers[index], 1,
-                                             &wait_semaphores[index], 1, &signal_semaphores[index],
-                                             buffer_presented_semaphores[index]);
-
-            magma_signal_semaphore(wait_semaphores[index]);
-
-            if (frame > 0) {
-                uint32_t last_index = (frame - 1) % buffers.size();
-                status =
-                    magma_wait_semaphores(&buffer_presented_semaphores[last_index], 1, 1000, true);
-                if (status != MAGMA_STATUS_OK)
-                    return DRETF(false, "wait on signal semaphore failed");
-                DLOG("buffer presented");
-
-                status = magma_wait_semaphores(&signal_semaphores[last_index], 1, 1000, true);
-                if (status != MAGMA_STATUS_OK)
-                    return DRETF(false, "wait on signal semaphore failed");
-            }
-        }
-
-        return true;
-    }
-};
-
 TEST(MagmaAbi, DeviceId)
 {
     TestConnection test;
@@ -393,15 +315,3 @@ TEST(MagmaAbi, SemaphoreImportExport)
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
-
-TEST(MagmaAbi, DisplayDoubleBuffered)
-{
-    TestDisplayConnection test;
-    EXPECT_TRUE(test.Display(2, 60));
-}
-
-TEST(MagmaAbi, DisplayTripleBuffered)
-{
-    TestDisplayConnection test;
-    EXPECT_TRUE(test.Display(3, 60));
-}

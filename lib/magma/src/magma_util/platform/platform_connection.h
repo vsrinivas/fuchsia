@@ -52,10 +52,6 @@ public:
     // with |buffer_id| has completed.
     virtual void WaitRendering(uint64_t buffer_id) = 0;
 
-    virtual void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                          uint32_t signal_semaphore_count, const uint64_t* semaphore_ids,
-                          uint32_t buffer_presented_handle) = 0;
-
     virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                         uint64_t page_count, uint64_t flags) = 0;
 
@@ -101,11 +97,6 @@ public:
         virtual magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle,
                                                    uint32_t context_id) = 0;
         virtual magma::Status WaitRendering(uint64_t buffer_id) = 0;
-
-        virtual magma::Status
-        PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-                 uint64_t* semaphore_ids,
-                 std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) = 0;
 
         virtual bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                   uint64_t page_count, uint64_t flags) = 0;

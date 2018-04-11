@@ -25,7 +25,6 @@ enum OpCode {
     DestroyContext,
     ExecuteCommandBuffer,
     WaitRendering,
-    PageFlip,
     GetError,
     MapBufferGpu,
     UnmapBufferGpu,
@@ -79,23 +78,6 @@ struct WaitRenderingOp {
     const OpCode opcode = WaitRendering;
     static constexpr uint32_t kNumHandles = 0;
     uint64_t buffer_id;
-} __attribute__((packed));
-
-// Note PageFlipOp must be overlayed on a memory allocation dynamically sized
-// for the number of semaphores.
-struct PageFlipOp {
-    const OpCode opcode = PageFlip;
-    static constexpr uint32_t kNumHandles = 1;
-    uint64_t buffer_id;
-    uint64_t signal_semaphore_count;
-    uint32_t wait_semaphore_count;
-    uint64_t semaphore_ids[];
-
-    static uint32_t size(uint32_t semaphore_count)
-    {
-        return sizeof(PageFlipOp) + sizeof(uint64_t) * semaphore_count;
-    }
-
 } __attribute__((packed));
 
 struct ExecuteImmediateCommandsOp {
@@ -155,24 +137,6 @@ T* OpCast(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles, uint32_t kNu
     if (kNumHandles != T::kNumHandles)
         return DRETP(nullptr, "wrong number of handles in message");
     return reinterpret_cast<T*>(bytes);
-}
-
-template <>
-PageFlipOp* OpCast<PageFlipOp>(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
-                               uint32_t kNumHandles)
-{
-    if (num_bytes < sizeof(PageFlipOp))
-        return DRETP(nullptr, "too few bytes for a page flip: %u", num_bytes);
-
-    auto page_flip_op = reinterpret_cast<PageFlipOp*>(bytes);
-    const uint32_t expected_size =
-        PageFlipOp::size(page_flip_op->wait_semaphore_count + page_flip_op->signal_semaphore_count);
-    if (num_bytes != expected_size)
-        return DRETP(nullptr, "wrong number of bytes in message, expected %u, got %u",
-                     expected_size, num_bytes);
-    if (kNumHandles != PageFlipOp::kNumHandles)
-        return DRETP(nullptr, "wrong number of handles in message");
-    return reinterpret_cast<PageFlipOp*>(bytes);
 }
 
 template <>
@@ -289,10 +253,6 @@ public:
                 case OpCode::WaitRendering:
                     success = WaitRendering(
                         OpCast<WaitRenderingOp>(bytes, actual_bytes, handles, actual_handles));
-                    break;
-                case OpCode::PageFlip:
-                    success = PageFlip(
-                        OpCast<PageFlipOp>(bytes, actual_bytes, handles, actual_handles), handles);
                     break;
                 case OpCode::ExecuteImmediateCommands:
                     success = ExecuteImmediateCommands(OpCast<ExecuteImmediateCommandsOp>(
@@ -438,25 +398,6 @@ private:
         magma::Status status = delegate_->ExecuteImmediateCommands(
             op->context_id, op->commands_size, op->command_data(), op->semaphore_count,
             op->semaphores);
-        if (!status)
-            SetError(status.get());
-        return true;
-    }
-
-    bool PageFlip(PageFlipOp* op, zx_handle_t* handles)
-    {
-        DLOG("Operation: PageFlip");
-        if (!op)
-            return DRETF(false, "malformed message");
-
-        auto buffer_presented_semaphore = magma::PlatformSemaphore::Import(handles[0]);
-        if (!buffer_presented_semaphore)
-            return DRETF(false, "couldn't import buffer_presented_semaphore from handle 0x%x",
-                         handles[0]);
-
-        magma::Status status =
-            delegate_->PageFlip(op->buffer_id, op->wait_semaphore_count, op->signal_semaphore_count,
-                                op->semaphore_ids, std::move(buffer_presented_semaphore));
         if (!status)
             SetError(status.get());
         return true;
@@ -696,30 +637,6 @@ public:
             if (result != MAGMA_STATUS_OK)
                 SetError(result);
         }
-    }
-
-    void PageFlip(uint64_t buffer_id, uint32_t wait_semaphore_count,
-                  uint32_t signal_semaphore_count, const uint64_t* semaphore_ids,
-                  uint32_t buffer_presented_handle) override
-    {
-        const uint32_t payload_size =
-            PageFlipOp::size(wait_semaphore_count + signal_semaphore_count);
-        std::unique_ptr<uint8_t[]> payload(new uint8_t[payload_size]);
-
-        // placement new on top of the allocation
-        auto op = new (payload.get()) PageFlipOp;
-        op->buffer_id = buffer_id;
-        op->signal_semaphore_count = signal_semaphore_count;
-        op->wait_semaphore_count = wait_semaphore_count;
-        for (uint32_t i = 0; i < wait_semaphore_count + signal_semaphore_count; i++) {
-            op->semaphore_ids[i] = semaphore_ids[i];
-        }
-
-        zx_handle_t zx_buffer_presented_handle = buffer_presented_handle;
-        magma_status_t result =
-            channel_write(payload.get(), payload_size, &zx_buffer_presented_handle, 1);
-        if (result != 0)
-            SetError(result);
     }
 
     magma_status_t GetError() override

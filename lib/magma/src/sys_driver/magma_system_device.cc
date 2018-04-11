@@ -21,8 +21,8 @@ std::shared_ptr<magma::PlatformConnection>
 MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id_t client_id,
                         uint32_t capabilities)
 {
-    // at least one bit must be one and it must be one of the 2 least significant bits
-    if (!capabilities || (capabilities & ~(MAGMA_CAPABILITY_DISPLAY | MAGMA_CAPABILITY_RENDERING)))
+    // at least one valid capability must be set, and rendering is the only valid capability
+    if (capabilities != MAGMA_CAPABILITY_RENDERING)
         return DRETP(nullptr, "attempting to open connection to device with invalid capabilities");
 
     msd_connection_t* msd_connection = msd_device_open(device->msd_dev(), client_id);
@@ -31,105 +31,6 @@ MagmaSystemDevice::Open(std::shared_ptr<MagmaSystemDevice> device, msd_client_id
 
     return magma::PlatformConnection::Create(std::make_unique<MagmaSystemConnection>(
         std::move(device), MsdConnectionUniquePtr(msd_connection), capabilities));
-}
-
-// Called by the driver thread
-std::shared_ptr<MagmaSystemBuffer>
-MagmaSystemDevice::PageFlipAndEnable(std::shared_ptr<MagmaSystemBuffer> buf,
-                                     magma_system_image_descriptor* image_desc, bool enable)
-{
-    std::unique_lock<std::mutex> lock(page_flip_mutex_);
-    std::shared_ptr<MagmaSystemBuffer> last_buffer_copy;
-
-    DASSERT(present_buffer_callback_);
-    present_buffer_callback_(buf, image_desc, 0, 0, {}, nullptr);
-
-    DLOG("PageFlipAndEnable enable %d", enable);
-    page_flip_enable_ = enable;
-
-    if (enable) {
-        for (auto& deferred_semaphores : deferred_flip_semaphores_) {
-            for (auto iter : deferred_semaphores.wait) {
-                DLOG("waiting for semaphore %lu", iter->platform_semaphore()->id());
-                if (!iter->platform_semaphore()->Wait(100))
-                    DLOG("timeout waiting for semaphore");
-            }
-            for (auto iter : deferred_semaphores.signal) {
-                DLOG("signalling semaphore %lu", iter->platform_semaphore()->id());
-                iter->platform_semaphore()->Signal();
-            }
-        }
-        deferred_flip_buffers_.clear();
-        deferred_flip_semaphores_.clear();
-        last_flipped_buffer_ = nullptr;
-
-    } else if (last_flipped_buffer_) {
-        void* src;
-        if (last_flipped_buffer_->platform_buffer()->MapCpu(&src)) {
-            std::unique_ptr<magma::PlatformBuffer> copy =
-                magma::PlatformBuffer::Create(last_flipped_buffer_->size(), "last_buffer_copy");
-
-            void* dst;
-            if (copy->MapCpu(&dst)) {
-                memcpy(dst, src, copy->size());
-                copy->UnmapCpu();
-                last_buffer_copy = MagmaSystemBuffer::Create(std::move(copy));
-            }
-            last_flipped_buffer_->platform_buffer()->UnmapCpu();
-        }
-    }
-
-    return last_buffer_copy;
-}
-
-// Called by display connection threads
-void MagmaSystemDevice::PageFlip(
-    MagmaSystemConnection* connection, std::shared_ptr<MagmaSystemBuffer> buf,
-    magma_system_image_descriptor* image_desc, uint32_t wait_semaphore_count,
-    uint32_t signal_semaphore_count, std::vector<std::shared_ptr<MagmaSystemSemaphore>> semaphores,
-    std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore)
-{
-    std::unique_lock<std::mutex> lock(page_flip_mutex_);
-
-    if (!page_flip_enable_) {
-        DeferredFlip deferred_flip;
-
-        for (uint32_t i = 0; i < wait_semaphore_count; i++) {
-            DLOG("page flip disabled buffer %lu wait semaphore %lu", buf->platform_buffer()->id(),
-                 semaphores[i]->platform_semaphore()->id());
-            deferred_flip.wait.push_back(semaphores[i]);
-        }
-        for (uint32_t i = wait_semaphore_count; i < semaphores.size(); i++) {
-            DLOG("page flip disabled buffer %lu signal semaphore %lu", buf->platform_buffer()->id(),
-                 semaphores[i]->platform_semaphore()->id());
-            deferred_flip.signal.push_back(semaphores[i]);
-        }
-        deferred_flip.signal.push_back(
-            MagmaSystemSemaphore::Create(std::move(buffer_presented_semaphore)));
-
-        auto iter = std::find(std::begin(deferred_flip_buffers_), std::end(deferred_flip_buffers_),
-                              buf->platform_buffer()->id());
-        if (iter == deferred_flip_buffers_.end()) {
-            // This buffer hasn't been flipped so its rendering should complete.
-            // Consume the wait semaphores now.
-            for (auto iter : deferred_flip.wait) {
-                DLOG("waiting for semaphore %lu", iter->platform_semaphore()->id());
-                if (!iter->platform_semaphore()->Wait(100))
-                    DLOG("timeout waiting for semaphore");
-            }
-            deferred_flip.wait.clear();
-        }
-
-        deferred_flip_buffers_.push_back(buf->platform_buffer()->id());
-        deferred_flip_semaphores_.push_back(std::move(deferred_flip));
-        return;
-    }
-
-    DASSERT(present_buffer_callback_);
-    present_buffer_callback_(buf, image_desc, wait_semaphore_count, signal_semaphore_count,
-                             std::move(semaphores), std::move(buffer_presented_semaphore));
-
-    last_flipped_buffer_ = buf;
 }
 
 std::shared_ptr<MagmaSystemBuffer> MagmaSystemDevice::ImportBuffer(uint32_t handle)

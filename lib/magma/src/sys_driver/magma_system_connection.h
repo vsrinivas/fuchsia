@@ -70,10 +70,6 @@ public:
 
     msd_connection_t* msd_connection() { return msd_connection_.get(); }
 
-    magma::Status
-    PageFlip(uint64_t id, uint32_t wait_semaphore_count, uint32_t signal_semaphore_count,
-             uint64_t* semaphore_ids,
-             std::unique_ptr<magma::PlatformSemaphore> buffer_presented_semaphore) override;
     magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                            void* commands, uint64_t semaphore_count,
                                            uint64_t* semaphore_ids) override;
@@ -104,7 +100,6 @@ private:
     std::unordered_map<uint64_t, BufferReference> buffer_map_;
     std::unordered_map<uint64_t, SemaphoreReference> semaphore_map_;
 
-    bool has_display_capability_;
     bool has_render_capability_;
 };
 
