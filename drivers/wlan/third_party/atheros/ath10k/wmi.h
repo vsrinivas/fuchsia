@@ -6578,25 +6578,25 @@ struct wmi_pdev_chan_info_req_cmd {
 #define WMI_MSGS \
     MSG(ATH10K_MSG_TYPE_WMI, ATH10K_MSG_TYPE_HTC, sizeof(struct wmi_cmd_hdr))
 
+#define WMI_TX_CREDITS_AVAILABLE ZX_USER_SIGNAL_0
+
 struct ath10k;
 struct ath10k_vif;
 struct ath10k_fw_stats_pdev;
 struct ath10k_fw_stats_peer;
 struct ath10k_fw_stats;
 
-int ath10k_wmi_attach(struct ath10k* ar);
+zx_status_t ath10k_wmi_attach(struct ath10k* ar);
 void ath10k_wmi_detach(struct ath10k* ar);
 void ath10k_wmi_free_host_mem(struct ath10k* ar);
-int ath10k_wmi_wait_for_service_ready(struct ath10k* ar);
-int ath10k_wmi_wait_for_unified_ready(struct ath10k* ar);
+zx_status_t ath10k_wmi_wait_for_service_ready(struct ath10k* ar);
+zx_status_t ath10k_wmi_wait_for_unified_ready(struct ath10k* ar);
 
-struct sk_buff* ath10k_wmi_alloc_skb(struct ath10k* ar, uint32_t len);
 int ath10k_wmi_connect(struct ath10k* ar);
 
-struct sk_buff* ath10k_wmi_alloc_skb(struct ath10k* ar, uint32_t len);
-int ath10k_wmi_cmd_send(struct ath10k* ar, struct sk_buff* skb, uint32_t cmd_id);
-int ath10k_wmi_cmd_send_nowait(struct ath10k* ar, struct sk_buff* skb,
-                               uint32_t cmd_id);
+zx_status_t ath10k_wmi_cmd_send(struct ath10k* ar, struct ath10k_msg_buf* buf, uint32_t cmd_id);
+int ath10k_wmi_cmd_send_nowait(struct ath10k* ar, struct ath10k_msg_buf* skb, uint32_t cmd_id);
+#if 0 // NEEDS PORTING
 void ath10k_wmi_start_scan_init(struct ath10k* ar, struct wmi_start_scan_arg* arg);
 
 void ath10k_wmi_pull_pdev_stats_base(const struct wmi_pdev_stats_base* src,
@@ -6609,8 +6609,10 @@ void ath10k_wmi_pull_pdev_stats_extra(const struct wmi_pdev_stats_extra* src,
                                       struct ath10k_fw_stats_pdev* dst);
 void ath10k_wmi_pull_peer_stats(const struct wmi_peer_stats* src,
                                 struct ath10k_fw_stats_peer* dst);
+#endif // NEEDS PORTING
 void ath10k_wmi_put_host_mem_chunks(struct ath10k* ar,
                                     struct wmi_host_mem_chunks* chunks);
+#if 0 // NEEDS PORTING
 void ath10k_wmi_put_start_scan_common(struct wmi_start_scan_common* cmn,
                                       const struct wmi_start_scan_arg* arg);
 void ath10k_wmi_set_wmm_param(struct wmi_wmm_params* params,
@@ -6622,7 +6624,9 @@ int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg* arg);
 int ath10k_wmi_event_scan(struct ath10k* ar, struct sk_buff* skb);
 int ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_wmi_event_echo(struct ath10k* ar, struct sk_buff* skb);
+#endif // NEEDS PORTING
+void ath10k_wmi_event_echo(struct ath10k* ar, struct ath10k_msg_buf* buf);
+#if 0 // NEEDS PORTING
 int ath10k_wmi_event_debug_mesg(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_update_stats(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_vdev_start_resp(struct ath10k* ar, struct sk_buff* skb);
@@ -6660,8 +6664,10 @@ void ath10k_wmi_event_vdev_install_key_complete(struct ath10k* ar,
 void ath10k_wmi_event_inst_rssi_stats(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_vdev_standby_req(struct ath10k* ar, struct sk_buff* skb);
 void ath10k_wmi_event_vdev_resume_req(struct ath10k* ar, struct sk_buff* skb);
-void ath10k_wmi_event_service_ready(struct ath10k* ar, struct sk_buff* skb);
-int ath10k_wmi_event_ready(struct ath10k* ar, struct sk_buff* skb);
+#endif // NEEDS PORTING
+void ath10k_wmi_event_service_ready(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+zx_status_t ath10k_wmi_event_ready(struct ath10k* ar, struct ath10k_msg_buf* msg_buf);
+#if 0 // NEEDS PORTING
 int ath10k_wmi_op_pull_phyerr_ev(struct ath10k* ar, const void* phyerr_buf,
                                  int left_len, struct wmi_phyerr_ev_arg* arg);
 void ath10k_wmi_main_op_fw_stats_fill(struct ath10k* ar,
@@ -6675,8 +6681,9 @@ size_t ath10k_wmi_fw_stats_num_vdevs(struct list_head* head);
 void ath10k_wmi_10_4_op_fw_stats_fill(struct ath10k* ar,
                                       struct ath10k_fw_stats* fw_stats,
                                       char* buf);
+#endif // NEEDS PORTING
 int ath10k_wmi_op_get_vdev_subtype(struct ath10k* ar,
                                    enum wmi_vdev_subtype subtype);
-int ath10k_wmi_barrier(struct ath10k* ar);
+zx_status_t ath10k_wmi_barrier(struct ath10k* ar);
 
 #endif /* _WMI_H_ */
