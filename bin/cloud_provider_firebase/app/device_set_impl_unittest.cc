@@ -17,8 +17,8 @@ namespace cloud_provider_firebase {
 
 std::unique_ptr<TestCloudDeviceSet> InitCloudDeviceSet(
     TestCloudDeviceSet** ptr,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
-  auto ret = std::make_unique<TestCloudDeviceSet>(task_runner);
+    async_t* async) {
+  auto ret = std::make_unique<TestCloudDeviceSet>(async);
   *ptr = ret.get();
   return ret;
 }
@@ -30,7 +30,7 @@ class DeviceSetImplTest : public gtest::TestWithMessageLoop,
       : firebase_auth_(message_loop_.async()),
         device_set_impl_(
             &firebase_auth_,
-            InitCloudDeviceSet(&cloud_device_set_, message_loop_.task_runner()),
+            InitCloudDeviceSet(&cloud_device_set_, message_loop_.async()),
             device_set_.NewRequest()),
         watcher_binding_(this) {}
 

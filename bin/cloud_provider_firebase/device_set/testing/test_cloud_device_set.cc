@@ -4,10 +4,11 @@
 
 #include "peridot/bin/cloud_provider_firebase/device_set/testing/test_cloud_device_set.h"
 
+#include <lib/async/cpp/task.h>
+
 namespace cloud_provider_firebase {
 
-TestCloudDeviceSet::TestCloudDeviceSet(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {}
+TestCloudDeviceSet::TestCloudDeviceSet(async_t* async) : async_(async) {}
 
 TestCloudDeviceSet::~TestCloudDeviceSet() {}
 
@@ -16,7 +17,8 @@ void TestCloudDeviceSet::CheckFingerprint(
     std::string fingerprint,
     std::function<void(Status)> callback) {
   checked_fingerprint = fingerprint;
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [status = status_to_return, callback = std::move(callback)] {
         callback(status);
       });
@@ -26,7 +28,8 @@ void TestCloudDeviceSet::SetFingerprint(std::string /*auth_token*/,
                                         std::string fingerprint,
                                         std::function<void(Status)> callback) {
   set_fingerprint = fingerprint;
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [status = status_to_return, callback = std::move(callback)] {
         callback(status);
       });
@@ -43,7 +46,8 @@ void TestCloudDeviceSet::WatchFingerprint(
 void TestCloudDeviceSet::EraseAllFingerprints(
     std::string auth_token,
     std::function<void(Status)> callback) {
-  task_runner_->PostTask(
+  async::PostTask(
+      async_,
       [status = status_to_return, callback = std::move(callback)] {
         callback(status);
       });

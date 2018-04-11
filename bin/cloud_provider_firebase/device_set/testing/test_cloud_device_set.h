@@ -8,14 +8,15 @@
 #include <functional>
 #include <string>
 
-#include "lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "peridot/bin/cloud_provider_firebase/device_set/cloud_device_set.h"
 
 namespace cloud_provider_firebase {
 
 class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
  public:
-  explicit TestCloudDeviceSet(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestCloudDeviceSet(async_t* async);
 
   ~TestCloudDeviceSet() override;
 
@@ -47,7 +48,7 @@ class TestCloudDeviceSet : public cloud_provider_firebase::CloudDeviceSet {
   int timestamp_update_requests_ = 0;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 };
 
 }  // namespace cloud_provider_firebase
