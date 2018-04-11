@@ -210,7 +210,7 @@
     <project name="third_party/sbase"
              path="third_party/sbase"
              remote="https://fuchsia.googlesource.com/third_party/sbase"
-             revision="8c63a02ac3c01c0383061c7c320f8944b2abd364"
+             revision="65e6e6592687767594450ef14cb934630bb46e4e"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/shaderc"
              path="third_party/shaderc"
