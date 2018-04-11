@@ -128,12 +128,6 @@ source_set("gfx") {
     "screenshotter.h",
     "swapchain/display_swapchain.cc",
     "swapchain/display_swapchain.h",
-    "swapchain/magma_buffer.cc",
-    "swapchain/magma_buffer.h",
-    "swapchain/magma_connection.cc",
-    "swapchain/magma_connection.h",
-    "swapchain/magma_semaphore.cc",
-    "swapchain/magma_semaphore.h",
     "swapchain/swapchain.h",
     "swapchain/vulkan_display_swapchain.cc",
     "swapchain/vulkan_display_swapchain.h",
@@ -168,6 +162,7 @@ source_set("gfx") {
     "//garnet/lib/magma:libmagma",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/ui/scenic:fidl_helpers",
+    "//zircon/public/fidl/display:display",
     "//zircon/public/lib/trace",
   ]
 }

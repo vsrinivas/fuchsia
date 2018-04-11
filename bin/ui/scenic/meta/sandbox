@@ -1,4 +1,4 @@
 {
     "features": [ "vulkan", "system-temp" ],
-    "dev": [ "class/framebuffer" ]
+    "dev": [ "class/display-controller" ]
 }

@@ -7,6 +7,7 @@
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
+#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
 
 #include "lib/escher/escher.h"
@@ -64,10 +65,12 @@ vk::ImageUsageFlags GetFramebufferImageUsage();
 
 }  // namespace
 
-DisplaySwapchain::DisplaySwapchain(Display* display,
+DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager,
+                                   Display* display,
                                    EventTimestamper* timestamper,
                                    escher::Escher* escher)
-    : display_(display),
+    : display_manager_(display_manager),
+      display_(display),
       device_(escher->vk_device()),
       queue_(escher->device()->vk_main_queue()),
       vulkan_proc_addresses_(escher->device()->proc_addrs()),
@@ -77,7 +80,6 @@ DisplaySwapchain::DisplaySwapchain(Display* display,
   FXL_DCHECK(escher);
 
   display_->Claim();
-  magma_connection_.Open();
 
   format_ = GetDisplayImageFormat(escher->device());
 
@@ -92,16 +94,21 @@ bool DisplaySwapchain::InitializeFramebuffers(
     escher::ResourceRecycler* resource_recycler) {
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
+#if !defined(__x86_64__)
+  FXL_DLOG(ERROR) << "Display swapchain only supported on intel";
+  return false;
+#endif
+
+  const uint32_t width_in_px = display_->width_in_px();
+  const uint32_t height_in_px = display_->height_in_px();
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
     // Allocate a framebuffer.
-    uint32_t width = display_->width_in_px();
-    uint32_t height = display_->height_in_px();
 
     // Start by creating a VkImage.
     // TODO(ES-42): Create this using Escher APIs.
     vk::ImageCreateInfo create_info;
     create_info.imageType = vk::ImageType::e2D, create_info.format = format_;
-    create_info.extent = vk::Extent3D{width, height, 1};
+    create_info.extent = vk::Extent3D{width_in_px, height_in_px, 1};
     create_info.mipLevels = 1;
     create_info.arrayLayers = 1;
     create_info.samples = vk::SampleCountFlagBits::e1;
@@ -142,8 +149,8 @@ bool DisplaySwapchain::InitializeFramebuffers(
     // Wrap the image and device memory in a escher::Image.
     escher::ImageInfo image_info;
     image_info.format = format_;
-    image_info.width = display_->width_in_px();
-    image_info.height = display_->height_in_px();
+    image_info.width = width_in_px;
+    image_info.height = height_in_px;
     image_info.usage = image_usage;
 
     // escher::Image::New() binds the memory to the image.
@@ -184,23 +191,34 @@ bool DisplaySwapchain::InitializeFramebuffers(
     }
 
     buffer.vmo = zx::vmo(export_result.value);
-    buffer.magma_buffer =
-        MagmaBuffer::NewFromVmo(&magma_connection_, buffer.vmo);
+    buffer.fb_id = display_manager_->ImportImage(
+        buffer.vmo, width_in_px, height_in_px, ZX_PIXEL_FORMAT_ARGB_8888);
+    if (buffer.fb_id == display::invalidId) {
+      FXL_DLOG(ERROR) << "Importing image failed.";
+      return false;
+    }
+
     swapchain_buffers_.push_back(std::move(buffer));
   }
   return true;
 }
 
-DisplaySwapchain::~DisplaySwapchain() { display_->Unclaim(); }
+DisplaySwapchain::~DisplaySwapchain() {
+  display_->Unclaim();
+  for (auto& buffer : swapchain_buffers_) {
+    display_manager_->ReleaseImage(buffer.fb_id);
+  }
+}
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
     const FrameTimingsPtr& frame_timings) {
-  auto render_finished_escher_semaphore = escher::Semaphore::New(device_);
+  auto render_finished_escher_semaphore =
+      escher::Semaphore::NewExportableSem(device_);
 
   zx::event render_finished_event = GetEventForSemaphore(
       vulkan_proc_addresses_, device_, render_finished_escher_semaphore);
-  auto render_finished_magma_semaphore =
-      MagmaSemaphore::NewFromEvent(&magma_connection_, render_finished_event);
+  uint64_t render_finished_event_id =
+      display_manager_->ImportEvent(render_finished_event);
 
   zx::event frame_presented_event;
   zx_status_t status = zx::event::create(0u, &frame_presented_event);
@@ -209,11 +227,12 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
         << "DisplaySwapchain::NewFrameRecord() failed to create event.";
     return std::unique_ptr<FrameRecord>();
   }
-  auto frame_presented_magma_semaphore =
-      MagmaSemaphore::NewFromEvent(&magma_connection_, frame_presented_event);
+  uint64_t frame_presented_event_id =
+      display_manager_->ImportEvent(frame_presented_event);
 
-  if (!render_finished_escher_semaphore || !render_finished_magma_semaphore ||
-      !frame_presented_magma_semaphore) {
+  if (!render_finished_escher_semaphore ||
+      render_finished_event_id == display::invalidId ||
+      frame_presented_event_id == display::invalidId) {
     FXL_LOG(ERROR)
         << "DisplaySwapchain::NewFrameRecord() failed to create semaphores";
     return std::unique_ptr<FrameRecord>();
@@ -224,10 +243,9 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
   record->swapchain_index = frame_timings->AddSwapchain(this);
   record->render_finished_escher_semaphore =
       std::move(render_finished_escher_semaphore);
-  record->render_finished_magma_semaphore =
-      std::move(render_finished_magma_semaphore);
-  record->frame_presented_magma_semaphore =
-      std::move(frame_presented_magma_semaphore);
+  record->render_finished_event_id = render_finished_event_id;
+  record->frame_presented_event_id = frame_presented_event_id;
+
   record->render_finished_watch = EventTimestamper::Watch(
       timestamper_, std::move(render_finished_event), escher::kFenceSignalled,
       [this, index = next_frame_index_](zx_time_t timestamp) {
@@ -273,17 +291,14 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  bool status = magma_connection_.DisplayPageFlip(
-      buffer.magma_buffer.get(), 1,
-      &frame_record->render_finished_magma_semaphore.get(), 0, nullptr,
-      frame_record->frame_presented_magma_semaphore.get());
+  display_manager_->Flip(display_, buffer.fb_id,
+                         frame_record->render_finished_event_id,
+                         frame_record->frame_presented_event_id,
+                         display::invalidId /* frame_signal_event_id */);
 
-  // TODO(MZ-244): handle this more robustly.
-  if (!status) {
-    FXL_DCHECK(false) << "DisplaySwapchain::DrawAndPresentFrame(): failed to"
-                         "present rendered image with magma_display_page_flip.";
-    return false;
-  }
+  display_manager_->ReleaseEvent(frame_record->render_finished_event_id);
+  display_manager_->ReleaseEvent(frame_record->frame_presented_event_id);
+
   return true;
 }
 

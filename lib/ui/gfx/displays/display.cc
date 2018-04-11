@@ -11,12 +11,13 @@
 namespace scenic {
 namespace gfx {
 
-Display::Display(uint32_t width_in_px, uint32_t height_in_px,
-                 zx::event ownership_event)
+Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
     : last_vsync_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)),
+      display_id_(id),
       width_in_px_(width_in_px),
-      height_in_px_(height_in_px),
-      ownership_event_(std::move(ownership_event)) {}
+      height_in_px_(height_in_px) {
+  zx::event::create(0, &ownership_event_);
+}
 
 zx_time_t Display::GetLastVsyncTime() {
   // Since listening for frame presentation events is our only way of knowing

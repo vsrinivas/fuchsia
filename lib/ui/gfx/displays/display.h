@@ -18,8 +18,7 @@ namespace gfx {
 // resolution, vsync interval, last vsync time, etc.
 class Display {
  public:
-  Display(uint32_t width_in_px, uint32_t height_in_px,
-          zx::event ownership_event);
+  Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
 
   // Obtain the time of the last Vsync, in nanoseconds.
   zx_time_t GetLastVsyncTime();
@@ -32,8 +31,13 @@ class Display {
   void Claim();
   void Unclaim();
 
+  // The display's ID in the context of the DisplayManager's DisplayController.
+  uint64_t display_id() { return display_id_; };
   uint32_t width_in_px() { return width_in_px_; };
   uint32_t height_in_px() { return height_in_px_; };
+
+  // Event signaled by DisplayManager when ownership of the display
+  // changes. This event backs Scenic's GetOwnershipEvent API.
   const zx::event& ownership_event() { return ownership_event_; };
 
  private:
@@ -44,6 +48,7 @@ class Display {
   void set_last_vsync_time(zx_time_t vsync_time);
 
   zx_time_t last_vsync_time_;
+  const uint64_t display_id_;
   const uint32_t width_in_px_;
   const uint32_t height_in_px_;
   zx::event ownership_event_;

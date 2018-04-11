@@ -12,9 +12,6 @@
 #include <lib/zx/vmo.h>
 #include <vulkan/vulkan.hpp>
 
-#include "garnet/lib/ui/gfx/swapchain/magma_buffer.h"
-#include "garnet/lib/ui/gfx/swapchain/magma_connection.h"
-#include "garnet/lib/ui/gfx/swapchain/magma_semaphore.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 #include "lib/escher/flib/fence_listener.h"
 #include "lib/escher/resources/resource_manager.h"
@@ -26,14 +23,16 @@ namespace scenic {
 namespace gfx {
 
 class Display;
+class DisplayManager;
 class EventTimestamper;
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
-// swapchain to present images to a physical display using the Magma API.
+// swapchain to present images to a physical display using the Zircon
+// display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
-  DisplaySwapchain(Display* display, EventTimestamper* timestamper,
-                   escher::Escher* escher);
+  DisplaySwapchain(DisplayManager* display_manager, Display* display,
+                   EventTimestamper* timestamper, escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // |Swapchain|
@@ -45,7 +44,7 @@ class DisplaySwapchain : public Swapchain {
     zx::vmo vmo;
     escher::GpuMemPtr device_memory;
     escher::ImagePtr escher_image;
-    MagmaBuffer magma_buffer;
+    uint64_t fb_id;
   };
 
   struct FrameRecord {
@@ -53,10 +52,10 @@ class DisplaySwapchain : public Swapchain {
     size_t swapchain_index;
 
     escher::SemaphorePtr render_finished_escher_semaphore;
-    MagmaSemaphore render_finished_magma_semaphore;
+    uint64_t render_finished_event_id;
     EventTimestamper::Watch render_finished_watch;
 
-    MagmaSemaphore frame_presented_magma_semaphore;
+    uint64_t frame_presented_event_id;
     EventTimestamper::Watch frame_presented_watch;
   };
   std::unique_ptr<FrameRecord> NewFrameRecord(
@@ -69,8 +68,8 @@ class DisplaySwapchain : public Swapchain {
   void OnFrameRendered(size_t frame_index, zx_time_t render_finished_time);
   void OnFramePresented(size_t frame_index, zx_time_t vsync_time);
 
+  DisplayManager* display_manager_;
   Display* const display_;
-  MagmaConnection magma_connection_;
 
   vk::Format format_;
   vk::Device device_;

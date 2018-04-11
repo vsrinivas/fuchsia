@@ -101,23 +101,6 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
     auto queues = physical_device.getQueueFamilyProperties();
     for (size_t i = 0; i < queues.size(); ++i) {
       if (kMainQueueFlags == (queues[i].queueFlags & kMainQueueFlags)) {
-        if (params.surface) {
-          // TODO: it is possible that there is no queue family that supports
-          // both graphics/compute and present.  In this case, we would need a
-          // separate present queue.  For now, just look for a single queue that
-          // meets all of our needs.
-          VkBool32 supports_present;
-          auto result =
-              instance->proc_addrs().GetPhysicalDeviceSurfaceSupportKHR(
-                  physical_device, i, params.surface, &supports_present);
-          FXL_CHECK(result == VK_SUCCESS);
-          if (supports_present != VK_TRUE) {
-            FXL_LOG(INFO)
-                << "Queue supports graphics/compute, but not presentation";
-            continue;
-          }
-        }
-
         // At this point, we have already succeeded.  Now, try to find the
         // optimal transfer queue family.
         SuitablePhysicalDeviceAndQueueFamilies result;

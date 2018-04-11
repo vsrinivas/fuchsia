@@ -125,8 +125,8 @@ std::unique_ptr<Swapchain> Engine::CreateDisplaySwapchain(Display* display) {
   return std::make_unique<VulkanDisplaySwapchain>(display, event_timestamper(),
                                                   escher());
 #else
-  return std::make_unique<DisplaySwapchain>(display, event_timestamper(),
-                                            escher());
+  return std::make_unique<DisplaySwapchain>(display_manager_, display,
+                                            event_timestamper(), escher());
 #endif
 }
 

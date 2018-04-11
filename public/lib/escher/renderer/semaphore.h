@@ -20,10 +20,12 @@ typedef fxl::RefPtr<Semaphore> SemaphorePtr;
 class Semaphore : public fxl::RefCountedThreadSafe<Semaphore> {
  public:
   explicit Semaphore(vk::Device device);
+  Semaphore(vk::Device device, bool exportable);
   ~Semaphore();
 
   // Convenient.
   static SemaphorePtr New(vk::Device device);
+  static SemaphorePtr NewExportableSem(vk::Device device);
 
   vk::Semaphore vk_semaphore() const { return value_; }
 

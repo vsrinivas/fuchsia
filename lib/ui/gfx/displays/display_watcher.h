@@ -20,8 +20,8 @@ class DisplayWatcher {
  public:
   // Callback that accepts display metrics.
   // |metrics| may be null if the display was not successfully acquired.
-  using DisplayReadyCallback = std::function<void(
-      uint32_t width_in_px, uint32_t height_in_px, zx::event ownership_event)>;
+  using DisplayReadyCallback =
+      std::function<void(fxl::UniqueFD fd, zx::channel dc_handle)>;
 
   DisplayWatcher();
   ~DisplayWatcher();
@@ -30,14 +30,10 @@ class DisplayWatcher {
   void WaitForDisplay(DisplayReadyCallback callback);
 
  private:
-  void HandleDevice(bool display, int dir_fd, std::string filename);
+  void HandleDevice(DisplayReadyCallback callback, int dir_fd,
+                    std::string filename);
 
-  std::unique_ptr<fsl::DeviceWatcher> display_watcher_;
-  std::unique_ptr<fsl::DeviceWatcher> framebuffer_watcher_;
-
-  DisplayReadyCallback callback_;
-  fxl::UniqueFD display_fd_;
-  fxl::UniqueFD framebuffer_fd_;
+  std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayWatcher);
 };
