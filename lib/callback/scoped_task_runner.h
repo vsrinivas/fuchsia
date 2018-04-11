@@ -13,7 +13,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace callback {
 
@@ -26,23 +25,16 @@ class ScopedTaskRunner {
  public:
   explicit ScopedTaskRunner(async_t* async);
 
-  // TODO(joshuaseaton): Remove this constructor (and the associated
-  // implementation) once all instances have been removed.
-  explicit ScopedTaskRunner(fxl::RefPtr<fxl::TaskRunner> task_runner);
-
   ~ScopedTaskRunner();
 
   // Posts a task to run as soon as possible.
   void PostTask(fxl::Closure task);
 
   // Posts a task to run as soon as possible after the specified |target_time|.
-  void PostTaskForTime(fxl::Closure task, fxl::TimePoint target_time);
+  void PostTaskForTime(fxl::Closure task, zx::time target_time);
 
   // Posts a task to run as soon as possible after the specified |delay|.
-  void PostDelayedTask(fxl::Closure task, fxl::TimeDelta delay);
-
-  // Returns true if the task runner runs tasks on the current thread.
-  bool RunsTasksOnCurrentThread();
+  void PostDelayedTask(fxl::Closure task, zx::duration delay);
 
   // Scope the given callback to the current task runner. This means that the
   // given callback will be called when the returned callback is called if and
@@ -54,7 +46,6 @@ class ScopedTaskRunner {
 
  private:
   async_t* const async_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::WeakPtrFactory<ScopedTaskRunner> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedTaskRunner);
