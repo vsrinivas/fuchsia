@@ -210,6 +210,8 @@ bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t prima
     elem->head = head;
     elem->tail = tail;
     elem->mcs_set = mcs_set;
+
+    *actual = elem_size;
     return true;
 }
 
@@ -222,6 +224,8 @@ bool GcrGroupAddressElement::Create(uint8_t* buf, size_t len, size_t* actual,
     elem->hdr.len = elem_size - sizeof(ElementHeader);
 
     elem->gcr_group_addr = addr;
+
+    *actual = elem_size;
     return true;
 }
 

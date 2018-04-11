@@ -260,7 +260,7 @@ bool ValidateElements(size_t len, element_id::ElementId* ids, size_t ids_len, El
 
 bool Beacon::Validate(size_t len) {
     ElementReader reader(elements, len);
-    constexpr size_t kValidIdSize = fbl::count_of(kValidProbeRequestIds);
+    constexpr size_t kValidIdSize = fbl::count_of(kValidBeaconIds);
     return ValidateElements(len, kValidBeaconIds, kValidIdSize, &reader);
 }
 
