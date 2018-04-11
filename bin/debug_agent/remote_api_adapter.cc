@@ -48,7 +48,7 @@ RemoteAPIAdapter::RemoteAPIAdapter(RemoteAPI* remote_api,
 
 RemoteAPIAdapter::~RemoteAPIAdapter() {}
 
-void RemoteAPIAdapter::OnHandleReadable() {
+void RemoteAPIAdapter::OnStreamReadable() {
   debug_ipc::MsgHeader header;
   size_t bytes_read =
       stream_->Peek(reinterpret_cast<char*>(&header), sizeof(header));

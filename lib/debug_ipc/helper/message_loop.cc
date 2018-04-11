@@ -8,8 +8,32 @@
 
 namespace debug_ipc {
 
+namespace {
+
+thread_local MessageLoop* current_message_loop = nullptr;
+
+}  // namespace
+
 MessageLoop::MessageLoop() = default;
-MessageLoop::~MessageLoop() = default;
+
+MessageLoop::~MessageLoop() {
+  FXL_DCHECK(Current() != this);  // Cleanup() should have been called.
+}
+
+void MessageLoop::Init() {
+  FXL_DCHECK(!current_message_loop);
+  current_message_loop = this;
+}
+
+void MessageLoop::Cleanup() {
+  FXL_DCHECK(current_message_loop == this);
+  current_message_loop = nullptr;
+}
+
+// static
+MessageLoop* MessageLoop::Current() {
+  return current_message_loop;
+}
 
 void MessageLoop::PostTask(std::function<void()> fn) {
   bool needs_awaken;

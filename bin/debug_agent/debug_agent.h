@@ -8,34 +8,26 @@
 #include <memory>
 #include <zircon/types.h>
 #include "garnet/bin/debug_agent/debugged_process.h"
-#include "garnet/bin/debug_agent/exception_handler.h"
 #include "garnet/bin/debug_agent/remote_api.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_agent {
 
-// Main state and control for the debug agent. The exception handler reports
-// exceptions in the debugged program directly to this class and data from
-// the debugger client via a StreamBuffer.
-//
-// This class sends data back to the client via the same StreamBuffer.
-class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
+// Main state and control for the debug agent.
+class DebugAgent : public RemoteAPI {
  public:
-  // The exception handler is non-owning and must outlive this class.
-  explicit DebugAgent(ExceptionHandler* handler);
+  // A MessageLoopZircon should already be set up on the current thread.
+  //
+  // The stream must outlive this class. It will be used to send data to the
+  // client. It will not be read (that's the job of the provider of the
+  // RemoteAPI).
+  explicit DebugAgent(debug_ipc::StreamBuffer* stream);
   ~DebugAgent();
 
-  debug_ipc::StreamBuffer& stream() { return handler_->socket_buffer(); }
+  debug_ipc::StreamBuffer* stream() { return stream_; }
 
-  // ExceptionHandler::ProcessWatcher implementation.
-  void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadStarting(zx::thread thread,
-                        zx_koid_t process_koid,
-                        zx_koid_t thread_koid) override;
-  void OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) override;
-  void OnException(zx_koid_t proc_koid,
-                   zx_koid_t thread_koid,
-                   uint32_t type) override;
+  void RemoveDebuggedProcess(zx_koid_t process_koid);
 
  private:
   // RemoteAPI implementation.
@@ -73,17 +65,10 @@ class DebugAgent : public ExceptionHandler::ProcessWatcher, public RemoteAPI {
                                     zx_koid_t thread_koid);
 
   // Returns a pointer to the newly created object.
-  DebuggedProcess* AddDebuggedProcess(zx_koid_t koid, zx::process proc);
-  void RemoveDebuggedProcess(zx_koid_t koid);
-  void StopDebuggedProcess(zx_koid_t koid);
+  DebuggedProcess* AddDebuggedProcess(zx_koid_t process_koid,
+                                      zx::process zx_proc);
 
-  // Sends all current threads or one specific thread information as new thread
-  // notifications about the given process.
-  void SendCurrentThreads(zx_handle_t process, zx_koid_t proc_koid);
-  void SendThreadNotification(zx_koid_t proc_koid,
-                              const debug_ipc::ThreadRecord& record);
-
-  ExceptionHandler* handler_;  // Non-owning.
+  debug_ipc::StreamBuffer* stream_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 

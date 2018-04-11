@@ -34,8 +34,23 @@ class MessageLoop {
 
   class WatchHandle;
 
+  // There can be only one active MessageLoop in scope per thread at a time.
+  //
+  // A message loop is active between Init() and Cleanup(). During this
+  // period, Current() will return the message loop.
+  //
+  // Init() / Cleanup() is a separate phase so a message loop can be created
+  // and managed on one thread and sent to another thread to actually run (to
+  // help with cross-thread task posting).
   MessageLoop();
   ~MessageLoop();
+
+  // These must be called on the same thread as Run().
+  virtual void Init();
+  virtual void Cleanup();
+
+  // Returns the current message loop or null if there isn't one.
+  static MessageLoop* Current();
 
   // Runs the message loop.
   virtual void Run() = 0;
@@ -48,14 +63,19 @@ class MessageLoop {
 
   // Starts watching the given file descriptor in the given mode. Returns
   // a WatchHandle that scopes the watch operation (when the handle is
-  // destroyed the watcher is unregistered.
+  // destroyed the watcher is unregistered).
   //
   // The watcher pointer must outlive the returned WatchHandle. Typically
   // the class implementing the FDWatcher would keep the WatchHandle as a
-  // member.
+  // member. Must only be called on the message loop thread.
   //
   // You can only watch a handle once. Note that stdin/stdout/stderr can be
   // the same underlying OS handle, so the caller can only watch one of them.
+  //
+  // The FDWatcher must not unregister from a callback. The handle might
+  // become both readable and writable at the same time which will necessitate
+  // calling both callbacks. The code does not expect the FDWatcher to
+  // disappear in between these callbacks.
   virtual WatchHandle WatchFD(WatchMode mode, int fd,
                               FDWatcher* watcher) = 0;
 
@@ -93,7 +113,8 @@ class MessageLoop {
 };
 
 // Scopes watching a file handle. When the WatchHandle is destroyed, the
-// MessageLoop will stop watching the handle.
+// MessageLoop will stop watching the handle. Must only be destroyed on the
+// thread where the MessageLoop is.
 //
 // Invalid watch handles will have watching() return false.
 class MessageLoop::WatchHandle {

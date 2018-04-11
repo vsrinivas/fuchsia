@@ -17,18 +17,30 @@ class MessageLoopZircon : public MessageLoop {
   MessageLoopZircon();
   ~MessageLoopZircon();
 
+  void Init() override;
+  void Cleanup() override;
+
+  // Returns the current message loop or null if there isn't one.
+  static MessageLoopZircon* Current();
+
   // MessageLoop implementation.
   void Run() override;
   WatchHandle WatchFD(WatchMode mode, int fd,
                       FDWatcher* watcher) override;
 
   // Watches the given socket for read/write status. The watcher must outlive
-  // the returned WatchHandle.
+  // the returned WatchHandle. Must only be called on the message loop thread.
+  //
+  // The FDWatcher must not unregister from a callback. The handle might
+  // become both readable and writable at the same time which will necessitate
+  // calling both callbacks. The code does not expect the FDWatcher to
+  // disappear in between these callbacks.
   WatchHandle WatchSocket(WatchMode mode, zx_handle_t socket_handle,
                           SocketWatcher* watcher);
 
   // Attaches to the exception port of the given process and issues callbacks
-  // on the given watcher. The watcher must oulive the returned WatchHandle.
+  // on the given watcher. The watcher must outlive the returned WatchHandle.
+  // Must only be called on the message loop thread.
   WatchHandle WatchProcessExceptions(zx_handle_t process_handle,
                                      zx_koid_t process_koid,
                                      ZirconExceptionWatcher* watcher);
@@ -46,9 +58,9 @@ class MessageLoopZircon : public MessageLoop {
   void SetHasTasks() override;
 
   // Handle an event of the given type.
-  void OnFdioSignal(WatchInfo* info, const zx_port_packet_t& packet);
-  void OnProcessException(WatchInfo* info, const zx_port_packet_t& packet);
-  void OnSocketSignal(WatchInfo* info, const zx_port_packet_t& packet);
+  void OnFdioSignal(const WatchInfo& info, const zx_port_packet_t& packet);
+  void OnProcessException(const WatchInfo& info, const zx_port_packet_t& packet);
+  void OnSocketSignal(const WatchInfo& info, const zx_port_packet_t& packet);
 
   using WatchMap = std::map<int, WatchInfo>;
   WatchMap watches_;

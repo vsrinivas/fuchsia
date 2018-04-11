@@ -22,6 +22,8 @@ static_library("helper") {
   } else {
     # Target toolchain.
     sources += [
+      "buffered_zx_socket.cc",
+      "buffered_zx_socket.h",
       "message_loop_zircon.cc",
       "message_loop_zircon.h",
     ]

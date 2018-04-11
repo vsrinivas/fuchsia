@@ -22,82 +22,16 @@
 
 namespace debug_agent {
 
-DebugAgent::DebugAgent(ExceptionHandler* handler) : handler_(handler) {}
+DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream) : stream_(stream) {}
 
 DebugAgent::~DebugAgent() {}
 
-void DebugAgent::OnProcessTerminated(zx_koid_t process_koid) {
-  DebuggedProcess* debugged = GetDebuggedProcess(process_koid);
-  if (!debugged) {
+void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
+  auto found = procs_.find(process_koid);
+  if (found == procs_.end())
     FXL_NOTREACHED();
-    return;
-  }
-
-  debug_ipc::NotifyProcess notify;
-  notify.process_koid = process_koid;
-
-  zx_info_process info;
-  GetProcessInfo(debugged->process().get(), &info);
-  notify.return_code = info.return_code;
-
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcess(notify, &writer);
-  stream().Write(writer.MessageComplete());
-
-  RemoveDebuggedProcess(process_koid);
-}
-
-void DebugAgent::OnThreadStarting(zx::thread thread,
-                                  zx_koid_t process_koid,
-                                  zx_koid_t thread_koid) {
-  DebuggedProcess* debugged = GetDebuggedProcess(process_koid);
-  if (!debugged) {
-    FXL_NOTREACHED();
-    return;
-  }
-
-  zx::thread dup_thread;
-  thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_thread);
-  debugged->OnThreadStarting(std::move(dup_thread), thread_koid);
-
-  debug_ipc::ThreadRecord record;
-  FillThreadRecord(thread, &record);
-  SendThreadNotification(process_koid, record);
-
-  // The thread will currently be in a suspended state, resume it.
-  thread.resume(ZX_RESUME_EXCEPTION);
-}
-
-void DebugAgent::OnThreadExiting(zx_koid_t proc_koid, zx_koid_t thread_koid) {
-  DebuggedProcess* debugged = GetDebuggedProcess(proc_koid);
-  if (!debugged) {
-    FXL_NOTREACHED();
-    return;
-  }
-  debugged->OnThreadExiting(thread_koid);
-
-  // Can't call FillThreadRecord since the thread doesn't exist any more.
-  debug_ipc::NotifyThread notify;
-  notify.process_koid = proc_koid;
-  notify.record.koid = thread_koid;
-  notify.record.state = debug_ipc::ThreadRecord::State::kDead;
-
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting,
-                               notify, &writer);
-  stream().Write(writer.MessageComplete());
-}
-
-void DebugAgent::OnException(zx_koid_t proc_koid,
-                             zx_koid_t thread_koid,
-                             uint32_t type) {
-  // Suspend all threads in the excepting process.
-  DebuggedProcess* proc = GetDebuggedProcess(proc_koid);
-  if (!proc) {
-    FXL_NOTREACHED();
-    return;
-  }
-  proc->OnException(thread_koid, type);
+  else
+    procs_.erase(found);
 }
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
@@ -113,15 +47,22 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,
     return;
 
   zx::process process = launcher.GetProcess();
-  reply->process_koid = KoidForObject(process);
-  reply->process_name = NameForObject(process);
-  AddDebuggedProcess(reply->process_koid, std::move(process));
+  zx_koid_t process_koid = KoidForObject(process);
+
+  DebuggedProcess* debugged_process =
+      AddDebuggedProcess(process_koid, std::move(process));
+  if (!debugged_process)
+    return;
 
   reply->status = launcher.Start();
   if (reply->status != ZX_OK) {
-    RemoveDebuggedProcess(reply->process_koid);
-    reply->process_koid = 0;
+    RemoveDebuggedProcess(process_koid);
+    return;
   }
+
+  // Success, fill out the reply.
+  reply->process_koid = process_koid;
+  reply->process_name = NameForObject(process);
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request,
@@ -146,27 +87,24 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
 
   // Don't return early since we must send the reply at the bottom.
   debug_ipc::AttachReply reply;
-
+  reply.status = ZX_ERR_NOT_FOUND;
   zx::process process = GetProcessFromKoid(request.koid);
-  zx_handle_t process_handle = process.get();
+  DebuggedProcess* new_process = nullptr;
   if (process.is_valid()) {
     reply.process_name = NameForObject(process);
-    DebuggedProcess* new_process =
-        AddDebuggedProcess(request.koid, std::move(process));
-    new_process->PopulateCurrentThreads();
-    reply.status = ZX_OK;
-  } else {
-    reply.status = ZX_ERR_NOT_FOUND;
+    new_process = AddDebuggedProcess(request.koid, std::move(process));
+    if (new_process)
+      reply.status = ZX_OK;
   }
 
   // Send the reply.
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteReply(reply, transaction_id, &writer);
-  stream().Write(writer.MessageComplete());
+  stream()->Write(writer.MessageComplete());
 
   // For valid attaches, follow up with the current thread list.
-  if (process_handle)
-    SendCurrentThreads(process_handle, request.koid);
+  if (new_process)
+    new_process->PopulateCurrentThreads();
 }
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request,
@@ -273,40 +211,16 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid,
   return process->GetThread(thread_koid);
 }
 
-DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t koid,
-                                                zx::process proc) {
-  handler_->Attach(koid, proc.get());
-  DebuggedProcess* proc_ptr = new DebuggedProcess(this, koid, std::move(proc));
-  procs_[koid] = std::unique_ptr<DebuggedProcess>(proc_ptr);
-  return proc_ptr;
-}
+DebuggedProcess* DebugAgent::AddDebuggedProcess(zx_koid_t process_koid,
+                                                zx::process zx_proc) {
+  auto proc = std::make_unique<DebuggedProcess>(
+      this, process_koid, std::move(zx_proc));
+  if (!proc->Init())
+    return nullptr;
 
-void DebugAgent::RemoveDebuggedProcess(zx_koid_t koid) {
-  auto found = procs_.find(koid);
-  if (found == procs_.end())
-    return;
-
-  handler_->Detach(found->second->koid());
-  procs_.erase(found);
-}
-
-void DebugAgent::SendCurrentThreads(zx_handle_t process, zx_koid_t proc_koid) {
-  std::vector<debug_ipc::ThreadRecord> threads;
-  GetProcessThreads(process, &threads);
-  for (const auto& thread : threads)
-    SendThreadNotification(proc_koid, thread);
-}
-
-void DebugAgent::SendThreadNotification(zx_koid_t proc_koid,
-                                        const debug_ipc::ThreadRecord& record) {
-  debug_ipc::NotifyThread notify;
-  notify.process_koid = proc_koid;
-  notify.record = record;
-
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyThread(
-      debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
-  stream().Write(writer.MessageComplete());
+  DebuggedProcess* result = proc.get();
+  procs_[process_koid] = std::move(proc);
+  return result;
 }
 
 }  // namespace debug_agent

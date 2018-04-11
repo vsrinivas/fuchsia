@@ -9,12 +9,12 @@
 #include <lib/zx/process.h>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
-#include "garnet/bin/debug_agent/exception_handler.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
+#include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
+#include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 
-// Currently this is just a manual test that sets up the exception handler and
-// spawns a process for
-// it to listen to.
+// Currently this is just a manual test that sets up some infrastructure and
+// runs the message loop.
 
 int main(int argc, char* argv[]) {
   zx::socket client_socket, router_socket;
@@ -22,29 +22,22 @@ int main(int argc, char* argv[]) {
       ZX_OK)
     fprintf(stderr, "Can't create socket.\n");
 
-  // Data flows from ExceptionHandler -> RemoteAPIAdapter -> DebugAgent;
-  debug_agent::ExceptionHandler handler;
-  debug_agent::DebugAgent agent(&handler);
-  debug_agent::RemoteAPIAdapter adapter(&agent, &handler.socket_buffer());
-  handler.set_read_watcher(&adapter);
-  handler.set_process_watcher(&agent);
+  debug_ipc::MessageLoopZircon message_loop;
+  message_loop.Init();
 
-  if (!handler.Start(std::move(router_socket))) {
-    fprintf(stderr, "Can't start thread.\n");
+  debug_ipc::BufferedZxSocket router_buffer;
+  if (!router_buffer.Init(std::move(router_socket))) {
+    fprintf(stderr, "Can't hook up stream.");
     return 1;
   }
 
-  // TODO(brettw) stuff goes here.
+  // Route data from the router_buffer -> RemoteAPIAdapter -> DebugAgent.
+  debug_agent::DebugAgent agent(&router_buffer.stream());
+  debug_agent::RemoteAPIAdapter adapter(&agent, &router_buffer.stream());
+  router_buffer.set_data_available_callback(
+    [&adapter](){ adapter.OnStreamReadable(); });
 
-  fprintf(stderr, "Sleeping...\n");
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(2000)));
-  fprintf(stderr, "Done sleeping, exiting.\n");
-
-  // Ensure the ExceptionHandler doesn't try to use these pointers (the
-  // ExceptionHandler will be destroyed last).
-  handler.Shutdown();
-  handler.set_read_watcher(nullptr);
-  handler.set_process_watcher(nullptr);
-
+  message_loop.Run();
+  message_loop.Cleanup();
   return 0;
 }

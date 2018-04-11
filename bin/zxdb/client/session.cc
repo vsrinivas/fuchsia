@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/client/session.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include "garnet/bin/zxdb/client/process_impl.h"
@@ -133,7 +134,7 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
           process->OnThreadExiting(thread.record);
       } else {
         fprintf(stderr, "Warning: received thread notification for an "
-                "unexpected process.");
+                "unexpected process %" PRIu64 ".", thread.process_koid);
       }
       break;
     }

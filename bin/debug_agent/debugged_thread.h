@@ -62,6 +62,9 @@ class DebuggedThread {
   // Fills in the backtrace if available. Otherwise fills in nothing.
   void GetBacktrace(std::vector<debug_ipc::StackFrame>* frames) const;
 
+  // Sends a notification to the client about the state of this thread.
+  void SendThreadNotification() const;
+
  private:
   enum class AfterBreakpointStep {
     kContinue,  // Resume execution.

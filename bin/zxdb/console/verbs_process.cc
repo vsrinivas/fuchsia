@@ -39,7 +39,11 @@ Err AssertRunnableTarget(Target* target) {
 
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
-void ProcessCommandCallback(const char* verb, Target* target, const Err& err) {
+void ProcessCommandCallback(const char* verb, Target* target,
+                            bool display_message_on_success, const Err& err) {
+  if (!display_message_on_success && !err.has_error())
+    return;
+
   Console* console = Console::get();
 
   OutputBuffer out;
@@ -153,7 +157,7 @@ Err DoRun(ConsoleContext* context, const Command& cmd) {
   }
 
   cmd.target()->Launch([](Target* target, const Err& err) {
-    ProcessCommandCallback("launch", target, err);
+    ProcessCommandCallback("launch", target, true, err);
   });
   return Err();
 }
@@ -184,7 +188,9 @@ Err DoKill(ConsoleContext* context, const Command& cmd) {
     return err;
 
   cmd.target()->Detach([](Target* target, const Err& err) {
-    ProcessCommandCallback("kill", target, err);
+    // The ConsoleContext displays messages for stopped processes, so don't
+    // display messages when successfully killing.
+    ProcessCommandCallback("kill", target, false, err);
   });
   return Err();
 }
@@ -227,7 +233,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
     return err;
 
   cmd.target()->Attach(koid, [](Target* target, const Err& err) {
-    ProcessCommandCallback("attach", target, err);
+    ProcessCommandCallback("attach", target, true, err);
   });
   return Err();
 }
@@ -264,7 +270,9 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
   // context will watch for Process destruction and print messages for each one
   // in the success case.
   cmd.target()->Detach([](Target* target, const Err& err) {
-    ProcessCommandCallback("detach", target, err);
+    // The ConsoleContext displays messages for stopped processes, so don't
+    // display messages when successfully detaching.
+    ProcessCommandCallback("detach", target, false, err);
   });
   return Err();
 }

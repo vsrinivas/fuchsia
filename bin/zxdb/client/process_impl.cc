@@ -22,7 +22,14 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       koid_(koid),
       name_(name),
       weak_thunk_(std::make_shared<WeakThunk<ProcessImpl>>(this)) {}
-ProcessImpl::~ProcessImpl() = default;
+
+ProcessImpl::~ProcessImpl() {
+  // Send notifications for all destroyed threads.
+  for (const auto& thread : threads_) {
+    for (auto& observer : observers())
+      observer.WillDestroyThread(this, thread.second.get());
+  }
+}
 
 ThreadImpl* ProcessImpl::GetThreadImplFromKoid(uint64_t koid) {
   auto found = threads_.find(koid);

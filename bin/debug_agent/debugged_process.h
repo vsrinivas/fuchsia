@@ -10,6 +10,8 @@
 #include <memory>
 
 #include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_agent {
@@ -18,14 +20,21 @@ class DebugAgent;
 class DebuggedThread;
 class ProcessBreakpoint;
 
-class DebuggedProcess {
+class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
  public:
-  DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid, zx::process proc);
-  ~DebuggedProcess();
+  // Caller must call Init immediately after construction and delete the
+  // object if that fails.
+  DebuggedProcess(DebugAgent* debug_agent,
+                  zx_koid_t process_koid,
+                  zx::process proc);
+  virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
   DebugAgent* debug_agent() const { return debug_agent_; }
   zx::process& process() { return process_; }
+
+  // Returns true on success. On failure, the object may not be used further.
+  bool Init();
 
   // IPC handlers.
   void OnPause(const debug_ipc::PauseRequest& request);
@@ -43,25 +52,32 @@ class DebuggedProcess {
   // Returns the thread or null if there is no known thread for this koid.
   DebuggedThread* GetThread(zx_koid_t thread_koid);
 
-  void OnThreadStarting(zx::thread thread, zx_koid_t thread_koid);
-  void OnThreadExiting(zx_koid_t thread_koid);
-
-  // Populates the thread map with the current threads for this process. Used
-  // after an attach where we will not get new thread notifications.
+  // Populates the thread map with the current threads for this process, and
+  // sends the list to the client. Used after an attach where we will not get
+  // new thread notifications.
   void PopulateCurrentThreads();
-
-  // Notification that an exception has happened on the given thread. The
-  // thread will be in a "suspended on exception" state.
-  void OnException(zx_koid_t thread_koid, uint32_t type);
 
   // Looks for a breakpoint that could have generated a software breakpoint
   // at the given address. Returns null if none found.
   ProcessBreakpoint* FindBreakpointForAddr(uint64_t address);
 
  private:
+  // ZirconExceptionWatcher implementation.
+  void OnProcessTerminated(zx_koid_t process_koid) override;
+  void OnThreadStarting(zx_koid_t process_koid,
+                        zx_koid_t thread_koid) override;
+  void OnThreadExiting(zx_koid_t process_koid,
+                       zx_koid_t thread_koid) override;
+  void OnException(zx_koid_t process_koid,
+                   zx_koid_t thread_koid,
+                   uint32_t type) override;
+
   DebugAgent* debug_agent_;  // Non-owning.
   zx_koid_t koid_;
   zx::process process_;
+
+  // Handle for watching the process exceptions.
+  debug_ipc::MessageLoop::WatchHandle process_watch_handle_;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedThread>> threads_;
 

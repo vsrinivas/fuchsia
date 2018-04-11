@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "garnet/bin/debug_agent/handle_read_watcher.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace debug_ipc {
@@ -16,10 +15,13 @@ namespace debug_agent {
 class RemoteAPI;
 
 // Converts a raw stream of input data to a series of RemoteAPI calls.
-class RemoteAPIAdapter : public HandleReadWatcher {
+class RemoteAPIAdapter {
  public:
   // The stream will be used to read input and send replies back to the
-  // client. The pointers must outlive this class (ownership is not taken).
+  // client. The creator must set it up so that OnStreamReadable() is called
+  // whenever there is new data to read on the stream.
+  //
+  // The pointers must outlive this class (ownership is not taken).
   RemoteAPIAdapter(RemoteAPI* remote_api, debug_ipc::StreamBuffer* stream);
 
   ~RemoteAPIAdapter();
@@ -27,8 +29,8 @@ class RemoteAPIAdapter : public HandleReadWatcher {
   RemoteAPI* api() { return api_; }
   debug_ipc::StreamBuffer* stream() { return stream_; }
 
-  // HandleReadWatcher implementation:
-  void OnHandleReadable() override;
+  // Indicates data is available to read on the stream.
+  void OnStreamReadable();
 
  private:
   // All pointers are non-owning.

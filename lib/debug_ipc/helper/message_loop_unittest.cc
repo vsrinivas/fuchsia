@@ -20,8 +20,12 @@ namespace debug_ipc {
 // TODO(brettw) add a timeout when timers are supported in the message loop.
 TEST(MessageLoop, PostQuit) {
   PlatformMessageLoop loop;
+  loop.Init();
+
   loop.PostTask([loop_ptr = &loop]() { loop_ptr->QuitNow(); });
   loop.Run();
+
+  loop.Cleanup();
 }
 
 TEST(MessageLoop, WatchPipeFD) {
@@ -42,20 +46,26 @@ TEST(MessageLoop, WatchPipeFD) {
   };
 
   PlatformMessageLoop loop;
-  ReadableWatcher watcher(&loop);
+  loop.Init();
 
-  // Going to write to pipefd[0] -> read from pipefd[1].
-  MessageLoop::WatchHandle watch_handle =
-      loop.WatchFD(MessageLoop::WatchMode::kRead, pipefd[1], &watcher);
-  ASSERT_TRUE(watch_handle.watching());
+  // Scope everything to before MessageLoop::Cleanup().
+  {
+    ReadableWatcher watcher(&loop);
 
-  // Enqueue a task that should cause pipefd[1] to become readable.
-  loop.PostTask([write_fd = pipefd[0]]() { write(write_fd, "Hello", 5); });
+    // Going to write to pipefd[0] -> read from pipefd[1].
+    MessageLoop::WatchHandle watch_handle =
+        loop.WatchFD(MessageLoop::WatchMode::kRead, pipefd[1], &watcher);
+    ASSERT_TRUE(watch_handle.watching());
 
-  // This will quit on success because the OnFDReadable callback called
-  // QuitNow, or hang forever on failure.
-  // TODO(brettw) add a timeout when timers are supported in the message loop.
-  loop.Run();
+    // Enqueue a task that should cause pipefd[1] to become readable.
+    loop.PostTask([write_fd = pipefd[0]]() { write(write_fd, "Hello", 5); });
+
+    // This will quit on success because the OnFDReadable callback called
+    // QuitNow, or hang forever on failure.
+    // TODO(brettw) add a timeout when timers are supported in the message loop.
+    loop.Run();
+  }
+  loop.Cleanup();
 }
 
 #if defined(__Fuchsia__)
@@ -74,19 +84,25 @@ TEST(MessageLoop, ZirconSocket) {
   };
 
   PlatformMessageLoop loop;
-  ReadableWatcher watcher(&loop);
+  loop.Init();
 
-  MessageLoop::WatchHandle watch_handle =
-      loop.WatchSocket(MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
-  ASSERT_TRUE(watch_handle.watching());
+  // Scope everything to before MessageLoop::Cleanup().
+  {
+    ReadableWatcher watcher(&loop);
 
-  // Enqueue a task that should cause receiver to become readable.
-  loop.PostTask([&sender]() { sender.write(0, "Hello", 5, nullptr); });
+    MessageLoop::WatchHandle watch_handle =
+        loop.WatchSocket(MessageLoop::WatchMode::kRead, receiver.get(), &watcher);
+    ASSERT_TRUE(watch_handle.watching());
 
-  // This will quit on success because the OnSocketReadable callback called
-  // QuitNow, or hang forever on failure.
-  // TODO(brettw) add a timeout when timers are supported in the message loop.
-  loop.Run();
+    // Enqueue a task that should cause receiver to become readable.
+    loop.PostTask([&sender]() { sender.write(0, "Hello", 5, nullptr); });
+
+    // This will quit on success because the OnSocketReadable callback called
+    // QuitNow, or hang forever on failure.
+    // TODO(brettw) add a timeout when timers are supported in the message loop.
+    loop.Run();
+  }
+  loop.Cleanup();
 }
 #endif
 

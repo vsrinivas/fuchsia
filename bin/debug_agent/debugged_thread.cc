@@ -89,7 +89,7 @@ void DebuggedThread::OnException(uint32_t type) {
   // Send notification.
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyException(notify, &writer);
-  debug_agent_->stream().Write(writer.MessageComplete());
+  debug_agent_->stream()->Write(writer.MessageComplete());
 
   // Keep the thread suspended for the client.
 
@@ -144,6 +144,20 @@ void DebuggedThread::GetBacktrace(
   constexpr size_t kMaxStackDepth = 256;
   UnwindStack(process_->process(), thread_, *arch::IPInRegs(&regs),
               *arch::SPInRegs(&regs), kMaxStackDepth, frames);
+}
+
+void DebuggedThread::SendThreadNotification() const {
+  debug_ipc::ThreadRecord record;
+  FillThreadRecord(thread_, &record);
+
+  debug_ipc::NotifyThread notify;
+  notify.process_koid = process_->koid();
+  notify.record = record;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyThread(
+      debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);
+  debug_agent_->stream()->Write(writer.MessageComplete());
 }
 
 void DebuggedThread::UpdateForSoftwareBreakpoint(
