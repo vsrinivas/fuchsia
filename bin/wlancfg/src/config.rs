@@ -43,6 +43,18 @@ impl Config {
         Self::load_data_config().or_else(|_| Self::load_default_config())
     }
 
+    pub fn roles_for_path(&self, path: &str) -> Option<&[Role]> {
+        if let Some(roles) = self.phy.get(path) {
+            println!("found wlan config entry for phy at {}", path);
+            Some(roles)
+        } else if let Some(roles) = self.phy.get("*") {
+            println!("using default wlan config entry for phy");
+            Some(roles)
+        } else {
+            None
+        }
+    }
+
     fn load_data_config() -> Result<Config, Error> {
         let mut file = File::open(CONFIG_FILE).context("could not open config file")?;
         let mut contents = String::new();
