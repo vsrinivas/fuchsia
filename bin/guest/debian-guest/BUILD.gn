@@ -45,6 +45,6 @@ guest_app("debian-guest") {
           path = rebase_path("${image_dir}/rootfs.img")
           dest = disk_name
         } ]
-    block_devices = [ "/pkg/data/${disk_name},ro,volatile" ]
+    block_devices = [ "/guest/data/${disk_name},ro,volatile" ]
   }
 }

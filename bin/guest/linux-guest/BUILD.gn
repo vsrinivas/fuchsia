@@ -75,5 +75,5 @@ guest_app("linux-guest") {
         path = rebase_path("$host_out_dir/linux/disk.img")
         dest = "${disk_name}"
       } ]
-  block_devices = [ "/pkg/data/${disk_name},ro,volatile" ]
+  block_devices = [ "/guest/data/${disk_name},ro,volatile" ]
 }

@@ -1,0 +1,6 @@
+{
+    "packages": {
+        "guest": "//garnet/bin/guest",
+        "guest_runner": "//garnet/bin/guest_runner"
+    }
+}

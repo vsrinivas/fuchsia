@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
       component::ApplicationContext::CreateFromStartupInfo();
 
   GuestConfig cfg;
-  zx_status_t status = read_guest_cfg("/pkg/data/guest.cfg", argc, argv, &cfg);
+  zx_status_t status = read_guest_cfg("/guest/data/guest.cfg", argc, argv, &cfg);
   if (status != ZX_OK) {
     return status;
   }

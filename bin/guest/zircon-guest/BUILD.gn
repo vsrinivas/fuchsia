@@ -52,5 +52,5 @@ guest_app("zircon-guest") {
       dest = gpt_filename
     },
   ]
-  block_devices = [ "/pkg/data/${gpt_filename},ro" ]
+  block_devices = [ "/guest/data/${gpt_filename},ro" ]
 }

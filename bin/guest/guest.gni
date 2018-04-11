@@ -38,19 +38,19 @@ template("guest_app") {
     if (defined(invoker.zircon)) {
       args += [
         "--zircon",
-        "/pkg/data/kernel",
+        "/guest/data/kernel",
       ]
     }
     if (defined(invoker.linux)) {
       args += [
         "--linux",
-        "/pkg/data/kernel",
+        "/guest/data/kernel",
       ]
     }
     if (defined(invoker.ramdisk)) {
       args += [
         "--ramdisk",
-        "/pkg/data/ramdisk",
+        "/guest/data/ramdisk",
       ]
     }
     if (defined(invoker.cmdline)) {
@@ -77,42 +77,20 @@ template("guest_app") {
   package(target_name) {
     deps = [
       ":${guest_config_target_name}",
-      "//garnet/bin/guest:bin",
     ]
     inputs = []
+    resources = []
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
 
-    binary = "guest"
-
     meta = [
       {
-        path = rebase_path("//garnet/bin/guest/meta/sandbox")
-        dest = "sandbox"
-      },
+        path = rebase_path("//garnet/bin/guest/meta/runtime")
+        dest = "runtime"
+      }
     ]
-
-    if (target_cpu == "arm64") {
-      resources = [
-        {
-          path = rebase_path("//garnet/lib/machina/arch/arm64/dts/board.dtb")
-          dest = "board.dtb"
-        },
-      ]
-    } else if (current_cpu == "x64") {
-      resources = [
-        {
-          path = rebase_path("//garnet/lib/machina/arch/x86/asl/dsdt.aml")
-          dest = "dsdt.aml"
-        },
-        {
-          path = rebase_path("//garnet/lib/machina/arch/x86/asl/mcfg.aml")
-          dest = "mcfg.aml"
-        },
-      ]
-    }
 
     # Add kernel resource.
     if (defined(invoker.zircon)) {
