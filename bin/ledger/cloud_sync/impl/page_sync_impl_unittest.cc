@@ -66,7 +66,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class PageSyncImplTest : public gtest::TestWithMessageLoop {
  public:
   PageSyncImplTest()
-      : storage_(&message_loop_),
+      : storage_(message_loop_.async()),
         encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {
     std::unique_ptr<TestSyncStateWatcher> watcher =

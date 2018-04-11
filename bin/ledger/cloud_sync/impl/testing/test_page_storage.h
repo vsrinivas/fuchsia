@@ -10,9 +10,10 @@
 #include <set>
 #include <vector>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/lib/callback/capture.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/ledger/cloud_sync/impl/testing/test_commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
@@ -25,7 +26,7 @@ namespace cloud_sync {
 // Registers the commits marked as synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(fsl::MessageLoop* message_loop);
+  explicit TestPageStorage(async_t* async);
 
   std::unique_ptr<TestCommit> NewCommit(std::string id,
                                         std::string content,
@@ -97,7 +98,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::map<std::string, std::string> sync_metadata;
 
  private:
-  fsl::MessageLoop* message_loop_;
+  async_t* const async_;
 };
 
 }  // namespace cloud_sync

@@ -21,8 +21,7 @@
 #include "peridot/bin/ledger/storage/testing/page_storage_empty_impl.h"
 
 namespace cloud_sync {
-TestPageStorage::TestPageStorage(fsl::MessageLoop* message_loop)
-    : message_loop_(message_loop) {}
+TestPageStorage::TestPageStorage(async_t* async) : async_(async) {}
 
 std::unique_ptr<TestCommit> TestPageStorage::NewCommit(std::string id,
                                                        std::string content,
@@ -46,8 +45,7 @@ void TestPageStorage::SetSyncDelegate(
 void TestPageStorage::GetHeadCommitIds(
     std::function<void(storage::Status, std::vector<storage::CommitId>)>
         callback) {
-  async::PostTask(message_loop_->async(), [this,
-                                           callback = std::move(callback)] {
+  async::PostTask(async_, [this, callback = std::move(callback)] {
     // Current tests only rely on the number of heads, not on the actual
     // ids.
     callback(storage::Status::OK, std::vector<storage::CommitId>(head_count));
@@ -59,16 +57,17 @@ void TestPageStorage::GetCommit(
     std::function<void(storage::Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   if (should_fail_get_commit) {
-    async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+    async::PostTask(async_, [callback = std::move(callback)] {
       callback(storage::Status::IO_ERROR, nullptr);
     });
     return;
   }
 
-  async::PostTask(message_loop_->async(), [this,
-                                           commit_id = commit_id.ToString(),
-                                           callback = std::move(callback)] {
-    callback(storage::Status::OK, std::move(new_commits_to_return[commit_id]));
+  async::PostTask(
+      async_,
+      [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+          callback(storage::Status::OK,
+                   std::move(new_commits_to_return[commit_id]));
   });
   new_commits_to_return.erase(commit_id.ToString());
 }
@@ -79,8 +78,9 @@ void TestPageStorage::AddCommitsFromSync(
   add_commits_from_sync_calls++;
 
   if (should_fail_add_commit_from_sync) {
-    async::PostTask(message_loop_->async(),
-                    [callback]() { callback(storage::Status::IO_ERROR); });
+    async::PostTask(
+      async_,
+      [callback]() { callback(storage::Status::IO_ERROR); });
     return;
   }
 
@@ -98,22 +98,21 @@ void TestPageStorage::AddCommitsFromSync(
                   }),
               unsynced_commits_to_return.end());
         }
-        async::PostTask(message_loop_->async(),
-                        [callback = std::move(callback)] {
-                          callback(storage::Status::OK);
-                        });
+        async::PostTask(
+          async_,
+          [callback = std::move(callback)] { callback(storage::Status::OK); });
       });
   if (should_delay_add_commit_confirmation) {
     delayed_add_commit_confirmations.push_back(move(confirm));
     return;
   }
-  async::PostTask(message_loop_->async(), confirm);
+  async::PostTask(async_, confirm);
 }
 
 void TestPageStorage::GetUnsyncedPieces(
     std::function<void(storage::Status, std::vector<storage::ObjectIdentifier>)>
         callback) {
-  async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+  async::PostTask(async_, [callback = std::move(callback)] {
     callback(storage::Status::OK, std::vector<storage::ObjectIdentifier>());
   });
 }
@@ -136,7 +135,7 @@ void TestPageStorage::GetUnsyncedCommits(
                        std::vector<std::unique_ptr<const storage::Commit>>)>
         callback) {
   if (should_fail_get_unsynced_commits) {
-    async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+    async::PostTask(async_, [callback = std::move(callback)] {
       callback(storage::Status::IO_ERROR, {});
     });
     return;
@@ -148,7 +147,7 @@ void TestPageStorage::GetUnsyncedCommits(
                  [](const std::unique_ptr<const storage::Commit>& commit) {
                    return commit->Clone();
                  });
-  async::PostTask(message_loop_->async(),
+  async::PostTask(async_,
                   fxl::MakeCopyable([results = std::move(results),
                                      callback = std::move(callback)]() mutable {
                     callback(storage::Status::OK, std::move(results));
@@ -166,7 +165,7 @@ void TestPageStorage::MarkCommitSynced(
           }),
       unsynced_commits_to_return.end());
   commits_marked_as_synced.insert(commit_id);
-  async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+  async::PostTask(async_, [callback = std::move(callback)] {
     callback(storage::Status::OK);
   });
 }
@@ -176,7 +175,7 @@ void TestPageStorage::SetSyncMetadata(
     fxl::StringView value,
     std::function<void(storage::Status)> callback) {
   sync_metadata[key.ToString()] = value.ToString();
-  async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+  async::PostTask(async_, [callback = std::move(callback)] {
     callback(storage::Status::OK);
   });
 }
@@ -186,15 +185,16 @@ void TestPageStorage::GetSyncMetadata(
     std::function<void(storage::Status, std::string)> callback) {
   auto it = sync_metadata.find(key.ToString());
   if (it == sync_metadata.end()) {
-    async::PostTask(message_loop_->async(), [callback = std::move(callback)] {
+    async::PostTask(async_, [callback = std::move(callback)] {
       callback(storage::Status::NOT_FOUND, "");
     });
     return;
   }
-  async::PostTask(message_loop_->async(),
-                  [callback = std::move(callback), metadata = it->second] {
-                    callback(storage::Status::OK, metadata);
-                  });
+  async::PostTask(
+      async_,
+      [callback = std::move(callback), metadata = it->second] {
+        callback(storage::Status::OK, metadata);
+  });
 }
 
 }  // namespace cloud_sync

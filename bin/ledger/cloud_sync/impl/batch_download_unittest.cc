@@ -11,7 +11,6 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/cloud_sync/impl/constants.h"
@@ -29,19 +28,18 @@ namespace {
 // synced.
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
-  explicit TestPageStorage(fsl::MessageLoop* message_loop)
-      : message_loop_(message_loop) {}
+  explicit TestPageStorage(async_t* async) : async_(async) {}
 
   void AddCommitsFromSync(
       std::vector<storage::PageStorage::CommitIdAndBytes> ids_and_bytes,
       std::function<void(storage::Status status)> callback) override {
     if (should_fail_add_commit_from_sync) {
-      async::PostTask(message_loop_->async(),
+      async::PostTask(async_,
                       [callback]() { callback(storage::Status::IO_ERROR); });
       return;
     }
     async::PostTask(
-        message_loop_->async(),
+        async_,
         fxl::MakeCopyable([this, ids_and_bytes = std::move(ids_and_bytes),
                            callback]() mutable {
           for (auto& commit : ids_and_bytes) {
@@ -55,8 +53,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                        fxl::StringView value,
                        std::function<void(storage::Status)> callback) override {
     sync_metadata[key.ToString()] = value.ToString();
-    async::PostTask(message_loop_->async(),
-                    [callback]() { callback(storage::Status::OK); });
+    async::PostTask(async_, [callback]() { callback(storage::Status::OK); });
   }
 
   bool should_fail_add_commit_from_sync = false;
@@ -64,13 +61,14 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   std::map<std::string, std::string> sync_metadata;
 
  private:
-  fsl::MessageLoop* message_loop_;
+  async_t* const async_;
 };
 
 class BatchDownloadTest : public gtest::TestWithMessageLoop {
  public:
   BatchDownloadTest()
-      : storage_(&message_loop_), encryption_service_(message_loop_.async()) {}
+      : storage_(message_loop_.async()),
+                 encryption_service_(message_loop_.async()) {}
   ~BatchDownloadTest() override {}
 
  protected:

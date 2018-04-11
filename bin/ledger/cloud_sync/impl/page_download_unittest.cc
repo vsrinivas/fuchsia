@@ -38,7 +38,7 @@ class BasePageDownloadTest : public gtest::TestWithMessageLoop,
                              public PageDownload::Delegate {
  public:
   BasePageDownloadTest()
-      : storage_(&message_loop_),
+      : storage_(message_loop_.async()),
         encryption_service_(message_loop_.async()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(message_loop_.async()) {
