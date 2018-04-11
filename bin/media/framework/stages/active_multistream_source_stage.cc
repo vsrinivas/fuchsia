@@ -70,7 +70,7 @@ GenericNode* ActiveMultistreamSourceStageImpl::GetGenericNode() {
 }
 
 void ActiveMultistreamSourceStageImpl::Update() {
-  std::lock_guard<std::mutex> locker(mutex_);
+  fbl::AutoLock lock(&mutex_);
 
   FXL_DCHECK(outputs_.size() == packets_per_output_.size());
 
@@ -78,6 +78,11 @@ void ActiveMultistreamSourceStageImpl::Update() {
 
   for (size_t i = 0; i < outputs_.size(); i++) {
     Output& output = outputs_[i];
+
+    if (!output.connected()) {
+      continue;
+    }
+
     std::deque<PacketPtr>& packets = packets_per_output_[i];
 
     if (packets.empty()) {
@@ -107,7 +112,7 @@ void ActiveMultistreamSourceStageImpl::FlushInput(size_t index,
 }
 
 void ActiveMultistreamSourceStageImpl::FlushOutput(size_t index) {
-  std::lock_guard<std::mutex> locker(mutex_);
+  fbl::AutoLock lock(&mutex_);
   FXL_DCHECK(index < outputs_.size());
   FXL_DCHECK(source_);
   packets_per_output_[index].clear();
@@ -121,7 +126,7 @@ void ActiveMultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {
 
 void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
                                                     PacketPtr packet) {
-  mutex_.lock();
+  fbl::AutoLock lock(&mutex_);
   FXL_DCHECK(output_index < outputs_.size());
   FXL_DCHECK(outputs_.size() == packets_per_output_.size());
   FXL_DCHECK(packet);
@@ -129,7 +134,6 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
   if (!packet_request_outstanding_) {
     // We requested a packet, then changed our minds due to a flush. Discard
     // the packet.
-    mutex_.unlock();
     return;
   }
 
@@ -137,6 +141,14 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
 
   if (packet->end_of_stream()) {
     ++ended_streams_;
+  }
+
+  if (!outputs_[output_index].connected()) {
+    // The output in question isn't connected. Discard the packet and request
+    // another.
+    source_->RequestPacket();
+    packet_request_outstanding_ = true;
+    return;
   }
 
   // We put new packets in per-output (per-stream) queues. That way, when
@@ -150,7 +162,7 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
     // We have a packet for an output with non-negative demand that didn't
     // have one before. Request an update. Update will request another
     // packet, if needed.
-    mutex_.unlock();
+    lock.release();
     NeedsUpdate();
   } else {
     // We got a packet, but it doesn't change matters, either because the
@@ -159,7 +171,6 @@ void ActiveMultistreamSourceStageImpl::SupplyPacket(size_t output_index,
     // We can request another packet without having to go through an update.
     source_->RequestPacket();
     packet_request_outstanding_ = true;
-    mutex_.unlock();
   }
 }
 
