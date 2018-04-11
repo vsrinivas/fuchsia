@@ -544,15 +544,15 @@ syscall mtrace_control
 # Legacy LK debug syscalls
 
 syscall debug_read
-    (handle: zx_handle_t, buffer: any[length] OUT, length: uint32_t)
+    (handle: zx_handle_t, buffer: char[length] OUT, length: size_t[1] INOUT)
     returns (zx_status_t);
 
 syscall debug_write
-    (buffer: any[length] IN, length: uint32_t)
+    (buffer: char[length] IN, length: size_t)
     returns (zx_status_t);
 
 syscall debug_send_command
-    (resource_handle: zx_handle_t, buffer: any[length] IN, length: uint32_t)
+    (resource_handle: zx_handle_t, buffer: char[length] IN, length: size_t)
     returns (zx_status_t);
 
 # DDK Syscalls: Interrupts

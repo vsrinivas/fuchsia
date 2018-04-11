@@ -49,10 +49,11 @@ static void fifo_write(uint8_t x) {
 
 static int debug_reader(void* arg) {
     zx_device_t* dev = arg;
-    uint8_t ch;
+    char ch;
     for (;;) {
-        zx_status_t status = zx_debug_read(get_root_resource(), (void*)&ch, 1);
-        if (status == 1) {
+        size_t length = 1;
+        zx_status_t status = zx_debug_read(get_root_resource(), &ch, &length);
+        if (status == ZX_OK && length == 1) {
             mtx_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);
@@ -60,7 +61,9 @@ static int debug_reader(void* arg) {
             fifo_write(ch);
             mtx_unlock(&fifo.lock);
         } else {
-            printf("console: error %d from zx_debug_read syscall, exiting.\n", status);
+            printf("console: error %d, length %zu from zx_debug_read syscall, exiting.\n",
+                    status, length);
+
             return status;
         }
     }
