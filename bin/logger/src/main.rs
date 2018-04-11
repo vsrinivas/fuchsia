@@ -227,9 +227,11 @@ fn main_wrapper() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::{AtomicBool, Ordering};
+    extern crate timebomb;
 
+    use self::timebomb::timeout_ms;
     use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use fidl_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker, LogProxy,
                       LogSinkProxy};
@@ -409,9 +411,11 @@ mod tests {
 
     fn filter_test_helper(
         expected: Vec<LogMessage>, packets: Vec<fx_log_packet_t>,
-        filter_options: Option<Box<LogFilterOptions>>,
+        filter_options: Option<Box<LogFilterOptions>>, test_name: &str,
     ) {
+        println!("DEBUG: {}: setup test", test_name);
         let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
+        println!("DEBUG: {}: call connect", test_name);
         log_sink_proxy
             .connect(&mut sout)
             .expect("unable to connect");
@@ -420,178 +424,225 @@ mod tests {
             expected: expected,
             done: done.clone(),
         };
+        println!("DEBUG: {}: call setup_listener", test_name);
         setup_listener(ls, log_proxy, filter_options);
+        println!("DEBUG: {}: call write", test_name);
         for mut p in packets {
             sin.write(to_u8_slice(&mut p)).unwrap();
         }
-
+        println!("DEBUG: {}: write returned", test_name);
         let tries = 100;
+
         for _ in 0..tries {
             if done.load(Ordering::Relaxed) {
                 break;
             }
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
+            println!("DEBUG: {}: wait on executor", test_name);
             executor.run(timeout, 2).unwrap();
+            println!("DEBUG: {}: executor returned", test_name);
         }
         assert!(
             done.load(Ordering::Relaxed),
             "task should have completed by now"
         );
+        println!("DEBUG: {}: assert done", test_name);
     }
+
+    const TEST_TIMEOUT: u32 = 5000; // in ms
 
     #[test]
     fn test_filter_by_pid() {
-        let p = setup_default_packet();
-        let mut p2 = p.clone();
-        p2.metadata.pid = 0;
-        let lm = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            dropped_logs: p.metadata.dropped_logs,
-            severity: p.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-        let options = Box::new(LogFilterOptions {
-            filter_by_pid: true,
-            pid: 1,
-            filter_by_tid: false,
-            tid: 0,
-            min_severity: LogLevelFilter::None,
-            verbosity: 0,
-            tags: vec![],
-        });
-        filter_test_helper(vec![lm], vec![p, p2], Some(options));
+        timeout_ms(
+            || {
+                let p = setup_default_packet();
+                let mut p2 = p.clone();
+                p2.metadata.pid = 0;
+                let lm = LogMessage {
+                    pid: p.metadata.pid,
+                    tid: p.metadata.tid,
+                    time: p.metadata.time,
+                    dropped_logs: p.metadata.dropped_logs,
+                    severity: p.metadata.severity,
+                    msg: String::from("BBBBB"),
+                    tags: vec![String::from("AAAAA")],
+                };
+                let options = Box::new(LogFilterOptions {
+                    filter_by_pid: true,
+                    pid: 1,
+                    filter_by_tid: false,
+                    tid: 0,
+                    min_severity: LogLevelFilter::None,
+                    verbosity: 0,
+                    tags: vec![],
+                });
+                filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_pid");
+            },
+            TEST_TIMEOUT,
+        );
     }
 
     #[test]
     fn test_filter_by_tid() {
-        let mut p = setup_default_packet();
-        p.metadata.pid = 0;
-        let mut p2 = p.clone();
-        p2.metadata.tid = 0;
-        let lm = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            dropped_logs: p.metadata.dropped_logs,
-            severity: p.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-        let options = Box::new(LogFilterOptions {
-            filter_by_pid: false,
-            pid: 1,
-            filter_by_tid: true,
-            tid: 1,
-            min_severity: LogLevelFilter::None,
-            verbosity: 0,
-            tags: vec![],
-        });
-        filter_test_helper(vec![lm], vec![p, p2], Some(options));
+        timeout_ms(
+            || {
+                let mut p = setup_default_packet();
+                p.metadata.pid = 0;
+                let mut p2 = p.clone();
+                p2.metadata.tid = 0;
+                let lm = LogMessage {
+                    pid: p.metadata.pid,
+                    tid: p.metadata.tid,
+                    time: p.metadata.time,
+                    dropped_logs: p.metadata.dropped_logs,
+                    severity: p.metadata.severity,
+                    msg: String::from("BBBBB"),
+                    tags: vec![String::from("AAAAA")],
+                };
+                let options = Box::new(LogFilterOptions {
+                    filter_by_pid: false,
+                    pid: 1,
+                    filter_by_tid: true,
+                    tid: 1,
+                    min_severity: LogLevelFilter::None,
+                    verbosity: 0,
+                    tags: vec![],
+                });
+                filter_test_helper(vec![lm], vec![p, p2], Some(options), "test_filter_by_tid");
+            },
+            TEST_TIMEOUT,
+        );
     }
 
     #[test]
     fn test_filter_by_min_severity() {
-        let p = setup_default_packet();
-        let mut p2 = p.clone();
-        p2.metadata.pid = 0;
-        p2.metadata.tid = 0;
-        p2.metadata.severity = FX_LOG_ERROR;
-        let lm = LogMessage {
-            pid: p2.metadata.pid,
-            tid: p2.metadata.tid,
-            time: p2.metadata.time,
-            dropped_logs: p2.metadata.dropped_logs,
-            severity: p2.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-        let options = Box::new(LogFilterOptions {
-            filter_by_pid: false,
-            pid: 1,
-            filter_by_tid: false,
-            tid: 1,
-            min_severity: LogLevelFilter::Error,
-            verbosity: 0,
-            tags: vec![],
-        });
-        filter_test_helper(vec![lm], vec![p, p2], Some(options));
+        timeout_ms(
+            || {
+                let p = setup_default_packet();
+                let mut p2 = p.clone();
+                p2.metadata.pid = 0;
+                p2.metadata.tid = 0;
+                p2.metadata.severity = FX_LOG_ERROR;
+                let lm = LogMessage {
+                    pid: p2.metadata.pid,
+                    tid: p2.metadata.tid,
+                    time: p2.metadata.time,
+                    dropped_logs: p2.metadata.dropped_logs,
+                    severity: p2.metadata.severity,
+                    msg: String::from("BBBBB"),
+                    tags: vec![String::from("AAAAA")],
+                };
+                let options = Box::new(LogFilterOptions {
+                    filter_by_pid: false,
+                    pid: 1,
+                    filter_by_tid: false,
+                    tid: 1,
+                    min_severity: LogLevelFilter::Error,
+                    verbosity: 0,
+                    tags: vec![],
+                });
+                filter_test_helper(
+                    vec![lm],
+                    vec![p, p2],
+                    Some(options),
+                    "test_filter_by_min_severity",
+                );
+            },
+            TEST_TIMEOUT,
+        );
     }
 
     #[test]
     fn test_filter_by_combination() {
-        let mut p = setup_default_packet();
-        p.metadata.pid = 0;
-        p.metadata.tid = 0;
-        let mut p2 = p.clone();
-        p2.metadata.severity = FX_LOG_ERROR;
-        let mut p3 = p.clone();
-        p3.metadata.pid = 1;
-        let lm = LogMessage {
-            pid: p2.metadata.pid,
-            tid: p2.metadata.tid,
-            time: p2.metadata.time,
-            dropped_logs: p2.metadata.dropped_logs,
-            severity: p2.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("AAAAA")],
-        };
-        let options = Box::new(LogFilterOptions {
-            filter_by_pid: true,
-            pid: 0,
-            filter_by_tid: false,
-            tid: 1,
-            min_severity: LogLevelFilter::Error,
-            verbosity: 0,
-            tags: vec![],
-        });
-        filter_test_helper(vec![lm], vec![p, p2, p3], Some(options));
+        timeout_ms(
+            || {
+                let mut p = setup_default_packet();
+                p.metadata.pid = 0;
+                p.metadata.tid = 0;
+                let mut p2 = p.clone();
+                p2.metadata.severity = FX_LOG_ERROR;
+                let mut p3 = p.clone();
+                p3.metadata.pid = 1;
+                let lm = LogMessage {
+                    pid: p2.metadata.pid,
+                    tid: p2.metadata.tid,
+                    time: p2.metadata.time,
+                    dropped_logs: p2.metadata.dropped_logs,
+                    severity: p2.metadata.severity,
+                    msg: String::from("BBBBB"),
+                    tags: vec![String::from("AAAAA")],
+                };
+                let options = Box::new(LogFilterOptions {
+                    filter_by_pid: true,
+                    pid: 0,
+                    filter_by_tid: false,
+                    tid: 1,
+                    min_severity: LogLevelFilter::Error,
+                    verbosity: 0,
+                    tags: vec![],
+                });
+                filter_test_helper(
+                    vec![lm],
+                    vec![p, p2, p3],
+                    Some(options),
+                    "test_filter_by_combination",
+                );
+            },
+            TEST_TIMEOUT,
+        );
     }
 
     #[test]
     fn test_filter_by_tags() {
-        let mut p = setup_default_packet();
-        let mut p2 = p.clone();
-        // p tags - "DDDDD"
-        memset(&mut p.data[..], 1, 68, 5);
+        timeout_ms(
+            || {
+                let mut p = setup_default_packet();
+                let mut p2 = p.clone();
+                // p tags - "DDDDD"
+                memset(&mut p.data[..], 1, 68, 5);
 
-        p2.metadata.pid = 0;
-        p2.metadata.tid = 0;
-        p2.data[6] = 5;
-        // p2 tag - "AAAAA", "BBBBB"
-        // p2 msg - "CCCCC"
-        memset(&mut p2.data[..], 13, 67, 5);
+                p2.metadata.pid = 0;
+                p2.metadata.tid = 0;
+                p2.data[6] = 5;
+                // p2 tag - "AAAAA", "BBBBB"
+                // p2 msg - "CCCCC"
+                memset(&mut p2.data[..], 13, 67, 5);
 
-        let lm1 = LogMessage {
-            pid: p.metadata.pid,
-            tid: p.metadata.tid,
-            time: p.metadata.time,
-            dropped_logs: p.metadata.dropped_logs,
-            severity: p.metadata.severity,
-            msg: String::from("BBBBB"),
-            tags: vec![String::from("DDDDD")],
-        };
-        let lm2 = LogMessage {
-            pid: p2.metadata.pid,
-            tid: p2.metadata.tid,
-            time: p2.metadata.time,
-            dropped_logs: p2.metadata.dropped_logs,
-            severity: p2.metadata.severity,
-            msg: String::from("CCCCC"),
-            tags: vec![String::from("AAAAA"), String::from("BBBBB")],
-        };
-        let options = Box::new(LogFilterOptions {
-            filter_by_pid: false,
-            pid: 1,
-            filter_by_tid: false,
-            tid: 1,
-            min_severity: LogLevelFilter::None,
-            verbosity: 0,
-            tags: vec![String::from("BBBBB"), String::from("DDDDD")],
-        });
-
-        filter_test_helper(vec![lm1, lm2], vec![p, p2], Some(options));
+                let lm1 = LogMessage {
+                    pid: p.metadata.pid,
+                    tid: p.metadata.tid,
+                    time: p.metadata.time,
+                    dropped_logs: p.metadata.dropped_logs,
+                    severity: p.metadata.severity,
+                    msg: String::from("BBBBB"),
+                    tags: vec![String::from("DDDDD")],
+                };
+                let lm2 = LogMessage {
+                    pid: p2.metadata.pid,
+                    tid: p2.metadata.tid,
+                    time: p2.metadata.time,
+                    dropped_logs: p2.metadata.dropped_logs,
+                    severity: p2.metadata.severity,
+                    msg: String::from("CCCCC"),
+                    tags: vec![String::from("AAAAA"), String::from("BBBBB")],
+                };
+                let options = Box::new(LogFilterOptions {
+                    filter_by_pid: false,
+                    pid: 1,
+                    filter_by_tid: false,
+                    tid: 1,
+                    min_severity: LogLevelFilter::None,
+                    verbosity: 0,
+                    tags: vec![String::from("BBBBB"), String::from("DDDDD")],
+                });
+                filter_test_helper(
+                    vec![lm1, lm2],
+                    vec![p, p2],
+                    Some(options),
+                    "test_filter_by_tags",
+                );
+            },
+            TEST_TIMEOUT,
+        );
     }
 }
