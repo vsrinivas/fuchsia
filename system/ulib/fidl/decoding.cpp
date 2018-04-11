@@ -64,16 +64,24 @@ private:
     // Returns true when the buffer space is claimed, and false when
     // the requested claim is too large for bytes_.
     bool ClaimOutOfLineStorage(uint32_t size, uint32_t* out_offset) {
+        static constexpr uint32_t mask = FIDL_ALIGNMENT - 1;
+
         // We have to manually maintain alignment here. For example, a pointer
         // to a struct that is 4 bytes still needs to advance the next
         // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
         // property.
-        uint64_t aligned_offset = fidl::FidlAlign(out_of_line_offset_ + size);
-        if (aligned_offset > static_cast<uint64_t>(num_bytes_)) {
+        uint32_t offset = out_of_line_offset_;
+        if (add_overflow(offset, size, &offset) ||
+            add_overflow(offset, mask, &offset)) {
             return false;
         }
-        *out_offset = static_cast<uint32_t>(out_of_line_offset_);
-        out_of_line_offset_ = static_cast<uint32_t>(aligned_offset);
+        offset &= ~mask;
+
+        if (offset > num_bytes_) {
+            return false;
+        }
+        *out_offset = out_of_line_offset_;
+        out_of_line_offset_ = offset;
         return true;
     }
 
