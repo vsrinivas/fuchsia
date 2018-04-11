@@ -42,6 +42,10 @@ DefinitionBlock ("dsdt.aml", "DSDT", 2, "ZX", "ZX DSDT", 0x0)
                 Package() { 0x0009ffff, 0, Zero, 41 },
                 Package() { 0x000affff, 0, Zero, 42 },
                 Package() { 0x000bffff, 0, Zero, 43 },
+                Package() { 0x000cffff, 0, Zero, 44 },
+                Package() { 0x000dffff, 0, Zero, 45 },
+                Package() { 0x000effff, 0, Zero, 46 },
+                Package() { 0x000fffff, 0, Zero, 47 },
             })
 
             NAME(_CRS, ResourceTemplate() {                         // _CRS: Current Resource Setting

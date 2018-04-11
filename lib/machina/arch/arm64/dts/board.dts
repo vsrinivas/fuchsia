@@ -95,7 +95,11 @@
                     <0x4000 0 0 1 &gic 0 8 4>,  // HIGH MID LOW WIRE GIC SPI 40 HIGH/CPU-0
                     <0x4800 0 0 1 &gic 0 9 4>,  // HIGH MID LOW WIRE GIC SPI 41 HIGH/CPU-0
                     <0x5000 0 0 1 &gic 0 10 4>, // HIGH MID LOW WIRE GIC SPI 42 HIGH/CPU-0
-                    <0x5800 0 0 1 &gic 0 11 4>; // HIGH MID LOW WIRE GIC SPI 43 HIGH/CPU-0
+                    <0x5800 0 0 1 &gic 0 11 4>, // HIGH MID LOW WIRE GIC SPI 43 HIGH/CPU-0
+                    <0x6000 0 0 1 &gic 0 12 4>, // HIGH MID LOW WIRE GIC SPI 44 HIGH/CPU-0
+                    <0x6800 0 0 1 &gic 0 13 4>, // HIGH MID LOW WIRE GIC SPI 45 HIGH/CPU-0
+                    <0x7000 0 0 1 &gic 0 14 4>, // HIGH MID LOW WIRE GIC SPI 46 HIGH/CPU-0
+                    <0x7800 0 0 1 &gic 0 15 4>; // HIGH MID LOW WIRE GIC SPI 47 HIGH/CPU-0
     #address-cells = <3>;
     #size-cells = <2>;
     #interrupt-cells = <1>;

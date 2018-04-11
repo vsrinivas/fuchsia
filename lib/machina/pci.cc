@@ -51,10 +51,10 @@ constexpr uint8_t kPciCapNextOffset = 1;
 // These are provided to the guest via the /pci@10000000 node within the device
 // tree, and via the _SB section in the DSDT ACPI table.
 //
-// The device tree and DSDT define interrupts for 12 devices (IRQ 32-43).
+// The device tree and DSDT define interrupts for 12 devices (IRQ 32-47).
 // Adding  additional devices beyond that will require updates to both.
 constexpr uint32_t kPciGlobalIrqAssigments[PCI_MAX_DEVICES] = {
-    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
+    32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47};
 
 uint32_t PciBar::aspace() const {
   switch (trap_type) {
@@ -157,8 +157,10 @@ void PciBus::set_config_addr(uint32_t addr) {
 }
 
 zx_status_t PciBus::Connect(PciDevice* device) {
-  if (next_open_slot_ >= PCI_MAX_DEVICES)
+  if (next_open_slot_ >= PCI_MAX_DEVICES) {
+    FXL_LOG(ERROR) << "Out of PCI devices";
     return ZX_ERR_OUT_OF_RANGE;
+  }
   ZX_DEBUG_ASSERT(device_[next_open_slot_] == nullptr);
   size_t slot = next_open_slot_++;
 
