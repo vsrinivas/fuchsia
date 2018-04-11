@@ -28,9 +28,8 @@ $ hcitool read-bdaddr
 ## btsnoop
 
 `btsnoop` uses the snoop channel of a specified bt-hci device (`/dev/class/bt-hci/000` by
-default) and writes HCI traffic to a file (`/tmp/btsnoop.log` by default) using the [BTSnoop file
-format](http://www.fte.com/webhelp/bpa600/Content/Technical_Information/BT_Snoop_File_Format.htm).
-The captured packets can be visualized using any protocol analyzer that supports BTSnoop (e.g.
+default) and writes HCI traffic to a file (`/tmp/btsnoop.log` by default) supporting both [BTSnoop](http://www.fte.com/webhelp/bpa600/Content/Technical_Information/BT_Snoop_File_Format.htm)
+and pcap formats. The captured packets can be visualized using any protocol analyzer that supports BTSnoop or pcap (e.g.
 Wireshark).
 
 The following command will sniff all HCI traffic to/from `/dev/class/bt-hci/001` and write it to
@@ -41,7 +40,13 @@ This will monitor `/dev/class/bt-hci/000` and output the traffic to `/tmp/btsnoo
 $ btsnoop
 ```
 
-To specify a custom HCI device and output location:
+To initiate a live capture using Wireshark (on host):
+
+```
+$ fx shell btsnoop --format pcap | wireshark -k -i -
+```
+
+To specify a custom HCI device and output location (on device):
 ```
 $ btsnoop --path=/my/custom/path --dev=/dev/class/bt-hci/005
 ```
