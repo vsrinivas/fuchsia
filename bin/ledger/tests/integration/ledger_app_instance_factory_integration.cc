@@ -4,17 +4,15 @@
 
 #include <memory>
 #include <string>
-#include <thread>
 
 #include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/handles/object_info.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
@@ -30,58 +28,11 @@ namespace test {
 namespace integration {
 namespace {
 
-
-// TODO(ZX-1819): Delete the following two functions once there is no
-//longer a dependency on Environment's main_runner() method.
-void RunMessageLoop(std::mutex* mtx,
-                    std::condition_variable* cv,
-                    fxl::RefPtr<fxl::TaskRunner>* out_task_runner,
-                    async_t** out_dispatcher) {
-  fsl::SetCurrentThreadName("message_loop");
-
-  fsl::MessageLoop message_loop;
-  {
-    std::lock_guard<std::mutex> lock(*mtx);
-    *out_task_runner = message_loop.task_runner();
-    *out_dispatcher = message_loop.async();
-  }
-  cv->notify_one();
-
-  message_loop.Run();
-}
-
-// This method blocks until the thread is spawned and provides us with an
- // async dispatcher pointer.
-std::thread CreateThread(fxl::RefPtr<fxl::TaskRunner>* out_task_runner,
-                         async_t** out_dispatcher) {
-  FXL_DCHECK(out_task_runner);
-  FXL_DCHECK(out_dispatcher);
-
-  std::mutex mtx;
-  std::condition_variable cv;
-
-  fxl::RefPtr<fxl::TaskRunner> task_runner;
-  async_t* dispatcher = nullptr;
-  std::thread thrd(RunMessageLoop, &mtx, &cv, &task_runner, &dispatcher);
-
-  std::unique_lock<std::mutex> lock(mtx);
-  cv.wait(lock, [&dispatcher] { return dispatcher != nullptr; });
-
-  FXL_DCHECK(task_runner);
-  FXL_DCHECK(dispatcher);
-  *out_task_runner = task_runner;
-  *out_dispatcher = dispatcher;
-
-  return thrd;
-}
-
-
-
 class LedgerAppInstanceImpl final
     : public LedgerAppInstanceFactory::LedgerAppInstance {
  public:
   LedgerAppInstanceImpl(
-      fxl::RefPtr<fxl::TaskRunner> services_task_runner,
+      async_t* services_dispatcher,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
           repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -95,7 +46,6 @@ class LedgerAppInstanceImpl final
   class LedgerRepositoryFactoryContainer {
    public:
     LedgerRepositoryFactoryContainer(
-        fxl::RefPtr<fxl::TaskRunner> task_runner,
         async_t* async,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request)
@@ -114,18 +64,16 @@ class LedgerAppInstanceImpl final
 
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
 
-  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
-  std::thread thread_;
+  async::Loop loop_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
-  async_t* async_;
+  async_t* services_dispatcher_;
   ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                           ledger::FakeCloudProvider>* const
       cloud_provider_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
-    fxl::RefPtr<fxl::TaskRunner> services_task_runner,
+    async_t* services_dispatcher,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
         repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory>
@@ -136,19 +84,19 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     : test::LedgerAppInstanceFactory::LedgerAppInstance(
           integration::RandomArray(1),
           std::move(repository_factory_ptr)),
-      services_task_runner_(std::move(services_task_runner)),
+      services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider) {
-  thread_ = CreateThread(&task_runner_, &async_);
-  async::PostTask(async_, fxl::MakeCopyable(
+  loop_.StartThread();
+  async::PostTask(loop_.async(), fxl::MakeCopyable(
       [this, request = std::move(repository_factory_request)]() mutable {
         factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            task_runner_, async_, std::move(request));
+            loop_.async(), std::move(request));
       }));
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   cloud_provider::CloudProviderPtr cloud_provider;
-  services_task_runner_->PostTask(fxl::MakeCopyable(
+  async::PostTask(services_dispatcher_, fxl::MakeCopyable(
       [this, request = cloud_provider.NewRequest()]() mutable {
         cloud_provider_->AddBinding(std::move(request));
       }));
@@ -156,11 +104,11 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
 }
 
 LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
-  async::PostTask(async_, [this]() {
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+  async::PostTask(loop_.async(), [this] {
     factory_container_.reset();
+    loop_.Quit();
   });
-  thread_.join();
+  loop_.JoinThreads();
 }
 
 }  // namespace
@@ -179,9 +127,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
 
  private:
-  // Thread used to run services.
-  std::thread services_thread_;
-  fxl::RefPtr<fxl::TaskRunner> services_task_runner_;
+  // Loop on which to run services.
+  async::Loop services_loop_;
   std::string server_id_ = "server-id";
   ledger::fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider,
                                           ledger::FakeCloudProvider>
@@ -189,13 +136,12 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 };
 
 void LedgerAppInstanceFactoryImpl::Init() {
-  services_thread_ = fsl::CreateThread(&services_task_runner_);
+  services_loop_.StartThread();
 }
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
-  services_task_runner_->PostTask(
-      [] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  services_thread_.join();
+  services_loop_.Quit();
+  services_loop_.JoinThreads();
 }
 
 void LedgerAppInstanceFactoryImpl::SetServerId(std::string server_id) {
@@ -209,7 +155,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
       repository_factory_request = repository_factory_ptr.NewRequest();
 
   auto result = std::make_unique<LedgerAppInstanceImpl>(
-      services_task_runner_, std::move(repository_factory_request),
+      services_loop_.async(), std::move(repository_factory_request),
       std::move(repository_factory_ptr), &cloud_provider_);
   return result;
 }
