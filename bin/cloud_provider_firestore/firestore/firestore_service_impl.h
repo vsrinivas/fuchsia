@@ -14,6 +14,7 @@
 #include "lib/fxl/functional/closure.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/listen_call.h"
+#include "peridot/bin/cloud_provider_firestore/grpc/read_stream_drainer.h"
 
 namespace cloud_provider_firestore {
 
@@ -53,6 +54,11 @@ using ListDocumentsResponseCall =
     SingleResponseCall<google::firestore::v1beta1::ListDocumentsResponse>;
 
 using EmptyResponseCall = SingleResponseCall<google::protobuf::Empty>;
+
+using RunQueryCall =
+    ReadStreamDrainer<grpc::ClientAsyncReaderInterface<
+                          google::firestore::v1beta1::RunQueryResponse>,
+                      google::firestore::v1beta1::RunQueryResponse>;
 
 // Implementation of the FirestoreService interface.
 //
@@ -101,6 +107,13 @@ class FirestoreServiceImpl : public FirestoreService {
                                  google::firestore::v1beta1::CommitResponse)>
                   callback) override;
 
+  void RunQuery(google::firestore::v1beta1::RunQueryRequest request,
+                std::shared_ptr<grpc::CallCredentials> call_credentials,
+                std::function<void(
+                    grpc::Status,
+                    std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+                    callback) override;
+
   std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,
       ListenCallClient* client) override;
@@ -120,12 +133,17 @@ class FirestoreServiceImpl : public FirestoreService {
   std::unique_ptr<google::firestore::v1beta1::Firestore::Stub> firestore_;
   grpc::CompletionQueue cq_;
 
+  // Single-request single-response calls.
   callback::AutoCleanableSet<DocumentResponseCall> document_response_calls_;
   callback::AutoCleanableSet<CommitResponseCall> commit_response_calls_;
   callback::AutoCleanableSet<ListDocumentsResponseCall>
       list_documents_response_calls_;
   callback::AutoCleanableSet<EmptyResponseCall> empty_response_calls_;
 
+  // Single-request stream-response calls.
+  callback::AutoCleanableSet<RunQueryCall> run_query_calls_;
+
+  // Stream-request stream-response calls.
   callback::AutoCleanableSet<ListenCall> listen_calls_;
 };
 

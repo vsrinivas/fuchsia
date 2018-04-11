@@ -76,6 +76,15 @@ class FirestoreService {
                          google::firestore::v1beta1::CommitResponse)>
           callback) = 0;
 
+  // Runs a query.
+  virtual void RunQuery(
+      google::firestore::v1beta1::RunQueryRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      std::function<
+          void(grpc::Status,
+               std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+          callback) = 0;
+
   // Initiates a stream to watch for change notifications.
   virtual std::unique_ptr<ListenCallHandler> Listen(
       std::shared_ptr<grpc::CallCredentials> call_credentials,

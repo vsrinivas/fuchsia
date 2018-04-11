@@ -66,6 +66,15 @@ void TestFirestoreService::DeleteDocument(
   delete_document_records.push_back({std::move(request), std::move(callback)});
 }
 
+void TestFirestoreService::RunQuery(
+    google::firestore::v1beta1::RunQueryRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    std::function<void(
+        grpc::Status,
+        std::vector<google::firestore::v1beta1::RunQueryResponse>)> callback) {
+  run_query_records.push_back({std::move(request), std::move(callback)});
+}
+
 void TestFirestoreService::Commit(
     google::firestore::v1beta1::CommitRequest request,
     std::shared_ptr<grpc::CallCredentials> /*call_credentials*/,

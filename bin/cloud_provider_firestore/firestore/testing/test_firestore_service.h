@@ -44,6 +44,13 @@ struct CommitRecord {
       callback;
 };
 
+struct RunQueryRecord {
+  google::firestore::v1beta1::RunQueryRequest request;
+  std::function<void(grpc::Status,
+                     std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+      callback;
+};
+
 class TestFirestoreService : public FirestoreService {
  public:
   TestFirestoreService();
@@ -77,6 +84,13 @@ class TestFirestoreService : public FirestoreService {
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
                       std::function<void(grpc::Status)> callback) override;
 
+  void RunQuery(google::firestore::v1beta1::RunQueryRequest request,
+                std::shared_ptr<grpc::CallCredentials> call_credentials,
+                std::function<void(
+                    grpc::Status,
+                    std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+                    callback) override;
+
   void Commit(google::firestore::v1beta1::CommitRequest request,
               std::shared_ptr<grpc::CallCredentials> call_credentials,
               std::function<void(grpc::Status,
@@ -94,6 +108,7 @@ class TestFirestoreService : public FirestoreService {
   std::vector<CreateDocumentRecord> create_document_records;
   std::vector<DeleteDocumentRecord> delete_document_records;
   std::vector<CommitRecord> commit_records;
+  std::vector<RunQueryRecord> run_query_records;
   std::vector<ListenCallClient*> listen_clients;
 
   fxl::Closure shutdown_callback;

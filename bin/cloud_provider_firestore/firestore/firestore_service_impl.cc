@@ -142,6 +142,21 @@ void FirestoreServiceImpl::Commit(
       &call, std::move(response_reader), std::move(callback));
 }
 
+void FirestoreServiceImpl::RunQuery(
+    google::firestore::v1beta1::RunQueryRequest request,
+    std::shared_ptr<grpc::CallCredentials> call_credentials,
+    std::function<void(
+        grpc::Status,
+        std::vector<google::firestore::v1beta1::RunQueryResponse>)> callback) {
+  FXL_DCHECK(async_ == async_get_default());
+  auto context = std::make_unique<grpc::ClientContext>();
+  context->set_credentials(call_credentials);
+
+  auto stream = firestore_->PrepareAsyncRunQuery(context.get(), request, &cq_);
+  auto& call = run_query_calls_.emplace(std::move(context), std::move(stream));
+  call.Drain(std::move(callback));
+}
+
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
     ListenCallClient* client) {
