@@ -64,9 +64,14 @@ int main(int argc, char** argv) {
     }
     setsockopt(s, SOL_SOCKET, REUSEPORT, &n, sizeof(n));
     if ((r = bind(s, (void*)&addr, sizeof(addr))) < 0) {
-        fprintf(stderr, "%s: cannot bind to [%s]%d %d\n", appname,
+        fprintf(stderr, "%s: cannot bind to [%s]%d: %d: %s\n", appname,
                 inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp)),
-                ntohs(addr.sin6_port), r);
+                ntohs(addr.sin6_port), errno, strerror(errno));
+        if (errno == 98) {
+          fprintf(stderr, "%s: another process is already using udp port %d. "
+                          "Try running `lsof -i udp:%d`.\n", appname,
+                  ntohs(addr.sin6_port), ntohs(addr.sin6_port));
+        }
         return -1;
     }
 
