@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/tasks/message_loop.h"
@@ -32,15 +33,15 @@ storage::ObjectDigest ComputeDigest(fxl::StringView value) {
 
 FakePageStorage::FakePageStorage(PageId page_id)
     : rng_(0),
-      message_loop_(fsl::MessageLoop::GetCurrent()),
+      async_(async_get_default()),
       page_id_(std::move(page_id)),
-      encryption_service_(message_loop_->async()) {}
+      encryption_service_(async_get_default()) {}
 
-FakePageStorage::FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id)
+FakePageStorage::FakePageStorage(async_t* async, PageId page_id)
     : rng_(0),
-      message_loop_(message_loop),
+      async_(async),
       page_id_(std::move(page_id)),
-      encryption_service_(message_loop_->async()) {}
+      encryption_service_(async) {}
 
 FakePageStorage::~FakePageStorage() {}
 
@@ -67,7 +68,7 @@ void FakePageStorage::GetCommit(
   }
 
   async::PostDelayedTask(
-      message_loop_->async(),
+      async_,
       [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
@@ -121,7 +122,7 @@ void FakePageStorage::CommitJournal(
         if (!drop_commit_notifications_) {
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
-                message_loop_->async(),
+                async_,
                 fxl::MakeCopyable(
                     [watcher, commit = commit->Clone()]() mutable {
                       std::vector<std::unique_ptr<const Commit>> commits;
@@ -199,7 +200,7 @@ void FakePageStorage::GetPiece(
         callback(Status::OK,
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
-  async::PostDelayedTask(message_loop_->async(), [this] { SendNextObject(); },
+  async::PostDelayedTask(async_, [this] { SendNextObject(); },
                          zx::msec(5));
 }
 

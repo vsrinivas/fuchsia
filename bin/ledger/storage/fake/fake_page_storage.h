@@ -11,7 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fsl/tasks/message_loop.h"
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
@@ -26,7 +27,7 @@ namespace fake {
 class FakePageStorage : public PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(PageId page_id);
-  FakePageStorage(fsl::MessageLoop* message_loop, PageId page_id);
+  FakePageStorage(async_t* async, PageId page_id);
   ~FakePageStorage() override;
 
   // PageStorage:
@@ -93,7 +94,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   std::set<CommitId> heads_;
   std::set<CommitWatcher*> watchers_;
   std::vector<fxl::Closure> object_requests_;
-  fsl::MessageLoop* message_loop_;
+  async_t* const async_;
   PageId page_id_;
   encryption::FakeEncryptionService encryption_service_;
 
