@@ -16,7 +16,7 @@ declare_args() {
 
 if (target_cpu == "x64") {
   image_dir = "debian-x86"
-  arch_cmdline = "earlycon=uart,io,0x3f8 io_delay=none clocksource=tsc"
+  arch_cmdline = "earlycon=uart,io,0x3f8 io_delay=none"
   if (debian_guest_usb_root) {
     # Standard x86-64 Linux Root GPT GUID
     partition_guid = "4F68BCE3-E8CD-4DB1-96E7-FBCAF984B709"
