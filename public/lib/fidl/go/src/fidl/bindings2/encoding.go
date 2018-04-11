@@ -6,7 +6,6 @@ package bindings2
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"strconv"
@@ -118,7 +117,7 @@ func getSize(t reflect.Type, v reflect.Value) (int, error) {
 			// Handles both structs and unions.
 			return 8, nil
 		}
-		return 0, fmt.Errorf("unsupported pointer type kind %s for type %s", t.Kind(), t.Name())
+		return 0, newValueError(ErrInvalidPointerType, t.Name())
 	case reflect.String:
 		return 16, nil
 	case reflect.Slice:
@@ -127,7 +126,7 @@ func getSize(t reflect.Type, v reflect.Value) (int, error) {
 		// Handles both structs and unions.
 		return getPayloadSize(t, v)
 	}
-	return 0, fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
+	return 0, newValueError(ErrInvalidInlineType, t.Name())
 }
 
 func structAsPayload(t reflect.Type, v reflect.Value) (Payload, error) {
@@ -142,7 +141,7 @@ func structAsPayload(t reflect.Type, v reflect.Value) (Payload, error) {
 	// very slow.
 	payload, ok := v.Addr().Interface().(Payload)
 	if !ok {
-		return nil, fmt.Errorf("struct %s must implement Payload", t.Name())
+		return nil, ErrStructIsNotPayload
 	}
 	return payload, nil
 }
@@ -368,7 +367,7 @@ func (e *encoder) marshalUnion(t reflect.Type, v reflect.Value, alignment int) e
 	// Index into the fields of the struct, adding 1 for the tag.
 	fieldIndex := int(kind) + 1
 	if fieldIndex >= t.NumField() {
-		return ErrInvalidUnionTag
+		return newValueError(ErrInvalidUnionTag, kind)
 	}
 	e.writeUint(kind, 4)
 
@@ -427,7 +426,7 @@ func (e *encoder) marshalInline(t reflect.Type, v reflect.Value, n nestedTypeDat
 	case reflect.Struct:
 		return e.marshalStructOrUnionInline(t, v)
 	default:
-		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
+		return newValueError(ErrInvalidInlineType, t.Name())
 	}
 	return nil
 }
@@ -442,7 +441,7 @@ func (e *encoder) marshalVector(t reflect.Type, v reflect.Value, n nestedTypeDat
 	}
 	max := n.Unnest()
 	if max != nil && v.Len() > *max {
-		return fmt.Errorf("vector exceeds maximum length of %d", *max)
+		return newExpectError(ErrVectorTooLong, *max, v.Len())
 	}
 	e.writeUint(uint64(v.Len()), 8)
 	e.writeUint(allocPresent, 8)
@@ -478,7 +477,7 @@ func (e *encoder) marshalString(v reflect.Value, n nestedTypeData) error {
 	s := v.String()
 	max := n.Unnest()
 	if max != nil && len(s) > *max {
-		return fmt.Errorf("string of length %d exceeds maximum length %d", len(s), *max)
+		return newExpectError(ErrStringTooLong, *max, len(s))
 	}
 	e.writeUint(uint64(len(s)), 8)
 	e.writeUint(allocPresent, 8)
@@ -499,7 +498,7 @@ func (e *encoder) marshalHandle(v reflect.Value, n nestedTypeData) error {
 	raw := zx.Handle(v.Uint())
 	if raw == zx.HANDLE_INVALID {
 		if !n.nullable {
-			return fmt.Errorf("encountered null handle for non-nullable handle type")
+			return ErrUnexpectedNullHandle
 		}
 		e.writeUint(uint64(noHandle), 4)
 		return nil
@@ -521,7 +520,7 @@ func (e *encoder) marshalPointer(t reflect.Type, v reflect.Value, n nestedTypeDa
 	case reflect.Struct:
 		return e.marshalStructOrUnionPointer(t, v)
 	}
-	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
+	return newValueError(ErrInvalidPointerType, t.Name())
 }
 
 // marshal is the central recursive function core to marshalling, and
@@ -766,7 +765,7 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 		case 1:
 			v.SetBool(true)
 		default:
-			return fmt.Errorf("%d is not a valid bool value", i)
+			return newValueError(ErrInvalidBoolValue, i)
 		}
 	case reflect.Int8:
 		v.SetInt(d.readInt(1))
@@ -791,7 +790,7 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 	case reflect.Struct:
 		return d.unmarshalStructOrUnionInline(t, v)
 	default:
-		return fmt.Errorf("unsupported inline type kind %s for type %s", t.Kind(), t.Name())
+		return newValueError(ErrInvalidInlineType, t.Name())
 	}
 	return nil
 }
@@ -803,18 +802,18 @@ func (d *decoder) unmarshalInline(t reflect.Type, v reflect.Value, n nestedTypeD
 func (d *decoder) unmarshalVector(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	size := int64(d.readUint(8))
 	if size < 0 {
-		return fmt.Errorf("vector length exceeds golang positive int")
+		return newExpectError(ErrVectorTooLong, math.MaxInt64, size)
 	}
 	if ptr := d.readUint(8); ptr == noAlloc {
 		if t.Kind() != reflect.Ptr {
-			return fmt.Errorf("unexpected null vector, vector is not nullable")
+			return newValueError(ErrUnexpectedNullRef, "vector")
 		}
 		v.Set(reflect.Zero(t))
 		return nil
 	}
 	max := n.Unnest()
 	if max != nil && int(size) > *max {
-		return fmt.Errorf("vector of length %d exceeds maximum length of %d", size, *max)
+		return newExpectError(ErrVectorTooLong, *max, size)
 	}
 
 	// Create the slice with reflection.
@@ -858,18 +857,18 @@ func (d *decoder) unmarshalVector(t reflect.Type, v reflect.Value, n nestedTypeD
 func (d *decoder) unmarshalString(t reflect.Type, v reflect.Value, n nestedTypeData) error {
 	size := int64(d.readUint(8))
 	if size < 0 {
-		return fmt.Errorf("string length exceeds golang positive int")
+		return newExpectError(ErrStringTooLong, math.MaxInt64, size)
 	}
 	if ptr := d.readUint(8); ptr == noAlloc {
 		if t.Kind() != reflect.Ptr {
-			return fmt.Errorf("unexpected null string, string is not nullable")
+			return newValueError(ErrUnexpectedNullRef, "string")
 		}
 		v.Set(reflect.Zero(t))
 		return nil
 	}
 	max := n.Unnest()
 	if max != nil && int(size) > *max {
-		return fmt.Errorf("string of length %d exceeds maximum length of %d", size, *max)
+		return newExpectError(ErrStringTooLong, *max, size)
 	}
 	s := string(d.buffer[d.nextObject : d.nextObject+int(size)])
 	if t.Kind() == reflect.Ptr {
@@ -889,17 +888,17 @@ func (d *decoder) unmarshalHandle(v reflect.Value, n nestedTypeData) error {
 	switch h {
 	case uint64(noHandle):
 		if !n.nullable {
-			return fmt.Errorf("found invalid handle passed for non-nullable handle type")
+			return ErrUnexpectedNullHandle
 		}
 		v.SetUint(uint64(zx.HANDLE_INVALID))
 	case uint64(handlePresent):
 		if len(d.handles) == 0 {
-			return fmt.Errorf("not enough handles available for decoding")
+			return ErrNotEnoughHandles
 		}
 		v.SetUint(uint64(d.handles[0]))
 		d.handles = d.handles[1:]
 	default:
-		return fmt.Errorf("unsupported value %d for encoded handle", h)
+		return newValueError(ErrBadHandleEncoding, h)
 	}
 	return nil
 }
@@ -915,7 +914,7 @@ func (d *decoder) unmarshalPointer(t reflect.Type, v reflect.Value, n nestedType
 	case reflect.Struct:
 		return d.unmarshalStructOrUnionPointer(t, v)
 	}
-	return fmt.Errorf("unsupported nullable type kind %s for type %s", t.Kind(), t.Name())
+	return newValueError(ErrInvalidPointerType, t.Name())
 }
 
 // unmarshal is the central recursive function core to unmarshalling, and
@@ -946,7 +945,7 @@ func (d *decoder) unmarshal(t reflect.Type, v reflect.Value, n nestedTypeData) e
 // UnmarshalHeader parses a FIDL header in the data into m.
 func UnmarshalHeader(data []byte, m *MessageHeader) error {
 	if len(data) < 16 {
-		return fmt.Errorf("too few bytes in payload to parse header")
+		return ErrMessageTooSmall
 	}
 	d := decoder{buffer: data}
 	m.Txid = uint32(d.readUint(4))

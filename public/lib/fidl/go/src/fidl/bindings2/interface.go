@@ -5,7 +5,6 @@
 package bindings2
 
 import (
-	"fmt"
 	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/zxwait"
@@ -107,7 +106,7 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 		return err
 	}
 	if header.Ordinal != ordinal {
-		return fmt.Errorf("expected ordinal %x, got %x", ordinal, header.Ordinal)
+		return newExpectError(ErrUnexpectedOrdinal, ordinal, header.Ordinal)
 	}
 	return nil
 }
@@ -148,10 +147,10 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 		return err
 	}
 	if header.Ordinal != ordinal {
-		return fmt.Errorf("expected ordinal %x, got %x", ordinal, header.Ordinal)
+		return newExpectError(ErrUnexpectedOrdinal, ordinal, header.Ordinal)
 	}
 	if header.Txid != txid {
-		return fmt.Errorf("expected txid %d, got %d", p.Txid, header.Txid)
+		return newExpectError(ErrUnexpectedTxid, txid, header.Txid)
 	}
 	return nil
 }
