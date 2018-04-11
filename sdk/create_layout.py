@@ -26,20 +26,22 @@ class CppBuilder(Builder):
             self.install_cpp_prebuilt_atom(atom)
         elif type == 'sources':
             self.install_cpp_source_atom(atom)
+        elif type == 'sysroot':
+            self.install_cpp_sysroot_atom(atom)
         else:
             print('Atom type "%s" not handled, skipping %s.' % (type, atom.id))
 
 
-    def install_cpp_prebuilt_atom(self, atom):
+    def install_cpp_prebuilt_atom(self, atom, check_arch=True):
         '''Installs a prebuilt atom from the "cpp" domain.'''
-        if atom.tags['arch'] != 'target':
+        if check_arch and atom.tags['arch'] != 'target':
             print('Only libraries compiled for a target are supported, '
                   'skipping %s.' % atom.id)
             return
         for file in atom.files:
             destination = file.destination
             extension = os.path.splitext(destination)[1][1:]
-            if extension == 'so':
+            if extension == 'so' or extension == "o":
                 dest = os.path.join(self.output, 'arch',
                                     self.metadata.target_arch, destination)
                 if os.path.isfile(dest):
@@ -49,7 +51,8 @@ class CppBuilder(Builder):
             elif self.is_overlay:
                 # Only binaries get installed in overlay mode.
                 continue
-            elif extension == 'h' or extension == 'modulemap':
+            elif (extension == 'h' or extension == 'modulemap' or
+                    extension == 'inc' or extension == 'rs'):
                 dest = os.path.join(self.output, 'pkg', atom.id.name,
                                     destination)
                 self.make_dir(dest)
@@ -68,6 +71,10 @@ class CppBuilder(Builder):
                                 file.destination)
             self.make_dir(dest)
             shutil.copy2(file.source, dest)
+
+
+    def install_cpp_sysroot_atom(self, atom):
+        self.install_cpp_prebuilt_atom(atom, check_arch=False)
 
 
     def install_exe_atom(self, atom):
