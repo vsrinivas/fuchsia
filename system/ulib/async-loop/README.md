@@ -10,10 +10,10 @@ asynchronous dispatchers instead if they have more specialized needs.
 
 - `libasync-loop.a` provides the loop implementation itself as declared in
 the following headers:
-    - [async-loop/loop.h](include/async-loop/loop.h)
+    - [async-loop/loop.h](include/lib/async-loop/loop.h)
 
 - `libasync-loop-cpp.a` provides C++ wrappers:
-    - [async-loop/cpp/loop.h](include/async-loop/cpp/loop.h)
+    - [async-loop/cpp/loop.h](include/lib/async-loop/cpp/loop.h)
 
 ## Using the message loop
 
