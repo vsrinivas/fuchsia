@@ -20,7 +20,6 @@ public:
     virtual void UnregisterInterruptCallback() = 0;
     virtual Gtt* GetGtt() = 0;
 
-    static std::unique_ptr<MsdIntelPciDevice> CreateCore(void* platform_device_handle);
     static std::unique_ptr<MsdIntelPciDevice> CreateShim(void* platform_device_handle);
 };
 

@@ -65,7 +65,7 @@ public:
         std::weak_ptr<MsdIntelConnection> connection;
 
         context_ =
-            std::shared_ptr<MsdIntelContext>(new ClientContext(connection, Gtt::CreateCore(this)));
+            std::shared_ptr<MsdIntelContext>(new ClientContext(connection, Gtt::CreateShim(this)));
 
         mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
 

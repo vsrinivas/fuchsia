@@ -26,7 +26,6 @@ public:
                                  CachingType caching_type) = 0;
 
     static std::unique_ptr<Gtt> CreateShim(Owner* owner);
-    static std::unique_ptr<Gtt> CreateCore(Owner* owner);
 
     friend class TestGtt;
 };

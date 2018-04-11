@@ -27,7 +27,6 @@ public:
                                   uint32_t interrupt_mask) = 0;
 
     static std::unique_ptr<InterruptManager> CreateShim(Owner* owner);
-    static std::unique_ptr<InterruptManager> CreateCore(Owner* owner);
 };
 
 #endif // INTERRUPT_MANAGER_H

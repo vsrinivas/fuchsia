@@ -92,14 +92,6 @@ package("magma") {
   }
 
   if (build_intel_gen) {
-    # Remove
-    deps += [ "$msd_intel_gen_build_root:msd_intel_core" ]
-    drivers += [
-      {
-        name = "libmsd_intel_core.so"
-      },
-    ]
-
     if (magma_enable_developer_build) {
       deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
       drivers += [

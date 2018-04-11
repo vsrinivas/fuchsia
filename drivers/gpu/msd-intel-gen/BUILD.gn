@@ -5,30 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-# Core device; to be replaced by a complete display driver.
-driver_module("msd_intel_core") {
-  output_name = "libmsd_intel_core"
-
-  sources = [
-    "src/core/core_driver_entry.cc",
-  ]
-
-  pci_vendor_id = "0x8086"
-  defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
-
-  deps = [
-    "src:core",
-    "//garnet/lib/magma/src/magma_util",
-    "//garnet/lib/magma/src/magma_util:command_buffer",
-    "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/sys_driver",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/zx",
-  ]
-  libs = [ "zircon" ]
-}
-
 # The gpu device
 driver_module("msd_intel") {
   output_name = "libmsd_intel"
