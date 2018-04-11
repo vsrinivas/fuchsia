@@ -1,0 +1,68 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library modular;
+
+// The Intent struct is a runtime descriptor for an abstract action to be initiated
+// in Fuchsia. For details please see docs/intent.md.
+struct Intent {
+  // The action represented by this Intent.
+  IntentAction action;
+
+  // The parameters that will be passed to the handler of |action|.
+  vector<IntentParameter>? parameters;
+};
+
+// A struct containing an action name and an optional specific handler for that action.
+struct IntentAction {
+  // The name of the action.
+  string? name;
+
+  // An optional specific handler for the intent (i.e. the mod at the |handler| url).
+  string? handler;
+};
+
+// A struct representing a parameter that is passed to the handler of an Intent's
+// Action.
+struct IntentParameter {
+  // The name of the parameter. The handler (i.e. selected mod) will be provided
+  // with the data for this parameter under a link called |name|.
+  string name;
+
+  // The data that will be passed to the intent handler.
+  IntentParameterData data;
+};
+
+union IntentParameterData {
+  // Set this if you already have an Entity reference at runtime.
+  // Entity.getTypes() will be used to set the constraints for this noun during
+  // resolution.
+  string entity_reference;
+
+  // Set this if you have structured JSON data. Values typically are a JSON
+  // object with a "@type" attribute and other associated data.  TODO(thatguy):
+  // We need to decide if we want to keep this in place, or deprecate this
+  // eventually and move entirely to using Entity references.
+  //
+  // DEPRECATED: Use |entity_reference|.
+  string json;
+
+  // Set this if you want to explicitly define this noun's allowed types. This
+  // is also useful in the cases where the noun has a 'direction' of type
+  // 'output', and you wish to set the allowable output types from the Module
+  // (see docs/modular/manifests/verb_template.md for a definition of
+  // 'direction').
+  //
+  // Only one entry in |entity_type| must match the constraint specified by
+  // the Module for the constraint to be considered satisfied.
+  vector<string> entity_type;
+
+  // Set this to use an existing Link accessible from your Module as the noun's
+  // value.
+  string link_name;
+
+  // Set to re-use an existing link within a story.
+  LinkPath link_path;
+};
+
