@@ -17,6 +17,15 @@ sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 import yaml
 
 
+# The list of packages that should be pulled from a Flutter SDK instead of pub.
+FLUTTER_PACKAGES = [
+    'flutter',
+    'flutter_driver',
+    'flutter_test',
+    'flutter_tools',
+]
+
+
 def main():
     parser = argparse.ArgumentParser('Builds a manifest file with 3p deps')
     parser.add_argument('--out',
@@ -35,7 +44,7 @@ def main():
         with open(spec, 'r') as spec_file:
             manifest = yaml.safe_load(spec_file)
             name = manifest['name']
-            if name.startswith('flutter'):
+            if name in FLUTTER_PACKAGES:
                 deps[name] = {
                     'sdk': 'flutter',
                 }
