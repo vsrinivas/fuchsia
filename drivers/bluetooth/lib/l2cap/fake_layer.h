@@ -31,8 +31,8 @@ class FakeLayer final : public L2CAP {
 
   // Called when a new channel gets opened. Tests can use this to obtain a
   // reference to all channels.
-  using ChannelCallback = std::function<void(fbl::RefPtr<l2cap::Channel>)>;
-  void set_channel_callback(ChannelCallback callback) {
+  using NewChannelCallback = fbl::Function<void(fbl::RefPtr<l2cap::Channel>)>;
+  void set_channel_callback(NewChannelCallback callback) {
     chan_cb_ = std::move(callback);
   }
 
@@ -41,12 +41,12 @@ class FakeLayer final : public L2CAP {
                   hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,
                   LinkErrorCallback link_error_callback,
-                  fxl::RefPtr<fxl::TaskRunner> task_runner) override;
+                  async_t* dispatcher) override;
   void Unregister(hci::ConnectionHandle handle) override;
   void OpenFixedChannel(hci::ConnectionHandle handle,
                         ChannelId id,
                         ChannelCallback callback,
-                        fxl::RefPtr<fxl::TaskRunner> callback_runner) override;
+                        async_t* dispatcher) override;
 
  private:
   friend class fbl::RefPtr<FakeLayer>;
@@ -58,7 +58,7 @@ class FakeLayer final : public L2CAP {
     hci::Connection::Role role;
     hci::Connection::LinkType type;
 
-    fxl::RefPtr<fxl::TaskRunner> callback_runner;
+    async_t* dispatcher;
 
     // Dual-mode callbacks
     LinkErrorCallback link_error_cb;

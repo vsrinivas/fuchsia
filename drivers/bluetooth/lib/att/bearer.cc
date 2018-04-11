@@ -232,7 +232,7 @@ bool Bearer::Activate() {
   chan_closed_cb_.Reset(fbl::BindMember(this, &Bearer::OnChannelClosed));
 
   return chan_->Activate(rx_task_.callback(), chan_closed_cb_.callback(),
-                         fsl::MessageLoop::GetCurrent()->task_runner());
+                         async_get_default());
 }
 
 void Bearer::ShutDown() {

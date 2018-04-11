@@ -100,7 +100,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
       handle1_packet_count++;
     }
   };
-  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
   async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
@@ -174,7 +174,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
       handle1_packet_count++;
     }
   };
-  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 12 packets in total, distributed among the two connection handles
   // and link types. Since the BR/EDR MTU is zero, we expect to only see LE
@@ -255,7 +255,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
       handle1_packet_count++;
     }
   };
-  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
   async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
@@ -329,7 +329,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
       handle1_packet_count++;
     }
   };
-  test_device()->SetDataCallback(data_callback, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
   async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
@@ -429,7 +429,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
     if (total_packet_count == kExpectedTotalPacketCount)
       message_loop()->PostQuitTask();
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   InitializeACLDataChannel(DataBufferInfo(kMaxMTU, kMaxNumPackets),
                            DataBufferInfo(kLEMaxMTU, kLEMaxNumPackets));
@@ -508,7 +508,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPackets) {
 
     seq_no = cur_no;
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   common::LinkedList<ACLDataPacket> packets;
   for (int i = 1; i <= kExpectedPacketCount; ++i) {
@@ -543,7 +543,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
     if (received.size() == kExpectedPacketCount)
       fsl::MessageLoop::GetCurrent()->QuitNow();
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   // Each thread will send a sequence of kPacketsPerThread packets. The payload
   // of each packet encodes an integer

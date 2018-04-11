@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -21,9 +22,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace hci {
@@ -102,13 +101,12 @@ class ACLDataChannel final {
       std::function<void(ACLDataPacketPtr data_packet)>;
 
   // Assigns a handler callback for received ACL data packets. |rx_callback|
-  // will be posted on |task_runner|. If |task_runner| is nullptr, then
-  // |rx_callback| will run on the Transport I/O thread.
+  // will be posted on |task_runner|.
   //
   // TODO(armansito): |task_runner| will become mandatory. The Transport I/O
   // thread will be gone when bt-hci becomes a non-IPC protocol.
-  void SetDataRxHandler(const DataReceivedCallback& rx_callback,
-                        fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr);
+  void SetDataRxHandler(DataReceivedCallback rx_callback,
+                        async_t* rx_dispatcher);
 
   // Queues the given ACL data packet to be sent to the controller. Returns
   // false if the packet cannot be queued up, e.g. if the size of |data_packet|
@@ -221,7 +219,7 @@ class ACLDataChannel final {
   // it.
   std::mutex rx_mutex_;
   DataReceivedCallback rx_callback_ __TA_GUARDED(rx_mutex_);
-  fxl::RefPtr<fxl::TaskRunner> rx_runner_ __TA_GUARDED(rx_mutex_);
+  async_t* rx_dispatcher_ __TA_GUARDED(rx_mutex_);
 
   // BR/EDR data buffer information. This buffer will not be available on
   // LE-only controllers.

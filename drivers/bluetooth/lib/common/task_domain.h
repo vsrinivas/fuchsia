@@ -139,7 +139,7 @@ class TaskDomain {
   fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
   async_t* dispatcher() const { return dispatcher_; }
 
-  void PostMessage(fbl::Function<void()> func) {
+  void PostMessage(fbl::Closure func) {
     // |objref| is captured here to make sure |obj_| stays alive until |func|
     // has run.
     async::PostTask(dispatcher_, [this, func = std::move(func),

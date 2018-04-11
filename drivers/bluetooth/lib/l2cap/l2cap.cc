@@ -26,7 +26,7 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
     PostMessage([this] {
       // This can only run once during initialization.
       FXL_DCHECK(!chanmgr_);
-      chanmgr_ = std::make_unique<ChannelManager>(hci_, task_runner());
+      chanmgr_ = std::make_unique<ChannelManager>(hci_, dispatcher());
 
       FXL_VLOG(1) << "l2cap: Initialized";
     });
@@ -38,7 +38,6 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
 
   // Called on the L2CAP runner as a result of ScheduleCleanUp().
   void CleanUp() {
-    FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
     FXL_VLOG(1) << "l2cap: Shutting down";
     chanmgr_ = nullptr;
   }
@@ -47,12 +46,12 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
                   hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,
                   LinkErrorCallback link_error_callback,
-                  fxl::RefPtr<fxl::TaskRunner> task_runner) override {
+                  async_t* dispatcher) override {
     PostMessage([this, handle, role, cpc = std::move(conn_param_callback),
-                 lec = std::move(link_error_callback), task_runner] {
+                 lec = std::move(link_error_callback), dispatcher] {
       if (chanmgr_) {
         chanmgr_->RegisterLE(handle, role, std::move(cpc), std::move(lec),
-                             task_runner);
+                             dispatcher);
       }
     });
   }
@@ -68,15 +67,17 @@ class Impl final : public L2CAP, public common::TaskDomain<Impl, L2CAP> {
   void OpenFixedChannel(hci::ConnectionHandle handle,
                         ChannelId id,
                         ChannelCallback callback,
-                        fxl::RefPtr<fxl::TaskRunner> callback_runner) override {
-    PostMessage([this, handle, id, cb = std::move(callback),
-                 callback_runner]() mutable {
-      if (!chanmgr_)
-        return;
+                        async_t* dispatcher) override {
+    FXL_DCHECK(dispatcher);
 
-      auto chan = chanmgr_->OpenFixedChannel(handle, id);
-      callback_runner->PostTask([chan, cb = std::move(cb)] { cb(chan); });
-    });
+    PostMessage(
+        [this, handle, id, cb = std::move(callback), dispatcher]() mutable {
+          if (!chanmgr_)
+            return;
+
+          auto chan = chanmgr_->OpenFixedChannel(handle, id);
+          async::PostTask(dispatcher, [chan, cb = std::move(cb)] { cb(chan); });
+        });
   }
 
  private:

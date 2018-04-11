@@ -27,14 +27,14 @@ class LESignalingChannel : public SignalingChannel {
   // automatically accept these parameters, however it is up to the
   // implementation of |callback| to apply them to the controller.
   //
-  // This task will be posted onto the given |task_runner|.
+  // This task will be posted onto the given |dispatcher|.
   void set_conn_param_update_callback(
       ConnectionParameterUpdateCallback callback,
-      fxl::RefPtr<fxl::TaskRunner> task_runner) {
+      async_t* dispatcher) {
     FXL_DCHECK(IsCreationThreadCurrent());
-    FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(task_runner));
+    FXL_DCHECK(static_cast<bool>(callback) == static_cast<bool>(dispatcher));
     conn_param_update_cb_ = std::move(callback);
-    conn_param_update_runner_ = task_runner;
+    dispatcher_ = dispatcher;
   }
 
  private:
@@ -44,7 +44,7 @@ class LESignalingChannel : public SignalingChannel {
   bool HandlePacket(const SignalingPacket& packet) override;
 
   ConnectionParameterUpdateCallback conn_param_update_cb_;
-  fxl::RefPtr<fxl::TaskRunner> conn_param_update_runner_;
+  async_t* dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LESignalingChannel);
 };

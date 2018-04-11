@@ -10,8 +10,10 @@
 #include <mutex>
 #include <queue>
 
+#include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
@@ -20,7 +22,6 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace l2cap {
@@ -60,15 +61,15 @@ class Channel : public fbl::RefCounted<Channel> {
   // request from the owner of this instance. For example, this can happen when
   // the remote end closes a dynamically configured channel or when the
   // underlying logical link is terminated through other means.
-  using ClosedCallback = std::function<void()>;
+  using ClosedCallback = fbl::Closure;
 
   // Callback invoked when a new SDU is received on this channel. Any previously
   // buffered SDUs will be sent to |rx_cb| right away, provided that |rx_cb| is
   // not empty and the underlying logical link is active.
   using RxCallback = std::function<void(const SDU& sdu)>;
 
-  // Activates this channel on |task_runner|. |rx_callback| and
-  // |closed_callback| will run on |task_runner|.
+  // Activates this channel assigning |dispatcher| to execute |rx_callback| and
+  // |closed_callback|.
   //
   // Returns false if the channel's link has been closed.
   //
@@ -76,7 +77,7 @@ class Channel : public fbl::RefCounted<Channel> {
   // underlying link can be removed at any time.
   virtual bool Activate(RxCallback rx_callback,
                         ClosedCallback closed_callback,
-                        fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
+                        async_t* dispatcher) = 0;
 
   // Deactivates this channel. No more packets can be sent or received after
   // this is called. |rx_callback| may still be called if it has been already
@@ -133,7 +134,7 @@ class ChannelImpl : public Channel {
   // Channel overrides:
   bool Activate(RxCallback rx_callback,
                 ClosedCallback closed_callback,
-                fxl::RefPtr<fxl::TaskRunner> task_runner) override;
+                async_t* dispatcher) override;
   void Deactivate() override;
   void SignalLinkError() override;
   bool Send(std::unique_ptr<const common::ByteBuffer> sdu) override;
@@ -160,7 +161,7 @@ class ChannelImpl : public Channel {
 
   std::mutex mtx_;
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_ __TA_GUARDED(mtx_);
+  async_t* dispatcher_ __TA_GUARDED(mtx_);
   RxCallback rx_cb_ __TA_GUARDED(mtx_);
   ClosedCallback closed_cb_ __TA_GUARDED(mtx_);
 

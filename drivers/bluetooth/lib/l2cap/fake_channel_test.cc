@@ -27,7 +27,7 @@ bool FakeChannelTest::Expect(const common::ByteBuffer& expected) {
     success = common::ContainersEqual(expected, *cb_packet);
   };
 
-  fake_chan()->SetSendCallback(cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(cb, dispatcher());
   RunUntilIdle();
 
   return success;

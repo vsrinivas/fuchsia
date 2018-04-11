@@ -55,6 +55,7 @@ class TestBase : public ::testing::Test {
 
   // Getters for internal fields frequently used by tests.
   fsl::MessageLoop* message_loop() { return &message_loop_; }
+  async_t* dispatcher() const { return message_loop_.async(); }
 
  private:
   fsl::MessageLoop message_loop_;

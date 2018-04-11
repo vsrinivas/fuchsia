@@ -8,6 +8,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
@@ -18,9 +19,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/le_signaling_channel.h"
 
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 
@@ -55,8 +54,7 @@ class ChannelManager final {
  public:
   using LinkErrorCallback = std::function<void()>;
 
-  ChannelManager(fxl::RefPtr<hci::Transport> hci,
-                 fxl::RefPtr<fxl::TaskRunner> task_runner);
+  ChannelManager(fxl::RefPtr<hci::Transport> hci, async_t* l2cap_dispatcher);
   ~ChannelManager();
 
   // Registers the given connection with the L2CAP layer. L2CAP channels can be
@@ -81,14 +79,14 @@ class ChannelManager final {
   // |link_error_callback| will be used to notify when a channel signals a link
   // error.
   //
-  // Both callbacks will be posted onto |task_runner|.
+  // Both callbacks will be posted onto |dispatcher|.
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
   void RegisterLE(hci::ConnectionHandle handle,
                   hci::Connection::Role role,
                   LEConnectionParameterUpdateCallback conn_param_callback,
                   LinkErrorCallback link_error_callback,
-                  fxl::RefPtr<fxl::TaskRunner> task_runner);
+                  async_t* dispatcher);
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.
@@ -117,7 +115,7 @@ class ChannelManager final {
                                           hci::Connection::Role role);
 
   fxl::RefPtr<hci::Transport> hci_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* l2cap_dispatcher_;
 
   using LinkMap = std::unordered_map<hci::ConnectionHandle,
                                      std::unique_ptr<internal::LogicalLink>>;
@@ -130,6 +128,7 @@ class ChannelManager final {
                          common::LinkedList<hci::ACLDataPacket>>;
   PendingPacketMap pending_packets_;
 
+  fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<ChannelManager> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ChannelManager);

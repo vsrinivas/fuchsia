@@ -47,8 +47,7 @@ class L2CAP_ChannelManagerTest : public TestingBase {
     // FakeControllerTest's ACL data callbacks will no longer work after this
     // call, as it overwrites ACLDataChannel's data rx handler. This is intended
     // as the L2CAP layer takes ownership of ACL data traffic.
-    chanmgr_ = std::make_unique<ChannelManager>(transport(),
-                                                message_loop()->task_runner());
+    chanmgr_ = std::make_unique<ChannelManager>(transport(), dispatcher());
 
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
@@ -62,11 +61,11 @@ class L2CAP_ChannelManagerTest : public TestingBase {
   fbl::RefPtr<Channel> ActivateNewFixedChannel(
       ChannelId id,
       hci::ConnectionHandle conn_handle = kTestHandle1,
-      const Channel::ClosedCallback& closed_cb = DoNothing,
-      const Channel::RxCallback& rx_cb = NopRxCallback) {
+      Channel::ClosedCallback closed_cb = DoNothing,
+      Channel::RxCallback rx_cb = NopRxCallback) {
     auto chan = chanmgr()->OpenFixedChannel(conn_handle, id);
     if (!chan ||
-        !chan->Activate(rx_cb, closed_cb, message_loop()->task_runner())) {
+        !chan->Activate(std::move(rx_cb), std::move(closed_cb), dispatcher())) {
       return nullptr;
     }
 
@@ -117,8 +116,7 @@ TEST_F(L2CAP_ChannelManagerTest, ActivateFailsAfterDeactivate) {
   chan->Deactivate();
 
   // Activate should fail.
-  EXPECT_FALSE(
-      chan->Activate(NopRxCallback, DoNothing, message_loop()->task_runner()));
+  EXPECT_FALSE(chan->Activate(NopRxCallback, DoNothing, dispatcher()));
 }
 
 TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
@@ -134,6 +132,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndUnregisterLink) {
 
   // This should notify the channel.
   chanmgr()->Unregister(kTestHandle1);
+
+  RunUntilIdle();
 
   // |closed_cb| will be called synchronously since it was registered using the
   // current thread's task runner.
@@ -155,6 +155,9 @@ TEST_F(L2CAP_ChannelManagerTest, OpenFixedChannelAndCloseChannel) {
   // called.
   chan->Deactivate();
   chanmgr()->Unregister(kTestHandle1);
+
+  RunUntilIdle();
+
   EXPECT_FALSE(closed_called);
 }
 
@@ -179,6 +182,8 @@ TEST_F(L2CAP_ChannelManagerTest, OpenAndCloseMultipleFixedChannels) {
 
   smp_chan->Deactivate();
   chanmgr()->Unregister(kTestHandle1);
+
+  RunUntilIdle();
 
   EXPECT_TRUE(att_closed);
   EXPECT_FALSE(smp_closed);
@@ -407,8 +412,8 @@ TEST_F(L2CAP_ChannelManagerTest, ReceiveDataBeforeSettingRxHandler) {
   // Run the loop so all packets are received.
   RunUntilIdle();
 
-  att_chan->Activate(att_rx_cb, DoNothing, message_loop()->task_runner());
-  smp_chan->Activate(smp_rx_cb, DoNothing, message_loop()->task_runner());
+  att_chan->Activate(att_rx_cb, DoNothing, dispatcher());
+  smp_chan->Activate(smp_rx_cb, DoNothing, dispatcher());
 
   RunUntilIdle();
 
@@ -437,7 +442,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendBasicSdu) {
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
     received = std::make_unique<common::DynamicByteBuffer>(bytes);
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   EXPECT_TRUE(att_chan->Send(common::NewBuffer('T', 'e', 's', 't')));
 
@@ -484,7 +489,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdus) {
       acl_fragments.push_back(
           std::make_unique<common::DynamicByteBuffer>(bytes));
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
@@ -584,7 +589,7 @@ TEST_F(L2CAP_ChannelManagerTest, SendFragmentedSdusDifferentBuffers) {
       acl_fragments.push_back(
           std::make_unique<common::DynamicByteBuffer>(bytes));
   };
-  test_device()->SetDataCallback(data_cb, message_loop()->task_runner());
+  test_device()->SetDataCallback(data_cb, dispatcher());
 
   chanmgr()->Register(kTestHandle1, hci::Connection::LinkType::kLE,
                       hci::Connection::Role::kMaster);
@@ -642,11 +647,9 @@ TEST_F(L2CAP_ChannelManagerTest, ChannelSignalLinkError) {
   bool link_error = false;
   auto link_error_cb = [&link_error, this] {
     link_error = true;
-    message_loop()->QuitNow();
   };
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        [](auto) {}, link_error_cb,
-                        message_loop()->task_runner());
+                        [](auto) {}, link_error_cb, dispatcher());
 
   // Activate a new a channel to signal the error.
   auto chan = ActivateNewFixedChannel(kATTChannelId, kTestHandle1);
@@ -655,7 +658,7 @@ TEST_F(L2CAP_ChannelManagerTest, ChannelSignalLinkError) {
   // The event will run asynchronously.
   EXPECT_FALSE(link_error);
 
-  RunMessageLoop(1);
+  RunUntilIdle();
   EXPECT_TRUE(link_error);
 }
 
@@ -671,8 +674,7 @@ TEST_F(L2CAP_ChannelManagerTest, LEConnectionParameterUpdateRequest) {
   };
 
   chanmgr()->RegisterLE(kTestHandle1, hci::Connection::Role::kMaster,
-                        conn_param_cb, DoNothing,
-                        message_loop()->task_runner());
+                        conn_param_cb, DoNothing, dispatcher());
 
   // clang-format off
   test_device()->SendACLDataChannelPacket(common::CreateStaticByteBuffer(

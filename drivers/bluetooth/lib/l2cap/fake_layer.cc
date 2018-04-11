@@ -4,6 +4,8 @@
 
 #include "fake_layer.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "fake_channel.h"
 
 namespace btlib {
@@ -28,15 +30,15 @@ void FakeLayer::TriggerLEConnectionParameterUpdate(
       << "l2cap: fake link not found: (handle: " << handle << ")";
 
   LinkData& link_data = iter->second;
-  link_data.callback_runner->PostTask(
-      [params, cb = link_data.le_conn_param_cb] { cb(params); });
+  async::PostTask(link_data.dispatcher,
+                  [params, cb = link_data.le_conn_param_cb] { cb(params); });
 }
 
 void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
                            hci::Connection::Role role,
                            LEConnectionParameterUpdateCallback conn_param_cb,
                            LinkErrorCallback link_error_cb,
-                           fxl::RefPtr<fxl::TaskRunner> task_runner) {
+                           async_t* dispatcher) {
   if (!initialized_)
     return;
 
@@ -49,7 +51,7 @@ void FakeLayer::RegisterLE(hci::ConnectionHandle handle,
   data.type = hci::Connection::LinkType::kLE;
   data.le_conn_param_cb = std::move(conn_param_cb);
   data.link_error_cb = std::move(link_error_cb);
-  data.callback_runner = task_runner;
+  data.dispatcher = dispatcher;
 
   links_.emplace(handle, std::move(data));
 }
@@ -61,7 +63,7 @@ void FakeLayer::Unregister(hci::ConnectionHandle handle) {
 void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
                                  ChannelId id,
                                  ChannelCallback callback,
-                                 fxl::RefPtr<fxl::TaskRunner> callback_runner) {
+                                 async_t* dispatcher) {
   // TODO(armansito): Add a failure mechanism for testing.
   FXL_DCHECK(initialized_);
   auto iter = links_.find(handle);
@@ -72,9 +74,9 @@ void FakeLayer::OpenFixedChannel(hci::ConnectionHandle handle,
 
   const auto& link = iter->second;
   auto chan = fbl::AdoptRef(new FakeChannel(id, handle, iter->second.type));
-  chan->SetLinkErrorCallback(link.link_error_cb, link.callback_runner);
+  chan->SetLinkErrorCallback(link.link_error_cb, link.dispatcher);
 
-  callback_runner->PostTask([chan, cb = std::move(callback)] { cb(chan); });
+  async::PostTask(dispatcher, [chan, cb = std::move(callback)] { cb(chan); });
 
   if (chan_cb_)
     chan_cb_(chan);

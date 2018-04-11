@@ -157,7 +157,7 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
     // This should only be called once and for the first request.
     EXPECT_EQ(kTestRequest, (*cb_packet)[0]);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool closed = false;
   unsigned int err_cb_count = 0u;
@@ -236,7 +236,7 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
     // This should only be called once and for the first request.
     EXPECT_EQ(kIndValue1, (*cb_packet)[1]);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool closed = false;
   unsigned int err_cb_count = 0u;
@@ -314,7 +314,7 @@ TEST_F(ATT_BearerTest, SendRequestWrongResponse) {
     // Send back the wrong response.
     fake_chan()->Receive(common::CreateStaticByteBuffer(kTestResponse2));
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   bool closed = false;
@@ -355,7 +355,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooShort) {
     chan_cb_called = true;
     fake_chan()->Receive(malformed_error_rsp);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   bool closed = false;
@@ -396,7 +396,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseTooLong) {
     chan_cb_called = true;
     fake_chan()->Receive(malformed_error_rsp);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   bool closed = false;
@@ -442,7 +442,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponseWrongOpCode) {
     chan_cb_called = true;
     fake_chan()->Receive(error_rsp);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   bool closed = false;
@@ -488,7 +488,7 @@ TEST_F(ATT_BearerTest, SendRequestErrorResponse) {
     chan_cb_called = true;
     fake_chan()->Receive(error_rsp);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool err_cb_called = false;
   auto err_cb = [&err_cb_called, this](Status status, Handle handle) {
@@ -521,7 +521,7 @@ TEST_F(ATT_BearerTest, SendRequestSuccess) {
     chan_cb_called = true;
     fake_chan()->Receive(response);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool cb_called = false;
   auto cb = [&cb_called, &response](const auto& rsp_packet) {
@@ -595,7 +595,7 @@ TEST_F(ATT_BearerTest, SendManyRequests) {
     else if (opcode == kTestRequest3)
       fake_chan()->Receive(response3);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   unsigned int success_count = 0u;
   unsigned int error_count = 0u;
@@ -662,7 +662,7 @@ TEST_F(ATT_BearerTest, SendIndicationSuccess) {
     chan_cb_called = true;
     fake_chan()->Receive(conf);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   bool cb_called = false;
   auto cb = [&cb_called, &conf](const auto& packet) {
@@ -728,7 +728,7 @@ TEST_F(ATT_BearerTest, SendWithoutResponseMany) {
 
     chan_cb_count++;
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   for (OpCode opcode = 0; opcode < kExpectedCount; opcode++) {
     // Everything
@@ -786,7 +786,7 @@ TEST_F(ATT_BearerTest, RemoteTransactionNoHandler) {
     received_error_rsp = true;
     EXPECT_TRUE(common::ContainersEqual(error_rsp, *packet));
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
   fake_chan()->Receive(common::CreateStaticByteBuffer(kTestRequest));
 
   RunUntilIdle();
@@ -919,7 +919,7 @@ TEST_F(ATT_BearerTest, ReplyWithResponse) {
 
     EXPECT_EQ(kTestResponse, (*packet)[0]);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   Bearer::TransactionId id;
   bool handler_called = false;
@@ -954,7 +954,7 @@ TEST_F(ATT_BearerTest, IndicationConfirmation) {
     conf_sent = true;
     EXPECT_EQ(kConfirmation, (*packet)[0]);
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   Bearer::TransactionId id;
   bool handler_called = false;
@@ -1018,7 +1018,7 @@ TEST_F(ATT_BearerTest, ReplyWithError) {
         kErrorResponse, kTestRequest, 0x00, 0x00, ErrorCode::kUnlikelyError);
     EXPECT_TRUE(common::ContainersEqual(expected, *packet));
   };
-  fake_chan()->SetSendCallback(chan_cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(chan_cb, dispatcher());
 
   Bearer::TransactionId id;
   bool handler_called = false;

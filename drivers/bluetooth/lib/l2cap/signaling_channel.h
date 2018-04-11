@@ -14,9 +14,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/sdu.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace l2cap {
@@ -64,7 +62,7 @@ class SignalingChannel {
   // Returns true if called on this SignalingChannel's creation thread. Mainly
   // intended for debug assertions.
   bool IsCreationThreadCurrent() const {
-    return task_runner_->RunsTasksOnCurrentThread();
+    return thread_checker_.IsCreationThreadCurrent();
   }
 
   // Returns the logicak link that signaling channel is operating on.
@@ -101,8 +99,7 @@ class SignalingChannel {
   hci::Connection::Role role_;
   uint16_t mtu_;
 
-  // Task runner for this object's thread.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  fxl::ThreadChecker thread_checker_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SignalingChannel);
 };

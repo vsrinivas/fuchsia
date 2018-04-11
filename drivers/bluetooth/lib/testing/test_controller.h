@@ -57,8 +57,7 @@ class TestController : public FakeControllerBase {
 
   // Callback to invoke when a packet is received over the data channel.
   using DataCallback = std::function<void(const common::ByteBuffer& packet)>;
-  void SetDataCallback(const DataCallback& callback,
-                       fxl::RefPtr<fxl::TaskRunner> task_runner);
+  void SetDataCallback(const DataCallback& callback, async_t* dispatcher);
 
   // Callback invoked when a transaction completes.
   void SetTransactionCallback(const fxl::Closure& callback,
@@ -73,7 +72,7 @@ class TestController : public FakeControllerBase {
 
   std::queue<CommandTransaction> cmd_transactions_;
   DataCallback data_callback_;
-  fxl::RefPtr<fxl::TaskRunner> data_task_runner_;
+  async_t* data_dispatcher_;
   fxl::Closure transaction_callback_;
   fxl::RefPtr<fxl::TaskRunner> transaction_task_runner_;
 

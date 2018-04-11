@@ -23,8 +23,8 @@ class Channel;
 //
 //   * Waiting on L2CAP sockets;
 //
-// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with a
-// TaskRunner which is used to serially dispatch all internal L2CAP tasks.
+// A production L2CAP (obtained via L2CAP::Create()) spawns a thread with an
+// async dispatcher which is used to serially dispatch all internal L2CAP tasks.
 //
 // L2CAP is defined as a pure-virtual interface, so that a fake can be injected
 // while testing layers that depend on it.
@@ -33,10 +33,10 @@ class Channel;
 // from any thread.
 class L2CAP : public fbl::RefCounted<L2CAP> {
  public:
-  using ChannelCallback = std::function<void(fbl::RefPtr<Channel>)>;
+  using ChannelCallback = fbl::Function<void(fbl::RefPtr<Channel>)>;
   using LEConnectionParameterUpdateCallback =
       internal::LESignalingChannel::ConnectionParameterUpdateCallback;
-  using LinkErrorCallback = std::function<void()>;
+  using LinkErrorCallback = std::function<void()>;  // copyable
 
   // Constructs an uninitialized L2CAP object that can be used in production.
   // This spawns a thread on which L2CAP tasks will be scheduled (using
@@ -57,7 +57,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   //
   // |callback| will be used to notify the caller if new connection parameters
   // were accepted from the remote end of the link. |callback| will be posted on
-  // the given |task_runner|.
+  // the given |dispatcher|.
   //
   // Has no effect if L2CAP is uninitialized or shut down.
   virtual void RegisterLE(
@@ -65,7 +65,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
       hci::Connection::Role role,
       LEConnectionParameterUpdateCallback conn_param_callback,
       LinkErrorCallback link_error_callback,
-      fxl::RefPtr<fxl::TaskRunner> task_runner) = 0;
+      async_t* dispatcher) = 0;
 
   // Removes a previously registered connection. All corresponding Channels will
   // be closed and all incoming data packets on this link will be dropped.
@@ -82,7 +82,7 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   // identified by |connection_handle| and starts routing packets.
   //
   // The resulting channel will be returned asynchronously via |callback| on the
-  // requested |task_runner|. Runs |callback| with nullptr if the channel is
+  // requested |dispatcher|. Runs |callback| with nullptr if the channel is
   // already open.
   //
   // Has no effect if L2CAP is uninitialized or shut down. |callback| will not
@@ -91,11 +91,10 @@ class L2CAP : public fbl::RefCounted<L2CAP> {
   // TODO(armansito): Replace this with a version that returns all fixed
   // channels to avoid jumping through an asynchronous callback for each
   // channel. Probably one for LE and one for Classic.
-  virtual void OpenFixedChannel(
-      hci::ConnectionHandle handle,
-      ChannelId id,
-      ChannelCallback callback,
-      fxl::RefPtr<fxl::TaskRunner> callback_runner) = 0;
+  virtual void OpenFixedChannel(hci::ConnectionHandle handle,
+                                ChannelId id,
+                                ChannelCallback callback,
+                                async_t* dispatcher) = 0;
 
  protected:
   friend class fbl::RefPtr<L2CAP>;

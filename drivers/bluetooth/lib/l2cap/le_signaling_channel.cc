@@ -86,9 +86,8 @@ void LESignalingChannel::OnConnParamUpdateReceived(
   SendPacket(kConnectionParameterUpdateResponse, packet.header().id,
              common::BufferView(&rsp, sizeof(rsp)));
 
-  if (!reject && conn_param_update_runner_) {
-    conn_param_update_runner_->PostTask(
-        std::bind(conn_param_update_cb_, params));
+  if (!reject && dispatcher_) {
+    async::PostTask(dispatcher_, std::bind(conn_param_update_cb_, params));
   }
 }
 

@@ -11,8 +11,6 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace att {

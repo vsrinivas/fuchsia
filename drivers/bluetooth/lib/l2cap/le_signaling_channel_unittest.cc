@@ -249,9 +249,8 @@ TEST_F(L2CAP_LESignalingChannelTest, ConnParamUpdateAccept) {
     conn_param_cb_called = true;
   };
 
-  fake_chan()->SetSendCallback(fake_chan_cb, message_loop()->task_runner());
-  sig()->set_conn_param_update_callback(conn_param_cb,
-                                        message_loop()->task_runner());
+  fake_chan()->SetSendCallback(fake_chan_cb, dispatcher());
+  sig()->set_conn_param_update_callback(conn_param_cb, dispatcher());
 
   fake_chan()->Receive(cmd);
 
@@ -287,7 +286,7 @@ TEST_F(L2CAP_LESignalingChannelSlaveTest, ConnParamUpdateReject) {
     cb_called = true;
   };
 
-  fake_chan()->SetSendCallback(cb, message_loop()->task_runner());
+  fake_chan()->SetSendCallback(cb, dispatcher());
   fake_chan()->Receive(cmd);
 
   RunUntilIdle();

@@ -80,7 +80,8 @@ class FakeControllerTest : public TestBase {
 
     transport_->acl_data_channel()->SetDataRxHandler(
         std::bind(&FakeControllerTest<FakeControllerType>::OnDataReceived, this,
-                  std::placeholders::_1));
+                  std::placeholders::_1),
+        TestBase::message_loop()->async());
 
     return true;
   }

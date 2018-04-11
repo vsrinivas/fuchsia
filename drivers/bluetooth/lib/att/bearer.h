@@ -27,7 +27,6 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace att {

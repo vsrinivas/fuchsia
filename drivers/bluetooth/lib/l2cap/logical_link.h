@@ -9,6 +9,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
@@ -22,9 +23,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/recombiner.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 
@@ -46,7 +45,7 @@ class LogicalLink final {
   LogicalLink(hci::ConnectionHandle handle,
               hci::Connection::LinkType type,
               hci::Connection::Role role,
-              fxl::RefPtr<fxl::TaskRunner> task_runner,
+              async_t* dispatcher,
               fxl::RefPtr<hci::Transport> hci);
 
   // When a logical link is destroyed it notifies all of its channels to close
@@ -70,11 +69,10 @@ class LogicalLink final {
 
   // Assigns the link error callback to be invoked when a channel signals a link
   // error.
-  void set_error_callback(std::function<void()> callback,
-                          fxl::RefPtr<fxl::TaskRunner> task_runner);
+  void set_error_callback(fbl::Closure callback, async_t* dispatcher);
 
-  // Returns task runner that this LogicalLink operates on.
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+  // Returns the dispatcher that this LogicalLink operates on.
+  async_t* dispatcher() const { return dispatcher_; }
 
   hci::Connection::LinkType type() const { return type_; }
   hci::Connection::Role role() const { return role_; }
@@ -100,15 +98,15 @@ class LogicalLink final {
   void Close();
 
   fxl::RefPtr<hci::Transport> hci_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
 
   // Information about the underlying controller logical link.
   hci::ConnectionHandle handle_;
   hci::Connection::LinkType type_;
   hci::Connection::Role role_;
 
-  std::function<void()> link_error_cb_;
-  fxl::RefPtr<fxl::TaskRunner> link_error_runner_;
+  fbl::Closure link_error_cb_;
+  async_t* link_error_dispatcher_;
 
   // Owns and manages the L2CAP signaling channel on this logical link.
   // Depending on |type_| this will either implement the LE or BR/EDR signaling
@@ -130,6 +128,7 @@ class LogicalLink final {
   using PendingPduMap = std::unordered_map<ChannelId, std::list<PDU>>;
   PendingPduMap pending_pdus_;
 
+  fxl::ThreadChecker thread_checker_;
   fxl::WeakPtrFactory<LogicalLink> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LogicalLink);

@@ -4,6 +4,7 @@
 
 #include "test_controller.h"
 
+#include <lib/async/cpp/task.h>
 #include <zircon/status.h>
 
 #include "gtest/gtest.h"
@@ -34,7 +35,8 @@ common::DynamicByteBuffer CommandTransaction::PopNextReply() {
   return reply;
 }
 
-TestController::TestController() : FakeControllerBase() {}
+TestController::TestController()
+    : FakeControllerBase(), data_dispatcher_(nullptr) {}
 
 TestController::~TestController() { Stop(); }
 
@@ -43,14 +45,14 @@ void TestController::QueueCommandTransaction(CommandTransaction transaction) {
 }
 
 void TestController::SetDataCallback(const DataCallback& callback,
-                                     fxl::RefPtr<fxl::TaskRunner> task_runner) {
+                                     async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
   FXL_DCHECK(!data_callback_);
-  FXL_DCHECK(!data_task_runner_);
+  FXL_DCHECK(!data_dispatcher_);
 
   data_callback_ = callback;
-  data_task_runner_ = task_runner;
+  data_dispatcher_ = dispatcher;
 }
 
 void TestController::SetTransactionCallback(
@@ -92,9 +94,9 @@ void TestController::OnACLDataPacketReceived(
     return;
 
   common::DynamicByteBuffer packet_copy(acl_data_packet);
-  data_task_runner_->PostTask(fxl::MakeCopyable([
-    packet_copy = std::move(packet_copy), cb = data_callback_
-  ]() mutable { cb(packet_copy); }));
+  async::PostTask(data_dispatcher_,
+                  [packet_copy = std::move(packet_copy),
+                   cb = data_callback_]() mutable { cb(packet_copy); });
 }
 
 }  // namespace testing

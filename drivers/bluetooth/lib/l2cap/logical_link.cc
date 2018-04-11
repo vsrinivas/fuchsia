@@ -45,17 +45,17 @@ constexpr bool IsValidBREDRFixedChannel(ChannelId id) {
 LogicalLink::LogicalLink(hci::ConnectionHandle handle,
                          hci::Connection::LinkType type,
                          hci::Connection::Role role,
-                         fxl::RefPtr<fxl::TaskRunner> task_runner,
+                         async_t* dispatcher,
                          fxl::RefPtr<hci::Transport> hci)
     : hci_(hci),
-      task_runner_(task_runner),
+      dispatcher_(dispatcher),
       handle_(handle),
       type_(type),
       role_(role),
       fragmenter_(handle),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci_);
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(type_ == hci::Connection::LinkType::kLE ||
              type_ == hci::Connection::LinkType::kACL);
 
@@ -84,7 +84,7 @@ LogicalLink::~LogicalLink() {
 }
 
 fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   // We currently only support the pre-defined fixed-channels.
   if (!AllowsFixedChannel(id)) {
@@ -116,7 +116,7 @@ fbl::RefPtr<Channel> LogicalLink::OpenFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(!recombiner_.ready());
   FXL_DCHECK(packet);
 
@@ -175,7 +175,7 @@ void LogicalLink::HandleRxPacket(hci::ACLDataPacketPtr packet) {
 
 void LogicalLink::SendBasicFrame(ChannelId id,
                                  const common::ByteBuffer& payload) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   // TODO(armansito): The following makes a copy of |payload| when constructing
   // |pdu|. Think about how this could be optimized, especially when |payload|
@@ -187,14 +187,14 @@ void LogicalLink::SendBasicFrame(ChannelId id,
   hci_->acl_data_channel()->SendPackets(std::move(fragments), type_);
 }
 
-void LogicalLink::set_error_callback(std::function<void()> callback,
-                                     fxl::RefPtr<fxl::TaskRunner> runner) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+void LogicalLink::set_error_callback(fbl::Closure callback,
+                                     async_t* dispatcher) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
-  FXL_DCHECK(runner);
+  FXL_DCHECK(dispatcher);
 
   link_error_cb_ = std::move(callback);
-  link_error_runner_ = runner;
+  link_error_dispatcher_ = dispatcher;
 }
 
 LESignalingChannel* LogicalLink::le_signaling_channel() const {
@@ -210,7 +210,7 @@ bool LogicalLink::AllowsFixedChannel(ChannelId id) {
 }
 
 void LogicalLink::RemoveChannel(Channel* chan) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(chan);
 
   auto iter = channels_.find(chan->id());
@@ -227,19 +227,16 @@ void LogicalLink::RemoveChannel(Channel* chan) {
 }
 
 void LogicalLink::SignalError() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   if (link_error_cb_) {
-    link_error_runner_->PostTask(link_error_cb_);
-
-    // Clear this so that the same callback is not called twice.
-    link_error_cb_ = {};
-    link_error_runner_ = nullptr;
+    async::PostTask(link_error_dispatcher_, std::move(link_error_cb_));
+    link_error_dispatcher_ = nullptr;
   }
 }
 
 void LogicalLink::Close() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   auto channels = std::move(channels_);
   for (auto& iter : channels) {

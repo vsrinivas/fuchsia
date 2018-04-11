@@ -36,6 +36,7 @@ ACLDataChannel::ACLDataChannel(Transport* transport,
       channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
       is_initialized_(false),
       event_handler_id_(0u),
+      rx_dispatcher_(nullptr),
       num_sent_packets_(0u),
       le_num_sent_packets_(0u) {
   // TODO(armansito): We'll need to pay attention to ZX_CHANNEL_WRITABLE as
@@ -120,14 +121,14 @@ void ACLDataChannel::ShutDown() {
 
   io_task_runner_ = nullptr;
   event_handler_id_ = 0u;
-  SetDataRxHandler(nullptr);
+  SetDataRxHandler(nullptr, nullptr);
 }
 
-void ACLDataChannel::SetDataRxHandler(const DataReceivedCallback& rx_callback,
-                                      fxl::RefPtr<fxl::TaskRunner> rx_runner) {
+void ACLDataChannel::SetDataRxHandler(DataReceivedCallback rx_callback,
+                                      async_t* rx_dispatcher) {
   std::lock_guard<std::mutex> lock(rx_mutex_);
-  rx_callback_ = rx_callback;
-  rx_runner_ = rx_runner;
+  rx_callback_ = std::move(rx_callback);
+  rx_dispatcher_ = rx_dispatcher;
 }
 
 bool ACLDataChannel::SendPacket(ACLDataPacketPtr data_packet,
@@ -436,16 +437,12 @@ async_wait_result_t ACLDataChannel::OnChannelReady(
 
     packet->InitializeFromBuffer();
 
-    // TODO(armansito): Always post when this becomes mandatory.
-    if (!rx_runner_) {
-      rx_callback_(std::move(packet));
-    } else {
-      // TODO(armansito): Stop using MakeCopyable! (NET-425).
-      rx_runner_->PostTask(fxl::MakeCopyable(
-          [cb = rx_callback_, packet = std::move(packet)]() mutable {
-            cb(std::move(packet));
-          }));
-    }
+    FXL_DCHECK(rx_dispatcher_);
+
+    async::PostTask(rx_dispatcher_,
+                    [cb = rx_callback_, packet = std::move(packet)]() mutable {
+                      cb(std::move(packet));
+                    });
   }
   return ASYNC_WAIT_AGAIN;
 }

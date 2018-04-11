@@ -96,7 +96,7 @@ class LowEnergyConnection {
     };
 
     l2cap->OpenFixedChannel(link_->handle(), l2cap::kATTChannelId, callback,
-                            task_runner_);
+                            async_get_default());
   }
 
   size_t ref_count() const { return refs_.size(); }
@@ -491,7 +491,7 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
 
   l2cap_->RegisterLE(link->handle(), link->role(),
                      std::move(conn_param_update_cb), std::move(link_error_cb),
-                     task_runner_);
+                     async_get_default());
 
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
