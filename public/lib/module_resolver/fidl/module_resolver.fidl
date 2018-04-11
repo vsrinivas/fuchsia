@@ -4,7 +4,7 @@
 
 library modular;
 
-// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/intent/fidl/intent.fidl";
 // import "lib/story/fidl/create_chain.fidl";
 // import "lib/story/fidl/create_link.fidl";
 // import "lib/module/fidl/link_path.fidl";
@@ -27,7 +27,7 @@ interface ModuleResolver {
       (FindModulesResult result);
 };
 
-// Mirrors the information present in a Daisy. Where a Daisy is meant to
+// Mirrors the information present in a Intent. Where a Intent is meant to
 // interface between Modules and the Framework, this structure is specific to
 // the interface between the Framework and the ModuleResolver.
 //

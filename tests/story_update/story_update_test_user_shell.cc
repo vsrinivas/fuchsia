@@ -125,10 +125,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // observability of the state transitions.
     //
     // The observability of the STOPPED state, however, is guaranteed.
-    modular::Daisy daisy;
-    daisy.url = kModuleUrl;
+    modular::Intent intent;
+    intent.action.handler = kModuleUrl;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module1",
-                                 std::move(daisy),
+                                 std::move(intent),
                                  nullptr /* surface_relation */);
 
     fidl::VectorPtr<fidl::StringPtr> module_path;
@@ -184,10 +184,10 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     // the story runner handling the Done() request from the module. Instead,
     // the controller connection is just closed, and flow of control would need
     // to resume from the connection error handler of the module controller.
-    modular::Daisy daisy;
-    daisy.url = kModuleUrl;
+    modular::Intent intent;
+    intent.action.handler = kModuleUrl;
     story_controller_->AddModule(nullptr /* parent_module_path */, "module2",
-                                 std::move(daisy),
+                                 std::move(intent),
                                  nullptr /* surface_relation */);
 
     fidl::VectorPtr<fidl::StringPtr> module_path;

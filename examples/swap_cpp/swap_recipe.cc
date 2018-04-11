@@ -114,10 +114,10 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     }
 
     // This module is named after its URL.
-    modular::Daisy daisy;
-    daisy.url = module_query;
+    modular::Intent intent;
+    intent.action.handler = module_query;
     module_context_->EmbedModule(
-        module_query, std::move(daisy), nullptr, module_.NewRequest(),
+        module_query, std::move(intent), nullptr, module_.NewRequest(),
         module_view_.NewRequest(), [](const modular::StartModuleStatus&) {});
     SetChild();
   }

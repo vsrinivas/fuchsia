@@ -9,8 +9,9 @@
 
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const Daisy& daisy);
-std::ostream& operator<<(std::ostream& os, const Noun& noun);
+std::ostream& operator<<(std::ostream& os, const Intent& intent);
+std::ostream& operator<<(std::ostream& os,
+                         const IntentParameterData& parameter_data);
 
 }  // namespace modular
 

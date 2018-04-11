@@ -43,13 +43,13 @@ interface StoryShell {
 };
 
 // Maps the node_name to the specific mozart view resulting from resolving and
-// launching the daisy specified in a Container node
+// launching the intent specified in a Container node
 struct ContainerView {
   // Name by which this container node is referenced in container layout and
   // surface relationship specifications (cf. container.fidl)
   string node_name;
 
-  // The new view resolved from the daisy corresponding to node_name
+  // The new view resolved from the intent corresponding to node_name
   views_v1_token.ViewOwner owner;
 };
 

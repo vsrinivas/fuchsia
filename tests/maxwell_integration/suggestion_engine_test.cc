@@ -684,14 +684,14 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   EXPECT_EQ("foo://bar", story_provider()->last_created_story());
 }
 
-TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryDaisy) {
+TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
   Proposinator p(suggestion_engine());
   StartListening(10);
 
-  auto daisy = std::make_unique<modular::Daisy>();
-  daisy->url = "foo://bar";
+  auto intent = std::make_unique<modular::Intent>();
+  intent->action.handler = "foo://bar";
   modular::CreateStory create_story;
-  create_story.daisy = std::move(daisy);
+  create_story.intent = std::move(intent);
   modular::Action action;
   action.set_create_story(std::move(create_story));
   fidl::VectorPtr<modular::Action> actions;

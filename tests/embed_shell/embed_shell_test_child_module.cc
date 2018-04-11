@@ -35,10 +35,10 @@ class ChildApp : modular::ModuleWatcher {
 
  private:
   void StartChildModule() {
-    modular::Daisy daisy;
-    daisy.url = kChildModuleUrl;
+    modular::Intent intent;
+    intent.action.handler = kChildModuleUrl;
     module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(daisy), nullptr /* incoming_services */,
+        kChildModuleName, std::move(intent), nullptr /* incoming_services */,
         child_module_.NewRequest(), nullptr /* surface_relation */,
         [](const modular::StartModuleStatus) {});
 

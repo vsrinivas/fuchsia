@@ -22,10 +22,12 @@ void XdrEntry(modular::XdrContext* const xdr,
               modular::ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
-  xdr->Field("verb", &data->verb);
+  xdr->ReadErrorHandler([data] { data->verb = ""; })
+      ->Field("action", &data->verb);
   xdr->ReadErrorHandler([data] { data->composition_pattern = ""; })
       ->Field("composition_pattern", &data->composition_pattern);
-  xdr->Field("noun_constraints", &data->noun_constraints, XdrNounConstraint);
+  xdr->ReadErrorHandler([data] { data->noun_constraints = nullptr; })
+      ->Field("parameters", &data->noun_constraints, XdrNounConstraint);
 }
 
 }  // namespace

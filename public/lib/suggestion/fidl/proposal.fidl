@@ -4,7 +4,7 @@
 
 library modular;
 
-// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/intent/fidl/intent.fidl";
 // import "lib/suggestion/fidl/suggestion_display.fidl";
 // import "lib/surface/fidl/surface.fidl";
 
@@ -50,7 +50,7 @@ struct Proposal {
 union Action {
   CreateStory create_story;
   FocusStory focus_story;
-  // This action is deprectaed, please use the Daisy based AddModule action
+  // This action is deprectaed, please use the Intent based AddModule action
   // instead.
   AddModuleToStory add_module_to_story;
   AddModule add_module;
@@ -69,9 +69,9 @@ struct CreateStory {
   // module.
   string? initial_data;
 
-  // The daisy used to add the first module to the created story.
+  // The intent used to add the first module to the created story.
   // If set, the |module_id| and |initial_data| is disregarded.
-  Daisy? daisy;
+  Intent? intent;
 };
 
 // Brings an existing story into focus.
@@ -115,9 +115,9 @@ struct AddModuleToStory {
   SurfaceRelation surface_relation;
 };
 
-// Adds a module from a Daisy to an existing story.
+// Adds a module from a Intent to an existing story.
 struct AddModule {
-  // The identifier of the story that the Daisy is to be added to.
+  // The identifier of the story that the Intent is to be added to.
   string story_id;
 
   // The name of the module that will be added as a result of this proposal.
@@ -125,10 +125,10 @@ struct AddModule {
   // will result in replacing the module at |module_name|, not adding a new one.
   string module_name;
 
-  // The Daisy that is to be added to the story.
-  Daisy daisy;
+  // The Intent that is to be added to the story.
+  Intent intent;
 
-  // The relation to use when adding a module as a result of resolving the Daisy.
+  // The relation to use when adding a module as a result of resolving the Intent.
   SurfaceRelation surface_relation;
 
   // The module path of an existing module to assign as the surface-relationship

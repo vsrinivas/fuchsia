@@ -58,55 +58,56 @@ class TestApp : public ModuleWatcher {
 
  private:
   void EmbedModule() {
-    daisy_.url = kChildModuleUrl;
-    daisy_.nouns.resize(4);
+    intent_.action.handler = kChildModuleUrl;
+    intent_.parameters.resize(4);
 
-    // We'll put three nouns "one", "two" and "three" on the Daisy. The first
-    // is used to match the Module, because we know that it expectes a noun
-    // named "one". The other two are extra and are going to be passed on
-    // to the Module regardless.
+    // We'll put three parameters "one", "two" and "three" on the Intent. The
+    // first is used to match the Module, because we know that it expectes a
+    // parameter named "one". The other two are extra and are going to be passed
+    // on to the Module regardless.
     //
-    // The second noun is set to a Link that we own with regular JSON content.
+    // The second parameter is set to a Link that we own with regular JSON
+    // content.
     //
-    // The third noun we expect to reference a Link created on our behalf by
-    // the Framework. We don't get access to that Link.
+    // The third parameter we expect to reference a Link created on our behalf
+    // by the Framework. We don't get access to that Link.
     module_context_->GetLink("foo", link_one_.NewRequest());
     link_one_->SetEntity(entity_one_reference_);
-    Noun noun;
-    noun.set_link_name("foo");
-    daisy_.nouns->at(0) = NounEntry();
-    daisy_.nouns->at(0).name = "one";
-    daisy_.nouns->at(0).noun = std::move(noun);
+    IntentParameterData parameter_data;
+    parameter_data.set_link_name("foo");
+    intent_.parameters->at(0) = IntentParameter();
+    intent_.parameters->at(0).name = "one";
+    intent_.parameters->at(0).data = std::move(parameter_data);
 
     module_context_->GetLink("bar", link_two_.NewRequest());
     link_two_->Set(nullptr, "12345");
-    noun = Noun();
-    noun.set_link_name("bar");
-    daisy_.nouns->at(1) = NounEntry();
-    daisy_.nouns->at(1).name = "two";
-    daisy_.nouns->at(1).noun = std::move(noun);
+    parameter_data = IntentParameterData();
+    parameter_data.set_link_name("bar");
+    intent_.parameters->at(1) = IntentParameter();
+    intent_.parameters->at(1).name = "two";
+    intent_.parameters->at(1).data = std::move(parameter_data);
 
-    noun = Noun();
-    noun.set_json("67890");
-    daisy_.nouns->at(2) = NounEntry();
-    daisy_.nouns->at(2).name = "three";
-    daisy_.nouns->at(2).noun = std::move(noun);
+    parameter_data = IntentParameterData();
+    parameter_data.set_json("67890");
+    intent_.parameters->at(2) = IntentParameter();
+    intent_.parameters->at(2).name = "three";
+    intent_.parameters->at(2).data = std::move(parameter_data);
 
     // This noun doesn't have a name, and will appear as the root or default
     // link for the child mod. This is for backwards compatibility. MI4-739
-    noun = Noun();
-    noun.set_json("1337");
-    daisy_.nouns->at(3) = NounEntry();
-    daisy_.nouns->at(3).noun = std::move(noun);
+    parameter_data = IntentParameterData();
+    parameter_data.set_json("1337");
+    intent_.parameters->at(3) = IntentParameter();
+    intent_.parameters->at(3).data = std::move(parameter_data);
 
     // Sync to avoid race conditions between writing
     link_one_->Sync([this] {
       link_two_->Sync([this] {
         module_context_->EmbedModule(
-            "my child", std::move(daisy_), nullptr, child_module_.NewRequest(),
+            "my child", std::move(intent_), nullptr, child_module_.NewRequest(),
             child_view_.NewRequest(), [this](StartModuleStatus status) {
               if (status == StartModuleStatus::SUCCESS) {
-                start_daisy_.Pass();
+                start_intent_.Pass();
               } else {
                 module_context_->Done();
               }
@@ -134,14 +135,14 @@ class TestApp : public ModuleWatcher {
   views_v1_token::ViewOwnerPtr child_view_;
 
   fidl::StringPtr entity_one_reference_;
-  Daisy daisy_;
+  Intent intent_;
 
   LinkPtr link_one_;
   LinkPtr link_two_;
 
   fidl::Binding<ModuleWatcher> module_watcher_binding_;
 
-  TestPoint start_daisy_{"Started child Daisy"};
+  TestPoint start_intent_{"Started child Intent"};
   TestPoint child_module_stopped_{"Child module observed to have stopped"};
   TestPoint initialized_{"Parent module initialized"};
   TestPoint stopped_{"Parent module stopped"};

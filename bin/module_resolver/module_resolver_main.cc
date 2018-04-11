@@ -118,23 +118,23 @@ class ModuleResolverApp : ContextListener {
         std::move(query),
         [this, story_id](const modular::FindModulesResult& result) {
           std::vector<Proposal> new_proposals;
-          std::vector<modular::Daisy> new_daisies;  // Only for comparison.
+          std::vector<modular::Intent> new_intents;  // Only for comparison.
           int proposal_count = 0;
           for (const auto& module : *result.modules) {
-            modular::Daisy daisy;
+            modular::Intent intent;
             new_proposals.push_back(CreateProposalFromModuleResolverResult(
-                module, story_id, proposal_count++, &daisy));
-            new_daisies.push_back(std::move(daisy));
+                module, story_id, proposal_count++, &intent));
+            new_intents.push_back(std::move(intent));
           }
 
-          // Compare the old daisies and the new daisies. This is a proxy
+          // Compare the old intents and the new intents. This is a proxy
           // for comparing the set of proposals themselves, because proposals
           // cannot be cloned, which makes it hard to compare them.
           bool push_new_proposals = true;
-          if (new_daisies.size() == current_proposal_daisies_.size()) {
+          if (new_intents.size() == current_proposal_intents_.size()) {
             push_new_proposals = false;
-            for (uint32_t i = 0; i < new_daisies.size(); ++i) {
-              if (!DaisyEqual(new_daisies[i], current_proposal_daisies_[i])) {
+            for (uint32_t i = 0; i < new_intents.size(); ++i) {
+              if (!IntentEqual(new_intents[i], current_proposal_intents_[i])) {
                 push_new_proposals = true;
                 break;
               }
@@ -154,7 +154,7 @@ class ModuleResolverApp : ContextListener {
               current_proposal_ids_.push_back(new_proposals[i].id);
               proposal_publisher_->Propose(std::move(new_proposals[i]));
             }
-            current_proposal_daisies_ = std::move(new_daisies);
+            current_proposal_intents_ = std::move(new_intents);
           }
         });
   }
@@ -169,23 +169,23 @@ class ModuleResolverApp : ContextListener {
       const modular::ModuleResolverResult& module_result,
       const std::string& story_id,
       int proposal_id,
-      modular::Daisy* daisy_out) {
-    modular::Daisy daisy;
-    daisy.url = module_result.module_id;
-    fidl::VectorPtr<modular::NounEntry> nouns;
-
+      modular::Intent* intent_out) {
+    modular::Intent intent;
+    intent.action.handler = module_result.module_id;
+    fidl::VectorPtr<modular::IntentParameter> parameters;
     fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
+
     for (const modular::ChainEntry& chain_entry :
          *module_result.create_chain_info.property_info) {
-      modular::NounEntry noun_entry;
-      noun_entry.name = chain_entry.key;
-      modular::Noun noun;
+      modular::IntentParameter parameter;
+      parameter.name = chain_entry.key;
+      modular::IntentParameterData parameter_data;
       const modular::CreateChainPropertyInfo& create_chain_info =
           chain_entry.value;
       if (create_chain_info.is_link_path()) {
         modular::LinkPath link_path;
         fidl::Clone(create_chain_info.link_path(), &link_path);
-        noun.set_link_path(std::move(link_path));
+        parameter_data.set_link_path(std::move(link_path));
         if (!parent_mod_path) {
           // TODO(thatguy): Mod parent-child relationships are critical for the
           // story shell, and right now the Framework only guarantees mod
@@ -198,18 +198,20 @@ class ModuleResolverApp : ContextListener {
           // expresses, in short "use the owner of the first shared link
           // between this mod and another mod as the parent".
           // MS-1473
-          parent_mod_path = noun.link_path().module_path.Clone();
+          parent_mod_path = parameter_data.link_path().module_path.Clone();
         }
       } else if (create_chain_info.is_create_link()) {
-        noun.set_entity_reference(create_chain_info.create_link().initial_data);
+        parameter_data.set_entity_reference(
+            create_chain_info.create_link().initial_data);
       }
-      noun_entry.noun = std::move(noun);
-      nouns.push_back(std::move(noun_entry));
+      parameter.data = std::move(parameter_data);
+      parameters.push_back(std::move(parameter));
     }
-    daisy.nouns = std::move(nouns);
+    intent.parameters = std::move(parameters);
+
     AddModule add_module;
-    fidl::Clone(daisy, daisy_out);
-    add_module.daisy = std::move(daisy);
+    fidl::Clone(intent, intent_out);
+    add_module.intent = std::move(intent);
     add_module.module_name = module_result.module_id;
     add_module.story_id = story_id;
     add_module.surface_parent_module_path = std::move(parent_mod_path);
@@ -276,7 +278,7 @@ class ModuleResolverApp : ContextListener {
   // NOTE(thatguy): This is only necessary because context can change
   // frequently but not result in new proposals, causing churn in the
   // "Next" section of suggestions at a high rate.
-  std::vector<modular::Daisy> current_proposal_daisies_;
+  std::vector<modular::Intent> current_proposal_intents_;
 
   IntelligenceServicesPtr intelligence_services_;
 

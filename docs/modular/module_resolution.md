@@ -1,7 +1,7 @@
 Module Resolution
 ===
 
-Resolution is the process by which a Fuchsia [`Daisy`](daisy.md), which
+Resolution is the process by which a Fuchsia [`Intent`](intent.md), which
 represents an abstract or loosely specified action, is expanded into a set of
 concrete Module implementations for execution and ranked by relevance to a
 provided context.
@@ -27,7 +27,7 @@ warrants its own public documentation.
 ### Inputs
 TODO
 
-* A `Daisy`: defines `Module` constraints based on desired action and/or
+* A `Intent`: defines `Module` constraints based on desired action and/or
   instances of runtime data.
 * A `ScoringInfo` struct: informs the ModuleResolver on how to score and rank
   the results, including the scope of context signals that may affect ranking.

@@ -38,8 +38,8 @@ struct ModuleData {
   // was stopped by its parent module using ModuleController.Stop().
   bool module_stopped;
 
-  // The daisy that was issued to start this Module instance.
-  Daisy? daisy;
+  // The intent that was issued to start this Module instance.
+  Intent? intent;
 };
 
 enum ModuleSource {

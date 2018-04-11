@@ -83,7 +83,8 @@ void XdrSurfaceRelation(XdrContext* const xdr, SurfaceRelation* const data) {
   xdr->Field("emphasis", &data->emphasis);
 }
 
-void XdrNoun(XdrContext* const xdr, Noun* const data) {
+void XdrIntentParameterData(XdrContext* const xdr,
+                            IntentParameterData* const data) {
   static constexpr char kTag[] = "tag";
   static constexpr char kEntityReference[] = "entity_reference";
   static constexpr char kJson[] = "json";
@@ -117,7 +118,8 @@ void XdrNoun(XdrContext* const xdr, Noun* const data) {
         xdr->Field(kLinkPath, &value, XdrLinkPath);
         data->set_link_path(std::move(value));
       } else {
-        FXL_LOG(ERROR) << "XdrNoun FROM_JSON unknown tag: " << tag;
+        FXL_LOG(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: "
+                       << tag;
       }
       break;
     }
@@ -135,29 +137,29 @@ void XdrNoun(XdrContext* const xdr, Noun* const data) {
       // for all types.
 
       switch (data->Which()) {
-        case Noun::Tag::kEntityReference:
+        case IntentParameterData::Tag::kEntityReference:
           tag = kEntityReference;
           xdr->Field(kEntityReference, data->entity_reference().operator->());
           break;
-        case Noun::Tag::kJson:
+        case IntentParameterData::Tag::kJson:
           tag = kJson;
           xdr->Field(kJson, data->json().operator->());
           break;
-        case Noun::Tag::kEntityType:
+        case IntentParameterData::Tag::kEntityType:
           tag = kEntityType;
           xdr->Field(kEntityType, data->entity_type().operator->());
           break;
-        case Noun::Tag::kLinkName:
+        case IntentParameterData::Tag::kLinkName:
           tag = kLinkName;
           xdr->Field(kLinkName, data->link_name().operator->());
           break;
-        case Noun::Tag::kLinkPath: {
+        case IntentParameterData::Tag::kLinkPath: {
           tag = kLinkPath;
           xdr->Field(kLinkPath, &data->link_path(), XdrLinkPath);
           break;
         }
-        case Noun::Tag::Invalid:
-          FXL_LOG(ERROR) << "XdrNoun TO_JSON unknown tag: "
+        case IntentParameterData::Tag::Invalid:
+          FXL_LOG(ERROR) << "XdrIntentParameterData TO_JSON unknown tag: "
                          << static_cast<int>(data->Which());
           break;
       }
@@ -168,15 +170,15 @@ void XdrNoun(XdrContext* const xdr, Noun* const data) {
   }
 }
 
-void XdrNounEntry(XdrContext* const xdr, NounEntry* const data) {
+void XdrIntentParameter(XdrContext* const xdr, IntentParameter* const data) {
   xdr->Field("name", &data->name);
-  xdr->Field("noun", &data->noun, XdrNoun);
+  xdr->Field("data", &data->data, XdrIntentParameterData);
 }
 
-void XdrDaisy(XdrContext* const xdr, Daisy* const data) {
-  xdr->Field("verb", &data->verb);
-  xdr->Field("url", &data->url);
-  xdr->Field("nouns", &data->nouns, XdrNounEntry);
+void XdrIntent(XdrContext* const xdr, Intent* const data) {
+  xdr->Field("action_name", &data->action.name);
+  xdr->Field("action_handler", &data->action.handler);
+  xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
@@ -187,7 +189,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
-  xdr->Field("daisy", &data->daisy, XdrDaisy);
+  xdr->Field("intent", &data->intent, XdrIntent);
 
   xdr->ReadErrorHandler([data] { data->chain_data.key_to_link_map.resize(0); })
       ->Field("chain_data", &data->chain_data, XdrChainData);
@@ -685,7 +687,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      DaisyPtr daisy,
+      IntentPtr intent,
       ResultCall result_call)
       : Operation("StoryControllerImpl::StartModuleCall",
                   container,
@@ -703,7 +705,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)),
-        daisy_(std::move(daisy)) {
+        intent_(std::move(intent)) {
     Ready();
   }
 
@@ -753,7 +755,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     module_data_->module_source = module_source_;
     fidl::Clone(surface_relation_, &module_data_->surface_relation);
     module_data_->module_stopped = false;
-    module_data_->daisy = std::move(daisy_);
+    module_data_->intent = std::move(intent_);
 
     // Initialize |module_data_->chain_data|.
     new InitializeChainCall(&operation_queue_, story_controller_impl_,
@@ -808,7 +810,7 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   fidl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
-  DaisyPtr daisy_;
+  IntentPtr intent_;
 
   LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
@@ -833,7 +835,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       SurfaceRelationPtr surface_relation,
       const bool focus,
       ModuleSource module_source,
-      DaisyPtr daisy,
+      IntentPtr intent,
       ResultCall result_call)
       : Operation("StoryControllerImpl::StartModuleInShellCall",
                   container,
@@ -850,7 +852,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         surface_relation_(std::move(surface_relation)),
         focus_(focus),
         module_source_(module_source),
-        daisy_(std::move(daisy)) {
+        intent_(std::move(intent)) {
     Ready();
   }
 
@@ -865,11 +867,11 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // shell.
     new StartModuleCall(
         &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        link_name_, fidl::Clone(module_manifest_), fidl::Clone(create_chain_info_),
-        module_source_, fidl::Clone(surface_relation_),
-        std::move(incoming_services_), std::move(module_controller_request_),
-        view_owner_.NewRequest(), std::move(daisy_),
-        [this, flow] { Cont(flow); });
+        link_name_, fidl::Clone(module_manifest_),
+        fidl::Clone(create_chain_info_), module_source_,
+        fidl::Clone(surface_relation_), std::move(incoming_services_),
+        std::move(module_controller_request_), view_owner_.NewRequest(),
+        std::move(intent_), [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -943,7 +945,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   SurfaceRelationPtr surface_relation_;
   const bool focus_;
   const ModuleSource module_source_;
-  DaisyPtr daisy_;
+  IntentPtr intent_;
 
   ModuleControllerPtr module_controller_;
   views_v1_token::ViewOwnerPtr view_owner_;
@@ -1012,7 +1014,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
           link_name_, nullptr /* module_manifest */, nullptr /* chain_data */,
           nullptr /* incoming_services */,
           nullptr /* module_controller_request*/, std::move(surface_relation_),
-          true, ModuleSource::EXTERNAL, std::move(module_data_->daisy),
+          true, ModuleSource::EXTERNAL, std::move(module_data_->intent),
           [flow] {});
     }
   }
@@ -1378,7 +1380,7 @@ class StoryControllerImpl::StartCall : Operation<> {
                   nullptr /* incoming_services */,
                   nullptr /* module_controller_request */,
                   CloneOptional(module_data.surface_relation), true,
-                  module_data.module_source, std::move(module_data.daisy),
+                  module_data.module_source, std::move(module_data.intent),
                   [flow] {});
             }
           }
@@ -1438,7 +1440,8 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
         nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
         std::move(module_data_->surface_relation), true,
-        module_data_->module_source, std::move(module_data_->daisy), [flow] {});
+        module_data_->module_source, std::move(module_data_->intent),
+        [flow] {});
   }
 
   OperationQueue operation_queue_;
@@ -1571,20 +1574,20 @@ class StoryControllerImpl::ResolveNounCall
 class StoryControllerImpl::ResolveModulesCall
     : Operation<FindModulesResultPtr> {
  public:
-  // If |daisy| originated from a Module, |requesting_module_path| must be
-  // non-null.  Otherwise, it is an error for the |daisy| to have any Nouns of
+  // If |intent| originated from a Module, |requesting_module_path| must be
+  // non-null.  Otherwise, it is an error for the |intent| to have any Nouns of
   // type 'link_name' (since a Link with a link name without an associated
   // Module path is impossible to locate).
   ResolveModulesCall(OperationContainer* const container,
                      StoryControllerImpl* const story_controller_impl,
-                     DaisyPtr daisy,
+                     IntentPtr intent,
                      fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
                      ResultCall result_call)
       : Operation("StoryControllerImpl::ResolveModulesCall",
                   container,
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
-        daisy_(std::move(daisy)),
+        intent_(std::move(intent)),
         requesting_module_path_(std::move(requesting_module_path)) {
     Ready();
   }
@@ -1594,23 +1597,23 @@ class StoryControllerImpl::ResolveModulesCall
     FlowToken flow{this, &result_};
 
     resolver_query_ = ResolverQuery::New();
-    resolver_query_->verb = daisy_->verb;
-    resolver_query_->url = daisy_->url;
+    resolver_query_->verb = intent_->action.name;
+    resolver_query_->url = intent_->action.handler;
 
-    for (const auto& entry : *daisy_->nouns) {
+    for (const auto& entry : *intent_->parameters) {
       const auto& name = entry.name;
-      const auto& noun = entry.noun;
+      const auto& data = entry.data;
 
-      if (name.is_null() && daisy_->url.is_null()) {
-        // It is not allowed to have a null noun name (left in for backwards
+      if (name.is_null() && intent_->action.handler.is_null()) {
+        // It is not allowed to have a null intent name (left in for backwards
         // compatibility with old code: MI4-739) and rely on verb-based
         // resolution.
         return;
       }
 
-      if (noun.is_json()) {
+      if (data.is_json()) {
         auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_json(noun.json());
+        noun_constraint->set_json(data.json());
 
         auto entry = ResolverNounConstraintEntry::New();
         entry->key = name;
@@ -1618,15 +1621,15 @@ class StoryControllerImpl::ResolveModulesCall
 
         resolver_query_->noun_constraints.push_back(std::move(*entry));
 
-      } else if (noun.is_link_name() || noun.is_link_path()) {
+      } else if (data.is_link_name() || data.is_link_path()) {
         // Find the chain for this Module, or use the one that was provided via
-        // the noun.
+        // the data.
         LinkPathPtr link_path;
-        if (noun.is_link_path()) {
-          link_path = CloneOptional(noun.link_path());
+        if (data.is_link_path()) {
+          link_path = CloneOptional(data.link_path());
         } else {
           link_path = story_controller_impl_->GetLinkPathForChainKey(
-              requesting_module_path_, noun.link_name());
+              requesting_module_path_, data.link_name());
         }
 
         if (!link_path) {
@@ -1634,7 +1637,7 @@ class StoryControllerImpl::ResolveModulesCall
           // one the Module created itself.
           link_path = LinkPath::New();
           link_path->module_path = requesting_module_path_.Clone();
-          link_path->link_name = noun.link_name();
+          link_path->link_name = data.link_name();
         }
 
         ++outstanding_requests_;
@@ -1651,18 +1654,18 @@ class StoryControllerImpl::ResolveModulesCall
                               }
                             });
 
-      } else if (noun.is_entity_type()) {
+      } else if (data.is_entity_type()) {
         auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_entity_type(noun.entity_type().Clone());
+        noun_constraint->set_entity_type(data.entity_type().Clone());
 
         auto entry = ResolverNounConstraintEntry::New();
         entry->key = name;
         entry->constraint = std::move(*noun_constraint);
         resolver_query_->noun_constraints.push_back(std::move(*entry));
 
-      } else if (noun.is_entity_reference()) {
+      } else if (data.is_entity_reference()) {
         auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_entity_reference(noun.entity_reference());
+        noun_constraint->set_entity_reference(data.entity_reference());
 
         auto entry = ResolverNounConstraintEntry::New();
         entry->key = name;
@@ -1687,7 +1690,7 @@ class StoryControllerImpl::ResolveModulesCall
   OperationQueue operation_queue_;
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  const DaisyPtr daisy_;
+  const IntentPtr intent_;
   const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
 
   ResolverQueryPtr resolver_query_;
@@ -1738,7 +1741,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
     // TODO(djmurphy): follow up, probably make containers modules
     for (size_t i = 0; i < nodes_->size(); ++i) {
       new ResolveModulesCall(&operation_queue_, story_controller_impl_,
-                             CloneOptional(nodes_->at(i)->daisy),
+                             CloneOptional(nodes_->at(i)->intent),
                              std::move(module_path),  // May be wrong.
                              [this, flow, i](FindModulesResultPtr result) {
                                Cont(flow, i, std::move(result));
@@ -1769,7 +1772,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
           nullptr /* incoming_services */,
           nullptr /* module_controller_request */,
           node_views_[nodes_->at(i)->node_name].NewRequest(),
-          nullptr /* daisy */, [this, flow] { Cont2(flow); });
+          nullptr /* intent */, [this, flow] { Cont2(flow); });
     } else {
       Cont2(flow);
     }
@@ -1815,30 +1818,30 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
 };
 
-// An operation that first performs module resolution with the provided Daisy
+// An operation that first performs module resolution with the provided Intent
 // and subsequently starts the most appropriate resolved module in the story
 // shell.
-class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
+class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
  public:
-  AddDaisyCall(
+  AddIntentCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
       fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
       const std::string& module_name,
-      Daisy daisy,
+      Intent intent,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
       const ModuleSource module_source,
       ResultCall result_call)
-      : Operation("StoryControllerImpl::AddDaisyCall",
+      : Operation("StoryControllerImpl::AddIntentCall",
                   container,
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         requesting_module_path_(std::move(requesting_module_path)),
         module_name_(module_name),
-        daisy_(std::move(daisy)),
+        intent_(std::move(intent)),
         incoming_services_(std::move(incoming_services)),
         module_controller_request_(std::move(module_controller_request)),
         surface_relation_(std::move(surface_relation)),
@@ -1852,7 +1855,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
     FlowToken flow{this, &result_};
 
     new ResolveModulesCall(&operation_queue_, story_controller_impl_,
-                           CloneOptional(daisy_),
+                           CloneOptional(intent_),
                            requesting_module_path_.Clone(),
                            [this, flow](FindModulesResultPtr result) {
                              StartModuleFromResult(flow, std::move(result));
@@ -1877,7 +1880,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
             CloneOptional(create_chain_info), std::move(incoming_services_),
             std::move(module_controller_request_), std::move(surface_relation_),
             true /* focus */, module_source_,
-            fidl::MakeOptional(std::move(daisy_)), [flow] {});
+            fidl::MakeOptional(std::move(intent_)), [flow] {});
       } else {
         new StartModuleCall(
             &operation_queue_, story_controller_impl_, std::move(module_path),
@@ -1886,7 +1889,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
             std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
             std::move(view_owner_request_),
-            fidl::MakeOptional(std::move(daisy_)), [flow] {});
+            fidl::MakeOptional(std::move(intent_)), [flow] {});
       }
 
       result_ = StartModuleStatus::SUCCESS;
@@ -1897,7 +1900,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
   StoryControllerImpl* const story_controller_impl_;
   fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
   const std::string module_name_;
-  Daisy daisy_;
+  Intent intent_;
   fidl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
@@ -1906,7 +1909,7 @@ class StoryControllerImpl::AddDaisyCall : Operation<StartModuleStatus> {
 
   StartModuleStatus result_{StartModuleStatus::NO_MODULES_FOUND};
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(AddDaisyCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(AddIntentCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -2072,7 +2075,7 @@ void StoryControllerImpl::StartModuleDeprecated(
       CloneOptional(manifest), std::move(create_chain_info), module_source,
       nullptr /* surface_relation */, std::move(incoming_services),
       std::move(module_controller_request), std::move(view_owner_request),
-      nullptr /* daisy */, [] {});
+      nullptr /* intent */, [] {});
 }
 
 void StoryControllerImpl::StartModuleInShellDeprecated(
@@ -2093,42 +2096,42 @@ void StoryControllerImpl::StartModuleInShellDeprecated(
       &operation_queue_, this, module_path, module_url, link_name,
       CloneOptional(manifest), std::move(create_chain_info),
       std::move(incoming_services), std::move(module_controller_request),
-      std::move(surface_relation), focus, module_source, nullptr /* daisy */,
+      std::move(surface_relation), focus, module_source, nullptr /* intent */,
       [] {});
 }
 
 void StoryControllerImpl::EmbedModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name,
-    DaisyPtr daisy,
+    IntentPtr intent,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
-  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
-                   module_name, std::move(*daisy), std::move(incoming_services),
-                   std::move(module_controller_request),
-                   nullptr /* surface_relation */,
-                   std::move(view_owner_request), std::move(module_source),
-                   std::move(callback));
+  new AddIntentCall(
+      &operation_queue_, this, parent_module_path.Clone(), module_name,
+      std::move(*intent), std::move(incoming_services),
+      std::move(module_controller_request), nullptr /* surface_relation */,
+      std::move(view_owner_request), std::move(module_source),
+      std::move(callback));
 }
 
 void StoryControllerImpl::StartModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name,
-    DaisyPtr daisy,
+    IntentPtr intent,
     fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
     fidl::InterfaceRequest<ModuleController> module_controller_request,
     SurfaceRelationPtr surface_relation,
     ModuleSource module_source,
     std::function<void(StartModuleStatus)> callback) {
-  new AddDaisyCall(&operation_queue_, this, parent_module_path.Clone(),
-                   module_name, std::move(*daisy), std::move(incoming_services),
-                   std::move(module_controller_request),
-                   std::move(surface_relation),
-                   nullptr /* view_owner_request */, std::move(module_source),
-                   std::move(callback));
+  new AddIntentCall(
+      &operation_queue_, this, parent_module_path.Clone(), module_name,
+      std::move(*intent), std::move(incoming_services),
+      std::move(module_controller_request), std::move(surface_relation),
+      nullptr /* view_owner_request */, std::move(module_source),
+      std::move(callback));
 }
 
 void StoryControllerImpl::StartContainerInShell(
@@ -2391,11 +2394,11 @@ void StoryControllerImpl::GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
 void StoryControllerImpl::AddModule(
     fidl::VectorPtr<fidl::StringPtr> parent_module_path,
     fidl::StringPtr module_name,
-    Daisy daisy,
+    Intent intent,
     SurfaceRelationPtr surface_relation) {
-  new AddDaisyCall(
+  new AddIntentCall(
       &operation_queue_, this, std::move(parent_module_path), module_name,
-      std::move(daisy), nullptr /* incoming_services */,
+      std::move(intent), nullptr /* incoming_services */,
       nullptr /* module_controller_request */, std::move(surface_relation),
       nullptr /* view_owner_request */, ModuleSource::EXTERNAL,
       [](StartModuleStatus) {});

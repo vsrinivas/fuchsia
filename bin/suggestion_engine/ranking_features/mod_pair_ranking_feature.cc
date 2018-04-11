@@ -62,7 +62,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
         break;
       }
       case Action::Tag::kAddModule: {
-        module_url = action.add_module().daisy.url;
+        module_url = action.add_module().intent.action.handler;
         break;
       }
       case Action::Tag::kCustomAction:

@@ -51,47 +51,49 @@ bool SurfaceRelationEqual(const SurfaceRelationPtr& a,
   return SurfaceRelationEqual(*a, *b);
 }
 
-bool NounEqual(const Noun& a, const Noun& b) {
+bool IntentParameterDataEqual(const IntentParameterData& a,
+                              const IntentParameterData& b) {
   if (a.Which() != b.Which()) {
     return false;
   }
 
   switch (a.Which()) {
-    case Noun::Tag::kEntityReference:
+    case IntentParameterData::Tag::kEntityReference:
       return a.entity_reference() == b.entity_reference();
-    case Noun::Tag::kJson:
+    case IntentParameterData::Tag::kJson:
       return a.json() == b.json();
-    case Noun::Tag::kEntityType:
+    case IntentParameterData::Tag::kEntityType:
       // TODO(thatguy): should this be compared ignoring order?
       return a.entity_type() == b.entity_type();
-    case Noun::Tag::kLinkName:
+    case IntentParameterData::Tag::kLinkName:
       return a.link_name() == b.link_name();
-    case Noun::Tag::kLinkPath:
+    case IntentParameterData::Tag::kLinkPath:
       return a.link_path() == b.link_path();
-    case Noun::Tag::Invalid:
+    case IntentParameterData::Tag::Invalid:
     default:
       return false;
   }
 }
 
-bool DaisyEqual(const Daisy& a, const Daisy& b) {
-  if ((a.url != b.url) || (a.verb != b.verb) ||
-      (a.nouns->size() != b.nouns->size())) {
+bool IntentEqual(const Intent& a, const Intent& b) {
+  if ((a.action.handler != b.action.handler) ||
+      (a.action.name != b.action.name) ||
+      (a.parameters->size() != b.parameters->size())) {
     return false;
   }
 
-  std::map<fidl::StringPtr, const Noun*> a_map;
-  for (const auto& i : *a.nouns) {
-    a_map[i.name] = &i.noun;
+  std::map<fidl::StringPtr, const IntentParameterData*> a_map;
+  for (const auto& i : *a.parameters) {
+    a_map[i.name] = &i.data;
   }
 
-  for (const auto& i : *b.nouns) {
+  for (const auto& i : *b.parameters) {
     const auto& j = a_map.find(i.name);
     if (j == a_map.cend()) {
       // name not found
       return false;
     }
-    if (!NounEqual(*j->second, i.noun)) {
+    if (!IntentParameterDataEqual(*j->second, i.data)) {
       return false;
     }
   }
@@ -99,14 +101,14 @@ bool DaisyEqual(const Daisy& a, const Daisy& b) {
   return true;
 }
 
-bool DaisyEqual(const DaisyPtr& a, const DaisyPtr& b) {
+bool IntentEqual(const IntentPtr& a, const IntentPtr& b) {
   if (a.get() == nullptr) {
     return (b.get() == nullptr);
   }
   if (b.get() == nullptr) {
     return false;
   }
-  return DaisyEqual(*a, *b);
+  return IntentEqual(*a, *b);
 }
 
 bool ModuleDataEqual(const ModuleData& a, const ModuleData& b) {
@@ -114,7 +116,8 @@ bool ModuleDataEqual(const ModuleData& a, const ModuleData& b) {
          ChainDataEqual(a.chain_data, b.chain_data) &&
          a.link_path == b.link_path && a.module_source == b.module_source &&
          SurfaceRelationEqual(a.surface_relation, b.surface_relation) &&
-         a.module_stopped == b.module_stopped && DaisyEqual(a.daisy, b.daisy);
+         a.module_stopped == b.module_stopped &&
+         IntentEqual(a.intent, b.intent);
 }
 
 bool ModuleDataEqual(const ModuleDataPtr& a, const ModuleDataPtr& b) {

@@ -6,7 +6,7 @@
 
 library modular;
 
-// import "lib/daisy/fidl/daisy.fidl";
+// import "lib/intent/fidl/intent.fidl";
 // import "lib/surface/fidl/surface.fidl";
 
 // Specification of the layout of multiple surfaces in a module container. The
@@ -57,13 +57,13 @@ struct ContainerRelationEntry {
 };
 
 // Specifies one module to start inside a container. The module is specified by
-// a daisy as usual. The node_name of the surface is referenced by container
+// a intent as usual. The node_name of the surface is referenced by container
 // layout and by container relation entry.
 struct ContainerNode {
   // Name by which this module is references in layout and surface relationship
   // specifications (cf. above).
   string node_name;
 
-  // The daisy to resolve to a module.
-  Daisy daisy;
+  // The intent to resolve to a module.
+  Intent intent;
 };

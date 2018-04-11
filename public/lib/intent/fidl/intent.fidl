@@ -28,7 +28,7 @@ struct IntentAction {
 struct IntentParameter {
   // The name of the parameter. The handler (i.e. selected mod) will be provided
   // with the data for this parameter under a link called |name|.
-  string name;
+  string? name;
 
   // The data that will be passed to the intent handler.
   IntentParameterData data;

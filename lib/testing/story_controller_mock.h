@@ -98,9 +98,9 @@ class StoryControllerMock : public StoryController {
 
   void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
                  fidl::StringPtr module_name,
-                 Daisy daisy,
+                 Intent intent,
                  SurfaceRelationPtr surface_relation) override {
-    last_added_module_ = daisy.url;
+    last_added_module_ = intent.action.handler;
   }
 
   std::string last_added_module_;

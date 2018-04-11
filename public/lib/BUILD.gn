@@ -41,7 +41,7 @@ fidl("fidl") {
     "context/fidl/metadata.fidl",
     "context/fidl/value.fidl",
     "context/fidl/value_type.fidl",
-    "daisy/fidl/daisy.fidl",
+    "intent/fidl/intent.fidl",
     "device/fidl/device_runner_monitor.fidl",
     "device/fidl/device_shell.fidl",
     "device/fidl/user_provider.fidl",

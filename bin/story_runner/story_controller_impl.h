@@ -159,7 +159,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void EmbedModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
       fidl::StringPtr module_name,
-      DaisyPtr daisy,
+      IntentPtr intent,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -170,7 +170,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void StartModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
       fidl::StringPtr module_name,
-      DaisyPtr daisy,
+      IntentPtr intent,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
@@ -219,7 +219,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
                fidl::InterfaceRequest<Link> request) override;
   void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
                  fidl::StringPtr module_name,
-                 Daisy daisy,
+                 Intent intent,
                  SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
@@ -352,7 +352,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class BlockingModuleDataWriteCall;
   class ResolveNounCall;
   class ResolveModulesCall;
-  class AddDaisyCall;
+  class AddIntentCall;
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.

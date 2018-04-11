@@ -101,10 +101,10 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleToStoryAction)  {
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction)  {
-  Daisy daisy;
-  daisy.url = "mod4";
+  Intent intent;
+  intent.action.handler = "mod4";
   AddModule add_module;
-  add_module.daisy = std::move(daisy);
+  add_module.intent = std::move(intent);
   Action action;
   action.set_add_module(std::move(add_module));
   Proposal proposal;
@@ -122,10 +122,10 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction)  {
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
-  Daisy daisy;
-  daisy.url = "mod-fiction";
+  Intent intent;
+  intent.action.handler = "mod-fiction";
   AddModule add_module;
-  add_module.daisy = std::move(daisy);
+  add_module.intent = std::move(intent);
   Action action;
   action.set_add_module(std::move(add_module));
   Proposal proposal;
@@ -143,10 +143,10 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
-  Daisy daisy;
-  daisy.url = "mod-fiction";
+  Intent intent;
+  intent.action.handler = "mod-fiction";
   AddModule add_module;
-  add_module.daisy = std::move(daisy);
+  add_module.intent = std::move(intent);
   Action action;
   action.set_add_module(std::move(add_module));
   Proposal proposal;

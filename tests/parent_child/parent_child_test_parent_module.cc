@@ -56,16 +56,17 @@ class ParentApp {
 
  private:
   void StartChildModuleTwice() {
-    modular::Daisy daisy;
-    daisy.url = kChildModuleUrl;
-    modular::NounEntry noun_entry;
-    noun_entry.name = "link";
-    noun_entry.noun = modular::Noun();
-    noun_entry.noun.set_link_name("module1link");
-    daisy.nouns.push_back(std::move(noun_entry));
+    modular::Intent intent;
+    intent.action.handler = kChildModuleUrl;
+    modular::IntentParameter intent_parameter;
+    intent_parameter.name = "link";
+    intent_parameter.data = modular::IntentParameterData();
+    intent_parameter.data.set_link_name("module1link");
+    intent.parameters.push_back(std::move(intent_parameter));
     module_host_->module_context()->StartModule(
-        kChildModuleName, std::move(daisy), nullptr, child_module_.NewRequest(),
-        nullptr, [](const modular::StartModuleStatus) {});
+        kChildModuleName, std::move(intent), nullptr,
+        child_module_.NewRequest(), nullptr,
+        [](const modular::StartModuleStatus) {});
 
     // Once the module starts, start the same module again, but with a different
     // link mapping. This stops the previous module instance and starts a new
@@ -74,15 +75,15 @@ class ParentApp {
         "child_module_init", [this](const fidl::StringPtr&) {
           child_module_.set_error_handler([this] { OnChildModuleStopped(); });
 
-          modular::Daisy daisy;
-          daisy.url = kChildModuleUrl;
-          modular::NounEntry noun_entry;
-          noun_entry.name = "link";
-          noun_entry.noun = modular::Noun();
-          noun_entry.noun.set_link_name("module2link");
-          daisy.nouns.push_back(std::move(noun_entry));
+          modular::Intent intent;
+          intent.action.handler = kChildModuleUrl;
+          modular::IntentParameter intent_parameter;
+          intent_parameter.name = "link";
+          intent_parameter.data = modular::IntentParameterData();
+          intent_parameter.data.set_link_name("module2link");
+          intent.parameters.push_back(std::move(intent_parameter));
           module_host_->module_context()->StartModule(
-              kChildModuleName, std::move(daisy), nullptr,
+              kChildModuleName, std::move(intent), nullptr,
               child_module2_.NewRequest(), nullptr,
               [](const modular::StartModuleStatus) {});
         });

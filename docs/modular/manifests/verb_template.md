@@ -121,7 +121,7 @@ This is the verb's name. It uniquely identifies this verb.
 > so no collisions are possible.
 
 Verb names allow `Module` [metadata files](module.md) to reference this verb
-template when they declare that they provide an implementation, and allows [`Daisies`](../daisy.md) to reference the same verb when a client requests the associated action to take place.
+template when they declare that they provide an implementation, and allows [`Daisies`](../intent.md) to reference the same verb when a client requests the associated action to take place.
 
 ### nouns
 

@@ -206,16 +206,16 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     module1_link_->SetSchema(kJsonSchema);
     module2_link_->SetSchema(kJsonSchema);
 
-    modular::Daisy daisy;
-    daisy.url = "example_module1";
-    modular::Noun noun;
-    noun.set_link_name(kModule1Link);
-    modular::NounEntry noun_entry;
-    noun_entry.name = "theOneLink";
-    noun_entry.noun = std::move(noun);
-    daisy.nouns.push_back(std::move(noun_entry));
+    modular::Intent intent;
+    intent.action.handler = "example_module1";
+    modular::IntentParameterData parameter_data;
+    parameter_data.set_link_name(kModule1Link);
+    modular::IntentParameter parameter;
+    parameter.name = "theOneLink";
+    parameter.data = std::move(parameter_data);
+    intent.parameters.push_back(std::move(parameter));
     component::ServiceProviderPtr services_from_module1;
-    module_context_->StartModule("module1", std::move(daisy),
+    module_context_->StartModule("module1", std::move(intent),
                                  services_from_module1.NewRequest(),
                                  module1_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
@@ -236,16 +236,16 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
           FXL_LOG(INFO) << "Incoming Multiplier service: 4 * 4 is 16.";
         }));
 
-    daisy = modular::Daisy();
-    daisy.url = "example_module2";
-    noun = modular::Noun();
-    noun.set_link_name(kModule2Link);
-    noun_entry = modular::NounEntry();
-    noun_entry.name = "theOneLink";
-    noun_entry.noun = std::move(noun);
-    daisy.nouns.push_back(std::move(noun_entry));
+    intent = modular::Intent();
+    intent.action.handler = "example_module2";
+    parameter_data = modular::IntentParameterData();
+    parameter_data.set_link_name(kModule2Link);
+    parameter = modular::IntentParameter();
+    parameter.name = "theOneLink";
+    parameter.data = std::move(parameter_data);
+    intent.parameters.push_back(std::move(parameter));
     component::ServiceProviderPtr services_from_module2;
-    module_context_->StartModule("module2", std::move(daisy), nullptr,
+    module_context_->StartModule("module2", std::move(intent), nullptr,
                                  module2_.NewRequest(), nullptr,
                                  [](const modular::StartModuleStatus&) {});
 

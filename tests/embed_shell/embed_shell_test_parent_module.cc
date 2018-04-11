@@ -53,10 +53,10 @@ class ParentApp {
   }
 
   void StartChildModule() {
-    modular::Daisy daisy;
-    daisy.url = kChildModuleUrl;
+    modular::Intent intent;
+    intent.action.handler = kChildModuleUrl;
     module_host_->module_context()->EmbedModule(
-        kChildModuleName, std::move(daisy), nullptr /* incoming_services */,
+        kChildModuleName, std::move(intent), nullptr /* incoming_services */,
         child_module_.NewRequest(), child_view_.NewRequest(),
         [](const modular::StartModuleStatus) {});
   }

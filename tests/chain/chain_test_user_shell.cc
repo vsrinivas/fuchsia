@@ -26,8 +26,8 @@ namespace {
 constexpr char kModuleUrl[] =
     "file:///system/test/modular_tests/chain_test_module";
 
-// Tests starting Modules with a Daisy and the subsequent initialization of the
-// Module's Links based on the values of Daisy.nouns.
+// Tests starting Modules with a Intent and the subsequent initialization of the
+// Module's Links based on the values of intent.parameters.
 class TestApp : public testing::ComponentBase<UserShell>,
                 StoryWatcher,
                 ModuleWatcher {
@@ -89,16 +89,16 @@ class TestApp : public testing::ComponentBase<UserShell>,
   }
 
   void AddRootModule() {
-    Daisy daisy;
-    daisy.url = kModuleUrl;
+    Intent intent;
+    intent.action.handler = kModuleUrl;
 
-    Noun noun;
-    noun.set_json(R"("initial data for the story")");
-    NounEntry entry;
-    entry.name = "rootModuleNoun1";
-    entry.noun = std::move(noun);
-    daisy.nouns.push_back(std::move(entry));
-    story_controller_->AddModule({}, "rootMod", std::move(daisy),
+    IntentParameterData data;
+    data.set_json(R"("initial data for the story")");
+    IntentParameter intent_parameter;
+    intent_parameter.name = "rootModuleNoun1";
+    intent_parameter.data = std::move(data);
+    intent.parameters.push_back(std::move(intent_parameter));
+    story_controller_->AddModule({}, "rootMod", std::move(intent),
                                  nullptr /* surface_relation */);
     fidl::VectorPtr<fidl::StringPtr> path;
     path.reset({"rootMod"});

@@ -298,17 +298,17 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
     return;
   }
 
-  if (create_story.daisy) {
-    // If a daisy was provided, create an empty story and add a module to it
-    // with the provided daisy.
+  if (create_story.intent) {
+    // If a intent was provided, create an empty story and add a module to it
+    // with the provided intent.
     story_provider_->CreateStory(
         nullptr,
-        fxl::MakeCopyable([this, daisy = std::move(*create_story.daisy),
+        fxl::MakeCopyable([this, intent = std::move(*create_story.intent),
                            activity](const fidl::StringPtr& story_id) mutable {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
-          story_controller->AddModule(nullptr, "", std::move(daisy), nullptr);
+          story_controller->AddModule(nullptr, "", std::move(intent), nullptr);
           focus_provider_ptr_->Request(story_id);
         }));
     return;
@@ -384,11 +384,11 @@ void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
     const auto& story_id = add_module.story_id;
     modular::StoryControllerPtr story_controller;
     story_provider_->GetController(story_id, story_controller.NewRequest());
-    modular::Daisy daisy;
-    fidl::Clone(add_module.daisy, &daisy);
+    modular::Intent intent;
+    fidl::Clone(add_module.intent, &intent);
     story_controller->AddModule(
-        add_module.surface_parent_module_path.Clone(), module_name, std::move(daisy),
-        fidl::MakeOptional(add_module.surface_relation));
+        add_module.surface_parent_module_path.Clone(), module_name,
+        std::move(intent), fidl::MakeOptional(add_module.surface_relation));
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";
   }

@@ -2,16 +2,16 @@
   "$schema": "http://json-schema.org/schema#",
   "title": "Schema for `verb_template` metadata file",
   "definitions": {
-    "nounConstraintArray": {
+    "parameterArray": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/nounConstraint"
+        "$ref": "#/definitions/parameter"
       },
       "additionalItems": false,
       "uniqueItems": true,
       "minItems": 1
     },
-    "nounConstraint": {
+    "parameter": {
       "type": "object",
       "properties": {
         "name": {
@@ -50,11 +50,11 @@
     "suggestion_headline": {
       "type": "string"
     },
-    "verb": {
+    "action": {
       "type": "string"
     },
-    "noun_constraints": {
-      "$ref": "#/definitions/nounConstraintArray"
+    "parameters": {
+      "$ref": "#/definitions/parameterArray"
     },
     "composition_pattern": {
       "$ref": "#/definitions/compositionPattern"
@@ -62,7 +62,7 @@
   },
   "required": [
     "binary",
-    "verb"
+    "action"
   ],
   "additionalProperties": false
 }

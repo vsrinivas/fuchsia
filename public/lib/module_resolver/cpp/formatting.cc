@@ -6,22 +6,24 @@
 
 namespace modular {
 
-std::ostream& operator<<(std::ostream& os, const Daisy& daisy) {
-  os << "{ verb: " << daisy.verb << ", nouns: [" << std::endl;
-  for (auto it = daisy.nouns->begin(); it != daisy.nouns->end(); ++it) {
-    os << "    " << it->name << ": " << it->noun << "," << std::endl;
+std::ostream& operator<<(std::ostream& os, const Intent& intent) {
+  os << "{ action: " << intent.action.name << ", parameters: [" << std::endl;
+  for (auto it = intent.parameters->begin(); it != intent.parameters->end();
+       ++it) {
+    os << "    " << it->name << ": " << it->data << "," << std::endl;
   }
   os << "  ] }";
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Noun& noun) {
-  if (noun.is_json()) {
-    os << noun.json();
-  } else if (noun.is_entity_reference()) {
-    os << "[ref: " << noun.entity_reference() << "]";
-  } else if (noun.is_entity_type()) {
-    for (const auto& type : *noun.entity_type()) {
+std::ostream& operator<<(std::ostream& os,
+                         const IntentParameterData& parameter_data) {
+  if (parameter_data.is_json()) {
+    os << parameter_data.json();
+  } else if (parameter_data.is_entity_reference()) {
+    os << "[ref: " << parameter_data.entity_reference() << "]";
+  } else if (parameter_data.is_entity_type()) {
+    for (const auto& type : *parameter_data.entity_type()) {
       os << type << ", ";
     }
   }
