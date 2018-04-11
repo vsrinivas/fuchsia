@@ -252,10 +252,6 @@ func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	if val.Library != "" {
 		strs = append(strs, compileLibraryName(val.Library))
 	}
-	for _, v := range val.NestedDecls {
-		str := changeIfReserved(v)
-		strs = append(strs, str)
-	}
 	str := changeIfReserved(val.Name)
 	strs = append(strs, str)
 	return strings.Join(strs, "::")

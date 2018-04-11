@@ -377,9 +377,6 @@ func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext str
 	if ci.Library != "" {
 		strs = append(strs, changeIfReserved(ci.Library, "")+".")
 	}
-	for _, v := range ci.NestedDecls {
-		strs = append(strs, changeIfReserved(v, ""))
-	}
 	strs = append(strs, changeIfReserved(ci.Name, ext))
 	return strings.Join(strs, "")
 }

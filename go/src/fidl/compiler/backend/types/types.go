@@ -30,7 +30,6 @@ type EncodedIdentifier string
 
 type CompoundIdentifier struct {
 	Library     Identifier
-	NestedDecls []Identifier
 	Name        Identifier
 }
 
@@ -38,21 +37,15 @@ func ParseCompoundIdentifier(ei EncodedIdentifier) CompoundIdentifier {
 	s := string(ei)
 	parts := strings.SplitN(s, "/", 2)
 	var library Identifier
-	var decls string
+	var name Identifier
 	if len(parts) == 2 {
 		library = Identifier(parts[0])
-		decls = parts[1]
+		name = Identifier(parts[1])
 	} else {
 		library = Identifier("")
-		decls = s
+		name = Identifier(s)
 	}
-	parts = strings.Split(decls, "-")
-	ids := make([]Identifier, len(parts)-1)
-	for i, decl := range parts[:len(parts)-1] {
-		ids[i] = Identifier(decl)
-	}
-	name := Identifier(parts[len(parts)-1])
-	return CompoundIdentifier{library, ids, name}
+	return CompoundIdentifier{library, name}
 }
 
 func EnsureLibrary(l Identifier, ei EncodedIdentifier) EncodedIdentifier {

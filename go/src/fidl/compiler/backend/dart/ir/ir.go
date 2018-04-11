@@ -326,9 +326,6 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	if val.Library != "" {
 		strs = append(strs, libraryPrefix(val.Library))
 	}
-	for _, v := range val.NestedDecls {
-		strs = append(strs, c.compileUpperCamelIdentifier(v))
-	}
 	strs = append(strs, changeIfReserved(string(val.Name)))
 	return strings.Join(strs, ".")
 }
