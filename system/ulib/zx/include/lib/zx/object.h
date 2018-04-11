@@ -198,19 +198,19 @@ template <typename T> bool operator!=(const object<T>& a, const object<T>& b) {
 }
 
 template <typename T> bool operator<(const object<T>& a, const object<T>& b) {
-  return a.get() < b.get();
+    return a.get() < b.get();
 }
 
 template <typename T> bool operator>(const object<T>& a, const object<T>& b) {
-  return a.get() > b.get();
+    return a.get() > b.get();
 }
 
 template <typename T> bool operator<=(const object<T>& a, const object<T>& b) {
-  return !(a.get() > b.get());
+    return !(a.get() > b.get());
 }
 
 template <typename T> bool operator>=(const object<T>& a, const object<T>& b) {
-  return !(a.get() < b.get());
+    return !(a.get() < b.get());
 }
 
 template <typename T> bool operator==(zx_handle_t a, const object<T>& b) {
@@ -222,19 +222,19 @@ template <typename T> bool operator!=(zx_handle_t a, const object<T>& b) {
 }
 
 template <typename T> bool operator<(zx_handle_t a, const object<T>& b) {
-  return a < b.get();
+    return a < b.get();
 }
 
 template <typename T> bool operator>(zx_handle_t a, const object<T>& b) {
-  return a > b.get();
+    return a > b.get();
 }
 
 template <typename T> bool operator<=(zx_handle_t a, const object<T>& b) {
-  return !(a > b.get());
+    return !(a > b.get());
 }
 
 template <typename T> bool operator>=(zx_handle_t a, const object<T>& b) {
-  return !(a < b.get());
+    return !(a < b.get());
 }
 
 template <typename T> bool operator==(const object<T>& a, zx_handle_t b) {
@@ -246,19 +246,19 @@ template <typename T> bool operator!=(const object<T>& a, zx_handle_t b) {
 }
 
 template <typename T> bool operator<(const object<T>& a, zx_handle_t b) {
-  return a.get() < b;
+    return a.get() < b;
 }
 
 template <typename T> bool operator>(const object<T>& a, zx_handle_t b) {
-  return a.get() > b;
+    return a.get() > b;
 }
 
 template <typename T> bool operator<=(const object<T>& a, zx_handle_t b) {
-  return !(a.get() > b);
+    return !(a.get() > b);
 }
 
 template <typename T> bool operator>=(const object<T>& a, zx_handle_t b) {
-  return !(a.get() < b);
+    return !(a.get() < b);
 }
 
 // Wraps a handle to an object to provide type-safe access to its operations
