@@ -17,7 +17,7 @@ class FactoryImplTest : public gtest::TestWithMessageLoop {
   FactoryImplTest()
       : factory_impl_(message_loop_.async()),
         factory_binding_(&factory_impl_, factory_.NewRequest()),
-        token_provider_(message_loop_.task_runner()),
+        token_provider_(message_loop_.async()),
         token_provider_binding_(&token_provider_) {}
   ~FactoryImplTest() override {}
 

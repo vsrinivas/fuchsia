@@ -4,12 +4,13 @@
 
 #include "peridot/lib/firebase_auth/testing/test_token_provider.h"
 
+#include <lib/async/cpp/task.h>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 
 namespace firebase_auth {
-TestTokenProvider::TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : task_runner_(std::move(task_runner)) {
+TestTokenProvider::TestTokenProvider(async_t* async) : async_(async) {
   error_to_return.status = modular_auth::Status::OK;
   error_to_return.message = "";
 }
@@ -31,7 +32,7 @@ void TestTokenProvider::GetFirebaseAuthToken(
   fidl::Clone(token_to_return, &token_to_return_copy);
   modular_auth::AuthErr error_to_return_copy;
   fidl::Clone(error_to_return, &error_to_return_copy);
-  task_runner_->PostTask(fxl::MakeCopyable(
+  async::PostTask(async_, fxl::MakeCopyable(
       [token_to_return = std::move(token_to_return_copy),
        error_to_return = std::move(error_to_return_copy), callback]() mutable {
         callback(std::move(token_to_return), std::move(error_to_return));

@@ -8,15 +8,16 @@
 #include <string>
 
 #include <fuchsia/cpp/modular_auth.h>
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace firebase_auth {
 
 class TestTokenProvider : public modular_auth::TokenProvider {
  public:
-  explicit TestTokenProvider(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestTokenProvider(async_t* async);
 
   ~TestTokenProvider() override;
 
@@ -38,7 +39,7 @@ class TestTokenProvider : public modular_auth::TokenProvider {
   modular_auth::AuthErr error_to_return;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
   FXL_DISALLOW_COPY_AND_ASSIGN(TestTokenProvider);
 };
 
