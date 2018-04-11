@@ -15,6 +15,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include "xdc.h"
 #include "xhci.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
@@ -450,6 +451,13 @@ zx_status_t xhci_start(xhci_t* xhci) {
     xhci_wait_bits(usbsts, USBSTS_HCH, 0);
 
     xhci_start_device_thread(xhci);
+
+    // TODO(jocelyndang): start xdc in a new process.
+    zx_status_t status = xdc_bind(xhci->zxdev, xhci->bti_handle, xhci->mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
+    }
+
     return ZX_OK;
 }
 
