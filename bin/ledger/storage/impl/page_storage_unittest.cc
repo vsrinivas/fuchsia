@@ -10,17 +10,13 @@
 #include <memory>
 #include <queue>
 #include <set>
-#include <thread>
 
 #include <lib/async/cpp/task.h>
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
@@ -551,7 +547,6 @@ class PageStorageTest : public ::test::TestWithCoroutines {
   }
 
   coroutine::CoroutineServiceImpl coroutine_service_;
-  std::thread io_thread_;
   files::ScopedTempDir tmp_dir_;
   encryption::FakeEncryptionService encryption_service_;
   std::unique_ptr<PageStorageImpl> storage_;
@@ -1588,18 +1583,6 @@ TEST_F(PageStorageTest, Generation) {
       TryCommitJournal(std::move(journal), Status::OK);
   ASSERT_TRUE(commit3);
   EXPECT_EQ(3u, commit3->GetGeneration());
-}
-
-TEST_F(PageStorageTest, DeletionOnIOThread) {
-  std::thread io_thread;
-  fxl::RefPtr<fxl::TaskRunner> io_runner;
-  io_thread = fsl::CreateThread(&io_runner);
-  io_runner->PostTask([] { fsl::MessageLoop::GetCurrent()->QuitNow(); });
-  bool called = false;
-  EXPECT_FALSE(callback::RunSynchronously(
-      io_runner, [&called] { called = true; }, fxl::TimeDelta::FromSeconds(1)));
-  EXPECT_FALSE(called);
-  io_thread.join();
 }
 
 TEST_F(PageStorageTest, GetEntryFromCommit) {
