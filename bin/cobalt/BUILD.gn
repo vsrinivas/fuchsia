@@ -88,6 +88,8 @@ executable("bin") {
   sources = [
     "cobalt_main.cc",
     "product_hack.h",
+    "timer_manager.h",
+    "timer_manager.cc",
   ]
 
   deps = [

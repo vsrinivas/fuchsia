@@ -16,6 +16,7 @@
 
 #include "config/cobalt_config.pb.h"
 #include "garnet/bin/cobalt/product_hack.h"
+#include "garnet/bin/cobalt/timer_manager.h"
 #include "grpc++/grpc++.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -41,6 +42,8 @@ using cobalt::CobaltEncoderFactory;
 using cobalt::EncryptedMessage;
 using cobalt::ObservationValue;
 using cobalt::Status;
+using cobalt::TimerManager;
+using cobalt::TimerVal;
 using cobalt::Value;
 using cobalt::config::ClientConfig;
 using cobalt::encoder::ClientSecret;
@@ -110,11 +113,13 @@ cobalt::Status ToCobaltStatus(ShippingManager::Status s) {
 
 class CobaltEncoderImpl : public CobaltEncoder {
  public:
-  // Does not take ownership of |shipping_manager| or |system_data|.
+  // Does not take ownership of |timer_manager|, |shipping_manager| or
+  // |system_data|.
   CobaltEncoderImpl(std::unique_ptr<ProjectContext> project_context,
                     ClientSecret client_secret,
                     ShippingManager* shipping_manager,
-                    const SystemData* system_data);
+                    const SystemData* system_data,
+                    TimerManager* timer_manager);
 
  private:
   template <class CB>
@@ -185,6 +190,7 @@ class CobaltEncoderImpl : public CobaltEncoder {
 
   Encoder encoder_;
   ShippingManager* shipping_manager_;  // not owned
+  TimerManager* timer_manager_; // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderImpl);
 };
@@ -193,11 +199,13 @@ CobaltEncoderImpl::CobaltEncoderImpl(
     std::unique_ptr<ProjectContext> project_context,
     ClientSecret client_secret,
     ShippingManager* shipping_manager,
-    const SystemData* system_data)
+    const SystemData* system_data,
+    TimerManager* timer_manager)
     : encoder_(std::move(project_context),
                std::move(client_secret),
                system_data),
-      shipping_manager_(shipping_manager) {}
+      shipping_manager_(shipping_manager),
+      timer_manager_(timer_manager) {}
 
 template <class CB>
 void CobaltEncoderImpl::AddEncodedObservation(Encoder::Result* result,
@@ -363,8 +371,34 @@ void CobaltEncoderImpl::StartTimer(
     uint64_t timestamp,
     uint32_t timeout_s,
     StartTimerCallback callback) {
-  // TODO(ninai)
-  callback(Status::OK);
+  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s)) {
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  TimerVal timer_val;
+  if(timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
+                     timer_id.get(),timestamp, timeout_s, &timer_val)
+    != Status::OK){
+    callback(Status::FAILED_PRECONDITION);
+    return;
+  }
+
+  // TODO(ninai): abstract this code into AddTimerObservationIfReady().
+  if (timer_val.end_timestamp == 0) {
+    // TimerManager has not seen an EndTimer call yet so we return OK and wait
+    // for the call.
+    callback(Status::OK);
+    return;
+  }
+
+  if(TimerManager::isMultipart(timer_val)){
+    // TODO(ninai) Add a Multipart Observation
+  } else {
+    AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
+                      timer_val.end_timestamp - timer_val.start_timestamp,
+                      callback);
+  }
 }
 
 void CobaltEncoderImpl::EndTimer(
@@ -372,8 +406,29 @@ void CobaltEncoderImpl::EndTimer(
     uint64_t timestamp,
     uint32_t timeout_s,
     EndTimerCallback callback) {
-  // TODO(ninai)
-  callback(Status::OK);
+  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s)) {
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  TimerVal timer_val;
+  if(timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp, timeout_s,
+                                &timer_val)
+     != Status::OK){
+    callback(Status::FAILED_PRECONDITION);
+    return;
+  }
+
+  if (timer_val.start_timestamp == 0) {
+    // TimerManager has not seen a StartTimer call yet so we return OK and wait
+    // for the call.
+    callback(Status::OK);
+    return;
+  }
+
+  AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
+                    timer_val.end_timestamp - timer_val.start_timestamp,
+                    callback);
 }
 
 void CobaltEncoderImpl::EndTimerMultiPart(
@@ -383,8 +438,28 @@ void CobaltEncoderImpl::EndTimerMultiPart(
     fidl::VectorPtr<ObservationValue> observation,
     uint32_t timeout_s,
     EndTimerMultiPartCallback callback) {
-  // TODO(ninai)
-  callback(Status::OK);
+  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s) ||
+      part_name.is_null()) {
+    callback(Status::INVALID_ARGUMENTS);
+    return;
+  }
+
+  TimerVal timer_val;
+  if(timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp, timeout_s,
+                              part_name.get(),  std::move(observation),
+                              &timer_val) != Status::OK){
+    callback(Status::FAILED_PRECONDITION);
+    return;
+  }
+
+  if (timer_val.start_timestamp == 0) {
+    // TimerManager has not seen a StartTimer call yet so we return OK and wait
+    // for the call.
+    callback(Status::OK);
+    return;
+  }
+
+  // TODO(ninai) Add a Multipart Observation
 }
 
 void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {
@@ -449,11 +524,13 @@ void CobaltControllerImpl::FailedSendAttempts(
 
 class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
  public:
-  // Does not take ownerhsip of |shipping_manager| or |system_data|.
+  // Does not take ownerhsip of |timer_manager|, |shipping_manager| or
+  // |system_data|.
   CobaltEncoderFactoryImpl(std::shared_ptr<ClientConfig> client_config,
                            ClientSecret client_secret,
                            ShippingManager* shipping_manager,
-                           const SystemData* system_data);
+                           const SystemData* system_data,
+                           TimerManager* timer_manager);
 
  private:
   void GetEncoder(int32_t project_id,
@@ -465,6 +542,7 @@ class CobaltEncoderFactoryImpl : public CobaltEncoderFactory {
       cobalt_encoder_bindings_;
   ShippingManager* shipping_manager_;  // not owned
   const SystemData* system_data_;      // not owned
+  TimerManager* timer_manager_;                       // not owned
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltEncoderFactoryImpl);
 };
@@ -473,11 +551,13 @@ CobaltEncoderFactoryImpl::CobaltEncoderFactoryImpl(
     std::shared_ptr<ClientConfig> client_config,
     ClientSecret client_secret,
     ShippingManager* shipping_manager,
-    const SystemData* system_data)
+    const SystemData* system_data,
+    TimerManager* timer_manager)
     : client_config_(client_config),
       client_secret_(std::move(client_secret)),
       shipping_manager_(shipping_manager),
-      system_data_(system_data) {}
+      system_data_(system_data),
+      timer_manager_(timer_manager) {}
 
 void CobaltEncoderFactoryImpl::GetEncoder(
     int32_t project_id,
@@ -487,7 +567,7 @@ void CobaltEncoderFactoryImpl::GetEncoder(
 
   std::unique_ptr<CobaltEncoderImpl> cobalt_encoder_impl(
       new CobaltEncoderImpl(std::move(project_context), client_secret_,
-                            shipping_manager_, system_data_));
+                            shipping_manager_, system_data_, timer_manager_));
   cobalt_encoder_bindings_.AddBinding(std::move(cobalt_encoder_impl),
                                       std::move(request));
 }
@@ -513,6 +593,7 @@ class CobaltApp {
   ShufflerClient shuffler_client_;
   SendRetryer send_retryer_;
   ShippingManager shipping_manager_;
+  TimerManager timer_manager_;
 
   std::shared_ptr<ClientConfig> client_config_;
 
@@ -546,6 +627,7 @@ CobaltApp::CobaltApp(async_t* async,
           &send_retryer_),
       controller_impl_(new CobaltControllerImpl(async, &shipping_manager_)) {
   shipping_manager_.Start();
+  timer_manager_.Start();
 
   // Open the cobalt config file.
   std::ifstream config_file_stream;
@@ -567,7 +649,8 @@ CobaltApp::CobaltApp(async_t* async,
       << "Could not parse the Cobalt config file: " << kConfigBinProtoPath;
 
   factory_impl_.reset(new CobaltEncoderFactoryImpl(
-      client_config_, getClientSecret(), &shipping_manager_, &system_data_));
+      client_config_, getClientSecret(), &shipping_manager_, &system_data_,
+      &timer_manager_));
 
   context_->outgoing_services()->AddService<CobaltEncoderFactory>(
       [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
