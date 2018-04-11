@@ -10,6 +10,7 @@
 
 #include <lib/fidl/internal.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 
 // TODO(kulakowski) Design zx_status_t error values.
