@@ -673,29 +673,22 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
         return ZX_ERR_IO;
     }
 
-    // Validate the request in debug mode.
-    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
-
-    size_t actual_len = hdr->len() + sizeof(AssociationResponse) + w.size();
-    auto status = packet->set_len(actual_len);
-    if (status != ZX_OK) {
-        errorf("[client] [%s] could not set packet length to %zu: %d\n", addr_.ToString().c_str(),
-               actual_len, status);
-    }
-
     // TODO(NET-567): Write negotiated SupportedRates, ExtendedSupportedRates IEs
 
     if (bss_->IsHTReady()) {
-        status = WriteHtCapabilities(&w);
+        auto status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
 
         status = WriteHtOperation(&w);
         if (status != ZX_OK) { return status; }
     }
 
+    // Validate the request in debug mode.
+    ZX_DEBUG_ASSERT(assoc->Validate(w.size()));
+
     body_payload_len = w.size();
     size_t frame_len = hdr->len() + sizeof(AssociationResponse) + body_payload_len;
-    status = packet->set_len(frame_len);
+    auto status = packet->set_len(frame_len);
     if (status != ZX_OK) {
         errorf("[client] [%s] could not set assocresp length to %zu: %d\n",
                addr_.ToString().c_str(), frame_len, status);
