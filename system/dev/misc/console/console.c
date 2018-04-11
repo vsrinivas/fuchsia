@@ -51,13 +51,17 @@ static int debug_reader(void* arg) {
     zx_device_t* dev = arg;
     uint8_t ch;
     for (;;) {
-        if (zx_debug_read(get_root_resource(), (void*)&ch, 1) == 1) {
+        zx_status_t status = zx_debug_read(get_root_resource(), (void*)&ch, 1);
+        if (status == 1) {
             mtx_lock(&fifo.lock);
             if (fifo.head == fifo.tail) {
                 device_state_set(dev, DEV_STATE_READABLE);
             }
             fifo_write(ch);
             mtx_unlock(&fifo.lock);
+        } else {
+            printf("console: error %d from zx_debug_read syscall, exiting.\n", status);
+            return status;
         }
     }
     return 0;
