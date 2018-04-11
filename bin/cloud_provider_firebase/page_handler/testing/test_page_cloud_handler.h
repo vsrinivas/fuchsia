@@ -9,7 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/public/lib/fxl/tasks/task_runner.h"
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/macros.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/public/page_cloud_handler.h"
 #include "peridot/bin/cloud_provider_firebase/page_handler/testing/page_cloud_handler_empty_impl.h"
@@ -22,7 +23,7 @@ namespace cloud_provider_firebase {
 // for individual methods allowing the test to verify error error handling.
 class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
  public:
-  explicit TestPageCloudHandler(fxl::RefPtr<fxl::TaskRunner> task_runner);
+  explicit TestPageCloudHandler(async_t* async);
 
   ~TestPageCloudHandler() override;
 
@@ -73,7 +74,7 @@ class TestPageCloudHandler : public PageCloudHandlerEmptyImpl {
   CommitWatcher* watcher = nullptr;
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* const async_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestPageCloudHandler);
 };
