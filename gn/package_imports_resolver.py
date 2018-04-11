@@ -21,6 +21,9 @@ class PackageImportsResolver:
        def import_resolved(self, config, config_path)
 
        where config is the JSON file representing the build package.
+
+       If there was an error reading some of the input files, `None` will be
+       returned.
        """
 
     def __init__(self, observer=None):

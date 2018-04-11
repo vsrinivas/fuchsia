@@ -34,6 +34,9 @@ def main():
     imported = imports_resolver.resolve_imports(json.loads(args.packages))
     labels = observer.labels
 
+    if imported == None:
+        return 1
+
     sys.stdout.write("imported = [%s]\n" %
                      ",".join(map(get_dep_from_package_name, imported)))
     sys.stdout.write("labels = [%s]\n" %
