@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_LIB_MACHINA_VIRTIO_DEVICE_FAKE_H_
+#define GARNET_LIB_MACHINA_VIRTIO_DEVICE_FAKE_H_
+
 #include "garnet/lib/machina/phys_mem_fake.h"
 #include "garnet/lib/machina/virtio_device.h"
 #include "garnet/lib/machina/virtio_queue_fake.h"
@@ -31,3 +34,5 @@ class VirtioDeviceFake
 };
 
 }  // namespace machina
+
+#endif  // GARNET_LIB_MACHINA_VIRTIO_DEVICE_FAKE_H_
