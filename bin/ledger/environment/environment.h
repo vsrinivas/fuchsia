@@ -7,7 +7,6 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/coroutine/coroutine.h"
 
 namespace ledger {
@@ -15,11 +14,9 @@ namespace ledger {
 // Environment for the ledger application.
 class Environment {
  public:
-  explicit Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                       async_t* async = nullptr);
+  explicit Environment(async_t* async);
   ~Environment();
 
-  const fxl::RefPtr<fxl::TaskRunner> main_runner() { return main_runner_; }
   async_t* async() { return async_; }
 
   coroutine::CoroutineService* coroutine_service() {
@@ -27,7 +24,6 @@ class Environment {
   }
 
  private:
-  fxl::RefPtr<fxl::TaskRunner> main_runner_;
   async_t* const async_;
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
 

@@ -9,12 +9,10 @@
 
 namespace ledger {
 
-Environment::Environment(fxl::RefPtr<fxl::TaskRunner> main_runner,
-                         async_t* async)
-    : main_runner_(std::move(main_runner)),
-      async_(async),
+Environment::Environment(async_t* async)
+    : async_(async),
       coroutine_service_(std::make_unique<coroutine::CoroutineServiceImpl>()) {
-  FXL_DCHECK(main_runner_);
+  FXL_DCHECK(async_);
 }
 
 Environment::~Environment() {}

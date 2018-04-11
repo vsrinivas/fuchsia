@@ -99,7 +99,7 @@ class LedgerAppInstanceImpl final
         async_t* async,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
             request)
-        : environment_(task_runner, async),
+        : environment_(async),
           factory_impl_(&environment_, nullptr),
           factory_binding_(&factory_impl_, std::move(request)) {}
     ~LedgerRepositoryFactoryContainer() {}

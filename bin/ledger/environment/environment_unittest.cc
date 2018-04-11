@@ -12,7 +12,7 @@ namespace {
 
 TEST(Environment, InitializationOfAsync) {
   fsl::MessageLoop loop;
-  Environment env(loop.task_runner(), loop.async());
+  Environment env(loop.async());
 
   EXPECT_EQ(loop.async(), env.async());
 }

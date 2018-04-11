@@ -68,7 +68,7 @@ class RecordingTestStrategy : public MergeStrategy {
 class MergeResolverTest : public test::TestWithPageStorage {
  public:
   MergeResolverTest()
-      : environment_(message_loop_.task_runner(), message_loop_.async()) {}
+      : environment_(message_loop_.async()) {}
   ~MergeResolverTest() override {}
 
  protected:

@@ -23,7 +23,7 @@ namespace {
 class NetConnectorFactoryTest : public gtest::TestWithMessageLoop {
  public:
   NetConnectorFactoryTest()
-      : environment_(message_loop_.task_runner(), message_loop_.async()) {}
+      : environment_(message_loop_.async()) {}
   ~NetConnectorFactoryTest() override {}
 
  protected:
