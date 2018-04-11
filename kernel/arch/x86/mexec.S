@@ -26,6 +26,13 @@ FUNCTION_LABEL(mexec_asm)
     // The old SP is in the old kernel virtual address space, so don't use it.
     xor %esp, %esp
 
+    // Make sure old PGE mappings from the kernel address space are not
+    // still in the TLB.  Having them there masked the previous bug wherein
+    // this code relied on using the incoming stack pointer.
+    mov %cr4, %rax
+    and $~X86_CR4_PGE, %rax
+    mov %rax, %cr4
+
     /* Switch to the safe identity mapped page tables */
     mov  %r9, %cr3
 
