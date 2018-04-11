@@ -22,10 +22,9 @@
 #include <vm/vm.h>
 #include <zircon/types.h>
 
-#include <mdi/mdi-defs.h>
-#include <mdi/mdi.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
+#include <zircon/boot/driver-config.h>
 
 #define LOCAL_TRACE 0
 
@@ -34,8 +33,8 @@
 
 #include <arch/arch_ops.h>
 
-// values read from MDI
-static uint64_t arm_gicv3_gic_base = 0;
+// values read from bootdata
+static vaddr_t arm_gicv3_gic_base = 0;
 static uint64_t arm_gicv3_gicd_offset = 0;
 static uint64_t arm_gicv3_gicr_offset = 0;
 static uint64_t arm_gicv3_gicr_stride = 0;
@@ -400,20 +399,12 @@ static const struct pdev_interrupt_ops gic_ops = {
     .shutdown = gic_shutdown,
 };
 
-static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
-    uint64_t gic_base_phys = 0;
-    uint64_t mx8_gpr_phys = 0;
+static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
+    const dcfg_arm_gicv3_driver_t* driver = driver_data;
+    ASSERT(driver->mmio_phys);
 
     LTRACE_ENTRY;
-
-    bool got_gic_base_phys = false;
-    bool got_gicd_offset = false;
-    bool got_gicr_offset = false;
-    bool got_gicr_stride = false;
-    bool got_ipi_base = false;
-    bool got_mx8_gpr_phys = false;
-
-    bool optional = false;
 
     // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
     // and we do not need to initialize GICv3. Since we have added both GICv3 and GICv2 in board.mdi,
@@ -422,64 +413,24 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
         return;
     }
 
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_BASE_PHYS:
-            got_gic_base_phys = !mdi_node_uint64(&child, &gic_base_phys);
-            break;
-        case MDI_ARM_GIC_V3_GICD_OFFSET:
-            got_gicd_offset = !mdi_node_uint64(&child, &arm_gicv3_gicd_offset);
-            break;
-        case MDI_ARM_GIC_V3_GICR_OFFSET:
-            got_gicr_offset = !mdi_node_uint64(&child, &arm_gicv3_gicr_offset);
-            break;
-        case MDI_ARM_GIC_V3_GICR_STRIDE:
-            got_gicr_stride = !mdi_node_uint64(&child, &arm_gicv3_gicr_stride);
-            break;
-        case MDI_ARM_GIC_V3_IPI_BASE:
-            got_ipi_base = !mdi_node_uint32(&child, &ipi_base);
-            break;
-        case MDI_ARM_GIC_V3_MX8_GPR_PHYS:
-            got_mx8_gpr_phys = !mdi_node_uint64(&child, &mx8_gpr_phys);
-            break;
-        case MDI_ARM_GIC_V3_OPTIONAL:
-            mdi_node_boolean(&child, &optional);
-            break;
-        }
-    }
-
-    if (!got_gic_base_phys) {
-        printf("arm-gic-v3: gic_base_phys not defined\n");
-        return;
-    }
-    if (!got_gicd_offset) {
-        printf("arm-gic-v3: gicd_offset not defined\n");
-        return;
-    }
-    if (!got_gicr_offset) {
-        printf("arm-gic-v3: gicr_offset not defined\n");
-        return;
-    }
-    if (!got_gicr_stride) {
-        printf("arm-gic-v3: gicr_stride not defined\n");
-        return;
-    }
-    if (!got_ipi_base) {
-        printf("arm-gic-v3: ipi_base not defined\n");
-        return;
-    }
-    if (got_mx8_gpr_phys) {
+    if (driver->mx8_gpr_phys) {
         printf("arm-gic-v3: Applying Errata e11171 for NXP MX8!\n");
-        mx8_gpr_virt = periph_paddr_to_vaddr(mx8_gpr_phys);
+        mx8_gpr_virt = periph_paddr_to_vaddr(driver->mx8_gpr_phys);
         ASSERT(mx8_gpr_virt);
     }
 
-    arm_gicv3_gic_base = periph_paddr_to_vaddr(gic_base_phys);
+    arm_gicv3_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
+    ASSERT(arm_gicv3_gic_base);
+    arm_gicv3_gicd_offset = driver->gicd_offset;
+    arm_gicv3_gicr_offset = driver->gicr_offset;
+    arm_gicv3_gicr_stride = driver->gicr_stride;
+    ipi_base = driver->ipi_base;
+
+    arm_gicv3_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
     ASSERT(arm_gicv3_gic_base);
 
     if (gic_init() != ZX_OK) {
-        if (optional) {
+        if (driver->optional) {
             // failed to detect gic v3 but it's marked optional. continue
             return;
         }
@@ -503,4 +454,4 @@ static void arm_gic_v3_init(mdi_node_ref_t* node, uint level) {
     LTRACE_EXIT;
 }
 
-LK_PDEV_INIT(arm_gic_v3_init, MDI_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);

@@ -19,7 +19,6 @@ MODULE_DEPS += \
 	kernel/dev/interrupt \
 	kernel/dev/pdev \
 	kernel/dev/pdev/interrupt \
-	kernel/lib/mdi \
 	kernel/lib/pow2_range_allocator
 
 include make/module.mk

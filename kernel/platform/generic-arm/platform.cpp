@@ -48,8 +48,6 @@
 #include <kernel/thread.h>
 #endif
 
-#include <mdi/mdi-defs.h>
-#include <mdi/mdi.h>
 #include <pdev/pdev.h>
 #include <zircon/boot/bootdata.h>
 #include <zircon/types.h>
@@ -81,9 +79,6 @@ static pmm_arena_info_t mem_arena = {
 // TODO(voydanoff): more generic way of doing this that can be shared with PC platform
 static uint8_t mexec_bootdata[4096];
 static size_t mexec_bootdata_length = 0;
-
-// kernel drivers node in the MDI
-static mdi_node_ref_t kernel_drivers;
 
 static volatile int panic_started;
 
@@ -228,19 +223,6 @@ static inline bool is_bootdata_container(void* addr) {
     return header->type == BOOTDATA_CONTAINER;
 }
 
-static void platform_mdi_init(const bootdata_t* section) {
-    mdi_node_ref_t root;
-
-    if (mdi_init(section, section->length + sizeof(*section), &root) != ZX_OK) {
-        panic("mdi_init failed\n");
-    }
-
-    // find kernel drivers node and save it for later
-    if (mdi_find_node(&root, MDI_KERNEL, &kernel_drivers) != ZX_OK) {
-        panic("platform_mdi_init couldn't find kernel-drivers\n");
-    }
-}
-
 static void save_mexec_bootdata(bootdata_t* section) {
     size_t length = BOOTDATA_ALIGN(section->length + sizeof(bootdata_t));
     ASSERT(sizeof(mexec_bootdata) - mexec_bootdata_length >= length);
@@ -279,10 +261,10 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
     }
 }
 
-static uint32_t process_bootsection(bootdata_t* section) {
+static void process_bootsection(bootdata_t* section) {
     switch (section->type) {
-    case BOOTDATA_MDI:
-        platform_mdi_init(section);
+    case BOOTDATA_KERNEL_DRIVER:
+        save_mexec_bootdata(section);
         break;
     case BOOTDATA_CMDLINE: {
         if (section->length < 1) {
@@ -313,8 +295,6 @@ static uint32_t process_bootsection(bootdata_t* section) {
         break;
     }
     }
-
-    return section->type;
 }
 
 static void process_bootdata(bootdata_t* root) {
@@ -330,7 +310,6 @@ static void process_bootdata(bootdata_t* root) {
         return;
     }
 
-    bool mdi_found = false;
     size_t offset = sizeof(bootdata_t);
     const size_t length = (root->length);
 
@@ -342,16 +321,8 @@ static void process_bootdata(bootdata_t* root) {
         uintptr_t ptr = reinterpret_cast<const uintptr_t>(root);
         bootdata_t* section = reinterpret_cast<bootdata_t*>(ptr + offset);
 
-        const uint32_t type = process_bootsection(section);
-        if (BOOTDATA_MDI == type) {
-            mdi_found = true;
-        }
-
+        process_bootsection(section);
         offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
-    }
-
-    if (!mdi_found) {
-        panic("No MDI found in ramdisk\n");
     }
 }
 
@@ -380,11 +351,12 @@ void platform_early_init(void) {
         panic("no ramdisk!\n");
     }
 
+    bootdata_t* bootdata = reinterpret_cast<bootdata_t*>(ramdisk_base);
     // walk the bootdata structure and process all the entries
-    process_bootdata(reinterpret_cast<bootdata_t*>(ramdisk_base));
+    process_bootdata(bootdata);
 
     // bring up kernel drivers after we have mapped our peripheral ranges
-    pdev_init(&kernel_drivers);
+    pdev_init(bootdata);
 
     // Serial port should be active now
 
@@ -546,13 +518,11 @@ zx_status_t platform_mexec_patch_bootdata(uint8_t* bootdata, const size_t len) {
     // to the mexec bootdata
     while (offset < mexec_bootdata_length) {
         bootdata_t* section = reinterpret_cast<bootdata_t*>(mexec_bootdata + offset);
-        if (section->type == BOOTDATA_MEM_CONFIG || section->type == BOOTDATA_CPU_CONFIG) {
-            zx_status_t status;
-            status = bootdata_append_section(bootdata, len, reinterpret_cast<uint8_t*>(section + 1),
-                                             section->length, section->type, section->extra,
-                                             section->flags);
-            if (status != ZX_OK) return status;
-        }
+        zx_status_t status;
+        status = bootdata_append_section(bootdata, len, reinterpret_cast<uint8_t*>(section + 1),
+                                         section->length, section->type, section->extra,
+                                         section->flags);
+        if (status != ZX_OK) return status;
 
         offset += BOOTDATA_ALIGN(sizeof(bootdata_t) + section->length);
     }

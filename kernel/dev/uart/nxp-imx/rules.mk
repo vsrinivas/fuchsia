@@ -13,6 +13,5 @@ MODULE_SRCS += \
 MODULE_DEPS += \
 	kernel/dev/pdev \
 	kernel/dev/pdev/uart \
-	kernel/lib/mdi \
 
 include make/module.mk

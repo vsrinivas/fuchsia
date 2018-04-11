@@ -23,3 +23,49 @@ static const bootdata_mem_range_t mem_config[] = {
         .length = 0x40000000,
     },
 };
+
+static const dcfg_simple_t uart_driver = {
+    .mmio_phys = 0x30860000,
+    .irq = 58,
+};
+
+static const dcfg_arm_gicv3_driver_t gicv3_driver = {
+    .mmio_phys = 0x38800000,
+    .gicd_offset = 0x00000,
+    .gicr_offset = 0x80000,
+    .gicr_stride = 0x20000,
+    .ipi_base = 9,
+    // Used for Errata e11171
+    .mx8_gpr_phys = 0x30340000,
+};
+
+static const dcfg_arm_psci_driver_t psci_driver = {
+    .use_hvc = false,
+};
+
+static const dcfg_arm_generic_timer_driver_t timer_driver = {
+    .irq_phys = 30,
+    .irq_virt = 27,
+    .freq_override = 8333333,
+};
+
+static void append_board_bootdata(bootdata_t* bootdata) {
+    // add CPU configuration
+    append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, 0, &cpu_config,
+                    sizeof(bootdata_cpu_config_t) +
+                    sizeof(bootdata_cpu_cluster_t) * cpu_config.cluster_count);
+
+    // add memory configuration
+    append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, 0, &mem_config,
+                    sizeof(bootdata_mem_range_t) * countof(mem_config));
+
+    // add kernel drivers
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_NXP_IMX_UART, &uart_driver,
+                    sizeof(uart_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
+                    sizeof(gicv3_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+                    sizeof(psci_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+                    sizeof(timer_driver));
+}

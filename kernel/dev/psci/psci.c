@@ -6,11 +6,9 @@
 
 #include <dev/psci.h>
 
-#if WITH_DEV_PDEV
 #include <pdev/driver.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
-#endif
+#include <zircon/boot/driver-config.h>
+#include <string.h>
 
 static uint64_t shutdown_args[3] = { 0, 0, 0 };
 static uint64_t reboot_args[3] = { 0, 0, 0 };
@@ -27,7 +25,6 @@ psci_call_proc do_psci_call = psci_smc_call;
 #endif
 
 void psci_system_off(void) {
-
     do_psci_call(PSCI64_SYSTEM_OFF, shutdown_args[0], shutdown_args[1], shutdown_args[2]);
 }
 
@@ -40,50 +37,17 @@ void psci_system_reset(enum reboot_flags flags) {
     do_psci_call(PSCI64_SYSTEM_RESET, args[0], args[1], args[2]);
 }
 
-#if WITH_DEV_PDEV
-static void arm_psci_read_arglist(mdi_node_ref_t* node, uint64_t* dest) {
-    if (mdi_array_length(node) != 3)
-        panic("bad array length in arm_psci_read_arglist for node %u\n", mdi_id(node));
+static void arm_psci_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_arm_psci_driver_t));
+    const dcfg_arm_psci_driver_t* driver = driver_data;
 
-    for (int i = 0; i < 3; i++)
-        mdi_array_uint64(node, i, dest + i);
+    do_psci_call = driver->use_hvc ? psci_hvc_call : psci_smc_call;
+    memcpy(shutdown_args, driver->shutdown_args, sizeof(shutdown_args));
+    memcpy(reboot_args, driver->reboot_args, sizeof(reboot_args));
+    memcpy(reboot_bootloader_args, driver->reboot_bootloader_args, sizeof(reboot_bootloader_args));
 }
 
-static void arm_psci_init(mdi_node_ref_t* node, uint level) {
-    bool use_smc = false;
-    bool use_hvc = false;
-
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_ARM_PSCI_USE_SMC:
-            mdi_node_boolean(&child, &use_smc);
-            break;
-        case MDI_ARM_PSCI_USE_HVC:
-            mdi_node_boolean(&child, &use_hvc);
-            break;
-        case MDI_ARM_PSCI_SHUTDOWN_ARGS:
-            arm_psci_read_arglist(&child, shutdown_args);
-            break;
-        case MDI_ARM_PSCI_REBOOT_ARGS:
-            arm_psci_read_arglist(&child, reboot_args);
-            break;
-        case MDI_ARM_PSCI_REBOOT_BOOTLOADER_ARGS:
-            arm_psci_read_arglist(&child, reboot_bootloader_args);
-            break;
-        }
-    }
-
-    if (use_smc && use_hvc) {
-        panic("both use-smc and use-hvc set in arm_psci_init\n");
-    }
-    if (!use_smc && !use_hvc) {
-        panic("neither use-smc and use-hvc set in arm_psci_init\n");
-    }
-    do_psci_call = use_smc ? psci_smc_call : psci_hvc_call;
-}
-
-LK_PDEV_INIT(arm_psci_init, MDI_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
 
 #if WITH_LIB_CONSOLE
 #include <lib/console.h>
@@ -112,10 +76,9 @@ static int cmd_psci(int argc, const cmd_args *argv, uint32_t flags) {
     printf("do_psci_call returned %u\n", ret);
     return 0;
 }
-#endif // WITH_LIB_CONSOLE
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("psci", "execute PSCI command", &cmd_psci, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_END(psci);
 
-#endif // WITH_DEV_PDEV
+#endif // WITH_LIB_CONSOLE

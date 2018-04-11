@@ -14,11 +14,10 @@
 #include <fbl/ref_ptr.h>
 #include <inttypes.h>
 #include <lk/init.h>
-#include <mdi/mdi-defs.h>
-#include <mdi/mdi.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
 #include <trace.h>
+#include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
 class ArmGicV2PciePlatformSupport : public PciePlatformInterface {
@@ -52,21 +51,12 @@ public:
     }
 };
 
-static void arm_gicv2_pcie_init(mdi_node_ref_t* node, uint level) {
-    bool msi = false;
+static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
+    const dcfg_arm_gicv2_driver_t* driver =
+            reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
 
-    if (level != LK_INIT_LEVEL_PLATFORM)
-        return;
-
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_ARM_GIC_V2_USE_MSI:
-            mdi_node_boolean(&child, &msi);
-            break;
-        }
-    }
-    if (!msi)
+    if (!driver->use_msi)
         return;
 
     dprintf(SPEW, "GICv2 MSI init\n");
@@ -89,6 +79,6 @@ static void arm_gicv2_pcie_init(mdi_node_ref_t* node, uint level) {
     }
 }
 
-LK_PDEV_INIT(arm_gicv2_pcie_init, MDI_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(arm_gicv2_pcie_init, KDRV_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM);
 
 #endif // if WITH_DEV_PCIE

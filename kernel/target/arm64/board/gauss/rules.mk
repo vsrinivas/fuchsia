@@ -11,7 +11,6 @@ DEVICE_TREE := $(GET_LOCAL_DIR)/device-tree.dtb
 PLATFORM_VID := 3   # PDEV_VID_GOOGLE
 PLATFORM_PID := 1   # PDEV_PID_GAUSS
 PLATFORM_BOARD_NAME := gauss
-PLATFORM_MDI_SRCS := $(LOCAL_DIR)/gauss.mdi
 PLATFORM_USE_SHIM := true
 
 include make/board.mk

@@ -7,10 +7,9 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/power.h>
 #include <dev/psci.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
 #include <pdev/driver.h>
 #include <pdev/power.h>
+#include <zircon/boot/driver-config.h>
 #include <stdio.h>
 
 #define PMU_HRST_OFFSET         0x404
@@ -18,8 +17,8 @@
 #define SCTRL_DDR_BYPASS        (1 << 31)
 #define SCTRL_REBOOT_OFFSET     0x4
 
-static uint64_t sctrl_base;
-static uint64_t pmu_base;
+static vaddr_t sctrl_base;
+static vaddr_t pmu_base;
 
 static void hisi_reboot(enum reboot_flags flags) {
     volatile void* sctrl = (volatile void *)sctrl_base;
@@ -42,35 +41,18 @@ static const struct pdev_power_ops hisi_power_ops = {
     .shutdown = hisi_shutdown,
 };
 
-static void hisi_power_init(mdi_node_ref_t* node, uint level) {
-    bool got_sctrl = false;
-    bool got_pmu = false;
+static void hisi_power_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_hisilicon_power_driver_t));
+    const dcfg_hisilicon_power_driver_t* driver = driver_data;
+    ASSERT(driver->sctrl_phys && driver->pmu_phys);
 
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_HISI_POWER_SCTRL_BASE_PHYS:
-            got_sctrl = !mdi_node_uint64(&child, &sctrl_base);
-            break;
-        case MDI_HISI_POWER_PMU_BASE_PHYS:
-            got_pmu = !mdi_node_uint64(&child, &pmu_base);
-            break;
-        }
-    }
-
-    if (!got_sctrl) {
-        panic("hisi power: MDI_HISI_POWER_SCTRL_BASE_VIRT not defined\n");
-    }
-    if (!got_pmu) {
-        panic("hisi power uart: MDI_HISI_POWER_PMU_BASE_VIRT not defined\n");
-    }
 
     // get virtual addresses of our peripheral bases
-    sctrl_base = periph_paddr_to_vaddr(sctrl_base);
-    pmu_base = periph_paddr_to_vaddr(pmu_base);
+    sctrl_base = periph_paddr_to_vaddr(driver->sctrl_phys);
+    pmu_base = periph_paddr_to_vaddr(driver->pmu_phys);
     ASSERT(sctrl_base && pmu_base);
 
     pdev_register_power(&hisi_power_ops);
 }
 
-LK_PDEV_INIT(hisi_power_init, MDI_HISI_POWER, hisi_power_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(hisi_power_init, KDRV_HISILICON_POWER, hisi_power_init, LK_INIT_LEVEL_PLATFORM);

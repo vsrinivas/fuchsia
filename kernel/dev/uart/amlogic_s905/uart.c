@@ -14,10 +14,9 @@
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
+#include <zircon/boot/driver-config.h>
 
 #define S905_UART_WFIFO         (0x0)
 #define S905_UART_RFIFO         (0x4)
@@ -78,7 +77,7 @@
 
 static cbuf_t uart_rx_buf;
 static bool initialized = false;
-static uintptr_t s905_uart_base = 0;
+static vaddr_t s905_uart_base = 0;
 static uint32_t s905_uart_irq = 0;
 
 /*
@@ -126,7 +125,7 @@ static void uart_irq(void *arg)
     }
 }
 
-static void s905_uart_init(mdi_node_ref_t* node, uint level)
+static void s905_uart_init(const void* driver_data, uint32_t length)
 {
     assert(s905_uart_base);
     assert(s905_uart_irq);
@@ -274,33 +273,17 @@ static const struct pdev_uart_ops s905_uart_ops = {
     .dputs = s905_dputs,
 };
 
-static void s905_uart_init_early(mdi_node_ref_t* node, uint level)
-{
-    s905_uart_base = 0;
-    s905_uart_irq  = 0;
+static void s905_uart_init_early(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_simple_t));
+    const dcfg_simple_t* driver = driver_data;
+    ASSERT(driver->mmio_phys && driver->irq);
 
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-            case MDI_BASE_PHYS:
-                if(mdi_node_uint64(&child, &s905_uart_base) != ZX_OK)
-                    return;
-                break;
-            case MDI_IRQ:
-                if(mdi_node_uint32(&child, &s905_uart_irq) != ZX_OK)
-                    return;
-                break;
-
-        }
-    }
-    if ((s905_uart_base == 0) || (s905_uart_irq == 0))
-        return;
-
-    s905_uart_base = periph_paddr_to_vaddr(s905_uart_base);
+    s905_uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
     ASSERT(s905_uart_base);
+    s905_uart_irq = driver->irq;
 
     pdev_register_uart(&s905_uart_ops);
 }
 
-LK_PDEV_INIT(s905_uart_init_early, MDI_S905_UART, s905_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
-LK_PDEV_INIT(s905_uart_init, MDI_S905_UART, s905_uart_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(s905_uart_init_early, KDRV_AMLOGIC_UART, s905_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(s905_uart_init, KDRV_AMLOGIC_UART, s905_uart_init, LK_INIT_LEVEL_PLATFORM);

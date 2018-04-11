@@ -12,14 +12,13 @@
 #include <arch/arm64/periphmap.h>
 #include <kernel/thread.h>
 #include <dev/interrupt.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
 #include <pdev/driver.h>
 #include <dev/psci.h>
+#include <zircon/boot/driver-config.h>
 
-static uint64_t preset_base;
-static uint64_t hiu_base;
-static uint64_t hdmitx_base;
+static vaddr_t preset_base;
+static vaddr_t hiu_base;
+static vaddr_t hdmitx_base;
 
 #define TOP_OFFSET_MASK      (0x0UL << 24)
 #define DWC_OFFSET_MASK      (0x10UL << 24)
@@ -66,42 +65,15 @@ static void hdmitx_writereg(uint32_t addr, uint32_t data) {
     WRITE32_HDMITX_REG(HDMITX_DATA_PORT + offset, data);
 }
 
-static void s912_hdcp_init(mdi_node_ref_t* node, uint level)
-{
-    uint32_t data32;
-    bool got_preset = false;
-    bool got_hiu = false;
-    bool got_hdmitx = false;
-
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_HDMI_HDCP_PRESET_BASE_PHYS:
-            got_preset = !mdi_node_uint64(&child, &preset_base);
-            break;
-        case MDI_HDMI_HDCP_HIU_BASE_PHYS:
-            got_hiu = !mdi_node_uint64(&child, &hiu_base);
-            break;
-        case MDI_HDMI_HDCP_HDMITX_BASE_PHYS:
-            got_hdmitx = !mdi_node_uint64(&child, &hdmitx_base);
-            break;
-        }
-    }
-
-    if (!got_preset) {
-        panic("amlogc hdcp: MDI_HDMI_HDCP_PRESET_BASE_VIRT not defined\n");
-    }
-    if (!got_hiu) {
-        panic("amlogc hdcp: MDI_HDMI_HDCP_HIU_BASE_VIRT not defined\n");
-    }
-    if (!got_hdmitx) {
-        panic("amlogc hdcp: MDI_HDMI_HDCP_HDMITXBASE_VIRT not defined\n");
-    }
+static void s912_hdcp_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_amlogic_hdcp_driver_t));
+    const dcfg_amlogic_hdcp_driver_t* driver = driver_data;
+    ASSERT(driver->preset_phys && driver->hui_phys && driver->hdmitx_phys);
 
     // get virtual addresses of our peripheral bases
-    preset_base = periph_paddr_to_vaddr(preset_base);
-    hiu_base = periph_paddr_to_vaddr(hiu_base);
-    hdmitx_base = periph_paddr_to_vaddr(hdmitx_base);
+    preset_base = periph_paddr_to_vaddr(driver->preset_phys);
+    hiu_base = periph_paddr_to_vaddr(driver->hdmitx_phys);
+    hdmitx_base = periph_paddr_to_vaddr(driver->hdmitx_phys);
     ASSERT(preset_base && hiu_base && hdmitx_base);
 
     // enable clocks
@@ -126,7 +98,7 @@ static void s912_hdcp_init(mdi_node_ref_t* node, uint level)
     hdmitx_writereg(HDMITX_DWC_MC_CLKDIS, 0x00);
 
     /* Configure HDCP */
-    data32  = 0;
+    uint32_t data32  = 0;
     data32 |= (0 << 7);
     data32 |= (0 << 6);
     data32 |= (0 << 4);
@@ -148,4 +120,4 @@ static void s912_hdcp_init(mdi_node_ref_t* node, uint level)
     psci_smc_call(0x82000012, 0, 0, 0);
 }
 
-LK_PDEV_INIT(s912_hdcp_init, MDI_HDMI_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(s912_hdcp_init, KDRV_AMLOGIC_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM);

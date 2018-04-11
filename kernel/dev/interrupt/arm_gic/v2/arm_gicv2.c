@@ -26,10 +26,9 @@
 #include <trace.h>
 #include <zircon/types.h>
 
-#include <mdi/mdi-defs.h>
-#include <mdi/mdi.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
+#include <zircon/boot/driver-config.h>
 
 #define LOCAL_TRACE 0
 
@@ -40,8 +39,8 @@
 static spin_lock_t gicd_lock;
 #define GICD_LOCK_FLAGS SPIN_LOCK_FLAG_INTERRUPTS
 
-// values read from MDI
-uint64_t arm_gicv2_gic_base = 0;
+// values read from bootdata
+vaddr_t arm_gicv2_gic_base = 0;
 uint64_t arm_gicv2_gicd_offset = 0;
 uint64_t arm_gicv2_gicc_offset = 0;
 uint64_t arm_gicv2_gich_offset = 0;
@@ -339,71 +338,21 @@ static const struct pdev_interrupt_ops gic_ops = {
     .shutdown = gic_shutdown,
 };
 
-static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
-    if (level != LK_INIT_LEVEL_PLATFORM_EARLY)
-        return;
+static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
+    const dcfg_arm_gicv2_driver_t* driver = driver_data;
+    ASSERT(driver->mmio_phys);
 
-    uint64_t gic_base_phys = 0;
-    uint64_t msi_frame_phys = 0;
-
-    bool got_gic_base_phys = false;
-    bool got_gicd_offset = false;
-    bool got_gicc_offset = false;
-    bool got_ipi_base = false;
-    bool optional = false;
-
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_BASE_PHYS:
-            got_gic_base_phys = mdi_node_uint64(&child, &gic_base_phys) == ZX_OK;
-            break;
-        case MDI_ARM_GIC_V2_GICD_OFFSET:
-            got_gicd_offset = mdi_node_uint64(&child, &arm_gicv2_gicd_offset) == ZX_OK;
-            break;
-        case MDI_ARM_GIC_V2_GICC_OFFSET:
-            got_gicc_offset = mdi_node_uint64(&child, &arm_gicv2_gicc_offset) == ZX_OK;
-            break;
-        case MDI_ARM_GIC_V2_GICH_OFFSET:
-            mdi_node_uint64(&child, &arm_gicv2_gich_offset);
-            break;
-        case MDI_ARM_GIC_V2_GICV_OFFSET:
-            mdi_node_uint64(&child, &arm_gicv2_gicv_offset);
-            break;
-        case MDI_ARM_GIC_V2_IPI_BASE:
-            got_ipi_base = mdi_node_uint32(&child, &ipi_base) == ZX_OK;
-            break;
-        case MDI_ARM_GIC_V2_MSI_FRAME_PHYS:
-            mdi_node_uint64(&child, &msi_frame_phys);
-            break;
-        case MDI_ARM_GIC_V2_OPTIONAL:
-            mdi_node_boolean(&child, &optional);
-            break;
-        }
-    }
-
-    if (!got_gic_base_phys) {
-        printf("arm-gic-v2: gic_base_phys not defined\n");
-        return;
-    }
-    if (!got_gicd_offset) {
-        printf("arm-gic-v2: gicd_offset not defined\n");
-        return;
-    }
-    if (!got_gicc_offset) {
-        printf("arm-gic-v2: gicc_offset not defined\n");
-        return;
-    }
-    if (!got_ipi_base) {
-        printf("arm-gic-v2: ipi_base not defined\n");
-        return;
-    }
-
-    arm_gicv2_gic_base = periph_paddr_to_vaddr(gic_base_phys);
+    arm_gicv2_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
     ASSERT(arm_gicv2_gic_base);
+    arm_gicv2_gicd_offset = driver->gicd_offset;
+    arm_gicv2_gicc_offset = driver->gicc_offset;
+    arm_gicv2_gich_offset = driver->gich_offset;
+    arm_gicv2_gicv_offset = driver->gicv_offset;
+    ipi_base = driver->ipi_base;
 
     if (arm_gic_init() != ZX_OK) {
-        if (optional) {
+        if (driver->optional) {
             // failed to detect gic v2 but it's marked optional. continue
             return;
         }
@@ -414,13 +363,13 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     dprintf(SPEW, "detected GICv2\n");
 
     // pass the list of physical and virtual addresses for the GICv2m register apertures
-    if (msi_frame_phys) {
+    if (driver->msi_frame_phys) {
         // the following arrays must be static because arm_gicv2m_init stashes the pointer
         static paddr_t GICV2M_REG_FRAMES[] = {0};
         static vaddr_t GICV2M_REG_FRAMES_VIRT[] = {0};
 
-        GICV2M_REG_FRAMES[0] = msi_frame_phys;
-        GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(msi_frame_phys);
+        GICV2M_REG_FRAMES[0] = driver->msi_frame_phys;
+        GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(driver->msi_frame_phys);
         ASSERT(GICV2M_REG_FRAMES_VIRT[0]);
         arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, countof(GICV2M_REG_FRAMES));
     }
@@ -436,4 +385,4 @@ static void arm_gic_v2_init(mdi_node_ref_t* node, uint level) {
     gicv2_hw_interface_register();
 }
 
-LK_PDEV_INIT(arm_gic_v2_init, MDI_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);

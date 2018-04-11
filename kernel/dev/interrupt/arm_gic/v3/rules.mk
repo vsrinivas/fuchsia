@@ -16,6 +16,5 @@ MODULE_DEPS += \
 	kernel/dev/interrupt \
 	kernel/dev/pdev \
 	kernel/dev/pdev/interrupt \
-	kernel/lib/mdi \
 
 include make/module.mk

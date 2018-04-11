@@ -119,7 +119,7 @@
 #define BOOTDATA_MEM_CONFIG       (0x434D454D) // MEMC
 
 // Kernel driver configuration
-// Content: one or more bootdata_kernel_driver_t (count determined by bootdata_t length)
+// Content: driver specific struct, with type determined by bootdata "extra" field
 #define BOOTDATA_KERNEL_DRIVER    (0x5652444B) // KDRV
 
 #define BOOTDATA_IGNORE           (0x50494b53) // SKIP
@@ -222,17 +222,6 @@ typedef struct {
     uint32_t    type;
     uint32_t    reserved;
 } bootdata_mem_range_t;
-
-#define BOOTDATA_KERNEL_DRIVER_MAX_PARAMS   16
-
-// see zircon/boot/kernel-drivers.h for interpretation of bootdata_kernel_driver_t params
-typedef struct {
-    uint32_t type;
-    uint32_t irq;
-    uint64_t mmio_paddr;
-    // extra driver specific parameters
-    uint64_t params[BOOTDATA_KERNEL_DRIVER_MAX_PARAMS];
-}bootdata_kernel_driver_t;
 
 /* EFI Variable for Crash Log */
 #define ZIRCON_VENDOR_GUID \

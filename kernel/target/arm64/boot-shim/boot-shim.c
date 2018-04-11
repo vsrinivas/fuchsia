@@ -9,9 +9,18 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <zircon/boot/bootdata.h>
+#include <zircon/boot/driver-config.h>
 
 // uncomment to dump device tree at boot
 // #define PRINT_DEVICE_TREE
+
+// used in boot-shim-config.h and in this file below
+static void append_bootdata(bootdata_t* container, uint32_t type, uint32_t extra,
+                            const void* payload, uint32_t length);
+
+// defined in boot-shim-config.h
+static void append_board_bootdata(bootdata_t* container);
 
 // Include board specific definitions
 #include "boot-shim-config.h"
@@ -103,13 +112,13 @@ static void read_device_tree(void* device_tree, device_tree_context_t* ctx) {
 }
 #endif // HAS_DEVICE_TREE
 
-static void append_bootdata(bootdata_t* container, uint32_t type, const void* payload,
-                            uint32_t length) {
+static void append_bootdata(bootdata_t* container, uint32_t type, uint32_t extra,
+                            const void* payload, uint32_t length) {
     bootdata_t* dest = (bootdata_t*)((uintptr_t)container + container->length + sizeof(bootdata_t));
 
     dest->type = type;
     dest->length = length;
-    dest->extra = 0;
+    dest->extra = extra;
     dest->flags = 0;
     dest->reserved0 = 0;
     dest->reserved1 = 0;
@@ -171,14 +180,8 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
     }
 #endif // HAS_DEVICE_TREE
 
-    // append cpu configuration from boot-shim-config.h
-    append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, &cpu_config,
-                    sizeof(bootdata_cpu_config_t) +
-                    sizeof(bootdata_cpu_cluster_t) * cpu_config.cluster_count);
-
-    // append memory configuration from boot-shim-config.h
-    append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, &mem_config,
-                    sizeof(bootdata_mem_range_t) * countof(mem_config));
+    // add board specific bootdata
+    append_board_bootdata(bootdata);
 
 #if HAS_DEVICE_TREE
     // look for optional RAM size in device tree
@@ -192,14 +195,14 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
         uart_puts("Setting RAM size device tree value: ");
         uart_print_hex(ctx.memory);
         uart_puts("\n");
-        append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, &mem_range, sizeof(mem_range));
+        append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, 0, &mem_range, sizeof(mem_range));
     } else {
         uart_puts("RAM size not found in device tree\n");
     }
 
     // append kernel command line
     if (ctx.cmdline && ctx.cmdline_length) {
-        append_bootdata(bootdata, BOOTDATA_CMDLINE, ctx.cmdline, ctx.cmdline_length);
+        append_bootdata(bootdata, BOOTDATA_CMDLINE, 0, ctx.cmdline, ctx.cmdline_length);
     }
 #endif // HAS_DEVICE_TREE
 

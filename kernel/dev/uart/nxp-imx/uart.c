@@ -12,10 +12,9 @@
 #include <dev/interrupt.h>
 #include <dev/uart.h>
 #include <platform/debug.h>
-#include <mdi/mdi.h>
-#include <mdi/mdi-defs.h>
 #include <pdev/driver.h>
 #include <pdev/uart.h>
+#include <zircon/boot/driver-config.h>
 
 /* Registers */
 #define MX8_URXD                    (0x00)
@@ -60,9 +59,9 @@
 #define RXBUF_SIZE 32
 
 
-// values read from MDI
+// values read from bootdata
 static bool initialized = false;
-static uint64_t uart_base = 0;
+static vaddr_t uart_base = 0;
 static uint32_t uart_irq = 0;
 static cbuf_t uart_rx_buf;
 // static cbuf_t uart_tx_buf;
@@ -197,7 +196,7 @@ static const struct pdev_uart_ops uart_ops = {
     .dputs = imx_dputs,
 };
 
-static void imx_uart_init(mdi_node_ref_t* node, uint level)
+static void imx_uart_init(const void* driver_data, uint32_t length)
 {
     uint32_t regVal;
 
@@ -243,35 +242,17 @@ static void imx_uart_init(mdi_node_ref_t* node, uint level)
     unmask_interrupt(uart_irq);
 }
 
-static void imx_uart_init_early(mdi_node_ref_t* node, uint level) {
-    uint64_t uart_base_phys = 0;
-    bool got_uart_base_phys = false;
-    bool got_uart_irq = false;
+static void imx_uart_init_early(const void* driver_data, uint32_t length) {
+    ASSERT(length >= sizeof(dcfg_simple_t));
+    const dcfg_simple_t* driver = driver_data;
+    ASSERT(driver->mmio_phys && driver->irq);
 
-    mdi_node_ref_t child;
-    mdi_each_child(node, &child) {
-        switch (mdi_id(&child)) {
-        case MDI_BASE_PHYS:
-            got_uart_base_phys = !mdi_node_uint64(&child, &uart_base_phys);
-            break;
-        case MDI_IRQ:
-            got_uart_irq = !mdi_node_uint32(&child, &uart_irq);
-            break;
-        }
-    }
-
-    if (!got_uart_base_phys) {
-        panic("imx uart: uart_base_phys not defined\n");
-    }
-    if (!got_uart_irq) {
-        panic("imx uart: uart_irq not defined\n");
-    }
-
-    uart_base = periph_paddr_to_vaddr(uart_base_phys);
+    uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
     ASSERT(uart_base);
+    uart_irq = driver->irq;
 
     pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(imx_uart_init_early, MDI_ARM_NXP_IMX_UART, imx_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
-LK_PDEV_INIT(imx_uart_init, MDI_ARM_NXP_IMX_UART, imx_uart_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(imx_uart_init_early, KDRV_NXP_IMX_UART, imx_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(imx_uart_init, KDRV_NXP_IMX_UART, imx_uart_init, LK_INIT_LEVEL_PLATFORM);

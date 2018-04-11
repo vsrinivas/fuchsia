@@ -52,3 +52,56 @@ static const bootdata_mem_range_t mem_config[] = {
         .length = 0x9000000,
     },
 };
+
+static const dcfg_simple_t uart_driver = {
+    .mmio_phys = 0xc81004c0,
+    .irq = 225,
+};
+
+static const dcfg_arm_gicv2_driver_t gicv2_driver = {
+    .mmio_phys = 0xc4300000,
+    .gicd_offset = 0x1000,
+    .gicc_offset = 0x2000,
+    .gich_offset = 0x4000,
+    .gicv_offset = 0x6000,
+    .ipi_base = 5,
+};
+
+static const dcfg_arm_psci_driver_t psci_driver = {
+    .use_hvc = false,
+    .reboot_args = { 1, 0, 0 },
+    .reboot_bootloader_args = { 4, 0, 0 },
+};
+
+static const dcfg_arm_generic_timer_driver_t timer_driver = {
+    .irq_phys = 30,
+};
+
+static const dcfg_amlogic_hdcp_driver_t hdcp_driver = {
+    .preset_phys = 0xc1104000,
+    .hui_phys = 0xc883c000,
+    .hdmitx_phys = 0xc883a000,
+};
+
+static void append_board_bootdata(bootdata_t* bootdata) {
+    // add CPU configuration
+    append_bootdata(bootdata, BOOTDATA_CPU_CONFIG, 0, &cpu_config,
+                    sizeof(bootdata_cpu_config_t) +
+                    sizeof(bootdata_cpu_cluster_t) * cpu_config.cluster_count);
+
+    // add memory configuration
+    append_bootdata(bootdata, BOOTDATA_MEM_CONFIG, 0, &mem_config,
+                    sizeof(bootdata_mem_range_t) * countof(mem_config));
+
+    // add kernel drivers
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_AMLOGIC_UART, &uart_driver,
+                    sizeof(uart_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
+                    sizeof(gicv2_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+                    sizeof(psci_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+                    sizeof(timer_driver));
+    append_bootdata(bootdata, BOOTDATA_KERNEL_DRIVER, KDRV_AMLOGIC_HDCP, &hdcp_driver,
+                    sizeof(hdcp_driver));
+}
