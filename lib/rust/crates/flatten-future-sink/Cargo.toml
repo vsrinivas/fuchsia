@@ -1,0 +1,7 @@
+[package]
+name = "flatten-future-sink"
+version = "0.1.0"
+authors = ["Craig Tiller <ctiller@google.com>"]
+
+[dependencies]
+futures = "=0.2.0-alpha"

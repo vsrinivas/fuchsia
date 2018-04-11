@@ -1,0 +1,12 @@
+[package]
+name = "mesh-endpoint"
+version = "0.1.0"
+authors = ["Craig Tiller <ctiller@google.com>"]
+
+[dependencies]
+mesh-protocol = "*"
+mesh-router = "*"
+futures = "=0.2.0-alpha"
+failure = "*"
+flatten-future-sink = "*"
+bytes = "*"

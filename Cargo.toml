@@ -21,6 +21,10 @@ members =  [
   "lib/rust/crates/eapol",
   "lib/rust/crates/fuchsia-bluetooth",
   "lib/rust/crates/fuchsia-wlan-dev",
+  "lib/rust/crates/flatten-future-sink",
+  "lib/rust/crates/mesh-endpoint",
+  "lib/rust/crates/mesh-protocol",
+  "lib/rust/crates/mesh-router",
   "lib/rust/crates/wlan-rsn",
   "lib/rust/crates/wlan-sme",
   "lib/rust/fidl_crates/fidl_wlan_device",
@@ -97,6 +101,7 @@ fuchsia-ddk = { path = "public/rust/crates/fuchsia-ddk" }
 eapol = { path = "lib/rust/crates/eapol" }
 fdio = { path = "public/rust/crates/fdio" }
 fidl = { path = "public/lib/fidl/rust/fidl" }
+flatten-future-sink = { path = "lib/rust/crates/flatten-future-sink" }
 fuchsia-app = { path = "public/rust/crates/fuchsia-app" }
 fuchsia-syslog = { path = "public/rust/crates/fuchsia-syslog" }
 fuchsia-async = { path = "public/rust/crates/fuchsia-async" }
@@ -105,6 +110,9 @@ fuchsia-vfs-watcher = { path = "public/rust/crates/fuchsia-vfs/fuchsia-vfs-watch
 fuchsia-wlan-dev = { path = "lib/rust/crates/fuchsia-wlan-dev" }
 fuchsia-zircon = { path = "public/rust/crates/fuchsia-zircon" }
 fuchsia-zircon-sys = { path = "public/rust/crates/fuchsia-zircon/fuchsia-zircon-sys" }
+mesh-endpoint = { path = "lib/rust/crates/mesh-endpoint" }
+mesh-protocol = { path = "lib/rust/crates/mesh-protocol" }
+mesh-router = { path = "lib/rust/crates/mesh-router" }
 mio = { path = "../third_party/rust-mirrors/mio" }
 mxruntime = { path = "public/rust/crates/mxruntime" }
 mxruntime-sys = { path = "public/rust/crates/mxruntime/mxruntime-sys" }
