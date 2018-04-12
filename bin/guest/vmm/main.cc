@@ -29,9 +29,9 @@
 #include "garnet/lib/machina/address.h"
 #include "garnet/lib/machina/framebuffer_scanout.h"
 #include "garnet/lib/machina/guest.h"
+#include "garnet/lib/machina/guest_controller_impl.h"
 #include "garnet/lib/machina/hid_event_source.h"
 #include "garnet/lib/machina/input_dispatcher.h"
-#include "garnet/lib/machina/inspect_service_impl.h"
 #include "garnet/lib/machina/interrupt_controller.h"
 #include "garnet/lib/machina/pci.h"
 #include "garnet/lib/machina/uart.h"
@@ -166,6 +166,7 @@ static zx_status_t setup_scenic_framebuffer(
     component::ApplicationContext* application_context,
     machina::VirtioGpu* gpu,
     machina::InputDispatcher* input_dispatcher,
+    machina::GuestControllerImpl* guest_controller,
     fbl::unique_ptr<machina::GpuScanout>* scanout) {
   // Check if we have a display. Since this is a device file, many file
   // detection APIs may not properly detect it. Just verify we can stat
@@ -174,11 +175,15 @@ static zx_status_t setup_scenic_framebuffer(
   if (stat("/dev/class/display/000", &buf)) {
     return ZX_ERR_NO_RESOURCES;
   }
-  zx_status_t status =
-      ScenicScanout::Create(application_context, input_dispatcher, scanout);
+  fbl::unique_ptr<ScenicScanout> scenic_scanout;
+  zx_status_t status = ScenicScanout::Create(application_context,
+                                             input_dispatcher,
+                                             &scenic_scanout);
   if (status != ZX_OK) {
     return status;
   }
+  guest_controller->set_view_provider(scenic_scanout.get());
+  *scanout = std::move(scenic_scanout);
   return gpu->AddScanout(scanout->get());
 }
 
@@ -215,9 +220,9 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  // Instantiate the inspect service.
-  machina::InspectServiceImpl inspect_svc(application_context.get(),
-                                          guest.phys_mem());
+  // Instantiate the controller service.
+  machina::GuestControllerImpl guest_controller(
+      application_context.get(), guest.phys_mem());
 
 #if __x86_64__
   status = machina::create_page_table(guest.phys_mem());
@@ -400,7 +405,7 @@ int main(int argc, char** argv) {
 
   // Setup console
   machina::VirtioConsole console(guest.phys_mem(), guest.device_async(),
-                                 inspect_svc.TakeSocket());
+                                 guest_controller.TakeSocket());
   status = console.Start();
   if (status != ZX_OK) {
     return status;
@@ -471,7 +476,8 @@ int main(int argc, char** argv) {
       // Expose a view that can be composited by mozart. Input events will be
       // injected by the view events.
       status = setup_scenic_framebuffer(application_context.get(), &gpu,
-                                        &input_dispatcher, &gpu_scanout);
+                                        &input_dispatcher, &guest_controller,
+                                        &gpu_scanout);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to create scenic view " << status;
         return status;

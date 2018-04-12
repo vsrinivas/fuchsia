@@ -5,9 +5,16 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  name = "machina"
+  name = "guest"
 
   sources = [
-    "inspect.fidl",
+    "guest_controller.fidl",
+    "guest_environment.fidl",
+    "guest_manager.fidl",
+    "vsock.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/ui/views/fidl:v1",
   ]
 }

@@ -24,6 +24,7 @@ source_set("lib") {
     "//garnet/bin/guest/third_party/fdt",
     "//garnet/lib/machina",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/guest/fidl",
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//zircon/public/lib/trace-provider",
     "//third_party/rapidjson",

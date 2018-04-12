@@ -5,28 +5,23 @@
 #ifndef GARNET_BIN_GUEST_CLI_SERVICE_H_
 #define GARNET_BIN_GUEST_CLI_SERVICE_H_
 
-#include <fbl/function.h>
-#include <fdio/util.h>
 #include <iostream>
 
-#include <fuchsia/cpp/machina.h>
+#include <fuchsia/cpp/guest.h>
 
-// Interface of the inspect service of the guest.
-extern machina::InspectServicePtr inspect_svc;
-// Path to the inspect service of the guest.
-extern std::string svc_path;
+#include "lib/app/cpp/environment_services.h"
+#include "lib/fsl/tasks/message_loop.h"
 
-using InspectReq = fidl::InterfaceRequest<machina::InspectService>;
-using ConnectFunc = fbl::Function<zx_status_t(InspectReq)>;
+// Pointer to the controller for the guest.
+extern guest::GuestControllerPtr g_guest_controller;
 
-static inline zx_status_t connect(InspectReq req) {
-  zx_status_t status =
-      fdio_service_connect(svc_path.c_str(), req.TakeChannel().release());
-  if (status != ZX_OK) {
-    std::cerr << "Failed to connect to " << svc_path << "\n";
-    return ZX_ERR_UNAVAILABLE;
-  }
-  return ZX_OK;
+static inline guest::GuestController* connect(uint32_t guest_id) {
+  guest::GuestManagerSyncPtr guestmgr;
+  component::ConnectToEnvironmentService(guestmgr.NewRequest());
+  guestmgr->Connect(guest_id, g_guest_controller.NewRequest());
+  g_guest_controller.set_error_handler(
+      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+  return g_guest_controller.get();
 }
 
 #endif  // GARNET_BIN_GUEST_CLI_SERVICE_H_

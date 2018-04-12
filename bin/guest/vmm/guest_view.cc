@@ -16,7 +16,7 @@
 zx_status_t ScenicScanout::Create(
     component::ApplicationContext* application_context,
     machina::InputDispatcher* input_dispatcher,
-    fbl::unique_ptr<GpuScanout>* out) {
+    fbl::unique_ptr<ScenicScanout>* out) {
   *out = fbl::make_unique<ScenicScanout>(application_context, input_dispatcher);
   return ZX_OK;
 }

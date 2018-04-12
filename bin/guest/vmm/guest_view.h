@@ -34,7 +34,7 @@ class ScenicScanout : public machina::GpuScanout,
  public:
   static zx_status_t Create(component::ApplicationContext* application_context,
                             machina::InputDispatcher* input_dispatcher,
-                            fbl::unique_ptr<GpuScanout>* out);
+                            fbl::unique_ptr<ScenicScanout>* out);
 
   ScenicScanout(component::ApplicationContext* application_context,
                 machina::InputDispatcher* input_dispatcher);

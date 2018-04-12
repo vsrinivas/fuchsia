@@ -1,0 +1,18 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library guest;
+
+// Invoked on every request to connect to port currently being listended on.
+interface SocketAcceptor {
+  1: OnAccept(uint32 source_cid, handle<socket> socket);
+};
+
+// Represents a single socket endpoint with an associated context ID (cid).
+[Discoverable]
+interface SocketEndpoint {
+  1: Connect(uint32 cid, uint32 port) -> (handle<socket> socket);
+  2: Listen(uint32 port, SocketAcceptor acceptor);
+  3: GetCid() -> (uint32 cid);
+};

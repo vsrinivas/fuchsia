@@ -1,11 +1,13 @@
 {
     "imports": [
+        "garnet/packages/config/network",
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/runtime"
     ],
     "packages": {
         "vmm": "//garnet/bin/guest/vmm",
         "guest_runner": "//garnet/bin/guest/runner:guest_runner",
-        "guest": "//garnet/bin/guest/cli:guest"
+        "guest": "//garnet/bin/guest/cli:guest",
+        "guestmgr": "//garnet/bin/guest/mgr:guestmgr"
     }
 }

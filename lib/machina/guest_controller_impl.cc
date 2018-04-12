@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/inspect_service_impl.h"
+#include "garnet/lib/machina/guest_controller_impl.h"
 
 #include "lib/fxl/logging.h"
 
@@ -19,25 +19,32 @@ static T duplicate(const T& handle, zx_rights_t rights) {
 
 namespace machina {
 
-InspectServiceImpl::InspectServiceImpl(
+GuestControllerImpl::GuestControllerImpl(
     component::ApplicationContext* application_context,
     const PhysMem& phys_mem)
     : vmo_(duplicate(phys_mem.vmo(), kVmoRights)) {
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 
-  application_context->outgoing().AddPublicService<InspectService>(
-      [this](fidl::InterfaceRequest<InspectService> request) {
+  application_context->outgoing().AddPublicService<guest::GuestController>(
+      [this](fidl::InterfaceRequest<guest::GuestController> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
-void InspectServiceImpl::FetchGuestMemory(FetchGuestMemoryCallback callback) {
+void GuestControllerImpl::FetchGuestMemory(FetchGuestMemoryCallback callback) {
   callback(duplicate(vmo_, ZX_RIGHT_SAME_RIGHTS));
 }
 
-void InspectServiceImpl::FetchGuestSerial(FetchGuestSerialCallback callback) {
+void GuestControllerImpl::FetchGuestSerial(FetchGuestSerialCallback callback) {
   callback(duplicate(client_socket_, ZX_RIGHT_SAME_RIGHTS));
+}
+
+void GuestControllerImpl::FetchViewProvider(
+    fidl::InterfaceRequest<views_v1::ViewProvider> request) {
+  if (view_provider_ != nullptr) {
+    view_provider_bindings_.AddBinding(view_provider_, std::move(request));
+  }
 }
 
 }  // namespace machina

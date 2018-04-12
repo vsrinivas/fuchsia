@@ -7,6 +7,6 @@
 
 #include "garnet/bin/guest/cli/service.h"
 
-void handle_launch(int argc, const char** argv);
+void handle_launch(int argc, const char* argv[]);
 
 #endif  // GARNET_BIN_GUEST_CLI_LAUNCH_H_

@@ -34,18 +34,14 @@ static void dump(zx::vmo vmo, zx_vaddr_t addr, size_t len) {
   hexdump_ex(reinterpret_cast<void*>(guest_addr + addr), len, addr);
 }
 
-void handle_dump(zx_vaddr_t addr, size_t len) {
-  zx_status_t status = connect(inspect_svc.NewRequest());
-  if (status != ZX_OK) {
+void handle_dump(uint32_t guest_id, zx_vaddr_t addr, size_t len) {
+  guest::GuestController* controller = connect(guest_id);
+  if (controller == nullptr) {
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
   }
-  inspect_svc.set_error_handler([] {
-    std::cerr << "Package is not running\n";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
-  });
-  inspect_svc->FetchGuestMemory([addr, len](zx::vmo vmo) {
-    dump(fbl::move(vmo), addr, len);
-    inspect_svc.Unbind();
+  controller->FetchGuestMemory([addr, len](zx::vmo vmo) {
+    dump(std::move(vmo), addr, len);
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
   });
 }

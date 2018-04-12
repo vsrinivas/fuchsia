@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library guest;
+
+struct GuestInfo {
+  // A globally unique identifier for a guest instance.
+  uint32 id;
+
+  // The string provided in the |GuestLaunchInfo| structure.
+  string label;
+};
+
+[Discoverable]
+interface GuestManager {
+  // Create a new environment in which guests can be launched.
+  //
+  // The |label| is a string that is used for diagnostic purposes, such as
+  // naming resources and dumping debug info.
+  1: CreateEnvironment(string? label, request<GuestEnvironment> env);
+
+  // Query for existing guest instances.
+  //
+  // This is intended for diagnostic purposes only.
+  2: ListGuests() -> (vector<GuestInfo> guest_infos);
+
+  // Connect to a currently running guest instance identified via the
+  // |guest_id|. The |guest_id| can be found via a call to |ListGuests|.
+  //
+  // This is intended for diagnostic purposes only.
+  3: Connect(uint32 guest_id, request<GuestController> controller);
+};

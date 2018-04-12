@@ -7,6 +7,7 @@
 
 #include "garnet/bin/guest/cli/service.h"
 
-void handle_serial(ConnectFunc func);
+void handle_serial(uint32_t guest_id);
+void handle_serial(guest::GuestController* guest_controller);
 
 #endif  // GARNET_BIN_GUEST_CLI_SERIAL_H_

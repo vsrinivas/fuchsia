@@ -4,9 +4,11 @@
 
 #include "garnet/bin/guest/cli/serial.h"
 
-#include <lib/async/cpp/wait.h>
 #include <poll.h>
 #include <iostream>
+
+#include <fdio/util.h>
+#include <lib/async/cpp/wait.h>
 
 #include "garnet/bin/guest/cli/service.h"
 #include "lib/fsl/socket/socket_drainer.h"
@@ -50,9 +52,7 @@ class InputReader {
     SendKeyToGuest();
   }
 
-  void SendKeyToGuest() {
-    OnSocketReady(async_, &wait_, ZX_OK, nullptr);
-  }
+  void SendKeyToGuest() { OnSocketReady(async_, &wait_, ZX_OK, nullptr); }
 
   void OnSocketReady(async_t* async,
                      async::WaitBase* wait,
@@ -63,7 +63,7 @@ class InputReader {
     }
     status = zx_socket_write(socket_, 0, &pending_key_, 1, nullptr);
     if (status == ZX_ERR_SHOULD_WAIT) {
-      wait->Begin(async); // ignore errors
+      wait->Begin(async);  // ignore errors
       return;
     }
     if (status != ZX_OK) {
@@ -107,18 +107,14 @@ static fbl::unique_ptr<InputReader> input_reader;
 // Write socket output to stdout.
 static fbl::unique_ptr<OutputWriter> output_writer;
 
-void handle_serial(ConnectFunc func) {
-  input_reader.reset(new InputReader);
-  output_writer.reset(new OutputWriter);
-  zx_status_t status = func(inspect_svc.NewRequest());
-  if (status != ZX_OK) {
-    return;
-  }
-  inspect_svc.set_error_handler([] {
-    std::cerr << "Package is not running\n";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
-  });
-  inspect_svc->FetchGuestSerial([](zx::socket socket) {
+void handle_serial(uint32_t guest_id) {
+  handle_serial(connect(guest_id));
+}
+
+void handle_serial(guest::GuestController* guest_controller) {
+  guest_controller->FetchGuestSerial([](zx::socket socket) {
+    input_reader.reset(new InputReader);
+    output_writer.reset(new OutputWriter);
     input_reader->Start(socket.get());
     output_writer->Start(std::move(socket));
   });

@@ -7,6 +7,6 @@
 
 #include <zircon/types.h>
 
-void handle_dump(zx_vaddr_t addr, size_t len);
+void handle_dump(uint32_t guest_id, zx_vaddr_t addr, size_t len);
 
 #endif  // GARNET_BIN_GUEST_CLI_DUMP_H_

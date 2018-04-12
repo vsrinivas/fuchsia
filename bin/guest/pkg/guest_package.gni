@@ -67,6 +67,24 @@ template("guest_package") {
         ]
       }
     }
+    if (defined(invoker.cpus)) {
+      args += [
+        "--cpus",
+        invoker.cpus,
+      ]
+    }
+    if (defined(invoker.memory)) {
+      args += [
+        "--memory",
+        invoker.memory,
+      ]
+    }
+    if (defined(invoker.gic)) {
+      args += [
+        "--gic",
+        invoker.gic,
+      ]
+    }
     args += [
       "--display",
       guest_display,
