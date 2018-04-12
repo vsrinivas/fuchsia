@@ -45,6 +45,9 @@ class WlanmacIfcProxy {
     void CompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
         ifc_->complete_tx(cookie_, pkt, status);
     }
+    void Indication(uint32_t ind) {
+        ifc_->indication(cookie_, ind);
+    }
 
    private:
     wlanmac_ifc_t* ifc_;

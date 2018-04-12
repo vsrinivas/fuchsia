@@ -3837,7 +3837,14 @@ zx_status_t Device::InterruptWorker() {
 
             bool tbtt_interrupt = intStatus.mac_int_0();
             if (tbtt_interrupt) {
-                // TODO(hahnr): Report TBTT to MLME.
+                {
+                    // Due to Ralinks limitation of not being able to report actual
+                    // Beacon transmission, TBTT is used instead.
+                    std::lock_guard<std::mutex> guard(lock_);
+                    if (wlanmac_proxy_ != nullptr) {
+                        wlanmac_proxy_->Indication(WLAN_INDICATION_BCN_TX_COMPLETE);
+                    }
+                }
 
                 // Clear interrupts.
                 status = WriteRegister(intStatus);
@@ -3851,7 +3858,12 @@ zx_status_t Device::InterruptWorker() {
 
             bool pre_tbtt_interrupt = intStatus.mac_int_1();
             if (pre_tbtt_interrupt) {
-                // TODO(hahnr): Report Pre-TBTT to MLME.
+                {
+                    std::lock_guard<std::mutex> guard(lock_);
+                    if (wlanmac_proxy_ != nullptr) {
+                        wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT);
+                    }
+                }
 
                 // Clear interrupts.
                 status = WriteRegister(intStatus);
