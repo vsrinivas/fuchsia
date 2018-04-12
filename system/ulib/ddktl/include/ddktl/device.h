@@ -304,14 +304,19 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         device_make_visible(zxdev());
     }
 
+    // Removes the device.
+    // This method may have the side-effect of destroying this object if the
+    // device's reference count drops to zero.
     zx_status_t DdkRemove() {
         if (zxdev_ == nullptr) {
             return ZX_ERR_BAD_STATE;
         }
 
-        zx_status_t res = device_remove(zxdev_);
+        // The call to |device_remove| must be last since it decrements the
+        // device's reference count when successful.
+        zx_device_t* dev = zxdev_;
         zxdev_ = nullptr;
-        return res;
+        return device_remove(dev);
     }
 
     const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
