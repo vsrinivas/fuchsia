@@ -4,6 +4,8 @@
 
 #include <wlan/mlme/ap/infra_bss.h>
 
+#include <wlan/common/channel.h>
+#include <wlan/mlme/debug.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -35,6 +37,12 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
         .primary = req.channel,
         .cbw = CBW20,
     };
+
+    if (IsCbw40RxReady()) {
+        wlan_channel_t chan_override = chan;
+        chan_override.cbw = CBW40;
+        chan.cbw = common::GetValidCbw(chan_override);
+    }
 
     auto status = device_->SetChannel(chan);
     if (status != ZX_OK) {
@@ -185,7 +193,7 @@ void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClie
     // If client enters deauthenticated state after being authenticated, remove client.
     if (to == RemoteClient::StateId::kDeauthenticated) {
         debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
-                client.ToString().c_str());
+                 client.ToString().c_str());
         auto status = clients_.Remove(client);
         if (status != ZX_OK) {
             errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),
@@ -331,10 +339,33 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
     hdr->fc.set_subtype(DataSubtype::kDataSubtype);
     hdr->fc.set_from_ds(1);
     // TODO(hahnr): Protect outgoing frames when RSNA is established.
-    hdr->sc.set_seq(NextSeq(*hdr));
     hdr->addr1 = frame.hdr->dest;
     hdr->addr2 = bssid_;
     hdr->addr3 = frame.hdr->src;
+
+    hdr->sc.set_seq(NextSeq(*hdr));
+
+    wlan_tx_info_t txinfo = {
+        // TODO(porce): Determine PHY and CBW based on the association negotiation.
+        .tx_flags = 0x0,
+        .valid_fields =
+            WLAN_TX_INFO_VALID_PHY | WLAN_TX_INFO_VALID_CHAN_WIDTH | WLAN_TX_INFO_VALID_MCS,
+        .phy = WLAN_PHY_HT,
+        .cbw = CBW20,
+        //.date_rate = 0x0,
+        .mcs = 0x7,
+    };
+
+    if (IsCbw40TxReady()) {
+        // Ralink appears to setup BlockAck session AND AMPDU handling
+        // TODO(porce): Use a separate sequence number space in that case
+        if (hdr->addr3.IsUcast()) {
+            // 40MHz direction does not matter here.
+            // Radio uses the operational channel setting. This indicates the bandwidth without
+            // direction.
+            txinfo.cbw = CBW40;
+        }
+    }
 
     auto llc = (*out_packet)->mut_field<LlcHeader>(hdr->len());
     llc->dsap = kLlcSnapExtension;
@@ -344,10 +375,6 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
     llc->protocol_id = frame.hdr->ether_type;
     std::memcpy(llc->payload, frame.body, frame.body_len);
 
-    wlan_tx_info_t txinfo = {
-        // TODO(hahnr): Fill wlan_tx_info_t.
-    };
-
     auto frame_len = hdr->len() + sizeof(LlcHeader) + frame.body_len;
     auto status = (*out_packet)->set_len(frame_len);
     if (status != ZX_OK) {
@@ -355,6 +382,12 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
                bssid_.ToString().c_str(), frame_len, status);
         return status;
     }
+
+    finspect("Outbound data frame: len %zu, hdr_len:%u body_len:%zu frame_len:%zu\n",
+             (*out_packet)->len(), hdr->len(), frame.body_len, frame_len);
+    finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
+    finspect("  llc  hdr: %s\n", debug::Describe(*llc).c_str());
+    finspect("  frame   : %s\n", debug::HexDump((*out_packet)->data(), frame_len).c_str());
 
     (*out_packet)->CopyCtrlFrom(txinfo);
 
@@ -492,8 +525,23 @@ HtOperation InfraBss::BuildHtOperation(const wlan_channel_t& chan) const {
 
     hto.primary_chan = chan.primary;
     HtOpInfoHead& head = hto.head;
-    head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_NONE);  // TODO(porce): CBW
-    head.set_sta_chan_width(HtOpInfoHead::TWENTY);                 // TODO(porce): CBW
+
+    switch (chan.cbw) {
+    case CBW40ABOVE:
+        head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_ABOVE);
+        head.set_sta_chan_width(HtOpInfoHead::ANY);
+        break;
+    case CBW40BELOW:
+        head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_ABOVE);
+        head.set_sta_chan_width(HtOpInfoHead::ANY);
+        break;
+    case CBW20:
+    default:
+        head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_NONE);
+        head.set_sta_chan_width(HtOpInfoHead::TWENTY);
+        break;
+    }
+
     head.set_rifs_mode(0);
     head.set_reserved1(0);  // TODO(porce): Tweak this for 802.11n D1.10 compatibility
     head.set_ht_protect(HtOpInfoHead::NONE);
