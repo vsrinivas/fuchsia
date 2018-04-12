@@ -32,7 +32,7 @@ class CommandDispatcher final {
                       bool* out_cmd_found);
 
   // Prints the names of all commands and their descriptions.
-  void DescribeAllCommands();
+  void DescribeAllCommands() const;
 
   // Each handler is provided with a |command_line| that can be used to obtain
   // positional arguments and options that were passed to the command. If

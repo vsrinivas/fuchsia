@@ -17,6 +17,13 @@ namespace bluetoothcli {
 namespace commands {
 namespace {
 
+bool HandleHelp(const App* app,
+                const fxl::CommandLine& cmd_line,
+                const fxl::Closure& complete_cb) {
+  app->command_dispatcher().DescribeAllCommands();
+  return false;
+}
+
 bool HandleAvailable(const App* app,
                      const fxl::CommandLine& cmd_line,
                      const fxl::Closure& complete_cb) {
@@ -131,6 +138,8 @@ void RegisterCommands(App* app,
 #define BIND(handler) \
   std::bind(&handler, app, std::placeholders::_1, std::placeholders::_2)
 
+  dispatcher->RegisterHandler("help", "Print command descriptions",
+                              BIND(HandleHelp));
   dispatcher->RegisterHandler("exit", "Exit the tool", BIND(HandleExit));
   dispatcher->RegisterHandler(
       "available", "Check if Bluetooth is available on this platform",

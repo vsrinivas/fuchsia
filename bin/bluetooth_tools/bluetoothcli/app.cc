@@ -73,21 +73,20 @@ void App::ReadNextInput() {
   auto split =
       fxl::SplitStringCopy(fxl::StringView(line, std::strlen(line)), " ",
                            fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-  if (split.empty() || split[0] == "help") {
+  if (split.empty()) {
+    return;
+  }
+
+  bool cmd_found = false;
+  if (command_dispatcher_.ExecuteCommand(split, complete_cb, &cmd_found)) {
+    call_complete_cb = false;
+  }
+
+  if (!cmd_found) {
+    CLI_LOG() << "Unknown command: " << line;
+  } else {
     linenoiseHistoryAdd(line);
-    command_dispatcher_.DescribeAllCommands();
-    return;
   }
-
-  bool cmd_found;
-  if (!command_dispatcher_.ExecuteCommand(split, complete_cb, &cmd_found)) {
-    if (!cmd_found)
-      CLI_LOG() << "Unknown command: " << line;
-    return;
-  }
-
-  call_complete_cb = false;
-  linenoiseHistoryAdd(line);
 }
 
 void App::OnActiveAdapterChanged(

@@ -36,7 +36,7 @@ bool CommandDispatcher::ExecuteCommand(const std::vector<std::string>& argv,
   return iter->second.handler(cl, complete_cb);
 }
 
-void CommandDispatcher::DescribeAllCommands() {
+void CommandDispatcher::DescribeAllCommands() const {
   for (const auto& iter : handler_map_) {
     std::printf("  %-20s %s\n", iter.first.c_str(),
                 iter.second.description.c_str());
