@@ -18,6 +18,9 @@ namespace gatt {
 
 // Types representing GATT procedure results.
 struct ServiceData {
+  ServiceData() = default;
+  ServiceData(att::Handle start, att::Handle end, const common::UUID& type);
+
   att::Handle range_start;
   att::Handle range_end;
   common::UUID type;
@@ -32,10 +35,19 @@ struct ServiceData {
 // Client is not thread safe. It must be created, used, and destroyed on the
 // same thread. All asynchronous callbacks are run on the thread that the data
 // bearer is bound to.
-class Client final {
+class Client {
  public:
-  explicit Client(fxl::RefPtr<att::Bearer> bearer);
-  ~Client() = default;
+  using StatusCallback = std::function<void(att::Status status)>;
+
+  // Constructs a new Client bearer.
+  static std::unique_ptr<Client> Create(fxl::RefPtr<att::Bearer> bearer);
+
+  virtual ~Client() = default;
+
+  // Returns a weak pointer to this Client. The weak pointer should be checked
+  // on the data bearer's thread only as Client can only be accessed on that
+  // thread.
+  virtual fxl::WeakPtr<Client> AsWeakPtr() = 0;
 
   // Initiates an MTU exchange and adjusts the MTU of the bearer according to
   // what the peer is capable of. The request will be initiated using the
@@ -48,37 +60,14 @@ class Client final {
   // parameter will be set to 0 and the underlying bearer's MTU will remain
   // unmodified.
   using MTUCallback = std::function<void(att::Status status, uint16_t mtu)>;
-  void ExchangeMTU(MTUCallback callback);
+  virtual void ExchangeMTU(MTUCallback callback) = 0;
 
   // Performs the "Discover All Primary Services" procedure defined in
   // v5.0, Vol 3, Part G, 4.4.1. |service_callback| is run for each discovered
   // service. |status_callback| is run with the result of the operation.
   using ServiceCallback = std::function<void(const ServiceData&)>;
-  using StatusCallback = std::function<void(att::Status status)>;
-  void DiscoverPrimaryServices(ServiceCallback svc_callback,
-                               StatusCallback status_callback);
-
- private:
-  void DiscoveryPrimaryServicesInternal(att::Handle start,
-                                        att::Handle end,
-                                        ServiceCallback svc_callback,
-                                        StatusCallback status_callback);
-
-  // Wraps |callback| in a TransactionCallback that only runs if this Client is
-  // still alive.
-  att::Bearer::TransactionCallback BindCallback(
-      att::Bearer::TransactionCallback callback);
-
-  // Wraps |callback| in a ErrorCallback that only runs if this Client is still
-  // alive.
-  att::Bearer::ErrorCallback BindErrorCallback(
-      att::Bearer::ErrorCallback callback);
-
-  fxl::RefPtr<att::Bearer> att_;
-
-  fxl::WeakPtrFactory<Client> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(Client);
+  virtual void DiscoverPrimaryServices(ServiceCallback svc_callback,
+                                       StatusCallback status_callback) = 0;
 };
 
 }  // namespace gatt

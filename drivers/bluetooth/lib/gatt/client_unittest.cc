@@ -39,7 +39,7 @@ class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
     ChannelOptions options(l2cap::kATTChannelId);
     fake_chan_ = CreateFakeChannel(options);
     att_ = att::Bearer::Create(fake_chan_);
-    client_ = std::make_unique<Client>(att_);
+    client_ = Client::Create(att_);
   }
 
   void TearDown() override {

@@ -20,7 +20,7 @@ Connection::Connection(const std::string& peer_id,
   auto att = att::Bearer::Create(std::move(att_chan));
   FXL_DCHECK(att);
 
-  client_ = std::make_unique<gatt::Client>(att);
+  client_ = gatt::Client::Create(att);
   server_ = std::make_unique<gatt::Server>(peer_id, local_db, att);
 
   // Negotiate the MTU right away.

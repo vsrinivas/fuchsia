@@ -45,6 +45,8 @@ source_set("tests") {
 
   sources = [
     "client_unittest.cc",
+    "fake_client.cc",
+    "fake_client.h",
     "local_service_manager_unittest.cc",
     "server_unittest.cc"
   ]
