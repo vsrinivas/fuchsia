@@ -391,24 +391,29 @@ zx_status_t URLLoaderImpl::HTTPClient<T>::SendStreamedBody() {
       size_t todo = std::min(sizeof(buffer), size - done);
       FXL_DCHECK(todo > 0);
       response_stream.read(buffer, todo);
-      size_t written;
-      zx_status_t result =
-          response_body_stream_.write(0, buffer, todo, &written);
-      if (result == ZX_ERR_SHOULD_WAIT) {
-        result = response_body_stream_.wait_one(
+      size_t offset = 0;
+      do {
+        size_t written = 0;
+        zx_status_t result =
+          response_body_stream_.write(0, buffer + offset, todo - offset, &written);
+        if (result == ZX_ERR_SHOULD_WAIT) {
+          result = response_body_stream_.wait_one(
             ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(),
             nullptr);
-        if (result == ZX_OK)
-          continue;  // retry now that the socket is ready
-      }
-      if (result != ZX_OK) {
-        // If the other end closes the socket, ZX_ERR_PEER_CLOSED
-        // can happen.
-        if (result != ZX_ERR_PEER_CLOSED)
-          FXL_VLOG(1) << "SendStreamedBody: result=" << result;
-        return result;
-      }
-      done += written;
+          if (result == ZX_OK)
+            continue;  // retry now that the socket is ready
+        }
+        if (result != ZX_OK) {
+          // If the other end closes the socket, ZX_ERR_PEER_CLOSED
+          // can happen.
+          if (result != ZX_ERR_PEER_CLOSED)
+            FXL_VLOG(1) << "SendStreamedBody: result=" << result;
+          return result;
+        }
+        offset += written;
+      } while (offset < todo);
+      FXL_DCHECK(offset == todo);
+      done += todo;
     } while (done < size);
   }
   return ZX_OK;
