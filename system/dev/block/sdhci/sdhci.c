@@ -1080,6 +1080,7 @@ static zx_status_t sdhci_bind(void* ctx, zx_device_t* parent) {
     if (caps0 & SDHCI_CORECFG_3P3_VOLT_SUPPORT) {
         dev->info.caps |= SDMMC_HOST_CAP_VOLTAGE_330;
     }
+    dev->info.caps |= SDMMC_HOST_CAP_AUTO_CMD12;
 
     // initialize the controller
     status = sdhci_controller_init(dev);

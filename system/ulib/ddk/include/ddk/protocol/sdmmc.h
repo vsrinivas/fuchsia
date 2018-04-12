@@ -77,6 +77,7 @@ typedef struct sdmmc_host_info {
 #define SDMMC_HOST_CAP_ADMA2         (1 << 1)
 #define SDMMC_HOST_CAP_64BIT         (1 << 2)
 #define SDMMC_HOST_CAP_VOLTAGE_330   (1 << 3)
+#define SDMMC_HOST_CAP_AUTO_CMD12    (1 << 4)
     // Maximum data request size
     uint64_t max_transfer_size;
 } sdmmc_host_info_t;

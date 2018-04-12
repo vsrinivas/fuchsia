@@ -344,8 +344,16 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
         zxlogf(TRACE, "sdmmc: do_txn error %d\n", st);
         block_complete(&txn->bop, st);
     } else {
-        zxlogf(TRACE, "sdmmc: do_txn complete\n");
+        if ((req->blockcount > 1) && !(dev->host_info.caps & SDMMC_HOST_CAP_AUTO_CMD12)) {
+            st = sdmmc_stop_transmission(dev);
+            if (st != ZX_OK) {
+                zxlogf(TRACE, "sdmmc: do_txn stop transmission error %d\n", st);
+                block_complete(&txn->bop, st);
+                return;
+            }
+        }
         block_complete(&txn->bop, ZX_OK);
+        zxlogf(TRACE, "sdmmc: do_txn complete\n");
     }
 }
 
