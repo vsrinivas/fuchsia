@@ -25,3 +25,5 @@ go/pkg
 *.orig
 last-update
 /.cipd
+.idea/
+*.iml
