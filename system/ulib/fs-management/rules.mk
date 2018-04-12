@@ -13,10 +13,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/launch.cpp \
     $(LOCAL_DIR)/mkfs.cpp \
     $(LOCAL_DIR)/mount.cpp \
+    $(LOCAL_DIR)/ram-nand.cpp \
     $(LOCAL_DIR)/ramdisk.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
+    system/ulib/ddk \
     system/ulib/fs \
     system/ulib/zx \
     system/ulib/zxcpp \
