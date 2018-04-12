@@ -19,6 +19,7 @@
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
+#include "xhci-util.h"
 
 #define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
 #define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
@@ -46,14 +47,9 @@ int xhci_get_root_hub_index(xhci_t* xhci, uint32_t device_id) {
     return index;
 }
 
-static void xhci_read_extended_caps(xhci_t* xhci, volatile uint32_t* hccparams1) {
-    uint32_t offset = XHCI_GET_BITS32(hccparams1, HCCPARAMS1_EXT_CAP_PTR_START,
-                                      HCCPARAMS1_EXT_CAP_PTR_BITS);
-    if (!offset) return;
-    // offset is 32-bit words from MMIO base
-    uint32_t* cap_ptr = (uint32_t *)(xhci->mmio + (offset << 2));
-
-    while (cap_ptr) {
+static void xhci_read_extended_caps(xhci_t* xhci) {
+    uint32_t* cap_ptr = NULL;
+    while ((cap_ptr = xhci_get_next_ext_cap(xhci->mmio, cap_ptr, NULL))) {
         uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
                                           EXT_CAP_CAPABILITY_ID_BITS);
 
@@ -106,10 +102,6 @@ static void xhci_read_extended_caps(xhci_t* xhci, volatile uint32_t* hccparams1)
         } else if (cap_id == EXT_CAP_USB_LEGACY_SUPPORT) {
             xhci->usb_legacy_support_cap = (xhci_usb_legacy_support_cap_t*)cap_ptr;
         }
-
-        // offset is 32-bit words from cap_ptr
-        offset = XHCI_GET_BITS32(cap_ptr, EXT_CAP_NEXT_PTR_START, EXT_CAP_NEXT_PTR_BITS);
-        cap_ptr = (offset ? cap_ptr + offset : NULL);
     }
 }
 
@@ -204,7 +196,7 @@ zx_status_t xhci_init(xhci_t* xhci, xhci_mode_t mode, uint32_t num_interrupts) {
         result = ZX_ERR_NO_MEMORY;
         goto fail;
     }
-    xhci_read_extended_caps(xhci, hccparams1);
+    xhci_read_extended_caps(xhci);
 
     // We need to claim before we write to any other registers on the
     // controller, but after we've read the extended capabilities.

@@ -69,3 +69,40 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t cmd, uint64_t ptr, uint32_t
 
     return status;
 }
+
+uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_cap_id) {
+    uint32_t* cap_ptr = prev_cap;
+    if (!cap_ptr) {
+        // Find the first cap.
+        xhci_cap_regs_t* xhci_cap_regs = (xhci_cap_regs_t*)mmio;
+        volatile uint32_t* hccparams1 = &xhci_cap_regs->hccparams1;
+
+        uint32_t offset = XHCI_GET_BITS32(hccparams1, HCCPARAMS1_EXT_CAP_PTR_START,
+                                          HCCPARAMS1_EXT_CAP_PTR_BITS);
+        if (!offset) {
+            return NULL;
+        }
+        // offset is 32-bit words from MMIO base
+        cap_ptr = (uint32_t *)(mmio + (offset << 2));
+    }
+
+    while (cap_ptr) {
+        // We only want to check the current cap for a match if it's not the
+        // one the user gave us.
+        if (cap_ptr != prev_cap) {
+            uint32_t cap_id = XHCI_GET_BITS32(cap_ptr, EXT_CAP_CAPABILITY_ID_START,
+                                              EXT_CAP_CAPABILITY_ID_BITS);
+
+            // The cap only matches if the user didn't specify an id to match,
+            // or the ids are equal.
+            if (!match_cap_id || (*match_cap_id == cap_id)) {
+                return cap_ptr;
+            }
+        }
+        // Get the next cap ptr, offset is 32-bit words from cap_ptr
+        uint32_t offset = XHCI_GET_BITS32(cap_ptr, EXT_CAP_NEXT_PTR_START,
+                                          EXT_CAP_NEXT_PTR_BITS);
+        cap_ptr = (offset ? cap_ptr + offset : NULL);
+    }
+    return NULL;
+}
