@@ -7,6 +7,6 @@ import("//build/rust/toolchain.gni")
 
 rust_library("fidl_power_manager") {
   deps = [
-    "//garnet/public/lib/power_manager/fidl:power_manager($rust_toolchain)",
+    "//garnet/public/lib/power_manager/fidl($rust_toolchain)",
   ]
 }

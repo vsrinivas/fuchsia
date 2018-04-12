@@ -4,7 +4,9 @@
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-fidl("power_manager") {
+fidl("fidl") {
+  name = "power_manager"
+
   sources = [
     "power_manager.fidl",
   ]

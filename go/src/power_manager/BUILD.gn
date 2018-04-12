@@ -15,7 +15,7 @@ go_test("power_manager_test") {
   ]
   extra_dependencies = [
     "//garnet/public/lib/app/fidl($go_toolchain)",
-    "//garnet/public/lib/power_manager/fidl:power_manager($go_toolchain)",
+    "//garnet/public/lib/power_manager/fidl($go_toolchain)",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//garnet/public/lib/app/go/src/app",
     "//garnet/public/lib/fidl/go/src/fidl",
