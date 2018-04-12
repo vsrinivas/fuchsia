@@ -40,9 +40,8 @@ ApplicationControllerImpl::ApplicationControllerImpl(
       info_dir_(fbl::AdoptRef(new fs::PseudoDir())),
       exported_dir_(std::move(exported_dir)),
       application_namespace_(std::move(application_namespace)),
-      wait_(async_get_default(), process_.get(), ZX_TASK_TERMINATED) {
-  wait_.set_handler(fbl::BindMember(this, &ApplicationControllerImpl::Handler));
-  auto status = wait_.Begin();
+      wait_(this, process_.get(), ZX_TASK_TERMINATED) {
+  zx_status_t status = wait_.Begin(async_get_default());
   FXL_DCHECK(status == ZX_OK);
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
@@ -131,8 +130,9 @@ void ApplicationControllerImpl::Wait(WaitCallback callback) {
 }
 
 // Called when process terminates, regardless of if Kill() was invoked.
-async_wait_result_t ApplicationControllerImpl::Handler(
+void ApplicationControllerImpl::Handler(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
   FXL_DCHECK(status == ZX_OK);
@@ -147,8 +147,6 @@ async_wait_result_t ApplicationControllerImpl::Handler(
   job_holder_->ExtractApplication(this);
   // The destructor of the temporary returned by ExtractApplication destroys
   // |this| at the end of the previous statement.
-
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace component

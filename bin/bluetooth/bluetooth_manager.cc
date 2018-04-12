@@ -95,8 +95,6 @@ void Adapter::OnDeviceDiscovered(bluetooth_control::RemoteDevice device) {
 BluetoothManager::BluetoothManager()
     : initializing_(true),
       active_adapter_(nullptr),
-      init_timeout_task_(
-          fbl::BindMember(this, &BluetoothManager::OnInitTimeout)),
       weak_ptr_factory_(this) {
   device_watcher_ = fsl::DeviceWatcher::Create(
       kBluetoothDeviceDir,
@@ -330,7 +328,7 @@ void BluetoothManager::OnRemoteDeviceUpdated(
 }
 
 void BluetoothManager::OnInitTimeout(async_t*,
-                                     async::Task*,
+                                     async::TaskBase*,
                                      zx_status_t status) {
   FXL_DCHECK(initializing_);
 
@@ -344,7 +342,7 @@ void BluetoothManager::OnInitTimeout(async_t*,
 }
 
 void BluetoothManager::CancelInitTimeout() {
-  zx_status_t status = init_timeout_task_.Cancel(async_get_default());
+  zx_status_t status = init_timeout_task_.Cancel();
   if (status != ZX_OK) {
     FXL_VLOG(1) << "bluetooth: Failed to cancel init timeout task: "
                 << zx_status_get_string(status);

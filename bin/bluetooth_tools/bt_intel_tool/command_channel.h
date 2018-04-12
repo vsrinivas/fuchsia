@@ -45,28 +45,33 @@ class CommandChannel {
 
  private:
   // Common read handler implemntation
-  async_wait_result_t HandleChannelReady(const zx::channel& channel,
-                                         async_t* async,
-                                         zx_status_t status,
-                                         const zx_packet_signal_t* signal);
+  void HandleChannelReady(const zx::channel& channel,
+                          async_t* async,
+                          async::WaitBase* wait,
+                          zx_status_t status,
+                          const zx_packet_signal_t* signal);
 
   // Read ready handler for |cmd_channel_|
-  async_wait_result_t OnCmdChannelReady(async_t* async,
-                                        zx_status_t status,
-                                        const zx_packet_signal_t* signal);
+  void OnCmdChannelReady(async_t* async,
+                         async::WaitBase* wait,
+                         zx_status_t status,
+                         const zx_packet_signal_t* signal);
 
   // Read ready handler for |acl_channel_|
-  async_wait_result_t OnAclChannelReady(async_t* async,
-                                        zx_status_t status,
-                                        const zx_packet_signal_t* signal);
+  void OnAclChannelReady(async_t* async,
+                         async::WaitBase* wait,
+                         zx_status_t status,
+                         const zx_packet_signal_t* signal);
 
   bool valid_;
   EventCallback event_callback_;
   fbl::unique_fd hci_fd_;
   zx::channel cmd_channel_;
-  async::Wait cmd_channel_wait_;
+  async::WaitMethod<CommandChannel, &CommandChannel::OnCmdChannelReady>
+      cmd_channel_wait_{this};
   zx::channel acl_channel_;
-  async::Wait acl_channel_wait_;
+  async::WaitMethod<CommandChannel, &CommandChannel::OnAclChannelReady>
+      acl_channel_wait_{this};
 };
 
 #endif  // GARNET_BIN_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_

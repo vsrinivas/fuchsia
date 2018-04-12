@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <fbl/function.h>
 #include <lib/fsl/tasks/message_loop.h>
 #include <lib/fxl/command_line.h>
@@ -66,9 +66,10 @@ class FencedBuffer : public Buffer {
                                        uint32_t index);
 
   // This function is called when the release fence is signalled
-  async_wait_result_t OnReleaseFenceSignalled(async_t* async,
-                                              zx_status_t status,
-                                              const zx_packet_signal* signal);
+  void OnReleaseFenceSignalled(async_t* async,
+                               async::WaitBase* wait,
+                               zx_status_t status,
+                               const zx_packet_signal* signal);
 
   // Set a handler function that will be called whenever the release fence
   // is signalled.
@@ -79,10 +80,10 @@ class FencedBuffer : public Buffer {
  private:
   uint32_t index_;
   BufferCallback release_fence_callback_;
-  async::AutoWait release_fence_waiter_;
+  async::WaitMethod<FencedBuffer, &FencedBuffer::OnReleaseFenceSignalled>
+      release_fence_waiter_{this};
 
-  FencedBuffer()
-      : release_fence_waiter_(fsl::MessageLoop::GetCurrent()->async()){};
+  FencedBuffer();
 
   zx::event acquire_fence_;
   zx::event release_fence_;

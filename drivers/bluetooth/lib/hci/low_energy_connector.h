@@ -116,9 +116,7 @@ class LowEnergyConnector {
   void OnCreateConnectionComplete(Status status, ConnectionPtr link);
 
   // Called when a LE Create Connection request has timed out.
-  void OnCreateConnectionTimeout(async_t*,
-                                 async::AutoTask*,
-                                 zx_status_t status);
+  void OnCreateConnectionTimeout();
 
   // Task runner for all asynchronous tasks.
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
@@ -136,7 +134,9 @@ class LowEnergyConnector {
   // Task that runs when a request to create connection times out. We do not
   // rely on CommandChannel's timer since that request completes when we receive
   // the HCI Command Status event.
-  async::AutoTask request_timeout_task_;
+  async::TaskClosureMethod<LowEnergyConnector,
+                           &LowEnergyConnector::OnCreateConnectionTimeout>
+                               request_timeout_task_{this};
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;

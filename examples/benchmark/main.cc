@@ -25,8 +25,7 @@ int main(int argc, char** argv) {
   const uint32_t kIterationCount = 1000;
   uint32_t iteration = 0;
 
-  async::Task task([&loop, &iteration](async_t* async, async::Task* task,
-                                       zx_status_t status) {
+  async::TaskClosure task([&loop, &task, &iteration] {
     // `task_start` and `task_end` are used to measure the time between
     // `example` benchmarks.  This is measured with a `time_between`
     // measurement type.
@@ -45,7 +44,7 @@ int main(int argc, char** argv) {
 
     // Schedule another benchmark.
     TRACE_INSTANT("benchmark", "task_end", TRACE_SCOPE_PROCESS);
-    task->PostDelayed(async, zx::usec(500));
+    task.PostDelayed(loop.async(), zx::usec(500));
   });
 
   task.Post(loop.async());

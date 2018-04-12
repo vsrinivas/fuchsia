@@ -113,13 +113,12 @@ void Transport::ShutDown() {
   }
 
   bool owns_thread = io_thread_.joinable();
-  io_task_runner_->PostTask([this, owns_thread] {
+  io_task_runner_->PostTask([this, owns_thread, ref = fxl::Ref(this)] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
 
-    const auto async = async_get_default();
-    cmd_channel_wait_.Cancel(async);
+    cmd_channel_wait_.Cancel();
     if (acl_data_channel_) {
-      acl_channel_wait_.Cancel(async);
+      acl_channel_wait_.Cancel();
     }
 
     // If own the IO thread, end it's message loop.
@@ -129,6 +128,7 @@ void Transport::ShutDown() {
 
   if (owns_thread)
     io_thread_.join();
+
 
   // We avoid deallocating the channels here as they *could* still be accessed
   // by other threads. It's OK to clear |io_task_runner_| as the channels hold
@@ -150,11 +150,11 @@ bool Transport::IsInitialized() const {
 }
 
 void Transport::WatchChannelClosed(const zx::channel& channel,
-                                   async::Wait& wait) {
-  io_task_runner_->PostTask([handle = channel.get(), &wait, this] {
+                                   Waiter& wait) {
+  io_task_runner_->PostTask([handle = channel.get(), &wait,
+                             this, ref = fxl::Ref(this)] {
     wait.set_object(handle);
     wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    wait.set_handler(fbl::BindMember(this, &Transport::OnChannelClosed));
     zx_status_t status = wait.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: Transport: failed channel setup: "
@@ -164,8 +164,9 @@ void Transport::WatchChannelClosed(const zx::channel& channel,
   });
 }
 
-async_wait_result_t Transport::OnChannelClosed(
+void Transport::OnChannelClosed(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
@@ -176,18 +177,16 @@ async_wait_result_t Transport::OnChannelClosed(
   }
 
   NotifyClosedCallback();
-  return ASYNC_WAIT_FINISHED;
 }
 
 void Transport::NotifyClosedCallback() {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(!io_task_runner_ ||
+             io_task_runner_->RunsTasksOnCurrentThread());
 
   // Clear the handlers so that we stop receiving events.
-  const auto async = async_get_default();
-
-  cmd_channel_wait_.Cancel(async);
+  cmd_channel_wait_.Cancel();
   if (acl_data_channel_) {
-    acl_channel_wait_.Cancel(async);
+    acl_channel_wait_.Cancel();
   }
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";

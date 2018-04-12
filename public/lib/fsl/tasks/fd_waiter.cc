@@ -42,7 +42,6 @@ bool FDWaiter::Wait(Callback callback, int fd, uint32_t events) {
 
   wait_.set_object(handle);
   wait_.set_trigger(signals);
-  wait_.set_handler(fbl::BindMember(this, &FDWaiter::Handler));
   zx_status_t status = wait_.Begin(async_);
 
   if (status != ZX_OK) {
@@ -63,7 +62,7 @@ void FDWaiter::Release() {
 
 void FDWaiter::Cancel() {
   if (io_) {
-    wait_.Cancel(async_);
+    wait_.Cancel();
     Release();
 
     // Last to prevent re-entrancy from the destructor of the callback.
@@ -71,9 +70,10 @@ void FDWaiter::Cancel() {
   }
 }
 
-async_wait_result_t FDWaiter::Handler(async_t* async,
-                                      zx_status_t status,
-                                      const zx_packet_signal_t* signal) {
+void FDWaiter::Handler(async_t* async,
+                       async::WaitBase* wait,
+                       zx_status_t status,
+                       const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_);
 
   uint32_t events = 0;
@@ -86,7 +86,6 @@ async_wait_result_t FDWaiter::Handler(async_t* async,
 
   // Last to prevent re-entrancy from the callback.
   callback(status, events);
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl

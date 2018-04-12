@@ -21,10 +21,6 @@ VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue)
       queue_wait_(async,
                   queue,
                   fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {
-  fifo_writable_wait_.set_handler(
-      fbl::BindMember(this, &VirtioNet::Stream::OnFifoWritable));
-  fifo_readable_wait_.set_handler(
-      fbl::BindMember(this, &VirtioNet::Stream::OnFifoReadable));
 }
 
 zx_status_t VirtioNet::Stream::Start(zx_handle_t fifo,
@@ -124,13 +120,14 @@ zx_status_t VirtioNet::Stream::WaitOnFifoWritable() {
   return fifo_writable_wait_.Begin(async_);
 }
 
-async_wait_result_t VirtioNet::Stream::OnFifoWritable(
+void VirtioNet::Stream::OnFifoWritable(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo writable: " << status;
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   uint32_t num_entries_written = 0;
@@ -142,7 +139,11 @@ async_wait_result_t VirtioNet::Stream::OnFifoWritable(
   fifo_num_entries_ -= num_entries_written;
   if (status == ZX_ERR_SHOULD_WAIT ||
       (status == ZX_OK && fifo_num_entries_ > 0)) {
-    return ASYNC_WAIT_AGAIN;
+    status = wait->Begin(async);
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Async wait failed on fifo writable: " << status;
+    }
+    return;
   }
   if (status == ZX_OK) {
     status = WaitOnQueue();
@@ -150,20 +151,20 @@ async_wait_result_t VirtioNet::Stream::OnFifoWritable(
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed write entries to fifo: " << status;
   }
-  return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t VirtioNet::Stream::WaitOnFifoReadable() {
   return fifo_readable_wait_.Begin(async_);
 }
 
-async_wait_result_t VirtioNet::Stream::OnFifoReadable(
+void VirtioNet::Stream::OnFifoReadable(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(INFO) << "Async wait failed on fifo readable: " << status;
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   // Dequeue entries for the Ethernet device.
@@ -172,11 +173,15 @@ async_wait_result_t VirtioNet::Stream::OnFifoReadable(
   status = zx_fifo_read_old(fifo_, static_cast<void*>(entries), sizeof(entries),
                             &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {
-    return ASYNC_WAIT_AGAIN;
+    status = wait->Begin(async);
+    if (status != ZX_OK) {
+      FXL_LOG(INFO) << "Async wait failed on fifo readable: " << status;
+    }
+    return;
   }
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to read from fifo: " << status;
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   for (uint32_t i = 0; i < num_entries_read; i++) {
@@ -185,10 +190,14 @@ async_wait_result_t VirtioNet::Stream::OnFifoReadable(
     status = queue_->Return(head, length);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to return descriptor to the queue " << status;
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
   }
-  return ASYNC_WAIT_AGAIN;
+
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(INFO) << "Async wait failed on fifo readable: " << status;
+  }
 }
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_t* async)

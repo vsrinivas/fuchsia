@@ -41,9 +41,10 @@ class VirtioConsole : public VirtioDeviceBase<VIRTIO_ID_CONSOLE,
     zx_status_t WaitOnQueue();
     void OnQueueReady(zx_status_t status, uint16_t index);
     zx_status_t WaitOnSocket();
-    async_wait_result_t OnSocketReady(async_t* async,
-                                      zx_status_t status,
-                                      const zx_packet_signal_t* signal);
+    void OnSocketReady(async_t* async,
+                       async::WaitBase* wait,
+                       zx_status_t status,
+                       const zx_packet_signal_t* signal);
 
     void OnStreamClosed(zx_status_t status, const char* action);
 
@@ -51,7 +52,7 @@ class VirtioConsole : public VirtioDeviceBase<VIRTIO_ID_CONSOLE,
     zx_handle_t socket_;
     VirtioQueue* queue_;
     VirtioQueueWaiter queue_wait_;
-    async::Wait socket_wait_;
+    async::WaitMethod<Stream, &Stream::OnSocketReady> socket_wait_{this};
     uint16_t head_;
     virtio_desc_t desc_;
   };

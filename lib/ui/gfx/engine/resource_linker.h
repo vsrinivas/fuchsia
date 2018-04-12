@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include "lib/fsl/handles/object_info.h"
 
 #include <fuchsia/cpp/gfx.h>
@@ -86,7 +86,7 @@ class ResourceLinker {
 
   struct ExportEntry {
     zx::eventpair export_token;
-    std::unique_ptr<async::AutoWait> token_peer_death_waiter;
+    std::unique_ptr<async::Wait> token_peer_death_waiter;
     Resource* resource;
   };
 
@@ -118,9 +118,9 @@ class ResourceLinker {
                                    Resource* actual,
                                    ImportResolutionResult resolution_result);
 
-  async_wait_result_t OnTokenPeerDeath(zx_koid_t import_koid,
-                                       zx_status_t status,
-                                       const zx_packet_signal* signal);
+  void OnTokenPeerDeath(zx_koid_t import_koid,
+                        zx_status_t status,
+                        const zx_packet_signal* signal);
 
   void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);
 

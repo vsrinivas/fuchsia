@@ -23,15 +23,14 @@ VirtioConsole::Stream::Stream(async_t* async,
       queue_wait_(async,
                   queue,
                   fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady)) {
-  socket_wait_.set_handler(
-      fbl::BindMember(this, &VirtioConsole::Stream::OnSocketReady));
 }
+
 zx_status_t VirtioConsole::Stream::Start() {
   return WaitOnQueue();
 }
 
 void VirtioConsole::Stream::Stop() {
-  socket_wait_.Cancel(async_);
+  socket_wait_.Cancel();
   queue_wait_.Cancel();
 }
 
@@ -62,13 +61,14 @@ zx_status_t VirtioConsole::Stream::WaitOnSocket() {
   return socket_wait_.Begin(async_);
 }
 
-async_wait_result_t VirtioConsole::Stream::OnSocketReady(
+void VirtioConsole::Stream::OnSocketReady(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     OnStreamClosed(status, "async wait on socket");
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   const bool do_read = desc_.writable;
@@ -91,11 +91,15 @@ async_wait_result_t VirtioConsole::Stream::OnSocketReady(
     }
   }
   if (status == ZX_ERR_SHOULD_WAIT || short_write) {
-    return ASYNC_WAIT_AGAIN;
+    status = wait->Begin(async);
+    if (status != ZX_OK) {
+      OnStreamClosed(status, "async wait on socket");
+    }
+    return;
   }
   if (status != ZX_OK) {
     OnStreamClosed(status, do_read ? "read from socket" : "write to socket");
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
   status = queue_->Return(head_, do_read ? actual : 0);
   if (status != ZX_OK) {
@@ -105,7 +109,6 @@ async_wait_result_t VirtioConsole::Stream::OnSocketReady(
   if (status != ZX_OK) {
     OnStreamClosed(status, "wait on queue");
   }
-  return ASYNC_WAIT_FINISHED;
 }
 
 void VirtioConsole::Stream::OnStreamClosed(zx_status_t status,

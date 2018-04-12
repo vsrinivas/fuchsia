@@ -33,7 +33,7 @@ ACLDataChannel::ACLDataChannel(Transport* transport,
                                zx::channel hci_acl_channel)
     : transport_(transport),
       channel_(std::move(hci_acl_channel)),
-      channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
+      channel_wait_(this, channel_.get(), ZX_CHANNEL_READABLE),
       is_initialized_(false),
       event_handler_id_(0u),
       rx_dispatcher_(nullptr),
@@ -60,8 +60,6 @@ void ACLDataChannel::Initialize(const DataBufferInfo& bredr_buffer_info,
   le_buffer_info_ = le_buffer_info;
 
   auto setup_handler_task = [this] {
-    channel_wait_.set_handler(
-        fbl::BindMember(this, &ACLDataChannel::OnChannelReady));
     zx_status_t status = channel_wait_.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: ACLDataChannel: failed channel setup: "
@@ -101,7 +99,7 @@ void ACLDataChannel::ShutDown() {
   auto handler_cleanup_task = [this] {
     FXL_DCHECK(fsl::MessageLoop::GetCurrent());
     FXL_LOG(INFO) << "hci: ACLDataChannel: canceling I/O handler";
-    zx_status_t status = channel_wait_.Cancel(async_get_default());
+    zx_status_t status = channel_wait_.Cancel();
     if (status != ZX_OK) {
       FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
                        << zx_status_get_string(status);
@@ -372,25 +370,27 @@ void ACLDataChannel::IncrementLETotalNumPacketsLocked(size_t count) {
   le_num_sent_packets_ += count;
 }
 
-async_wait_result_t ACLDataChannel::OnChannelReady(
+void ACLDataChannel::OnChannelReady(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "hci: ACLDataChannel: channel error: "
                    << zx_status_get_string(status);
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
-  if (!is_initialized_)
-    return ASYNC_WAIT_AGAIN;
+  if (!is_initialized_) {
+    return;
+  }
 
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
   if (!rx_callback_) {
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   for (size_t count = 0; count < signal->count; count++) {
@@ -399,7 +399,7 @@ async_wait_result_t ACLDataChannel::OnChannelReady(
     auto packet = ACLDataPacket::New(slab_allocators::kLargeACLDataPayloadSize);
     if (!packet) {
       FXL_LOG(ERROR) << "Failed to allocate buffer received ACL data packet!";
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
     uint32_t read_size;
     auto packet_bytes = packet->mutable_view()->mutable_data();
@@ -411,7 +411,7 @@ async_wait_result_t ACLDataChannel::OnChannelReady(
                   << zx_status_get_string(status);
       // Clear the handler so that we stop receiving events from it.
       // TODO(jamuraa): signal failure to the consumer so it can do something.
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
 
     if (read_size < sizeof(ACLDataHeader)) {
@@ -444,7 +444,12 @@ async_wait_result_t ACLDataChannel::OnChannelReady(
                       cb(std::move(packet));
                     });
   }
-  return ASYNC_WAIT_AGAIN;
+
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "hci: ACLDataChannel: wait error: "
+                   << zx_status_get_string(status);
+  }
 }
 
 }  // namespace hci

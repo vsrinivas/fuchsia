@@ -97,7 +97,8 @@ class FakeCameraSource : public CameraInterfaceBase {
   media::TimelineFunction frame_to_timestamp_;
   camera_video_format_t format_;
   std::vector<std::unique_ptr<Buffer>> buffers_;
-  async::AutoTask task_;
+  async::TaskClosureMethod<FakeCameraSource,
+                           &FakeCameraSource::ProduceFrame> task_{this};
   FrameNotifyCallback notify_callback_;
 };
 

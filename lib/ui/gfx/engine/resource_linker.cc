@@ -51,15 +51,14 @@ bool ResourceLinker::ExportResource(Resource* resource,
 
   // The resource must be removed from being considered for import if its
   // peer is closed.
-  auto wait = std::make_unique<async::AutoWait>(
-      async_get_default(),    // async dispatcher
+  auto wait = std::make_unique<async::Wait>(
       export_token.get(),     // handle
       kEventPairDeathSignals  // trigger
   );
   wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
-                              import_koid, std::placeholders::_2,
-                              std::placeholders::_3));
-  zx_status_t status = wait->Begin();
+                              import_koid, std::placeholders::_3,
+                              std::placeholders::_4));
+  zx_status_t status = wait->Begin(async_get_default());
   FXL_CHECK(status == ZX_OK);
 
   // Add the resource and export token to our data structures.
@@ -164,15 +163,13 @@ bool ResourceLinker::ImportResource(Import* import,
   return true;
 }
 
-async_wait_result_t ResourceLinker::OnTokenPeerDeath(
+void ResourceLinker::OnTokenPeerDeath(
     zx_koid_t import_koid,
     zx_status_t status,
     const zx_packet_signal* signal) {
   // This is invoked when all the peers for the registered export
   // handle are closed, or if there is a loop death or other error.
   RemoveExportEntryForExpiredKoid(import_koid);
-
-  return ASYNC_WAIT_FINISHED;
 }
 
 void ResourceLinker::InvokeExpirationCallback(Resource* resource,

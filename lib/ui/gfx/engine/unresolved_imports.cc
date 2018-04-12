@@ -52,12 +52,12 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
 
     // The resource must be removed from being considered for import
     // if its peer is closed.
-    auto wait = std::make_unique<async::AutoWait>(
-        async_get_default(), import_handle, kEventPairDeathSignals);
+    auto wait = std::make_unique<async::Wait>(
+        import_handle, kEventPairDeathSignals);
     wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
-                                import_koid, std::placeholders::_1,
-                                std::placeholders::_2, std::placeholders::_3));
-    zx_status_t status = wait->Begin();
+                                import_koid,
+                                std::placeholders::_3, std::placeholders::_4));
+    zx_status_t status = wait->Begin(async_get_default());
     FXL_CHECK(status == ZX_OK);
 
     import_entry_iter->second.token_peer_death_waiter = std::move(wait);
@@ -143,9 +143,8 @@ size_t UnresolvedImports::NumUnresolvedImportsForKoid(
   }
 }
 
-async_wait_result_t UnresolvedImports::OnTokenPeerDeath(
+void UnresolvedImports::OnTokenPeerDeath(
     zx_koid_t import_koid,
-    async_t*,
     zx_status_t status,
     const zx_packet_signal* signal) {
   // Remove |import_koid|, even if there was an error (i.e. status != ZX_OK).
@@ -157,7 +156,6 @@ async_wait_result_t UnresolvedImports::OnTokenPeerDeath(
                     ? ResourceLinker::ExpirationCause::kExportTokenClosed
                     : ResourceLinker::ExpirationCause::kInternalError);
   }
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace gfx

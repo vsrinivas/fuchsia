@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/media.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -72,7 +72,7 @@ class FakeWavReader : public SeekingReader {
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;
   zx::socket socket_;
-  std::unique_ptr<async::AutoWait> waiter_;
+  std::unique_ptr<async::Wait> waiter_;
   uint64_t position_;
 };
 

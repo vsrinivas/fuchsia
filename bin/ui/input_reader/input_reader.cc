@@ -20,9 +20,10 @@ constexpr char kFramebuffPath[] = "/dev/class/framebuffer";
 // see  MZ-432.
 constexpr char kVirtConsole[] = "000";
 
-struct DeviceInfo {
+struct InputReader::DeviceInfo {
   std::unique_ptr<InputInterpreter> interpreter;
-  std::unique_ptr<async::AutoWait> waiter;
+  std::unique_ptr<async::WaitMethod<InputReader,
+                                    &InputReader::OnDeviceHandleReady>> waiter;
 };
 
 InputReader::InputReader(input::InputDeviceRegistry* registry,
@@ -55,12 +56,10 @@ void InputReader::WatchDisplayOwnershipChanges(int dir_fd) {
     if (result == sizeof(display_ownership_event_)) {
       // Add handler to listen for signals on this event
       zx_signals_t signals = ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1;
-      display_ownership_waiter_ = std::make_unique<async::AutoWait>(
-          async_get_default(), display_ownership_event_, signals);
-      display_ownership_waiter_->set_handler(
-          fbl::BindMember(this, &InputReader::OnDisplayHandleReady));
-
-      zx_status_t status = display_ownership_waiter_->Begin();
+      display_ownership_waiter_.set_object(display_ownership_event_);
+      display_ownership_waiter_.set_trigger(signals);
+      zx_status_t status =
+          display_ownership_waiter_.Begin(async_get_default());
       FXL_CHECK(status == ZX_OK);
     } else {
       FXL_DLOG(ERROR)
@@ -86,71 +85,71 @@ void InputReader::DeviceAdded(std::unique_ptr<InputInterpreter> interpreter) {
   FXL_VLOG(1) << "Input device " << interpreter->name() << " added ";
   zx_handle_t handle = interpreter->handle();
 
-  auto wait = std::make_unique<async::AutoWait>(async_get_default(), handle,
-                                                ZX_USER_SIGNAL_0);
+  auto wait = std::make_unique<async::WaitMethod<InputReader,
+                                    &InputReader::OnDeviceHandleReady>>(
+      this, handle, ZX_USER_SIGNAL_0);
 
-  wait->set_handler([this, handle](async_t*, zx_status_t status,
-                                   const zx_packet_signal_t* signal) {
-    return OnDeviceHandleReady(handle, status, signal);
-  });
-
-  zx_status_t status = wait->Begin();
+  zx_status_t status = wait->Begin(async_get_default());
   FXL_CHECK(status == ZX_OK);
 
   devices_.emplace(handle,
                    new DeviceInfo{std::move(interpreter), std::move(wait)});
 }
 
-async_wait_result_t InputReader::OnDeviceHandleReady(
-    zx_handle_t handle,
+void InputReader::OnDeviceHandleReady(
+    async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "InputReader::OnDeviceHandleReady received an error status code: "
         << status;
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   zx_signals_t pending = signal->observed;
   FXL_DCHECK(pending & ZX_USER_SIGNAL_0);
 
   auto discard = !(display_owned_ || ignore_console_);
-  bool ret = devices_[handle]->interpreter->Read(discard);
+  bool ret = devices_[wait->object()]->interpreter->Read(discard);
   if (!ret) {
     // This will destroy the waiter.
-    DeviceRemoved(handle);
-    return ASYNC_WAIT_FINISHED;
+    DeviceRemoved(wait->object());
+    return;
   }
 
-  return ASYNC_WAIT_AGAIN;
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR)
+        << "InputReader::OnDeviceHandleReady wait failed: " << status;
+  }
 }
 
-async_wait_result_t InputReader::OnDisplayHandleReady(
+void InputReader::OnDisplayHandleReady(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "InputReader::OnDisplayHandleReady received an error status code: "
         << status;
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   zx_signals_t pending = signal->observed;
   if (pending & ZX_USER_SIGNAL_0) {
     display_owned_ = false;
-    display_ownership_waiter_->set_trigger(ZX_USER_SIGNAL_1);
-    auto waiter_status = display_ownership_waiter_->Begin();
+    display_ownership_waiter_.set_trigger(ZX_USER_SIGNAL_1);
+    auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
   } else if (pending & ZX_USER_SIGNAL_1) {
     display_owned_ = true;
-    display_ownership_waiter_->set_trigger(ZX_USER_SIGNAL_0);
-    auto waiter_status = display_ownership_waiter_->Begin();
+    display_ownership_waiter_.set_trigger(ZX_USER_SIGNAL_0);
+    auto waiter_status = display_ownership_waiter_.Begin(async);
     FXL_CHECK(waiter_status == ZX_OK);
   }
-
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace mozart

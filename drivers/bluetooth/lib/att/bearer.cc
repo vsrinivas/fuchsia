@@ -161,7 +161,7 @@ void Bearer::TransactionQueue::Enqueue(PendingTransactionPtr transaction) {
 }
 
 void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
-                                           async::AutoTask::Handler timeout_cb,
+                                           async::Task::Handler timeout_cb,
                                            uint32_t timeout_ms) {
   FXL_DCHECK(chan);
 
@@ -450,7 +450,7 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
   FXL_DCHECK(tq);
 
   tq->TrySendNext(chan_.get(),
-                  [this](async_t*, async::AutoTask*, zx_status_t status) {
+                  [this](async_t*, async::Task*, zx_status_t status) {
                     if (status == ZX_OK)
                       ShutDownInternal(true /* due_to_timeout */);
                   },

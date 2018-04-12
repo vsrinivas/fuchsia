@@ -227,30 +227,32 @@ zx_status_t VirtioQueue::Poll(virtio_queue_poll_fn_t handler,
   return ZX_OK;
 }
 
-zx_status_t VirtioQueue::PollAsync(async::AutoWait* wait,
+zx_status_t VirtioQueue::PollAsync(async_t* async, async::Wait* wait,
                                    virtio_queue_poll_fn_t handler,
                                    void* ctx) {
   wait->set_object(event_.get());
   wait->set_trigger(SIGNAL_QUEUE_AVAIL);
-  wait->set_handler([this, handler, ctx](async_t* async, zx_status_t status,
+  wait->set_handler([this, handler, ctx](async_t* async, async::Wait* wait,
+                                         zx_status_t status,
                                          const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-      return ASYNC_WAIT_FINISHED;
-    }
-    return InvokeAsyncHandler(handler, ctx);
+    InvokeAsyncHandler(async, wait, status, handler, ctx);
   });
-  return wait->Begin();
+  return wait->Begin(async);
 }
 
-async_wait_result_t VirtioQueue::InvokeAsyncHandler(
+void VirtioQueue::InvokeAsyncHandler(
+    async_t* async,
+    async::Wait* wait,
+    zx_status_t status,
     virtio_queue_poll_fn_t handler,
     void* ctx) {
+  if (status != ZX_OK) {
+    return;
+  }
+
   uint16_t head;
   uint32_t used = 0;
-  zx_status_t status = NextAvail(&head);
-  if (status == ZX_ERR_SHOULD_WAIT) {
-    return ASYNC_WAIT_AGAIN;
-  }
+  status = NextAvail(&head);
   if (status == ZX_OK) {
     status = handler(this, head, &used, ctx);
     // Try to return the buffer to the queue, even if the handler has failed
@@ -260,7 +262,9 @@ async_wait_result_t VirtioQueue::InvokeAsyncHandler(
       status = return_status;
     }
   }
-  return status == ZX_OK ? ASYNC_WAIT_AGAIN : ASYNC_WAIT_FINISHED;
+  if (status == ZX_OK || status == ZX_ERR_SHOULD_WAIT) {
+    wait->Begin(async); // ignore errors
+  }
 }
 
 zx_status_t VirtioQueue::ReadDesc(uint16_t desc_index, virtio_desc_t* out) {

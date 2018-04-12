@@ -32,9 +32,6 @@ LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
     : task_runner_(task_runner),
       hci_(hci),
       delegate_(std::move(delegate)),
-      request_timeout_task_(
-          fbl::BindMember(this,
-                          &LowEnergyConnector::OnCreateConnectionTimeout)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(hci_);
@@ -251,12 +248,7 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
   status_cb(status, std::move(link));
 }
 
-void LowEnergyConnector::OnCreateConnectionTimeout(async_t*,
-                                                   async::AutoTask*,
-                                                   zx_status_t status) {
-  if (status != ZX_OK)
-    return;
-
+void LowEnergyConnector::OnCreateConnectionTimeout() {
   FXL_DCHECK(pending_request_);
   FXL_LOG(INFO) << "LE Create Connection timed out: canceling request";
 

@@ -111,17 +111,6 @@ zx_status_t FakeCameraSource::Start(FrameNotifyCallback callback) {
                               format_.frames_per_sec_numerator);
 
   frame_count_ = 0;
-  // Define a re-occuring task that is triggered at the appropriate
-  // framerate.  This will give frames at a steady cadence.
-  task_.set_handler(
-      [this](async_t* async, async::AutoTask* task, zx_status_t status) {
-        if (status != ZX_OK) {
-          FXL_LOG(ERROR) << "FakeCameraSource had a Autotask error, ("
-                         << zx_status_get_string(status) << ").  Exiting.";
-          return;
-        }
-        this->ProduceFrame();
-      });
 
   // Set the first time at which we will generate a frame:
   PostNextCaptureTask();

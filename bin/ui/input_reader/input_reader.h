@@ -8,7 +8,7 @@
 #include <map>
 #include <utility>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
 #include "lib/fsl/io/device_watcher.h"
 #include "lib/fxl/macros.h"
@@ -16,8 +16,6 @@
 #include <fuchsia/cpp/input.h>
 
 namespace mozart {
-
-struct DeviceInfo;
 
 // InputReader does four things:
 // 1- Watches who owns the display, which can be us, or the console.
@@ -37,17 +35,21 @@ class InputReader {
   void Start();
 
  private:
+  struct DeviceInfo;
+
   void WatchDisplayOwnershipChanges(int dir_fd);
 
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(zx_handle_t handle);
 
-  async_wait_result_t OnDeviceHandleReady(zx_handle_t handle,
-                                          zx_status_t status,
-                                          const zx_packet_signal_t* signal);
-  async_wait_result_t OnDisplayHandleReady(async_t* async,
-                                           zx_status_t status,
-                                           const zx_packet_signal_t* signal);
+  void OnDeviceHandleReady(async_t* async,
+                           async::WaitBase* wait,
+                           zx_status_t status,
+                           const zx_packet_signal_t* signal);
+  void OnDisplayHandleReady(async_t* async,
+                            async::WaitBase* wait,
+                            zx_status_t status,
+                            const zx_packet_signal_t* signal);
 
   input::InputDeviceRegistry* const registry_;
   const bool ignore_console_;
@@ -56,7 +58,8 @@ class InputReader {
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<fsl::DeviceWatcher> console_watcher_;
   zx_handle_t display_ownership_event_;
-  std::unique_ptr<async::AutoWait> display_ownership_waiter_;
+  async::WaitMethod<InputReader, &InputReader::OnDisplayHandleReady>
+      display_ownership_waiter_{this};
   bool display_owned_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InputReader);

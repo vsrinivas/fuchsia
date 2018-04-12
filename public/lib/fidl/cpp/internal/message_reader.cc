@@ -73,9 +73,7 @@ MessageReader::MessageReader(MessageHandler* message_handler)
     : wait_{{ASYNC_STATE_INIT},
             &MessageReader::CallHandler,
             ZX_HANDLE_INVALID,
-            kSignals,
-            0u,
-            {}},
+            kSignals},
       async_(nullptr),
       should_stop_(nullptr),
       message_handler_(message_handler) {}
@@ -153,24 +151,23 @@ zx_status_t MessageReader::WaitAndDispatchOneMessageUntil(zx::time deadline) {
   return ZX_ERR_PEER_CLOSED;
 }
 
-async_wait_result_t MessageReader::CallHandler(
+void MessageReader::CallHandler(
     async_t* async,
     async_wait_t* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   static_assert(offsetof(MessageReader, wait_) == 0,
                 "The wait must be the first member for this cast to be valid.");
-  return reinterpret_cast<MessageReader*>(wait)->OnHandleReady(async, status,
-                                                               signal);
+  reinterpret_cast<MessageReader*>(wait)->OnHandleReady(async, status, signal);
 }
 
-async_wait_result_t MessageReader::OnHandleReady(
+void MessageReader::OnHandleReady(
     async_t* async,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     NotifyError();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
@@ -181,18 +178,21 @@ async_wait_result_t MessageReader::OnHandleReady(
       // handler has destroyed this object and we need to unwind without
       // touching |this|.
       if (status == ZX_ERR_SHOULD_WAIT)
-        return ASYNC_WAIT_AGAIN;
+        break;
       if (status != ZX_OK)
-        return ASYNC_WAIT_FINISHED;
+        return;
     }
-    return ASYNC_WAIT_AGAIN;
+    status = async_begin_wait(async, &wait_);
+    if (status != ZX_OK) {
+      NotifyError();
+    }
+    return;
   }
 
   ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
   // Notice that we don't notify an error until we've drained all the messages
   // out of the channel.
   NotifyError();
-  return ASYNC_WAIT_FINISHED;
 }
 
 zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {

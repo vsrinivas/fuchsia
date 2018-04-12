@@ -12,9 +12,7 @@ namespace gfx {
 
 EventTimestamper::EventTimestamper()
     : main_loop_(fsl::MessageLoop::GetCurrent()),
-      task_([](async_t*, async::Task*, zx_status_t) {
-        zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
-      }) {
+      task_([] { zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */); }) {
   FXL_DCHECK(main_loop_);
   background_loop_.StartThread();
 
@@ -80,8 +78,7 @@ EventTimestamper::Watch::~Watch() {
       break;
     case Waiter::State::STARTED:
       waiter_->set_state(Waiter::State::ABANDONED);
-      if (ZX_OK ==
-          waiter_->wait().Cancel(timestamper_->background_loop_.async())) {
+      if (ZX_OK == waiter_->wait().Cancel()) {
         // We successfully cancelled the async::Wait, so we can/must delete the
         // Waiter ourselves.  Otherwise we must not delete it, because it will
         // delete itself when it sees that it has been abandoned.
@@ -116,16 +113,16 @@ EventTimestamper::Waiter::Waiter(
     : task_runner_(task_runner),
       event_(std::move(event)),
       callback_(std::move(callback)),
-      wait_(event_.get(), trigger) {
-  wait_.set_handler(fbl::BindMember(this, &EventTimestamper::Waiter::Handle));
+      wait_(this, event_.get(), trigger) {
 }
 
 EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-async_wait_result_t EventTimestamper::Waiter::Handle(
+void EventTimestamper::Waiter::Handle(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
@@ -140,8 +137,6 @@ async_wait_result_t EventTimestamper::Waiter::Handle(
     state_ = State::STOPPED;
     callback_(now);
   });
-
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace gfx

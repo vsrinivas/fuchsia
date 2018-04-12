@@ -5,7 +5,7 @@
 #ifndef LIB_ESCHER_FLIB_FENCE_LISTENER_H_
 #define LIB_ESCHER_FLIB_FENCE_LISTENER_H_
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <zircon/syscalls/port.h>
 
@@ -39,14 +39,14 @@ class FenceListener {
   const zx::event& event() { return fence_; }
 
  private:
-  async_wait_result_t OnFenceSignalled(zx_status_t status,
-                                       const zx_packet_signal* signal);
+  void OnFenceSignalled(zx_status_t status,
+                        const zx_packet_signal* signal);
 
   void ClearHandler();
 
   zx::event fence_;
 
-  async::AutoWait waiter_;
+  async::Wait waiter_;
   fxl::Closure ready_callback_;
   bool ready_ = false;
 

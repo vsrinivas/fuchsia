@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/cpp/media.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/socket.h>
 
@@ -68,7 +68,7 @@ class FidlReader : public Reader,
   ReadAtCallback read_at_callback_;
   zx::socket socket_;
   size_t socket_position_ = kUnknownSize;
-  std::unique_ptr<async::AutoWait> waiter_;
+  std::unique_ptr<async::Wait> waiter_;
 };
 
 }  // namespace media

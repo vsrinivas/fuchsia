@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 
 #include "garnet/lib/ui/gfx/resources/import.h"
 
@@ -47,13 +47,12 @@ class UnresolvedImports {
     Import* import_ptr;
     zx::eventpair import_token;
     zx_koid_t import_koid;
-    std::unique_ptr<async::AutoWait> token_peer_death_waiter;
+    std::unique_ptr<async::Wait> token_peer_death_waiter;
   };
 
-  async_wait_result_t OnTokenPeerDeath(zx_koid_t import_koid,
-                                       async_t*,
-                                       zx_status_t status,
-                                       const zx_packet_signal* signal);
+  void OnTokenPeerDeath(zx_koid_t import_koid,
+                        zx_status_t status,
+                        const zx_packet_signal* signal);
 
   std::vector<Import*> RemoveUnresolvedImportsForKoid(zx_koid_t import_koid);
 

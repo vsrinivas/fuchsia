@@ -10,8 +10,7 @@
 
 namespace netconnector {
 
-MessageRelayBase::MessageRelayBase()
-    : read_wait_(async_get_default()), write_wait_(async_get_default()) {}
+MessageRelayBase::MessageRelayBase() = default;
 
 MessageRelayBase::~MessageRelayBase() {}
 
@@ -24,21 +23,17 @@ void MessageRelayBase::SetChannel(zx::channel channel) {
 
   read_wait_.set_object(channel_.get());
   read_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  read_wait_.set_handler(
-      fbl::BindMember(this, &MessageRelayBase::ReadChannelMessages));
 
   write_wait_.set_object(channel_.get());
   write_wait_.set_trigger(ZX_CHANNEL_WRITABLE | ZX_CHANNEL_PEER_CLOSED);
-  write_wait_.set_handler(
-      fbl::BindMember(this, &MessageRelayBase::WriteChannelMessages));
 
   // We defer handling channel messages so that the caller doesn't get callbacks
   // during SetChannel.
 
-  read_wait_.Begin();
+  read_wait_.Begin(async_get_default());
 
   if (!messages_to_write_.empty()) {
-    write_wait_.Begin();
+    write_wait_.Begin(async_get_default());
   }
 }
 
@@ -46,9 +41,7 @@ void MessageRelayBase::SendMessage(std::vector<uint8_t> message) {
   messages_to_write_.push(std::move(message));
 
   if (channel_ && !write_wait_.is_pending()) {
-    async_wait_result_t result = WriteChannelMessages(nullptr, ZX_OK, nullptr);
-    if (result == ASYNC_WAIT_AGAIN)
-      write_wait_.Begin();
+    WriteChannelMessages(async_get_default(), &write_wait_, ZX_OK, nullptr);
   }
 }
 
@@ -59,8 +52,9 @@ void MessageRelayBase::CloseChannel() {
   OnChannelClosed();
 }
 
-async_wait_result_t MessageRelayBase::ReadChannelMessages(
+void MessageRelayBase::ReadChannelMessages(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   while (channel_) {
@@ -70,7 +64,12 @@ async_wait_result_t MessageRelayBase::ReadChannelMessages(
                                        nullptr, 0, &actual_handle_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      return ASYNC_WAIT_AGAIN;
+      status = wait->Begin(async);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to wait on read channel, status " << status;
+        CloseChannel();
+        break;
+      }
     }
 
     if (status == ZX_ERR_PEER_CLOSED) {
@@ -107,16 +106,15 @@ async_wait_result_t MessageRelayBase::ReadChannelMessages(
 
     OnMessageReceived(std::move(message));
   }
-
-  return ASYNC_WAIT_FINISHED;
 }
 
-async_wait_result_t MessageRelayBase::WriteChannelMessages(
+void MessageRelayBase::WriteChannelMessages(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   if (!channel_) {
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   while (!messages_to_write_.empty()) {
@@ -126,7 +124,12 @@ async_wait_result_t MessageRelayBase::WriteChannelMessages(
         channel_.write(0, message.data(), message.size(), nullptr, 0);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      return ASYNC_WAIT_AGAIN;
+      status = wait->Begin(async);
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "Failed to wait on write channel, status " << status;
+        CloseChannel();
+        break;
+      }
     }
 
     if (status == ZX_ERR_PEER_CLOSED) {
@@ -143,8 +146,6 @@ async_wait_result_t MessageRelayBase::WriteChannelMessages(
 
     messages_to_write_.pop();
   }
-
-  return ASYNC_WAIT_FINISHED;
 }
 
 MessageRelay::MessageRelay() {}

@@ -73,7 +73,7 @@ CommandChannel::TransactionData::~TransactionData() {
   Complete(std::move(event));
 }
 
-void CommandChannel::TransactionData::Start(async::AutoTask::Handler timeout_cb,
+void CommandChannel::TransactionData::Start(fbl::Closure timeout_cb,
                                             zx::duration timeout) {
   // Transactions should only ever be started once.
   FXL_DCHECK(!timeout_task_.is_pending());
@@ -112,7 +112,7 @@ CommandChannel::CommandChannel(Transport* transport,
       next_event_handler_id_(1u),
       transport_(transport),
       channel_(std::move(hci_command_channel)),
-      channel_wait_(channel_.get(), ZX_CHANNEL_READABLE),
+      channel_wait_(this, channel_.get(), ZX_CHANNEL_READABLE),
       command_timeout_ms_(kCommandTimeoutMs),
       is_initialized_(false),
       allowed_command_packets_(1u) {
@@ -130,8 +130,6 @@ void CommandChannel::Initialize() {
   FXL_DCHECK(!is_initialized_);
 
   auto setup_handler_task = [this] {
-    channel_wait_.set_handler(
-        fbl::BindMember(this, &CommandChannel::OnChannelReady));
     zx_status_t status = channel_wait_.Begin(async_get_default());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "hci: CommandChannel: failed channel setup: "
@@ -173,7 +171,7 @@ void CommandChannel::ShutDownInternal() {
   is_initialized_ = false;
 
   // Stop listening for HCI events.
-  zx_status_t status = channel_wait_.Cancel(async_get_default());
+  zx_status_t status = channel_wait_.Cancel();
   if (status != ZX_OK) {
     FXL_LOG(WARNING) << "Couldn't cancel wait on channel: "
                      << zx_status_get_string(status);
@@ -362,16 +360,12 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
 
   auto& transaction = cmd.data;
 
-  transaction->Start([ this, id = cmd.data->id() ](async_t*, async::AutoTask*,
-                                                   zx_status_t status) {
-    if (status == ZX_OK) {
-      FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
-                     << " timed out, shutting down.";
-      ShutDownInternal();
-      // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
-    }
-  },
-                     zx::msec(command_timeout_ms_));
+  transaction->Start([ this, id = cmd.data->id() ] {
+    FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
+                   << " timed out, shutting down.";
+    ShutDownInternal();
+    // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
+  }, zx::msec(command_timeout_ms_));
 
   MaybeAddTransactionHandler(transaction.get());
 
@@ -531,8 +525,9 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
       [event = std::move(event), callback]() mutable { callback(*event); }));
 }
 
-async_wait_result_t CommandChannel::OnChannelReady(
+void CommandChannel::OnChannelReady(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
@@ -541,7 +536,7 @@ async_wait_result_t CommandChannel::OnChannelReady(
   if (status != ZX_OK) {
     FXL_VLOG(1) << "hci: CommandChannel: channel error: "
                 << zx_status_get_string(status);
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   // Allocate a buffer for the event. Since we don't know the size beforehand we
@@ -555,7 +550,7 @@ async_wait_result_t CommandChannel::OnChannelReady(
     auto packet = EventPacket::New(slab_allocators::kLargeControlPayloadSize);
     if (!packet) {
       FXL_LOG(ERROR) << "Failed to allocate event packet!";
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
     auto packet_bytes = packet->mutable_view()->mutable_data();
     zx_status_t read_status =
@@ -566,7 +561,7 @@ async_wait_result_t CommandChannel::OnChannelReady(
                   << zx_status_get_string(read_status);
       // Clear the handler so that we stop receiving events from it.
       // TODO(jamuraa): signal upper layers that we can't read the channel.
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
 
     if (read_size < sizeof(EventHeader)) {
@@ -600,7 +595,12 @@ async_wait_result_t CommandChannel::OnChannelReady(
     }
     TrySendQueuedCommands();
   }
-  return ASYNC_WAIT_AGAIN;
+
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_VLOG(1) << "hci: CommandChannel: wait error: "
+                << zx_status_get_string(status);
+  }
 }
 
 }  // namespace hci

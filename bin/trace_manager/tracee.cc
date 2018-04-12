@@ -60,7 +60,7 @@ Tracee::Tracee(TraceProviderBundle* bundle)
 
 Tracee::~Tracee() {
   if (async_) {
-    wait_.Cancel(async_);
+    wait_.Cancel();
     wait_.set_object(ZX_HANDLE_INVALID);
     async_ = nullptr;
   }
@@ -139,18 +139,13 @@ void Tracee::TransitionToState(State new_state) {
   state_ = new_state;
 }
 
-async_wait_result_t Tracee::OnHandleReady(async_t* async,
-                                          zx_status_t status,
-                                          const zx_packet_signal_t* signal) {
+void Tracee::OnHandleReady(async_t* async,
+                           async::WaitBase* wait,
+                           zx_status_t status,
+                          const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    FXL_VLOG(2) << *bundle_ << ": error=" << status;
-    FXL_DCHECK(status == ZX_ERR_CANCELED);
-    FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
-               state_ == State::kStopping);
-    wait_.set_object(ZX_HANDLE_INVALID);
-    async_ = nullptr;
-    TransitionToState(State::kStopped);
-    return ASYNC_WAIT_FINISHED;
+    OnHandleError(status);
+    return;
   }
 
   zx_signals_t pending = signal->observed;
@@ -206,10 +201,22 @@ async_wait_result_t Tracee::OnHandleReady(async_t* async,
     fxl::Closure stopped_callback = std::move(stopped_callback_);
     FXL_DCHECK(stopped_callback);
     stopped_callback();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
-  return ASYNC_WAIT_AGAIN;
+  status = wait->Begin(async);
+  if (status != ZX_OK)
+    OnHandleError(status);
+}
+
+void Tracee::OnHandleError(zx_status_t status) {
+  FXL_VLOG(2) << *bundle_ << ": error=" << status;
+  FXL_DCHECK(status == ZX_ERR_CANCELED);
+  FXL_DCHECK(state_ == State::kStartPending || state_ == State::kStarted ||
+             state_ == State::kStopping);
+  wait_.set_object(ZX_HANDLE_INVALID);
+  async_ = nullptr;
+  TransitionToState(State::kStopped);
 }
 
 Tracee::TransferStatus Tracee::TransferRecords(const zx::socket& socket) const {

@@ -42,11 +42,13 @@ class Tracer {
   void Stop();
 
  private:
-  async_wait_result_t OnHandleReady(async_t* async,
-                                    zx_status_t status,
-                                    const zx_packet_signal_t* signal);
+  void OnHandleReady(async_t* async,
+                     async::WaitBase* wait,
+                     zx_status_t status,
+                     const zx_packet_signal_t* signal);
+  void OnHandleError(zx_status_t status);
 
-  async_wait_result_t DrainSocket();
+  void DrainSocket(async_t* async);
   void CloseSocket();
   void Done();
 

@@ -150,7 +150,7 @@ class BluetoothManager final {
   void OnRemoteDeviceUpdated(const bluetooth_control::RemoteDevice& device);
 
   // Called when |init_timeout_task_| expires.
-  void OnInitTimeout(async_t* async, async::Task* task, zx_status_t status);
+  void OnInitTimeout(async_t* async, async::TaskBase* task, zx_status_t status);
 
   // Cancels |init_timeout_task_|.
   void CancelInitTimeout();
@@ -187,7 +187,8 @@ class BluetoothManager final {
 
   // The initializing state timeout. We use this to exit the "initializing"
   // state if no adapters are added during this period.
-  async::Task init_timeout_task_;
+  async::TaskMethod<BluetoothManager,
+                    &BluetoothManager::OnInitTimeout> init_timeout_task_{this};
 
   // Asynchronous requests queued during the "initializing" state.
   std::queue<std::function<void()>> pending_requests_;

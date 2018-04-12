@@ -73,37 +73,46 @@ void Tracer::Stop() {
   }
 }
 
-async_wait_result_t Tracer::OnHandleReady(async_t* async,
-                                          zx_status_t status,
-                                          const zx_packet_signal_t* signal) {
+void Tracer::OnHandleReady(async_t* async,
+                           async::WaitBase* wait,
+                           zx_status_t status,
+                           const zx_packet_signal_t* signal) {
   FXL_DCHECK(state_ == State::kStarted || state_ == State::kStopping);
 
+  if (status != ZX_OK) {
+    OnHandleError(status);
+    return;
+  }
+
   if (signal->observed & ZX_SOCKET_READABLE) {
-    return DrainSocket();
+    DrainSocket(async);
   } else if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
     Done();
-    return ASYNC_WAIT_FINISHED;
   } else {
     FXL_CHECK(false);
-    return ASYNC_WAIT_FINISHED;
   }
 }
 
-async_wait_result_t Tracer::DrainSocket() {
+void Tracer::DrainSocket(async_t* async) {
   for (;;) {
     size_t actual;
     zx_status_t status =
         socket_.read(0u, buffer_.data() + buffer_end_,
                      buffer_.capacity() - buffer_end_, &actual);
-    if (status == ZX_ERR_SHOULD_WAIT)
-      return ASYNC_WAIT_AGAIN;
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      status = wait_.Begin(async);
+      if (status != ZX_OK) {
+        OnHandleError(status);
+      }
+      return;
+    }
 
     if (status || actual == 0) {
       if (status != ZX_ERR_PEER_CLOSED) {
         FXL_LOG(ERROR) << "Failed to read data from socket: status=" << status;
       }
       Done();
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
 
     buffer_end_ += actual;
@@ -115,7 +124,7 @@ async_wait_result_t Tracer::DrainSocket() {
     if (!reader_->ReadRecords(chunk)) {
       FXL_LOG(ERROR) << "Trace stream is corrupted";
       Done();
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
 
     size_t bytes_consumed =
@@ -126,9 +135,14 @@ async_wait_result_t Tracer::DrainSocket() {
   }
 }
 
+void Tracer::OnHandleError(zx_status_t status) {
+  FXL_LOG(ERROR) << "Failed to wait on socket: status=" << status;
+  Done();
+}
+
 void Tracer::CloseSocket() {
   if (socket_) {
-    wait_.Cancel(async_);
+    wait_.Cancel();
     wait_.set_object(ZX_HANDLE_INVALID);
     async_ = nullptr;
     socket_.reset();

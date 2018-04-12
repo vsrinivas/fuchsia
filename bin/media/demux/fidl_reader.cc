@@ -115,11 +115,13 @@ void FidlReader::ReadFromSocket() {
                                       read_at_bytes_remaining_, &byte_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      waiter_ = std::make_unique<async::AutoWait>(
-          async_get_default(), socket_.get(),
+      waiter_ = std::make_unique<async::Wait>(
+          socket_.get(),
           ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async, zx_status_t status,
+      waiter_->set_handler([this](async_t* async,
+                                  async::Wait* wait,
+                                  zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {
@@ -127,14 +129,13 @@ void FidlReader::ReadFromSocket() {
           }
 
           FailReadAt(status);
-          return ASYNC_WAIT_FINISHED;
+          return;
         }
 
         ReadFromSocket();
-        return ASYNC_WAIT_FINISHED;
       });
 
-      waiter_->Begin();
+      waiter_->Begin(async_get_default());
 
       break;
     }

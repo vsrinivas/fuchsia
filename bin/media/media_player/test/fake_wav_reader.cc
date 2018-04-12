@@ -81,29 +81,28 @@ void FakeWavReader::WriteToSocket() {
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      waiter_ = std::make_unique<async::AutoWait>(
-          async_get_default(), socket_.get(),
+      waiter_ = std::make_unique<async::Wait>(
+          socket_.get(),
           ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_t* async, zx_status_t status,
+      waiter_->set_handler([this](async_t* async, async::Wait* wait,
+                                  zx_status_t status,
                                   const zx_packet_signal_t* signal) {
         if (status == ZX_ERR_CANCELED) {
           // Run loop has aborted...the app is shutting down.
-          return ASYNC_WAIT_FINISHED;
+          return;
         }
 
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "AsyncWait failed " << status;
           socket_.reset();
-          return ASYNC_WAIT_FINISHED;
+          return;
         }
 
         WriteToSocket();
-        return ASYNC_WAIT_FINISHED;
       });
 
-      waiter_->Begin();
-
+      waiter_->Begin(async_get_default());
       return;
     }
 

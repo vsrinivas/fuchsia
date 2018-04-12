@@ -90,7 +90,10 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   zx_status_t SetTrap(Guest* guest);
 
  protected:
-  void CallIoHandlerAsync(async_t* async, const zx_packet_guest_bell_t* bell);
+  void CallIoHandlerAsync(async_t* async,
+                          async::GuestBellTrapBase* trap,
+                          zx_status_t status,
+                          const zx_packet_guest_bell_t* bell);
 
   fbl::Canary<fbl::magic("IOMP")> canary_;
   const uint32_t kind_;

@@ -10,7 +10,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <garnet/examples/ui/video_display/camera_interface_base.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fxl/logging.h>
 #include <zircon/device/camera-proto.h>
 #include <zircon/device/camera.h>
@@ -104,15 +104,17 @@ class CameraClient : public CameraInterfaceBase {
   zx_status_t OnFrameNotify(camera::camera_proto::VideoBufFrameNotify resp);
 
   // Called when a new message is received on the Command channel:
-  async_wait_result_t OnNewCmdMessage(async_t* async,
-                                      zx_status_t status,
-                                      const zx_packet_signal* signal);
+  void OnNewCmdMessage(async_t* async,
+                       async::WaitBase* wait,
+                       zx_status_t status,
+                       const zx_packet_signal* signal);
   zx_status_t ProcessCmdChannel();
 
   // Called when a new message is received on the Streaming channel:
-  async_wait_result_t OnNewBufferMessage(async_t* async,
-                                         zx_status_t status,
-                                         const zx_packet_signal* signal);
+  void OnNewBufferMessage(async_t* async,
+                          async::WaitBase* wait,
+                          zx_status_t status,
+                          const zx_packet_signal* signal);
   zx_status_t ProcessBufferChannel();
 
   // Send the stop command to the driver.  This differs from the public Stop()
@@ -183,7 +185,10 @@ class CameraClient : public CameraInterfaceBase {
   zx::channel vb_ch_;
 
   std::vector<camera_video_format_t> out_formats_;
-  async::AutoWait cmd_msg_waiter_, buff_msg_waiter_;
+  async::WaitMethod<CameraClient, &CameraClient::OnNewCmdMessage>
+      cmd_msg_waiter_{this};
+  async::WaitMethod<CameraClient, &CameraClient::OnNewBufferMessage>
+      buff_msg_waiter_{this};
 };
 
 }  // namespace video_display

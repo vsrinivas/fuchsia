@@ -5,7 +5,7 @@
 #ifndef LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_
 #define LIB_NETCONNECTOR_CPP_MESSAGE_RELAY_H_
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
 #include <queue>
@@ -44,18 +44,22 @@ class MessageRelayBase {
 
  private:
   // Tries to read messages from channel_ and waits for more.
-  async_wait_result_t ReadChannelMessages(async_t* async,
-                                          zx_status_t status,
-                                          const zx_packet_signal_t* signal);
+  void ReadChannelMessages(async_t* async,
+                           async::WaitBase* wait,
+                           zx_status_t status,
+                           const zx_packet_signal_t* signal);
 
   // Writes all the messages in messages_to_write_.
-  async_wait_result_t WriteChannelMessages(async_t* async,
-                                           zx_status_t status,
-                                           const zx_packet_signal_t* signal);
+  void WriteChannelMessages(async_t* async,
+                            async::WaitBase* wait,
+                            zx_status_t status,
+                            const zx_packet_signal_t* signal);
 
   zx::channel channel_;
-  async::AutoWait read_wait_;
-  async::AutoWait write_wait_;
+  async::WaitMethod<MessageRelayBase,
+                    &MessageRelayBase::ReadChannelMessages> read_wait_{this};
+  async::WaitMethod<MessageRelayBase,
+                    &MessageRelayBase::WriteChannelMessages> write_wait_{this};
   std::queue<std::vector<uint8_t>> messages_to_write_;
 };
 

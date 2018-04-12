@@ -104,9 +104,8 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
     uint16_t op = 0;
     uint32_t flags = 0;
     zx::socket socket;
-    async::AutoWait rx_wait;
-    async::AutoWait tx_wait;
-    Connection(async_t* async) : rx_wait(async), tx_wait(async) {}
+    async::Wait rx_wait;
+    async::Wait tx_wait;
   };
   using ConnectionMap = std::
       unordered_map<ConnectionKey, fbl::unique_ptr<Connection>, ConnectionHash>;
@@ -141,12 +140,13 @@ class VirtioVsock : public VirtioDeviceBase<VIRTIO_ID_VSOCK,
                                 Stream<F>* stream) __TA_REQUIRES(mutex_);
   void WaitOnSocketLocked(zx_status_t status,
                           ConnectionKey key,
-                          async::AutoWait* wait) __TA_REQUIRES(mutex_);
+                          async::Wait* wait) __TA_REQUIRES(mutex_);
 
-  async_wait_result_t OnSocketReady(async_t* async,
-                                    zx_status_t status,
-                                    const zx_packet_signal_t* signal,
-                                    ConnectionKey key);
+  void OnSocketReady(async_t* async,
+                     async::Wait* wait,
+                     zx_status_t status,
+                     const zx_packet_signal_t* signal,
+                     ConnectionKey key);
 
   void Mux(zx_status_t status, uint16_t index);
   void Demux(zx_status_t status, uint16_t index);

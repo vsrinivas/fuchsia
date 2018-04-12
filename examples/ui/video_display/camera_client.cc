@@ -31,9 +31,7 @@ namespace video_display {
     return _resp.result;                                                       \
   }
 
-CameraClient::CameraClient()
-    : cmd_msg_waiter_(fsl::MessageLoop::GetCurrent()->async()),
-      buff_msg_waiter_(fsl::MessageLoop::GetCurrent()->async()) {}
+CameraClient::CameraClient() = default;
 
 CameraClient::~CameraClient() {
   Close();
@@ -71,9 +69,7 @@ zx_status_t CameraClient::Open(uint32_t dev_id) {
   // Set up waiter to wait for messages on this channel:
   cmd_msg_waiter_.set_object(stream_ch_.get());
   cmd_msg_waiter_.set_trigger(ZX_CHANNEL_READABLE);
-  cmd_msg_waiter_.set_handler(
-      fbl::BindMember(this, &CameraClient::OnNewCmdMessage));
-  zx_status_t status = cmd_msg_waiter_.Begin();
+  zx_status_t status = cmd_msg_waiter_.Begin(async_get_default());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start AutoWaiter";
     return status;
@@ -225,9 +221,7 @@ zx_status_t CameraClient::OnSetFormatResp(
   // channel:
   buff_msg_waiter_.set_object(vb_ch_.get());
   buff_msg_waiter_.set_trigger(ZX_CHANNEL_READABLE);
-  buff_msg_waiter_.set_handler(
-      fbl::BindMember(this, &CameraClient::OnNewBufferMessage));
-  status = buff_msg_waiter_.Begin();
+  status = buff_msg_waiter_.Begin(async_get_default());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start AutoWaiter";
     return status;
@@ -559,13 +553,14 @@ zx_status_t CameraClient::ProcessCmdChannel() {
 }
 #undef CHECK_RESP
 
-async_wait_result_t CameraClient::OnNewCmdMessage(
+void CameraClient::OnNewCmdMessage(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error: CameraClient received an error.  Exiting.";
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
   // Read channel
   zx_status_t ret_status = ProcessCmdChannel();
@@ -573,18 +568,22 @@ async_wait_result_t CameraClient::OnNewCmdMessage(
     FXL_LOG(ERROR) << "Error: Got bad status when processing channel ("
                    << ret_status << ")";
     Close();
-    return ASYNC_WAIT_AGAIN;
+    return;
   }
-  return ASYNC_WAIT_AGAIN;
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error: CameraClient wait failed.  Exiting.";
+  }
 }
 
-async_wait_result_t CameraClient::OnNewBufferMessage(
+void CameraClient::OnNewBufferMessage(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Error: CameraClient received an error.  Exiting.";
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
   // Read channel
   zx_status_t ret_status = ProcessBufferChannel();
@@ -593,9 +592,12 @@ async_wait_result_t CameraClient::OnNewBufferMessage(
                    << ret_status << ")";
     // TODO(garratt): Shut down only this stream, instead of whole process
     Close();
-    return ASYNC_WAIT_AGAIN;
+    return;
   }
-  return ASYNC_WAIT_AGAIN;
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Error: CameraClient wait failed.  Exiting.";
+  }
 }
 zx_status_t CameraClient::CheckConfigurationState(CameraState required_state) {
   fbl::AutoLock lock(&state_lock_);

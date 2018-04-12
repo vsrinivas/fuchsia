@@ -66,18 +66,24 @@ class FakeControllerBase {
 
  private:
   // Read and handle packets received over the channels.
-  async_wait_result_t HandleCommandPacket(async_t* async,
-                                          zx_status_t wait_status,
-                                          const zx_packet_signal_t* signal);
-  async_wait_result_t HandleACLPacket(async_t* async,
-                                      zx_status_t wait_status,
-                                      const zx_packet_signal_t* signal);
+  void HandleCommandPacket(async_t* async,
+                           async::WaitBase* wait,
+                           zx_status_t wait_status,
+                           const zx_packet_signal_t* signal);
+  void HandleACLPacket(async_t* async,
+                       async::WaitBase* wait,
+                       zx_status_t wait_status,
+                       const zx_packet_signal_t* signal);
 
   zx::channel cmd_channel_;
   zx::channel acl_channel_;
 
-  async::Wait cmd_channel_wait_;
-  async::Wait acl_channel_wait_;
+  async::WaitMethod<FakeControllerBase,
+                    &FakeControllerBase::HandleCommandPacket>
+                    cmd_channel_wait_{this};
+  async::WaitMethod<FakeControllerBase,
+                    &FakeControllerBase::HandleACLPacket>
+                    acl_channel_wait_{this};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeControllerBase);
 };

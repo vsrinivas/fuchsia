@@ -23,12 +23,11 @@ DeviceWatcher::DeviceWatcher(fxl::UniqueFD dir_fd,
     : dir_fd_(std::move(dir_fd)),
       dir_watch_(std::move(dir_watch)),
       callback_(std::move(callback)),
-      wait_(async_get_default(),
+      wait_(this,
             dir_watch_.get(),
             ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED),
       weak_ptr_factory_(this) {
-  wait_.set_handler(fbl::BindMember(this, &DeviceWatcher::Handler));
-  auto status = wait_.Begin();
+  auto status = wait_.Begin(async_get_default());
   FXL_DCHECK(status == ZX_OK);
 }
 
@@ -65,9 +64,13 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::Create(std::string directory_path,
       std::move(dir_fd), std::move(dir_watch), std::move(callback)));
 }
 
-async_wait_result_t DeviceWatcher::Handler(async_t* async,
-                                           zx_status_t status,
-                                           const zx_packet_signal* signal) {
+void DeviceWatcher::Handler(async_t* async,
+                            async::WaitBase* wait,
+                            zx_status_t status,
+                            const zx_packet_signal* signal) {
+  if (status != ZX_OK)
+    return;
+
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint32_t size;
     uint8_t buf[VFS_WATCH_MSG_MAX];
@@ -88,23 +91,23 @@ async_wait_result_t DeviceWatcher::Handler(async_t* async,
                   std::string(reinterpret_cast<char*>(msg), namelen));
         // Note: Callback may have destroyed the DeviceWatcher before returning.
         if (!weak) {
-          return ASYNC_WAIT_FINISHED;
+          return;
         }
       }
       msg += namelen;
       size -= namelen;
     }
-    return ASYNC_WAIT_AGAIN;
+    wait->Begin(async); // ignore errors
+    return;
   }
 
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(jeffbrown): Should we tell someone about this?
     dir_watch_.reset();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   FXL_CHECK(false);
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl

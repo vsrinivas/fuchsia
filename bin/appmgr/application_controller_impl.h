@@ -6,7 +6,7 @@
 #define GARNET_BIN_APPMGR_APPLICATION_CONTROLLER_IMPL_H_
 
 #include <fs/pseudo-dir.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/process.h>
 
 #include "garnet/bin/appmgr/application_namespace.h"
@@ -57,9 +57,10 @@ class ApplicationControllerImpl : public ApplicationController {
   void Wait(WaitCallback callback) override;
 
  private:
-  async_wait_result_t Handler(async_t* async,
-                              zx_status_t status,
-                              const zx_packet_signal* signal);
+  void Handler(async_t* async,
+               async::WaitBase* wait,
+               zx_status_t status,
+               const zx_packet_signal* signal);
 
   bool SendReturnCodeIfTerminated();
 
@@ -75,7 +76,8 @@ class ApplicationControllerImpl : public ApplicationController {
 
   fxl::RefPtr<ApplicationNamespace> application_namespace_;
 
-  async::AutoWait wait_;
+  async::WaitMethod<ApplicationControllerImpl,
+                    &ApplicationControllerImpl::Handler> wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ApplicationControllerImpl);
 };

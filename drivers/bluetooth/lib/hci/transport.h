@@ -9,7 +9,7 @@
 #include <memory>
 #include <thread>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
@@ -104,13 +104,15 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   explicit Transport(std::unique_ptr<DeviceWrapper> hci_device);
   ~Transport();
 
-  // Sets up a wait to watch for |channel| to close and calls OnChannelClosed
-  void WatchChannelClosed(const zx::channel& channel, async::Wait& wait);
-
   // Channel closed callback.
-  async_wait_result_t OnChannelClosed(async_t* async,
-                                      zx_status_t status,
-                                      const zx_packet_signal_t* signal);
+  void OnChannelClosed(async_t* async,
+                       async::WaitBase* wait,
+                       zx_status_t status,
+                       const zx_packet_signal_t* signal);
+  using Waiter = async::WaitMethod<Transport, &Transport::OnChannelClosed>;
+
+  // Sets up a wait to watch for |channel| to close and calls OnChannelClosed
+  void WatchChannelClosed(const zx::channel& channel, Waiter& wait);
 
   // Notifies the closed callback.
   void NotifyClosedCallback();
@@ -129,8 +131,8 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   std::thread io_thread_;
 
   // async::Waits for the command and ACL channels
-  async::Wait cmd_channel_wait_;
-  async::Wait acl_channel_wait_;
+  Waiter cmd_channel_wait_{this};
+  Waiter acl_channel_wait_{this};
 
   // The task runner used for posting tasks on the HCI transport I/O thread.
   fxl::RefPtr<fxl::TaskRunner> io_task_runner_;

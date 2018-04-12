@@ -29,8 +29,6 @@ bool FakeControllerBase::StartCmdChannel(zx::channel chan) {
   cmd_channel_ = std::move(chan);
   cmd_channel_wait_.set_object(cmd_channel_.get());
   cmd_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  cmd_channel_wait_.set_handler(
-      fbl::BindMember(this, &FakeControllerBase::HandleCommandPacket));
   zx_status_t status = cmd_channel_wait_.Begin(async_get_default());
   if (status != ZX_OK) {
     cmd_channel_.reset();
@@ -49,8 +47,6 @@ bool FakeControllerBase::StartAclChannel(zx::channel chan) {
   acl_channel_ = std::move(chan);
   acl_channel_wait_.set_object(acl_channel_.get());
   acl_channel_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  acl_channel_wait_.set_handler(
-      fbl::BindMember(this, &FakeControllerBase::HandleACLPacket));
   zx_status_t status = acl_channel_wait_.Begin(async_get_default());
   if (status != ZX_OK) {
     acl_channel_.reset();
@@ -90,7 +86,7 @@ zx_status_t FakeControllerBase::SendACLDataChannelPacket(
 
 void FakeControllerBase::CloseCommandChannel() {
   if (cmd_channel_.is_valid()) {
-    cmd_channel_wait_.Cancel(async_get_default());
+    cmd_channel_wait_.Cancel();
     cmd_channel_wait_.set_object(ZX_HANDLE_INVALID);
     cmd_channel_.reset();
   }
@@ -98,14 +94,15 @@ void FakeControllerBase::CloseCommandChannel() {
 
 void FakeControllerBase::CloseACLDataChannel() {
   if (acl_channel_.is_valid()) {
-    acl_channel_wait_.Cancel(async_get_default());
+    acl_channel_wait_.Cancel();
     acl_channel_wait_.set_object(ZX_HANDLE_INVALID);
     acl_channel_.reset();
   }
 }
 
-async_wait_result_t FakeControllerBase::HandleCommandPacket(
+void FakeControllerBase::HandleCommandPacket(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t wait_status,
     const zx_packet_signal_t* signal) {
   common::StaticByteBuffer<hci::kMaxCommandPacketPayloadSize> buffer;
@@ -122,23 +119,29 @@ async_wait_result_t FakeControllerBase::HandleCommandPacket(
                      << zx_status_get_string(status);
 
     CloseCommandChannel();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   if (read_size < sizeof(hci::CommandHeader)) {
     FXL_LOG(ERROR) << "Malformed command packet received";
-    return ASYNC_WAIT_AGAIN;
+  } else {
+    common::MutableBufferView view(buffer.mutable_data(), read_size);
+    common::PacketView<hci::CommandHeader> packet(
+        &view, read_size - sizeof(hci::CommandHeader));
+    OnCommandPacketReceived(packet);
   }
 
-  common::MutableBufferView view(buffer.mutable_data(), read_size);
-  common::PacketView<hci::CommandHeader> packet(
-      &view, read_size - sizeof(hci::CommandHeader));
-  OnCommandPacketReceived(packet);
-  return ASYNC_WAIT_AGAIN;
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on cmd channel: "
+                   << zx_status_get_string(status);
+    CloseCommandChannel();
+  }
 }
 
-async_wait_result_t FakeControllerBase::HandleACLPacket(
+void FakeControllerBase::HandleACLPacket(
     async_t* async,
+    async::WaitBase* wait,
     zx_status_t wait_status,
     const zx_packet_signal_t* signal) {
   common::StaticByteBuffer<hci::kMaxACLPayloadSize + sizeof(hci::ACLDataHeader)>
@@ -156,12 +159,18 @@ async_wait_result_t FakeControllerBase::HandleACLPacket(
                      << zx_status_get_string(status);
 
     CloseACLDataChannel();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   common::BufferView view(buffer.data(), read_size);
   OnACLDataPacketReceived(view);
-  return ASYNC_WAIT_AGAIN;
+
+  status = wait->Begin(async);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait on ACL channel: "
+                   << zx_status_get_string(status);
+    CloseACLDataChannel();
+  }
 }
 
 }  // namespace testing

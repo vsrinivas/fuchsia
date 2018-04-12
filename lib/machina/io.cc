@@ -27,10 +27,9 @@ IoMapping::IoMapping(uint32_t kind,
 
 zx_status_t IoMapping::SetTrap(Guest* guest) {
   if (kind_ == ZX_GUEST_TRAP_BELL) {
-    async_trap_.set_guest(guest->handle());
-    async_trap_.set_addr(base_);
-    async_trap_.set_length(size_);
-    return async_trap_.Begin(guest->device_async());
+    return async_trap_.SetTrap(guest->device_async(),
+                               zx::unowned_guest::wrap(guest->handle()),
+                               base_, size_);
   } else {
     uintptr_t key = reinterpret_cast<uintptr_t>(this);
     return zx_guest_set_trap(guest->handle(), kind_, base_, size_,
@@ -39,6 +38,8 @@ zx_status_t IoMapping::SetTrap(Guest* guest) {
 }
 
 void IoMapping::CallIoHandlerAsync(async_t* async,
+                                   async::GuestBellTrapBase* trap,
+                                   zx_status_t status,
                                    const zx_packet_guest_bell_t* bell) {
   FXL_CHECK(Write(bell->addr, kBellValue) == ZX_OK)
       << "Failed to handle async IO";

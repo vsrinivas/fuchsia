@@ -22,6 +22,9 @@ class InputReader {
 
   void Start(zx_handle_t socket) {
     socket_ = socket;
+    wait_.set_object(socket_);
+    wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED |
+                      ZX_SOCKET_PEER_CLOSED);
     WaitForKeystroke();
   }
 
@@ -48,40 +51,34 @@ class InputReader {
   }
 
   void SendKeyToGuest() {
-    async_wait_result_t result = OnSocketReady(async_, ZX_OK, nullptr);
-    if (result == ASYNC_WAIT_AGAIN) {
-      wait_.set_object(socket_);
-      wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED |
-                        ZX_SOCKET_PEER_CLOSED);
-      wait_.set_handler(fbl::BindMember(this, &InputReader::OnSocketReady));
-      wait_.Begin(async_);
-    }
+    OnSocketReady(async_, &wait_, ZX_OK, nullptr);
   }
 
-  async_wait_result_t OnSocketReady(async_t* async,
-                                    zx_status_t status,
-                                    const zx_packet_signal_t* signal) {
+  void OnSocketReady(async_t* async,
+                     async::WaitBase* wait,
+                     zx_status_t status,
+                     const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
     status = zx_socket_write(socket_, 0, &pending_key_, 1, nullptr);
     if (status == ZX_ERR_SHOULD_WAIT) {
-      return ASYNC_WAIT_AGAIN;
+      wait->Begin(async); // ignore errors
+      return;
     }
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Error " << status << " writing to socket";
-      return ASYNC_WAIT_FINISHED;
+      return;
     }
     pending_key_ = 0;
     WaitForKeystroke();
-    return ASYNC_WAIT_FINISHED;
   }
 
   zx_handle_t socket_ = ZX_HANDLE_INVALID;
   fsl::FDWaiter fd_waiter_;
   char pending_key_;
   async_t* async_;
-  async::Wait wait_;
+  async::WaitMethod<InputReader, &InputReader::OnSocketReady> wait_{this};
 };
 
 // Reads output from a socket provided by the guest and writes the data to

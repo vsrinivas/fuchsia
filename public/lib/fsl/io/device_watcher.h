@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_IO_DEVICE_WATCHER_H_
 #define LIB_FSL_IO_DEVICE_WATCHER_H_
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
 #include <functional>
@@ -45,14 +45,15 @@ class FXL_EXPORT DeviceWatcher {
 
   static void ListDevices(fxl::WeakPtr<DeviceWatcher> weak, int dir_fd);
 
-  async_wait_result_t Handler(async_t* async,
-                              zx_status_t status,
-                              const zx_packet_signal* signal);
+  void Handler(async_t* async,
+               async::WaitBase* wait,
+               zx_status_t status,
+               const zx_packet_signal* signal);
 
   fxl::UniqueFD dir_fd_;
   zx::channel dir_watch_;
   Callback callback_;
-  async::AutoWait wait_;
+  async::WaitMethod<DeviceWatcher, &DeviceWatcher::Handler> wait_;
   fxl::WeakPtrFactory<DeviceWatcher> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceWatcher);

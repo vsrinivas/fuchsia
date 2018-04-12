@@ -111,8 +111,9 @@ class VirtioGpu : public VirtioDeviceBase<VIRTIO_ID_GPU,
                      kNumHashTableBuckets>;
 
   ResourceTable resources_;
-  async::AutoWait control_queue_wait_;
-  async::AutoWait cursor_queue_wait_;
+  async_t* async_;
+  async::Wait control_queue_wait_;
+  async::Wait cursor_queue_wait_;
 };
 
 }  // namespace machina

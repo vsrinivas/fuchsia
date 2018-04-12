@@ -7,7 +7,7 @@
 #include <string>
 
 #include <fuchsia/cpp/network.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 
 #include "garnet/bin/media/demux/reader.h"
 #include "garnet/bin/media/util/incident.h"
@@ -57,7 +57,7 @@ class HttpReader : public Reader {
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
   zx::socket socket_;
-  std::unique_ptr<async::AutoWait> waiter_;
+  std::unique_ptr<async::Wait> waiter_;
   size_t socket_position_ = kUnknownSize;
   Incident ready_;
 

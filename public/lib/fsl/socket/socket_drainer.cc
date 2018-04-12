@@ -20,28 +20,25 @@ SocketDrainer::SocketDrainer(Client* client, async_t* async)
 }
 
 SocketDrainer::~SocketDrainer() {
-  wait_.Cancel(async_);
+  wait_.Cancel();
   if (destruction_sentinel_)
     *destruction_sentinel_ = true;
 }
 
 void SocketDrainer::Start(zx::socket source) {
   source_ = std::move(source);
-  async_wait_result_t result = OnHandleReady(async_, ZX_OK, nullptr);
-  if (result == ASYNC_WAIT_AGAIN) {
-    wait_.set_object(source_.get());
-    wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED
-                      | ZX_SOCKET_PEER_CLOSED);
-    wait_.set_handler(fbl::BindMember(this, &SocketDrainer::OnHandleReady));
-    wait_.Begin(async_);
-  }
+  wait_.set_object(source_.get());
+  wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_READ_DISABLED
+                    | ZX_SOCKET_PEER_CLOSED);
+  OnHandleReady(async_, &wait_, ZX_OK, nullptr);
 }
 
-async_wait_result_t SocketDrainer::OnHandleReady(
-    async_t* async, zx_status_t status, const zx_packet_signal_t* signal) {
+void SocketDrainer::OnHandleReady(
+    async_t* async, async::WaitBase* wait, zx_status_t status,
+    const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     client_->OnDataComplete();
-    return ASYNC_WAIT_FINISHED;
+    return;
   }
 
   std::vector<char> buffer(64 * 1024);
@@ -54,18 +51,22 @@ async_wait_result_t SocketDrainer::OnHandleReady(
     destruction_sentinel_ = &is_destroyed;
     client_->OnDataAvailable(buffer.data(), num_bytes);
     if (is_destroyed)
-      return ASYNC_WAIT_FINISHED;
+      return;
     destruction_sentinel_ = nullptr;
-    return ASYNC_WAIT_AGAIN;
+    status = ZX_ERR_SHOULD_WAIT;
   }
 
-  if (status == ZX_ERR_SHOULD_WAIT)
-    return ASYNC_WAIT_AGAIN;
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    status = wait->Begin(async);
+    if (status != ZX_OK) {
+      client_->OnDataComplete();
+    }
+    return;
+  }
 
   FXL_DCHECK(status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE)
       << "Unhandled zx_status_t: " << status;
   client_->OnDataComplete();
-  return ASYNC_WAIT_FINISHED;
 }
 
 }  // namespace fsl

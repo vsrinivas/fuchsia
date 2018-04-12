@@ -10,7 +10,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/event.h>
 #include <virtio/virtio.h>
 #include <zircon/types.h>
@@ -216,7 +216,7 @@ class VirtioQueue {
   // when one is available.
   //
   // TODO(PD-103): Use a c++ style function object here.
-  zx_status_t PollAsync(async::AutoWait* wait,
+  zx_status_t PollAsync(async_t* async, async::Wait* wait,
                         virtio_queue_poll_fn_t handler,
                         void* ctx);
 
@@ -235,8 +235,11 @@ class VirtioQueue {
   // Returns a circular index into a Virtio ring.
   uint32_t RingIndexLocked(uint32_t index) const __TA_REQUIRES(mutex_);
 
-  async_wait_result_t InvokeAsyncHandler(virtio_queue_poll_fn_t handler,
-                                         void* ctx);
+  void InvokeAsyncHandler(async_t* async,
+                          async::Wait* wait,
+                          zx_status_t status,
+                          virtio_queue_poll_fn_t handler,
+                          void* ctx);
 
   mutable fbl::Mutex mutex_;
   VirtioDevice* device_;

@@ -24,12 +24,15 @@ class VirtioQueueWaiter {
   void Cancel();
 
  private:
-  async_wait_result_t WaitHandler(async_t* async,
-                                  zx_status_t status,
-                                  const zx_packet_signal_t* signal);
+  void WaitHandler(async_t* async,
+                   async::WaitBase* wait,
+                   zx_status_t status,
+                   const zx_packet_signal_t* signal);
 
   fbl::Mutex mutex_;
-  async::Wait wait_ __TA_GUARDED(mutex_);
+  async::WaitMethod<VirtioQueueWaiter,
+                    &VirtioQueueWaiter::WaitHandler> wait_
+                    __TA_GUARDED(mutex_) {this};
   async_t* const async_;
   VirtioQueue* const queue_ __TA_GUARDED(mutex_);
   const Handler handler_;

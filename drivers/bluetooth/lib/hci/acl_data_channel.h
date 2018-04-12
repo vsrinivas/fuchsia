@@ -189,9 +189,10 @@ class ACLDataChannel final {
       __TA_REQUIRES(send_mutex_);
 
   // Read Ready Handler for |channel_|
-  async_wait_result_t OnChannelReady(async_t* async,
-                                     zx_status_t status,
-                                     const zx_packet_signal_t* signal);
+  void OnChannelReady(async_t* async,
+                      async::WaitBase* wait,
+                      zx_status_t status,
+                      const zx_packet_signal_t* signal);
 
   // Used to assert that certain public functions are only called on the
   // creation thread.
@@ -204,7 +205,8 @@ class ACLDataChannel final {
   zx::channel channel_;
 
   // Wait object for |channel_| on |io_task_runner_|
-  async::Wait channel_wait_;
+  async::WaitMethod<ACLDataChannel, &ACLDataChannel::OnChannelReady>
+      channel_wait_{this};
 
   // True if this instance has been initialized through a call to Initialize().
   std::atomic_bool is_initialized_;

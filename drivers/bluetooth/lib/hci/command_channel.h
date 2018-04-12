@@ -193,7 +193,7 @@ class CommandChannel final {
 
     // Starts the transaction timer, which will call timeout_cb if it's not
     // completed in time.
-    void Start(async::AutoTask::Handler timeout_cb, zx::duration timeout);
+    void Start(fbl::Closure timeout_cb, zx::duration timeout);
 
     // Completes the transaction with |event|.
     void Complete(std::unique_ptr<EventPacket> event);
@@ -215,7 +215,7 @@ class CommandChannel final {
     EventCode complete_event_code_;
     CommandCallback callback_;
     fxl::RefPtr<fxl::TaskRunner> task_runner_;
-    async::AutoTask timeout_task_;
+    async::TaskClosure timeout_task_;
     EventHandlerId handler_id_;
 
     FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(TransactionData);
@@ -281,9 +281,10 @@ class CommandChannel final {
   void UpdateTransaction(std::unique_ptr<EventPacket> event);
 
   // Read ready handler for |channel_|
-  async_wait_result_t OnChannelReady(async_t* async,
-                                     zx_status_t status,
-                                     const zx_packet_signal_t* signal);
+  void OnChannelReady(async_t* async,
+                      async::WaitBase* wait,
+                      zx_status_t status,
+                      const zx_packet_signal_t* signal);
 
   // Opcodes of commands that we have sent to the controller but not received a
   // status update from.  New commands with these opcodes can't be sent because
@@ -316,7 +317,8 @@ class CommandChannel final {
   zx::channel channel_;
 
   // Wait object for |channel_|
-  async::Wait channel_wait_;
+  async::WaitMethod<CommandChannel, &CommandChannel::OnChannelReady>
+      channel_wait_{this};
 
   // The command timeout value (in milliseconds) for pending transactions.
   // If any transactions take longer than this, we shutdown automatically.

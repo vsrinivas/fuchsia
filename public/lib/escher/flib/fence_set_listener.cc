@@ -34,15 +34,14 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
 
   // Wait for |kFenceSignalled| on each fence.
   for (auto& fence : *fences_) {
-    auto wait = std::make_unique<async::AutoWait>(
-        async_get_default(),  // async dispatcher
+    auto wait = std::make_unique<async::Wait>(
         fence.get(),          // handle
         kFenceSignalled       // trigger
     );
     wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
-                                waiter_index, std::placeholders::_2,
-                                std::placeholders::_3));
-    zx_status_t status = wait->Begin();
+                                waiter_index, std::placeholders::_3,
+                                std::placeholders::_4));
+    zx_status_t status = wait->Begin(async_get_default());
     FXL_CHECK(status == ZX_OK);
 
     waiters_.push_back(std::move(wait));
@@ -52,7 +51,7 @@ void FenceSetListener::WaitReadyAsync(fxl::Closure ready_callback) {
   ready_callback_ = std::move(ready_callback);
 }
 
-async_wait_result_t FenceSetListener::OnFenceSignalled(
+void FenceSetListener::OnFenceSignalled(
     size_t waiter_index,
     zx_status_t status,
     const zx_packet_signal* signal) {
@@ -72,7 +71,6 @@ async_wait_result_t FenceSetListener::OnFenceSignalled(
 
       callback();
     }
-    return ASYNC_WAIT_FINISHED;
   } else {
     FXL_LOG(ERROR) << "FenceSetListener::OnFenceSignalled received an "
                       "error status code: "
@@ -80,7 +78,6 @@ async_wait_result_t FenceSetListener::OnFenceSignalled(
 
     // TODO(MZ-173): Close the session if there is an error, or if the fence
     // is closed.
-    return ASYNC_WAIT_FINISHED;
   }
 }
 
