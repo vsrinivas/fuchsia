@@ -156,11 +156,12 @@ bool validate_too_many_handles_specified_error() {
 
     zx_handle_t handles[] = {
         dummy_handle_0,
+        ZX_HANDLE_INVALID,
     };
 
     const char* error = nullptr;
     auto status = fidl_validate(&nonnullable_handle_message_type, &message, sizeof(message),
-                                ArrayCount(handles) + 1, &error);
+                                ArrayCount(handles), &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error, error);
