@@ -54,7 +54,7 @@ documentation generation system.
 ```
 file = library-header , using-list , declaration-list ;
 
-library-header = "library" , IDENTIFIER , ";" ;
+library-header = "library" , compound-identifier , ";" ;
 
 using-list = ( using )* ;
 

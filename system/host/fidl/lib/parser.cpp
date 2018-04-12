@@ -887,7 +887,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     ConsumeToken(Token::Kind::Library);
     if (!Ok())
         return Fail();
-    auto identifier = ParseIdentifier();
+    auto library_name = ParseCompoundIdentifier();
     if (!Ok())
         return Fail();
     ConsumeToken(Token::Kind::Semicolon);
@@ -960,7 +960,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         return Fail();
 
     return std::make_unique<raw::File>(
-        std::move(identifier), std::move(using_list), std::move(const_declaration_list),
+        std::move(library_name), std::move(using_list), std::move(const_declaration_list),
         std::move(enum_declaration_list), std::move(interface_declaration_list),
         std::move(struct_declaration_list), std::move(union_declaration_list));
 }

@@ -324,20 +324,21 @@ struct UnionDeclaration {
 };
 
 struct File {
-    File(std::unique_ptr<Identifier> identifier, std::vector<std::unique_ptr<Using>> using_list,
+    File(std::unique_ptr<CompoundIdentifier> library_name,
+         std::vector<std::unique_ptr<Using>> using_list,
          std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
          std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list,
          std::vector<std::unique_ptr<InterfaceDeclaration>> interface_declaration_list,
          std::vector<std::unique_ptr<StructDeclaration>> struct_declaration_list,
          std::vector<std::unique_ptr<UnionDeclaration>> union_declaration_list)
-        : identifier(std::move(identifier)), using_list(std::move(using_list)),
+        : library_name(std::move(library_name)), using_list(std::move(using_list)),
           const_declaration_list(std::move(const_declaration_list)),
           enum_declaration_list(std::move(enum_declaration_list)),
           interface_declaration_list(std::move(interface_declaration_list)),
           struct_declaration_list(std::move(struct_declaration_list)),
           union_declaration_list(std::move(union_declaration_list)) {}
 
-    std::unique_ptr<Identifier> identifier;
+    std::unique_ptr<CompoundIdentifier> library_name;
     std::vector<std::unique_ptr<Using>> using_list;
     std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;
     std::vector<std::unique_ptr<EnumDeclaration>> enum_declaration_list;

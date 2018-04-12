@@ -485,7 +485,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     // All fidl files in a library should agree on the library name.
-    auto library_name = file->identifier->location;
+    // TODO(FIDL-146) Handle multipart library names.
+    auto library_name = file->library_name->components[0]->location;
 
     if (library_name_.valid()) {
         StringView current_name = library_name_.data();
