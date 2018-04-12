@@ -17,6 +17,8 @@
 #ifndef BRCMFMAC_CFG80211_H
 #define BRCMFMAC_CFG80211_H
 
+#include <threads.h>
+
 /* for brcmu_d11inf */
 #include "brcmu_d11.h"
 #include "core.h"
@@ -239,7 +241,7 @@ struct escan_info {
  */
 struct brcmf_cfg80211_vif_event {
     wait_queue_head_t vif_wq;
-    spinlock_t vif_event_lock;
+    mtx_t vif_event_lock;
     uint8_t action;
     struct brcmf_cfg80211_vif* vif;
 };
@@ -307,7 +309,7 @@ struct brcmf_cfg80211_info {
     struct brcmf_p2p_info p2p;
     struct brcmf_btcoex_info* btcoex;
     struct cfg80211_scan_request* scan_request;
-    struct mutex usr_sync;
+    mtx_t usr_sync;
     struct wl_cfg80211_bss_info* bss_info;
     struct brcmf_cfg80211_connect_info conn_info;
     struct brcmf_pmk_list_le pmk_list;

@@ -18,6 +18,8 @@
 
 //#include <net/cfg80211.h>
 
+#include "core.h"
+#include "fwil_types.h"
 #include "linuxisms.h"
 
 struct brcmf_cfg80211_info;

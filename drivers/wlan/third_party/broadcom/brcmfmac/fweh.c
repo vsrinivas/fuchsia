@@ -15,17 +15,18 @@
  */
 
 //#include <linux/netdevice.h>
+#include "fweh.h"
 
-#include "linuxisms.h"
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-
 #include "cfg80211.h"
 #include "core.h"
 #include "debug.h"
-#include "fweh.h"
+#include "device.h"
 #include "fwil.h"
+#include "linuxisms.h"
 #include "proto.h"
 #include "tracepoint.h"
 
@@ -92,11 +93,11 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
  */
 static void brcmf_fweh_queue_event(struct brcmf_fweh_info* fweh,
                                    struct brcmf_fweh_queue_item* event) {
-    ulong flags;
-
-    spin_lock_irqsave(&fweh->evt_q_lock, flags);
+    //spin_lock_irqsave(&fweh->evt_q_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     list_add_tail(&event->q, &fweh->event_q);
-    spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
+    //spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
     schedule_work(&fweh->event_work);
 }
 
@@ -196,14 +197,15 @@ static void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_even
  */
 static struct brcmf_fweh_queue_item* brcmf_fweh_dequeue_event(struct brcmf_fweh_info* fweh) {
     struct brcmf_fweh_queue_item* event = NULL;
-    ulong flags;
 
-    spin_lock_irqsave(&fweh->evt_q_lock, flags);
+    //spin_lock_irqsave(&fweh->evt_q_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     if (!list_empty(&fweh->event_q)) {
         event = list_first_entry(&fweh->event_q, struct brcmf_fweh_queue_item, q);
         list_del(&event->q);
     }
-    spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
+    //spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 
     return event;
 }
@@ -288,7 +290,7 @@ void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing) {
 void brcmf_fweh_attach(struct brcmf_pub* drvr) {
     struct brcmf_fweh_info* fweh = &drvr->fweh;
     INIT_WORK(&fweh->event_work, brcmf_fweh_event_worker);
-    spin_lock_init(&fweh->evt_q_lock);
+    //spin_lock_init(&fweh->evt_q_lock);
     INIT_LIST_HEAD(&fweh->event_q);
 }
 

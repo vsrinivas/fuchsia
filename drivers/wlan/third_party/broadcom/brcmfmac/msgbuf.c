@@ -24,6 +24,8 @@
 
 #include "msgbuf.h"
 
+#include <threads.h>
+
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
@@ -261,7 +263,7 @@ struct brcmf_msgbuf {
     unsigned long* txstatus_done_map;
 
     struct work_struct flowring_work;
-    spinlock_t flowring_work_lock;
+    //spinlock_t flowring_work_lock;
     struct list_head work_queue;
 };
 
@@ -521,14 +523,15 @@ static void brcmf_msgbuf_remove_flowring(struct brcmf_msgbuf* msgbuf, uint16_t f
 
 static struct brcmf_msgbuf_work_item* brcmf_msgbuf_dequeue_work(struct brcmf_msgbuf* msgbuf) {
     struct brcmf_msgbuf_work_item* work = NULL;
-    ulong flags;
 
-    spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
+    //spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     if (!list_empty(&msgbuf->work_queue)) {
         work = list_first_entry(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
         list_del(&work->queue);
     }
-    spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
+    //spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 
     return work;
 }
@@ -612,7 +615,6 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
     struct brcmf_msgbuf_work_item* create;
     struct ethhdr* eh = (struct ethhdr*)(skb->data);
     uint32_t flowid;
-    ulong flags;
 
     create = kzalloc(sizeof(*create), GFP_ATOMIC);
     if (create == NULL) {
@@ -630,9 +632,11 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
     memcpy(create->sa, eh->h_source, ETH_ALEN);
     memcpy(create->da, eh->h_dest, ETH_ALEN);
 
-    spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
+    //spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     list_add_tail(&create->queue, &msgbuf->work_queue);
-    spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
+    //spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
     schedule_work(&msgbuf->flowring_work);
 
     return flowid;
@@ -1404,7 +1408,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     brcmf_msgbuf_rxbuf_ioctlresp_post(msgbuf);
 
     INIT_WORK(&msgbuf->flowring_work, brcmf_msgbuf_flowring_worker);
-    spin_lock_init(&msgbuf->flowring_work_lock);
+    //spin_lock_init(&msgbuf->flowring_work_lock);
     INIT_LIST_HEAD(&msgbuf->work_queue);
 
     brcmf_debugfs_add_entry(drvr, "msgbuf_stats", brcmf_msgbuf_stats_read);

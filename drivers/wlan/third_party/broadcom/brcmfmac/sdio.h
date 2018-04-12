@@ -181,7 +181,7 @@ struct brcmf_sdio_dev {
     bool oob_irq_requested;
     bool sd_irq_requested;
     bool irq_en; /* irq enable flags */
-    spinlock_t irq_en_lock;
+    //spinlock_t irq_en_lock;
     bool irq_wake; /* irq wake enable flags */
     bool sg_support;
     uint max_request_size;

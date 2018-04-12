@@ -32,8 +32,7 @@ struct brcmf_commonring {
 
     void* cr_ctx;
 
-    spinlock_t lock;
-    unsigned long flags;
+    //spinlock_t lock;
     bool inited;
     bool was_full;
 

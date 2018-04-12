@@ -22,12 +22,14 @@
 //#include <linux/vmalloc.h>
 //#include <net/cfg80211.h>
 //#include <net/netlink.h>
+#include "cfg80211.h"
+
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "btcoex.h"
 #include "bus.h"
-#include "cfg80211.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
@@ -2939,12 +2941,14 @@ static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
 }
 
 static void brcmf_escan_timeout(struct timer_list* t) {
+    pthread_mutex_lock(&irq_callback_lock);
     struct brcmf_cfg80211_info* cfg = from_timer(cfg, t, escan_timeout);
 
     if (cfg->int_escan_map || cfg->scan_request) {
         brcmf_err("timer expired\n");
         schedule_work(&cfg->escan_timeout_work);
     }
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static bool brcmf_compare_update_same_bss(struct brcmf_cfg80211_info* cfg,
@@ -5445,7 +5449,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
     brcmf_dbg(TRACE, "Enter: action %u flags %u ifidx %u bsscfgidx %u\n", ifevent->action,
               ifevent->flags, ifevent->ifidx, ifevent->bsscfgidx);
 
-    spin_lock(&event->vif_event_lock);
+    mtx_lock(&event->vif_event_lock);
     event->action = ifevent->action;
     vif = event->vif;
 
@@ -5453,7 +5457,7 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
     case BRCMF_E_IF_ADD:
         /* waiting process may have timed out */
         if (!cfg->vif_event.vif) {
-            spin_unlock(&event->vif_event_lock);
+            mtx_unlock(&event->vif_event_lock);
             return ZX_ERR_SHOULD_WAIT;
         }
 
@@ -5464,12 +5468,12 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
             ifp->ndev->ieee80211_ptr = &vif->wdev;
             SET_NETDEV_DEV(ifp->ndev, wiphy_dev(cfg->wiphy));
         }
-        spin_unlock(&event->vif_event_lock);
+        mtx_unlock(&event->vif_event_lock);
         wake_up(&event->vif_wq);
         return ZX_OK;
 
     case BRCMF_E_IF_DEL:
-        spin_unlock(&event->vif_event_lock);
+        mtx_unlock(&event->vif_event_lock);
         /* event may not be upon user request */
         if (brcmf_cfg80211_vif_event_armed(cfg)) {
             wake_up(&event->vif_wq);
@@ -5477,12 +5481,12 @@ static zx_status_t brcmf_notify_vif_event(struct brcmf_if* ifp, const struct brc
         return ZX_OK;
 
     case BRCMF_E_IF_CHANGE:
-        spin_unlock(&event->vif_event_lock);
+        mtx_unlock(&event->vif_event_lock);
         wake_up(&event->vif_wq);
         return ZX_OK;
 
     default:
-        spin_unlock(&event->vif_event_lock);
+        mtx_unlock(&event->vif_event_lock);
         break;
     }
     return ZX_ERR_INVALID_ARGS;
@@ -5573,7 +5577,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
         return err;
     }
     brcmf_register_event_handlers(cfg);
-    mutex_init(&cfg->usr_sync);
+    mtx_init(&cfg->usr_sync, mtx_plain);
     brcmf_init_escan(cfg);
     brcmf_init_conf(cfg->conf);
     init_completion(&cfg->vif_disabled);
@@ -5588,7 +5592,7 @@ static void wl_deinit_priv(struct brcmf_cfg80211_info* cfg) {
 
 static void init_vif_event(struct brcmf_cfg80211_vif_event* event) {
     init_waitqueue_head(&event->vif_wq);
-    spin_lock_init(&event->vif_event_lock);
+    mtx_init(&event->vif_event_lock, mtx_plain);
 }
 
 static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
@@ -6440,9 +6444,9 @@ zx_status_t brcmf_cfg80211_up(struct net_device* ndev) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     zx_status_t err = ZX_OK;
 
-    mutex_lock(&cfg->usr_sync);
+    mtx_lock(&cfg->usr_sync);
     err = __brcmf_cfg80211_up(ifp);
-    mutex_unlock(&cfg->usr_sync);
+    mtx_unlock(&cfg->usr_sync);
 
     return err;
 }
@@ -6452,9 +6456,9 @@ zx_status_t brcmf_cfg80211_down(struct net_device* ndev) {
     struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
     zx_status_t err = ZX_OK;
 
-    mutex_lock(&cfg->usr_sync);
+    mtx_lock(&cfg->usr_sync);
     err = __brcmf_cfg80211_down(ifp);
-    mutex_unlock(&cfg->usr_sync);
+    mtx_unlock(&cfg->usr_sync);
 
     return err;
 }
@@ -6479,28 +6483,28 @@ bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long stat
 static inline bool vif_event_equals(struct brcmf_cfg80211_vif_event* event, uint8_t action) {
     uint8_t evt_action;
 
-    spin_lock(&event->vif_event_lock);
+    mtx_lock(&event->vif_event_lock);
     evt_action = event->action;
-    spin_unlock(&event->vif_event_lock);
+    mtx_unlock(&event->vif_event_lock);
     return evt_action == action;
 }
 
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif) {
     struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
 
-    spin_lock(&event->vif_event_lock);
+    mtx_lock(&event->vif_event_lock);
     event->vif = vif;
     event->action = 0;
-    spin_unlock(&event->vif_event_lock);
+    mtx_unlock(&event->vif_event_lock);
 }
 
 bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_cfg80211_vif_event* event = &cfg->vif_event;
     bool armed;
 
-    spin_lock(&event->vif_event_lock);
+    mtx_lock(&event->vif_event_lock);
     armed = event->vif != NULL;
-    spin_unlock(&event->vif_event_lock);
+    mtx_unlock(&event->vif_event_lock);
 
     return armed;
 }

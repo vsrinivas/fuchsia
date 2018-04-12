@@ -16,6 +16,11 @@
 #ifndef _BRCMF_PNO_H
 #define _BRCMF_PNO_H
 
+#include <zircon/types.h>
+
+#include "core.h"
+#include "fwil_types.h"
+
 #define BRCMF_PNO_SCAN_COMPLETE 1
 #define BRCMF_PNO_MAX_PFN_COUNT 16
 #define BRCMF_PNO_SCHED_SCAN_MIN_PERIOD 10

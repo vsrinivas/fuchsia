@@ -16,13 +16,14 @@
 //#include <linux/netdevice.h>
 //#include <linux/types.h>
 
-#include "linuxisms.h"
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-
 #include "commonring.h"
 #include "core.h"
+#include "device.h"
+#include "linuxisms.h"
 
 void brcmf_commonring_register_cb(struct brcmf_commonring* commonring,
                                   zx_status_t (*cr_ring_bell)(void* ctx),
@@ -44,7 +45,7 @@ void brcmf_commonring_config(struct brcmf_commonring* commonring, uint16_t depth
     commonring->item_len = item_len;
     commonring->buf_addr = buf_addr;
     if (!commonring->inited) {
-        spin_lock_init(&commonring->lock);
+        //spin_lock_init(&commonring->lock);
         commonring->inited = true;
     }
     commonring->r_ptr = 0;
@@ -58,15 +59,16 @@ void brcmf_commonring_config(struct brcmf_commonring* commonring, uint16_t depth
     commonring->f_ptr = 0;
 }
 
-void brcmf_commonring_lock(struct brcmf_commonring* commonring) __TA_ACQUIRE(&commonring->lock) {
-    unsigned long flags;
-
-    spin_lock_irqsave(&commonring->lock, flags);
-    commonring->flags = flags;
+void brcmf_commonring_lock(struct brcmf_commonring* commonring) {//__TA_ACQUIRE(&commonring->lock) {
+    //spin_lock_irqsave(&commonring->lock, flags);
+    //commonring->flags = flags;
+    pthread_mutex_lock(&irq_callback_lock);
 }
 
-void brcmf_commonring_unlock(struct brcmf_commonring* commonring) __TA_RELEASE(&commonring->lock) {
-    spin_unlock_irqrestore(&commonring->lock, commonring->flags);
+void brcmf_commonring_unlock(struct brcmf_commonring* commonring) {
+                             // __TA_RELEASE(&commonring->lock) {
+    //spin_unlock_irqrestore(&commonring->lock, commonring->flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 bool brcmf_commonring_write_available(struct brcmf_commonring* commonring) {

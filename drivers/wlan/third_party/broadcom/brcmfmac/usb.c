@@ -23,6 +23,7 @@
 #include "usb.h"
 
 #include <ddk/protocol/usb.h>
+#include <threads.h>
 
 #include "bcdc.h"
 #include "brcm_hw_ids.h"
@@ -138,7 +139,7 @@ struct brcmf_usb_image {
 
 struct brcmf_usbdev_info {
     struct brcmf_usbdev bus_pub; /* MUST BE FIRST */
-    spinlock_t qlock;
+    //spinlock_t qlock;
     struct list_head rx_freeq;
     struct list_head rx_postq;
     struct list_head tx_freeq;
@@ -150,7 +151,7 @@ struct brcmf_usbdev_info {
     int tx_high_watermark;
     int tx_freecount;
     bool tx_flowblock;
-    spinlock_t tx_flowblock_lock;
+    //spinlock_t tx_flowblock_lock;
 
     struct brcmf_usbreq* tx_reqs;
     struct brcmf_usbreq* rx_reqs;
@@ -161,7 +162,7 @@ struct brcmf_usbdev_info {
 
     struct usb_device* usbdev;
     struct brcmf_device* dev;
-    struct mutex dev_init_lock;
+    mtx_t dev_init_lock;
 
     int ctl_in_pipe, ctl_out_pipe;
     struct urb* ctl_urb; /* URB for control endpoint */
@@ -229,15 +230,19 @@ static void brcmf_usb_ctlread_complete(struct urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     brcmf_dbg(USB, "Enter\n");
+    pthread_mutex_lock(&irq_callback_lock);
     devinfo->ctl_urb_actual_length = urb->actual_length;
     brcmf_usb_ctl_complete(devinfo, BRCMF_USB_CBCTL_READ, urb->status);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static void brcmf_usb_ctlwrite_complete(struct urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
     brcmf_dbg(USB, "Enter\n");
+    pthread_mutex_lock(&irq_callback_lock);
     brcmf_usb_ctl_complete(devinfo, BRCMF_USB_CBCTL_WRITE, urb->status);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static zx_status_t brcmf_usb_send_ctl(struct brcmf_usbdev_info* devinfo, uint8_t* buf, int len) {
@@ -366,11 +371,12 @@ static zx_status_t brcmf_usb_rx_ctlpkt(struct brcmf_device* dev, uint8_t* buf, u
 
 static struct brcmf_usbreq* brcmf_usb_deq(struct brcmf_usbdev_info* devinfo, struct list_head* q,
                                           int* counter) {
-    unsigned long flags;
     struct brcmf_usbreq* req;
-    spin_lock_irqsave(&devinfo->qlock, flags);
+    //spin_lock_irqsave(&devinfo->qlock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     if (list_empty(q)) {
-        spin_unlock_irqrestore(&devinfo->qlock, flags);
+        //spin_unlock_irqrestore(&devinfo->qlock, flags);
+        pthread_mutex_unlock(&irq_callback_lock);
         return NULL;
     }
     req = list_entry(q->next, struct brcmf_usbreq, list);
@@ -378,19 +384,21 @@ static struct brcmf_usbreq* brcmf_usb_deq(struct brcmf_usbdev_info* devinfo, str
     if (counter) {
         (*counter)--;
     }
-    spin_unlock_irqrestore(&devinfo->qlock, flags);
+    //spin_unlock_irqrestore(&devinfo->qlock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
     return req;
 }
 
 static void brcmf_usb_enq(struct brcmf_usbdev_info* devinfo, struct list_head* q,
                           struct brcmf_usbreq* req, int* counter) {
-    unsigned long flags;
-    spin_lock_irqsave(&devinfo->qlock, flags);
+    //spin_lock_irqsave(&devinfo->qlock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     list_add_tail(&req->list, q);
     if (counter) {
         (*counter)++;
     }
-    spin_unlock_irqrestore(&devinfo->qlock, flags);
+    //spin_unlock_irqrestore(&devinfo->qlock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static struct brcmf_usbreq* brcmf_usbdev_qinit(struct list_head* q, int qsize) {
@@ -448,30 +456,31 @@ static void brcmf_usb_free_q(struct list_head* q, bool pending) {
 }
 
 static void brcmf_usb_del_fromq(struct brcmf_usbdev_info* devinfo, struct brcmf_usbreq* req) {
-    unsigned long flags;
-
-    spin_lock_irqsave(&devinfo->qlock, flags);
+    //spin_lock_irqsave(&devinfo->qlock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     list_del_init(&req->list);
-    spin_unlock_irqrestore(&devinfo->qlock, flags);
+    //spin_unlock_irqrestore(&devinfo->qlock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static void brcmf_usb_tx_complete(struct urb* urb) {
     struct brcmf_usbreq* req = (struct brcmf_usbreq*)urb->context;
     struct brcmf_usbdev_info* devinfo = req->devinfo;
-    unsigned long flags;
 
+    pthread_mutex_lock(&irq_callback_lock);
     brcmf_dbg(USB, "Enter, urb->status=%d, skb=%p\n", urb->status, req->skb);
     brcmf_usb_del_fromq(devinfo, req);
 
     brcmf_proto_bcdc_txcomplete(devinfo->dev, req->skb, urb->status == 0);
     req->skb = NULL;
     brcmf_usb_enq(devinfo, &devinfo->tx_freeq, req, &devinfo->tx_freecount);
-    spin_lock_irqsave(&devinfo->tx_flowblock_lock, flags);
+    //spin_lock_irqsave(&devinfo->tx_flowblock_lock, flags);
     if (devinfo->tx_freecount > devinfo->tx_high_watermark && devinfo->tx_flowblock) {
         brcmf_proto_bcdc_txflowblock(devinfo->dev, false);
         devinfo->tx_flowblock = false;
     }
-    spin_unlock_irqrestore(&devinfo->tx_flowblock_lock, flags);
+    //spin_unlock_irqrestore(&devinfo->tx_flowblock_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static void brcmf_usb_rx_complete(struct urb* urb) {
@@ -479,6 +488,7 @@ static void brcmf_usb_rx_complete(struct urb* urb) {
     struct brcmf_usbdev_info* devinfo = req->devinfo;
     struct sk_buff* skb;
 
+    pthread_mutex_lock(&irq_callback_lock);
     brcmf_dbg(USB, "Enter, urb->status=%d\n", urb->status);
     brcmf_usb_del_fromq(devinfo, req);
     skb = req->skb;
@@ -488,6 +498,7 @@ static void brcmf_usb_rx_complete(struct urb* urb) {
     if (urb->status != 0 || !urb->actual_length) {
         brcmu_pkt_buf_free_skb(skb);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
+        pthread_mutex_unlock(&irq_callback_lock);
         return;
     }
 
@@ -499,6 +510,7 @@ static void brcmf_usb_rx_complete(struct urb* urb) {
         brcmu_pkt_buf_free_skb(skb);
         brcmf_usb_enq(devinfo, &devinfo->rx_freeq, req, NULL);
     }
+    pthread_mutex_unlock(&irq_callback_lock);
     return;
 }
 
@@ -573,7 +585,6 @@ static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct sk_buff* skb) {
     struct brcmf_usbdev_info* devinfo = brcmf_usb_get_businfo(dev);
     struct brcmf_usbreq* req;
     zx_status_t ret;
-    unsigned long flags;
 
     brcmf_dbg(USB, "Enter, skb=%p\n", skb);
     if (devinfo->bus_pub.state != BRCMFMAC_USB_STATE_UP) {
@@ -603,12 +614,14 @@ static zx_status_t brcmf_usb_tx(struct brcmf_device* dev, struct sk_buff* skb) {
         goto fail;
     }
 
-    spin_lock_irqsave(&devinfo->tx_flowblock_lock, flags);
+    //spin_lock_irqsave(&devinfo->tx_flowblock_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
     if (devinfo->tx_freecount < devinfo->tx_low_watermark && !devinfo->tx_flowblock) {
         brcmf_proto_bcdc_txflowblock(dev, true);
         devinfo->tx_flowblock = true;
     }
-    spin_unlock_irqrestore(&devinfo->tx_flowblock_lock, flags);
+    //spin_unlock_irqrestore(&devinfo->tx_flowblock_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
     return ZX_OK;
 
 fail:
@@ -677,8 +690,10 @@ static void brcmf_usb_down(struct brcmf_device* dev) {
 static void brcmf_usb_sync_complete(struct urb* urb) {
     struct brcmf_usbdev_info* devinfo = (struct brcmf_usbdev_info*)urb->context;
 
+    pthread_mutex_lock(&irq_callback_lock);
     devinfo->ctl_completed = true;
     brcmf_usb_ioctl_resp_wake(devinfo);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t cmd, void* buffer,
@@ -1035,8 +1050,8 @@ static struct brcmf_usbdev* brcmf_usb_attach(struct brcmf_usbdev_info* devinfo, 
     init_waitqueue_head(&devinfo->ioctl_resp_wait);
 
     /* Initialize the spinlocks */
-    spin_lock_init(&devinfo->qlock);
-    spin_lock_init(&devinfo->tx_flowblock_lock);
+    //spin_lock_init(&devinfo->qlock);
+    //spin_lock_init(&devinfo->tx_flowblock_lock);
 
     INIT_LIST_HEAD(&devinfo->rx_freeq);
     INIT_LIST_HEAD(&devinfo->rx_postq);
@@ -1168,11 +1183,11 @@ static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
         goto error;
     }
 
-    mutex_unlock(&devinfo->dev_init_lock);
+    mtx_unlock(&devinfo->dev_init_lock);
     return;
 error:
     brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", dev_name(dev), ret);
-    mutex_unlock(&devinfo->dev_init_lock);
+    mtx_unlock(&devinfo->dev_init_lock);
     device_release_driver(dev);
 }
 
@@ -1218,7 +1233,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
             goto fail;
         }
         /* we are done */
-        mutex_unlock(&devinfo->dev_init_lock);
+        mtx_unlock(&devinfo->dev_init_lock);
         return ZX_OK;
     }
     bus->chip = bus_pub->devid;
@@ -1278,8 +1293,8 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
     /* Take an init lock, to protect for disconnect while still loading.
      * Necessary because of the asynchronous firmware load construction
      */
-    mutex_init(&devinfo->dev_init_lock);
-    mutex_lock(&devinfo->dev_init_lock);
+    mtx_init(&devinfo->dev_init_lock, mtx_plain);
+    mtx_lock(&devinfo->dev_init_lock);
 
     usb_set_intfdata(intf, devinfo);
 
@@ -1359,7 +1374,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
     return ZX_OK;
 
 fail:
-    mutex_unlock(&devinfo->dev_init_lock);
+    mtx_unlock(&devinfo->dev_init_lock);
     kfree(devinfo);
     usb_set_intfdata(intf, NULL);
     return ret;
@@ -1372,7 +1387,7 @@ static void brcmf_usb_disconnect(struct usb_interface* intf) {
     devinfo = (struct brcmf_usbdev_info*)usb_get_intfdata(intf);
 
     if (devinfo) {
-        mutex_lock(&devinfo->dev_init_lock);
+        mtx_lock(&devinfo->dev_init_lock);
         /* Make sure that devinfo still exists. Firmware probe routines
          * may have released the device and cleared the intfdata.
          */

@@ -266,11 +266,13 @@ static void brcmf_btcoex_restore_part1(struct brcmf_btcoex_info* btci) {
  * brcmf_btcoex_timerfunc() - BT coex timer callback
  */
 static void brcmf_btcoex_timerfunc(struct timer_list* t) {
+    pthread_mutex_lock(&irq_callback_lock);
     struct brcmf_btcoex_info* bt_local = from_timer(bt_local, t, timer);
     brcmf_dbg(TRACE, "enter\n");
 
     bt_local->timer_on = false;
     schedule_work(&bt_local->work);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 /**

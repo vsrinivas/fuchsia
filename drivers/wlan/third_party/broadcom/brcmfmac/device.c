@@ -14,8 +14,13 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "debug.h"
 #include "device.h"
+
+#include <threads.h>
+
+#include "debug.h"
+
+pthread_mutex_t irq_callback_lock;
 
 struct brcmf_bus* dev_get_drvdata(struct brcmf_device* dev) {
     return dev->drvdata;

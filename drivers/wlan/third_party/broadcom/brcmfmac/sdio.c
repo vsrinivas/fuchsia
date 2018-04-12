@@ -37,6 +37,8 @@
 
 #include "sdio.h"
 
+#include <threads.h>
+
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -105,6 +107,7 @@ struct rte_console {
 
 #include "bus.h"
 #include "debug.h"
+#include "device.h"
 #include "tracepoint.h"
 
 #define TXQLEN 2048         /* bulk tx queue length */
@@ -475,7 +478,7 @@ struct brcmf_sdio {
     uint8_t* rxctl;             /* Aligned pointer into rxbuf */
     uint8_t* rxctl_orig;        /* pointer for freeing rxctl */
     uint rxlen;            /* Length of valid data in buffer */
-    spinlock_t rxctl_lock; /* protection lock for ctrl frame resources */
+    //spinlock_t rxctl_lock; /* protection lock for ctrl frame resources */
 
     uint8_t sdpcm_ver; /* Bus protocol reported by dongle */
 
@@ -505,7 +508,7 @@ struct brcmf_sdio {
     bool ctrl_frame_stat;
     zx_status_t ctrl_frame_err;
 
-    spinlock_t txq_lock; /* protect bus->txq */
+    // spinlock_t txq_lock; /* protect bus->txq */
     wait_queue_head_t ctrl_wait;
     wait_queue_head_t dcmd_resp_wait;
 
@@ -1694,17 +1697,20 @@ gotpkt:
     brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_CTL_ON(), buf, len, "RxCtrl:\n");
 
     /* Point to valid data and indicate its length */
-    spin_lock_bh(&bus->rxctl_lock);
+    //spin_lock_bh(&bus->rxctl_lock);
+    pthread_mutex_lock(&irq_callback_lock);
     if (bus->rxctl) {
         brcmf_err("last control frame is being processed.\n");
-        spin_unlock_bh(&bus->rxctl_lock);
+        //spin_unlock_bh(&bus->rxctl_lock);
+        pthread_mutex_unlock(&irq_callback_lock);
         vfree(buf);
         goto done;
     }
     bus->rxctl = buf + doff;
     bus->rxctl_orig = buf;
     bus->rxlen = len - doff;
-    spin_unlock_bh(&bus->rxctl_lock);
+    //spin_unlock_bh(&bus->rxctl_lock);
+    pthread_mutex_unlock(&irq_callback_lock);
 
 done:
     /* Awake any waiters */
@@ -2203,7 +2209,8 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
         }
         pkt_num = min_t(uint32_t, pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
         __skb_queue_head_init(&pktq);
-        spin_lock_bh(&bus->txq_lock);
+        //spin_lock_bh(&bus->txq_lock);
+        pthread_mutex_lock(&irq_callback_lock);
         for (i = 0; i < pkt_num; i++) {
             pkt = brcmu_pktq_mdeq(&bus->txq, tx_prec_map, &prec_out);
             if (pkt == NULL) {
@@ -2211,7 +2218,8 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
             }
             __skb_queue_tail(&pktq, pkt);
         }
-        spin_unlock_bh(&bus->txq_lock);
+        //spin_unlock_bh(&bus->txq_lock);
+        pthread_mutex_unlock(&irq_callback_lock);
         if (i == 0) {
             break;
         }
@@ -2364,9 +2372,11 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
     brcmf_sdio_free_glom(bus);
 
     /* Clear rx control and wake any waiters */
-    spin_lock_bh(&bus->rxctl_lock);
+    //spin_lock_bh(&bus->rxctl_lock);
+    pthread_mutex_lock(&irq_callback_lock);
     bus->rxlen = 0;
-    spin_unlock_bh(&bus->rxctl_lock);
+    //spin_unlock_bh(&bus->rxctl_lock);
+    pthread_mutex_unlock(&irq_callback_lock);
     brcmf_sdio_dcmd_resp_wake(bus);
 
     /* Reset some F2 state stuff */
@@ -2376,16 +2386,17 @@ static void brcmf_sdio_bus_stop(struct brcmf_device* dev) {
 
 static inline void brcmf_sdio_clrintr(struct brcmf_sdio* bus) {
     struct brcmf_sdio_dev* sdiodev;
-    unsigned long flags;
 
     sdiodev = bus->sdiodev;
     if (sdiodev->oob_irq_requested) {
-        spin_lock_irqsave(&sdiodev->irq_en_lock, flags);
+        //spin_lock_irqsave(&sdiodev->irq_en_lock, flags);
+        pthread_mutex_lock(&irq_callback_lock);
         if (!sdiodev->irq_en && !atomic_read(&bus->ipend)) {
             enable_irq(sdiodev->settings->bus.sdio.oob_irq_nr);
             sdiodev->irq_en = true;
         }
-        spin_unlock_irqrestore(&sdiodev->irq_en_lock, flags);
+        //spin_unlock_irqrestore(&sdiodev->irq_en_lock, flags);
+        pthread_mutex_unlock(&irq_callback_lock);
     }
 }
 
@@ -2644,7 +2655,8 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct sk_buf
     bus->sdcnt.fcqueued++;
 
     /* Priority based enq */
-    spin_lock_bh(&bus->txq_lock);
+    //spin_lock_bh(&bus->txq_lock);
+    pthread_mutex_lock(&irq_callback_lock);
     /* reset bus_flags in packet cb */
     *(uint16_t*)(pkt->cb) = 0;
     if (!brcmf_sdio_prec_enq(&bus->txq, pkt, prec)) {
@@ -2659,7 +2671,9 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct sk_buf
         bus->txoff = true;
         brcmf_proto_bcdc_txflowblock(dev, true);
     }
-    spin_unlock_bh(&bus->txq_lock);
+    //spin_unlock_bh(&bus->txq_lock);
+    pthread_mutex_unlock(&irq_callback_lock);
+
 
 #ifdef DEBUG
     if (pktq_plen(&bus->txq, prec) > qcount[prec]) {
@@ -3053,14 +3067,16 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     /* Wait until control frame is available */
     timeleft = brcmf_sdio_dcmd_resp_wait(bus, &bus->rxlen, &pending);
 
-    spin_lock_bh(&bus->rxctl_lock);
+    //spin_lock_bh(&bus->rxctl_lock);
+    pthread_mutex_lock(&irq_callback_lock);
     rxlen = bus->rxlen;
     memcpy(msg, bus->rxctl, min(msglen, rxlen));
     bus->rxctl = NULL;
     buf = bus->rxctl_orig;
     bus->rxctl_orig = NULL;
     bus->rxlen = 0;
-    spin_unlock_bh(&bus->rxctl_lock);
+    //spin_unlock_bh(&bus->rxctl_lock);
+    pthread_mutex_unlock(&irq_callback_lock);
     vfree(buf);
 
     if (rxlen) {
@@ -3834,6 +3850,7 @@ static zx_status_t brcmf_sdio_watchdog_thread(void* data) {
 }
 
 static void brcmf_sdio_watchdog(struct timer_list* t) {
+    pthread_mutex_lock(&irq_callback_lock);
     struct brcmf_sdio* bus = from_timer(bus, t, timer);
 
     if (bus->watchdog_tsk) {
@@ -3843,6 +3860,7 @@ static void brcmf_sdio_watchdog(struct timer_list* t) {
             mod_timer(&bus->timer, jiffies + BRCMF_WD_POLL);
         }
     }
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static zx_status_t brcmf_sdio_get_fwname(struct brcmf_device* dev, uint32_t chip, uint32_t chiprev,
@@ -4020,8 +4038,8 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
         goto fail;
     }
 
-    spin_lock_init(&bus->rxctl_lock);
-    spin_lock_init(&bus->txq_lock);
+    //spin_lock_init(&bus->rxctl_lock);
+    //spin_lock_init(&bus->txq_lock);
     init_waitqueue_head(&bus->ctrl_wait);
     init_waitqueue_head(&bus->dcmd_resp_wait);
 

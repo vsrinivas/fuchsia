@@ -28,6 +28,8 @@
 #include <ddk/device.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/usb.h>
+#include <pthread.h>
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -299,8 +301,6 @@ done:
 }
 
 void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason reason, bool state) {
-    unsigned long flags;
-
     if (!ifp || !ifp->ndev) {
         return;
     }
@@ -308,7 +308,9 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
     brcmf_dbg(TRACE, "enter: bsscfgidx=%d stop=0x%X reason=%d state=%d\n", ifp->bsscfgidx,
               ifp->netif_stop, reason, state);
 
-    spin_lock_irqsave(&ifp->netif_stop_lock, flags);
+    //spin_lock_irqsave(&ifp->netif_stop_lock, flags);
+    pthread_mutex_lock(&irq_callback_lock);
+
     if (state) {
         if (!ifp->netif_stop) {
             netif_stop_queue(ifp->ndev);
@@ -320,7 +322,8 @@ void brcmf_txflowblock_if(struct brcmf_if* ifp, enum brcmf_netif_stop_reason rea
             netif_wake_queue(ifp->ndev);
         }
     }
-    spin_unlock_irqrestore(&ifp->netif_stop_lock, flags);
+    //spin_unlock_irqrestore(&ifp->netif_stop_lock, flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 void brcmf_netif_rx(struct brcmf_if* ifp, struct sk_buff* skb) {
@@ -683,7 +686,7 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     ifp->bsscfgidx = bsscfgidx;
 
     init_waitqueue_head(&ifp->pend_8021x_wait);
-    spin_lock_init(&ifp->netif_stop_lock);
+    //spin_lock_init(&ifp->netif_stop_lock);
 
     if (mac_addr != NULL) {
         memcpy(ifp->mac_addr, mac_addr, ETH_ALEN);
@@ -928,7 +931,7 @@ zx_status_t brcmf_attach(struct brcmf_device* dev, struct brcmf_mp_device* setti
         drvr->if2bss[i] = BRCMF_BSSIDX_INVALID;
     }
 
-    mutex_init(&drvr->proto_block);
+    mtx_init(&drvr->proto_block, mtx_plain);
 
     /* Link to bus module */
     drvr->hdrlen = 0;
@@ -1202,8 +1205,13 @@ void brcmf_bus_change_state(struct brcmf_bus* bus, enum brcmf_bus_state state) {
 
 zx_status_t brcmf_core_init(zx_device_t* device) {
     zx_status_t result;
+    pthread_mutexattr_t pmutex_attributes;
 
     zxlogf(INFO, "brcmfmac: core_init was called\n");
+
+    pthread_mutexattr_init(&pmutex_attributes);
+    pthread_mutexattr_settype(&pmutex_attributes, PTHREAD_MUTEX_NORMAL | PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&irq_callback_lock, &pmutex_attributes);
 
     pci_protocol_t pdev;
     result = device_get_protocol(device, ZX_PROTOCOL_PCI, &pdev);

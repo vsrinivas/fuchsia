@@ -75,16 +75,6 @@ typedef struct {
 #define GENMASK1(val) ((1UL << (val)) - 1)
 #define GENMASK(start, end) ((GENMASK1((start) + 1) & ~GENMASK1(end)))
 
-#define LOCK_ASSERT_HELD(lock)                                                \
-    do {                                                                      \
-        int res = mtx_trylock(lock);                                          \
-        ZX_ASSERT(res != 0);                                                  \
-        if (res == 0) {                                                       \
-            zxlogf(ERROR, "brcmfmac: lock not held at %s:%d\n", __FILE__, __LINE__); \
-            mtx_unlock(lock);                                                 \
-        }                                                                     \
-    } while (0)
-
 #define WARN(cond, msg)                                                           \
     ({  bool ret_cond = cond;                                                     \
         if (ret_cond) {                                                           \
@@ -167,7 +157,6 @@ typedef struct {
 #define roundup_log2(val) \
     ((unsigned long)(val) == 0 ? (val) : ((sizeof(unsigned long) * 8) - __builtin_clzl((val)-1)))
 
-typedef int32_t spinlock_t;
 typedef uint32_t gfp_t;
 
 #define LINUX_FUNC(name, paramtype, rettype)                                                   \
@@ -298,14 +287,10 @@ LINUX_FUNCVV(vfree)
 #define kfree free
 #define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
 LINUX_FUNCVI(pr_warn)
-LINUX_FUNCVV(spin_unlock_bh)
-LINUX_FUNCVV(spin_lock_bh)
 LINUX_FUNCVS(sdio_enable_func)
 LINUX_FUNCVI(sdio_disable_func)
 LINUX_FUNCVV(alloc_ordered_workqueue)
 LINUX_FUNCVI(INIT_WORK)
-LINUX_FUNCVI(spin_lock_init)
-LINUX_FUNCVI(spin_unlock_irqrestore)
 LINUX_FUNCX(wmb)
 LINUX_FUNCX(rmb)
 
@@ -313,7 +298,7 @@ LINUX_FUNCX(rmb)
 static inline void release_firmware(const struct brcmf_firmware* firmware) {
     return;
 }
-#define spin_lock_irqsave(a, b) {b=0;}
+
 LINUX_FUNCII(enable_irq)
 LINUX_FUNCVV(wiphy_priv)
 LINUX_FUNCVS(wiphy_register)
@@ -388,10 +373,6 @@ LINUX_FUNCX(prandom_u32)
 LINUX_FUNCVI(schedule_work)
 LINUX_FUNCVI(wait_for_completion_timeout)
 LINUX_FUNCVI(ether_addr_equal)
-LINUX_FUNCVI(mutex_lock)
-LINUX_FUNCVI(mutex_unlock)
-LINUX_FUNCVI(mutex_init)
-LINUX_FUNCVI(mutex_destroy)
 LINUX_FUNCX(rtnl_lock)
 LINUX_FUNCX(rtnl_unlock)
 #define pci_write_config_dword(pdev, offset, value) \
@@ -437,8 +418,6 @@ LINUX_FUNCII(MBM_TO_DBM)
 LINUX_FUNCVI(SET_NETDEV_DEV)
 LINUX_FUNCVV(wiphy_dev)
 LINUX_FUNCX(cond_resched)
-LINUX_FUNCVI(spin_lock)
-LINUX_FUNCVI(spin_unlock)
 #undef mdelay // conflicts with Josh's definition above
 #define mdelay linux_mdelay // name conflict
 LINUX_FUNCII(linux_mdelay)

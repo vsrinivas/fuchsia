@@ -20,17 +20,19 @@
 //#include <linux/slab.h>
 //#include <net/cfg80211.h>
 
-#include "linuxisms.h"
+#include "p2p.h"
+
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
-#include "defs.h"
 #include "cfg80211.h"
 #include "core.h"
 #include "debug.h"
+#include "defs.h"
 #include "fwil.h"
 #include "fwil_types.h"
-#include "p2p.h"
+#include "linuxisms.h"
 
 /* parameters used for p2p escan */
 #define P2PAPI_SCAN_NPROBES 1
@@ -2223,12 +2225,12 @@ zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wde
     zx_status_t err;
 
     vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
-    mutex_lock(&cfg->usr_sync);
+    mtx_lock(&cfg->usr_sync);
     err = brcmf_p2p_enable_discovery(p2p);
     if (err == ZX_OK) {
         set_bit(BRCMF_VIF_STATUS_READY, &vif->sme_state);
     }
-    mutex_unlock(&cfg->usr_sync);
+    mtx_unlock(&cfg->usr_sync);
     return err;
 }
 
@@ -2243,12 +2245,12 @@ void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev) {
      * will have been cleared at this point.
      */
     if (p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif == vif) {
-        mutex_lock(&cfg->usr_sync);
+        mtx_lock(&cfg->usr_sync);
         /* Set the discovery state to SCAN */
         (void)brcmf_p2p_set_discover_state(vif->ifp, WL_P2P_DISC_ST_SCAN, 0, 0);
         brcmf_abort_scanning(cfg);
         clear_bit(BRCMF_VIF_STATUS_READY, &vif->sme_state);
-        mutex_unlock(&cfg->usr_sync);
+        mtx_unlock(&cfg->usr_sync);
     }
 }
 

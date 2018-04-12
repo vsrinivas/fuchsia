@@ -307,14 +307,15 @@ typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
  *
  * @p2pdev_setup_ongoing: P2P device creation in progress.
  * @event_work: event worker.
- * @evt_q_lock: lock for event queue protection.
+ * //@evt_q_lock: lock for event queue protection.
+ *  (replaced by irq_callback_lock)
  * @event_q: event queue.
  * @evt_handler: registered event handlers.
  */
 struct brcmf_fweh_info {
     bool p2pdev_setup_ongoing;
     struct work_struct event_work;
-    spinlock_t evt_q_lock;
+    //spinlock_t evt_q_lock;
     struct list_head event_q;
     zx_status_t (*evt_handler[BRCMF_E_LAST])(struct brcmf_if* ifp,
                                              const struct brcmf_event_msg* evtmsg, void* data);

@@ -25,7 +25,9 @@
 //#include <linux/types.h>
 //#include <net/cfg80211.h>
 
-#include "linuxisms.h"
+#include "fwsignal.h"
+
+#include <threads.h>
 
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
@@ -35,10 +37,11 @@
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "device.h"
 #include "fweh.h"
 #include "fwil.h"
 #include "fwil_types.h"
-#include "fwsignal.h"
+#include "linuxisms.h"
 #include "p2p.h"
 #include "proto.h"
 
@@ -486,8 +489,7 @@ struct brcmf_fws_stats {
 
 struct brcmf_fws_info {
     struct brcmf_pub* drvr;
-    spinlock_t spinlock;
-    ulong flags;
+    //spinlock_t spinlock;
     struct brcmf_fws_stats stats;
     struct brcmf_fws_hanger hanger;
     enum brcmf_fws_fcmode fcmode;
@@ -547,12 +549,14 @@ static zx_status_t brcmf_fws_get_tlv_len(struct brcmf_fws_info* fws, enum brcmf_
 }
 #undef BRCMF_FWS_TLV_DEF
 
-static void brcmf_fws_lock(struct brcmf_fws_info* fws) __TA_ACQUIRE(&fws->spinlock) {
-    spin_lock_irqsave(&fws->spinlock, fws->flags);
+static void brcmf_fws_lock(struct brcmf_fws_info* fws) { // __TA_ACQUIRE(&fws->spinlock) {
+    //spin_lock_irqsave(&fws->spinlock, fws->flags);
+    pthread_mutex_lock(&irq_callback_lock);
 }
 
-static void brcmf_fws_unlock(struct brcmf_fws_info* fws) __TA_RELEASE(&fws->spinlock) {
-    spin_unlock_irqrestore(&fws->spinlock, fws->flags);
+static void brcmf_fws_unlock(struct brcmf_fws_info* fws) { // __TA_RELEASE(&fws->spinlock) {
+    //spin_unlock_irqrestore(&fws->spinlock, fws->flags);
+    pthread_mutex_unlock(&irq_callback_lock);
 }
 
 static bool brcmf_fws_ifidx_match(struct sk_buff* skb, void* arg) {
@@ -2255,7 +2259,7 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
         goto fail;
     }
 
-    spin_lock_init(&fws->spinlock);
+    //spin_lock_init(&fws->spinlock);
 
     /* store drvr reference */
     fws->drvr = drvr;

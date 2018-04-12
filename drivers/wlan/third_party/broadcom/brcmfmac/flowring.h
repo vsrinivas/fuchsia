@@ -46,7 +46,7 @@ struct brcmf_flowring {
     struct brcmf_device* dev;
     struct brcmf_flowring_hash hash[BRCMF_FLOWRING_HASHSIZE];
     struct brcmf_flowring_ring** rings;
-    spinlock_t block_lock;
+    //spinlock_t block_lock;
     enum proto_addr_mode addr_mode[BRCMF_MAX_IFS];
     uint16_t nrofrings;
     bool tdls_active;

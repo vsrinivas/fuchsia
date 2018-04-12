@@ -17,6 +17,11 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_BRCMFMAC_FWSIGNAL_H_
 
+#include <zircon/types.h>
+
+#include "core.h"
+#include "linuxisms.h"
+
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out);
 void brcmf_fws_detach(struct brcmf_fws_info* fws);
 bool brcmf_fws_queue_skbs(struct brcmf_fws_info* fws);

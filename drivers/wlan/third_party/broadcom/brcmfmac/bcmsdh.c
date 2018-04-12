@@ -110,7 +110,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     pdata = &sdiodev->settings->bus.sdio;
     if (pdata->oob_irq_supported) {
         brcmf_dbg(SDIO, "Enter, register OOB IRQ %d\n", pdata->oob_irq_nr);
-        spin_lock_init(&sdiodev->irq_en_lock);
+        //spin_lock_init(&sdiodev->irq_en_lock);
         sdiodev->irq_en = true;
 
         ret = request_irq(pdata->oob_irq_nr, brcmf_sdiod_oob_irqhandler, pdata->oob_irq_flags,
