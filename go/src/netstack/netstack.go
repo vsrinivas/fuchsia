@@ -165,11 +165,14 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 func (ifs *ifState) setDHCPStatus(enabled bool) {
 	ifs.ns.mu.Lock()
 	defer ifs.ns.mu.Unlock()
-	d := ifs.dhcpState
+	d := &ifs.dhcpState
+	if enabled == d.enabled {
+		return
+	}
 	if enabled {
 		d.ctx, d.cancel = context.WithCancel(ifs.ctx)
 		d.client.Run(d.ctx)
-	} else {
+	} else if d.cancel != nil {
 		d.cancel()
 	}
 	d.enabled = enabled
@@ -207,6 +210,10 @@ func (ifs *ifState) stop() {
 	log.Printf("NIC %d: stopped", ifs.nic.ID)
 	if ifs.cancel != nil {
 		ifs.cancel()
+	}
+	if ifs.dhcpState.cancel != nil {
+		// TODO: consider remembering DHCP status
+		ifs.setDHCPStatus(false)
 	}
 
 	// TODO(crawshaw): more cleanup to be done here:
@@ -419,7 +426,6 @@ func (ns *netstack) addEth(path string) error {
 	}
 
 	ifs.dhcpState.client = dhcp.NewClient(ns.stack, nicid, ep.LinkAddr, ifs.dhcpAcquired)
-	ifs.dhcpState.ctx, ifs.dhcpState.cancel = context.WithCancel(ifs.ctx)
 
 	// Add default route. This will get clobbered later when we get a DHCP response.
 	ns.stack.SetRouteTable(ns.flattenRouteTables())
