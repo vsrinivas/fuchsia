@@ -55,6 +55,11 @@ FidlAudioRenderer::FidlAudioRenderer(AudioRenderer2Ptr audio_renderer)
       AudioStreamType::SampleFormat::kSigned16,
       Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
       Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
+
+  supported_stream_types_.push_back(AudioStreamTypeSet::Create(
+      {StreamType::kAudioEncodingLpcm}, AudioStreamType::SampleFormat::kFloat,
+      Range<uint32_t>(media::kMinChannelCount, media::kMaxChannelCount),
+      Range<uint32_t>(media::kMinFramesPerSecond, media::kMaxFramesPerSecond)));
 }
 
 FidlAudioRenderer::~FidlAudioRenderer() {}
