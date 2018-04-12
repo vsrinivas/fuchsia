@@ -108,7 +108,7 @@ class BranchTracker::PageWatcherContainer {
       size_t entry_size =
           add_entry
               ? fidl_serialization::GetEntrySize(entries->at(i).key->size())
-              : fidl_serialization::GetByteArraySize(deletions->at(j)->size());
+              : fidl_serialization::GetByteVectorSize(deletions->at(j)->size());
       size_t entry_handle_count = add_entry ? 1 : 0;
 
       if (changes.empty() ||

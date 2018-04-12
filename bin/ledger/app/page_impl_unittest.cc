@@ -42,8 +42,7 @@ std::string ToString(const mem::BufferPtr& vmo) {
 
 class PageImplTest : public gtest::TestWithMessageLoop {
  public:
-  PageImplTest()
-      : environment_(message_loop_.async()) {}
+  PageImplTest() : environment_(message_loop_.async()) {}
   ~PageImplTest() override {}
 
  protected:
@@ -56,8 +55,8 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     fake_storage_ = fake_storage.get();
     auto resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, fake_storage_,
-        std::make_unique<backoff::ExponentialBackoff>(
-            zx::sec(0), 1u, zx::sec(0)));
+        std::make_unique<backoff::ExponentialBackoff>(zx::sec(0), 1u,
+                                                      zx::sec(0)));
     resolver_ = resolver.get();
 
     manager_ = std::make_unique<PageManager>(
@@ -664,7 +663,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesWithTokenForSize) {
   const size_t entry_count =
       std::min(fidl_serialization::kMaxMessageHandles,
                (fidl_serialization::kMaxInlineDataSize -
-                fidl_serialization::kArrayHeaderSize) /
+                fidl_serialization::kVectorHeaderSize) /
                    fidl_serialization::GetEntrySize(min_key_size)) +
       1;
   AddEntries(entry_count, min_key_size);
@@ -760,10 +759,9 @@ TEST_F(PageImplTest, PutGetSnapshotGetEntriesInlineWithTokenForEntryCount) {
   // key, object and entry itself; enum size for Priority and size of the header
   // for the InlinedEntry struct.
   const size_t min_entry_size =
-      fidl_serialization::kPointerSize * 3 + fidl_serialization::kEnumSize +
-      fidl_serialization::kStructHeaderSize +
-      fidl_serialization::GetByteArraySize(min_key_size) +
-      fidl_serialization::GetByteArraySize(min_value_size);
+      fidl_serialization::Align(fidl_serialization::kPriorityEnumSize) +
+      fidl_serialization::GetByteVectorSize(min_key_size) +
+      fidl_serialization::GetByteVectorSize(min_value_size);
   // Put enough inlined entries to cause pagination based on size of the
   // message.
   const size_t entry_count =
@@ -1030,7 +1028,7 @@ TEST_F(PageImplTest, PutGetSnapshotGetKeysWithToken) {
   const size_t min_key_size = kMaxKeySize;
   const size_t key_count =
       fidl_serialization::kMaxInlineDataSize /
-          fidl_serialization::GetByteArraySize(min_key_size) +
+          fidl_serialization::GetByteVectorSize(min_key_size) +
       1;
   AddEntries(key_count, min_key_size);
   PageSnapshotPtr snapshot = GetSnapshot();

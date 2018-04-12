@@ -123,7 +123,7 @@ void FillEntries(
   struct Context {
     fidl::VectorPtr<EntryType> entries;
     // The serialization size of all entries.
-    size_t size = fidl_serialization::kArrayHeaderSize;
+    size_t size = fidl_serialization::kVectorHeaderSize;
     // The number of handles used.
     size_t handle_count = 0u;
     // If |entries| array size exceeds kMaxInlineDataSize, |next_token| will
@@ -200,7 +200,7 @@ void FillEntries(
                 size_t next_token_size =
                     i + 1 >= results.size()
                         ? 0
-                        : fidl_serialization::GetByteArraySize(
+                        : fidl_serialization::GetByteVectorSize(
                               context->entries->at(i + 1).key->size());
                 if (!results[i]) {
                   size_t entry_size = ComputeEntrySize(entry);
@@ -288,7 +288,7 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
     // The result of GetKeys. New keys from on_next are appended to this array.
     fidl::VectorPtr<fidl::VectorPtr<uint8_t>> keys;
     // The total size in number of bytes of the |keys| array.
-    size_t size = fidl_serialization::kArrayHeaderSize;
+    size_t size = fidl_serialization::kVectorHeaderSize;
     // If the |keys| array size exceeds the maximum allowed inlined data size,
     // |next_token| will have the value of the next key (not included in array)
     // which can be used as the next token.
@@ -303,7 +303,8 @@ void PageSnapshotImpl::GetKeys(fidl::VectorPtr<uint8_t> key_start,
         if (!PageUtils::MatchesPrefix(entry.key, key_prefix_)) {
           return false;
         }
-        context->size += fidl_serialization::GetByteArraySize(entry.key.size());
+        context->size +=
+            fidl_serialization::GetByteVectorSize(entry.key.size());
         if (context->size > fidl_serialization::kMaxInlineDataSize) {
           context->next_token = entry.key;
           return false;
@@ -378,9 +379,8 @@ void PageSnapshotImpl::GetInline(fidl::VectorPtr<uint8_t> key,
                 callback(status, nullptr);
                 return;
               }
-              if (fidl_serialization::GetByteArraySize(data_view.size()) +
-                      // Size of the Status.
-                      fidl_serialization::kEnumSize >
+              if (fidl_serialization::GetByteVectorSize(data_view.size()) +
+                      fidl_serialization::kStatusEnumSize >
                   fidl_serialization::kMaxInlineDataSize) {
                 callback(Status::VALUE_TOO_LARGE, nullptr);
                 return;

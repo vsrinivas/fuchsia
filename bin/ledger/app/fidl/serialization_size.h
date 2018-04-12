@@ -6,6 +6,7 @@
 #define PERIDOT_BIN_LEDGER_APP_FIDL_SERIALIZATION_SIZE_H_
 
 #include <stddef.h>
+#include <zircon/fidl.h>
 #include <zircon/types.h>
 
 #include <fuchsia/cpp/ledger.h>
@@ -17,31 +18,38 @@ namespace fidl_serialization {
 constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 constexpr size_t kMaxMessageHandles = ZX_CHANNEL_MAX_MSG_HANDLES;
 
-// FIXME(LE-449): Remove dependency on FIDL internal structure layout.
-// These constants and the associated computations are no longer valid in FIDL2.
-const size_t kArrayHeaderSize = 8;  // sizeof(fidl::internal::Array_Data<char>);
-const size_t kPointerSize = sizeof(uint64_t);
-const size_t kEnumSize = sizeof(int32_t);
-const size_t kHandleSize = sizeof(int32_t);
-const size_t kStructHeaderSize = 8;  // sizeof(fidl::internal::StructHeader);
+// TODO(mariagl): Remove dependency on FIDL internal structure layout, see
+// LE-449.
+const size_t kPointerSize = sizeof(uintptr_t);
+const size_t kStatusEnumSize = sizeof(int32_t);
+const size_t kHandleSize = sizeof(zx_handle_t);
+const size_t kVectorHeaderSize = sizeof(fidl_vector_t);
+const size_t kPriorityEnumSize = sizeof(int32_t);
+const size_t kMessageHeaderSize = sizeof(fidl_message_header_t);
 
 inline size_t Align(size_t n) {
-  return (n + 7) & ~7;
+  return FIDL_ALIGN(n);
 }
 
 // The overhead for storing the pointer, the timestamp (int64) and the two
 // arrays.
 constexpr size_t kPageChangeHeaderSize =
-    kPointerSize + sizeof(int64_t) + 2 * kArrayHeaderSize;
+    kPointerSize + sizeof(int64_t) + 2 * kVectorHeaderSize;
 
-// Returns the fidl size of a byte array with the given length.
-size_t GetByteArraySize(size_t array_length);
+// Returns the fidl size of a byte vector with the given length.
+size_t GetByteVectorSize(size_t vector_length);
 
 // Returns the fidl size of an Entry holding a key with the given length.
 size_t GetEntrySize(size_t key_length);
 
 // Returns the fidl size of an InlinedEntry.
 size_t GetInlinedEntrySize(const InlinedEntry& entry);
+
+// Size of an object stored in memory (and accessed by a handle).
+constexpr size_t kMemoryObjectSize = 2 * kPointerSize + kHandleSize;
+
+// Returns the size of a DiffEntry object
+size_t GetDiffEntrySize(size_t key_length, int number_of_values);
 
 }  // namespace fidl_serialization
 }  //  namespace ledger

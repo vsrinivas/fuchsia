@@ -107,7 +107,7 @@ void ComputePageChange(
     }
     size_t entry_size =
         change.deleted
-            ? fidl_serialization::GetByteArraySize(change.entry.key.size())
+            ? fidl_serialization::GetByteVectorSize(change.entry.key.size())
             : fidl_serialization::GetEntrySize(change.entry.key.size());
     size_t entry_handle_count = change.deleted ? 0 : 1;
     if (pagination_behavior == PaginationBehavior::BY_SIZE &&
@@ -208,7 +208,7 @@ void ComputeThreeWayDiff(
     // The array to be returned through the callback.
     fidl::VectorPtr<DiffEntry> changes;
     // The serialization size of all entries.
-    size_t fidl_size = fidl_serialization::kArrayHeaderSize;
+    size_t fidl_size = fidl_serialization::kVectorHeaderSize;
     // The number of handles.
     size_t handles_count = 0u;
     // The next token to be returned through the callback.
@@ -238,9 +238,7 @@ void ComputeThreeWayDiff(
     int number_of_values =
         bool(change.base) + bool(change.left) + bool(change.right);
     size_t diffentry_size =
-        fidl_serialization::GetByteArraySize(key.size()) +
-        number_of_values *
-            (fidl_serialization::kHandleSize + fidl_serialization::kEnumSize);
+        fidl_serialization::GetDiffEntrySize(key.size(), number_of_values);
     if (context->fidl_size + diffentry_size >
             fidl_serialization::kMaxInlineDataSize ||
         context->handles_count + number_of_values >

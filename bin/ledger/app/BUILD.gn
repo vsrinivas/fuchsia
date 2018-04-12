@@ -113,6 +113,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "fidl/serialization_size_unittest.cc",
     "ledger_manager_unittest.cc",
     "merging/common_ancestor_unittest.cc",
     "merging/conflict_resolver_client_unittest.cc",
