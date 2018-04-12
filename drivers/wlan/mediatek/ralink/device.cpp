@@ -1938,8 +1938,8 @@ zx_status_t Device::SetRxFilter() {
     rfc.set_drop_cts(1);
     rfc.set_drop_rts(1);
     rfc.set_drop_pspoll(1);
-    rfc.set_drop_ba(0);   // TODO(porce): Investigate the merit of
-    rfc.set_drop_bar(1);  // independent filtering of BA and BAR
+    rfc.set_drop_ba(1);  // TODO(porce): Revisit for AMPDU
+    rfc.set_drop_bar(1);
     rfc.set_drop_ctrl_rsv(1);
     status = WriteRegister(rfc);
     CHECK_WRITE(RX_FILTR_CFG, status);
