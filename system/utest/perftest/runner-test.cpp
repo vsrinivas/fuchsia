@@ -122,13 +122,16 @@ static bool test_parsing_command_args() {
     BEGIN_TEST;
 
     const char* argv[] = {"unused_argv0", "--runs", "123", "--out", "dest_file",
-                          "--filter", "some_regex"};
+                          "--filter", "some_regex", "--enable-tracing",
+                          "--startup-delay=456"};
     perftest::internal::CommandArgs args;
     perftest::internal::ParseCommandArgs(
         countof(argv), const_cast<char**>(argv), &args);
     EXPECT_EQ(args.run_count, 123);
     EXPECT_STR_EQ(args.output_filename, "dest_file");
     EXPECT_STR_EQ(args.filter_regex, "some_regex");
+    EXPECT_TRUE(args.enable_tracing);
+    EXPECT_EQ(args.startup_delay_seconds, 456);
 
     END_TEST;
 }

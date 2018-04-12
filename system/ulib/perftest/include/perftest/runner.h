@@ -28,6 +28,8 @@ struct CommandArgs {
     // Note that this default matches any string.
     const char* filter_regex = "";
     uint32_t run_count = 1000;
+    bool enable_tracing = false;
+    double startup_delay_seconds = 0;
 };
 
 void ParseCommandArgs(int argc, char** argv, CommandArgs* dest);

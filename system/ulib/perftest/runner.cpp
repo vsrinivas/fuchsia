@@ -6,12 +6,18 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <pthread.h>
 #include <regex.h>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <trace-engine/context.h>
+#include <trace-engine/instrumentation.h>
+#include <trace-provider/provider.h>
 #include <unittest/unittest.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 namespace perftest {
@@ -62,6 +68,31 @@ public:
             uint64_t time_taken = timestamps_[idx + 1] - timestamps_[idx];
             results->AppendValue(
                 static_cast<double>(time_taken) * nanoseconds_per_tick);
+        }
+    }
+
+    // Output a trace event for each of the test runs.  Since we do this
+    // after the test runs took place (using the timestamps we recorded),
+    // we avoid incurring the overhead of the tracing system on each test
+    // run.
+    void WriteTraceEvents() {
+        trace_string_ref_t category_ref;
+        trace_context_t* context =
+            trace_acquire_context_for_category("perftest", &category_ref);
+        if (!context) {
+            return;
+        }
+        trace_thread_ref_t thread_ref;
+        trace_context_register_current_thread(context, &thread_ref);
+        trace_string_ref_t name_ref;
+        trace_context_register_string_literal(context, "test_run", &name_ref);
+        for (uint32_t idx = 0; idx < run_count_; ++idx) {
+            trace_context_write_duration_begin_event_record(
+                context, timestamps_[idx],
+                &thread_ref, &category_ref, &name_ref, nullptr, 0);
+            trace_context_write_duration_end_event_record(
+                context, timestamps_[idx + 1],
+                &thread_ref, &category_ref, &name_ref, nullptr, 0);
         }
     }
 
@@ -141,6 +172,7 @@ bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
         fprintf(log_stream, "[       OK ] %s\n", test_name);
 
         state.CopyTimeResults(test_name, results_set);
+        state.WriteTraceEvents();
     }
 
     regfree(&regex);
@@ -161,6 +193,8 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
         {"out", required_argument, nullptr, 'o'},
         {"filter", required_argument, nullptr, 'f'},
         {"runs", required_argument, nullptr, 'r'},
+        {"enable-tracing", no_argument, nullptr, 't'},
+        {"startup-delay", required_argument, nullptr, 'd'},
     };
     optind = 1;
     for (;;) {
@@ -176,7 +210,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
             dest->filter_regex = optarg;
             break;
         case 'r': {
-            // Convert string to number.
+            // Convert string to number (uint32_t).
             char* end;
             long val = strtol(optarg, &end, 0);
             // Check that the string contains only a positive number and
@@ -188,6 +222,22 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
                 exit(1);
             }
             dest->run_count = static_cast<uint32_t>(val);
+            break;
+        }
+        case 't':
+            dest->enable_tracing = true;
+            break;
+        case 'd': {
+            // Convert string to number (double type).
+            char* end;
+            double val = strtod(optarg, &end);
+            if (*end != '\0' || *optarg == '\0') {
+                fprintf(stderr,
+                        "Invalid argument for --startup-delay: \"%s\"\n",
+                        optarg);
+                exit(1);
+            }
+            dest->startup_delay_seconds = val;
             break;
         }
         default:
@@ -203,9 +253,32 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
 
 }  // namespace internal
 
+static void* TraceProviderThread(void* thread_arg) {
+    async::Loop loop;
+    trace::TraceProvider provider(loop.async());
+    loop.Run();
+    return nullptr;
+}
+
+static void StartTraceProvider() {
+    pthread_t tid;
+    int err = pthread_create(&tid, nullptr, TraceProviderThread, nullptr);
+    ZX_ASSERT(err == 0);
+    err = pthread_detach(tid);
+    ZX_ASSERT(err == 0);
+}
+
 static bool PerfTestMode(int argc, char** argv) {
     internal::CommandArgs args;
     internal::ParseCommandArgs(argc, argv, &args);
+
+    if (args.enable_tracing) {
+        StartTraceProvider();
+    }
+    zx_duration_t duration =
+        static_cast<zx_duration_t>(ZX_SEC(1) * args.startup_delay_seconds);
+    zx_nanosleep(zx_deadline_after(duration));
+
     ResultsSet results;
     bool success = RunTests(g_tests, args.run_count, args.filter_regex, stdout,
                             &results);
@@ -254,7 +327,18 @@ int PerfTestMain(int argc, char** argv) {
                "      Regular expression that specifies a subset of tests "
                "to run.  By default, all the tests are run.\n"
                "  --runs NUMBER\n"
-               "      Number of times to run each test.\n",
+               "      Number of times to run each test.\n"
+               "  --enable-tracing\n"
+               "      Enable use of Fuchsia tracing: Enable registering as a "
+               "TraceProvider.  This is off by default because the "
+               "TraceProvider gets registered asynchronously on a background "
+               "thread (see TO-650), and that activity could introduce noise "
+               "to the tests.\n"
+               "  --startup-delay SECONDS\n"
+               "      Delay in seconds to wait on startup, after registering "
+               "a TraceProvider.  This allows working around a race condition "
+               "where tracing misses initial events from newly-registered "
+               "TraceProviders (see TO-650).\n",
                argv[0], argv[0]);
         return 1;
     }
