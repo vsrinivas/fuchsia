@@ -1,3 +1,3 @@
 #!/boot/bin/sh
 
-/system/bin/zircon_benchmarks --fbenchmark_out="${1}"
+/system/bin/zircon_benchmarks -p --out="${1}"

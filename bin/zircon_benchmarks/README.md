@@ -20,33 +20,19 @@ There are three ways to run zircon_benchmarks:
   variability (such as standard deviation).  This limits the usefulness of
   gbenchmark for detecting performance regressions.
 
-* fbenchmark mode (Fuchsia benchmarks): This mode will record the times
-  taken by each run of the benchmarks, allowing further analysis, which is
-  useful for detecting performance regressions.  This uses the test runner
-  code in `test_runner.cc`.
+* perftest mode: This mode will record the times taken by each run of
+  the benchmarks, allowing further analysis, which is useful for
+  detecting performance regressions.  It also prints some summary
+  statistics.  This uses the test runner provided by Zircon's perftest
+  library.
 
-  For this, run `zircon_benchmarks --fbenchmark_out=output.json`.  The
-  result data will be written to `output.json`.  This uses the JSON output
-  format described in the [Benchmarking](../../docs/benchmarking.md#export)
-  guide.
+  For this, run `zircon_benchmarks -p --out=output.json`.  The result
+  data will be written to `output.json`.  This uses the JSON output
+  format described in the
+  [Benchmarking](../../docs/benchmarking.md#export) guide.
 
-  Options:
-
-  * `--fbenchmark_runs=N`: The number of times to run each benchmark.  The
-    default is 1000.
-
-  * `--fbenchmark_filter=REGEX`: A regular expression that specifies a
-    subset of benchmarks to run.  By default, all the benchmarks are run.
-
-  * `--fbenchmark_enable_tracing`: Enable Fuchsia tracing, i.e. enable
-    registering as a TraceProvider.  This is off by default because the
-    TraceProvider gets registered asynchronously on a background thread,
-    and that activity could introduce noise to the benchmarks.
-
-  * `--fbenchmark_startup_delay=N`: Wait for N seconds on startup, after
-    registering a TraceProvider.  This allows working around a race
-    condition where tracing misses initial events from newly-registered
-    TraceProviders (see TO-650).
+  See Zircon's perftest library for details of the other command line
+  options.
 
   Note: Not all of the benchmarks have been converted so that they will run
   in this mode.  (TODO(TO-651): Convert the remaining tests.)  Those that

@@ -4,20 +4,11 @@
 
 #pragma once
 
-#include <functional>
-
 #include <benchmark/benchmark.h>
+#include <perftest/perftest.h>
 
 namespace fbenchmark {
 
-class TestCaseInterface {
- public:
-  virtual ~TestCaseInterface();
-  virtual void Run() = 0;
-};
-
-void RegisterTestFactory(const char* name,
-                         std::function<TestCaseInterface*()> factory_func);
 int BenchmarksMain(int argc, char** argv, bool run_gbenchmark);
 
 // Register a benchmark that is specified by a class.
@@ -34,17 +25,15 @@ void RegisterTest(const char* test_name, Args... args) {
           test.Run();
       });
 
-  // Wrapper class that allows us to call Run() via a virtual function
-  // call.  (In the future we might require TestClass to derive from
-  // TestCaseInterface instead of using a wrapper like this.)
-  class TestCase : public TestCaseInterface {
-   public:
-    explicit TestCase(Args... args) : test_(args...) {}
-    void Run() override { test_.Run(); }
-   private:
-    TestClass test_;
-  };
-  RegisterTestFactory(test_name, [=] { return new TestCase(args...); });
+  perftest::RegisterTest(
+      test_name,
+      [=](perftest::RepeatState* state) {
+        TestClass test(args...);
+        while (state->KeepRunning()) {
+          test.Run();
+        }
+        return true;
+      });
 }
 
 typedef void TestFunc();
