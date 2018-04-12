@@ -317,7 +317,6 @@ zx_status_t InfraBss::SendEthFrame(fbl::unique_ptr<Packet> packet) {
     return device_->SendEthernet(fbl::move(packet));
 }
 
-// TODO(hahnr): Send BUs when Beacon transmission was confirmed.
 zx_status_t InfraBss::SendNextBu() {
     ZX_DEBUG_ASSERT(bu_queue_.size() > 0);
     if (bu_queue_.size() == 0) { return ZX_ERR_BAD_STATE; }
@@ -410,7 +409,20 @@ void InfraBss::OnPreTbtt() {
 }
 
 void InfraBss::OnBcnTxComplete() {
-    // TODO(hahnr): Implement.
+    // Only send out multicast frames if the Beacon we just sent was a DTIM.
+    if (ps_cfg_.LastDtimCount() != 0) { return; }
+    if (bu_queue_.size() == 0) { return; }
+
+    debugps("[infra-bss] [%s] sending %zu group addressed BU\n", bssid_.ToString().c_str(),
+            bu_queue_.size());
+    while (bu_queue_.size() > 0) {
+        auto status = SendNextBu();
+        if (status != ZX_OK) {
+            errorf("[infra-bss] [%s] could not send group addressed BU: %d\n",
+                   bssid_.ToString().c_str(), status);
+            return;
+        }
+    }
 }
 
 const common::MacAddr& InfraBss::bssid() const {

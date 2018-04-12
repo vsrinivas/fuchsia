@@ -48,6 +48,13 @@ class PsCfg {
         return --dtim_count_;
     }
 
+    uint8_t LastDtimCount() {
+        if (dtim_count_ == dtim_period_ - 1) {
+            return 0;
+        }
+        return dtim_count_ + 1;
+    }
+
     bool IsDtim() { return dtim_count_ == 0; }
 
    private:
