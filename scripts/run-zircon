@@ -348,7 +348,7 @@ case $ARCH in
         if (( !$SERIAL )); then
           CMDLINE+="kernel.serial=none "
         fi
-        BOOTDATA="$BUILDDIR/qemu-bootdata.bin"
+        BOOTDATA="$BUILDDIR/bootdata.bin"
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
