@@ -321,9 +321,8 @@ void Device::WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
 
 void Device::WlanmacIndication(uint32_t ind) {
     debugf("WlanmacIndication %u\n", ind);
-
-    std::lock_guard<std::mutex> lock(lock_);
-    dispatcher_.HwIndication(ind);
+    auto status = QueueDevicePortPacket(DevicePacket::kIndication, ind);
+    if (status != ZX_OK) { warnf("could not queue driver indication packet err=%d\n", status); }
 }
 
 zx_status_t Device::GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) {
@@ -495,6 +494,9 @@ void Device::MainLoop() {
             case to_enum_type(DevicePacket::kShutdown):
                 running = false;
                 continue;
+            case to_enum_type(DevicePacket::kIndication):
+                dispatcher_.HwIndication(pkt.status);
+                break;
             case to_enum_type(DevicePacket::kPacketQueued): {
                 fbl::unique_ptr<Packet> packet;
                 {
@@ -580,11 +582,12 @@ zx_status_t Device::RegisterChannelWaitLocked() {
                                ZX_WAIT_ASYNC_REPEATING);
 }
 
-zx_status_t Device::QueueDevicePortPacket(DevicePacket id) {
+zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     debugfn();
     zx_port_packet_t pkt = {};
     pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = ZX_PKT_TYPE_USER;
+    pkt.status = status;
     return port_.queue(&pkt, 0);
 }
 

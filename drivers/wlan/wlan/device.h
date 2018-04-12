@@ -74,6 +74,7 @@ class Device : public DeviceInterface {
     enum class DevicePacket : uint64_t {
         kShutdown,
         kPacketQueued,
+        kIndication,
     };
 
     zx_status_t AddWlanDevice();
@@ -93,7 +94,7 @@ class Device : public DeviceInterface {
     void MainLoop();
     void ProcessChannelPacketLocked(const zx_port_packet_t& pkt) __TA_REQUIRES(lock_);
     zx_status_t RegisterChannelWaitLocked() __TA_REQUIRES(lock_);
-    zx_status_t QueueDevicePortPacket(DevicePacket id);
+    zx_status_t QueueDevicePortPacket(DevicePacket id, uint32_t status = 0);
 
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
     void SetStatusLocked(uint32_t status);
