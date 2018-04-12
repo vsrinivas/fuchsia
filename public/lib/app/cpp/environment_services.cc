@@ -35,15 +35,3 @@ zx::channel CreateStaticServiceRootHandle() {
 }  // namespace subtle
 
 }  // namespace component
-
-namespace app {
-namespace subtle {
-
-// static
-zx::channel CreateStaticServiceRootHandle() {
-  return component::subtle::CreateStaticServiceRootHandle();
-}
-
-}  // namespace subtle
-
-}  // namespace app

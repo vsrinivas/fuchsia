@@ -55,13 +55,4 @@ zx::channel CreateStaticServiceRootHandle();
 
 }  // namespace component
 
-// TODO(alhaad): This namespace is temporary. Use 'component' namespace when
-// we migrate dart/runtime/vm/os_fuchsia.cc
-namespace app {
-namespace subtle {
-zx::channel CreateStaticServiceRootHandle();
-
-}  // namespace subtle
-}  // namespace app
-
 #endif  // LIB_APP_CPP_ENVIRONMENT_SERVICES_H_
