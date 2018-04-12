@@ -91,30 +91,44 @@ template("sdk_library") {
 
     tags = [ "type:sources" ]
 
-    files = []
+    headers = []
+    sources = []
+    source_headers_are_public = true
+    if (defined(invoker.public)) {
+      source_headers_are_public = false
+      headers += invoker.public
+    }
     if (defined(invoker.sources)) {
       foreach(source_file, invoker.sources) {
         extension = get_path_info(source_file, "extension")
-        if (extension == "h") {
-          include_base = "include"
-          if (defined(invoker.include_base)) {
-            include_base = invoker.include_base
-          }
-          destination = rebase_path(source_file, include_base)
-          files += [
-            {
-              source = source_file
-              dest = "include/$destination"
-            },
-          ]
+        if (extension == "h" && source_headers_are_public) {
+          headers += [ source_file ]
         } else {
-          files += [
-            {
-              source = source_file
-            },
-          ]
+          sources += [ source_file ]
         }
       }
+    }
+
+    files = []
+    foreach(source_file, sources) {
+      files += [
+        {
+          source = source_file
+        },
+      ]
+    }
+    foreach(header_file, headers) {
+      include_base = "include"
+      if (defined(invoker.include_base)) {
+        include_base = invoker.include_base
+      }
+      destination = rebase_path(header_file, include_base)
+      files += [
+        {
+          source = header_file
+          dest = "include/$destination"
+        },
+      ]
     }
 
     deps = []

@@ -123,23 +123,30 @@ template("prebuilt_shared_library") {
     no_headers = defined(invoker.no_headers) && invoker.no_headers
 
     files = []
-    if (defined(invoker.sources) && !no_headers) {
-      foreach(source_file, invoker.sources) {
-        extension = get_path_info(source_file, "extension")
-        if (extension == "h") {
-          # TODO(pylaligand): change this default to "include".
-          include_base = "."
-          if (defined(invoker.include_base)) {
-            include_base = invoker.include_base
+    if ((defined(invoker.public) || defined(invoker.sources)) && !no_headers) {
+      headers = []
+      if (defined(invoker.public)) {
+        headers += invoker.public
+      } else {
+        foreach(source_file, invoker.sources) {
+          extension = get_path_info(source_file, "extension")
+          if (extension == "h") {
+            headers += [ source_file ]
           }
-          destination = rebase_path(source_file, include_base)
-          files += [
-            {
-              source = source_file
-              dest = "include/$destination"
-            },
-          ]
         }
+      }
+      foreach(header, headers) {
+        include_base = "include"
+        if (defined(invoker.include_base)) {
+          include_base = invoker.include_base
+        }
+        destination = rebase_path(header, include_base)
+        files += [
+          {
+            source = header
+            dest = "include/$destination"
+          },
+        ]
       }
     }
 
