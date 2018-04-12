@@ -68,8 +68,8 @@ void MessageRelayBase::ReadChannelMessages(
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to wait on read channel, status " << status;
         CloseChannel();
-        break;
       }
+      break;
     }
 
     if (status == ZX_ERR_PEER_CLOSED) {
@@ -128,8 +128,8 @@ void MessageRelayBase::WriteChannelMessages(
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to wait on write channel, status " << status;
         CloseChannel();
-        break;
       }
+      break;
     }
 
     if (status == ZX_ERR_PEER_CLOSED) {
