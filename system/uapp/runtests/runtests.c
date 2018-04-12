@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glob.h>
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <libgen.h>
@@ -315,6 +316,9 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
     // Iterate over the files in dir, setting up the output for test binaries
     // and executing them via run_test as they're found. Skips over test binaries
     // whose names aren't in filter_names.
+    //
+    // TODO(mknyszek): Iterate over these dirents (or just discovered test binaries)
+    // in a deterministic order.
     while ((de = readdir(dir)) != NULL) {
         const char* test_name = de->d_name;
         if (!match_test_names(test_name, filter_names, num_filter_names)) {
@@ -410,14 +414,40 @@ static int write_summary_json(const list_node_t* tests, FILE* summary_json) {
     return 0;
 }
 
+// Resolves a set of globs into the same glob_t.
+//
+// |globs| is an array of glob patterns.
+// |num_globs| is the number of glob patterns in |globs|.
+// |resolved| is the output glob_t.
+//
+// Returns a glob error (see glob.h), but will never return GLOB_NOMATCH. Note
+// also that GLOB_ABORTED will never be returned, because we use the GLOB_ERR
+// flag and thus the only error returned is the fatal GLOB_NOSPACE.
+static int resolve_test_globs(const char** globs, const int num_globs, glob_t* resolved) {
+    // Zero out the number of paths found because in the event of a single path
+    // and GLOB_NOMATCH, it may not happen, and we don't return GLOB_NOMATCH.
+    resolved->gl_pathc = 0;
+    for (int i = 0; i < num_globs; i++) {
+        int err = glob(globs[i], i>0 ? GLOB_APPEND : 0, NULL, resolved);
+
+        // Ignore a lack of matches.
+        if (err && err != GLOB_NOMATCH) {
+            return err;
+        }
+    }
+    return 0;
+}
+
 int usage(char* name) {
     fprintf(stderr,
             "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a]"
-            " [-t test names] [-o directory] [directories ...]\n"
+            " [-t test names] [-o directory] [directory globs ...]\n"
             "\n"
-            "The optional [directories ...] is a list of           \n"
-            "directories containing tests to run, non-recursively. \n"
-            "If not specified, the default set of directories is:  \n", name);
+            "The optional [directory globs...] is a list of        \n"
+            "globs which match directories containing tests to run,\n"
+            "non-recursively. Note that non-directories captured by\n"
+            "a glob will be silently ignored. If not specified, the\n"
+            "default set of directories is:                        \n", name);
     for (size_t i = 0; i < DEFAULT_NUM_TEST_DIRS; i++) {
         fprintf(stderr, "   %s", default_test_dirs[i]);
         if (i < DEFAULT_NUM_TEST_DIRS - 1) {
@@ -460,8 +490,8 @@ int main(int argc, char** argv) {
     test_type_t test_type = TEST_DEFAULT;
     int num_filter_names = 0;
     const char** filter_names = NULL;
-    int num_test_dirs = 0;
-    const char** test_dirs = NULL;
+    int num_test_globs = 0;
+    const char** test_globs = NULL;
     const char* output_dir = NULL;
 
     int i = 1;
@@ -507,8 +537,9 @@ int main(int argc, char** argv) {
             output_dir = (const char*)argv[i + 1];
             i++;
         } else if (argv[i][0] != '-') {
-            num_test_dirs = argc - i;
-            test_dirs = (const char**)&argv[i];
+            // Treat the rest of the argv array as a list of directory globs.
+            num_test_globs = argc - i;
+            test_globs = (const char**)&argv[i];
             break;
         } else {
             return usage(argv[0]);
@@ -526,10 +557,25 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    if (test_dirs == NULL) {
-        test_dirs = default_test_dirs;
-        num_test_dirs = DEFAULT_NUM_TEST_DIRS;
+    // If we got no test globs, just set it to the default test dirs so we can
+    // use glob patterns there too.
+    if (test_globs == NULL) {
+        num_test_globs = DEFAULT_NUM_TEST_DIRS;
+        test_globs = default_test_dirs;
     }
+
+    // Takes test_globs and resolves them, putting the result in test_dirs, which
+    // is used by the rest of the code. Note that by this point test_globs will
+    // not be NULL.
+    glob_t resolved_globs;
+    if (resolve_test_globs(test_globs, num_test_globs, &resolved_globs)) {
+        printf("Error: Failed to resolve globs\n");
+        return -1;
+    }
+    // TODO(mknyszek): Sort test_dirs in order to make running tests more
+    // deterministic.
+    int num_test_dirs = resolved_globs.gl_pathc;
+    const char** test_dirs = (const char**)resolved_globs.gl_pathv;
 
     struct stat st;
     if (output_dir != NULL && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
@@ -548,7 +594,8 @@ int main(int argc, char** argv) {
             continue;
         }
         if (!S_ISDIR(st.st_mode)) {
-            printf("Error: %s is not a directory!\n", test_dirs[i]);
+            // Silently skip non-directories, as they may have been picked up in
+            // the glob.
             continue;
         }
 
@@ -642,6 +689,11 @@ int main(int argc, char** argv) {
             break;
         }
         free(test);
+    }
+
+    // Free the glob structure.
+    if (test_globs != NULL) {
+        globfree(&resolved_globs);
     }
 
     // Print this last, since some infra recipes will shut down the fuchsia
