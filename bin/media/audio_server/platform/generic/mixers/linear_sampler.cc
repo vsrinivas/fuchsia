@@ -117,18 +117,24 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
-  int32_t send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
+
+  // "Source end" is the last valid renderer sub-frame that can be sampled.
+  int32_t src_end =
+      static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
 
   FXL_DCHECK(doff < dst_frames);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  FXL_DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
+  // "Source offset" can be negative, but within the bounds of pos_filter_width.
+  // For linear_sampler this means that soff > -FRAC_ONE.
+  FXL_DCHECK(soff + pos_filter_width() >= 0);
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto
   // any relevant filter data from the end of the source.
   if (ScaleType != ScalerType::MUTED) {
+    // When starting "between buffers", we must rely on previously-cached vals.
     if (soff < 0) {
       for (size_t D = 0; D < DChCount; ++D) {
         filter_data_[DChCount + D] = SR::Read(src + (D / SR::DstPerSrc));
@@ -138,8 +144,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
         int32_t* out = dst + (doff * DChCount);
 
         for (size_t D = 0; D < DChCount; ++D) {
-          int32_t sample =
-              Interpolate(filter_data_[DChCount + D], filter_data_[D], -soff);
+          int32_t sample = Interpolate(
+              filter_data_[D], filter_data_[DChCount + D], soff + FRAC_ONE);
           out[D] = DM::Mix(out[D], sample, amplitude_scale);
         }
 
@@ -148,7 +154,8 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       } while ((doff < dst_frames) && (soff < 0));
     }
 
-    while ((doff < dst_frames) && (soff < send)) {
+    // Now we are fully in the current buffer and need not rely on our cache.
+    while ((doff < dst_frames) && (soff < src_end)) {
       uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
       int32_t* out = dst + (doff * DChCount);
 
@@ -163,16 +170,16 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
       soff += frac_step_size;
     }
   } else {
-    // Figure out how many samples we would have produced and update the soff
-    // and doff values appropriately.
-    if ((doff < dst_frames) && (soff < send)) {
+    // We are muted. Don't mix, but figure out how many samples we WOULD have
+    // produced and update the soff and doff values appropriately.
+    if ((doff < dst_frames) && (soff < src_end)) {
       uint32_t src_avail =
-          (((send - soff) + frac_step_size - 1) / frac_step_size);
+          (((src_end - soff) + frac_step_size - 1) / frac_step_size);
       uint32_t dst_avail = (dst_frames - doff);
       uint32_t avail = std::min(src_avail, dst_avail);
 
-      soff += avail * frac_step_size;
       doff += avail;
+      soff += avail * frac_step_size;
       // Note: if "accumulate" is NOT set, we should have cleared the buffer
       // (but didn't). This likely isn't worth the effort to address, because
       // StandardOutputBase::Process zeroes buffers before using them to mix.
@@ -180,19 +187,18 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
     }
   }
 
-  // If we have room to produce one more sample, and our sampling position
-  // hits the position input buffer's final frame exactly, go ahead and sample
-  // the final frame into the output buffer.
-  if ((doff < dst_frames) && (soff == send)) {
+  // If we have room for at least one more sample, and our sampling position
+  // hits the input buffer's final frame exactly ...
+  if ((doff < dst_frames) && (soff == src_end)) {
+    // ... and if we are not muted, of course ...
     if (ScaleType != ScalerType::MUTED) {
+      // ... then we can _point-sample_ one final frame into our output buffer.
+      // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (soff >> kPtsFractionalBits) * SChCount;
       int32_t* out = dst + (doff * DChCount);
 
       for (size_t D = 0; D < DChCount; ++D) {
-        // The following line is incorrect if fractional src_pos is non-zero!
         int32_t sample = SR::Read(src + S + (D / SR::DstPerSrc));
-        // TODO(mpuryear): MTWN-77 Interpolate here, don't point-sample.
-
         out[D] = DM::Mix(out[D], sample, amplitude_scale);
       }
     }
@@ -204,16 +210,23 @@ inline bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
   *dst_offset = doff;
   *frac_src_offset = soff;
 
-  if (soff >= send) {
-    uint32_t S = (send >> kPtsFractionalBits) * SChCount;
+  // If the next source position for us to consume is beyond the start of the
+  // last frame, cache those samples for use in future interpolation.
+  if (soff > src_end) {
+    uint32_t S = (src_end >> kPtsFractionalBits) * SChCount;
     for (size_t D = 0; D < DChCount; ++D) {
       filter_data_[D] = SR::Read(src + S + (D / SR::DstPerSrc));
     }
-    // TODO(mpuryear): MTWN-78 Return TRUE if we complete both dst and src?
-    // Should we hold a buf if we consume its last frame but don't need more?
-    return (doff < dst_frames);
+
+    // At this point the source offset (soff) is either somewhere within the
+    // last source sample, or entirely beyond the end of the source buffer (if
+    // frac_step_size is greater than unity).  Either way, we've extracted all
+    // of the information from this source buffer, and can return TRUE.
+    return true;
   }
 
+  // The source offset (soff) is exactly on the start of the last source sample,
+  // or earlier. Thus we have not exhausted this source buffer -- return FALSE.
   return false;
 }
 
@@ -264,18 +277,24 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
   const SType* src = static_cast<const SType*>(src_void);
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
-  int32_t send = static_cast<int32_t>(frac_src_frames - FRAC_ONE);
+
+  // "Source end" is the last valid renderer sub-frame that can be sampled.
+  int32_t src_end =
+      static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
 
   FXL_DCHECK(doff < dst_frames);
-  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FXL_DCHECK(src_end >= 0);
   FXL_DCHECK(frac_src_frames <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
-  FXL_DCHECK((soff >= 0) || (static_cast<uint32_t>(-soff) < FRAC_ONE));
+  // "Source offset" can be negative, but within the bounds of pos_filter_width.
+  // For linear_sampler this means that soff > -FRAC_ONE.
+  FXL_DCHECK(soff + pos_filter_width() >= 0);
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets and hold onto
   // any relevant filter data from the end of the source.
   if (ScaleType != ScalerType::MUTED) {
+    // When starting "between buffers", we must rely on previously-cached vals.
     if (soff < 0) {
       for (size_t D = 0; D < chan_count; ++D) {
         filter_data_u_[chan_count + D] = SampleNormalizer<SType>::Read(src + D);
@@ -295,7 +314,8 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
       } while ((doff < dst_frames) && (soff < 0));
     }
 
-    while ((doff < dst_frames) && (soff < send)) {
+    // Now we are fully in the current buffer and need not rely on our cache.
+    while ((doff < dst_frames) && (soff < src_end)) {
       uint32_t S = (soff >> kPtsFractionalBits) * chan_count;
       int32_t* out = dst + (doff * chan_count);
 
@@ -310,11 +330,11 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
       soff += frac_step_size;
     }
   } else {
-    // Figure out how many samples we would have produced and update the soff
-    // and doff values appropriately.
-    if ((doff < dst_frames) && (soff < send)) {
+    // We are muted. Don't mix, but figure out how many samples we WOULD have
+    // produced and update the soff and doff values appropriately.
+    if ((doff < dst_frames) && (soff < src_end)) {
       uint32_t src_avail =
-          (((send - soff) + frac_step_size - 1) / frac_step_size);
+          (((src_end - soff) + frac_step_size - 1) / frac_step_size);
       uint32_t dst_avail = (dst_frames - doff);
       uint32_t avail = std::min(src_avail, dst_avail);
 
@@ -327,11 +347,13 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
     }
   }
 
-  // If we have room to produce one more sample, and our sampling position
-  // hits the position input buffer's final frame exactly, go ahead and sample
-  // the final frame into the output buffer.
-  if ((doff < dst_frames) && (soff == send)) {
+  // If we have room for at least one more sample, and our sampling position
+  // hits the input buffer's final frame exactly ...
+  if ((doff < dst_frames) && (soff == src_end)) {
+    // ... and if we are not muted, of course ...
     if (ScaleType != ScalerType::MUTED) {
+      // ... then we can _point-sample_ one final frame into our output buffer.
+      // We need not _interpolate_ since fractional position is exactly zero.
       uint32_t S = (soff >> kPtsFractionalBits) * chan_count;
       int32_t* out = dst + (doff * chan_count);
 
@@ -348,16 +370,23 @@ inline bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
   *dst_offset = doff;
   *frac_src_offset = soff;
 
-  if (soff >= send) {
-    uint32_t S = (send >> kPtsFractionalBits) * chan_count;
+  // If the next source position for us to consume is beyond the start of the
+  // last frame, cache those samples for use in future interpolation.
+  if (soff > src_end) {
+    uint32_t S = (src_end >> kPtsFractionalBits) * chan_count;
     for (size_t D = 0; D < chan_count; ++D) {
       filter_data_u_[D] = SampleNormalizer<SType>::Read(src + S + D);
     }
-    // TODO(mpuryear): MTWN-78 Return TRUE if we complete both dst and src?
-    // Should we hold a buf if we consume its last frame but don't need more?
-    return (doff < dst_frames);
+
+    // At this point the source offset (soff) is either somewhere within the
+    // last source sample, or entirely beyond the end of the source buffer (if
+    // frac_step_size is greater than unity).  Either way, we've extracted all
+    // of the information from this source buffer, and can return TRUE.
+    return true;
   }
 
+  // The source offset (soff) is exactly on the start of the last source sample,
+  // or earlier. Thus we have not exhausted this source buffer -- return FALSE.
   return false;
 }
 

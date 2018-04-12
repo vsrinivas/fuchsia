@@ -193,7 +193,6 @@ TEST(Timing, Position_Fractional_Point) {
 // locations. Ensure it doesn't touch other buffer sections, regardless of
 // 'accumulate' flag. Check cases when supply > demand, and vice versa, and =.
 // This test uses fractional lengths/offsets, still with a step_size of ONE.
-// TODO(mpuryear): When/if MTWN-77 is fixed, adjust expected values.
 TEST(Timing, Position_Fractional_Linear) {
   uint32_t frac_step_size = Mixer::FRAC_ONE;
   bool mix_result;
@@ -233,7 +232,9 @@ TEST(Timing, Position_Fractional_Linear) {
       mixer->Mix(accum2, 4, &dst_offset, source2, 3 << kPtsFractionalBits,
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, true);
 
-  EXPECT_FALSE(mix_result);
+  // Less than one frame of the source buffer remains, and we cached the final
+  // sample, so mix_result should be TRUE.
+  EXPECT_TRUE(mix_result);
   EXPECT_EQ(4u, dst_offset);
   EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum2, expect2, fbl::count_of(accum2)));
@@ -279,7 +280,9 @@ TEST(Timing, Interpolation_Values) {
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
-  EXPECT_FALSE(mix_result);
+  // Less than one frame of the source buffer remains, and we cached the final
+  // sample, so mix_result should be TRUE.
+  EXPECT_TRUE(mix_result);
   EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(3 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_EQ(expected, accum_result);
@@ -370,7 +373,8 @@ TEST(Timing, Interpolation_Rates) {
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
                  &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
 
-  EXPECT_FALSE(mix_result);
+  // We exhausted the entire source buffer, so mix_result should be TRUE.
+  EXPECT_TRUE(mix_result);
   EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(0x2257, frac_src_offset);
   EXPECT_EQ(expected, accum_result);

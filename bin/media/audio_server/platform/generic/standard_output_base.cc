@@ -247,6 +247,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
+    bool release_renderer_packet = false;
     while (true) {
       // Try to grab the front of the packet queue.  If it has been flushed
       // since the last time we grabbed it, be sure to reset our mixer's
@@ -279,20 +280,28 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       // Now process the packet which is at the front of the renderer's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one.  Otherwise, we are finished.
-      bool process_result = (task_type == TaskType::Mix)
-                                ? ProcessMix(renderer, info, pkt_ref)
-                                : ProcessTrim(renderer, info, pkt_ref);
-      if (!process_result) {
+      release_renderer_packet = (task_type == TaskType::Mix)
+                                    ? ProcessMix(renderer, info, pkt_ref)
+                                    : ProcessTrim(renderer, info, pkt_ref);
+
+      // If we produced enough output frames, then we are done with this mix,
+      // regardless of what we should now do with the renderer packet.
+      if (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames) {
         break;
       }
-
+      // If we still need more output, but could not complete this renderer
+      // packet (we're paused, or packet is in the future), then we are done.
+      if (!release_renderer_packet) {
+        break;
+      }
+      // We did consume this entire renderer packet, and we should keep mixing.
       pkt_ref.reset();
-      packet_link->UnlockPendingQueueFront(true);
+      packet_link->UnlockPendingQueueFront(release_renderer_packet);
     }
 
-    // Unlock the queue and proceed to the next renderer.
+    // Unlock queue (completing packet if needed) and proceed to next renderer.
     pkt_ref.reset();
-    packet_link->UnlockPendingQueueFront(false);
+    packet_link->UnlockPendingQueueFront(release_renderer_packet);
 
     // Note: there is no point in doing this for the trim task, but it doesn't
     // hurt anything, and its easier then introducing another function to the
@@ -413,28 +422,24 @@ bool StandardOutputBase::ProcessMix(
   FXL_DCHECK(packet->frac_frame_len() <=
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
-  if (frac_input_offset >= static_cast<int32_t>(packet->frac_frame_len())) {
-    frac_input_offset -= packet->frac_frame_len();
-  } else {
-    bool consumed_source = info->mixer->Mix(
+  bool consumed_source = false;
+  if (frac_input_offset < static_cast<int32_t>(packet->frac_frame_len())) {
+    consumed_source = info->mixer->Mix(
         buf, frames_left, &output_offset, packet->payload(),
         packet->frac_frame_len(), &frac_input_offset, info->step_size,
         info->amplitude_scale, cur_mix_job_.accumulate);
     FXL_DCHECK(output_offset <= frames_left);
+  }
 
-    if (!consumed_source) {
-      // Looks like we didn't consume all of this region.  Assert that we have
-      // produced all of our frames and we are done.
-      FXL_DCHECK(output_offset == frames_left);
-      return false;
-    }
-
-    frac_input_offset -= packet->frac_frame_len();
+  if (consumed_source) {
+    FXL_DCHECK(frac_input_offset + info->mixer->pos_filter_width() >=
+               packet->frac_frame_len());
   }
 
   cur_mix_job_.frames_produced += output_offset;
+
   FXL_DCHECK(cur_mix_job_.frames_produced <= cur_mix_job_.buf_frames);
-  return true;
+  return consumed_source;
 }
 
 bool StandardOutputBase::SetupTrim(

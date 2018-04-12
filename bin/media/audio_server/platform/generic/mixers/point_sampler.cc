@@ -102,11 +102,8 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   if (ScaleType != ScalerType::MUTED) {
     while ((doff < dst_frames) &&
            (soff < static_cast<int32_t>(frac_src_frames))) {
-      uint32_t src_iter;
-      int32_t* out;
-
-      src_iter = (soff >> kPtsFractionalBits) * SChCount;
-      out = dst + (doff * DChCount);
+      uint32_t src_iter = (soff >> kPtsFractionalBits) * SChCount;
+      int32_t* out = dst + (doff * DChCount);
 
       for (size_t dst_iter = 0; dst_iter < DChCount; ++dst_iter) {
         int32_t sample = SR::Read(src + src_iter + (dst_iter / SR::DstPerSrc));
@@ -137,6 +134,7 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   *dst_offset = doff;
   *frac_src_offset = soff;
 
+  // If we passed the last valid source subframe, then we exhausted this source.
   return (soff >= static_cast<int32_t>(frac_src_frames));
 }
 
@@ -232,6 +230,7 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
   *dst_offset = doff;
   *frac_src_offset = soff;
 
+  // If we passed the last valid source subframe, then we exhausted this source.
   return (soff >= static_cast<int32_t>(frac_src_frames));
 }
 
