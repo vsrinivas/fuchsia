@@ -35,6 +35,13 @@ class GpuBitmap {
             zx_pixel_format_t format,
             uint8_t* buffer);
 
+  // Create a bitmap with an existing buffer.
+  GpuBitmap(uint32_t width,
+            uint32_t height,
+            uint32_t stride,
+            zx_pixel_format_t format,
+            uint8_t* buffer);
+
   // Create a bitmap for a given size.
   GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format);
 
@@ -46,6 +53,7 @@ class GpuBitmap {
 
   uint32_t width() const { return width_; }
   uint32_t height() const { return height_; }
+  uint32_t stride() const { return stride_; }
   zx_pixel_format_t format() const { return format_; }
   uint8_t pixelsize() const { return ZX_PIXEL_FORMAT_BYTES(format_); }
   uint8_t* buffer() const { return ptr_; }
@@ -61,6 +69,7 @@ class GpuBitmap {
  private:
   uint32_t width_;
   uint32_t height_;
+  uint32_t stride_;
   zx_pixel_format_t format_;
 
   // Reading of the buffer should always occur through |ptr_| as |buffer_| is

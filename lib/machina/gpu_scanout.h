@@ -27,6 +27,7 @@ class GpuScanout {
 
   uint32_t width() const { return surface_.width(); }
   uint32_t height() const { return surface_.height(); }
+  uint32_t stride() const { return surface_.stride(); }
   uint8_t pixelsize() const { return surface_.pixelsize(); }
 
   // Draws |rect| from the backing resource to the display.

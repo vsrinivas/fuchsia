@@ -40,7 +40,8 @@ zx_status_t FramebufferScanout::Create(const char* path,
     return status;
   }
 
-  GpuBitmap bitmap(fb.info.width, fb.info.height, fb.info.format,
+  GpuBitmap bitmap(fb.info.width, fb.info.height,
+                   fb.info.stride, fb.info.format,
                    reinterpret_cast<uint8_t*>(fbo));
   fbl::unique_ptr<FramebufferScanout> scanout(
       new FramebufferScanout(fbl::move(bitmap), fbl::move(fd)));

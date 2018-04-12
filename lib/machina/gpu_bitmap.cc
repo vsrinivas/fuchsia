@@ -93,11 +93,23 @@ GpuBitmap::GpuBitmap(uint32_t width,
                      uint32_t height,
                      zx_pixel_format_t format,
                      uint8_t* ptr)
-    : width_(width), height_(height), format_(format), ptr_(ptr) {}
+    : GpuBitmap(width, height, width, format, ptr) {}
+
+GpuBitmap::GpuBitmap(uint32_t width,
+                     uint32_t height,
+                     uint32_t stride,
+                     zx_pixel_format_t format,
+                     uint8_t* ptr)
+    : width_(width),
+      height_(height),
+      stride_(stride),
+      format_(format),
+      ptr_(ptr) {}
 
 GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format)
     : width_(width),
       height_(height),
+      stride_(width),
       format_(format),
       buffer_(new uint8_t[width * height * pixelsize()]),
       ptr_(buffer_.get()) {}
@@ -105,6 +117,7 @@ GpuBitmap::GpuBitmap(uint32_t width, uint32_t height, zx_pixel_format_t format)
 GpuBitmap::GpuBitmap(GpuBitmap&& o)
     : width_(o.width_),
       height_(o.height_),
+      stride_(o.stride_),
       format_(o.format_),
       buffer_(fbl::move(o.buffer_)),
       ptr_(o.ptr_) {
@@ -114,6 +127,7 @@ GpuBitmap::GpuBitmap(GpuBitmap&& o)
 GpuBitmap& GpuBitmap::operator=(GpuBitmap&& o) {
   width_ = o.width_;
   height_ = o.height_;
+  stride_ = o.stride_;
   format_ = o.format_;
   buffer_ = fbl::move(o.buffer_);
   ptr_ = o.ptr_;
@@ -144,24 +158,24 @@ void GpuBitmap::DrawBitmap(const GpuBitmap& src_bitmap,
     return;
   }
 
-  size_t stride = src_rect.width * src_bitmap.pixelsize();
+  size_t copy_stride = src_rect.width * src_bitmap.pixelsize();
   size_t src_offset =
-      (src_bitmap.width() * src_rect.y + src_rect.x) * src_bitmap.pixelsize();
-  size_t dst_offset = (width() * dst_rect.y + dst_rect.x) * pixelsize();
+      (src_bitmap.stride() * src_rect.y + src_rect.x) * src_bitmap.pixelsize();
+  size_t dst_offset = (stride() * dst_rect.y + dst_rect.x) * pixelsize();
   uint8_t* src_buf = src_bitmap.buffer();
   uint8_t* dst_buf = buffer();
 
   // Optimize for the case where we can do a single copy from src to dst.
-  if (dst_rect.width == width() && src_bitmap.width() == width()) {
-    copy(dst_buf + dst_offset, src_buf + src_offset, stride * dst_rect.height,
-         format());
+  if (dst_rect.width == width() && src_bitmap.stride() == stride()) {
+    copy(dst_buf + dst_offset, src_buf + src_offset,
+         copy_stride * dst_rect.height, format());
     return;
   }
 
   for (uint32_t row = 0; row < src_rect.height; ++row) {
-    copy(dst_buf + dst_offset, src_buf + src_offset, stride, format());
-    src_offset += src_bitmap.width() * src_bitmap.pixelsize();
-    dst_offset += width() * pixelsize();
+    copy(dst_buf + dst_offset, src_buf + src_offset, copy_stride, format());
+    src_offset += src_bitmap.stride() * src_bitmap.pixelsize();
+    dst_offset += stride() * pixelsize();
   }
 }
 
