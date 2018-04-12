@@ -416,8 +416,9 @@ static void loader_service_handler(async_t* async,
     return;
 stop:
     zx_handle_close(wait->object);
-    free(wait);
-    loader_service_deref(session->svc); // Balanced in |loader_service_attach|.
+    loader_service_t* svc = session->svc;
+    free(session);
+    loader_service_deref(svc); // Balanced in |loader_service_attach|.
 }
 
 zx_status_t loader_service_attach(loader_service_t* svc, zx_handle_t h) {
