@@ -115,7 +115,8 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
             // policy set while also holding cache policy flags within the arch
             // flags. The only path that should be able to achieve this is if
             // something in the kernel maps into their aspace incorrectly.
-            if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0) {
+            if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0 &&
+                (arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != cache_policy) {
                 TRACEF("warning: mapping %s has conflicting cache policies: vmo %02x "
                        "arch_mmu_flags %02x.\n",
                        name, cache_policy, arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
