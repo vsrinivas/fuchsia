@@ -10,7 +10,7 @@ TestBackoff::TestBackoff() {}
 
 TestBackoff::~TestBackoff() {}
 
-fxl::TimeDelta TestBackoff::GetNext() {
+zx::duration TestBackoff::GetNext() {
   get_next_count++;
   if (on_get_next_) {
     on_get_next_();

@@ -21,23 +21,23 @@ class ExponentialBackoff : public Backoff {
   explicit ExponentialBackoff(
       std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ExponentialBackoff(
-      fxl::TimeDelta initial_delay, uint32_t retry_factor,
-      fxl::TimeDelta max_delay,
+      zx::duration initial_delay, uint32_t retry_factor,
+      zx::duration max_delay,
       std::function<uint64_t()> seed_generator = fxl::RandUint64);
   ~ExponentialBackoff() override;
 
-  fxl::TimeDelta GetNext() override;
+  zx::duration GetNext() override;
   void Reset() override;
 
  private:
-  const fxl::TimeDelta initial_delay_;
+  const zx::duration initial_delay_;
   const uint32_t retry_factor_;
-  const fxl::TimeDelta max_delay_;
+  const zx::duration max_delay_;
   // Used to prevent overflows in multiplication.
-  const fxl::TimeDelta max_delay_divided_by_factor_;
+  const zx::duration max_delay_divided_by_factor_;
   std::default_random_engine rng_;
 
-  fxl::TimeDelta next_delay_ = initial_delay_;
+  zx::duration next_delay_ = initial_delay_;
 };
 
 }  // namespace backoff

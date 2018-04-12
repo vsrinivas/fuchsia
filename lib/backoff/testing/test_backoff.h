@@ -7,7 +7,6 @@
 
 #include "garnet/lib/backoff/backoff.h"
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace backoff {
 
@@ -17,12 +16,12 @@ class TestBackoff : public Backoff {
   ~TestBackoff() override;
 
   // Backoff:
-  fxl::TimeDelta GetNext() override;
+  zx::duration GetNext() override;
   void Reset() override;
 
   void SetOnGetNext(fxl::Closure on_get_next);
 
-  fxl::TimeDelta backoff_to_return = fxl::TimeDelta::FromSeconds(0);
+  zx::duration backoff_to_return = zx::sec(0);
 
   int get_next_count = 0;
   int reset_count = 0;

@@ -191,9 +191,8 @@ network::NetworkService* NetworkWrapperImpl::GetNetworkService() {
         request.SetNetworkService(nullptr);
       }
       network_service_.Unbind();
-      task_runner_.PostDelayedTask(
-          [this] { RetryGetNetworkService(); },
-          zx::nsec((backoff_->GetNext()).ToNanoseconds()));
+      task_runner_.PostDelayedTask([this] { RetryGetNetworkService(); },
+                                   backoff_->GetNext());
     });
   }
 

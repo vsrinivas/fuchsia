@@ -5,8 +5,9 @@
 #ifndef GARNET_LIB_BACKOFF_BACKOFF_H_
 #define GARNET_LIB_BACKOFF_BACKOFF_H_
 
+#include <lib/zx/time.h>
+
 #include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
 
 namespace backoff {
 
@@ -16,7 +17,7 @@ class Backoff {
   Backoff() {}
   virtual ~Backoff() {}
 
-  virtual fxl::TimeDelta GetNext() = 0;
+  virtual zx::duration GetNext() = 0;
   virtual void Reset() = 0;
 
  private:
