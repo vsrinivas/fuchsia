@@ -22,6 +22,8 @@ MODULE_LIBS := system/ulib/c system/ulib/zircon
 
 MODULE_STATIC_LIBS := system/ulib/pretty
 
+MODULE_PACKAGE := src
+
 include make/module.mk
 
 MODULE := $(LOCAL_DIR).hostlib
