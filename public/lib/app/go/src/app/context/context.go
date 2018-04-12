@@ -16,10 +16,15 @@ import (
 	"fuchsia/go/component"
 )
 
+type Connector struct {
+	serviceRoot zx.Handle
+}
+
 type Context struct {
+	connector *Connector
+
 	Environment     *component.ApplicationEnvironmentInterface
 	OutgoingService *svcns.Namespace
-	serviceRoot     zx.Handle
 	Launcher        *component.ApplicationLauncherInterface
 	appServices     zx.Handle
 	services        bindings2.BindingSet
@@ -47,7 +52,9 @@ func getServiceRoot() zx.Handle {
 
 func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	c := &Context{
-		serviceRoot: serviceRoot,
+		connector: &Connector{
+			serviceRoot: serviceRoot,
+		},
 		appServices: appServices,
 	}
 
@@ -74,6 +81,10 @@ func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	return c
 }
 
+func (c *Context) GetConnector() *Connector {
+	return c.connector
+}
+
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
 		stub := component.ServiceProviderStub{Impl: c.OutgoingService}
@@ -86,10 +97,14 @@ func (c *Context) Serve() {
 }
 
 func (c *Context) ConnectToEnvService(r bindings2.ServiceRequest) {
+	c.connector.ConnectToEnvService(r)
+}
+
+func (c *Connector) ConnectToEnvService(r bindings2.ServiceRequest) {
 	c.ConnectToEnvServiceAt(r.Name(), r.ToChannel())
 }
 
-func (c *Context) ConnectToEnvServiceAt(name string, h zx.Channel) {
+func (c *Connector) ConnectToEnvServiceAt(name string, h zx.Channel) {
 	err := fdio.ServiceConnectAt(c.serviceRoot, name, zx.Handle(h))
 	if err != nil {
 		panic(fmt.Sprintf("ConnectToEnvService: %v: %v", name, err))
