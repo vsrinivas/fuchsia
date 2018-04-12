@@ -36,7 +36,7 @@ type ThinVFS struct {
 	nextCookie int64
 }
 
-type VfsQueryInfo struct {
+type VFSQueryInfo struct {
 	TotalBytes uint64
 	UsedBytes  uint64
 	TotalNodes uint64
@@ -576,7 +576,7 @@ func (vfs *ThinVFS) processOpDirectory(msg *fdio.Msg, rh zx.Handle, dw *director
 			totalBytes := uint64(vfs.fs.Size())
 			usedBytes := totalBytes - uint64(vfs.fs.FreeSize())
 
-			queryInfo := VfsQueryInfo{
+			queryInfo := VFSQueryInfo{
 				TotalBytes: totalBytes,
 				UsedBytes:  usedBytes,
 				TotalNodes: 0,
