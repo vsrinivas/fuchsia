@@ -27,7 +27,6 @@ source_set("lib") {
     "//garnet/public/lib/ui/view_framework:view_provider",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/mdi",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
