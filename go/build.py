@@ -30,7 +30,7 @@ def main():
                         choices=['x64', 'arm64'], required=True)
     parser.add_argument('--current-os', help='Target operating system.',
                         choices=['fuchsia', 'linux', 'mac', 'win'], required=True)
-    parser.add_argument('--go-tool', help='The go tool to use for builds')
+    parser.add_argument('--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
     parser.add_argument('--go-dependency', help='Manifest of dest=src of dependencies',
@@ -110,20 +110,31 @@ def main():
     env['GOARCH'] = goarch
     env['GOOS'] = goos
     env['GOPATH'] = gopath
-    env['ZIRCON_SYSROOT'] = args.zircon_sysroot
-    env['FUCHSIA_ROOT_OUT_DIR'] = os.path.abspath(args.root_out_dir)
+
+    build_goroot = os.path.abspath(args.go_root)
+
+    # Setting GOROOT is a workaround for https://golang.org/issue/18678:
+    # Go should be able to automagically find itself and derive GOROOT
+    # from that instead of using any compiled in value for GOROOT.
+    # Our in-tree build of Go should have a correct compiled-in GOROOT,
+    # but play it safe. Remove this when we're using Go 1.9 (or above).
+    env['GOROOT'] = build_goroot
 
     if goos == 'fuchsia':
-        gengoroot = os.path.abspath(os.path.join(args.root_out_dir, 'goroot'))
-        if os.path.exists(gengoroot):
-            env['GOROOT'] = gengoroot
+        # These are used by $CC (gccwrap.sh).
+        env['ZIRCON'] = os.path.join(args.fuchsia_root, 'zircon')
+        env['ZIRCON_SYSROOT'] = args.zircon_sysroot
+        env['FUCHSIA_ROOT_OUT_DIR'] = os.path.abspath(args.root_out_dir)
+        env['CC'] = os.path.join(build_goroot, 'misc/fuchsia/gccwrap.sh')
 
     # /usr/bin:/bin are required for basic things like bash(1) and env(1), but
     # preference the toolchain path. Note that on Mac, ld is also found from
     # /usr/bin.
     env['PATH'] = args.toolchain_prefix + ":/usr/bin:/bin"
 
-    cmd = [args.go_tool]
+    go_tool = os.path.join(build_goroot, 'bin/go')
+
+    cmd = [go_tool]
     if args.is_test:
       cmd += ['test', '-c']
     else:

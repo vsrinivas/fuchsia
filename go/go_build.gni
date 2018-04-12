@@ -78,6 +78,14 @@ template("go_build") {
       "//build/go/gen_libraries.py",
     ]
 
+    # The same Go toolchain is used for host and target.
+    # It lives in $root_out_dir/goroot for the target's value of root_out_dir.
+    # TODO(dje): Move go toolchain to host root_out_dir. It runs on the host.
+    target_root_out_dir = get_label_info("//third_party/go:go_runtime($target_toolchain)", "root_out_dir")
+    go_root = rebase_path("$target_root_out_dir/goroot")
+
+    deps += [ "//third_party/go:go_runtime" ]
+
     go_dependencies = []
     if (defined(invoker.go_dependencies)) {
       go_dependencies = invoker.go_dependencies
@@ -101,8 +109,8 @@ template("go_build") {
       current_cpu,
       "--current-os",
       current_os,
-      "--go-tool",
-      rebase_path("//buildtools/go"),
+      "--go-root",
+      go_root,
       "--binname",
       output_name,
       "--toolchain-prefix",
@@ -145,8 +153,6 @@ template("go_build") {
       "--package",
       invoker.gopackage,
     ]
-
-    deps += [ "//third_party/go:go_runtime" ]
 
     if (is_fuchsia) {
       deps += [ "//garnet/public/sdk:zircon_sysroot_export" ]
