@@ -186,10 +186,16 @@ func (f *installFile) open() error {
 	var err error
 	// TODO(raggi): propagate flags instead to allow for resumption and so on
 	f.blob, err = os.OpenFile(f.fs.blobfs.PathOf(f.name), os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	if err != nil {
-		return goErrToFSErr(err)
+	// permission errors from blobfs are returned when the blob already exists and
+	// is no longer writable
+	if os.IsPermission(err) {
+		f.blob.Close()
+		return fs.ErrAlreadyExists
 	}
-	return nil
+	if err != nil {
+		f.blob.Close()
+	}
+	return goErrToFSErr(err)
 }
 
 func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
