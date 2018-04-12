@@ -67,7 +67,7 @@ void FirebaseAuthImpl::GetToken(
               [this, callback = std::move(callback)]() mutable {
                 GetToken(std::move(callback));
               },
-              zx::duration(backoff_->GetNext().ToNanoseconds()));
+              backoff_->GetNext());
           return;
         }
 

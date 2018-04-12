@@ -46,8 +46,7 @@ std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
       [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
       std::make_unique<backoff::ExponentialBackoff>(
-          fxl::TimeDelta::FromMilliseconds(10), 2u,
-          fxl::TimeDelta::FromSeconds(60 * 60), fxl::RandUint64));
+          zx::msec(10), 2u, zx::sec(60 * 60), fxl::RandUint64));
   resolvers_[page_id] = resolver.get();
   GetResolverStrategyForPage(
       page_id,

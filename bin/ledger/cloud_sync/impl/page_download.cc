@@ -415,7 +415,7 @@ void PageDownload::RetryWithBackoff(fxl::Closure callable) {
           callable();
         }
       },
-      zx::duration(backoff_->GetNext().ToNanoseconds()));
+      backoff_->GetNext());
 }
 
 }  // namespace cloud_sync

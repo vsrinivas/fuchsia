@@ -22,8 +22,6 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/cobalt/cobalt.h"
 #include "peridot/bin/ledger/environment/environment.h"
@@ -35,7 +33,7 @@ namespace {
 
 constexpr fxl::StringView kPersistentFileSystem = "/data";
 constexpr fxl::StringView kMinFsName = "minfs";
-constexpr fxl::TimeDelta kMaxPollingDelay = fxl::TimeDelta::FromSeconds(10);
+constexpr zx::duration kMaxPollingDelay = zx::sec(10);
 constexpr fxl::StringView kNoMinFsFlag = "no_minfs_wait";
 constexpr fxl::StringView kNoStatisticsReporting =
     "no_statistics_reporting_for_testing";
@@ -121,10 +119,9 @@ class App : public ledger_internal::LedgerController {
 };
 
 void WaitForData() {
-  backoff::ExponentialBackoff backoff(fxl::TimeDelta::FromMilliseconds(10), 2,
-                                      fxl::TimeDelta::FromSeconds(1));
-  fxl::TimePoint now = fxl::TimePoint::Now();
-  while (fxl::TimePoint::Now() - now < kMaxPollingDelay) {
+  backoff::ExponentialBackoff backoff(zx::msec(10), 2, zx::sec(1));
+  zx::time now = zx::clock::get(ZX_CLOCK_MONOTONIC);
+  while (zx::clock::get(ZX_CLOCK_MONOTONIC) - now < kMaxPollingDelay) {
     fxl::UniqueFD fd(open(kPersistentFileSystem.data(), O_RDWR));
     FXL_DCHECK(fd.is_valid());
     char buf[sizeof(vfs_query_info_t) + MAX_FS_NAME_LEN + 1];
@@ -137,7 +134,7 @@ void WaitForData() {
       return;
     }
 
-    usleep(backoff.GetNext().ToMicroseconds());
+    FXL_DCHECK(zx::nanosleep(zx::deadline_after(backoff.GetNext())) == ZX_OK);
   }
 
   FXL_LOG(WARNING) << kPersistentFileSystem

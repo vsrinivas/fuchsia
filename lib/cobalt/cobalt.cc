@@ -225,7 +225,7 @@ void CobaltContext::OnConnectionError() {
   encoder_.Unbind();
   async::PostDelayedTask(async_,
                         [this] { ConnectToCobaltApplication(); },
-                        zx::nsec(backoff_.GetNext().ToNanoseconds()));
+                        backoff_.GetNext());
 }
 
 void CobaltContext::ReportObservationOnMainThread(
@@ -279,7 +279,7 @@ void CobaltContext::SendObservations() {
           observations_in_transit_.clear();
           SendObservations();
         },
-        zx::nsec(backoff_.GetNext().ToNanoseconds()));
+        backoff_.GetNext());
   });
 }
 

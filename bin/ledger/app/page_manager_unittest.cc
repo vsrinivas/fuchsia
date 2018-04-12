@@ -35,7 +35,7 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
   return std::make_unique<MergeResolver>(
       [] {}, environment, storage,
       std::make_unique<backoff::ExponentialBackoff>(
-          fxl::TimeDelta::FromSeconds(0), 1u, fxl::TimeDelta::FromSeconds(0)));
+          zx::sec(0), 1u, zx::sec(0)));
 }
 
 std::string ToString(const mem::BufferPtr& vmo) {

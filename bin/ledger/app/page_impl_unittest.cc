@@ -57,8 +57,7 @@ class PageImplTest : public gtest::TestWithMessageLoop {
     auto resolver = std::make_unique<MergeResolver>(
         [] {}, &environment_, fake_storage_,
         std::make_unique<backoff::ExponentialBackoff>(
-            fxl::TimeDelta::FromSeconds(0), 1u,
-            fxl::TimeDelta::FromSeconds(0)));
+            zx::sec(0), 1u, zx::sec(0)));
     resolver_ = resolver.get();
 
     manager_ = std::make_unique<PageManager>(

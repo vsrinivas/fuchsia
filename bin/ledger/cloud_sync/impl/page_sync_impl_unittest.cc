@@ -38,9 +38,9 @@ class TestBackoff : public backoff::Backoff {
   explicit TestBackoff(int* get_next_count) : get_next_count_(get_next_count) {}
   ~TestBackoff() override {}
 
-  fxl::TimeDelta GetNext() override {
+  zx::duration GetNext() override {
     (*get_next_count_)++;
-    return fxl::TimeDelta::FromMilliseconds(50);
+    return zx::msec(50);
   }
 
   void Reset() override {}
