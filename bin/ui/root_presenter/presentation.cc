@@ -47,7 +47,8 @@ constexpr float kCursorElevation = 800;
 }  // namespace
 
 Presentation::Presentation(views_v1::ViewManager* view_manager,
-                           ui::Scenic* scenic, scenic_lib::Session* session)
+                           ui::Scenic* scenic,
+                           scenic_lib::Session* session)
     : view_manager_(view_manager),
       scenic_(scenic),
       session_(session),
@@ -104,15 +105,15 @@ void Presentation::Present(
 
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scenic_->GetDisplayInfo(fxl::MakeCopyable(
-      [weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
-       presentation_request = std::move(presentation_request)](
-          gfx::DisplayInfo display_info) mutable {
-        if (weak)
-          weak->CreateViewTree(std::move(view_owner),
-                               std::move(presentation_request),
-                               std::move(display_info));
-      }));
+  scenic_->GetDisplayInfo(fxl::MakeCopyable([
+    weak = weak_factory_.GetWeakPtr(), view_owner = std::move(view_owner),
+    presentation_request = std::move(presentation_request)
+  ](gfx::DisplayInfo display_info) mutable {
+    if (weak)
+      weak->CreateViewTree(std::move(view_owner),
+                           std::move(presentation_request),
+                           std::move(display_info));
+  }));
 }
 
 void Presentation::CreateViewTree(
@@ -186,8 +187,7 @@ void Presentation::CreateViewTree(
   PresentScene();
 }
 
-void Presentation::InitializeDisplayModel(
-    gfx::DisplayInfo display_info) {
+void Presentation::InitializeDisplayModel(gfx::DisplayInfo display_info) {
   FXL_DCHECK(!display_model_initialized_);
 
   // Save previous display values. These could have been overriden by earlier
@@ -435,11 +435,12 @@ void Presentation::OnReport(uint32_t device_id,
 
 void Presentation::CaptureKeyboardEvent(
     input::KeyboardEvent event_to_capture,
-    fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener_handle) {
+    fidl::InterfaceHandle<presentation::KeyboardCaptureListener>
+        listener_handle) {
   presentation::KeyboardCaptureListenerPtr listener;
   listener.Bind(std::move(listener_handle));
   // Auto-remove listeners if the interface closes.
-  listener.set_error_handler([this, listener = listener.get()] {
+  listener.set_error_handler([ this, listener = listener.get() ] {
     captured_keybindings_.erase(
         std::remove_if(captured_keybindings_.begin(),
                        captured_keybindings_.end(),
@@ -528,8 +529,7 @@ void Presentation::OnEvent(input::InputEvent event) {
 
       for (size_t i = 0; i < captured_keybindings_.size(); i++) {
         const auto& event = captured_keybindings_[i].event;
-        if ((kbd.modifiers & event.modifiers) &&
-            (event.phase == kbd.phase) &&
+        if ((kbd.modifiers & event.modifiers) && (event.phase == kbd.phase) &&
             (event.code_point == kbd.code_point)) {
           input::KeyboardEvent clone;
           fidl::Clone(kbd, &clone);
@@ -579,9 +579,8 @@ void Presentation::OnChildAttached(uint32_t child_key,
   callback();
 }
 
-void Presentation::OnChildUnavailable(
-    uint32_t child_key,
-    OnChildUnavailableCallback callback) {
+void Presentation::OnChildUnavailable(uint32_t child_key,
+                                      OnChildUnavailableCallback callback) {
   if (kRootViewKey == child_key) {
     FXL_LOG(ERROR) << "Root presenter: Root view terminated unexpectedly.";
     Shutdown();
@@ -592,31 +591,38 @@ void Presentation::OnChildUnavailable(
   callback();
 }
 
-void Presentation::OnPropertiesChanged(
-    views_v1::ViewProperties properties,
-    OnPropertiesChangedCallback callback) {
+void Presentation::OnPropertiesChanged(views_v1::ViewProperties properties,
+                                       OnPropertiesChangedCallback callback) {
   // Nothing to do right now.
   callback();
 }
 
 // |Presentation|
 void Presentation::EnableClipping(bool enabled) {
-  FXL_LOG(INFO) << "Presentation Controller method called: EnableClipping!!";
+  if (presentation_clipping_enabled_ != enabled) {
+    FXL_LOG(INFO) << "enable clipping: " << (enabled ? "true" : "false");
+    presentation_clipping_enabled_ = enabled;
+    PresentScene();
+  }
 }
 
 // |Presentation|
 void Presentation::UseOrthographicView() {
-  FXL_LOG(INFO)
-      << "Presentation Controller method called: UseOrthographicView!!";
+  FXL_LOG(INFO) << "Presentation Controller method called: "
+                   "UseOrthographicView!! (not implemented)";
 }
 
 // |Presentation|
 void Presentation::UsePerspectiveView() {
-  FXL_LOG(INFO)
-      << "Presentation Controller method called: UsePerspectiveView!!";
+  FXL_LOG(INFO) << "Presentation Controller method called: "
+                   "UsePerspectiveView!! (not implemented)";
 }
 
 void Presentation::PresentScene() {
+  bool use_clipping =
+      presentation_clipping_enabled_ && perspective_demo_mode_.WantsClipping();
+  renderer_.SetDisableClipping(!use_clipping);
+
   // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
   // state.
   for (auto it = cursors_.begin(); it != cursors_.end(); ++it) {

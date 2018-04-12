@@ -89,10 +89,6 @@ bool PerspectiveDemoMode::OnEvent(const input::InputEvent& event,
 void PerspectiveDemoMode::HandleAltBackspace(Presentation* presenter) {
   switch (animation_state_) {
     case kDefault:
-      animation_state_ = kNoClipping;
-      presenter->renderer_.SetDisableClipping(true);
-      break;
-    case kNoClipping:
       animation_state_ = kCameraMovingAway;
       break;
     case kTrackball:
@@ -109,7 +105,7 @@ void PerspectiveDemoMode::HandleAltBackspace(Presentation* presenter) {
 
 bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
                                           uint64_t presentation_time) {
-  if (animation_state_ == kDefault || animation_state_ == kNoClipping) {
+  if (animation_state_ == kDefault) {
     return false;
   }
 
@@ -131,7 +127,6 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
     param = 1.f;
     switch (animation_state_) {
       case kDefault:
-      case kNoClipping:
         FXL_DCHECK(false);
         return false;
       case kCameraMovingAway:
@@ -144,7 +139,6 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
         float ortho_eye[3] = {half_width, half_height, 1100.f};
         presenter->camera_.SetTransform(ortho_eye, target, up);
         presenter->camera_.SetProjection(0.f);
-        presenter->renderer_.SetDisableClipping(false);
         return true;
       }
       case kTrackball:

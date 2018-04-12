@@ -66,7 +66,8 @@ class Presentation : private views_v1::ViewTreeListener,
                      private presentation::Presentation {
  public:
   Presentation(views_v1::ViewManager* view_manager,
-               ui::Scenic* scenic, scenic_lib::Session* session);
+               ui::Scenic* scenic,
+               scenic_lib::Session* session);
 
   ~Presentation() override;
 
@@ -104,9 +105,8 @@ class Presentation : private views_v1::ViewTreeListener,
                           OnChildUnavailableCallback callback) override;
 
   // |ViewListener|:
-  void OnPropertiesChanged(
-      views_v1::ViewProperties properties,
-      OnPropertiesChangedCallback callback) override;
+  void OnPropertiesChanged(views_v1::ViewProperties properties,
+                           OnPropertiesChangedCallback callback) override;
 
   // |Presentation|
   void EnableClipping(bool enabled) override;
@@ -118,8 +118,7 @@ class Presentation : private views_v1::ViewTreeListener,
   void UsePerspectiveView() override;
 
   // |Presentation|
-  void SetRendererParams(
-      ::fidl::VectorPtr<gfx::RendererParam> params) override;
+  void SetRendererParams(::fidl::VectorPtr<gfx::RendererParam> params) override;
 
   void InitializeDisplayModel(gfx::DisplayInfo display_info);
 
@@ -140,7 +139,8 @@ class Presentation : private views_v1::ViewTreeListener,
   // |Presentation|
   void CaptureKeyboardEvent(
       input::KeyboardEvent event_to_capture,
-      fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener) override;
+      fidl::InterfaceHandle<presentation::KeyboardCaptureListener> listener)
+      override;
 
   // |Presentation|
   void GetPresentationMode(GetPresentationModeCallback callback) override;
@@ -188,6 +188,8 @@ class Presentation : private views_v1::ViewTreeListener,
   DisplayModel display_model_actual_;
   DisplayModel display_model_simulated_;
 
+  bool presentation_clipping_enabled_ = true;
+
   bool display_model_initialized_ = false;
 
   // |display_metrics_| must be recalculated anytime
@@ -202,8 +204,10 @@ class Presentation : private views_v1::ViewTreeListener,
 
   fidl::Binding<presentation::Presentation> presentation_binding_;
   fidl::Binding<views_v1::ViewTreeListener> tree_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener> tree_container_listener_binding_;
-  fidl::Binding<views_v1::ViewContainerListener> view_container_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener>
+      tree_container_listener_binding_;
+  fidl::Binding<views_v1::ViewContainerListener>
+      view_container_listener_binding_;
   fidl::Binding<views_v1::ViewListener> view_listener_binding_;
 
   views_v1::ViewTreePtr tree_;

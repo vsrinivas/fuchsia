@@ -5,8 +5,8 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_PERSPECTIVE_DEMO_MODE_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_PERSPECTIVE_DEMO_MODE_H_
 
-#include "lib/fxl/macros.h"
 #include <fuchsia/cpp/input.h>
+#include "lib/fxl/macros.h"
 #include "lib/ui/scenic/client/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
@@ -33,6 +33,8 @@ class PerspectiveDemoMode {
 
   bool UpdateAnimation(Presentation* presenter, uint64_t presentation_time);
 
+  bool WantsClipping() const { return animation_state_ == kDefault; }
+
  private:
   // Handle the "Perspective Demo" hotkey.  This cycles through the following
   // modes:
@@ -47,7 +49,6 @@ class PerspectiveDemoMode {
 
   enum AnimationState {
     kDefault,
-    kNoClipping,
     kCameraMovingAway,
     kCameraReturning,
     kTrackball,
