@@ -4,7 +4,8 @@
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-fidl("logger") {
+fidl("fidl") {
+  name = "logger"
   sources = [
     "logger.fidl",
   ]

@@ -7,6 +7,6 @@ import("//build/rust/toolchain.gni")
 
 rust_library("fidl_logger") {
   deps = [
-    "//garnet/public/lib/logger/fidl:logger($rust_toolchain)",
+    "//garnet/public/lib/logger/fidl($rust_toolchain)",
   ]
 }

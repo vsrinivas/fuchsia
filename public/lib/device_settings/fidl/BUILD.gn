@@ -4,7 +4,8 @@
 
 import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 
-fidl("device_settings") {
+fidl("fidl") {
+  name = "device_settings"
   sources = [
     "device_settings.fidl",
   ]
