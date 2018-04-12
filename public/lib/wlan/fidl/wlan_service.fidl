@@ -60,6 +60,9 @@ struct WlanStatus {
 
 struct BssConfig {
   string ssid;
+  int32 beaconPeriod;
+  int32 dtimPeriod;
+  uint8 channel;
 };
 
 // Stub interface; eventually to be replaced by something based on the 802.11

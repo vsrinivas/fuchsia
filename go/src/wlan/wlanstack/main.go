@@ -124,7 +124,7 @@ func (ws *Wlanstack) StartBss(sc_cfg wlan_service.BssConfig) (wserr wlan_service
 		return wlan_service.Error{wlan_service.ErrCodeNotFound, "No wlan interface found"}, nil
 	}
 
-	cfg := wlan.NewAPConfig(sc_cfg.Ssid)
+	cfg := wlan.NewAPConfig(sc_cfg.Ssid, sc_cfg.BeaconPeriod, sc_cfg.DtimPeriod, sc_cfg.Channel)
 	respC := make(chan *wlan.CommandResult, 1)
 	cli.PostCommand(wlan.CmdStartBSS, cfg, respC)
 

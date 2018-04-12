@@ -21,8 +21,8 @@ func NewEmptyAPConfig() *APConfig {
 	return &APConfig{}
 }
 
-func NewAPConfig(ssid string) *APConfig {
-	return &APConfig{ssid, 100, 1, true, 6}
+func NewAPConfig(ssid string, beaconPeriod int32, dtimPeriod int32, channel uint8) *APConfig {
+	return &APConfig{ssid, int(beaconPeriod), int(dtimPeriod), true, channel}
 }
 
 func ReadAPConfigFromFile(path string) (*APConfig, error) {

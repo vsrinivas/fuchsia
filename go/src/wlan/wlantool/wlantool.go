@@ -88,7 +88,7 @@ func (a *ToolApp) Disconnect() {
 	}
 }
 
-func (a *ToolApp) StartBSS(ssid string) {
+func (a *ToolApp) StartBSS(ssid string, beaconPeriod int32, dtimPeriod int32, channel uint8) {
 	if len(ssid) > 32 {
 		fmt.Println("ssid is too long")
 		return
@@ -97,7 +97,7 @@ func (a *ToolApp) StartBSS(ssid string) {
 		fmt.Println("ssid is too short")
 		return
 	}
-	werr, err := a.wlan.StartBss(wlan_service.BssConfig{ssid})
+	werr, err := a.wlan.StartBss(wlan_service.BssConfig{ssid, beaconPeriod, dtimPeriod, channel})
 	if err != nil {
 		fmt.Println("Error:", err)
 	} else if werr.Code != wlan_service.ErrCodeOk {
@@ -159,7 +159,7 @@ var Usage = func() {
 	fmt.Printf("       %v %v [-p <passphrase>] [-t <timeout>] [-b <bssid>] ssid\n", os.Args[0], cmdConnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdDisconnect)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStatus)
-	fmt.Printf("       %v %v ssid\n", os.Args[0], cmdStartBSS)
+	fmt.Printf("       %v %v [-b <beacon period>] [-d <DTIM period>] [-c channel] ssid\n", os.Args[0], cmdStartBSS)
 	fmt.Printf("       %v %v\n", os.Args[0], cmdStopBSS)
 }
 
@@ -237,13 +237,16 @@ func main() {
 		a.Status()
 	case cmdStartBSS:
 		startBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
+		startBSSBeaconPeriod := startBSSFlagSet.Int("b", 100, "Beacon period")
+		startBSSDTIMPeriod := startBSSFlagSet.Int("d", 1, "DTIM period")
+		startBSSChannel := startBSSFlagSet.Int("c", 6, "Channel")
 		startBSSFlagSet.Parse(os.Args[2:])
 		if startBSSFlagSet.NArg() != 1 {
 			Usage()
 			return
 		}
 		ssid := startBSSFlagSet.Arg(0)
-		a.StartBSS(ssid)
+		a.StartBSS(ssid, int32(*startBSSBeaconPeriod), int32(*startBSSDTIMPeriod), uint8(*startBSSChannel))
 	case cmdStopBSS:
 		stopBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
 		stopBSSFlagSet.Parse(os.Args[2:])
