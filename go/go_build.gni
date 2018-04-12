@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
+import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # A template for an action that builds a Go binary. Users should instead use the
@@ -79,10 +80,7 @@ template("go_build") {
     ]
 
     # The same Go toolchain is used for host and target.
-    # It lives in $root_out_dir/goroot for the target's value of root_out_dir.
-    # TODO(dje): Move go toolchain to host root_out_dir. It runs on the host.
-    target_root_out_dir = get_label_info("//third_party/go:go_runtime($target_toolchain)", "root_out_dir")
-    go_root = rebase_path("$target_root_out_dir/goroot")
+    go_root = rebase_path("$host_tools_dir/goroot")
 
     deps += [ "//third_party/go:go_runtime" ]
 
