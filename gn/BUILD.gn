@@ -416,7 +416,6 @@ foreach(board, zircon_boards) {
       ":finalize_manifests",
     ]
     inputs = [
-      "$zircon_build_dir/${board}-kernel-bootdata.bin",
       final_boot_manifest,
     ]
     boot = true
@@ -819,9 +818,7 @@ foreach(board, zircon_boards) {
     if (zedboot_cmdline_file != "") {
       deps += [ ":extra_zedboot_cmdline" ]
     }
-    inputs = [
-      "${zircon_build_dir}/${board}-kernel-bootdata.bin",
-    ]
+    inputs = []
     foreach(dep, deps) {
       dep = get_target_outputs(dep)
       inputs += [ dep[0] ]
