@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/audio_policy.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
@@ -16,6 +16,8 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/media/audio/perceived_level.h"
+
+using audio_policy::AudioPolicyStatus;
 
 namespace media {
 namespace {
@@ -96,7 +98,8 @@ class VolApp {
     }
 
     audio_policy_service_ =
-        application_context_->ConnectToEnvironmentService<AudioPolicyService>();
+        application_context_
+            ->ConnectToEnvironmentService<audio_policy::AudioPolicy>();
 
     if (mute_) {
       audio_policy_service_->SetSystemAudioMute(true);
@@ -151,7 +154,7 @@ class VolApp {
   }
 
   void HandleStatus(uint64_t version = kInitialStatus,
-                    AudioPolicyStatusPtr status = nullptr) {
+                    audio_policy::AudioPolicyStatusPtr status = nullptr) {
     if (status) {
       system_audio_gain_db_ = status->system_audio_gain_db;
       system_audio_muted_ = status->system_audio_muted;
@@ -221,7 +224,7 @@ class VolApp {
 
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::Closure quit_callback_;
-  AudioPolicyServicePtr audio_policy_service_;
+  audio_policy::AudioPolicyPtr audio_policy_service_;
   bool interactive_ = true;
   bool mute_ = false;
   bool unmute_ = false;

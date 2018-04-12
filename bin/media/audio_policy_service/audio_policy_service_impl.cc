@@ -11,7 +11,9 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 
-namespace media {
+using media::kMutedGain;
+
+namespace audio_policy {
 namespace {
 
 static constexpr float kMaxSystemAudioGain = 0.0f;
@@ -28,8 +30,8 @@ AudioPolicyServiceImpl::AudioPolicyServiceImpl(
     std::unique_ptr<component::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
-  application_context_->outgoing_services()->AddService<AudioPolicyService>(
-      [this](fidl::InterfaceRequest<AudioPolicyService> request) {
+  application_context_->outgoing_services()->AddService<AudioPolicy>(
+      [this](fidl::InterfaceRequest<AudioPolicy> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 
@@ -162,7 +164,7 @@ void AudioPolicyServiceImpl::EnsureAudioService() {
   }
 
   audio_service_ =
-      application_context_->ConnectToEnvironmentService<AudioServer>();
+      application_context_->ConnectToEnvironmentService<media::AudioServer>();
 
   audio_service_.set_error_handler([this]() {
     audio_service_.set_error_handler(nullptr);
@@ -170,4 +172,4 @@ void AudioPolicyServiceImpl::EnsureAudioService() {
   });
 }
 
-}  // namespace media
+}  // namespace audio_policy

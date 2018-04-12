@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_
 
 #include <string>
+
+#include <fuchsia/cpp/audio_policy.h>
 
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/media.h>
 
-namespace media {
+namespace audio_policy {
 
-class AudioPolicyServiceImpl : public AudioPolicyService {
+class AudioPolicyServiceImpl : public AudioPolicy {
  public:
   AudioPolicyServiceImpl(
       std::unique_ptr<component::ApplicationContext> application_context);
   ~AudioPolicyServiceImpl() override;
 
-  // AudioPolicyService implementation.
+  // AudioPolicy implementation.
   void GetStatus(uint64_t version_last_seen,
                  GetStatusCallback callback) override;
 
@@ -58,19 +58,20 @@ class AudioPolicyServiceImpl : public AudioPolicyService {
   // Returns the effective system audio gain based on |system_audio_gain_db_|
   // and |system_audio_muted_|.
   float effective_system_audio_gain() {
-    return system_audio_muted_ ? kMutedGain
-                               : system_audio_gain_db_;
+    return system_audio_muted_ ? media::kMutedGain : system_audio_gain_db_;
   }
 
   std::unique_ptr<component::ApplicationContext> application_context_;
-  fidl::BindingSet<AudioPolicyService> bindings_;
+  fidl::BindingSet<AudioPolicy> bindings_;
   float system_audio_gain_db_ = kDefaultSystemAudioGainDb;
   bool system_audio_muted_ = kDefaultSystemMuted;
-  FidlPublisher<GetStatusCallback> status_publisher_;
-  AudioServerPtr audio_service_;
+  media::FidlPublisher<GetStatusCallback> status_publisher_;
+  media::AudioServerPtr audio_service_;
   uint32_t initialize_attempts_remaining_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AudioPolicyServiceImpl);
 };
 
-}  // namespace media
+}  // namespace audio_policy
+
+#endif  // GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_

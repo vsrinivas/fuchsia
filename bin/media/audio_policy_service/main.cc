@@ -10,7 +10,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
-  media::AudioPolicyServiceImpl impl(
+  audio_policy::AudioPolicyServiceImpl impl(
       component::ApplicationContext::CreateFromStartupInfo());
 
   loop.Run();

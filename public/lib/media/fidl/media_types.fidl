@@ -26,6 +26,10 @@ const string kVideoEncodingVp3 = "vp3";
 const string kVideoEncodingVp8 = "vp8";
 const string kVideoEncodingVp9 = "vp9";
 
+// Special value for GetStatus version_last_seen parameter to get the current
+// status immediately.
+const uint64 kInitialStatus = 0;
+
 // Describes the type of media.
 struct MediaType {
   // Identifies the type’s medium.
