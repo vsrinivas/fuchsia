@@ -4,8 +4,6 @@
 
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 
-#include <zircon/assert.h>
-
 #include <utility>
 
 #include "lib/fidl/cpp/internal/logging.h"
@@ -39,8 +37,6 @@ zx_status_t ProxyController::Send(
     const fidl_type_t* type,
     Message message,
     std::unique_ptr<MessageHandler> response_handler) {
-  ZX_ASSERT_MSG(reader_.is_bound(),
-                "Cannot send a FIDL message with an unbound interface.");
   zx_txid_t txid = 0;
   if (response_handler) {
     txid = next_txid_++;
