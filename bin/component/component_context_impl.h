@@ -7,13 +7,13 @@
 
 #include <string>
 
+#include <fuchsia/cpp/ledger_internal.h>
 #include <fuchsia/cpp/modular.h>
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/component/message_queue_manager.h"
 #include "peridot/bin/entity/entity_provider_runner.h"
-#include <fuchsia/cpp/ledger_internal.h>
 
 namespace modular {
 
@@ -82,9 +82,11 @@ class ComponentContextImpl : public ComponentContext {
       fidl::InterfaceRequest<EntityResolver> request) override;
 
   // |ComponentContext|
-  void CreateEntityWithData(
-      fidl::VectorPtr<TypeToDataEntry> type_to_data,
-      CreateEntityWithDataCallback result) override;
+  void CreateEntityWithData(fidl::VectorPtr<TypeToDataEntry> type_to_data,
+                            CreateEntityWithDataCallback result) override;
+
+  // |ComponentContext|
+  void GetPackageName(GetPackageNameCallback result) override;
 
   MessageQueueManager* const message_queue_manager_;
   AgentRunner* const agent_runner_;

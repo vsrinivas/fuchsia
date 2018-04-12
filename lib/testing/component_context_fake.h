@@ -65,9 +65,11 @@ class ComponentContextFake : public ComponentContext {
       fidl::InterfaceRequest<EntityResolver> request) override;
 
   // |ComponentContext|
-  void CreateEntityWithData(
-      fidl::VectorPtr<TypeToDataEntry> type_to_data,
-      CreateEntityWithDataCallback result) override;
+  void CreateEntityWithData(fidl::VectorPtr<TypeToDataEntry> type_to_data,
+                            CreateEntityWithDataCallback result) override;
+
+  // |ComponentContext|
+  void GetPackageName(GetPackageNameCallback result) override;
 
   EntityResolverFake entity_resolver_;
 

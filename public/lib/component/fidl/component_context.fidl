@@ -50,4 +50,11 @@ interface ComponentContext {
   // within 16KB in size.
   7: CreateEntityWithData(vector<TypeToDataEntry> type_to_data)
       -> (string? entity_reference);
+
+  // Gets the package name of this component.
+  // TODO(vardhan): MI4-939. This information should likely be exposed by a
+  // lower level (component-level, or application level). This information is
+  // most meant for a component to identify itself automatically when publishing
+  // metrics.
+  8: GetPackageName() -> (string package_name);
 };

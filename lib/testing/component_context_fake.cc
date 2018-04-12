@@ -58,4 +58,8 @@ void ComponentContextFake::CreateEntityWithData(
   FXL_NOTIMPLEMENTED();
 }
 
+void ComponentContextFake::GetPackageName(GetPackageNameCallback result) {
+  FXL_NOTIMPLEMENTED();
+}
+
 }  // namespace modular

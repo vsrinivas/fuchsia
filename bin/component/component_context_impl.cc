@@ -92,4 +92,8 @@ void ComponentContextImpl::CreateEntityWithData(
   result(entity_provider_runner_->CreateReferenceFromData(std::move(copy)));
 }
 
+void ComponentContextImpl::GetPackageName(GetPackageNameCallback result) {
+  result(component_url_);
+}
+
 }  // namespace modular
