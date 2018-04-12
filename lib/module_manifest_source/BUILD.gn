@@ -29,47 +29,6 @@ source_set("json") {
   ]
 }
 
-group("unittests") {
-  testonly = true
-
-  deps = [
-    ":directory_source_unittest",
-  ]
-}
-
-source_set("directory_source") {
-  sources = [
-    "directory_source.cc",
-    "directory_source.h",
-  ]
-
-  public_deps = [
-    ":json",
-    ":module_manifest_source",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//peridot/lib/fidl:json_xdr",
-    "//third_party/rapidjson",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("directory_source_unittest") {
-  testonly = true
-
-  sources = [
-    "directory_source_unittest.cc",
-  ]
-
-  deps = [
-    ":directory_source",
-    "//garnet/lib/gtest",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 source_set("firebase_source") {
   sources = [
     "firebase_source.cc",
