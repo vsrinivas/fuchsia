@@ -13,7 +13,6 @@
 
 #include "lib/fxl/macros.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 
 #include "garnet/lib/debugger_utils/dso_list.h"
 #include "garnet/lib/debugger_utils/util.h"

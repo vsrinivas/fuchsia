@@ -12,8 +12,6 @@ source_set("tasks") {
     "incoming_task_queue.h",
     "message_loop.cc",
     "message_loop.h",
-    "message_loop_handler.cc",
-    "message_loop_handler.h",
   ]
   libs = [
     "zircon",

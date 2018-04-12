@@ -18,7 +18,6 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace scenic {

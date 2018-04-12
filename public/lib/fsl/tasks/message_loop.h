@@ -10,7 +10,6 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/fsl/tasks/incoming_task_queue.h"
-#include "lib/fsl/tasks/message_loop_handler.h"
 #include "lib/fxl/fxl_export.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -44,28 +43,6 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
   const fxl::RefPtr<fxl::TaskRunner>& task_runner() const {
     return task_runner_;
   }
-
-  // Adds a |handler| that the message loop calls when the |handle| triggers one
-  // of the given |trigger| or when |timeout| elapses, whichever happens first.
-  //
-  // The returned key can be used to remove the callback. The returned key will
-  // always be non-zero.
-  //
-  // TODO(jeffbrown): Bring the handler API in line with |AsyncDispatcher|
-  // and manage timeouts through cancelable tasks instead.
-  HandlerKey AddHandler(MessageLoopHandler* handler,
-                        zx_handle_t handle,
-                        zx_signals_t trigger,
-                        fxl::TimeDelta timeout = fxl::TimeDelta::Max());
-
-  // The message loop will no longer call the handler identified by the key. It
-  // is an error to call this function with a key that doesn't correspond to a
-  // currently registered callback.
-  void RemoveHandler(HandlerKey key);
-
-  // Returns whether the message loop has a handler registered with the given
-  // key.
-  bool HasHandler(HandlerKey key) const;
 
   // The message loop will call |callback| after each task that execute and
   // after each time it signals a handler. If the message loop already has an
@@ -107,23 +84,12 @@ class FXL_EXPORT MessageLoop : private internal::TaskQueueDelegate {
     return static_cast<internal::IncomingTaskQueue*>(task_runner_.get());
   }
 
-  class HandlerRecord;
-
   async_loop_config_t loop_config_;
   async::Loop loop_;
 
   fxl::RefPtr<fxl::TaskRunner> task_runner_;
   fxl::Closure after_task_callback_;
   bool is_running_ = false;
-
-  HandlerKey next_handler_key_ = 1u;
-  std::map<HandlerKey, HandlerRecord*> handlers_;
-
-  // Set while the handler is running.
-  HandlerRecord* current_handler_ = nullptr;
-
-  // Set to true if the current handler needs to be destroyed once it returns.
-  bool current_handler_removed_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MessageLoop);
 };
