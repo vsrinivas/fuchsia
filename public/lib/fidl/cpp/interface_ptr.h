@@ -57,15 +57,19 @@ namespace fidl {
 template <typename Interface>
 class InterfacePtr {
  public:
+  using Proxy = typename Interface::Proxy_;
+
   // Creates an unbound |InterfacePtr|.
-  InterfacePtr() : proxy_(&controller_) {}
-  InterfacePtr(std::nullptr_t) : proxy_(&controller_) {}
+  InterfacePtr() : proxy_(&controller_) { controller_.set_proxy(&proxy_); }
+  InterfacePtr(std::nullptr_t) : InterfacePtr() {}
 
   InterfacePtr(const InterfacePtr& other) = delete;
   InterfacePtr& operator=(const InterfacePtr& other) = delete;
 
   InterfacePtr(InterfacePtr&& other)
-      : controller_(std::move(other.controller_)), proxy_(&controller_) {}
+      : controller_(std::move(other.controller_)), proxy_(&controller_) {
+    controller_.set_proxy(&proxy_);
+  }
 
   InterfacePtr& operator=(InterfacePtr&& other) {
     if (this != &other)
@@ -204,6 +208,12 @@ class InterfacePtr {
   Interface* operator->() const { return get(); }
   Interface& operator*() const { return *get(); }
 
+  // An object on which to register for FIDL events.
+  //
+  // Arriving events are dispatched to the callbacks stored on this object.
+  // Events for unbound callbacks are ignored.
+  Proxy& events() { return proxy_; }
+
   // Blocks the calling thread until either a message arrives on the previously
   // bound channel or an error occurs.
   //
@@ -249,7 +259,7 @@ class InterfacePtr {
 
  private:
   internal::ProxyController controller_;
-  mutable typename Interface::Proxy_ proxy_;
+  mutable Proxy proxy_;
 };
 
 }  // namespace fidl

@@ -4,6 +4,7 @@
 
 #include "lib/fidl/cpp/internal/stub_controller.h"
 
+#include "lib/fidl/cpp/internal/logging.h"
 #include "lib/fidl/cpp/internal/pending_response.h"
 #include "lib/fidl/cpp/internal/weak_stub_controller.h"
 
@@ -16,6 +17,16 @@ StubController::~StubController() {
   InvalidateWeakIfNeeded();
 }
 
+zx_status_t StubController::Send(const fidl_type_t* type, Message message) {
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Validate(type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
+    return status;
+  }
+  return message.Write(reader_.channel().get(), 0);
+}
+
 zx_status_t StubController::OnMessage(Message message) {
   if (!message.has_header())
     return ZX_ERR_INVALID_ARGS;
@@ -26,7 +37,7 @@ zx_status_t StubController::OnMessage(Message message) {
       weak_ = new WeakStubController(this);
     weak = weak_;
   }
-  return stub_->Dispatch(std::move(message), PendingResponse(txid, weak));
+  return stub_->Dispatch_(std::move(message), PendingResponse(txid, weak));
 }
 
 void StubController::OnChannelGone() {

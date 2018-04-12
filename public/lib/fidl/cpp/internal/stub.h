@@ -12,6 +12,7 @@
 
 namespace fidl {
 namespace internal {
+class StubController;
 
 // An interface for dispatching FIDL messages to a protocol implementation.
 //
@@ -31,7 +32,17 @@ class Stub {
   //
   // The |PendingResponse| object has affinity for the current thread and is not
   // safe to transport to another thread.
-  virtual zx_status_t Dispatch(Message message, PendingResponse response) = 0;
+  virtual zx_status_t Dispatch_(Message message, PendingResponse response) = 0;
+
+  // The protocol-agnostic object that listens for incoming messages.
+  //
+  // The controller must be set to a non-null value before sending events
+  // through this stub.
+  StubController* controller() const { return controller_; }
+  void set_controller(StubController* controller) { controller_ = controller; }
+
+ private:
+  StubController* controller_ = nullptr;
 };
 
 }  // namespace internal

@@ -17,6 +17,7 @@ template("fidl_example") {
 
 fidl_example("alignment") {}
 fidl_example("enums") {}
+fidl_example("events") {}
 fidl_example("example-0") { name = "example_0" }
 fidl_example("example-1") { name = "example_1" }
 fidl_example("example-2") { name = "example_2" }
@@ -52,6 +53,7 @@ group("examples") {
   deps = [
     ":alignment",
     ":enums",
+    ":events",
     ":example-0",
     ":example-1",
     ":example-2",

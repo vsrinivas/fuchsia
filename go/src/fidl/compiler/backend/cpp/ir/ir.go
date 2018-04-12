@@ -22,9 +22,9 @@ type Decl interface {
 }
 
 type Type struct {
-	Decl      string
-	Dtor      string
-	DeclType  types.DeclType
+	Decl     string
+	Dtor     string
+	DeclType types.DeclType
 }
 
 type Const struct {
@@ -79,14 +79,15 @@ type StructMember struct {
 }
 
 type Interface struct {
-	Namespace     string
-	Name          string
-	ServiceName   string
-	ProxyName     string
-	StubName      string
-	SyncName      string
-	SyncProxyName string
-	Methods       []Method
+	Namespace       string
+	Name            string
+	ServiceName     string
+	ProxyName       string
+	StubName        string
+	EventSenderName string
+	SyncName        string
+	SyncProxyName   string
+	Methods         []Method
 }
 
 type Method struct {
@@ -506,6 +507,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		val.GetAttribute("ServiceName"),
 		c.compileCompoundIdentifier(val.Name, "_Proxy"),
 		c.compileCompoundIdentifier(val.Name, "_Stub"),
+		c.compileCompoundIdentifier(val.Name, "_EventSender"),
 		c.compileCompoundIdentifier(val.Name, "_Sync"),
 		c.compileCompoundIdentifier(val.Name, "_SyncProxy"),
 		[]Method{},
@@ -516,6 +518,10 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		callbackType := ""
 		if v.HasResponse {
 			callbackType = changeIfReserved(v.Name, "Callback")
+		}
+		responseTypeNameSuffix := "ResponseTable"
+		if !v.HasRequest {
+			responseTypeNameSuffix = "EventTable"
 		}
 		m := Method{
 			v.Ordinal,
@@ -528,7 +534,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
-			fmt.Sprintf("%s%s%sResponseTable", c.library, r.Name, v.Name),
+			fmt.Sprintf("%s%s%s%s", c.library, r.Name, v.Name, responseTypeNameSuffix),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),

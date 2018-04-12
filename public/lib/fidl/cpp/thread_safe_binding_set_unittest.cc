@@ -6,23 +6,22 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
 namespace {
 
 TEST(ThreadSafeBindingSet, Trivial) {
-  ThreadSafeBindingSet<test::Frobinator> binding_set;
+  ThreadSafeBindingSet<frobinator::Frobinator> binding_set;
 }
 
 TEST(ThreadSafeBindingSet, Control) {
   constexpr size_t kCount = 10;
 
-  test::FrobinatorPtr ptrs[kCount];
+  frobinator::FrobinatorPtr ptrs[kCount];
   test::FrobinatorImpl impls[kCount];
 
-  ThreadSafeBindingSet<test::Frobinator> binding_set;
+  ThreadSafeBindingSet<frobinator::Frobinator> binding_set;
 
   fidl::test::AsyncLoopForTest loop;
 

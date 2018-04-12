@@ -9,14 +9,13 @@
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/test/frobinator.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
 namespace {
 
 TEST(InterfaceRequest, Trivial) {
-  InterfaceRequest<test::Frobinator> request;
+  InterfaceRequest<frobinator::Frobinator> request;
 }
 
 TEST(InterfaceRequest, Control) {
@@ -24,11 +23,11 @@ TEST(InterfaceRequest, Control) {
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
   zx_handle_t saved1 = h1.get();
 
-  InterfaceRequest<test::Frobinator> request(std::move(h1));
+  InterfaceRequest<frobinator::Frobinator> request(std::move(h1));
   EXPECT_TRUE(request.is_valid());
   EXPECT_EQ(saved1, request.channel().get());
 
-  InterfaceRequest<test::Frobinator> request2 = std::move(request);
+  InterfaceRequest<frobinator::Frobinator> request2 = std::move(request);
   EXPECT_FALSE(request.is_valid());
   EXPECT_TRUE(request2.is_valid());
   EXPECT_EQ(saved1, request2.channel().get());

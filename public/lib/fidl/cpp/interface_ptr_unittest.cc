@@ -9,23 +9,22 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
 namespace {
 
 TEST(InterfacePtr, Trivial) {
-  test::FrobinatorPtr ptr;
+  frobinator::FrobinatorPtr ptr;
 }
 
 TEST(InterfacePtr, Control) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<test::Frobinator> binding(&impl);
+  Binding<frobinator::Frobinator> binding(&impl);
 
-  test::FrobinatorPtr ptr;
+  frobinator::FrobinatorPtr ptr;
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   ptr->Frob("one");
@@ -45,13 +44,49 @@ TEST(InterfacePtr, Control) {
   EXPECT_EQ(ZX_ERR_TIMED_OUT, ptr.WaitForResponseUntil(zx::time()));
 }
 
+TEST(InterfacePtr, Events) {
+  fidl::test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<frobinator::Frobinator> binding(&impl);
+
+  frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+
+  std::vector<std::string> hrobs;
+  ptr.events().Hrob = [&hrobs] (StringPtr value) {
+    hrobs.push_back(value);
+  };
+
+  binding.events().Hrob("one");
+  EXPECT_TRUE(hrobs.empty());
+
+  loop.RunUntilIdle();
+
+  EXPECT_EQ(1u, hrobs.size());
+}
+
+TEST(InterfacePtr, EventWithoutListener) {
+  fidl::test::AsyncLoopForTest loop;
+
+  test::FrobinatorImpl impl;
+  Binding<frobinator::Frobinator> binding(&impl);
+
+  frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+
+  binding.events().Hrob("one");
+
+  loop.RunUntilIdle();
+}
+
 TEST(InterfacePtr, MoveWithOutstandingTransaction) {
   fidl::test::AsyncLoopForTest loop;
 
   zx::channel h1, h2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
 
-  test::FrobinatorPtr ptr;
+  frobinator::FrobinatorPtr ptr;
 
   int error_count = 0;
   ptr.set_error_handler([&error_count]() { ++error_count; });
@@ -69,7 +104,7 @@ TEST(InterfacePtr, MoveWithOutstandingTransaction) {
   loop.RunUntilIdle();
   EXPECT_EQ(0, reply_count);
 
-  test::FrobinatorPtr ptr2 = std::move(ptr);
+  frobinator::FrobinatorPtr ptr2 = std::move(ptr);
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(ptr2.is_bound());
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/test/loop_config.h"
+#include "lib/fidl/cpp/internal/proxy.h"
 
 namespace fidl {
+namespace internal {
 
-const async_loop_config_t kTestLoopConfig = {
-  .make_default_for_current_thread = true
-};
+Proxy::~Proxy() = default;
 
+}  // namespace internal
 }  // namespace fidl

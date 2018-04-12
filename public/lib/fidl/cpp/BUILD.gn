@@ -34,6 +34,8 @@ sdk_source_set("cpp") {
     "internal/message_reader.h",
     "internal/pending_response.cc",
     "internal/pending_response.h",
+    "internal/proxy.cc",
+    "internal/proxy.h",
     "internal/proxy_controller.cc",
     "internal/proxy_controller.h",
     "internal/stub.cc",

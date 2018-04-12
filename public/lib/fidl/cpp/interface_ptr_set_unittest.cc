@@ -7,7 +7,6 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
@@ -17,23 +16,23 @@ class BoundFrobinatorImpl : public test::FrobinatorImpl {
  public:
   BoundFrobinatorImpl() : binding_(this) {}
 
-  Binding<test::Frobinator>& binding() { return binding_; }
+  Binding<frobinator::Frobinator>& binding() { return binding_; }
 
  private:
-  Binding<test::Frobinator> binding_;
+  Binding<frobinator::Frobinator> binding_;
 };
 
 TEST(InterfacePtrSet, Trivial) {
-  InterfacePtrSet<test::Frobinator> ptr_set;
+  InterfacePtrSet<frobinator::Frobinator> ptr_set;
 }
 
 TEST(InterfacePtrSet, Control) {
   constexpr size_t kCount = 10;
 
-  test::FrobinatorPtr ptrs[kCount];
+  frobinator::FrobinatorPtr ptrs[kCount];
   BoundFrobinatorImpl impls[kCount];
 
-  InterfacePtrSet<test::Frobinator> ptr_set;
+  InterfacePtrSet<frobinator::Frobinator> ptr_set;
 
   fidl::test::AsyncLoopForTest loop;
 

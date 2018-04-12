@@ -13,6 +13,7 @@
 
 #include "lib/fidl/cpp/internal/message_handler.h"
 #include "lib/fidl/cpp/internal/message_reader.h"
+#include "lib/fidl/cpp/internal/proxy.h"
 
 namespace fidl {
 namespace internal {
@@ -38,6 +39,15 @@ class ProxyController : public MessageHandler {
   // this object.
   MessageReader& reader() { return reader_; }
   const MessageReader& reader() const { return reader_; }
+
+  // The protocol-specific object that decodes messages and dispatches them to
+  // an implementation of the protocol.
+  //
+  // The proxy must be set to a non-null value before messages are read from the
+  // underlying channel. Typically, the caller will set a non-null proxy before
+  // binding a channel to the |MessageReader|.
+  Proxy* proxy() const { return proxy_; }
+  void set_proxy(Proxy* proxy) { proxy_ = proxy; }
 
   // Send a message over the channel.
   //
@@ -76,6 +86,7 @@ class ProxyController : public MessageHandler {
   void ClearPendingHandlers();
 
   MessageReader reader_;
+  Proxy* proxy_ = nullptr;
   std::map<zx_txid_t, std::unique_ptr<MessageHandler>> handlers_;
   zx_txid_t next_txid_;
 };

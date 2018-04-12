@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 #define LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
 
-#include "lib/fidl/cpp/test/frobinator.h"
+#include <fuchsia/cpp/frobinator.h>
 
 #include <string>
 #include <vector>
@@ -13,7 +13,7 @@
 namespace fidl {
 namespace test {
 
-class FrobinatorImpl : public Frobinator {
+class FrobinatorImpl : public frobinator::Frobinator {
  public:
   FrobinatorImpl();
   ~FrobinatorImpl();

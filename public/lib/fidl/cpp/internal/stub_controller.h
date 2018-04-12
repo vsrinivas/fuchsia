@@ -45,6 +45,12 @@ class StubController : public MessageHandler {
   Stub* stub() const { return stub_; }
   void set_stub(Stub* stub) { stub_ = stub; }
 
+  // Send a message over the channel.
+  //
+  // Returns an error if the message fails to encode properly or if the message
+  // cannot be written to the channel.
+  zx_status_t Send(const fidl_type_t* type, Message message);
+
  private:
   // Called by the |MessageReader| when a message arrives on the channel from
   // the client.

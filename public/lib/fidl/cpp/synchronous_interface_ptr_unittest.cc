@@ -11,18 +11,17 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 
 namespace fidl {
 namespace {
 
 TEST(SynchronousInterfacePtr, Trivial) {
-  test::FrobinatorSyncPtr ptr;
+  frobinator::FrobinatorSyncPtr ptr;
 }
 
 TEST(SynchronousInterfacePtr, Control) {
-  test::FrobinatorSyncPtr ptr;
+  frobinator::FrobinatorSyncPtr ptr;
   auto request = ptr.NewRequest();
 
   std::thread client([ptr = std::move(ptr)]() mutable {
@@ -38,7 +37,7 @@ TEST(SynchronousInterfacePtr, Control) {
   fidl::test::AsyncLoopForTest loop;
 
   test::FrobinatorImpl impl;
-  Binding<test::Frobinator> binding(&impl);
+  Binding<frobinator::Frobinator> binding(&impl);
 
   EXPECT_EQ(ZX_OK, binding.Bind(std::move(request)));
 

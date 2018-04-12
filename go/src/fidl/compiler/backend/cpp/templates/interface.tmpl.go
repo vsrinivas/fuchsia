@@ -10,6 +10,7 @@ class {{ .Name }};
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
 class {{ .StubName }};
+class {{ .EventSenderName }};
 class {{ .SyncName }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
@@ -41,6 +42,10 @@ class {{ .SyncProxyName }};
   {{- end -}}
 {{ end -}}
 
+{{- define "EventMethodSignature" -}}
+{{ .Name }}({{ template "Params" .Response }})
+{{- end -}}
+
 {{- define "SyncRequestMethodSignature" -}}
   {{- if .Response -}}
 {{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
@@ -54,6 +59,7 @@ class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
   using Stub_ = {{ .StubName }};
+  using EventSender_ = {{ .EventSenderName }};
   using Sync_ = {{ .SyncName }};
   {{- if .ServiceName }}
   static const char Name_[];
@@ -61,12 +67,25 @@ class {{ .Name }} {
   virtual ~{{ .Name }}();
 
   {{- range .Methods }}
-    {{- if .HasRequest }}
-      {{- if .HasResponse }}
+    {{- if .HasResponse }}
   using {{ .CallbackType }} =
       std::function<void({{ template "ParamTypes" .Response }})>;
-      {{- end }}
+    {{- end }}
+    {{- if .HasRequest }}
   virtual void {{ template "RequestMethodSignature" . }} = 0;
+    {{- end }}
+  {{- end }}
+};
+
+class {{ .EventSenderName }} {
+ public:
+  virtual ~{{ .EventSenderName }}();
+
+  {{- range .Methods }}
+    {{- if not .HasRequest }}
+      {{- if .HasResponse }}
+  virtual void {{ template "EventMethodSignature" . }} = 0;
+      {{- end }}
     {{- end }}
   {{- end }}
 };
@@ -83,14 +102,18 @@ class {{ .SyncName }} {
   {{- end }}
 };
 
-class {{ .ProxyName }} : public {{ .Name }} {
+class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
  public:
   explicit {{ .ProxyName }}(::fidl::internal::ProxyController* controller);
   ~{{ .ProxyName }}() override;
 
+  zx_status_t Dispatch_(::fidl::Message message) override;
+
   {{- range .Methods }}
     {{- if .HasRequest }}
   void {{ template "RequestMethodSignature" . }} override;
+    {{- else if .HasResponse }}
+  {{ .CallbackType }} {{ .Name }};
     {{- end }}
   {{- end }}
 
@@ -101,13 +124,21 @@ class {{ .ProxyName }} : public {{ .Name }} {
   ::fidl::internal::ProxyController* controller_;
 };
 
-class {{ .StubName }} : public ::fidl::internal::Stub {
+class {{ .StubName }} : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
  public:
   explicit {{ .StubName }}({{ .Name }}* impl);
   ~{{ .StubName }}() override;
 
-  zx_status_t Dispatch(::fidl::Message message,
-                       ::fidl::internal::PendingResponse response) override;
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+  {{- range .Methods }}
+    {{- if not .HasRequest }}
+      {{- if .HasResponse }}
+  void {{ template "EventMethodSignature" . }} override;
+      {{- end }}
+    {{- end }}
+  {{- end }}
 
  private:
   {{ .Name }}* impl_;
@@ -134,12 +165,12 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 namespace {
 
 {{ range .Methods }}
-  {{- if .HasRequest }}
 constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
+  {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
-    {{- if .HasResponse }}
+  {{- end }}
+  {{- if .HasResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
-    {{- end }}
   {{- end }}
 {{- end }}
 
@@ -151,6 +182,8 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 {{- end }}
 
+{{ .EventSenderName }}::~{{ .EventSenderName }}() = default;
+
 {{ .SyncName }}::~{{ .SyncName }}() = default;
 
 {{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
@@ -159,6 +192,47 @@ const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 }
 
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
+
+zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    {{- range .Methods }}
+      {{- if not .HasRequest }}
+        {{- if .HasResponse }}
+    case {{ .OrdinalName }}: {
+      if (!{{ .Name }}) {
+        status = ZX_OK;
+        break;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
+        break;
+      }
+        {{- if .Response }}
+      ::fidl::Decoder decoder(std::move(message));
+          {{- range $index, $param := .Response }}
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .Offset }});
+          {{- end }}
+        {{- end }}
+      {{ .Name }}(
+        {{- range $index, $param := .Response -}}
+          {{- if $index }}, {{ end }}std::move(arg{{ $index }})
+        {{- end -}}
+      );
+      break;
+    }
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
 
 {{ range .Methods }}
   {{- if .HasRequest }}
@@ -257,7 +331,7 @@ class {{ .ResponderType }} {
 
 }  // namespace
 
-zx_status_t {{ .StubName }}::Dispatch(
+zx_status_t {{ .StubName }}::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
@@ -296,6 +370,23 @@ zx_status_t {{ .StubName }}::Dispatch(
   }
   return status;
 }
+
+{{- range .Methods }}
+  {{- if not .HasRequest }}
+    {{- if .HasResponse }}
+void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
+  ::fidl::Encoder _encoder({{ .OrdinalName }});
+    {{- if .Response }}
+  _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+      {{- range .Response }}
+  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
+      {{- end }}
+    {{- end }}
+  controller()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
+}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 {{ .SyncProxyName }}::{{ .SyncProxyName }}(::zx::channel channel)
   : proxy_(::std::move(channel)) {}

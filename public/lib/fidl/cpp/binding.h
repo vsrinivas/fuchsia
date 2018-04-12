@@ -67,6 +67,7 @@ class Binding {
   explicit Binding(ImplPtr impl)
       : impl_(std::forward<ImplPtr>(impl)), stub_(&*this->impl()) {
     controller_.set_stub(&stub_);
+    stub_.set_controller(&controller_);
   }
 
   // Constructs a completed binding of |channel| to implementation |impl|.
@@ -189,6 +190,9 @@ class Binding {
 
   // The implementation used by this |Binding| to process incoming messages.
   const ImplPtr& impl() const { return impl_; }
+
+  // The interface for sending events back to the client.
+  typename Interface::EventSender_& events() { return stub_; }
 
   // Whether this |Binding| is currently listening to a channel.
   bool is_bound() const { return controller_.reader().is_bound(); }

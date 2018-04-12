@@ -67,9 +67,11 @@ zx_status_t ProxyController::OnMessage(Message message) {
   if (!message.has_header())
     return ZX_ERR_INVALID_ARGS;
   zx_txid_t txid = message.txid();
-  // TODO(abarth): Implement events.
-  if (!txid)
-    return ZX_ERR_NOT_SUPPORTED;
+  if (!txid) {
+    if (!proxy_)
+      return ZX_ERR_NOT_SUPPORTED;
+    return proxy_->Dispatch_(std::move(message));
+  }
   auto it = handlers_.find(txid);
   if (it == handlers_.end())
     return ZX_ERR_NOT_FOUND;
