@@ -143,7 +143,7 @@ zx_status_t Dispatcher::HandleCtrlPacket(const Packet* packet) {
         return mlme_->HandleFrame(frame, *rxinfo);
     }
     default:
-        warnf("unsupported control subtype %02x\n", fc->subtype());
+        debugf("rxed unfiltered control subtype 0x%02x\n", fc->subtype());
         return ZX_OK;
     }
 }
