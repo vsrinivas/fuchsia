@@ -183,7 +183,7 @@ void PageUpload::RetryWithBackoff(fxl::Closure callable) {
           callable();
         }
       },
-      backoff_->GetNext());
+      zx::duration(backoff_->GetNext().ToNanoseconds()));
 }
 
 void PageUpload::SetState(UploadSyncState new_state) {

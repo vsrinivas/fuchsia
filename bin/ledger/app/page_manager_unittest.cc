@@ -283,7 +283,7 @@ TEST_F(PageManagerTest, DelayBindingUntilSyncTimeout) {
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(fake_page_sync), std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC,
-                           fxl::TimeDelta::FromSeconds(0));
+                           zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);
@@ -318,7 +318,7 @@ TEST_F(PageManagerTest, ExitWhenSyncFinishes) {
   PageManager page_manager(&environment_, std::move(storage),
                            std::move(fake_page_sync), std::move(merger),
                            PageManager::PageStorageState::NEEDS_SYNC,
-                           fxl::TimeDelta::FromSeconds(0));
+                           zx::sec(0));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
@@ -349,7 +349,7 @@ TEST_F(PageManagerTest, DontDelayBindingWithLocalPageStorage) {
       &environment_, std::move(storage), std::move(fake_page_sync),
       std::move(merger), PageManager::PageStorageState::AVAILABLE,
       // Use a long timeout to ensure the test does not hit it.
-      fxl::TimeDelta::FromSeconds(3600));
+      zx::sec(3600));
 
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
   EXPECT_TRUE(fake_page_sync_ptr->start_called);

@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include <lib/async/cpp/auto_wait.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/zx/socket.h>
 
@@ -43,7 +43,8 @@ class SocketWriter {
   void WriteData(fxl::StringView data);
   void Done();
 
-  Client* client_;
+  Client* const client_;
+  async_t* const async_;
   // Position of the next byte to request.
   size_t offset_ = 0u;
   // Data left to send from last call to |GetNext|.
@@ -51,7 +52,7 @@ class SocketWriter {
   // Data left to send.
   fxl::StringView data_view_;
   zx::socket destination_;
-  async::AutoWait wait_;
+  async::Wait wait_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SocketWriter);
 };

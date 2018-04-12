@@ -200,7 +200,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
                     task_runner_.PostDelayedTask(
                         TRACE_CALLBACK(std::move(delay_callback), "ledger",
                                        "merge_delay"),
-                        backoff_->GetNext());
+                        zx::duration(backoff_->GetNext().ToNanoseconds()));
                     cleanup.cancel();
                     merge_in_progress_ = false;
                     // We don't want to continue merging if nobody is interested

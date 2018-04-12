@@ -52,7 +52,7 @@ class PageManager : public ledger_internal::PageDebug {
               std::unique_ptr<sync_coordinator::PageSync> page_sync,
               std::unique_ptr<MergeResolver> merge_resolver,
               PageManager::PageStorageState state,
-              fxl::TimeDelta sync_timeout = fxl::TimeDelta::FromSeconds(5));
+              zx::duration sync_timeout = zx::sec(5));
   ~PageManager() override;
 
   // Creates a new PageImpl managed by this PageManager, and binds it to the
@@ -98,7 +98,7 @@ class PageManager : public ledger_internal::PageDebug {
   std::unique_ptr<storage::PageStorage> page_storage_;
   std::unique_ptr<sync_coordinator::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
-  const fxl::TimeDelta sync_timeout_;
+  const zx::duration sync_timeout_;
   callback::AutoCleanableSet<
       fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl>>
       snapshots_;

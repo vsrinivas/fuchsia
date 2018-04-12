@@ -71,7 +71,7 @@ void UserSyncImpl::OnCloudErased() {
 
 void UserSyncImpl::OnNetworkError() {
   task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
-                               backoff_->GetNext());
+                               zx::duration(backoff_->GetNext().ToNanoseconds()));
 }
 
 void UserSyncImpl::Start() {
@@ -143,7 +143,7 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
     case cloud_provider::Status::NETWORK_ERROR:
       // Retry after some backoff time.
       task_runner_.PostDelayedTask([this] { CheckCloudNotErased(); },
-                                   backoff_->GetNext());
+                                   zx::duration(backoff_->GetNext().ToNanoseconds()));
       return;
     case cloud_provider::Status::NOT_FOUND:
       // |this| can be deleted within on_version_mismatch_() - don't

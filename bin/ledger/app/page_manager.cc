@@ -20,7 +20,7 @@ PageManager::PageManager(Environment* environment,
                          std::unique_ptr<sync_coordinator::PageSync> page_sync,
                          std::unique_ptr<MergeResolver> merge_resolver,
                          PageManager::PageStorageState state,
-                         fxl::TimeDelta sync_timeout)
+                         zx::duration sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_(std::move(page_sync)),
