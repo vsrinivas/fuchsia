@@ -10,20 +10,16 @@
 #include <lib/fidl/coding.h>
 #include <zircon/syscalls/object.h>
 
-// All sizes here are given as uint32_t. Fidl message sizes are
-// bounded to well below UINT32_MAX. This also applies to arrays and
-// vectors. For arrays, element_count * element_size will always fit
-// with 32 bits. For vectors, max_count * element_size will always fit
-// within 32 bits.
+// All sizes here are given as uint32_t. Fidl message sizes are bounded to well below UINT32_MAX.
+// This also applies to arrays and vectors. For arrays, element_count * element_size will always fit
+// with 32 bits. For vectors, max_count * element_size will always fit within 32 bits.
 
-// Pointers to other type tables within a type are always nonnull,
-// with the exception of vectors. In that case, a null pointer
-// indicates that the element type of the vector has no interesting
-// information to be decoded (i.e. no pointers or handles). The vector
-// type still needs to be emitted as it contains the information about
-// the size of its secondary object. Contrast this with arrays: being
-// inline, ones with no interested coding information can be elided,
-// just like a uint32 field in a struct is elided.
+// Pointers to other type tables within a type are always nonnull, with the exception of vectors.
+// In that case, a null pointer indicates that the element type of the vector has no interesting
+// information to be decoded (i.e. no pointers or handles). The vector type still needs to be
+// emitted as it contains the information about the size of its secondary object. Contrast this with
+// arrays: being inline, ones with no interesting coding information can be elided, just like a
+// uint32 field in a struct is elided.
 
 namespace fidl {
 
@@ -56,9 +52,8 @@ enum FidlTypeTag : uint32_t {
     kFidlTypeVector = 7u,
 };
 
-// Though the |size| is implied by the fields, computing that
-// information is not the purview of this library. It's easier for the
-// compiler to stash it.
+// Though the |size| is implied by the fields, computing that information is not the purview of this
+// library. It's easier for the compiler to stash it.
 struct FidlCodedStruct {
     const FidlField* const fields;
     const uint32_t field_count;
@@ -77,8 +72,8 @@ struct FidlCodedStructPointer {
         : struct_type(struct_type) {}
 };
 
-// Unlike structs, union members do not have different offsets, so
-// this points to an array of |fidl_type*| rather than |FidlField|.
+// Unlike structs, union members do not have different offsets, so this points to an array of
+// |fidl_type*| rather than |FidlField|.
 //
 // On-the-wire unions begin with a tag which is an index into |types|.
 // |data_offset| is the offset of the data in the wire format (tag + padding).
@@ -101,8 +96,8 @@ struct FidlCodedUnionPointer {
         : union_type(union_type) {}
 };
 
-// An array is essentially a struct with |array_size / element_size| of the same
-// field, named at |element|.
+// An array is essentially a struct with |array_size / element_size| of the same field, named at
+// |element|.
 struct FidlCodedArray {
     const fidl_type* const element;
     const uint32_t array_size;
@@ -113,8 +108,8 @@ struct FidlCodedArray {
 };
 
 struct FidlCodedHandle {
-    // Note that an explicitly sized type is used here, as
-    // zx_obj_type_t is a C enum and hence has no guaranteed ABI.
+    // Note that an explicitly sized type is used here, as zx_obj_type_t is a C enum and hence has
+    // no guaranteed ABI.
     const uint32_t handle_subtype;
     const FidlNullability nullable;
 
@@ -132,10 +127,9 @@ struct FidlCodedString {
         : max_size(max_size), nullable(nullable) {}
 };
 
-// Note that |max_count * element_size| is guaranteed to fit into a
-// uint32_t. Unlike other types, the |element| pointer may be
-// null. This occurs when the element type contains no interesting
-// bits (i.e. pointers or handles).
+// Note that |max_count * element_size| is guaranteed to fit into a uint32_t. Unlike other types,
+// the |element| pointer may be null. This occurs when the element type contains no interesting bits
+// (i.e. pointers or handles).
 struct FidlCodedVector {
     const fidl_type* const element;
     const uint32_t max_count;
