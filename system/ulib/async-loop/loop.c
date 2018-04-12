@@ -375,7 +375,7 @@ static void async_loop_wake_threads(async_loop_t* loop) {
             .type = ZX_PKT_TYPE_USER,
             .status = ZX_OK};
         zx_status_t status = zx_port_queue(loop->port, &packet, 0u);
-        ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+        ZX_ASSERT_MSG(status == ZX_OK, "zx_port_queue: status=%d", status);
     }
 }
 
@@ -427,6 +427,9 @@ static zx_status_t async_loop_begin_wait(async_t* async, async_wait_t* wait) {
         wait->object, loop->port, (uintptr_t)wait, wait->trigger, ZX_WAIT_ASYNC_ONCE);
     if (status == ZX_OK) {
         list_add_head(&loop->wait_list, wait_to_node(wait));
+    } else {
+        ZX_ASSERT_MSG(status == ZX_ERR_ACCESS_DENIED,
+                      "zx_object_wait_async: status=%d", status);
     }
 
     mtx_unlock(&loop->lock);
@@ -441,13 +444,29 @@ static zx_status_t async_loop_cancel_wait(async_t* async, async_wait_t* wait) {
     // Note: We need to process cancelations even while the loop is being
     // destroyed in case the client is counting on the handler not being
     // invoked again past this point.
+
+    mtx_lock(&loop->lock);
+
+    // First, confirm that the wait is actually pending.
+    list_node_t* node = wait_to_node(wait);
+    if (!list_in_list(node)) {
+        mtx_unlock(&loop->lock);
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    // Next, cancel the wait.  This may be racing with another thread that
+    // has read the wait's packet but not yet dispatched it.  So if we fail
+    // to cancel then we assume we lost the race.
     zx_status_t status = zx_port_cancel(loop->port, wait->object,
                                         (uintptr_t)wait);
     if (status == ZX_OK) {
-        mtx_lock(&loop->lock);
-        list_delete(wait_to_node(wait));
-        mtx_unlock(&loop->lock);
+        list_delete(node);
+    } else {
+        ZX_ASSERT_MSG(status == ZX_ERR_NOT_FOUND,
+                      "zx_port_cancel: status=%d", status);
     }
+
+    mtx_unlock(&loop->lock);
     return status;
 }
 
@@ -533,8 +552,17 @@ static zx_status_t async_loop_set_guest_bell_trap(
     if (atomic_load_explicit(&loop->state, memory_order_acquire) == ASYNC_LOOP_SHUTDOWN)
         return ZX_ERR_BAD_STATE;
 
-    return zx_guest_set_trap(guest, ZX_GUEST_TRAP_BELL, addr,
-                             length, loop->port, (uintptr_t)trap);
+    zx_status_t status = zx_guest_set_trap(guest, ZX_GUEST_TRAP_BELL, addr,
+                                           length, loop->port, (uintptr_t)trap);
+    if (status != ZX_OK) {
+        ZX_ASSERT_MSG(status == ZX_ERR_ACCESS_DENIED ||
+                      status == ZX_ERR_ALREADY_EXISTS ||
+                      status == ZX_ERR_INVALID_ARGS ||
+                      status == ZX_ERR_OUT_OF_RANGE ||
+                      status == ZX_ERR_WRONG_TYPE,
+                      "zx_guest_set_trap: status=%d", status);
+    }
+    return status;
 }
 
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task) {
@@ -566,7 +594,7 @@ static void async_loop_restart_timer_locked(async_loop_t* loop) {
     }
 
     zx_status_t status = zx_timer_set(loop->timer, deadline, 0);
-    ZX_ASSERT_MSG(status == ZX_OK, "status=%d", status);
+    ZX_ASSERT_MSG(status == ZX_OK, "zx_timer_set: status=%d", status);
 }
 
 static void async_loop_invoke_prologue(async_loop_t* loop) {

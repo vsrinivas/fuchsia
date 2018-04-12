@@ -89,6 +89,21 @@ protected:
     }
 };
 
+class SelfCancelingWait : public TestWait {
+public:
+    SelfCancelingWait(zx_handle_t object, zx_signals_t trigger)
+        : TestWait(object, trigger) {}
+
+    zx_status_t cancel_result = ZX_ERR_INTERNAL;
+
+protected:
+    void Handle(async_t* async, zx_status_t status,
+                const zx_packet_signal_t* signal) override {
+        TestWait::Handle(async, status, signal);
+        cancel_result = Cancel(async);
+    }
+};
+
 class TestTask : public async_task_t {
 public:
     TestTask()
@@ -177,6 +192,20 @@ protected:
         }
     }
 };
+
+class SelfCancelingTask : public TestTask {
+public:
+    SelfCancelingTask() = default;
+
+    zx_status_t cancel_result = ZX_ERR_INTERNAL;
+
+protected:
+    void Handle(async_t* async, zx_status_t status) override {
+        TestTask::Handle(async, status);
+        cancel_result = Cancel(async);
+    }
+};
+
 
 class TestReceiver : async_receiver_t {
 public:
@@ -433,14 +462,17 @@ bool wait_test() {
     END_TEST;
 }
 
-bool wait_invalid_handle_test() {
+bool wait_unwaitable_handle_test() {
     BEGIN_TEST;
 
     async::Loop loop;
+    zx::event event;
+    EXPECT_EQ(ZX_OK, zx::event::create(0u, &event), "create event");
+    event.replace(ZX_RIGHT_NONE, &event);
 
-    TestWait wait(ZX_HANDLE_INVALID, ZX_USER_SIGNAL_0);
-    EXPECT_EQ(ZX_ERR_BAD_HANDLE, wait.Begin(loop.async()), "begin");
-    EXPECT_EQ(ZX_ERR_BAD_HANDLE, wait.Cancel(loop.async()), "cancel");
+    TestWait wait(event.get(), ZX_USER_SIGNAL_0);
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, wait.Begin(loop.async()), "begin");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, wait.Cancel(loop.async()), "cancel");
     EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(0u, wait.run_count, "run count");
 
@@ -457,16 +489,22 @@ bool wait_shutdown_test() {
     CascadeWait wait1(event.get(), ZX_USER_SIGNAL_0, 0u, 0u, false);
     CascadeWait wait2(event.get(), ZX_USER_SIGNAL_0, ZX_USER_SIGNAL_0, 0u, true);
     TestWait wait3(event.get(), ZX_USER_SIGNAL_1);
+    SelfCancelingWait wait4(event.get(), ZX_USER_SIGNAL_0);
+    SelfCancelingWait wait5(event.get(), ZX_USER_SIGNAL_1);
 
     EXPECT_EQ(ZX_OK, wait1.Begin(loop.async()), "begin 1");
     EXPECT_EQ(ZX_OK, wait2.Begin(loop.async()), "begin 2");
     EXPECT_EQ(ZX_OK, wait3.Begin(loop.async()), "begin 3");
+    EXPECT_EQ(ZX_OK, wait4.Begin(loop.async()), "begin 4");
+    EXPECT_EQ(ZX_OK, wait5.Begin(loop.async()), "begin 5");
 
     // Nothing signaled so nothing happens at first.
     EXPECT_EQ(ZX_OK, loop.RunUntilIdle(), "run loop");
     EXPECT_EQ(0u, wait1.run_count, "run count 1");
     EXPECT_EQ(0u, wait2.run_count, "run count 2");
     EXPECT_EQ(0u, wait3.run_count, "run count 3");
+    EXPECT_EQ(0u, wait4.run_count, "run count 4");
+    EXPECT_EQ(0u, wait5.run_count, "run count 5");
 
     // Set signal 1: notifies both waiters, |wait2| clears the signal and repeats
     EXPECT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0), "signal 1");
@@ -484,11 +522,18 @@ bool wait_shutdown_test() {
     EXPECT_EQ(ZX_USER_SIGNAL_0, wait2.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 2");
     EXPECT_EQ(1u, wait2.last_signal->count, "count 2");
     EXPECT_EQ(0u, wait3.run_count, "run count 3");
+    EXPECT_EQ(1u, wait4.run_count, "run count 4");
+    EXPECT_EQ(ZX_USER_SIGNAL_0, wait4.last_signal->trigger & ZX_USER_SIGNAL_ALL, "trigger 4");
+    EXPECT_EQ(ZX_USER_SIGNAL_0, wait4.last_signal->observed & ZX_USER_SIGNAL_ALL, "observed 4");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, wait4.cancel_result, "cancel result 4");
+    EXPECT_EQ(0u, wait5.run_count, "run count 5");
 
     // When the loop shuts down:
     //   |wait1| not notified because it was serviced and didn't repeat
     //   |wait2| notified because it repeated
     //   |wait3| notified because it was not yet serviced
+    //   |wait4| not notified because it was serviced
+    //   |wait5| notified because it was not yet serviced
     loop.Shutdown();
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
@@ -497,12 +542,17 @@ bool wait_shutdown_test() {
     EXPECT_EQ(1u, wait3.run_count, "run count 3");
     EXPECT_EQ(ZX_ERR_CANCELED, wait3.last_status, "status 3");
     EXPECT_NULL(wait3.last_signal, "signal 3");
+    EXPECT_EQ(1u, wait4.run_count, "run count 4");
+    EXPECT_EQ(1u, wait5.run_count, "run count 5");
+    EXPECT_EQ(ZX_ERR_CANCELED, wait5.last_status, "status 5");
+    EXPECT_NULL(wait5.last_signal, "signal 5");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, wait5.cancel_result, "cancel result 5");
 
     // Try to add or cancel work after shutdown.
-    TestWait wait4(event.get(), ZX_USER_SIGNAL_0);
-    EXPECT_EQ(ZX_ERR_BAD_STATE, wait4.Begin(loop.async()), "begin after shutdown");
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, wait4.Cancel(loop.async()), "cancel after shutdown");
-    EXPECT_EQ(0u, wait4.run_count, "run count 4");
+    TestWait wait6(event.get(), ZX_USER_SIGNAL_0);
+    EXPECT_EQ(ZX_ERR_BAD_STATE, wait6.Begin(loop.async()), "begin after shutdown");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, wait6.Cancel(loop.async()), "cancel after shutdown");
+    EXPECT_EQ(0u, wait6.run_count, "run count 6");
 
     END_TEST;
 }
@@ -574,12 +624,16 @@ bool task_shutdown_test() {
     TestTask task3;
     TestTask task4;
     QuitTask task5;
+    SelfCancelingTask task6;
+    SelfCancelingTask task7;
 
     EXPECT_EQ(ZX_OK, task1.PostForTime(loop.async(), start_time + zx::msec(1)), "post 1");
     EXPECT_EQ(ZX_OK, task2.PostForTime(loop.async(), start_time + zx::msec(1)), "post 2");
     EXPECT_EQ(ZX_OK, task3.PostForTime(loop.async(), zx::time::infinite()), "post 3");
     EXPECT_EQ(ZX_OK, task4.PostForTime(loop.async(), zx::time::infinite()), "post 4");
     EXPECT_EQ(ZX_OK, task5.PostForTime(loop.async(), start_time + zx::msec(1)), "post 5");
+    EXPECT_EQ(ZX_OK, task6.PostForTime(loop.async(), start_time), "post 6");
+    EXPECT_EQ(ZX_OK, task7.PostForTime(loop.async(), zx::time::infinite()), "post 7");
 
     // Run tasks which are due up to the time when the quit task runs.
     EXPECT_EQ(ZX_ERR_CANCELED, loop.Run(), "run loop");
@@ -591,6 +645,10 @@ bool task_shutdown_test() {
     EXPECT_EQ(0u, task4.run_count, "run count 4");
     EXPECT_EQ(1u, task5.run_count, "run count 5");
     EXPECT_EQ(ZX_OK, task5.last_status, "status 5");
+    EXPECT_EQ(1u, task6.run_count, "run count 6");
+    EXPECT_EQ(ZX_OK, task6.last_status, "status 6");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, task6.cancel_result, "cancel result 6");
+    EXPECT_EQ(0u, task7.run_count, "run count 7");
 
     // Cancel task 4.
     EXPECT_EQ(ZX_OK, task4.Cancel(loop.async()), "cancel 4");
@@ -601,6 +659,8 @@ bool task_shutdown_test() {
     //   |task3| notified because it was not yet serviced
     //   |task4| not notified because it was canceled
     //   |task5| not notified because it was serviced
+    //   |task6| not notified because it was serviced
+    //   |task7| notified because it was not yet serviced
     loop.Shutdown();
     EXPECT_EQ(1u, task1.run_count, "run count 1");
     EXPECT_EQ(2u, task2.run_count, "run count 2");
@@ -609,12 +669,16 @@ bool task_shutdown_test() {
     EXPECT_EQ(ZX_ERR_CANCELED, task3.last_status, "status 3");
     EXPECT_EQ(0u, task4.run_count, "run count 4");
     EXPECT_EQ(1u, task5.run_count, "run count 5");
+    EXPECT_EQ(1u, task6.run_count, "run count 6");
+    EXPECT_EQ(1u, task7.run_count, "run count 7");
+    EXPECT_EQ(ZX_ERR_CANCELED, task7.last_status, "status 7");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, task7.cancel_result, "cancel result 7");
 
     // Try to add or cancel work after shutdown.
-    TestTask task6;
-    EXPECT_EQ(ZX_ERR_BAD_STATE, task6.PostForTime(loop.async(), zx::time::infinite()), "post after shutdown");
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, task6.Cancel(loop.async()), "cancel after shutdown");
-    EXPECT_EQ(0u, task6.run_count, "run count 6");
+    TestTask task8;
+    EXPECT_EQ(ZX_ERR_BAD_STATE, task8.PostForTime(loop.async(), zx::time::infinite()), "post after shutdown");
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, task8.Cancel(loop.async()), "cancel after shutdown");
+    EXPECT_EQ(0u, task8.run_count, "run count 8");
 
     END_TEST;
 }
@@ -952,7 +1016,7 @@ RUN_TEST(make_default_true_test)
 RUN_TEST(quit_test)
 RUN_TEST(time_test)
 RUN_TEST(wait_test)
-RUN_TEST(wait_invalid_handle_test)
+RUN_TEST(wait_unwaitable_handle_test)
 RUN_TEST(wait_shutdown_test)
 RUN_TEST(task_test)
 RUN_TEST(task_shutdown_test)
