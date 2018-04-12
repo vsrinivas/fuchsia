@@ -57,7 +57,7 @@ fi
 
 device_addr=
 update_device_addr() {
-  device_addr=$(get-device-addr)
+  device_addr=$(get-device-addr "$@")
   if [[ -z "${device_addr}" ]]; then
     device_addr="$(fx-command-run netaddr --fuchsia 2>/dev/null)"
   fi
@@ -72,7 +72,7 @@ while true; do
     exit 1
   fi
 
-  update_device_addr
+  update_device_addr "$@"
   if [[ -z "${device_addr}" ]]; then
     if [[ "${state}" != "discover1" ]]; then
       log "No device found, waiting..."
