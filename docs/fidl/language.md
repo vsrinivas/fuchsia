@@ -19,13 +19,6 @@ sequence of semicolon delimited declarations. The order of declarations within a
 FIDL file or among FIDL files within a library is irrelevant. FIDL does not
 require (or support) forward declarations of any kind.
 
-Topics for discussion:
-
-*   Previously we defined FIDL files as standalone units loosely organized into
-    modules which caused problems for languages such as Dart and Rust which
-    prefer to work with more granular units, hence the idea of formalizing the
-    concept of FIDL libraries. Is this the right approach?
-
 ### Tokens
 
 #### Comments
@@ -115,11 +108,6 @@ prefixing the identifier with the library name or alias.
     };
 ```
 
-Topics for discussion:
-
-*   Should we provide shortcuts for referencing types in other libraries? Should
-    we support importing symbols into the library's own scope?
-
 #### Literals
 
 FIDL supports the following literal types using C-like syntax: bools, signed
@@ -134,21 +122,10 @@ integers, unsigned integers, floats, strings.
     const float32 kFloat = 1.0;
 ```
 
-Topics for discussion:
-
-*   Provide more formal definition.
-*   Describe special constants like float.NAN and uint32.MAX.
-
 #### Declaration Separator
 
 FIDL uses the semi-colon **';'** to separate adjacent declarations within the
-file, much like C. Although it is somewhat of a nuisance, it makes the grammar
-more regular (constant, member, and type declarations look the same) which
-simplifies parsing.
-
-NB: I am sure there are other viewpoints on this… Ideally the grammar should be
-LL(1) but whoever ultimately writes the new compiler can weigh in on what's
-simple to parse or not.
+file, much like C.
 
 ### Libraries
 
@@ -180,16 +157,6 @@ The scope of "library" and "using" declarations is limited to a single file.
 Each individual file within a FIDL library must restate the "library"
 declaration together with any "using" declarations needed by that file.
 
-When the FIDL compiler encounters a library name such as "mozart.geometry",
-searches the library path to find the directory which contains that library's
-FIDL files, then loads the files. The compiler emits an error ifs any referenced
-library cannot be found.
-
-The build system generally takes care of providing the FIDL compiler with a
-suitable library path argument derived from the build dependencies for the
-target. eg. `--library mozart.geometry=apps/mozart/services/geometry --library
-mozart.buffers=apps/mozart/services/buffers`
-
 The library's name may be used by certain language bindings to provide scoping
 for symbols emitted by the code generator.
 
@@ -197,16 +164,6 @@ For example, the C++ bindings generator places declarations for the FIDL library
 "mozart.composition" within the C++ namespace "mozart::composition". Similarly,
 for languages such as Dart and Rust which have their own module system, each
 FIDL library is compiled as a module for that language.
-
-Topics for discussion:
-
-*   Are there any attributes we would like to define at the library level? eg.
-    C++ namespace or other code generator hints
-*   Should the individual FIDL files which make up a library be collated (merged
-    into one combined file archive) or is the one-to-one mapping of library to
-    directory good enough?
-*   Do FIDL libraries need any auxiliary metadata represented separately from the
-    FIDL files themselves?
 
 ### Types and Type Declarations
 
@@ -435,7 +392,7 @@ struct Color {
 };
 ```
 
-##### Use
+#### Use
 
 Structs are denoted by their declared name (eg. **Circle**) and nullability:
 
