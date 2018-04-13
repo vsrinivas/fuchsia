@@ -35,10 +35,8 @@
 ##                         for the Garnet layer). If the --packages argument is
 ##                         given multiple times, all the specified packages are
 ##                         included in the build.
-##   --variant             Pass --variant=VARIANT to gen.py, which itself is
-##                         a shorthand for setting the `select_variant` GN
-##                         build argument using a standard set of values.
-##                         Multiple --variant arguments can be used.
+##   --variant             Pass a `select_variant=[VARIANT*,...]` GN build argument
+##                         collecting all the --variant arguments in order.
 ##   --args                Additional argument to pass to gn. If the --args
 ##                         argument is given multiple times, all the specified
 ##                         arguments are passed to gn.
