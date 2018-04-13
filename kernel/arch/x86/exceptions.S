@@ -64,13 +64,14 @@ FUNCTION_LABEL(_isr_\@)
 .endif
 END_FUNCTION(_isr_\@)
 .popsection
-.pushsection .rodata
+.pushsection .rodata.isr
 .quad _isr_\@
 .popsection
 .endm
 
-.pushsection .rodata
+.pushsection .rodata.isr
 /* build a table of isr entry points */
+.balign 8
 DATA(_isr_table)
 .popsection
 .rept NUM_INT

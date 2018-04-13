@@ -487,6 +487,7 @@ END_FUNCTION(arm64_syscall_dispatcher)
 // Adds the label for the jump table.
 .macro start_syscall_dispatch
     .pushsection .rodata.syscall-table,"a",%progbits
+    .balign 8
     .Lcall_wrapper_table:
     .popsection
 .endm

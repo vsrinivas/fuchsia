@@ -51,7 +51,7 @@ struct CodePatchInfo {
 #define CODE_TEMPLATE(name, asm_code)                              \
     extern const uint8_t name[];                                   \
     extern const uint8_t name##End[];                              \
-    __asm__(".pushsection .rodata,\"a\",%progbits\n"               \
+    __asm__(".pushsection .rodata.code_template,\"a\",%progbits\n" \
             ".global " #name "\n"                                  \
             ".global " #name "End\n"                               \
             #name ":\n"                                            \

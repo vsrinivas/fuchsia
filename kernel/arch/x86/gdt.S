@@ -10,7 +10,7 @@
 #include <arch/x86/asm.h>
 #include <arch/x86/descriptor.h>
 
-.section .rodata
+.section .rodata.gdt
 
 .align 8
 DATA(_gdtr)
