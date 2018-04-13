@@ -153,10 +153,6 @@ std::string Name::QName() const {
         qname += library_->name();
         qname += '/';
     }
-    for (const auto& decl : nested_decls_) {
-        qname += decl.data();
-        qname += '.';
-    }
     qname += name_.data();
     return qname;
 }

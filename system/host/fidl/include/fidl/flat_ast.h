@@ -56,11 +56,6 @@ struct Name {
         if (LibraryName(library_) != LibraryName(other.library_)) {
             return LibraryName(library_) < LibraryName(other.library_);
         }
-        for (size_t idx = 0u; idx < nested_decls_.size(); ++idx) {
-            if (nested_decls_[idx].data() != other.nested_decls_[idx].data()) {
-                return nested_decls_[idx].data() < other.nested_decls_[idx].data();
-            }
-        }
         return name_.data() < other.name_.data();
     }
 
@@ -81,7 +76,6 @@ struct Name {
 
 private:
     const Library* library_ = nullptr;
-    std::vector<SourceLocation> nested_decls_;
     SourceLocation name_;
 };
 
