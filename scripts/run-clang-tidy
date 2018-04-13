@@ -36,7 +36,11 @@ BUILD_TARGET=""
 
 function func_help {
   echo "USAGE: clang-tidy-zircon <options> [files ...]"
+  echo ""
+  echo "Make sure that you generate the compile_commands.json file with the "
+  echo "USE_CLANG=true flag."
   echo "options:"
+  echo ""
   echo "-p <toolchain prefix>     : path to the directory containing bin/clang"
   echo "-t <target>               : build target. Default is x86"
   echo "-h                        : for help"
@@ -109,7 +113,10 @@ cd "$ZIRCON_ROOT"
 # Check compile_commands.json
 COMPILE_COMMANDS="$ZIRCON_ROOT/compile_commands.json"
 if [ ! -f "$COMPILE_COMMANDS" ]; then
-  echo "compile_commands.json missing, see https://fuchsia.googlesource.com/zircon/+/master/docs/editors.md for instructions on how to generate it."
+  echo "compile_commands.json missing, see "
+  echo "https://fuchsia.googlesource.com/zircon/+/master/docs/editors.md for "
+  echo "instructions on how to generate it (make sure you use the "
+  echo "USE_CLANG=true option when building zircon)."
   exit -1
 fi
 
