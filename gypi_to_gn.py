@@ -5,6 +5,8 @@
 
 """Converts a given gypi file to a python scope and writes the result to stdout.
 
+HOW TO USE
+
 It is assumed that the file contains a toplevel dictionary, and this script
 will return that dictionary as a GN "scope" (see example below). This script
 does not know anything about GYP and it will not expand variables or execute
@@ -91,16 +93,18 @@ def LoadPythonDictionary(path):
     file_data.update(file_data['variables'])
     del file_data['variables']
 
-  # Strip any conditions.
-  if 'conditions' in file_data:
-    del file_data['conditions']
-  if 'target_conditions' in file_data:
-    del file_data['target_conditions']
-
-  # Strip targets in the toplevel, since some files define these and we can't
-  # slurp them in.
-  if 'targets' in file_data:
-    del file_data['targets']
+  # Strip all elements that this script can't process.
+  elements_to_strip = [
+    'conditions',
+    'target_conditions',
+    'target_defaults',
+    'targets',
+    'includes',
+    'actions',
+  ]
+  for element in elements_to_strip:
+    if element in file_data:
+      del file_data[element]
 
   return file_data
 
