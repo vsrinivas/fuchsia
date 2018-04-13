@@ -241,7 +241,7 @@ class ConvergenceTest
       pages_.emplace_back();
       ledger::LedgerPtr ledger_ptr = ledger_instances_[i]->GetTestLedger();
       ledger::Status status = test::GetPageEnsureInitialized(
-          &message_loop_, &ledger_ptr,
+          [this] { message_loop_.QuitNow(); }, &ledger_ptr,
           // The first ledger gets a random page id, the others use the
           // same id for their pages.
           i == 0 ? nullptr : fidl::MakeOptional(page_id), &pages_[i], &page_id);

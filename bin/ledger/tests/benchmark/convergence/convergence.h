@@ -10,6 +10,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
@@ -40,7 +42,8 @@ struct DeviceContext {
 //   --server-id=<string> the ID of the Firebase instance to use for syncing
 class ConvergenceBenchmark : public ledger::PageWatcher {
  public:
-  ConvergenceBenchmark(int entry_count,
+  ConvergenceBenchmark(async::Loop* loop,
+                       int entry_count,
                        int value_size,
                        int device_count,
                        std::string server_id);
@@ -57,6 +60,7 @@ class ConvergenceBenchmark : public ledger::PageWatcher {
 
   void ShutDown();
 
+  async::Loop* const loop_;
   test::DataGenerator generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   test::CloudProviderFirebaseFactory cloud_provider_firebase_factory_;

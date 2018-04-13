@@ -6,11 +6,11 @@
 
 #include <iostream>
 
+#include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
 #include "garnet/lib/callback/waiter.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -41,17 +41,20 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-DeleteEntryBenchmark::DeleteEntryBenchmark(size_t entry_count,
+DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
+                                           size_t entry_count,
                                            size_t transaction_size,
                                            size_t key_size,
                                            size_t value_size)
-    : tmp_dir_(kStoragePath),
+    : loop_(loop),
+      tmp_dir_(kStoragePath),
       application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       entry_count_(entry_count),
       transaction_size_(transaction_size),
       key_size_(key_size),
       value_size_(value_size) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
   FXL_DCHECK(transaction_size_ >= 0);
   FXL_DCHECK(key_size_ > 0);
@@ -60,16 +63,17 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(size_t entry_count,
 
 void DeleteEntryBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status =
-      test::GetLedger(fsl::MessageLoop::GetCurrent(),
+  ledger::Status status = test::GetLedger(
+                      [this] { loop_->Quit(); },
                       application_context_.get(), &application_controller_,
                       nullptr, "delete_entry", tmp_dir_.path(), &ledger);
-  QuitOnError(status, "GetLedger");
+  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
-                                          &ledger, nullptr, &page_, &id);
-  QuitOnError(status, "Page initialization");
+  status = test::GetPageEnsureInitialized(
+      [this] { loop_->Quit(); }, &ledger, nullptr, &page_,
+      &id);
+  QuitOnError([this] { loop_->Quit(); }, status, "Page initialization");
 
   Populate();
 }
@@ -85,12 +89,13 @@ void DeleteEntryBenchmark::Populate() {
       test::benchmark::PageDataGenerator::ReferenceStrategy::REFERENCE,
       ledger::Priority::EAGER, [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          benchmark::QuitOnError(status, "PageGenerator::Populate");
+          benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                 "PageGenerator::Populate");
           return;
         }
         if (transaction_size_ > 0) {
           page_->StartTransaction([this](ledger::Status status) {
-            if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "Page::StartTransaction")) {
               return;
             }
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
@@ -110,7 +115,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 
   TRACE_ASYNC_BEGIN("benchmark", "delete_entry", i);
   page_->Delete(std::move(keys_[i]), [this, i](ledger::Status status) {
-    if (benchmark::QuitOnError(status, "Page::Delete")) {
+    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                               "Page::Delete")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
@@ -127,7 +133,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i](ledger::Status status) {
-    if (benchmark::QuitOnError(status, "Page::Commit")) {
+    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                               "Page::Commit")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
@@ -138,7 +145,8 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
       return;
     }
     page_->StartTransaction([this, i = i + 1](ledger::Status status) {
-      if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+      if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                 "Page::StartTransaction")) {
         return;
       }
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
@@ -150,8 +158,7 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
 void DeleteEntryBenchmark::ShutDown() {
   application_controller_->Kill();
   application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 
 }  // namespace benchmark
@@ -185,9 +192,10 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop loop;
-  test::benchmark::DeleteEntryBenchmark app(entry_count, transaction_size,
-                                            key_size, value_size);
+  async::Loop loop;
+  test::benchmark::DeleteEntryBenchmark app(&loop, entry_count,
+                                            transaction_size, key_size,
+                                            value_size);
 
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

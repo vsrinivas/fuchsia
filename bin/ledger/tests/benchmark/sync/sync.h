@@ -8,6 +8,8 @@
 #include <memory>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
@@ -35,7 +37,8 @@ namespace benchmark {
 //   --server-id=<string> the ID of the Firebase instance ot use for syncing
 class SyncBenchmark : public ledger::PageWatcher {
  public:
-  SyncBenchmark(size_t change_count,
+  SyncBenchmark(async::Loop* loop,
+                size_t change_count,
                 size_t value_size,
                 size_t entries_per_change,
                 PageDataGenerator::ReferenceStrategy reference_strategy,
@@ -53,6 +56,7 @@ class SyncBenchmark : public ledger::PageWatcher {
 
   void ShutDown();
 
+  async::Loop* const loop_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;

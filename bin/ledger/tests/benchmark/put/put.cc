@@ -7,7 +7,6 @@
 #include <lib/zx/time.h>
 #include <trace/event.h>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
@@ -25,6 +24,7 @@ namespace test {
 namespace benchmark {
 
 PutBenchmark::PutBenchmark(
+    async::Loop* loop,
     int entry_count,
     int transaction_size,
     int key_size,
@@ -32,7 +32,8 @@ PutBenchmark::PutBenchmark(
     bool update,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     uint64_t seed)
-    : generator_(seed),
+    : loop_(loop),
+      generator_(seed),
       tmp_dir_(kStoragePath),
       application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
@@ -43,6 +44,7 @@ PutBenchmark::PutBenchmark(
       update_(update),
       page_watcher_binding_(this),
       reference_strategy_(reference_strategy) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count > 0);
   FXL_DCHECK(transaction_size >= 0);
   FXL_DCHECK(key_size > 0);
@@ -61,14 +63,14 @@ void PutBenchmark::Run() {
                 << (update_ ? " --update" : "");
   ledger::LedgerPtr ledger;
   ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
+      [this] { loop_->Quit(); }, application_context_.get(),
       &application_controller_, nullptr, "put", tmp_dir_.path(), &ledger);
-  QuitOnError(status, "GetLedger");
+  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
-                                          &ledger, nullptr, &page_, &id);
-  QuitOnError(status, "GetPageEnsureInitialized");
+  status = test::GetPageEnsureInitialized(
+      [this] { loop_->Quit(); }, &ledger, nullptr, &page_, &id);
+  QuitOnError([this] { loop_->Quit(); }, status, "GetPageEnsureInitialized");
 
   InitializeKeys(fxl::MakeCopyable(
       [this, ledger = std::move(ledger)](
@@ -76,7 +78,7 @@ void PutBenchmark::Run() {
         if (transaction_size_ > 0) {
           page_->StartTransaction(fxl::MakeCopyable(
               [this, keys = std::move(keys)](ledger::Status status) mutable {
-                if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+                if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "Page::StartTransaction")) {
                   return;
                 }
                 TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
@@ -126,9 +128,9 @@ void PutBenchmark::InitializeKeys(
   page_data_generator_.Populate(
       &page_, std::move(keys_cloned), value_size_, keys_cloned.size(),
       reference_strategy_, ledger::Priority::EAGER,
-      fxl::MakeCopyable([keys = std::move(keys), on_done = std::move(on_done)](
+      fxl::MakeCopyable([this, keys = std::move(keys), on_done = std::move(on_done)](
                             ledger::Status status) mutable {
-        if (QuitOnError(status, "PageDataGenerator::Populate")) {
+        if (QuitOnError([this] { loop_->Quit(); }, status, "PageDataGenerator::Populate")) {
           return;
         }
         on_done(std::move(keys));
@@ -141,7 +143,7 @@ void PutBenchmark::BindWatcher(std::vector<fidl::VectorPtr<uint8_t>> keys) {
       snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
       fxl::MakeCopyable(
           [this, keys = std::move(keys)](ledger::Status status) mutable {
-            if (benchmark::QuitOnError(status, "GetSnapshot")) {
+            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "GetSnapshot")) {
               return;
             }
             RunSingle(0, std::move(keys));
@@ -181,8 +183,8 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
   if (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE) {
     page_->Put(
         std::move(key), std::move(value),
-        [trace_event_id, on_done = std::move(on_done)](ledger::Status status) {
-          if (QuitOnError(status, "Page::Put")) {
+        [this, trace_event_id, on_done = std::move(on_done)](ledger::Status status) {
+          if (QuitOnError([this] { loop_->Quit(); }, status, "Page::Put")) {
             return;
           }
           TRACE_ASYNC_END("benchmark", "put", trace_event_id);
@@ -199,16 +201,18 @@ void PutBenchmark::PutEntry(fidl::VectorPtr<uint8_t> key,
           [this, trace_event_id, key = std::move(key),
            on_done = std::move(on_done)](
               ledger::Status status, ledger::ReferencePtr reference) mutable {
-            if (QuitOnError(status, "Page::CreateReferenceFromVmo")) {
+            if (QuitOnError([this] { loop_->Quit(); }, status,
+                            "Page::CreateReferenceFromVmo")) {
               return;
             }
             TRACE_ASYNC_END("benchmark", "create reference", trace_event_id);
             TRACE_ASYNC_BEGIN("benchmark", "put reference", trace_event_id);
             page_->PutReference(
                 std::move(key), std::move(*reference), ledger::Priority::EAGER,
-                [trace_event_id,
+                [this, trace_event_id,
                  on_done = std::move(on_done)](ledger::Status status) {
-                  if (QuitOnError(status, "Page::PutReference")) {
+                  if (QuitOnError([this] { loop_->Quit(); }, status,
+                                  "Page::PutReference")) {
                     return;
                   }
                   TRACE_ASYNC_END("benchmark", "put reference", trace_event_id);
@@ -226,7 +230,8 @@ void PutBenchmark::CommitAndRunNext(
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit(fxl::MakeCopyable([this, i, keys = std::move(keys)](
                                       ledger::Status status) mutable {
-    if (benchmark::QuitOnError(status, "Page::Commit")) {
+    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                               "Page::Commit")) {
       return;
     }
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
@@ -239,7 +244,8 @@ void PutBenchmark::CommitAndRunNext(
     page_->StartTransaction(
         fxl::MakeCopyable([this, i = i + 1, keys = std::move(keys)](
                               ledger::Status status) mutable {
-          if (benchmark::QuitOnError(status, "Page::StartTransaction")) {
+          if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                     "Page::StartTransaction")) {
             return;
           }
           TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
@@ -252,8 +258,7 @@ void PutBenchmark::ShutDown() {
   // Shut down the Ledger process first as it relies on |tmp_dir_| storage.
   application_controller_->Kill();
   application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 
 }  // namespace benchmark

@@ -9,17 +9,21 @@
 #include <string>
 
 #include <fuchsia/cpp/ledger.h>
+
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/strings/string_view.h"
 
 namespace test {
 namespace benchmark {
 
-// Logs an error and posts a quit task on the current message loop if the given
-// ledger status is not ledger::Status::OK. Returns true if the quit task was
-// posted.
-bool QuitOnError(ledger::Status status, fxl::StringView description);
+// Logs an error and calls |quit_callback| which quits a related message loop if
+// the given ledger status is not ledger::Status::OK. Returns true if the loop
+// was quit .
+bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
+                 fxl::StringView description);
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
+    fxl::Closure quit_callback,
     std::string description);
 
 }  // namespace benchmark

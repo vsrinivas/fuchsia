@@ -4,15 +4,13 @@
 
 #include "peridot/bin/ledger/testing/get_ledger.h"
 
-#include <lib/zx/time.h>
-
 #include <utility>
 
 #include <fuchsia/cpp/cloud_provider_firebase.h>
 #include <fuchsia/cpp/ledger_internal.h>
+#include <lib/async/cpp/task.h>
+
 #include "garnet/lib/callback/capture.h"
-#include "garnet/lib/callback/synchronous_task.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
@@ -23,7 +21,7 @@ namespace {
 constexpr zx::duration kTimeout = zx::sec(10);
 }  // namespace
 
-ledger::Status GetLedger(fsl::MessageLoop* loop,
+ledger::Status GetLedger(fxl::Closure quit_callback,
                          component::ApplicationContext* context,
                          component::ApplicationControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
@@ -68,15 +66,15 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
     FXL_LOG(ERROR) << "Failure while getting ledger.";
     return status;
   }
-  ledger_ptr->set_error_handler([loop] {
+  ledger_ptr->set_error_handler([quit_callback = std::move(quit_callback)] {
     FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
-    loop->PostQuitTask();
+    quit_callback();
   });
 
   return status;
 }
 
-ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
+ledger::Status GetPageEnsureInitialized(fxl::Closure quit_callback,
                                         ledger::LedgerPtr* ledger,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,
@@ -92,9 +90,9 @@ ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
     return status;
   }
 
-  page->set_error_handler([loop] {
+  page->set_error_handler([quit_callback = std::move(quit_callback)] {
     FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-    loop->PostQuitTask();
+    quit_callback();
   });
 
   (*page)->GetId(callback::Capture([] {}, page_id));

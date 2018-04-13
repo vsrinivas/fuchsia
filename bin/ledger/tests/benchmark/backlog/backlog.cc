@@ -5,14 +5,12 @@
 #include "peridot/bin/ledger/tests/benchmark/backlog/backlog.h"
 
 #include <iostream>
-//#include <cmath>
 
 #include <fuchsia/cpp/cloud_provider.h>
 #include <trace/event.h>
 
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
@@ -52,12 +50,14 @@ namespace test {
 namespace benchmark {
 
 BacklogBenchmark::BacklogBenchmark(
+    async::Loop* loop,
     size_t unique_key_count,
     size_t value_size,
     size_t commit_count,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
-    : application_context_(
+    : loop_(loop),
+      application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       sync_watcher_binding_(this),
@@ -69,6 +69,7 @@ BacklogBenchmark::BacklogBenchmark(
       writer_tmp_dir_(kStoragePath),
       reader_tmp_dir_(kStoragePath),
       done_writing_(false) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(unique_key_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(commit_count_ > 0);
@@ -94,15 +95,15 @@ void BacklogBenchmark::Run() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_writer.NewRequest());
   ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
+      [this] { loop_->Quit(); }, application_context_.get(),
       &writer_controller_, std::move(cloud_provider_writer), "backlog",
       writer_path, &writer_);
-  QuitOnError(status, "Get writer ledger");
+  QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
-  status =
-      test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(), &writer_,
-                                     nullptr, &writer_page_, &page_id_);
-  QuitOnError(status, "Writer page initialization");
+  status = test::GetPageEnsureInitialized(
+      [this] { loop_->Quit(); }, &writer_, nullptr, &writer_page_,
+      &page_id_);
+  QuitOnError([this] { loop_->Quit(); }, status, "Writer page initialization");
 
   WaitForWriterUpload();
   TRACE_ASYNC_BEGIN("benchmark", "populate and upload", 0);
@@ -122,7 +123,7 @@ void BacklogBenchmark::Populate() {
       reference_strategy_, ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          benchmark::QuitOnError(status, "PageGenerator::Populate");
+          benchmark::QuitOnError([this] { loop_->Quit(); }, status, "PageGenerator::Populate");
           return;
         }
         done_writing_ = true;
@@ -144,7 +145,7 @@ void BacklogBenchmark::WaitForWriterUpload() {
   };
   writer_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback("Page::SetSyncStateWatcher"));
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::ConnectReader() {
@@ -155,16 +156,16 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
   ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
+      [this] { loop_->Quit(); }, application_context_.get(),
       &reader_controller_, std::move(cloud_provider_reader), "backlog",
       reader_path, &reader_);
-  QuitOnError(status, "ConnectReader");
+  QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);
   TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
   reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
                    [this](ledger::Status status) {
-                     if (benchmark::QuitOnError(status, "GetPage")) {
+                     if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "GetPage")) {
                        return;
                      }
                      TRACE_ASYNC_END("benchmark", "get page", 0);
@@ -189,12 +190,12 @@ void BacklogBenchmark::WaitForReaderDownload() {
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback("Page::SetSyncStateWatcher"));
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
   reader_page_->GetSnapshot(reader_snapshot_.NewRequest(), nullptr, nullptr,
-                            benchmark::QuitOnErrorCallback("GetSnapshot"));
+                            benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetSnapshot"));
   TRACE_ASYNC_BEGIN("benchmark", "get all entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }
@@ -205,7 +206,7 @@ void BacklogBenchmark::CheckStatusAndGetMore(
     fidl::VectorPtr<uint8_t> next_token) {
   if ((status != ledger::Status::OK) &&
       (status != ledger::Status::PARTIAL_RESULT)) {
-    QuitOnError(status, "PageSnapshot::GetEntries");
+    QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::GetEntries");
   }
   if (status == ledger::Status::OK) {
     TRACE_ASYNC_END("benchmark", "get all entries", 0);
@@ -250,8 +251,7 @@ void BacklogBenchmark::ShutDown() {
   writer_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   reader_controller_->Kill();
   reader_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 
 }  // namespace benchmark
@@ -301,8 +301,8 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop loop;
-  test::benchmark::BacklogBenchmark app(unique_key_count, value_size,
+  async::Loop loop;
+  test::benchmark::BacklogBenchmark app(&loop, unique_key_count, value_size,
                                         commit_count, reference_strategy,
                                         server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });

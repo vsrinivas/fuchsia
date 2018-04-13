@@ -6,6 +6,8 @@
 #define PERIDOT_BIN_LEDGER_TESTS_BENCHMARK_GET_PAGE_GET_PAGE_H_
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include <vector>
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
@@ -22,7 +24,7 @@ namespace benchmark {
 //   new page with a random id is requested every time.
 class GetPageBenchmark {
  public:
-  GetPageBenchmark(size_t requests_count, bool reuse);
+  GetPageBenchmark(async::Loop* async, size_t requests_count, bool reuse);
 
   void Run();
 
@@ -30,6 +32,7 @@ class GetPageBenchmark {
   void RunSingle(size_t request_number);
   void ShutDown();
 
+  async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;

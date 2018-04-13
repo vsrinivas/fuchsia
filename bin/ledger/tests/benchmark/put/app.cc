@@ -4,7 +4,6 @@
 
 #include <iostream>
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_number_conversions.h"
@@ -98,9 +97,10 @@ int main(int argc, const char** argv) {
     seed = fxl::RandUint64();
   }
 
-  fsl::MessageLoop loop;
-  test::benchmark::PutBenchmark app(entry_count, transaction_size, key_size,
-                                    value_size, update, ref_strategy, seed);
+  async::Loop loop;
+  test::benchmark::PutBenchmark app(&loop, entry_count, transaction_size,
+                                    key_size, value_size, update, ref_strategy,
+                                    seed);
 
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

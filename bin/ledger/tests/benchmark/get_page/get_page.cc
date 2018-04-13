@@ -11,7 +11,6 @@
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/logging.h"
@@ -34,20 +33,24 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-GetPageBenchmark::GetPageBenchmark(size_t requests_count, bool reuse)
-    : tmp_dir_(kStoragePath),
+GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
+                                   bool reuse)
+    : loop_(loop),
+      tmp_dir_(kStoragePath),
       application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       requests_count_(requests_count),
       reuse_(reuse) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(requests_count_ > 0);
 }
 
 void GetPageBenchmark::Run() {
   ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
-      &application_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
-  QuitOnError(status, "GetLedger");
+      [this] { loop_->Quit(); }, application_context_.get(),
+      &application_controller_, nullptr, "get_page", tmp_dir_.path(),
+      &ledger_);
+  QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
   page_id_ = fidl::MakeOptional(generator_.MakePageId());
   RunSingle(requests_count_);
 }
@@ -62,7 +65,8 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   ledger::PagePtr page;
   ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
                    [this, request_number](ledger::Status status) {
-                     if (benchmark::QuitOnError(status, "Ledger::GetPage")) {
+                     if (benchmark::QuitOnError([this] { loop_->Quit(); },
+                         status, "Ledger::GetPage")) {
                        return;
                      }
                      TRACE_ASYNC_END("benchmark", "get page",
@@ -75,8 +79,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 void GetPageBenchmark::ShutDown() {
   application_controller_->Kill();
   application_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 
 }  // namespace benchmark
@@ -96,8 +99,8 @@ int main(int argc, const char** argv) {
   }
   bool reuse = command_line.HasOption(kReuseFlag);
 
-  fsl::MessageLoop loop;
-  test::benchmark::GetPageBenchmark app(requests_count, reuse);
+  async::Loop loop;
+  test::benchmark::GetPageBenchmark app(&loop, requests_count, reuse);
 
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

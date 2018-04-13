@@ -8,6 +8,8 @@
 #include <memory>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -26,7 +28,8 @@ namespace benchmark {
 //     individually (implicit transaction).
 class UpdateEntryBenchmark {
  public:
-  UpdateEntryBenchmark(int entry_count, int transaction_size);
+  UpdateEntryBenchmark(async::Loop* loop, int entry_count,
+                       int transaction_size);
 
   void Run();
 
@@ -37,6 +40,7 @@ class UpdateEntryBenchmark {
   void CommitAndShutDown();
   void ShutDown();
 
+  async::Loop* const loop_;
   test::DataGenerator generator_;
 
   files::ScopedTempDir tmp_dir_;

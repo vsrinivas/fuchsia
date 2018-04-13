@@ -51,12 +51,14 @@ namespace test {
 namespace benchmark {
 
 SyncBenchmark::SyncBenchmark(
+    async::Loop* loop,
     size_t change_count,
     size_t value_size,
     size_t entries_per_change,
     PageDataGenerator::ReferenceStrategy reference_strategy,
     std::string server_id)
-    : application_context_(
+    : loop_(loop),
+      application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       change_count_(change_count),
@@ -67,6 +69,7 @@ SyncBenchmark::SyncBenchmark(
       page_watcher_binding_(this),
       alpha_tmp_dir_(kStoragePath),
       beta_tmp_dir_(kStoragePath) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(change_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(entries_per_change_ > 0);
@@ -89,34 +92,38 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
-      fsl::MessageLoop::GetCurrent(), application_context_.get(),
+      [this] { loop_->Quit(); }, application_context_.get(),
       &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
       &alpha);
-  QuitOnError(status, "alpha ledger");
+  QuitOnError([this] { loop_->Quit(); }, status, "alpha ledger");
 
   cloud_provider::CloudProviderPtr cloud_provider_beta;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_beta.NewRequest());
   ledger::LedgerPtr beta;
-  status =
-      test::GetLedger(fsl::MessageLoop::GetCurrent(),
-                      application_context_.get(), &beta_controller_,
-                      std::move(cloud_provider_beta), "sync", beta_path, &beta);
-  QuitOnError(status, "beta ledger");
+  status = test::GetLedger([this] { loop_->Quit(); },
+                           application_context_.get(), &beta_controller_,
+                           std::move(cloud_provider_beta), "sync", beta_path,
+                           &beta);
+  QuitOnError([this] { loop_->Quit(); }, status, "beta ledger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized(fsl::MessageLoop::GetCurrent(),
-                                          &alpha, nullptr, &alpha_page_, &id);
-  QuitOnError(status, "alpha page initialization");
+  status = test::GetPageEnsureInitialized(
+      [this] { loop_->Quit(); }, &alpha, nullptr, &alpha_page_,
+      &id);
+  QuitOnError([this] { loop_->Quit(); }, status, "alpha page initialization");
   page_id_ = id;
   beta->GetPage(fidl::MakeOptional(std::move(id)), beta_page_.NewRequest(),
-                benchmark::QuitOnErrorCallback("GetPage"));
+                benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+                                               "GetPage"));
 
   ledger::PageSnapshotPtr snapshot;
   beta_page_->GetSnapshot(snapshot.NewRequest(), nullptr,
                           page_watcher_binding_.NewBinding(),
                           [this](ledger::Status status) {
-                            if (benchmark::QuitOnError(status, "GetSnapshot")) {
+                            if (benchmark::QuitOnError(
+                                [this] { loop_->Quit(); }, status,
+                                "GetSnapshot")) {
                               return;
                             }
                             RunSingleChange(0);
@@ -158,10 +165,12 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", change_number);
   page_data_generator_.Populate(
       &alpha_page_, std::move(keys), value_size_, entries_per_change_,
-      reference_strategy_, ledger::Priority::EAGER, [](ledger::Status status) {
-        if (benchmark::QuitOnError(status, "PageDataGenerator::Populate")) {
-          return;
-        }
+      reference_strategy_, ledger::Priority::EAGER,
+      [this](ledger::Status status) {
+          if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                     "PageDataGenerator::Populate")) {
+              return;
+          }
       });
 }
 
@@ -170,8 +179,7 @@ void SyncBenchmark::ShutDown() {
   alpha_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
   beta_controller_->Kill();
   beta_controller_.WaitForResponseUntil(zx::deadline_after(zx::sec(5)));
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 }  // namespace benchmark
 }  // namespace test
@@ -220,8 +228,8 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop loop;
-  test::benchmark::SyncBenchmark app(change_count, value_size,
+  async::Loop loop;
+  test::benchmark::SyncBenchmark app(&loop, change_count, value_size,
                                      entries_per_change, reference_strategy,
                                      server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });

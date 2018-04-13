@@ -4,24 +4,24 @@
 
 #include "peridot/bin/ledger/testing/quit_on_error.h"
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace test {
 namespace benchmark {
 
-bool QuitOnError(ledger::Status status, fxl::StringView description) {
+bool QuitOnError(fxl::Closure quit_callback, ledger::Status status,
+                 fxl::StringView description) {
   if (status != ledger::Status::OK) {
     FXL_LOG(ERROR) << description << " failed with status " << status << ".";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    quit_callback();
     return true;
   }
   return false;
 }
 
 std::function<void(ledger::Status)> QuitOnErrorCallback(
+    fxl::Closure quit_callback,
     std::string description) {
-  return [description](ledger::Status status) {
-    QuitOnError(status, description);
+  return [quit_callback = std::move(quit_callback), description](ledger::Status status) {
+    QuitOnError(quit_callback, status, description);
   };
 }
 

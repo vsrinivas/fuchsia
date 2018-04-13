@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/cloud_provider_firebase_factory.h"
@@ -29,7 +31,8 @@ namespace benchmark {
 //   values.
 class FetchBenchmark : public ledger::SyncWatcher {
  public:
-  FetchBenchmark(size_t entry_count,
+  FetchBenchmark(async::Loop* loop,
+                 size_t entry_count,
                  size_t value_size,
                  size_t part_size,
                  std::string server_id);
@@ -52,6 +55,7 @@ class FetchBenchmark : public ledger::SyncWatcher {
 
   void ShutDown();
 
+  async::Loop* const loop_;
   test::DataGenerator generator_;
   test::benchmark::PageDataGenerator page_data_generator_;
   std::unique_ptr<component::ApplicationContext> application_context_;

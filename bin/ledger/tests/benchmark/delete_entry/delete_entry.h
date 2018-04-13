@@ -8,6 +8,8 @@
 #include <memory>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "peridot/bin/ledger/testing/data_generator.h"
@@ -26,7 +28,8 @@ namespace benchmark {
 //   --value-size=<int> the size of a single value in bytes
 class DeleteEntryBenchmark {
  public:
-  DeleteEntryBenchmark(size_t entry_count,
+  DeleteEntryBenchmark(async::Loop* loop,
+                       size_t entry_count,
                        size_t transaction_size,
                        size_t key_size,
                        size_t value_size);
@@ -39,6 +42,7 @@ class DeleteEntryBenchmark {
   void CommitAndRunNext(size_t i);
   void ShutDown();
 
+  async::Loop* const loop_;
   files::ScopedTempDir tmp_dir_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;

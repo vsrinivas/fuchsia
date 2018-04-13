@@ -11,11 +11,12 @@
 #include <fuchsia/cpp/cloud_provider.h>
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular_auth.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
-#include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/fidl_helpers/boundable.h"
 
 namespace test {
@@ -25,7 +26,7 @@ namespace test {
 //
 // TODO(ppi): take the server_id as std::optional<std::string> and drop bool
 // sync once we're on C++17.
-ledger::Status GetLedger(fsl::MessageLoop* loop,
+ledger::Status GetLedger(fxl::Closure quit_callback,
                          component::ApplicationContext* context,
                          component::ApplicationControllerPtr* controller,
                          cloud_provider::CloudProviderPtr cloud_provider,
@@ -37,7 +38,7 @@ ledger::Status GetLedger(fsl::MessageLoop* loop,
 // callback only after executing a GetId() call on the page, ensuring that it is
 // already initialized. If |id| is nullptr, a new page with a unique id is
 // created.
-ledger::Status GetPageEnsureInitialized(fsl::MessageLoop* loop,
+ledger::Status GetPageEnsureInitialized(fxl::Closure quit_callback,
                                         ledger::LedgerPtr* ledger,
                                         ledger::PageIdPtr requested_id,
                                         ledger::PagePtr* page,

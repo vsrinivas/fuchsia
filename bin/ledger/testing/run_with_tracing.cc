@@ -9,10 +9,12 @@
 #include <trace/event.h>
 #include <trace/observer.h>
 
+#include "lib/fxl/logging.h"
+
 namespace test {
 namespace benchmark {
 
-int RunWithTracing(fsl::MessageLoop* loop, std::function<void()> runnable) {
+int RunWithTracing(async::Loop* loop, std::function<void()> runnable) {
   trace::TraceProvider trace_provider(loop->async());
   trace::TraceObserver trace_observer;
 
@@ -31,22 +33,20 @@ int RunWithTracing(fsl::MessageLoop* loop, std::function<void()> runnable) {
   }
 
   int err = 0;
-  async::PostDelayedTask(
-      loop->async(),
-      [&started, loop, &err] {
-        if (!started) {
-          // To avoid running the runnable if the tracing state changes to
-          // started in the immediate next task on the queue (before the quit
-          // task executes).
-          started = true;
-          FXL_LOG(ERROR)
-              << "Timed out waiting for the tracing to start; Did you run the "
-                 "binary with the trace tool enabled?";
-          err = -1;
-          loop->PostQuitTask();
-        }
-      },
-      zx::sec(5));
+  async::TaskClosure quit_task([&started, loop, &err] {
+      if (!started) {
+        // To avoid running the runnable if the tracing state changes to
+        // started in the immediate next task on the queue (before the quit
+        // task executes).
+        started = true;
+        FXL_LOG(ERROR)
+            << "Timed out waiting for the tracing to start; Did you run the "
+               "binary with the trace tool enabled?";
+        err = -1;
+        loop->Quit();
+      }
+  });
+  quit_task.PostDelayed(loop->async(), zx::sec(5));
 
   loop->Run();
   return err;

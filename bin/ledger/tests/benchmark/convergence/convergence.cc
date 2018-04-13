@@ -11,7 +11,6 @@
 
 #include "garnet/lib/callback/waiter.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/logging.h"
@@ -41,11 +40,13 @@ constexpr size_t kKeySize = 100;
 namespace test {
 namespace benchmark {
 
-ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
+ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop,
+                                           int entry_count,
                                            int value_size,
                                            int device_count,
                                            std::string server_id)
-    : application_context_(
+    : loop_(loop),
+      application_context_(
           component::ApplicationContext::CreateFromStartupInfo()),
       cloud_provider_firebase_factory_(application_context_.get()),
       entry_count_(entry_count),
@@ -53,6 +54,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(int entry_count,
       device_count_(device_count),
       server_id_(std::move(server_id)),
       devices_(device_count) {
+  FXL_DCHECK(loop_);
   FXL_DCHECK(entry_count_ > 0);
   FXL_DCHECK(value_size_ > 0);
   FXL_DCHECK(device_count_ > 1);
@@ -81,13 +83,14 @@ void ConvergenceBenchmark::Run() {
     cloud_provider_firebase_factory_.MakeCloudProvider(
         server_id_, "", cloud_provider.NewRequest());
     ledger::Status status = test::GetLedger(
-        fsl::MessageLoop::GetCurrent(), application_context_.get(),
+        [this] { loop_->Quit(); }, application_context_.get(),
         &device_context.app_controller, std::move(cloud_provider),
         "convergence", synced_dir_path, &device_context.ledger);
-    QuitOnError(status, "GetLedger");
+    QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
     device_context.ledger->GetPage(fidl::MakeOptional(page_id_),
                                    device_context.page_connection.NewRequest(),
-                                   benchmark::QuitOnErrorCallback("GetPage"));
+                                   benchmark::QuitOnErrorCallback(
+                                     [this] { loop_->Quit(); }, "GetPage"));
     ledger::PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
     device_context.page_connection->GetSnapshot(
@@ -95,7 +98,7 @@ void ConvergenceBenchmark::Run() {
         device_context.page_watcher->NewBinding(), waiter->NewCallback());
   }
   waiter->Finalize([this](ledger::Status status) {
-    if (benchmark::QuitOnError(status, "GetSnapshot")) {
+    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "GetSnapshot")) {
       return;
     }
     Start(0);
@@ -120,7 +123,7 @@ void ConvergenceBenchmark::Start(int step) {
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
     devices_[device_id].page_connection->Put(
         std::move(key), std::move(value),
-        benchmark::QuitOnErrorCallback("Put"));
+        benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Put"));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);
@@ -150,8 +153,7 @@ void ConvergenceBenchmark::ShutDown() {
     device_context.app_controller.WaitForResponseUntil(
         zx::deadline_after(zx::sec(5)));
   }
-
-  fsl::MessageLoop::GetCurrent()->PostQuitTask();
+  loop_->Quit();
 }
 }  // namespace benchmark
 }  // namespace test
@@ -183,8 +185,8 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  fsl::MessageLoop loop;
-  test::benchmark::ConvergenceBenchmark app(entry_count, value_size,
+  async::Loop loop;
+  test::benchmark::ConvergenceBenchmark app(&loop, entry_count, value_size,
                                             device_count, server_id);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

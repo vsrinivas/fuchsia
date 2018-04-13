@@ -9,6 +9,8 @@
 #include <set>
 
 #include <fuchsia/cpp/ledger.h>
+#include <lib/async-loop/cpp/loop.h>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -33,7 +35,8 @@ namespace benchmark {
 //   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark : public ledger::PageWatcher {
  public:
-  PutBenchmark(int entry_count,
+  PutBenchmark(async::Loop* loop,
+               int entry_count,
                int transaction_size,
                int key_size,
                int value_size,
@@ -66,6 +69,7 @@ class PutBenchmark : public ledger::PageWatcher {
 
   void ShutDown();
 
+  async::Loop* const loop_;
   test::DataGenerator generator_;
   PageDataGenerator page_data_generator_;
 
