@@ -18,6 +18,8 @@
 
 //#include <net/cfg80211.h>
 
+#include <sync/completion.h>
+
 #include "core.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -98,7 +100,7 @@ enum brcmf_p2p_status {
  */
 struct afx_hdl {
     struct work_struct afx_work;
-    struct completion act_frm_scan;
+    completion_t act_frm_scan;
     bool is_active;
     int32_t peer_chan;
     bool is_listen;
@@ -123,7 +125,7 @@ struct afx_hdl {
  * @send_af_done: indication that action frame tx is complete.
  * @afx_hdl: action frame search handler info.
  * @af_sent_channel: channel action frame is sent.
- * @af_tx_sent_jiffies: jiffies time when af tx was transmitted.
+ * @af_tx_sent_time: ZX time when af tx was transmitted.
  * @wait_next_af: thread synchronizing struct.
  * @gon_req_action: about to send go negotiation requets frame.
  * @block_gon_req_tx: drop tx go negotiation requets frame.
@@ -140,11 +142,11 @@ struct brcmf_p2p_info {
     struct ieee80211_channel remain_on_channel;
     uint32_t remain_on_channel_cookie;
     uint8_t next_af_subtype;
-    struct completion send_af_done;
+    completion_t send_af_done;
     struct afx_hdl afx_hdl;
     uint32_t af_sent_channel;
-    unsigned long af_tx_sent_jiffies;
-    struct completion wait_next_af;
+    zx_time_t af_tx_sent_time;
+    completion_t wait_next_af;
     bool gon_req_action;
     bool block_gon_req_tx;
     bool p2pdev_dynamically;

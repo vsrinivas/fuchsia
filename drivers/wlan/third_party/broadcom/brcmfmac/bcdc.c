@@ -459,7 +459,7 @@ zx_status_t brcmf_proto_bcdc_attach(struct brcmf_pub* drvr) {
     return ZX_OK;
 
 fail:
-    kfree(bcdc);
+    free(bcdc);
     return ZX_ERR_NO_MEMORY;
 }
 
@@ -468,5 +468,5 @@ void brcmf_proto_bcdc_detach(struct brcmf_pub* drvr) {
 
     drvr->proto->pd = NULL;
     brcmf_fws_detach(bcdc->fws);
-    kfree(bcdc);
+    free(bcdc);
 }

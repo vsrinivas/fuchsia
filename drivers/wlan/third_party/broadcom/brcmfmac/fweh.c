@@ -268,7 +268,7 @@ static void brcmf_fweh_event_worker(struct work_struct* work) {
             err = ZX_OK;
         }
 event_free:
-        kfree(event);
+        free(event);
     }
 }
 

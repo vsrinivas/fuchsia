@@ -38,7 +38,7 @@
 #include "proto.h"
 #include "tracepoint.h"
 
-#define MSGBUF_IOCTL_RESP_TIMEOUT msecs_to_jiffies(2000)
+#define MSGBUF_IOCTL_RESP_TIMEOUT_MSEC (2000)
 
 #define MSGBUF_TYPE_GEN_STATUS 0x1
 #define MSGBUF_TYPE_RING_STATUS 0x2
@@ -295,7 +295,7 @@ static struct brcmf_msgbuf_pktids* brcmf_msgbuf_init_pktids(uint32_t nr_array_en
 
     pktids = calloc(1, sizeof(*pktids));
     if (!pktids) {
-        kfree(array);
+        free(array);
         return NULL;
     }
     pktids->array = array;
@@ -390,8 +390,8 @@ static void brcmf_msgbuf_release_array(struct brcmf_device* dev,
         count++;
     } while (count < pktids->array_size);
 
-    kfree(array);
-    kfree(pktids);
+    free(array);
+    free(pktids);
 }
 
 static void brcmf_msgbuf_release_pktids(struct brcmf_msgbuf* msgbuf) {
@@ -450,7 +450,7 @@ static zx_status_t brcmf_msgbuf_tx_ioctl(struct brcmf_pub* drvr, int ifidx, uint
 
 static uint32_t brcmf_msgbuf_ioctl_resp_wait(struct brcmf_msgbuf* msgbuf) {
     return wait_event_timeout(msgbuf->ioctl_resp_wait, msgbuf->ctl_completed,
-                              MSGBUF_IOCTL_RESP_TIMEOUT);
+                              MSGBUF_IOCTL_RESP_TIMEOUT_MSEC);
 }
 
 static void brcmf_msgbuf_ioctl_resp_wake(struct brcmf_msgbuf* msgbuf) {
@@ -606,7 +606,7 @@ static void brcmf_msgbuf_flowring_worker(struct work_struct* work) {
 
     while ((create = brcmf_msgbuf_dequeue_work(msgbuf))) {
         brcmf_msgbuf_flowring_create_worker(msgbuf, create);
-        kfree(create);
+        free(create);
     }
 }
 
@@ -623,7 +623,7 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
 
     flowid = brcmf_flowring_create(msgbuf->flow, eh->h_dest, skb->priority, ifidx);
     if (flowid == BRCMF_FLOWRING_INVALID_ID) {
-        kfree(create);
+        free(create);
         return flowid;
     }
 
@@ -1417,14 +1417,14 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
 
 fail:
     if (msgbuf) {
-        kfree(msgbuf->flow_map);
-        kfree(msgbuf->txstatus_done_map);
+        free(msgbuf->flow_map);
+        free(msgbuf->txstatus_done_map);
         brcmf_msgbuf_release_pktids(msgbuf);
-        kfree(msgbuf->flowring_dma_handle);
+        free(msgbuf->flowring_dma_handle);
         if (msgbuf->ioctbuf)
             dma_free_coherent(drvr->bus_if->dev, BRCMF_TX_IOCTL_MAX_MSG_SIZE, msgbuf->ioctbuf,
                               msgbuf->ioctbuf_handle);
-        kfree(msgbuf);
+        free(msgbuf);
     }
     return ZX_ERR_NO_MEMORY;
 }
@@ -1440,10 +1440,10 @@ void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {
         while (!list_empty(&msgbuf->work_queue)) {
             work = list_first_entry(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
             list_del(&work->queue);
-            kfree(work);
+            free(work);
         }
-        kfree(msgbuf->flow_map);
-        kfree(msgbuf->txstatus_done_map);
+        free(msgbuf->flow_map);
+        free(msgbuf->txstatus_done_map);
         if (msgbuf->txflow_wq) {
             destroy_workqueue(msgbuf->txflow_wq);
         }
@@ -1452,8 +1452,8 @@ void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {
         dma_free_coherent(drvr->bus_if->dev, BRCMF_TX_IOCTL_MAX_MSG_SIZE, msgbuf->ioctbuf,
                           msgbuf->ioctbuf_handle);
         brcmf_msgbuf_release_pktids(msgbuf);
-        kfree(msgbuf->flowring_dma_handle);
-        kfree(msgbuf);
+        free(msgbuf->flowring_dma_handle);
+        free(msgbuf);
         drvr->proto->pd = NULL;
     }
 }

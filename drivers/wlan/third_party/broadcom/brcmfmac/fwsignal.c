@@ -313,8 +313,8 @@ struct brcmf_skbuff_cb {
 #define brcmf_txstatus_get_field(txs, field) \
     brcmu_maskget32(txs, BRCMF_FWS_TXSTAT_##field##_MASK, BRCMF_FWS_TXSTAT_##field##_SHIFT)
 
-/* How long to defer borrowing in jiffies */
-#define BRCMF_FWS_BORROW_DEFER_PERIOD (HZ / 10)
+/* How long to defer borrowing in msec */
+#define BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC (100)
 
 /**
  * enum brcmf_fws_fifo - fifo indices used by dongle firmware.
@@ -504,7 +504,7 @@ struct brcmf_fws_info {
     int deq_node_pos[BRCMF_FWS_FIFO_COUNT];
     uint32_t fifo_credit_map;
     uint32_t fifo_delay_map;
-    unsigned long borrow_defer_timestamp;
+    zx_time_t borrow_defer_timestamp;
     bool bus_flow_blocked;
     bool creditmap_received;
     uint8_t mode;
@@ -1649,7 +1649,7 @@ void brcmf_fws_rxreorder(struct brcmf_if* ifp, struct sk_buff* pkt) {
         brcmf_rxreorder_get_skb_list(rfi, rfi->exp_idx, rfi->exp_idx, &reorder_list);
         /* add the last packet */
         __skb_queue_tail(&reorder_list, pkt);
-        kfree(rfi);
+        free(rfi);
         ifp->drvr->reorder_flows[flow_id] = NULL;
         goto netif_rx;
     }
@@ -1961,7 +1961,7 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct sk_buff* s
 static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
     int lender_ac;
 
-    if (time_after(fws->borrow_defer_timestamp, jiffies)) {
+    if (fws->borrow_defer_timestamp > zx_clock_get(ZX_CLOCK_MONOTONIC)) {
         fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -2066,7 +2066,8 @@ zx_status_t brcmf_fws_process_skb(struct brcmf_if* ifp, struct sk_buff* skb) {
 
     brcmf_fws_lock(fws);
     if (fifo != BRCMF_FWS_FIFO_AC_BE && fifo < BRCMF_FWS_FIFO_BCMC) {
-        fws->borrow_defer_timestamp = jiffies + BRCMF_FWS_BORROW_DEFER_PERIOD;
+        fws->borrow_defer_timestamp = zx_clock_get(ZX_CLOCK_MONOTONIC) +
+                                      ZX_MSEC(BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC);
     }
 
     skcb->mac_status = brcmf_fws_macdesc_find(fws, ifp, eh->h_dest, &skcb->mac);
@@ -2362,7 +2363,7 @@ void brcmf_fws_detach(struct brcmf_fws_info* fws) {
     brcmf_fws_unlock(fws);
 
     /* free top structure */
-    kfree(fws);
+    free(fws);
 }
 
 bool brcmf_fws_queue_skbs(struct brcmf_fws_info* fws) {

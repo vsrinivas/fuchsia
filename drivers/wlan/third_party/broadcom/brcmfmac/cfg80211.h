@@ -17,6 +17,7 @@
 #ifndef BRCMFMAC_CFG80211_H
 #define BRCMFMAC_CFG80211_H
 
+#include <sync/completion.h>
 #include <threads.h>
 
 /* for brcmu_d11inf */
@@ -88,7 +89,7 @@
 
 // clang-format on
 
-#define BRCMF_VIF_EVENT_TIMEOUT msecs_to_jiffies(1500)
+#define BRCMF_VIF_EVENT_TIMEOUT_MSEC (1500)
 
 /**
  * enum brcmf_scan_status - scan engine status
@@ -329,7 +330,7 @@ struct brcmf_cfg80211_info {
     struct work_struct escan_timeout_work;
     struct list_head vif_list;
     struct brcmf_cfg80211_vif_event vif_event;
-    struct completion vif_disabled;
+    completion_t vif_disabled;
     struct brcmu_d11inf d11inf;
     struct brcmf_assoclist_le assoclist;
     struct brcmf_cfg80211_wowl wowl;

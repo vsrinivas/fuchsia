@@ -244,7 +244,7 @@ void brcmf_flowring_delete(struct brcmf_flowring* flow, uint16_t flowid) {
         skb = skb_dequeue(&ring->skblist);
     }
 
-    kfree(ring);
+    free(ring);
 }
 
 uint32_t brcmf_flowring_enqueue(struct brcmf_flowring* flow, uint16_t flowid, struct sk_buff* skb) {
@@ -351,7 +351,7 @@ struct brcmf_flowring* brcmf_flowring_attach(struct brcmf_device* dev, uint16_t 
         }
         flow->rings = kcalloc(nrofrings, sizeof(*flow->rings), GFP_KERNEL);
         if (!flow->rings) {
-            kfree(flow);
+            free(flow);
             flow = NULL;
         }
     }
@@ -376,10 +376,10 @@ void brcmf_flowring_detach(struct brcmf_flowring* flow) {
     while (search) {
         remove = search;
         search = search->next;
-        kfree(remove);
+        free(remove);
     }
-    kfree(flow->rings);
-    kfree(flow);
+    free(flow->rings);
+    free(flow);
 }
 
 void brcmf_flowring_configure_addr_mode(struct brcmf_flowring* flow, int ifidx,
@@ -444,7 +444,7 @@ void brcmf_flowring_delete_peer(struct brcmf_flowring* flow, int ifidx, uint8_t 
         } else {
             flow->tdls_entry = search->next;
         }
-        kfree(search);
+        free(search);
         if (flow->tdls_entry == NULL) {
             flow->tdls_active = false;
         }
@@ -482,5 +482,5 @@ void brcmf_flowring_add_tdls_peer(struct brcmf_flowring* flow, int ifidx, uint8_
     return;
 
 free_entry:
-    kfree(tdls_entry);
+    free(tdls_entry);
 }

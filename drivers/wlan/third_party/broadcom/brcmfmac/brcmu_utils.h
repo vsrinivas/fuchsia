@@ -32,7 +32,7 @@
     {                                        \
         uint countdown = (us) + 9;           \
         while ((exp) && (countdown >= 10)) { \
-            udelay(10);                      \
+            usleep(10);                      \
             countdown -= 10;                 \
         }                                    \
     }

@@ -302,13 +302,13 @@ static void brcmf_fw_strip_multi_v1(struct nvram_parser* nvp, uint16_t domain_nr
         }
         i++;
     }
-    kfree(nvp->nvram);
+    free(nvp->nvram);
     nvp->nvram = nvram;
     nvp->nvram_len = j;
     return;
 
 fail:
-    kfree(nvram);
+    free(nvram);
     nvp->nvram_len = 0;
 }
 
@@ -356,12 +356,12 @@ static void brcmf_fw_strip_multi_v2(struct nvram_parser* nvp, uint16_t domain_nr
         }
         i++;
     }
-    kfree(nvp->nvram);
+    free(nvp->nvram);
     nvp->nvram = nvram;
     nvp->nvram_len = j;
     return;
 fail:
-    kfree(nvram);
+    free(nvram);
     nvp->nvram_len = 0;
 }
 
@@ -408,7 +408,7 @@ static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t
     }
 
     if (nvp.nvram_len == 0) {
-        kfree(nvp.nvram);
+        free(nvp.nvram);
         return NULL;
     }
 
@@ -432,7 +432,7 @@ static void* brcmf_fw_nvram_strip(const uint8_t* data, size_t data_len, uint32_t
 }
 
 void brcmf_fw_nvram_free(void* nvram) {
-    kfree(nvram);
+    free(nvram);
 }
 
 struct brcmf_fw {
@@ -480,14 +480,14 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     }
 
     fwctx->done(fwctx->dev, ZX_OK, fwctx->code, nvram, nvram_length);
-    kfree(fwctx);
+    free(fwctx);
     return ZX_OK;
 
 fail:
     brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
     release_firmware(fwctx->code);
     fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
-    kfree(fwctx);
+    free(fwctx);
     return ZX_ERR_NO_RESOURCES;
 }
 
@@ -552,7 +552,7 @@ fail:
     brcmf_dbg(TRACE, "failed: dev=%s\n", dev_name(fwctx->dev));
 done:
     fwctx->done(fwctx->dev, result, fw, NULL, 0);
-    kfree(fwctx);
+    free(fwctx);
     return result;
 }
 

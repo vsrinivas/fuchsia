@@ -17,7 +17,6 @@
 
 #include "linuxisms.h"
 
-uint64_t jiffies; // To make it link, jiffies has to be defined (not just declared)
 struct current_with_pid* current; // likewise current
 
 

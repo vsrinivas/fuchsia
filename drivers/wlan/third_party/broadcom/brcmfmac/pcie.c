@@ -179,7 +179,7 @@ static struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 #define BRCMF_H2D_HOST_D0_INFORM_IN_USE 0x00000008
 #define BRCMF_H2D_HOST_D0_INFORM 0x00000010
 
-#define BRCMF_PCIE_MBDATA_TIMEOUT msecs_to_jiffies(2000)
+#define BRCMF_PCIE_MBDATA_TIMEOUT_MSEC (2000)
 
 #define BRCMF_PCIE_CFGREG_STATUS_CMD 0x4
 #define BRCMF_PCIE_CFGREG_PM_CSR 0x4C
@@ -930,7 +930,7 @@ static void brcmf_pcie_release_ringbuffer(struct brcmf_device* dev,
         size = ring->commonring.depth * ring->commonring.item_len;
         dma_free_coherent(dev, size, dma_buf, ring->dma_handle);
     }
-    kfree(ring);
+    free(ring);
 }
 
 static void brcmf_pcie_release_ringbuffers(struct brcmf_pciedev_info* devinfo) {
@@ -940,7 +940,7 @@ static void brcmf_pcie_release_ringbuffers(struct brcmf_pciedev_info* devinfo) {
         brcmf_pcie_release_ringbuffer(&devinfo->pdev->dev, devinfo->shared.commonrings[i]);
         devinfo->shared.commonrings[i] = NULL;
     }
-    kfree(devinfo->shared.flowrings);
+    free(devinfo->shared.flowrings);
     devinfo->shared.flowrings = NULL;
     if (devinfo->idxbuf) {
         dma_free_coherent(&devinfo->pdev->dev, devinfo->idxbuf_sz, devinfo->idxbuf,
@@ -1619,7 +1619,7 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
     bus->msgbuf = calloc(1, sizeof(*bus->msgbuf));
     if (!bus->msgbuf) {
         ret = ZX_ERR_NO_MEMORY;
-        kfree(bus);
+        free(bus);
         goto fail;
     }
 
@@ -1648,8 +1648,8 @@ static zx_status_t brcmf_pcie_probe(struct brcmf_pci_device* pdev) {
         return ZX_OK;
     }
 fail_bus:
-    kfree(bus->msgbuf);
-    kfree(bus);
+    free(bus->msgbuf);
+    free(bus);
 fail:
     brcmf_err("failed %x:%x\n", pdev->vendor, pdev->device);
     brcmf_pcie_release_resource(devinfo);
@@ -1659,8 +1659,8 @@ fail:
     if (devinfo->settings) {
         brcmf_release_module_param(devinfo->settings);
     }
-    kfree(pcie_bus_dev);
-    kfree(devinfo);
+    free(pcie_bus_dev);
+    free(devinfo);
     return ret;
 }
 
@@ -1684,10 +1684,10 @@ static void brcmf_pcie_remove(struct brcmf_pci_device* pdev) {
 
     brcmf_detach(&pdev->dev);
 
-    kfree(bus->bus_priv.pcie);
-    kfree(bus->msgbuf->flowrings);
-    kfree(bus->msgbuf);
-    kfree(bus);
+    free(bus->bus_priv.pcie);
+    free(bus->msgbuf->flowrings);
+    free(bus->msgbuf);
+    free(bus);
 
     brcmf_pcie_release_irq(devinfo);
     brcmf_pcie_release_scratchbuffers(devinfo);
@@ -1702,7 +1702,7 @@ static void brcmf_pcie_remove(struct brcmf_pci_device* pdev) {
         brcmf_release_module_param(devinfo->settings);
     }
 
-    kfree(devinfo);
+    free(devinfo);
     dev_set_drvdata(&pdev->dev, NULL);
 }
 
@@ -1723,7 +1723,7 @@ static zx_status_t brcmf_pcie_pm_enter_D3(struct brcmf_device* dev) {
     brcmf_pcie_send_mb_data(devinfo, BRCMF_H2D_HOST_D3_INFORM);
 
     wait_event_timeout(devinfo->mbdata_resp_wait, devinfo->mbdata_completed,
-                       BRCMF_PCIE_MBDATA_TIMEOUT);
+                       BRCMF_PCIE_MBDATA_TIMEOUT_MSEC);
     if (!devinfo->mbdata_completed) {
         brcmf_err("Timeout on response for entering D3 substate\n");
         brcmf_bus_change_state(bus, BRCMF_BUS_UP);

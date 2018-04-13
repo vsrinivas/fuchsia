@@ -303,7 +303,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
         ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val | SSB_TMSLOW_REJECT);
 
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-        udelay(1);
+        usleep(1);
         SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh)) & SSB_TMSHIGH_BUSY),
                  100000);
 
@@ -318,7 +318,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
             val |= SSB_IMSTATE_REJECT;
             ci->ops->write32(ci->ctx, CORE_SB(base, sbimstate), val);
             val = ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate));
-            udelay(1);
+            usleep(1);
             SPINWAIT((ci->ops->read32(ci->ctx, CORE_SB(base, sbimstate)) & SSB_IMSTATE_BUSY),
                      100000);
         }
@@ -327,7 +327,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
         val = SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK | SSB_TMSLOW_REJECT | SSB_TMSLOW_RESET;
         ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), val);
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-        udelay(10);
+        usleep(10);
 
         /* clear the initiator reject bit */
         val = ci->ops->read32(ci->ctx, CORE_SB(base, sbidlow));
@@ -340,7 +340,7 @@ static void brcmf_chip_sb_coredisable(struct brcmf_core_priv* core, uint32_t pre
 
     /* leave reset and reject asserted */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), (SSB_TMSLOW_REJECT | SSB_TMSLOW_RESET));
-    udelay(1);
+    usleep(1);
 }
 
 static void brcmf_chip_ai_coredisable(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset) {
@@ -396,7 +396,7 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prere
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow),
                      SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK | SSB_TMSLOW_RESET);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    udelay(1);
+    usleep(1);
 
     /* clear any serror */
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatehigh));
@@ -413,12 +413,12 @@ static void brcmf_chip_sb_resetcore(struct brcmf_core_priv* core, uint32_t prere
     /* clear reset and allow it to propagate throughout the core */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), SSB_TMSLOW_FGC | SSB_TMSLOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    udelay(1);
+    usleep(1);
 
     /* leave clock enabled */
     ci->ops->write32(ci->ctx, CORE_SB(base, sbtmstatelow), SSB_TMSLOW_CLOCK);
     regdata = ci->ops->read32(ci->ctx, CORE_SB(base, sbtmstatelow));
-    udelay(1);
+    usleep(1);
 }
 
 static void brcmf_chip_ai_resetcore(struct brcmf_core_priv* core, uint32_t prereset, uint32_t reset,
@@ -1109,9 +1109,9 @@ void brcmf_chip_detach(struct brcmf_chip* pub) {
     brcmf_err("Need to free the core list!!!"); // TODO(cphoenix): Re-enable this code ASAP.
 /*    list_for_each_entry_safe(core, tmp, &chip->cores, list) {
         list_del(&core->list);
-        kfree(core);
+        free(core);
     }*/
-    kfree(chip);
+    free(chip);
 }
 
 struct brcmf_core* brcmf_chip_get_core(struct brcmf_chip* pub, uint16_t coreid) {

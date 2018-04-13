@@ -61,7 +61,7 @@ zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     return ZX_OK;
 
 fail:
-    kfree(proto);
+    free(proto);
     drvr->proto = NULL;
     return ZX_ERR_NO_MEMORY;
 }
@@ -75,7 +75,7 @@ void brcmf_proto_detach(struct brcmf_pub* drvr) {
         } else if (drvr->bus_if->proto_type == BRCMF_PROTO_MSGBUF) {
             brcmf_proto_msgbuf_detach(drvr);
         }
-        kfree(drvr->proto);
+        free(drvr->proto);
         drvr->proto = NULL;
     }
 }

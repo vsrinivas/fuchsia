@@ -35,6 +35,7 @@
 //#include <linux/types.h>
 //#include <net/cfg80211.h>
 
+#include <sync/completion.h>
 
 #include "brcm_hw_ids.h"
 #include "brcmu_utils.h"
@@ -42,14 +43,14 @@
 #include "bus.h"
 #include "chip.h"
 #include "chipcommon.h"
-#include "defs.h"
-#include "soc.h"
 #include "common.h"
 #include "core.h"
 #include "debug.h"
+#include "defs.h"
 #include "device.h"
 #include "linuxisms.h"
 #include "sdio.h"
+#include "soc.h"
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT 2
 
@@ -67,7 +68,7 @@ struct brcmf_sdiod_freezer {
     atomic_t thread_count;
     uint32_t frozen_count;
     wait_queue_head_t thread_freeze;
-    struct completion resumed;
+    completion_t resumed;
 };
 
 static irqreturn_t brcmf_sdiod_oob_irqhandler(int irq, void* dev_id) {
@@ -778,14 +779,14 @@ static zx_status_t brcmf_sdiod_freezer_attach(struct brcmf_sdio_dev* sdiodev) {
     atomic_set(&sdiodev->freezer->thread_count, 0);
     atomic_set(&sdiodev->freezer->freezing, 0);
     init_waitqueue_head(&sdiodev->freezer->thread_freeze);
-    init_completion(&sdiodev->freezer->resumed);
+    sdiodev->freezer->resumed = COMPLETION_INIT;
     return ZX_OK;
 }
 
 static void brcmf_sdiod_freezer_detach(struct brcmf_sdio_dev* sdiodev) {
     if (sdiodev->freezer) {
         WARN_ON(atomic_read(&sdiodev->freezer->freezing));
-        kfree(sdiodev->freezer);
+        free(sdiodev->freezer);
     }
 }
 
@@ -794,7 +795,7 @@ static zx_status_t brcmf_sdiod_freezer_on(struct brcmf_sdio_dev* sdiodev) {
     zx_status_t res = ZX_OK;
 
     sdiodev->freezer->frozen_count = 0;
-    reinit_completion(&sdiodev->freezer->resumed);
+    completion_reset(&sdiodev->freezer->resumed);
     atomic_set(&sdiodev->freezer->freezing, 1);
     brcmf_sdio_trigger_dpc(sdiodev->bus);
     wait_event(sdiodev->freezer->thread_freeze,
@@ -823,7 +824,7 @@ void brcmf_sdiod_try_freeze(struct brcmf_sdio_dev* sdiodev) {
     }
     sdiodev->freezer->frozen_count++;
     wake_up(&sdiodev->freezer->thread_freeze);
-    wait_for_completion(&sdiodev->freezer->resumed);
+    completion_wait(&sdiodev->freezer->resumed, ZX_TIME_INFINITE);
 }
 
 void brcmf_sdiod_freezer_count(struct brcmf_sdio_dev* sdiodev) {
@@ -995,7 +996,7 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
     }
     sdiodev = calloc(1, sizeof(struct brcmf_sdio_dev));
     if (!sdiodev) {
-        kfree(bus_if);
+        free(bus_if);
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -1027,8 +1028,8 @@ static zx_status_t brcmf_ops_sdio_probe(struct sdio_func* func, const struct sdi
 fail:
     dev_set_drvdata(&func->dev, NULL);
     dev_set_drvdata(&sdiodev->func1->dev, NULL);
-    kfree(sdiodev);
-    kfree(bus_if);
+    free(sdiodev);
+    free(bus_if);
     return err;
 }
 
@@ -1058,8 +1059,8 @@ static void brcmf_ops_sdio_remove(struct sdio_func* func) {
         dev_set_drvdata(&sdiodev->func1->dev, NULL);
         dev_set_drvdata(&sdiodev->func2->dev, NULL);
 
-        kfree(bus_if);
-        kfree(sdiodev);
+        free(bus_if);
+        free(sdiodev);
     }
 
     brcmf_dbg(SDIO, "Exit\n");

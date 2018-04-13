@@ -93,7 +93,7 @@
 #define BRCMF_SCAN_UNASSOC_TIME 40
 #define BRCMF_SCAN_PASSIVE_TIME 120
 
-#define BRCMF_ND_INFO_TIMEOUT msecs_to_jiffies(2000)
+#define BRCMF_ND_INFO_TIMEOUT_MSEC 2000
 
 #define BRCMF_ASSOC_PARAMS_FIXED_SIZE (sizeof(struct brcmf_assoc_params_le) - sizeof(uint16_t))
 
@@ -575,7 +575,7 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
     }
     // TODO(cphoenix): Lots of duplicated code between here and brcmf_p2p_add_vif() (p2p.c:2057).
     /* wait for firmware event */
-    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_ADD, BRCMF_VIF_EVENT_TIMEOUT);
+    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_ADD, BRCMF_VIF_EVENT_TIMEOUT_MSEC);
     brcmf_cfg80211_arm_vif_event(cfg, NULL);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
@@ -783,7 +783,7 @@ static zx_status_t brcmf_cfg80211_del_ap_iface(struct wiphy* wiphy, struct wirel
     }
 
     /* wait for firmware event */
-    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_DEL, BRCMF_VIF_EVENT_TIMEOUT);
+    time_left = brcmf_cfg80211_wait_vif_event(cfg, BRCMF_E_IF_DEL, BRCMF_VIF_EVENT_TIMEOUT_MSEC);
     if (time_left == 0) {
         brcmf_err("timeout occurred\n");
         err = ZX_ERR_IO;
@@ -1034,7 +1034,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
         }
     }
 
-    kfree(params);
+    free(params);
 exit:
     return err;
 }
@@ -1118,7 +1118,8 @@ static zx_status_t brcmf_cfg80211_scan(struct wiphy* wiphy, struct cfg80211_scan
     }
 
     /* Arm scan timeout timer */
-    mod_timer(&cfg->escan_timeout, jiffies + msecs_to_jiffies(BRCMF_ESCAN_TIMER_INTERVAL_MS));
+    mod_timer(&cfg->escan_timeout,
+              zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_ESCAN_TIMER_INTERVAL_MS));
 
     return ZX_OK;
 
@@ -1997,7 +1998,7 @@ static zx_status_t brcmf_cfg80211_connect(struct wiphy* wiphy, struct net_device
     brcmf_set_join_pref(ifp, &sme->bss_select);
 
     err = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params, join_params_size);
-    kfree(ext_join_params);
+    free(ext_join_params);
     if (err == ZX_OK) { /* This is it. join command worked, we are done */
         goto done;
     }
@@ -2475,7 +2476,7 @@ static void brcmf_fill_bss_param(struct brcmf_if* ifp, struct station_info* si) 
     }
 
 out_kfree:
-    kfree(buf);
+    free(buf);
 }
 
 static zx_status_t brcmf_cfg80211_get_station_ibss(struct brcmf_if* ifp,
@@ -2859,7 +2860,7 @@ static zx_status_t brcmf_inform_ibss(struct brcmf_cfg80211_info* cfg, struct net
 
 CleanUp:
 
-    kfree(buf);
+    free(buf);
 
     brcmf_dbg(TRACE, "Exit\n");
 
@@ -3294,7 +3295,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
 out_err:
     cfg80211_sched_scan_stopped(wiphy, 0);
 free_req:
-    kfree(request);
+    free(request);
     return err;
 }
 
@@ -3329,15 +3330,6 @@ static zx_status_t brcmf_cfg80211_sched_scan_stop(struct wiphy* wiphy, struct ne
         brcmf_notify_escan_complete(cfg, ifp, true, true);
     }
     return ZX_OK;
-}
-
-static __ALWAYS_INLINE void brcmf_delay(uint32_t ms) {
-    if (ms < 1000 / HZ) {
-        cond_resched();
-        mdelay(ms);
-    } else {
-        msleep(ms);
-    }
 }
 
 static zx_status_t brcmf_config_wowl_pattern(struct brcmf_if* ifp, uint8_t cmd[4], uint8_t* pattern,
@@ -3376,7 +3368,7 @@ static zx_status_t brcmf_config_wowl_pattern(struct brcmf_if* ifp, uint8_t cmd[4
 
     ret = brcmf_fil_iovar_data_set(ifp, "wowl_pattern", buf, bufsize);
 
-    kfree(buf);
+    free(buf);
     return ret;
 }
 
@@ -3472,7 +3464,7 @@ static void brcmf_report_wowl_wakeind(struct wiphy* wiphy, struct brcmf_if* ifp)
         if (wakeind & BRCMF_WOWL_PFN_FOUND) {
             brcmf_dbg(INFO, "WOWL Wake indicator: BRCMF_WOWL_PFN_FOUND\n");
             timeout = wait_event_timeout(cfg->wowl.nd_data_wait, cfg->wowl.nd_data_completed,
-                                         BRCMF_ND_INFO_TIMEOUT);
+                                         BRCMF_ND_INFO_TIMEOUT_MSEC);
             if (!timeout) {
                 brcmf_err("No result for wowl net detect\n");
             } else {
@@ -3615,7 +3607,7 @@ static zx_status_t brcmf_cfg80211_suspend(struct wiphy* wiphy, struct cfg80211_w
              * generated due to DISASSOC call to the fw to keep
              * the state fw and WPA_Supplicant state consistent
              */
-            brcmf_delay(500);
+            msleep(500);
         }
         /* Configure MPC */
         brcmf_set_mpc(ifp, 1);
@@ -4232,7 +4224,7 @@ zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktfla
     }
 
 exit:
-    kfree(iovar_ie_buf);
+    free(iovar_ie_buf);
     return err;
 }
 
@@ -4737,7 +4729,7 @@ static zx_status_t brcmf_cfg80211_mgmt_tx(struct wiphy* wiphy, struct wireless_d
         ack = brcmf_p2p_send_action_frame(cfg, cfg_to_ndev(cfg), af_params);
 
         cfg80211_mgmt_tx_status(wdev, *cookie, buf, len, ack, GFP_KERNEL);
-        kfree(af_params);
+        free(af_params);
     } else {
         brcmf_dbg(TRACE, "Unhandled, fc=%04x!!\n", mgmt->frame_control);
         brcmf_dbg_hex_dump(true, buf, len, "payload, len=%zu\n", len);
@@ -5086,7 +5078,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
 
 void brcmf_free_vif(struct brcmf_cfg80211_vif* vif) {
     list_del(&vif->list);
-    kfree(vif);
+    free(vif);
 }
 
 void brcmf_cfg80211_free_netdev(struct net_device* ndev) {
@@ -5167,10 +5159,10 @@ static bool brcmf_is_nonetwork(struct brcmf_cfg80211_info* cfg, const struct brc
 static void brcmf_clear_assoc_ies(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_cfg80211_connect_info* conn_info = cfg_to_conn(cfg);
 
-    kfree(conn_info->req_ie);
+    free(conn_info->req_ie);
     conn_info->req_ie = NULL;
     conn_info->req_ie_len = 0;
-    kfree(conn_info->resp_ie);
+    free(conn_info->resp_ie);
     conn_info->resp_ie = NULL;
     conn_info->resp_ie_len = 0;
 }
@@ -5270,7 +5262,7 @@ static zx_status_t brcmf_bss_roaming_done(struct brcmf_cfg80211_info* cfg, struc
     notify_channel = ieee80211_get_channel(wiphy, freq);
 
 done:
-    kfree(buf);
+    free(buf);
 
     roam_info.channel = notify_channel;
     roam_info.bssid = profile->bssid;
@@ -5331,7 +5323,7 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     if (event == BRCMF_E_LINK && reason == BRCMF_E_REASON_LINK_BSSCFG_DIS &&
             ndev != cfg_to_ndev(cfg)) {
         brcmf_dbg(CONN, "AP mode link down\n");
-        complete(&cfg->vif_disabled);
+        completion_signal(&cfg->vif_disabled);
         return ZX_OK;
     }
 
@@ -5390,7 +5382,7 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp, const struc
             brcmf_link_down(ifp->vif, brcmf_map_fw_linkdown_reason(e));
             brcmf_init_prof(ndev_to_prof(ndev));
             if (ndev != cfg_to_ndev(cfg)) {
-                complete(&cfg->vif_disabled);
+                completion_signal(&cfg->vif_disabled);
             }
             brcmf_net_setcarrier(ifp, false);
         }
@@ -5523,15 +5515,15 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
 }
 
 static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
-    kfree(cfg->conf);
+    free(cfg->conf);
     cfg->conf = NULL;
-    kfree(cfg->extra_buf);
+    free(cfg->extra_buf);
     cfg->extra_buf = NULL;
-    kfree(cfg->wowl.nd);
+    free(cfg->wowl.nd);
     cfg->wowl.nd = NULL;
-    kfree(cfg->wowl.nd_info);
+    free(cfg->wowl.nd_info);
     cfg->wowl.nd_info = NULL;
-    kfree(cfg->escan_info.escan_buf);
+    free(cfg->escan_info.escan_buf);
     cfg->escan_info.escan_buf = NULL;
 }
 
@@ -5580,7 +5572,7 @@ static zx_status_t wl_init_priv(struct brcmf_cfg80211_info* cfg) {
     mtx_init(&cfg->usr_sync, mtx_plain);
     brcmf_init_escan(cfg);
     brcmf_init_conf(cfg->conf);
-    init_completion(&cfg->vif_disabled);
+    cfg->vif_disabled = COMPLETION_INIT;
     return err;
 }
 
@@ -5801,7 +5793,7 @@ static zx_status_t brcmf_construct_chaninfo(struct brcmf_cfg80211_info* cfg, uin
     }
 
 fail_pbuf:
-    kfree(pbuf);
+    free(pbuf);
     return err;
 }
 
@@ -5852,7 +5844,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
         err = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN);
         if (err != ZX_OK) {
             brcmf_err("get chanspecs error (%d)\n", err);
-            kfree(pbuf);
+            free(pbuf);
             return err;
         }
 
@@ -5879,7 +5871,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
 
             brcmf_update_bw40_channel_flag(&band->channels[j], &ch);
         }
-        kfree(pbuf);
+        free(pbuf);
     }
     return err;
 }
@@ -6205,10 +6197,10 @@ static zx_status_t brcmf_setup_ifmodes(struct wiphy* wiphy, struct brcmf_if* ifp
     return ZX_OK;
 
 err:
-    kfree(c0_limits);
-    kfree(p2p_limits);
-    kfree(mbss_limits);
-    kfree(combo);
+    free(c0_limits);
+    free(p2p_limits);
+    free(mbss_limits);
+    free(combo);
     return ZX_ERR_NO_MEMORY;
 }
 
@@ -6337,7 +6329,7 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
 
             band->channels = kmemdup(&__wl_2ghz_channels, sizeof(__wl_2ghz_channels), GFP_KERNEL);
             if (!band->channels) {
-                kfree(band);
+                free(band);
                 return ZX_ERR_NO_MEMORY;
             }
 
@@ -6352,7 +6344,7 @@ static zx_status_t brcmf_setup_wiphy(struct wiphy* wiphy, struct brcmf_if* ifp) 
 
             band->channels = kmemdup(&__wl_5ghz_channels, sizeof(__wl_5ghz_channels), GFP_KERNEL);
             if (!band->channels) {
-                kfree(band);
+                free(band);
                 return ZX_ERR_NO_MEMORY;
             }
 
@@ -6430,7 +6422,7 @@ static zx_status_t __brcmf_cfg80211_down(struct brcmf_if* ifp) {
            generated due to DISASSOC call to the fw to keep
            the state fw and WPA_Supplicant state consistent
          */
-        brcmf_delay(500);
+        msleep(500);
     }
 
     brcmf_abort_scanning(cfg);
@@ -6609,21 +6601,21 @@ static void brcmf_free_wiphy(struct wiphy* wiphy) {
 
     if (wiphy->iface_combinations) {
         for (i = 0; i < wiphy->n_iface_combinations; i++) {
-            kfree(wiphy->iface_combinations[i].limits);
+            free(wiphy->iface_combinations[i].limits);
         }
     }
-    kfree(wiphy->iface_combinations);
+    free(wiphy->iface_combinations);
     if (wiphy->bands[NL80211_BAND_2GHZ]) {
-        kfree(wiphy->bands[NL80211_BAND_2GHZ]->channels);
-        kfree(wiphy->bands[NL80211_BAND_2GHZ]);
+        free(wiphy->bands[NL80211_BAND_2GHZ]->channels);
+        free(wiphy->bands[NL80211_BAND_2GHZ]);
     }
     if (wiphy->bands[NL80211_BAND_5GHZ]) {
-        kfree(wiphy->bands[NL80211_BAND_5GHZ]->channels);
-        kfree(wiphy->bands[NL80211_BAND_5GHZ]);
+        free(wiphy->bands[NL80211_BAND_5GHZ]->channels);
+        free(wiphy->bands[NL80211_BAND_5GHZ]);
     }
 #if IS_ENABLED(CONFIG_PM)
     if (wiphy->wowlan != &brcmf_wowlan_support) {
-        kfree(wiphy->wowlan);
+        free(wiphy->wowlan);
     }
 #endif
     wiphy_free(wiphy);
@@ -6814,7 +6806,7 @@ priv_out:
 wiphy_out:
     brcmf_free_wiphy(wiphy);
 ops_out:
-    kfree(ops);
+    free(ops);
     return NULL;
 }
 
@@ -6826,7 +6818,7 @@ void brcmf_cfg80211_detach(struct brcmf_cfg80211_info* cfg) {
     brcmf_pno_detach(cfg);
     brcmf_btcoex_detach(cfg);
     wiphy_unregister(cfg->wiphy);
-    kfree(cfg->ops);
+    free(cfg->ops);
     wl_deinit_priv(cfg);
     brcmf_free_wiphy(cfg->wiphy);
 }

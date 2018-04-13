@@ -32,7 +32,7 @@
 #include "p2p.h"
 
 /* T1 start SCO/eSCO priority suppression */
-#define BRCMF_BTCOEX_OPPR_WIN_TIME msecs_to_jiffies(2000)
+#define BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC (2000)
 
 /* BT registers values during DHCP */
 #define BRCMF_BT_DHCP_REG50 0x8022
@@ -294,11 +294,12 @@ static void brcmf_btcoex_handler(struct work_struct* work) {
         */
         brcmf_dbg(INFO, "DHCP started\n");
         btci->bt_state = BRCMF_BT_DHCP_OPPR_WIN;
-        if (btci->timeout < BRCMF_BTCOEX_OPPR_WIN_TIME) {
+        if (btci->timeout < BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC) {
             mod_timer(&btci->timer, btci->timer.expires);
         } else {
-            btci->timeout -= BRCMF_BTCOEX_OPPR_WIN_TIME;
-            mod_timer(&btci->timer, jiffies + BRCMF_BTCOEX_OPPR_WIN_TIME);
+            btci->timeout -= BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
+            mod_timer(&btci->timer,
+                      zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC));
         }
         btci->timer_on = true;
         break;
@@ -310,11 +311,11 @@ static void brcmf_btcoex_handler(struct work_struct* work) {
         }
 
         /* DHCP is not over yet, start lowering BT priority */
-        brcmf_dbg(INFO, "DHCP T1:%d expired\n", jiffies_to_msecs(BRCMF_BTCOEX_OPPR_WIN_TIME));
+        brcmf_dbg(INFO, "DHCP T1:%d expired\n", BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC);
         brcmf_btcoex_boost_wifi(btci, true);
 
         btci->bt_state = BRCMF_BT_DHCP_FLAG_FORCE_TIMEOUT;
-        mod_timer(&btci->timer, jiffies + btci->timeout);
+        mod_timer(&btci->timer, zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(btci->timeout));
         btci->timer_on = true;
         break;
 
@@ -362,7 +363,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
 
     /* Set up timer for BT  */
     btci->timer_on = false;
-    btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME;
+    btci->timeout = BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC;
     timer_setup(&btci->timer, brcmf_btcoex_timerfunc, 0);
     btci->cfg = cfg;
     btci->saved_regs_part1 = false;
@@ -395,7 +396,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
     brcmf_btcoex_boost_wifi(cfg->btcoex, false);
     brcmf_btcoex_restore_part1(cfg->btcoex);
 
-    kfree(cfg->btcoex);
+    free(cfg->btcoex);
     cfg->btcoex = NULL;
 }
 
@@ -453,7 +454,7 @@ zx_status_t brcmf_btcoex_set_mode(struct brcmf_cfg80211_vif* vif, enum brcmf_btc
         }
         /* Start BT timer only for SCO connection */
         if (brcmf_btcoex_is_sco_active(ifp)) {
-            btci->timeout = msecs_to_jiffies(duration);
+            btci->timeout = duration;
             btci->vif = vif;
             brcmf_btcoex_dhcp_start(btci);
         }

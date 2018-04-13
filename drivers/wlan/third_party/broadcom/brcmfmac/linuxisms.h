@@ -25,6 +25,7 @@
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
 
 // TODO(cphoenix): Clean up the list stuff (Note: it has to be early for the #define to work)
+// TODO(cphoenix): Replace other functions e.g. pci_write_config_dword() in code
 #define list_add_tail zx_list_add_tail
 #include <zircon/listnode.h>
 #undef list_add_tail
@@ -128,20 +129,10 @@ typedef struct {
 
 #define lockdep_assert_held(mtx) ZX_ASSERT(mtx_trylock(mtx) != thrd_success)
 
-// TODO(cphoenix): Use zx_nanosleep instead of busy-wait?
-#define mdelay(msecs)                                                                \
-    do {                                                                             \
-        zx_time_t busy_loop_end = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(msecs); \
-        while (zx_clock_get(ZX_CLOCK_MONOTONIC) < busy_loop_end) {}                  \
-    } while (0)
-
-#define udelay(msecs)                                                                \
-    do {                                                                             \
-        zx_time_t busy_loop_end = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_USEC(msecs); \
-        while (zx_clock_get(ZX_CLOCK_MONOTONIC) < busy_loop_end) {}                  \
-    } while (0)
-
-#define usleep_range(early, late) udelay(early)
+#define usleep(us) zx_nanosleep(zx_deadline_after(ZX_USEC(us)))
+#define usleep_range(early, late) usleep(early)
+#define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
+#define PAUSE zx_nanosleep(zx_deadline_after(ZX_MSEC(50)))
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define min_t(t, a, b) (((t)(a) < (t)(b)) ? (t)(a) : (t)(b))
@@ -181,8 +172,6 @@ typedef uint32_t gfp_t;
 #define BCMA_CORE_SYS_MEM      0x849
 #define BCMA_CORE_PMU          0x827
 
-#define PAUSE zx_nanosleep(zx_deadline_after(ZX_MSEC(50)))
-
 // clang-format off
 #define LINUX_FUNCII(name) LINUX_FUNC(name, int, int)
 #define LINUX_FUNCIV(name) LINUX_FUNC(name, int, void*)
@@ -212,8 +201,6 @@ LINUX_FUNCVI(skb_pull)
 LINUX_FUNCVI(__skb_trim)
 LINUX_FUNCVI(brfcmf_dbg)
 LINUX_FUNCII(time_after)
-LINUX_FUNCII(msecs_to_jiffies)
-LINUX_FUNCII(jiffies_to_msecs)
 #define net_ratelimit() (true)
 // Last parameter of this returns an error code. Must be a zx_status_t (0 or negative).
 LINUX_FUNCVI(sdio_readb)
@@ -282,10 +269,6 @@ LINUX_FUNCIV(vzalloc)
 LINUX_FUNCIV(kzalloc)
 //LINUX_FUNCIV(valloc)
 LINUX_FUNCVV(vfree)
-// TODO(cphoenix): Replace these functions in code rather than using #defines
-// and others e.g. pci_write_config_dword()
-#define kfree free
-#define msleep(ms) zx_nanosleep(zx_deadline_after(ZX_MSEC(ms)))
 LINUX_FUNCVI(pr_warn)
 LINUX_FUNCVS(sdio_enable_func)
 LINUX_FUNCVI(sdio_disable_func)
@@ -324,15 +307,11 @@ LINUX_FUNCX(in_interrupt)
 LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCII(allow_signal)
 LINUX_FUNCX(kthread_should_stop)
-LINUX_FUNCVI(wait_for_completion_interruptible)
-LINUX_FUNCVI(reinit_completion)
-LINUX_FUNCVI(complete)
 LINUX_FUNCVI(mod_timer)
 LINUX_FUNCVI(add_timer)
 LINUX_FUNCVI(timer_setup)
 LINUX_FUNCVI(timer_pending)
 LINUX_FUNCII(__ffs)
-LINUX_FUNCVI(init_completion)
 LINUX_FUNCVS(kthread_run)
 static inline const char* dev_name(void* dev) {
     return device_get_name(dev);
@@ -371,7 +350,6 @@ LINUX_FUNCVI(cfg80211_rx_mgmt)
 LINUX_FUNCVI(cfg80211_mgmt_tx_status)
 LINUX_FUNCX(prandom_u32)
 LINUX_FUNCVI(schedule_work)
-LINUX_FUNCVI(wait_for_completion_timeout)
 LINUX_FUNCVI(ether_addr_equal)
 LINUX_FUNCX(rtnl_lock)
 LINUX_FUNCX(rtnl_unlock)
@@ -418,9 +396,6 @@ LINUX_FUNCII(MBM_TO_DBM)
 LINUX_FUNCVI(SET_NETDEV_DEV)
 LINUX_FUNCVV(wiphy_dev)
 LINUX_FUNCX(cond_resched)
-#undef mdelay // conflicts with Josh's definition above
-#define mdelay linux_mdelay // name conflict
-LINUX_FUNCII(linux_mdelay)
 LINUX_FUNCII(max)
 LINUX_FUNCVI(netdev_mc_count)
 LINUX_FUNCVI(netif_stop_queue)
@@ -825,8 +800,6 @@ enum nl80211_band {
 
 enum brcmf_bus_type { BRCMF_BUSTYPE_SDIO, BRCMF_BUSTYPE_USB, BRCMF_BUSTYPE_PCIE };
 
-extern uint64_t jiffies;
-
 #define TP_PROTO(args...) args
 #define MODULE_FIRMWARE(a)
 #define MODULE_AUTHOR(a)
@@ -1127,14 +1100,10 @@ struct seq_file {
 };
 
 struct timer_list {
-    uint64_t expires;
+    zx_time_t expires;
 };
 
 struct asdf {
-    int foo;
-};
-
-struct completion {
     int foo;
 };
 

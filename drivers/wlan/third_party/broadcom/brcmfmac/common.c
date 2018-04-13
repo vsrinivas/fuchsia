@@ -224,7 +224,7 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
         err = ZX_ERR_IO;
     }
 
-    kfree(chunk_buf);
+    free(chunk_buf);
 done:
     release_firmware(clm);
     return err;
@@ -468,7 +468,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
 }
 
 void brcmf_release_module_param(struct brcmf_mp_device* module_param) {
-    kfree(module_param);
+    free(module_param);
 }
 
 static zx_status_t brcmf_common_pd_probe(struct platform_device* pdev) {

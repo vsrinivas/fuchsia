@@ -47,7 +47,7 @@
 #include "pno.h"
 #include "proto.h"
 
-#define MAX_WAIT_FOR_8021X_TX msecs_to_jiffies(950)
+#define MAX_WAIT_FOR_8021X_TX_MSEC (950)
 
 #define BRCMF_BSSIDX_INVALID -1
 
@@ -161,7 +161,7 @@ static void _brcmf_set_multicast_list(struct work_struct* work) {
         cmd_value = cnt ? true : cmd_value;
     }
 
-    kfree(buf);
+    free(buf);
 
     /*
      * Now send the allmulti setting.  This is based on the setting in the
@@ -738,7 +738,7 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
          * up the ifp if needed.
          */
         brcmf_p2p_ifp_removed(ifp, rtnl_locked);
-        kfree(ifp);
+        free(ifp);
     }
 }
 
@@ -1156,7 +1156,7 @@ void brcmf_detach(struct brcmf_device* dev) {
 
     brcmf_debug_detach(drvr);
     bus_if->drvr = NULL;
-    kfree(drvr);
+    free(drvr);
 }
 
 zx_status_t brcmf_iovar_data_set(struct brcmf_device* dev, char* name, void* data, uint32_t len) {
@@ -1174,7 +1174,7 @@ bool brcmf_netdev_wait_pend8021x(struct brcmf_if* ifp) {
     uint32_t time_left;
 
     time_left = wait_event_timeout(ifp->pend_8021x_wait, !brcmf_get_pend_8021x_cnt(ifp),
-                                   MAX_WAIT_FOR_8021X_TX);
+                                   MAX_WAIT_FOR_8021X_TX_MSEC);
 
     if (!time_left) {
         brcmf_err("Timed out waiting for no pending 802.1x packets\n");

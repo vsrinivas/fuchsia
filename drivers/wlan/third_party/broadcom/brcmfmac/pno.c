@@ -367,7 +367,7 @@ static zx_status_t brcmf_pno_prep_fwconfig(struct brcmf_pno_info* pi,
     return ZX_OK;
 
 fail:
-    kfree(fw_buckets);
+    free(fw_buckets);
     return err;
 }
 
@@ -473,9 +473,9 @@ clean:
         brcmf_pno_clean(ifp);
     }
 free_gscan:
-    kfree(gscan_cfg);
+    free(gscan_cfg);
 free_buckets:
-    kfree(buckets);
+    free(buckets);
     return err;
 }
 
@@ -547,7 +547,7 @@ void brcmf_pno_detach(struct brcmf_cfg80211_info* cfg) {
 
     WARN_ON(pi->n_reqs);
     mtx_destroy(&pi->req_lock);
-    kfree(pi);
+    free(pi);
 }
 
 void brcmf_pno_wiphy_params(struct wiphy* wiphy, bool gscan) {

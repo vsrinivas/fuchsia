@@ -37,7 +37,7 @@
 #include "firmware.h"
 #include "linuxisms.h"
 
-#define IOCTL_RESP_TIMEOUT msecs_to_jiffies(2000)
+#define IOCTL_RESP_TIMEOUT_MSEC (2000)
 
 #define BRCMF_USB_RESET_GETVER_SPINWAIT 100 /* in unit of ms */
 #define BRCMF_USB_RESET_GETVER_LOOP_CNT 10
@@ -193,7 +193,8 @@ static struct brcmf_usbdev_info* brcmf_usb_get_businfo(struct brcmf_device* dev)
 }
 
 static uint32_t brcmf_usb_ioctl_resp_wait(struct brcmf_usbdev_info* devinfo) {
-    return wait_event_timeout(devinfo->ioctl_resp_wait, devinfo->ctl_completed, IOCTL_RESP_TIMEOUT);
+    return wait_event_timeout(devinfo->ioctl_resp_wait, devinfo->ctl_completed,
+                              IOCTL_RESP_TIMEOUT_MSEC);
 }
 
 static void brcmf_usb_ioctl_resp_wake(struct brcmf_usbdev_info* devinfo) {
@@ -737,7 +738,7 @@ static zx_status_t brcmf_usb_dl_cmd(struct brcmf_usbdev_info* devinfo, uint8_t c
     }
 
 finalize:
-    kfree(tmpbuf);
+    free(tmpbuf);
     return ret;
 }
 
@@ -783,7 +784,7 @@ static zx_status_t brcmf_usb_resetcfg(struct brcmf_usbdev_info* devinfo) {
 
     loop_cnt = 0;
     do {
-        mdelay(BRCMF_USB_RESET_GETVER_SPINWAIT);
+        msleep(BRCMF_USB_RESET_GETVER_SPINWAIT);
         loop_cnt++;
         id.chip = 0xDEAD; /* Get the ID */
         err = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
@@ -913,7 +914,7 @@ static zx_status_t brcmf_usb_dl_writeimage(struct brcmf_usbdev_info* devinfo, ui
     }
 
 fail:
-    kfree(bulkchunk);
+    free(bulkchunk);
     brcmf_dbg(USB, "Exit, err=%d\n", err);
     return err;
 }
@@ -1005,8 +1006,8 @@ static void brcmf_usb_detach(struct brcmf_usbdev_info* devinfo) {
     usb_free_urb(devinfo->ctl_urb);
     usb_free_urb(devinfo->bulk_urb);
 
-    kfree(devinfo->tx_reqs);
-    kfree(devinfo->rx_reqs);
+    free(devinfo->tx_reqs);
+    free(devinfo->rx_reqs);
 
     if (devinfo->settings) {
         brcmf_release_module_param(devinfo->settings);
@@ -1256,7 +1257,7 @@ static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
 
 fail:
     /* Release resources in reverse order */
-    kfree(bus);
+    free(bus);
     brcmf_usb_detach(devinfo);
     return ret;
 }
@@ -1268,7 +1269,7 @@ static void brcmf_usb_disconnect_cb(struct brcmf_usbdev_info* devinfo) {
     brcmf_dbg(USB, "Enter, bus_pub %p\n", devinfo);
 
     brcmf_detach(devinfo->dev);
-    kfree(devinfo->bus_pub.bus);
+    free(devinfo->bus_pub.bus);
     brcmf_usb_detach(devinfo);
 }
 
@@ -1375,7 +1376,7 @@ static zx_status_t brcmf_usb_probe(struct usb_interface* intf, const struct usb_
 
 fail:
     mtx_unlock(&devinfo->dev_init_lock);
-    kfree(devinfo);
+    free(devinfo);
     usb_set_intfdata(intf, NULL);
     return ret;
 }
@@ -1396,7 +1397,7 @@ static void brcmf_usb_disconnect(struct usb_interface* intf) {
         }
 
         brcmf_usb_disconnect_cb(devinfo);
-        kfree(devinfo);
+        free(devinfo);
     }
 done:
     brcmf_dbg(USB, "Exit\n");
