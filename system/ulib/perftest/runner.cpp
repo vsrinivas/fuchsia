@@ -54,6 +54,13 @@ public:
         return true;
     }
 
+    bool RunTestFunc(const internal::NamedTest* test) {
+        overall_start_time_ = zx_ticks_get();
+        bool result = test->test_func(this);
+        overall_end_time_ = zx_ticks_get();
+        return result;
+    }
+
     bool Success() const {
         return runs_started_ == run_count_ && finishing_calls_ == 1;
     }
@@ -84,16 +91,34 @@ public:
         }
         trace_thread_ref_t thread_ref;
         trace_context_register_current_thread(context, &thread_ref);
-        trace_string_ref_t name_ref;
-        trace_context_register_string_literal(context, "test_run", &name_ref);
-        for (uint32_t idx = 0; idx < run_count_; ++idx) {
+
+        auto WriteEvent = [&](trace_string_ref_t* name_ref,
+                              uint64_t start_time, uint64_t end_time) {
             trace_context_write_duration_begin_event_record(
-                context, timestamps_[idx],
-                &thread_ref, &category_ref, &name_ref, nullptr, 0);
+                context, start_time,
+                &thread_ref, &category_ref, name_ref, nullptr, 0);
             trace_context_write_duration_end_event_record(
-                context, timestamps_[idx + 1],
-                &thread_ref, &category_ref, &name_ref, nullptr, 0);
+                context, end_time,
+                &thread_ref, &category_ref, name_ref, nullptr, 0);
+        };
+
+        trace_string_ref_t test_setup_string;
+        trace_string_ref_t test_run_string;
+        trace_string_ref_t test_teardown_string;
+        trace_context_register_string_literal(
+            context, "test_setup", &test_setup_string);
+        trace_context_register_string_literal(
+            context, "test_run", &test_run_string);
+        trace_context_register_string_literal(
+            context, "test_teardown", &test_teardown_string);
+
+        WriteEvent(&test_setup_string, overall_start_time_, timestamps_[0]);
+        for (uint32_t idx = 0; idx < run_count_; ++idx) {
+            WriteEvent(&test_run_string,
+                       timestamps_[idx], timestamps_[idx + 1]);
         }
+        WriteEvent(&test_teardown_string,
+                   timestamps_[run_count_], overall_end_time_);
     }
 
 private:
@@ -111,6 +136,10 @@ private:
     // extra comparison in the fast path of KeepRunning().
     uint32_t finishing_calls_ = 0;
     fbl::unique_ptr<uint64_t[]> timestamps_;
+    // Start time, before the test's setup phase.
+    uint64_t overall_start_time_;
+    // End time, after the test's teardown phase.
+    uint64_t overall_end_time_;
 };
 
 }  // namespace
@@ -156,7 +185,7 @@ bool RunTests(TestList* test_list, uint32_t run_count, const char* regex_string,
         fprintf(log_stream, "[ RUN      ] %s\n", test_name);
 
         RepeatStateImpl state(run_count);
-        bool result = test_case.test_func(&state);
+        bool result = state.RunTestFunc(&test_case);
 
         if (!result) {
             fprintf(log_stream, "[  FAILED  ] %s\n", test_name);
