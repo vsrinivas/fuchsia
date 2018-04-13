@@ -216,9 +216,7 @@ bool Syscall::validate() const {
             valid_args = false;
         }
         if (arg.arr_spec) {
-            if (!valid_array_count(arg)) {
-                std::string err = "invalid array spec for " + arg.name;
-                print_error(err.c_str());
+            if (!validate_array_spec(arg)) {
                 valid_args = false;
             }
         }
@@ -231,20 +229,28 @@ void Syscall::assign_index(int* next_index) {
         index = (*next_index)++;
 }
 
-bool Syscall::valid_array_count(const TypeSpec& ts) const {
+bool Syscall::validate_array_spec(const TypeSpec& ts) const {
     if (ts.arr_spec->count > 0)
         return true;
-    // find the argument that represents the array count.
-    for (const auto& arg : arg_spec) {
-        if (ts.arr_spec->name == arg.name) {
-            if (!arg.arr_spec)
-                return true;
-            // if the count itself is an array it can only be "[1]".
-            // TODO:cpu also enforce INOUT here.
-            return (arg.arr_spec->count == 1u);
+    // find arguments that represent the array count.
+    for (const string& multiplier : ts.arr_spec->multipliers) {
+        auto arg = std::find_if(arg_spec.begin(), arg_spec.end(), [&] (const TypeSpec& a) {
+            return a.name == multiplier;
+        });
+        if (arg == arg_spec.end()) {
+            std::string err = "invalid array spec for " + ts.name
+                + ": '" + multiplier + "' does not refer to an argument";
+            print_error(err.c_str());
+            return false;
+        }
+        // TODO:cpu also enforce INOUT here.
+        if (arg->arr_spec && arg->arr_spec->count != 1u) {
+            std::string err = "invalid array spec for " + ts.name
+                + ": '" + multiplier + "' refers to an array of size != 1";
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 void Syscall::print_error(const char* what) const {

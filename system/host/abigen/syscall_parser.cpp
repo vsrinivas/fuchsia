@@ -48,9 +48,30 @@ bool parse_param_attributes(TokenStream* ts, vector<string>* attrs) {
     return true;
 }
 
+bool parse_product_of_identifiers(TokenStream* ts, TypeSpec* type_spec,
+                                  std::vector<std::string>* identifiers) {
+    while (true) {
+        if (!vet_identifier(ts->curr(), ts->filectx()))
+            return false;
+        if (ts->curr() == type_spec->name) {
+            ts->filectx().print_error("invalid name for an array specifier", ts->curr());
+            return false;
+        }
+        identifiers->push_back(ts->curr());
+        if (ts->next() == "]") {
+            return true;
+        }
+        if (ts->curr() != "*") {
+            ts->filectx().print_error("expected ']' or '*'", "");
+            return false;
+        }
+        ts->next(); // consume '*'
+    }
+}
+
 bool parse_arrayspec(TokenStream* ts, TypeSpec* type_spec) {
-    std::string name;
     uint32_t count = 0;
+    std::vector<std::string> multipliers;
 
     if (ts->next() != "[")
         return false;
@@ -61,32 +82,24 @@ bool parse_arrayspec(TokenStream* ts, TypeSpec* type_spec) {
     auto c = ts->curr()[0];
 
     if (isalpha(c)) {
-        if (!vet_identifier(ts->curr(), ts->filectx()))
+        if (!parse_product_of_identifiers(ts, type_spec, &multipliers)) {
             return false;
-        name = ts->curr();
-
+        }
     } else if (isdigit(c)) {
         count = c - '0';
         if (ts->curr().size() > 1 || count == 0 || count > 9) {
             ts->filectx().print_error("only 1-9 explicit array count allowed", "");
             return false;
         }
+        if (ts->next() != "]") {
+            ts->filectx().print_error("expected", "]");
+            return false;
+        }
     } else {
         ts->filectx().print_error("expected array specifier", "");
         return false;
     }
-
-    if (name == type_spec->name) {
-        ts->filectx().print_error("invalid name for an array specifier", name);
-        return false;
-    }
-
-    if (ts->next() != "]") {
-        ts->filectx().print_error("expected", "]");
-        return false;
-    }
-
-    type_spec->arr_spec.reset(new ArraySpec{ArraySpec::IN, count, name});
+    type_spec->arr_spec.reset(new ArraySpec{ArraySpec::IN, count, multipliers});
     return true;
 }
 
@@ -190,7 +203,7 @@ bool process_syscall(AbigenGenerator* parser, TokenStream& ts) {
             std::for_each(syscall.ret_spec.begin() + 1, syscall.ret_spec.end(),
                           [](TypeSpec& type_spec) {
                               type_spec.arr_spec.reset(
-                                  new ArraySpec{ArraySpec::OUT, 1, ""});
+                                  new ArraySpec{ArraySpec::OUT, 1, {}});
                           });
         }
     } else if (return_spec != ";") {

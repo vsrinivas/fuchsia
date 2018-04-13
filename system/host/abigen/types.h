@@ -25,8 +25,12 @@ struct ArraySpec {
     };
 
     Kind kind;
+    // Size of the array is specified in one of the two ways:
+    //    1) a number in the range 1--9 ('count' is non-zero, 'multipliers' is empty)
+    //    2) a sequence of one or more identifiers separated by '*',
+    //       e.g. "foo * bar" or "foo" ('count' is zero, 'multipliers' is non-empty)
     uint32_t count;
-    std::string name;
+    std::vector<std::string> multipliers;
 
     std::string kind_str() const;
     std::string kind_lowercase_str() const;
@@ -71,7 +75,7 @@ struct Syscall {
     void for_each_return(const std::function<void(const TypeSpec&)>& cb) const;
     bool validate() const;
     void assign_index(int* next_index);
-    bool valid_array_count(const TypeSpec& ts) const;
+    bool validate_array_spec(const TypeSpec& ts) const;
     void print_error(const char* what) const;
     std::string return_type() const;
     bool is_void_return() const;
