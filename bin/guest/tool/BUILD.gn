@@ -23,6 +23,9 @@ executable("bin") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/app/fidl",
     "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
+    "//garnet/public/lib/ui/presentation/fidl",
+    "//garnet/public/lib/ui/views/fidl:v1",
     "//zircon/public/lib/pretty",
   ]
 }
