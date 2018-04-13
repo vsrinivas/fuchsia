@@ -16,7 +16,9 @@
 namespace fidl {
 
 std::string NameIdentifier(SourceLocation name);
-std::string NameName(const flat::Name& name);
+std::string NameName(const flat::Name& name, StringView library_separator, StringView separator);
+
+std::string NameLibrary(const std::vector<StringView>& library_name);
 
 std::string NamePrimitiveCType(types::PrimitiveSubtype subtype);
 std::string NamePrimitiveSubtype(types::PrimitiveSubtype subtype);
@@ -33,7 +35,7 @@ std::string NameFlatCType(const flat::Type* type);
 std::string NameInterface(const flat::Interface& interface);
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method);
 std::string NameOrdinal(StringView method_name);
-std::string NameMessage(StringView library_name, StringView method_name, types::MessageKind kind);
+std::string NameMessage(StringView method_name, types::MessageKind kind);
 std::string NameParameter(StringView message_name,
                           const flat::Interface::Method::Parameter& parameter);
 
@@ -45,10 +47,8 @@ std::string NameFields(StringView name);
 std::string NameCodedStruct(const flat::Struct* struct_decl);
 std::string NameCodedUnion(const flat::Union* union_decl);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
-std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name,
-                                     types::Nullability nullability);
-std::string NameCodedRequestHandle(StringView library_name, StringView interface_name,
-                                   types::Nullability nullability);
+std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability);
+std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability);
 std::string NameCodedArray(StringView element_name, uint64_t size);
 std::string NameCodedVector(StringView element_name, uint64_t max_size,
                             types::Nullability nullability);

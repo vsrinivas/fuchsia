@@ -89,7 +89,7 @@ private:
     void Generate(const flat::Union& value);
     void Generate(const flat::Union::Member& value);
     void
-    Generate(const std::pair<const StringView, std::unique_ptr<flat::Library>>& library_dependency);
+    Generate(const std::pair<const std::vector<StringView>, std::unique_ptr<flat::Library>>& library_dependency);
 
     void GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl);
     void GenerateDeclarationsMember(const flat::Library* library,

@@ -261,7 +261,7 @@ std::map<const flat::Decl*, CGenerator::NamedEnum>
 CGenerator::NameEnums(const std::vector<std::unique_ptr<flat::Enum>>& enum_infos) {
     std::map<const flat::Decl*, NamedEnum> named_enums;
     for (const auto& enum_info : enum_infos) {
-        std::string enum_name = NameName(enum_info->name);
+        std::string enum_name = NameName(enum_info->name, "_", "_");
         named_enums.emplace(enum_info.get(), NamedEnum{std::move(enum_name), *enum_info});
     }
     return named_enums;
@@ -279,8 +279,7 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
             named_method.ordinal = method.ordinal.Value();
             named_method.ordinal_name = NameOrdinal(method_name);
             if (method.maybe_request != nullptr) {
-                std::string c_name =
-                    NameMessage(LibraryName(library_), method_name, types::MessageKind::kRequest);
+                std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
                 std::string coded_name = NameTable(c_name);
                 named_method.request = std::make_unique<NamedMessage>(NamedMessage{
                     std::move(c_name), std::move(coded_name), method.maybe_request->parameters});
@@ -288,14 +287,13 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
             if (method.maybe_response != nullptr) {
                 if (method.maybe_request == nullptr) {
                     std::string c_name =
-                        NameMessage(LibraryName(library_), method_name, types::MessageKind::kEvent);
+                        NameMessage(method_name, types::MessageKind::kEvent);
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
                                      method.maybe_response->parameters});
                 } else {
-                    std::string c_name = NameMessage(LibraryName(library_), method_name,
-                                                     types::MessageKind::kResponse);
+                    std::string c_name = NameMessage(method_name, types::MessageKind::kResponse);
                     std::string coded_name = NameTable(c_name);
                     named_method.response = std::make_unique<NamedMessage>(
                         NamedMessage{std::move(c_name), std::move(coded_name),
@@ -313,8 +311,8 @@ std::map<const flat::Decl*, CGenerator::NamedStruct>
 CGenerator::NameStructs(const std::vector<std::unique_ptr<flat::Struct>>& struct_infos) {
     std::map<const flat::Decl*, NamedStruct> named_structs;
     for (const auto& struct_info : struct_infos) {
-        std::string c_name = NameName(struct_info->name);
-        std::string coded_name = NameName(struct_info->name) + "Coded";
+        std::string c_name = NameName(struct_info->name, "_", "_");
+        std::string coded_name = c_name + "Coded";
         named_structs.emplace(struct_info.get(),
                               NamedStruct{std::move(c_name), std::move(coded_name), *struct_info});
     }
@@ -325,7 +323,7 @@ std::map<const flat::Decl*, CGenerator::NamedUnion>
 CGenerator::NameUnions(const std::vector<std::unique_ptr<flat::Union>>& union_infos) {
     std::map<const flat::Decl*, NamedUnion> named_unions;
     for (const auto& union_info : union_infos) {
-        std::string union_name = NameName(union_info->name);
+        std::string union_name = NameName(union_info->name, "_", "_");
         named_unions.emplace(union_info.get(), NamedUnion{std::move(union_name), *union_info});
     }
     return named_unions;

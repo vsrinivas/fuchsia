@@ -20,6 +20,7 @@
 #include <fidl/identifier_table.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
+#include <fidl/names.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/tables_generator.h>
@@ -298,8 +299,9 @@ int main(int argc, char* argv[]) {
 
     fidl::IdentifierTable identifier_table;
     fidl::ErrorReporter error_reporter;
-    std::map<fidl::StringView, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
+    std::map<std::vector<fidl::StringView>, std::unique_ptr<fidl::flat::Library>> compiled_libraries;
     const fidl::flat::Library* final_library = nullptr;
+    std::vector<fidl::StringView> final_library_name;
     for (const auto& source_manager : source_managers) {
         if (source_manager.sources().empty()) {
             continue;
@@ -316,22 +318,25 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         final_library = library.get();
-        auto name_and_library = std::make_pair(library->name(), std::move(library));
+        std::vector<fidl::StringView> library_name = library->name();
+        final_library_name = library_name;
+        auto name_and_library = std::make_pair(std::move(library_name), std::move(library));
         auto iter = compiled_libraries.insert(std::move(name_and_library));
         if (!iter.second) {
-            auto name = iter.first->first;
-            Fail("Mulitple libraries with the same name: '%.*s'\n",
-                 static_cast<int>(name.size()), name.data());
+            const auto& name = iter.first->first;
+            Fail("Mulitple libraries with the same name: '%s'\n",
+                 NameLibrary(name).data());
         }
     }
     if (final_library == nullptr) {
         Fail("No library was produced.\n");
     }
 
-    if (!library_name.empty() && final_library->name() != library_name) {
-        auto name = final_library->name();
-        Fail("Generated library '%.*s' did not match --name argument: %s\n",
-             static_cast<int>(name.size()), name.data(), library_name.c_str());
+    // Verify that the produced library's name matches the expected name.
+    std::string final_name = NameLibrary(final_library_name);
+    if (!library_name.empty() && final_name != library_name) {
+        Fail("Generated library '%s' did not match --name argument: %s\n",
+             final_name.data(), library_name.data());
     }
 
     // We recompile dependencies, and only emit output for the final

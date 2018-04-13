@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "fidl/lexer.h"
+#include "fidl/names.h"
 #include "fidl/parser.h"
 #include "fidl/raw_ast.h"
 
@@ -139,21 +140,19 @@ TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
 // a struct declaration inside an interface out to the top level and
 // so on.
 
-StringView LibraryName(const Library* library) {
-    if (library == nullptr) {
-        return "";
+std::string LibraryName(const Library* library, StringView separator) {
+    std::string name;
+    if (library != nullptr) {
+        bool first = true;
+        for (const auto& part : library->name()) {
+            if (!first) {
+                name += separator;
+            }
+            name += part;
+            first = false;
+        }
     }
-    return library->name();
-}
-
-std::string Name::QName() const {
-    std::string qname;
-    if (library_ != nullptr) {
-        qname += library_->name();
-        qname += '/';
-    }
-    qname += name_.data();
-    return qname;
+    return name;
 }
 
 bool Library::Fail(StringView message) {
@@ -168,7 +167,7 @@ bool Library::Fail(const SourceLocation& location, StringView message) {
     return false;
 }
 
-Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies,
+Library::Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies,
                  ErrorReporter* error_reporter)
     : dependencies_(dependencies), error_reporter_(error_reporter) {
     for (const auto& dep : *dependencies_) {
@@ -180,27 +179,34 @@ Library::Library(const std::map<StringView, std::unique_ptr<Library>>* dependenc
 
 bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
                                         SourceLocation location, Name* name_out) {
-    if (compound_identifier->components.size() == 1) {
-        *name_out = Name(this, compound_identifier->components[0]->location);
-        return true;
-    }
-    if (compound_identifier->components.size() == 2) {
-        const auto& components = compound_identifier->components;
-        auto library_location = components[0]->location;
-        auto library_name = library_location.data();
-        auto iter = dependencies_->find(library_name);
-        if (iter == dependencies_->end()) {
-            std::string message("Could not find library named ");
-            message += library_name;
-            return Fail(location, message);
-        }
-        const std::unique_ptr<Library>& library = iter->second;
-        auto decl_name = components[1]->location;
-        *name_out = Name(library.get(), decl_name);
+    const auto& components = compound_identifier->components;
+    assert(components.size() >= 1);
+
+    SourceLocation decl_name = components.back()->location;
+
+    if (components.size() == 1) {
+        *name_out = Name(this, decl_name);
         return true;
     }
 
-    return Fail(location, "TODO(TO-701) Handle nested declarations.");
+    std::vector<StringView> library_name;
+    for (auto iter = components.begin();
+         iter != components.end() - 1;
+         ++iter) {
+        library_name.push_back((*iter)->location.data());
+    }
+
+    auto iter = dependencies_->find(library_name);
+    if (iter == dependencies_->end()) {
+        std::string message("Could not find library named ");
+        message += NameLibrary(library_name);
+        const auto& location = components[0]->location;
+        return Fail(location, message);
+    }
+
+    const std::unique_ptr<Library>& library = iter->second;
+    *name_out = Name(library.get(), decl_name);
+    return true;
 }
 
 bool Library::ParseSize(std::unique_ptr<Constant> constant, Size* out_size) {
@@ -482,18 +488,17 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     // All fidl files in a library should agree on the library name.
-    // TODO(FIDL-146) Handle multipart library names.
-    auto library_name = file->library_name->components[0]->location;
-
-    if (library_name_.valid()) {
-        StringView current_name = library_name_.data();
-        StringView new_name = library_name.data();
-        if (current_name != new_name) {
-            return Fail(library_name,
+    std::vector<StringView> new_name;
+    for (const auto& part : file->library_name->components) {
+        new_name.push_back(part->location.data());
+    }
+    if (!library_name_.empty()) {
+        if (new_name != library_name_) {
+            return Fail(file->library_name->components[0]->location,
                         "Two files in the library disagree about the name of the library");
         }
     } else {
-        library_name_ = library_name;
+        library_name_ = new_name;
     }
 
     auto using_list = std::move(file->using_list);
@@ -1167,29 +1172,6 @@ bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
         return CompileIdentifierType(identifier_type, out_typeshape);
     }
     }
-}
-
-std::string Interface::MethodQName(const Method* method) const {
-    std::string qname = QName();
-    qname += ".";
-    qname += method->name.data();
-    return qname;
-}
-
-std::string Interface::MessageQName(const Method* method, types::MessageKind kind) const {
-    std::string qname = MethodQName(method);
-    switch (kind) {
-    case types::MessageKind::kRequest:
-        qname += "#Request";
-        break;
-    case types::MessageKind::kResponse:
-        qname += "#Response";
-        break;
-    case types::MessageKind::kEvent:
-        qname += "#Event";
-        break;
-    }
-    return qname;
 }
 
 } // namespace flat

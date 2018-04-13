@@ -344,8 +344,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(LibraryName(request_type->name.library()),
-                                           NameName(request_type->name), request_type->nullability);
+        auto name = NameCodedRequestHandle(NameName(request_type->name, "_", "_"), request_type->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
         request_type_map_[request_type] = coded_request_type.get();
@@ -400,8 +399,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
             auto iter = interface_type_map_.find(identifier_type);
             if (iter != interface_type_map_.end())
                 return iter->second;
-            auto name = NameCodedInterfaceHandle(LibraryName(identifier_type->name.library()),
-                                                 NameName(identifier_type->name),
+            auto name = NameCodedInterfaceHandle(NameName(identifier_type->name, "_", "_"),
                                                  identifier_type->nullability);
             auto coded_interface_type = std::make_unique<coded::InterfaceHandleType>(
                 std::move(name), identifier_type->nullability);
@@ -506,7 +504,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
         break;
     case flat::Decl::Kind::kEnum: {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
-        std::string enum_name = NameName(enum_decl->name);
+        std::string enum_name = NameName(enum_decl->name, "_", "_");
         named_coded_types_.emplace(&enum_decl->name,
                                    std::make_unique<coded::PrimitiveType>(
                                        std::move(enum_name), enum_decl->type,
@@ -521,11 +519,10 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             std::string method_name = NameMethod(interface_name, method);
             auto CreateMessage = [&](const flat::Interface::Method::Message& message,
                                      types::MessageKind kind) -> void {
-                std::string message_name =
-                    NameMessage(LibraryName(decl->name.library()), method_name, kind);
+                std::string message_name = NameMessage(method_name, kind);
                 interface_messages.push_back(std::make_unique<coded::MessageType>(
                     std::move(message_name), std::vector<coded::Field>(), message.typeshape.Size(),
-                    interface_decl->MessageQName(&method, kind)));
+                    message_name));
             };
             if (method.maybe_request) {
                 CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -548,7 +545,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             &decl->name,
             std::make_unique<coded::StructType>(std::move(struct_name), std::vector<coded::Field>(),
                                                 struct_decl->typeshape.Size(),
-                                                std::move(pointer_name), struct_decl->QName()));
+                                                std::move(pointer_name), NameName(struct_decl->name, ".", "/")));
         break;
     }
     case flat::Decl::Kind::kUnion: {
@@ -559,7 +556,7 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
             &decl->name, std::make_unique<coded::UnionType>(
                              std::move(union_name), std::vector<const coded::Type*>(),
                              union_decl->membershape.Offset(), union_decl->typeshape.Size(),
-                             std::move(pointer_name), union_decl->QName()));
+                             std::move(pointer_name), NameName(union_decl->name, ".", "/")));
         break;
     }
     }

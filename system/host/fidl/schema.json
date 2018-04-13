@@ -18,7 +18,7 @@
             "$ref": "#/definitions/version"
         },
         "name": {
-            "$ref": "#/definitions/identifier"
+            "$ref": "#/definitions/library-identifier"
         },
         "const_declarations": {
             "type": "array",
@@ -358,7 +358,7 @@
             ],
             "properties": {
                 "name": {
-                    "$ref": "#/definitions/identifier"
+                    "$ref": "#/definitions/library-identifier"
                 },
                 "declarations": {
                     "$ref": "#/definitions/declarations-map"
@@ -764,11 +764,15 @@
         },
         "compound-identifier": {
             "type": "string",
-            "pattern": "([_A-Za-z][_A-Za-z0-9]*/)?([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*"
+            "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*/[_A-Za-z][_A-Za-z0-9]*"
         },
         "identifier": {
             "type": "string",
             "pattern": "^[_A-Za-z][_A-Za-z0-9]*$"
+        },
+        "library-identifier": {
+            "type": "string",
+            "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*"
         },
         "size": {
             "type": "integer",

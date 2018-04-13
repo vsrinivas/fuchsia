@@ -320,16 +320,10 @@ void JSONGenerator::Generate(const flat::Ordinal& value) {
 
 void JSONGenerator::Generate(const flat::Name& value) {
     // These look like (when there is a library)
-    //     LIB/ID
+    //     { "LIB.LIB.LIB", "ID" }
     // or (when there is not)
-    //     ID
-    std::string encoded_string;
-    if (LibraryName(value.library()) != LibraryName(library_)) {
-        encoded_string += LibraryName(value.library());
-        encoded_string += "/";
-    }
-    encoded_string += std::string(value.name().data());
-    Generate(encoded_string);
+    //     { "ID" }
+    Generate(NameName(value, ".", "/"));
 }
 
 void JSONGenerator::Generate(const flat::Const& value) {
@@ -444,10 +438,11 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
 }
 
 void JSONGenerator::Generate(
-    const std::pair<const StringView, std::unique_ptr<flat::Library>>& library_dependency) {
+    const std::pair<const std::vector<StringView>, std::unique_ptr<flat::Library>>& library_dependency) {
     const flat::Library* library = library_dependency.second.get();
     GenerateObject([&]() {
-        GenerateObjectMember("name", library->library_name_, Position::kFirst);
+        auto library_name = flat::LibraryName(library, ".");
+        GenerateObjectMember("name", library_name, Position::kFirst);
         GenerateDeclarationsMember(library);
     });
 }
@@ -457,7 +452,7 @@ void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,
         EmitNewlineAndIndent(&json_file_, ++indent_level_);
     else
         EmitObjectSeparator(&json_file_, indent_level_);
-    EmitObjectKey(&json_file_, indent_level_, NameName(name));
+    EmitObjectKey(&json_file_, indent_level_, NameName(name, ".", "/"));
     EmitString(&json_file_, decl);
 }
 
@@ -488,7 +483,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObject([&]() {
         GenerateObjectMember("version", StringView("0.0.1"), Position::kFirst);
 
-        GenerateObjectMember("name", library_->library_name_);
+        GenerateObjectMember("name", LibraryName(library_, "."));
 
         GenerateObjectPunctuation(Position::kSubsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");
@@ -503,10 +498,10 @@ std::ostringstream JSONGenerator::Produce() {
         // The library's declaration_order_ contains all the declarations for all
         // transitive dependencies. The backend only needs the declaration order
         // for this specific library.
-        std::vector<flat::Decl*> declaration_order;
+        std::vector<std::string> declaration_order;
         for (flat::Decl* decl : library_->declaration_order_) {
             if (decl->name.library() == library_)
-                declaration_order.push_back(decl);
+                declaration_order.push_back(NameName(decl->name, ".", "/"));
         }
         GenerateObjectMember("declaration_order", declaration_order);
 

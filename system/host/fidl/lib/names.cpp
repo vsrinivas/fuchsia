@@ -277,13 +277,28 @@ std::string NameIdentifier(SourceLocation name) {
     return name.data();
 }
 
-std::string NameName(const flat::Name& name) {
-    // TODO(TO-701) Handle nested declarations.
-    return name.name().data();
+std::string NameName(const flat::Name& name, StringView library_separator, StringView name_separator) {
+    std::string compiled_name = LibraryName(name.library(), library_separator);
+    compiled_name += name_separator;
+    compiled_name += name.name().data();
+    return compiled_name;
+}
+
+std::string NameLibrary(const std::vector<StringView>& library_name) {
+    std::string name;
+    bool first = true;
+    for (const auto& part : library_name) {
+        if (!first ) {
+            name += ".";
+        }
+        first = false;
+        name += part;
+    }
+    return name;
 }
 
 std::string NameInterface(const flat::Interface& interface) {
-    return NameName(interface.name);
+    return NameName(interface.name, "_", "_");
 }
 
 std::string NameMethod(StringView interface_name, const flat::Interface::Method& method) {
@@ -296,9 +311,8 @@ std::string NameOrdinal(StringView method_name) {
     return ordinal_name;
 }
 
-std::string NameMessage(StringView library_name, StringView method_name, types::MessageKind kind) {
-    std::string message_name(library_name);
-    message_name += method_name;
+std::string NameMessage(StringView method_name, types::MessageKind kind) {
+    std::string message_name(method_name);
     switch (kind) {
     case types::MessageKind::kRequest:
         message_name += "Request";
@@ -336,15 +350,11 @@ std::string NameFields(StringView name) {
 }
 
 std::string NameCodedStruct(const flat::Struct* struct_decl) {
-    std::string name(LibraryName(struct_decl->name.library()));
-    name += NameName(struct_decl->name);
-    return name;
+    return NameName(struct_decl->name, "_", "_");
 }
 
 std::string NameCodedUnion(const flat::Union* union_decl) {
-    std::string name(LibraryName(union_decl->name.library()));
-    name += NameName(union_decl->name);
-    return name;
+    return NameName(union_decl->name, "_", "_");
 }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {
@@ -354,20 +364,16 @@ std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nul
     return name;
 }
 
-std::string NameCodedInterfaceHandle(StringView library_name, StringView interface_name,
-                                     types::Nullability nullability) {
-    std::string name(library_name);
+std::string NameCodedInterfaceHandle(StringView interface_name, types::Nullability nullability) {
+    std::string name(interface_name);
     name += "Interface";
-    name += interface_name;
     name += NameNullability(nullability);
     return name;
 }
 
-std::string NameCodedRequestHandle(StringView library_name, StringView interface_name,
-                                   types::Nullability nullability) {
-    std::string name(library_name);
+std::string NameCodedRequestHandle(StringView interface_name, types::Nullability nullability) {
+    std::string name(interface_name);
     name += "Request";
-    name += interface_name;
     name += NameNullability(nullability);
     return name;
 }

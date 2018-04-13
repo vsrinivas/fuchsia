@@ -29,7 +29,7 @@ struct Decl;
 class Library;
 
 // This is needed (for now) to work around declaration order issues.
-StringView LibraryName(const Library* library);
+std::string LibraryName(const Library* library, StringView separator);
 
 // TODO(TO-701) Handle multipart names.
 struct Name {
@@ -45,7 +45,7 @@ struct Name {
     SourceLocation name() const { return name_; }
 
     bool operator==(const Name& other) const {
-        if (LibraryName(library_) != LibraryName(other.library_)) {
+        if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
             return false;
         }
         return name_.data() == other.name_.data();
@@ -53,26 +53,11 @@ struct Name {
     bool operator!=(const Name& other) const { return name_.data() != other.name_.data(); }
 
     bool operator<(const Name& other) const {
-        if (LibraryName(library_) != LibraryName(other.library_)) {
-            return LibraryName(library_) < LibraryName(other.library_);
+        if (LibraryName(library_, ".") != LibraryName(other.library_, ".")) {
+            return LibraryName(library_, ".") < LibraryName(other.library_, ".");
         }
         return name_.data() < other.name_.data();
     }
-
-    // Returns a fully-qualified representation of the name including information
-    // about the library and the nesting declarations.  This name is appropriate
-    // for use in generated symbol tables.
-    //
-    // When there is a library, looks like this:
-    //   "library/name"
-    //   "library/decl.name"
-    //   "library/decl.decl.name"
-    //
-    // Where there is no library, looks like this:
-    //   "name"
-    //   "decl.name"
-    //   "decl.decl.name"
-    std::string QName() const;
 
 private:
     const Library* library_ = nullptr;
@@ -151,10 +136,6 @@ struct Decl {
 
     Decl(Decl&&) = default;
     Decl& operator=(Decl&&) = default;
-
-    // Gets the fully-qualified name of the declaration.
-    // This name is appropriate for use in generated symbol tables.
-    std::string QName() const { return name.QName(); }
 
     const Kind kind;
 
@@ -413,24 +394,6 @@ struct Interface : public Decl {
         : Decl(Kind::kInterface, std::move(attributes), std::move(name)),
           methods(std::move(methods)) {}
 
-    // Gets the fully-qualified name of a method.
-    // This name is appropriate for use in generated symbol tables.
-    //
-    // The name is a combination of the interface's qualified name and the method name.
-    //   "library/interface.method"
-    //   "library/interface.method"
-    //   "library/interface.method"
-    std::string MethodQName(const Method* method) const;
-
-    // Gets the fully-qualified name of a message associated with a method.
-    // This name is appropriate for use in generated symbol tables.
-    //
-    // The name is a combination of the method's qualified name and the message kind.
-    //   "library/interface.method#Request"
-    //   "library/interface.method#Response"
-    //   "library/interface.method#Event"
-    std::string MessageQName(const Method* method, types::MessageKind kind) const;
-
     std::vector<Method> methods;
 };
 
@@ -475,13 +438,13 @@ struct Union : public Decl {
 
 class Library {
 public:
-    Library(const std::map<StringView, std::unique_ptr<Library>>* dependencies,
+    Library(const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies,
             ErrorReporter* error_reporter);
 
     bool ConsumeFile(std::unique_ptr<raw::File> file);
     bool Compile();
 
-    StringView name() const { return library_name_.data(); }
+    const std::vector<StringView>& name() const { return library_name_; }
 
 private:
     bool Fail(StringView message);
@@ -619,9 +582,9 @@ public:
         }
     }
 
-    const std::map<StringView, std::unique_ptr<Library>>* dependencies_;
+    const std::map<std::vector<StringView>, std::unique_ptr<Library>>* dependencies_;
 
-    SourceLocation library_name_;
+    std::vector<StringView> library_name_;
 
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;

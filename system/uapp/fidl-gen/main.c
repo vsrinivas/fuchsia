@@ -5,6 +5,6 @@
 #include <library.h>
 
 int main(int argc, char** argv) {
-    Test test;
+    test_Test test;
     return sizeof(test);
 }
