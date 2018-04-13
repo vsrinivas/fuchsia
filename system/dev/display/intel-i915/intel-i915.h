@@ -136,7 +136,7 @@ private:
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.
-    fbl::Vector<DisplayDevice*> display_devices_ __TA_GUARDED(display_lock_);
+    fbl::Vector<fbl::unique_ptr<DisplayDevice>> display_devices_ __TA_GUARDED(display_lock_);
     uint64_t next_id_ __TA_GUARDED(display_lock_) = 1; // id can't be INVALID_DISPLAY_ID == 0
     mtx_t display_lock_;
 

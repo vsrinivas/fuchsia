@@ -846,7 +846,7 @@ namespace i915 {
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, select_trans(ddi, pipe), pipe) { }
 
-bool DpDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
+bool DpDisplay::QueryDevice(edid::Edid* edid, default_display_info* info) {
     // For eDP displays, assume that the BIOS has enabled panel power, given
     // that we need to rely on it properly configuring panel power anyway. For
     // general DP displays, the default power state is D0, so we don't have to

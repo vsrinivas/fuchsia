@@ -8,7 +8,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/display.h>
 #include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
 #include <hw/inout.h>
@@ -54,7 +53,8 @@
 namespace {
 static const zx_pixel_format_t supported_formats[1] = { ZX_PIXEL_FORMAT_ARGB_8888 };
 
-bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::Pipe pipe) {
+bool pipe_in_use(const fbl::Vector<fbl::unique_ptr<i915::DisplayDevice>>& displays,
+                 registers::Pipe pipe) {
     for (size_t i = 0; i < displays.size(); i++) {
         if (displays[i]->pipe() == pipe) {
             return true;
@@ -155,7 +155,7 @@ void Controller::EnableBacklight(bool enable) {
 
 void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
-    DisplayDevice* device = nullptr;
+    fbl::unique_ptr<DisplayDevice> device = nullptr;
     bool was_kernel_framebuffer = false;
     uint64_t display_added = INVALID_DISPLAY_ID;
     uint64_t display_removed = INVALID_DISPLAY_ID;
@@ -181,7 +181,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                 if (display_devices_.is_empty()) {
                     zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
                 } else {
-                    DisplayDevice* new_device = display_devices_[0];
+                    fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[0];
                     zx_set_framebuffer_vmo(get_root_resource(),
                                            new_device->framebuffer_vmo().get(),
                                            static_cast<uint32_t>(new_device->framebuffer_size()),
@@ -189,7 +189,6 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
                                            new_device->info().height, new_device->info().stride);
                 }
             }
-            device->DdkRemove();
             zxlogf(SPEW, "Display unplugged\n");
             display_removed = device->id();
         } else { // New device was plugged in
@@ -227,7 +226,7 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
     void* handle = nullptr;
     {
         fbl::AutoLock lock(&display_lock_);
-        for (auto display : display_devices_) {
+        for (auto& display : display_devices_) {
             if (display->pipe() == pipe) {
                 registers::PipeRegs regs(pipe);
                 auto live_surface = regs.PlaneSurfaceLive().ReadFrom(mmio_space());
@@ -246,9 +245,9 @@ void Controller::HandlePipeVsync(registers::Pipe pipe) {
 }
 
 DisplayDevice* Controller::FindDevice(uint64_t display_id) {
-    for (auto d : display_devices_) {
+    for (auto& d : display_devices_) {
         if (d->id() == display_id) {
-            return d;
+            return d.get();
         }
     }
     return nullptr;
@@ -574,39 +573,20 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
 }
 
 zx_status_t Controller::InitDisplays() {
+    fbl::AutoLock lock(&display_lock_);
     if (is_modesetting_enabled(device_id_)) {
         BringUpDisplayEngine(false);
 
-        acquire_dc_cb_lock();
-        uint64_t displays[registers::kDdiCount];
-        uint32_t display_count;
-        {
-            fbl::AutoLock lock(&display_lock_);
-            for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-                auto disp_device = InitDisplay(registers::kDdis[i]);
-                if (disp_device) {
-                    if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
-                        zxlogf(INFO, "Failed to add display %d\n", i);
-                    }
+        for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+            auto disp_device = InitDisplay(registers::kDdis[i]);
+            if (disp_device) {
+                if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
+                    zxlogf(INFO, "Failed to add display %d\n", i);
                 }
             }
-            display_count = static_cast<uint32_t>(display_devices_.size());
-            for (unsigned i = 0; i < display_count; i++) {
-                displays[i] = display_devices_[i]->id();
-            }
         }
-
-        // TODO(stevensd): Once displays are no longer real ddk devices, move
-        // InitDisplays before DdkAdd so that dc_cb_ can't be set before here. Also
-        // remove the requirement for dc_cb_lock()
-        if (display_count && dc_cb()) {
-            dc_cb()->on_displays_changed(dc_cb_ctx_, displays, display_count, nullptr, 0);
-        }
-        release_dc_cb_lock();
-
         return ZX_OK;
     } else {
-        fbl::AutoLock lock(&display_lock_);
 
         fbl::AllocChecker ac;
         // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
@@ -626,20 +606,19 @@ zx_status_t Controller::InitDisplays() {
 }
 
 zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
-    zx_status_t status = display->DdkAdd("intel_i915_disp");
     fbl::AllocChecker ac;
     display_devices_.reserve(display_devices_.size() + 1, &ac);
 
-    if (ac.check() && status == ZX_OK) {
-        display_devices_.push_back(display.release(), &ac);
+    if (ac.check()) {
+        display_devices_.push_back(fbl::move(display), &ac);
         assert(ac.check());
     } else {
-        zxlogf(ERROR, "i915: failed to add display device %d\n", status);
-        return status == ZX_OK ? ZX_ERR_NO_MEMORY : status;
+        zxlogf(ERROR, "i915: failed to add display device\n");
+        return ZX_ERR_NO_MEMORY;
     }
 
     if (display_devices_.size() == 1) {
-        DisplayDevice* new_device = display_devices_[0];
+        fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[0];
         zx_set_framebuffer_vmo(get_root_resource(), new_device->framebuffer_vmo().get(),
                                static_cast<uint32_t>(new_device->framebuffer_size()),
                                new_device->info().format, new_device->info().width,
@@ -751,7 +730,7 @@ void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t 
     ZX_DEBUG_ASSERT(CheckConfiguration(display_config, display_count));
     fbl::AutoLock lock(&display_lock_);
 
-    for (auto display : display_devices_) {
+    for (auto& display : display_devices_) {
         display_config_t* config = nullptr;
         for (unsigned i = 0; i < display_count; i++) {
             if (display_config[i]->display_id == display->id()) {
@@ -898,10 +877,6 @@ void Controller::GpuRelease() {
 // Ddk methods
 
 void Controller::DdkUnbind() {
-    fbl::AutoLock lock(&display_lock_);
-    while (!display_devices_.is_empty()) {
-        device_remove(display_devices_.erase(0)->zxdev());
-    }
     device_remove(zxdev());
     device_remove(zx_gpu_dev_);
 }
@@ -954,7 +929,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
 
         {
             fbl::AutoLock lock(&display_lock_);
-            for (auto* display : display_devices_) {
+            for (auto& display : display_devices_) {
                 // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
                 registers::PipeRegs pipe_regs(display->pipe());
 
@@ -1069,6 +1044,12 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         }
     }
 
+    zxlogf(TRACE, "i915: initializing displays\n");
+    status = InitDisplays();
+    if (status != ZX_OK) {
+        return status;
+    }
+
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to add controller device\n");
@@ -1077,13 +1058,6 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     // DevMgr now owns this pointer, release it to avoid destroying the object
     // when device goes out of scope.
     __UNUSED auto ptr = controller_ptr->release();
-
-    zxlogf(TRACE, "i915: initializing displays\n");
-    status = InitDisplays();
-    if (status != ZX_OK) {
-        device_remove(zxdev());
-        return status;
-    }
 
     i915_gpu_core_device_proto.version = DEVICE_OPS_VERSION;
     i915_gpu_core_device_proto.release = gpu_release;

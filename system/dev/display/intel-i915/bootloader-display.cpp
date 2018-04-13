@@ -13,7 +13,7 @@ BootloaderDisplay::BootloaderDisplay(Controller* controller, uint64_t id,
                                      registers::Ddi ddi, registers::Pipe pipe)
         : DisplayDevice(controller, id, ddi, registers::TRANS_A, pipe) {}
 
-bool BootloaderDisplay::QueryDevice(edid::Edid* edid, zx_display_info_t* di) {
+bool BootloaderDisplay::QueryDevice(edid::Edid* edid, default_display_info_t* di) {
     uint32_t format, width, height, stride;
     zx_status_t status = zx_bootloader_fb_get_info(&format, &width, &height, &stride);
     if (status == ZX_OK) {
@@ -27,7 +27,6 @@ bool BootloaderDisplay::QueryDevice(edid::Edid* edid, zx_display_info_t* di) {
         di->height = 1700 / 2;
         di->stride = 2560 / 2;
     }
-    di->flags = ZX_DISPLAY_FLAG_HW_FRAMEBUFFER;
     if ((di->pixelsize = ZX_PIXEL_FORMAT_BYTES(di->format)) == 0) {
         zxlogf(ERROR, "i915: unknown format %u\n", di->format);
         return false;

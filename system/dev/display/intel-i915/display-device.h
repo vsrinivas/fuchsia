@@ -6,7 +6,6 @@
 
 #include <ddk/protocol/display-controller.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/display.h>
 #include <hwreg/mmio.h>
 #include <lib/edid/edid.h>
 #include <region-alloc/region-alloc.h>
@@ -22,24 +21,23 @@ namespace i915 {
 
 class Controller;
 
-class DisplayDevice;
-using DisplayDeviceType = ddk::Device<DisplayDevice>;
+typedef struct default_display_info {
+    uint32_t format;
+    uint32_t width;
+    uint32_t height;
+    uint32_t stride;
+    uint32_t pixelsize;
+} default_display_info_t;
 
-class DisplayDevice : public DisplayDeviceType, public ddk::DisplayProtocol<DisplayDevice> {
+class DisplayDevice {
 public:
     DisplayDevice(Controller* device, uint64_t id,
                   registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe);
     virtual ~DisplayDevice();
 
-    void DdkRelease();
-
-    zx_status_t SetMode(zx_display_info_t* info);
-    zx_status_t GetMode(zx_display_info_t* info);
-    zx_status_t GetFramebuffer(void** framebuffer);
-    void Flush();
-
     void ApplyConfiguration(display_config_t* config);
 
+    void Flush();
     bool Init();
     bool Resume();
     // Method to allow the display device to handle hotplug events. Returns
@@ -50,7 +48,7 @@ public:
     uint64_t id() const { return id_; }
     const zx::vmo& framebuffer_vmo() const { return framebuffer_vmo_; }
     uint32_t framebuffer_size() const { return framebuffer_size_; }
-    const zx_display_info_t& info() const { return info_; }
+    const default_display_info_t& info() const { return info_; }
     registers::Ddi ddi() const { return ddi_; }
     registers::Pipe pipe() const { return pipe_; }
     registers::Trans trans() const { return trans_; }
@@ -60,7 +58,7 @@ public:
 protected:
     // Queries the DisplayDevice to see if there is a supported display attached. If
     // there is, then returns true and populates |edid| and |info|.
-    virtual bool QueryDevice(edid::Edid* edid, zx_display_info_t* info) = 0;
+    virtual bool QueryDevice(edid::Edid* edid, default_display_info_t* info) = 0;
     // Configures the hardware to display a framebuffer at the preferred resolution.
     virtual bool DefaultModeset() = 0;
 
@@ -87,7 +85,7 @@ private:
     fbl::unique_ptr<GttRegion> fb_gfx_addr_;
 
     bool inited_;
-    zx_display_info_t info_;
+    default_display_info_t info_;
     uint32_t image_type_;
     edid::Edid edid_;
     bool is_enabled_;

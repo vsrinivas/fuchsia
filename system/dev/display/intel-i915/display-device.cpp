@@ -23,8 +23,7 @@ namespace i915 {
 
 DisplayDevice::DisplayDevice(Controller* controller, uint64_t id,
                              registers::Ddi ddi, registers::Trans trans, registers::Pipe pipe)
-        : DisplayDeviceType(controller->zxdev()), controller_(controller), id_(id)
-        , ddi_(ddi), trans_(trans), pipe_(pipe) {}
+        : controller_(controller), id_(id), ddi_(ddi), trans_(trans), pipe_(pipe) {}
 
 DisplayDevice::~DisplayDevice() {
     if (inited_) {
@@ -42,28 +41,6 @@ hwreg::RegisterIo* DisplayDevice::mmio_space() const {
 }
 
 // implement device protocol
-
-void DisplayDevice::DdkRelease() {
-    delete this;
-}
-
-// implement display protocol
-
-zx_status_t DisplayDevice::SetMode(zx_display_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t DisplayDevice::GetMode(zx_display_info_t* info) {
-    assert(info);
-    memcpy(info, &info_, sizeof(zx_display_info_t));
-    return ZX_OK;
-}
-
-zx_status_t DisplayDevice::GetFramebuffer(void** framebuffer) {
-    assert(framebuffer);
-    *framebuffer = reinterpret_cast<void*>(framebuffer_);
-    return ZX_OK;
-}
 
 void DisplayDevice::Flush() {
     // TODO(ZX-1413): Use uncacheable memory for fb or use some zx cache primitive when available

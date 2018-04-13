@@ -452,7 +452,7 @@ static bool calculate_params(uint32_t symbol_clock_khz,
 
 namespace i915 {
 
-bool HdmiDisplay::QueryDevice(edid::Edid* edid, zx_display_info* info) {
+bool HdmiDisplay::QueryDevice(edid::Edid* edid, default_display_info* info) {
     // HDMI isn't supported on these DDIs
     if (ddi_to_pin(ddi()) == -1) {
         return false;
