@@ -28,7 +28,7 @@ struct IoValue {
 // Callback interface to be implemented by devices.
 //
 // IoHandlers may be called from multiple VCPU threads concurrently so
-// implementations must implement proper internal syncronization.
+// implementations must implement proper internal synchronization.
 class IoHandler {
  public:
   virtual ~IoHandler() = default;
@@ -42,7 +42,7 @@ class IoHandler {
 
 // Represents a single mapping of an |IoHandler| to an address range.
 //
-// A single handler may be mapped to mutiple distinct address ranges.
+// A single handler may be mapped to multiple distinct address ranges.
 class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
  public:
   static IoMapping* FromPortKey(uint64_t key) {
@@ -53,7 +53,7 @@ class IoMapping : public fbl::SinglyLinkedListable<fbl::unique_ptr<IoMapping>> {
   //
   // Any accesses starting at |base| for |size| bytes are to be handled by
   // |handler|. When invoking |handler| the address is provides as relative
-  // to |base|. Addionally an |offset| can also be provided to add a
+  // to |base|. Additionally an |offset| can also be provided to add a
   // displacement into |handler|.
   //
   // Specifically, an access to |base| would invoke the |handler| with the

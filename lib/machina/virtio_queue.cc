@@ -130,7 +130,7 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 
   *index = ring_.avail->ring[RingIndexLocked(ring_.index++)];
 
-  // If we have event indicies enabled, update the avail-event to notify us
+  // If we have event indices enabled, update the avail-event to notify us
   // when we have sufficient descriptors available.
   if (device()->has_enabled_features(1u << VIRTIO_F_RING_EVENT_IDX) &&
       ring_.avail_event) {

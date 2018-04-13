@@ -27,7 +27,7 @@ class VirtioBlock
   // Set the dispatcher to use to interface with the back-end.
   zx_status_t SetDispatcher(fbl::unique_ptr<BlockDispatcher> dispatcher);
 
-  // Starts a thread to monitor the queue for incomming block requests.
+  // Starts a thread to monitor the queue for incoming block requests.
   zx_status_t Start();
 
   // Our config space is read-only.

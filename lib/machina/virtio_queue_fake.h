@@ -83,7 +83,7 @@ class VirtioQueueFake {
   //
   // Descriptors are not reclaimed and it is a programming error to attempt
   // to write to more than descriptors than the queue was initialized with.
-  // ZX_ERR_NO_MEMORY is returned if the pool of available desciptors has
+  // ZX_ERR_NO_MEMORY is returned if the pool of available descriptors has
   // been exhausted.
   zx_status_t WriteDescriptor(void* addr,
                               size_t len,

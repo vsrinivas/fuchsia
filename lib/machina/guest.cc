@@ -127,7 +127,7 @@ zx_status_t Guest::StartVcpu(uintptr_t entry, uint64_t id) {
   }
   if (vcpus_[id] != nullptr) {
     // The guest might make multiple requests to start a particular VCPU. On
-    // x86, the guest should send two START_UP IPIs but we initialise the VCPU
+    // x86, the guest should send two START_UP IPIs but we initialize the VCPU
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }

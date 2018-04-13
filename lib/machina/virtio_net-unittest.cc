@@ -36,7 +36,7 @@ class VirtioNetTest : public testing::Test {
   PhysMemFake phys_mem_;
   VirtioNet net_;
   VirtioQueueFake queue_;
-  // Fifo entpoints to provide to the net device.
+  // Fifo endpoints to provide to the net device.
   eth_fifos_t fifos_;
   // Fifo endpoints to simulate ethernet device activity.
   zx_handle_t fifo_[2];

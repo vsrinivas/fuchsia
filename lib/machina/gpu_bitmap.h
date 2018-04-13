@@ -52,7 +52,7 @@ class GpuBitmap {
 
   // Draws a portion of another bitmap into this one.
   //
-  // |source_rect| and |dest_rect| must both be wholely contained within
+  // |source_rect| and |dest_rect| must both be wholly contained within
   // the respective bitmaps and must have the same width and height.
   void DrawBitmap(const GpuBitmap& from,
                   const GpuRect& source_rect,

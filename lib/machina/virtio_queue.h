@@ -56,8 +56,8 @@ typedef struct virtio_queue {
 
 // Callback function for virtio_queue_handler.
 //
-// For chained buffers uing VRING_DESC_F_NEXT, this function will be called once
-// for each buffer in the chain.
+// For chained buffers using VRING_DESC_F_NEXT, this function will be called
+// once for each buffer in the chain.
 //
 // addr     - Pointer to the descriptor buffer.
 // len      - Length of the descriptor buffer.
@@ -110,7 +110,7 @@ class VirtioQueue {
 
   VirtioQueue();
 
-  // TODO(tjdetwiler): Temporary escape hatches to allow access the the
+  // TODO(tjdetwiler): Temporary escape hatches to allow accessing the
   // underlying ring structure.
   const virtio_queue_t* ring() { return &ring_; }
 
@@ -135,7 +135,7 @@ class VirtioQueue {
 
   // If the device negotiates |VIRTIO_F_EVENT_IDX|, this is the number of
   // descriptors to allow the driver to queue into the avail ring before
-  // signalling the device that the queue has descriptors.
+  // signaling the device that the queue has descriptors.
   //
   // The default value is 1 so that every update to the avail ring causes a
   // notification that descriptors are available.
@@ -199,13 +199,13 @@ class VirtioQueue {
 
   // Reads a single descriptor from the queue.
   //
-  // This method should only be called using descriptor indicies acquired with
-  // virtio_queue_next_avail (including any chained decriptors) and before
+  // This method should only be called using descriptor indices acquired with
+  // virtio_queue_next_avail (including any chained descriptors) and before
   // they've been released with virtio_queue_return.
   zx_status_t ReadDesc(uint16_t index, virtio_desc_t* desc);
 
   // Spawn a thread to wait for descriptors to be available and invoke the
-  // provided handler on each available buffer asyncronously.
+  // provided handler on each available buffer asynchronously.
   //
   // Returns |ZX_ERR_INVALID_ARGS| if |thread_name| is null.
   zx_status_t Poll(virtio_queue_poll_fn_t handler,

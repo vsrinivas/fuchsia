@@ -77,18 +77,18 @@ class Vcpu {
     // A failure was encountered while creating the VCPU.
     ERROR_FAILED_TO_CREATE = 5,
 
-    // A failure was encontered while starting the VCPU.
+    // A failure was encountered while starting the VCPU.
     ERROR_FAILED_TO_START = 6,
 
-    // A failure was encontered while resuming the VCPU.
+    // A failure was encountered while resuming the VCPU.
     ERROR_FAILED_TO_RESUME = 7,
 
-    // A terminal failure was encontered while handling a guest packet.
+    // A terminal failure was encountered while handling a guest packet.
     ERROR_ABORTED = 7,
   };
 
   // Entry point for the VCPU on the dedicated VCPU thread. This thread will
-  // handle taking the VCPU through the entire VCPU lifecycle and handle any
+  // handle taking the VCPU through the entire VCPU life-cycle and handle any
   // interaction with the VCPU syscalls.
   struct ThreadEntryArgs;
   zx_status_t ThreadEntry(const ThreadEntryArgs* args);

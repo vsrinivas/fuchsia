@@ -128,7 +128,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       // drivers.
       //
       // This is the only feature supported beyond the first feature word so
-      // we just specaial case it here.
+      // we just special case it here.
       fbl::AutoLock lock(&device_->mutex_);
       value->access_size = 4;
       if (device_->features_sel_ == 1) {
@@ -198,7 +198,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       return ZX_OK;
     }
 
-    // Currently not implmeneted.
+    // Currently not implemented.
     case VIRTIO_PCI_COMMON_CFG_CONFIG_GEN:
     case VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR:
     case VIRTIO_PCI_COMMON_CFG_MSIX_CONFIG:

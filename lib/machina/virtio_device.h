@@ -36,10 +36,9 @@ class VirtioDevice {
   virtual zx_status_t HandleQueueNotify(uint16_t queue_sel) { return ZX_OK; }
 
   // Send a notification back to the guest that there are new descriptors in
-  // then used ring.
+  // the used ring.
   //
-  // The method for how this notification is delievered is transport
-  // specific.
+  // The method for how this notification is delivered is transport specific.
   zx_status_t NotifyGuest();
 
   const PhysMem& phys_mem() { return phys_mem_; }
@@ -127,7 +126,7 @@ class VirtioDevice {
   // shared configuration space.
   const size_t device_config_size_ = 0;
 
-  // Virtqueues for this device.
+  // Virtio queues for this device.
   VirtioQueue* const queues_ = nullptr;
 
   // Size of queues array.

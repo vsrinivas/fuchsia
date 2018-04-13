@@ -116,7 +116,7 @@ class PciDevice {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // Handle accesses to this devics config space.
+  // Handle accesses to this device config space.
   zx_status_t ReadConfig(uint64_t reg, IoValue* value) const;
   zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
@@ -131,7 +131,7 @@ class PciDevice {
 
   // Returns a pointer to a base address register for this device.
   //
-  // Returns nullptr if the register is not implmeneted.
+  // Returns nullptr if the register is not implemented.
   const PciBar* bar(size_t n) const {
     return is_bar_implemented(n) ? &bar_[n] : nullptr;
   }
@@ -235,7 +235,7 @@ class PciBus {
            device_[device];
   }
 
-  // Current config address seleceted by the 0xcf8 IO port.
+  // Current config address selected by the 0xcf8 IO port.
   uint32_t config_addr();
   void set_config_addr(uint32_t addr);
 

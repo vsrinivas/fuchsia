@@ -183,7 +183,7 @@ TEST(PageTableTest, Complex) {
   //
   // PDPT
   // > 2 direct-mapped 1gb regions
-  // > 1 ponter to a PD
+  // > 1 pointer to a PD
   //
   // PD
   // > 61 direct-mapped 2mb regions
