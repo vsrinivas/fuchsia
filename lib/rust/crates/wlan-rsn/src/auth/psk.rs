@@ -5,6 +5,7 @@
 use {Error, Result};
 use futures;
 use futures::Async::Ready;
+use futures::task;
 use crypto::hmac::Hmac;
 use crypto::pbkdf2;
 use crypto::sha1::Sha1;
@@ -52,7 +53,7 @@ impl futures::Future for Psk {
     type Item = Vec<u8>;
     type Error = Error;
 
-    fn poll(&mut self) -> futures::Poll<Self::Item, Self::Error> {
+    fn poll(&mut self, _: &mut task::Context) -> futures::Poll<Self::Item, Self::Error> {
         // IEEE Std 802.11-2016, J.4.1
         let size: usize = 256 / 8;
         let mut out_key: Vec<u8> = vec![0; size];
@@ -75,16 +76,11 @@ mod tests {
         let psk_result = new(cfg_result.unwrap());
         assert_eq!(psk_result.is_ok(), true);
         let mut psk = psk_result.unwrap();
-
-        let actual_result = psk.poll();
-        assert_eq!(actual_result.is_ok(), true);
-        let ready_result = actual_result.unwrap();
-        assert_eq!(ready_result.is_ready(), true);
-
-        if let Ready(actual) = ready_result {
-            let expected = Vec::from_hex(expected).unwrap();
-            assert_eq!(actual, expected);
-        }
+        let future_result = futures::executor::block_on(psk);
+        assert_eq!(future_result.is_ok(), true);
+        let actual = future_result.unwrap();
+        let expected = Vec::from_hex(expected).unwrap();
+        assert_eq!(actual, expected);
     }
 
     // IEEE Std 802.11-2016, J.4.2, Test case 1
