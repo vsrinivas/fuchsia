@@ -1262,22 +1262,6 @@ __NO_SAFESTACK static void load_deps(struct dso* p) {
     }
 }
 
-__NO_SAFESTACK static void load_preload(char* s) {
-    int tmp;
-    char* z;
-    for (z = s; *z; s = z) {
-        for (; *s && (isspace(*s) || *s == ':'); s++)
-            ;
-        for (z = s; *z && !isspace(*z) && *z != ':'; z++)
-            ;
-        tmp = *z;
-        *z = 0;
-        struct dso *p;
-        load_library(s, 0, NULL, &p);
-        *z = tmp;
-    }
-}
-
 __NO_SAFESTACK NO_ASAN static void reloc_all(struct dso* p) {
     size_t dyn[DYN_CNT];
     for (; p; p = dso_next(p)) {
@@ -1595,7 +1579,6 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
 
     libc.page_size = PAGE_SIZE;
 
-    char* ld_preload = getenv("LD_PRELOAD");
     const char* ld_debug = getenv("LD_DEBUG");
     if (ld_debug != NULL && ld_debug[0] != '\0')
         log_libs = true;
@@ -1654,8 +1637,6 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, int argc, char** argv) {
     // some libraries (sanitizer runtime) before that, so we don't do
     // each library's TLS setup directly in load_library_vmo.
 
-    if (ld_preload)
-        load_preload(ld_preload);
     load_deps(&app);
 
     app.global = 1;
