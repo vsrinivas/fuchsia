@@ -328,7 +328,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
     }
 
     if (type_->coded_struct.size > num_bytes_) {
-        SetError("Message size is smaller than expected");
+        SetError("num_bytes is less than required according to type");
         return status_;
     }
 
@@ -480,8 +480,12 @@ zx_status_t FidlEncoder::EncodeMessage() {
                 Pop();
                 continue;
             }
-            uint32_t size =
-                static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
+            uint32_t size;
+            if (mul_overflow(vector_ptr->count, frame->vector_state.element_size, &size)) {
+                SetError("integer overflow calculating vector size");
+                Pop();
+                continue;
+            }
             if (!ClaimOutOfLineStorage(size, vector_ptr->data, &frame->offset)) {
                 SetError("message wanted to store too large of a vector");
                 Pop();
@@ -502,7 +506,7 @@ zx_status_t FidlEncoder::EncodeMessage() {
         }
         case Frame::kStateDone: {
             if (out_of_line_offset_ != num_bytes_) {
-                SetError("did not encode the entire provided buffer");
+              SetError("did not encode the entire provided buffer");
             }
             if (status_ == ZX_OK) {
                 *actual_handles_out_ = handle_idx_;

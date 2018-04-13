@@ -657,6 +657,30 @@ bool validate_present_nullable_bounded_string_short_error() {
     END_TEST;
 }
 
+bool validate_vector_with_huge_count() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_vector_of_uint32_message_layout message = {};
+    // (2^30 + 4) * 4 (4 == sizeof(uint32_t)) overflows to 16 when stored as uint32_t.
+    // We want 16 because it happens to be the actual size of the vector data in the message,
+    // so we can trigger the overflow without triggering the "tried to claim too many bytes" or
+    // "didn't use all the bytes in the message" errors.
+    message.inline_struct.vector =
+        fidl_vector_t{(1ull << 30) + 4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
+
+    const char* error = nullptr;
+    auto status =
+        fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
+                      sizeof(message), 0, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+    const char expected_error_msg[] = "integer overflow calculating vector size";
+    EXPECT_STR_EQ(expected_error_msg, error, "wrong error msg");
+
+    END_TEST;
+}
+
 bool validate_present_nonnullable_vector_of_handles() {
     BEGIN_TEST;
 
@@ -1569,6 +1593,7 @@ RUN_TEST(validate_present_nullable_bounded_string_short_error)
 END_TEST_CASE(strings)
 
 BEGIN_TEST_CASE(vectors)
+RUN_TEST(validate_vector_with_huge_count)
 RUN_TEST(validate_present_nonnullable_vector_of_handles)
 RUN_TEST(validate_present_nullable_vector_of_handles)
 RUN_TEST(validate_absent_nonnullable_vector_of_handles_error)

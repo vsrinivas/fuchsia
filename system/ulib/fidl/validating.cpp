@@ -454,8 +454,10 @@ zx_status_t FidlValidator::ValidateMessage() {
             if (vector_ptr->count > frame->vector_state.max_count) {
                 return WithError("message tried to validate too large of a bounded vector");
             }
-            uint32_t size =
-                static_cast<uint32_t>(vector_ptr->count * frame->vector_state.element_size);
+            uint32_t size;
+            if (mul_overflow(vector_ptr->count, frame->vector_state.element_size, &size)) {
+                return WithError("integer overflow calculating vector size");
+            }
             if (!ClaimOutOfLineStorage(size, &frame->offset)) {
                 return WithError("message wanted to store too large of a vector");
             }
