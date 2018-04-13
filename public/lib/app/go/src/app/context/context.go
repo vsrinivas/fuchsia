@@ -45,7 +45,7 @@ func getServiceRoot() zx.Handle {
 	return zx.Handle(c1)
 }
 
-func New(serviceRoot, serviceRequest, appServices zx.Handle) *Context {
+func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	c := &Context{
 		serviceRoot: serviceRoot,
 		appServices: appServices,
@@ -67,8 +67,8 @@ func New(serviceRoot, serviceRequest, appServices zx.Handle) *Context {
 	c.Launcher = p2
 	c.ConnectToEnvService(r2)
 
-	if serviceRequest.IsValid() {
-		c.OutgoingService.ServeDirectory(serviceRequest)
+	if directoryRequest.IsValid() {
+		c.OutgoingService.ServeDirectory(directoryRequest)
 	}
 
 	return c
@@ -97,9 +97,9 @@ func (c *Context) ConnectToEnvServiceAt(name string, h zx.Channel) {
 }
 
 func CreateFromStartupInfo() *Context {
-	serviceRequest := mxruntime.GetStartupHandle(
+	directoryRequest := mxruntime.GetStartupHandle(
 		mxruntime.HandleInfo{Type: HandleDirectoryRequest, Arg: 0})
 	appServices := mxruntime.GetStartupHandle(
 		mxruntime.HandleInfo{Type: HandleAppServices, Arg: 0})
-	return New(getServiceRoot(), serviceRequest, appServices)
+	return New(getServiceRoot(), directoryRequest, appServices)
 }
