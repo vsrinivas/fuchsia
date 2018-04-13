@@ -34,8 +34,8 @@ function main {
   device="$(get-device-addr $@)"
 
   if [[ -n "$device" ]]; then
-    device_args=("-d" "$1")
     shift
+    device_args=("-d" "$1")
     shift
   fi
 
