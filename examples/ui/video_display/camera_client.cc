@@ -668,12 +668,12 @@ void CameraClient::SetShuttingDown(bool waiting_for_driver,
   fbl::AutoLock lock(&state_lock_);
   if (!waiting_for_driver && !waiting_for_consumer) {
     state_ = CameraState::ShuttingDown;
-    // close streams
-    vb_ch_.reset();
-    stream_ch_.reset();
     // Kill the AutoWaiters:
     cmd_msg_waiter_.Cancel();
     buff_msg_waiter_.Cancel();
+    // close streams
+    vb_ch_.reset();
+    stream_ch_.reset();
   }
   if (!waiting_for_driver && waiting_for_consumer) {
     state_ = CameraState::WaitingForConsumer;
