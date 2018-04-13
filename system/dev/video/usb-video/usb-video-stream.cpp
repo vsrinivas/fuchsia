@@ -363,7 +363,9 @@ zx_status_t UsbVideoStream::TryFormatLocked(const UsbVideoFormat* format,
     memcpy(&negotiation_result_, &result, sizeof(usb_video_vc_probe_and_commit_controls));
     cur_streaming_setting_ = best_setting;
 
-    max_frame_size_ = negotiation_result_.dwMaxVideoFrameSize;
+    // Round frame size up to a whole number of pages, to allow mapping the frames
+    // individually to vmars.
+    max_frame_size_ = ROUNDUP(negotiation_result_.dwMaxVideoFrameSize, PAGE_SIZE);
     cur_format_ = format;
     cur_frame_desc_ = frame_desc;
 
