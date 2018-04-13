@@ -46,9 +46,10 @@ func New(indexDir, blobDir string) (*Filesystem, error) {
 		return nil, fmt.Errorf("pkgfs: open blobfs: %s", err)
 	}
 
+	static := index.NewStatic()
 	f := &Filesystem{
-		static: index.NewStatic(),
-		index:  index.NewDynamic(indexDir),
+		static: static,
+		index:  index.NewDynamic(indexDir, static),
 		blobfs: bm,
 		mountInfo: mountInfo{
 			parentFd: -1,

@@ -31,7 +31,7 @@ func TestList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx := NewDynamic(d)
+	idx := NewDynamic(d, NewStatic())
 	pkgs, err := idx.List()
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +87,7 @@ func TestAdd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	idx := NewDynamic(d)
+	idx := NewDynamic(d, NewStatic())
 
 	err = idx.Add(pkg.Package{Name: "foo", Version: "0"}, "abc")
 	if err != nil {

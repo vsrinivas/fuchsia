@@ -20,6 +20,9 @@ import (
 type DynamicIndex struct {
 	root string
 
+	// TODO(PKG-19): this will be removed in future
+	static *StaticIndex
+
 	// mu protects all following fields
 	mu sync.Mutex
 
@@ -34,11 +37,12 @@ type DynamicIndex struct {
 }
 
 // NewDynamic initializes an DynamicIndex with the given root path.
-func NewDynamic(root string) *DynamicIndex {
+func NewDynamic(root string, static *StaticIndex) *DynamicIndex {
 	// TODO(PKG-14): error is deliberately ignored. This should not be fatal to boot.
 	_ = os.MkdirAll(root, os.ModePerm)
 	return &DynamicIndex{
 		root:       root,
+		static:     static,
 		installing: make(map[string]pkg.Package),
 		needs:      make(map[string]map[string]struct{}),
 		waiting:    make(map[string]map[string]struct{}),
@@ -65,6 +69,10 @@ func (idx *DynamicIndex) Add(p pkg.Package, root string) error {
 	if err := os.MkdirAll(idx.PackagePath(p.Name), os.ModePerm); err != nil {
 		return err
 	}
+
+	// TODO(PKG-19): this needs to be removed as the static package set should not
+	// be updated dynamically in future.
+	idx.static.Set(p, root)
 
 	return ioutil.WriteFile(idx.PackagePath(filepath.Join(p.Name, p.Version)), []byte(root), os.ModePerm)
 }
