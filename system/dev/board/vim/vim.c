@@ -27,6 +27,7 @@
 #include <zircon/threads.h>
 
 #include "vim.h"
+#include "vim2-hw.h"
 
 // DMC MMIO for display driver
 static pbus_mmio_t vim_display_mmios[] = {
@@ -123,6 +124,15 @@ static int vim_start_thread(void* arg) {
             zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
             goto fail;
         }
+    }
+
+    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
+        // set VIM2 fan to level 3 (fastest speed)
+        // TODO(voydanoff) replace this with a thermal driver
+        gpio_config(&bus->gpio, VIM2_FAN_CTL0, GPIO_DIR_OUT);
+        gpio_config(&bus->gpio, VIM2_FAN_CTL1, GPIO_DIR_OUT);
+        gpio_write(&bus->gpio, VIM2_FAN_CTL0, 1);
+        gpio_write(&bus->gpio, VIM2_FAN_CTL1, 1);
     }
 
     // Display driver currently supports only the S912
