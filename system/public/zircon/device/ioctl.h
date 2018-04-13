@@ -40,7 +40,7 @@
 // device protocol families
 #define IOCTL_FAMILY_CONSOLE        0x10
 #define IOCTL_FAMILY_INPUT          0x11
-#define IOCTL_FAMILY_DISPLAY        0x12
+// 0x12 unused
 #define IOCTL_FAMILY_BLOCK          0x13
 #define IOCTL_FAMILY_I2C            0x14
 #define IOCTL_FAMILY_TPM            0x15

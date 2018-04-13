@@ -19,7 +19,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/device/display.h>
 #include <zircon/syscalls.h>
 
 static const zx_pixel_format_t _gsupported_pixel_formats = { ZX_PIXEL_FORMAT_RGB_x888 };
@@ -397,7 +396,6 @@ zx_status_t astro_display_bind(void* ctx, zx_device_t* parent) {
     }
 
     display->parent = parent;
-    display->console_visible = true;
 
     zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PLATFORM_DEV, &display->pdev);
     if (status !=  ZX_OK) {

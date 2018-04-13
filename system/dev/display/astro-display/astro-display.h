@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/display.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/canvas.h>
@@ -107,10 +106,6 @@ typedef struct {
     uint8_t                             input_color_format;
     uint8_t                             output_color_format;
     uint8_t                             color_depth;
-
-    bool                                console_visible;
-    zx_display_cb_t                     ownership_change_callback;
-    void*                               ownership_change_cookie;
 
     display_controller_cb_t*            dc_cb;
     void*                               dc_cb_ctx;
