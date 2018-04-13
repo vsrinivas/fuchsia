@@ -11,6 +11,7 @@ package("media") {
 
   deps = [
     "audio_player",
+    "audio_player_rust",
     "fx",
     "master_gain",
     "media_client_sine",
@@ -24,6 +25,9 @@ package("media") {
   binaries = [
     {
       name = "audio_player"
+    },
+    {
+      name = "audio_player_rust"
     },
     {
       name = "fx"

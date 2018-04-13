@@ -16,6 +16,7 @@ members =  [
   "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
   "examples/fidl/*rust",
+  "examples/media/audio_player_rust",
   "examples/network/wget-rs",
   "examples/rust/testing",
   "lib/rust/crates/eapol",
@@ -56,6 +57,7 @@ members =  [
   "public/rust/fidl_crates/fidl_input",
   "public/rust/fidl_crates/fidl_logger",
   "public/rust/fidl_crates/fidl_media",
+  "public/rust/fidl_crates/fidl_media_player",
   "public/rust/fidl_crates/fidl_mem",
   "public/rust/fidl_crates/fidl_netstack",
   "public/rust/fidl_crates/fidl_network",
@@ -85,6 +87,7 @@ fidl_images = { path = "public/rust/fidl_crates/fidl_images" }
 fidl_input = { path = "public/rust/fidl_crates/fidl_input" }
 fidl_logger = { path = "public/rust/fidl_crates/fidl_logger" }
 fidl_media = { path = "public/rust/fidl_crates/fidl_media" }
+fidl_media_player = { path = "public/rust/fidl_crates/fidl_media_player" }
 fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
 fidl_network = { path = "public/rust/fidl_crates/fidl_network" }

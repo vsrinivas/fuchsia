@@ -101,7 +101,14 @@
   {
     "library_name": "media",
     "fidl_target": "//garnet/public/lib/media/fidl:fidl",
+    "library_deps": [],
+    "public": true
+  },
+    {
+    "library_name": "media_player",
+    "fidl_target": "//garnet/public/lib/media/fidl:media_player",
     "library_deps": [
+      "media",
       "views_v1"
     ],
     "public": true
