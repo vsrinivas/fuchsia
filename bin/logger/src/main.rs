@@ -22,24 +22,16 @@ extern crate futures;
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
-use futures::future::ok as fok;
 use futures::FutureExt;
+use futures::StreamExt;
+use futures::future::ok as fok;
+use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use parking_lot::Mutex;
-use futures::StreamExt;
 
-use fidl_logger::{
-    Log,
-    LogImpl,
-    LogMarker,
-    LogListenerProxy,
-    LogMessage,
-    LogSink,
-    LogSinkImpl,
-    LogSinkMarker,
-};
+use fidl_logger::{Log, LogImpl, LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl,
+                  LogSinkMarker};
 
 pub mod logger;
 
@@ -106,94 +98,96 @@ fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMess
 }
 
 fn spawn_log_manager(state: LogManager, chan: async::Channel) {
-    async::spawn(LogImpl {
-        state,
-        listen: |state, log_listener, options, _controller| {
-            let ll = match log_listener.into_proxy() {
-                Ok(ll) => ll,
-                Err(e) => {
-                    eprintln!("Logger: Error getting listener proxy: {:?}", e);
-                    // TODO: close channel
-                    return fok(());
-                }
-            };
-
-            let mut lw = ListenerWrapper {
-                listener: ll,
-                min_severity: None,
-                pid: None,
-                tid: None,
-                tags: HashSet::new(),
-            };
-
-            if let Some(mut options) = options {
-                lw.tags = options.tags.drain(..).collect();
-                if lw.tags.len() > logger::FX_LOG_MAX_TAGS {
-                    // TODO: close channel
-                    return fok(());
-                }
-                for tag in &lw.tags {
-                    if tag.len() > logger::FX_LOG_MAX_TAG_LEN - 1 {
+    async::spawn(
+        LogImpl {
+            state,
+            listen: |state, log_listener, options, _controller| {
+                let ll = match log_listener.into_proxy() {
+                    Ok(ll) => ll,
+                    Err(e) => {
+                        eprintln!("Logger: Error getting listener proxy: {:?}", e);
                         // TODO: close channel
                         return fok(());
                     }
-                }
-                if options.filter_by_pid {
-                    lw.pid = Some(options.pid)
-                }
-                if options.filter_by_tid {
-                    lw.tid = Some(options.tid)
-                }
-                if options.filter_by_severity {
-                    lw.min_severity = Some(options.min_severity)
-                }
-            }
-            let mut shared_members = state.shared_members.lock();
-            for msg in &mut shared_members.log_msg_buffer.iter_mut().rev() {
-                if ListenerStatus::Fine != lw.send_log(msg) {
-                    return fok(());
-                }
-            }
-            shared_members.listeners.push(lw);
+                };
 
-            fok(())
-        }
-    }
-    .serve(chan)
-    .recover(|e| eprintln!("Log manager failed: {:?}", e)))
+                let mut lw = ListenerWrapper {
+                    listener: ll,
+                    min_severity: None,
+                    pid: None,
+                    tid: None,
+                    tags: HashSet::new(),
+                };
+
+                if let Some(mut options) = options {
+                    lw.tags = options.tags.drain(..).collect();
+                    if lw.tags.len() > logger::FX_LOG_MAX_TAGS {
+                        // TODO: close channel
+                        return fok(());
+                    }
+                    for tag in &lw.tags {
+                        if tag.len() > logger::FX_LOG_MAX_TAG_LEN - 1 {
+                            // TODO: close channel
+                            return fok(());
+                        }
+                    }
+                    if options.filter_by_pid {
+                        lw.pid = Some(options.pid)
+                    }
+                    if options.filter_by_tid {
+                        lw.tid = Some(options.tid)
+                    }
+                    if options.filter_by_severity {
+                        lw.min_severity = Some(options.min_severity)
+                    }
+                }
+                let mut shared_members = state.shared_members.lock();
+                for msg in &mut shared_members.log_msg_buffer.iter_mut().rev() {
+                    if ListenerStatus::Fine != lw.send_log(msg) {
+                        return fok(());
+                    }
+                }
+                shared_members.listeners.push(lw);
+
+                fok(())
+            },
+        }.serve(chan)
+            .recover(|e| eprintln!("Log manager failed: {:?}", e)),
+    )
 }
 
 fn spawn_log_sink(state: LogManager, chan: async::Channel) {
-    async::spawn(LogSinkImpl {
-        state,
-        connect: |state, socket, _controller| {
-            let ls = match logger::LoggerStream::new(socket) {
-                Err(e) => {
-                    eprintln!("Logger: Failed to create tokio socket: {:?}", e);
-                    // TODO: close channel
-                    return fok(());
-                }
-                Ok(ls) => ls,
-            };
+    async::spawn(
+        LogSinkImpl {
+            state,
+            connect: |state, socket, _controller| {
+                let ls = match logger::LoggerStream::new(socket) {
+                    Err(e) => {
+                        eprintln!("Logger: Failed to create tokio socket: {:?}", e);
+                        // TODO: close channel
+                        return fok(());
+                    }
+                    Ok(ls) => ls,
+                };
 
-            let shared_members = state.shared_members.clone();
-            let f = ls.for_each(move |mut log_msg| {
-                let mut shared_members = shared_members.lock();
-                run_listeners(&mut shared_members.listeners, &mut log_msg);
-                shared_members.log_msg_buffer.push_front(log_msg);
-                shared_members.log_msg_buffer.truncate(OLD_MSGS_BUF_SIZE);
-                Ok(())
-            }).map(|_s| ());
+                let shared_members = state.shared_members.clone();
+                let f = ls.for_each(move |mut log_msg| {
+                    let mut shared_members = shared_members.lock();
+                    run_listeners(&mut shared_members.listeners, &mut log_msg);
+                    shared_members.log_msg_buffer.push_front(log_msg);
+                    shared_members.log_msg_buffer.truncate(OLD_MSGS_BUF_SIZE);
+                    Ok(())
+                }).map(|_s| ());
 
-            async::spawn(f.recover(|e| {
-                eprintln!("Logger: Stream failed {:?}", e);
-            }));
+                async::spawn(f.recover(|e| {
+                    eprintln!("Logger: Stream failed {:?}", e);
+                }));
 
-            fok(())
-        }
-    }
-    .serve(chan)
-    .recover(|e| eprintln!("Log sink failed: {:?}", e)))
+                fok(())
+            },
+        }.serve(chan)
+            .recover(|e| eprintln!("Log sink failed: {:?}", e)),
+    )
 }
 
 fn main() {
@@ -225,7 +219,10 @@ fn main_wrapper() -> Result<(), Error> {
         .start()
         .map_err(|e| e.context("error starting service server"))?;
 
-    Ok(executor.run(server_fut, 2).context("running server").map(|_| ())?) // 2 threads
+    Ok(executor
+        .run(server_fut, 2)
+        .context("running server")
+        .map(|_| ())?) // 2 threads
 }
 
 #[cfg(test)]
@@ -234,14 +231,8 @@ mod tests {
 
     use super::*;
 
-    use fidl_logger::{
-        LogProxy,
-        LogSinkProxy,
-        LogFilterOptions,
-        LogListenerImpl,
-        LogListener,
-        LogListenerMarker,
-    };
+    use fidl_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker, LogProxy,
+                      LogSinkProxy};
     use logger::fx_log_packet_t;
     use zx::prelude::*;
 
@@ -287,37 +278,49 @@ mod tests {
     }
 
     fn spawn_log_listener(ll: LogListenerState, chan: async::Channel) {
-        async::spawn(LogListenerImpl {
-            state: ll,
-            log: |ll, msg, _controller| {
-                let len = ll.expected.len();
-                assert_ne!(len, 0, "got extra message: {:?}", msg);
-                // we can receive messages out of order
-                ll.expected.retain(|e| e != &msg);
-                assert_eq!(ll.expected.len(), len-1, "expected: {:?},\nmsg: {:?}", ll.expected, msg);
-                if ll.expected.len() == 0 {
-                    ll.done.store(true, Ordering::Relaxed);
-                }
-                fok(())
-            },
-        }
-        .serve(chan)
-        .recover(|e| panic!("test fail {:?}", e)))
+        async::spawn(
+            LogListenerImpl {
+                state: ll,
+                log: |ll, msg, _controller| {
+                    let len = ll.expected.len();
+                    assert_ne!(len, 0, "got extra message: {:?}", msg);
+                    // we can receive messages out of order
+                    ll.expected.retain(|e| e != &msg);
+                    assert_eq!(
+                        ll.expected.len(),
+                        len - 1,
+                        "expected: {:?},\nmsg: {:?}",
+                        ll.expected,
+                        msg
+                    );
+                    if ll.expected.len() == 0 {
+                        ll.done.store(true, Ordering::Relaxed);
+                    }
+                    fok(())
+                },
+            }.serve(chan)
+                .recover(|e| panic!("test fail {:?}", e)),
+        )
     }
 
     fn setup_listener(
-        ll: LogListenerState,
-        lp: LogProxy,
-        mut filter_options: Option<Box<LogFilterOptions>>,
+        ll: LogListenerState, lp: LogProxy, mut filter_options: Option<Box<LogFilterOptions>>
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
         let mut remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
         let local = async::Channel::from_channel(local).expect("failed to make async channel");
         spawn_log_listener(ll, local);
-        lp.listen(&mut remote_ptr, &mut filter_options).expect("failed to register listener");
+        lp.listen(&mut remote_ptr, &mut filter_options)
+            .expect("failed to register listener");
     }
 
-    fn setup_test() -> (async::Executor, LogProxy, LogSinkProxy, zx::Socket, zx::Socket) {
+    fn setup_test() -> (
+        async::Executor,
+        LogProxy,
+        LogSinkProxy,
+        zx::Socket,
+        zx::Socket,
+    ) {
         let executor = async::Executor::new().expect("unable to create executor");
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let shared_members = Arc::new(Mutex::new(LogManagerShared {
@@ -361,7 +364,9 @@ mod tests {
         let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
         let mut p = setup_default_packet();
         sin.write(to_u8_slice(&mut p)).unwrap();
-        log_sink_proxy.connect(&mut sout).expect("unable to connect");
+        log_sink_proxy
+            .connect(&mut sout)
+            .expect("unable to connect");
         p.metadata.severity = FX_LOG_INFO;
         sin.write(to_u8_slice(&mut p)).unwrap();
 
@@ -396,16 +401,20 @@ mod tests {
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
+        assert!(
+            done.load(Ordering::Relaxed),
+            "task should have completed by now"
+        );
     }
 
     fn filter_test_helper(
-        expected: Vec<LogMessage>,
-        packets: Vec<fx_log_packet_t>,
+        expected: Vec<LogMessage>, packets: Vec<fx_log_packet_t>,
         filter_options: Option<Box<LogFilterOptions>>,
     ) {
         let (mut executor, log_proxy, log_sink_proxy, sin, mut sout) = setup_test();
-        log_sink_proxy.connect(&mut sout).expect("unable to connect");
+        log_sink_proxy
+            .connect(&mut sout)
+            .expect("unable to connect");
         let done = Arc::new(AtomicBool::new(false));
         let ls = LogListenerState {
             expected: expected,
@@ -424,7 +433,10 @@ mod tests {
             let timeout = async::Timer::<()>::new(10.millis().after_now()).unwrap();
             executor.run(timeout, 2).unwrap();
         }
-        assert!(done.load(Ordering::Relaxed), "task should have completed by now");
+        assert!(
+            done.load(Ordering::Relaxed),
+            "task should have completed by now"
+        );
     }
 
     #[test]
