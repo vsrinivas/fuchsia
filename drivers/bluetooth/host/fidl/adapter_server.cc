@@ -5,6 +5,7 @@
 #include "adapter_server.h"
 
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
+#include "garnet/drivers/bluetooth/lib/gap/bredr_connection_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/bredr_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
@@ -154,6 +155,16 @@ void AdapterServer::StopDiscovery(StopDiscoveryCallback callback) {
   bredr_discovery_session_ = nullptr;
   le_discovery_session_ = nullptr;
   callback(Status());
+}
+
+void AdapterServer::SetConnectable(bool enabled,
+                                   SetConnectableCallback callback) {
+  FXL_VLOG(1) << "Adapter SetConnectable(" << enabled << ")";
+
+  adapter()->bredr_connection_manager()->SetConnectable(
+      enabled, [callback](const auto& status) {
+        callback(fidl_helpers::StatusToFidl(status));
+      });
 }
 
 void AdapterServer::OnDiscoveryResult(

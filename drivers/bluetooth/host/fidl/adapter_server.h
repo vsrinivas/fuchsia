@@ -42,6 +42,8 @@ class AdapterServer : public AdapterServerBase<::bluetooth_host::Adapter> {
                     SetLocalNameCallback callback) override;
   void StartDiscovery(StartDiscoveryCallback callback) override;
   void StopDiscovery(StopDiscoveryCallback callback) override;
+  void SetConnectable(bool connectable,
+                      SetConnectableCallback callback) override;
 
   // Called by |le_discovery_session_| when devices are discovered.
   void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);

@@ -42,6 +42,9 @@ interface Adapter {
   // then the system will continue performing device discovery even if this method results in
   // success.
   6: StopDiscovery() -> (bluetooth.Status @status);
+
+  // Sets whether this host should be connectable.
+  7: SetConnectable(bool enabled) -> (bluetooth.Status @status);
 };
 
 // Management interface implemented by bt-host devices.

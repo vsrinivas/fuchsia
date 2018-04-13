@@ -177,6 +177,13 @@ fn add_adapter(
             let (del_local, del_remote) = zx::Channel::create().unwrap();
             let del_local = async::Channel::from_channel(del_local).unwrap();
             let mut adap_delegate = ClientEnd::<AdapterDelegateMarker>::new(del_remote);
+            host_adapter.set_connectable(&mut true)
+                        .map(move |status| {
+                            status.error.and_then::<Box<Error>, _>(|e| {
+                                info!("Can't set connectable: {:?}", e);
+                                None
+                            })
+                        });
             host_adapter.set_delegate(&mut adap_delegate);
 
             // Add to the adapters

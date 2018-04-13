@@ -43,5 +43,7 @@ class Status : public common::Status<StatusCode> {
   explicit Status(hci::StatusCode proto_code);
 };
 
+using StatusCallback = std::function<void(const Status& status)>;
+
 }  // namespace hci
 }  // namespace btlib

@@ -129,8 +129,8 @@ enum StatusCode : uint8_t {
   kOperationCancelledByHost                     = 0x44,
 };
 
-// Bitmask values for the 8-octet Local Supported LMP Features bit-field. See Core Spec
-// v5.0, Volume 2, Part C, Section 3.3 "Feature Mask Definition".
+// Bitmask values for the 8-octet Local Supported LMP Features bit-field. See
+// Core Specv5.0, Volume 2, Part C, Section 3.3 "Feature Mask Definition".
 enum class LMPFeature : uint64_t {
   // Octet 0
   k3SlotPackets   = (1 << 0),
@@ -150,7 +150,14 @@ enum class LMPFeature : uint64_t {
   // TODO(armansito): Add definitions
 
   // Octet 3
-  // TODO(armansito): Add definitions
+  // Reserved (1ull << 24)
+  kEDRACL2MbitMode        = (1ull << 25),
+  kEDRACL3MbitMode        = (1ull << 26),
+  kEnhancedInquiryScan    = (1ull << 27),
+  kInterlacedInquiryScan  = (1ull << 28),
+  kInterlacedPageScan     = (1ull << 29),
+  kRSSIwithInquiryResults = (1ull << 30),
+  kEV3Packets             = (1ull << 31),
 
   // Octet 4
   kEV4Packets         = (1ull << 32),
@@ -705,7 +712,8 @@ enum class GenericEnableParam : uint8_t {
   kEnable = 0x01,
 };
 
-// Values that can be passed to the Type parameter in a HCI_Read_Transmit_Power_Level command.
+// Values that can be passed to the Type parameter in a
+// HCI_Read_Transmit_Power_Level command.
 enum class ReadTransmitPowerType : uint8_t {
   // Read Current Transmit Power Level.
   kCurrent = 0x00,
@@ -729,7 +737,8 @@ constexpr uint16_t kLEAdvertisingIntervalMax = 0x4000;
 constexpr uint16_t kLEPeriodicAdvertisingIntervalMin = 0x0006;
 constexpr uint16_t kLEPeriodicAdvertisingIntervalMax = 0xFFFF;
 
-// The minimum and maximum range values for the LE extended advertising interval parameters.
+// The minimum and maximum range values for the LE extended advertising interval
+// parameters.
 constexpr uint32_t kLEExtendedAdvertisingIntervalMin = 0x000020;
 constexpr uint32_t kLEExtendedAdvertisingIntervalMax = 0xFFFFFF;
 
@@ -742,7 +751,8 @@ constexpr uint16_t kLEAdvertisingIntervalDefault = 0x0800;
 constexpr uint16_t kLEScanIntervalMin = 0x0004;
 constexpr uint16_t kLEScanIntervalMax = 0x4000;
 
-// The minimum and maximum range values for the LE extended scan interval parameters.
+// The minimum and maximum range values for the LE extended scan interval
+// parameters.
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.8.64)
 constexpr uint16_t kLEExtendedScanIntervalMin = 0x0004;
 constexpr uint16_t kLEExtendedScanIntervalMax = 0xFFFF;
@@ -756,24 +766,28 @@ constexpr uint16_t kLEScanIntervalDefault = 0x0010;
 constexpr uint16_t kLEConnectionIntervalMin = 0x0006;
 constexpr uint16_t kLEConnectionIntervalMax = 0x0C80;
 
-// The maximum value that can be used for the |conn_latency| parameter in a HCI_LE_Create_Connection
+// The maximum value that can be used for the |conn_latency| parameter in a
+// HCI_LE_Create_Connection
 // command (see Core Spec v5.0, Vol 2, Part E, Section 7.8.12).
 constexpr uint16_t kLEConnectionLatencyMax = 0x01F3;
 
-// The minimum and maximum range values for LE connection supervision timeout parameters.
+// The minimum and maximum range values for LE connection supervision timeout
+// parameters.
 constexpr uint16_t kLEConnectionSupervisionTimeoutMin = 0x000A;
 constexpr uint16_t kLEConnectionSupervisionTimeoutMax = 0x0C80;
 
-// The minimum and maximum range values for LE link layer tx PDU used on connections.
+// The minimum and maximum range values for LE link layer tx PDU used on
+// connections.
 constexpr uint16_t kLEMaxTxOctetsMin = 0x001B;
 constexpr uint16_t kLEMaxTxOctetsMax = 0x00FB;
 
-// The minimum and maximum range values for LE link layer tx maximum packet transmission time used
-// on connections.
+// The minimum and maximum range values for LE link layer tx maximum packet
+// transmission time used on connections.
 constexpr uint16_t kLEMaxTxTimeMin = 0x0148;
 constexpr uint16_t kLEMaxTxTimeMax = 0x4290;
 
-// Minimum, maximum, default values for the Resolvable Private Address timeout parameter.
+// Minimum, maximum, default values for the Resolvable Private Address timeout
+// parameter.
 constexpr uint16_t kLERPATimeoutMin = 0x0001;      // 1 second
 constexpr uint16_t kLERPATimeoutMax = 0xA1B8;      // Approx. 11.5 hours
 constexpr uint16_t kLERPATimeoutDefault = 0x0384;  // 900 seconds or 15 minutes.
@@ -836,11 +850,12 @@ enum class LEAddressType : uint8_t {
   // Random (static) Identity Address (Corresponds to Resolved Private Address)
   kRandomIdentity = 0x03,
 
-  // This is a special value used in LE Extended Advertising Report events to indicate a random
-  // address that the controller was unable to resolve.
+  // This is a special value used in LE Extended Advertising Report events to
+  // indicate a random address that the controller was unable to resolve.
   kRandomUnresolved = 0xFE,
 
-  // This is a special value that is only used in LE Directed Advertising Report events.
+  // This is a special value that is only used in LE Directed Advertising Report
+  // events.
   // Meaning: No address provided (anonymous advertisement)
   kAnonymous = 0xFF,
 };
@@ -878,9 +893,9 @@ enum class LEPeerAddressType : uint8_t {
   // Random Device Address or Random (static) Identity Address
   kRandom = 0x01,
 
-  // This is a special value that should only be used with the HCI_LE_Add_Device_To_White_List and
-  // HCI_LE_Remove_Device_From_White_List commands for peer devices sending anonymous
-  // advertisements.
+  // This is a special value that should only be used with the
+  // HCI_LE_Add_Device_To_White_List and HCI_LE_Remove_Device_From_White_List
+  // commands for peer devices sending anonymous advertisements.
   kAnonymous = 0xFF,
 };
 
@@ -918,8 +933,8 @@ enum class LEAdvFilterPolicy : uint8_t {
 // HCI_LE_Periodic_Advertising_Create_Sync command.
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.8.67)
 enum class LEPeriodicAdvFilterPolicy : uint8_t {
-  // Use the Advertising_SID, Advertising_Address_Type, and Advertising_Address parameters to
-  // determine which advertiser to listen to.
+  // Use the Advertising_SID, Advertising_Address_Type, and Advertising_Address
+  // parameters to determine which advertiser to listen to.
   kListNotUsed = 0x00,
 
   // Use the Periodic Advertiser List to determine which advertiser to listen to.
@@ -977,40 +992,44 @@ enum class LEExtendedDuplicateFilteringOption : uint8_t {
   kDisabled = 0x00,
   kEnabled = 0x01,
 
-  // Duplicate advertisements in a single scan period should not be sent to the Host in advertising
-  // report events; this setting shall only be used if the Period parameter is non-zero.
+  // Duplicate advertisements in a single scan period should not be sent to the
+  // Host in advertising report events; this setting shall only be used if the
+  // Period parameter is non-zero.
   kEnabledResetForEachScanPeriod = 0x02,
 };
 
-// The PHY bitfield values that can be used in HCI_LE_Set_PHY and HCI_LE_Set_Default_PHY commands
-// that can be used for the TX_PHYS and RX_PHYS parameters.
+// The PHY bitfield values that can be used in HCI_LE_Set_PHY and
+// HCI_LE_Set_Default_PHY commands that can be used for the TX_PHYS and RX_PHYS
+// parameters.
 constexpr uint8_t kLEPHYBit1M = (1 << 0);
 constexpr uint8_t kLEPHYBit2M = (1 << 1);
 constexpr uint8_t kLEPHYBitCoded = (1 << 2);
 
-// The PHY bitfield values that can be used in HCI_LE_Set_PHY and HCI_LE_Set_Default_PHY commands
-// that can be used for the ALL_PHYS parameter.
+// The PHY bitfield values that can be used in HCI_LE_Set_PHY and
+// HCI_LE_Set_Default_PHY commands that can be used for the ALL_PHYS parameter.
 constexpr uint8_t kLEAllPHYSBitTxNoPreference = (1 << 0);
 constexpr uint8_t kLEAllPHYSBitRxNoPreference = (1 << 1);
 
-// Potential values that can be used for the LE PHY parameters in HCI commands and events.
+// Potential values that can be used for the LE PHY parameters in HCI commands
+// and events.
 enum class LEPHY : uint8_t {
   kLE1M = 0x01,
   kLE2M = 0x02,
 
-  // Only for the HCI_LE_Enhanced_Transmitter_Test command this value implies S=8 data coding.
-  // Otherwise this refers to general LE Coded PHY.
+  // Only for the HCI_LE_Enhanced_Transmitter_Test command this value implies
+  // S=8 data coding. Otherwise this refers to general LE Coded PHY.
   kLECoded = 0x03,
 
   // This should ony be used with the HCI_LE_Enhanced_Transmitter_Test command.
   kLECodedS2 = 0x04,
 
-  // Some HCI events may use this value to indicate that no packets were sent on a particular PHY,
-  // specifically the LE Extended Advertising Report event.
+  // Some HCI events may use this value to indicate that no packets were sent
+  // on a particular PHY, specifically the LE Extended Advertising Report event.
   kNone = 0x00,
 };
 
-// Potential values that can be used for the PHY_options parameter in a HCI_LE_Set_PHY command.
+// Potential values that can be used for the PHY_options parameter in a
+// HCI_LE_Set_PHY command.
 enum class LEPHYOptions : uint16_t {
   kNoPreferredEncoding = 0x00,
   kPreferS2Coding = 0x01,
@@ -1024,7 +1043,8 @@ enum class LETestModulationIndex : uint8_t {
   kAssumeStable = 0x01,
 };
 
-// Potential values for the Operation parameter in a HCI_LE_Set_Extended_Advertising_Data command.
+// Potential values for the Operation parameter in a
+// HCI_LE_Set_Extended_Advertising_Data command.
 enum class LESetExtendedAdvDataOp : uint8_t {
   // Intermediate fragment of fragmented extended advertising data.
   kIntermediateFragment = 0x00,
@@ -1042,13 +1062,14 @@ enum class LESetExtendedAdvDataOp : uint8_t {
   kUnchangedData = 0x04,
 };
 
-// Potential values for the Fragment_Preference parameter in a HCI_LE_Set_Extended_Advertising_Data
-// command.
+// Potential values for the Fragment_Preference parameter in a
+// HCI_LE_Set_Extended_Advertising_Data command.
 enum class LEExtendedAdvFragmentPreference : uint8_t {
   // The Controller may fragment all Host advertising data
   kMayFragment = 0x00,
 
-  // The Controller should not fragment or should minimize fragmentation of Host advertising data
+  // The Controller should not fragment or should minimize fragmentation of Host
+  // advertising data
   kShouldNotFragment = 0x01,
 };
 
@@ -1069,8 +1090,9 @@ constexpr uint16_t kLEExtendedAdvEventTypeDirected     = (1 << 2);
 constexpr uint16_t kLEExtendedAdvEventTypeScanResponse = (1 << 3);
 constexpr uint16_t kLEExtendedAdvEventTypeLegacy       = (1 << 4);
 
-// LE Advertising data status properties stored in bits 5 and 6 of the Event_Type bitfield of a LE
-// Extended Advertising Report event and in a LE Periodic Advertising Report event.
+// LE Advertising data status properties stored in bits 5 and 6 of the
+// Event_Type bitfield of a LE Extended Advertising Report event and in a LE
+// Periodic Advertising Report event.
 enum class LEAdvertisingDataStatus : uint16_t {
   // Data is complete.
   kComplete = 0x00,
@@ -1082,11 +1104,12 @@ enum class LEAdvertisingDataStatus : uint16_t {
   kIncompleteTruncated = 0x02,
 };
 
-// The Periodic_Advertising_Properties bitfield used in a HCI_LE_Set_Periodic_Advertising_Parameters
-// command.
+// The Periodic_Advertising_Properties bitfield used in a
+// HCI_LE_Set_Periodic_Advertising_Parameters command.
 constexpr uint16_t kLEPeriodicAdvPropBitIncludeTxPower = (1 << 6);
 
-// Potential values for the Privacy_Mode parameter in a HCI_LE_Set_Privacy_Mode command.
+// Potential values for the Privacy_Mode parameter in a HCI_LE_Set_Privacy_Mode
+// command.
 enum class LEPrivacyMode : uint8_t {
   // Use Network Privacy Mode for this peer device (default).
   kNetwork = 0x00,
@@ -1098,14 +1121,17 @@ enum class LEPrivacyMode : uint8_t {
 // The maximum length of advertising data that can get passed to the
 // HCI_LE_Set_Advertising_Data command.
 //
-// This constant should be used on pre-5.0 controllers. On controllers that support 5.0+ the host
-// should use the HCI_LE_Read_Maximum_Advertising_Data_Length command to obtain this information.
+// This constant should be used on pre-5.0 controllers. On controllers that
+// support 5.0+ the host should use the
+// HCI_LE_Read_Maximum_Advertising_Data_Length command to obtain this
+// information.
 constexpr size_t kMaxLEAdvertisingDataLength = 0x1F;  // (31)
 
 // The maximum length of advertising data that can get passed to the
-// HCI_LE_Set_Extended_Advertising_Data command. The advertised data can be larger than this value
-// (based on the value returned for the LE Read Maximum Advertising Data Length parameter), however
-// must be fragmented among multiple command packets.
+// HCI_LE_Set_Extended_Advertising_Data command. The advertised data can be
+// larger than this value (based on the value returned for the LE Read Maximum
+// Advertising Data Length parameter), however must be fragmented among multiple
+// command packets.
 constexpr size_t kMaxLEExtendedAdvertisingDataLength = 251;
 
 // Maximum value of the Advertising SID subfield in the ADI field of the PDU
@@ -1129,7 +1155,8 @@ constexpr size_t kMaxCommandPacketPayloadSize = 255;
 // header. See Core Spec v5.0 Vol 2, Part E, 5.4.4, paragraph 1.
 constexpr size_t kMaxEventPacketPayloadSize = 255;
 
-// The maximum number of bytes in a HCI ACL data packet payload supported by our stack.
+// The maximum number of bytes in a HCI ACL data packet payload supported by our
+// stack.
 constexpr size_t kMaxACLPayloadSize = 1024;
 
 // Values that can be used in HCI Read|WriteFlowControlMode commands.
@@ -1141,8 +1168,8 @@ enum class FlowControlMode : uint8_t {
   kDataBlockBased = 0x01
 };
 
-// The Packet Boundary Flag is contained in bits 4 and 5 in the second octet of a HCI ACL Data
-// packet.
+// The Packet Boundary Flag is contained in bits 4 and 5 in the second octet of
+// a HCI ACL Data packet.
 enum class ACLPacketBoundaryFlag : uint8_t {
   kFirstNonFlushable  = 0x00,
   kContinuingFragment = 0x01,
@@ -1150,7 +1177,8 @@ enum class ACLPacketBoundaryFlag : uint8_t {
   kCompletePDU        = 0x03,
 };
 
-// The Broadcast Flag is contained in bits 6 and 7 in the second octet of a HCI ACL Data packet.
+// The Broadcast Flag is contained in bits 6 and 7 in the second octet of a HCI
+// ACL Data packet.
 enum class ACLBroadcastFlag : uint8_t {
   kPointToPoint         = 0x00,
   kActiveSlaveBroadcast = 0x01,
@@ -1162,8 +1190,8 @@ enum class LEConnectionRole : uint8_t {
   kSlave = 0x01,
 };
 
-// Possible values that can be reported for the Master_Clock_Accuracy and Advertiser_Clock_Accuracy
-// parameters.
+// Possible values that can be reported for the Master_Clock_Accuracy and
+// Advertiser_Clock_Accuracy parameters.
 enum class LEClockAccuracy : uint8_t {
   k500Ppm = 0x00,
   k250Ppm = 0x01,
@@ -1181,9 +1209,10 @@ enum class LEChannelSelectionAlgorithm : uint8_t {
   kAlgorithm2 = 0x01,
 };
 
-// "Hosts and Controllers shall be able to accept HCI ACL Data Packets with up to 27 bytes of data
-// excluding the HCI ACL Data Packet header on Connection Handles associated with an LE-U logical
-// link." (See Core Spec v5.0, Volume 2, Part E, Section 5.4.2)
+// "Hosts and Controllers shall be able to accept HCI ACL Data Packets with up
+// to 27 bytes of data excluding the HCI ACL Data Packet header on Connection
+// Handles associated with an LE-U logical link." (See Core Spec v5.0, Volume 2,
+// Part E, Section 5.4.2)
 constexpr size_t kMinLEACLDataBufferLength = 27;
 
 // The maximum value that can be used for a 12-bit connection handle.
@@ -1210,6 +1239,45 @@ constexpr std::array<uint8_t, 3> kGIAC {{ 0x33, 0x8B, 0x9E }};
 
 // The Limited Dedicated Inquiry Access Code (LIAC)
 constexpr std::array<uint8_t, 3> kLIAC {{ 0x00, 0x8B, 0x9E }};
+
+// Values that represent a Scan_Enable parameter in a HCI_(Read,Write)_Scan_Enable command.
+enum class ScanEnableType : uint8_t {
+  kNone = 0x00,  // No scans enabled,
+  kInquiryOnly = 0x01, // Inquiry scan enabled, Page scan disabled.
+  kPageOnly = 0x02, // Inquiry scan disabled, Page scan enabled.
+  kInquiryAndPage = 0x03, // Inquiry scan enabled, Page scan enabled.
+};
+
+// The minimum and maximum range values for Page Scan Interval (in time slices)
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.3.19)
+constexpr uint16_t kPageScanIntervalMin = 0x0012;
+constexpr uint16_t kPageScanIntervalMax = 0x1000;
+
+// The minimum and maximum range valeus for Page Scan Window (in time slices)
+// (see Core Spec v5.0, Vol 2, Part E, Section 7.3.19)
+constexpr uint16_t kPageScanWindowMin = 0x0011;
+constexpr uint16_t kPageScanWindowMax = 0x1000;
+
+enum class PageScanType : uint8_t {
+  kStandardScan = 0x00, // Standard scan (default) (mandatory)
+  kInterlacedScan = 0x01, // Interlaced scan
+};
+
+// Constant values for common scanning modes
+// See Spec 5.0, Vol 3, Part C, Section 4.2.2.1, Table 4.2
+constexpr uint16_t kPageScanR0Interval = 0x0800; // 1.28s
+constexpr uint16_t kPageScanR0Window = 0x0800; // 1.28s
+constexpr uint16_t kPageScanR1Interval = 0x0800; // 1.28s
+constexpr uint16_t kPageScanR1Window = 0x0011; // 10.625ms
+constexpr uint16_t kPageScanR2Interval = 0x1000; // 2.56s
+constexpr uint16_t kPageScanR2Window = 0x0011; // 10.625ms
+
+// Link Types for BR/EDR connections.
+enum class LinkType : uint8_t {
+  kSCO = 0x00,         // SCO
+  kACL = 0x01,         // ACL (data channel)
+  kExtendedSCO = 0x02, // eSCO
+};
 
 }  // namespace hci
 }  // namespace btlib

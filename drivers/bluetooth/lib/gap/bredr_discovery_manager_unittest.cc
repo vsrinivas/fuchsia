@@ -26,9 +26,6 @@ constexpr uint8_t LowerBits(const hci::OpCode opcode) {
   return opcode & 0x00FF;
 }
 
-const common::DeviceAddress kAddress0(common::DeviceAddress::Type::kBREDR,
-                                      "00:00:00:00:00:01");
-
 class BrEdrDiscoveryManagerTest : public TestingBase {
  public:
   BrEdrDiscoveryManagerTest() = default;

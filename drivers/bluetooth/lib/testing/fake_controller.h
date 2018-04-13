@@ -270,6 +270,12 @@ class FakeController : public FakeControllerBase,
   // Set by HCI_LE_Set_Random_Address
   common::DeviceAddress le_random_address_;
 
+  // Used for BR/EDR Scans
+  hci::ScanEnableType bredr_scan_state_;
+  hci::PageScanType page_scan_type_;
+  uint16_t page_scan_interval_;
+  uint16_t page_scan_window_;
+
   // Variables used for
   // HCI_LE_Create_Connection/HCI_LE_Create_Connection_Cancel.
   uint16_t next_conn_handle_;

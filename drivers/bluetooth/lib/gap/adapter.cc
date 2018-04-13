@@ -15,6 +15,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
 #include "lib/fxl/random/uuid.h"
 
+#include "bredr_connection_manager.h"
 #include "bredr_discovery_manager.h"
 #include "low_energy_advertising_manager.h"
 #include "low_energy_connection_manager.h"
@@ -410,11 +411,14 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
   le_advertising_manager_ =
       std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
 
+  bredr_connection_manager_ = std::make_unique<BrEdrConnectionManager>(
+      hci_, &device_cache_,
+      state_.HasLMPFeatureBit(0, hci::LMPFeature::kInterlacedPageScan));
   bredr_discovery_manager_ =
       std::make_unique<BrEdrDiscoveryManager>(hci_, &device_cache_);
 
   // This completes the initialization sequence.
-  init_state_ = State::kInitialized;
+  self->init_state_ = State::kInitialized;
   callback(true);
 }
 
@@ -422,6 +426,8 @@ uint64_t Adapter::BuildEventMask() {
   uint64_t event_mask = 0;
 
   // Enable events that are needed for basic flow control.
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionCompleteEvent);
+  event_mask |= static_cast<uint64_t>(hci::EventMask::kConnectionRequestEvent);
   event_mask |=
       static_cast<uint64_t>(hci::EventMask::kDisconnectionCompleteEvent);
   event_mask |= static_cast<uint64_t>(hci::EventMask::kHardwareErrorEvent);

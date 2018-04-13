@@ -30,6 +30,7 @@ class Transport;
 
 namespace gap {
 
+class BrEdrConnectionManager;
 class BrEdrDiscoveryManager;
 
 class LowEnergyAdvertisingManager;
@@ -97,6 +98,12 @@ class Adapter final {
 
   // Returns this Adapter's remote device cache.
   const RemoteDeviceCache& device_cache() const { return device_cache_; }
+
+  // Returns this Adapter's BR/EDR connection manager.
+  BrEdrConnectionManager* bredr_connection_manager() const {
+    FXL_DCHECK(bredr_connection_manager_);
+    return bredr_connection_manager_.get();
+  }
 
   // Returns this Adapter's BR/EDR discovery manager.
   BrEdrDiscoveryManager* bredr_discovery_manager() const {
@@ -204,6 +211,7 @@ class Adapter final {
   std::unique_ptr<LowEnergyAdvertisingManager> le_advertising_manager_;
 
   // Objects that perform BR/EDR procedures.
+  std::unique_ptr<BrEdrConnectionManager> bredr_connection_manager_;
   std::unique_ptr<BrEdrDiscoveryManager> bredr_discovery_manager_;
   fxl::ThreadChecker thread_checker_;
 
