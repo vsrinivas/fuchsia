@@ -137,7 +137,9 @@ private:
     void StartDeviceThread();
 
     void Destroy();
-    bool RenderEngineInit();
+
+    bool BaseInit(void* device_handle);
+    bool RenderEngineInit(bool exec_init_batch);
     bool RenderEngineReset();
 
     void ProcessCompletedCommandBuffers();

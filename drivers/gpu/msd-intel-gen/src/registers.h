@@ -149,6 +149,7 @@ public:
     }
 };
 
+// from intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.1
 class ActiveHeadPointer {
 public:
     static constexpr uint32_t kOffset = 0x74;

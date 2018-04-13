@@ -15,6 +15,11 @@ public:
     {
         return engine->ExecBatch(std::move(mapped_batch));
     }
+    static bool SubmitContext(RenderEngineCommandStreamer* engine, MsdIntelContext* context,
+                              uint32_t tail)
+    {
+        return engine->SubmitContext(context, tail);
+    }
 };
 
 // These tests are unit testing the functionality of MsdIntelDevice.
@@ -181,13 +186,21 @@ public:
             uint64_t offset =
                 (iteration * sizeof(uint32_t)) % dst_mapping->buffer()->platform_buffer()->size();
 
+            static constexpr uint32_t kScratchRegOffset = 0x02600;
+
+            uint32_t i = 0;
+            batch_ptr[i++] = (0x22 << 23) |  (3 - 2); // store to mmio
+            batch_ptr[i++] = kScratchRegOffset;
+            batch_ptr[i++] = expected_val;
+
             static constexpr uint32_t kDwordCount = 4;
             static constexpr uint32_t kAddressSpaceGtt = 1 << 22;
-            batch_ptr[0] = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt; // store dword
-            batch_ptr[1] = magma::lower_32_bits(dst_mapping->gpu_addr() + offset);
-            batch_ptr[2] = magma::upper_32_bits(dst_mapping->gpu_addr() + offset);
-            batch_ptr[3] = expected_val;
-            batch_ptr[4] = (0xA << 23); // batch end
+
+            batch_ptr[i++] = (0x20 << 23) | (kDwordCount - 2) | kAddressSpaceGtt; // store dword
+            batch_ptr[i++] = magma::lower_32_bits(dst_mapping->gpu_addr() + offset);
+            batch_ptr[i++] = magma::upper_32_bits(dst_mapping->gpu_addr() + offset);
+            batch_ptr[i++] = expected_val;
+            batch_ptr[i++] = (0xA << 23); // batch end
 
             auto ringbuffer =
                 device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
@@ -196,6 +209,7 @@ public:
 
             // Initialize the target
             reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)] = 0xdeadbeef;
+            device->register_io()->Write32(kScratchRegOffset, 0xdeadbeef);
 
             EXPECT_TRUE(TestEngineCommandStreamer::ExecBatch(
                 device->render_engine_cs(),
@@ -205,6 +219,8 @@ public:
             EXPECT_TRUE(device->WaitIdle());
 
             EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+
+            EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset));
 
             uint32_t target_val =
                 reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)];
@@ -225,6 +241,43 @@ public:
             EXPECT_TRUE(ringbuffer_wrapped);
 
         DLOG("Finished, num_iterations %u", num_iterations);
+    }
+
+    void RegisterWrite()
+    {
+        magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
+        ASSERT_NE(platform_device, nullptr);
+
+        std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
+        ASSERT_NE(device, nullptr);
+
+        ASSERT_TRUE(device->BaseInit(platform_device->GetDeviceHandle()));
+
+        auto ringbuffer =
+            device->global_context()->get_ringbuffer(device->render_engine_cs()->id());
+
+        static constexpr uint32_t kScratchRegOffset = 0x02600;
+        device->register_io()->Write32(kScratchRegOffset, 0xdeadbeef);
+
+        static constexpr uint32_t expected_val = 0x8000000;
+        ringbuffer->write_tail((0x22 << 23) | (3 - 2)); // store to mmio
+        ringbuffer->write_tail(kScratchRegOffset);
+        ringbuffer->write_tail(expected_val);
+        ringbuffer->write_tail(0);
+
+        TestEngineCommandStreamer::SubmitContext(
+            device->render_engine_cs(), device->global_context().get(), ringbuffer->tail());
+
+        auto start = std::chrono::high_resolution_clock::now();
+        while (device->render_engine_cs()->GetActiveHeadPointer() != ringbuffer->tail() &&
+               std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::high_resolution_clock::now() - start)
+                       .count() < 100) {
+            std::this_thread::yield();
+        }
+
+        EXPECT_EQ(ringbuffer->tail(), device->render_engine_cs()->GetActiveHeadPointer());
+        EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset));
     }
 
     void ProcessRequest()
@@ -320,6 +373,12 @@ TEST(MsdIntelDevice, MockDump)
 {
     TestMsdIntelDevice test;
     test.MockDump();
+}
+
+TEST(MsdIntelDevice, RegisterWrite)
+{
+    TestMsdIntelDevice test;
+    test.RegisterWrite();
 }
 
 TEST(MsdIntelDevice, BatchBuffer)
