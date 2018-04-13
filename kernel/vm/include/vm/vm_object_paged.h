@@ -45,7 +45,7 @@ public:
         // any deadlocks.
         TA_NO_THREAD_SAFETY_ANALYSIS { return size_; }
     bool is_paged() const override { return true; }
-    bool is_contiguous() const { return is_contiguous_; }
+    bool is_contiguous() const override { return is_contiguous_; }
 
     size_t AllocatedPagesInRange(uint64_t offset, uint64_t len) const override;
 

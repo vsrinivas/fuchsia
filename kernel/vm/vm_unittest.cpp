@@ -322,7 +322,7 @@ static bool vmo_create_test() {
     zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, PAGE_SIZE, &vmo);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_TRUE(vmo, "");
-    EXPECT_FALSE(static_cast<VmObjectPaged*>(vmo.get())->is_contiguous(), "vmo is not contig\n");
+    EXPECT_FALSE(vmo->is_contiguous(), "vmo is not contig\n");
     END_TEST;
 }
 
@@ -473,6 +473,28 @@ static bool vmo_odd_size_commit_test() {
     END_TEST;
 }
 
+static bool vmo_create_physical_test() {
+    BEGIN_TEST;
+
+    paddr_t pa;
+    vm_page_t* vm_page = pmm_alloc_page(0, &pa);
+    uint32_t cache_policy;
+
+    ASSERT_TRUE(vm_page, "");
+
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = VmObjectPhysical::Create(pa, PAGE_SIZE, &vmo);
+    ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+    EXPECT_TRUE(vmo, "vmobject creation\n");
+    EXPECT_EQ(ZX_OK, vmo->GetMappingCachePolicy(&cache_policy), "try get");
+    EXPECT_EQ(ARCH_MMU_FLAG_UNCACHED, cache_policy, "check initial cache policy");
+    EXPECT_TRUE(vmo->is_contiguous(), "check contiguous");
+
+    pmm_free_page(vm_page);
+
+    END_TEST;
+}
+
 // Creates a vm object that commits contiguous memory.
 static bool vmo_create_contiguous_test() {
     BEGIN_TEST;
@@ -482,7 +504,7 @@ static bool vmo_create_contiguous_test() {
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     EXPECT_TRUE(vmo, "vmobject creation\n");
 
-    EXPECT_TRUE(static_cast<VmObjectPaged*>(vmo.get())->is_contiguous(), "vmo is contig\n");
+    EXPECT_TRUE(vmo->is_contiguous(), "vmo is contig\n");
 
     paddr_t last_pa;
     auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
@@ -1012,6 +1034,7 @@ VM_UNITTEST(vmo_pin_test)
 VM_UNITTEST(vmo_multiple_pin_test)
 VM_UNITTEST(vmo_commit_test)
 VM_UNITTEST(vmo_odd_size_commit_test)
+VM_UNITTEST(vmo_create_physical_test)
 VM_UNITTEST(vmo_create_contiguous_test)
 VM_UNITTEST(vmo_contiguous_decommit_test)
 VM_UNITTEST(vmo_precommitted_map_test)

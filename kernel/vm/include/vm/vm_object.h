@@ -50,6 +50,9 @@ public:
 
     // Returns true if the object is backed by RAM.
     virtual bool is_paged() const { return false; }
+    // Returns true if the object is backed by a contiguous range of physical
+    // memory.
+    virtual bool is_contiguous() const { return false; }
 
     // Returns the number of physical pages currently allocated to the
     // object where (offset <= page_offset < offset+len).

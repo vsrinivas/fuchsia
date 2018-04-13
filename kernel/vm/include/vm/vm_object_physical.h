@@ -27,6 +27,8 @@ class VmObjectPhysical final : public VmObject {
 public:
     static zx_status_t Create(paddr_t base, uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
+    bool is_contiguous() const override { return true; }
+
     uint64_t size() const override
         // TODO: Figure out whether it's safe to lock here without causing
         // any deadlocks.
