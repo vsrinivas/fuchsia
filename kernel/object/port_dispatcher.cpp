@@ -263,18 +263,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
 
             if (out_packet != nullptr)
                 *out_packet = port_packet->packet;
-
-            PortObserver* observer = port_packet->observer;
-
-            if (observer) {
-                // Deleting the observer under the lock is fine because
-                // the reference that holds to this PortDispatcher is by
-                // construction not the last one. We need to do this under
-                // the lock because another thread can call CanReap().
-                delete observer;
-            } else if (port_packet->is_ephemeral()) {
-                port_packet->Free();
-            }
+            FreePacket(port_packet);
         }
 
         return ZX_OK;
@@ -283,6 +272,20 @@ wait:
         zx_status_t st = sema_.Wait(deadline, nullptr);
         if (st != ZX_OK)
             return st;
+    }
+}
+
+void PortDispatcher::FreePacket(PortPacket* port_packet) {
+    PortObserver* observer = port_packet->observer;
+
+    if (observer) {
+        // Deleting the observer under the lock is fine because the
+        // reference that holds to this PortDispatcher is by construction
+        // not the last one. We need to do this under the lock because
+        // another thread can call CanReap().
+        delete observer;
+    } else if (port_packet->is_ephemeral()) {
+        port_packet->Free();
     }
 }
 

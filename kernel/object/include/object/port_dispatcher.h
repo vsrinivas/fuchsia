@@ -168,6 +168,8 @@ private:
 
     explicit PortDispatcher(uint32_t options);
 
+    void FreePacket(PortPacket* port_packet) TA_REQ(get_lock());
+
     // Adopts a RefPtr to |eport|, and adds it to |eports_|.
     // Called by ExceptionPort.
     void LinkExceptionPort(ExceptionPort* eport);
