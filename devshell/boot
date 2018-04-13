@@ -55,7 +55,7 @@ ip_targ=()
 had_artifacts=false
 had_imgdir=false
 had_zirdir=false
-zir_tools="${ZIRCON_TOOLS_DIR}"
+zircon_tools="${ZIRCON_TOOLS_DIR}"
 while [[ "$1" =~ ^- ]]; do
   case "$1" in
   -h|--help)
@@ -95,7 +95,7 @@ while [[ "$1" =~ ^- ]]; do
     shift
     fuchsia_dir="${1}"
     zircon_dir="${1}"
-    zir_tools="${zircon_dir}/tools"
+    zircon_tools="${zircon_dir}/tools"
     had_artifacts=true
     ;;
   --images-dir)
@@ -106,7 +106,7 @@ while [[ "$1" =~ ^- ]]; do
   --zircon-dir)
     shift
     zircon_dir="${1}"
-    zir_tools="${zircon_dir}/tools"
+    zircon_tools="${zircon_dir}/tools"
     had_zirdir=true
     ;;
   *)
@@ -213,7 +213,7 @@ else
   fi
 fi
 
-exec "${zir_tools}/bootserver" \
+exec "${zircon_tools}/bootserver" \
   "${ip_targ[@]}" \
   "${disks[@]}" \
   "${zircon_dir}/${zircon_bin}" \
