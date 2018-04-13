@@ -13,7 +13,6 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/mxerror"
-	"syscall/zx/mxruntime"
 	"syscall/zx/zxsocket"
 	"time"
 
@@ -41,11 +40,6 @@ const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
 const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 
 const defaultNIC = 2
-
-// TODO: define these in syscall/zx/mxruntime
-const (
-	handleServicesRequest mxruntime.HandleType = 0x3B
-)
 
 var (
 	ioctlNetcGetIfInfo   = fdio.IoctlNum(fdio.IoctlKindDefault, fdio.IoctlFamilyNetconfig, 0)
