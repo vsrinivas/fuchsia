@@ -12,7 +12,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fdio/util.h>
+#include <bootfs/bootfs.h>
 
 zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo) {
     bootfs_header_t hdr;

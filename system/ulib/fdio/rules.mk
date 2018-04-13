@@ -11,7 +11,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := userlib
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/debug.c \
     $(LOCAL_DIR)/get-vmo.c \

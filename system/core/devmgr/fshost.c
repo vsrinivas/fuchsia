@@ -7,6 +7,7 @@
 
 #include <bootdata/decompress.h>
 
+#include <bootfs/bootfs.h>
 #include <fdio/namespace.h>
 #include <fdio/util.h>
 #include <fdio/watcher.h>

@@ -36,21 +36,6 @@ zx_status_t fdio_transfer_fd(int fd, int newfd, zx_handle_t* handles, uint32_t* 
 // closes them on failure.
 zx_status_t fdio_create_fd(zx_handle_t* handles, uint32_t* types, size_t hcount, int* fd_out);
 
-typedef struct bootfs_entry bootfs_entry_t;
-
-typedef struct bootfs {
-    zx_handle_t vmo;
-    uint32_t dirsize;
-    void* dir;
-} bootfs_t;
-
-zx_status_t bootfs_create(bootfs_t* bfs, zx_handle_t vmo);
-void bootfs_destroy(bootfs_t* bfs);
-zx_status_t bootfs_open(bootfs_t* bfs, const char* name, zx_handle_t* vmo);
-zx_status_t bootfs_parse(bootfs_t* bfs,
-                         zx_status_t (*cb)(void* cookie, const bootfs_entry_t* entry),
-                         void* cookie);
-
 // attempt to install a fdio in the unistd fd table
 // if fd >= 0, request a specific fd, and starting_fd is ignored
 // if fd < 0, request the first available fd >= starting_fd

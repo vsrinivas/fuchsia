@@ -20,6 +20,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
+#include <bootfs/bootfs.h>
 #include <fdio/namespace.h>
 #include <fdio/util.h>
 
