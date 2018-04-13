@@ -3,10 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### listen for logs
+### listen for kernel logs.
 
-## This command delegates to the Zircon `loglistener` binary. Additional
-## options can be found with `fx log -h`.
+## This command delegates to the Zircon `loglistener` binary.
 
 set -e
 
