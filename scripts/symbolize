@@ -251,6 +251,7 @@ def main():
     arch = "x86_64"
     bias = 0
     name_to_buildid = {}
+    bias_to_name = {}
     processed_lines = []
     prev_sp = None
     prev_frame_num = None
@@ -261,14 +262,14 @@ def main():
 
     # Regex for parsing
     # Either nothing, or something like "[00007.268] 00304.00325> "
-    full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> )"
+    full_prefix = "^(|\[\d+\.\d+\] \d+\.\d+> ?)"
     btre = re.compile(full_prefix + "bt#(\d+):")
     bt_with_offset_re = re.compile(full_prefix +
         "bt#(\d+): pc 0x[0-9a-f]+ sp (0x[0-9a-f]+) \(([^,]+),(0x[0-9a-f]+)\)$")
     bt_end_re = re.compile(full_prefix + "bt#(\d+): end")
     arch_re = re.compile(full_prefix + "arch: ([\\S]+)$")
     build_id_re = re.compile(full_prefix +
-        "dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=(.+)$")
+        "(?:dlsvc: debug: )?dso: id=([0-9a-z]+) base=(0x[0-9a-f]+) name=(.+)$")
     disasm_re = re.compile("^ *(0x[0-9a-f]+)( .+)$")
 
     # Zircon backtraces
@@ -281,6 +282,11 @@ def main():
     zircon_bt = False
     zircon_pc = ''
 
+    # ASAN backtraces
+    asan_bt_re = re.compile(full_prefix + "\{\{\{bt:(\d+):(0x[0-9a-f]+)\}\}\}")
+    asan_bt_end_re = re.compile(full_prefix + "$")
+    asan_bt = False
+
     while True:
         line = args.file.readline()
         if args.echo and not args.file.isatty():
@@ -289,7 +295,9 @@ def main():
         # Strip any trailing carriage return character ("\r"), since
         # these appear in the serial console output from QEMU.
         line = line.rstrip()
-        if bt_end_re.match(line) or end_of_file:
+        bt_end = bt_end_re.match(line)
+        asan_bt_end = asan_bt and asan_bt_end_re.match(line)
+        if bt_end or asan_bt_end or end_of_file:
             if len(processed_lines) != 0:
                 writeline("\nstart of symbolized stack:\n")
                 writelines(processed_lines)
@@ -310,6 +318,7 @@ def main():
                 total_stack_size = 0
                 prev_sp = None
                 zircon_bt = False
+                asan_bt = False
             if end_of_file:
                 break
             else:
@@ -323,11 +332,13 @@ def main():
         if m:
             if done_dso_list:
                 name_to_buildid = {}
+                bias_to_name = {}
                 done_dso_list = False
             buildid = m.group(2)
             bias = int(m.group(3), 16)
             name = m.group(4)
             name_to_buildid[name] = buildid
+            bias_to_name[bias] = name
             continue
         # We didn't see a dso line, so we're done with this list.
         # The next time we see one means we're starting a new list.
@@ -408,6 +419,36 @@ def main():
 
             prefix = "bt#%s: %s => " % (frame_num, addr)
             call_loc = get_call_location(arch, zircon_elf_path, addr)
+            # In the case of inlined methods, it is more readable if the
+            # inlined lines are aligned to be to the right of "=>".
+            processed_lines.append(prefix +
+                    call_loc.replace("(inlined", (" " * len(prefix)) + "(inlined"))
+            continue
+
+        # ASAN Specific Handling
+        m = asan_bt_re.match(line)
+        if m and not zircon_bt:
+            asan_bt = True
+            frame_num = m.group(2)
+            addr = int(m.group(3), 16)
+            offset = None
+            dso = None
+            for bias, candidate_dso in bias_to_name.items():
+                if addr >= bias:
+                    candidate_offset = addr - bias
+                    if offset is None or candidate_offset < offset:
+                        offset = candidate_offset
+                        dso = candidate_dso
+            if offset is None:
+                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x\n" % (frame_num, addr))
+                continue
+            dso_full_path = find_dso_full_path(dso, args.app, name_to_buildid, build_dirs)
+            if not dso_full_path:
+                processed_lines.append("#%s: unknown, can't find full path for %s\n" % (frame_num, dso))
+                continue
+
+            prefix = "bt#%s: 0x%x => " % (frame_num, addr)
+            call_loc = run_addr2line(arch, dso_full_path, "0x%x" % offset)
             # In the case of inlined methods, it is more readable if the
             # inlined lines are aligned to be to the right of "=>".
             processed_lines.append(prefix +
