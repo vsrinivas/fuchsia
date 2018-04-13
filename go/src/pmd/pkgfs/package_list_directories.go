@@ -36,7 +36,7 @@ func (pr *packagesRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 
 	pld, err := newPackageListDir(parts[0], pr.fs)
 	if err != nil {
-		log.Printf("pkgfs:packagesroot:open error reading package list dir for %q: %s", name, err)
+		debugLog("pkgfs:packagesroot:open error reading package list dir for %q: %s", name, err)
 		return nil, nil, nil, err
 	}
 	if len(parts) > 1 {
