@@ -94,12 +94,16 @@ static int hikey960_start_thread(void* arg) {
         goto fail;
     }
 
+#if 0
     // Use USB device mode by default if power button is pressed at boot
     uint8_t state;
     gpio_config(&hikey->gpio, GPIO_PWRON_DET, GPIO_DIR_IN);
     gpio_read(&hikey->gpio, GPIO_PWRON_DET, &state);
     // button is active low
     hikey->initial_usb_mode = (state ? USB_MODE_HOST : USB_MODE_DEVICE);
+#else
+    hikey->initial_usb_mode = USB_MODE_HOST;
+#endif
 
     status = pbus_set_protocol(&hikey->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &hikey->usb_mode_switch);
     if (status != ZX_OK) {
