@@ -580,7 +580,7 @@ func (s *socketServer) newIostate(h zx.Handle, netProto tcpip.NetworkProtocolNum
 	}
 
 	if ep != nil {
-		// This must be initialized before starting the control loop below, or it will race with iosCloseHandler.
+		// This must be initialized before starting the control loop below, or it will race with opClose.
 		ios.writeLoopDone = make(chan struct{})
 	}
 
@@ -1162,7 +1162,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 			case zx.ErrOk:
 			case zx.ErrBadHandle, zx.ErrPeerClosed:
 				// The socket might have been closed.
-				// TODO: consider synchronizing with iosCloseHandler.
+				// TODO: consider synchronizing with opClose.
 			default:
 				log.Printf("connect: signal-peer failed: %v", err)
 				// TODO: communicate this to the client
@@ -1172,7 +1172,7 @@ func (s *socketServer) opConnect(ios *iostate, msg *zxsocket.Msg) (status zx.Sta
 			case zx.ErrOk:
 			case zx.ErrBadHandle, zx.ErrPeerClosed:
 				// The socket might have been closed.
-				// TODO: consider synchronizing with iosCloseHandler.
+				// TODO: consider synchronizing with opClose.
 			default:
 				log.Printf("connect: signal failed: %v", err)
 				// TODO: communicate this to the client
@@ -1342,7 +1342,7 @@ func (s *socketServer) opFcntl(ios *iostate, msg *zxsocket.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
+func (s *socketServer) opClose(ios *iostate, cookie cookie) zx.Status {
 	s.mu.Lock()
 	delete(s.io, cookie)
 	s.mu.Unlock()
@@ -1377,6 +1377,8 @@ func (s *socketServer) iosCloseHandler(ios *iostate, cookie cookie) {
 		}
 		ios.dataHandle.Close()
 	}()
+
+	return zx.ErrOk
 }
 
 func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64) zx.Status {
@@ -1434,8 +1436,7 @@ func (s *socketServer) fdioHandler(msg *fdio.Msg, rh zx.Handle, cookieVal int64)
 		}
 		return fdio.ErrIndirect.Status
 	case fdio.OpClose:
-		s.iosCloseHandler(ios, cookie)
-		return zx.ErrOk
+		return s.opClose(ios, cookie)
 	default:
 		log.Printf("fdioHandler: unknown socket op: %v", op)
 		return zx.ErrNotSupported
@@ -1467,8 +1468,7 @@ func (s *socketServer) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookieVa
 	case fdio.OpConnect:
 		return s.opConnect(ios, msg) // do_connect
 	case fdio.OpClose:
-		s.iosCloseHandler(ios, cookie)
-		return zx.ErrOk
+		return s.opClose(ios, cookie)
 	case fdio.OpRead:
 		if debug {
 			log.Printf("unexpected opRead")
