@@ -18,7 +18,10 @@ import cgi
 import collections
 import json
 import sys
+import os.path
 import textwrap
+
+FUCHSIA_DIR = os.path.abspath(os.path.join(__file__, os.pardir, os.pardir, os.pardir))
 
 # Magic value for nodes with empty names.
 UNNAMED_NAME = '<unnamed>'
@@ -448,7 +451,7 @@ def print_html_document(root_node):
     <script>
     var kTree = %(json)s
     </script>
-    <link rel='stylesheet' href='https://evmar.github.io/webtreemap/webtreemap.css'>
+    <link rel='stylesheet' href='%(css)s'>
     <style>
     body {
       font-family: sans-serif;
@@ -479,7 +482,7 @@ def print_html_document(root_node):
 
     <div id='map'></div>
 
-    <script src='https://evmar.github.io/webtreemap/webtreemap.js'></script>
+    <script src='%(js)s'></script>
     <script>
     var map = document.getElementById('map');
     appendTreemap(map, kTree);
@@ -500,7 +503,9 @@ def print_html_document(root_node):
     %(table)s
     ''' % {
             'json': json.dumps(build_webtreemap(root_node)),
-            'table': ' '.join(dump_html_table(root_node))
+            'table': ' '.join(dump_html_table(root_node)),
+            'css': os.path.join(FUCHSIA_DIR, 'scripts', 'third_party', 'webtreemap', 'webtreemap.css'),
+            'js': os.path.join(FUCHSIA_DIR, 'scripts', 'third_party', 'webtreemap', 'webtreemap.js'),
     }
     print(textwrap.dedent(html))
 
