@@ -1,0 +1,64 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library process;
+
+using io;
+using ldsvc;
+
+struct HandleInfo {
+    handle h;
+
+    // Process argument identifier, from <zircon/processargs.h>.
+    uint32 id;
+};
+
+struct NameInfo {
+    // Path at which to install the associated directory.
+    //
+    // Must be an absolute path (i.e., start with '/').
+    string path;
+
+    // The associated directory.
+    io.Directory directory;
+};
+
+struct LaunchInfo {
+    // The executable to run in the process.
+    handle<vmo> target;
+
+    // The job in which to create the process.
+    //
+    // Used for |PA_JOB_DEFAULT| unless an explicit |PA_JOB_DEFAULT| is included
+    // in |handles|.
+    handle<job> job;
+
+    // The shared library loader to use for the process.
+    ldsvc.Loader loader;
+
+    // The arguments to pass to the process.
+    vector<string> args;
+
+    // The environment to use for the process.
+    vector<string> env;
+
+    // The namespace to install in the process.
+    //
+    // The paths in the namespace must be non-overlapping. See
+    // <https://fuchsia.googlesource.com/docs/+/master/the-book/namespaces.md> for details.
+    vector<NameInfo> names;
+
+    // Additional startup handles to pass to the process.
+    vector<HandleInfo> handles;
+};
+
+struct LaunchResult {
+    handle<process> process;
+    handle<vmar> root_vmar;
+};
+
+interface Launcher {
+    // Creates and starts the process described by |info|.
+    1: Launch(LaunchInfo info) -> (status @status, LaunchResult? result);
+};
