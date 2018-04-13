@@ -1,0 +1,96 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+function help {
+  cat <<END
+
+usage: pave-prebuilt <prebuilt-path>
+
+Take the pre-built path and use it to pave a device. The pre-built path may
+point to a directory or a TAR-ed (and optionally gzipped) file.
+
+The pre-built should contain the following
+  - bootserver in a directory called 'tools'
+  - zircon.bin at its root
+  - any relevant kernel bootdatas at its root
+  - the args.gn used to do the build that produced these outputs at the root
+  - an 'images' directory containing the images to feed to bootserver
+
+END
+}
+
+function file_to_dir {
+  local filename=$(basename "$1")
+  filename="${filename%%\.tar*}"
+  echo "${filename}"
+}
+
+function expand_archive {
+  local tar_dir="$2"
+  if [[ ! -d "$tar_dir" ]]; then
+    mkdir -p -- "$tar_dir"
+  fi
+
+  local tar_flags="-xf"
+
+  local strip_gz="${1%%\.tar\.gz}"
+  if [[ "${strip_gz}" != "$1" ]]; then
+    tar_flags="${tar_flags}z"
+  fi
+
+  tar "${tar_flags}" "$1" -C "$tar_dir" &>/dev/null
+  if [[ $? -eq 0 ]]; then
+    echo "${tar_dir}"
+  else
+    echo ""
+  fi
+}
+
+function main {
+  if [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+     help
+     return 0
+  fi
+
+  if [[ $# -lt 1 ]]; then
+    >&2 echo "A path to a directory or compressed file must be supplied."
+    help
+    return 1
+  fi
+
+  local top_level_dir="$(pwd)/$(dirname $(dirname "${BASH_SOURCE[0]}"))/"
+
+  local dir_src
+  if [[ $# -lt 1 ]]; then
+    echo "Please supply a file or directory to containing the build to use"
+    help
+    return 1
+  fi
+
+  if [[ -d "$1" ]]; then
+    dir_src="$1"
+  elif [[ -f "$1" ]]; then
+    local targ_dir=$(file_to_dir "$1")
+    local clean_tld="${top_level_dir%/}"
+    targ_dir="${clean_tld}/${targ_dir}"
+    echo "Expanding '${1}' to '${targ_dir}'"
+    dir_src=$(expand_archive "$1" "${targ_dir}")
+    if [[ -z "${dir_src}" ]]; then
+      >&2 echo "Archive expansion failed!"
+      return 1
+    fi
+  else
+    >&2 echo "Supplied path '${1}' is invalid"
+    help
+    return 1
+  fi
+
+  echo "Starting bootserver"
+
+  $(FUCHSIA_DIR="${top_level_dir}" "${top_level_dir}/scripts/fx" use "${dir_src}")
+  $(FUCHSIA_DIR="${top_level_dir}" "${top_level_dir}/scripts/fx" boot --artifacts "${dir_src}")
+}
+
+main "$@"
