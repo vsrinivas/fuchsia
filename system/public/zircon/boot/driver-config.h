@@ -74,6 +74,6 @@ typedef struct {
 // for KDRV_AMLOGIC_HDCP
 typedef struct {
     uint64_t preset_phys;
-    uint64_t hui_phys;
+    uint64_t hiu_phys;
     uint64_t hdmitx_phys;
 } dcfg_amlogic_hdcp_driver_t;

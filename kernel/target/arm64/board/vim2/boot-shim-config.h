@@ -79,7 +79,7 @@ static const dcfg_arm_generic_timer_driver_t timer_driver = {
 
 static const dcfg_amlogic_hdcp_driver_t hdcp_driver = {
     .preset_phys = 0xc1104000,
-    .hui_phys = 0xc883c000,
+    .hiu_phys = 0xc883c000,
     .hdmitx_phys = 0xc883a000,
 };
 

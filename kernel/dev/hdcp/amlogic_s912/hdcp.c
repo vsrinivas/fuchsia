@@ -68,11 +68,11 @@ static void hdmitx_writereg(uint32_t addr, uint32_t data) {
 static void s912_hdcp_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_amlogic_hdcp_driver_t));
     const dcfg_amlogic_hdcp_driver_t* driver = driver_data;
-    ASSERT(driver->preset_phys && driver->hui_phys && driver->hdmitx_phys);
+    ASSERT(driver->preset_phys && driver->hiu_phys && driver->hdmitx_phys);
 
     // get virtual addresses of our peripheral bases
     preset_base = periph_paddr_to_vaddr(driver->preset_phys);
-    hiu_base = periph_paddr_to_vaddr(driver->hdmitx_phys);
+    hiu_base = periph_paddr_to_vaddr(driver->hiu_phys);
     hdmitx_base = periph_paddr_to_vaddr(driver->hdmitx_phys);
     ASSERT(preset_base && hiu_base && hdmitx_base);
 
