@@ -480,8 +480,6 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
 void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
-  std::lock_guard<std::mutex> lock(event_handler_mutex_);
-
   EventCode event_code;
   const std::unordered_map<EventCode, EventHandlerId>* event_handlers;
 
@@ -500,19 +498,25 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     return;
   }
 
-  auto handler_iter = event_handler_id_map_.find(iter->second);
-  FXL_DCHECK(handler_iter != event_handler_id_map_.end());
+  EventCallback callback;
+  fxl::RefPtr<fxl::TaskRunner> task_runner;
 
-  auto& handler = handler_iter->second;
-  FXL_DCHECK(handler.event_code == event_code);
+  {
+    std::lock_guard<std::mutex> lock(event_handler_mutex_);
+    auto handler_iter = event_handler_id_map_.find(iter->second);
+    FXL_DCHECK(handler_iter != event_handler_id_map_.end());
 
-  auto callback = handler.event_callback;
-  auto task_runner = handler.task_runner;
+    auto& handler = handler_iter->second;
+    FXL_DCHECK(handler.event_code == event_code);
 
-  auto expired_it = expiring_event_handler_ids_.find(iter->second);
-  if (expired_it != expiring_event_handler_ids_.end()) {
-    RemoveEventHandlerInternal(iter->second);
-    expiring_event_handler_ids_.erase(expired_it);
+    callback = handler.event_callback;
+    task_runner = handler.task_runner;
+
+    auto expired_it = expiring_event_handler_ids_.find(iter->second);
+    if (expired_it != expiring_event_handler_ids_.end()) {
+      RemoveEventHandlerInternal(iter->second);
+      expiring_event_handler_ids_.erase(expired_it);
+    }
   }
 
   if (task_runner->RunsTasksOnCurrentThread()) {

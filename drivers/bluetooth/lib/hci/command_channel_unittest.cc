@@ -292,14 +292,14 @@ TEST_F(HCI_CommandChannelTest, OneSentUntilStatus) {
   inquiry_id = cmd_channel()->SendCommand(std::move(inquiry),
                                           message_loop()->task_runner(), cb);
 
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   EXPECT_EQ(1u, transaction_count);
   EXPECT_EQ(1u, cb_event_count);
 
   test_device()->SendCommandChannelPacket(rsp_commandsavail);
 
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   EXPECT_EQ(2u, transaction_count);
   EXPECT_EQ(2u, cb_event_count);
@@ -383,14 +383,14 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
   cmd_channel()->SendCommand(std::move(packet), message_loop()->task_runner(),
                              cb);
 
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   // Different opcodes can be sent without a reply
   EXPECT_EQ(2u, transaction_count);
 
   // Even if we get a response to one, the duplicate opcode is still queued.
   test_device()->SendCommandChannelPacket(rsp_inqcancel);
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   EXPECT_EQ(2u, transaction_count);
   EXPECT_EQ(1u, cancel_count);
@@ -398,7 +398,7 @@ TEST_F(HCI_CommandChannelTest, QueuedCommands) {
 
   // Once we get a reset back, the second can be sent (and replied to)
   test_device()->SendCommandChannelPacket(rsp_reset);
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   EXPECT_EQ(3u, transaction_count);
   EXPECT_EQ(1u, cancel_count);
@@ -474,7 +474,7 @@ TEST_F(HCI_CommandChannelTest, AsynchronousCommands) {
   id1 = cmd_channel()->SendCommand(
       std::move(packet), message_loop()->task_runner(), cb, kTestEventCode0);
 
-  message_loop()->RunUntilIdle();
+  RunUntilIdle();
 
   // Should have received the Status but not the result.
   EXPECT_EQ(1u, cb_count);
@@ -912,6 +912,101 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
   RunMessageLoop();
 
   EXPECT_EQ(2u, cb_count);
+}
+
+// Tests:
+//  - Asynchronous commands should be able to schedule another asynchronous
+//    command in their callback.
+TEST_F(HCI_CommandChannelTest, AsynchronousCommandChaining) {
+  constexpr size_t kExpectedCallbacksPerCommand = 2;
+  constexpr EventCode kTestEventCode0 = 0xFE;
+  // Set up expectations
+  // clang-format off
+  // Using HCI_Reset for testing.
+  auto req_reset = common::CreateStaticByteBuffer(
+      LowerBits(kReset), UpperBits(kReset), // HCI_Reset opcode
+      0x00                                  // parameter_total_size (no payload)
+      );
+  auto rsp_resetstatus = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode,
+      0x04,                        // parameter_total_size (4 byte payload)
+      StatusCode::kSuccess, 0xFA,  // status, num_hci_command_packets (250)
+      LowerBits(kReset), UpperBits(kReset)  // HCI_Reset opcode
+  );
+  auto req_inqcancel = common::CreateStaticByteBuffer(
+      LowerBits(kInquiryCancel), UpperBits(kInquiryCancel), // HCI_InquiryCancel
+      0x00                        // parameter_total_size (no payload)
+  );
+  auto rsp_inqstatus = common::CreateStaticByteBuffer(
+      kCommandStatusEventCode,
+      0x04,                        // parameter_total_size (4 byte payload)
+      StatusCode::kSuccess, 0xFA,  // status, num_hci_command_packets (250)
+      LowerBits(kInquiryCancel), UpperBits(kInquiryCancel) // HCI_InquiryCanacel
+  );
+  auto rsp_bogocomplete = common::CreateStaticByteBuffer(
+      kTestEventCode0,
+      0x00 // parameter_total_size (no payload)
+      );
+  // clang-format on
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(req_reset, {&rsp_resetstatus}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(req_reset, {&rsp_resetstatus}));
+  test_device()->StartCmdChannel(test_cmd_chan());
+  test_device()->StartAclChannel(test_acl_chan());
+
+  CommandChannel::TransactionId id1, id2;
+  CommandChannel::CommandCallback cb;
+  size_t cb_count = 0u;
+
+  cb = [&cb, cmd_channel = cmd_channel(),
+        task_runner = message_loop()->task_runner(), &id1, &id2, &cb_count,
+        kTestEventCode0](CommandChannel::TransactionId callback_id,
+                         const EventPacket& event) {
+    if (cb_count < kExpectedCallbacksPerCommand) {
+      EXPECT_EQ(id1, callback_id);
+    } else {
+      EXPECT_EQ(id2, callback_id);
+    }
+    if ((cb_count % 2) == 0) {
+      // First event from each command - CommandStatus
+      EXPECT_EQ(kCommandStatusEventCode, event.event_code());
+      auto params = event.view().payload<CommandStatusEventParams>();
+      EXPECT_EQ(StatusCode::kSuccess, params.status);
+    } else {
+      // Second event from each command - completion event
+      EXPECT_EQ(kTestEventCode0, event.event_code());
+      if (cb_count < 2) {
+        // Add the second command when the first one completes.
+        auto packet = CommandPacket::New(kReset);
+        id2 = cmd_channel->SendCommand(std::move(packet), task_runner, cb,
+                                       kTestEventCode0);
+      }
+    }
+    cb_count++;
+  };
+
+  auto packet = CommandPacket::New(kReset);
+  id1 = cmd_channel()->SendCommand(
+      std::move(packet), message_loop()->task_runner(), cb, kTestEventCode0);
+
+  RunUntilIdle();
+
+  // Should have received the Status but not the result.
+  EXPECT_EQ(1u, cb_count);
+
+  // Sending the complete will finish the command and add the next command.
+  test_device()->SendCommandChannelPacket(rsp_bogocomplete);
+  RunUntilIdle();
+
+  EXPECT_EQ(3u, cb_count);
+
+  // Finish out the command.
+  test_device()->SendCommandChannelPacket(rsp_bogocomplete);
+  RunUntilIdle();
+
+  EXPECT_EQ(4u, cb_count);
 }
 
 }  // namespace

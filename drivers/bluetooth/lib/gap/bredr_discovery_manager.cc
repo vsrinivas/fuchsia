@@ -135,10 +135,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
         }
 
         // We've stopped scanning because we timed out.
-        self->task_runner_->PostTask([self]() {
-          if (self)
-            self->MaybeStartInquiry();
-        });
+        self->MaybeStartInquiry();
       },
       hci::kInquiryCompleteEventCode);
 }
