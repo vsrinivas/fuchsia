@@ -6,6 +6,7 @@ package ipcserver
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -14,6 +15,7 @@ import (
 	"fuchsia/go/amber"
 
 	"amber/daemon"
+	"amber/lg"
 	"amber/pkg"
 	"amber/source"
 
@@ -52,6 +54,29 @@ func (c *ControlSrvr) Check() (bool, error) {
 
 func (c *ControlSrvr) ListSrcs() ([]string, error) {
 	return []string{}, nil
+}
+
+func (c *ControlSrvr) getAndWaitForUpdate(name string, version *string, ch *zx.Channel) {
+	defer ch.Close()
+}
+
+func (c *ControlSrvr) GetUpdateComplete(name string, version *string) (zx.Channel, error) {
+	r, w, e := zx.NewChannel(0)
+	if e != nil {
+		log.Printf("Could not create channel")
+		return 0, e
+	}
+
+	log.Println("Channel created successfully")
+	go c.getAndWaitForUpdate(name, version, &w)
+	return r, nil
+}
+
+func (c *ControlSrvr) PackagesActivated(merkle []string) error {
+	for _, m := range merkle {
+		lg.Log.Printf("Got package activation for %s\n", m)
+	}
+	return nil
 }
 
 func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {

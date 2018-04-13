@@ -107,10 +107,11 @@ func (idx *DynamicIndex) AddNeeds(root string, p pkg.Package, blobs map[string]s
 	idx.waiting[root] = blobs
 }
 
-func (idx *DynamicIndex) Fulfill(need string) {
+func (idx *DynamicIndex) Fulfill(need string) []string {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
+	fulfilled := []string{}
 	packageRoots := idx.needs[need]
 	delete(idx.needs, need)
 	for pkgRoot := range packageRoots {
@@ -120,9 +121,11 @@ func (idx *DynamicIndex) Fulfill(need string) {
 			delete(idx.waiting, pkgRoot)
 			idx.Add(idx.installing[pkgRoot], pkgRoot)
 			delete(idx.installing, pkgRoot)
+			fulfilled = append(fulfilled, pkgRoot)
 			continue
 		}
 	}
+	return fulfilled
 }
 
 func (idx *DynamicIndex) HasNeed(root string) bool {

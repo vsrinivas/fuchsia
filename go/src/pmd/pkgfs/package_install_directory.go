@@ -213,11 +213,13 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 	f.written += uint64(n)
 
 	if f.written >= f.size && err == nil {
-		f.fs.index.Fulfill(f.name)
+		pkgs := f.fs.index.Fulfill(f.name)
 
 		if f.isPkg {
 			// TODO(raggi): use already open file instead of re-opening the file
 			importPackage(f.fs, f.name)
+		} else {
+			notifyActivation(f.fs, pkgs)
 		}
 	}
 
@@ -237,7 +239,8 @@ func (f *installFile) Truncate(sz uint64) error {
 	err := f.blob.Truncate(int64(f.size))
 
 	if f.size == 0 && f.name == identityBlob && err == nil {
-		f.fs.index.Fulfill(f.name)
+		activations := f.fs.index.Fulfill(f.name)
+		notifyActivation(f.fs, activations)
 	}
 
 	return goErrToFSErr(err)
@@ -355,6 +358,7 @@ func importPackage(fs *Filesystem, root string) {
 
 	if len(needBlobs) == 0 {
 		fs.index.Add(p, root)
+		notifyActivation(fs, []string{root})
 	} else {
 		fs.index.AddNeeds(root, p, needBlobs)
 	}
@@ -370,5 +374,15 @@ func importPackage(fs *Filesystem, root string) {
 		for _, root := range needList {
 			fs.amberPxy.GetBlob(root)
 		}
+	}()
+}
+
+func notifyActivation(fs *Filesystem, roots []string) {
+	if len(roots) == 0 {
+		return
+	}
+
+	go func() {
+		fs.amberPxy.PackagesActivated(roots)
 	}()
 }

@@ -37,4 +37,8 @@ interface Control {
   // Get a content blob identified by the given hashed Merkle root. This returns
   // an error if the string is empty or the fetch fails for some reason.
   7: GetBlob(string merkle);
+
+  8: PackagesActivated(vector<string> merkle);
+
+  9: GetUpdateComplete(string name, string? version) -> (handle<channel> rplyChan);
 };
