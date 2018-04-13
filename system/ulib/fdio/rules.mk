@@ -14,7 +14,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/bootfs.c \
     $(LOCAL_DIR)/bsdsocket.c \
     $(LOCAL_DIR)/debug.c \
-    $(LOCAL_DIR)/dispatcher.c \
     $(LOCAL_DIR)/get-vmo.c \
     $(LOCAL_DIR)/fidl.cpp \
     $(LOCAL_DIR)/logger.c \
