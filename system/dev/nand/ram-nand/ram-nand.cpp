@@ -174,12 +174,21 @@ void NandDevice::Query(nand_info_t* info_out, size_t* nand_op_size_out) {
 }
 
 void NandDevice::Queue(nand_op_t* operation) {
+    uint32_t max_pages = params_.NumPages();
     switch (operation->command) {
     case NAND_OP_WRITE_DATA:
     case NAND_OP_READ_DATA: {
-        uint32_t max_pages = params_.pages_per_block * params_.num_blocks;
         if (operation->rw.offset_nand >= max_pages || !operation->rw.length ||
             (max_pages - operation->rw.offset_nand) < operation->rw.length) {
+            operation->completion_cb(operation, ZX_ERR_OUT_OF_RANGE);
+            return;
+        }
+        break;
+    }
+    case NAND_OP_WRITE_OOB:
+    case NAND_OP_READ_OOB: {
+        if (operation->oob.page_num >= max_pages || !operation->oob.length ||
+            operation->oob.length > params_.oob_size) {
             operation->completion_cb(operation, ZX_ERR_OUT_OF_RANGE);
             return;
         }
@@ -253,37 +262,19 @@ int NandDevice::WorkerThread() {
 
         zx_status_t status = ZX_OK;
 
-        // Use the most likely values for now.
-        uint32_t nand_addr = operation->rw.offset_nand * params_.page_size;
-        uint64_t vmo_addr = operation->rw.offset_vmo * params_.page_size;
-        uint32_t length = operation->rw.length * params_.page_size;
-        void* addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
-
         switch (operation->command) {
         case NAND_OP_READ_DATA:
-            status = zx_vmo_write(operation->rw.vmo, addr, vmo_addr, length);
-            operation->rw.corrected_bit_flips = 0;
+        case NAND_OP_WRITE_DATA:
+            status = ReadWriteData(operation);
             break;
 
-        case NAND_OP_WRITE_DATA:
-            // Likely something bad is going on if writing multiple blocks.
-            ZX_DEBUG_ASSERT_MSG(operation->rw.length <= params_.pages_per_block,
-                                "Writing multiple blocks");
-            ZX_DEBUG_ASSERT_MSG(operation->rw.offset_nand / params_.pages_per_block ==
-                                (operation->rw.offset_nand + operation->rw.length - 1)
-                                / params_.pages_per_block,
-                                "Writing multiple blocks");
-            status = zx_vmo_read(operation->rw.vmo, addr, vmo_addr, length);
+        case NAND_OP_READ_OOB:
+        case NAND_OP_WRITE_OOB:
+            status = ReadWriteOob(operation);
             break;
 
         case NAND_OP_ERASE: {
-            uint32_t block_size = params_.page_size * params_.pages_per_block;
-            nand_addr = operation->erase.first_block * block_size;
-            length = operation->erase.num_blocks * block_size;
-            addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
-
-            memset(addr, 0xff, length);
-            status = ZX_OK;
+            status = Erase(operation);
             break;
         }
         default:
@@ -297,4 +288,63 @@ int NandDevice::WorkerThread() {
 int NandDevice::WorkerThreadStub(void* arg) {
     NandDevice* device = static_cast<NandDevice*>(arg);
     return device->WorkerThread();
+}
+
+zx_status_t NandDevice::ReadWriteData(nand_op_t* operation) {
+    uint32_t nand_addr = operation->rw.offset_nand * params_.page_size;
+    uint64_t vmo_addr = operation->rw.offset_vmo * params_.page_size;
+    uint32_t length = operation->rw.length * params_.page_size;
+    void* addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
+
+    if (operation->command == NAND_OP_READ_DATA) {
+        operation->rw.corrected_bit_flips = 0;
+        return zx_vmo_write(operation->rw.vmo, addr, vmo_addr, length);
+    }
+
+    ZX_DEBUG_ASSERT(operation->command == NAND_OP_WRITE_DATA);
+
+    // Likely something bad is going on if writing multiple blocks.
+    ZX_DEBUG_ASSERT_MSG(operation->rw.length <= params_.pages_per_block,
+                        "Writing multiple blocks");
+    ZX_DEBUG_ASSERT_MSG(operation->rw.offset_nand / params_.pages_per_block ==
+                        (operation->rw.offset_nand + operation->rw.length - 1)
+                        / params_.pages_per_block,
+                        "Writing multiple blocks");
+    return zx_vmo_read(operation->rw.vmo, addr, vmo_addr, length);
+}
+
+zx_status_t NandDevice::ReadWriteOob(nand_op_t* operation) {
+    uint32_t nand_addr = MainDataSize() + operation->oob.page_num * params_.oob_size;
+    void* addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
+
+    if (operation->command == NAND_OP_READ_OOB) {
+        operation->oob.corrected_bit_flips = 0;
+        return zx_vmo_write(operation->oob.vmo, addr, operation->oob.offset_vmo,
+                            operation->oob.length);
+    }
+
+    ZX_DEBUG_ASSERT(operation->command == NAND_OP_WRITE_OOB);
+    return zx_vmo_read(operation->oob.vmo, addr, operation->oob.offset_vmo,
+                       operation->oob.length);
+}
+
+zx_status_t NandDevice::Erase(nand_op_t* operation) {
+    ZX_DEBUG_ASSERT(operation->command == NAND_OP_ERASE);
+
+    uint32_t block_size = params_.page_size * params_.pages_per_block;
+    uint32_t nand_addr = operation->erase.first_block * block_size;
+    uint32_t length = operation->erase.num_blocks * block_size;
+    void* addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
+
+    memset(addr, 0xff, length);
+
+    // Clear the OOB area:
+    uint32_t oob_per_block = params_.oob_size * params_.pages_per_block;
+    length = operation->erase.num_blocks * oob_per_block;
+    nand_addr = MainDataSize() + operation->erase.first_block * oob_per_block;
+    addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
+
+    memset(addr, 0xff, length);
+
+    return ZX_OK;
 }

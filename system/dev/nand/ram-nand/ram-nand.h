@@ -22,10 +22,11 @@
 
 // Wrapper for nand_info_t. It simplifies initialization of NandDevice.
 struct NandParams : public nand_info_t {
-    NandParams() : NandParams(0, 0, 0, 0) {}
+    NandParams() : NandParams(0, 0, 0, 0, 0) {}
 
-    NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits)
-        : NandParams(nand_info_t {page_size, pages_per_block, num_blocks, ecc_bits}) {}
+    NandParams(uint32_t page_size, uint32_t pages_per_block, uint32_t num_blocks, uint32_t ecc_bits,
+               uint32_t oob_size)
+        : NandParams(nand_info_t {page_size, pages_per_block, num_blocks, ecc_bits, oob_size}) {}
 
     NandParams(const nand_info_t& base) {
         // NandParams has no data members.
@@ -33,7 +34,11 @@ struct NandParams : public nand_info_t {
     }
 
     uint64_t GetSize() const {
-        return static_cast<uint64_t>(page_size) * pages_per_block * num_blocks;
+        return static_cast<uint64_t>(page_size + oob_size) * NumPages();
+    }
+
+    uint32_t NumPages() const {
+        return pages_per_block * num_blocks;
     }
 };
 
@@ -74,6 +79,12 @@ class NandDevice {
     bool RemoveFromList(nand_op_t** operation);
     int WorkerThread();
     static int WorkerThreadStub(void* arg);
+    uint32_t MainDataSize() const { return params_.NumPages() * params_.page_size; }
+
+    // Implementation of the actual commands.
+    zx_status_t ReadWriteData(nand_op_t* operation);
+    zx_status_t ReadWriteOob(nand_op_t* operation);
+    zx_status_t Erase(nand_op_t* operation);
 
     zx_device_t* zx_device_ = nullptr;
     RemoveCallback remove_callback_ = nullptr;

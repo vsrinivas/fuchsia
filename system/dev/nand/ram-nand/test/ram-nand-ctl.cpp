@@ -16,8 +16,9 @@ namespace {
 class NandDevice {
   public:
     NandDevice() {
+        nand_info_t config = {4096, 4, 5, 6, 0};
         char path[PATH_MAX];
-        if (!create_ram_nand(4096, 4, 5, 6, path)) {
+        if (!create_ram_nand(&config, path)) {
             device_.reset(open(path, O_RDWR));
         }
     }

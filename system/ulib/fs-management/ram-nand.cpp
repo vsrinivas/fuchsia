@@ -18,22 +18,15 @@ constexpr char base_path[] = "/dev/misc/nand-ctl";
 
 }  // namespace
 
-int create_ram_nand(uint32_t page_size, uint32_t pages_per_block, uint32_t block_count,
-                    uint32_t ecc_bits, char* out_path) {
+int create_ram_nand(const nand_info_t* config, char* out_path) {
     fbl::unique_fd control(open(base_path, O_RDWR));
     if (!control) {
         fprintf(stderr, "Could not open nand-ctl\n");
         return -1;
     }
 
-    nand_info_t config;
-    config.page_size = page_size;
-    config.pages_per_block = pages_per_block;
-    config.num_blocks = block_count;
-    config.ecc_bits = ecc_bits;
-
     ram_nand_name_t response = {};
-    if (ioctl_ram_nand_create(control.get(), &config, &response) < 0) {
+    if (ioctl_ram_nand_create(control.get(), config, &response) < 0) {
         fprintf(stderr, "Could not create ram_nand device\n");
         return -1;
     }

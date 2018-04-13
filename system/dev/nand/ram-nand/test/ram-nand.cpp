@@ -21,7 +21,7 @@ const int kNumPages = kBlockSize * kNumBlocks;
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
-    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6);  // 6 bits of ECC.
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     {
         NandDevice device(params);
 
@@ -42,7 +42,7 @@ bool TrivialLifetimeTest() {
 }
 
 fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
-    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6);  // 6 bits of ECC.
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 4);  // 6 bits of ECC, 4 OOB bytes.
     fbl::AllocChecker checker;
     fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params));
     if (!checker.check()) {
@@ -89,7 +89,7 @@ class UnbindChecker {
 
 bool BasicDeviceProtocolTest() {
     BEGIN_TEST;
-    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6);  // 6 bits of ECC.
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     NandDevice device(params);
 
     zx_device_t* zx_dev = reinterpret_cast<zx_device_t*>(42);
@@ -125,7 +125,7 @@ bool UnlinkTest() {
 
 bool QueryTest() {
     BEGIN_TEST;
-    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6);  // 6 bits of ECC.
+    NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 8);  // 6 bits of ECC, 8 OOB bytes.
     NandDevice device(params);
 
     nand_info_t info;
@@ -455,6 +455,89 @@ bool QueueMultipleTest() {
     END_TEST;
 }
 
+bool OobLimitsTest() {
+    BEGIN_TEST;
+
+    size_t op_size;
+    fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+    ASSERT_TRUE(device);
+
+    NandTest test;
+    Operation operation(op_size, &test);
+
+    nand_op_t* op = operation.GetOperation();
+    op->oob.command = NAND_OP_READ_OOB;
+    op->completion_cb = &NandTest::CompletionCb;
+
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    op->oob.length = 1;
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE, operation.status());
+
+    op->oob.page_num = kNumPages;
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    ASSERT_TRUE(operation.SetVmo());
+
+    op->oob.page_num = kNumPages - 1;
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+
+    op->oob.length = 5;
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, operation.status());
+
+    END_TEST;
+}
+
+bool ReadWriteOobTest() {
+    BEGIN_TEST;
+
+    size_t op_size;
+    fbl::unique_ptr<NandDevice> device = CreateDevice(&op_size);
+    ASSERT_TRUE(device);
+
+    NandTest test;
+    Operation operation(op_size, &test);
+    ASSERT_TRUE(operation.SetVmo());
+
+    const char desired[4] = { 'a', 'b', 'c', 'd' };
+    memcpy(operation.buffer(), desired, sizeof(desired));
+
+    nand_op_t* op = operation.GetOperation();
+    op->oob.corrected_bit_flips = 125;
+
+    op->oob.command = NAND_OP_WRITE_OOB;
+    op->oob.length = sizeof(desired);
+    op->oob.page_num = 2;
+    op->completion_cb = &NandTest::CompletionCb;
+    device->Queue(op);
+
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_EQ(125, op->oob.corrected_bit_flips);  // Doesn't modify the value.
+
+    op->oob.command = NAND_OP_READ_OOB;
+    memset(operation.buffer(), 0, sizeof(desired));
+
+    device->Queue(op);
+    ASSERT_TRUE(test.Wait());
+    ASSERT_EQ(ZX_OK, operation.status());
+    ASSERT_EQ(0, op->oob.corrected_bit_flips);
+
+    ASSERT_EQ(0, memcmp(operation.buffer(), desired, sizeof(desired)));
+
+    END_TEST;
+}
+
 bool EraseLimitsTest() {
     BEGIN_TEST;
 
@@ -537,6 +620,8 @@ RUN_TEST_SMALL(BadBlockListTest)
 RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(QueueMultipleTest)
+RUN_TEST_SMALL(OobLimitsTest)
+RUN_TEST_SMALL(ReadWriteOobTest)
 RUN_TEST_SMALL(EraseLimitsTest)
 RUN_TEST_SMALL(EraseTest)
 END_TEST_CASE(RamNandTests)

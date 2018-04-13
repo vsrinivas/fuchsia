@@ -20,6 +20,7 @@ struct nand_info {
     uint32_t num_blocks;        // Device size, in erase blocks.
     uint32_t ecc_bits;          // Number of ECC bits (correctable bit flips),
                                 // per correction chunk.
+    uint32_t oob_size;          // Available out of band bytes per page.
 };
 
 // nand_op_t's are submitted for processing via the queue() method of the
@@ -33,6 +34,11 @@ struct nand_info {
 // Any mention of "in pages" in this file means nand pages, as reported by
 // nand_info.page_size, as opposed to physical memory pages (RAM). That's true
 // even for vmo-related values.
+//
+// corrected_bit_flips are always related to nand_info.ecc_bits, so it is
+// possible to obtain a value that is larger than what is being read (in the oob
+// case). On the other hand, if errors cannot be corrected, the operation will
+// fail, and corrected_bit_flips will be undefined.
 
 // NOTE: The protocol can be extended with barriers to support controllers that
 // may issue multiple simultaneous request to the IO chips.
@@ -40,7 +46,8 @@ struct nand_info {
 #define NAND_OP_READ_DATA               0x00000001
 #define NAND_OP_WRITE_DATA              0x00000002
 #define NAND_OP_ERASE                   0x00000003
-// TBD NAND_OP_READ_OOB, NAND_OP_WRITE_OOB
+#define NAND_OP_READ_OOB                0x00000004
+#define NAND_OP_WRITE_OOB               0x00000005
 
 typedef struct nand_op nand_op_t;
 
@@ -64,6 +71,21 @@ struct nand_op {
             // be recycled.
             uint32_t corrected_bit_flips;
         } rw;
+
+        struct {
+            // This operation reads or writes OOB data for a single page.
+            uint32_t command;            // Command.
+            zx_handle_t vmo;             // vmo of data to read or write.
+            uint32_t length;             // Transfer length in bytes.
+                                         // (0 is invalid).
+            uint32_t page_num;           // Offset into nand, in pages.
+            uint64_t offset_vmo;         // vmo offset in bytes.
+            // Return value from READ_OOB, max corrected bit flips in any
+            // underlying ECC chunk read in order to access the OOB data. The
+            // caller can compare this value against ecc_bits to decide whether
+            // the nand erase block needs to be recycled.
+            uint32_t corrected_bit_flips;
+        } oob;
 
         // NAND_OP_ERASE.
         struct {

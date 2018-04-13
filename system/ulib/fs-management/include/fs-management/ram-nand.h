@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include <zircon/compiler.h>
+#include <zircon/device/ram-nand.h>
 
 __BEGIN_CDECLS
 
@@ -14,8 +15,7 @@ __BEGIN_CDECLS
 // buffer for the path should be at least PATH_MAX characters long.
 //
 // Returns 0 on success.
-int create_ram_nand(uint32_t page_size, uint32_t pages_per_block, uint32_t block_count,
-                    uint32_t ecc_bits, char* out_path);
+int create_ram_nand(const nand_info_t* config, char* out_path);
 
 // Destroys a ram_nand, given the name returned from create_ram_nand().
 //
