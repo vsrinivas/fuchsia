@@ -27,6 +27,8 @@ auth::store::IdentityProvider MapToStoreIdentityProvider(
   switch (provider_type) {
     case AuthProviderType::GOOGLE:
       return auth::store::IdentityProvider::GOOGLE;
+    case AuthProviderType::SPOTIFY:
+      return auth::store::IdentityProvider::SPOTIFY;
     case AuthProviderType::DEV:
       return auth::store::IdentityProvider::TEST;
   }
@@ -39,9 +41,15 @@ using auth::Status;
 TokenManagerImpl::TokenManagerImpl(
     component::ApplicationContext* app_context,
     std::unique_ptr<store::AuthDb> auth_db,
-    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs)
+    fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
+    fidl::InterfaceHandle<auth::AuthenticationContextProvider>
+        auth_context_provider)
     : token_cache_(kMaxCacheSize), auth_db_(std::move(auth_db)) {
   FXL_CHECK(app_context);
+
+  // Initialize the UI display context for each token manager instance.
+  auth_context_provider_.Bind(std::move(auth_context_provider));
+
   // TODO: Start the auth provider only when someone does a request to it,
   // instead of starting all the configured providers in advance.
   for (auto& config : *auth_provider_configs) {
@@ -96,18 +104,28 @@ TokenManagerImpl::TokenManagerImpl(
 
 TokenManagerImpl::~TokenManagerImpl() {}
 
-void TokenManagerImpl::Authorize(
-    const auth::AuthProviderType auth_provider_type,
-    fidl::InterfaceHandle<auth::AuthenticationUIContext> auth_ui_context,
+void TokenManagerImpl::Authorize(AppConfig app_config,
+    const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+    fidl::StringPtr user_profile_id,
     AuthorizeCallback callback) {
-  auto it = auth_providers_.find(auth_provider_type);
+  auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
 
+  auth::AuthenticationUIContextPtr auth_ui_context;
+  auth_context_provider_->GetAuthenticationUIContext(
+      auth_ui_context.NewRequest());
+
+  auth_ui_context.set_error_handler([this, callback] {
+    FXL_LOG(INFO) << "Auth UI Context disconnected";
+    callback(Status::INTERNAL_ERROR, nullptr);
+    return;
+  });
+
   it->second->GetPersistentCredential(
       std::move(auth_ui_context),
-      [this, auth_provider_type, callback](
+      [this, auth_provider_type = app_config.auth_provider_type, callback](
           AuthProviderStatus status, fidl::StringPtr credential,
           UserProfileInfoPtr user_profile_info) {
         if (status != AuthProviderStatus::OK || credential.get().empty()) {
@@ -131,22 +149,21 @@ void TokenManagerImpl::Authorize(
 }
 
 void TokenManagerImpl::GetAccessToken(
-    const auth::AuthProviderType auth_provider_type,
-    fidl::StringPtr user_profile_id,
-    fidl::StringPtr app_client_id,
+    AppConfig app_config, fidl::StringPtr user_profile_id,
     fidl::VectorPtr<fidl::StringPtr> app_scopes,
     GetAccessTokenCallback callback) {
-  auto it = auth_providers_.find(auth_provider_type);
+  auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
 
   std::string credential;
   auto cred_id = store::CredentialIdentifier(
-      user_profile_id, MapToStoreIdentityProvider(auth_provider_type));
+      user_profile_id,
+      MapToStoreIdentityProvider(app_config.auth_provider_type));
   auth_db_->GetRefreshToken(cred_id, &credential);
 
-  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
+  auto cache_key = GetCacheKey(app_config.auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
@@ -156,7 +173,7 @@ void TokenManagerImpl::GetAccessToken(
   }
 
   it->second->GetAppAccessToken(
-      fidl::StringPtr(credential), app_client_id, std::move(app_scopes),
+      fidl::StringPtr(credential), app_config.client_id, std::move(app_scopes),
       [this, callback, cache_key, tokens](AuthProviderStatus status,
                                           AuthTokenPtr access_token) mutable {
         std::string access_token_val;
@@ -185,21 +202,21 @@ void TokenManagerImpl::GetAccessToken(
       });
 }
 
-void TokenManagerImpl::GetIdToken(
-    const auth::AuthProviderType auth_provider_type,
-    fidl::StringPtr user_profile_id,
-    fidl::StringPtr audience,
-    GetIdTokenCallback callback) {
-  auto it = auth_providers_.find(auth_provider_type);
+void TokenManagerImpl::GetIdToken(AppConfig app_config,
+                                  fidl::StringPtr user_profile_id,
+                                  fidl::StringPtr audience,
+                                  GetIdTokenCallback callback) {
+  auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
 
   std::string credential;
   auto cred_id = store::CredentialIdentifier(
-      user_profile_id, MapToStoreIdentityProvider(auth_provider_type));
+      user_profile_id,
+      MapToStoreIdentityProvider(app_config.auth_provider_type));
   auth_db_->GetRefreshToken(cred_id, &credential);
-  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
+  auto cache_key = GetCacheKey(app_config.auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK &&
@@ -238,18 +255,17 @@ void TokenManagerImpl::GetIdToken(
       });
 }
 
-void TokenManagerImpl::GetFirebaseToken(
-    const auth::AuthProviderType auth_provider_type,
-    fidl::StringPtr user_profile_id,
-    fidl::StringPtr audience,
-    fidl::StringPtr firebase_api_key,
-    GetFirebaseTokenCallback callback) {
-  auto it = auth_providers_.find(auth_provider_type);
+void TokenManagerImpl::GetFirebaseToken(AppConfig app_config,
+                                        fidl::StringPtr user_profile_id,
+                                        fidl::StringPtr audience,
+                                        fidl::StringPtr firebase_api_key,
+                                        GetFirebaseTokenCallback callback) {
+  auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE, nullptr);
   }
 
-  auto cache_key = GetCacheKey(auth_provider_type, user_profile_id);
+  auto cache_key = GetCacheKey(app_config.auth_provider_type, user_profile_id);
   cache::OAuthTokens tokens;
 
   if (token_cache_.Get(cache_key, &tokens) == cache::Status::kOK) {
@@ -265,7 +281,7 @@ void TokenManagerImpl::GetFirebaseToken(
     }
   }
 
-  GetIdToken(auth_provider_type, user_profile_id, audience,
+  GetIdToken(std::move(app_config), user_profile_id, audience,
              [this, it, callback, cache_key, firebase_api_key](
                  Status status, fidl::StringPtr id_token) {
                if (status != Status::OK) {
@@ -304,32 +320,33 @@ void TokenManagerImpl::GetFirebaseToken(
              });
 }
 
-void TokenManagerImpl::DeleteAllTokens(
-    const auth::AuthProviderType auth_provider_type,
-    fidl::StringPtr user_profile_id,
-    DeleteAllTokensCallback callback) {
-  auto it = auth_providers_.find(auth_provider_type);
+void TokenManagerImpl::DeleteAllTokens(AppConfig app_config,
+                                       fidl::StringPtr user_profile_id,
+                                       DeleteAllTokensCallback callback) {
+  auto it = auth_providers_.find(app_config.auth_provider_type);
   if (it == auth_providers_.end()) {
     callback(Status::AUTH_PROVIDER_SERVICE_UNAVAILABLE);
   }
 
   std::string credential;
   auto cred_id = store::CredentialIdentifier(
-      user_profile_id, MapToStoreIdentityProvider(auth_provider_type));
-  cache::CacheKey cache_key = GetCacheKey(auth_provider_type, user_profile_id);
+      user_profile_id,
+      MapToStoreIdentityProvider(app_config.auth_provider_type));
+  cache::CacheKey cache_key =
+      GetCacheKey(app_config.auth_provider_type, user_profile_id);
 
   auth_db_->GetRefreshToken(cred_id, &credential);
 
   it->second->RevokeAppOrPersistentCredential(
-      fidl::StringPtr(credential), [this, auth_provider_type, user_profile_id,
-                                    callback](AuthProviderStatus status) {
+      fidl::StringPtr(credential),
+      [this, app_config, user_profile_id, callback](AuthProviderStatus status) {
         if (status != AuthProviderStatus::OK) {
           callback(Status::AUTH_PROVIDER_SERVER_ERROR);
           return;
         }
 
         auto cache_status = token_cache_.Delete(
-            GetCacheKey(auth_provider_type, user_profile_id));
+            GetCacheKey(app_config.auth_provider_type, user_profile_id));
         if (cache_status != cache::Status::kOK &&
             cache_status != cache::Status::kKeyNotFound) {
           callback(Status::INTERNAL_CACHE_ERROR);
@@ -337,7 +354,8 @@ void TokenManagerImpl::DeleteAllTokens(
         }
 
         auto cred_id = store::CredentialIdentifier(
-            user_profile_id, MapToStoreIdentityProvider(auth_provider_type));
+            user_profile_id,
+            MapToStoreIdentityProvider(app_config.auth_provider_type));
         auth_db_->DeleteCredential(cred_id);
 
         callback(Status::OK);

@@ -42,7 +42,7 @@ enum Status {
   kCredentialNotFound
 };
 
-enum IdentityProvider { GOOGLE = 0, TEST };
+enum IdentityProvider { GOOGLE = 0, SPOTIFY, TEST };
 
 // Uniquely identifies a given user credential using an identifier |id| provided
 // by the Identity Provider |identity_provider|. The identifier here refers to

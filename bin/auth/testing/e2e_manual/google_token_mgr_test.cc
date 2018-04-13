@@ -31,8 +31,7 @@ namespace google_oauth_demo {
 namespace {
 
 const std::string kTestUserId = "tq_user_1";
-const auth::AuthProviderType kGoogleAuthProvider =
-    auth::AuthProviderType::GOOGLE;
+const std::string kTestAppUrl = "/system/test/google_oauth_demo";
 constexpr fxl::StringView kRefreshTokenFlag = "refresh-token";
 constexpr fxl::StringView kUserProfileIdFlag = "user-profile-id";
 
@@ -42,16 +41,26 @@ void PrintUsage(const char* executable_name) {
             << " --" << kRefreshTokenFlag << "=<string>" << std::endl;
 }
 
+auth::AppConfig MakeGoogleAppConfig(const std::string& client_id,
+                                    const std::string& client_secret) {
+  auth::AppConfig google_app_config;
+  google_app_config.auth_provider_type = auth::AuthProviderType::GOOGLE;
+  google_app_config.client_id = client_id;
+  google_app_config.client_secret = client_secret;
+  return google_app_config;
+}
+
 // This is a sample app demonstrating Google OAuth handshake for minting
 // OAuth tokens.
-class GoogleTokenManagerApp {
+class GoogleTokenManagerApp : auth::AuthenticationContextProvider {
  public:
   GoogleTokenManagerApp(const std::string& user_profile_id,
                         const std::string& refresh_token)
       : user_profile_id_(user_profile_id),
         refresh_token_(refresh_token),
         application_context_(
-            component::ApplicationContext::CreateFromStartupInfo()) {}
+            component::ApplicationContext::CreateFromStartupInfo()),
+        auth_context_provider_binding_(this) {}
 
   ~GoogleTokenManagerApp() {}
 
@@ -65,6 +74,13 @@ class GoogleTokenManagerApp {
   }
 
  private:
+  // |AuthenticationContextProvider|
+  void GetAuthenticationUIContext(
+      fidl::InterfaceRequest<auth::AuthenticationUIContext> request) override {
+    FXL_LOG(INFO) << "DevTokenManagerAppTest::GetAuthenticationUIContext() is "
+                     "unimplemented.";
+  }
+
   void Initialize() {
     component::Services services;
     component::ApplicationLaunchInfo launch_info;
@@ -84,14 +100,15 @@ class GoogleTokenManagerApp {
     services.ConnectToService(token_mgr_factory_.NewRequest());
 
     auth::AuthProviderConfig google_config;
-    google_config.auth_provider_type = kGoogleAuthProvider;
+    google_config.auth_provider_type = auth::AuthProviderType::GOOGLE;
     google_config.url = "google_auth_provider";
 
     fidl::VectorPtr<auth::AuthProviderConfig> auth_provider_configs;
     auth_provider_configs.push_back(std::move(google_config));
 
     token_mgr_factory_->GetTokenManager(
-        kTestUserId, std::move(auth_provider_configs), token_mgr_.NewRequest());
+        kTestUserId, kTestAppUrl, std::move(auth_provider_configs),
+        auth_context_provider_binding_.NewBinding(), token_mgr_.NewRequest());
   }
 
   // This step is equivalent to calling Authorize(), until we can figure out how
@@ -123,7 +140,7 @@ class GoogleTokenManagerApp {
     auth::Status status;
     fidl::StringPtr access_token;
 
-    token_mgr_->GetAccessToken(kGoogleAuthProvider, user_profile_id_, "",
+    token_mgr_->GetAccessToken(MakeGoogleAppConfig("", ""), user_profile_id_,
                                std::move(scopes), &status, &access_token);
     ASSERT_EQ(auth::Status::OK, status);
     EXPECT_TRUE(access_token.get().find(":at_") != std::string::npos);
@@ -133,8 +150,8 @@ class GoogleTokenManagerApp {
     auth::Status status;
     fidl::StringPtr id_token;
 
-    token_mgr_->GetIdToken(kGoogleAuthProvider, user_profile_id_, "", &status,
-                           &id_token);
+    token_mgr_->GetIdToken(MakeGoogleAppConfig("", ""), user_profile_id_, "",
+                           &status, &id_token);
     ASSERT_EQ(auth::Status::OK, status);
     EXPECT_TRUE(id_token.get().find(":idt_") != std::string::npos);
   }
@@ -144,8 +161,8 @@ class GoogleTokenManagerApp {
     auth::FirebaseTokenPtr firebase_token;
 
     // TODO: Wire test firebase api key
-    token_mgr_->GetFirebaseToken(kGoogleAuthProvider, user_profile_id_, "", "",
-                                 &status, &firebase_token);
+    token_mgr_->GetFirebaseToken(MakeGoogleAppConfig("", ""), user_profile_id_,
+                                 "", "", &status, &firebase_token);
     ASSERT_EQ(auth::Status::OK, status);
     EXPECT_FALSE(firebase_token);
   }
@@ -154,7 +171,8 @@ class GoogleTokenManagerApp {
     auth::Status status;
     auth::FirebaseTokenPtr firebase_token;
 
-    token_mgr_->DeleteAllTokens(kGoogleAuthProvider, user_profile_id_, &status);
+    token_mgr_->DeleteAllTokens(MakeGoogleAppConfig("", ""), user_profile_id_,
+                                &status);
     ASSERT_EQ(auth::Status::OK, status);
   }
 
@@ -162,6 +180,9 @@ class GoogleTokenManagerApp {
   const std::string refresh_token_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   component::ApplicationControllerPtr app_controller_;
+
+  fidl::Binding<auth::AuthenticationContextProvider>
+      auth_context_provider_binding_;
 
   auth::TokenManagerSyncPtr token_mgr_;
   auth::TokenManagerFactorySyncPtr token_mgr_factory_;

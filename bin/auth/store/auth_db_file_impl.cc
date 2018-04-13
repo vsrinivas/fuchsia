@@ -26,6 +26,8 @@ auth::IdentityProvider MapToFbsIdentityProvider(
   switch (idp) {
     case auth::store::IdentityProvider::GOOGLE:
       return IdentityProvider_GOOGLE;
+    case auth::store::IdentityProvider::SPOTIFY:
+      return IdentityProvider_SPOTIFY;
     case auth::store::IdentityProvider::TEST:
       return IdentityProvider_TEST;
   }
@@ -38,6 +40,8 @@ auth::store::IdentityProvider MapToAuthIdentityProvider(
   switch (idp) {
     case IdentityProvider_GOOGLE:
       return auth::store::IdentityProvider::GOOGLE;
+    case IdentityProvider_SPOTIFY:
+      return auth::store::IdentityProvider::SPOTIFY;
     case IdentityProvider_TEST:
       return auth::store::IdentityProvider::TEST;
   }

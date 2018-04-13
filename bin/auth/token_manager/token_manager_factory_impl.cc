@@ -17,8 +17,10 @@ TokenManagerFactoryImpl::TokenManagerFactoryImpl(
 TokenManagerFactoryImpl::~TokenManagerFactoryImpl() {}
 
 void TokenManagerFactoryImpl::GetTokenManager(
-    fidl::StringPtr user_id,
+    fidl::StringPtr user_id, fidl::StringPtr application_url,
     fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
+    fidl::InterfaceHandle<auth::AuthenticationContextProvider>
+        auth_context_provider,
     fidl::InterfaceRequest<TokenManager> request) {
   auto file_name = kAuthDbPath + user_id.get() + kAuthDbPostfix;
 
@@ -34,7 +36,8 @@ void TokenManagerFactoryImpl::GetTokenManager(
   // TODO: Share the TokenManagerImpl instance per user across connections.
   std::unique_ptr<TokenManagerImpl> token_manager_impl =
       std::make_unique<TokenManagerImpl>(app_context_, std::move(auth_db_file),
-                                         std::move(auth_provider_configs));
+                                         std::move(auth_provider_configs),
+                                         std::move(auth_context_provider));
 
   token_manager_bindings_.AddBinding(std::move(token_manager_impl),
                                      std::move(request));

@@ -11,7 +11,6 @@
 
 #include "garnet/bin/auth/cache/token_cache.h"
 #include "garnet/bin/auth/store/auth_db.h"
-#include "garnet/bin/auth/token_manager/test/dev_auth_provider_impl.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -30,37 +29,36 @@ class TokenManagerImpl : public TokenManager {
  public:
   TokenManagerImpl(component::ApplicationContext* context,
                    std::unique_ptr<store::AuthDb> auth_db,
-                   fidl::VectorPtr<AuthProviderConfig> auth_provider_configs);
+                   fidl::VectorPtr<AuthProviderConfig> auth_provider_configs,
+                   fidl::InterfaceHandle<auth::AuthenticationContextProvider>
+                       auth_context_provider);
 
   ~TokenManagerImpl() override;
 
  private:
   // |TokenManager|
-  void Authorize(const auth::AuthProviderType auth_provider_type,
-                 const fidl::InterfaceHandle<auth::AuthenticationUIContext>
-                     auth_ui_context,
+  void Authorize(AppConfig app_config,
+                 const fidl::VectorPtr<fidl::StringPtr> app_scopes,
+                 fidl::StringPtr user_profile_id,
                  AuthorizeCallback callback) override;
 
-  void GetAccessToken(const auth::AuthProviderType auth_provider_type,
-                      fidl::StringPtr user_profile_id,
-                      fidl::StringPtr app_client_id,
+  void GetAccessToken(AppConfig app_config, fidl::StringPtr user_profile_id,
                       const fidl::VectorPtr<fidl::StringPtr> app_scopes,
                       GetAccessTokenCallback callback) override;
 
-  void GetIdToken(const auth::AuthProviderType auth_provider_type,
-                  fidl::StringPtr user_profile_id,
+  void GetIdToken(AppConfig app_config, fidl::StringPtr user_profile_id,
                   fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
-  void GetFirebaseToken(const auth::AuthProviderType auth_provider_type,
-                        fidl::StringPtr user_profile_id,
+  void GetFirebaseToken(AppConfig app_config, fidl::StringPtr user_profile_id,
                         fidl::StringPtr audience,
                         fidl::StringPtr firebase_api_key,
                         GetFirebaseTokenCallback callback) override;
 
-  void DeleteAllTokens(const auth::AuthProviderType auth_provider_type,
-                       fidl::StringPtr user_profile_id,
+  void DeleteAllTokens(AppConfig app_config, fidl::StringPtr user_profile_id,
                        DeleteAllTokensCallback callback) override;
+
+  auth::AuthenticationContextProviderPtr auth_context_provider_;
 
   std::map<AuthProviderType, component::ApplicationControllerPtr>
       auth_provider_controllers_;
