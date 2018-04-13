@@ -112,8 +112,7 @@ apply a safety factor (i.e. divide the entropy estimate by 2), and update the va
 `entropy_per_1000_bytes` (don't forget to multiply by 1000).
 
 Note that eventually `entropy_per_1000_bytes` should probably be configured somewhere instead of
-hard-coded in jitterentropy\_collector.cpp. MDI seems like a good candidate for storing the
-configuration, but kernel cmdlines or even a preprocessor symbol could work.
+hard-coded in jitterentropy\_collector.cpp. Kernel cmdlines or even a preprocessor symbol could work.
 
 ## Notes about the testing script
 
