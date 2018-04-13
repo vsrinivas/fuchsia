@@ -19,14 +19,24 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-static_library("glslang") {
+config("glslang_config") {
+  include_dirs = [
+    ".",
+    "glslang/Public",
+  ]
+}
+
+config("glslang_internal_config") {
   cflags_cc = [
-    "-Wno-reorder",
     "-Wno-ignored-qualifiers",
-    "-Wno-inconsistent-missing-override",
     "-Wno-missing-field-initializers",
+    "-Wno-reorder",
+    "-Wno-unused-function",
     "-Wno-unused-variable",
   ]
+}
+
+static_library("glslang") {
   sources = [
     "glslang/GenericCodeGen/CodeGen.cpp",
     "glslang/GenericCodeGen/Link.cpp",
@@ -62,7 +72,11 @@ static_library("glslang") {
     ":HLSL",
     ":OGLCompiler",
     ":OSDependent",
+    ":glslang-default-resource-limits",
+    ":SPIRV",
   ]
+  public_configs = [ ":glslang_config" ]
+  configs += [ ":glslang_internal_config" ]
 }
 static_library("OSDependent") {
   cflags_cc = [
