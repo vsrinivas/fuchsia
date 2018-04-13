@@ -56,7 +56,12 @@ mod tests {
     #[test]
     fn test_prf_test_case_2() {
         let key = "Jefe".as_bytes();
-        let actual = prf(&key[..], "prefix", "what do ya want for nothing?".as_bytes(), 512);
+        let actual = prf(
+            &key[..],
+            "prefix",
+            "what do ya want for nothing?".as_bytes(),
+            512,
+        );
         assert_eq!(actual.is_ok(), true);
 
         let expected = Vec::from_hex("51f4de5b33f249adf81aeb713a3c20f4fe631446fabdfa58244759ae58ef9009a99abf4eac2ca5fa87e692c440eb40023e7babb206d61de7b92f41529092b8fc").unwrap();
@@ -90,10 +95,17 @@ mod tests {
     #[test]
     fn test_prf_test_case_65_2() {
         let key = "Jefe".as_bytes();
-        let actual = prf(&key[..], "prefix-2", "what do ya want for nothing?".as_bytes(), 256);
+        let actual = prf(
+            &key[..],
+            "prefix-2",
+            "what do ya want for nothing?".as_bytes(),
+            256,
+        );
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex("47c4908e30c947521ad20be9053450ecbea23d3aa604b77326d8b3825ff7475c").unwrap();
+        let expected = Vec::from_hex(
+            "47c4908e30c947521ad20be9053450ecbea23d3aa604b77326d8b3825ff7475c",
+        ).unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 
@@ -101,7 +113,12 @@ mod tests {
     #[test]
     fn test_prf_test_case_65_3() {
         let key = Vec::from_hex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap();
-        let actual = prf(&key[..], "prefix-3", "Test Using Larger Than Block-Size Key - Hash Key First".as_bytes(), 384);
+        let actual = prf(
+            &key[..],
+            "prefix-3",
+            "Test Using Larger Than Block-Size Key - Hash Key First".as_bytes(),
+            384,
+        );
         assert_eq!(actual.is_ok(), true);
 
         let expected = Vec::from_hex("0ab6c33ccf70d0d736f4b04c8a7373255511abc5073713163bd0b8c9eeb7e1956fa066820a73ddee3f6d3bd407e0682a").unwrap();
@@ -122,10 +139,17 @@ mod tests {
     #[test]
     fn test_prf_empty_key() {
         let key: [u8; 0] = [];
-        let actual = prf(&key[..], "something is happening", "Lorem ipsum".as_bytes(), 256);
+        let actual = prf(
+            &key[..],
+            "something is happening",
+            "Lorem ipsum".as_bytes(),
+            256,
+        );
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex("5b154287399baeabd7d2c9682989e0933b3fdef8211ae7ae0c6586bb1e38de7c").unwrap();
+        let expected = Vec::from_hex(
+            "5b154287399baeabd7d2c9682989e0933b3fdef8211ae7ae0c6586bb1e38de7c",
+        ).unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 
@@ -135,7 +159,9 @@ mod tests {
         let actual = prf(&key[..], "", "Lorem ipsum".as_bytes(), 256);
         assert_eq!(actual.is_ok(), true);
 
-        let expected = Vec::from_hex("1317523ae07f212fc4139ce9ebafe31ecf7c59cb07c7a7f04131afe7a59de60c").unwrap();
+        let expected = Vec::from_hex(
+            "1317523ae07f212fc4139ce9ebafe31ecf7c59cb07c7a7f04131afe7a59de60c",
+        ).unwrap();
         assert_eq!(actual.unwrap(), expected);
     }
 
@@ -163,7 +189,12 @@ mod tests {
     fn test_prf_valid_bit_sizes() {
         for bits in &VALID_BIT_SIZES {
             let result = prf("".as_bytes(), "", "".as_bytes(), *bits as usize);
-            assert_eq!(result.is_ok(), true, "expected success with valid bit size: {:?}", *bits);
+            assert_eq!(
+                result.is_ok(),
+                true,
+                "expected success with valid bit size: {:?}",
+                *bits
+            );
         }
     }
 
@@ -174,7 +205,12 @@ mod tests {
                 continue;
             }
             let result = prf("".as_bytes(), "", "".as_bytes(), bits as usize);
-            assert_eq!(result.is_err(), true, "expected failure with wrong bit size: {:?}", bits);
+            assert_eq!(
+                result.is_err(),
+                true,
+                "expected failure with wrong bit size: {:?}",
+                bits
+            );
         }
     }
 }

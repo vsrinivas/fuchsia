@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use suite_selector;
-use pmkid;
 use akm;
 use cipher;
+use pmkid;
+use suite_selector;
 
-use nom::{le_u8, le_u16, IResult};
+use nom::{le_u16, le_u8, IResult};
 
 macro_rules! if_remaining (
   ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
@@ -30,7 +30,9 @@ pub struct Rsne<'a> {
 }
 
 fn read_suite_selector<'a, T>(input: &'a [u8]) -> IResult<&'a [u8], T>
-    where T: suite_selector::Factory<'a, Suite=T> {
+where
+    T: suite_selector::Factory<'a, Suite = T>,
+{
     let (i1, bytes) = try_parse!(input, take!(4));
     let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(&bytes[0..3], bytes[3])));
     return IResult::Done(i2, ctor_result);
@@ -85,11 +87,9 @@ mod tests {
             0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
             0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00, 0x01, 0x00, 0x01, 0x02, 0x03, 0x04,
             0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x00, 0x0f,
-            0xac, 0x04
+            0xac, 0x04,
         ];
-        b.iter(|| {
-            from_bytes(&frame)
-        });
+        b.iter(|| from_bytes(&frame));
     }
 
     // TODO(hahnr): Add tests.

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use rsne;
-use nom::{le_u8, le_u16, IResult, Needed, ErrorKind};
-use nom::IResult::{Done, Incomplete};
 use super::Element;
+use nom::IResult::{Done, Incomplete};
+use nom::{le_u16, le_u8, ErrorKind, IResult, Needed};
+use rsne;
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {Result, Error};
-use byteorder::{ByteOrder, BigEndian};
+use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::KeySize;
-use crypto::aesni::{AesNiEncryptor, AesNiDecryptor};
-use crypto::symmetriccipher::{BlockEncryptor, BlockDecryptor};
+use crypto::aesni::{AesNiDecryptor, AesNiEncryptor};
+use crypto::symmetriccipher::{BlockDecryptor, BlockEncryptor};
 use keywrap::Algorithm;
+use {Error, Result};
 
 // Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
 
@@ -22,7 +22,7 @@ impl NistAes {
             16 => Ok(KeySize::KeySize128),
             24 => Ok(KeySize::KeySize192),
             32 => Ok(KeySize::KeySize256),
-            _ => Err(Error::InvalidAesKeywrapKeySize(key_len))
+            _ => Err(Error::InvalidAesKeywrapKeySize(key_len)),
         }
     }
 }
@@ -139,7 +139,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F",
             "00112233445566778899AABBCCDDEEFF",
-            "1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5");
+            "1FA68B0A8112B447AEF34BD8FB5A7B829D3E862371D2CFE5",
+        );
     }
 
     // RFC 3394, 4.2 Wrap 128 bits of Key Data with a 192-bit KEK
@@ -148,7 +149,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F1011121314151617",
             "00112233445566778899AABBCCDDEEFF",
-            "96778B25AE6CA435F92B5B97C050AED2468AB8A17AD84E5D");
+            "96778B25AE6CA435F92B5B97C050AED2468AB8A17AD84E5D",
+        );
     }
 
     // RFC 3394, 4.3 Wrap 128 bits of Key Data with a 256-bit KEK
@@ -157,7 +159,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F",
             "00112233445566778899AABBCCDDEEFF",
-            "64E8C3F9CE0F5BA263E9777905818A2A93C8191E7D6E8AE7");
+            "64E8C3F9CE0F5BA263E9777905818A2A93C8191E7D6E8AE7",
+        );
     }
 
     // RFC 3394, 4.4 Wrap 192 bits of Key Data with a 192-bit KEK
@@ -166,7 +169,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F1011121314151617",
             "00112233445566778899AABBCCDDEEFF0001020304050607",
-            "031D33264E15D33268F24EC260743EDCE1C6C7DDEE725A936BA814915C6762D2");
+            "031D33264E15D33268F24EC260743EDCE1C6C7DDEE725A936BA814915C6762D2",
+        );
     }
 
     // RFC 3394, 4.5 Wrap 192 bits of Key Data with a 256-bit KEK
@@ -175,7 +179,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F",
             "00112233445566778899AABBCCDDEEFF0001020304050607",
-            "A8F9BC1612C68B3FF6E6F4FBE30E71E4769C8B80A32CB8958CD5D17D6B254DA1");
+            "A8F9BC1612C68B3FF6E6F4FBE30E71E4769C8B80A32CB8958CD5D17D6B254DA1",
+        );
     }
 
     // RFC 3394, 4.6 Wrap 256 bits of Key Data with a 256-bit KEK
@@ -184,7 +189,8 @@ mod tests {
         test_wrap_unwrap(
             "000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F",
             "00112233445566778899AABBCCDDEEFF000102030405060708090A0B0C0D0E0F",
-            "28C9F404C4B810F4CBCCB35CFB87F8263F5786E2D80ED326CBC7F0E71A99F43BFB988B9B7A02DD21");
+            "28C9F404C4B810F4CBCCB35CFB87F8263F5786E2D80ED326CBC7F0E71A99F43BFB988B9B7A02DD21",
+        );
     }
 
     #[test]
@@ -203,7 +209,9 @@ mod tests {
     #[test]
     fn test_invalid_data_length() {
         let kek = Vec::from_hex("000102030405060708090A0B0C0D0E0F").unwrap();
-        let data = Vec::from_hex("012345678912345601234567891234560123456789123456012345678912345614").unwrap();
+        let data = Vec::from_hex(
+            "012345678912345601234567891234560123456789123456012345678912345614",
+        ).unwrap();
 
         let keywrap = NistAes;
         let result = keywrap.wrap(&kek[..], &data[..]);

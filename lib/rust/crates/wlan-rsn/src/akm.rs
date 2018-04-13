@@ -4,18 +4,18 @@
 #![allow(dead_code)]
 
 use auth::{config, psk};
+use crypto_utils;
 use futures::Future;
 use integrity;
 use keywrap;
 use std::fmt;
 use suite_selector;
 use {Error, Result};
-use crypto_utils;
 
 macro_rules! return_none_if_unknown_algo {
     ($e:expr) => {
         if !$e.has_known_algorithm() {
-            return None
+            return None;
         }
     };
 }
@@ -67,7 +67,7 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 ... 11 => Some(16),
+            1...11 => Some(16),
             12 | 13 => Some(24),
             _ => None,
         }
@@ -78,7 +78,7 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 ... 11 => Some(128),
+            1...11 => Some(128),
             12 | 13 => Some(192),
             _ => None,
         }
@@ -89,7 +89,7 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 ... 11 => Some(128),
+            1...11 => Some(128),
             12 | 13 => Some(256),
             _ => None,
         }
@@ -100,7 +100,7 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.1.3
         match self.suite_type {
-            1 ... 11 | 13 => Some(256),
+            1...11 | 13 => Some(256),
             12 => Some(384),
             _ => None,
         }
@@ -113,8 +113,8 @@ impl<'a> Akm<'a> {
         match self.suite_type {
             1 | 2 => Some(Box::new(integrity::HmacSha1128)),
             // TODO(hahnr): Add remaining integrity algorithms.
-            3 ... 13 => None,
-            _ => None
+            3...13 => None,
+            _ => None,
         }
     }
 
@@ -123,16 +123,17 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 ... 13 => Some(Box::new(keywrap::aes::NistAes)),
-            _ => None
+            1...13 => Some(Box::new(keywrap::aes::NistAes)),
+            _ => None,
         }
     }
 
     /// Returns `None` if there is no known authentication method associated with this AKM.
     /// Else, returns a `Result` which indicates an error if the given `config` is incompatible with
     /// the AKM, or succeeds if the authentication method was successfully created.
-    pub fn auth_method(&self, config: config::Config)
-                       -> Option<Result<Box<Future<Item=Vec<u8>, Error=Error>>>> {
+    pub fn auth_method(
+        &self, config: config::Config,
+    ) -> Option<Result<Box<Future<Item = Vec<u8>, Error = Error>>>> {
         return_none_if_unknown_algo!(self);
 
         // IEEE 802.11-2016, 9.4.2.25.3, Table 9-133
@@ -144,9 +145,9 @@ impl<'a> Akm<'a> {
                     Ok(psk) => Ok(Box::new(psk)),
                     Err(e) => Err(e),
                 },
-                _ => Err(Error::IncompatibleConfig(config, "PSK".to_string()))
+                _ => Err(Error::IncompatibleConfig(config, "PSK".to_string())),
             }),
-            _ => None
+            _ => None,
         }
     }
 
@@ -155,8 +156,8 @@ impl<'a> Akm<'a> {
 
         // IEEE 802.11-2016, 12.7.1.2
         match self.suite_type {
-            1 ... 4 | 8 | 9 => Some(crypto_utils::prf(k, a, b, bits)),
-            _ => None
+            1...4 | 8 | 9 => Some(crypto_utils::prf(k, a, b, bits)),
+            _ => None,
         }
     }
 }
@@ -175,6 +176,10 @@ impl<'a> suite_selector::Factory<'a> for Akm<'a> {
 
 impl<'a> fmt::Debug for Akm<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
+        write!(
+            f,
+            "{:02X}-{:02X}-{:02X}:{}",
+            self.oui[0], self.oui[1], self.oui[2], self.suite_type
+        )
     }
 }

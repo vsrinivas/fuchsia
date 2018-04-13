@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
+use super::{Error, Result};
 use std::fmt;
 use suite_selector;
-use super::{Error, Result};
 
 macro_rules! return_none_if_unknown_usage {
     ($e:expr) => {
         if !$e.has_known_usage() {
-            return None
+            return None;
         }
     };
 }
@@ -54,14 +54,13 @@ impl<'a> Cipher<'a> {
         (self.suite_type == 3 || self.suite_type >= 14) && !self.is_vendor_specific()
     }
 
-
     pub fn supports_gtk(&self) -> Option<bool> {
         return_none_if_unknown_usage!(self);
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            1 ... 5 | 8 ... 10 => Some(true),
-            0 | 6 | 11 ... 13 => Some(false),
+            1...5 | 8...10 => Some(true),
+            0 | 6 | 11...13 => Some(false),
             _ => None,
         }
     }
@@ -71,8 +70,8 @@ impl<'a> Cipher<'a> {
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            0 | 2 ... 4 | 8 ... 10 => Some(true),
-            1 | 5 | 6 | 11 ... 13 => Some(false),
+            0 | 2...4 | 8...10 => Some(true),
+            1 | 5 | 6 | 11...13 => Some(false),
             _ => None,
         }
     }
@@ -82,8 +81,8 @@ impl<'a> Cipher<'a> {
 
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-132
         match self.suite_type {
-            6 | 11 ... 13 => Some(true),
-            0 | 1 ... 5 | 8 ... 10 => Some(false),
+            6 | 11...13 => Some(true),
+            0 | 1...5 | 8...10 => Some(false),
             _ => None,
         }
     }
@@ -116,6 +115,10 @@ impl<'a> suite_selector::Factory<'a> for Cipher<'a> {
 
 impl<'a> fmt::Debug for Cipher<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
+        write!(
+            f,
+            "{:02X}-{:02X}-{:02X}:{}",
+            self.oui[0], self.oui[1], self.oui[2], self.suite_type
+        )
     }
 }

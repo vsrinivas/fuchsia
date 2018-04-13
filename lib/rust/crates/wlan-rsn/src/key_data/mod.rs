@@ -4,11 +4,11 @@
 
 pub mod kde;
 
-use {Result, Error};
-use rsne;
-use nom::{le_u8, le_u16, IResult, Needed, ErrorKind};
 use nom::IResult::{Done, Incomplete};
+use nom::{le_u16, le_u8, ErrorKind, IResult, Needed};
+use rsne;
 use std::mem;
+use {Error, Result};
 
 #[derive(Debug)]
 pub enum Element<'a> {
@@ -36,7 +36,7 @@ fn parse_ie<'a>(i0: &'a [u8]) -> IResult<&'a [u8], Element> {
             let (_, rsne) = try_parse!(bytes, rsne::from_bytes);
             Done(out, Element::Rsne(rsne))
         }
-        _ => Done(out, Element::UnsupportedIe(id, len))
+        _ => Done(out, Element::UnsupportedIe(id, len)),
     }
 }
 
@@ -44,7 +44,7 @@ fn parse_element<'a>(input: &'a [u8]) -> IResult<&'a [u8], Element> {
     let (_, type_) = try_parse!(input, call!(peek_u8_at, 0));
     match type_ {
         kde::TYPE => kde::parse(input),
-        _ => parse_ie(input)
+        _ => parse_ie(input),
     }
 }
 
@@ -55,7 +55,9 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>> {
     if key_data.len() % 8 != 0 || key_data.len() < 16 {
         Err(Error::InvaidKeyDataLength(key_data.len()))
     } else {
-        parse_elements(key_data).to_full_result().map_err(|e| Error::InvalidKeyData(e))
+        parse_elements(key_data)
+            .to_full_result()
+            .map_err(|e| Error::InvalidKeyData(e))
     }
 }
 
@@ -65,6 +67,7 @@ mod tests {
 
     #[test]
     fn test_complex_key_data() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             // GTK KDE
             0xDD,
@@ -111,44 +114,40 @@ mod tests {
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
                 }
-                Element::UnsupportedIe(id, len) => {
-                    match pos {
-                        1 => {
-                            assert_eq!(id, 99);
-                            assert_eq!(len, 6);
-                        }
-                        5 => {
-                            assert_eq!(id, 200);
-                            assert_eq!(len, 2);
-                        }
-                        _ => assert!(false)
+                Element::UnsupportedIe(id, len) => match pos {
+                    1 => {
+                        assert_eq!(id, 99);
+                        assert_eq!(len, 6);
                     }
-                }
-                Element::Rsne(rsne) => {
-                    match pos {
-                        2 => {
-                            assert_eq!(rsne.element_id, 48);
-                            assert_eq!(rsne.length, 6);
-                            assert_eq!(rsne.version, 257);
-                            assert!(rsne.group_data_cipher_suite.is_some());
-                            let cipher = rsne.group_data_cipher_suite.unwrap();
-                            assert_eq!(cipher.suite_type, 4);
-                            let oui = vec![1, 2, 3];
-                            assert_eq!(cipher.oui, &oui[..]);
-                        }
-                        4 => {
-                            assert_eq!(rsne.element_id, 48);
-                            assert_eq!(rsne.length, 6);
-                            assert_eq!(rsne.version, 9);
-                            assert!(rsne.group_data_cipher_suite.is_some());
-                            let cipher = rsne.group_data_cipher_suite.unwrap();
-                            assert_eq!(cipher.suite_type, 1);
-                            let oui = vec![0x00, 0x0F, 0xAC];
-                            assert_eq!(cipher.oui, &oui[..]);
-                        }
-                        _ => assert!(false)
+                    5 => {
+                        assert_eq!(id, 200);
+                        assert_eq!(len, 2);
                     }
-                }
+                    _ => assert!(false),
+                },
+                Element::Rsne(rsne) => match pos {
+                    2 => {
+                        assert_eq!(rsne.element_id, 48);
+                        assert_eq!(rsne.length, 6);
+                        assert_eq!(rsne.version, 257);
+                        assert!(rsne.group_data_cipher_suite.is_some());
+                        let cipher = rsne.group_data_cipher_suite.unwrap();
+                        assert_eq!(cipher.suite_type, 4);
+                        let oui = vec![1, 2, 3];
+                        assert_eq!(cipher.oui, &oui[..]);
+                    }
+                    4 => {
+                        assert_eq!(rsne.element_id, 48);
+                        assert_eq!(rsne.length, 6);
+                        assert_eq!(rsne.version, 9);
+                        assert!(rsne.group_data_cipher_suite.is_some());
+                        let cipher = rsne.group_data_cipher_suite.unwrap();
+                        assert_eq!(cipher.suite_type, 1);
+                        let oui = vec![0x00, 0x0F, 0xAC];
+                        assert_eq!(cipher.oui, &oui[..]);
+                    }
+                    _ => assert!(false),
+                },
                 Element::UnsupportedKde(hdr) => {
                     assert_eq!(pos, 3);
                     assert_eq!(hdr.type_, 0xDD);
@@ -158,7 +157,7 @@ mod tests {
                     assert_eq!(hdr.data_type, 1);
                 }
                 Element::Padding => assert_eq!(pos, 6),
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
             pos += 1;
         }
@@ -166,6 +165,7 @@ mod tests {
 
     #[test]
     fn test_too_short_key_data() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             10, 5, 1, 2, 3, 4, 5, // Unsupported IE
         ];
@@ -175,6 +175,7 @@ mod tests {
 
     #[test]
     fn test_not_multiple_of_8() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             // Unsupported IE
             10, 21, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
@@ -185,6 +186,7 @@ mod tests {
 
     #[test]
     fn test_no_padding() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             10, 14, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, // Unsupported IE
         ];
@@ -200,13 +202,14 @@ mod tests {
                     assert_eq!(id, 10);
                     assert_eq!(len, 14);
                 }
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
         }
     }
 
     #[test]
     fn test_single_padding_byte() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             10, 13, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, // Unsupported IE
             0xDD, // 1 byte padding
@@ -224,13 +227,14 @@ mod tests {
                     assert_eq!(len, 13);
                 }
                 Element::Padding => (),
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
         }
     }
 
     #[test]
     fn test_long_padding() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             20, 6, 1, 2, 3, 4, 5, 6, // Unsupported IE
             0xdd, 0, 0, 0, 0, 0, 0, 0, // 8 bytes padding
@@ -248,13 +252,14 @@ mod tests {
                     assert_eq!(len, 6);
                 }
                 Element::Padding => (),
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
         }
     }
 
     #[test]
     fn test_gtk() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             // GTK KDE
             0xDD,
@@ -281,13 +286,14 @@ mod tests {
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
                 }
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
         }
     }
 
     #[test]
     fn test_long_gtk() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         let buf = [
             // GTK KDE
             0xDD,
@@ -312,9 +318,12 @@ mod tests {
                     assert_eq!(hdr.oui, kde::OUI);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 200);
-                    assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+                    assert_eq!(
+                        kde.gtk,
+                        vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+                    );
                 }
-                _ => assert!(false, "Unexpected element found: {:?}", e)
+                _ => assert!(false, "Unexpected element found: {:?}", e),
             }
         }
     }

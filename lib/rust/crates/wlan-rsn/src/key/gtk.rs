@@ -10,7 +10,6 @@ use {Error, Result};
 pub struct Gtk {
     gtk: Vec<u8>,
     tk_len: usize,
-
     // TODO(hahnr): Add TKIP Tx/Rx MIC support (IEEE 802.11-2016, 12.8.2).
 }
 
@@ -22,7 +21,9 @@ impl Gtk {
 
 // IEEE 802.11-2016, 12.7.1.4
 pub fn new(gmk: &[u8], aa: &[u8; 6], gnonce: &[u8; 32], cipher: &Cipher) -> Result<Gtk> {
-    let tk_bits = cipher.tk_bits().ok_or_else(|| Error::PtkHierarchyUnsupportedCipherError)?;
+    let tk_bits = cipher
+        .tk_bits()
+        .ok_or_else(|| Error::PtkHierarchyUnsupportedCipherError)?;
 
     // data length = 6 (aa) + 32 (gnonce)
     let mut data: [u8; 38] = [0; 38];
