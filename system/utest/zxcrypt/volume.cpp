@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -21,6 +22,30 @@ namespace {
 // See test-device.h; the following macros allow reusing tests for each of the supported versions.
 #define EACH_PARAM(OP, Test) OP(Test, Volume, AES256_XTS_SHA256)
 
+// ZX-1948: Dump extra information if encountering an unexpected error during volume creation.
+bool VolumeCreate(fbl::unique_fd fd, const crypto::Bytes& key, bool fvm, zx_status_t expected) {
+    BEGIN_HELPER;
+
+    char err[128];
+    block_info_t bInfo;
+    ASSERT_GE(ioctl_block_get_info(fd.get(), &bInfo), 0);
+    if (fvm) {
+        fvm_info_t fInfo;
+        ASSERT_GE(ioctl_block_fvm_query(fd.get(), &fInfo), 0);
+        snprintf(err, sizeof(err),
+                 "details: block size=%" PRIu32 ", block count=%" PRIu64
+                 ", slice size=%zu, slice count=%zu",
+                 bInfo.block_size, bInfo.block_count, fInfo.slice_size, fInfo.vslice_count);
+    } else {
+        snprintf(err, sizeof(err), "details: block size=%" PRIu32 ", block count=%" PRIu64,
+                 bInfo.block_size, bInfo.block_count);
+    }
+
+    EXPECT_EQ(Volume::Create(fbl::move(fd), key), expected, err);
+
+    END_HELPER;
+}
+
 bool TestCreate(Volume::Version version, bool fvm) {
     BEGIN_TEST;
 
@@ -35,10 +60,10 @@ bool TestCreate(Volume::Version version, bool fvm) {
     crypto::Bytes short_key;
     ASSERT_OK(short_key.Copy(device.key()));
     ASSERT_OK(short_key.Resize(short_key.len() - 1));
-    EXPECT_ZX(Volume::Create(fbl::move(device.parent()), short_key), ZX_ERR_INVALID_ARGS);
+    EXPECT_TRUE(VolumeCreate(fbl::move(device.parent()), short_key, fvm, ZX_ERR_INVALID_ARGS));
 
     // Valid
-    EXPECT_OK(Volume::Create(fbl::move(device.parent()), device.key()));
+    EXPECT_TRUE(VolumeCreate(fbl::move(device.parent()), device.key(), fvm, ZX_OK));
 
     END_TEST;
 }
@@ -60,7 +85,7 @@ bool TestOpen(Volume::Version version, bool fvm) {
     EXPECT_ZX(Volume::Open(fbl::move(bad_fd), device.key(), 0, &volume), ZX_ERR_INVALID_ARGS);
 
     // Bad key
-    ASSERT_OK(Volume::Create(fbl::move(device.parent()), device.key()));
+    ASSERT_TRUE(VolumeCreate(fbl::move(device.parent()), device.key(), fvm, ZX_OK));
 
     crypto::Bytes mod;
     ASSERT_OK(mod.Copy(device.key()));
