@@ -18,6 +18,7 @@ MODULE_LIBS := \
     system/ulib/async-loop.cpp \
     system/ulib/c \
     system/ulib/fbl \
+    system/ulib/trace \
     system/ulib/trace-engine \
     system/ulib/trace-provider \
     system/ulib/unittest \

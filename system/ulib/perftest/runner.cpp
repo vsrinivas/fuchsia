@@ -16,6 +16,7 @@
 #include <trace-engine/context.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
+#include <trace/event.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -55,6 +56,7 @@ public:
     }
 
     bool RunTestFunc(const internal::NamedTest* test) {
+        TRACE_DURATION("perftest", "test_group", "test_name", test->name);
         overall_start_time_ = zx_ticks_get();
         bool result = test->test_func(this);
         overall_end_time_ = zx_ticks_get();
