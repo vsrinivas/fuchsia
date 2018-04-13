@@ -62,8 +62,15 @@ zx_status_t BeaconSender::HandleProbeRequest(const ImmutableMgmtFrame<ProbeReque
         case element_id::kSsid: {
             auto ie = reader.read<SsidElement>();
             if (ie == nullptr) { return ZX_ERR_STOP; };
+            if (hdr->len == 0) {
+                // Wildcard ProbeRequest
+                break;
+            }
             size_t ssid_len = strlen(req_.ssid->data());
-            if (strncmp(ie->ssid, req_.ssid->data(), ssid_len) != 0) { return ZX_ERR_STOP; }
+            if (hdr->len != ssid_len || strncmp(ie->ssid, req_.ssid->data(), ssid_len) != 0) {
+                // Probe request was broadcast but not intended for this BSS.
+                return ZX_ERR_STOP;
+            }
 
             break;
         }
