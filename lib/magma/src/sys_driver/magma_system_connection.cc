@@ -254,13 +254,16 @@ bool MagmaSystemConnection::ImportObject(uint32_t handle, magma::PlatformObject:
             if (!magma::PlatformObject::IdFromHandle(handle, &id))
                 return DRETF(false, "failed to get semaphore id for handle");
 
+            // Always import the handle to to ensure it gets closed
+            auto platform_sem = magma::PlatformSemaphore::Import(handle);
+
             auto iter = semaphore_map_.find(id);
             if (iter != semaphore_map_.end()) {
                 iter->second.refcount++;
                 return true;
             }
 
-            auto semaphore = MagmaSystemSemaphore::Create(magma::PlatformSemaphore::Import(handle));
+            auto semaphore = MagmaSystemSemaphore::Create(std::move(platform_sem));
             if (!semaphore)
                 return DRETF(false, "failed to import platform semaphore");
 
