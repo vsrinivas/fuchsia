@@ -1370,7 +1370,8 @@ asm_AES_set_decrypt_key:
 .globl	asm_AES_cbc_encrypt
 .hidden asm_AES_cbc_encrypt
 .type	asm_AES_cbc_encrypt,@function
-
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 .hidden	asm_AES_cbc_encrypt
 asm_AES_cbc_encrypt:
 .cfi_startproc	

@@ -1,6 +1,7 @@
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
-
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 
 .globl	gcm_gmult_4bit
 .hidden gcm_gmult_4bit

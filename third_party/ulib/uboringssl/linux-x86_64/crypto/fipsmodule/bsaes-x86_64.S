@@ -1,8 +1,10 @@
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
 
-
-
+.extern	asm_AES_encrypt
+.hidden asm_AES_encrypt
+.extern	asm_AES_decrypt
+.hidden asm_AES_decrypt
 
 .type	_bsaes_encrypt8,@function
 .align	64
@@ -1063,7 +1065,8 @@ _bsaes_key_convert:
 
 	.byte	0xf3,0xc3
 .size	_bsaes_key_convert,.-_bsaes_key_convert
-
+.extern	asm_AES_cbc_encrypt
+.hidden asm_AES_cbc_encrypt
 .globl	bsaes_cbc_encrypt
 .hidden bsaes_cbc_encrypt
 .type	bsaes_cbc_encrypt,@function

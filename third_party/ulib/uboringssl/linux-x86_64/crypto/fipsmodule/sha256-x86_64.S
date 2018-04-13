@@ -1,7 +1,8 @@
 #if defined(__x86_64__) && !defined(OPENSSL_NO_ASM)
 .text	
 
-
+.extern	OPENSSL_ia32cap_P
+.hidden OPENSSL_ia32cap_P
 .globl	sha256_block_data_order
 .hidden sha256_block_data_order
 .type	sha256_block_data_order,@function
