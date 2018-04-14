@@ -12,8 +12,8 @@
 
 #include <trace/event.h>
 
-#include <zircon/syscalls.h>
 #include <unittest/unittest.h>
+#include <zircon/syscalls.h>
 
 #ifdef __cplusplus
 #include <fbl/string.h>

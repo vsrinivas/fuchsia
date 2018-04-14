@@ -24,8 +24,12 @@
     _7, _7X, _6, _6X, _5, _5X, _4, _4X,         \
     _3, _3X, _2, _2X, _1, _1X, N, ...) N
 
-// Applies a function or macro to each pair of arguments to produce a
-// comma-separated result.  Works with 0 to 15 pairs.
+// Applies a function or macro to each pair of arguments.
+// Works with 0 to 15 pairs.
+//
+// Example:
+//     #define MY_FN(idx, a, b)
+//     TRACE_INTERNAL_APPLY_PAIRWISE(MY_FN, "x", 1, "y", 2)
 #define TRACE_INTERNAL_APPLY_PAIRWISE(fn, ...)                              \
     TRACE_INTERNAL_APPLY_PAIRWISE_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
     (fn, __VA_ARGS__)
@@ -33,74 +37,159 @@
 #define TRACE_INTERNAL_APPLY_PAIRWISE__(n) TRACE_INTERNAL_APPLY_PAIRWISE##n
 #define TRACE_INTERNAL_APPLY_PAIRWISE0(fn, ...)
 #define TRACE_INTERNAL_APPLY_PAIRWISE1(fn, k1, v1) \
-    (fn(k1, v1))
+    fn(1, k1, v1)
 #define TRACE_INTERNAL_APPLY_PAIRWISE2(fn, k1, v1, k2, v2) \
-    (fn(k1, v1)), (fn(k2, v2))
+    fn(1, k1, v1) fn(2, k2, v2)
 #define TRACE_INTERNAL_APPLY_PAIRWISE3(fn, k1, v1, k2, v2, k3, v3) \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3)
 #define TRACE_INTERNAL_APPLY_PAIRWISE4(fn, k1, v1, k2, v2, k3, v3, k4, v4) \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)
 #define TRACE_INTERNAL_APPLY_PAIRWISE5(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                        k5, v5)                             \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                \
-        (fn(k5, v5))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                \
+        fn(5, k5, v5)
 #define TRACE_INTERNAL_APPLY_PAIRWISE6(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                        k5, v5, k6, v6)                     \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                \
-        (fn(k5, v5)), (fn(k6, v6))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                \
+        fn(5, k5, v5) fn(6, k6, v6)
 #define TRACE_INTERNAL_APPLY_PAIRWISE7(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                        k5, v5, k6, v6, k7, v7)             \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7)
 #define TRACE_INTERNAL_APPLY_PAIRWISE8(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                        k5, v5, k6, v6, k7, v7, k8, v8)     \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)
 #define TRACE_INTERNAL_APPLY_PAIRWISE9(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                        k5, v5, k6, v6, k7, v7, k8, v8,     \
                                        k9, v9)                             \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),            \
-        (fn(k9, v9))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)            \
+            fn(9, k9, v9)
 #define TRACE_INTERNAL_APPLY_PAIRWISE10(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                         k5, v5, k6, v6, k7, v7, k8, v8,     \
                                         k9, v9, k10, v10)                   \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                 \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),             \
-        (fn(k9, v9)), (fn(k10, v10))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                 \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)             \
+            fn(9, k9, v9) fn(10, k10, v10)
 #define TRACE_INTERNAL_APPLY_PAIRWISE11(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
                                         k5, v5, k6, v6, k7, v7, k8, v8,     \
                                         k9, v9, k10, v10, k11, v11)         \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                 \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),             \
-        (fn(k9, v9)), (fn(k10, v10)), (fn(k11, v11))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                 \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)             \
+            fn(9, k9, v9) fn(10, k10, v10) fn(11, k11, v11)
 #define TRACE_INTERNAL_APPLY_PAIRWISE12(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
                                         k5, v5, k6, v6, k7, v7, k8, v8,       \
                                         k9, v9, k10, v10, k11, v11, k12, v12) \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                   \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),               \
-        (fn(k9, v9)), (fn(k10, v10)), (fn(k11, v11)), (fn(k12, v12))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                   \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)               \
+            fn(9, k9, v9) fn(10, k10, v10) fn(11, k11, v11) fn(12, k12, v12)
 #define TRACE_INTERNAL_APPLY_PAIRWISE13(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
                                         k5, v5, k6, v6, k7, v7, k8, v8,       \
                                         k9, v9, k10, v10, k11, v11, k12, v12, \
                                         k13, v13)                             \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                   \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),               \
-        (fn(k9, v9)), (fn(k10, v10)), (fn(k11, v11)), (fn(k12, v12)),         \
-        (fn(k13, v13))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                   \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)               \
+            fn(9, k9, v9) fn(10, k10, v10) fn(11, k11, v11) fn(12, k12, v12)  \
+                fn(13, k13, v13)
 #define TRACE_INTERNAL_APPLY_PAIRWISE14(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
                                         k5, v5, k6, v6, k7, v7, k8, v8,       \
                                         k9, v9, k10, v10, k11, v11, k12, v12, \
                                         k13, v13, k14, v14)                   \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                   \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),               \
-        (fn(k9, v9)), (fn(k10, v10)), (fn(k11, v11)), (fn(k12, v12)),         \
-        (fn(k13, v13)), (fn(k14, v14))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                   \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)               \
+            fn(9, k9, v9) fn(10, k10, v10) fn(11, k11, v11) fn(12, k12, v12)  \
+                fn(13, k13, v13) fn(14, k14, v14)
 #define TRACE_INTERNAL_APPLY_PAIRWISE15(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
                                         k5, v5, k6, v6, k7, v7, k8, v8,       \
                                         k9, v9, k10, v10, k11, v11, k12, v12, \
                                         k13, v13, k14, v14, k15, v15)         \
-    (fn(k1, v1)), (fn(k2, v2)), (fn(k3, v3)), (fn(k4, v4)),                   \
-        (fn(k5, v5)), (fn(k6, v6)), (fn(k7, v7)), (fn(k8, v8)),               \
-        (fn(k9, v9)), (fn(k10, v10)), (fn(k11, v11)), (fn(k12, v12)),         \
-        (fn(k13, v13)), (fn(k14, v14)), (fn(k15, v15))
+    fn(1, k1, v1) fn(2, k2, v2) fn(3, k3, v3) fn(4, k4, v4)                   \
+        fn(5, k5, v5) fn(6, k6, v6) fn(7, k7, v7) fn(8, k8, v8)               \
+            fn(9, k9, v9) fn(10, k10, v10) fn(11, k11, v11) fn(12, k12, v12)  \
+                fn(13, k13, v13) fn(14, k14, v14) fn(15, k15, v15)
+
+// Applies a function or macro to each pair of arguments to produce a
+// comma-separated result.  Works with 0 to 15 pairs.
+//
+// Example:
+//     #define MY_FN(idx, a, b)
+//     TRACE_INTERNAL_APPLY_PAIRWISE_CSV(MY_FN, "x", 1, "y", 2)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV(fn, ...)                              \
+    TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(TRACE_INTERNAL_COUNT_PAIRS(__VA_ARGS__)) \
+    (fn, __VA_ARGS__)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV_(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV__(n) TRACE_INTERNAL_APPLY_PAIRWISE_CSV##n
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV0(fn, ...)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV1(fn, k1, v1) \
+    fn(1, k1, v1)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV2(fn, k1, v1, k2, v2) \
+    fn(1, k1, v1), fn(2, k2, v2)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV3(fn, k1, v1, k2, v2, k3, v3) \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV4(fn, k1, v1, k2, v2, k3, v3, k4, v4) \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV5(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                           k5, v5)                             \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                \
+        fn(5, k5, v5)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV6(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                           k5, v5, k6, v6)                     \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                \
+        fn(5, k5, v5), fn(6, k6, v6)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV7(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                           k5, v5, k6, v6, k7, v7)             \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV8(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                           k5, v5, k6, v6, k7, v7, k8, v8)     \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV9(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                           k5, v5, k6, v6, k7, v7, k8, v8,     \
+                                           k9, v9)                             \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),            \
+        fn(9, k9, v9)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV10(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,     \
+                                            k9, v9, k10, v10)                   \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                 \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),             \
+        fn(9, k9, v9), fn(10, k10, v10)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV11(fn, k1, v1, k2, v2, k3, v3, k4, v4, \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,     \
+                                            k9, v9, k10, v10, k11, v11)         \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                 \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),             \
+        fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV12(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,       \
+                                            k9, v9, k10, v10, k11, v11, k12, v12) \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                   \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),               \
+        fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11), fn(12, k12, v12)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV13(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,       \
+                                            k9, v9, k10, v10, k11, v11, k12, v12, \
+                                            k13, v13)                             \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                   \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),               \
+        fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11), fn(12, k12, v12),      \
+        fn(13, k13, v13)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV14(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,       \
+                                            k9, v9, k10, v10, k11, v11, k12, v12, \
+                                            k13, v13, k14, v14)                   \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                   \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),               \
+        fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11), fn(12, k12, v12),      \
+        fn(13, k13, v13), fn(14, k14, v14)
+#define TRACE_INTERNAL_APPLY_PAIRWISE_CSV15(fn, k1, v1, k2, v2, k3, v3, k4, v4,   \
+                                            k5, v5, k6, v6, k7, v7, k8, v8,       \
+                                            k9, v9, k10, v10, k11, v11, k12, v12, \
+                                            k13, v13, k14, v14, k15, v15)         \
+    fn(1, k1, v1), fn(2, k2, v2), fn(3, k3, v3), fn(4, k4, v4),                   \
+        fn(5, k5, v5), fn(6, k6, v6), fn(7, k7, v7), fn(8, k8, v8),               \
+        fn(9, k9, v9), fn(10, k10, v10), fn(11, k11, v11), fn(12, k12, v12),      \
+        fn(13, k13, v13), fn(14, k14, v14), fn(15, k15, v15)
