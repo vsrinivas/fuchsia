@@ -14,7 +14,8 @@ struct LogFilterOptions {
   bool filter_by_tid;
   uint64 tid;
 
-  // Return all messages which contains at least one tag.
+  // If non-empty, return all messages which contain at least one specified tag.
+  // If empty, messages will not be filtered by tag.
   // Passed tags should not be more than 63 bytes in length and max tags can be 5.
   // Listener would be discarded if the limit is not followed.
   vector<string>:5 tags;
@@ -23,6 +24,8 @@ struct LogFilterOptions {
 struct LogMessage {
   uint64 pid;
   uint64 tid;
+  // Nanoseconds since the system was powered on, aka ZX_CLOCK_MONOTONIC.
+  // https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md#supported-clock-ids
   uint64 time;
   int32 severity;
   uint32 dropped_logs;
@@ -30,7 +33,7 @@ struct LogMessage {
   string msg;
 };
 
-// Interface to for LogListener to listen to.
+// Interface for LogListener to listen to.
 [ServiceName="logger::Log"]
 interface Log {
   // Listener listens for logs
