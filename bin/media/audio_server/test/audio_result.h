@@ -16,6 +16,9 @@ namespace test {
 // overall set. These measurements are eventually displayed in an overall recap,
 // after all other tests have completed.
 //
+// We perform frequency tests at various frequencies (kSummaryFreqs[] from
+// frequency_set.h), storing the result for each frequency.
+//
 // Although these audio measurements are quantitative, there is no 'right
 // answer' per se. Rather, we compare current measurements to those previously
 // measured, to detect any fidelity regressions. Because the code being tested
@@ -50,9 +53,9 @@ class AudioResult {
   static double LevelToleranceSource16;
   static double LevelToleranceSourceFloat;
 
-  static constexpr double kPrevLevelToleranceSource8 = 67.219077e-3;
-  static constexpr double kPrevLevelToleranceSource16 = 10.548786e-7;
-  static constexpr double kPrevLevelToleranceSourceFloat = 10.548786e-7;
+  static constexpr double kPrevLevelToleranceSource8 = 6.7219077e-02;
+  static constexpr double kPrevLevelToleranceSource16 = 1.0548786e-06;
+  static constexpr double kPrevLevelToleranceSourceFloat = 1.0548786e-06;
 
   static double LevelSource8;
   static double LevelSource16;
@@ -71,7 +74,7 @@ class AudioResult {
   static double FloorSource16;
   static double FloorSourceFloat;
 
-  // Val-being-checked (in dBr to reference signal) must be >= this value.
+  // Val-being-checked (in dBr to reference signal) must be >= these values.
   static constexpr double kPrevFloorSource8 = 49.952957;
   static constexpr double kPrevFloorSource16 = 98.104753;
   static constexpr double kPrevFloorSourceFloat = 98.104911;
@@ -82,10 +85,10 @@ class AudioResult {
   //
   // Previously-cached thresholds related to stereo-to-mono mixing.
   static double LevelToleranceStereoMono;
-  static constexpr double kPrevLevelToleranceStereoMono = 29.724227e-6;
+  static constexpr double kPrevLevelToleranceStereoMono = 2.9724227e-05;
 
   static double LevelStereoMono;
-  static constexpr double kPrevLevelStereoMono = -30.1029996e-1;
+  static constexpr double kPrevLevelStereoMono = -3.01029996;
 
   static double FloorStereoMono;
   static constexpr double kPrevFloorStereoMono = 93.607405;
@@ -100,6 +103,8 @@ class AudioResult {
   static double LevelToleranceInterpolation;
   static constexpr double kPrevLevelToleranceInterpolation = 1.0933640e-03;
 
+  // Frequency Response
+  //
   // What is our received level (in dBFS), when sending sinusoids through our
   // mixers at certain resampling ratios. PointSampler and LinearSampler are
   // specifically targeted with resampling ratios that represent how the current
@@ -109,11 +114,6 @@ class AudioResult {
   // and 44.1k-to-48k). Additional ratios are available with the --full switch.
   // Our entire set of ratios is present in the below arrays: Unity (1:1), Down1
   // (2:1), Down2 (294:160), Up1 (147:160) and Up2 (1:2).
-  //
-  // We perform frequency response tests at various frequencies (kSummaryFreqs[]
-  // from frequency_set.h), storing the result at each frequency. As with
-  // resampling ratios, subsequent CL contains a more exhaustive frequency set,
-  // for in-depth testing and diagnostics to be done outside CQ.
   static std::array<double, FrequencySet::kNumReferenceFreqs>
       FreqRespPointUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -144,13 +144,6 @@ class AudioResult {
   //
   // Note: with rates other than N:1 or 1:N, interpolating resamplers dampen
   // high frequencies -- as shown in previously-saved LinearSampler results.
-  //
-  // We save previous results to 8-digit accuracy (>23 bits), exceeding float32
-  // precision. This does not pose a risk of 'flaky test' since the math should
-  // be the same every time. With no real dependencies outside FBL, we expect
-  // any change that affects these results to be directly within the core
-  // objects (Mixer, Gain, OutputFormatter), and the corresponding adjustments
-  // to these thresholds should be included with that CL.
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -177,7 +170,6 @@ class AudioResult {
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespLinearMicro;
 
-  //
   // Signal-to-Noise-And-Distortion (SINAD)
   //
   // Sinad (signal-to-noise-and-distortion) is the ratio (in dBr) of reference
@@ -248,9 +240,10 @@ class AudioResult {
   static constexpr uint32_t kPrevMinScaleNonZero =
       0x10000000 >> kAudioPipelineWidth;
 
+  // Dynamic Range
+  // (gain integrity and system response at low volume levels)
   //
-  // Dynamic Range (gain integrity and system response at low volume levels) is
-  // measured at a single reference frequency (kReferenceFreq), on a lone mono
+  // Measured at a single reference frequency (kReferenceFreq), on a lone mono
   // source without SRC. By determining the smallest possible change in gain
   // that causes a detectable change in output (our 'gain epsilon'), we
   // determine a system's sensitivity to gain changes. We measure not only the
@@ -264,11 +257,11 @@ class AudioResult {
   // signal" calculation, but also as a second avenue toward measuring a
   // system's linearity/accuracy/precision with regard to data scaling and gain.
   static double DynRangeTolerance;
-  static constexpr double kPrevDynRangeTolerance = 75.380325e-4;
+  static constexpr double kPrevDynRangeTolerance = 7.5380325e-03;
 
   // Level and unwanted artifacts, applying the smallest-detectable gain change.
   static double LevelEpsilonDown;
-  static constexpr double kPrevLevelEpsilonDown = -16.807164e-5;
+  static constexpr double kPrevLevelEpsilonDown = -1.6807164e-04;
 
   static double SinadEpsilonDown;
   static constexpr double kPrevSinadEpsilonDown = 93.232593;
@@ -291,9 +284,9 @@ class AudioResult {
   static double LevelToleranceMix16;
   static double LevelToleranceMixFloat;
 
-  static constexpr double kPrevLevelToleranceMix8 = 67.219077e-3;
-  static constexpr double kPrevLevelToleranceMix16 = 17.031199e-5;
-  static constexpr double kPrevLevelToleranceMixFloat = 17.069356e-5;
+  static constexpr double kPrevLevelToleranceMix8 = 6.7219077e-02;
+  static constexpr double kPrevLevelToleranceMix16 = 1.7031199e-04;
+  static constexpr double kPrevLevelToleranceMixFloat = 1.7069356e-04;
 
   static double LevelMix8;
   static double LevelMix16;
@@ -307,7 +300,7 @@ class AudioResult {
   static double FloorMix16;
   static double FloorMixFloat;
 
-  static constexpr double kPrevFloorMix8 = 49.952957;
+  static constexpr double kPrevFloorMix8 = 49.952317;
   static constexpr double kPrevFloorMix16 = 90.677331;
   static constexpr double kPrevFloorMixFloat = 91.484408;
 
@@ -321,9 +314,9 @@ class AudioResult {
   static double LevelToleranceOutput16;
   static double LevelToleranceOutputFloat;
 
-  static constexpr double kPrevLevelToleranceOutput8 = 65.638245e-3;
-  static constexpr double kPrevLevelToleranceOutput16 = 84.876728e-6;
-  static constexpr double kPrevLevelToleranceOutputFloat = 68.541681e-8;
+  static constexpr double kPrevLevelToleranceOutput8 = 6.5638245e-02;
+  static constexpr double kPrevLevelToleranceOutput16 = 8.4876728e-05;
+  static constexpr double kPrevLevelToleranceOutputFloat = 6.8541681e-07;
 
   static double LevelOutput8;
   static double LevelOutput16;

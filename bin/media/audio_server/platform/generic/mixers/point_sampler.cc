@@ -43,7 +43,7 @@ class PointSamplerImpl : public PointSampler {
                          Gain::AScale amplitude_scale);
 };
 
-// TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
+// TODO(mpuryear): MTWN-75 factor to minimize PointSamplerImpl code duplication
 template <typename SType>
 class NxNPointSamplerImpl : public PointSampler {
  public:
@@ -106,8 +106,18 @@ inline bool PointSamplerImpl<DChCount, SType, SChCount>::Mix(
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
 
-  FXL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
+  FXL_DCHECK(doff < dst_frames);
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FXL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+
+  // Source offset can be negative, but within the bounds of pos_filter_width.
+  // PointSampler has no memory: input frames only affect present/future output.
+  // That is: its "positive filter width" is zero.
   FXL_DCHECK(soff >= 0);
+  // Source offset must also be within neg_filter_width of our last sample.
+  // Our neg_filter_width is just shy of FRAC_ONE; soff can't exceed this buf.
+  FXL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
@@ -209,8 +219,18 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
   uint32_t doff = *dst_offset;
   int32_t soff = *frac_src_offset;
 
-  FXL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
+  FXL_DCHECK(doff < dst_frames);
+  FXL_DCHECK(frac_src_frames >= FRAC_ONE);
+  FXL_DCHECK(frac_src_frames <=
+             static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
+
+  // Source offset can be negative, but within the bounds of pos_filter_width.
+  // PointSampler has no memory: input frames only affect present/future output.
+  // That is: its "positive filter width" is zero.
   FXL_DCHECK(soff >= 0);
+  // Source offset must also be within neg_filter_width of our last sample.
+  // Our neg_filter_width is just shy of FRAC_ONE; soff can't exceed this buf.
+  FXL_DCHECK(soff < static_cast<int32_t>(frac_src_frames));
 
   // If we are not attenuated to the point of being muted, go ahead and perform
   // the mix.  Otherwise, just update the source and dest offsets.
@@ -231,8 +251,8 @@ inline bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
     }
   } else {
     if (doff < dst_frames) {
-      // Figure out how many samples we would have produced and update the soff
-      // and doff values appropriately.
+      // Figure out how many samples we would have produced and update the
+      // soff and doff values appropriately.
       uint32_t src_avail =
           ((frac_src_frames - soff) + frac_step_size - 1) / frac_step_size;
       uint32_t dst_avail = (dst_frames - doff);
@@ -286,7 +306,7 @@ bool NxNPointSamplerImpl<SType>::Mix(int32_t* dst,
 }
 
 // Templates used to expand all of the different combinations of the possible
-// Point Sampler Mixer configurations.
+// PointSampler Mixer configurations.
 template <size_t DChCount, typename SType, size_t SChCount>
 static inline MixerPtr SelectPSM(const AudioMediaTypeDetails& src_format,
                                  const AudioMediaTypeDetails& dst_format) {

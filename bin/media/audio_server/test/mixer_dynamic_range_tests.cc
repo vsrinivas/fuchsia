@@ -292,7 +292,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
                    &magn_signal, &magn_other);
 
   *level_mix_db = ValToDb(magn_signal / expected_amplitude);
-  *sinad_mix_db = ValToDb(magn_signal / magn_other);
+  *sinad_mix_db = ValToDb(expected_amplitude / magn_other);
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.

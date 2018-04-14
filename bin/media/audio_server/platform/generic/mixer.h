@@ -133,16 +133,24 @@ class Mixer {
   virtual void Reset() {}
 
   // The positive and negative widths of the filter for this mixer, expressed in
-  // fractional input renderer units.  To be clear...
+  // fractional input renderer units.  These widths convey which input frames
+  // will be referenced by the filter, when producing output for a specific
+  // instant in time. Positive filter width refers to how far forward
+  // (positively) the filter looks, from the PTS in question; negative filter
+  // width refers to how far backward (negatively) the filter looks, from that
+  // same PTS.  Specifically...
   //
   // Let:
   // P = pos_filter_width()
   // N = neg_filter_width()
-  // S = A point at which the input will be sampled.
+  // S = An arbitrary point in time at which the input stream will be sampled.
   // X = The PTS of an input frame.
   //
   // If (X >= (S - N)) && (X <= (S + P))
-  // Then X is within the filter and contributes to mix operation.
+  // Then input frame X is within the filter and contributes to mix operation.
+  //
+  // Conversely, input frame X contributes to the output samples S where
+  //  (S >= X - P)  and  (S <= X + N)
   //
   inline uint32_t pos_filter_width() const { return pos_filter_width_; }
   inline uint32_t neg_filter_width() const { return neg_filter_width_; }

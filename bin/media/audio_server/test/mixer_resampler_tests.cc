@@ -307,7 +307,7 @@ void TestInterpolation(uint32_t source_frames_per_second,
   expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
-  expected = -1;          // result of -0.5 correctly rounds out, to -1
+  expected = -1;          // result -0.5  rounds "out" to -1
 
   mix_result =
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
@@ -341,7 +341,7 @@ void TestInterpolation(uint32_t source_frames_per_second,
   expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
-  expected = 0;           // result 0.49999 "rounds in", to 0.
+  expected = 0;           // result 0.49999 rounds "in", to 0.
 
   mix_result =
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
@@ -358,7 +358,7 @@ void TestInterpolation(uint32_t source_frames_per_second,
   expected_src_offset = frac_src_offset + frac_step_size;
   dst_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
-  expected = 0;           // result −0.49999 "rounds in", to 0.
+  expected = 0;           // result −0.49999 rounds "in", to 0.
 
   mix_result =
       mixer->Mix(&accum_result, 1, &dst_offset, source, 2 << kPtsFractionalBits,
@@ -411,9 +411,80 @@ TEST(Resampling, Interpolation_Rate_Max_Error) {
   TestInterpolation(38426, 44100);
 }
 
-//
-// TODO(mpuryear): Test Mixer::Reset() and pos_filter_width()/neg_filter_width()
-//
+// Verify PointSampler filter widths.
+TEST(Resampling, FilterWidth_Point) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1,
+                               48000, Resampler::SampleAndHold);
+
+  EXPECT_EQ(mixer->pos_filter_width(), 0u);
+  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+
+  mixer->Reset();
+
+  EXPECT_EQ(mixer->pos_filter_width(), 0u);
+  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+}
+
+// Verify LinearSampler filter widths.
+TEST(Resampling, FilterWidth_Linear) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000,
+                               Resampler::LinearInterpolation);
+
+  EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+
+  mixer->Reset();
+
+  EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
+  EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
+}
+
+// Verify LinearSampler::Reset clears out any cached "previous edge" values.
+// Earlier test (Position_Fractional_Linear) already validates
+// that LinearSampler correctly caches edge values, so just validate Reset.
+TEST(Resampling, Reset_Linear) {
+  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                               Resampler::LinearInterpolation);
+
+  // When src_offset ends on fractional val, it caches that sample for next mix
+  // Source (offset 0.5 of 3) has 2.5. Destination (offset 2 of 4) wants 2.
+  int32_t frac_src_offset = 1 << (kPtsFractionalBits - 1);  // 0.5
+  int16_t source[] = {0x1B0, 0xEA, 0x28E, 0x4D2, 0x3039};
+
+  uint32_t dst_offset = 2;
+  uint32_t frac_step_size = Mixer::FRAC_ONE;
+  // Mix (accumulate) source[0:1,1:2] into accum[2,3].
+  int32_t accum[] = {-0x6F00, -0xDE00, -0x14D00, -0x1BC00, -0x22B00};
+  int32_t expect[] = {-0x6F00, -0xDE00, 0, 0, -0x22B00};
+  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+
+  bool mix_result =
+      mixer->Mix(accum, 4, &dst_offset, source, 3 << kPtsFractionalBits,
+                 &frac_src_offset, frac_step_size, Gain::kUnityScale, true);
+  EXPECT_EQ(4u, dst_offset);
+  EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+  // src_offset ended less than 1 from end: src[2] will be cached for next mix.
+
+  // Mixes with a frac_src_offset < 0 rely on a cached val. This one, post-
+  // reset, has no cached vals and hence uses 0 for "left" vals during interp.
+  mixer->Reset();
+
+  // Start the src at offset -0.5.
+  frac_src_offset = -(1 << (kPtsFractionalBits - 1));
+  // Dst wants only one sample, at dst[0].
+  dst_offset = 0;
+  expect[0] = 0xD800;  // Mix( :1B0)=D8 to [0]. Without Reset, = (28E:1B0)=21F.
+  NormalizeInt24ToPipelineBitwidth(&expect[0], 1);
+
+  mix_result =
+      mixer->Mix(accum, 1, &dst_offset, source, 2 << kPtsFractionalBits,
+                 &frac_src_offset, frac_step_size, Gain::kUnityScale, false);
+  EXPECT_EQ(1u, dst_offset);
+  EXPECT_EQ(1 << (kPtsFractionalBits - 1), frac_src_offset);
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
+}
 
 }  // namespace test
 }  // namespace audio
