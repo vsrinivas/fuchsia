@@ -590,8 +590,7 @@ ClientSecret CobaltApp::getClientSecret() {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/system/data/boringssl/cert.pem",
-         1);
+  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/config/ssl/cert.pem", 1);
 
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

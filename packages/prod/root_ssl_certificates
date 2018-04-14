@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "root_ssl_certificates": "//garnet/root_ssl_certificates"
+    }
+}

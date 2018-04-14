@@ -67,8 +67,9 @@ void NamespaceBuilder::AddSandbox(
       // TODO(flowerhack): Make this feature more fine-grained.
       PushDirectoryFromPath("/data");
     } else if (feature == "root-ssl-certificates") {
-      PushDirectoryFromPath("/system/data/boringssl");
-      PushDirectoryFromPathAs("/system/data/boringssl", "/etc/ssl");
+      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
+      // TODO(joshlf): Remove this mount once BoringSSL is updated to use the new path in /features
+      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/system/data/boringssl");
     } else if (feature == "shell") {
       // TODO(abarth): These permissions should depend on the envionment
       // in some way so that a shell running at a user-level scope doesn't
