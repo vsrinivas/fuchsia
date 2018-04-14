@@ -201,8 +201,12 @@ void PortDispatcher::on_zero_handles() {
             eport->OnPortZeroHandles();
             get_lock()->Acquire();
         }
+
+        // Free any queued packets.
+        while (!packets_.is_empty()) {
+            FreePacket(packets_.pop_front());
+        }
     }
-    while (Dequeue(0ull, nullptr) == ZX_OK) {}
 }
 
 zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
@@ -261,8 +265,7 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
             if (port_packet == nullptr)
                 goto wait;
 
-            if (out_packet != nullptr)
-                *out_packet = port_packet->packet;
+            *out_packet = port_packet->packet;
             FreePacket(port_packet);
         }
 
