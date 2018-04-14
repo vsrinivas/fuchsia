@@ -82,3 +82,12 @@ FUNCTION(arch_zero_page)
 
     ret
 END_FUNCTION(arch_zero_page)
+
+// This clobbers %rax and memory below %rsp, but preserves all other registers.
+FUNCTION(load_startup_idt)
+    lea _idt_startup(%rip), %rax
+    movw $(16 * 256) - 1, -16(%rsp)
+    movq %rax, -16+2(%rsp)
+    lidt -16(%rsp)
+    ret
+END_FUNCTION(load_startup_idt)

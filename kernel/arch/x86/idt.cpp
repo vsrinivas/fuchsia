@@ -26,12 +26,6 @@
 
 // Early boot shared IDT structure
 struct idt _idt_startup;
-// clang-format off
-struct idtr _idtr = {
-    .limit = sizeof(_idt_startup) - 1,
-    .address = (uintptr_t)&_idt_startup
-};
-// clang-format on
 
 // IDT after early boot
 struct idt _idt __ALIGNED(PAGE_SIZE);

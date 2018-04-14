@@ -200,9 +200,9 @@ high_entry:
     wrmsr
 
     /* set up the idt */
-    mov $_idt_startup, %rdi
+    lea _idt_startup(%rip), %rdi
     call idt_setup
-    lidt _idtr
+    call load_startup_idt
 
     /* assign this core CPU# 0 and initialize its per cpu state */
     xor %edi, %edi
