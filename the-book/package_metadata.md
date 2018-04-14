@@ -116,9 +116,8 @@ The set of currently known features are as follows:
   likely make this access more fine-grained than just the `/data` directory.)
 
 - `root-ssl-certificates`, which requests access to the root SSL certificates
-  for the device. These certicates are provided in the `/etc/ssl` and
-  `/system/data/boringssl` directories in the package's namespace. (The latter
-  of which will be removed once all clients transition to the former.)
+  for the device. These certicates are provided in the `/config/ssl` directory
+  in the package's namespace.
 
 - `shell`, which requests access to the resources appropriate for an interactive
   command line. Typically, shells are granted access to all the resources
