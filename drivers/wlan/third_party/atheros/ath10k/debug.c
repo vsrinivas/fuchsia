@@ -55,7 +55,7 @@ struct ath10k_tlv_dump_data {
 
     /* pad to 32-bit boundaries as needed */
     uint8_t tlv_data[];
-} __packed;
+} __PACKED;
 
 struct ath10k_dump_file_data {
     /* dump file information */
@@ -111,7 +111,7 @@ struct ath10k_dump_file_data {
 
     /* struct ath10k_tlv_dump_data + more */
     uint8_t data[0];
-} __packed;
+} __PACKED;
 
 void ath10k_debug_print_hwfw_info(struct ath10k* ar) {
     const struct firmware* firmware;
@@ -1341,7 +1341,7 @@ static const char ath10k_gstrings_stats[][ETH_GSTRING_LEN] = {
     "d_fw_cold_reset_count",
 };
 
-#define ATH10K_SSTATS_LEN ARRAY_SIZE(ath10k_gstrings_stats)
+#define ATH10K_SSTATS_LEN countof(ath10k_gstrings_stats)
 
 void ath10k_debug_get_et_strings(struct ieee80211_hw* hw,
                                  struct ieee80211_vif* vif,

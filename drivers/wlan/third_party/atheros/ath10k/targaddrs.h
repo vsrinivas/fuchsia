@@ -223,7 +223,7 @@ struct host_interest {
 
     /* bdata's sig and key addr */
     uint32_t hi_bd_sig_key;                  /* 0x11c */
-} __packed;
+} __PACKED;
 
 #define HI_ITEM(item)  offsetof(struct host_interest, item)
 

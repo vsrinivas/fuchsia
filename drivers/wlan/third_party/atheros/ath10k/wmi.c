@@ -2474,7 +2474,7 @@ void ath10k_wmi_event_chan_info(struct ath10k* ar, struct sk_buff* skb) {
     }
 
     idx = freq_to_idx(ar, freq);
-    if (idx >= ARRAY_SIZE(ar->survey)) {
+    if (idx >= countof(ar->survey)) {
         ath10k_warn("chan info: invalid frequency %d (idx %d out of bounds)\n",
                     freq, idx);
         goto exit;
@@ -3340,7 +3340,7 @@ static int ath10k_wmi_op_pull_swba_ev(struct ath10k* ar, struct sk_buff* skb,
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == ARRAY_SIZE(arg->tim_info))) {
+        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -3388,7 +3388,7 @@ static int ath10k_wmi_10_2_4_op_pull_swba_ev(struct ath10k* ar,
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == ARRAY_SIZE(arg->tim_info))) {
+        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -3434,7 +3434,7 @@ static int ath10k_wmi_10_4_op_pull_swba_ev(struct ath10k* ar,
         /* If this happens there were some changes in firmware and
          * ath10k should update the max size of tim_info array.
          */
-        if (WARN_ON_ONCE(i == ARRAY_SIZE(arg->tim_info))) {
+        if (WARN_ON_ONCE(i == countof(arg->tim_info))) {
             break;
         }
 
@@ -4488,7 +4488,7 @@ static int ath10k_wmi_alloc_chunk(struct ath10k* ar, uint32_t req_id,
                                   uint32_t num_units, uint32_t unit_len) {
     uint32_t pool_size;
     unsigned int idx = ar->wmi.num_mem_chunks;
-    ZX_ASSERT(idx < ARRAY_SIZE(ar->wmi.mem_chunks));
+    ZX_ASSERT(idx < countof(ar->wmi.mem_chunks));
 
     pool_size = num_units * roundup(unit_len, 4);
     zx_status_t status = io_buffer_init(&ar->wmi.mem_chunks[idx].handle, pool_size,
@@ -4605,7 +4605,7 @@ ath10k_wmi_main_op_pull_svc_rdy_ev(struct ath10k* ar, struct sk_buff* skb,
     arg->service_map_len = sizeof(ev->wmi_service_bitmap);
 
     n = min_t(size_t, arg->num_mem_reqs,
-              ARRAY_SIZE(arg->mem_reqs));
+              countof(arg->mem_reqs));
     for (i = 0; i < n; i++) {
         arg->mem_reqs[i] = &ev->mem_reqs[i];
     }
@@ -4645,7 +4645,7 @@ ath10k_wmi_10x_op_pull_svc_rdy_ev(struct ath10k* ar, struct sk_buff* skb,
     arg->service_map_len = sizeof(ev->wmi_service_bitmap);
 
     n = min_t(size_t, arg->num_mem_reqs,
-              ARRAY_SIZE(arg->mem_reqs));
+              countof(arg->mem_reqs));
     for (i = 0; i < n; i++) {
         arg->mem_reqs[i] = &ev->mem_reqs[i];
     }
@@ -4930,7 +4930,7 @@ static int ath10k_wmi_event_pdev_bss_chan_info(struct ath10k* ar,
 
     mtx_lock(&ar->data_lock);
     idx = freq_to_idx(ar, freq);
-    if (idx >= ARRAY_SIZE(ar->survey)) {
+    if (idx >= countof(ar->survey)) {
         ath10k_warn("bss chan info: invalid frequency %d (idx %d out of bounds)\n",
                     freq, idx);
         goto exit;
@@ -5964,7 +5964,7 @@ int ath10k_wmi_start_scan_verify(const struct wmi_start_scan_arg* arg) {
     if (arg->ie_len > WLAN_SCAN_PARAMS_MAX_IE_LEN) {
         return -EINVAL;
     }
-    if (arg->n_channels > ARRAY_SIZE(arg->channels)) {
+    if (arg->n_channels > countof(arg->channels)) {
         return -EINVAL;
     }
     if (arg->n_ssids > WLAN_SCAN_PARAMS_MAX_SSID) {
@@ -7496,31 +7496,31 @@ ath10k_wmi_fw_vdev_stats_fill(const struct ath10k_fw_stats_vdev* vdev,
     len += scnprintf(buf + len, buf_len - len, "%30s %u\n",
                      "num tx not acked", vdev->num_tx_not_acked);
 
-    for (i = 0 ; i < ARRAY_SIZE(vdev->num_tx_frames); i++)
+    for (i = 0 ; i < countof(vdev->num_tx_frames); i++)
         len += scnprintf(buf + len, buf_len - len,
                          "%25s [%02d] %u\n",
                          "num tx frames", i,
                          vdev->num_tx_frames[i]);
 
-    for (i = 0 ; i < ARRAY_SIZE(vdev->num_tx_frames_retries); i++)
+    for (i = 0 ; i < countof(vdev->num_tx_frames_retries); i++)
         len += scnprintf(buf + len, buf_len - len,
                          "%25s [%02d] %u\n",
                          "num tx frames retries", i,
                          vdev->num_tx_frames_retries[i]);
 
-    for (i = 0 ; i < ARRAY_SIZE(vdev->num_tx_frames_failures); i++)
+    for (i = 0 ; i < countof(vdev->num_tx_frames_failures); i++)
         len += scnprintf(buf + len, buf_len - len,
                          "%25s [%02d] %u\n",
                          "num tx frames failures", i,
                          vdev->num_tx_frames_failures[i]);
 
-    for (i = 0 ; i < ARRAY_SIZE(vdev->tx_rate_history); i++)
+    for (i = 0 ; i < countof(vdev->tx_rate_history); i++)
         len += scnprintf(buf + len, buf_len - len,
                          "%25s [%02d] 0x%08x\n",
                          "tx rate history", i,
                          vdev->tx_rate_history[i]);
 
-    for (i = 0 ; i < ARRAY_SIZE(vdev->beacon_rssi_history); i++)
+    for (i = 0 ; i < countof(vdev->beacon_rssi_history); i++)
         len += scnprintf(buf + len, buf_len - len,
                          "%25s [%02d] %u\n",
                          "beacon rssi history", i,

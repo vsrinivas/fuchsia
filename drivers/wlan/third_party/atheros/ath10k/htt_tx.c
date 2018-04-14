@@ -1081,7 +1081,7 @@ int ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmode,
 
     res = ath10k_hif_tx_sg(htt->ar,
                            htt->ar->htc.endpoint[htt->eid].ul_pipe_id,
-                           sg_items, ARRAY_SIZE(sg_items));
+                           sg_items, countof(sg_items));
     if (res) {
         goto err_unmap_msdu;
     }

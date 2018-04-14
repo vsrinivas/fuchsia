@@ -1128,7 +1128,7 @@ struct wmi_tlv {
     uint16_t len;
     uint16_t tag;
     uint8_t value[0];
-} __packed;
+} __PACKED;
 
 #define WMI_TLV_MGMT_RX_NUM_RSSI 4
 
@@ -1140,7 +1140,7 @@ struct wmi_tlv_mgmt_rx_ev {
     uint32_t buf_len;
     uint32_t status;
     uint32_t rssi[WMI_TLV_MGMT_RX_NUM_RSSI];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_abi_version {
     uint32_t abi_ver0;
@@ -1149,7 +1149,7 @@ struct wmi_tlv_abi_version {
     uint32_t abi_ver_ns1;
     uint32_t abi_ver_ns2;
     uint32_t abi_ver_ns3;
-} __packed;
+} __PACKED;
 
 enum wmi_tlv_hw_bd_id {
     WMI_TLV_HW_BD_LEGACY = 0,
@@ -1162,7 +1162,7 @@ struct wmi_tlv_hw_bd_info {
     uint8_t project_id;
     uint8_t custom_id;
     uint8_t reference_design_id;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_svc_rdy_ev {
     uint32_t fw_build_vers;
@@ -1182,13 +1182,13 @@ struct wmi_tlv_svc_rdy_ev {
     uint32_t max_num_scan_chans;
     uint32_t hw_bd_id; /* 0 means hw_bd_info is invalid */
     struct wmi_tlv_hw_bd_info hw_bd_info[5];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_rdy_ev {
     struct wmi_tlv_abi_version abi;
     struct wmi_mac_addr mac_addr;
     uint32_t status;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_resource_config {
     uint32_t num_vdevs;
@@ -1227,18 +1227,18 @@ struct wmi_tlv_resource_config {
     uint32_t keep_alive_pattern_size;
     uint32_t max_tdls_concurrent_sleep_sta;
     uint32_t max_tdls_concurrent_buffer_sta;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_init_cmd {
     struct wmi_tlv_abi_version abi;
     uint32_t num_host_mem_chunks;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pdev_set_param_cmd {
     uint32_t pdev_id; /* not used yet */
     uint32_t param_id;
     uint32_t param_value;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pdev_set_rd_cmd {
     uint32_t pdev_id; /* not used yet */
@@ -1247,11 +1247,11 @@ struct wmi_tlv_pdev_set_rd_cmd {
     uint32_t regd_5ghz;
     uint32_t conform_limit_2ghz;
     uint32_t conform_limit_5ghz;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_scan_chan_list_cmd {
     uint32_t num_scan_chans;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_start_scan_cmd {
     struct wmi_start_scan_common common;
@@ -1261,7 +1261,7 @@ struct wmi_tlv_start_scan_cmd {
     uint32_t num_ssids;
     uint32_t ie_len;
     uint32_t num_probes;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_vdev_start_cmd {
     uint32_t vdev_id;
@@ -1274,7 +1274,7 @@ struct wmi_tlv_vdev_start_cmd {
     uint32_t bcn_tx_power;
     uint32_t num_noa_descr;
     uint32_t disable_hw_ack;
-} __packed;
+} __PACKED;
 
 enum {
     WMI_TLV_PEER_TYPE_DEFAULT = 0, /* generic / non-BSS / self-peer */
@@ -1288,7 +1288,7 @@ struct wmi_tlv_peer_create_cmd {
     uint32_t vdev_id;
     struct wmi_mac_addr peer_addr;
     uint32_t peer_type;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_peer_assoc_cmd {
     struct wmi_mac_addr mac_addr;
@@ -1308,34 +1308,34 @@ struct wmi_tlv_peer_assoc_cmd {
     uint32_t ht_info[2];
     uint32_t num_legacy_rates;
     uint32_t num_ht_rates;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pdev_suspend {
     uint32_t pdev_id; /* not used yet */
     uint32_t opt;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pdev_set_wmm_cmd {
     uint32_t pdev_id; /* not used yet */
     uint32_t dg_type; /* no idea.. */
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_vdev_wmm_params {
     uint32_t dummy;
     struct wmi_wmm_params params;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_vdev_set_wmm_cmd {
     uint32_t vdev_id;
     struct wmi_tlv_vdev_wmm_params vdev_wmm_params[4];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_phyerr_ev {
     uint32_t num_phyerrs;
     uint32_t tsf_l32;
     uint32_t tsf_u32;
     uint32_t buf_len;
-} __packed;
+} __PACKED;
 
 enum wmi_tlv_dbglog_param {
     WMI_TLV_DBGLOG_PARAM_LOG_LEVEL = 1,
@@ -1365,17 +1365,17 @@ enum wmi_tlv_dbglog_log_level {
 struct wmi_tlv_dbglog_cmd {
     uint32_t param;
     uint32_t value;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_resume_cmd {
     uint32_t reserved;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_req_stats_cmd {
     uint32_t stats_id; /* wmi_stats_id */
     uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_vdev_stats {
     uint32_t vdev_id;
@@ -1392,16 +1392,16 @@ struct wmi_tlv_vdev_stats {
     uint32_t num_tx_not_acked;
     uint32_t tx_rate_history[10];
     uint32_t beacon_rssi_history[10];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pktlog_enable {
     uint32_t reserved;
     uint32_t filter;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_pktlog_disable {
     uint32_t reserved;
-} __packed;
+} __PACKED;
 
 enum wmi_tlv_bcn_tx_status {
     WMI_TLV_BCN_TX_STATUS_OK,
@@ -1413,29 +1413,29 @@ enum wmi_tlv_bcn_tx_status {
 struct wmi_tlv_bcn_tx_status_ev {
     uint32_t vdev_id;
     uint32_t tx_status;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_bcn_prb_info {
     uint32_t caps;
     uint32_t erp;
     uint8_t ies[0];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_bcn_tmpl_cmd {
     uint32_t vdev_id;
     uint32_t tim_ie_offset;
     uint32_t buf_len;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_prb_tmpl_cmd {
     uint32_t vdev_id;
     uint32_t buf_len;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_p2p_go_bcn_ie {
     uint32_t vdev_id;
     uint32_t ie_len;
-} __packed;
+} __PACKED;
 
 enum wmi_tlv_diag_item_type {
     WMI_TLV_DIAG_ITEM_TYPE_FW_EVENT,
@@ -1450,18 +1450,18 @@ struct wmi_tlv_diag_item {
     uint32_t timestamp;
     uint32_t code;
     uint8_t payload[0];
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_diag_data_ev {
     uint32_t num_items;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_sta_keepalive_cmd {
     uint32_t vdev_id;
     uint32_t enabled;
     uint32_t method; /* WMI_STA_KEEPALIVE_METHOD_ */
     uint32_t interval; /* in seconds */
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_stats_ev {
     uint32_t stats_id; /* WMI_STAT_ */
@@ -1470,38 +1470,38 @@ struct wmi_tlv_stats_ev {
     uint32_t num_peer_stats;
     uint32_t num_bcnflt_stats;
     uint32_t num_chan_stats;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_p2p_noa_ev {
     uint32_t vdev_id;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_roam_ev {
     uint32_t vdev_id;
     uint32_t reason;
     uint32_t rssi;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_add_del_event_cmd {
     uint32_t vdev_id;
     uint32_t is_add;
     uint32_t event_bitmap;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_enable_cmd {
     uint32_t enable;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_host_wakeup_ind {
     uint32_t reserved;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_event_info {
     uint32_t vdev_id;
     uint32_t flag;
     uint32_t wake_reason;
     uint32_t data_len;
-} __packed;
+} __PACKED;
 
 enum wmi_tlv_pattern_type {
     WOW_PATTERN_MIN = 0,
@@ -1527,19 +1527,19 @@ struct wmi_tlv_wow_bitmap_pattern {
     uint32_t pattern_len;
     uint32_t bitmask_len;
     uint32_t pattern_id;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_add_pattern_cmd {
     uint32_t vdev_id;
     uint32_t pattern_id;
     uint32_t pattern_type;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_wow_del_pattern_cmd {
     uint32_t vdev_id;
     uint32_t pattern_id;
     uint32_t pattern_type;
-} __packed;
+} __PACKED;
 
 /* TDLS Options */
 enum wmi_tlv_tdls_options {
@@ -1562,13 +1562,13 @@ struct wmi_tdls_set_state_cmd {
     uint32_t tdls_puapsd_mask;
     uint32_t tdls_puapsd_inactivity_time_ms;
     uint32_t tdls_puapsd_rx_frame_threshold;
-} __packed;
+} __PACKED;
 
 struct wmi_tdls_peer_update_cmd {
     uint32_t vdev_id;
     struct wmi_mac_addr peer_macaddr;
     uint32_t peer_state;
-} __packed;
+} __PACKED;
 
 enum {
     WMI_TLV_TDLS_PEER_QOS_AC_VO = BIT(0),
@@ -1592,11 +1592,11 @@ struct wmi_tdls_peer_capab {
     uint32_t is_peer_responder;
     uint32_t pref_offchan_num;
     uint32_t pref_offchan_bw;
-} __packed;
+} __PACKED;
 
 struct wmi_tlv_adaptive_qcs {
     uint32_t enable;
-} __packed;
+} __PACKED;
 
 /**
  * wmi_tlv_tx_pause_id - firmware tx queue pause reason types
@@ -1638,7 +1638,7 @@ struct wmi_tlv_tx_pause_ev {
     uint32_t vdev_map;
     uint32_t peer_id;
     uint32_t tid_map;
-} __packed;
+} __PACKED;
 
 #define WMI_TLV_PFX(type) ATH10K_MSG_TYPE_WMI_TLV_##type
 

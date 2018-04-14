@@ -108,13 +108,13 @@ static struct ieee80211_rate ath10k_rates_rev2[] = {
 #define ATH10K_MAC_FIRST_OFDM_RATE_IDX 4
 
 #define ath10k_a_rates (ath10k_rates + ATH10K_MAC_FIRST_OFDM_RATE_IDX)
-#define ath10k_a_rates_size (ARRAY_SIZE(ath10k_rates) - \
+#define ath10k_a_rates_size (countof(ath10k_rates) - \
                  ATH10K_MAC_FIRST_OFDM_RATE_IDX)
 #define ath10k_g_rates (ath10k_rates + 0)
-#define ath10k_g_rates_size (ARRAY_SIZE(ath10k_rates))
+#define ath10k_g_rates_size (countof(ath10k_rates))
 
 #define ath10k_g_rates_rev2 (ath10k_rates_rev2 + 0)
-#define ath10k_g_rates_rev2_size (ARRAY_SIZE(ath10k_rates_rev2))
+#define ath10k_g_rates_rev2_size (countof(ath10k_rates_rev2))
 
 static bool ath10k_mac_bitrate_is_cck(int bitrate) {
     switch (bitrate) {
@@ -329,7 +329,7 @@ static int ath10k_install_peer_wep_keys(struct ath10k_vif* arvif,
         return -ENOENT;
     }
 
-    for (i = 0; i < ARRAY_SIZE(arvif->wep_keys); i++) {
+    for (i = 0; i < countof(arvif->wep_keys); i++) {
         if (arvif->wep_keys[i] == NULL) {
             continue;
         }
@@ -420,7 +420,7 @@ static int ath10k_clear_peer_keys(struct ath10k_vif* arvif,
         return -ENOENT;
     }
 
-    for (i = 0; i < ARRAY_SIZE(peer->keys); i++) {
+    for (i = 0; i < countof(peer->keys); i++) {
         if (peer->keys[i] == NULL) {
             continue;
         }
@@ -461,7 +461,7 @@ bool ath10k_mac_is_peer_wep_key_set(struct ath10k* ar, const uint8_t* addr,
         return false;
     }
 
-    for (i = 0; i < ARRAY_SIZE(peer->keys); i++) {
+    for (i = 0; i < countof(peer->keys); i++) {
         if (peer->keys[i] && peer->keys[i]->keyidx == keyidx) {
             return true;
         }
@@ -489,7 +489,7 @@ static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
         mtx_lock(&ar->data_lock);
         i = 0;
         list_for_each_entry(peer, &ar->peers, list) {
-            for (i = 0; i < ARRAY_SIZE(peer->keys); i++) {
+            for (i = 0; i < countof(peer->keys); i++) {
                 if (peer->keys[i] == key) {
                     ether_addr_copy(addr, peer->addr);
                     peer->keys[i] = NULL;
@@ -497,13 +497,13 @@ static int ath10k_clear_vdev_key(struct ath10k_vif* arvif,
                 }
             }
 
-            if (i < ARRAY_SIZE(peer->keys)) {
+            if (i < countof(peer->keys)) {
                 break;
             }
         }
         mtx_unlock(&ar->data_lock);
 
-        if (i == ARRAY_SIZE(peer->keys)) {
+        if (i == countof(peer->keys)) {
             break;
         }
         /* key flags are not required to delete the key */
@@ -855,7 +855,7 @@ static void ath10k_peer_cleanup(struct ath10k* ar, uint32_t vdev_id) {
         /* Double check that peer is properly un-referenced from
          * the peer_map
          */
-        for (i = 0; i < ARRAY_SIZE(ar->peer_map); i++) {
+        for (i = 0; i < countof(ar->peer_map); i++) {
             if (ar->peer_map[i] == peer) {
                 ath10k_warn("removing stale peer_map entry for %pM (ptr %pK idx %d)\n",
                             peer->addr, peer, i);
@@ -882,7 +882,7 @@ static void ath10k_peer_cleanup_all(struct ath10k* ar) {
         kfree(peer);
     }
 
-    for (i = 0; i < ARRAY_SIZE(ar->peer_map); i++) {
+    for (i = 0; i < countof(ar->peer_map); i++) {
         ar->peer_map[i] = NULL;
     }
 
@@ -2752,7 +2752,7 @@ static int ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* arvif,
     smps = ht_cap->cap & IEEE80211_HT_CAP_SM_PS;
     smps >>= IEEE80211_HT_CAP_SM_PS_SHIFT;
 
-    if (smps >= ARRAY_SIZE(ath10k_smps_map)) {
+    if (smps >= countof(ath10k_smps_map)) {
         return -EINVAL;
     }
 
@@ -5009,7 +5009,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
     INIT_DELAYED_WORK(&arvif->connection_loss_work,
                       ath10k_mac_vif_sta_connection_loss_work);
 
-    for (i = 0; i < ARRAY_SIZE(arvif->bitrate_mask.control); i++) {
+    for (i = 0; i < countof(arvif->bitrate_mask.control); i++) {
         arvif->bitrate_mask.control[i].legacy = 0xffffffff;
         memset(arvif->bitrate_mask.control[i].ht_mcs, 0xff,
                sizeof(arvif->bitrate_mask.control[i].ht_mcs));
@@ -5085,7 +5085,7 @@ static int ath10k_add_interface(struct ieee80211_hw* hw,
      * queues for regular vif tx.
      */
     vif->cab_queue = arvif->vdev_id % (IEEE80211_MAX_QUEUES - 1);
-    for (i = 0; i < ARRAY_SIZE(vif->hw_queue); i++) {
+    for (i = 0; i < countof(vif->hw_queue); i++) {
         vif->hw_queue[i] = arvif->vdev_id % (IEEE80211_MAX_QUEUES - 1);
     }
 
@@ -5384,7 +5384,7 @@ static void ath10k_remove_interface(struct ieee80211_hw* hw,
     }
 
     mtx_lock(&ar->data_lock);
-    for (i = 0; i < ARRAY_SIZE(ar->peer_map); i++) {
+    for (i = 0; i < countof(ar->peer_map); i++) {
         peer = ar->peer_map[i];
         if (!peer) {
             continue;
@@ -6166,7 +6166,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         arsta->arvif = arvif;
         INIT_WORK(&arsta->update_wk, ath10k_sta_rc_update_wk);
 
-        for (i = 0; i < ARRAY_SIZE(sta->txq); i++) {
+        for (i = 0; i < countof(sta->txq); i++) {
             ath10k_mac_txq_init(sta->txq[i]);
         }
     }
@@ -6288,7 +6288,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         ath10k_mac_dec_num_stations(arvif, sta);
 
         mtx_lock(&ar->data_lock);
-        for (i = 0; i < ARRAY_SIZE(ar->peer_map); i++) {
+        for (i = 0; i < countof(ar->peer_map); i++) {
             peer = ar->peer_map[i];
             if (!peer) {
                 continue;
@@ -6310,7 +6310,7 @@ static int ath10k_sta_state(struct ieee80211_hw* hw,
         }
         mtx_unlock(&ar->data_lock);
 
-        for (i = 0; i < ARRAY_SIZE(sta->txq); i++) {
+        for (i = 0; i < countof(sta->txq); i++) {
             ath10k_mac_txq_unref(ar, sta->txq[i]);
         }
 
@@ -6862,11 +6862,11 @@ ath10k_mac_bitrate_mask_has_single_rate(struct ath10k* ar,
 
     num_rates += hweight32(mask->control[band].legacy);
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].ht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].ht_mcs); i++) {
         num_rates += hweight8(mask->control[band].ht_mcs[i]);
     }
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].vht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].vht_mcs); i++) {
         num_rates += hweight16(mask->control[band].vht_mcs[i]);
     }
 
@@ -6888,7 +6888,7 @@ ath10k_mac_bitrate_mask_get_single_nss(struct ath10k* ar,
         return false;
     }
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].ht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].ht_mcs); i++) {
         if (mask->control[band].ht_mcs[i] == 0) {
             continue;
         } else if (mask->control[band].ht_mcs[i] ==
@@ -6899,7 +6899,7 @@ ath10k_mac_bitrate_mask_get_single_nss(struct ath10k* ar,
         }
     }
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].vht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].vht_mcs); i++) {
         if (mask->control[band].vht_mcs[i] == 0) {
             continue;
         } else if (mask->control[band].vht_mcs[i] ==
@@ -6959,7 +6959,7 @@ ath10k_mac_bitrate_mask_get_single_rate(struct ath10k* ar,
         return 0;
     }
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].ht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].ht_mcs); i++) {
         if (hweight8(mask->control[band].ht_mcs[i]) == 1) {
             *nss = i + 1;
             *rate = WMI_RATE_PREAMBLE_HT << 6 |
@@ -6970,7 +6970,7 @@ ath10k_mac_bitrate_mask_get_single_rate(struct ath10k* ar,
         }
     }
 
-    for (i = 0; i < ARRAY_SIZE(mask->control[band].vht_mcs); i++) {
+    for (i = 0; i < countof(mask->control[band].vht_mcs); i++) {
         if (hweight16(mask->control[band].vht_mcs[i]) == 1) {
             *nss = i + 1;
             *rate = WMI_RATE_PREAMBLE_VHT << 6 |
@@ -7892,7 +7892,7 @@ static const struct ieee80211_iface_limit ath10k_10x_if_limits[] = {
 static const struct ieee80211_iface_combination ath10k_if_comb[] = {
     {
         .limits = ath10k_if_limits,
-        .n_limits = ARRAY_SIZE(ath10k_if_limits),
+        .n_limits = countof(ath10k_if_limits),
         .max_interfaces = 8,
         .num_different_channels = 1,
         .beacon_int_infra_match = true,
@@ -7902,7 +7902,7 @@ static const struct ieee80211_iface_combination ath10k_if_comb[] = {
 static const struct ieee80211_iface_combination ath10k_10x_if_comb[] = {
     {
         .limits = ath10k_10x_if_limits,
-        .n_limits = ARRAY_SIZE(ath10k_10x_if_limits),
+        .n_limits = countof(ath10k_10x_if_limits),
         .max_interfaces = 8,
         .num_different_channels = 1,
         .beacon_int_infra_match = true,
@@ -7977,13 +7977,13 @@ static struct ieee80211_iface_combination ath10k_tlv_if_comb[] = {
         .limits = ath10k_tlv_if_limit,
         .num_different_channels = 1,
         .max_interfaces = 4,
-        .n_limits = ARRAY_SIZE(ath10k_tlv_if_limit),
+        .n_limits = countof(ath10k_tlv_if_limit),
     },
     {
         .limits = ath10k_tlv_if_limit_ibss,
         .num_different_channels = 1,
         .max_interfaces = 2,
-        .n_limits = ARRAY_SIZE(ath10k_tlv_if_limit_ibss),
+        .n_limits = countof(ath10k_tlv_if_limit_ibss),
     },
 };
 
@@ -7992,19 +7992,19 @@ static struct ieee80211_iface_combination ath10k_tlv_qcs_if_comb[] = {
         .limits = ath10k_tlv_if_limit,
         .num_different_channels = 1,
         .max_interfaces = 4,
-        .n_limits = ARRAY_SIZE(ath10k_tlv_if_limit),
+        .n_limits = countof(ath10k_tlv_if_limit),
     },
     {
         .limits = ath10k_tlv_qcs_if_limit,
         .num_different_channels = 2,
         .max_interfaces = 4,
-        .n_limits = ARRAY_SIZE(ath10k_tlv_qcs_if_limit),
+        .n_limits = countof(ath10k_tlv_qcs_if_limit),
     },
     {
         .limits = ath10k_tlv_if_limit_ibss,
         .num_different_channels = 1,
         .max_interfaces = 2,
-        .n_limits = ARRAY_SIZE(ath10k_tlv_if_limit_ibss),
+        .n_limits = countof(ath10k_tlv_if_limit_ibss),
     },
 };
 
@@ -8025,7 +8025,7 @@ static const struct ieee80211_iface_limit ath10k_10_4_if_limits[] = {
 static const struct ieee80211_iface_combination ath10k_10_4_if_comb[] = {
     {
         .limits = ath10k_10_4_if_limits,
-        .n_limits = ARRAY_SIZE(ath10k_10_4_if_limits),
+        .n_limits = countof(ath10k_10_4_if_limits),
         .max_interfaces = 16,
         .num_different_channels = 1,
         .beacon_int_infra_match = true,
@@ -8191,8 +8191,8 @@ int ath10k_mac_register(struct ath10k* ar) {
 
     SET_IEEE80211_DEV(ar->hw, ar->dev);
 
-    BUILD_BUG_ON((ARRAY_SIZE(ath10k_2ghz_channels) +
-                  ARRAY_SIZE(ath10k_5ghz_channels)) !=
+    BUILD_BUG_ON((countof(ath10k_2ghz_channels) +
+                  countof(ath10k_5ghz_channels)) !=
                  ATH10K_NUM_CHANS);
 
     if (ar->phy_capability & WHAL_WLAN_11G_CAPABILITY) {
@@ -8205,7 +8205,7 @@ int ath10k_mac_register(struct ath10k* ar) {
         }
 
         band = &ar->mac.sbands[NL80211_BAND_2GHZ];
-        band->n_channels = ARRAY_SIZE(ath10k_2ghz_channels);
+        band->n_channels = countof(ath10k_2ghz_channels);
         band->channels = channels;
 
         if (ar->hw_params.cck_rate_map_rev2) {
@@ -8229,7 +8229,7 @@ int ath10k_mac_register(struct ath10k* ar) {
         }
 
         band = &ar->mac.sbands[NL80211_BAND_5GHZ];
-        band->n_channels = ARRAY_SIZE(ath10k_5ghz_channels);
+        band->n_channels = countof(ath10k_5ghz_channels);
         band->channels = channels;
         band->n_bitrates = ath10k_a_rates_size;
         band->bitrates = ath10k_a_rates;
@@ -8345,7 +8345,7 @@ int ath10k_mac_register(struct ath10k* ar) {
     case ATH10K_FW_WMI_OP_VERSION_MAIN:
         ar->hw->wiphy->iface_combinations = ath10k_if_comb;
         ar->hw->wiphy->n_iface_combinations =
-            ARRAY_SIZE(ath10k_if_comb);
+            countof(ath10k_if_comb);
         ar->hw->wiphy->interface_modes |= BIT(NL80211_IFTYPE_ADHOC);
         break;
     case ATH10K_FW_WMI_OP_VERSION_TLV:
@@ -8353,11 +8353,11 @@ int ath10k_mac_register(struct ath10k* ar) {
             ar->hw->wiphy->iface_combinations =
                 ath10k_tlv_qcs_if_comb;
             ar->hw->wiphy->n_iface_combinations =
-                ARRAY_SIZE(ath10k_tlv_qcs_if_comb);
+                countof(ath10k_tlv_qcs_if_comb);
         } else {
             ar->hw->wiphy->iface_combinations = ath10k_tlv_if_comb;
             ar->hw->wiphy->n_iface_combinations =
-                ARRAY_SIZE(ath10k_tlv_if_comb);
+                countof(ath10k_tlv_if_comb);
         }
         ar->hw->wiphy->interface_modes |= BIT(NL80211_IFTYPE_ADHOC);
         break;
@@ -8366,12 +8366,12 @@ int ath10k_mac_register(struct ath10k* ar) {
     case ATH10K_FW_WMI_OP_VERSION_10_2_4:
         ar->hw->wiphy->iface_combinations = ath10k_10x_if_comb;
         ar->hw->wiphy->n_iface_combinations =
-            ARRAY_SIZE(ath10k_10x_if_comb);
+            countof(ath10k_10x_if_comb);
         break;
     case ATH10K_FW_WMI_OP_VERSION_10_4:
         ar->hw->wiphy->iface_combinations = ath10k_10_4_if_comb;
         ar->hw->wiphy->n_iface_combinations =
-            ARRAY_SIZE(ath10k_10_4_if_comb);
+            countof(ath10k_10_4_if_comb);
         break;
     case ATH10K_FW_WMI_OP_VERSION_UNSET:
     case ATH10K_FW_WMI_OP_VERSION_MAX:
@@ -8424,7 +8424,7 @@ int ath10k_mac_register(struct ath10k* ar) {
     }
 
     ar->hw->wiphy->cipher_suites = cipher_suites;
-    ar->hw->wiphy->n_cipher_suites = ARRAY_SIZE(cipher_suites);
+    ar->hw->wiphy->n_cipher_suites = countof(cipher_suites);
 
     wiphy_ext_feature_set(ar->hw->wiphy, NL80211_EXT_FEATURE_CQM_RSSI_LIST);
 

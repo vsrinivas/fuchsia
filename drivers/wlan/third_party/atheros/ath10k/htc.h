@@ -71,14 +71,14 @@ struct ath10k_htc_hdr {
     union {
         uint8_t trailer_len; /* for rx */
         uint8_t control_byte0;
-    } __packed;
+    } __PACKED;
     union {
         uint8_t seq_no; /* for tx */
         uint8_t control_byte1;
-    } __packed;
+    } __PACKED;
     uint8_t pad0;
     uint8_t pad1;
-} __packed __aligned(4);
+} __PACKED __ALIGNED(4);
 
 enum ath10k_ath10k_htc_msg_id {
     ATH10K_HTC_MSG_READY_ID                = 1,
@@ -120,19 +120,19 @@ enum ath10k_htc_setup_complete_flags {
 
 struct ath10k_ath10k_htc_msg_hdr {
     uint16_t message_id; /* @enum htc_message_id */
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_unknown {
     uint8_t pad0;
     uint8_t pad1;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_ready {
     uint16_t credit_count;
     uint16_t credit_size;
     uint8_t max_endpoints;
     uint8_t pad0;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_ready_extended {
     struct ath10k_htc_ready base;
@@ -140,21 +140,21 @@ struct ath10k_htc_ready_extended {
     uint8_t max_msgs_per_htc_bundle;
     uint8_t pad0;
     uint8_t pad1;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_conn_svc {
     uint16_t service_id;
     uint16_t flags; /* @enum ath10k_htc_conn_flags */
     uint8_t pad0;
     uint8_t pad1;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_conn_svc_response {
     uint16_t service_id;
     uint8_t status; /* @enum ath10k_htc_conn_svc_status */
     uint8_t eid;
     uint16_t max_msg_size;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_setup_complete_extended {
     uint8_t pad0;
@@ -164,7 +164,7 @@ struct ath10k_htc_setup_complete_extended {
     uint8_t pad2;
     uint8_t pad3;
     uint8_t pad4;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_msg {
     struct ath10k_ath10k_htc_msg_hdr hdr;
@@ -179,7 +179,7 @@ struct ath10k_htc_msg {
         /* target-to-host */
         struct ath10k_htc_conn_svc_response connect_service_response;
     };
-} __packed __aligned(4);
+} __PACKED __ALIGNED(4);
 
 enum ath10k_ath10k_htc_record_id {
     ATH10K_HTC_RECORD_NULL             = 0,
@@ -193,14 +193,14 @@ struct ath10k_ath10k_htc_record_hdr {
     uint8_t len;
     uint8_t pad0;
     uint8_t pad1;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_credit_report {
     uint8_t eid; /* @enum ath10k_htc_ep_id */
     uint8_t credits;
     uint8_t pad0;
     uint8_t pad1;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_lookahead_report {
     uint8_t pre_valid;
@@ -212,11 +212,11 @@ struct ath10k_htc_lookahead_report {
     uint8_t pad3;
     uint8_t pad4;
     uint8_t pad5;
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_lookahead_bundle {
     uint8_t lookahead[4];
-} __packed;
+} __PACKED;
 
 struct ath10k_htc_record {
     struct ath10k_ath10k_htc_record_hdr hdr;
@@ -226,7 +226,7 @@ struct ath10k_htc_record {
         struct ath10k_htc_lookahead_bundle lookahead_bundle[0];
         uint8_t pauload[0];
     };
-} __packed __aligned(4);
+} __PACKED __ALIGNED(4);
 
 /*
  * note: the trailer offset is dynamic depending
@@ -239,7 +239,7 @@ struct ath10k_htc_frame {
         uint8_t payload[0];
     };
     struct ath10k_htc_record trailer[0];
-} __packed __aligned(4);
+} __PACKED __ALIGNED(4);
 
 /*******************/
 /* Host-side stuff */

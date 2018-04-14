@@ -55,7 +55,7 @@ enum rx_attention_flags {
 
 struct rx_attention {
     uint32_t flags; /* %RX_ATTENTION_FLAGS_ */
-} __packed;
+} __PACKED;
 
 /*
  * first_mpdu
@@ -210,7 +210,7 @@ struct rx_frag_info {
     uint8_t ring1_more_count;
     uint8_t ring2_more_count;
     uint8_t ring3_more_count;
-} __packed;
+} __PACKED;
 
 /*
  * ring0_more_count
@@ -263,12 +263,12 @@ struct rx_mpdu_start {
         struct {
             uint32_t pn31_0;
             uint32_t info1; /* %RX_MPDU_START_INFO1_ */
-        } __packed;
+        } __PACKED;
         struct {
             uint8_t pn[6];
-        } __packed;
-    } __packed;
-} __packed;
+        } __PACKED;
+    } __PACKED;
+} __PACKED;
 
 /*
  * peer_idx
@@ -360,7 +360,7 @@ struct rx_mpdu_start {
 
 struct rx_mpdu_end {
     uint32_t info0;
-} __packed;
+} __PACKED;
 
 /*
  * reserved_0
@@ -462,18 +462,18 @@ struct rx_msdu_start_common {
     uint32_t info0; /* %RX_MSDU_START_INFO0_ */
     uint32_t flow_id_crc;
     uint32_t info1; /* %RX_MSDU_START_INFO1_ */
-} __packed;
+} __PACKED;
 
 struct rx_msdu_start_qca99x0 {
     uint32_t info2; /* %RX_MSDU_START_INFO2_ */
-} __packed;
+} __PACKED;
 
 struct rx_msdu_start {
     struct rx_msdu_start_common common;
     union {
         struct rx_msdu_start_qca99x0 qca99x0;
-    } __packed;
-} __packed;
+    } __PACKED;
+} __PACKED;
 
 /*
  * msdu_length
@@ -567,7 +567,7 @@ struct rx_msdu_end_common {
     uint8_t classification_filter;
     uint8_t wapi_pn[10];
     uint32_t info0;
-} __packed;
+} __PACKED;
 
 #define RX_MSDU_END_INFO1_TCP_FLAG_MASK     0x000001ff
 #define RX_MSDU_END_INFO1_TCP_FLAG_LSB      0
@@ -590,14 +590,14 @@ struct rx_msdu_end_qca99x0 {
     uint32_t tcp_ack_no;
     uint32_t info1;
     uint32_t info2;
-} __packed;
+} __PACKED;
 
 struct rx_msdu_end {
     struct rx_msdu_end_common common;
     union {
         struct rx_msdu_end_qca99x0 qca99x0;
-    } __packed;
-} __packed;
+    } __PACKED;
+} __PACKED;
 
 /*
  *ip_hdr_chksum
@@ -709,7 +709,7 @@ struct rx_ppdu_start {
     uint32_t info3; /* %RX_PPDU_START_INFO3_ */
     uint32_t info4; /* %RX_PPDU_START_INFO4_ */
     uint32_t info5; /* %RX_PPDU_START_INFO5_ */
-} __packed;
+} __PACKED;
 
 /*
  * rssi_chain0_pri20
@@ -906,7 +906,7 @@ struct rx_ppdu_end_common {
     uint32_t evm_p15;
     uint32_t tsf_timestamp;
     uint32_t wb_timestamp;
-} __packed;
+} __PACKED;
 
 struct rx_ppdu_end_qca988x {
     uint8_t locationing_timestamp;
@@ -915,7 +915,7 @@ struct rx_ppdu_end_qca988x {
     uint32_t info0; /* %RX_PPDU_END_INFO0_ */
     uint16_t bb_length;
     uint16_t info1; /* %RX_PPDU_END_INFO1_ */
-} __packed;
+} __PACKED;
 
 #define RX_PPDU_END_RTT_CORRELATION_VALUE_MASK 0x00ffffff
 #define RX_PPDU_END_RTT_CORRELATION_VALUE_LSB  0
@@ -931,7 +931,7 @@ struct rx_ppdu_end_qca6174 {
     uint32_t rtt; /* %RX_PPDU_END_RTT_ */
     uint16_t bb_length;
     uint16_t info1; /* %RX_PPDU_END_INFO1_ */
-} __packed;
+} __PACKED;
 
 #define RX_PKT_END_INFO0_RX_SUCCESS              BIT(0)
 #define RX_PKT_END_INFO0_ERR_TX_INTERRUPT_RX     BIT(3)
@@ -958,7 +958,7 @@ struct rx_pkt_end {
     uint32_t info0; /* %RX_PKT_END_INFO0_ */
     uint32_t phy_timestamp_1;
     uint32_t phy_timestamp_2;
-} __packed;
+} __PACKED;
 
 #define RX_LOCATION_INFO0_RTT_FAC_LEGACY_MASK       0x00003fff
 #define RX_LOCATION_INFO0_RTT_FAC_LEGACY_LSB        0
@@ -993,7 +993,7 @@ struct rx_pkt_end {
 struct rx_location_info {
     uint32_t rx_location_info0; /* %RX_LOCATION_INFO0_ */
     uint32_t rx_location_info1; /* %RX_LOCATION_INFO1_ */
-} __packed;
+} __PACKED;
 
 enum rx_phy_ppdu_end_info0 {
     RX_PHY_PPDU_END_INFO0_ERR_RADAR           = BIT(2),
@@ -1048,7 +1048,7 @@ enum rx_phy_ppdu_end_info1 {
 struct rx_phy_ppdu_end {
     uint32_t info0; /* %RX_PHY_PPDU_END_INFO0_ */
     uint32_t info1; /* %RX_PHY_PPDU_END_INFO1_ */
-} __packed;
+} __PACKED;
 
 #define RX_PPDU_END_RX_TIMING_OFFSET_MASK          0x00000fff
 #define RX_PPDU_END_RX_TIMING_OFFSET_LSB           0
@@ -1071,7 +1071,7 @@ struct rx_ppdu_end_qca99x0 {
     uint32_t rx_info; /* %RX_PPDU_END_RX_INFO_ */
     uint16_t bb_length;
     uint16_t info1; /* %RX_PPDU_END_INFO1_ */
-} __packed;
+} __PACKED;
 
 struct rx_ppdu_end_qca9984 {
     struct rx_pkt_end rx_pkt_end;
@@ -1081,7 +1081,7 @@ struct rx_ppdu_end_qca9984 {
     uint32_t rx_info; /* %RX_PPDU_END_RX_INFO_ */
     uint16_t bb_length;
     uint16_t info1; /* %RX_PPDU_END_INFO1_ */
-} __packed;
+} __PACKED;
 
 struct rx_ppdu_end {
     struct rx_ppdu_end_common common;
@@ -1090,8 +1090,8 @@ struct rx_ppdu_end {
         struct rx_ppdu_end_qca6174 qca6174;
         struct rx_ppdu_end_qca99x0 qca99x0;
         struct rx_ppdu_end_qca9984 qca9984;
-    } __packed;
-} __packed;
+    } __PACKED;
+} __PACKED;
 
 /*
  * evm_p0
@@ -1220,6 +1220,6 @@ struct rx_ppdu_end {
 
 struct fw_rx_desc_base {
     uint8_t info0;
-} __packed;
+} __PACKED;
 
 #endif /* _RX_DESC_H_ */

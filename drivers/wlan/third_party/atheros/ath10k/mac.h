@@ -37,7 +37,7 @@ struct rfc1042_hdr {
     uint8_t llc_ctrl;
     uint8_t snap_oui[3];
     __be16 snap_type;
-} __packed;
+} __PACKED;
 
 struct ath10k* ath10k_mac_create(size_t priv_size);
 void ath10k_mac_destroy(struct ath10k* ar);

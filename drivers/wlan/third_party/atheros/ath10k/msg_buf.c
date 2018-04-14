@@ -74,7 +74,7 @@ zx_status_t ath10k_msg_bufs_init(struct ath10k* ar) {
     // type, with total size information).
     mtx_lock(&ath10k_msg_types_lock);
     if (!ath10k_msg_types_initialized) {
-        for (size_t ndx = 0; ndx < ARRAY_SIZE(ath10k_msg_types_init_data); ndx++) {
+        for (size_t ndx = 0; ndx < countof(ath10k_msg_types_init_data); ndx++) {
             enum ath10k_msg_type type = ath10k_msg_types_init_data[ndx].type;
             enum ath10k_msg_type parent_type = ath10k_msg_types_init_data[ndx].isa;
             struct ath10k_msg_type_info* type_info = &ath10k_msg_types_info[type];

@@ -582,7 +582,7 @@ struct amsdu_subframe_hdr {
     uint8_t dst[ETH_ALEN];
     uint8_t src[ETH_ALEN];
     __be16 len;
-} __packed;
+} __PACKED;
 
 #define GROUP_ID_IS_SU_MIMO(x) ((x) == 0 || (x) == 63)
 
@@ -2223,7 +2223,7 @@ static inline bool is_valid_legacy_rate(uint8_t rate) {
                                           };
     int i;
 
-    for (i = 0; i < ARRAY_SIZE(legacy_rates); i++) {
+    for (i = 0; i < countof(legacy_rates); i++) {
         if (rate == legacy_rates[i]) {
             return true;
         }

@@ -377,10 +377,10 @@ static const char* const ath10k_core_fw_feature_str[] = {
 static unsigned int ath10k_core_get_fw_feature_str(char* buf, size_t buf_len,
                                                    enum ath10k_fw_features feat) {
     /* make sure that ath10k_core_fw_feature_str[] gets updated */
-    BUILD_BUG_ON(ARRAY_SIZE(ath10k_core_fw_feature_str) !=
+    BUILD_BUG_ON(countof(ath10k_core_fw_feature_str) !=
                  ATH10K_FW_FEATURE_COUNT);
 
-    if (feat >= ARRAY_SIZE(ath10k_core_fw_feature_str) ||
+    if (feat >= countof(ath10k_core_fw_feature_str) ||
             WARN_ON(!ath10k_core_fw_feature_str[feat])) {
         return scnprintf(buf, buf_len, "bit%d", feat);
     }
@@ -1613,7 +1613,7 @@ static zx_status_t ath10k_init_hw_params(struct ath10k* ar) {
     const struct ath10k_hw_params* hw_params;
     unsigned int i;
 
-    for (i = 0; i < ARRAY_SIZE(ath10k_hw_params_list); i++) {
+    for (i = 0; i < countof(ath10k_hw_params_list); i++) {
         hw_params = &ath10k_hw_params_list[i];
 
         if (hw_params->id == ar->target_version &&
@@ -1622,7 +1622,7 @@ static zx_status_t ath10k_init_hw_params(struct ath10k* ar) {
         }
     }
 
-    if (i == ARRAY_SIZE(ath10k_hw_params_list)) {
+    if (i == countof(ath10k_hw_params_list)) {
         ath10k_err("Unsupported hardware version: 0x%x\n",
                    ar->target_version);
         return ZX_ERR_INVALID_ARGS;

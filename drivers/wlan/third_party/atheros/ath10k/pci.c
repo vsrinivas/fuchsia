@@ -1508,7 +1508,7 @@ zx_status_t ath10k_pci_hif_map_service_to_pipe(struct ath10k* ar, uint16_t servi
 
     ath10k_dbg(ar, ATH10K_DBG_PCI, "pci hif map service\n");
 
-    for (i = 0; i < ARRAY_SIZE(target_service_to_ce_map_wlan); i++) {
+    for (i = 0; i < countof(target_service_to_ce_map_wlan); i++) {
         entry = &target_service_to_ce_map_wlan[i];
 
         if (entry->service_id != service_id) {
@@ -3086,7 +3086,7 @@ static bool ath10k_pci_chip_is_supported(uint32_t dev_id, uint32_t chip_id) {
     int i;
     uint32_t rev_id = MS(chip_id, SOC_CHIP_ID_REV);
 
-    for (i = 0; i < ARRAY_SIZE(ath10k_pci_supp_chips); i++) {
+    for (i = 0; i < countof(ath10k_pci_supp_chips); i++) {
         supp_chip = &ath10k_pci_supp_chips[i];
 
         if (supp_chip->dev_id == dev_id &&

@@ -107,7 +107,7 @@ ath10k_wmi_tlv_iter(struct ath10k* ar, const void* ptr, size_t len,
             return -EINVAL;
         }
 
-        if (tlv_tag < ARRAY_SIZE(wmi_tlv_policies) &&
+        if (tlv_tag < countof(wmi_tlv_policies) &&
                 wmi_tlv_policies[tlv_tag].min_len &&
                 wmi_tlv_policies[tlv_tag].min_len > tlv_len) {
             ath10k_dbg(ar, ATH10K_DBG_WMI,
@@ -742,7 +742,7 @@ static int ath10k_wmi_tlv_swba_tim_parse(struct ath10k* ar, uint16_t tag, uint16
         return -EPROTO;
     }
 
-    if (swba->n_tim >= ARRAY_SIZE(swba->arg->tim_info)) {
+    if (swba->n_tim >= countof(swba->arg->tim_info)) {
         return -ENOBUFS;
     }
 
@@ -772,7 +772,7 @@ static int ath10k_wmi_tlv_swba_noa_parse(struct ath10k* ar, uint16_t tag, uint16
         return -EPROTO;
     }
 
-    if (swba->n_noa >= ARRAY_SIZE(swba->arg->noa_info)) {
+    if (swba->n_noa >= countof(swba->arg->noa_info)) {
         return -ENOBUFS;
     }
 
@@ -902,7 +902,7 @@ ath10k_wmi_tlv_parse_mem_reqs(struct ath10k* ar, uint16_t tag, uint16_t len,
         return -EPROTO;
     }
 
-    for (i = 0; i < ARRAY_SIZE(arg->mem_reqs); i++) {
+    for (i = 0; i < countof(arg->mem_reqs); i++) {
         if (!arg->mem_reqs[i]) {
             arg->mem_reqs[i] = ptr;
             return 0;
@@ -1028,23 +1028,23 @@ static void ath10k_wmi_tlv_pull_vdev_stats(const struct wmi_tlv_vdev_stats* src,
     dst->num_rx_discard = src->num_rx_discard;
     dst->num_tx_not_acked = src->num_tx_not_acked;
 
-    for (i = 0; i < ARRAY_SIZE(src->num_tx_frames); i++)
+    for (i = 0; i < countof(src->num_tx_frames); i++)
         dst->num_tx_frames[i] =
             src->num_tx_frames[i];
 
-    for (i = 0; i < ARRAY_SIZE(src->num_tx_frames_retries); i++)
+    for (i = 0; i < countof(src->num_tx_frames_retries); i++)
         dst->num_tx_frames_retries[i] =
             src->num_tx_frames_retries[i];
 
-    for (i = 0; i < ARRAY_SIZE(src->num_tx_frames_failures); i++)
+    for (i = 0; i < countof(src->num_tx_frames_failures); i++)
         dst->num_tx_frames_failures[i] =
             src->num_tx_frames_failures[i];
 
-    for (i = 0; i < ARRAY_SIZE(src->tx_rate_history); i++)
+    for (i = 0; i < countof(src->tx_rate_history); i++)
         dst->tx_rate_history[i] =
             src->tx_rate_history[i];
 
-    for (i = 0; i < ARRAY_SIZE(src->beacon_rssi_history); i++)
+    for (i = 0; i < countof(src->beacon_rssi_history); i++)
         dst->beacon_rssi_history[i] =
             src->beacon_rssi_history[i];
 }
