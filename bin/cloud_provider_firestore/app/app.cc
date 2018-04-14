@@ -59,7 +59,7 @@ class App : public modular::Lifecycle {
 int main(int argc, const char** argv) {
   // The trust root file is made available by the sandbox feature
   // "root-ssl-certificates"
-  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/etc/ssl/cert.pem", 1);
+  setenv("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "/config/ssl/cert.pem", 1);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);
