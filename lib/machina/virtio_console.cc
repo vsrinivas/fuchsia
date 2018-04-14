@@ -5,7 +5,6 @@
 #include "garnet/lib/machina/virtio_console.h"
 
 #include <virtio/virtio_ids.h>
-#include <zircon/device/ethernet.h>
 
 #include <fcntl.h>
 #include <string.h>
@@ -14,124 +13,158 @@
 
 namespace machina {
 
-VirtioConsole::Stream::Stream(async_t* async,
-                              VirtioQueue* queue,
-                              zx_handle_t socket)
-    : async_(async),
-      socket_(socket),
-      queue_(queue),
-      queue_wait_(async,
-                  queue,
-                  fbl::BindMember(this, &VirtioConsole::Stream::OnQueueReady)) {
-}
+// Represents an single, unidirectional serial stream.
+class Stream {
+ public:
+  Stream(async_t* async, VirtioQueue* queue, zx_handle_t socket)
+      : async_(async),
+        socket_(socket),
+        queue_(queue),
+        queue_wait_(async,
+                    queue,
+                    fbl::BindMember(this, &Stream::OnQueueReady)) {}
 
-zx_status_t VirtioConsole::Stream::Start() {
-  return WaitOnQueue();
-}
+  zx_status_t Start() { return WaitOnQueue(); }
 
-void VirtioConsole::Stream::Stop() {
-  socket_wait_.Cancel();
-  queue_wait_.Cancel();
-}
-
-zx_status_t VirtioConsole::Stream::WaitOnQueue() {
-  return queue_wait_.Begin();
-}
-
-void VirtioConsole::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
-  if (status == ZX_OK) {
-    head_ = index;
-    status = queue_->ReadDesc(head_, &desc_);
-  }
-  if (status != ZX_OK) {
-    OnStreamClosed(status, "reading descriptor");
-    return;
-  }
-  status = WaitOnSocket();
-  if (status != ZX_OK) {
-    OnStreamClosed(status, "waiting on socket");
-  }
-}
-
-zx_status_t VirtioConsole::Stream::WaitOnSocket() {
-  zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
-  signals |= desc_.writable ? ZX_SOCKET_READABLE : ZX_SOCKET_WRITABLE;
-  socket_wait_.set_object(socket_);
-  socket_wait_.set_trigger(signals);
-  return socket_wait_.Begin(async_);
-}
-
-void VirtioConsole::Stream::OnSocketReady(
-    async_t* async,
-    async::WaitBase* wait,
-    zx_status_t status,
-    const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    OnStreamClosed(status, "async wait on socket");
-    return;
+  void Stop() {
+    socket_wait_.Cancel();
+    queue_wait_.Cancel();
   }
 
-  const bool do_read = desc_.writable;
-  bool short_write = false;
-  size_t actual = 0;
-  if (do_read) {
-    status = zx_socket_read(socket_, 0, static_cast<void*>(desc_.addr),
-                            desc_.len, &actual);
-  } else {
-    status = zx_socket_write(socket_, 0, static_cast<const void*>(desc_.addr),
-                             desc_.len, &actual);
-    // It's possible only part of the descriptor has been written to the
-    // socket. If so we need to wait on ZX_SOCKET_WRITABLE again to write the
-    // remainder of the payload.
-    if (status == ZX_OK && desc_.len > actual) {
-      desc_.addr = reinterpret_cast<void*>(
-          reinterpret_cast<uintptr_t>(desc_.addr) + actual);
-      desc_.len -= actual;
-      short_write = true;
+ private:
+  zx_status_t WaitOnQueue() { return queue_wait_.Begin(); }
+
+  void OnQueueReady(zx_status_t status, uint16_t index) {
+    if (status == ZX_OK) {
+      head_ = index;
+      status = queue_->ReadDesc(head_, &desc_);
     }
-  }
-  if (status == ZX_ERR_SHOULD_WAIT || short_write) {
-    status = wait->Begin(async);
     if (status != ZX_OK) {
-      OnStreamClosed(status, "async wait on socket");
+      OnStreamClosed(status, "reading descriptor");
+      return;
     }
-    return;
+    status = WaitOnSocket();
+    if (status != ZX_OK) {
+      OnStreamClosed(status, "waiting on socket");
+    }
   }
-  if (status != ZX_OK) {
-    OnStreamClosed(status, do_read ? "read from socket" : "write to socket");
-    return;
-  }
-  status = queue_->Return(head_, do_read ? actual : 0);
-  if (status != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to return descriptor " << status;
-  }
-  status = WaitOnQueue();
-  if (status != ZX_OK) {
-    OnStreamClosed(status, "wait on queue");
-  }
-}
 
-void VirtioConsole::Stream::OnStreamClosed(zx_status_t status,
-                                           const char* action) {
-  Stop();
-  FXL_LOG(ERROR) << "Stream closed during step '" << action << "' (" << status
-                 << ")";
-}
+  zx_status_t WaitOnSocket() {
+    zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
+    signals |= desc_.writable ? ZX_SOCKET_READABLE : ZX_SOCKET_WRITABLE;
+    socket_wait_.set_object(socket_);
+    socket_wait_.set_trigger(signals);
+    return socket_wait_.Begin(async_);
+  }
+
+  void OnSocketReady(async_t* async,
+                     async::WaitBase* wait,
+                     zx_status_t status,
+                     const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+      status = queue_->Return(head_, 0);
+      if (status != ZX_OK) {
+        FXL_LOG(WARNING) << "Failed to return descriptor " << status;
+      }
+      status = WaitOnQueue();
+    }
+
+    const bool do_read = desc_.writable;
+    bool short_write = false;
+    size_t actual = 0;
+    if (do_read) {
+      status = zx_socket_read(socket_, 0, static_cast<void*>(desc_.addr),
+                              desc_.len, &actual);
+    } else {
+      status = zx_socket_write(socket_, 0, static_cast<const void*>(desc_.addr),
+                               desc_.len, &actual);
+      // It's possible only part of the descriptor has been written to the
+      // socket. If so we need to wait on ZX_SOCKET_WRITABLE again to write the
+      // remainder of the payload.
+      if (status == ZX_OK && desc_.len > actual) {
+        desc_.addr = reinterpret_cast<void*>(
+            reinterpret_cast<uintptr_t>(desc_.addr) + actual);
+        desc_.len -= actual;
+        short_write = true;
+      }
+    }
+    if (status == ZX_ERR_SHOULD_WAIT || short_write) {
+      status = wait->Begin(async);
+      if (status != ZX_OK) {
+        OnStreamClosed(status, "async wait on socket");
+      }
+      return;
+    }
+    if (status != ZX_OK) {
+      OnStreamClosed(status, do_read ? "read from socket" : "write to socket");
+      return;
+    }
+    status = queue_->Return(head_, do_read ? actual : 0);
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "Failed to return descriptor " << status;
+    }
+    status = WaitOnQueue();
+    if (status != ZX_OK) {
+      OnStreamClosed(status, "wait on queue");
+    }
+  }
+
+  void OnStreamClosed(zx_status_t status, const char* action) {
+    Stop();
+    FXL_LOG(ERROR) << "Stream closed during step '" << action << "' (" << status
+                   << ")";
+  }
+
+  async_t* async_;
+  zx_handle_t socket_;
+  VirtioQueue* queue_;
+  VirtioQueueWaiter queue_wait_;
+  async::WaitMethod<Stream, &Stream::OnSocketReady> socket_wait_{this};
+  uint16_t head_;
+  virtio_desc_t desc_;
+};
+
+class VirtioConsole::Port {
+ public:
+  Port(async_t* async,
+       VirtioQueue* rx_queue,
+       VirtioQueue* tx_queue,
+       zx::socket socket)
+      : socket_(fbl::move(socket)),
+        rx_stream_(async, rx_queue, socket_.get()),
+        tx_stream_(async, tx_queue, socket_.get()) {}
+
+  zx_status_t Start() {
+    zx_status_t status = rx_stream_.Start();
+    if (status != ZX_OK) {
+      return status;
+    }
+    return tx_stream_.Start();
+  }
+
+ private:
+  zx::socket socket_;
+  Stream rx_stream_;
+  Stream tx_stream_;
+};
 
 VirtioConsole::VirtioConsole(const PhysMem& phys_mem,
                              async_t* async,
                              zx::socket socket)
-    : VirtioDeviceBase(phys_mem),
-      socket_(fbl::move(socket)),
-      rx_stream_(async, queue(0), socket_.get()),
-      tx_stream_(async, queue(1), socket_.get()) {}
+    : VirtioDeviceBase(phys_mem) {
+  {
+    fbl::AutoLock lock(&config_mutex_);
+    config_.max_nr_ports = kVirtioConsoleMaxNumPorts;
+  }
+  ports_[0] =
+      std::make_unique<Port>(async, queue(0), queue(1), std::move(socket));
+}
+
+VirtioConsole::~VirtioConsole() = default;
 
 zx_status_t VirtioConsole::Start() {
-  zx_status_t status = rx_stream_.Start();
-  if (status != ZX_OK) {
-    return status;
-  }
-  return tx_stream_.Start();
+  fbl::AutoLock lock(&mutex_);
+  return ports_[0]->Start();
 }
 
 }  // namespace machina
