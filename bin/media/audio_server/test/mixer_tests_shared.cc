@@ -10,7 +10,6 @@ namespace test {
 
 // Convenience abbreviations within this source file to shorten names
 using Resampler = media::audio::Mixer::Resampler;
-using ASF = AudioSampleFormat;
 
 //
 // Subtest utility functions -- used by test functions; can ASSERT on their own.
@@ -21,7 +20,7 @@ using ASF = AudioSampleFormat;
 // accumulation format (not the destination format), so we need not specify a
 // dst_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
-MixerPtr SelectMixer(ASF src_format,
+MixerPtr SelectMixer(AudioSampleFormat src_format,
                      uint32_t src_channels,
                      uint32_t src_frame_rate,
                      uint32_t dst_channels,
@@ -33,7 +32,7 @@ MixerPtr SelectMixer(ASF src_format,
   src_details.frames_per_second = src_frame_rate;
 
   AudioMediaTypeDetails dst_details;
-  dst_details.sample_format = ASF::SIGNED_16;
+  dst_details.sample_format = AudioSampleFormat::FLOAT;
   dst_details.channels = dst_channels;
   dst_details.frames_per_second = dst_frame_rate;
 
@@ -47,7 +46,7 @@ MixerPtr SelectMixer(ASF src_format,
 // destination format. They perform no SRC, gain scaling or rechannelization, so
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
-OutputFormatterPtr SelectOutputFormatter(ASF dst_format,
+OutputFormatterPtr SelectOutputFormatter(AudioSampleFormat dst_format,
                                          uint32_t num_channels) {
   AudioMediaTypeDetailsPtr dst_details = AudioMediaTypeDetails::New();
   dst_details->sample_format = dst_format;

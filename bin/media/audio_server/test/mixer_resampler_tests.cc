@@ -284,7 +284,9 @@ TEST(Timing, Interpolation_Values) {
   mix_result = mixer->Mix(&accum_result, 1, &dst_offset, source2,
                           2 << kPtsFractionalBits, &frac_src_offset,
                           frac_step_size, Gain::kUnityScale, false);
-
+  // frac_src_offset ended less than 1 sample from buffer end, so expect true.
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(3 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
@@ -301,6 +303,8 @@ TEST(Timing, Interpolation_Values) {
                           2 << kPtsFractionalBits, &frac_src_offset,
                           frac_step_size, Gain::kUnityScale, false);
 
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(3 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
@@ -317,6 +321,8 @@ TEST(Timing, Interpolation_Values) {
                           2 << kPtsFractionalBits, &frac_src_offset,
                           frac_step_size, Gain::kUnityScale, false);
 
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(0x1A56, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 
@@ -333,6 +339,8 @@ TEST(Timing, Interpolation_Values) {
                           2 << kPtsFractionalBits, &frac_src_offset,
                           frac_step_size, Gain::kUnityScale, false);
 
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(1u, dst_offset);
   EXPECT_EQ(0x1100, frac_src_offset);
   EXPECT_EQ(expected, accum_result);
 }

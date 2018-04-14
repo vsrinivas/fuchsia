@@ -74,13 +74,9 @@ class FrequencySet {
 
   // The full-spectrum audio tests use a broad set of standard frequencies.
   static constexpr uint32_t kNumReferenceFreqs = 47;
-  // Summary audio tests use a small frequency set taken from the full list.
-  static constexpr uint32_t kNumSummaryIdxs = 3;
 
   // Each val represents a standard frequency within the broad set.
   static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFreqs;
-  // Each val is a kReferenceFreqs index, pointing to a summary freq.
-  static const std::array<uint32_t, kNumSummaryIdxs> kSummaryIdxs;
 
   // Because of translation between power-of-two-sized buffers and sample rate,
   // values in kReferenceFreqs translate into the following actual frequencies:
@@ -88,8 +84,14 @@ class FrequencySet {
 
   // Certain tests (such as noise floor and sinad) are evaluated with a
   // sinusoidal input at a single reference frequency (usually close to 1 kHz).
-  static constexpr uint32_t kRefFreqIdx = 20;  // 1kHz reference tone
+  static constexpr uint32_t kRefFreqIdx = 20;  // [20] is 1kHz reference tone.
   static const uint32_t kReferenceFreq;
+
+  // Summary audio tests use a small frequency set taken from the full list.
+  static constexpr uint32_t kNumSummaryIdxs = 3;
+
+  // Each val is a kReferenceFreqs index, pointing to a summary freq.
+  static const std::array<uint32_t, kNumSummaryIdxs> kSummaryIdxs;
 
   // class is static only - prevent attempts to instantiate it
   FrequencySet() = delete;

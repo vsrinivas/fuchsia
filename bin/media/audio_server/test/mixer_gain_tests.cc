@@ -147,11 +147,11 @@ TEST(Gain, Precision) {
   Gain gain;
   gain.SetRendererGain(-159.99f);
   Gain::AScale amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x00000003u, amplitude_scale);  // 2.68 rounds up to 3
+  EXPECT_EQ(0x00000003u, amplitude_scale);  // ...2.68 rounds up to ...3
 
   gain.SetRendererGain(-157.696f);
   amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0x00000003u, amplitude_scale);  // 3.499 correctly rounds down to 3
+  EXPECT_EQ(0x00000003u, amplitude_scale);  // ...3.499 rounds down to ...3
 
   gain.SetRendererGain(-0.50f);
   amplitude_scale = gain.GetGainScale(0.0f);
@@ -159,7 +159,7 @@ TEST(Gain, Precision) {
 
   gain.SetRendererGain(Gain::kMaxGain);
   amplitude_scale = gain.GetGainScale(0.0f);
-  EXPECT_EQ(0xFD9539A4u, amplitude_scale);  // FD9539A4.4 correctly rounds down
+  EXPECT_EQ(0xFD9539A4u, amplitude_scale);  // ...A4.4 rounds down to ...A4
 }
 
 //
@@ -175,8 +175,6 @@ TEST(Gain, Scaling_Linearity) {
   Gain gain;
 
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
-  //
-  // Can a signal with kMaxGain exceed the max value for a sample?  Yes.
   gain.SetRendererGain(20.0f);
   Gain::AScale stream_scale = gain.GetGainScale(0.0f);
 
@@ -203,9 +201,9 @@ TEST(Gain, Scaling_Linearity) {
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
-// How does our Gain respond to very low values? During scaling we shift-right,
-// first biasing values by a fractional value so that we 'round away from zero'.
-// By this we mean: +1.5 becomes +2; -1.5 becomes -2; -1.1 becomes -1.
+// How does our Gain respond to very low values? Today during the scaling
+// process, the system should round fractional data values away from 0.
+// By "round away from zero", we mean: 1.5 --> 2; -1.5 --> -2; -1.1 --> -1.
 TEST(Gain, Scaling_Precision) {
   int16_t source[] = {32767, -32768, -1, 1};  // max/min values
   int32_t accum[4];
@@ -299,7 +297,9 @@ TEST(Gain, Accumulator) {
 
 // How does our accumulator behave at its limits? Does it clamp or rollover?
 TEST(Gain, Accumulator_Clamp) {
+  // These vals lead to positive/negative rollover in int32, if not guarded.
   int16_t source[] = {32767, -32768};
+
   // If we add these vals, accum SHOULD clamp to int32::max and int32::min.
   int32_t accum[] = {std::numeric_limits<int32_t>::max() - 32767 + 2,
                      std::numeric_limits<int32_t>::min() + 32768 - 2};
@@ -352,6 +352,10 @@ TEST(Gain, Accumulator_Clear) {
         Gain::MuteThreshold(15));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
+
+// Headroom - post-SUM gain
+// TODO(mpuryear): When we have a master gain stage that can take advantage of
+// the headroom inherent in a multi-stream accumulator, implement this test.
 
 }  // namespace test
 }  // namespace audio

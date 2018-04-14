@@ -14,43 +14,6 @@ namespace test {
 // These test functions, run after all other details tests have executed,
 // producing a digest of the various audio fidelity measurements made.
 //
-// Display our baseline noise floor measurements, in decibels below full-scale
-//
-// 'Source' noise floor is the demonstrated best-case background noise when
-// accepting audio (from an AudioRenderer or audio Input device, for example).
-// 'Output' noise floor is the demonstrated best-case background noise when
-// emitting audio (to an audio Output device or AudioCapturer, for example).
-TEST(Recap, NoiseFloor) {
-  printf("\n Best-case noise-floor");
-  printf("\n   (in dB, with prior results)");
-
-  printf("\n\n   Sources");
-  printf("\n\t     8-bit           16-bit            Float");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
-         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16,
-         AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
-
-  printf("\n\n   Mix Floor");
-  printf("\n\t     8-bit           16-bit          ");
-  printf("  Float         Stereo->Mono");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf) ", AudioResult::FloorMix8,
-         AudioResult::kPrevFloorMix8, AudioResult::FloorMix16,
-         AudioResult::kPrevFloorMix16);
-  printf("  %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorMixFloat,
-         AudioResult::kPrevFloorMixFloat, AudioResult::FloorStereoMono,
-         AudioResult::kPrevFloorStereoMono);
-
-  printf("\n\n   Outputs");
-  printf("\n\t     8-bit           16-bit            Float");
-  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
-         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
-         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
-         AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
-
-  printf("\n\n");
-}
-
 TEST(Recap, FreqResp) {
   printf("\n Frequency Response");
   printf("\n   (in dB, with prior results)");
@@ -283,6 +246,47 @@ TEST(Recap, SINAD) {
   printf("\n\n");
 }
 
+//
+// Display our baseline noise floor measurements, in decibels below full-scale
+//
+// 'Source' noise floor is the demonstrated best-case background noise when
+// accepting audio (from an AudioRenderer or audio Input device, for example).
+// 'Output' noise floor is the demonstrated best-case background noise when
+// emitting audio (to an audio Output device or AudioCapturer, for example).
+TEST(Recap, NoiseFloor) {
+  printf("\n Best-case noise-floor");
+  printf("\n   (in dB, with prior results)");
+
+  printf("\n\n   Sources");
+  printf("\n\t     8-bit           16-bit            Float");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorSource8, AudioResult::kPrevFloorSource8,
+         AudioResult::FloorSource16, AudioResult::kPrevFloorSource16,
+         AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
+
+  printf("\n\n   Mix Floor");
+  printf("\n\t     8-bit           16-bit          ");
+  printf("  Float         Stereo->Mono");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf) ", AudioResult::FloorMix8,
+         AudioResult::kPrevFloorMix8, AudioResult::FloorMix16,
+         AudioResult::kPrevFloorMix16);
+  printf("  %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)", AudioResult::FloorMixFloat,
+         AudioResult::kPrevFloorMixFloat, AudioResult::FloorStereoMono,
+         AudioResult::kPrevFloorStereoMono);
+
+  printf("\n\n   Outputs");
+  printf("\n\t     8-bit           16-bit            Float");
+  printf("\n\t %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)   %5.2lf  (%5.2lf)",
+         AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8,
+         AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16,
+         AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
+
+  printf("\n\n");
+}
+
+//
+// Display our gain sensitivity and dynamic range, in decibels
+//
 TEST(Recap, DynamicRange) {
   printf("\n Dynamic Range");
   printf("\n   (in dB, with prior results)");

@@ -14,7 +14,7 @@ namespace test {
 using Resampler = media::audio::Mixer::Resampler;
 
 //
-// Pass-thru Noise-Floor tests
+// Baseline Noise-Floor tests
 //
 // These tests determine our best-case audio quality/fidelity, in the absence of
 // any gain, interpolation/SRC, mixing, reformatting or other processing. These
@@ -29,28 +29,25 @@ using Resampler = media::audio::Mixer::Resampler;
 template <typename T>
 double MeasureSourceNoiseFloor(double* sinad_db) {
   MixerPtr mixer;
+  double amplitude, expected_amplitude;
 
   if (std::is_same<T, uint8_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
+    amplitude = std::numeric_limits<int8_t>::max();
+    expected_amplitude = std::numeric_limits<int8_t>::max() * (1 << 8);
   } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
+    amplitude = std::numeric_limits<int16_t>::max();
+    expected_amplitude = std::numeric_limits<int16_t>::max();
   } else if (std::is_same<T, float>::value) {
     mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
+    amplitude = 1.0;
+    expected_amplitude = -std::numeric_limits<int16_t>::min();
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
-  }
-
-  double amplitude;
-  if (std::is_same<T, uint8_t>::value) {
-    amplitude = std::numeric_limits<int8_t>::max();
-  } else if (std::is_same<T, float>::value) {
-    amplitude = -(static_cast<double>(std::numeric_limits<int16_t>::max()) /
-                  std::numeric_limits<int16_t>::min());
-  } else {
-    amplitude = std::numeric_limits<int16_t>::max();
   }
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
@@ -78,7 +75,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   *sinad_db = ValToDb(magn_signal / magn_other);
 
   // All sources (8-bit, 16-bit, ...) are normalized to int16 in accum buffer.
-  return ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+  return ValToDb(magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
@@ -118,12 +115,25 @@ template <typename T>
 double MeasureOutputNoiseFloor(double* sinad_db) {
   OutputFormatterPtr output_formatter;
 
+  double amplitude = std::numeric_limits<int16_t>::max();
+  // Calculate expected magnitude of signal strength, compared to max value.
+  // For 8-bit output, compensate for the shift it got on the way to accum.
+  // N.B.: using int8::max (not uint8::max) is intentional, as within uint8
+  // we still use a maximum amplitude of 127 (it is just centered on 128).
+  // For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
+  double expected_amplitude;
+
   if (std::is_same<T, uint8_t>::value) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::UNSIGNED_8, 1);
+    expected_amplitude = std::numeric_limits<int8_t>::max();
   } else if (std::is_same<T, int16_t>::value) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::SIGNED_16, 1);
+    expected_amplitude = std::numeric_limits<int16_t>::max();
   } else if (std::is_same<T, float>::value) {
     output_formatter = SelectOutputFormatter(AudioSampleFormat::FLOAT, 1);
+    expected_amplitude =
+        static_cast<double>(std::numeric_limits<int16_t>::max()) /
+        -std::numeric_limits<int16_t>::min();
   } else {
     FXL_DCHECK(false) << "Unsupported source format";
   }
@@ -131,7 +141,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // Populate accum buffer and output to destination buffer
   std::vector<int32_t> accum(kFreqTestBufSize);
   OverwriteCosine(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  std::numeric_limits<int16_t>::max());
+                  amplitude);
 
   std::vector<T> dest(kFreqTestBufSize);
   output_formatter->ProduceOutput(accum.data(), dest.data(), kFreqTestBufSize);
@@ -145,19 +155,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
   // We can directly compare 'signal' and 'other', regardless of output format.
   *sinad_db = ValToDb(magn_signal / magn_other);
 
-  // Calculate magnitude of primary signal strength, compared to max value.
-  // For 8-bit output, compensate for the shift it got on the way to accum.
-  // N.B.: using int8::max (not uint8::max) is intentional, as within uint8
-  // we still use a maximum amplitude of 127 (it is just centered on 128).
-  // For float, 7FFF equates to less than 1.0, so adjust by (32768/32767).
-  if (std::is_same<T, uint8_t>::value) {
-    return ValToDb(magn_signal / std::numeric_limits<int8_t>::max());
-  } else if (std::is_same<T, float>::value) {
-    return ValToDb(magn_signal * (-std::numeric_limits<int16_t>::min()) /
-                   std::numeric_limits<int16_t>::max());
-  } else {
-    return ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
-  }
+  return ValToDb(magn_signal / expected_amplitude);
 }
 
 // Measure level response and noise floor for 1kHz sine, to an 8bit output.
@@ -213,7 +211,7 @@ void MeasureFreqRespSinad(MixerPtr mixer,
   // ratio, some resamplers need it in order to produce the final dest value.
   // All FFT inputs are considered periodic, so to generate a periodic output
   // from the resampler, this extra source element should equal source[0].
-  std::vector<int16_t> source(src_buf_size + 1);
+  std::vector<float> source(src_buf_size + 1);
   std::vector<int32_t> accum(kFreqTestBufSize);
   uint32_t step_size = Mixer::FRAC_ONE * src_buf_size / kFreqTestBufSize;
 
@@ -241,8 +239,8 @@ void MeasureFreqRespSinad(MixerPtr mixer,
 
     // Populate the source buffer with a sinusoid at each reference frequency.
     OverwriteCosine(source.data(), src_buf_size,
-                    FrequencySet::kReferenceFreqs[freq_idx],
-                    std::numeric_limits<int16_t>::max());
+                    FrequencySet::kReferenceFreqs[freq_idx], 1.0);
+
     source[src_buf_size] = source[0];
 
     // Resample the source into the accumulation buffer, in pieces. (Why in
@@ -272,7 +270,7 @@ void MeasureFreqRespSinad(MixerPtr mixer,
 
     // Calculate Frequency Response and Signal-to-Noise-And-Distortion (SINAD).
     level_db[freq_idx] =
-        ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+        ValToDb(magn_signal / -std::numeric_limits<int16_t>::min());
     sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
   }
 }
@@ -292,7 +290,7 @@ void EvaluateFreqRespResults(double* freq_resp_results,
                         : FrequencySet::kSummaryIdxs[idx];
     EXPECT_GE(freq_resp_results[freq], freq_resp_limits[freq]) << freq;
     EXPECT_LE(freq_resp_results[freq],
-              0.0 + AudioResult::kLevelToleranceInterp16)
+              0.0 + AudioResult::kLevelToleranceInterpolation)
         << freq;
   }
 }
@@ -317,8 +315,8 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
 void TestUnitySampleRatio(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
-                               sampler_type);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize, freq_resp_results,
                        sinad_results);
@@ -329,8 +327,8 @@ void TestUnitySampleRatio(Resampler sampler_type,
 void TestDownSampleRatio1(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 96000, 1, 48000,
-                               sampler_type);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 96000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize << 1,
                        freq_resp_results, sinad_results);
@@ -341,8 +339,8 @@ void TestDownSampleRatio1(Resampler sampler_type,
 void TestDownSampleRatio2(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 88200, 1, 48000,
-                               sampler_type);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 88200, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x1D67
                        round(kFreqTestBufSize * 88200.0 / 48000.0),
@@ -354,8 +352,8 @@ void TestDownSampleRatio2(Resampler sampler_type,
 void TestUpSampleRatio1(Resampler sampler_type,
                         double* freq_resp_results,
                         double* sinad_results) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000,
-                               sampler_type);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 44100, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x0EB3
                        round(kFreqTestBufSize * 44100.0 / 48000.0),
@@ -367,8 +365,8 @@ void TestUpSampleRatio1(Resampler sampler_type,
 void TestUpSampleRatio2(Resampler sampler_type,
                         double* freq_resp_results,
                         double* sinad_results) {
-  MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 48000,
-                               sampler_type);
+  MixerPtr mixer =
+      SelectMixer(AudioSampleFormat::FLOAT, 1, 24000, 1, 48000, sampler_type);
 
   MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize >> 1,
                        freq_resp_results, sinad_results);

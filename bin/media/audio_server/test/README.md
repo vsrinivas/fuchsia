@@ -123,26 +123,7 @@ their stage in the flow of audio through the mixer:
 
 **Normalize (Ingest)**
 
-*   MTWN-85
-
-    As a future enhancement, the audio mixer should accept incoming audio data
-in float (32-bit) format, as is supported by certain audio renderer clients (or
-certain audio capture hardware). This can be easily added even before we support
-this format throughout the audio mixer's processing pipeline.
-
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Normalize.
-
 **Rechannel**
-
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Rechannel.
 
 **Interpolate**
 
@@ -176,12 +157,6 @@ higher code resilience and easier future extensibility.
 we should consider adding new ones with increased fidelity. This would more
 fully allow clients to make the quality-vs.-performance tradeoff themselves.
 
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Interpolation.
-
 **Gain**
 
 *   MTWN-70
@@ -193,12 +168,6 @@ clarified (might be as easy as changing a "should" to a "must"). Depending on
 whether single-threaded is a requirement, we will need additional product code
 and tests.
 
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Gain scaling.
-
 **Accumulate**
 
 *   MTWN-83
@@ -208,20 +177,17 @@ overflow, given a sufficient number of incoming streams. This limit is
 admittedly beyond any foreseeable scenario (65,000 streams), but this should be
 documented even if the code does not explicitly clamp.
 
-*   MTWN-86
-
-    Expanding the width of our internal data processing pipeline -- whether
-moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Accumulation.
-
 **Denormalize (Output)**
 
+**Numerous Stages**
+
 *   MTWN-86
 
     Expanding the width of our internal data processing pipeline -- whether
 moving to float32, or staying with fixed-point/int but increasing our number of
-fractional bits -- will require changes to all stages, including Denormalize
-/Output.
+fractional bits -- will require changes to all stages, including
+Normalization-Input, Rechannelization, Interpolation, Gain Scaling, Accumulation
+and Denormalization-Output.
 
 **Interface to Renderer (or other parts of audio_server)**
 
@@ -237,10 +203,3 @@ potential enabling) of scheduling these packets on fractional sample positions.
     The AudioSampleFormat enum includes entries for ALL and NONE, with the
 intention that these would be used in future scenarios. Until then, however,
 it might clarify things for client developers if we remove these.
-
-*   MTWN-44
-
-    Today, our AudioRenderer API accepts audio data in unsigned-8 and signed-16
-integer formats. It should also ingest audio in the 32-bit float format, even if
-(initially) it simply normalizes this into the highest-fidelity format that is
-supported natively by the system audio mixer.
