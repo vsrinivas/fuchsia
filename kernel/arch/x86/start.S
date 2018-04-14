@@ -175,6 +175,8 @@ farjump64:
     mov  $high_entry, %rax
     jmp  *%rax
 
+// This code runs at the final virtual address, so it should be pure PIC.
+.pushsection .text
 high_entry:
     /* zero our kernel segment data registers */
     xor %eax, %eax
@@ -185,10 +187,10 @@ high_entry:
     mov %eax, %ss
 
     /* load the high kernel stack */
-    mov  $_kstack_end, %rsp
+    lea _kstack_end(%rip), %rsp
 
     /* reload the gdtr */
-    lgdt _gdtr
+    lgdt _gdtr(%rip)
 
     // Set %gs.base to &bp_percpu.  It's statically initialized
     // with kernel_unsafe_sp set, so after this it's safe to call
@@ -231,6 +233,7 @@ high_entry:
     hlt                     /* interrupts will unhalt the processor */
     pause
     jmp 0b                  /* so jump back to halt to conserve power */
+.popsection
 
     /* 64bit entry point from a secondary loader */
 .align 8
