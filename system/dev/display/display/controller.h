@@ -53,6 +53,7 @@ public:
                            int32_t* displays_removed, uint32_t removed_count);
     void OnDisplayVsync(int32_t display_id, void* handles);
     void OnClientClosed(ClientProxy* client);
+    void SetVcOwner(bool vc_is_owner);
     void ShowActiveDisplay();
 
     void OnConfigApplied(DisplayConfig* configs[], int32_t count);
@@ -65,12 +66,17 @@ public:
     bool current_thread_is_loop() { return thrd_current() == loop_thread_; }
     mtx_t* mtx() { return &mtx_; }
 private:
+    void HandleClientOwnershipChanges() __TA_REQUIRES(mtx_);
+
     // mtx_ is a global lock on state shared among clients.
     mtx_t mtx_;
 
     DisplayInfo::Map displays_ __TA_GUARDED(mtx_);
 
-    ClientProxy* active_client_ __TA_GUARDED(mtx_);
+    ClientProxy* vc_client_ __TA_GUARDED(mtx_) = nullptr;
+    ClientProxy* primary_client_ __TA_GUARDED(mtx_) = nullptr;
+    bool vc_is_owner_ __TA_GUARDED(mtx_);
+    ClientProxy* active_client_ __TA_GUARDED(mtx_) = nullptr;
 
     async::Loop loop_;
     thrd_t loop_thread_;

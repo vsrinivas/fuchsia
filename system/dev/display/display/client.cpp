@@ -34,6 +34,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(display_ControllerSetDisplayImage);
     SELECT_TABLE_CASE(display_ControllerCheckConfig);
     SELECT_TABLE_CASE(display_ControllerApplyConfig);
+    SELECT_TABLE_CASE(display_ControllerSetOwnership);
     }
     if (table != nullptr) {
         const char* err;
@@ -90,6 +91,7 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(SetDisplayImage);
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
+    HANDLE_REQUEST_CASE(SetOwnership);
     default:
         zxlogf(INFO, "Unknown ordinal %d\n", msg.ordinal());
     }
@@ -122,6 +124,18 @@ void Client::HandleSetControllerCallback(const display_ControllerSetControllerCa
         added[i] = iter->id;
     }
     NotifyDisplaysChanged(added, static_cast<uint32_t>(configs_.size()), nullptr, 0);
+
+    if (is_owner_) {
+        display_ControllerCallbackOnClientOwnershipChangeRequest msg;
+        msg.hdr.txid = next_txn_++;
+        msg.hdr.ordinal = display_ControllerCallbackOnClientOwnershipChangeOrdinal;
+        msg.has_ownership = true;
+
+        zx_status_t status = callback_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
+        if (status != ZX_OK) {
+            zxlogf(INFO, "Error writing ownership message message %d\n", status);
+        }
+    }
 }
 
 void Client::HandleImportVmoImage(const display_ControllerImportVmoImageRequest* req,
@@ -182,7 +196,7 @@ void Client::HandleReleaseImage(const display_ControllerReleaseImageRequest* req
         }
     }
 
-    if (current_config_change) {
+    if (is_owner_ && current_config_change) {
         ApplyConfig();
     }
 }
@@ -255,7 +269,19 @@ void Client::HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
         display_config.displayed_image = display_config.pending_image;
     }
 
-    ApplyConfig();
+    if (is_owner_) {
+        ApplyConfig();
+    }
+}
+
+void Client::HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    // Only the virtcon can control ownership
+    if (!is_vc_) {
+        zxlogf(SPEW, "Ignoring non-virtcon ownership\n");
+        return;
+    }
+    controller_->SetVcOwner(req->active);
 }
 
 bool Client::CheckConfig() {
@@ -276,6 +302,8 @@ bool Client::CheckConfig() {
 }
 
 void Client::ApplyConfig() {
+    ZX_DEBUG_ASSERT(is_owner_);
+
     display_config_t* configs[configs_.size()];
     int idx = 0;
     for (auto& display_config : configs_) {
@@ -353,6 +381,29 @@ void Client::NotifyDisplaysChanged(const int32_t* displays_added, uint32_t added
     }
 }
 
+void Client::SetOwnership(bool is_owner) {
+    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+
+    is_owner_ = is_owner;
+
+    if (callback_handle_) {
+        display_ControllerCallbackOnClientOwnershipChangeRequest msg;
+        msg.hdr.txid = next_txn_++;
+        msg.hdr.ordinal = display_ControllerCallbackOnClientOwnershipChangeOrdinal;
+        msg.has_ownership = is_owner;
+
+        zx_status_t status = callback_handle_.write(0, &msg, sizeof(msg), nullptr, 0);
+        if (status != ZX_OK) {
+            zxlogf(INFO, "Error writing remove message %d\n", status);
+        }
+    }
+
+    if (is_owner) {
+        ApplyConfig();
+    }
+
+}
+
 void Client::OnDisplaysChanged(fbl::unique_ptr<DisplayConfig>* displays_added,
                                uint32_t added_count,
                                int32_t* displays_removed, uint32_t removed_count) {
@@ -415,18 +466,34 @@ void Client::Reset() {
         }
     }
 
-    ApplyConfig();
+    if (is_owner_) {
+        ApplyConfig();
+    }
 
     images_.clear();
 
     proxy_->OnClientDead();
 }
 
-Client::Client(Controller* controller, ClientProxy* proxy)
-        : controller_(controller), proxy_(proxy) { }
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc)
+        : controller_(controller), proxy_(proxy), is_vc_(is_vc) { }
 
 Client::~Client() {
     ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID);
+}
+
+void ClientProxy::SetOwnership(bool is_owner) {
+    auto task = new async::Task();
+    task->set_handler([client_handler = &handler_, is_owner]
+                       (async_t* async, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK) {
+                client_handler->SetOwnership(is_owner);
+            }
+
+            delete task;
+
+    });
+    task->Post(controller_->loop().async());
 }
 
 zx_status_t ClientProxy::OnDisplaysChanged(const DisplayInfo** displays_added,
@@ -612,9 +679,9 @@ void ClientProxy::DdkRelease() {
     delete this;
 }
 
-ClientProxy::ClientProxy(Controller* controller)
+ClientProxy::ClientProxy(Controller* controller, bool is_vc)
         : ClientParent(controller->zxdev()),
-          controller_(controller), handler_(controller_, this) {
+          controller_(controller), is_vc_(is_vc), handler_(controller_, this, is_vc_) {
     mtx_init(&bind_lock_, mtx_plain);
 }
 

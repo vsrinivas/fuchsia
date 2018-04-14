@@ -51,7 +51,7 @@ public:
 // on the controller's looper, so no synchronization is necessary.
 class Client {
 public:
-    Client(Controller* controller, ClientProxy* proxy);
+    Client(Controller* controller, ClientProxy* proxy, bool is_vc);
     ~Client();
 
     zx_status_t InitApiConnection(zx::handle* client_handle);
@@ -60,6 +60,7 @@ public:
                            uint32_t added_count,
                            int32_t* displays_removed,
                            uint32_t removed_count);
+    void SetOwnership(bool is_owner);
 
     // Resets state associated with the remote client. Note that this does not fully reset
     // the class, as the Client instance can get re-inited with InitApiConnection.
@@ -77,10 +78,13 @@ private:
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleApplyConfig(const display_ControllerApplyConfigRequest* req,
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
+                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
 
 
     Controller* controller_;
     ClientProxy* proxy_;
+    bool is_vc_;
 
     zx::channel server_handle_;
     zx::channel callback_handle_;
@@ -90,6 +94,7 @@ private:
     Image::Map images_;
     DisplayConfig::Map configs_;
     bool pending_config_valid_ = false;
+    bool is_owner_ = false;
 
     void HandleControllerApi(async_t* async, async::WaitBase* self,
                              zx_status_t status, const zx_packet_signal_t* signal);
@@ -106,7 +111,7 @@ private:
 using ClientParent = ddk::Device<ClientProxy, ddk::Ioctlable, ddk::Closable>;
 class ClientProxy : public ClientParent {
 public:
-    ClientProxy(Controller* controller);
+    ClientProxy(Controller* controller, bool is_vc);
     ~ClientProxy();
 
     zx_status_t DdkClose(uint32_t flags);
@@ -116,11 +121,13 @@ public:
 
     zx_status_t OnDisplaysChanged(const DisplayInfo** displays_added, uint32_t added_count,
                                   const int32_t* displays_removed, uint32_t removed_count);
+    void SetOwnership(bool is_owner);
 
     void OnClientDead();
     void Close();
 private:
     Controller* controller_;
+    bool is_vc_;
     Client handler_;
 
     // Various state for tracking the connection to the client.

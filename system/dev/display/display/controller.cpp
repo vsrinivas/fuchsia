@@ -85,9 +85,16 @@ void Controller::OnDisplaysChanged(int32_t* displays_added, uint32_t added_count
     }
 
     zx_status_t status;
-    if (active_client_) {
-        status = active_client_->OnDisplaysChanged(added_success, added_success_count,
-                                                   removed_success, removed_success_count);
+    if (vc_client_) {
+        status = vc_client_->OnDisplaysChanged(added_success, added_success_count,
+                                               removed_success, removed_success_count);
+        if (status != ZX_OK) {
+            zxlogf(INFO, "Error when processing hotplug (%d)\n", status);
+        }
+    }
+    if (primary_client_) {
+        status = primary_client_->OnDisplaysChanged(added_success, added_success_count,
+                                                    removed_success, removed_success_count);
         if (status != ZX_OK) {
             zxlogf(INFO, "Error when processing hotplug (%d)\n", status);
         }
@@ -144,9 +151,40 @@ void Controller::ReleaseImage(Image* image) {
     ops_.ops->release_image(ops_.ctx, &image->info());
 }
 
+void Controller::SetVcOwner(bool vc_is_owner) {
+    fbl::AutoLock lock(&mtx_);
+    vc_is_owner_ = vc_is_owner;
+    HandleClientOwnershipChanges();
+}
+
+void Controller::HandleClientOwnershipChanges() {
+    ClientProxy* new_active;
+    if (vc_is_owner_ || primary_client_ == nullptr) {
+        new_active = vc_client_;
+    } else {
+        new_active = primary_client_;
+    }
+
+    if (new_active != active_client_) {
+        if (active_client_) {
+            active_client_->SetOwnership(false);
+        }
+        if (new_active) {
+            new_active->SetOwnership(true);
+        }
+        active_client_ = new_active;
+    }
+}
+
 void Controller::OnClientClosed(ClientProxy* client) {
     fbl::AutoLock lock(&mtx_);
-    active_client_ = nullptr;
+    if (client == vc_client_) {
+        vc_client_ = nullptr;
+        vc_is_owner_ = false;
+    } else if (client == primary_client_) {
+        primary_client_ = nullptr;
+    }
+    HandleClientOwnershipChanges();
 }
 
 zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
@@ -156,13 +194,14 @@ zx_status_t Controller::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
 zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint32_t flags) {
     fbl::AutoLock lock(&mtx_);
 
-    if (active_client_) {
+    bool is_vc = strcmp("virtcon", path) == 0;
+    if ((is_vc && vc_client_) || (!is_vc && primary_client_)) {
         zxlogf(TRACE, "Already bound\n");
         return ZX_ERR_ALREADY_BOUND;
     }
 
     fbl::AllocChecker ac;
-    auto client = fbl::make_unique_checked<ClientProxy>(&ac, this);
+    auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc);
     if (!ac.check()) {
         zxlogf(TRACE, "Failed to alloc client\n");
         return ZX_ERR_NO_MEMORY;
@@ -179,7 +218,7 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
     }
 
     zx_status_t status;
-    if ((status = client->DdkAdd("dc", DEVICE_ADD_INSTANCE)) != ZX_OK) {
+    if ((status = client->DdkAdd(is_vc ? "dc-vc" : "dc", DEVICE_ADD_INSTANCE)) != ZX_OK) {
         zxlogf(TRACE, "Failed to add client %d\n", status);
         return status;
     }
@@ -189,7 +228,12 @@ zx_status_t Controller::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
 
     zxlogf(TRACE, "New client connected at \"%s\"\n", path);
 
-    active_client_ = client_ptr;
+    if (is_vc) {
+        vc_client_ = client_ptr;
+    } else {
+        primary_client_ = client_ptr;
+    }
+    HandleClientOwnershipChanges();
 
     return ZX_OK;
 }
@@ -221,8 +265,11 @@ zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
 void Controller::DdkUnbind() {
     {
         fbl::AutoLock lock(&mtx_);
-        if (active_client_) {
-            active_client_->Close();
+        if (vc_client_) {
+            vc_client_->Close();
+        }
+        if (primary_client_) {
+            primary_client_->Close();
         }
     }
     DdkRemove();
@@ -232,8 +279,7 @@ void Controller::DdkRelease() {
     delete this;
 }
 
-Controller::Controller(zx_device_t* parent) : ControllerParent(parent),
-        active_client_(nullptr) {
+Controller::Controller(zx_device_t* parent) : ControllerParent(parent) {
     mtx_init(&mtx_, mtx_plain);
 }
 
