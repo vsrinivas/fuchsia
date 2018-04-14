@@ -46,6 +46,7 @@ source_set("cpp") {
     "optional.h",
     "string.cc",
     "string.h",
+    "synchronous_interface_ptr.h",
     "thread_safe_binding_set.h",
     "traits.h",
     "vector.h",
