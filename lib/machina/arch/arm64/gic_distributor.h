@@ -10,9 +10,13 @@
 #include <fbl/mutex.h>
 
 #include "garnet/lib/machina/io.h"
-#include "garnet/bin/guest/guest_config.h"
 
 namespace machina {
+
+enum class GicVersion {
+  V2 = 2,
+  V3 = 3,
+};
 
 class Guest;
 class Vcpu;
@@ -20,7 +24,7 @@ class Vcpu;
 // Implements GIC distributor.
 class GicDistributor : public IoHandler {
  public:
-  zx_status_t Init(Guest* guest, Gic version);
+  zx_status_t Init(Guest* guest, GicVersion version);
 
   zx_status_t Read(uint64_t addr, IoValue* value) const override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
@@ -34,7 +38,7 @@ class GicDistributor : public IoHandler {
   // NOTE: This must match the same constant in arch/hypervisor.h within Zircon.
   static constexpr size_t kNumInterrupts = 256;
   static constexpr uint8_t kMaxVcpus = 8;
-  Gic gic_version_ = Gic::V2;
+  GicVersion gic_version_ = GicVersion::V2;
   mutable fbl::Mutex mutex_;
   uint8_t enabled_[kNumInterrupts / CHAR_BIT] __TA_GUARDED(mutex_) = {};
   uint8_t cpu_masks_[kNumInterrupts] __TA_GUARDED(mutex_) = {};

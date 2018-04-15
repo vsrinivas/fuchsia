@@ -16,10 +16,9 @@
 
 #include "garnet/lib/machina/block_dispatcher.h"
 
-enum class Gic {
-  V2 = 2,
-  V3 = 3,
-};
+#if __aarch64__
+#include "garnet/lib/machina/arch/arm64/gic_distributor.h"
+#endif
 
 struct BlockSpec {
   std::string path;
@@ -58,7 +57,9 @@ class GuestConfig {
   bool balloon_demand_page() const { return balloon_demand_page_; }
   GuestDisplay display() const { return display_; }
   bool block_wait() const { return block_wait_; }
-  Gic gic_version() const { return gic_version_; }
+#if __aarch64__
+  machina::GicVersion gic_version() const { return gic_version_; }
+#endif
 
  private:
   friend class GuestConfigParser;
@@ -74,7 +75,9 @@ class GuestConfig {
   bool balloon_demand_page_ = false;
   GuestDisplay display_ = GuestDisplay::SCENIC;
   bool block_wait_ = false;
-  Gic gic_version_ = Gic::V2;
+#if __aarch64__
+  machina::GicVersion gic_version_ = machina::GicVersion::V2;
+#endif
 };
 
 class GuestConfigParser {

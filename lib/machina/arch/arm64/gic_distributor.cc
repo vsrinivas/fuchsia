@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/machina/arch/arm64/gic_distributor.h"
+
 #include <fbl/auto_lock.h>
 
 #include "garnet/lib/machina/address.h"
@@ -15,7 +16,7 @@ namespace machina {
 
 static constexpr uint32_t kGicv2Revision = 2;
 static constexpr uint32_t kGicv3Revision = 3;
-static constexpr uint32_t kGicdCtlr      = 0x7;
+static constexpr uint32_t kGicdCtlr = 0x7;
 
 // clang-format off
 
@@ -73,8 +74,9 @@ struct SoftwareGeneratedInterrupt {
   }
 };
 
-static inline uint32_t typer_it_lines(uint32_t num_interrupts, Gic version) {
-  if (version == Gic::V2) {
+static inline uint32_t typer_it_lines(uint32_t num_interrupts,
+                                      GicVersion version) {
+  if (version == GicVersion::V2) {
     return set_bits((num_interrupts >> 5) - 1, 4, 0);
   } else {
     return set_bits((num_interrupts >> 5) - 1, 23, 19);
@@ -89,23 +91,26 @@ static inline uint32_t pidr2_arch_rev(uint32_t revision) {
   return set_bits(revision, 7, 4);
 }
 
-zx_status_t GicDistributor::Init(Guest* guest, Gic version) {
+zx_status_t GicDistributor::Init(Guest* guest, GicVersion version) {
   zx_status_t status;
   gic_version_ = version;
 
-  if (version == Gic::V2) {
-    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
+  if (version == GicVersion::V2) {
+    status =
+        guest->CreateMapping(TrapType::MMIO_SYNC, kGicv2DistributorPhysBase,
                              kGicv2DistributorSize, 0, this);
   } else {
     // Map the distributor
-    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
+    status =
+        guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3DistributorPhysBase,
                              kGicv3DistributorSize, 0, this);
     if (status != ZX_OK) {
       return status;
     }
 
     // Map the redistributor RD Base
-    status = guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3ReDistributorPhysBase,
+    status =
+        guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3ReDistributorPhysBase,
                              kGicv3ReDistributorSize, 0, this);
     if (status != ZX_OK) {
       return status;
@@ -126,7 +131,8 @@ zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
 
   switch (addr) {
     case GicdRegister::TYPE:
-      value->u32 = typer_it_lines(kNumInterrupts, gic_version_) | typer_cpu_number(num_vcpus_);
+      value->u32 = typer_it_lines(kNumInterrupts, gic_version_) |
+                   typer_cpu_number(num_vcpus_);
       return ZX_OK;
     case GicdRegister::ICFG0:
       // SGIs are RAO/WI.

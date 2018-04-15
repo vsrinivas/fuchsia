@@ -46,7 +46,9 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t--balloon-threshold=[pages]     Number of unused pages to allow the guest to\n";
   std::cerr << "\t                                retain. Has no effect unless -m is also used\n";
   std::cerr << "\t--balloon-demand-page           Demand-page balloon deflate requests\n";
-  std::cerr << "\t--gic                           Version 2 or 3\n";
+#if __aarch64__
+  std::cerr << "\t--gic={2,3}                     Version 2 or 3\n";
+#endif
   std::cerr << "\n";
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
@@ -312,7 +314,8 @@ static GuestConfigParser::OptionHandler parse_display(GuestDisplay* out) {
   };
 }
 
-static GuestConfigParser::OptionHandler parse_gic(Gic* out) {
+#if __aarch64__
+static GuestConfigParser::OptionHandler parse_gic(machina::GicVersion* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
@@ -325,9 +328,9 @@ static GuestConfigParser::OptionHandler parse_gic(Gic* out) {
       return ZX_ERR_INVALID_ARGS;
     }
     if (number == 2) {
-      *out = Gic::V2;
+      *out = machina::GicVersion::V2;
     } else if (number == 3) {
-      *out = Gic::V3;
+      *out = machina::GicVersion::V3;
     } else {
       FXL_LOG(ERROR) << "Invalid GIC version";
       return ZX_ERR_INVALID_ARGS;
@@ -335,6 +338,7 @@ static GuestConfigParser::OptionHandler parse_gic(Gic* out) {
     return ZX_OK;
   };
 }
+#endif
 
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
   {"zircon", save_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
@@ -354,7 +358,9 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
       {"display", parse_display(&cfg_->display_)},
       {"block-wait", set_flag(&cfg_->block_wait_, true)},
+#if __aarch64__
       {"gic", parse_gic(&cfg_->gic_version_)},
+#endif
 }
 {}
 
