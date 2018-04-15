@@ -276,8 +276,14 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       if (value.access_size != 1)
         return ZX_ERR_IO_DATA_INTEGRITY;
 
-      fbl::AutoLock lock(&device_->mutex_);
-      device_->status_ = value.u8;
+
+      {
+        fbl::AutoLock lock(&device_->mutex_);
+        device_->status_ = value.u8;
+      }
+      if (value.u8 & VIRTIO_STATUS_DRIVER_OK) {
+        device_->OnDeviceReady();
+      }
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_QUEUE_SEL: {

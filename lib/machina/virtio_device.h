@@ -41,6 +41,13 @@ class VirtioDevice {
   // The method for how this notification is delivered is transport specific.
   zx_status_t NotifyGuest();
 
+  // Invoked when the driver has accepted features and set the device into a
+  // 'Ready' state.
+  //
+  // Devices can place logic here that depends on the set of negotiated
+  // features with the driver.
+  virtual void OnDeviceReady() { }
+
   const PhysMem& phys_mem() { return phys_mem_; }
   uint16_t num_queues() const { return num_queues_; }
 
