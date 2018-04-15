@@ -82,7 +82,7 @@ package("trace") {
   # If your build includes the target trace tool, your $host_tools_dir
   # contains the utilities to work with traces copied from the target.
   data_deps = [
-    "//garnet/bin/traceutils",
+    "//garnet/bin/traceutil",
   ]
 }
 
