@@ -7,16 +7,24 @@ use futures::prelude::*;
 use futures::{future, stream};
 use std::sync::Arc;
 use wlan;
-use wlan_service::{self, DeviceListener, DeviceListenerImpl, DeviceServiceProxy};
+use wlan_service::{self, DeviceListener, DeviceListenerImpl, DeviceServiceProxyInterface};
 use zx;
 
 #[derive(Debug)]
-pub struct Listener {
-    proxy: DeviceServiceProxy,
+pub struct Listener<Proxy>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
+    proxy: Proxy,
     config: Config,
 }
 
-fn on_phy_added(listener: &Arc<Listener>, id: u16) -> impl Future<Item = (), Error = Never> {
+fn on_phy_added<Proxy>(
+    listener: &Arc<Listener<Proxy>>, id: u16
+) -> impl Future<Item = (), Error = Never>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
     println!("wlancfg: phy {} added", id);
 
     let listener_ref = listener.clone();
@@ -68,32 +76,49 @@ fn on_phy_added(listener: &Arc<Listener>, id: u16) -> impl Future<Item = (), Err
         .recover(|e| println!("failure in on_phy_added: {:?}", e))
 }
 
-fn on_phy_removed(_listener: &Arc<Listener>, id: u16) -> impl Future<Item = (), Error = Never> {
+fn on_phy_removed<Proxy>(
+    _listener: &Arc<Listener<Proxy>>, id: u16
+) -> impl Future<Item = (), Error = Never>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
     println!("wlancfg: phy removed: {}", id);
     future::ok(())
 }
 
-fn on_iface_added(
-    _listener: &Arc<Listener>, phy_id: u16, iface_id: u16
-) -> impl Future<Item = (), Error = Never> {
+fn on_iface_added<Proxy>(
+    _listener: &Arc<Listener<Proxy>>, phy_id: u16, iface_id: u16
+) -> impl Future<Item = (), Error = Never>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
     println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
     future::ok(())
 }
 
-fn on_iface_removed(
-    _listener: &Arc<Listener>, phy_id: u16, iface_id: u16
-) -> impl Future<Item = (), Error = Never> {
+fn on_iface_removed<Proxy>(
+    _listener: &Arc<Listener<Proxy>>, phy_id: u16, iface_id: u16
+) -> impl Future<Item = (), Error = Never>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
     println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
     future::ok(())
 }
 
-impl Listener {
-    pub fn new(proxy: DeviceServiceProxy, config: Config) -> Self {
+impl<Proxy> Listener<Proxy>
+where
+    Proxy: DeviceServiceProxyInterface,
+{
+    pub fn new(proxy: Proxy, config: Config) -> Self {
         Listener { proxy, config }
     }
 }
 
-pub fn device_listener(state: Listener) -> impl DeviceListener {
+pub fn device_listener<Proxy>(state: Listener<Proxy>) -> impl DeviceListener
+where
+    Proxy: DeviceServiceProxyInterface,
+{
     DeviceListenerImpl {
         state: Arc::new(state),
         on_phy_added: |state, id, _| on_phy_added(state, id),
