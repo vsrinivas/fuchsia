@@ -14,19 +14,22 @@
 
 const char* filesystem_name_filter = "";
 
-int usage(char** argv) {
-    fprintf(stderr, "usage:\n");
-    fprintf(stderr, "$ %s [OPTIONS]\n", argv[0]);
-    fprintf(stderr, " -d blkdev : Use block device |blkdev| instead of a ramdisk\n");
-    fprintf(stderr, " -f fs     : Test only fileystem |fs|, where |fs| is one of:\n");
+static void print_test_help(FILE* f) {
+    fprintf(f,
+            "  -d <blkdev>\n"
+            "      Use block device <blkdev> instead of a ramdisk\n"
+            "\n"
+            "  -f <fs>\n"
+            "      Test only fileystem <fs>, where <fs> is one of:\n");
     for (int j = 0; j < NUM_FILESYSTEMS; j++) {
-        fprintf(stderr, "   %s\n", FILESYSTEMS[j].name);
+        fprintf(f, "%8s%s\n", "", FILESYSTEMS[j].name);
     }
-    return -1;
 }
 
 int main(int argc, char** argv) {
     use_real_disk = false;
+
+    unittest_register_test_help_printer(print_test_help);
 
     int i = 1;
     while (i < argc) {
@@ -56,12 +59,13 @@ int main(int argc, char** argv) {
                 }
             }
             if (!found) {
-                fprintf(stderr, "error: Filesystem not found\n");
-                return usage(argv);
+                fprintf(stderr, "Error: Filesystem not found\n");
+                return -1;
             }
             i += 2;
         } else {
-            return usage(argv);
+            // Ignore options we don't recognize. See ulib/unittest/README.md.
+            break;
         }
     }
 
