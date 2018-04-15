@@ -22,11 +22,6 @@ FIRMWARE_DIR=/tmp/hikey/hikey-firmware
 FIRMWARE_GIT=https://android.googlesource.com/device/linaro/hikey
 FIRMWARE_TAG=android-o-iot-preview-5
 
-TOOLS_GIT=https://github.com/96boards-hikey/tools-images-hikey960.git
-TOOLS_DIR=/tmp/hikey/tools
-
-RECOVERY_PORT=/dev/serial/by-id/usb-HISILICON_USB_SER-if00-port0
-
 MKBOOTIMG="${ZIRCON_DIR}/third_party/tools/android/mkbootimg"
 MKDTIMG="${ZIRCON_DIR}/third_party/tools/android/mkdtimg"
 
@@ -38,33 +33,10 @@ help() {
     echo "                  Defaults to BUILD_DIR/bootdata.bin."
     echo "  -f              Download and flash firmware."
     echo "  -m              Add mexec option to kernel command line to enable netboot."
-    echo "  -p [port]       Port used for recovery."
-    echo "                  Defaults to ${RECOVERY_PORT}."
-    echo "  -r              Recover device from a bad state."
     echo "  -h              Show this help message."
     echo
     echo "See docs/targets/hikey960.md for more details."
     exit 1
-}
-
-help_recovery() {
-    echo
-    echo "Check that the device is in recovery mode and that ${RECOVERY_PORT} is the recovery port."
-    echo "Recovery mode switch configuration is:"
-    echo "  Auto Power up(Switch 1)   closed/ON"
-    echo "  Recovery(Switch 2)        closed/ON"
-    echo "  Fastboot(Switch 3)        open/OFF"
-    echo "You can alter the recovery port with the -p option."
-
-    echo "NOTE: the recovery utility may require root permissions. If so rerun the script under sudo."
-
-    # TODO(alexlegg): Check that ${RECOVERY_PORT} exists and give options if it doesn't.
-
-    read -p "Proceed (y|n)? " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
 }
 
 help_fastboot() {
@@ -85,17 +57,6 @@ git_clone() {
     git clone --depth 1 $@
 }
 
-recover_device() {
-    if [[ ! -d $TOOLS_DIR ]]; then
-        git_clone $TOOLS_GIT $TOOLS_DIR
-    fi
-    pushd $TOOLS_DIR
-    chmod +x hikey_idt
-    help_recovery
-    ./hikey_idt -c config -p $RECOVERY_PORT
-    popd
-}
-
 flash_firmware() {
     if [[ ! -d $FIRMWARE_DIR ]]; then
         git_clone -b $FIRMWARE_TAG $FIRMWARE_GIT $FIRMWARE_DIR
@@ -105,47 +66,6 @@ flash_firmware() {
     fastboot flash ptable ${FIRMWARE_DIR}/installer/hikey960/ptable.img
     fastboot flash xloader ${FIRMWARE_DIR}/installer/hikey960/sec_xloader.img
     fastboot flash fastboot ${FIRMWARE_DIR}/installer/hikey960/fastboot.img
-    fastboot flash nvme ${FIRMWARE_DIR}/installer/hikey960/nvme.img
-    fastboot flash fw_lpm3 ${FIRMWARE_DIR}/installer/hikey960/lpm3.img
-    fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
-}
-
-recover_uefi() {
-    echo Creating $UEFI_DIR...
-    if [[ ! -d $UEFI_DIR ]]; then
-        mkdir -p ${UEFI_DIR}
-        pushd ${UEFI_DIR}
-        echo Fetching $UEFI_URL...
-        wget -A bin,config,efi,hikey_idt,img,txt -m -nd -np ${UEFI_URL}
-    else
-        pushd ${UEFI_DIR}
-    fi
-
-    chmod +x hikey_idt
-    help_recovery
-    ./hikey_idt -c config -p $RECOVERY_PORT
-    popd
-}
-
-flash_firmware_uefi() {
-    if [[ ! -d $FIRMWARE_DIR ]]; then
-        git_clone -b $FIRMWARE_TAG $FIRMWARE_GIT $FIRMWARE_DIR
-    fi
-
-    echo Creating $UEFI_DIR...
-    if [[ ! -d $UEFI_DIR ]]; then
-        mkdir -p ${UEFI_DIR}
-        pushd ${UEFI_DIR}
-        echo Fetching $UEFI_URL...
-        wget -A bin,config,efi,hikey_idt,img,txt -m -nd -np ${UEFI_URL}
-        popd
-    fi
-
-    help_fastboot
-    fastboot flash ptable ${UEFI_DIR}/prm_ptable.img
-    fastboot flash xloader ${UEFI_DIR}/sec_xloader.img
-    fastboot flash fastboot ${UEFI_DIR}/l-loader.bin
-    fastboot flash fip ${UEFI_DIR}/fip.bin
     fastboot flash nvme ${FIRMWARE_DIR}/installer/hikey960/nvme.img
     fastboot flash fw_lpm3 ${FIRMWARE_DIR}/installer/hikey960/lpm3.img
     fastboot flash trustfirmware ${FIRMWARE_DIR}/installer/hikey960/bl31.bin
@@ -175,9 +95,6 @@ while getopts "b:d:fmnp:ruh" FLAG; do
     d) RAMDISK="${OPTARG}";;
     f) FLAG_FIRMWARE=true;;
     m) CMDLINE+=" netsvc.netboot=true";;
-    p) RECOVERY_PORT="${OPTARG}";;
-    r) FLAG_RECOVER=true;
-       FLAG_FIRMWARE=true;;
     *) help;;
     esac
 done
@@ -186,10 +103,6 @@ shift $((OPTIND-1))
 BUILD_DIR="${BUILD_DIR:-build-arm64}"
 RAMDISK="${RAMDISK:-${BUILD_DIR}/hikey960-bootdata.bin}"
 OUT_IMAGE="${BUILD_DIR}/boot.img"
-
-if [[ $FLAG_RECOVER ]]; then
-    recover_uefi
-fi
 
 if [[ $FLAG_FIRMWARE ]]; then
     flash_firmware
