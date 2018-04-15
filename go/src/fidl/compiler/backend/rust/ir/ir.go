@@ -181,6 +181,7 @@ var reservedSuffixes = []string{
 	"Impl",
 	"Marker",
 	"Proxy",
+	"ProxyInterface",
 	"Responder",
 	"Server",
 }

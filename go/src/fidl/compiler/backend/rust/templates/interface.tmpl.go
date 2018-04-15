@@ -33,6 +33,32 @@ impl fidl::endpoints2::ServiceMarker for {{ $interface.Name }}Marker {
   const NAME: &'static str = "{{ $interface.ServiceName }}";
 }
 
+pub trait {{ $interface.Name }}ProxyInterface {
+  {{- range $method := $interface.Methods }}
+  {{- if $method.HasResponse }}
+  type {{ $method.CamelName }}ResponseFut: Future<Item = (
+   {{- range $index, $response := $method.Response -}}
+   {{- if (eq $index 0) -}} {{ $response.Type }}
+   {{- else -}}, {{ $response.Type }} {{- end -}}
+   {{- end -}}
+  ), Error = fidl::Error> + Send;
+  {{- end -}}
+
+  {{- if $method.HasRequest }}
+  fn {{ $method.Name }}(&self,
+   {{- range $request := $method.Request }}
+   {{ $request.Name }}: &mut {{ $request.Type }},
+   {{- end }}
+  )
+  {{- if $method.HasResponse -}}
+  -> Self::{{ $method.CamelName }}ResponseFut;
+  {{- else -}}
+  -> Result<(), fidl::Error>;
+  {{- end -}}
+  {{- end -}}
+  {{- end }}
+}
+
 #[derive(Debug, Clone)]
 pub struct {{ $interface.Name }}Proxy {
   client: fidl::client2::Client,
@@ -62,6 +88,38 @@ impl {{ $interface.Name }}Proxy {
    {{- else -}}, {{ $response.Type }} {{- end -}}
    {{- end -}}
   )> {
+  {{- else -}}
+  -> Result<(), fidl::Error> {
+  {{- end }}
+	{{ $interface.Name }}ProxyInterface::{{ $method.Name }}(self,
+	 {{- range $request := $method.Request }}
+	 {{ $request.Name }},
+	 {{- end }}
+    )
+  }
+  {{- end -}}
+  {{- end }}
+}
+
+impl {{ $interface.Name}}ProxyInterface for {{ $interface.Name}}Proxy {
+  {{- range $method := $interface.Methods }}
+  {{- if $method.HasResponse }}
+  type {{ $method.CamelName }}ResponseFut = fidl::client2::QueryResponseFut<(
+   {{- range $index, $response := $method.Response -}}
+   {{- if (eq $index 0) -}} {{ $response.Type }}
+   {{- else -}}, {{ $response.Type }} {{- end -}}
+   {{- end -}}
+  )>;
+  {{- end -}}
+
+  {{- if $method.HasRequest }}
+  fn {{ $method.Name }}(&self,
+   {{- range $request := $method.Request }}
+   mut {{ $request.Name }}: &mut {{ $request.Type }},
+   {{- end }}
+  )
+  {{- if $method.HasResponse -}}
+  -> Self::{{ $method.CamelName}}ResponseFut {
    self.client.send_query(&mut (
   {{- else -}}
   -> Result<(), fidl::Error> {
