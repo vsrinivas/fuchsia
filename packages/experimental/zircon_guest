@@ -1,5 +1,8 @@
 {
+    "imports": [
+        "garnet/packages/prod/guest_runner"
+    ],
     "packages": {
-        "zircon-guest": "//garnet/bin/guest/zircon-guest"
+        "zircon_guest": "//garnet/bin/guest/pkg/zircon_guest"
     }
 }

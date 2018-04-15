@@ -1,6 +1,11 @@
 {
+    "imports": [
+        "garnet/packages/prod/pkgsvr",
+        "garnet/packages/prod/runtime"
+    ],
     "packages": {
-        "guest": "//garnet/bin/guest",
-        "guest_runner": "//garnet/bin/guest_runner"
+        "vmm": "//garnet/bin/guest/vmm",
+        "guest_runner": "//garnet/bin/guest/runner:guest_runner",
+        "guest": "//garnet/bin/guest/cli:guest"
     }
 }

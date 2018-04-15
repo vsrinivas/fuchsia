@@ -1,10 +1,10 @@
 # Guest
-The `guest` app enables booting a guest operating system using the Zircon
+The `vmm` app enables booting a guest operating system using the Zircon
 hypervisor.
 
 These instructions will guide you through creating minimal Zircon and Linux
 guests. For instructions on building a more comprehensive linux guest system
-see the [debian-guest](debian-guest/README.md) package.
+see the [debian_guest](pkg/debian_guest/README.md) package.
 
 These instructions assume a general familiarity with how to netboot the target
 device.
@@ -12,7 +12,7 @@ device.
 ## Build host system with the guest package
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set x64 --packages garnet/packages/experimental/guest --args guest_display=\"framebuffer\"
+$ fx set x64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\"
 $ fx full-build
 $ fx boot
 ```
@@ -20,7 +20,7 @@ $ fx boot
 ## Building for QEMU
 Configure, build, and boot the guest package as follows:
 ```
-$ fx set arm64 --packages "garnet/packages/experimental/guest"
+$ fx set arm64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest
 $ fx full-build
 $ fx run
 ```
@@ -28,22 +28,22 @@ $ fx run
 ## Running guests
 After netbooting the target device, to run Zircon:
 ```
-$ guest launch zircon-guest
+$ guest launch zircon_guest
 ```
 
 Likewise, to launch a Linux guest:
 ```
-$ guest launch linux-guest
+$ guest launch linux_guest
 ```
 
 ## Running from Topaz
 To run from Topaz, configure the guest package as follows:
 ```
-$ fx set x64 --packages topaz/packages/topaz,garnet/packages/experimental/guest
+$ fx set x64 --packages topaz/packages/topaz,garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest
 ```
 
 After netbooting the guest packages can be launched from the system launcher as
-`linux-guest` and `zircon-guest`.
+`linux_guest` and `zircon_guest`.
 
 ## Building for arm64
 First flash Zedboot onto your VIM2:
@@ -56,7 +56,7 @@ $ scripts/flash-vim2 -m
 
 Then configure, build, and boot the guest package as follows:
 ```
-$ fx set arm64 --packages garnet/packages/experimental/guest --args guest_display=\"framebuffer\" --netboot
+$ fx set arm64 --packages garnet/packages/experimental/linux_guest,garnet/packages/experimental/zircon_guest --args guest_display=\"framebuffer\" --netboot
 $ fx full-build
 $ fx boot vim2
 ```

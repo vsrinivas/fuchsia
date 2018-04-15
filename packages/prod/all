@@ -20,7 +20,6 @@
         "garnet/packages/prod/fortune",
         "garnet/packages/prod/gralloc",
         "garnet/packages/prod/guest_runner",
-        "garnet/packages/prod/guest_tool",
         "garnet/packages/prod/icu_data",
         "garnet/packages/prod/image_pipe_swapchain",
         "garnet/packages/prod/insntrace",

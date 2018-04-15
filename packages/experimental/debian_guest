@@ -1,10 +1,8 @@
 {
     "imports": [
-        "garnet/packages/prod/guest_tool",
-        "garnet/packages/prod/pkgsvr",
-        "garnet/packages/prod/runtime"
+        "garnet/packages/prod/guest_runner"
     ],
     "packages": {
-        "debian-guest": "//garnet/bin/guest/debian-guest"
+        "debian_guest": "//garnet/bin/guest/pkg/debian_guest"
     }
 }

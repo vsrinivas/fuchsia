@@ -1,5 +1,8 @@
 {
+    "imports": [
+        "garnet/packages/prod/guest_runner"
+    ],
     "packages": {
-        "linux-guest": "//garnet/bin/guest/linux-guest"
+        "linux_guest": "//garnet/bin/guest/pkg/linux_guest"
     }
 }
