@@ -16,8 +16,6 @@ static_library("console") {
     "console_context.h",
     "line_input.cc",
     "line_input.h",
-    "main_loop.cc",
-    "main_loop.h",
     "memory_format.cc",
     "memory_format.h",
     "nouns.cc",
@@ -42,10 +40,6 @@ static_library("console") {
   if (current_toolchain == host_toolchain) {
     # TODO(brettw) add main loop for Posix host systems.
   } else {
-    sources += [
-      "main_loop_zircon.cc",
-      "main_loop_zircon.h",
-    ]
     deps += [
       "//garnet/public/lib/fxl",
       "//zircon/public/lib/fdio",

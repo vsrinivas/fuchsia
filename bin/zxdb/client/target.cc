@@ -6,7 +6,7 @@
 
 namespace zxdb {
 
-Target::Target(Session* session) : ClientObject(session) {}
+Target::Target(Session* session) : ClientObject(session), weak_factory_(this) {}
 Target::~Target() = default;
 
 void Target::AddObserver(TargetObserver* observer) {
@@ -15,6 +15,10 @@ void Target::AddObserver(TargetObserver* observer) {
 
 void Target::RemoveObserver(TargetObserver* observer) {
   observers_.RemoveObserver(observer);
+}
+
+fxl::WeakPtr<Target> Target::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 }  // namespace zxdb

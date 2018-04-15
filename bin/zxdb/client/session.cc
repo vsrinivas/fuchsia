@@ -9,6 +9,7 @@
 
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
+#include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
@@ -23,33 +24,19 @@ constexpr uint32_t kMaxMessageSize = 16777216;
 
 }  // namespace
 
-Session::Session() : system_(this) {}
+Session::Session(debug_ipc::StreamBuffer* stream)
+    : stream_(stream), system_(this) {}
 Session::~Session() = default;
 
-void Session::SetAgentConnection(std::unique_ptr<AgentConnection> connection) {
-  // Cancel out all pending connections. Be careful with the ordering in case
-  // the callbacks initiate new requests.
-  std::map<uint32_t, Callback> old_pending = std::move(pending_);
-  agent_connection_ = std::move(connection);
-
-  if (!old_pending.empty()) {
-    Err err(ErrType::kNoConnection, "Connection lost.");
-    for (const auto& pair : old_pending) {
-      if (pair.second)
-        pair.second(err, std::vector<char>());
-    }
-  }
-}
-
-void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
+void Session::OnStreamReadable() {
   while (true) {
-    if (!stream->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
+    if (!stream_->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
       return;
 
     std::vector<char> serialized_header;
     serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
-    stream->Peek(&serialized_header[0],
-                 debug_ipc::MsgHeader::kSerializedHeaderSize);
+    stream_->Peek(&serialized_header[0],
+                  debug_ipc::MsgHeader::kSerializedHeaderSize);
 
     debug_ipc::MessageReader reader(std::move(serialized_header));
     debug_ipc::MsgHeader header;
@@ -71,7 +58,7 @@ void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
       return;
     }
 
-    if (!stream->IsAvailable(header.size))
+    if (!stream_->IsAvailable(header.size))
       return;  // Wait for more data.
 
     // Consume the message now that we know the size. Do this before doing
@@ -79,7 +66,7 @@ void Session::OnAgentData(debug_ipc::StreamBuffer* stream) {
     // transaction ID is wrong.
     std::vector<char> serialized;
     serialized.resize(header.size);
-    stream->Read(&serialized[0], header.size);
+    stream_->Read(&serialized[0], header.size);
 
     // Transaction ID 0 is reserved for notifications.
     if (header.transaction_id == 0) {

@@ -39,16 +39,9 @@ Console::~Console() {
 
 void Console::Init() {
   line_input_.BeginReadLine();
-}
 
-Console::Result Console::OnInput(char c) {
-  if (line_input_.OnInput(c)) {
-    Result result = DispatchInputLine(line_input_.line());
-    if (result == Result::kQuit)
-      return result;
-    line_input_.BeginReadLine();
-  }
-  return Result::kContinue;
+  stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
+      debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO, this);
 }
 
 void Console::Output(OutputBuffer output) {
@@ -96,6 +89,20 @@ Console::Result Console::DispatchInputLine(const std::string& line) {
     Output(std::move(out));
   }
   return Result::kContinue;
+}
+
+void Console::OnFDReadable(int fd) {
+  char ch;
+  while (read(STDIN_FILENO, &ch, 1) > 0) {
+    if (line_input_.OnInput(ch)) {
+      Result result = DispatchInputLine(line_input_.line());
+      if (result == Result::kQuit) {
+        debug_ipc::MessageLoop::Current()->QuitNow();
+        return;
+      }
+      line_input_.BeginReadLine();
+    }
+  }
 }
 
 }  // namespace zxdb

@@ -6,6 +6,8 @@
 
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/line_input.h"
+#include "garnet/lib/debug_ipc/helper/fd_watcher.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/macros.h"
 
 namespace zxdb {
@@ -13,12 +15,8 @@ namespace zxdb {
 class OutputBuffer;
 class Session;
 
-class Console {
+class Console : public debug_ipc::FDWatcher {
  public:
-  // The result of dispatching input is either to keep running or quit the
-  // message loop to exit.
-  enum class Result { kContinue, kQuit };
-
   explicit Console(Session* session);
   ~Console();
 
@@ -29,20 +27,26 @@ class Console {
   // Prints the first prompt to the screen. This only needs to be called once.
   void Init();
 
-  // Returns what should happen as a result of this input.
-  Result OnInput(char c);
-
   // Prints the buffer/string to the console.
   void Output(OutputBuffer output);
   void Output(const std::string& s);
   void Output(const Err& err);
 
  private:
+  // The result of dispatching input is either to keep running or quit the
+  // message loop to exit.
+  enum class Result { kContinue, kQuit };
+
   Result DispatchInputLine(const std::string& line);
+
+  // FDWatcher implementation.
+  void OnFDReadable(int fd) override;
 
   static Console* singleton_;
 
   ConsoleContext context_;
+
+  debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
   LineInputStdout line_input_;
 

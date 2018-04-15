@@ -5,8 +5,8 @@
 #pragma once
 
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/client/weak_thunk.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -37,9 +37,17 @@ class TargetImpl : public Target {
   void OnProcessExiting(int return_code) override;
 
  private:
-  void OnLaunchOrAttachReply(const Err& err, uint64_t koid, uint32_t status,
-                             const std::string& process_name,
-                             Callback callback);
+  static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
+                                         Callback callback,
+                                         const Err& err,
+                                         uint64_t koid,
+                                         uint32_t status,
+                                         const std::string& process_name);
+  void OnLaunchOrAttachReply(Callback callback,
+                             const Err& err,
+                             uint64_t koid,
+                             uint32_t status,
+                             const std::string& process_name);
 
   void OnKillOrDetachReply(const Err& err, uint32_t status, Callback callback);
 
@@ -50,8 +58,7 @@ class TargetImpl : public Target {
   // Associated process if there is one.
   std::unique_ptr<ProcessImpl> process_;
 
-  std::shared_ptr<WeakThunk<TargetImpl>> weak_thunk_;
-  // ^ Keep at the bottom to make sure it's destructed last.
+  fxl::WeakPtrFactory<TargetImpl> impl_weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TargetImpl);
 };

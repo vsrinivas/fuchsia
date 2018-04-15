@@ -10,14 +10,14 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
 TargetImpl::TargetImpl(SystemImpl* system)
-    : Target(system->session()),
-      weak_thunk_(std::make_shared<WeakThunk<TargetImpl>>(this)) {}
+    : Target(system->session()), impl_weak_factory_(this) {}
 TargetImpl::~TargetImpl() = default;
 
 std::unique_ptr<TargetImpl> TargetImpl::Clone(SystemImpl* system) {
@@ -43,14 +43,18 @@ void TargetImpl::SetArgs(std::vector<std::string> args) {
 }
 
 void TargetImpl::Launch(Callback callback) {
-  if (state_ != State::kNone) {
-    // TODO(brettw) issue callback asynchronously to avoid reentering caller.
-    callback(this, Err("Can't launch, program is already running."));
-    return;
-  }
-  if (args_.empty()) {
-    // TODO(brettw) issue callback asynchronously to avoid reentering caller.
-    callback(this, Err("No program specified to launch."));
+  Err err;
+  if (state_ != State::kNone)
+    err = Err("Can't launch, program is already running.");
+  else if (args_.empty())
+    err = Err("No program specified to launch.");
+
+  if (err.has_error()) {
+    // Avoid reentering caller to dispatch the error.
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, err, weak_ptr = GetWeakPtr()](){
+          callback(std::move(weak_ptr), err);
+        });
     return;
   }
 
@@ -58,45 +62,37 @@ void TargetImpl::Launch(Callback callback) {
   request.argv = args_;
   session()->Send<debug_ipc::LaunchRequest, debug_ipc::LaunchReply>(
       request,
-      [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
-       callback = std::move(callback)](
+      [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
            const Err& err, debug_ipc::LaunchReply reply) {
-        if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnLaunchOrAttachReply(err, reply.process_koid,
-                                            reply.status, reply.process_name,
-                                            std::move(callback));
-        } else {
-          // The reply that the process was launched came after the local
-          // objects were destroyed.
-          // TODO(brettw) handle this more gracefully. Maybe kill the remote
-          // process?
-          fprintf(stderr, "Warning: process launch race, extra process could "
-              "be running.\n");
-        }
+        TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, callback, err,
+                                               reply.process_koid,
+                                               reply.status,
+                                               reply.process_name);
       });
 }
 
 void TargetImpl::Kill(Callback callback) {
   if (!process_.get()) {
-    // TODO(brettw): Send this asynchronously so as not to surprise callers.
-    callback(this, Err("Error detaching: No process."));
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, weak_ptr = GetWeakPtr()](){
+          callback(std::move(weak_ptr), Err("Error detaching: No process."));
+        });
     return;
   }
 
   debug_ipc::KillRequest request;
   request.process_koid = process_->GetKoid();
   session()->Send<debug_ipc::KillRequest, debug_ipc::KillReply>(
-      request, [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
-                callback](const Err& err, debug_ipc::KillReply reply) {
-        if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnKillOrDetachReply(err, reply.status,
-                                          std::move(callback));
+      request,
+      [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
+          const Err& err, debug_ipc::KillReply reply) {
+        if (weak_target) {
+          weak_target->OnKillOrDetachReply(err, reply.status,
+                                           std::move(callback));
         } else {
           // The reply that the process was launched came after the local
-          // objects were destroyed.
-          // TODO(brettw) handle this more gracefully. Maybe kill the remote
-          // process?
-          fprintf(stderr, "Warning: process detach race\n");
+          // objects were destroyed. We're still OK to dispatch either way.
+          callback(weak_target, err);
         }
       });
 }
@@ -106,28 +102,19 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
   request.koid = koid;
   session()->Send<debug_ipc::AttachRequest, debug_ipc::AttachReply>(
       request,
-      [koid, thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
-       callback](
+      [koid, callback, weak_target = impl_weak_factory_.GetWeakPtr()](
            const Err& err, debug_ipc::AttachReply reply) {
-        if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnLaunchOrAttachReply(err, koid, reply.status,
-                                            reply.process_name,
-                                            std::move(callback));
-        } else {
-          // The reply that the process was attached came after the local
-          // objects were destroyed.
-          // TODO(brettw) handle this more gracefully. Maybe kill the remote
-          // process?
-          fprintf(stderr, "Warning: process attach race, extra process could "
-              "be running.\n");
-        }
+        OnLaunchOrAttachReplyThunk(std::move(weak_target), std::move(callback),
+                                   err, koid, reply.status, reply.process_name);
       });
 }
 
 void TargetImpl::Detach(Callback callback) {
   if (!process_.get()) {
-    // TODO(brettw): Send this asynchronously so as not to surprise callers.
-    callback(this, Err("Error detaching: No process."));
+    debug_ipc::MessageLoop::Current()->PostTask(
+        [callback, weak_ptr = GetWeakPtr()](){
+          callback(std::move(weak_ptr), Err("Error detaching: No process."));
+        });
     return;
   }
 
@@ -135,17 +122,15 @@ void TargetImpl::Detach(Callback callback) {
   request.process_koid = process_->GetKoid();
   session()->Send<debug_ipc::DetachRequest, debug_ipc::DetachReply>(
       request,
-      [thunk = std::weak_ptr<WeakThunk<TargetImpl>>(weak_thunk_),
-       callback](
+      [callback, weak_target = impl_weak_factory_.GetWeakPtr()](
            const Err& err, debug_ipc::DetachReply reply) {
-        if (auto ptr = thunk.lock()) {
-          ptr->thunk->OnKillOrDetachReply(err, reply.status, std::move(callback));
+        if (weak_target) {
+          weak_target->OnKillOrDetachReply(
+              err, reply.status, std::move(callback));
         } else {
           // The reply that the process was launched came after the local
-          // objects were destroyed.
-          // TODO(brettw) handle this more gracefully. Maybe kill the remote
-          // process?
-          fprintf(stderr, "Warning: process detach race\n");
+          // objects were destroyed. We're still OK to dispatch either way.
+          callback(weak_target, err);
         }
       });
 }
@@ -161,10 +146,36 @@ void TargetImpl::OnProcessExiting(int return_code) {
   }
 }
 
-void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
+// static
+void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
+                                            Callback callback,
+                                            const Err& err,
+                                            uint64_t koid,
+                                            uint32_t status,
+                                            const std::string& process_name) {
+  if (target) {
+    target->OnLaunchOrAttachReply(std::move(callback), err, koid, status,
+                                  process_name);
+  } else {
+    // The reply that the process was launched came after the local
+    // objects were destroyed.
+    if (err.has_error()) {
+      // Process not launched, forward the error.
+      callback(target, err);
+    } else {
+      // TODO(brettw) handle this more gracefully. Maybe kill the remote
+      // process?
+      callback(target, Err(
+          "Warning: process launch race, extra process is likely running."));
+    }
+  }
+}
+
+void TargetImpl::OnLaunchOrAttachReply(Callback callback,
+                                       const Err& err,
+                                       uint64_t koid,
                                        uint32_t status,
-                                       const std::string& process_name,
-                                       Callback callback) {
+                                       const std::string& process_name) {
   FXL_DCHECK(state_ = State::kStarting);
   FXL_DCHECK(!process_.get());  // Shouldn't have a process.
 
@@ -182,7 +193,7 @@ void TargetImpl::OnLaunchOrAttachReply(const Err& err, uint64_t koid,
   }
 
   if (callback)
-    callback(this, issue_err);
+    callback(GetWeakPtr(), issue_err);
 
   if (state_ == State::kRunning) {
     for (auto& observer : observers())
@@ -199,7 +210,8 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status, Callback c
     issue_err = err;
   } else if (status != 0) {
     // Error from detaching.
-    // TODO(davemoore): Not sure what state the target should be if we error upon detach.
+    // TODO(davemoore): Not sure what state the target should be if we error
+    // upon detach.
     issue_err = Err(fxl::StringPrintf("Error detaching, status = %d.", status));
   } else {
     // Successfully detached.
@@ -212,7 +224,7 @@ void TargetImpl::OnKillOrDetachReply(const Err& err, uint32_t status, Callback c
   }
 
   if (callback)
-    callback(this, issue_err);
+    callback(GetWeakPtr(), issue_err);
 }
 
 }  // namespace zxdb

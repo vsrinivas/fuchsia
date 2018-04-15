@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 
 namespace zxdb {
 
@@ -49,11 +50,8 @@ void BreakpointImpl::CommitChanges(std::function<void(const Err&)> callback) {
     if (!enabled_) {
       // The breakpoint isn't enabled and there's no backend breakpoint to
       // clear, don't need to do anything.
-      //
-      // TODO(brettw) issue callback non-reentrantly by posting back to the
-      // message loop.
-      if (callback)
-        callback(Err());
+      debug_ipc::MessageLoop::Current()->PostTask(
+          [callback]() { callback(Err()); });
       return;
     }
 

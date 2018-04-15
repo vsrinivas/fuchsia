@@ -10,10 +10,8 @@
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
-#include "garnet/bin/zxdb/client/agent_connection.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/console.h"
-#include "garnet/bin/zxdb/console/main_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/buffered_zx_socket.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 
@@ -61,24 +59,34 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  // Start background thread to run the agent in-process.
   debug_ipc::MessageLoopZircon agent_loop;
   std::thread agent_thread(&AgentThread, &agent_loop, std::move(agent_socket));
 
-  zxdb::Session session;
-  session.SetAgentConnection(std::make_unique<zxdb::AgentConnection>(
-      &session, client_socket.release()));
+  // Client message loop.
+  debug_ipc::MessageLoopZircon client_loop;
+  client_loop.Init();
 
-  zxdb::Console console(&session);
-  console.Init();
+  // This scope forces all the objects to be destroyed before the Cleanup()
+  // call which will mark the message loop as not-current.
+  {
+    debug_ipc::BufferedZxSocket buffer;
+    if (!buffer.Init(std::move(client_socket))) {
+      fprintf(stderr, "Can't hook up stream.");
+      return 1;
+    }
 
-  zxdb::PlatformMainLoop main_loop;
+    // Route data from buffer -> session.
+    zxdb::Session session(&buffer.stream());
+    buffer.set_data_available_callback(
+        [&session](){ session.OnStreamReadable(); });
 
-  // TODO(brettw) have a better way to hook this up. Probably the main loop
-  // needs to be more generic and live in client/. Then there can be a global
-  // and the AgentConnection can register and unregister itself.
-  main_loop.StartWatchingConnection(session.agent_connection());
-  main_loop.Run();
-  main_loop.StopWatchingConnection(session.agent_connection());
+    zxdb::Console console(&session);
+    console.Init();
+
+    client_loop.Run();
+  }
+  client_loop.Cleanup();
 
   // Ask the background thread to stop and join.
   agent_loop.PostTask([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });

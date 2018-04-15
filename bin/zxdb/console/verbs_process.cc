@@ -39,7 +39,7 @@ Err AssertRunnableTarget(Target* target) {
 
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
-void ProcessCommandCallback(const char* verb, Target* target,
+void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
                             bool display_message_on_success, const Err& err) {
   if (!display_message_on_success && !err.has_error())
     return;
@@ -48,11 +48,14 @@ void ProcessCommandCallback(const char* verb, Target* target,
 
   OutputBuffer out;
   if (err.has_error()) {
-    out.Append(fxl::StringPrintf("Process %d %s failed.\n",
-                                 console->context().IdForTarget(target), verb));
+    if (target) {
+      out.Append(fxl::StringPrintf("Process %d %s failed.\n",
+                                   console->context().IdForTarget(target.get()),
+                                   verb));
+    }
     out.OutputErr(err);
-  } else {
-    out.Append(DescribeTarget(&console->context(), target, false));
+  } else if (target) {
+    out.Append(DescribeTarget(&console->context(), target.get(), false));
   }
 
   console->Output(std::move(out));
@@ -156,7 +159,7 @@ Err DoRun(ConsoleContext* context, const Command& cmd) {
     cmd.target()->SetArgs(cmd.args());
   }
 
-  cmd.target()->Launch([](Target* target, const Err& err) {
+  cmd.target()->Launch([](fxl::WeakPtr<Target> target, const Err& err) {
     ProcessCommandCallback("launch", target, true, err);
   });
   return Err();
@@ -187,7 +190,7 @@ Err DoKill(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  cmd.target()->Detach([](Target* target, const Err& err) {
+  cmd.target()->Detach([](fxl::WeakPtr<Target> target, const Err& err) {
     // The ConsoleContext displays messages for stopped processes, so don't
     // display messages when successfully killing.
     ProcessCommandCallback("kill", target, false, err);
@@ -232,7 +235,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  cmd.target()->Attach(koid, [](Target* target, const Err& err) {
+  cmd.target()->Attach(koid, [](fxl::WeakPtr<Target> target, const Err& err) {
     ProcessCommandCallback("attach", target, true, err);
   });
   return Err();
@@ -269,7 +272,7 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
   // Only print something when there was an error detaching. The console
   // context will watch for Process destruction and print messages for each one
   // in the success case.
-  cmd.target()->Detach([](Target* target, const Err& err) {
+  cmd.target()->Detach([](fxl::WeakPtr<Target> target, const Err& err) {
     // The ConsoleContext displays messages for stopped processes, so don't
     // display messages when successfully detaching.
     ProcessCommandCallback("detach", target, false, err);
