@@ -10,10 +10,9 @@
 extern crate failure;
 #[macro_use]
 extern crate fdio;
-extern crate fidl;
-extern crate fuchsia_async as async;
-extern crate fuchsia_zircon as zircon;
 extern crate fidl_wlan_device as wlan;
+extern crate fuchsia_async as async;
+extern crate fuchsia_zircon as zx;
 
 use failure::Error;
 use std::fmt;
@@ -44,24 +43,9 @@ impl WlanPhy {
     }
 
     /// Retrieves a zircon channel to the WLAN Phy device, for use with the WLAN Phy fidl service.
-    pub fn connect(&self) -> Result<wlan::PhyProxy, zircon::Status> {
-        let chan = sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)?;
+    pub fn connect(&self) -> Result<wlan::PhyProxy, zx::Status> {
+        let chan = sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zx::Status::INTERNAL)?;
         Ok(wlan::PhyProxy::new(async::Channel::from_channel(chan)?))
-    }
-
-    /// Queries the WLAN Phy device for its capabilities.
-    pub fn query(&self) -> Result<wlan::PhyInfo, zircon::Status> {
-        sys::query_wlanphy_device(&self.dev_node).map_err(|_| zircon::Status::INTERNAL)
-    }
-
-    /// Creates a new WLAN Iface with the given role.
-    pub fn create_iface(&self, role: wlan::MacRole) -> Result<wlan::IfaceInfo, zircon::Status> {
-        sys::create_wlaniface(&self.dev_node, role).map_err(|_| zircon::Status::INTERNAL)
-    }
-
-    /// Destroys the WLAN Iface with the given id.
-    pub fn destroy_iface(&self, id: u16) -> Result<(), zircon::Status> {
-        sys::destroy_wlaniface(&self.dev_node, id).map_err(|_| zircon::Status::INTERNAL)
     }
 }
 

@@ -737,7 +737,6 @@ version = "0.1.0"
 dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fdio 0.2.0",
- "fidl 0.1.0",
  "fidl_wlan_device 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
