@@ -21,13 +21,14 @@ package("run_integration_tests") {
     "server",
   ]
 
-  binaries = [ {
-        name = "report_result"
-      } ]
-
-  tests = [ {
-        name = "run_integration_tests"
-      } ]
+  binaries = [
+    {
+      name = "report_result"
+    },
+    {
+      name = "run_integration_tests"
+    },
+  ]
 }
 
 package("test_runner_tests") {
