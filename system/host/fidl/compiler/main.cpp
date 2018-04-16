@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include <fstream>
 #include <iostream>
@@ -86,7 +88,35 @@ void Usage() {
     exit(1);
 }
 
+void MakeParentDirectory(const std::string& filename) {
+    std::string::size_type slash = 0;
+
+    for (;;) {
+        slash = filename.find('/', slash);
+        if (slash == filename.npos) {
+            return;
+        }
+
+        std::string path = filename.substr(0, slash);
+        ++slash;
+        if (path.size() == 0u) {
+            // Skip creating "/".
+            continue;
+        }
+
+        if (mkdir(path.data(), 0755) != 0 && errno != EEXIST) {
+            Fail("Could not create directory %s for output file %s: error %s\n",
+                 path.data(), filename.data(), strerror(errno));
+
+        }
+    }
+}
+
 std::fstream Open(std::string filename, std::ios::openmode mode) {
+    if ((mode & std::ios::out) != 0) {
+        MakeParentDirectory(filename);
+    }
+
     std::fstream stream;
     stream.open(filename, mode);
     if (!stream.is_open()) {
