@@ -138,10 +138,10 @@ zx_status_t DummyIommu::ClearMappingsForBusTxnId(uint64_t bus_txn_id) {
     return ZX_OK;
 }
 
-uint64_t DummyIommu::minimum_contiguity(uint64_t bus_txn_id) const {
+uint64_t DummyIommu::minimum_contiguity(uint64_t bus_txn_id) {
     return PAGE_SIZE;
 }
 
-uint64_t DummyIommu::aspace_size(uint64_t bus_txn_id) const {
+uint64_t DummyIommu::aspace_size(uint64_t bus_txn_id) {
     return UINT64_MAX;
 }

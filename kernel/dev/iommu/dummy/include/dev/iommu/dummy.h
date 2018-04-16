@@ -28,8 +28,8 @@ public:
 
     zx_status_t ClearMappingsForBusTxnId(uint64_t bus_txn_id) final;
 
-    uint64_t minimum_contiguity(uint64_t bus_txn_id) const final;
-    uint64_t aspace_size(uint64_t bus_txn_id) const final;
+    uint64_t minimum_contiguity(uint64_t bus_txn_id) final;
+    uint64_t aspace_size(uint64_t bus_txn_id) final;
 
     ~DummyIommu() final;
 

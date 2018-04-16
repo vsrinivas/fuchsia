@@ -772,12 +772,12 @@ zx_status_t IommuImpl::GetOrCreateDeviceContextLocked(ds::Bdf bdf, DeviceContext
     return ctx_table_state->CreateDeviceContext(bdf, domain_id, context);
 }
 
-uint64_t IommuImpl::minimum_contiguity(uint64_t bus_txn_id) const {
+uint64_t IommuImpl::minimum_contiguity(uint64_t bus_txn_id) {
     // TODO(teisenbe): Discover this from the device context
     return PAGE_SIZE;
 }
 
-uint64_t IommuImpl::aspace_size(uint64_t bus_txn_id) const {
+uint64_t IommuImpl::aspace_size(uint64_t bus_txn_id) {
     // TODO(teisenbe): Discover this from the device context
     // 2^48 is the size of an address space using 4-levevel translation.
     return 1ull << 48;

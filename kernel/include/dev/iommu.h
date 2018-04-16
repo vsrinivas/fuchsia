@@ -83,11 +83,11 @@ public:
     // Returns the number of bytes that Map() can guarantee, upon success, to find
     // a contiguous address range for.  This function is only returns meaningful
     // values if |IsValidBusTxnId(bus_txn_id)|.
-    virtual uint64_t minimum_contiguity(uint64_t bus_txn_id) const = 0;
+    virtual uint64_t minimum_contiguity(uint64_t bus_txn_id) = 0;
 
     // Returns the total size of the space the addresses are mapped into.  This
     // function is only returns meaningful values if |IsValidBusTxnId(bus_txn_id)|.
-    virtual uint64_t aspace_size(uint64_t bus_txn_id) const = 0;
+    virtual uint64_t aspace_size(uint64_t bus_txn_id) = 0;
 
     virtual ~Iommu() { }
 };
