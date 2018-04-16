@@ -1,0 +1,3 @@
+if (( $CURRENT == 2 )); then
+  _path_files -/
+fi
