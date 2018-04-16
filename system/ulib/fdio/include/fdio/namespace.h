@@ -56,6 +56,8 @@ zx_status_t fdio_ns_chdir(fdio_ns_t* ns);
 // Replace the fdio "global" namespace with the provided namespace
 zx_status_t fdio_ns_install(fdio_ns_t* ns);
 
+// Retrieve the fdio "global" namespace (if any).
+zx_status_t fdio_ns_get_installed(fdio_ns_t** ns);
 
 typedef struct fdio_flat_namespace {
     size_t count;

@@ -22,6 +22,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
@@ -573,7 +574,6 @@ void __libc_extensions_init(uint32_t handle_count,
             fdio_fdtab[arg]->dupcount++;
             LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
             break;
-                LOG(1, "fdio: inherit fd=%d (socket)\n", arg_fd);
         case PA_NS_DIR:
             // we always contine here to not steal the
             // handles from higher level code that may
@@ -625,15 +625,8 @@ void __libc_extensions_init(uint32_t handle_count,
     }
 
     if (fdio_root_ns) {
-        fdio_t* io = fdio_ns_open_root(fdio_root_ns);
-        if (io != NULL) {
-            // If we have a root from the legacy PA_FDIO_ROOT,
-            // a specified root namespace overrides it
-            if (fdio_root_handle) {
-                fdio_close(fdio_root_handle);
-            }
-            fdio_root_handle = io;
-        }
+        ZX_ASSERT(!fdio_root_handle);
+        fdio_root_handle = fdio_ns_open_root(fdio_root_ns);
     }
     if (fdio_root_handle) {
         fdio_root_init = true;
@@ -679,6 +672,7 @@ zx_status_t fdio_ns_install(fdio_ns_t* ns) {
         //TODO: support replacing an active namespace
         status = ZX_ERR_ALREADY_EXISTS;
     } else {
+        fdio_root_ns = ns;
         if (fdio_root_handle) {
             old_root = fdio_root_handle;
         }
@@ -691,6 +685,18 @@ zx_status_t fdio_ns_install(fdio_ns_t* ns) {
         fdio_close(old_root);
         fdio_release(old_root);
     }
+    return status;
+}
+
+zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
+    zx_status_t status = ZX_OK;
+    mtx_lock(&fdio_lock);
+    if (fdio_root_ns == NULL) {
+        status = ZX_ERR_NOT_FOUND;
+    } else {
+        *ns = fdio_root_ns;
+    }
+    mtx_unlock(&fdio_lock);
     return status;
 }
 
