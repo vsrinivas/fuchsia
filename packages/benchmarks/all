@@ -1,5 +1,8 @@
 {
     "imports": [
         "peridot/packages/benchmarks/modular"
-    ]
+    ],
+    "packages": {
+        "peridot_benchmarks": "//peridot/tests/benchmark:peridot_benchmarks"
+    }
 }

@@ -51,3 +51,20 @@ package("run_modular_benchmarks") {
     },
   ]
 }
+
+copy("copy_peridot_benchmarks") {
+  sources = ["peridot_benchmarks.sh"]
+  outputs = ["$root_out_dir/{{source_file_part}}"]
+}
+
+package("peridot_benchmarks") {
+  testonly = true
+  fuchsia_package = true
+
+  deps = [":copy_peridot_benchmarks"]
+
+  binaries = [ {
+        name = "peridot_benchmarks.sh"
+        dest = "benchmarks.sh"
+      } ]
+}
