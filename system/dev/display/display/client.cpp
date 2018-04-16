@@ -37,6 +37,8 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(display_ControllerCheckConfig);
     SELECT_TABLE_CASE(display_ControllerApplyConfig);
     SELECT_TABLE_CASE(display_ControllerSetOwnership);
+    SELECT_TABLE_CASE(display_ControllerComputeLinearImageStride);
+    SELECT_TABLE_CASE(display_ControllerAllocateVmo);
     }
     if (table != nullptr) {
         const char* err;
@@ -84,6 +86,8 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
 
     uint8_t out_byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
     fidl::Builder builder(out_byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES);
+    zx_handle_t out_handle = ZX_HANDLE_INVALID;
+    bool has_out_handle = false;
     const fidl_type_t* out_type = nullptr;
 
     switch (msg.ordinal()) {
@@ -96,6 +100,12 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     HANDLE_REQUEST_CASE(CheckConfig);
     HANDLE_REQUEST_CASE(ApplyConfig);
     HANDLE_REQUEST_CASE(SetOwnership);
+    HANDLE_REQUEST_CASE(ComputeLinearImageStride);
+    case display_ControllerAllocateVmoOrdinal: {
+        auto r = reinterpret_cast<const display_ControllerAllocateVmoRequest*>(msg.bytes().data());
+        HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
+        break;
+    }
     default:
         zxlogf(INFO, "Unknown ordinal %d\n", msg.ordinal());
     }
@@ -104,7 +114,8 @@ void Client::HandleControllerApi(async_t* async, async::WaitBase* self,
     if (resp_bytes.actual() != 0) {
         ZX_DEBUG_ASSERT(out_type != nullptr);
 
-        fidl::Message resp(fbl::move(resp_bytes), fidl::HandlePart());
+        fidl::Message resp(fbl::move(resp_bytes),
+                           fidl::HandlePart(&out_handle, 1, has_out_handle ? 1 : 0));
         resp.header() = msg.header();
 
         const char* err_msg;
@@ -350,6 +361,26 @@ void Client::HandleSetOwnership(const display_ControllerSetOwnershipRequest* req
         return;
     }
     controller_->SetVcOwner(req->active);
+}
+
+void Client::HandleComputeLinearImageStride(
+        const display_ControllerComputeLinearImageStrideRequest* req,
+        fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<display_ControllerComputeLinearImageStrideResponse>();
+    *resp_table = &display_ControllerComputeLinearImageStrideResponseTable;
+    resp->stride = DC_IMPL_CALL(compute_linear_stride, req->width, req->pixel_format);
+}
+
+void Client::HandleAllocateVmo(const display_ControllerAllocateVmoRequest* req,
+                               fidl::Builder* resp_builder,
+                               zx_handle_t* handle_out, bool* has_handle_out,
+                               const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<display_ControllerAllocateVmoResponse>();
+    *resp_table = &display_ControllerAllocateVmoResponseTable;
+
+    resp->res = DC_IMPL_CALL(allocate_vmo, req->size, handle_out);
+    *has_handle_out = resp->res == ZX_OK;
+    resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
 }
 
 bool Client::CheckConfig() {

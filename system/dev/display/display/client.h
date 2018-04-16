@@ -90,7 +90,13 @@ private:
                            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleSetOwnership(const display_ControllerSetOwnershipRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
-
+    void HandleComputeLinearImageStride(
+            const display_ControllerComputeLinearImageStrideRequest* req,
+            fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleAllocateVmo(const display_ControllerAllocateVmoRequest* req,
+                           fidl::Builder* resp_builder,
+                           zx_handle_t* handle_out, bool* has_handle_out,
+                           const fidl_type_t** resp_table);
 
     Controller* controller_;
     ClientProxy* proxy_;
