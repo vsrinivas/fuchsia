@@ -101,7 +101,6 @@ void NamespaceBuilder::AddDeprecatedDefaultDirectories() {
   // TODO(abarth): Remove items from this list as clients no longer need them.
   PushDirectoryFromPathIfNotPresent("/data");
   PushDirectoryFromPathIfNotPresent("/system");
-  PushDirectoryFromPathIfNotPresent("/tmp");
 }
 
 void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
