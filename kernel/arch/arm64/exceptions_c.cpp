@@ -15,6 +15,7 @@
 #include <debug.h>
 #include <inttypes.h>
 
+#include <kernel/interrupt.h>
 #include <kernel/thread.h>
 
 #include <platform.h>
@@ -325,34 +326,26 @@ extern "C" uint32_t arm64_irq(struct arm64_iframe_short* iframe, uint exception_
 
     LTRACEF("iframe %p, flags 0x%x\n", iframe, exception_flags);
 
-    arch_set_in_int_handler(true);
-    thread_preempt_disable();
+    int_handler_saved_state_t state;
+    int_handler_start(&state);
 
     kcounter_add(exceptions_irq, 1u);
     platform_irq(iframe);
 
-    bool preempt_pending = false;
-    /* This logic is similar to thread_preempt_reenable() except that we
-     * call thread_preempt() below instead of thread_reschedule(). */
-    thread_t* current_thread = get_current_thread();
-    DEBUG_ASSERT(current_thread->preempt_disable > 0);
-    if (--current_thread->preempt_disable == 0) {
-        preempt_pending = current_thread->preempt_pending;
-    }
-    arch_set_in_int_handler(false);
+    bool do_preempt = int_handler_finish(&state);
 
     /* if we came from user space, check to see if we have any signals to handle */
     if (unlikely(exception_flags & ARM64_EXCEPTION_FLAG_LOWER_EL)) {
         uint32_t exit_flags = 0;
         if (thread_is_signaled(get_current_thread()))
             exit_flags |= ARM64_IRQ_EXIT_THREAD_SIGNALED;
-        if (preempt_pending)
+        if (do_preempt)
             exit_flags |= ARM64_IRQ_EXIT_RESCHEDULE;
         return exit_flags;
     }
 
     /* preempt the thread if the interrupt has signaled it */
-    if (preempt_pending)
+    if (do_preempt)
         thread_preempt();
 
     /* if we're returning to kernel space, make sure we restore the correct x18 */

@@ -424,7 +424,7 @@ void sched_reschedule(void) {
     thread_t* current_thread = get_current_thread();
     uint curr_cpu = arch_curr_cpu_num();
 
-    if (current_thread->preempt_disable) {
+    if (current_thread->disable_counts != 0) {
         current_thread->preempt_pending = true;
         return;
     }
