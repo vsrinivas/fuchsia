@@ -1214,7 +1214,7 @@ macro_rules! fidl2_union {
                         }
                         index += 1;
                     )*
-                    Err($crate::Error::Invalid)
+                    Err($crate::Error::UnknownUnionTag)
                 })
             }
         }

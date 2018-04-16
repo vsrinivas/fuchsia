@@ -15,55 +15,19 @@ extern crate futures;
 extern crate slab;
 
 #[macro_use]
-mod encoding;
-#[macro_use]
 pub mod encoding2;
-mod message;
 mod error;
-mod server;
-mod interface;
-mod client;
 pub mod client2;
-mod endpoints;
 pub mod endpoints2;
 
-pub use encoding::{Encodable, Decodable, EncodablePtr, DecodablePtr, EncodableType};
-pub use encoding::{CodableUnion, EncodableNullable, DecodableNullable};
-pub use encoding::{encode_handle, decode_handle};
-pub use message::{EncodeBuf, DecodeBuf, MsgType};
-pub use error::{Error, Result, ErrorOrClose};
-pub use server::{CloseChannel, Stub, Server};
-pub use interface::InterfacePtr;
-pub use client::{Client, FidlService};
-pub use endpoints::{ClientEnd, ServerEnd};
+pub use error::{Error, Result};
 
 /// A specialized `Box<Future<...>>` type for FIDL.
 /// This is a convenience to avoid writing
-/// `Future<Item = I, Error = CloseChannel> + Send`.
+/// `Future<Item = I, Error = Error> + Send`.
 /// The error type indicates various FIDL protocol errors, as well as general-purpose IO
 /// errors such as a closed channel.
 pub type BoxFuture<Item> = Box<futures::Future<Item = Item, Error = Error> + Send>;
-
-/// A specialized `Future<...>` type for FIDL server implementations.
-/// This is a convenience to avoid writing
-/// `Future<Item = I, Error = CloseChannel>>`.
-/// Errors in this `Future` should require no extra handling, and upon error the type should
-/// be dropped.
-pub trait ServerFuture<Item>: futures::Future<Item = Item, Error = CloseChannel> + Send {}
-impl<T, Item> ServerFuture<Item> for T
-    where T: futures::Future<Item = Item, Error = CloseChannel> + Send {}
-
-/// A specialized `Box<Future<...>>` type for FIDL server implementations.
-/// This is a convenience to avoid writing
-/// `Box<Future<Item = I, Error = CloseChannel>>`.
-/// Errors in this `Future` should require no extra handling, and upon error the type should
-/// be dropped.
-pub type BoxServerFuture<Item> = Box<futures::Future<Item = Item, Error = CloseChannel> + Send>;
-
-/// A specialized `Future<...>` type for FIDL server implementations.
-/// This is a convenience to avoid writing
-/// `future::FutureResult<Item = I, Error = CloseChannel>>`.
-pub type ServerImmediate<Item> = futures::future::FutureResult<Item, CloseChannel>;
 
 /// A specialized `Future<...>` type for FIDL.
 /// This is a convenience to avoid writing

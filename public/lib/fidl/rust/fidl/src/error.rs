@@ -4,7 +4,6 @@
 
 //! Error (common to all fidl operations)
 
-use CloseChannel;
 use std::io;
 use std::result;
 
@@ -16,10 +15,6 @@ pub type Result<T> = result::Result<T, Error>;
 /// The error type used by FIDL operations.
 #[derive(Fail, Debug)]
 pub enum Error {
-    /// FIDL out-of-line data was stored with bad alignment.
-    #[fail(display = "FIDL out-of-line data was stored with bad alignment")]
-    BadAlignment,
-
     /// Invalid header for a FIDL buffer.
     #[fail(display = "Invalid header for a FIDL buffer.")]
     InvalidHeader,
@@ -43,10 +38,6 @@ pub enum Error {
     /// Incorrectly encoded UTF8.
     #[fail(display = "A FIDL message contained incorrectly encoded UTF8.")]
     Utf8Error,
-
-    /// There was an attempt to decode a FIDL message containing an invalid handle.
-    #[fail(display = "There was an attempt to decode a FIDL message containing an invalid handle.")]
-    InvalidHandle,
 
     /// A message was recieved for an ordinal value that the service does not understand.
     /// This generally results from an attempt to call a FIDL service of a type other than
@@ -105,27 +96,4 @@ pub enum Error {
     #[doc(hidden)]
     #[fail(display = "__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
-}
-
-/// The result of an attempt to run a FIDL request handler and serialize the result.
-/// This should only be used when implementing the `Stub` trait.
-#[derive(Debug)]
-pub enum ErrorOrClose {
-    /// A FIDL error.
-    Error(Error),
-    /// A signal indicating that an error occurred in a request handler and
-    /// the server's channel should be closed.
-    CloseChannel,
-}
-
-impl From<Error> for ErrorOrClose {
-    fn from(err: Error) -> Self {
-        ErrorOrClose::Error(err)
-    }
-}
-
-impl From<CloseChannel> for ErrorOrClose {
-    fn from(_: CloseChannel) -> Self {
-        ErrorOrClose::CloseChannel
-    }
 }
