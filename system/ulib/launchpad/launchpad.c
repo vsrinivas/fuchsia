@@ -1299,7 +1299,7 @@ zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
     if (status == ZX_OK) {
         return launchpad_file_load_with_vdso(lp, vmo);
     } else {
-        return status;
+        return lp_error(lp, status, "launchpad_vmo_from_file failure");
     }
 }
 
