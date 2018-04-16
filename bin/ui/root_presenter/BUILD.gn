@@ -22,8 +22,6 @@ executable("root_presenter") {
     "perspective_demo_mode.h",
     "presentation.cc",
     "presentation.h",
-    "presentation_switcher.cc",
-    "presentation_switcher.h",
   ]
 
   deps = [

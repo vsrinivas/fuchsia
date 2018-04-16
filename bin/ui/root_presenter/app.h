@@ -55,10 +55,6 @@ class App : public presentation::Presenter,
   void InitializeServices();
   void Reset();
 
-  void SwitchToPresentation(const size_t presentation_idx);
-  void SwitchToNextPresentation();
-  void SwitchToPreviousPresentation();
-
   std::unique_ptr<component::ApplicationContext> application_context_;
   fidl::BindingSet<presentation::Presenter> presenter_bindings_;
   fidl::BindingSet<input::InputDeviceRegistry> input_receiver_bindings_;
@@ -72,7 +68,6 @@ class App : public presentation::Presenter,
   std::unique_ptr<scenic_lib::LayerStack> layer_stack_;
 
   std::vector<std::unique_ptr<Presentation>> presentations_;
-  size_t active_presentation_idx_ = 0;
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<mozart::InputDeviceImpl>>

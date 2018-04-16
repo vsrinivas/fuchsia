@@ -20,8 +20,8 @@
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
-#include "garnet/bin/ui/root_presenter/presentation_switcher.h"
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/input/device_state.h"
@@ -65,11 +65,6 @@ class Presentation : private views_v1::ViewTreeListener,
                      private views_v1::ViewContainerListener,
                      private presentation::Presentation {
  public:
-  // Callback when the presentation yields to the next/previous one.
-  using YieldCallback = std::function<void(bool yield_to_next)>;
-  // Callback when the presentation is shut down.
-  using ShutdownCallback = std::function<void()>;
-
   Presentation(views_v1::ViewManager* view_manager,
                ui::Scenic* scenic,
                scenic_lib::Session* session);
@@ -83,21 +78,19 @@ class Presentation : private views_v1::ViewTreeListener,
   void Present(
       views_v1_token::ViewOwnerPtr view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation_request,
-      YieldCallback yield_callback,
-      ShutdownCallback shutdown_callback);
+      fxl::Closure shutdown_callback);
 
   void OnReport(uint32_t device_id, input::InputReport report);
   void OnDeviceAdded(mozart::InputDeviceImpl* input_device);
   void OnDeviceRemoved(uint32_t device_id);
 
-  const scenic_lib::Layer& layer() const { return layer_; }
+  const scenic_lib::Layer& layer() { return layer_; }
 
  private:
   friend class DisplayRotater;
   friend class DisplayUsageSwitcher;
   friend class PerspectiveDemoMode;
   friend class DisplaySizeSwitcher;
-  friend class PresentationSwitcher;
 
   // Sets |display_metrics_| and updates view_manager and Scenic.
   // Returns false if the updates were skipped (if display initialization hasn't
@@ -205,8 +198,7 @@ class Presentation : private views_v1::ViewTreeListener,
 
   views_v1::ViewPtr root_view_;
 
-  YieldCallback yield_callback_;
-  ShutdownCallback shutdown_callback_;
+  fxl::Closure shutdown_callback_;
 
   geometry::PointF mouse_coordinates_;
 
@@ -233,9 +225,6 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // Toggles through different display sizes.
   DisplaySizeSwitcher display_size_switcher_;
-
-  // Toggles through different presentations.
-  PresentationSwitcher presentation_switcher_;
 
   struct CursorState {
     bool created;
