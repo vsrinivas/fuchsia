@@ -14,6 +14,11 @@ enum {
 };
 
 zx_status_t completion_wait(completion_t* completion, zx_time_t timeout) {
+    zx_time_t deadline = (timeout == ZX_TIME_INFINITE) ? timeout : zx_deadline_after(timeout);
+    return completion_wait_deadline(completion, deadline);
+}
+
+zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadline) {
     // TODO(kulakowski): With a little more state (a waiters count),
     // this could optimistically spin before entering the kernel.
 
@@ -24,7 +29,6 @@ zx_status_t completion_wait(completion_t* completion, zx_time_t timeout) {
         if (current_value == SIGNALED) {
             return ZX_OK;
         }
-        zx_time_t deadline = (timeout == ZX_TIME_INFINITE) ? timeout : zx_deadline_after(timeout);
         switch (zx_futex_wait(futex, current_value, deadline)) {
         case ZX_OK:
             continue;

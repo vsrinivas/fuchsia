@@ -27,6 +27,11 @@ typedef struct completion_t {
 // signaled.
 zx_status_t completion_wait(completion_t* completion, zx_time_t timeout);
 
+// Returns ZX_ERR_TIMED_OUT if deadline elapses, and ZX_OK if woken by
+// a call to completion_wake or if the completion has already been
+// signaled.
+zx_status_t completion_wait_deadline(completion_t* completion, zx_time_t deadline);
+
 // Awakens all waiters on the completion, and marks the it as
 // signaled. Waits after this call but before a reset of the
 // completion will also see the signal and immediately return.
