@@ -73,6 +73,14 @@ class Client {
                                        CharacteristicCallback chrc_callback,
                                        att::StatusCallback status_callback) = 0;
 
+  // Performs the "Discover All Characteristic Descriptors" procedure defined in
+  // Vol 3, Part G, 4.7.1.
+  using DescriptorCallback = std::function<void(const DescriptorData&)>;
+  virtual void DiscoverDescriptors(att::Handle range_start,
+                                   att::Handle range_end,
+                                   DescriptorCallback desc_callback,
+                                   att::StatusCallback status_callback) = 0;
+
   // Sends an ATT Write Request with the requested attribute |handle| and
   // |value|. This can be used to send a write request to any attribute.
   // (Vol 3, Part F, 3.4.5.1).

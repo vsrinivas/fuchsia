@@ -53,6 +53,13 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
   });
 }
 
+void FakeClient::DiscoverDescriptors(att::Handle range_start,
+                                     att::Handle range_end,
+                                     DescriptorCallback desc_callback,
+                                     StatusCallback status_callback) {
+  FXL_NOTIMPLEMENTED();
+}
+
 void FakeClient::WriteRequest(att::Handle handle,
                               const common::ByteBuffer& value,
                               StatusCallback callback) {

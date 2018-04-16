@@ -29,6 +29,15 @@ const auto kDiscoverAllPrimaryRequest = common::CreateStaticByteBuffer(
 
 void NopSvcCallback(const gatt::ServiceData&) {}
 void NopChrcCallback(const gatt::CharacteristicData&) {}
+void NopDescCallback(const gatt::DescriptorData&) {}
+
+constexpr uint8_t UpperBits(uint16_t val) {
+  return val >> 8;
+}
+
+constexpr uint8_t LowerBits(uint16_t val) {
+  return val & 0x00FF;
+}
 
 class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
  public:
@@ -46,6 +55,29 @@ class GATT_ClientTest : public l2cap::testing::FakeChannelTest {
   void TearDown() override {
     client_ = nullptr;
     att_ = nullptr;
+  }
+
+  // |out_status| must remain valid.
+  void SendDiscoverDescriptors(att::Status* out_status,
+                               Client::DescriptorCallback desc_callback,
+                               att::Handle range_start = 0x0001,
+                               att::Handle range_end = 0xFFFF) {
+    async::PostTask(dispatcher(), [=] {
+      client()->DiscoverDescriptors(
+          range_start, range_end, std::move(desc_callback),
+          [out_status](att::Status val) { *out_status = val; });
+    });
+  }
+
+  // Blocks until the fake channel receives a Find Information request with the
+  // given handles
+  bool ExpectFindInformation(att::Handle range_start = 0x0001,
+                             att::Handle range_end = 0xFFFF) {
+    return Expect(common::CreateStaticByteBuffer(
+        0x04,                                            // opcode
+        LowerBits(range_start), UpperBits(range_start),  // start handle
+        LowerBits(range_end), UpperBits(range_end)       // end hanle
+        ));
   }
 
   att::Bearer* att() const { return att_.get(); }
@@ -635,7 +667,7 @@ TEST_F(GATT_ClientTest, DiscoverAllPrimaryMultipleRequests) {
   EXPECT_EQ(kTestUuid3, services[2].type);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacHandlesEqual) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryHandlesEqual) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0x0001;
 
@@ -647,7 +679,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacHandlesEqual) {
   EXPECT_TRUE(status);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacResponseTooShort) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryResponseTooShort) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -676,7 +708,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacResponseTooShort) {
   EXPECT_EQ(HostError::kPacketMalformed, status.error());
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacMalformedDataLength) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryMalformedDataLength) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -711,7 +743,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacMalformedDataLength) {
   EXPECT_EQ(HostError::kPacketMalformed, status.error());
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacMalformedAttrDataList) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryMalformedAttrDataList) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -747,7 +779,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacMalformedAttrDataList) {
   EXPECT_EQ(HostError::kPacketMalformed, status.error());
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacEmptyDataList) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryEmptyDataList) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -779,7 +811,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacEmptyDataList) {
   EXPECT_TRUE(status);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacAttributeNotFound) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryAttributeNotFound) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -813,7 +845,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacAttributeNotFound) {
   EXPECT_TRUE(status);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacError) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryError) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -847,7 +879,7 @@ TEST_F(GATT_ClientTest, DiscoverCharacError) {
   EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharac16BitResultsSingleRequest) {
+TEST_F(GATT_ClientTest, CharacteristicDiscovery16BitResultsSingleRequest) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0x0005;
 
@@ -889,7 +921,7 @@ TEST_F(GATT_ClientTest, DiscoverCharac16BitResultsSingleRequest) {
   RunUntilIdle();
 
   EXPECT_TRUE(status);
-  EXPECT_EQ(2u, chrcs.size());
+  ASSERT_EQ(2u, chrcs.size());
   EXPECT_EQ(0x0003, chrcs[0].handle);
   EXPECT_EQ(0, chrcs[0].properties);
   EXPECT_EQ(0x0004, chrcs[0].value_handle);
@@ -900,7 +932,7 @@ TEST_F(GATT_ClientTest, DiscoverCharac16BitResultsSingleRequest) {
   EXPECT_EQ(kTestUuid2, chrcs[1].type);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharac128BitResultsSingleRequest) {
+TEST_F(GATT_ClientTest, CharacteristicDiscovery128BitResultsSingleRequest) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0x0005;
 
@@ -946,7 +978,7 @@ TEST_F(GATT_ClientTest, DiscoverCharac128BitResultsSingleRequest) {
   EXPECT_EQ(kTestUuid3, chrcs[0].type);
 }
 
-TEST_F(GATT_ClientTest, DiscoverCharacMultipleRequests) {
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryMultipleRequests) {
   constexpr att::Handle kStart = 0x0001;
   constexpr att::Handle kEnd = 0xFFFF;
 
@@ -1173,6 +1205,359 @@ TEST_F(GATT_ClientTest, CharacteristicDiscoveryValueNotContiguous) {
 
   EXPECT_EQ(HostError::kPacketMalformed, status.error());
   EXPECT_TRUE(chrcs.empty());
+}
+
+TEST_F(GATT_ClientTest, CharacteristicDiscoveryHandlesNotIncreasing) {
+  constexpr att::Handle kStart = 0x0002;
+  constexpr att::Handle kEnd = 0x0005;
+
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x08,        // opcode: read by type request
+      0x02, 0x00,  // start handle: 0x0002
+      0x05, 0x00,  // end handle: 0x0005
+      0x03, 0x28   // type: characteristic decl. (0x2803)
+  );
+
+  att::Status status;
+  auto res_cb = [this, &status](att::Status val) { status = val; };
+
+  std::vector<CharacteristicData> chrcs;
+  auto chrc_cb = [&chrcs](const CharacteristicData& chrc) {
+    chrcs.push_back(chrc);
+  };
+
+  // Initiate the request on the message loop since Expect() below blocks.
+  async::PostTask(dispatcher(), [&, this] {
+    client()->DiscoverCharacteristics(kStart, kEnd, chrc_cb, res_cb);
+  });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x09,        // opcode: read by type response
+      0x07,        // data length: 7 (16-bit UUIDs)
+      0x02, 0x00,  // chrc 1 handle
+      0x00,        // chrc 1 properties
+      0x03, 0x00,  // chrc 1 value handle
+      0xAD, 0xDE,  // chrc 1 uuid: 0xDEAD
+      0x02, 0x00,  // chrc 1 handle (repeated)
+      0x00,        // chrc 1 properties
+      0x03, 0x00,  // chrc 1 value handle
+      0xEF, 0xBE   // chrc 1 uuid: 0xBEEF
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+
+  // The first characteristic should be reported.
+  EXPECT_EQ(1u, chrcs.size());
+}
+
+// Equal handles should result should not short-circuit and result in a request.
+TEST_F(GATT_ClientTest, DescriptorDiscoveryHandlesEqual) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0001;
+
+  att::Status status(HostError::kFailed);  // Initialize as error
+  SendDiscoverDescriptors(&status, NopDescCallback, kStart, kEnd);
+  EXPECT_TRUE(ExpectFindInformation(kStart, kEnd));
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryResponseTooShort) {
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  // Respond back with a malformed payload.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(0x05));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryMalformedDataLength) {
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,  // opcode: find information response
+      0x03   // format (must be 1 or 2)
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryMalformedAttrDataList16) {
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,  // opcode: find information response
+      0x01,  // format: 16-bit. Data length must be 4
+      1, 2, 3, 4, 5));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryMalformedAttrDataList128) {
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,  // opcode: find information response
+      0x02,  // format: 128-bit. Data length must be 18
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryEmptyDataList) {
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,  // opcode: find information response
+      0x01   // format: 16-bit.
+             // data list empty
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryAttributeNotFound) {
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x01, 0x00,  // handle: 0x0001
+      0x0A         // error: Attribute Not Found
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryError) {
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x04,        // request: find information
+      0x01, 0x00,  // handle: 0x0001
+      0x06         // error: Request Not Supported
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscovery16BitResultsSingleRequest) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0003;
+
+  std::vector<DescriptorData> descrs;
+  auto desc_cb = [&descrs](const DescriptorData& desc) {
+    descrs.push_back(desc);
+  };
+
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, std::move(desc_cb), kStart, kEnd);
+  ASSERT_TRUE(ExpectFindInformation(kStart, kEnd));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit. Data length must be 4
+      0x01, 0x00,  // desc 1 handle
+      0xEF, 0xBE,  // desc 1 uuid
+      0x02, 0x00,  // desc 2 handle
+      0xAD, 0xDE,  // desc 2 uuid
+      0x03, 0x00,  // desc 3 handle
+      0xFE, 0xFE   // desc 3 uuid
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  ASSERT_EQ(3u, descrs.size());
+  EXPECT_EQ(0x0001, descrs[0].handle);
+  EXPECT_EQ(0x0002, descrs[1].handle);
+  EXPECT_EQ(0x0003, descrs[2].handle);
+  EXPECT_EQ((uint16_t)0xBEEF, descrs[0].type);
+  EXPECT_EQ((uint16_t)0xDEAD, descrs[1].type);
+  EXPECT_EQ((uint16_t)0xFEFE, descrs[2].type);
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscovery128BitResultsSingleRequest) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0002;
+
+  std::vector<DescriptorData> descrs;
+  auto desc_cb = [&descrs](const DescriptorData& desc) {
+    descrs.push_back(desc);
+  };
+
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, std::move(desc_cb), kStart, kEnd);
+  ASSERT_TRUE(ExpectFindInformation(kStart, kEnd));
+
+  att()->set_mtu(512);
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x02,        // format: 128-bit. Data length must be 18
+      0x01, 0x00,  // desc 1 handle
+      0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+      0xEF, 0xBE, 0x00, 0x00,  // desc 1 uuid
+      0x02, 0x00,              // desc 2 handle
+      0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+      0xAD, 0xDE, 0x00, 0x00  // desc 2 uuid
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  ASSERT_EQ(2u, descrs.size());
+  EXPECT_EQ(0x0001, descrs[0].handle);
+  EXPECT_EQ(0x0002, descrs[1].handle);
+  EXPECT_EQ((uint16_t)0xBEEF, descrs[0].type);
+  EXPECT_EQ((uint16_t)0xDEAD, descrs[1].type);
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryMultipleRequests) {
+  constexpr att::Handle kEnd = 0x0005;
+  constexpr att::Handle kStart1 = 0x0001;
+  constexpr att::Handle kStart2 = 0x0003;
+  constexpr att::Handle kStart3 = 0x0004;
+
+  std::vector<DescriptorData> descrs;
+  auto desc_cb = [&descrs](const DescriptorData& desc) {
+    descrs.push_back(desc);
+  };
+
+  att::Status status(HostError::kFailed);
+  SendDiscoverDescriptors(&status, std::move(desc_cb), kStart1, kEnd);
+
+  // Batch 1
+  ASSERT_TRUE(ExpectFindInformation(kStart1, kEnd));
+  return;
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit. Data length must be 4
+      0x01, 0x00,  // desc 1 handle
+      0xEF, 0xBE,  // desc 1 uuid
+      0x02, 0x00,  // desc 2 handle
+      0xAD, 0xDE   // desc 2 uuid
+      ));
+  RunUntilIdle();
+
+  // Batch 2
+  ASSERT_TRUE(ExpectFindInformation(kStart2, kEnd));
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x02,        // format: 128-bit. Data length must be 18
+      0x03, 0x00,  // desc 3 handle
+      0xFB, 0x34, 0x9B, 0x5F, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00, 0x00,
+      0xFE, 0xFE, 0x00, 0x00  // desc 3 uuid
+      ));
+  RunUntilIdle();
+
+  // Batch 3
+  ASSERT_TRUE(ExpectFindInformation(kStart3, kEnd));
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x08,        // request: read by type
+      0x04, 0x00,  // handle: kStart3 (0x0004)
+      0x0A         // error: Attribute Not Found
+      ));
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  ASSERT_EQ(3u, descrs.size());
+  EXPECT_EQ(0x0001, descrs[0].handle);
+  EXPECT_EQ(0x0002, descrs[1].handle);
+  EXPECT_EQ(0x0003, descrs[2].handle);
+  EXPECT_EQ((uint16_t)0xBEEF, descrs[0].type);
+  EXPECT_EQ((uint16_t)0xDEAD, descrs[1].type);
+  EXPECT_EQ((uint16_t)0xFEFE, descrs[2].type);
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryResultsBeforeRange) {
+  constexpr att::Handle kStart = 0x0002;
+
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback, kStart);
+  ASSERT_TRUE(ExpectFindInformation(kStart));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit.
+      0x01, 0x00,  // handle is before the range
+      0xEF, 0xBE   // uuid
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryResultsBeyondRange) {
+  constexpr att::Handle kStart = 0x0001;
+  constexpr att::Handle kEnd = 0x0002;
+
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback, kStart, kEnd);
+  ASSERT_TRUE(ExpectFindInformation(kStart, kEnd));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit.
+      0x03, 0x00,  // handle is beyond the range
+      0xEF, 0xBE   // uuid
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
+}
+
+TEST_F(GATT_ClientTest, DescriptorDiscoveryHandlesNotIncreasing) {
+  att::Status status;
+  SendDiscoverDescriptors(&status, NopDescCallback);
+  ASSERT_TRUE(ExpectFindInformation());
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x05,        // opcode: find information response
+      0x01,        // format: 16-bit.
+      0x01, 0x00,  // handle: 0x0001
+      0xEF, 0xBE,  // uuid
+      0x01, 0x00,  // handle: 0x0001 (repeats)
+      0xAD, 0xDE   // uuid
+      ));
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kPacketMalformed, status.error());
 }
 
 TEST_F(GATT_ClientTest, WriteRequestMalformedResponse) {

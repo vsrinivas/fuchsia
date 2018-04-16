@@ -10,6 +10,7 @@ static_library("gatt") {
     "connection.h",
     "gatt.cc",
     "gatt.h",
+    "gatt_defs.cc",
     "gatt_defs.h",
     "local_service_manager.cc",
     "local_service_manager.h",

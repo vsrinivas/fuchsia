@@ -29,21 +29,58 @@ common::MutableByteBufferPtr NewPDU(size_t param_size) {
   return pdu;
 }
 
+template <att::UUIDType Format,
+          typename EntryType = att::InformationData<Format>>
+bool ProcessDescriptorDiscoveryResponse(
+    att::Handle range_start,
+    att::Handle range_end,
+    common::BufferView entries,
+    const Client::DescriptorCallback& desc_callback,
+    att::Handle* out_last_handle) {
+  FXL_DCHECK(out_last_handle);
+
+  if (entries.size() % sizeof(EntryType)) {
+    FXL_VLOG(1) << "gatt:: Malformed information data list!";
+    return false;
+  }
+
+  att::Handle last_handle = range_end;
+  while (entries.size()) {
+    const EntryType& entry = entries.As<EntryType>();
+
+    DescriptorData desc;
+    desc.handle = le16toh(entry.handle);
+
+    // Stop and report an error if the server erroneously responds with
+    // an attribute outside the requested range.
+    if (desc.handle > range_end || desc.handle < range_start) {
+      FXL_VLOG(1) << fxl::StringPrintf(
+          "gatt: Descriptor handle out of range (handle: 0x%04x, "
+          "range: 0x%04x - 0x%04x)",
+          desc.handle, range_start, range_end);
+      return false;
+    }
+
+    // The handles must be strictly increasing.
+    if (last_handle != range_end && desc.handle <= last_handle) {
+      FXL_VLOG(1) << "gatt: descriptor handles are not strictly increasing!";
+      return false;
+    }
+
+    last_handle = desc.handle;
+    desc.type = common::UUID(entry.uuid);
+
+    // Notify the handler.
+    desc_callback(desc);
+
+    entries = entries.view(sizeof(EntryType));
+  }
+
+  *out_last_handle = last_handle;
+  return true;
+}
+
 }  // namespace
-
-ServiceData::ServiceData(att::Handle start,
-                         att::Handle end,
-                         const common::UUID& type)
-    : range_start(start), range_end(end), type(type) {}
-
-CharacteristicData::CharacteristicData(Properties props,
-                                       att::Handle handle,
-                                       att::Handle value_handle,
-                                       common::UUID type)
-    : properties(props),
-      handle(handle),
-      value_handle(value_handle),
-      type(type) {}
 
 class Impl final : public Client {
  public:
@@ -337,6 +374,14 @@ class Impl final : public Client {
               return;
             }
 
+            // The handles must be strictly increasing. Check this so that a
+            // server cannot fool us into sending requests forever.
+            if (last_handle != range_end && chrc.handle <= last_handle) {
+              FXL_VLOG(1) << "gatt: Handles are not strictly increasing!";
+              res_cb(att::Status(HostError::kPacketMalformed));
+              return;
+            }
+
             last_handle = chrc.handle;
 
             // This must succeed as we have performed the necessary checks
@@ -368,6 +413,94 @@ class Impl final : public Client {
                                                            att::Handle handle) {
           // An Error Response code of "Attribute Not Found" indicates the end
           // of the procedure (v5.0, Vol 3, Part G, 4.6.1).
+          if (status.is_protocol_error() &&
+              status.protocol_error() == att::ErrorCode::kAttributeNotFound) {
+            res_cb(att::Status());
+            return;
+          }
+
+          res_cb(status);
+        });
+
+    att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+  }
+
+  void DiscoverDescriptors(att::Handle range_start,
+                           att::Handle range_end,
+                           DescriptorCallback desc_callback,
+                           StatusCallback status_callback) override {
+    FXL_DCHECK(range_start <= range_end);
+    FXL_DCHECK(desc_callback);
+    FXL_DCHECK(status_callback);
+
+    auto pdu = NewPDU(sizeof(att::FindInformationRequestParams));
+    if (!pdu) {
+      status_callback(att::Status(HostError::kOutOfMemory));
+      return;
+    }
+
+    att::PacketWriter writer(att::kFindInformationRequest, pdu.get());
+    auto* params = writer.mutable_payload<att::FindInformationRequestParams>();
+    params->start_handle = htole16(range_start);
+    params->end_handle = htole16(range_end);
+
+    auto rsp_cb = BindCallback([this, range_start, range_end,
+                                desc_cb = std::move(desc_callback),
+                                res_cb = status_callback](
+                                   const att::PacketReader& rsp) mutable {
+      FXL_DCHECK(rsp.opcode() == att::kFindInformationResponse);
+
+      if (rsp.payload_size() < sizeof(att::FindInformationResponseParams)) {
+        FXL_VLOG(1) << "gatt: received malformed \"Find Information\" response";
+        att_->ShutDown();
+        res_cb(att::Status(HostError::kPacketMalformed));
+        return;
+      }
+
+      const auto& rsp_params =
+          rsp.payload<att::FindInformationResponseParams>();
+      common::BufferView entries =
+          rsp.payload_data().view(sizeof(rsp_params.format));
+
+      att::Handle last_handle;
+      bool result;
+      switch (rsp_params.format) {
+        case att::UUIDType::k16Bit:
+          result = ProcessDescriptorDiscoveryResponse<att::UUIDType::k16Bit>(
+              range_start, range_end, entries, desc_cb, &last_handle);
+          break;
+        case att::UUIDType::k128Bit:
+          result = ProcessDescriptorDiscoveryResponse<att::UUIDType::k128Bit>(
+              range_start, range_end, entries, desc_cb, &last_handle);
+          break;
+        default:
+          FXL_VLOG(1) << "gatt: invalid information data format";
+          result = false;
+          break;
+      }
+
+      if (!result) {
+        att_->ShutDown();
+        res_cb(att::Status(HostError::kPacketMalformed));
+        return;
+      }
+
+      // The procedure is over if we have reached the end of the handle range.
+      if (last_handle == range_end) {
+        res_cb(att::Status());
+        return;
+      }
+
+      // Request the next batch.
+      DiscoverDescriptors(last_handle + 1, range_end, std::move(desc_cb),
+                          std::move(res_cb));
+    });
+
+    auto error_cb =
+        BindErrorCallback([this, res_cb = status_callback](att::Status status,
+                                                           att::Handle handle) {
+          // An Error Response code of "Attribute Not Found" indicates the end
+          // of the procedure (v5.0, Vol 3, Part G, 4.7.1).
           if (status.is_protocol_error() &&
               status.protocol_error() == att::ErrorCode::kAttributeNotFound) {
             res_cb(att::Status());

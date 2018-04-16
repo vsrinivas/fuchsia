@@ -83,11 +83,19 @@ struct CharacteristicData {
   CharacteristicData(Properties props,
                      att::Handle handle,
                      att::Handle value_handle,
-                     common::UUID type);
+                     const common::UUID& type);
 
   Properties properties;
   att::Handle handle;
   att::Handle value_handle;
+  common::UUID type;
+};
+
+struct DescriptorData {
+  DescriptorData() = default;
+  DescriptorData(att::Handle handle, const common::UUID& type);
+
+  att::Handle handle;
   common::UUID type;
 };
 
