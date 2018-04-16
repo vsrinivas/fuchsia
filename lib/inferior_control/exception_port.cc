@@ -196,7 +196,7 @@ void ExceptionPort::Worker() {
   while (keep_running_) {
     zx_port_packet_t packet;
     zx_status_t status =
-        zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0);
+        zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 1);
     if (status < 0) {
       FXL_LOG(ERROR) << "zx_port_wait returned error: "
                      << util::ZxErrorString(status);

@@ -3783,7 +3783,7 @@ void Device::StopInterruptPolling() {
             .key = kIntPortPktShutdown,
             .type = ZX_PKT_TYPE_USER,
         };
-        interrupt_port_.queue(&pkt, 0);
+        interrupt_port_.queue(&pkt, 1);
         interrupt_thrd_.join();
     }
 }
@@ -3795,7 +3795,7 @@ zx_status_t Device::InterruptWorker() {
     zx_port_packet_t pkt;
     for (;;) {
         zx::time timeout = zx::deadline_after(zx::sec(5));
-        auto status = interrupt_port_.wait(timeout, &pkt, 0);
+        auto status = interrupt_port_.wait(timeout, &pkt, 1);
         if (status == ZX_ERR_TIMED_OUT) {
             continue;
         } else if (status != ZX_OK) {

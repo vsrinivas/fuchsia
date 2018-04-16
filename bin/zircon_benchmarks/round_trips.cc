@@ -180,7 +180,7 @@ class ChannelPortTest {
                                    ZX_WAIT_ASYNC_ONCE) == ZX_OK);
 
     zx_port_packet_t packet;
-    FXL_CHECK(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+    FXL_CHECK(zx_port_wait(port, ZX_TIME_INFINITE, &packet, 1) == ZX_OK);
     if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED)
       return false;
 
@@ -295,7 +295,7 @@ class PortTest {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
     packet.user.u32[0] = 1;
-    FXL_CHECK(zx_port_queue(ports_[0], &packet, 0) == ZX_OK);
+    FXL_CHECK(zx_port_queue(ports_[0], &packet, 1) == ZX_OK);
 
     zx_handle_close(ports_[0]);
     zx_handle_close(ports_[1]);
@@ -305,11 +305,11 @@ class PortTest {
     FXL_CHECK(ports.size() == 2);
     for (;;) {
       zx_port_packet_t packet;
-      FXL_CHECK(zx_port_wait(ports[0], ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+      FXL_CHECK(zx_port_wait(ports[0], ZX_TIME_INFINITE, &packet, 1) == ZX_OK);
       // Check for a request to shut down.
       if (packet.user.u32[0])
         break;
-      FXL_CHECK(zx_port_queue(ports[1], &packet, 0) == ZX_OK);
+      FXL_CHECK(zx_port_queue(ports[1], &packet, 1) == ZX_OK);
     }
     zx_handle_close(ports[0]);
     zx_handle_close(ports[1]);
@@ -318,8 +318,8 @@ class PortTest {
   void Run() {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
-    FXL_CHECK(zx_port_queue(ports_[0], &packet, 0) == ZX_OK);
-    FXL_CHECK(zx_port_wait(ports_[1], ZX_TIME_INFINITE, &packet, 0) == ZX_OK);
+    FXL_CHECK(zx_port_queue(ports_[0], &packet, 1) == ZX_OK);
+    FXL_CHECK(zx_port_wait(ports_[1], ZX_TIME_INFINITE, &packet, 1) == ZX_OK);
   }
 
  private:

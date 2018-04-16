@@ -139,7 +139,7 @@ impl Port {
     pub fn queue(&self, packet: &Packet) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_port_queue(self.raw_handle(),
-                &packet.0 as *const sys::zx_port_packet_t, 0)
+                &packet.0 as *const sys::zx_port_packet_t, 1)
         };
         ok(status)
     }
@@ -153,7 +153,7 @@ impl Port {
         let mut packet = Default::default();
         let status = unsafe {
             sys::zx_port_wait(self.raw_handle(), deadline.nanos(),
-                &mut packet as *mut sys::zx_port_packet_t, 0)
+                &mut packet as *mut sys::zx_port_packet_t, 1)
         };
         ok(status)?;
         Ok(Packet(packet))

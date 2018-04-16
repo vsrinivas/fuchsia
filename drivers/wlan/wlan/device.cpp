@@ -451,7 +451,7 @@ void Device::MainLoop() {
     bool running = true;
     while (running) {
         zx::time timeout = zx::deadline_after(zx::sec(30));
-        zx_status_t status = port_.wait(timeout, &pkt, 0);
+        zx_status_t status = port_.wait(timeout, &pkt, 1);
         std::lock_guard<std::mutex> lock(lock_);
         if (status == ZX_ERR_TIMED_OUT) {
             // TODO(tkilbourn): more watchdog checks here?
@@ -567,7 +567,7 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = ZX_PKT_TYPE_USER;
     pkt.status = status;
-    return port_.queue(&pkt, 0);
+    return port_.queue(&pkt, 1);
 }
 
 zx_status_t Device::GetChannel(zx::channel* out) {
