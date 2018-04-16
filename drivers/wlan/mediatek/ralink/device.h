@@ -289,6 +289,7 @@ class Device : public wlan_device::Phy {
 
     std::vector<usb_request_t*> free_write_reqs_ __TA_GUARDED(lock_);
     uint16_t iface_id_ = 0;
+    uint16_t iface_role_ = 0;
 
     // Thread which periodically reads interrupt registers.
     // Required because the device doesn't support USB interrupt endpoints.

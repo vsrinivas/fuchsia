@@ -3451,8 +3451,15 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
         return;
     }
 
-    if (req.role != wlan_device::MacRole::CLIENT) {
-        errorf("Only CLIENT role is supported right now\n");
+    switch (req.role) {
+    case wlan_device::MacRole::CLIENT:
+        iface_role_ = WLAN_MAC_ROLE_CLIENT;
+        break;
+    case wlan_device::MacRole::AP:
+        iface_role_ = WLAN_MAC_ROLE_AP;
+        break;
+    default:
+        errorf("Unknown MacRole: %u\n", req.role);
         resp.status = ZX_ERR_NOT_SUPPORTED;
         callback(std::move(resp));
         return;
@@ -3462,6 +3469,7 @@ void Device::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCallbac
     if (status != ZX_OK) {
         errorf("could not add iface device err=%d\n", status);
         resp.status = status;
+        iface_role_ = 0;
     } else {
         infof("iface added\n");
         resp.status = ZX_OK;
@@ -3489,21 +3497,25 @@ void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCall
         return;
     }
 
+    iface_role_ = 0;
     device_remove(wlanmac_dev_);
     resp.status = ZX_OK;
     callback(std::move(resp));
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
-    memset(info, 0, sizeof(*info));
+    ZX_DEBUG_ASSERT(iface_role_ != 0);
+    if (iface_role_ == 0) {
+        return ZX_ERR_BAD_STATE;
+    }
 
+    memset(info, 0, sizeof(*info));
     info->eth_info.mtu = 1500;
     std::memcpy(info->eth_info.mac, mac_addr_, ETH_MAC_SIZE);
     info->eth_info.features |= ETHMAC_FEATURE_WLAN;
 
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
-    // TODO(tkilbourn): update this when we add AP support
-    info->mac_roles = WLAN_MAC_ROLE_CLIENT;
+    info->mac_role = iface_role_;
     info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
     info->num_bands = 1;
     info->bands[0] = {

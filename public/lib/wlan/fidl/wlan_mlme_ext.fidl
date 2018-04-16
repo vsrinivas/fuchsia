@@ -46,7 +46,7 @@ struct BandCapabilities {
 // necessary for the SME.
 struct DeviceQueryResponse {
     array<uint8>:6 mac_addr;
-    vector<MacRole> roles;
+    MacRole role;
     vector<BandCapabilities> bands;
 };
 

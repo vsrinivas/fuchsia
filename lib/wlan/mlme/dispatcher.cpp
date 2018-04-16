@@ -7,9 +7,8 @@
 #include <fbl/unique_ptr.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
-#include <wlan/mlme/ap/ap_mlme.h>
-#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/debug.h>
+#include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -33,9 +32,10 @@ template <unsigned int N, typename T> T align(T t) {
 
 }  // namespace
 
-Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme) : device_(device) {
+Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
+  : device_(device), mlme_(std::move(mlme)) {
     debugfn();
-    if (mlme != nullptr) { mlme_.swap(mlme); }
+    ZX_ASSERT(mlme_ != nullptr);
 }
 
 Dispatcher::~Dispatcher() {}
@@ -51,13 +51,6 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
 
     finspect("Packet: %s\n", debug::Describe(*packet).c_str());
-
-    // If there is no active MLME, block all packets but service ones.
-    // MLME-JOIN.request and MLME-START.request implicitly select a role and initialize the
-    // MLME. DEVICE_QUERY.request is used to obtain device capabilities.
-
-    auto service_msg = (packet->peer() == Packet::Peer::kService);
-    if (mlme_ == nullptr && !service_msg) { return ZX_OK; }
 
     zx_status_t status = ZX_OK;
     switch (packet->peer()) {
@@ -393,48 +386,10 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         return HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(packet, method);
     }
 
-    // Only a subset of requests are supported before an MLME has been initialized.
-    if (mlme_ == nullptr) {
-        switch (method) {
-        case wlan_mlme::Method::RESET_request:
-            // MLME already reset.
-            return ZX_OK;
-        case wlan_mlme::Method::SCAN_request:
-        // fallthrough
-        case wlan_mlme::Method::JOIN_request: {
-            infof("configuring Client MLME\n");
-            mlme_.reset(new ClientMlme(device_));
-            auto status = mlme_->Init();
-            if (status != ZX_OK) {
-                errorf("Client MLME could not be initialized\n");
-                mlme_.reset();
-                return status;
-            }
-            break;
-        }
-        case wlan_mlme::Method::START_request: {
-            infof("configuring AP MLME\n");
-            mlme_.reset(new ApMlme(device_));
-            auto status = mlme_->Init();
-            if (status != ZX_OK) {
-                errorf("AP MLME could not be initialized\n");
-                mlme_.reset();
-                return status;
-            }
-            break;
-        }
-        default:
-            warnf("unknown MLME method %u with no active MLME\n", method);
-            return ZX_OK;
-        }
-    }
-
     switch (method) {
     case wlan_mlme::Method::RESET_request:
-        // Let currently active MLME handle RESET request, then, reset MLME.
         infof("resetting MLME\n");
         HandleMlmeMethod<wlan_mlme::ResetRequest>(packet, method);
-        mlme_.reset();
         return ZX_OK;
     case wlan_mlme::Method::START_request:
         return HandleMlmeMethod<wlan_mlme::StartRequest>(packet, method);
@@ -482,9 +437,17 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
 
     memcpy(resp.mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
 
-    resp.roles->resize(0);
-    if (info.mac_roles & WLAN_MAC_ROLE_CLIENT) { resp.roles->push_back(wlan_mlme::MacRole::CLIENT); }
-    if (info.mac_roles & WLAN_MAC_ROLE_AP) { resp.roles->push_back(wlan_mlme::MacRole::AP); }
+    switch (info.mac_role) {
+    case WLAN_MAC_ROLE_CLIENT:
+        resp.role = wlan_mlme::MacRole::CLIENT;
+        break;
+    case WLAN_MAC_ROLE_AP:
+        resp.role = wlan_mlme::MacRole::AP;
+        break;
+    default:
+        // TODO(tkilbourn): return an error?
+        break;
+    }
 
     resp.bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {
@@ -528,19 +491,19 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
 
 zx_status_t Dispatcher::PreChannelChange(wlan_channel_t chan) {
     debugfn();
-    if (mlme_ != nullptr) { mlme_->PreChannelChange(chan); }
+    mlme_->PreChannelChange(chan);
     return ZX_OK;
 }
 
 zx_status_t Dispatcher::PostChannelChange() {
     debugfn();
-    if (mlme_ != nullptr) { mlme_->PostChannelChange(); }
+    mlme_->PostChannelChange();
     return ZX_OK;
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {
     debugfn();
-    if (mlme_ != nullptr) { mlme_->HwIndication(ind); }
+    mlme_->HwIndication(ind);
 }
 
 }  // namespace wlan

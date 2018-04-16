@@ -174,8 +174,22 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req,
         return;
     }
 
+    uint16_t role = 0;
+    switch (req.role) {
+    case wlan_device::MacRole::CLIENT:
+        role = WLAN_MAC_ROLE_CLIENT;
+        break;
+    case wlan_device::MacRole::AP:
+        role = WLAN_MAC_ROLE_AP;
+        break;
+    default:
+        resp.status = ZX_ERR_NOT_SUPPORTED;
+        callback(std::move(resp));
+        return;
+    }
+
     // Create the interface device and bind it.
-    auto macdev = std::make_unique<IfaceDevice>(zxdev_);
+    auto macdev = std::make_unique<IfaceDevice>(zxdev_, role);
     zx_status_t status = macdev->Bind();
     if (status != ZX_OK) {
         zxlogf(ERROR, "could not bind child wlanmac device: %d\n", status);

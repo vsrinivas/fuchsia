@@ -75,14 +75,12 @@ enum {
 };
 
 enum {
-    // Device supports operation as a non-AP station (i.e., a client of an AP).
-    WLAN_MAC_ROLE_CLIENT = (1 << 0),
-    // Device supports operation as an access point.
-    WLAN_MAC_ROLE_AP = (1 << 1),
+    // Device is operating as a non-AP station (i.e., a client of an AP).
+    WLAN_MAC_ROLE_CLIENT = 1,
+    // Device is operating as an access point.
+    WLAN_MAC_ROLE_AP = 2,
     // TODO: IBSS, PBSS, mesh
 };
-
-#define WLAN_MAC_ROLE_ALL (WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP)
 
 // Basic capabilities. IEEE Std 802.11-2016, 9.4.1.4
 enum {
@@ -146,12 +144,12 @@ typedef struct wlan_band_info {
 
 typedef struct wlanmac_info {
     ethmac_info_t eth_info;
+    // The MAC role for the device.
+    uint16_t mac_role;
     // Bitmask indicating the WLAN_PHY_* values supported by the hardware.
     uint16_t supported_phys;
     // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
     uint32_t driver_features;
-    // Bitmask representing supported roles.
-    uint16_t mac_roles;
     // Bitmask indicating WLAN_CAP_* capabilities supported by the hardware.
     uint32_t caps;
     // Supported bands.

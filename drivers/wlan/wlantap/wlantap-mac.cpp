@@ -131,7 +131,7 @@ struct WlantapMacImpl : WlantapMac {
         info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
         info->driver_features = ConvertDriverFeatures(
             self.phy_config_->phy_info.driver_features);
-        info->mac_roles = ConvertMacRoles(self.phy_config_->phy_info.mac_roles);
+        info->mac_role = ConvertMacRoles(self.phy_config_->phy_info.mac_roles);
         info->caps = ConvertCaps(self.phy_config_->phy_info.caps);
         info->num_bands = std::min(self.phy_config_->phy_info.bands->size(),
                                    static_cast<size_t>(WLAN_MAX_BANDS));

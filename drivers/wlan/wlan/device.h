@@ -113,7 +113,7 @@ class Device : public DeviceInterface {
     std::thread work_thread_;
     zx::port port_;
 
-    Dispatcher dispatcher_ __TA_GUARDED(lock_);
+    fbl::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
 
     bool dead_ __TA_GUARDED(lock_) = false;
     zx::channel channel_ __TA_GUARDED(lock_);

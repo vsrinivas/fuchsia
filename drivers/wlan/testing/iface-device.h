@@ -16,7 +16,7 @@ namespace testing {
 
 class IfaceDevice {
    public:
-    IfaceDevice(zx_device_t* device);
+    IfaceDevice(zx_device_t* device, uint16_t role);
 
     zx_device_t* zxdev() { return zxdev_; }
 
@@ -36,6 +36,9 @@ class IfaceDevice {
     std::mutex lock_;
     wlanmac_ifc_t* ifc_ = nullptr;
     void* ifc_cookie_ = nullptr;
+
+    // One of the WLAN_MAC_ROLE_* constants from lib/wlan/protocol/mac.h
+    uint16_t role_;
 };
 
 }  // namespace testing

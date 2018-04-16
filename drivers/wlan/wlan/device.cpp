@@ -10,6 +10,8 @@
 #include <lib/zx/time.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
+#include <wlan/mlme/ap/ap_mlme.h>
+#include <wlan/mlme/client/client_mlme.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
@@ -72,7 +74,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
 #undef DEV
 
 Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
-    : parent_(device), wlanmac_proxy_(wlanmac_proto), dispatcher_(this) {
+    : parent_(device), wlanmac_proxy_(wlanmac_proto) {
     debugfn();
     state_ = fbl::AdoptRef(new DeviceState);
 }
@@ -100,6 +102,26 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
         return status;
     }
     state_->set_address(common::MacAddr(wlanmac_info_.eth_info.mac));
+
+    fbl::unique_ptr<Mlme> mlme;
+    switch (wlanmac_info_.mac_role) {
+    case WLAN_MAC_ROLE_CLIENT:
+        mlme.reset(new ClientMlme(this));
+        break;
+    case WLAN_MAC_ROLE_AP:
+        mlme.reset(new ApMlme(this));
+        break;
+    default:
+        errorf("unsupported MAC role: %u\n", wlanmac_info_.mac_role);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    ZX_DEBUG_ASSERT(mlme != nullptr);
+    status = mlme->Init();
+    if (status != ZX_OK) {
+        errorf("could not initialize MLME: %d\n", status);
+        return status;
+    }
+    dispatcher_.reset(new Dispatcher(this, std::move(mlme)));
 
     work_thread_ = std::thread(&Device::MainLoop, this);
 
@@ -370,7 +392,7 @@ zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
         return ZX_OK;
     }
 
-    zx_status_t status = dispatcher_.PreChannelChange(chan);
+    zx_status_t status = dispatcher_->PreChannelChange(chan);
     if (status != ZX_OK) {
         errorf("%s prechange failed (status %d)\n", buf, status);
         return status;
@@ -385,7 +407,7 @@ zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
 
     state_->set_channel(chan);
 
-    status = dispatcher_.PostChannelChange();
+    status = dispatcher_->PostChannelChange();
     if (status != ZX_OK) {
         // TODO(porce): Revert the successful PreChannelChange(), wlanmac_proxy_.SetChannel(),
         // and state_->set_channel()
@@ -474,7 +496,7 @@ void Device::MainLoop() {
                 running = false;
                 continue;
             case to_enum_type(DevicePacket::kIndication):
-                dispatcher_.HwIndication(pkt.status);
+                dispatcher_->HwIndication(pkt.status);
                 break;
             case to_enum_type(DevicePacket::kPacketQueued): {
                 fbl::unique_ptr<Packet> packet;
@@ -483,7 +505,7 @@ void Device::MainLoop() {
                     packet = packet_queue_.Dequeue();
                     ZX_DEBUG_ASSERT(packet != nullptr);
                 }
-                zx_status_t status = dispatcher_.HandlePacket(packet.get());
+                zx_status_t status = dispatcher_->HandlePacket(packet.get());
                 if (status != ZX_OK) { errorf("could not handle packet err=%d\n", status); }
                 break;
             }
@@ -495,7 +517,7 @@ void Device::MainLoop() {
         case ZX_PKT_TYPE_SIGNAL_REP:
             switch (ToPortKeyType(pkt.key)) {
             case PortKeyType::kMlme:
-                dispatcher_.HandlePortPacket(pkt.key);
+                dispatcher_->HandlePortPacket(pkt.key);
                 break;
             case PortKeyType::kService:
                 ProcessChannelPacketLocked(pkt);

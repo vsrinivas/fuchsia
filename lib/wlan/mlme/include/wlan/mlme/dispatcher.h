@@ -17,7 +17,7 @@ namespace wlan {
 
 class Dispatcher {
    public:
-    explicit Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme = nullptr);
+    explicit Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme);
     ~Dispatcher();
 
     zx_status_t HandlePacket(const Packet* packet);
@@ -44,13 +44,9 @@ class Dispatcher {
                                    const ActionFrame* action, const wlan_rx_info_t* rxinfo);
 
     DeviceInterface* device_;
-    // Created and destroyed dynamically:
-    // - Creates ClientMlme when MLME-JOIN.request or MLME-SCAN.request was received.
-    // - Creates ApMlme when MLME-START.request was received.
-    // - Destroys Mlme when MLME-RESET.request was received.
-    // Note: Mode can only be changed at boot up or when MLME-RESET.request was sent in between mode
-    // changes.
-    fbl::unique_ptr<Mlme> mlme_;
+    // The MLME that will handle requests for this dispatcher. This field will be set upon querying
+    // the underlying DeviceInterface, based on the role of the device (e.g., Client or AP).
+    fbl::unique_ptr<Mlme> mlme_ = nullptr;
 };
 
 }  // namespace wlan

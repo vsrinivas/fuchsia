@@ -47,7 +47,7 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
 };
 #undef DEV
 
-IfaceDevice::IfaceDevice(zx_device_t* device) : parent_(device) {}
+IfaceDevice::IfaceDevice(zx_device_t* device, uint16_t role) : parent_(device), role_(role) {}
 
 zx_status_t IfaceDevice::Bind() {
     zxlogf(INFO, "wlan::testing::IfaceDevice::Bind()\n");
@@ -87,7 +87,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     // Fill out a minimal set of wlan device capabilities
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     info->driver_features = 0;
-    info->mac_roles = WLAN_MAC_ROLE_CLIENT;
+    info->mac_role = role_;
     info->caps = 0;
     info->num_bands = 2;
     // clang-format off
