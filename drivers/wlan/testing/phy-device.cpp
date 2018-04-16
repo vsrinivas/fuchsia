@@ -20,22 +20,12 @@ namespace testing {
 #define DEV(c) static_cast<PhyDevice*>(c)
 static zx_protocol_device_t wlanphy_test_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
         return DEV(ctx)->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     },
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
 };
 #undef DEV
 

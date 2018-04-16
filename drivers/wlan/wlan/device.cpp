@@ -31,39 +31,18 @@ namespace wlan {
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlan_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
     .unbind = [](void* ctx) { DEV(ctx)->WlanUnbind(); },
     .release = [](void* ctx) { DEV(ctx)->WlanRelease(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
     .ioctl = [](void* ctx, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                 size_t out_len, size_t* out_actual) -> zx_status_t {
         return DEV(ctx)->WlanIoctl(op, in_buf, in_len, out_buf, out_len, out_actual);
     },
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
 };
 
 static zx_protocol_device_t eth_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
     .unbind = [](void* ctx) { DEV(ctx)->EthUnbind(); },
     .release = [](void* ctx) { DEV(ctx)->EthRelease(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .ioctl = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
 };
 
 static wlanmac_ifc_t wlanmac_ifc_ops = {

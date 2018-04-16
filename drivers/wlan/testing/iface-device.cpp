@@ -14,19 +14,8 @@ namespace testing {
 #define DEV(c) static_cast<IfaceDevice*>(c)
 static zx_protocol_device_t wlanmac_test_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .ioctl = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
 };
 
 static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
