@@ -558,7 +558,7 @@ zx_status_t VnodeMinfs::BlockOp(WritebackWork* wb, blk_op_t op, bop_params_t* bo
         blk_t* array = &inode_.inum[ibindex];
         // number of direct blocks to process within indirect blocks
         blk_t count = fbl::min(boparams->count - found,
-                                         kMinfsIndirect * kMinfsDirectPerIndirect - start);
+                               kMinfsIndirect * kMinfsDirectPerIndirect - start);
         // if bnos exist, adjust past found
         blk_t* bnos = boparams->bnos == nullptr ? nullptr : &boparams->bnos[found];
 

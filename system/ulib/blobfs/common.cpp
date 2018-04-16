@@ -149,7 +149,7 @@ zx_status_t writeblk(int fd, uint64_t bno, const void* data) {
 }
 
 int blobfs_mkfs(int fd, uint64_t block_count) {
-    uint64_t inodes = 32768;
+    uint64_t inodes = kBlobfsDefaultInodeCount;
 
     blobfs_info_t info;
     memset(&info, 0x00, sizeof(info));

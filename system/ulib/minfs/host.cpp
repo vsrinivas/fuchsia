@@ -74,6 +74,8 @@ int status_to_errno(zx_status_t status) {
         return EFBIG;
     case ZX_ERR_NO_SPACE:
         return ENOSPC;
+    case ZX_ERR_ALREADY_EXISTS:
+        return EEXIST;
     default:
         return EIO;
     }
@@ -142,6 +144,10 @@ int emu_mount(const char* path) {
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
     return minfs::minfs_mount(fbl::move(bc), &fake_root) == ZX_OK ? 0 : -1;
+}
+
+bool emu_is_mounted() {
+    return fake_root != nullptr;
 }
 
 // Since this is a host-side tool, the client may be bringing

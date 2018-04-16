@@ -21,6 +21,7 @@ MODULE_HOST_LIBS := \
     system/ulib/blobfs.hostlib \
     system/ulib/digest.hostlib \
     system/ulib/fbl.hostlib \
+    system/ulib/fs-host.hostlib \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
@@ -32,6 +33,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
+    -Isystem/ulib/fs-host/include \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

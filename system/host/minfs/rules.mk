@@ -12,14 +12,11 @@ MODULE_TYPE := hostapp
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/main.cpp \
-
-MODULE_HOST_SRCS := \
-    $(LOCAL_DIR)/main.cpp \
     system/ulib/bitmap/raw-bitmap.cpp \
     system/ulib/fs/vfs.cpp \
     system/ulib/fs/vnode.cpp \
 
-MODULE_HOST_COMPILEFLAGS := \
+MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/bitmap/include \
@@ -28,12 +25,12 @@ MODULE_HOST_COMPILEFLAGS := \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \
     -Isystem/ulib/minfs/include \
-
-MODULE_COMPILEFLAGS := $(MODULE_HOST_COMPILEFLAGS)
+    -Isystem/ulib/fs-host/include \
 
 MODULE_HOST_LIBS := \
     system/ulib/fbl.hostlib \
-    system/ulib/minfs.hostlib
+    system/ulib/minfs.hostlib \
+    system/ulib/fs-host.hostlib \
 
 MODULE_DEFINES += DISABLE_THREAD_ANNOTATIONS
 

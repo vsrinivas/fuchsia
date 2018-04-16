@@ -75,6 +75,8 @@ constexpr size_t kFVMBlockDataBmStart  = 0x20000;
 constexpr size_t kFVMBlockInodeStart   = 0x30000;
 constexpr size_t kFVMBlockDataStart    = 0x40000;
 
+constexpr uint64_t kMinfsDefaultInodeCount = 32768;
+
 typedef struct {
     uint64_t magic0;
     uint64_t magic1;

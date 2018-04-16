@@ -1080,7 +1080,7 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
     }
 #endif
     if ((info.flags & kMinfsFlagFVM) == 0) {
-        inodes = 32768;
+        inodes = kMinfsDefaultInodeCount;
         blocks = bc->Maxblk();
     }
 
