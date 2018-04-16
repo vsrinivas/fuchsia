@@ -694,19 +694,6 @@ zx_status_t fdio_ns_install(fdio_ns_t* ns) {
     return status;
 }
 
-
-zx_status_t fdio_clone_root(zx_handle_t* handles, uint32_t* types) {
-    // The root handle is established in the init hook called from
-    // libc startup (or, in the special case of devmgr, installed
-    // slightly later), and is never NULL and does not change
-    // in normal operation
-    zx_status_t r = fdio_root_handle->ops->clone(fdio_root_handle, handles, types);
-    if (r > 0) {
-        *types = PA_FDIO_REMOTE;
-    }
-    return r;
-}
-
 zx_status_t fdio_clone_cwd(zx_handle_t* handles, uint32_t* types) {
     return fdio_cwd_handle->ops->clone(fdio_cwd_handle, handles, types);
 }
