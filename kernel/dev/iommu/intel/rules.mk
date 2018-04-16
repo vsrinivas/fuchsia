@@ -22,5 +22,6 @@ MODULE_DEPS := \
     kernel/lib/bitmap \
     kernel/lib/fbl \
     kernel/lib/hwreg \
+    kernel/lib/region-alloc \
 
 include make/module.mk

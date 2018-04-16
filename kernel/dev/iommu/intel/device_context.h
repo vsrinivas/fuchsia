@@ -9,6 +9,8 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
+#include <region-alloc/region-alloc.h>
 #include <vm/vm_object.h>
 
 #include "hw.h"
@@ -38,16 +40,26 @@ public:
 
     uint32_t domain_id() const { return domain_id_; }
 
+    uint64_t minimum_contiguity() const;
+    uint64_t aspace_size() const;
+
     // Use the second-level translation table to map the host pages in the given
     // range on |vmo| to the guest's address |*virt_paddr|.  |size| is in bytes.
     // |mapped_len| may be larger than |size|, if |size| was not page-aligned.
     //
-    // This function may return a partial mapping, in which case |mapped_len|
-    // will indicate how many bytes were actually mapped.
+    // If |map_contiguous| is false, this function may return a partial mapping,
+    // in which case |mapped_len| will indicate how many bytes were actually mapped.
+    //
+    // If |map_contiguous| is true, this function will never return a partial
+    // mapping, and |mapped_len| should be equal to |size|.
     zx_status_t SecondLevelMap(const fbl::RefPtr<VmObject>& vmo,
                                uint64_t offset, size_t size, uint32_t perms,
-                               paddr_t* virt_paddr, size_t* mapped_len);
+                               bool map_contiguous, paddr_t* virt_paddr, size_t* mapped_len);
     zx_status_t SecondLevelUnmap(paddr_t virt_paddr, size_t size);
+
+    // Use the second-level translation table to identity-map the given range of
+    // host pages.
+    zx_status_t SecondLevelMapIdentity(paddr_t base, size_t size, uint32_t perms);
 
 private:
     DeviceContext(ds::Bdf bdf, uint32_t domain_id, IommuImpl* parent,
@@ -56,6 +68,25 @@ private:
                   volatile ds::ContextEntry* context_entry);
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(DeviceContext);
+
+    // Shared initialization code for the two public Create() methods
+    zx_status_t InitCommon();
+
+    // Map a VMO which may consist of discontiguous physical pages. If
+    // |map_contiguous| is true, this must either map the whole requested range
+    // contiguously, or fail. If |map_contiguous| is false, it may return
+    // success with a partial mapping.
+    zx_status_t SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObject>& vmo,
+                                            uint64_t offset, size_t size, uint flags,
+                                            bool map_contiguous, paddr_t* virt_paddr,
+                                            size_t* mapped_len);
+
+    // Map a VMO which consists of contiguous physical pages. Currently we assume
+    // that all contiguous VMOs should be mapped as a contiguous range, so this
+    // function will not return a partial mapping.
+    zx_status_t SecondLevelMapContiguous(const fbl::RefPtr<VmObject>& vmo,
+                                         uint64_t offset, size_t size, uint flags,
+                                         paddr_t* virt_paddr, size_t* mapped_len);
 
     IommuImpl* const parent_;
     union {
@@ -66,6 +97,12 @@ private:
     // Page tables used for translating requests-without-PASID and for nested
     // translation of requests-with-PASID.
     SecondLevelPageTable second_level_pt_;
+    RegionAllocator region_alloc_;
+    // TODO(teisenbe): Use a better data structure for these.  If the region
+    // nodes were intrusive, we wouldn't need to have a resizable array for this
+    // and we could have cheaper removal.  We can fix this up when it's a
+    // problem though.
+    fbl::Vector<fbl::unique_ptr<const RegionAllocator::Region>> allocated_regions_;
 
     const ds::Bdf bdf_;
     const bool extended_;

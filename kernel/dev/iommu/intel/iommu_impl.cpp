@@ -244,13 +244,6 @@ bool IommuImpl::IsValidBusTxnId(uint64_t bus_txn_id) const {
     return false;
 }
 
-zx_status_t IommuImpl::MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo,
-                                     uint64_t offset, size_t size, uint32_t perms,
-                                     dev_vaddr_t* vaddr, size_t* mapped_len) {
-    DEBUG_ASSERT(!vmo->is_paged() || static_cast<VmObjectPaged*>(vmo.get())->is_contiguous());
-    return Map(bus_txn_id, vmo, offset, size, perms, vaddr, mapped_len);
-}
-
 zx_status_t IommuImpl::Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo,
                            uint64_t offset, size_t size, uint32_t perms,
                            dev_vaddr_t* vaddr, size_t* mapped_len) {
@@ -276,12 +269,37 @@ zx_status_t IommuImpl::Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo
     if (status != ZX_OK) {
         return status;
     }
-    status = dev->SecondLevelMap(vmo, offset, size, perms, vaddr, mapped_len);
+    return dev->SecondLevelMap(vmo, offset, size, perms, false /* map_contiguous */,
+                               vaddr, mapped_len);
+}
+
+zx_status_t IommuImpl::MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo,
+                                     uint64_t offset, size_t size, uint32_t perms,
+                                     dev_vaddr_t* vaddr, size_t* mapped_len) {
+    DEBUG_ASSERT(vaddr);
+    if (!IS_PAGE_ALIGNED(offset) || size == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (perms & ~(IOMMU_FLAG_PERM_READ | IOMMU_FLAG_PERM_WRITE | IOMMU_FLAG_PERM_EXECUTE)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (perms == 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (!IsValidBusTxnId(bus_txn_id)) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
+
+    fbl::AutoLock guard(&lock_);
+    DeviceContext* dev;
+    zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
     if (status != ZX_OK) {
         return status;
     }
-
-    return ZX_OK;
+    return dev->SecondLevelMap(vmo, offset, size, perms, true /* map_contiguous */,
+                               vaddr, mapped_len);
 }
 
 zx_status_t IommuImpl::Unmap(uint64_t bus_txn_id, dev_vaddr_t vaddr, size_t size) {
@@ -426,23 +444,14 @@ zx_status_t IommuImpl::EnableBiosReservedMappingsLocked() {
                 return status;
             }
 
-            fbl::RefPtr<VmObject> vmo;
-            status = VmObjectPhysical::Create(mem->base_addr, mem->len, &vmo);
-            if (status != ZX_OK) {
-                return status;
-            }
-
             LTRACEF("Enabling region [%lx, %lx) for %02x:%02x.%02x\n", mem->base_addr,
                     mem->base_addr + mem->len, bdf.bus(), bdf.dev(), bdf.func());
-            dev_vaddr_t vaddr;
-            size_t mapped_len;
+            size_t size = ROUNDUP(mem->len, PAGE_SIZE);
             const uint32_t perms = IOMMU_FLAG_PERM_READ | IOMMU_FLAG_PERM_WRITE;
-            status = dev->SecondLevelMap(vmo, 0, mem->len, perms, &vaddr, &mapped_len);
+            status = dev->SecondLevelMapIdentity(mem->base_addr, size, perms);
             if (status != ZX_OK) {
                 return status;
             }
-            ASSERT(vaddr == mem->base_addr);
-            ASSERT(mapped_len == ROUNDUP(mem->len, PAGE_SIZE));
         }
 
         cursor_bytes += sizeof(*mem) + mem->scope_bytes;
@@ -773,14 +782,37 @@ zx_status_t IommuImpl::GetOrCreateDeviceContextLocked(ds::Bdf bdf, DeviceContext
 }
 
 uint64_t IommuImpl::minimum_contiguity(uint64_t bus_txn_id) {
-    // TODO(teisenbe): Discover this from the device context
-    return PAGE_SIZE;
+    if (!IsValidBusTxnId(bus_txn_id)) {
+        return 0;
+    }
+
+    ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
+
+    fbl::AutoLock guard(&lock_);
+    DeviceContext* dev;
+    zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return dev->minimum_contiguity();
 }
 
 uint64_t IommuImpl::aspace_size(uint64_t bus_txn_id) {
-    // TODO(teisenbe): Discover this from the device context
-    // 2^48 is the size of an address space using 4-levevel translation.
-    return 1ull << 48;
+    if (!IsValidBusTxnId(bus_txn_id)) {
+        return 0;
+    }
+
+    ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
+
+    fbl::AutoLock guard(&lock_);
+    DeviceContext* dev;
+    zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return dev->aspace_size();
 }
 
 } // namespace intel_iommu
