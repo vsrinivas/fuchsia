@@ -182,11 +182,11 @@ func (ifs *ifState) setDHCPStatus(enabled bool) {
 func (ifs *ifState) stateChange(s eth.State) {
 	switch s {
 	case eth.StateClosed, eth.StateDown:
-		ifs.stop()
+		ifs.onEthStop()
 	case eth.StateStarted:
-		// Only restart if we are not in the initial state (which means we're still starting).
+		// Only call `restarted` if we are not in the initial state (which means we're still starting).
 		if ifs.state != eth.StateUnknown {
-			ifs.restart()
+			ifs.onEthRestart()
 		}
 	}
 	ifs.state = s
@@ -194,7 +194,7 @@ func (ifs *ifState) stateChange(s eth.State) {
 	OnInterfacesChanged()
 }
 
-func (ifs *ifState) restart() {
+func (ifs *ifState) onEthRestart() {
 	log.Printf("NIC %d: restarting", ifs.nic.ID)
 	ifs.ns.mu.Lock()
 	ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
@@ -207,7 +207,7 @@ func (ifs *ifState) restart() {
 	ifs.setDHCPStatus(ifs.dhcpState.enabled || ifs.eth.Features&eth.FeatureWlan != 0)
 }
 
-func (ifs *ifState) stop() {
+func (ifs *ifState) onEthStop() {
 	log.Printf("NIC %d: stopped", ifs.nic.ID)
 	if ifs.cancel != nil {
 		ifs.cancel()

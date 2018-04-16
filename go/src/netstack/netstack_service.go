@@ -315,7 +315,7 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) (err erro
 	}
 
 	if enabled {
-		ifState.eth.Start()
+		ifState.eth.Up()
 	} else {
 		ifState.eth.Down()
 	}
