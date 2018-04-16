@@ -43,3 +43,19 @@ zx_status_t usb_audio_set_volume(usb_protocol_t* usb,
                                  int volume);
 
 __END_CDECLS
+
+#if __cplusplus
+namespace audio {
+namespace usb {
+
+enum class Direction { Unknown, Input, Output };
+enum class EndpointSyncType : uint8_t {
+    None     = USB_ENDPOINT_NO_SYNCHRONIZATION,
+    Async    = USB_ENDPOINT_ASYNCHRONOUS,
+    Adaptive = USB_ENDPOINT_ADAPTIVE,
+    Sync     = USB_ENDPOINT_SYNCHRONOUS,
+};
+
+}  // namespace usb
+}  // namespace audio
+#endif  // __cplusplus
