@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+copy("copy_benchmarks") {
+  sources = ["benchmarks.sh"]
+  outputs = ["$root_out_dir/garnet_{{source_file_part}}"]
+}
+
+package("garnet_benchmarks") {
+  testonly = true
+  fuchsia_package = true
+
+  deps = [":copy_benchmarks"]
+
+  binaries = [ {
+        name = "garnet_benchmarks.sh"
+        dest = "benchmarks.sh"
+      } ]
+}
