@@ -4,21 +4,39 @@
 
 library logger;
 
-struct LogFilterOptions {
-  bool filter_by_severity;
-  int32 min_severity;
+enum LogLevelFilter: int8 {
+  NONE = -1;
+  INFO = 0;
+  WARN = 1;
+  ERROR = 2;
+  FATAL = 3;
+};
 
+// Max tags that can be passed to filter by listener.
+const uint8 kMaxTags = 5;
+
+// Max tag length that can be passed to filter by listener.
+const uint8 kMaxTagLen = 63;
+
+struct LogFilterOptions {
   bool filter_by_pid;
   uint64 pid;
 
   bool filter_by_tid;
   uint64 tid;
 
+  // If more than zero, logs would be filtered based on verbosity and
+  // |min_severity| would be ignored.
+  uint8 verbosity;
+
+  LogLevelFilter min_severity;
+
   // If non-empty, return all messages which contain at least one specified tag.
   // If empty, messages will not be filtered by tag.
-  // Passed tags should not be more than 63 bytes in length and max tags can be 5.
+  // Passed tags should not be more than |kMaxTagLen| bytes in length and max
+  // tags can be |kMaxTags|.
   // Listener would be discarded if the limit is not followed.
-  vector<string>:5 tags;
+  vector<string>:kMaxTags tags;
 };
 
 struct LogMessage {

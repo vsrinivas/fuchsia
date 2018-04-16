@@ -30,8 +30,8 @@ use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-use fidl_logger::{Log, LogImpl, LogListenerProxy, LogMarker, LogMessage, LogSink, LogSinkImpl,
-                  LogSinkMarker};
+use fidl_logger::{Log, LogImpl, LogLevelFilter, LogListenerProxy, LogMarker, LogMessage, LogSink,
+                  LogSinkImpl, LogSinkMarker};
 
 pub mod logger;
 
@@ -121,12 +121,12 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
 
                 if let Some(mut options) = options {
                     lw.tags = options.tags.drain(..).collect();
-                    if lw.tags.len() > logger::FX_LOG_MAX_TAGS {
+                    if lw.tags.len() > fidl_logger::MAX_TAGS as usize {
                         // TODO: close channel
                         return fok(());
                     }
                     for tag in &lw.tags {
-                        if tag.len() > logger::FX_LOG_MAX_TAG_LEN - 1 {
+                        if tag.len() > fidl_logger::MAX_TAG_LEN as usize {
                             // TODO: close channel
                             return fok(());
                         }
@@ -137,8 +137,10 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
                     if options.filter_by_tid {
                         lw.tid = Some(options.tid)
                     }
-                    if options.filter_by_severity {
-                        lw.min_severity = Some(options.min_severity)
+                    if options.verbosity > 0 {
+                        lw.min_severity = Some(-(options.verbosity as i32))
+                    } else if options.min_severity != LogLevelFilter::None {
+                        lw.min_severity = Some(options.min_severity as i32)
                     }
                 }
                 let mut shared_members = state.shared_members.lock();
@@ -458,8 +460,8 @@ mod tests {
             pid: 1,
             filter_by_tid: false,
             tid: 0,
-            filter_by_severity: false,
-            min_severity: 0,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
             tags: vec![],
         });
         filter_test_helper(vec![lm], vec![p, p2], Some(options));
@@ -485,8 +487,8 @@ mod tests {
             pid: 1,
             filter_by_tid: true,
             tid: 1,
-            filter_by_severity: false,
-            min_severity: 0,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
             tags: vec![],
         });
         filter_test_helper(vec![lm], vec![p, p2], Some(options));
@@ -513,8 +515,8 @@ mod tests {
             pid: 1,
             filter_by_tid: false,
             tid: 1,
-            filter_by_severity: true,
-            min_severity: FX_LOG_ERROR,
+            min_severity: LogLevelFilter::Error,
+            verbosity: 0,
             tags: vec![],
         });
         filter_test_helper(vec![lm], vec![p, p2], Some(options));
@@ -543,8 +545,8 @@ mod tests {
             pid: 0,
             filter_by_tid: false,
             tid: 1,
-            filter_by_severity: true,
-            min_severity: FX_LOG_ERROR,
+            min_severity: LogLevelFilter::Error,
+            verbosity: 0,
             tags: vec![],
         });
         filter_test_helper(vec![lm], vec![p, p2, p3], Some(options));
@@ -587,8 +589,8 @@ mod tests {
             pid: 1,
             filter_by_tid: false,
             tid: 1,
-            filter_by_severity: false,
-            min_severity: 0,
+            min_severity: LogLevelFilter::None,
+            verbosity: 0,
             tags: vec![String::from("BBBBB"), String::from("DDDDD")],
         });
 

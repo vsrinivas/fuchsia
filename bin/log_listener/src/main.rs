@@ -22,18 +22,15 @@ use std::io::{stdout, Write};
 
 // Include the generated FIDL bindings for the `Logger` service.
 extern crate fidl_logger;
-use fidl_logger::{LogFilterOptions, LogListener, LogListenerImpl, LogListenerMarker, LogMarker,
-                  LogMessage};
-
-const FX_LOG_MAX_TAGS: usize = 5;
-const FX_LOG_MAX_TAG_LEN: usize = 63;
+use fidl_logger::{LogFilterOptions, LogLevelFilter, LogListener, LogListenerImpl,
+                  LogListenerMarker, LogMarker, LogMessage, MAX_TAGS, MAX_TAG_LEN};
 
 fn default_log_filter_options() -> LogFilterOptions {
     LogFilterOptions {
         filter_by_pid: false,
         pid: 0,
-        filter_by_severity: false,
-        min_severity: 0,
+        min_severity: LogLevelFilter::None,
+        verbosity: 0,
         filter_by_tid: false,
         tid: 0,
         tags: vec![],
@@ -84,57 +81,38 @@ fn parse_flags(args: &[String]) -> Result<LogFilterOptions, String> {
         match argument.as_ref() {
             "--tag" => {
                 let tag = &args[i + 1];
-                if tag.len() > FX_LOG_MAX_TAG_LEN {
+                if tag.len() > MAX_TAG_LEN as usize {
                     return Err(format!(
                         "'{}' should not be more then {} characters",
-                        tag, FX_LOG_MAX_TAG_LEN
+                        tag, MAX_TAG_LEN
                     ));
                 }
                 options.tags.push(String::from(tag.as_ref()));
-                if options.tags.len() > FX_LOG_MAX_TAGS {
-                    return Err(format!("Max tags allowed: {}", FX_LOG_MAX_TAGS));
+                if options.tags.len() > MAX_TAGS as usize {
+                    return Err(format!("Max tags allowed: {}", MAX_TAGS));
                 }
             }
-            "--severity" => {
-                options.filter_by_severity = true;
-                match args[i + 1].as_ref() {
-                    "INFO" => {
-                        options.min_severity = 0;
-                    }
-                    "WARN" => {
-                        options.min_severity = 1;
-                    }
-                    "ERROR" => {
-                        options.min_severity = 2;
-                    }
-                    "FATAL" => {
-                        options.min_severity = 3;
-                    }
-                    a => {
-                        return Err(format!("Invalid severity: {}", a));
-                    }
+            "--severity" => match args[i + 1].as_ref() {
+                "INFO" => options.min_severity = LogLevelFilter::Info,
+                "WARN" => options.min_severity = LogLevelFilter::Warn,
+                "ERROR" => options.min_severity = LogLevelFilter::Error,
+                "FATAL" => options.min_severity = LogLevelFilter::Fatal,
+                a => return Err(format!("Invalid severity: {}", a)),
+            },
+            "--verbosity" => if let Ok(v) = args[i + 1].parse::<u8>() {
+                if v == 0 {
+                    return Err(format!(
+                        "Invalid verbosity: '{}', should be positive integer greater than 0.",
+                        args[i + 1]
+                    ));
                 }
-            }
-            "--verbosity" => {
-                options.filter_by_severity = true;
-                match args[i + 1].parse::<i32>() {
-                    Ok(v) => {
-                        if v <= 0 {
-                            return Err(format!(
-                                "Invalid verbosity: '{}', should be positive integer greater than 0.",
-                                args[i+1]
-                            ));
-                        }
-                        options.min_severity = -v;
-                    }
-                    Err(_) => {
-                        return Err(format!(
-                            "Invalid verbosity: '{}', should be positive integer greater than 0.",
-                            args[i + 1]
-                        ));
-                    }
-                }
-            }
+                options.verbosity = v;
+            } else {
+                return Err(format!(
+                    "Invalid verbosity: '{}', should be positive integer greater than 0.",
+                    args[i + 1]
+                ));
+            },
             "--pid" => {
                 options.filter_by_pid = true;
                 match args[i + 1].parse::<u64>() {
@@ -477,11 +455,12 @@ mod tests {
         #[test]
         fn severity() {
             let mut expected = default_log_filter_options();
-            expected.filter_by_severity = true;
-            expected.min_severity = -1;
+            expected.min_severity = LogLevelFilter::None;
             for s in vec!["INFO", "WARN", "ERROR", "FATAL"] {
                 let mut args = vec!["--severity".to_string(), s.to_string()];
-                expected.min_severity = expected.min_severity + 1;
+                expected.min_severity = LogLevelFilter::from_primitive(
+                    expected.min_severity.into_primitive() + 1,
+                ).unwrap();
                 parse_flag_test_helper(&args, Some(&expected));
             }
         }
@@ -496,8 +475,7 @@ mod tests {
         fn verbosity() {
             let args = vec!["--verbosity".to_string(), "2".to_string()];
             let mut expected = default_log_filter_options();
-            expected.filter_by_severity = true;
-            expected.min_severity = -2;
+            expected.verbosity = 2;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -517,7 +495,7 @@ mod tests {
         fn tag_edge_case() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
-            for _ in 1..FX_LOG_MAX_TAG_LEN {
+            for _ in 1..MAX_TAG_LEN {
                 tag.push('a');
             }
             args.push(tag.clone());
@@ -527,7 +505,7 @@ mod tests {
 
             args[1] = "tag1".to_string();
             expected.tags[0] = args[1].clone();
-            for i in 1..FX_LOG_MAX_TAGS {
+            for i in 1..MAX_TAGS {
                 args.push("--tag".to_string());
                 args.push(format!("tag{}", i));
                 expected.tags.push(format!("tag{}", i));
@@ -539,14 +517,14 @@ mod tests {
         fn tag_fail() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
-            for _ in 0..FX_LOG_MAX_TAG_LEN {
+            for _ in 0..MAX_TAG_LEN {
                 tag.push('a');
             }
             args.push(tag);
             parse_flag_test_helper(&args, None);
 
             args[1] = "tag1".to_string();
-            for i in 0..FX_LOG_MAX_TAGS {
+            for i in 0..MAX_TAGS {
                 args.push("--tag".to_string());
                 args.push(format!("tag{}", i));
             }
