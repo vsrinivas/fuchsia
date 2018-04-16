@@ -100,17 +100,17 @@ static zx_status_t vn_create_locked(mxvn_t* dir, const char* name, size_t len,
     }
     mxvn_t* vn = vn_lookup_locked(dir, name, len);
     if (vn != NULL) {
-        // if there's already vnode, we do not allow
-        // overlapping a remoted vnode:
-        if (vn->remote != ZX_HANDLE_INVALID) {
-            LOG(1, "VN-CREATE FAILED: SHADOWING REMOTE\n");
-            return ZX_ERR_NOT_SUPPORTED;
-        }
         // And we do not allow replacing a virtual dir node
         // with a real directory node:
         if (remote != ZX_HANDLE_INVALID) {
             LOG(1, "VN-CREATE FAILED: SHADOWING LOCAL\n");
             return ZX_ERR_ALREADY_EXISTS;
+        }
+        // if there's already vnode, we do not allow
+        // overlapping a remoted vnode:
+        if (vn->remote != ZX_HANDLE_INVALID) {
+            LOG(1, "VN-CREATE FAILED: SHADOWING REMOTE\n");
+            return ZX_ERR_NOT_SUPPORTED;
         }
         *out = vn;
         return ZX_OK;
@@ -479,10 +479,6 @@ zx_status_t fdio_ns_bind(fdio_ns_t* ns, const char* path, zx_handle_t remote) {
     zx_status_t r = ZX_OK;
 
     mtx_lock(&ns->lock);
-    if (ns->refcount != 0) {
-        r = ZX_ERR_BAD_STATE;
-        goto done;
-    }
     mxvn_t* vn = &ns->root;
     if (path[0] == 0) {
         // the path was "/" so we're trying to bind to the root vnode

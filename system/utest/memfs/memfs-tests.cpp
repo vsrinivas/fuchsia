@@ -77,6 +77,50 @@ bool test_memfs_basic() {
     END_TEST;
 }
 
+bool test_memfs_install() {
+    BEGIN_TEST;
+
+    async::Loop loop;
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+    ASSERT_EQ(memfs_install_at(loop.async(), "/mytmp"), ZX_OK);
+    int fd = open("/mytmp", O_DIRECTORY | O_RDONLY);
+    ASSERT_GE(fd, 0);
+
+    // Access files within the filesystem.
+    DIR* d = fdopendir(fd);
+
+    // Create a file
+    const char* filename = "file-a";
+    fd = openat(dirfd(d), filename, O_CREAT | O_RDWR);
+    ASSERT_GE(fd, 0);
+    const char* data = "hello";
+    ssize_t datalen = strlen(data);
+    ASSERT_EQ(write(fd, data, datalen), datalen);
+    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+    char buf[32];
+    ASSERT_EQ(read(fd, buf, sizeof(buf)), datalen);
+    ASSERT_EQ(memcmp(buf, data, datalen), 0);
+
+    // Readdir the file
+    struct dirent* de;
+    ASSERT_NONNULL((de = readdir(d)));
+    ASSERT_EQ(strcmp(de->d_name, "."), 0);
+    ASSERT_NONNULL((de = readdir(d)));
+    ASSERT_EQ(strcmp(de->d_name, filename), 0);
+    ASSERT_NULL(readdir(d));
+
+    ASSERT_EQ(closedir(d), 0);
+
+    ASSERT_EQ(memfs_install_at(loop.async(), "/mytmp"), ZX_ERR_ALREADY_EXISTS);
+
+    loop.Shutdown();
+
+    // No way to clean up the namespace entry. See ZX-2013 for more details.
+
+    END_TEST;
+}
+
 bool test_memfs_close_during_access() {
     BEGIN_TEST;
 
@@ -135,5 +179,6 @@ bool test_memfs_close_during_access() {
 BEGIN_TEST_CASE(memfs_tests)
 RUN_TEST(test_memfs_null)
 RUN_TEST(test_memfs_basic)
+RUN_TEST(test_memfs_install)
 RUN_TEST(test_memfs_close_during_access)
 END_TEST_CASE(memfs_tests)

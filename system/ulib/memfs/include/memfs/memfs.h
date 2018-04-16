@@ -29,4 +29,13 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
 // TODO(smklein): Remove this requirement.
 zx_status_t memfs_free_filesystem(memfs_filesystem_t* fs, zx_duration_t timeout);
 
+// Creates an in-memory file system and installs it into the local namespace at
+// the given path.
+//
+// Operations on the file system are serviced by the given async dispatcher.
+//
+// Returns |ZX_ERR_ALREADY_EXISTS| if |path| already exists in the namespace for
+// this process.
+zx_status_t memfs_install_at(async_t* async, const char* path);
+
 __END_CDECLS

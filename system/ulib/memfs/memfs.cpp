@@ -16,6 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <fdio/namespace.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
 #include <memfs/memfs.h>
@@ -144,6 +145,32 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
 
     *fs_out = fs.release();
     *root_out = client.release();
+    return ZX_OK;
+}
+
+zx_status_t memfs_install_at(async_t* async, const char* path) {
+    fdio_ns_t* ns;
+    zx_status_t status = fdio_ns_get_installed(&ns);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    memfs_filesystem_t* fs;
+    zx_handle_t root;
+    status = memfs_create_filesystem(async, &fs, &root);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = fdio_ns_bind(ns, path, root);
+    if (status != ZX_OK) {
+        memfs_free_filesystem(fs, 0);
+        zx_handle_close(root);
+        return status;
+    }
+
+    // We leak |fs| because there's no way to spin down the file system.
+    // See ZX-1576 for more details.
     return ZX_OK;
 }
 
