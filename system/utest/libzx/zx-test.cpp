@@ -234,7 +234,7 @@ static bool port_test() {
     ASSERT_EQ(channel[1].write(0u, "12345", 5, nullptr, 0u), ZX_OK);
 
     zx_port_packet_t packet = {};
-    ASSERT_EQ(port.wait(zx::time(), &packet, 0u), ZX_OK);
+    ASSERT_EQ(port.wait(zx::time(), &packet, 1u), ZX_OK);
     ASSERT_EQ(packet.key, key);
     ASSERT_EQ(packet.type, ZX_PKT_TYPE_SIGNAL_ONE);
     ASSERT_EQ(packet.signal.count, 1u);

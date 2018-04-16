@@ -21,7 +21,7 @@ one packet is available.
 Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data.
 
-The **count** argument should be set to one. A value of zero is also accepted as a deprecated feature.
+The **count** argument must be set to one.
 
 The *deadline* indicates when to stop waiting for a packet (with respect to
 **ZX_CLOCK_MONOTONIC**).  If no packet has arrived by the deadline,

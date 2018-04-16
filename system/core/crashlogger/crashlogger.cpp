@@ -387,7 +387,7 @@ int self_dump_func(void* arg) {
     // and just terminate on any exception.
 
     zx_port_packet_t packet;
-    zx_port_wait(ex_port, ZX_TIME_INFINITE, &packet, 0);
+    zx_port_wait(ex_port, ZX_TIME_INFINITE, &packet, 1);
     if (packet.key != kSelfExceptionKey) {
         print_error("invalid crash key");
         return 1;
@@ -585,7 +585,7 @@ int main(int argc, char** argv) {
 
     while (true) {
         zx_port_packet_t packet;
-        zx_port_wait(ex_port, ZX_TIME_INFINITE, &packet, 0);
+        zx_port_wait(ex_port, ZX_TIME_INFINITE, &packet, 1);
         if (packet.key != kSysExceptionKey) {
             print_error("invalid crash key");
             return 1;

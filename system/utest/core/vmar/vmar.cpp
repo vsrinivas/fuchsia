@@ -127,7 +127,7 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
     while (true) {
         zx_status_t s;
 
-        s = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0);
+        s = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 1);
         if (s != ZX_OK && status != ZX_OK) {
             status = s;
             break;

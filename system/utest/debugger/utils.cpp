@@ -396,7 +396,7 @@ bool read_exception(zx_handle_t eport, zx_port_packet_t* packet) {
     BEGIN_HELPER;
 
     unittest_printf("Waiting for exception/signal on eport %d\n", eport);
-    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
+    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 1), ZX_OK, "zx_port_wait failed");
 
     if (ZX_PKT_IS_EXCEPTION(packet->type))
         ASSERT_EQ(packet->key, exception_port_key);
@@ -423,7 +423,7 @@ bool wait_thread_suspended(zx_handle_t proc, zx_handle_t thread, zx_handle_t epo
 
     while (true) {
         zx_port_packet_t packet;
-        zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet, 0);
+        zx_status_t status = zx_port_wait(eport, zx_deadline_after(ZX_SEC(1)), &packet, 1);
         if (status == ZX_ERR_TIMED_OUT) {
             // This shouldn't really happen unless the system is really loaded.
             // Just flag it and try again. The watchdog will catch failures.

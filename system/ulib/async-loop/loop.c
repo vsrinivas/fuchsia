@@ -217,7 +217,7 @@ static zx_status_t async_loop_run_once(async_loop_t* loop, zx_time_t deadline) {
         return ZX_ERR_CANCELED;
 
     zx_port_packet_t packet;
-    zx_status_t status = zx_port_wait(loop->port, deadline, &packet, 0);
+    zx_status_t status = zx_port_wait(loop->port, deadline, &packet, 1);
     if (status != ZX_OK)
         return status;
 
@@ -374,7 +374,7 @@ static void async_loop_wake_threads(async_loop_t* loop) {
             .key = KEY_CONTROL,
             .type = ZX_PKT_TYPE_USER,
             .status = ZX_OK};
-        zx_status_t status = zx_port_queue(loop->port, &packet, 0u);
+        zx_status_t status = zx_port_queue(loop->port, &packet, 1u);
         ZX_ASSERT_MSG(status == ZX_OK, "zx_port_queue: status=%d", status);
     }
 }
@@ -539,7 +539,7 @@ static zx_status_t async_loop_queue_packet(async_t* async, async_receiver_t* rec
         .status = ZX_OK};
     if (data)
         packet.user = *data;
-    return zx_port_queue(loop->port, &packet, 0u);
+    return zx_port_queue(loop->port, &packet, 1u);
 }
 
 static zx_status_t async_loop_set_guest_bell_trap(

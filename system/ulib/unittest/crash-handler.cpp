@@ -145,7 +145,7 @@ static void process_exception(crash_list_t crash_list, const zx_port_packet_t* p
 static test_result_t watch_test_thread(zx_handle_t port, crash_list_t crash_list) {
     zx_port_packet_t packet;
     while (true) {
-        zx_status_t status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 0);
+        zx_status_t status = zx_port_wait(port, ZX_TIME_INFINITE, &packet, 1);
         if (status != ZX_OK) {
             UNITTEST_FAIL_TRACEF("failed to wait on port: error %s\n",
                                  zx_status_get_string(status));

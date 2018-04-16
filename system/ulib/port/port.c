@@ -55,7 +55,7 @@ zx_status_t port_queue(port_t* port, port_handler_t* ph, uint32_t evt) {
     zx_port_packet_t pkt;
     pkt.key = (uintptr_t)ph;
     pkt.user.u32[0] = evt;
-    zx_status_t r = zx_port_queue(port->handle, &pkt, 0);
+    zx_status_t r = zx_port_queue(port->handle, &pkt, 1);
     zprintf("port_queue(%p, %p) obj=%x port=%x evt=%x: r=%d\n",
             port, ph, ph->handle, port->handle, r, evt);
     return r;
@@ -65,7 +65,7 @@ zx_status_t port_dispatch(port_t* port, zx_time_t deadline, bool once) {
     for (;;) {
         zx_port_packet_t pkt;
         zx_status_t r;
-        if ((r = zx_port_wait(port->handle, deadline, &pkt, 0)) != ZX_OK) {
+        if ((r = zx_port_wait(port->handle, deadline, &pkt, 1)) != ZX_OK) {
             if (r != ZX_ERR_TIMED_OUT) {
                 printf("port_dispatch: port wait failed %d\n", r);
             }

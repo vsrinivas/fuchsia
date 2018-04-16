@@ -453,7 +453,7 @@ static bool guest_set_trap_with_bell() {
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
 
-    ASSERT_EQ(port.wait(zx::time::infinite(), &packet, 0), ZX_OK);
+    ASSERT_EQ(port.wait(zx::time::infinite(), &packet, 1), ZX_OK);
     EXPECT_EQ(packet.key, kTrapKey);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_BELL);
     EXPECT_EQ(packet.guest_bell.addr, TRAP_ADDR);

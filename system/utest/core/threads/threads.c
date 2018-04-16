@@ -77,7 +77,7 @@ static bool resume_thread_synchronous(zx_handle_t thread, zx_handle_t suspend_to
 static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_t excp_type, uint32_t ignore_type) {
     zx_port_packet_t packet;
     while (true) {
-        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 0), ZX_OK, "");
+        ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 1), ZX_OK, "");
         ASSERT_EQ(packet.key, kExceptionPortKey, "");
         if (packet.type != ignore_type) {
             ASSERT_EQ(packet.type, excp_type, "");
@@ -555,18 +555,18 @@ static bool test_suspend_port_call(void) {
     zx_port_packet_t packet1 = { 100ull, ZX_PKT_TYPE_USER, 0u, {} };
     zx_port_packet_t packet2 = { 300ull, ZX_PKT_TYPE_USER, 0u, {} };
 
-    ASSERT_EQ(zx_port_queue(port[0], &packet1, 0u), ZX_OK, "");
-    ASSERT_EQ(zx_port_queue(port[0], &packet2, 0u), ZX_OK, "");
+    ASSERT_EQ(zx_port_queue(port[0], &packet1, 1u), ZX_OK, "");
+    ASSERT_EQ(zx_port_queue(port[0], &packet2, 1u), ZX_OK, "");
 
     zx_port_packet_t packet;
-    ASSERT_EQ(zx_port_wait(port[1], zx_deadline_after(ZX_MSEC(100)), &packet, 0u), ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(zx_port_wait(port[1], zx_deadline_after(ZX_MSEC(100)), &packet, 1u), ZX_ERR_TIMED_OUT, "");
 
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
 
-    ASSERT_EQ(zx_port_wait(port[1], ZX_TIME_INFINITE, &packet, 0u), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port[1], ZX_TIME_INFINITE, &packet, 1u), ZX_OK, "");
     EXPECT_EQ(packet.key, 105ull, "");
 
-    ASSERT_EQ(zx_port_wait(port[0], ZX_TIME_INFINITE, &packet, 0u), ZX_OK, "");
+    ASSERT_EQ(zx_port_wait(port[0], ZX_TIME_INFINITE, &packet, 1u), ZX_OK, "");
     EXPECT_EQ(packet.key, 300ull, "");
 
     ASSERT_EQ(zx_object_wait_one(

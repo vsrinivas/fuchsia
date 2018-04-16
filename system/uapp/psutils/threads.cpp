@@ -249,7 +249,7 @@ int self_dump_func(void* arg) {
 
     while (true) {
         zx_port_packet_t packet;
-        zx_port_wait(data->excp_port, ZX_TIME_INFINITE, &packet, 0);
+        zx_port_wait(data->excp_port, ZX_TIME_INFINITE, &packet, 1);
         if (packet.key != kSelfExceptionKey) {
             print_error("invalid crash key");
             return 1;

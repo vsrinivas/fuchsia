@@ -19,7 +19,7 @@ zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet, si
 **port_queue**() queues a *packet* to the port specified
 by *handle*.
 
-The **count** argument should be set to one. A value of zero is also accepted as a deprecated feature.
+The **count** argument must be set to one.
 
 ```
 typedef struct zx_port_packet {

@@ -97,7 +97,7 @@ zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
 
 zx_status_t TestLoopDispatcher::DispatchNextWait() {
     zx_port_packet_t packet;
-    zx_status_t status = port_.wait(zx::time(0), &packet, 0);
+    zx_status_t status = port_.wait(zx::time(0), &packet, 1);
     if (status != ZX_OK) {
         return status;
     }

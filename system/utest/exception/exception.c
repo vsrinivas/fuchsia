@@ -151,7 +151,7 @@ static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
 
 static bool read_packet(zx_handle_t eport, zx_port_packet_t* packet)
 {
-    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 0), ZX_OK, "zx_port_wait failed");
+    ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, packet, 1), ZX_OK, "zx_port_wait failed");
     if (ZX_PKT_IS_SIGNAL_REP(packet->type)) {
         unittest_printf("signal received: key %" PRIu64 ", observed 0x%x\n",
                         packet->key, packet->signal.observed);
