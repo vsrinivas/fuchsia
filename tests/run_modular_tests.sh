@@ -5,4 +5,8 @@
 
 set -e
 
-/system/test/run_integration_tests --test_file=/system/test/modular_tests/modular_tests.json "$@"
+if [-f /system/bin/run_integration_tests]; then
+  run_integration_tests --test_file=/system/test/modular_tests/modular_tests.json "$@"
+else
+  /system/test/run_integration_tests --test_file=/system/test/modular_tests/modular_tests.json "$@"
+fi
