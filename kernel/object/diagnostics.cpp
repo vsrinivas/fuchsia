@@ -57,6 +57,7 @@ static void DumpProcessListKeyMap() {
     printf("#so: number of sockets\n");
     printf("#tm : number of timers\n");
     printf("#fi : number of fifos\n");
+    printf("#?? : number of all other handle types\n");
 }
 
 static const char* ObjectTypeToString(zx_obj_type_t type) {
@@ -116,7 +117,7 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
     uint32_t types[ZX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, buf_len, "%4u: %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, buf_len, "%4u: %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[ZX_OBJ_TYPE_JOB],
              types[ZX_OBJ_TYPE_PROCESS],
@@ -128,7 +129,12 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
              types[ZX_OBJ_TYPE_PORT],
              types[ZX_OBJ_TYPE_SOCKET],
              types[ZX_OBJ_TYPE_TIMER],
-             types[ZX_OBJ_TYPE_FIFO]
+             types[ZX_OBJ_TYPE_FIFO],
+             types[ZX_OBJ_TYPE_INTERRUPT] + types[ZX_OBJ_TYPE_PCI_DEVICE] +
+             types[ZX_OBJ_TYPE_LOG] + types[ZX_OBJ_TYPE_RESOURCE] +
+             types[ZX_OBJ_TYPE_GUEST] + types[ZX_OBJ_TYPE_VCPU] +
+             types[ZX_OBJ_TYPE_IOMMU] + types[ZX_OBJ_TYPE_BTI] +
+             types[ZX_OBJ_TYPE_PROFILE] + types[ZX_OBJ_TYPE_PMT]
              );
 }
 
