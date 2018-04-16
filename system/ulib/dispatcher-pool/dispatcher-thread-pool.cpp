@@ -211,7 +211,7 @@ void ThreadPool::InternalShutdown() {
         fbl::AutoLock lock(&pool_lock_);
         for (__UNUSED const auto& thread : active_threads_) {
             __UNUSED zx_status_t res;
-            res = port_.queue(&pkt, sizeof(pkt));
+            res = port_.queue(&pkt, 1);
             ZX_DEBUG_ASSERT(res == ZX_OK);
         }
     }
