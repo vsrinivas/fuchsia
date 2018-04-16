@@ -245,8 +245,6 @@ TEST_PARSE_GUID(IllegalCharacters,
                 "abcdefgh-ijkl-mnop-qrst-uvwxyz!@#$%^",
                 ZX_ERR_INVALID_ARGS);
 
-#if __x86_64__
-
 #define TEST_PARSE_MEM_SIZE(string, result)                                   \
   TEST(GuestConfigParserTest, MemSizeTest_##string) {                         \
     GuestConfig config;                                                       \
@@ -275,8 +273,6 @@ TEST_PARSE_MEM_SIZE(4G, 4ul << 30);
 TEST_PARSE_MEM_SIZE_ERROR(TooSmall, 1024);
 TEST_PARSE_MEM_SIZE_ERROR(IllegalModifier, 5l);
 TEST_PARSE_MEM_SIZE_ERROR(NonNumber, abc);
-
-#endif
 
 TEST(GuestConfigParserTest, DisplayType) {
   GuestConfig config;

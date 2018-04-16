@@ -133,7 +133,6 @@ static GuestConfigParser::OptionHandler append_string(std::string* out,
   };
 }
 
-#if __x86_64__
 constexpr size_t kMinMemorySize = 1 << 20;
 
 static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
@@ -177,7 +176,6 @@ static GuestConfigParser::OptionHandler parse_mem_size(size_t* out) {
     return ZX_OK;
   };
 }
-#endif
 
 template <typename NumberType>
 static GuestConfigParser::OptionHandler parse_number(NumberType* out) {
@@ -350,9 +348,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg) : cfg_(cfg), opts_ {
       {"cmdline", save_option(&cfg_->cmdline_)},
       {"cmdline-append", append_string(&cfg_->cmdline_, " ")},
       {"cpus", parse_number(&cfg_->num_cpus_)},
-#if __x86_64__
       {"memory", parse_mem_size(&cfg_->memory_)},
-#endif
       {"balloon-demand-page", set_flag(&cfg_->balloon_demand_page_, true)},
       {"balloon-interval", parse_number(&cfg_->balloon_interval_seconds_)},
       {"balloon-threshold", parse_number(&cfg_->balloon_pages_threshold_)},
