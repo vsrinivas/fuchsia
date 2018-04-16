@@ -17,6 +17,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/usb-audio-device.cpp \
     $(LOCAL_DIR)/usb-audio-path.cpp \
     $(LOCAL_DIR)/usb-audio-stream.cpp \
+    $(LOCAL_DIR)/usb-audio-stream-interface.cpp \
     $(LOCAL_DIR)/usb-audio-units.cpp \
     $(LOCAL_DIR)/usb-midi-sink.c \
     $(LOCAL_DIR)/usb-midi-source.c \

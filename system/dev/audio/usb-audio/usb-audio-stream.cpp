@@ -25,7 +25,7 @@ namespace usb {
 
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 8;
 
-static constexpr uint32_t ExtractSampleRate(const usb_audio_ac_samp_freq& sr) {
+static constexpr uint32_t ExtractSampleRate(const usb_audio_as_samp_freq& sr) {
     return static_cast<uint32_t>(sr.freq[0])
         | (static_cast<uint32_t>(sr.freq[1]) << 8)
         | (static_cast<uint32_t>(sr.freq[2]) << 16);
