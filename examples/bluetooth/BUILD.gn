@@ -8,14 +8,18 @@ package("garnet_bluetooth_examples") {
   deprecated_system_image = true
 
   deps = [
-#    "ble_battery_service",
+    # "ble_battery_service",
+    "bt-le-heart-rate-peripheral",
     "bt_beacon_reader",
   ]
 
   binaries = [
-#    {
-#     name = "ble_battery_service"
-#   },
+    # {
+    #   name = "ble_battery_service"
+    # },
+    {
+      name = "bt-le-heart-rate-peripheral"
+    },
     {
       name = "bt_beacon_reader"
     },

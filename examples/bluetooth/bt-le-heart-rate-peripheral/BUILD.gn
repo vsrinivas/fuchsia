@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bt-le-heart-rate-peripheral") {
+  output_name = "bt-le-heart-rate-peripheral"
+
+  sources = [
+    "app.cc",
+    "app.h",
+    "main.cc",
+    "service.cc",
+    "service.h",
+    "system_load_heart_model.cc",
+    "system_load_heart_model.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/bluetooth/fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
