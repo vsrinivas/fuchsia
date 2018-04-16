@@ -36,6 +36,7 @@ MODULE_DEPS += \
     kernel/lib/memory_limit \
     kernel/lib/fbl \
     kernel/lib/pow2_range_allocator \
+    kernel/lib/smbios \
     kernel/lib/version \
     kernel/dev/interrupt \
     kernel/dev/pcie \

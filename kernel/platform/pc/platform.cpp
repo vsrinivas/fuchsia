@@ -920,8 +920,8 @@ void platform_init(void) {
 
     pc_init_smbios();
 
-    smbios::WalkStructs([](smbios::SpecVersion version, const smbios::Header* h,
-                           const smbios::StringTable& st, void* ctx) -> zx_status_t {
+    SmbiosWalkStructs([](smbios::SpecVersion version, const smbios::Header* h,
+                         const smbios::StringTable& st, void* ctx) -> zx_status_t {
         if (h->type == smbios::StructType::SystemInfo && version.IncludesVersion(2, 0)) {
             auto entry = reinterpret_cast<const smbios::SystemInformationStruct2_0*>(h);
             st.GetString(entry->manufacturer_str_idx, &manufacturer);
