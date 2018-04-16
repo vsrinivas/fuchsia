@@ -31,6 +31,7 @@ template("fidl_library") {
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
+  c_header = "$root_gen_dir/fuchsia/c/$library_name.h"
   coding_tables = "$fidl_stem.tables.cc"
 
   main_target_name = target_name
@@ -67,6 +68,8 @@ template("fidl_library") {
       rebase_path(libraries, root_build_dir),
       "--json",
       rebase_path(json_representation, root_build_dir),
+      "--c-header",
+      rebase_path(c_header, root_build_dir),
       "--tables",
       rebase_path(coding_tables, root_build_dir),
       "--name",
@@ -120,6 +123,7 @@ template("fidl_library") {
     outputs = [
       coding_tables,
       json_representation,
+      c_header,
     ]
 
     rebased_response_file = rebase_path(response_file, root_build_dir)
