@@ -176,12 +176,13 @@ The **ZX_THREAD_STATE_\*** values are defined by
 #include <zircon/syscalls/object.h>
 ```
 
-*   *ZX_THREAD_STATE_NEW*
-*   *ZX_THREAD_STATE_RUNNING*
-*   *ZX_THREAD_STATE_SUSPENDED*
-*   *ZX_THREAD_STATE_BLOCKED*
-*   *ZX_THREAD_STATE_DYING*
-*   *ZX_THREAD_STATE_DEAD*
+*   *ZX_THREAD_STATE_NEW*: The thread has been created but it has not started running yet.
+*   *ZX_THREAD_STATE_RUNNING*: The thread is running user code normally.
+*   *ZX_THREAD_STATE_SUSPENDED*: Stopped due to [zx_task_suspend](task_suspend.md).
+*   *ZX_THREAD_STATE_BLOCKED*: In a syscall or handling an exception.
+*   *ZX_THREAD_STATE_DYING*: The thread is in the process of being terminated,
+    but it has not been stopped yet.
+*   *ZX_THREAD_STATE_DEAD*: The thread has stopped running.
 
 The **ZX_EXCEPTION_PORT_TYPE_\*** values are defined by
 
