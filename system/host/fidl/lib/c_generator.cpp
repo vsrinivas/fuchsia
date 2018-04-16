@@ -456,21 +456,41 @@ std::ostringstream CGenerator::Produce() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
-        case flat::Decl::Kind::kConst:
-            ProduceConstForwardDeclaration(named_consts.find(decl)->second);
+        case flat::Decl::Kind::kConst: {
+            auto iter = named_consts.find(decl);
+            if (iter != named_consts.end()) {
+                ProduceConstForwardDeclaration(iter->second);
+            }
             break;
-        case flat::Decl::Kind::kEnum:
-            ProduceEnumForwardDeclaration(named_enums.find(decl)->second);
+        }
+        case flat::Decl::Kind::kEnum: {
+            auto iter = named_enums.find(decl);
+            if (iter != named_enums.end()) {
+                ProduceEnumForwardDeclaration(iter->second);
+            }
             break;
-        case flat::Decl::Kind::kInterface:
-            ProduceInterfaceForwardDeclaration(named_interfaces.find(decl)->second);
+        }
+        case flat::Decl::Kind::kInterface: {
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceForwardDeclaration(iter->second);
+            }
             break;
-        case flat::Decl::Kind::kStruct:
-            ProduceStructForwardDeclaration(named_structs.find(decl)->second);
+        }
+        case flat::Decl::Kind::kStruct: {
+            auto iter = named_structs.find(decl);
+            if (iter != named_structs.end()) {
+                ProduceStructForwardDeclaration(iter->second);
+            }
             break;
-        case flat::Decl::Kind::kUnion:
-            ProduceUnionForwardDeclaration(named_unions.find(decl)->second);
+        }
+        case flat::Decl::Kind::kUnion: {
+            auto iter = named_unions.find(decl);
+            if (iter != named_unions.end()) {
+                ProduceUnionForwardDeclaration(iter->second);
+            }
             break;
+        }
         default:
             abort();
         }
@@ -486,9 +506,13 @@ std::ostringstream CGenerator::Produce() {
         case flat::Decl::Kind::kUnion:
             // Only messages have extern fidl_type_t declarations.
             break;
-        case flat::Decl::Kind::kInterface:
-            ProduceInterfaceExternDeclaration(named_interfaces.find(decl)->second);
+        case flat::Decl::Kind::kInterface: {
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceExternDeclaration(iter->second);
+            }
             break;
+        }
         default:
             abort();
         }
@@ -498,22 +522,38 @@ std::ostringstream CGenerator::Produce() {
 
     for (const auto* decl : library_->declaration_order_) {
         switch (decl->kind) {
-        case flat::Decl::Kind::kConst:
-            ProduceConstDeclaration(named_consts.find(decl)->second);
+        case flat::Decl::Kind::kConst: {
+            auto iter = named_consts.find(decl);
+            if (iter != named_consts.end()) {
+                ProduceConstDeclaration(named_consts.find(decl)->second);
+            }
             break;
+        }
         case flat::Decl::Kind::kEnum:
             // Enums can be entirely forward declared, as they have no
             // dependencies other than standard headers.
             break;
-        case flat::Decl::Kind::kInterface:
-            ProduceInterfaceDeclaration(named_interfaces.find(decl)->second);
+        case flat::Decl::Kind::kInterface: {
+            auto iter = named_interfaces.find(decl);
+            if (iter != named_interfaces.end()) {
+                ProduceInterfaceDeclaration(named_interfaces.find(decl)->second);
+            }
             break;
-        case flat::Decl::Kind::kStruct:
-            ProduceStructDeclaration(named_structs.find(decl)->second);
+        }
+        case flat::Decl::Kind::kStruct: {
+            auto iter = named_structs.find(decl);
+            if (iter != named_structs.end()) {
+                ProduceStructDeclaration(named_structs.find(decl)->second);
+            }
             break;
-        case flat::Decl::Kind::kUnion:
-            ProduceUnionDeclaration(named_unions.find(decl)->second);
+        }
+        case flat::Decl::Kind::kUnion: {
+            auto iter = named_unions.find(decl);
+            if (iter != named_unions.end()) {
+                ProduceUnionDeclaration(named_unions.find(decl)->second);
+            }
             break;
+        }
         default:
             abort();
         }
