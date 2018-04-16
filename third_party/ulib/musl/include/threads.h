@@ -31,6 +31,8 @@ enum {
     thrd_timedout = 4,
 };
 
+// These are bitfield values; initialize with e.g. (mtx_plain|mtx_timed).
+// mtx_recursive is not implemented.
 enum {
     mtx_plain = 0,
     mtx_recursive = 1,
