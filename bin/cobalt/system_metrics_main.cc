@@ -15,8 +15,8 @@
 
 #include "lib/app/cpp/application_context.h"
 #include <fuchsia/cpp/cobalt.h>
-#include <fuchsia/cpp/cobalt.h>
 #include "lib/fsl/tasks/message_loop.h"
+#include <lib/zx/resource.h>
 
 const uint32_t kSystemMetricsProjectId = 102;
 const uint32_t kUptimeMetricId = 1;
@@ -26,7 +26,7 @@ const unsigned int kIntervalMinutes = 1;
 
 // Gets the root resource which is needed in order to access a variety of system
 // metrics, including memory usage data.
-zx_status_t get_root_resource(zx_handle_t* resource) {
+zx_status_t get_root_resource(zx::resource* resource_out) {
   static constexpr char kResourcePath[] = "/dev/misc/sysinfo";
   int fd = open(kResourcePath, O_RDWR);
   if (fd < 0) {
@@ -35,13 +35,15 @@ zx_status_t get_root_resource(zx_handle_t* resource) {
     return ZX_ERR_IO;
   }
 
-  ssize_t n = ioctl_sysinfo_get_root_resource(fd, resource);
+  zx_handle_t raw_resource;
+  ssize_t n = ioctl_sysinfo_get_root_resource(fd, &raw_resource);
   if (n != sizeof(zx_handle_t)) {
     FXL_LOG(ERROR) << "Failed to get root resource: " << n;
     return ZX_ERR_IO;
   }
   close(fd);
-  return n < 0 ? ZX_ERR_IO : ZX_OK;
+  resource_out->reset(raw_resource);
+  return ZX_OK;
 }
 
 std::string StatusToString(cobalt::Status status) {
@@ -142,7 +144,7 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
     return cobalt::Status::OK;
   }
 
-  zx_handle_t root_resource;
+  zx::resource root_resource;
   zx_status_t status = get_root_resource(&root_resource);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "get_root_resource failed!!!";
@@ -150,7 +152,7 @@ cobalt::Status SystemMetricsApp::LogMemoryUsage(
   }
 
   zx_info_kmem_stats_t stats;
-  status = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS, &stats,
+  status = zx_object_get_info(root_resource.get(), ZX_INFO_KMEM_STATS, &stats,
                               sizeof(stats), NULL, NULL);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "zx_object_get_info failed with " << status << ".";
