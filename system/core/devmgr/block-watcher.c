@@ -54,7 +54,7 @@ void launch_blob_init() {
         argv[1] = blob_init_arg;
     }
 
-    zx_status_t status = devmgr_launch(job, "blob:init", argc, &argv[0], NULL, -1,
+    zx_status_t status = devmgr_launch(job, "pkgfs", argc, &argv[0], NULL, -1,
                                        &handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
 
     if (status != ZX_OK) {
