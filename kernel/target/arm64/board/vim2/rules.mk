@@ -6,9 +6,6 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-PLATFORM_VID := 4   # PDEV_VID_KHADAS
-PLATFORM_PID := 2   # PDEV_PID_VIM2
 PLATFORM_BOARD_NAME := vim2
-PLATFORM_USE_SHIM := true
 
 include make/board.mk
