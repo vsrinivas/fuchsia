@@ -194,71 +194,92 @@ TEST(NoiseFloor, Output_Float) {
 }
 
 // Ideal frequency response measurement is 0.00 dB across the audible spectrum
-// Ideal SINAD is at least 6 dB per signal-bit (which here is 16, so >96 dB).
+// Ideal SINAD is at least 6 dB per signal-bit (>96 dB, if 16-bit resolution).
+// If UseFullFrequencySet is false, we test at only three summary frequencies.
 void MeasureFreqRespSinad(MixerPtr mixer,
-                          uint32_t step_size,
+                          uint32_t src_buf_size,
                           double* level_db,
                           double* sinad_db) {
   if (!std::isnan(level_db[0])) {
-    // This run already has test frequency response and SINAD test results for
-    // this sampler and resampling ratio, so don't waste time/cycles redoing it.
+    // This run already has frequency response and SINAD test results for this
+    // sampler and resampling ratio; don't waste time and cycles rerunning it.
     return;
   }
-  // Set to a valid (worst-case) value; no need to recompute, in any outcome.
+  // Set this to a valid (worst-case) value, so that (for any outcome) another
+  // test does not later rerun this combination of sampler and resample ratio.
   level_db[0] = -INFINITY;
 
-  const uint32_t src_buf_size =
-      step_size * (kFreqTestBufSize >> kPtsFractionalBits);
-
-  // Source has extra val: linear interp needs it to calc the final dest val.
+  // Vector source[] has an additional element because depending on resampling
+  // ratio, some resamplers need it in order to produce the final dest value.
+  // All FFT inputs are considered periodic, so to generate a periodic output
+  // from the resampler, this extra source element should equal source[0].
   std::vector<int16_t> source(src_buf_size + 1);
   std::vector<int32_t> accum(kFreqTestBufSize);
+  uint32_t step_size = Mixer::FRAC_ONE * src_buf_size / kFreqTestBufSize;
 
+  // kReferenceFreqs[] contains the full set of official test frequencies (47).
+  // The "summary" list is a small subset (3) of that list. Each kSummaryIdxs[]
+  // value is an index (in kReferenceFreqs[]) to one of those frequencies.
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
                            ? FrequencySet::kReferenceFreqs.size()
                            : FrequencySet::kSummaryIdxs.size();
-  // Measure frequency reseponse for each summary frequency
+
+  // Measure level response for each frequency.
   for (uint32_t idx = 0; idx < num_freqs; ++idx) {
+    // If full-spectrum testing, test at every frequency in kReferenceFreqs[];
+    // otherwise, only use the frequencies indicated in kSummaryIdxs[].
     uint32_t freq_idx = idx;
     if (FrequencySet::UseFullFrequencySet == false) {
       freq_idx = FrequencySet::kSummaryIdxs[idx];
     }
 
-    // If frequency is too high to be characterized in this buffer, skip it
+    // If frequency is too high to be characterized in this buffer, skip it.
+    // Per Nyquist, buffer length must be at least 2x the measured frequency.
     if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > src_buf_size) {
       continue;
     }
 
-    // Populate source buffer; mix it (pass-thru) to accumulation buffer
+    // Populate the source buffer with a sinusoid at each reference frequency.
     OverwriteCosine(source.data(), src_buf_size,
                     FrequencySet::kReferenceFreqs[freq_idx],
                     std::numeric_limits<int16_t>::max());
-
     source[src_buf_size] = source[0];
 
-    uint32_t dst_offset = 0;
-    int32_t frac_src_offset = 0;
-    mixer->Mix(accum.data(), kFreqTestBufSize, &dst_offset, source.data(),
-               (src_buf_size + 1) << kPtsFractionalBits, &frac_src_offset,
-               step_size, Gain::kUnityScale, false);
-    EXPECT_EQ(kFreqTestBufSize, dst_offset);
-    EXPECT_EQ(static_cast<int32_t>(src_buf_size << kPtsFractionalBits),
-              frac_src_offset);
+    // Resample the source into the accumulation buffer, in pieces. (Why in
+    // pieces? See description of kResamplerTestNumPackets in frequency_set.h.)
+    uint32_t dst_frames, dst_offset;
+    int32_t frac_src_offset;
+    uint32_t frac_src_frames = source.size() * Mixer::FRAC_ONE;
 
-    // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
+    for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
+      dst_frames = kFreqTestBufSize * (packet + 1) / kResamplerTestNumPackets;
+      dst_offset = kFreqTestBufSize * packet / kResamplerTestNumPackets;
+      frac_src_offset =
+          (static_cast<int64_t>(src_buf_size) * Mixer::FRAC_ONE * packet) /
+          kResamplerTestNumPackets;
+
+      mixer->Mix(accum.data(), dst_frames, &dst_offset, source.data(),
+                 frac_src_frames, &frac_src_offset, step_size,
+                 Gain::kUnityScale, false);
+      EXPECT_EQ(dst_frames, dst_offset);
+    }
+
+    // Copy results to double[], for high-resolution frequency analysis (FFT).
     double magn_signal = -INFINITY, magn_other = INFINITY;
     MeasureAudioFreq(accum.data(), kFreqTestBufSize,
                      FrequencySet::kReferenceFreqs[freq_idx], &magn_signal,
                      &magn_other);
 
-    // Calculate Signal-to-Noise-And-Distortion (SINAD)
-    sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
-
+    // Calculate Frequency Response and Signal-to-Noise-And-Distortion (SINAD).
     level_db[freq_idx] =
         ValToDb(magn_signal / std::numeric_limits<int16_t>::max());
+    sinad_db[freq_idx] = ValToDb(magn_signal / magn_other);
   }
 }
 
+// Given result and limit arrays, compare them as frequency response results.
+// I.e., ensure greater-than-or-equal-to, plus a less-than-or-equal-to check
+// against the overall level tolerance (for level results greater than 0 dB).
 void EvaluateFreqRespResults(double* freq_resp_results,
                              const double* freq_resp_limits) {
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
@@ -276,6 +297,8 @@ void EvaluateFreqRespResults(double* freq_resp_results,
   }
 }
 
+// Given result and limit arrays, compare them as SINAD results. This simply
+// means apply a strict greater-than-or-equal-to, without additional tolerance.
 void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
   uint32_t num_freqs = FrequencySet::UseFullFrequencySet
                            ? FrequencySet::kReferenceFreqs.size()
@@ -289,59 +312,66 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits) {
   }
 }
 
+// For the given resampler, measure frequency response and sinad at unity (no
+// SRC). We articulate this with source buffer length equal to dest length.
 void TestUnitySampleRatio(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                                sampler_type);
-  constexpr uint32_t step_size = Mixer::FRAC_ONE;  // 48k -> 48k
 
-  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
+  MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize, freq_resp_results,
                        sinad_results);
 }
 
+// For the given resampler, target 96000->48000 downsampling. We articulate this
+// by specifying a source buffer twice the length of the destination buffer.
 void TestDownSampleRatio1(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 96000, 1, 48000,
                                sampler_type);
-  constexpr uint32_t step_size = Mixer::FRAC_ONE << 1;  // 96k -> 48k
 
-  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize << 1,
+                       freq_resp_results, sinad_results);
 }
 
+// For the given resampler, target 88200->48000 downsampling. We articulate this
+// by specifying a source buffer longer than destination buffer by that ratio.
 void TestDownSampleRatio2(Resampler sampler_type,
                           double* freq_resp_results,
                           double* sinad_results) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 88200, 1, 48000,
                                sampler_type);
-  constexpr uint32_t step_size = 0x1D67;  // 88.2k -> 48k
 
-  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x1D67
+                       round(kFreqTestBufSize * 88200.0 / 48000.0),
+                       freq_resp_results, sinad_results);
 }
 
+// For the given resampler, target 44100->48000 upsampling. We articulate this
+// by specifying a source buffer shorter than destination buffer by that ratio.
 void TestUpSampleRatio1(Resampler sampler_type,
                         double* freq_resp_results,
                         double* sinad_results) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 44100, 1, 48000,
                                sampler_type);
-  constexpr uint32_t step_size = 0x0EB3;  // 44.1k -> 48k
 
-  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinad(std::move(mixer),  // previously was step_size 0x0EB3
+                       round(kFreqTestBufSize * 44100.0 / 48000.0),
+                       freq_resp_results, sinad_results);
 }
 
+// For the given resampler, target the 1:2 upsampling ratio. We articulate this
+// by specifying a source buffer at half the length of the destination buffer.
 void TestUpSampleRatio2(Resampler sampler_type,
                         double* freq_resp_results,
                         double* sinad_results) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 24000, 1, 48000,
                                sampler_type);
-  constexpr uint32_t step_size = Mixer::FRAC_ONE >> 1;  // 24k -> 48k
 
-  MeasureFreqRespSinad(std::move(mixer), step_size, freq_resp_results,
-                       sinad_results);
+  MeasureFreqRespSinad(std::move(mixer), kFreqTestBufSize >> 1,
+                       freq_resp_results, sinad_results);
 }
 
 // Measure Freq Response for Point sampler, no rate conversion.

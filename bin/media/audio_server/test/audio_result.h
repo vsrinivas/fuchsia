@@ -40,8 +40,16 @@ class AudioResult {
   static constexpr double kLevelToleranceOutput16 = 0.00000068541681;
 
   // Compared to unity accuracy (kLevelToleranceSource16), LinearSampler boosts
-  // low-frequencies slightly during significant up-sampling (e.g. 1:2).
-  static constexpr double kLevelToleranceInterp16 = 0.000038069078;
+  // low-frequencies slightly during significant up-sampling (e.g. 1:2). These
+  // tolerances represent how far above 0.0 dB is acceptable.
+
+  // This threshold changed as a result of adjusting our resampler tests to call
+  // Mixer objects in the same way that their primary callers in audio_server
+  // do. For reference, previous value is (for the time being only) included in
+  // nearby comment. The commented value will be removed soon, in upcoming CL.
+  static constexpr double kLevelToleranceInterp16 = 0.000060765397;
+  //       Prior to change in resampler tests, was: 0.000038069078
+
   static constexpr double kLevelToleranceMix16 = 0.00017031199;
 
   static constexpr double kLevelToleranceSourceFloat = 0.00000099668031;
