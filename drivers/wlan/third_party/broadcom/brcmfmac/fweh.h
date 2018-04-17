@@ -26,6 +26,8 @@
 
 #include <string.h>
 
+#include "workqueue.h"
+
 /* formward declarations */
 struct brcmf_pub;
 struct brcmf_if;

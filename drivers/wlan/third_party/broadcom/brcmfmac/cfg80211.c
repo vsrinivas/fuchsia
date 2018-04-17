@@ -44,6 +44,7 @@
 #include "proto.h"
 #include "tracepoint.h"
 #include "vendor.h"
+#include "workqueue.h"
 
 #define BRCMF_SCAN_IE_LEN_MAX 2048
 
@@ -2947,7 +2948,7 @@ static void brcmf_escan_timeout(struct timer_list* t) {
 
     if (cfg->int_escan_map || cfg->scan_request) {
         brcmf_err("timer expired\n");
-        schedule_work(&cfg->escan_timeout_work);
+        workqueue_schedule_default(&cfg->escan_timeout_work);
     }
     pthread_mutex_unlock(&irq_callback_lock);
 }
@@ -3097,7 +3098,7 @@ static void brcmf_init_escan(struct brcmf_cfg80211_info* cfg) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     /* Init scan_timeout timer */
     timer_setup(&cfg->escan_timeout, brcmf_escan_timeout, 0);
-    INIT_WORK(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
+    workqueue_init_work(&cfg->escan_timeout_work, brcmf_cfg80211_escan_timeout_worker);
 }
 
 static struct cfg80211_scan_request* brcmf_alloc_internal_escan_request(struct wiphy* wiphy,
@@ -5069,7 +5070,7 @@ zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, enum nl80211_iftype
         vif->mbss = mbss;
     }
 
-    list_add_tail(&vif->list, &cfg->vif_list);
+    list_add_tail(&cfg->vif_list, &vif->list);
     if (vif_out) {
         *vif_out = vif;
     }

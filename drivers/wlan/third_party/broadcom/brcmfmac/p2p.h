@@ -23,6 +23,7 @@
 #include "core.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "workqueue.h"
 
 struct brcmf_cfg80211_info;
 

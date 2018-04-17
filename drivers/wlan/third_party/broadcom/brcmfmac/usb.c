@@ -394,7 +394,7 @@ static void brcmf_usb_enq(struct brcmf_usbdev_info* devinfo, struct list_head* q
                           struct brcmf_usbreq* req, int* counter) {
     //spin_lock_irqsave(&devinfo->qlock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    list_add_tail(&req->list, q);
+    list_add_tail(q, &req->list);
     if (counter) {
         (*counter)++;
     }
@@ -421,7 +421,7 @@ static struct brcmf_usbreq* brcmf_usbdev_qinit(struct list_head* q, int qsize) {
         }
 
         INIT_LIST_HEAD(&req->list);
-        list_add_tail(&req->list, q);
+        list_add_tail(q, &req->list);
         req++;
     }
     return reqs;

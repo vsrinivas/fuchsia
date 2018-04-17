@@ -24,12 +24,22 @@
 #ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
 #define GARNET_DRIVERS_WLAN_THIRD_PARTY_BROADCOM_INCLUDE_LINUXISMS_H_
 
-// TODO(cphoenix): Clean up the list stuff (Note: it has to be early for the #define to work)
-// TODO(cphoenix): Replace other functions e.g. pci_write_config_dword() in code
-#define list_add_tail zx_list_add_tail
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <zircon/assert.h>
 #include <zircon/listnode.h>
-#undef list_add_tail
-#define list_add_tail(item, list) zx_list_add_tail(list, item)
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include "device.h"
+
+// TODO(cphoenix): Clean up the list stuff
+// TODO(cphoenix): Replace other functions e.g. pci_write_config_dword() in code
 #define list_head list_node // for struct list_head
 #define INIT_LIST_HEAD(head) list_initialize(head)
 #define list_empty(list) list_is_empty(list)
@@ -42,19 +52,6 @@
 #define list_for_each_entry_safe(cursor, temp, list, field) \
     list_for_every_entry_safe(list, cursor, temp, __typeof__(*cursor), field)
 #define container_of containerof
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
-#include "device.h"
 
 typedef uint16_t __be16;
 typedef uint32_t __be32;
@@ -272,8 +269,6 @@ LINUX_FUNCVV(vfree)
 LINUX_FUNCVI(pr_warn)
 LINUX_FUNCVS(sdio_enable_func)
 LINUX_FUNCVI(sdio_disable_func)
-LINUX_FUNCVV(alloc_ordered_workqueue)
-LINUX_FUNCVI(INIT_WORK)
 LINUX_FUNCX(wmb)
 LINUX_FUNCX(rmb)
 
@@ -302,7 +297,6 @@ LINUX_FUNC(wait_event_interruptible_timeout, struct wait_queue_head, int)
 LINUX_FUNC(wait_event_timeout, struct wait_queue_head, uint32_t)
 LINUX_FUNCVI(sdio_f0_writeb)
 #define max_t(a, b, c) (b)
-LINUX_FUNCVI(queue_work)
 LINUX_FUNCX(in_interrupt)
 LINUX_FUNCVI(sdio_f0_readb)
 LINUX_FUNCII(allow_signal)
@@ -318,9 +312,7 @@ static inline const char* dev_name(void* dev) {
 }
 LINUX_FUNCVI(init_waitqueue_head)
 LINUX_FUNCVI(device_release_driver)
-LINUX_FUNCVI(destroy_workqueue)
 LINUX_FUNCVI(del_timer_sync)
-LINUX_FUNCVI(cancel_work_sync)
 LINUX_FUNCVV(strnchr)
 LINUX_FUNCVI(request_firmware)
 #define from_timer(a, b, c) ((void*)0)
@@ -349,7 +341,6 @@ LINUX_FUNCII(ieee80211_is_probe_resp)
 LINUX_FUNCVI(cfg80211_rx_mgmt)
 LINUX_FUNCVI(cfg80211_mgmt_tx_status)
 LINUX_FUNCX(prandom_u32)
-LINUX_FUNCVI(schedule_work)
 LINUX_FUNCVI(ether_addr_equal)
 LINUX_FUNCX(rtnl_lock)
 LINUX_FUNCX(rtnl_unlock)
@@ -447,7 +438,6 @@ LINUX_FUNCVI(usb_sndctrlpipe)
 LINUX_FUNCVI(usb_rcvctrlpipe)
 LINUX_FUNCVI(sdio_claim_irq)
 LINUX_FUNCVI(is_valid_ether_addr)
-LINUX_FUNCVV(create_singlethread_workqueue)
 LINUX_FUNCVI(test_and_set_bit)
 LINUX_FUNCII(disable_irq_nosync)
 LINUX_FUNCII(request_irq)
@@ -515,14 +505,12 @@ typedef void* usb_complete_t;
 #define CONFIG_BRCMFMAC_PROTO_MSGBUF  // turns on msgbuf.h
 #define CONFIG_BRCMFMAC_PROTO_BCDC    // Needed to see func defs in bcdc.h
 #define DECLARE_WAITQUEUE(name, b) struct linuxwait name
-#define DECLARE_WORK(name, b) struct linuxwait name = {b};
 #define READ_ONCE(a) (a)
 #define BUG_ON(a)
 
 struct linuxwait {
     void* foo;
 };
-#define WQ_MEM_RECLAIM (17)
 
 #define KBUILD_MODNAME "brcmfmac"
 #define IEEE80211_P2P_ATTR_DEVICE_INFO 2
@@ -1066,14 +1054,6 @@ struct ethhdr {
     uint32_t h_proto;
     void* h_dest;
     void* h_source;
-};
-
-struct work_struct {
-    int foo;
-};
-
-struct mutex {
-    int foo;
 };
 
 struct notifier_block {

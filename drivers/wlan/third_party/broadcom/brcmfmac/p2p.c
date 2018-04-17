@@ -33,6 +33,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
+#include "workqueue.h"
 
 /* parameters used for p2p escan */
 #define P2PAPI_SCAN_NPROBES 1
@@ -1111,7 +1112,7 @@ static int32_t brcmf_p2p_af_searching_channel(struct brcmf_p2p_info* p2p) {
         afx_hdl->is_listen = false;
         brcmf_dbg(TRACE, "Scheduling action frame for sending.. (%d)\n", retry);
         /* search peer on peer's listen channel */
-        schedule_work(&afx_hdl->afx_work);
+        workqueue_schedule_default(&afx_hdl->afx_work);
         completion_wait(&afx_hdl->act_frm_scan, duration);
         if ((afx_hdl->peer_chan != P2P_INVALID_CHANNEL) ||
                 (!test_bit(BRCMF_P2P_STATUS_FINDING_COMMON_CHANNEL, &p2p->status))) {
@@ -1122,7 +1123,7 @@ static int32_t brcmf_p2p_af_searching_channel(struct brcmf_p2p_info* p2p) {
             brcmf_dbg(TRACE, "Scheduling listen peer, channel=%d\n", afx_hdl->my_listen_chan);
             /* listen on my listen channel */
             afx_hdl->is_listen = true;
-            schedule_work(&afx_hdl->afx_work);
+            workqueue_schedule_default(&afx_hdl->afx_work);
             completion_wait(&afx_hdl->act_frm_scan, duration);
         }
         if ((afx_hdl->peer_chan != P2P_INVALID_CHANNEL) ||
@@ -2012,7 +2013,7 @@ static zx_status_t brcmf_p2p_create_p2pdev(struct brcmf_p2p_info* p2p, struct wi
     WARN_ON(p2p_ifp->bsscfgidx != (int32_t)bsscfgidx);
 
     p2p->send_af_done = COMPLETION_INIT;
-    INIT_WORK(&p2p->afx_hdl.afx_work, brcmf_p2p_afx_handler);
+    workqueue_init_work(&p2p->afx_hdl.afx_work, brcmf_p2p_afx_handler);
     p2p->afx_hdl.act_frm_scan = COMPLETION_INIT;
     p2p->wait_next_af = COMPLETION_INIT;
 

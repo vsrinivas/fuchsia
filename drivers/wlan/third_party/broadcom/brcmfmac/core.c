@@ -46,6 +46,7 @@
 #include "pcie.h"
 #include "pno.h"
 #include "proto.h"
+#include "workqueue.h"
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
 
@@ -230,7 +231,7 @@ static zx_status_t brcmf_netdev_set_mac_address(struct net_device* ndev, void* a
 static void brcmf_netdev_set_multicast_list(struct net_device* ndev) {
     struct brcmf_if* ifp = netdev_priv(ndev);
 
-    schedule_work(&ifp->multicast_work);
+    workqueue_schedule_default(&ifp->multicast_work);
 }
 
 static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff* skb, struct net_device* ndev) {
@@ -520,8 +521,8 @@ zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {
     memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
     dev_net_set(ndev, wiphy_net(cfg_to_wiphy(drvr->config)));
 
-    INIT_WORK(&ifp->multicast_work, _brcmf_set_multicast_list);
-    INIT_WORK(&ifp->ndoffload_work, _brcmf_update_ndtable);
+    workqueue_init_work(&ifp->multicast_work, _brcmf_set_multicast_list);
+    workqueue_init_work(&ifp->ndoffload_work, _brcmf_update_ndtable);
 
     if (rtnl_locked) {
         err = register_netdevice(ndev);
@@ -725,8 +726,8 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
         }
 
         if (ifp->ndev->netdev_ops == &brcmf_netdev_ops_pri) {
-            cancel_work_sync(&ifp->multicast_work);
-            cancel_work_sync(&ifp->ndoffload_work);
+            workqueue_cancel_work(&ifp->multicast_work);
+            workqueue_cancel_work(&ifp->ndoffload_work);
         }
         brcmf_net_detach(ifp->ndev, rtnl_locked);
     } else {
@@ -908,7 +909,7 @@ static int brcmf_inet6addr_changed(struct notifier_block* nb, unsigned long acti
         break;
     }
 
-    schedule_work(&ifp->ndoffload_work);
+    workqueue_schedule_default(&ifp->ndoffload_work);
 
     return NOTIFY_OK;
 }

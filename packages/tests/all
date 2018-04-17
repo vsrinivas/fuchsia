@@ -5,6 +5,7 @@
         "garnet/packages/tests/auth",
         "garnet/packages/tests/bluetooth",
         "garnet/packages/tests/boringssl",
+        "garnet/packages/tests/broadcom",
         "garnet/packages/tests/cobalt_client",
         "garnet/packages/tests/debug_agent",
         "garnet/packages/tests/debugserver",

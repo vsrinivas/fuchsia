@@ -29,6 +29,7 @@
 #include "linuxisms.h"
 #include "proto.h"
 #include "tracepoint.h"
+#include "workqueue.h"
 
 /**
  * struct brcmf_fweh_queue_item - event item on event queue.
@@ -95,10 +96,10 @@ static void brcmf_fweh_queue_event(struct brcmf_fweh_info* fweh,
                                    struct brcmf_fweh_queue_item* event) {
     //spin_lock_irqsave(&fweh->evt_q_lock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    list_add_tail(&event->q, &fweh->event_q);
+    list_add_tail(&fweh->event_q, &event->q);
     //spin_unlock_irqrestore(&fweh->evt_q_lock, flags);
     pthread_mutex_unlock(&irq_callback_lock);
-    schedule_work(&fweh->event_work);
+    workqueue_schedule_default(&fweh->event_work);
 }
 
 static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
@@ -289,7 +290,7 @@ void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing) {
  */
 void brcmf_fweh_attach(struct brcmf_pub* drvr) {
     struct brcmf_fweh_info* fweh = &drvr->fweh;
-    INIT_WORK(&fweh->event_work, brcmf_fweh_event_worker);
+    workqueue_init_work(&fweh->event_work, brcmf_fweh_event_worker);
     //spin_lock_init(&fweh->evt_q_lock);
     INIT_LIST_HEAD(&fweh->event_q);
 }
@@ -310,7 +311,7 @@ void brcmf_fweh_detach(struct brcmf_pub* drvr) {
         (void)brcmf_fil_iovar_data_set(ifp, "event_msgs", eventmask, BRCMF_EVENTING_MASK_LEN);
     }
     /* cancel the worker */
-    cancel_work_sync(&fweh->event_work);
+    workqueue_cancel_work(&fweh->event_work);
     WARN_ON(!list_empty(&fweh->event_q));
     memset(fweh->evt_handler, 0, sizeof(fweh->evt_handler));
 }

@@ -52,6 +52,7 @@
 #include "firmware.h"
 #include "linuxisms.h"
 #include "soc.h"
+#include "workqueue.h"
 
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
 #define CTL_DONE_TIMEOUT_MSEC (2500)
@@ -3392,7 +3393,7 @@ done:
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus) {
     if (!bus->dpc_triggered) {
         bus->dpc_triggered = true;
-        queue_work(bus->brcmf_wq, &bus->datawork);
+        workqueue_schedule(bus->brcmf_wq, &bus->datawork);
     }
 }
 
@@ -3418,7 +3419,7 @@ void brcmf_sdio_isr(struct brcmf_sdio* bus) {
     }
 
     bus->dpc_triggered = true;
-    queue_work(bus->brcmf_wq, &bus->datawork);
+    workqueue_schedule(bus->brcmf_wq, &bus->datawork);
 }
 
 static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
@@ -3449,7 +3450,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
                 atomic_set(&bus->ipend, 1);
 
                 bus->dpc_triggered = true;
-                queue_work(bus->brcmf_wq, &bus->datawork);
+                workqueue_schedule(bus->brcmf_wq, &bus->datawork);
             }
         }
 
@@ -4024,13 +4025,15 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     bus->tx_seq = SDPCM_SEQ_WRAP - 1;
 
     /* single-threaded workqueue */
-    wq = alloc_ordered_workqueue("brcmf_wq/%s", WQ_MEM_RECLAIM, dev_name(&sdiodev->func1->dev));
+    char name[WORKQUEUE_NAME_MAXLEN];
+    snprintf(name, WORKQUEUE_NAME_MAXLEN, "brcmf_wq/%s", dev_name(&sdiodev->func1->dev));
+    wq = workqueue_create(name);
     if (!wq) {
         brcmf_err("insufficient memory to create txworkqueue\n");
         goto fail;
     }
     brcmf_sdiod_freezer_count(sdiodev);
-    INIT_WORK(&bus->datawork, brcmf_sdio_dataworker);
+    workqueue_init_work(&bus->datawork, brcmf_sdio_dataworker);
     bus->brcmf_wq = wq;
 
     /* attempt to attach to the dongle */
@@ -4144,9 +4147,9 @@ void brcmf_sdio_remove(struct brcmf_sdio* bus) {
 
         brcmf_detach(bus->sdiodev->dev);
 
-        cancel_work_sync(&bus->datawork);
+        workqueue_cancel_work(&bus->datawork);
         if (bus->brcmf_wq) {
-            destroy_workqueue(bus->brcmf_wq);
+            workqueue_destroy(bus->brcmf_wq);
         }
 
         if (bus->ci) {

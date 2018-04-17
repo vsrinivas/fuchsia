@@ -37,6 +37,7 @@
 #include "linuxisms.h"
 #include "proto.h"
 #include "tracepoint.h"
+#include "workqueue.h"
 
 #define MSGBUF_IOCTL_RESP_TIMEOUT_MSEC (2000)
 
@@ -634,10 +635,10 @@ static uint32_t brcmf_msgbuf_flowring_create(struct brcmf_msgbuf* msgbuf, int if
 
     //spin_lock_irqsave(&msgbuf->flowring_work_lock, flags);
     pthread_mutex_lock(&irq_callback_lock);
-    list_add_tail(&create->queue, &msgbuf->work_queue);
+    list_add_tail(&msgbuf->work_queue, &create->queue);
     //spin_unlock_irqrestore(&msgbuf->flowring_work_lock, flags);
     pthread_mutex_unlock(&irq_callback_lock);
-    schedule_work(&msgbuf->flowring_work);
+    workqueue_schedule_default(&msgbuf->flowring_work);
 
     return flowid;
 }
@@ -728,7 +729,7 @@ static zx_status_t brcmf_msgbuf_schedule_txdata(struct brcmf_msgbuf* msgbuf, uin
     set_bit(flowid, msgbuf->flow_map);
     commonring = msgbuf->flowrings[flowid];
     if ((force) || (atomic_read(&commonring->outstanding_tx) < BRCMF_MSGBUF_DELAY_TXWORKER_THRS)) {
-        queue_work(msgbuf->txflow_wq, &msgbuf->txflow_work);
+        workqueue_schedule(msgbuf->txflow_wq, &msgbuf->txflow_work);
     }
 
     return ZX_OK;
@@ -1323,12 +1324,12 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
         goto fail;
     }
 
-    msgbuf->txflow_wq = create_singlethread_workqueue("msgbuf_txflow");
+    msgbuf->txflow_wq = workqueue_create("msgbuf_txflow");
     if (msgbuf->txflow_wq == NULL) {
         brcmf_err("workqueue creation failed\n");
         goto fail;
     }
-    INIT_WORK(&msgbuf->txflow_work, brcmf_msgbuf_txflow_worker);
+    workqueue_init_work(&msgbuf->txflow_work, brcmf_msgbuf_txflow_worker);
     count = BITS_TO_LONGS(if_msgbuf->max_flowrings);
     count = count * sizeof(unsigned long);
     msgbuf->flow_map = calloc(1, count);
@@ -1407,7 +1408,7 @@ zx_status_t brcmf_proto_msgbuf_attach(struct brcmf_pub* drvr) {
     brcmf_msgbuf_rxbuf_event_post(msgbuf);
     brcmf_msgbuf_rxbuf_ioctlresp_post(msgbuf);
 
-    INIT_WORK(&msgbuf->flowring_work, brcmf_msgbuf_flowring_worker);
+    workqueue_init_work(&msgbuf->flowring_work, brcmf_msgbuf_flowring_worker);
     //spin_lock_init(&msgbuf->flowring_work_lock);
     INIT_LIST_HEAD(&msgbuf->work_queue);
 
@@ -1436,7 +1437,7 @@ void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {
     brcmf_dbg(TRACE, "Enter\n");
     if (drvr->proto->pd) {
         msgbuf = (struct brcmf_msgbuf*)drvr->proto->pd;
-        cancel_work_sync(&msgbuf->flowring_work);
+        workqueue_cancel_work(&msgbuf->flowring_work);
         while (!list_empty(&msgbuf->work_queue)) {
             work = list_first_entry(&msgbuf->work_queue, struct brcmf_msgbuf_work_item, queue);
             list_del(&work->queue);
@@ -1445,7 +1446,7 @@ void brcmf_proto_msgbuf_detach(struct brcmf_pub* drvr) {
         free(msgbuf->flow_map);
         free(msgbuf->txstatus_done_map);
         if (msgbuf->txflow_wq) {
-            destroy_workqueue(msgbuf->txflow_wq);
+            workqueue_destroy(msgbuf->txflow_wq);
         }
 
         brcmf_flowring_detach(msgbuf->flow);

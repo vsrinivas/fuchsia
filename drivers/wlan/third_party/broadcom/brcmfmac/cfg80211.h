@@ -26,6 +26,7 @@
 #include "device.h"
 #include "fwil_types.h"
 #include "p2p.h"
+#include "workqueue.h"
 
 // clang-format off
 

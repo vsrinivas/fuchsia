@@ -44,6 +44,7 @@
 #include "linuxisms.h"
 #include "p2p.h"
 #include "proto.h"
+#include "workqueue.h"
 
 /**
  * DOC: Firmware Signalling
@@ -1220,7 +1221,7 @@ static void brcmf_fws_schedule_deq(struct brcmf_fws_info* fws) {
     /* only schedule dequeue when there are credits for delayed traffic */
     if ((fws->fifo_credit_map & fws->fifo_delay_map) ||
             (!brcmf_fws_fc_active(fws) && fws->fifo_delay_map)) {
-        queue_work(fws->fws_wq, &fws->fws_dequeue_work);
+        workqueue_schedule(fws->fws_wq, &fws->fws_dequeue_work);
     }
 }
 
@@ -2275,13 +2276,13 @@ zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws
         return ZX_OK;
     }
 
-    fws->fws_wq = create_singlethread_workqueue("brcmf_fws_wq");
+    fws->fws_wq = workqueue_create("brcmf_fws_wq");
     if (fws->fws_wq == NULL) {
         brcmf_err("workqueue creation failed\n");
         rc = ZX_ERR_NO_RESOURCES;
         goto fail;
     }
-    INIT_WORK(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);
+    workqueue_init_work(&fws->fws_dequeue_work, brcmf_fws_dequeue_worker);
 
     /* enable firmware signalling if fcmode active */
     if (fws->fcmode != BRCMF_FWS_FCMODE_NONE)
@@ -2354,7 +2355,7 @@ void brcmf_fws_detach(struct brcmf_fws_info* fws) {
     }
 
     if (fws->fws_wq) {
-        destroy_workqueue(fws->fws_wq);
+        workqueue_destroy(fws->fws_wq);
     }
 
     /* cleanup */

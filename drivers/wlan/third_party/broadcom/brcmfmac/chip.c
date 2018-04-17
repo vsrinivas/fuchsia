@@ -470,7 +470,7 @@ static zx_status_t brcmf_chip_add_core(struct brcmf_chip_priv* ci, uint16_t core
     core->chip = ci;
     core->wrapbase = wrapbase;
 
-    list_add_tail(&core->list, &ci->cores);
+    list_add_tail(&ci->cores, &core->list);
     if (core_out) {
         *core_out = &core->pub;
     }

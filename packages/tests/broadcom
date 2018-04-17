@@ -1,0 +1,5 @@
+{
+    "packages": {
+        "brcmfmac_test" : "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_test"
+    }
+}

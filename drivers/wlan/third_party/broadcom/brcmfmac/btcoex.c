@@ -30,6 +30,7 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "p2p.h"
+#include "workqueue.h"
 
 /* T1 start SCO/eSCO priority suppression */
 #define BRCMF_BTCOEX_OPPR_WIN_TIME_MSEC (2000)
@@ -271,7 +272,7 @@ static void brcmf_btcoex_timerfunc(struct timer_list* t) {
     brcmf_dbg(TRACE, "enter\n");
 
     bt_local->timer_on = false;
-    schedule_work(&bt_local->work);
+    workqueue_schedule_default(&bt_local->work);
     pthread_mutex_unlock(&irq_callback_lock);
 }
 
@@ -369,7 +370,7 @@ zx_status_t brcmf_btcoex_attach(struct brcmf_cfg80211_info* cfg) {
     btci->saved_regs_part1 = false;
     btci->saved_regs_part2 = false;
 
-    INIT_WORK(&btci->work, brcmf_btcoex_handler);
+    workqueue_init_work(&btci->work, brcmf_btcoex_handler);
 
     cfg->btcoex = btci;
     return ZX_OK;
@@ -391,7 +392,7 @@ void brcmf_btcoex_detach(struct brcmf_cfg80211_info* cfg) {
         del_timer_sync(&cfg->btcoex->timer);
     }
 
-    cancel_work_sync(&cfg->btcoex->work);
+    workqueue_cancel_work(&cfg->btcoex->work);
 
     brcmf_btcoex_boost_wifi(cfg->btcoex, false);
     brcmf_btcoex_restore_part1(cfg->btcoex);
@@ -410,7 +411,7 @@ static void brcmf_btcoex_dhcp_start(struct brcmf_btcoex_info* btci) {
     brcmf_btcoex_params_write(ifp, 68, BRCMF_BT_DHCP_REG68);
     btci->dhcp_done = false;
     btci->bt_state = BRCMF_BT_DHCP_START;
-    schedule_work(&btci->work);
+    workqueue_schedule_default(&btci->work);
     brcmf_dbg(TRACE, "enable BT DHCP Timer\n");
 }
 
@@ -425,7 +426,7 @@ static void brcmf_btcoex_dhcp_end(struct brcmf_btcoex_info* btci) {
         /* schedule worker if transition to IDLE is needed */
         if (btci->bt_state != BRCMF_BT_DHCP_IDLE) {
             brcmf_dbg(INFO, "bt_state:%d\n", btci->bt_state);
-            schedule_work(&btci->work);
+            workqueue_schedule_default(&btci->work);
         }
     } else {
         /* Restore original values */
