@@ -18,12 +18,12 @@ zx_status_t usb_audio_source_create(zx_device_t* device, usb_protocol_t* usb, in
                                     usb_audio_ac_format_type_i_desc* format_desc);
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
-                                 usb_interface_descriptor_t* intf,
-                                 usb_endpoint_descriptor_t* ep);
+                                 const usb_interface_descriptor_t* intf,
+                                 const usb_endpoint_descriptor_t* ep);
 
 zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int index,
-                                   usb_interface_descriptor_t* intf,
-                                   usb_endpoint_descriptor_t* ep);
+                                   const usb_interface_descriptor_t* intf,
+                                   const usb_endpoint_descriptor_t* ep);
 
 
 uint32_t* usb_audio_parse_sample_rates(usb_audio_ac_format_type_i_desc* format_desc,

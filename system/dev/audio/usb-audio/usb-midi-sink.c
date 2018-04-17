@@ -197,7 +197,8 @@ static zx_protocol_device_t usb_midi_sink_device_proto = {
 };
 
 zx_status_t usb_midi_sink_create(zx_device_t* device, usb_protocol_t* usb, int index,
-                                  usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
+                                  const usb_interface_descriptor_t* intf,
+                                  const usb_endpoint_descriptor_t* ep) {
     usb_midi_sink_t* sink = calloc(1, sizeof(usb_midi_sink_t));
     if (!sink) {
         printf("Not enough memory for usb_midi_sink_t\n");

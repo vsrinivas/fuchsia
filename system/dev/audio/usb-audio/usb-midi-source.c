@@ -191,7 +191,8 @@ static zx_protocol_device_t usb_midi_source_device_proto = {
 };
 
 zx_status_t usb_midi_source_create(zx_device_t* device, usb_protocol_t* usb, int index,
-                                  usb_interface_descriptor_t* intf, usb_endpoint_descriptor_t* ep) {
+                                  const usb_interface_descriptor_t* intf,
+                                  const usb_endpoint_descriptor_t* ep) {
     usb_midi_source_t* source = calloc(1, sizeof(usb_midi_source_t));
     if (!source) {
         printf("Not enough memory for usb_midi_source_t\n");

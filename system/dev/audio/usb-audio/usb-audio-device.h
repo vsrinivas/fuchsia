@@ -42,8 +42,24 @@ public:
 private:
     explicit UsbAudioDevice(zx_device_t* parent);
 
+    // A small struct used when searching descriptors for midi streaming
+    // interfaces.
+    //
+    // TODO(johngro) : Someday, turn this into something more like
+    // UsbAudioStreamingInterface and give it the ability to parse and
+    // understand its class specific interfaces, class specific endpoints, and
+    // manage multiple alternate interface settings.
+    struct MidiStreamingInfo {
+        explicit MidiStreamingInfo(const usb_interface_descriptor_t* i) : ifc(i) {}
+        const usb_interface_descriptor_t* ifc;
+        const usb_endpoint_descriptor_t*  in_ep  = nullptr;
+        const usb_endpoint_descriptor_t*  out_ep = nullptr;
+    };
+
     zx_status_t Bind();
     void Probe();
+    void ParseMidiStreamingIfc(DescriptorListMemory::Iterator* iter,
+                               MidiStreamingInfo* inout_info);
 
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
@@ -52,6 +68,9 @@ private:
     usb_device_descriptor_t usb_dev_desc_;
     fbl::RefPtr<DescriptorListMemory> desc_list_;
     fbl::DoublyLinkedList<fbl::RefPtr<UsbAudioStream>> streams_ TA_GUARDED(lock_);
+
+    int midi_sink_index_ = 0;
+    int midi_source_index_ = 0;
 };
 
 }  // namespace usb
