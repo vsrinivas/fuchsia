@@ -55,7 +55,9 @@ void ScenicSystem::Initialize() {
   escher::VulkanInstance::Params instance_params(
       {{},
        {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_KHR_MAGMA_SURFACE_EXTENSION_NAME},
+        VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+        VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
        true});
   // Only enable Vulkan validation layers when in debug mode.
 #if !defined(NDEBUG)
@@ -64,8 +66,11 @@ void ScenicSystem::Initialize() {
   vulkan_instance_ = escher::VulkanInstance::New(std::move(instance_params));
   surface_ = CreateVulkanMagmaSurface(vulkan_instance_->vk_instance());
   vulkan_device_queues_ = escher::VulkanDeviceQueues::New(
-      vulkan_instance_,
-      {{VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME}, surface_});
+      vulkan_instance_, {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+                          VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+                          VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+                          VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
+                         surface_});
 
   // Initialize Escher.
   escher::GlslangInitializeProcess();

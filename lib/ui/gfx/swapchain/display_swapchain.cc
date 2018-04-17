@@ -330,7 +330,8 @@ vk::ImageUsageFlags GetFramebufferImageUsage() {
 
     for (auto& extension : instance_extensions.value) {
       if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
-        return vk::ImageUsageFlagBits::eScanoutGOOGLE;
+        return vk::ImageUsageFlagBits::eScanoutGOOGLE |
+               vk::ImageUsageFlagBits::eColorAttachment;
       }
     }
   }

@@ -251,7 +251,7 @@
     <project name="third_party/vulkan_loader_and_validation_layers"
              path="third_party/vulkan_loader_and_validation_layers"
              remote="https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers"
-             revision="924ddb043aa7ba8b4c93f8859d710b177fd5c76c"
+             revision="d05307fc31c55d95c23c91738591f54572038157"
              gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/yasm"
              path="third_party/yasm"
