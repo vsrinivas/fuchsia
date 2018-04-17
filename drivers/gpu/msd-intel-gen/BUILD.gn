@@ -5,8 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-shared_ldflags = "-Wl,--no-undefined"
-
 # Core device; to be replaced by a complete display driver.
 driver_module("msd_intel_core") {
   output_name = "libmsd_intel_core"
@@ -29,8 +27,6 @@ driver_module("msd_intel_core") {
     "//zircon/public/lib/zx",
   ]
   libs = [ "zircon" ]
-
-  ldflags = [ "$shared_ldflags" ]
 }
 
 # The gpu device
@@ -41,8 +37,6 @@ driver_module("msd_intel") {
     ":msd_intel_entry",
     "src",
   ]
-
-  ldflags = [ "$shared_ldflags" ]
 }
 
 # The gpu device; runs gtests at startup
@@ -55,8 +49,6 @@ driver_module("msd_intel_test") {
     ":msd_intel_test_entry",
     "src",
   ]
-
-  ldflags = [ "$shared_ldflags" ]
 }
 
 source_set("msd_intel_entry") {

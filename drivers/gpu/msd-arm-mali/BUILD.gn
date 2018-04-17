@@ -5,8 +5,6 @@
 import("//build/config/fuchsia/rules.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
-shared_ldflags = "-Wl,--no-undefined"
-
 ARM_MALI_DEVICE_ID = "PDEV_DID_ARM_MALI"
 
 driver_module("msd_arm") {
@@ -16,8 +14,6 @@ driver_module("msd_arm") {
     ":msd_arm_entry",
     "src",
   ]
-
-  ldflags = [ shared_ldflags ]
 }
 
 driver_module("msd_arm_test") {
@@ -29,8 +25,6 @@ driver_module("msd_arm_test") {
     "src",
     "tests:gtest",
   ]
-
-  ldflags = [ shared_ldflags ]
 }
 
 magma_pdev_entry("msd_arm_entry") {
