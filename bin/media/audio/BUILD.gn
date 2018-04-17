@@ -10,8 +10,6 @@ source_set("audio") {
     "gain.h",
     "level.cc",
     "level.h",
-    "lpcm_util.cc",
-    "lpcm_util.h",
     "mixdown_table.h",
     "mixer.h",
     "mixer_input.h",

@@ -27,6 +27,8 @@ source_set("ffmpeg") {
     "ffmpeg_video_decoder.h",
     "ffmpeg_video_frame_layout.cc",
     "ffmpeg_video_frame_layout.h",
+    "lpcm_util.cc",
+    "lpcm_util.h",
   ]
 
   deps = [

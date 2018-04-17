@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "garnet/bin/media/audio/lpcm_util.h"
 #include "garnet/bin/media/ffmpeg/ffmpeg_decoder_base.h"
+#include "garnet/bin/media/ffmpeg/lpcm_util.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media_player {
