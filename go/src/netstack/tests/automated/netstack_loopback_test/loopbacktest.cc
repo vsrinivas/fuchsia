@@ -13,6 +13,13 @@
 #include <sys/types.h>
 #include <string>
 #include <thread>
+#include <unistd.h>
+
+#include <fdio/io.h>
+#include <fdio/private.h>
+#include <fdio/util.h>
+
+#include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"
 
@@ -124,6 +131,84 @@ void BlockingAcceptWrite() {
 TEST(NetStreamTest, BlockingAcceptWrite) {
   for (int i = 0; i < kRepeatEach; i++) {
     BlockingAcceptWrite();
+  }
+}
+
+// NetStreamTest.BlockAcceptWriteNoClose
+
+// NoClose simulates an unexpected process exit by closing the socket handle
+// associated with fd without sending a Close op to netstack.
+void NoClose(int fd) {
+  fdio_t* io;
+  zx_status_t status = fdio_unbind_from_fd(fd, &io);
+  EXPECT_GE(status, 0);
+  zx_handle_t h;
+  zx_signals_t sigs;
+  __fdio_wait_begin(io, 0,  &h, &sigs);
+  EXPECT_NE(NULL, h);
+  zx_handle_close(h);
+  __fdio_release(io);
+}
+
+void BlockingAcceptWriteNoClose() {
+  short port = 0; // will be assigned by the first bind.
+
+  for (int j = 0; j < 2; j++) {
+    int acptfd = socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_GE(acptfd, 0);
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = port;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    int ret = bind(acptfd, (const struct sockaddr*)&addr, sizeof(addr));
+    ASSERT_EQ(0, ret) << "bind failed: " << errno << " port: " << port;
+
+    socklen_t addrlen = sizeof(addr);
+    ret = getsockname(acptfd, (struct sockaddr*)&addr, &addrlen);
+    ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+
+    // remember the assigned port and use it for the next bind.
+    port = addr.sin_port;
+
+    int ntfyfd[2];
+    ASSERT_EQ(0, pipe(ntfyfd));
+
+    ret = listen(acptfd, 10);
+    ASSERT_EQ(0, ret) << "listen failed: " << errno;
+
+    std::string out;
+    std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
+
+    int connfd = accept(acptfd, nullptr, nullptr);
+    ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+
+    const char* msg = "hello";
+    ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
+    ASSERT_EQ(0, close(connfd));
+
+    ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+    thrd.join();
+
+    EXPECT_STREQ(msg, out.c_str());
+
+    // Simulate unexpected process exit.
+    NoClose(acptfd);
+
+    EXPECT_EQ(0, close(ntfyfd[0]));
+    EXPECT_EQ(0, close(ntfyfd[1]));
+
+    // Wait while netstack tears down the port.
+    // TODO: synchronize with netstack instead of nanosleep.
+    if (j == 0) {
+      zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    }
+  }
+}
+
+TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
+  for (int i = 0; i < kRepeatEach; i++) {
+    BlockingAcceptWriteNoClose();
   }
 }
 
