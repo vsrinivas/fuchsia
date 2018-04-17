@@ -13,11 +13,11 @@
 #include <string>
 #include <unordered_map>
 
+#include <fuchsia/cpp/component.h>
 #include "garnet/bin/appmgr/application_controller_impl.h"
 #include "garnet/bin/appmgr/application_environment_controller_impl.h"
 #include "garnet/bin/appmgr/application_namespace.h"
 #include "garnet/bin/appmgr/application_runner_holder.h"
-#include <fuchsia/cpp/component.h>
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -64,6 +64,8 @@ class JobHolder {
 
   void AddBinding(fidl::InterfaceRequest<ApplicationEnvironment> environment);
 
+  zx_status_t BindSvc(zx::channel channel);
+
  private:
   static uint32_t next_numbered_label_;
 
@@ -106,6 +108,9 @@ class JobHolder {
 
   std::unordered_map<std::string, std::unique_ptr<ApplicationRunnerHolder>>
       runners_;
+
+  zx::channel svc_channel_client_;
+  zx::channel svc_channel_server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JobHolder);
 };

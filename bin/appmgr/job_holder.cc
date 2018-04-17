@@ -59,19 +59,6 @@ std::vector<const char*> GetArgv(const std::string& argv0,
   return argv;
 }
 
-// The very first nested environment process we create gets the
-// PA_DIRECTORY_REQUEST given to us by our parent. It's slightly awkward that we
-// don't publish the root environment's services. We should consider
-// reorganizing the boot process so that the root environment's services are
-// the ones we want to publish.
-void PublishServicesForFirstNestedEnvironment(ServiceProviderBridge* services) {
-  static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
-  if (request == ZX_HANDLE_INVALID)
-    return;
-  services->ServeDirectory(zx::channel(request));
-  request = ZX_HANDLE_INVALID;
-}
-
 std::string GetLabelFromURL(const std::string& url) {
   size_t last_slash = url.rfind('/');
   if (last_slash == std::string::npos || last_slash + 1 == url.length())
@@ -120,10 +107,8 @@ zx::process CreateProcess(const zx::job& job,
     handles.push_back(directory_request.release());
   }
 
-  PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &ids,
-                     &handles);
-  PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &ids,
-                     &handles);
+  PushFileDescriptor(std::move(launch_info.out), STDOUT_FILENO, &ids, &handles);
+  PushFileDescriptor(std::move(launch_info.err), STDERR_FILENO, &ids, &handles);
 
   for (size_t i = 0; i < flat->count; ++i) {
     ids.push_back(flat->type[i]);
@@ -215,6 +200,12 @@ JobHolder::JobHolder(JobHolder* parent,
   // derive from the application manager's job.
   zx_handle_t parent_job =
       parent_ != nullptr ? parent_->job_.get() : zx_job_default();
+
+  // init svc service channel for root application environment
+  if (parent_ == nullptr) {
+    FXL_CHECK(zx::channel::create(0, &svc_channel_server_,
+                                  &svc_channel_client_) == ZX_OK);
+  }
   FXL_CHECK(zx::job::create(parent_job, 0u, &job_) == ZX_OK);
   FXL_CHECK(job_.duplicate(kChildJobRights, &job_for_child_) == ZX_OK);
 
@@ -237,11 +228,11 @@ JobHolder::~JobHolder() {
 }
 
 zx::channel JobHolder::OpenRootInfoDir() {
+  // TODO: define /hub access policy: CP-26
   JobHolder* root_job_holder = this;
   while (root_job_holder->parent() != nullptr) {
     root_job_holder = root_job_holder->parent();
   }
-
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) < 0) {
     return zx::channel();
@@ -267,8 +258,12 @@ void JobHolder::CreateNestedJob(
   info_dir_->AddEntry(child->label(), child->info_dir());
   children_.emplace(child, std::move(controller));
 
-  PublishServicesForFirstNestedEnvironment(
-      &child->default_namespace_->services());
+  JobHolder* root_job_holder = this;
+  while (root_job_holder->parent() != nullptr) {
+    root_job_holder = root_job_holder->parent();
+  }
+  child->default_namespace_->services().ServeDirectory(
+      std::move(root_job_holder->svc_channel_server_));
 }
 
 void JobHolder::CreateApplication(
@@ -545,6 +540,15 @@ ApplicationRunnerHolder* JobHolder::GetOrCreateRunner(
   }
 
   return result.first->second.get();
+}
+
+zx_status_t JobHolder::BindSvc(zx::channel channel) {
+  JobHolder* root_job_holder = this;
+  while (root_job_holder->parent() != nullptr) {
+    root_job_holder = root_job_holder->parent();
+  }
+  return fdio_service_clone_to(root_job_holder->svc_channel_client_.get(),
+                               channel.release());
 }
 
 }  // namespace component

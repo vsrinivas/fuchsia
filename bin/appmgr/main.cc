@@ -24,7 +24,26 @@
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/log_settings.h"
 
+namespace {
+
 constexpr char kRootLabel[] = "app";
+
+void PublishRootDir(component::JobHolder* root, fs::ManagedVfs* vfs) {
+  static zx_handle_t request = zx_get_startup_handle(PA_DIRECTORY_REQUEST);
+  if (request == ZX_HANDLE_INVALID)
+    return;
+  fbl::RefPtr<fs::PseudoDir> dir(fbl::AdoptRef(new fs::PseudoDir()));
+  auto svc = fbl::AdoptRef(new fs::Service([root](zx::channel channel) {
+    return root->BindSvc(std::move(channel));
+  }));
+  dir->AddEntry("hub", root->info_dir());
+  dir->AddEntry("svc", svc);
+
+  vfs->ServeDirectory(dir, zx::channel(request));
+  request = ZX_HANDLE_INVALID;
+}
+
+}  // namespace
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -49,13 +68,15 @@ int main(int argc, char** argv) {
   if (vfs.ServeDirectory(directory, std::move(h2)) != ZX_OK)
     return -1;
   component::JobHolder root_job_holder(nullptr, std::move(h1), kRootLabel);
+  fs::ManagedVfs publish_vfs(loop.async());
+  PublishRootDir(&root_job_holder, &vfs);
 
   component::ApplicationControllerPtr sysmgr;
   auto run_sysmgr = [&root_job_holder, &sysmgr] {
     component::ApplicationLaunchInfo launch_info;
     launch_info.url = "sysmgr";
-    root_job_holder.CreateApplication(
-        std::move(launch_info), sysmgr.NewRequest());
+    root_job_holder.CreateApplication(std::move(launch_info),
+                                      sysmgr.NewRequest());
   };
 
   async::PostTask(loop.async(), [&run_sysmgr, &sysmgr] {
