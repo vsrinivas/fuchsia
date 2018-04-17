@@ -103,21 +103,34 @@ void FifoDispatcher::OnPeerZeroHandlesLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     UpdateStateLocked(ZX_FIFO_WRITABLE, ZX_FIFO_PEER_CLOSED);
 }
 
-zx_status_t FifoDispatcher::WriteFromUser(user_in_ptr<const uint8_t> ptr, size_t len, uint32_t* actual) {
+zx_status_t FifoDispatcher::WriteFromUserOld(user_in_ptr<const uint8_t> ptr, size_t len,
+                                             size_t* actual) {
     canary_.Assert();
 
     AutoLock lock(get_lock());
     if (!peer_)
         return ZX_ERR_PEER_CLOSED;
-
-    return peer_->WriteSelfLocked(ptr, len, actual);
+    size_t count = len / peer_->elem_size_;
+    return peer_->WriteSelfLocked(peer_->elem_size_, ptr, count, actual);
 }
 
-zx_status_t FifoDispatcher::WriteSelfLocked(user_in_ptr<const uint8_t> ptr, size_t bytelen, uint32_t* actual)
+zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const uint8_t> ptr,
+                                          size_t count, size_t* actual) {
+    canary_.Assert();
+
+    AutoLock lock(get_lock());
+    if (!peer_)
+        return ZX_ERR_PEER_CLOSED;
+    return peer_->WriteSelfLocked(elem_size, ptr, count, actual);
+}
+
+zx_status_t FifoDispatcher::WriteSelfLocked(size_t elem_size, user_in_ptr<const uint8_t> ptr,
+                                            size_t count, size_t* actual)
     TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    size_t count = bytelen / elem_size_;
+    if (elem_size != elem_size_)
+        return ZX_ERR_OUT_OF_RANGE;
     if (count == 0)
         return ZX_ERR_OUT_OF_RANGE;
 
@@ -170,11 +183,20 @@ zx_status_t FifoDispatcher::WriteSelfLocked(user_in_ptr<const uint8_t> ptr, size
     return ZX_OK;
 }
 
-zx_status_t FifoDispatcher::ReadToUser(user_out_ptr<uint8_t> ptr, size_t bytelen, uint32_t* actual)
+zx_status_t FifoDispatcher::ReadToUserOld(user_out_ptr<uint8_t> ptr, size_t bytelen,
+                                          size_t* actual) {
+    canary_.Assert();
+    size_t count = bytelen / elem_size_;
+    return ReadToUser(elem_size_, ptr, count, actual);
+}
+
+zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> ptr, size_t count,
+                                       size_t* actual)
     TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
-    size_t count = bytelen / elem_size_;
+    if (elem_size != elem_size_)
+        return ZX_ERR_OUT_OF_RANGE;
     if (count == 0)
         return ZX_ERR_OUT_OF_RANGE;
 

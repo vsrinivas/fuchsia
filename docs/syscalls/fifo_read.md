@@ -9,27 +9,34 @@ fifo_read - read data from a fifo
 ```
 #include <zircon/syscalls.h>
 
-zx_status_t zx_fifo_read(zx_handle_t handle,
-                         void* buffer, size_t size,
-                         uint32_t* num_entries_read);
+zx_status_t zx_fifo_read(zx_handle_t handle, size_t elem_size,
+                         void* buffer, size_t count, size_t* actual_count);
 ```
 
 ## DESCRIPTION
 
-**fifo_read**() attempts to read some number of elements out of
-the fifo specified by *handle*.  *size* will be rounded down to
-a multiple of the fifo's *element-size*.
-
-It is not legal to read zero elements.
+**fifo_read**() attempts to read up to *count* elements from the fifo
+*handle* into *buffer*.
 
 Fewer elements may be read than requested if there are insufficient
-elements in the fifo to fulfill the entire request.
+elements in the fifo to fulfill the entire request. The number of
+elements actually read is returned via *actual_count*.
 
+The element size specified by *elem_size* must match the element size
+that was passed into **fifo_create**().
+
+*buffer* must have a size of at least *count * elem_size* bytes.
+
+*actual_count* is allowed to be NULL. This is useful when reading
+a single element: if *count* is 1 and **fifo_read**() returns **ZX_OK**,
+*actual_count* is guaranteed to be 1 and thus can be safely ignored.
+
+It is not legal to read zero elements.
 
 ## RETURN VALUE
 
 **fifo_read**() returns **ZX_OK** on success, and returns
-the number of elements read (at least one) via *num_entries_read*.
+the number of elements read (at least one) via *actual_count*.
 
 ## ERRORS
 
@@ -37,10 +44,11 @@ the number of elements read (at least one) via *num_entries_read*.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
 
-**ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *num_entries_read*
+**ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or *actual_count*
 is an invalid pointer.
 
-**ZX_ERR_OUT_OF_RANGE**  *size* was smaller than the size of a single element.
+**ZX_ERR_OUT_OF_RANGE**  *count* is zero or *elem_size* is not equal
+to the element size of the fifo.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
 

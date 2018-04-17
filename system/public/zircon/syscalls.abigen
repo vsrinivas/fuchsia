@@ -461,19 +461,19 @@ syscall fifo_create
     returns (zx_status_t,
         out0: zx_handle_t handle_acquire, out1: zx_handle_t handle_acquire);
 
-syscall fifo_read deprecated
+syscall fifo_read
+    (handle: zx_handle_t, elem_size: size_t, data: any[count * elem_size] OUT, count: size_t)
+    returns (zx_status_t, actual_count: size_t optional);
+
+syscall fifo_read_old deprecated
     (handle: zx_handle_t, data: any[len] OUT, len: size_t)
     returns (zx_status_t, num_written: uint32_t);
 
-syscall fifo_read_old
-    (handle: zx_handle_t, data: any[len] OUT, len: size_t)
-    returns (zx_status_t, num_written: uint32_t);
+syscall fifo_write
+    (handle: zx_handle_t, elem_size: size_t, data: any[count * elem_size] IN, count: size_t)
+    returns (zx_status_t, actual_count: size_t optional);
 
-syscall fifo_write deprecated
-    (handle: zx_handle_t, data: any[len] IN, len: size_t)
-    returns (zx_status_t, num_written: uint32_t);
-
-syscall fifo_write_old
+syscall fifo_write_old deprecated
     (handle: zx_handle_t, data: any[len] IN, len: size_t)
     returns (zx_status_t, num_written: uint32_t);
 
