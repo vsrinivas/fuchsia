@@ -162,7 +162,8 @@ func main() {
 	service := &bindings2.BindingSet{}
 	ctx := context.CreateFromStartupInfo()
 	ctx.OutgoingService.AddService(wlan_service.WlanName, func(c zx.Channel) error {
-		return service.Add(&wlan_service.WlanStub{Impl: ws}, c)
+		_, err := service.Add(&wlan_service.WlanStub{Impl: ws}, c, nil)
+		return err
 	})
 	go bindings2.Serve()
 	ctx.Serve()

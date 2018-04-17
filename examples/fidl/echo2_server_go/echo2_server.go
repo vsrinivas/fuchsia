@@ -26,9 +26,10 @@ func main() {
 	echoService := &bindings2.BindingSet{}
 	c := context.CreateFromStartupInfo()
 	c.OutgoingService.AddService(echo2.EchoName, func(c zx.Channel) error {
-		return echoService.Add(&echo2.EchoStub{
+		_, err := echoService.Add(&echo2.EchoStub{
 			Impl: &echoImpl{},
-		}, c)
+		}, c, nil)
+		return err
 	})
 	c.Serve()
 	go bindings2.Serve()

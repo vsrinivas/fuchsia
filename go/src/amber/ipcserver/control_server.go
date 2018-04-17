@@ -104,7 +104,8 @@ func (c *ControlSrvr) Quit() {
 
 func (c *ControlSrvr) Bind(ch zx.Channel) error {
 	s := amber.ControlStub{Impl: c}
-	return c.bs.Add(&s, ch)
+	_, err := c.bs.Add(&s, ch, nil)
+	return err
 }
 
 func (c *ControlSrvr) initDaemon() {

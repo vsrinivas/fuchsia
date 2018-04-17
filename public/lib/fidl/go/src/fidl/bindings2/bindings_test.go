@@ -25,7 +25,7 @@ func TestEcho(t *testing.T) {
 	client := Test1Interface(Proxy{Channel: ch})
 	bindings := BindingSet{}
 	stub := &Test1Stub{Impl: &Test1Impl{}}
-	if err := bindings.Add(stub, sh); err != nil {
+	if _, err := bindings.Add(stub, sh, nil); err != nil {
 		t.Fatal(err)
 	}
 	go Serve()

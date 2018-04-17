@@ -75,7 +75,7 @@ func (a *testApp) listen() {
 	if err != nil {
 		panic(err.Error())
 	}
-	service.Add(&netstack.NotificationListenerStub{Impl: a}, r.Channel)
+	service.Add(&netstack.NotificationListenerStub{Impl: a}, r.Channel, nil)
 	a.netstack.RegisterListener(netstack.NotificationListenerInterface(*p))
 
 	bindings2.Serve()

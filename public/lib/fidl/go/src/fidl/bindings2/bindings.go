@@ -5,7 +5,6 @@
 package bindings2
 
 import (
-	"log"
 	"sync"
 	"syscall/zx"
 	"syscall/zx/dispatch"
@@ -17,7 +16,7 @@ var d *dispatch.Dispatcher
 func init() {
 	disp, err := dispatch.NewDispatcher()
 	if err != nil {
-		log.Panicf("failed to create dispatcher: %v", err)
+		panic("failed to create dispatcher: " + err.Error())
 	}
 	d = disp
 }
@@ -51,9 +50,7 @@ type Binding struct {
 }
 
 // Init initializes a Binding.
-func (b *Binding) Init(e func(error)) error {
-	b.errHandler = e
-
+func (b *Binding) Init(errHandler func(error)) error {
 	// Declare the wait handler as a closure.
 	h := func(d *dispatch.Dispatcher, s zx.Status, sigs *zx.PacketSignal) dispatch.WaitResult {
 		if s != zx.ErrOk {
@@ -88,6 +85,7 @@ func (b *Binding) Init(e func(error)) error {
 		return err
 	}
 	b.id = &id
+	b.errHandler = errHandler
 	return nil
 }
 
@@ -148,58 +146,81 @@ func (b *Binding) Close() error {
 	return b.Channel.Close()
 }
 
+// BindingKey is a key which maps to a specific binding.
+//
+// It is only valid for the BindingSet that produced it.
+type BindingKey uint64
+
 // BindingSet is a managed set of Bindings which know how to unbind and
 // remove themselves in the event of a connection error.
 type BindingSet struct {
+	nextKey  BindingKey
 	mu       sync.Mutex
-	Bindings []*Binding
+	Bindings map[BindingKey]*Binding
 }
 
 // Add creates a new Binding, initializes it, and adds it to the set.
-func (b *BindingSet) Add(s Stub, c zx.Channel) error {
+//
+// onError is an optional handler than may be passed which will be called after
+// the binding between the Stub and the Channel is successfully closed.
+func (b *BindingSet) Add(s Stub, c zx.Channel, onError func(error)) (BindingKey, error) {
 	binding := &Binding{
 		Stub:    s,
 		Channel: c,
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.Bindings == nil {
+		b.Bindings = make(map[BindingKey]*Binding)
+	}
+	key := b.nextKey
 	err := binding.Init(func(err error) {
-		if s, ok := err.(zx.Error); !ok || s.Status != zx.ErrPeerClosed {
-			log.Printf("encountered in handling: %v", err)
-		}
-		if err := b.Remove(binding); err != nil {
-			log.Printf("failed to remove binding: %v", err)
+		if b.Remove(key) && onError != nil {
+			onError(err)
 		}
 	})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	b.mu.Lock()
-	b.Bindings = append(b.Bindings, binding)
-	b.mu.Unlock()
-	return nil
+	b.Bindings[key] = binding
+	b.nextKey += 1
+	return key, nil
 }
 
 // Remove removes a Binding from the set.
-func (b *BindingSet) Remove(binding *Binding) error {
+//
+// Returns true if a Binding was found and removed.
+func (b *BindingSet) Remove(key BindingKey) bool {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-	for i := 0; i < len(b.Bindings); i++ {
-		if b.Bindings[i] != binding {
-			continue
+	if binding, ok := b.Bindings[key]; ok {
+		delete(b.Bindings, key)
+		b.mu.Unlock()
+
+		// Close the binding before calling the callback.
+		if err := binding.Close(); err != nil {
+			// Just panic. The only reason this can fail is if the handle
+			// is bad, which it shouldn't be if we're tracking things. If
+			// it does fail, better to fail fast.
+			panic(err)
 		}
-		// Swap remove the binding.
-		b.Bindings[i] = b.Bindings[len(b.Bindings)-1]
-		b.Bindings = b.Bindings[:len(b.Bindings)-1]
-		break
+		return true
 	}
-	return binding.Close()
+	b.mu.Unlock()
+	return false
 }
 
 // Close removes all the bindings from the set.
 func (b *BindingSet) Close() {
+	// Lock, close all the bindings, and clear the map.
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	for _, binding := range b.Bindings {
-		binding.Close()
+		if err := binding.Close(); err != nil {
+			// Just panic. The only reason this can fail is if the handle
+			// is bad, which it shouldn't be if we're tracking things. If
+			// it does fail, better to fail fast.
+			panic(err)
+		}
 	}
-	b.Bindings = []*Binding{}
+	b.Bindings = make(map[BindingKey]*Binding)
+	b.mu.Unlock()
 }

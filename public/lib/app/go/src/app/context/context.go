@@ -88,7 +88,7 @@ func (c *Context) GetConnector() *Connector {
 func (c *Context) Serve() {
 	if c.appServices.IsValid() {
 		stub := component.ServiceProviderStub{Impl: c.OutgoingService}
-		c.services.Add(&stub, zx.Channel(c.appServices))
+		c.services.Add(&stub, zx.Channel(c.appServices), nil)
 		go bindings2.Serve()
 	}
 	if c.OutgoingService.Dispatcher != nil {

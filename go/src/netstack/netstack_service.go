@@ -348,9 +348,10 @@ func AddNetstackService(ctx *context.Context) error {
 	}
 	netstackService = &bindings2.BindingSet{}
 	ctx.OutgoingService.AddService(nsfidl.NetstackName, func(c zx.Channel) error {
-		return netstackService.Add(&nsfidl.NetstackStub{
+		_, err := netstackService.Add(&nsfidl.NetstackStub{
 			Impl: &netstackImpl{},
-		}, c)
+		}, c, nil)
+		return err
 	})
 	return nil
 }

@@ -62,7 +62,7 @@ func TestPowerManagerWatcher(t *testing.T) {
 	pmWatcher := &WatcherMock{called: 0}
 	s := power_manager.PowerManagerWatcherStub{Impl: pmWatcher}
 	bs := bindings2.BindingSet{}
-	bs.Add(&s, rw.Channel)
+	bs.Add(&s, rw.Channel, nil)
 	go bindings2.Serve()
 
 	err = pmClient.pm.Watch(*pw)
