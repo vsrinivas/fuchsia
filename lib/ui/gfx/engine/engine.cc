@@ -43,11 +43,10 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
           std::make_unique<escher::RoundedRectFactory>(escher)),
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
+      session_manager_(std::make_unique<SessionManager>()),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
-
-  session_manager_ = InitializeSessionManager();
 
   InitializeFrameScheduler();
   paper_renderer_->set_sort_by_pipeline(false);
@@ -56,14 +55,14 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
 Engine::Engine(
     DisplayManager* display_manager,
     std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
+    std::unique_ptr<SessionManager> session_manager,
     escher::Escher* escher = nullptr)
     : display_manager_(display_manager),
       escher_(escher),
       release_fence_signaller_(std::move(release_fence_signaller)),
+      session_manager_(std::move(session_manager)),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
-
-  session_manager_ = InitializeSessionManager();
 
   InitializeFrameScheduler();
 }
@@ -207,10 +206,6 @@ void Engine::UpdateMetrics(Node* node,
       *node, [this, &local_metrics, updated_nodes](Node* node) {
         UpdateMetrics(node, local_metrics, updated_nodes);
       });
-}
-
-std::unique_ptr<SessionManager> Engine::InitializeSessionManager() {
-  return std::make_unique<SessionManager>(this);
 }
 
 void Engine::CleanupEscher() {

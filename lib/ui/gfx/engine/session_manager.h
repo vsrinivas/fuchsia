@@ -30,10 +30,7 @@ class UpdateScheduler;
 // particular presentation time.
 class SessionManager {
  public:
-  // An UpdateScheduler is used by SessionManager to request a new frame, which
-  // eventually results in a call to ApplyScheduledSessionUpdates(). Must not be
-  // null.
-  SessionManager(UpdateScheduler* update_scheduler);
+  SessionManager() = default;
 
   virtual ~SessionManager() = default;
 
@@ -48,10 +45,10 @@ class SessionManager {
       CommandDispatcherContext context,
       Engine* engine);
 
-  // Tell the FrameScheduler to schedule a frame, and remember the Session so
-  // that we can tell it to apply updates when the FrameScheduler notifies us
-  // via OnPrepareFrame().
-  void ScheduleUpdateForSession(uint64_t presentation_time,
+  // Tell the UpdateScheduler to schedule a frame, and remember the Session so
+  // that we can tell it to apply updates in ApplyScheduledSessionUpdates().
+  void ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
+                                uint64_t presentation_time,
                                 fxl::RefPtr<Session> session);
 
   // Executes updates that are schedule up to and including a given presentation
@@ -72,8 +69,6 @@ class SessionManager {
       SessionId session_id,
       EventReporter* event_reporter,
       ErrorReporter* error_reporter) const;
-
-  UpdateScheduler* const update_scheduler_;
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_manager_;

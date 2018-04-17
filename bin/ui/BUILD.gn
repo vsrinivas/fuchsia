@@ -9,11 +9,10 @@ package("scenic_tests") {
   deprecated_system_image = true
 
   deps = [
-    "gfx/tests",
     "ime/tests",
     "input_reader/tests",
-    "view_manager/tests",
     "presentation_mode/tests",
+    "view_manager/tests",
     "//garnet/lib/ui/gfx/tests",
     "//garnet/lib/ui/scenic/tests",
     "//garnet/public/lib/ui/geometry/cpp:tests",

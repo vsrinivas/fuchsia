@@ -16,11 +16,6 @@
 namespace scenic {
 namespace gfx {
 
-SessionManager::SessionManager(UpdateScheduler* update_scheduler)
-    : update_scheduler_(update_scheduler) {
-  FXL_DCHECK(update_scheduler_ != nullptr);
-}
-
 SessionHandler* SessionManager::FindSession(SessionId id) {
   auto it = session_manager_.find(id);
   if (it != session_manager_.end()) {
@@ -53,11 +48,13 @@ std::unique_ptr<CommandDispatcher> SessionManager::CreateCommandDispatcher(
   return handler;
 }
 
-void SessionManager::ScheduleUpdateForSession(uint64_t presentation_time,
+void SessionManager::ScheduleUpdateForSession(UpdateScheduler* update_scheduler,
+                                              uint64_t presentation_time,
                                               fxl::RefPtr<Session> session) {
+  FXL_DCHECK(update_scheduler);
   if (session->is_valid()) {
     updatable_sessions_.insert({presentation_time, std::move(session)});
-    update_scheduler_->ScheduleUpdate(presentation_time);
+    update_scheduler->ScheduleUpdate(presentation_time);
   }
 }
 

@@ -67,7 +67,7 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class SessionManagerForTest : public SessionManager {
  public:
-  SessionManagerForTest(UpdateScheduler* update_scheduler);
+  SessionManagerForTest();
 
  private:
   std::unique_ptr<SessionHandler> CreateSessionHandler(
@@ -83,9 +83,6 @@ class EngineForTest : public Engine {
   EngineForTest(DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
                 escher::Escher* escher = nullptr);
-
- private:
-  std::unique_ptr<SessionManager> InitializeSessionManager() override;
 };
 
 }  // namespace test

@@ -28,6 +28,12 @@ class GfxSystem : public TempSystemDelegate {
   void TakeScreenshot(fidl::StringPtr filename,
                       ui::Scenic::TakeScreenshotCallback callback) override;
 
+ protected:
+  // Protected so test classes can expose.
+  std::unique_ptr<Engine> engine_;
+  virtual std::unique_ptr<escher::Escher> InitializeEscher();
+  virtual std::unique_ptr<Engine> InitializeEngine();
+
  private:
   void Initialize();
 
@@ -44,7 +50,6 @@ class GfxSystem : public TempSystemDelegate {
   escher::VulkanDeviceQueuesPtr vulkan_device_queues_;
   vk::SurfaceKHR surface_;
   std::unique_ptr<escher::Escher> escher_;
-  std::unique_ptr<Engine> engine_;
 };
 
 }  // namespace gfx

@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
 
   public_deps = [
+    ":apptests",
     ":unittests",
     ":unittests_using_escher",
   ]
@@ -90,5 +91,22 @@ executable("unittests_using_escher") {
     "//garnet/examples/escher/common",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/test_runner/cpp/reporting",
+  ]
+}
+
+executable("apptests") {
+  output_name = "gfx_apptests"
+
+  testonly = true
+
+  sources = [
+    "gfx_apptest.cc",
+    "gfx_test.h",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/tests:main",
+    "//garnet/lib/ui/gfx/tests:testing_deps",
+    "//garnet/lib/ui/scenic/tests:testing_deps",
   ]
 }

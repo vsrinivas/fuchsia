@@ -44,14 +44,11 @@ std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
                                                              engine_.get());
 }
 
-void GfxSystem::Initialize() {
-  Display* display = display_manager_.default_display();
-  if (!display) {
-    FXL_LOG(ERROR) << "No default display, Scenic system exiting";
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
-    return;
-  }
+std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
+  return std::make_unique<Engine>(&display_manager_, escher_.get());
+}
 
+std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   // Initialize Vulkan.
   escher::VulkanInstance::Params instance_params(
       {{},
@@ -75,10 +72,21 @@ void GfxSystem::Initialize() {
 
   // Initialize Escher.
   escher::GlslangInitializeProcess();
-  escher_ = std::make_unique<escher::Escher>(vulkan_device_queues_);
+  return std::make_unique<escher::Escher>(vulkan_device_queues_);
+}
+
+void GfxSystem::Initialize() {
+  Display* display = display_manager_.default_display();
+  if (!display) {
+    FXL_LOG(ERROR) << "No default display, Scenic system exiting";
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    return;
+  }
+
+  escher_ = InitializeEscher();
 
   // Initialize the Scenic engine.
-  engine_ = std::make_unique<Engine>(&display_manager_, escher_.get());
+  engine_ = InitializeEngine();
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   context()->app_context()->debug_export_dir()->AddEntry(

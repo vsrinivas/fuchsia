@@ -1275,7 +1275,7 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
         [weak = weak_factory_.GetWeakPtr(), presentation_time] {
           if (weak)
             weak->engine_->session_manager()->ScheduleUpdateForSession(
-                presentation_time, SessionPtr(weak.get()));
+                weak->engine_, presentation_time, SessionPtr(weak.get()));
         });
 
     scheduled_updates_.push(Update{presentation_time, std::move(commands),
@@ -1291,8 +1291,8 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
     scheduled_image_pipe_updates_.push(
         {presentation_time, std::move(image_pipe)});
 
-    engine_->session_manager()->ScheduleUpdateForSession(presentation_time,
-                                                         SessionPtr(this));
+    engine_->session_manager()->ScheduleUpdateForSession(
+        engine_, presentation_time, SessionPtr(this));
   }
 }
 
