@@ -187,6 +187,10 @@ The resulting file has the following format:
     ]
 ```
 
+This format is formally defined by
+[//zircon/system/ulib/perftest/performance-results-schema.json](
+https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest/performance-results-schema.json).
+
 ### Dashboard upload
 
 Dashboard upload integration and infra support is WIP as of March, 2018.
