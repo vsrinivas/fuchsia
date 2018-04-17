@@ -14,7 +14,6 @@ sdk("zircon_sysroot") {
   deps = [
     "//zircon/public/lib/backtrace:backtrace_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
-    "//zircon/public/lib/fs-management:fs-management_sdk",
     "//zircon/public/lib/launchpad:launchpad_sdk",
     "//zircon/public/sysroot:sysroot_sdk",
   ]

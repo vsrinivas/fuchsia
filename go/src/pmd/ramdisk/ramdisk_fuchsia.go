@@ -6,6 +6,7 @@
 
 package ramdisk
 
+// #cgo CFLAGS: -I${SRCDIR}/../../../../../zircon/system/ulib/fs-management/include
 // #cgo LDFLAGS: -lfs-management
 // #include <fs-management/ramdisk.h>
 // #include <fs-management/mount.h>
