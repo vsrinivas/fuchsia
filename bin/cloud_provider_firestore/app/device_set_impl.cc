@@ -82,26 +82,31 @@ DeviceSetImpl::DeviceSetImpl(
 
 DeviceSetImpl::~DeviceSetImpl() {}
 
+void DeviceSetImpl::ScopedGetCredentials(
+    std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
+  credentials_provider_->GetCredentials(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
+}
+
 void DeviceSetImpl::CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(
       GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
-        firestore_service_->GetDocument(
-            std::move(request), std::move(call_credentials),
-            [callback](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->GetDocument(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
 
-              callback(cloud_provider::Status::OK);
-            });
-      });
+          callback(cloud_provider::Status::OK);
+        });
+  });
 }
 
 void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
@@ -116,19 +121,18 @@ void DeviceSetImpl::SetFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
   exists.set_boolean_value(true);
   (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
-        firestore_service_->CreateDocument(
-            std::move(request), std::move(call_credentials),
-            [callback](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->CreateDocument(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
+          callback(cloud_provider::Status::OK);
+        });
+  });
 }
 
 void DeviceSetImpl::SetWatcher(
@@ -139,7 +143,7 @@ void DeviceSetImpl::SetWatcher(
   watched_fingerprint_ = convert::ToString(fingerprint);
   set_watcher_callback_ = callback;
 
-  credentials_provider_->GetCredentials([this](auto call_credentials) mutable {
+  ScopedGetCredentials([this](auto call_credentials) mutable {
     // Initiate the listen RPC. We will receive a call on OnConnected() when the
     // watcher is ready.
     listen_call_handler_ =
@@ -152,21 +156,20 @@ void DeviceSetImpl::Erase(EraseCallback callback) {
   request.set_parent(user_path_);
   request.set_collection_id(kDeviceCollection);
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback = callback](auto call_credentials) mutable {
-        firestore_service_->ListDocuments(
-            std::move(request), call_credentials,
-            [this, call_credentials, callback = std::move(callback)](
-                auto status, auto result) mutable {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              OnGotDocumentsToErase(std::move(call_credentials),
-                                    std::move(result), std::move(callback));
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = callback](auto call_credentials) mutable {
+    firestore_service_->ListDocuments(
+        std::move(request), call_credentials,
+        [this, call_credentials, callback = std::move(callback)](
+            auto status, auto result) mutable {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
+          OnGotDocumentsToErase(std::move(call_credentials), std::move(result),
+                                std::move(callback));
+        });
+  });
 }
 
 void DeviceSetImpl::OnGotDocumentsToErase(

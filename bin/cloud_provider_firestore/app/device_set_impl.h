@@ -33,6 +33,9 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
+  void ScopedGetCredentials(
+      std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+
   // cloud_provider::DeviceSet:
   void CheckFingerprint(fidl::VectorPtr<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;

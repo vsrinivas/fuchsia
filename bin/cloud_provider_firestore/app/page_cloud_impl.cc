@@ -4,6 +4,7 @@
 
 #include "peridot/bin/cloud_provider_firestore/app/page_cloud_impl.h"
 
+#include "garnet/lib/callback/scoped_callback.h"
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
@@ -51,7 +52,8 @@ PageCloudImpl::PageCloudImpl(
     : page_path_(std::move(page_path)),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
-      binding_(this, std::move(request)) {
+      binding_(this, std::move(request)),
+      weak_ptr_factory_(this) {
   // The class shuts down when the client connection is disconnected.
   binding_.set_error_handler([this] {
     if (on_empty_) {
@@ -61,6 +63,12 @@ PageCloudImpl::PageCloudImpl(
 }
 
 PageCloudImpl::~PageCloudImpl() {}
+
+void PageCloudImpl::ScopedGetCredentials(
+    std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
+  credentials_provider_->GetCredentials(callback::MakeScoped(
+      weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
+}
 
 void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                                AddCommitsCallback callback) {
@@ -95,19 +103,18 @@ void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
       google::firestore::v1beta1::
           DocumentTransform_FieldTransform_ServerValue_REQUEST_TIME);
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
-        firestore_service_->Commit(
-            std::move(request), std::move(call_credentials),
-            [callback](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->Commit(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
+          callback(cloud_provider::Status::OK);
+        });
+  });
 }
 
 void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,
@@ -135,19 +142,18 @@ void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,
   *((*document->mutable_fields())[kDataKey].mutable_bytes_value()) =
       std::move(data_str);
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
-        firestore_service_->CreateDocument(
-            std::move(request), std::move(call_credentials),
-            [callback](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->CreateDocument(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
+          callback(cloud_provider::Status::OK);
+        });
+  });
 }
 
 void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
@@ -155,31 +161,28 @@ void PageCloudImpl::GetObject(fidl::VectorPtr<uint8_t> id,
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(GetObjectPath(page_path_, convert::ToString(id)));
 
-  credentials_provider_->GetCredentials(
-      [this, request = std::move(request),
-       callback](auto call_credentials) mutable {
-        firestore_service_->GetDocument(
-            std::move(request), std::move(call_credentials),
-            [callback](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()), 0u,
-                         zx::socket());
-                return;
-              }
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->GetDocument(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()), 0u, zx::socket());
+            return;
+          }
 
-              if (result.fields().count(kDataKey) != 1) {
-                FXL_LOG(ERROR)
-                    << "Incorrect format of the retrieved object document";
-                callback(cloud_provider::Status::PARSE_ERROR, 0u, zx::socket());
-                return;
-              }
+          if (result.fields().count(kDataKey) != 1) {
+            FXL_LOG(ERROR)
+                << "Incorrect format of the retrieved object document";
+            callback(cloud_provider::Status::PARSE_ERROR, 0u, zx::socket());
+            return;
+          }
 
-              const std::string& bytes =
-                  result.fields().at(kDataKey).bytes_value();
-              callback(cloud_provider::Status::OK, bytes.size(),
-                       fsl::WriteStringToSocket(bytes));
-            });
-      });
+          const std::string& bytes = result.fields().at(kDataKey).bytes_value();
+          callback(cloud_provider::Status::OK, bytes.size(),
+                   fsl::WriteStringToSocket(bytes));
+        });
+  });
 }
 
 void PageCloudImpl::SetWatcher(

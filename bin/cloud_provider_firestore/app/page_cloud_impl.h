@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/cloud_provider_firestore/app/credentials_provider.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/firestore_service.h"
 
@@ -30,6 +31,9 @@ class PageCloudImpl : public cloud_provider::PageCloud {
   void set_on_empty(const fxl::Closure& on_empty) { on_empty_ = on_empty; }
 
  private:
+  void ScopedGetCredentials(
+      std::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+
   // cloud_provider::PageCloud:
   void AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
                   AddCommitsCallback callback) override;
@@ -51,6 +55,9 @@ class PageCloudImpl : public cloud_provider::PageCloud {
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
   fxl::Closure on_empty_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<PageCloudImpl> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageCloudImpl);
 };
