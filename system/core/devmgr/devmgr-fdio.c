@@ -45,6 +45,7 @@ static struct {
     uint32_t flags;
 } FSTAB[] = {
     { "/svc",       "svc",       FS_SVC },
+    { "/hub",       "hub",       FS_HUB },
     { "/dev",       "dev",       FS_DEV },
     { "/boot",      "boot",      FS_BOOT },
     { "/data",      "data",      FS_DATA },
@@ -56,8 +57,9 @@ static struct {
     { "/tmp",       "tmp",       FS_TMP },
 };
 
-void devmgr_disable_svc(void) {
+void devmgr_disable_appmgr_services(void) {
     FSTAB[0].flags = 0;
+    FSTAB[1].flags = 0;
 }
 
 zx_status_t devmgr_launch(zx_handle_t job, const char* name,

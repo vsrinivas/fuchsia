@@ -32,10 +32,11 @@
 bool require_system;
 
 // The handle used to transmit messages to appmgr.
-static zx_handle_t svc_root_handle;
+static zx_handle_t appmgr_req_cli;
+
 // The handle used by appmgr to serve incoming requests.
 // If appmgr cannot be launched within a timeout, this handle is closed.
-static zx_handle_t svc_request_handle;
+static zx_handle_t appmgr_req_srv;
 
 bool getenv_bool(const char* key, bool _default) {
     const char* value = getenv(key);
@@ -117,11 +118,11 @@ static int fuchsia_starter(void* arg) {
     do {
         zx_status_t status = zx_object_wait_one(fshost_event, FSHOST_SIGNAL_READY, deadline, NULL);
         if (status == ZX_ERR_TIMED_OUT) {
-            if (svc_request_handle != ZX_HANDLE_INVALID) {
+            if (appmgr_req_srv != ZX_HANDLE_INVALID) {
                 if (require_system) {
-                    printf("devmgr: appmgr not launched in 10s, closing svc handle\n");
+                    printf("devmgr: appmgr not launched in 10s, closing appmgr handle\n");
                 }
-                zx_handle_close(svc_request_handle);
+                zx_handle_close(appmgr_req_srv);
             }
             deadline = ZX_TIME_INFINITE;
             continue;
@@ -145,12 +146,12 @@ static int fuchsia_starter(void* arg) {
             unsigned int appmgr_hnd_count = 0;
             zx_handle_t appmgr_hnds[2] = {};
             uint32_t appmgr_ids[2] = {};
-            if (svc_request_handle) {
+            if (appmgr_req_srv) {
                 assert(appmgr_hnd_count < countof(appmgr_hnds));
-                appmgr_hnds[appmgr_hnd_count] = svc_request_handle;
+                appmgr_hnds[appmgr_hnd_count] = appmgr_req_srv;
                 appmgr_ids[appmgr_hnd_count] = PA_DIRECTORY_REQUEST;
                 appmgr_hnd_count++;
-                svc_request_handle = ZX_HANDLE_INVALID;
+                appmgr_req_srv = ZX_HANDLE_INVALID;
             }
             devmgr_launch(fuchsia_job_handle, "appmgr", countof(argv_appmgr),
                           argv_appmgr, NULL, -1, appmgr_hnds, appmgr_ids,
@@ -427,7 +428,7 @@ int main(int argc, char** argv) {
         printf("unable to create service job\n");
     }
     zx_object_set_property(fuchsia_job_handle, ZX_PROP_NAME, "fuchsia", 7);
-    zx_channel_create(0, &svc_root_handle, &svc_request_handle);
+    zx_channel_create(0, &appmgr_req_cli, &appmgr_req_srv);
     zx_event_create(0, &fshost_event);
 
     devmgr_vfs_init();
@@ -441,11 +442,11 @@ int main(int argc, char** argv) {
 
     require_system = getenv_bool("devmgr.require-system", false);
 
-    // if we're not a full fuchsia build, no point to set up /svc
-    // which will just cause things attempting to access it to block
-    // until we give up on the appmgr 10s later
+    // if we're not a full fuchsia build, no point to set up appmgr services
+    // which will just cause things attempting to access it to block until
+    // we give up on the appmgr 10s later
     if (!require_system) {
-        devmgr_disable_svc();
+        devmgr_disable_appmgr_services();
     }
 
     start_console_shell();
@@ -625,9 +626,6 @@ void devmgr_vfs_exit(void) {
 }
 
 zx_handle_t fs_clone(const char* path) {
-    if (!strcmp(path, "svc")) {
-        return fdio_service_clone(svc_root_handle);
-    }
     if (!strcmp(path, "dev")) {
         return devfs_root_clone();
     }
@@ -635,7 +633,15 @@ zx_handle_t fs_clone(const char* path) {
     if (zx_channel_create(0, &h0, &h1) != ZX_OK) {
         return ZX_HANDLE_INVALID;
     }
-    if (fdio_open_at(fs_root, path, FS_DIR_FLAGS, h1) != ZX_OK) {
+    zx_handle_t fs = fs_root;
+    int flags = FS_DIR_FLAGS;
+    if (!strcmp(path, "hub")) {
+        fs = appmgr_req_cli;
+    } else if (!strcmp(path, "svc")) {
+        flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+        fs = appmgr_req_cli;
+    }
+    if (fdio_open_at(fs, path, flags, h1) != ZX_OK) {
         zx_handle_close(h0);
         return ZX_HANDLE_INVALID;
     }

@@ -32,10 +32,12 @@ zx_handle_t devmgr_load_file(const char* path);
 #define FS_PKGFS    0x0100
 #define FS_INSTALL  0x0200
 #define FS_TMP      0x0400
+#define FS_HUB      0x0800
 #define FS_ALL      0xFFFF
 
+
 #define FS_FOR_FSPROC  (FS_SVC)
-#define FS_FOR_APPMGR  (FS_ALL & (~FS_SVC))
+#define FS_FOR_APPMGR  (FS_ALL & (~FS_SVC) & (~FS_HUB))
 
 #define FS_DIR_FLAGS \
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\
@@ -61,7 +63,7 @@ zx_status_t copy_vmo(zx_handle_t src, zx_off_t offset, size_t length, zx_handle_
 
 void load_system_drivers(void);
 
-void devmgr_disable_svc(void);
+void devmgr_disable_appmgr_services(void);
 
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.

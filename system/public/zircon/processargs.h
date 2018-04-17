@@ -145,8 +145,7 @@ struct zx_proc_args {
 #define PA_FDIO_LOGGER           0x35
 #define PA_FDIO_SOCKET           0x36
 
-// Server endpoint for remoteio "/svc" directory provided
-// to enable handling of inbound connections to services
+// Server endpoint for handling connection to appmgr services.
 #define PA_DIRECTORY_REQUEST     0x3B
 
 // Used by devmgr and devhosts
