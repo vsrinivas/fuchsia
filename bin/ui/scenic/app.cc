@@ -7,7 +7,7 @@
 #include "lib/fsl/tasks/message_loop.h"
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-#include "garnet/lib/ui/gfx/scenic_system.h"
+#include "garnet/lib/ui/gfx/gfx_system.h"
 #endif
 
 #ifdef SCENIC_ENABLE_SKETCHY_SUBSYSTEM
@@ -30,7 +30,7 @@ App::App(component::ApplicationContext* app_context)
           fsl::MessageLoop::GetCurrent()->task_runner().get(),
           &clock_)) {
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto scenic = scenic_->RegisterSystem<scenic::gfx::ScenicSystem>();
+  auto scenic = scenic_->RegisterSystem<scenic::gfx::GfxSystem>();
   FXL_DCHECK(scenic);
 #endif
 
@@ -39,7 +39,7 @@ App::App(component::ApplicationContext* app_context)
   auto sketchy = scenic_->RegisterSystem<SketchySystem>(scenic);
   FXL_DCHECK(sketchy);
 #else
-#error SketchySystem requires gfx::ScenicSystem.
+#error SketchySystem requires gfx::GfxSystem.
 #endif
 #endif
 
@@ -48,7 +48,7 @@ App::App(component::ApplicationContext* app_context)
   auto views = scenic_->RegisterSystem<ViewSystem>(scenic);
   FXL_DCHECK(views);
 #else
-#error ViewSystem requires gfx::ScenicSystem.
+#error ViewSystem requires gfx::GfxSystem.
 #endif
 #endif
 

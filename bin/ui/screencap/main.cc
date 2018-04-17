@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
 #include <trace-provider/provider.h>
+#include <memory>
 
-#include "garnet/lib/ui/gfx/scenic_system.h"
+#include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/scenic/clock.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/lib/ui/scenic/system.h"
@@ -35,9 +35,9 @@ int main(int argc, const char** argv) {
   // Connect to the SceneManager service.
   auto scenic = app_context->ConnectToEnvironmentService<ui::Scenic>();
   scenic.set_error_handler([&loop] {
-      FXL_LOG(ERROR) << "Lost connection to Scenic service.";
-      loop.QuitNow();
-    });
+    FXL_LOG(ERROR) << "Lost connection to Scenic service.";
+    loop.QuitNow();
+  });
   auto done_cb = [&loop](bool status) {
     if (!status) {
       FXL_LOG(ERROR) << "TakeScreenshot failed";

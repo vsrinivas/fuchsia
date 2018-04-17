@@ -6,23 +6,22 @@
 
 namespace scenic {
 
-SketchySystem::SketchySystem(SystemContext context,
-                             gfx::ScenicSystem* scenic_system)
-    : System(std::move(context)), scenic_system_(scenic_system) {}
+SketchySystem::SketchySystem(SystemContext context, gfx::GfxSystem* gfx_system)
+    : System(std::move(context)), gfx_system_(gfx_system) {}
 
 SketchySystem::~SketchySystem() = default;
 
 std::unique_ptr<CommandDispatcher> SketchySystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
   return std::make_unique<SketchyCommandDispatcher>(std::move(context),
-                                                    scenic_system_);
+                                                    gfx_system_);
 }
 
 SketchyCommandDispatcher::SketchyCommandDispatcher(
     CommandDispatcherContext context,
-    gfx::ScenicSystem* scenic_system)
-    : CommandDispatcher(std::move(context)), scenic_system_(scenic_system) {
-  FXL_DCHECK(scenic_system_);
+    gfx::GfxSystem* gfx_system)
+    : CommandDispatcher(std::move(context)), gfx_system_(gfx_system) {
+  FXL_DCHECK(gfx_system_);
 }
 
 SketchyCommandDispatcher::~SketchyCommandDispatcher() = default;

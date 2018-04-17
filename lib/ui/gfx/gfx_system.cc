@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/scenic_system.h"
+#include "garnet/lib/ui/gfx/gfx_system.h"
 
 #include <fs/pseudo-file.h>
 
@@ -16,7 +16,7 @@
 namespace scenic {
 namespace gfx {
 
-ScenicSystem::ScenicSystem(SystemContext context)
+GfxSystem::GfxSystem(SystemContext context)
     : TempSystemDelegate(std::move(context), false) {
   display_manager_.WaitForDefaultDisplay([this]() {
     // Don't initialize Vulkan and the system until display is ready.
@@ -30,7 +30,7 @@ ScenicSystem::ScenicSystem(SystemContext context)
   });
 }
 
-ScenicSystem::~ScenicSystem() {
+GfxSystem::~GfxSystem() {
   if (escher_) {
     // It's possible that |escher_| never got created (and therefore
     // escher::GlslangInitializeProcess() was never called).
@@ -38,13 +38,13 @@ ScenicSystem::~ScenicSystem() {
   }
 }
 
-std::unique_ptr<CommandDispatcher> ScenicSystem::CreateCommandDispatcher(
+std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
     CommandDispatcherContext context) {
   return engine_->session_manager()->CreateCommandDispatcher(std::move(context),
                                                              engine_.get());
 }
 
-void ScenicSystem::Initialize() {
+void GfxSystem::Initialize() {
   Display* display = display_manager_.default_display();
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Scenic system exiting";
@@ -91,7 +91,7 @@ void ScenicSystem::Initialize() {
   SetToInitialized();
 };
 
-void ScenicSystem::GetDisplayInfoImmediately(
+void GfxSystem::GetDisplayInfoImmediately(
     ui::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(initialized_);
   Display* display = engine_->display_manager()->default_display();
@@ -104,7 +104,7 @@ void ScenicSystem::GetDisplayInfoImmediately(
   callback(std::move(info));
 }
 
-void ScenicSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
+void GfxSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   if (initialized_) {
     GetDisplayInfoImmediately(callback);
   } else {
@@ -113,9 +113,8 @@ void ScenicSystem::GetDisplayInfo(ui::Scenic::GetDisplayInfoCallback callback) {
   }
 };
 
-void ScenicSystem::TakeScreenshot(
-    fidl::StringPtr filename,
-    ui::Scenic::TakeScreenshotCallback callback) {
+void GfxSystem::TakeScreenshot(fidl::StringPtr filename,
+                               ui::Scenic::TakeScreenshotCallback callback) {
   FXL_CHECK(initialized_);
   Screenshotter screenshotter(engine_.get());
   screenshotter.TakeScreenshot(filename.get(), callback);

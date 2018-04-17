@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_UI_GFX_SCENIC_SYSTEM_H_
-#define GARNET_LIB_UI_GFX_SCENIC_SYSTEM_H_
+#ifndef GARNET_LIB_UI_GFX_GFX_SYSTEM_H_
+#define GARNET_LIB_UI_GFX_GFX_SYSTEM_H_
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
@@ -13,12 +13,12 @@
 namespace scenic {
 namespace gfx {
 
-class ScenicSystem : public TempSystemDelegate {
+class GfxSystem : public TempSystemDelegate {
  public:
   static constexpr TypeId kTypeId = kGfx;
 
-  explicit ScenicSystem(SystemContext context);
-  ~ScenicSystem();
+  explicit GfxSystem(SystemContext context);
+  ~GfxSystem();
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
@@ -50,4 +50,4 @@ class ScenicSystem : public TempSystemDelegate {
 }  // namespace gfx
 }  // namespace scenic
 
-#endif  // GARNET_LIB_UI_GFX_SCENIC_SYSTEM_H_
+#endif  // GARNET_LIB_UI_GFX_GFX_SYSTEM_H_

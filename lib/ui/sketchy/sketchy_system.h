@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_
 #define GARNET_LIB_UI_SKETCHY_SKETCHY_SYSTEM_H_
 
-#include "garnet/lib/ui/gfx/scenic_system.h"
+#include "garnet/lib/ui/gfx/gfx_system.h"
 #include "garnet/lib/ui/scenic/system.h"
 
 namespace scenic {
@@ -15,27 +15,27 @@ class SketchySystem : public System {
  public:
   static constexpr TypeId kTypeId = kSketchy;
 
-  SketchySystem(SystemContext context, gfx::ScenicSystem* scenic);
+  SketchySystem(SystemContext context, gfx::GfxSystem* scenic);
   ~SketchySystem() override;
 
   std::unique_ptr<CommandDispatcher> CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
  private:
-  gfx::ScenicSystem* const scenic_system_;
+  gfx::GfxSystem* const gfx_system_;
 };
 
 // TODO(MZ-552): document.
 class SketchyCommandDispatcher : public CommandDispatcher {
  public:
   SketchyCommandDispatcher(CommandDispatcherContext context,
-                           gfx::ScenicSystem* scenic);
+                           gfx::GfxSystem* scenic);
   ~SketchyCommandDispatcher() override;
 
   bool ApplyCommand(const ui::Command& command) override;
 
  private:
-  gfx::ScenicSystem* const scenic_system_;
+  gfx::GfxSystem* const gfx_system_;
 };
 
 }  // namespace scenic
