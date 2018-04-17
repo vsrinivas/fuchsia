@@ -6,8 +6,6 @@ import("//build/test.gni")
 
 source_set("audio") {
   sources = [
-    "driver_utils.cc",
-    "driver_utils.h",
     "gain.cc",
     "gain.h",
     "level.cc",

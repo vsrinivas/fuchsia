@@ -6,8 +6,7 @@
 
 #include <audio-proto-utils/format-utils.h>
 
-#include "garnet/bin/media/audio/driver_utils.h"
-#include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/audio_server/driver_utils.h"
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -27,9 +26,8 @@ zx_status_t SelectBestFormat(
   uint32_t pref_channels = *channels_inout;
   audio_sample_format_t pref_sample_format;
 
-  if (!driver_utils::SampleFormatToDriverSampleFormat(
-          fxl::To<AudioStreamType::SampleFormat>(*sample_format_inout),
-          &pref_sample_format)) {
+  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(
+          *sample_format_inout, &pref_sample_format)) {
     FXL_LOG(WARNING) << "Failed to convert FIDL sample format ("
                      << static_cast<uint32_t>(*sample_format_inout)
                      << ") to driver sample format.";
@@ -228,10 +226,9 @@ zx_status_t SelectBestFormat(
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  AudioStreamType::SampleFormat tmp;
   __UNUSED bool convert_res =
-      driver_utils::DriverSampleFormatToSampleFormat(best_sample_format, &tmp);
-  *sample_format_inout = fxl::To<AudioSampleFormat>(tmp);
+      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format,
+                                                          sample_format_inout);
   FXL_DCHECK(convert_res);
 
   *channels_inout = best_channels;

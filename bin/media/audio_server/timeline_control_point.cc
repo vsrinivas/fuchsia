@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/fidl/timeline_control_point.h"
+#include "garnet/bin/media/audio_server/timeline_control_point.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

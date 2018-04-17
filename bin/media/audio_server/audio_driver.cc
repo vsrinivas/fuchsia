@@ -6,8 +6,7 @@
 
 #include <audio-proto-utils/format-utils.h>
 
-#include "garnet/bin/media/audio/driver_utils.h"
-#include "garnet/bin/media/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/audio_server/driver_utils.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
@@ -170,8 +169,8 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second,
 
   // Sanity check arguments.
   audio_sample_format_t driver_format;
-  if (!driver_utils::SampleFormatToDriverSampleFormat(
-          fxl::To<AudioStreamType::SampleFormat>(fmt), &driver_format)) {
+  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(fmt,
+                                                           &driver_format)) {
     FXL_LOG(ERROR) << "Failed to convert Fmt 0x" << std::hex
                    << static_cast<uint32_t>(fmt) << " to driver format.";
     return ZX_ERR_INVALID_ARGS;

@@ -15,7 +15,7 @@
 #include "garnet/bin/media/audio_server/audio_pipe.h"
 #include "garnet/bin/media/audio_server/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
-#include "garnet/bin/media/fidl/timeline_control_point.h"
+#include "garnet/bin/media/audio_server/timeline_control_point.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
