@@ -206,7 +206,6 @@ protected:
     }
 };
 
-
 class TestReceiver : async_receiver_t {
 public:
     TestReceiver()
@@ -458,6 +457,8 @@ bool wait_test() {
     EXPECT_EQ(1u, wait1.run_count, "run count 1");
     EXPECT_EQ(2u, wait2.run_count, "run count 2");
     EXPECT_EQ(3u, wait3.run_count, "run count 3");
+
+    loop.Shutdown();
 
     END_TEST;
 }
