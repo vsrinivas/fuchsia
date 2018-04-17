@@ -33,6 +33,10 @@ import (
 const debug = true
 const debug2 = false
 
+// TODO: Replace these with a better tracing mechanism (NET-757)
+const logListen = false
+const logAccept = false
+
 const ZX_SOCKET_HALF_CLOSE = 1
 const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
 const ZXSIO_SIGNAL_OUTGOING = zx.SignalUser1
@@ -876,6 +880,13 @@ func (s *socketServer) opBind(ios *iostate, msg *zxsocket.Msg) (status zx.Status
 	if err := ios.ep.Bind(*addr, nil); err != nil {
 		return mxNetError(err)
 	}
+
+	if logListen {
+		if ios.transProto == udp.ProtocolNumber {
+			log.Printf("UDP bind (%v, %v)", addr.Addr, addr.Port)
+		}
+	}
+
 	msg.Datalen = 0
 	msg.SetOff(0)
 	return zx.ErrOk
@@ -1042,6 +1053,14 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 			return
 		}
 
+		if logAccept {
+			localAddr, err := newep.GetLocalAddress()
+			remoteAddr, err2 := newep.GetRemoteAddress()
+			if err == nil && err2 == nil {
+				log.Printf("TCP accept: local(%v, %v), remote(%v, %v)", localAddr.Addr, localAddr.Port, remoteAddr.Addr, remoteAddr.Port)
+			}
+		}
+
 		err = s.newIostate(ios.dataHandle, ios.netProto, ios.transProto, newwq, newep, true)
 		if err != nil {
 			if debug {
@@ -1075,6 +1094,13 @@ func (s *socketServer) opListen(ios *iostate, msg *zxsocket.Msg) (status zx.Stat
 			log.Printf("listen: %v", err)
 		}
 		return mxNetError(err)
+	}
+
+	if logListen {
+		addr, err := ios.ep.GetLocalAddress()
+		if err == nil {
+			log.Printf("TCP listen: (%v, %v)", addr.Addr, addr.Port)
+		}
 	}
 
 	ios.listenLoopClosing = make(chan struct{})
