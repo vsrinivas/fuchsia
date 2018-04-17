@@ -53,6 +53,19 @@ int strcmp(char const *cs, char const *ct) {
     return __res;
 }
 
+// copied from kernel/lib/libc/string/strncmp.c
+int strncmp(char const *cs, char const *ct, size_t count) {
+    signed char __res = 0;
+
+    while (count > 0) {
+        if ((__res = *cs - *ct++) != 0 || !*cs++)
+            break;
+        count--;
+    }
+
+    return __res;
+}
+
 void fail(const char* message) {
     uart_puts(message);
     while (1) {}

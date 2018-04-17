@@ -23,6 +23,10 @@ static void append_bootdata(bootdata_t* container, uint32_t type, uint32_t extra
 // defined in boot-shim-config.h
 static void append_board_bootdata(bootdata_t* container);
 
+#if USE_DEVICE_TREE_CPU_COUNT
+static void set_cpu_count(uint32_t cpu_count);
+#endif
+
 // Include board specific definitions
 #include "boot-shim-config.h"
 
@@ -41,6 +45,7 @@ typedef struct {
     size_t memory;
     char* cmdline;
     size_t cmdline_length;
+    uint32_t cpu_count;
 } device_tree_context_t;
 
 static int node_callback(int depth, const char *name, void *cookie) {
@@ -58,6 +63,9 @@ static int node_callback(int depth, const char *name, void *cookie) {
         ctx->node = NODE_MEMORY;
     } else {
         ctx->node = NODE_NONE;
+        if (!strncmp(name, "cpu@", 4)) {
+            ctx->cpu_count++;
+        }
     }
 
     return 0;
@@ -165,7 +173,12 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
     ctx.initrd_start = 0;
     ctx.memory = 0;
     ctx.cmdline = NULL;
+    ctx.cpu_count = 0;
     read_device_tree(device_tree, &ctx);
+
+#if USE_DEVICE_TREE_CPU_COUNT
+    set_cpu_count(ctx.cpu_count);
+#endif
 
     // find our bootdata first
     if (!bootdata) {

@@ -9,4 +9,5 @@
 void fail(const char* message);
 void *memcpy(void *dest, const void *src, size_t count);
 int strcmp(char const *cs, char const *ct);
+int strncmp(char const *cs, char const *ct, size_t count);
 

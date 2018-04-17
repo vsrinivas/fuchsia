@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #define HAS_DEVICE_TREE 1
+#define USE_DEVICE_TREE_CPU_COUNT 1
 
-static const bootdata_cpu_config_t cpu_config = {
+static bootdata_cpu_config_t cpu_config = {
     .cluster_count = 1,
     .clusters = {
         {
@@ -89,4 +90,10 @@ static void append_board_bootdata(bootdata_t* bootdata) {
 
     // add platform ID
     append_bootdata(bootdata, BOOTDATA_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));
+}
+
+static void set_cpu_count(uint32_t cpu_count) {
+    if (cpu_count > 0) {
+        cpu_config.clusters[0].cpu_count = cpu_count;
+    }
 }
