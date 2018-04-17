@@ -11,14 +11,20 @@ import (
 	"fuchsia/go/amber"
 	"os"
 	"strings"
+	"time"
+
+	"syscall/zx"
+	"syscall/zx/zxwait"
 )
 
 const usage = `usage: amber_ctl <command> [opts]
 Commands
     get_up    - get an update for a package
       Options
-        -n: name of the package
-        -v: version of the package, if not supplied the latest is retrieved
+        -n:      name of the package
+        -v:      version of the package, if not supplied the latest is retrieved
+        -nowait: exit once package installation has started, but don't wait for
+                 package activation
 
     get_blob  - get the specified content blob
         -i: content ID of the blob
@@ -48,6 +54,7 @@ var (
 	srcKey     = fs.String("k", "", "Root key for the source, this can be either the key itself or a http[s]:// or file:// URL to the key")
 	srcKeyHash = fs.String("h", "", "SHA256 of the key. This is required whether the key is provided directly or by URL")
 	blobID     = fs.String("i", "", "Content ID of the blob")
+	noWait     = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
 )
 
 func doTest(pxy *amber.ControlInterface) {
@@ -93,11 +100,46 @@ func main() {
 		// about an amber version as opposed to human version. the human version is
 		// part of the package name
 		*pkgName = fmt.Sprintf("%s/%s", *pkgName, *pkgVersion)
-		blobID, err := proxy.GetUpdate(*pkgName, nil)
-		if err == nil {
-			fmt.Printf("Wrote update to blob %s\n", *blobID)
+		if *noWait {
+			blobID, err := proxy.GetUpdate(*pkgName, nil)
+			if err == nil {
+				fmt.Printf("Wrote update to blob %s\n", *blobID)
+			} else {
+				fmt.Printf("Error getting update %s\n", err)
+			}
 		} else {
-			fmt.Printf("Error getting update %s\n", err)
+			c, err := proxy.GetUpdateComplete(*pkgName, nil)
+			if err == nil {
+				defer c.Close()
+				b := make([]byte, 1024, 1024)
+				d := []zx.Handle{}
+				fmt.Printf("About to read channel %d %d\n", zx.SignalChannelReadable, zx.SignalChannelPeerClosed)
+				for {
+					sigs, _ := zxwait.Wait(*c.Handle(),
+						zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
+						zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
+					if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
+						bs, _, err := c.Read(b, d, 0)
+						if err == nil {
+							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
+						} else {
+							fmt.Printf("Error reading response from channel: %s\n", err)
+							break
+						}
+					}
+					if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
+						fmt.Println("Error: response channel closed unexpectedly.")
+						break
+					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
+						fmt.Printf("Error awaiting response from channel: %s\n", err)
+						break
+					} else if err != nil && err.(zx.Error).Status == zx.ErrTimedOut {
+						fmt.Println("Awaiting response...")
+					}
+				}
+			} else {
+				fmt.Printf("Error requesting update: %s\n", err)
+			}
 		}
 	case "get_blob":
 		if err := proxy.GetBlob(*blobID); err != nil {

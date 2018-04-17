@@ -31,7 +31,8 @@ interface Control {
   // stores the package in BlobFS. This method returns the merkle root of the
   // package and therefore a way to access the package once it arrives in
   // BlobFS. If null is returned, no update was found.
-  6: GetUpdate(string name, string? version) -> (string? merkle);
+  6: GetUpdate(string name, string? version) -> (string? blobID);
+
   // TODO(jmatt) add a GetUpdate that takes a handle to write to
 
   // Get a content blob identified by the given hashed Merkle root. This returns

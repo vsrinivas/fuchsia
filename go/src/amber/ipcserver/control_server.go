@@ -67,7 +67,6 @@ func (c *ControlSrvr) GetUpdateComplete(name string, version *string) (zx.Channe
 		return 0, e
 	}
 
-	log.Println("Channel created successfully")
 	go c.getAndWaitForUpdate(name, version, &w)
 	return r, nil
 }
@@ -79,13 +78,13 @@ func (c *ControlSrvr) PackagesActivated(merkle []string) error {
 	return nil
 }
 
-func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
+func pkgSetFromPkg(name string, version *string) (*pkg.PackageSet, *pkg.Package, error) {
 	d := ""
 	if version == nil {
 		version = &d
 	}
 	if len(name) == 0 {
-		return nil, fmt.Errorf("No name provided")
+		return nil, nil, fmt.Errorf("No name provided")
 	}
 
 	if name[0] != '/' {
@@ -95,10 +94,17 @@ func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
 	ps := pkg.NewPackageSet()
 	pkg := pkg.Package{Name: name, Version: *version}
 	ps.Add(&pkg)
+	return ps, &pkg, nil
+}
 
+func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
+	ps, pkg, err := pkgSetFromPkg(name, version)
+	if err != nil {
+		return nil, err
+	}
 	c.initDaemon()
 	updates := c.daemon.GetUpdates(ps)
-	res, ok := updates[pkg]
+	res, ok := updates[*pkg]
 	if !ok {
 		return nil, fmt.Errorf("No update available")
 	}
@@ -106,11 +112,10 @@ func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
 		return nil, res.Err
 	}
 
-	_, err := daemon.WriteUpdateToPkgFS(res)
+	_, err = daemon.WriteUpdateToPkgFS(res)
 	if err != nil {
 		return nil, err
 	}
-
 	return &res.Update.Merkle, nil
 }
 
