@@ -23,10 +23,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <fbl/auto_call.h>
 #include <fbl/limits.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fdio/watcher.h>
+#include <sync/completion.h>
 #include <unittest/unittest.h>
 #include <lib/zx/time.h>
 
@@ -1270,39 +1272,61 @@ bool ramdisk_test_fifo_sleep_unavailable(void) {
     END_TEST;
 }
 
+// This thread and its arguments can be used to wake a ramdisk that sleeps with deferred writes.
+// The correct calling sequence in the calling thread is:
+//   thrd_create(&thread, fifo_wake_thread, &wake);
+//   ioctl_ramdisk_sleep_after(wake->fd, &one);
+//   completion_signal(&wake.start);
+//   block_fifo_txn(client, requests, fbl::count_of(requests));
+//   thrd_join(thread, &res);
+//
+// This order matters!
+// * |sleep_after| must be called from the same thread as |fifo_txn| (or they may be reordered, and
+//   the txn counts zeroed).
+// * The do-while loop below must not be started before |sleep_after| has been called (hence the
+//   'start' signal).
+// * This thread must not be waiting when the calling thread blocks in |fifo_txn| (i.e. 'start' must
+//   have been signaled.)
+
 typedef struct wake_args {
     int fd;
     uint64_t after;
+    completion_t start;
+    zx_time_t deadline;
 } wake_args_t;
 
 static int fifo_wake_thread(void* arg) {
     ssize_t res;
+
+    // Always send a wake-up call; even if we failed to go to sleep.
     wake_args_t* wake = static_cast<wake_args_t*>(arg);
+    auto cleanup = fbl::MakeAutoCall([&] { ioctl_ramdisk_wake_up(wake->fd); });
+
+    // Wait for the start-up signal
+    zx_status_t rc = completion_wait(&wake->start, wake->deadline);
+    completion_reset(&wake->start);
+    if (rc != ZX_OK) {
+        return rc;
+    }
+
+    // Loop until timeout, |wake_after| txns received, or error getting counts
     ramdisk_txn_counts_t counts;
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
-        if (deadline < zx_clock_get(ZX_CLOCK_MONOTONIC)) {
+        if (wake->deadline < zx_clock_get(ZX_CLOCK_MONOTONIC)) {
             return ZX_ERR_TIMED_OUT;
         }
         if ((res = ioctl_ramdisk_get_txn_counts(wake->fd, &counts)) < 0) {
             return static_cast<zx_status_t>(res);
         }
-    } while(counts.received < wake->after);
-    if ((res = ioctl_ramdisk_wake_up(wake->fd)) < 0) {
-        return static_cast<zx_status_t>(res);
-    }
-    return 0;
+    } while (counts.received < wake->after);
+    return ZX_OK;
 }
 
 bool ramdisk_test_fifo_sleep_deferred(void) {
     BEGIN_TEST;
     // Set up the initial handshake connection with the ramdisk
     int fd = get_ramdisk(PAGE_SIZE, 512);
-
-    // Tell ramdisk to defer txns while sleeping
-    uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
-    ASSERT_GE(ioctl_ramdisk_set_flags(fd, &flags), 0);
 
     zx_handle_t fifo;
     ssize_t expected = sizeof(fifo);
@@ -1333,45 +1357,39 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
     fifo_client_t* client;
     ASSERT_EQ(block_fifo_create_client(fifo, &client), ZX_OK);
 
-    // Put the ramdisk to sleep after 1 transaction
-    uint64_t one = 1;
-    ASSERT_GE(ioctl_ramdisk_sleep_after(fd, &one), 0);
+    // Create a bunch of requests, some of which are guaranteed to block.
+    block_fifo_request_t requests[16];
+    for (size_t i = 0; i < fbl::count_of(requests); ++i) {
+        requests[i].txnid = txnid;
+        requests[i].vmoid = vmoid;
+        requests[i].opcode = BLOCKIO_READ;
+        requests[i].length = 1;
+        requests[i].vmo_offset = 0;
+        requests[i].dev_offset = i;
+    }
 
-    // Batch write the VMO to the ramdisk
-    // Split it into two requests, spread across the disk
-    block_fifo_request_t requests[2];
-    requests[0].txnid = txnid;
-    requests[0].vmoid = vmoid;
-    requests[0].opcode = BLOCKIO_WRITE;
-    requests[0].length = 1;
-    requests[0].vmo_offset = 0;
-    requests[0].dev_offset = 0;
-
-    requests[1].txnid = txnid;
-    requests[1].vmoid = vmoid;
-    requests[1].opcode = BLOCKIO_WRITE;
-    requests[1].length = 2;
-    requests[1].vmo_offset = 1;
-    requests[1].dev_offset = 100;
-
-    // Start thread to wake ramdisk
+    // Sleep and wake parameters
+    uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
     thrd_t thread;
     wake_args_t wake;
     wake.fd = fd;
     wake.after = fbl::count_of(requests);
-    ASSERT_EQ(thrd_create(&thread, fifo_wake_thread, &wake), thrd_success);
-
-    // Send enough requests to put the ramdisk to sleep; this will block until its awoken!
-    // Other callers (e.g. block_watcher) may also send requests without affecting this test.
-    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
-
-    // Check the wake thread succeeded
+    completion_reset(&wake.start);
+    wake.deadline = zx_deadline_after(ZX_SEC(3));
+    uint64_t txns_before_sleep = 1;
     int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
-    ASSERT_EQ(res, 0, "Background thread failed");
 
-    requests[0].opcode = BLOCKIO_READ;
-    requests[1].opcode = BLOCKIO_READ;
+    // Send enough requests to put the ramdisk to sleep and then be awoken wake thread. The ordering
+    // below matters!  See the comment on |ramdisk_wake_thread| for details.
+    ASSERT_EQ(thrd_create(&thread, fifo_wake_thread, &wake), thrd_success);
+    ASSERT_GE(ioctl_ramdisk_set_flags(fd, &flags), 0);
+    ASSERT_GE(ioctl_ramdisk_sleep_after(fd, &txns_before_sleep), 0);
+    completion_signal(&wake.start);
+    ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
+
+    // Check the wake thread succeeded, and that we can do I/O normally again
+    ASSERT_EQ(res, 0, "Background thread failed");
     ASSERT_EQ(block_fifo_txn(client, &requests[0], fbl::count_of(requests)), ZX_OK);
 
     // Close the current vmo

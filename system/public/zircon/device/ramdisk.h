@@ -71,6 +71,8 @@ IOCTL_WRAPPER(ioctl_ramdisk_wake_up, IOCTL_RAMDISK_WAKE_UP);
 // Tell the ramdisk to "sleep" after |in| transactions.
 // After this point, all incoming transactions will fail.
 // This will reset the current transaction count.
+// NOTE! Use caution with RAMDISK_FLAG_RESUME_ON_WAKE set; sleeping with this flags will cause I/O
+// to block indefinitely until another call invokes |ioctl_ramdisk_wake_up|.
 IOCTL_WRAPPER_IN(ioctl_ramdisk_sleep_after, IOCTL_RAMDISK_SLEEP_AFTER, uint64_t);
 
 // ssize_t ioctl_ramdisk_get_txn_count(int fd, ramdisk_txn_counts_t* out);
