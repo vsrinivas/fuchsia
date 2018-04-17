@@ -5,6 +5,7 @@
         "garnet/packages/prod/cmdutils",
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/openssh",
+        "garnet/packages/prod/root_ssl_certificates",
         "garnet/packages/prod/runtime"
     ]
 }
