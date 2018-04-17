@@ -1,4 +1,4 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -9,19 +9,16 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/default_tests.cpp \
+    $(LOCAL_DIR)/loop_tests.cpp \
     $(LOCAL_DIR)/main.c \
-    $(LOCAL_DIR)/receiver_tests.cpp \
-    $(LOCAL_DIR)/time_tests.cpp \
-    $(LOCAL_DIR)/task_tests.cpp \
-    $(LOCAL_DIR)/trap_tests.cpp \
-    $(LOCAL_DIR)/wait_tests.cpp
 
-MODULE_NAME := async-test
+MODULE_NAME := async-loop-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async-loop.cpp \
+    system/ulib/async-loop \
     system/ulib/async-testutils \
     system/ulib/zx \
     system/ulib/zxcpp \
