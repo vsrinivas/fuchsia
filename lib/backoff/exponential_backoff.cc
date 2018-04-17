@@ -33,8 +33,8 @@ ExponentialBackoff::~ExponentialBackoff() {}
 
 zx::duration ExponentialBackoff::GetNext() {
   // Add a random component in [0, next_delay).
-  std::uniform_int_distribution<uint64_t> distribution(0u, next_delay_.get());
-  zx::duration r = zx::nsec(distribution(rng_));
+  std::uniform_int_distribution<zx_duration_t> distribution(0u, next_delay_.get());
+  zx::duration r(distribution(rng_));
   zx::duration result =
       max_delay_ - r >= next_delay_ ? next_delay_ + r : max_delay_;
 
