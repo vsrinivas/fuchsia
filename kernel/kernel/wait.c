@@ -13,6 +13,13 @@
 #include <kernel/timer.h>
 #include <lib/ktrace.h>
 #include <platform.h>
+#include <trace.h>
+
+#define LOCAL_TRACE 0
+
+// add expensive code to do a full validation of the wait queue at various entry points
+// to this module.
+#define WAIT_QUEUE_VALIDATION (0 || (LK_DEBUGLEVEL > 2))
 
 // Wait queues are building blocks that other locking primitives use to
 // handle blocking threads.
@@ -50,6 +57,39 @@
 
 void wait_queue_init(wait_queue_t* wait) {
     *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
+}
+
+void wait_queue_validate_queue(wait_queue_t* wait) {
+    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    // validate that the queue is sorted properly
+    thread_t* last = NULL;
+    thread_t* temp;
+    list_for_every_entry(&wait->heads, temp, thread_t, wait_queue_heads_node) {
+        DEBUG_ASSERT(temp->magic == THREAD_MAGIC);
+
+        // validate that the queue is sorted high to low priority
+        if (last) {
+            DEBUG_ASSERT_MSG(last->effec_priority > temp->effec_priority,
+                    "%p:%d  %p:%d",
+                    last, last->effec_priority,
+                    temp, temp->effec_priority);
+        }
+
+        // walk any threads linked to this head, validating that they're the same priority
+        thread_t* temp2;
+        list_for_every_entry(&temp->queue_node, temp2, thread_t, queue_node) {
+            DEBUG_ASSERT(temp2->magic == THREAD_MAGIC);
+            DEBUG_ASSERT_MSG(temp->effec_priority == temp2->effec_priority,
+                    "%p:%d  %p:%d",
+                    temp, temp->effec_priority,
+                    temp2, temp2->effec_priority);
+        }
+
+        last = temp;
+    }
 }
 
 // add a thread to the tail of a wait queue, sorted by priority
@@ -165,6 +205,10 @@ static zx_status_t wait_queue_block_worker(wait_queue_t* wait, zx_time_t deadlin
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(wait);
+    }
+
     if (deadline != ZX_TIME_INFINITE && deadline <= current_time()) {
         return ZX_ERR_TIMED_OUT;
     }
@@ -273,6 +317,10 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(wait);
+    }
+
     t = wait_queue_pop_head(wait);
     if (t) {
         wait->count--;
@@ -296,6 +344,10 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
 
 thread_t* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error) {
     thread_t* t;
+
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(wait);
+    }
 
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
@@ -333,6 +385,10 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(wait);
+    }
 
     if (wait->count == 0)
         return 0;
@@ -418,6 +474,10 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(list_in_list(&t->queue_node));
 
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(t->blocking_wait_queue);
+    }
+
     wait_queue_remove_thread(t);
     t->blocking_wait_queue->count--;
     t->blocking_wait_queue = NULL;
@@ -429,4 +489,29 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     return ZX_OK;
 }
 
+void wait_queue_priority_changed(struct thread* t, int old_prio) {
+    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    DEBUG_ASSERT(t->state == THREAD_BLOCKED);
+    DEBUG_ASSERT(t->blocking_wait_queue != NULL);
+    DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
+
+    LTRACEF("%p %d -> %d\n", t, old_prio, t->effec_priority);
+
+    // simple algorithm: remove the thread from the queue and add it back
+    // TODO: implement optimal algorithm depending on all the different edge
+    // cases of how the thread was previously queued and what priority its
+    // switching to.
+    wait_queue_remove_thread(t);
+    wait_queue_insert(t->blocking_wait_queue, t);
+
+    // TODO: find a way to call into wrapper mutex object if present and
+    // have the holder inherit the new priority
+
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(t->blocking_wait_queue);
+    }
+}
 

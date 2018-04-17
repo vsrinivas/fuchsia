@@ -76,4 +76,10 @@ bool wait_queue_is_empty(wait_queue_t*);
 /* remove a specific thread out of a wait queue it's blocked on */
 zx_status_t wait_queue_unblock_thread(struct thread* t, zx_status_t wait_queue_error);
 
+/* a thread's priority has changed, potentially modify the wait queue it's in */
+void wait_queue_priority_changed(struct thread* t, int old_prio);
+
+/* validate that the queue of a given wait queue is valid */
+void wait_queue_validate_queue(wait_queue_t* wait);
+
 __END_CDECLS

@@ -597,7 +597,7 @@ static void sched_priority_changed(thread_t* t, int old_prio,
         if (t->effec_priority < old_prio) {
             // we're currently running and dropped our effective priority, might want to resched
             if (t == get_current_thread()) {
-                *local_resched |= true;
+                *local_resched = true;
             } else {
                 *accum_cpu_mask |= cpu_num_to_mask(t->curr_cpu);
             }
@@ -614,7 +614,7 @@ static void sched_priority_changed(thread_t* t, int old_prio,
 
             // we may now be higher priority than the current thread on this cpu, reschedule
             if (t->curr_cpu == arch_curr_cpu_num()) {
-                *local_resched |= true;
+                *local_resched = true;
             } else {
                 *accum_cpu_mask |= cpu_num_to_mask(t->curr_cpu);
             }
@@ -622,6 +622,15 @@ static void sched_priority_changed(thread_t* t, int old_prio,
             insert_in_run_queue_tail(t->curr_cpu, t);
         }
 
+        break;
+    case THREAD_BLOCKED:
+        // it's blocked on something, sitting in a wait queue, so we may need to move it around
+        // within the wait queue.
+        // note it's possible to be blocked but not in a wait queue if the thread is in transition
+        // from blocked to running
+        if (t->blocking_wait_queue) {
+            wait_queue_priority_changed(t, old_prio);
+        }
         break;
     default:
         // the other states do not matter, exit
