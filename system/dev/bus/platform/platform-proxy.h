@@ -30,6 +30,9 @@ enum {
     PDEV_GPIO_SET_ALT_FUNCTION,
     PDEV_GPIO_READ,
     PDEV_GPIO_WRITE,
+    PDEV_GPIO_GET_INTERRUPT,
+    PDEV_GPIO_RELEASE_INTERRUPT,
+    PDEV_GPIO_SET_POLARITY,
 
     // ZX_PROTOCOL_I2C
     PDEV_I2C_GET_MAX_TRANSFER,
@@ -65,6 +68,7 @@ typedef struct pdev_req {
         uint8_t gpio_value;
         pdev_i2c_txn_ctx_t i2c_txn;
         uint32_t i2c_bitrate;
+        uint32_t flags;
     };
 } pdev_req_t;
 

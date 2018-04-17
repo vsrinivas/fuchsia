@@ -61,6 +61,7 @@ static const pbus_irq_t gpio_irqs[] = {
         .irq = S905D2_GPIO_IRQ_7,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    /*
     {
         .irq = S905D2_A0_GPIO_IRQ_0,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
@@ -69,6 +70,7 @@ static const pbus_irq_t gpio_irqs[] = {
         .irq = S905D2_A0_GPIO_IRQ_1,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
+    */
 };
 
 static pbus_dev_t gpio_dev = {

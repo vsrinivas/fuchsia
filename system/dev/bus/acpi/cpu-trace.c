@@ -40,7 +40,7 @@ static zx_status_t cpu_trace_map_mmio(void* ctx, uint32_t index, uint32_t cache_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t cpu_trace_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+static zx_status_t cpu_trace_map_interrupt(void* ctx, uint32_t index, uint32_t flags, zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 

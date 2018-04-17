@@ -64,7 +64,7 @@ static pbus_mmio_t vim_display_mmios[] = {
 const pbus_gpio_t vim_display_gpios[] = {
     {
         // HPD
-        .gpio = S912_GPIOH(20),
+        .gpio = S912_GPIOH(0),
     },
 };
 

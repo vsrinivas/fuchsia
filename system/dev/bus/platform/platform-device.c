@@ -58,23 +58,37 @@ fail:
     return status;
 }
 
-static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
+                                              uint32_t flags, zx_handle_t* out_handle) {
     platform_dev_t* dev = ctx;
-
+    uint32_t flags_;
     if (index >= dev->irq_count || !out_handle) {
         return ZX_ERR_INVALID_ARGS;
     }
     pbus_irq_t* irq = &dev->irqs[index];
+    if (flags) {
+        flags_ = flags;
+    } else {
+        flags_ = irq->mode;
+    }
+#if ENABLE_NEW_IRQ_API
+    zx_status_t status = zx_irq_create(dev->bus->resource, irq->irq, flags_, out_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "platform_dev_map_interrupt: zx_irq_create failed %d\n", status);
+        return status;
+    }
+#else
     zx_status_t status = zx_interrupt_create(dev->bus->resource, 0, out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
         return status;
     }
-    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq, irq->mode);
+    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq, flags_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_bind failed %d\n", status);
         zx_handle_close(*out_handle);
     }
+#endif
     return status;
 }
 
@@ -141,9 +155,10 @@ static zx_status_t pdev_rpc_get_mmio(platform_dev_t* dev, uint32_t index, zx_off
 }
 
 static zx_status_t pdev_rpc_get_interrupt(platform_dev_t* dev, uint32_t index,
+                                          uint32_t flags,
                                           zx_handle_t* out_handle, uint32_t* out_handle_count) {
 
-    zx_status_t status = platform_dev_map_interrupt(dev, index, out_handle);
+    zx_status_t status = platform_dev_map_interrupt(dev, index, flags, out_handle);
     if (status == ZX_OK) {
         *out_handle_count = 1;
     }
@@ -230,6 +245,50 @@ static zx_status_t pdev_rpc_gpio_write(platform_dev_t* dev, uint32_t index, uint
     return gpio_write(&bus->gpio, index, value);
 }
 
+static zx_status_t pdev_rpc_get_gpio_interrupt(platform_dev_t* dev, uint32_t index,
+                                               uint32_t flags,
+                                               zx_handle_t* out_handle,
+                                               uint32_t* out_handle_count) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    index = dev->gpios[index].gpio;
+    zx_status_t status = gpio_get_interrupt(&bus->gpio, index, flags, out_handle);
+    if (status == ZX_OK) {
+        *out_handle_count = 1;
+    }
+    return status;
+}
+
+static zx_status_t pdev_rpc_release_gpio_interrupt(platform_dev_t* dev, uint32_t index) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    index = dev->gpios[index].gpio;
+    return gpio_release_interrupt(&bus->gpio, index);
+}
+
+static zx_status_t pdev_rpc_set_gpio_polarity(platform_dev_t* dev,
+                                            uint32_t index, uint32_t flags) {
+    platform_bus_t* bus = dev->bus;
+    if (!bus->gpio.ops) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (index >= dev->gpio_count) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    index = dev->gpios[index].gpio;
+    return gpio_set_polarity(&bus->gpio, index, flags);
+}
 static zx_status_t pdev_rpc_i2c_transact(platform_dev_t* dev, pdev_req_t* req, uint8_t* data,
                                         zx_handle_t channel) {
     platform_bus_t* bus = dev->bus;
@@ -304,7 +363,7 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
                                             &handle, &handle_count);
         break;
     case PDEV_GET_INTERRUPT:
-        resp.status = pdev_rpc_get_interrupt(dev, req->index, &handle, &handle_count);
+        resp.status = pdev_rpc_get_interrupt(dev, req->index, req->flags, &handle, &handle_count);
         break;
     case PDEV_GET_BTI:
         resp.status = pdev_rpc_get_bti(dev, req->index, &handle, &handle_count);
@@ -329,6 +388,16 @@ static zx_status_t platform_dev_rxrpc(void* ctx, zx_handle_t channel) {
         break;
     case PDEV_GPIO_WRITE:
         resp.status = pdev_rpc_gpio_write(dev, req->index, req->gpio_value);
+        break;
+    case PDEV_GPIO_GET_INTERRUPT:
+        resp.status = pdev_rpc_get_gpio_interrupt(dev, req->index,
+                                                req->flags, &handle, &handle_count);
+        break;
+    case PDEV_GPIO_RELEASE_INTERRUPT:
+        resp.status = pdev_rpc_release_gpio_interrupt(dev, req->index);
+        break;
+    case PDEV_GPIO_SET_POLARITY:
+        resp.status = pdev_rpc_set_gpio_polarity(dev, req->index, req->flags);
         break;
     case PDEV_I2C_GET_MAX_TRANSFER:
         resp.status = i2c_impl_get_max_transfer_size(&dev->bus->i2c, req->index,

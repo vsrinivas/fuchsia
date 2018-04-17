@@ -31,6 +31,7 @@ typedef struct {
     zx_device_t*                        mydevice;
     zx_device_t*                        fbdevice;
     zx_handle_t                         bti;
+    zx_handle_t                         inth;
 
     gpio_protocol_t                     gpio;
 
@@ -57,6 +58,7 @@ typedef struct {
     disp_timing_t                       pref_disp_timing;
 
     bool console_visible;
+    bool hdmi_inited;
     zx_display_cb_t ownership_change_callback;
     void* ownership_change_cookie;
 } vim2_display_t;

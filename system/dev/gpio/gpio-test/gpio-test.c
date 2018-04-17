@@ -27,13 +27,24 @@ typedef struct {
     gpio_protocol_t gpio;
     uint32_t gpio_count;
     thrd_t thread;
+    thrd_t wait;
     bool done;
+    zx_handle_t inth;
 } gpio_test_t;
+
+// GPIO indices (based on gpio_test_gpios)
+enum {
+    GPIO_LED,
+    GPIO_BUTTON,
+};
 
 static void gpio_test_release(void* ctx) {
     gpio_test_t* gpio_test = ctx;
+    gpio_protocol_t* gpio = &gpio_test->gpio;
 
     gpio_test->done = true;
+    zx_handle_close(gpio_test->inth);
+    gpio_release_interrupt(gpio, GPIO_BUTTON);
     thrd_join(gpio_test->thread, NULL);
     free(gpio_test);
 }
@@ -65,6 +76,53 @@ static int gpio_test_thread(void *arg) {
         }
     }
 
+    return 0;
+}
+
+static int gpio_waiting_thread(void *arg) {
+    gpio_test_t* gpio_test = arg;
+    gpio_protocol_t* gpio = &gpio_test->gpio;
+    while(1) {
+#if ENABLE_NEW_IRQ_API
+        zx_status_t status = zx_irq_wait(gpio_test->inth, NULL);
+#else
+        uint64_t slots;
+        zx_status_t status = zx_interrupt_wait(gpio_test->inth, &slots);
+#endif
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "gpio_waiting_thread: zx_interrupt_wait failed %d\n", status);
+            return -1;
+        }
+        uint8_t out;
+        gpio_read(gpio, GPIO_LED, &out);
+        gpio_write(gpio, GPIO_LED, !out);
+        sleep(1);
+    }
+}
+
+// test thread that cycles runs tests for GPIO interrupts
+static int gpio_interrupt_test(void *arg) {
+    gpio_test_t* gpio_test = arg;
+    gpio_protocol_t* gpio = &gpio_test->gpio;
+    zx_status_t status;
+
+    if (gpio_config(gpio, GPIO_BUTTON, GPIO_DIR_IN | GPIO_PULL_DOWN) != ZX_OK) {
+        zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u \n", GPIO_BUTTON);
+        return -1;
+    }
+
+    if (ZX_OK != (status = gpio_config(gpio, GPIO_LED, GPIO_DIR_OUT))) {
+        zxlogf(ERROR, "gpio_interrupt_test: gpio_config failed for gpio %u\n", GPIO_LED);
+        return -1;
+    }
+
+    if (gpio_get_interrupt(gpio, GPIO_BUTTON,
+                           ZX_INTERRUPT_MODE_EDGE_HIGH, &gpio_test->inth) != ZX_OK) {
+        zxlogf(ERROR, "gpio_interrupt_test: gpio_get_interrupt failed for gpio %u\n", GPIO_BUTTON);
+        return -1;
+    }
+
+    thrd_create_with_name(&gpio_test->wait, gpio_waiting_thread, gpio_test, "gpio_waiting_thread");
     return 0;
 }
 
@@ -107,6 +165,7 @@ static zx_status_t gpio_test_bind(void* ctx, zx_device_t* parent) {
     }
 
     thrd_create_with_name(&gpio_test->thread, gpio_test_thread, gpio_test, "gpio_test_thread");
+    thrd_create_with_name(&gpio_test->thread, gpio_interrupt_test, gpio_test, "gpio_interrupt_test");
     return ZX_OK;
 }
 

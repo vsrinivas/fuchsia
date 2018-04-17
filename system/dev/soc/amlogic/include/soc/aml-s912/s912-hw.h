@@ -26,6 +26,8 @@
 #define S912_GPIO_LENGTH                0x1C00
 #define S912_GPIO_A0_BASE               0xc8100000
 #define S912_GPIO_AO_LENGTH             0x1000
+#define S912_GPIO_INTERRUPT_BASE        0xC1100000
+#define S912_GPIO_INTERRUPT_LENGTH      0x10000
 
 #define S912_I2C_A_BASE                 0xc1108500
 #define S912_I2C_A_LENGTH               0x20
@@ -47,7 +49,7 @@
 #define S912_UART_A_BASE                0xc11084c0
 #define S912_UART_A_LENGTH              0x18
 #define S912_UART_AO_B_BASE             0xc81004e0
-#define S912_UART_AO_B_LENGTH          0x18
+#define S912_UART_AO_B_LENGTH           0x18
 
 // IRQs
 #define S912_M_I2C_0_IRQ                53

@@ -4,9 +4,15 @@
 
 #pragma once
 
+#define GPIO_INTERRUPT_POLARITY_SHIFT   16
+#define PINS_PER_BLOCK                  32
+#define ALT_FUNCTION_MAX                6
+#define MAX_GPIO_INDEX                  255
+#define BITS_PER_GPIO_INTERRUPT         8
+
 #define S912_GPIOX_PINS     19
 #define S912_GPIODV_PINS    30
-#define S912_GPIOH_PINS     32
+#define S912_GPIOH_PINS     10
 #define S912_GPIOBOOT_PINS  16
 #define S912_GPIOCARD_PINS  7
 #define S912_GPIOCLK_PINS   2
@@ -64,8 +70,39 @@
 #define S912_PERIPHS_PIN_MUX_8 0x34
 #define S912_PERIPHS_PIN_MUX_9 0x35
 
+#define S912_PULL_UP_REG0   0x3A
+#define S912_PULL_UP_REG1   0x3B
+#define S912_PULL_UP_REG2   0x3C
+#define S912_PULL_UP_REG3   0x3D
+#define S912_PULL_UP_REG4   0x3E
+
+#define S912_PULL_UP_EN_REG0   0x48
+#define S912_PULL_UP_EN_REG1   0x49
+#define S912_PULL_UP_EN_REG2   0x4A
+#define S912_PULL_UP_EN_REG3   0x4B
+#define S912_PULL_UP_EN_REG4   0x4C
+
+// These are relative to base address 0xc1100000 and in sizeof(uint32_t)
+#define S912_GPIO_INT_STATUS            0x2618
+#define S912_GPIO_INT_CLEAR             0x2619
+#define S912_GPIO_INT_MASK              0x261A
+#define S912_GPIO_INT_EDGE_POLARITY     0x2620
+#define S912_GPIO_0_3_PIN_SELECT        0x2621
+#define S912_GPIO_4_7_PIN_SELECT        0x2622
+#define S912_GPIO_FILTER_SELECT         0x2623
+
+#define S912_GPIOA0_PIN_START      0
+#define S912_GPIOZ_PIN_START       10
+#define S912_GPIOH_PIN_START       26
+#define S912_GPIOBOOT_PIN_START    36
+#define S912_GPIOCARD_PIN_START    52
+#define S912_GPIODV_PIN_START      59
+#define S912_GPIOX_PIN_START       89
+#define S912_GPIOCLK_PIN_START     108
+
 // GPIO AO registers live in a seperate register bank.
 #define S912_AO_RTI_PIN_MUX_REG  0x05
 #define S912_AO_RTI_PIN_MUX_REG2 0x06
 #define S912_AO_GPIO_OEN_OUT     0x09   // OEN: [9:0], OUT: [25:16]
 #define S912_AO_GPIO_IN          0x0a
+#define S912_A0_GPIO_OUT_OFFSET  16

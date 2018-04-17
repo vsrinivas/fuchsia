@@ -126,6 +126,41 @@ static zx_status_t pdev_gpio_set_alt_function(void* ctx, uint32_t index, uint64_
     return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
 }
 
+static zx_status_t pdev_gpio_get_interrupt(void* ctx, uint32_t index,
+                                           uint32_t flags,
+                                           zx_handle_t *out_handle) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_GET_INTERRUPT,
+        .index = index,
+        .flags = flags,
+    };
+    pdev_resp_t resp;
+
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp),
+                                          out_handle, 1, NULL);
+}
+
+static zx_status_t pdev_gpio_set_polarity(void* ctx, uint32_t index, uint32_t polarity) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_SET_POLARITY,
+        .index = index,
+        .flags = polarity,
+    };
+    pdev_resp_t resp;
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
+}
+static zx_status_t pdev_gpio_release_interrupt(void *ctx, uint32_t index) {
+    platform_proxy_t* proxy = ctx;
+    pdev_req_t req = {
+        .op = PDEV_GPIO_RELEASE_INTERRUPT,
+        .index = index,
+    };
+    pdev_resp_t resp;
+    return platform_dev_rpc(proxy, &req, sizeof(req), &resp, sizeof(resp), NULL, 0, NULL);
+}
+
 static zx_status_t pdev_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
@@ -160,6 +195,9 @@ static gpio_protocol_ops_t gpio_ops = {
     .set_alt_function = pdev_gpio_set_alt_function,
     .read = pdev_gpio_read,
     .write = pdev_gpio_write,
+    .get_interrupt = pdev_gpio_get_interrupt,
+    .release_interrupt = pdev_gpio_release_interrupt,
+    .set_polarity = pdev_gpio_set_polarity,
 };
 
 static zx_status_t pdev_i2c_get_max_transfer_size(void* ctx, uint32_t index, size_t* out_size) {
@@ -323,11 +361,13 @@ fail:
     return status;
 }
 
-static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index, zx_handle_t* out_handle) {
+static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
+                                              uint32_t flags, zx_handle_t* out_handle) {
     platform_proxy_t* proxy = ctx;
     pdev_req_t req = {
         .op = PDEV_GET_INTERRUPT,
         .index = index,
+        .flags = flags,
     };
     pdev_resp_t resp;
 
