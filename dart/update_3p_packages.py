@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import argparse
 import os
 import paths
 import subprocess
@@ -39,6 +40,12 @@ PROJECT_DEPENDENCIES = [
 
 
 def main():
+    parser = argparse.ArgumentParser('Update third-party Dart packages')
+    parser.add_argument('--changelog',
+                        help='Path to the changelog file to write',
+                        default=None)
+    script_args = parser.parse_args()
+
     if sys.platform.startswith('linux'):
         platform = 'linux'
     elif sys.platform.startswith('darwin'):
@@ -72,6 +79,11 @@ def main():
     args.append('--projects')
     for project in PROJECT_DEPENDENCIES:
         args.append(os.path.join(paths.FUCHSIA_ROOT, project))
+    if script_args.changelog:
+        args.extend([
+            '--changelog',
+            script_args.changelog,
+        ])
 
     subprocess.check_call(args, env={"FLUTTER_ROOT": flutter_root});
 

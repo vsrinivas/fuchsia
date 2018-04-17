@@ -105,6 +105,38 @@ dart_library("%s") {
 ''')
 
 
+def read_package_versions(base):
+    '''Scans the packages in a given directory.'''
+    result = {}
+    for (root, dirs, files) in os.walk(base):
+        for dir in dirs:
+            spec = os.path.join(root, dir, 'pubspec.yaml')
+            if not os.path.exists(spec):
+                continue
+            with open(spec, 'r') as spec_file:
+                data = yaml.safe_load(spec_file)
+                result[data['name']] = data['version']
+        break
+    return result
+
+
+def generate_package_diff(old_packages, new_packages, changelog):
+    '''Writes a changelog file with package version changes.'''
+    old = set(old_packages.iteritems())
+    new = set(new_packages.iteritems())
+    changed_keys = set([k for (k, _) in (old | new) - (old & new)])
+    if not changed_keys:
+        return
+    max_key_width = max(map(lambda k: len(k), changed_keys))
+    with open(changelog, 'w') as changelog_file:
+        for key in sorted(changed_keys):
+            old = old_packages.get(key, '<none>')
+            new = new_packages.get(key, '<none>')
+            changelog_file.write('%s %s --> %s\n' % (key.rjust(max_key_width),
+                                                     old.rjust(10),
+                                                     new.ljust(10)))
+
+
 def main():
     parser = argparse.ArgumentParser('Import dart packages from pub')
     parser.add_argument('--pub', required=True,
@@ -115,6 +147,9 @@ def main():
                         help='Paths to projects containing dependency files')
     parser.add_argument('--output', required=True,
                         help='Path to the output directory')
+    parser.add_argument('--changelog',
+                        help='Path to the changelog file to write',
+                        default=None)
     args = parser.parse_args()
     tempdir = tempfile.mkdtemp()
     try:
@@ -156,6 +191,8 @@ def main():
         with open(os.path.join(importer_dir, 'pubspec.yaml'), 'w') as pubspec:
             yaml.safe_dump(manifest, pubspec)
 
+        old_packages = read_package_versions(args.output)
+
         # Use pub to load the dependencies into a local cache.
         pub_cache_dir = os.path.join(tempdir, 'pub_cache')
         os.mkdir(pub_cache_dir)
@@ -171,6 +208,7 @@ def main():
                         shutil.rmtree(os.path.join(root, dir))
                 # Only process the root of the output tree.
                 break
+
         pub_packages = parse_packages_file(os.path.join(importer_dir, '.packages'))
         for package in pub_packages:
             if package[0] in packages:
@@ -217,6 +255,10 @@ def main():
                 shutil.rmtree(test_path)
             write_build_file(os.path.join(dest_dir, 'BUILD.gn'), package_name,
                              name_with_version, deps)
+
+        if args.changelog:
+            new_packages = read_package_versions(args.output)
+            generate_package_diff(old_packages, new_packages, args.changelog)
 
     finally:
         shutil.rmtree(tempdir)
