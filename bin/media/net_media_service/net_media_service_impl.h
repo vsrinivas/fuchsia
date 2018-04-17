@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIA_NET_MEDIA_SERVICE_NET_MEDIA_SERVICE_IMPL_H_
 
 #include <fuchsia/cpp/media_player.h>
-#include "garnet/bin/media/util/factory_service_base.h"
+#include "garnet/bin/media/net_media_service/factory_service_base.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"

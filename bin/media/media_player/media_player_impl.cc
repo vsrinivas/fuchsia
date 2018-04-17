@@ -8,31 +8,21 @@
 #include <fuchsia/cpp/media_player.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/media/demux/fidl_reader.h"
-#include "garnet/bin/media/demux/file_reader.h"
-#include "garnet/bin/media/demux/http_reader.h"
-#include "garnet/bin/media/demux/reader_cache.h"
-#include "garnet/bin/media/fidl/fidl_formatting.h"
-#include "garnet/bin/media/fidl/fidl_type_conversions.h"
-#include "garnet/bin/media/player/demux_source_segment.h"
-#include "garnet/bin/media/player/renderer_sink_segment.h"
-#include "garnet/bin/media/render/fidl_audio_renderer.h"
-#include "garnet/bin/media/render/fidl_video_renderer.h"
-#include "garnet/bin/media/util/safe_clone.h"
+#include "garnet/bin/media/media_player/demux/fidl_reader.h"
+#include "garnet/bin/media/media_player/demux/file_reader.h"
+#include "garnet/bin/media/media_player/demux/http_reader.h"
+#include "garnet/bin/media/media_player/demux/reader_cache.h"
+#include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
+#include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
+#include "garnet/bin/media/media_player/player/demux_source_segment.h"
+#include "garnet/bin/media/media_player/player/renderer_sink_segment.h"
+#include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
+#include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
+#include "garnet/bin/media/media_player/util/safe_clone.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
-
-using media::AudioRenderer;
-using media::AudioRenderer2Ptr;
-using media::AudioServer;
-using media::kMaxTime;
-using media::kUnspecifiedTime;
-using media::MediaRenderer;
-using media::SafeClone;
-using media::StreamType;
-using media::Timeline;
 
 namespace media_player {
 
@@ -116,8 +106,9 @@ void MediaPlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
         auto audio_server =
-            application_context_->ConnectToEnvironmentService<AudioServer>();
-        AudioRenderer2Ptr audio_renderer;
+            application_context_
+                ->ConnectToEnvironmentService<media::AudioServer>();
+        media::AudioRenderer2Ptr audio_renderer;
         audio_server->CreateRendererV2(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
         if (gain_ != 1.0f) {
@@ -185,7 +176,7 @@ void MediaPlayerImpl::Update() {
       case State::kFlushed:
         // Presentation time is not progressing, and the pipeline is clear of
         // packets.
-        if (target_position_ != kUnspecifiedTime) {
+        if (target_position_ != media::kUnspecifiedTime) {
           // We want to seek. Enter |kWaiting| state until the operation is
           // complete.
           state_ = State::kWaiting;
@@ -194,7 +185,7 @@ void MediaPlayerImpl::Update() {
           // request while setting the timeline transform and and seeking the
           // source, we'll notice that and do those things again.
           int64_t target_position = target_position_;
-          target_position_ = kUnspecifiedTime;
+          target_position_ = media::kUnspecifiedTime;
 
           // |program_range_min_pts_| will be delivered in the |SetProgramRange|
           // call, ensuring that the renderers discard packets with PTS values
@@ -204,11 +195,11 @@ void MediaPlayerImpl::Update() {
           program_range_min_pts_ = target_position;
 
           SetTimelineFunction(
-              0.0f, Timeline::local_now(), [this, target_position]() {
+              0.0f, media::Timeline::local_now(), [this, target_position]() {
                 if (target_position_ == target_position) {
                   // We've had a rendundant seek request. Ignore it.
-                  target_position_ = kUnspecifiedTime;
-                } else if (target_position_ != kUnspecifiedTime) {
+                  target_position_ = media::kUnspecifiedTime;
+                } else if (target_position_ != media::kUnspecifiedTime) {
                   // We've had a seek request to a new position. Refrain from
                   // seeking the source and re-enter this sequence.
                   state_ = State::kFlushed;
@@ -237,7 +228,7 @@ void MediaPlayerImpl::Update() {
           // |SetProgramRange| and |Prime| requests and transition to |kPrimed|
           // when the operation is complete.
           state_ = State::kWaiting;
-          player_.SetProgramRange(0, program_range_min_pts_, kMaxTime);
+          player_.SetProgramRange(0, program_range_min_pts_, media::kMaxTime);
 
           player_.Prime([this]() {
             state_ = State::kPrimed;
@@ -255,7 +246,7 @@ void MediaPlayerImpl::Update() {
       case State::kPrimed:
         // Presentation time is not progressing, and the pipeline is primed with
         // packets.
-        if (target_position_ != kUnspecifiedTime ||
+        if (target_position_ != media::kUnspecifiedTime ||
             target_state_ == State::kFlushed) {
           // Either we want to seek, or we otherwise want to flush.
           player_.Flush(target_state_ != State::kFlushed);
@@ -268,13 +259,13 @@ void MediaPlayerImpl::Update() {
           // presentation timeline and transition to |kPlaying| when the
           // operation completes.
           state_ = State::kWaiting;
-          SetTimelineFunction(1.0f, Timeline::local_now() + kMinimumLeadTime,
-                              [this]() {
-                                state_ = State::kPlaying;
-                                // Now we're in |kPlaying|. Call |Update| to
-                                // see if there's further action to be taken.
-                                Update();
-                              });
+          SetTimelineFunction(
+              1.0f, media::Timeline::local_now() + kMinimumLeadTime, [this]() {
+                state_ = State::kPlaying;
+                // Now we're in |kPlaying|. Call |Update| to
+                // see if there's further action to be taken.
+                Update();
+              });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -287,7 +278,7 @@ void MediaPlayerImpl::Update() {
       case State::kPlaying:
         // Presentation time is progressing, and packets are moving through
         // the pipeline.
-        if (target_position_ != kUnspecifiedTime ||
+        if (target_position_ != media::kUnspecifiedTime ||
             target_state_ == State::kFlushed ||
             target_state_ == State::kPrimed) {
           // Either we want to seek or we want to stop playback, possibly
@@ -295,13 +286,13 @@ void MediaPlayerImpl::Update() {
           // to enter |kWaiting|, stop the presentation timeline and transition
           // to |kPrimed| when the operation completes.
           state_ = State::kWaiting;
-          SetTimelineFunction(0.0f, Timeline::local_now() + kMinimumLeadTime,
-                              [this]() {
-                                state_ = State::kPrimed;
-                                // Now we're in |kPrimed|. Call |Update| to see
-                                // if there's further action to be taken.
-                                Update();
-                              });
+          SetTimelineFunction(
+              0.0f, media::Timeline::local_now() + kMinimumLeadTime, [this]() {
+                state_ = State::kPrimed;
+                // Now we're in |kPrimed|. Call |Update| to see
+                // if there's further action to be taken.
+                Update();
+              });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -334,7 +325,7 @@ void MediaPlayerImpl::SetTimelineFunction(float rate,
       media::TimelineFunction(transform_subject_time_, reference_time,
                               media::TimelineRate(rate)),
       callback);
-  transform_subject_time_ = kUnspecifiedTime;
+  transform_subject_time_ = media::kUnspecifiedTime;
   status_publisher_.SendUpdates();
 }
 
@@ -358,7 +349,7 @@ void MediaPlayerImpl::SetReaderSource(
 
 void MediaPlayerImpl::SetReader(std::shared_ptr<Reader> reader) {
   state_ = State::kWaiting;
-  target_position_ = kUnspecifiedTime;
+  target_position_ = media::kUnspecifiedTime;
   program_range_min_pts_ = 0;
   transform_subject_time_ = 0;
 
@@ -413,8 +404,8 @@ void MediaPlayerImpl::CreateView(
 }
 
 void MediaPlayerImpl::SetAudioRenderer(
-    fidl::InterfaceHandle<AudioRenderer> audio_renderer,
-    fidl::InterfaceHandle<MediaRenderer> media_renderer) {
+    fidl::InterfaceHandle<media::AudioRenderer> audio_renderer,
+    fidl::InterfaceHandle<media::MediaRenderer> media_renderer) {
   // We're using AudioRenderer2, so we can't support this.
   // TODO(dalesat): Change SetAudioRenderer so it takes an AudioRenderer2.
   FXL_NOTIMPLEMENTED();

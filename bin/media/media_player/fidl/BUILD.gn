@@ -1,0 +1,28 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fidl") {
+  sources = [
+    "fidl_formatting.cc",
+    "fidl_formatting.h",
+    "fidl_packet_consumer.cc",
+    "fidl_packet_consumer.h",
+    "fidl_packet_producer.cc",
+    "fidl_packet_producer.h",
+    "fidl_type_conversions.cc",
+    "fidl_type_conversions.h",
+  ]
+
+  deps = [
+    "//garnet/bin/media/media_player/framework",
+    "//garnet/bin/media/media_player/util",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/fidl:media_player",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/network/fidl",
+  ]
+}

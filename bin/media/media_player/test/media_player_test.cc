@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "garnet/bin/media/fidl/fidl_formatting.h"
+#include "garnet/bin/media/media_player/fidl/fidl_formatting.h"
 #include "garnet/bin/media/media_player/test/fake_renderer.h"
 #include "garnet/bin/media/media_player/test/fake_wav_reader.h"
 #include "lib/app/cpp/application_context.h"
@@ -95,7 +95,7 @@ class MediaPlayerTester {
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::Closure quit_callback_;
   FakeWavReader fake_reader_;
-  media::FakeRenderer fake_renderer_;
+  FakeRenderer fake_renderer_;
   MediaPlayerPtr media_player_;
   bool ended_ = false;
 };

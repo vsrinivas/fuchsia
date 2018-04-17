@@ -54,13 +54,12 @@ package("tests") {
   package_name = "media_tests"
 
   deps = [
-    "//garnet/bin/media/audio:tests",
     "//garnet/bin/media/audio_server:tests",
-    "//garnet/bin/media/demux:tests",
     "//garnet/bin/media/media_player:tests",
+    "//garnet/bin/media/media_player/demux:tests",
+    "//garnet/bin/media/media_player/player:tests",
+    "//garnet/bin/media/media_player/util:tests",
     "//garnet/bin/media/net_media_service:tests",
-    "//garnet/bin/media/player:tests",
-    "//garnet/bin/media/util:tests",
     "//garnet/public/lib/media/c:tests",
     "//garnet/public/lib/media/timeline:tests",
     "//garnet/public/lib/media/transport:tests",
@@ -69,10 +68,6 @@ package("tests") {
   tests = [
     {
       name = "audio_mixer_tests"
-    },
-
-    {
-      name = "media_audio_tests"
     },
 
     {

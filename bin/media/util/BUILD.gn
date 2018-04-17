@@ -6,53 +6,13 @@ import("//build/test.gni")
 
 source_set("util") {
   sources = [
-    "factory_service_base.h",
     "fidl_publisher.h",
     "file_channel.cc",
     "file_channel.h",
   ]
 
-  public_deps = [
-    ":host_compatible",
-    "//garnet/public/lib/app/cpp",
-  ]
-
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-  ]
-}
-
-source_set("host_compatible") {
-  sources = [
-    "callback_joiner.cc",
-    "callback_joiner.h",
-    "incident.cc",
-    "incident.h",
-    "priority_queue_of_unique_ptr.h",
-    "safe_clone.h",
-    "thread_aware_shared_ptr.h",
-    "threadsafe_callback_joiner.cc",
-    "threadsafe_callback_joiner.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-test("tests") {
-  output_name = "media_util_tests"
-
-  sources = [
-    "test/incident_test.cc",
-    "test/priority_queue_of_unique_ptr_test.cc",
-  ]
-
-  deps = [
-    ":util",
-    "//third_party/googletest:gtest_main",
   ]
 }

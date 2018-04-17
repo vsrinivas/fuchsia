@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+source_set("util") {
+  sources = [
+    "callback_joiner.cc",
+    "callback_joiner.h",
+    "incident.cc",
+    "incident.h",
+    "safe_clone.h",
+    "threadsafe_callback_joiner.cc",
+    "threadsafe_callback_joiner.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test("tests") {
+  output_name = "media_util_tests"
+
+  sources = [
+    "test/incident_test.cc",
+  ]
+
+  deps = [
+    ":util",
+    "//third_party/googletest:gtest_main",
+  ]
+}

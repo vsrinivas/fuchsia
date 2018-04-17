@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_
+#define GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_
 
 #include <functional>
 #include <vector>
@@ -60,3 +61,5 @@ class FidlPublisher {
 };
 
 }  // namespace media
+
+#endif  // GARNET_BIN_MEDIA_UTIL_FIDL_PUBLISHER_H_

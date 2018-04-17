@@ -17,6 +17,7 @@ executable("bin") {
   output_name = "net_media_service"
 
   sources = [
+    "factory_service_base.h",
     "main.cc",
     "media_player_messages.cc",
     "media_player_messages.h",
@@ -32,7 +33,6 @@ executable("bin") {
 
   deps = [
     ":serialization",
-    "//garnet/bin/media/media_player",
     "//garnet/bin/media/util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fidl/cpp",

@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("render") {
+  sources = [
+    "audio_renderer.h",
+    "fidl_audio_renderer.cc",
+    "fidl_audio_renderer.h",
+    "fidl_video_renderer.cc",
+    "fidl_video_renderer.h",
+    "renderer.cc",
+    "renderer.h",
+    "video_renderer.h",
+  ]
+
+  deps = [
+    ":video_converter",
+    "//garnet/bin/media/media_player/fidl",
+    "//garnet/bin/media/media_player/framework",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/media/transport",
+    "//garnet/public/lib/ui/view_framework",
+  ]
+}
+
+config("optimize_video_converter") {
+  cflags = [ "-O3" ]
+}
+
+source_set("video_converter") {
+  sources = [
+    "video_converter.cc",
+    "video_converter.h",
+  ]
+
+  deps = [
+    "//garnet/bin/media/media_player/framework",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/fidl",
+    "//garnet/public/lib/ui/geometry/cpp",
+    "//zircon/public/lib/trace",
+  ]
+
+  configs += [ ":optimize_video_converter" ]
+}

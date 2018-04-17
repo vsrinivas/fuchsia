@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_
 
 #include <memory>
 #include <queue>
@@ -13,13 +14,13 @@
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 
-namespace media {
+namespace media_player {
 
 // Implements MediaRenderer for testing.
-class FakeRenderer : public MediaPacketConsumerBase,
-                     public MediaRenderer,
-                     public MediaTimelineControlPoint,
-                     public TimelineConsumer {
+class FakeRenderer : public media::MediaPacketConsumerBase,
+                     public media::MediaRenderer,
+                     public media::MediaTimelineControlPoint,
+                     public media::TimelineConsumer {
  public:
   class PacketInfo {
    public:
@@ -67,13 +68,14 @@ class FakeRenderer : public MediaPacketConsumerBase,
   // MediaRenderer implementation.
   void GetSupportedMediaTypes(GetSupportedMediaTypesCallback callback) override;
 
-  void SetMediaType(MediaType media_type) override;
+  void SetMediaType(media::MediaType media_type) override;
 
-  void GetPacketConsumer(fidl::InterfaceRequest<MediaPacketConsumer>
+  void GetPacketConsumer(fidl::InterfaceRequest<media::MediaPacketConsumer>
                              packet_consumer_request) override;
 
-  void GetTimelineControlPoint(fidl::InterfaceRequest<MediaTimelineControlPoint>
-                                   control_point_request) override;
+  void GetTimelineControlPoint(
+      fidl::InterfaceRequest<media::MediaTimelineControlPoint>
+          control_point_request) override;
 
   // MediaPacketConsumerBase overrides.
   void OnPacketSupplied(
@@ -97,11 +99,11 @@ class FakeRenderer : public MediaPacketConsumerBase,
   void Prime(PrimeCallback callback) override;
 
   // TimelineConsumer implementation.
-  void SetTimelineTransform(TimelineTransform timeline_transform,
+  void SetTimelineTransform(media::TimelineTransform timeline_transform,
                             SetTimelineTransformCallback callback) override;
 
   void SetTimelineTransformNoReply(
-      TimelineTransform timeline_transform) override;
+      media::TimelineTransform timeline_transform) override;
 
   // Clears the pending timeline function and calls its associated callback
   // with the indicated completed status.
@@ -121,19 +123,21 @@ class FakeRenderer : public MediaPacketConsumerBase,
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  fidl::Binding<MediaRenderer> renderer_binding_;
-  fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
-  fidl::Binding<TimelineConsumer> timeline_consumer_binding_;
+  fidl::Binding<media::MediaRenderer> renderer_binding_;
+  fidl::Binding<media::MediaTimelineControlPoint> control_point_binding_;
+  fidl::Binding<media::TimelineConsumer> timeline_consumer_binding_;
   std::queue<std::unique_ptr<SuppliedPacket>> packet_queue_;
-  TimelineFunction current_timeline_function_;
-  TimelineFunction pending_timeline_function_;
+  media::TimelineFunction current_timeline_function_;
+  media::TimelineFunction pending_timeline_function_;
   SetTimelineTransformCallback set_timeline_transform_callback_;
   bool end_of_stream_ = false;
   uint64_t status_version_ = 1u;
   std::vector<GetStatusCallback> pending_status_callbacks_;
-  TimelineRate pts_rate_;
+  media::TimelineRate pts_rate_;
 
   bool expected_ = true;
 };
 
-}  // namespace media
+}  // namespace media_player
+
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_TEST_FAKE_RENDERER_H_

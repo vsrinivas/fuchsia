@@ -9,10 +9,10 @@
 
 #include <fuchsia/cpp/media.h>
 
-#include "garnet/bin/media/demux/reader.h"
-#include "garnet/bin/media/player/player.h"
-#include "garnet/bin/media/render/fidl_audio_renderer.h"
-#include "garnet/bin/media/render/fidl_video_renderer.h"
+#include "garnet/bin/media/media_player/demux/reader.h"
+#include "garnet/bin/media/media_player/player/player.h"
+#include "garnet/bin/media/media_player/render/fidl_audio_renderer.h"
+#include "garnet/bin/media/media_player/render/fidl_video_renderer.h"
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -81,7 +81,7 @@ class MediaPlayerImpl : public MediaPlayer {
   void SetReader(std::shared_ptr<Reader> reader);
 
   // Creates the renderer for |medium| if it doesn't exist already.
-  void MaybeCreateRenderer(media::StreamType::Medium medium);
+  void MaybeCreateRenderer(StreamType::Medium medium);
 
   // Creates sinks as needed and connects enabled streams.
   void ConnectSinks();
@@ -116,12 +116,12 @@ class MediaPlayerImpl : public MediaPlayer {
   State target_state_ = State::kFlushed;
 
   // The position we want to seek to (because the client called Seek) or
-  // kUnspecifiedTime, which indicates there's no desire to seek.
+  // media::kUnspecifiedTime, which indicates there's no desire to seek.
   int64_t target_position_ = media::kUnspecifiedTime;
 
   // The subject time to be used for SetTimelineFunction. The value is
-  // kUnspecifiedTime if there's no need to seek or the position we want to
-  // seek to if there is.
+  // media::kUnspecifiedTime if there's no need to seek or the position we want
+  // to seek to if there is.
   int64_t transform_subject_time_ = media::kUnspecifiedTime;
 
   // The minimum program range PTS to be used for SetProgramRange.
