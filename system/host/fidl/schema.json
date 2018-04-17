@@ -502,7 +502,7 @@
                 }
             }
         },
-        "attribute-list": {
+        "attributes-list": {
             "type": "array",
             "items": {
                 "$ref": "#/definitions/attribute"
