@@ -40,11 +40,10 @@ KERNEL_DEFINES += \
 	ARM_ISA_ARMV8=1 \
 	ARM_ISA_ARMV8A=1
 
-# unless otherwise specified, limit to 2 clusters and 8 CPUs per cluster
-SMP_CPU_MAX_CLUSTERS ?= 2
-SMP_CPU_MAX_CLUSTER_CPUS ?= 8
-
 SMP_MAX_CPUS ?= 16
+
+SMP_CPU_MAX_CLUSTERS ?= 2
+SMP_CPU_MAX_CLUSTER_CPUS ?= $(SMP_MAX_CPUS)
 
 MODULE_SRCS += \
 	$(LOCAL_DIR)/mp.cpp
