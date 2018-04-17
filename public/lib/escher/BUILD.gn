@@ -62,6 +62,7 @@ source_set("escher") {
   ]
 
   deps = [
+    "//third_party/shaderc/libshaderc",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
@@ -83,6 +84,8 @@ source_set("escher") {
     "escher_process_init.cc",
     "escher_process_init.h",
     "forward_declarations.h",
+    "fs/hack_filesystem.h",
+    "fs/hack_filesystem.cc",
     "geometry/bounding_box.cc",
     "geometry/bounding_box.h",
     "geometry/quad.cc",
@@ -266,6 +269,10 @@ source_set("escher") {
     "vk/naive_gpu_allocator.h",
     "vk/render_pass.cc",
     "vk/render_pass.h",
+    "vk/shader_module.cc",
+    "vk/shader_module.h",
+    "vk/shader_module_template.cc",
+    "vk/shader_module_template.h",
     "vk/simple_image_factory.cc",
     "vk/simple_image_factory.h",
     "vk/texture.cc",
@@ -275,6 +282,7 @@ source_set("escher") {
     "vk/vulkan_device_queues.h",
     "vk/vulkan_instance.cc",
     "vk/vulkan_instance.h",
+    "vk/vulkan_limits.h",
     "vk/vulkan_swapchain.h",
     "vk/vulkan_swapchain_helper.cc",
     "vk/vulkan_swapchain_helper.h",

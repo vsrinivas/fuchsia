@@ -80,6 +80,7 @@ class Escher : public MeshBuilderFactory {
     return command_buffer_sequencer_.get();
   }
   impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
+  shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
   impl::ImageCache* image_cache() { return image_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
 
@@ -110,6 +111,7 @@ class Escher : public MeshBuilderFactory {
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
+  std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
   std::unique_ptr<impl::ImageCache> image_cache_;
 
   std::unique_ptr<impl::GpuUploader> gpu_uploader_;

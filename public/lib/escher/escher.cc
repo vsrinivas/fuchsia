@@ -15,6 +15,7 @@
 #include "lib/escher/vk/gpu_allocator.h"
 #include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/vk/texture.h"
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
 
@@ -79,6 +80,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
           NewTransferCommandBufferPool(vulkan_context_,
                                        command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
+      shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
       image_cache_(std::make_unique<impl::ImageCache>(this, gpu_allocator())),
       gpu_uploader_(NewGpuUploader(this,
                                    command_buffer_pool(),

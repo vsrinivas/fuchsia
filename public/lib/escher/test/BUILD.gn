@@ -22,6 +22,7 @@ executable("escher_unittests") {
     "util/hashable_unittest.cc",
     "util/hashmap_unittest.cc",
     "vk/buffer_unittest.cc",
+    "vk/shader_module_template_unittest.cc",
   ]
 
   if (is_fuchsia) {
@@ -40,6 +41,7 @@ executable("escher_unittests") {
     ":gtest_escher",
     "base:base_unittests",
     "//garnet/public/lib/fxl",
+    "//third_party/shaderc/libshaderc",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
