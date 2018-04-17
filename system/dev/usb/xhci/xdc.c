@@ -325,6 +325,9 @@ static int xdc_start_thread(void* arg) {
 }
 
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
+#if !defined(__x86_64__)
+    return ZX_ERR_NOT_SUPPORTED;
+#endif
     xdc_t* xdc = calloc(1, sizeof(xdc_t));
     if (!xdc) {
         return ZX_ERR_NO_MEMORY;
