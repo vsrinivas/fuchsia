@@ -14,22 +14,22 @@ The async package consists of three libraries:
 
 - `libasync.a` provides the C client API which includes all of the function
 and structures declared in the following headers:
-    - [async/dispatcher.h](include/async/dispatcher.h)
-    - [async/receiver.h](include/async/receiver.h)
-    - [async/task.h](include/async/task.h)
-    - [async/time.h](include/async/time.h)
-    - [async/trap.h](include/async/trap.h)
-    - [async/wait.h](include/async/wait.h)
+    - [async/dispatcher.h](include/lib/async/dispatcher.h)
+    - [async/receiver.h](include/lib/async/receiver.h)
+    - [async/task.h](include/lib/async/task.h)
+    - [async/time.h](include/lib/async/time.h)
+    - [async/trap.h](include/lib/async/trap.h)
+    - [async/wait.h](include/lib/async/wait.h)
 
 - `libasync-cpp.a` provides C++ wrappers:
-    - [async/cpp/receiver.h](include/async/cpp/receiver.h)
-    - [async/cpp/task.h](include/async/cpp/task.h)
-    - [async/cpp/time.h](include/async/cpp/time.h)
-    - [async/cpp/trap.h](include/async/cpp/trap.h)
-    - [async/cpp/wait.h](include/async/cpp/wait.h)
+    - [async/cpp/receiver.h](include/lib/async/cpp/receiver.h)
+    - [async/cpp/task.h](include/lib/async/cpp/task.h)
+    - [async/cpp/time.h](include/lib/async/cpp/time.h)
+    - [async/cpp/trap.h](include/lib/async/cpp/trap.h)
+    - [async/cpp/wait.h](include/lib/async/cpp/wait.h)
 
 - `libasync-default.so` provides functions for getting or setting a thread-local
-default asynchronous dispatcher as declared in [async/default.h](include/async/default.h).
+default asynchronous dispatcher as declared in [async/default.h](include/lib/async/default.h).
 
 See also [libasync-loop.a](../async-loop/README.md) which provides a general-purpose
 implementation of `async_t`.
@@ -49,7 +49,7 @@ The client is responsible for ensuring that the wait structure remains in
 memory until the wait's handler runs or the wait is successfully canceled using
 `async_cancel_wait()`.
 
-See [async/wait.h](include/async/wait.h) for details.
+See [async/wait.h](include/lib/async/wait.h) for details.
 
 ```c
 #include <lib/async/wait.h>     // for async_begin_wait()
@@ -81,7 +81,7 @@ time base instead.
 To make unit testing easier, prefer using `async_now()` to get the current
 time according the dispatcher's time base.
 
-See [async/time.h](include/async/time.h) for details.
+See [async/time.h](include/lib/async/time.h) for details.
 
 ### Posting tasks and getting the current time
 
@@ -96,7 +96,7 @@ The client is responsible for ensuring that the task structure remains in
 memory until the task's handler runs or the task is successfully canceled using
 `async_cancel_task()`.
 
-See [async/task.h](include/async/task.h) for details.
+See [async/task.h](include/lib/async/task.h) for details.
 
 ```c
 #include <lib/async/task.h>     // for async_post_task()
@@ -137,7 +137,7 @@ on a thread of the dispatcher's choosing depending on its implementation.
 The client is responsible for ensuring that the receiver structure remains in
 memory until all queued packets have been delivered.
 
-See [async/receiver.h](include/async/receiver.h) for details.
+See [async/receiver.h](include/lib/async/receiver.h) for details.
 
 ```c
 #include <lib/async/receiver.h>  // for async_queue_packet()
@@ -176,7 +176,7 @@ by calling `async_get_default()`, which is used by many libraries.
 Message loop implementations should register themselves as the default
 dispatcher any threads they service.
 
-See [async/default.h](include/async/default.h) for details.
+See [async/default.h](include/lib/async/default.h) for details.
 
 ## Using the C++ helpers
 
@@ -196,4 +196,4 @@ integrate clients of this library with your own dispatcher.
 It is possible to implement only some of the operations but this may cause
 incompatibilities with certain clients.
 
-See [async/dispatcher.h](include/async/dispatcher.h) for details.
+See [async/dispatcher.h](include/lib/async/dispatcher.h) for details.
