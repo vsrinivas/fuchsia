@@ -71,15 +71,24 @@ void Console::Output(const Err& err) {
 
 Console::Result Console::DispatchInputLine(const std::string& line) {
   Command cmd;
-  Err err = ParseCommand(line, &cmd);
+  Err err;
+  if (line.empty()) {
+    // Repeat the previous command, don't add to history.
+    cmd = previous_command_;
+  } else {
+    line_input_.AddToHistory(line);
+    err = ParseCommand(line, &cmd);
+  }
 
   if (err.ok()) {
     if (cmd.verb() == Verb::kQuit) {
       return Result::kQuit;
     } else {
       err = context_.FillOutCommand(&cmd);
-      if (!err.has_error())
+      if (!err.has_error()) {
         err = DispatchCommand(&context_, cmd);
+        previous_command_ = cmd;
+      }
     }
   }
 

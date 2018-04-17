@@ -54,7 +54,11 @@ size_t GetTerminalMaxCols(int fileno) {
 
 }  // namespace
 
-LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {}
+LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {
+  // Start with a blank item at [0] which is where editing will take place.
+  history_.emplace_front();
+}
+
 LineInputBase::~LineInputBase() {}
 
 void LineInputBase::BeginReadLine() {
@@ -64,7 +68,6 @@ void LineInputBase::BeginReadLine() {
   pos_ = 0;
   history_index_ = 0;
   completion_mode_ = false;
-  history_.emplace_front();
 
   cur_line() = std::string();
   RepaintLine();
@@ -129,6 +132,16 @@ bool LineInputBase::OnInput(char c) {
       break;
   }
   return false;
+}
+
+void LineInputBase::AddToHistory(const std::string& line) {
+  if (history_.size() == max_history_)
+    history_.pop_back();
+
+  // Editing takes place at history_[0], so this replaces it and pushes
+  // everything else back with a new blank line to edit.
+  history_[0] = line;
+  history_.emplace_front();
 }
 
 void LineInputBase::Hide() {

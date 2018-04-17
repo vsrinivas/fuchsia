@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/line_input.h"
 #include "garnet/lib/debug_ipc/helper/fd_watcher.h"
@@ -49,6 +50,7 @@ class Console : public debug_ipc::FDWatcher {
   debug_ipc::MessageLoop::WatchHandle stdio_watch_;
 
   LineInputStdout line_input_;
+  Command previous_command_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Console);
 };

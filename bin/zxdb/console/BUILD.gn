@@ -37,9 +37,7 @@ static_library("console") {
     "//garnet/public/lib/fxl",
   ]
 
-  if (current_toolchain == host_toolchain) {
-    # TODO(brettw) add main loop for Posix host systems.
-  } else {
+  if (current_toolchain != host_toolchain) {
     deps += [
       "//garnet/public/lib/fxl",
       "//zircon/public/lib/fdio",

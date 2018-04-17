@@ -20,7 +20,8 @@ namespace zxdb {
 //  1. Call BeginReadLine().
 //  2. Push data to it via OnInput() until it returns true.
 //  3. Get the input from line().
-//  4. Repeat.
+//  4. Add line to history if desired.
+//  5. Repeat.
 class LineInputBase {
  public:
   // Given some typing, returns a prioritized list of completions.
@@ -51,6 +52,12 @@ class LineInputBase {
   // Provides one character of input to the editor. Returns true if the line
   // is complete (the user has pressed enter).
   bool OnInput(char c);
+
+  // Adds the given line to history. If the history is longer than
+  // max_history_, the oldest thing will be deleted.
+  //
+  // Only valid to be called before BeginReadLine() starts the next line input.
+  void AddToHistory(const std::string& line);
 
   // The input can be hidden and re-shown. Hiding it will erase the current
   // line and put the cursor at the beginning of the line, but not change

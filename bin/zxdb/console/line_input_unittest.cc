@@ -111,10 +111,8 @@ TEST(LineInput, History) {
   TestLineInput input("");
 
   // Make some history.
-  input.BeginReadLine();
-  EXPECT_TRUE(input.OnInputStr("one\n"));
-  input.BeginReadLine();
-  EXPECT_TRUE(input.OnInputStr("two\n"));
+  input.AddToHistory("one");
+  input.AddToHistory("two");
 
   // Go up twice.
   input.BeginReadLine();
@@ -126,6 +124,7 @@ TEST(LineInput, History) {
 
   // Append a letter and accept it.
   input.OnInputStr("s\r");
+  input.AddToHistory(input.line());
 
   // Start editing a new line with some input.
   input.BeginReadLine();
