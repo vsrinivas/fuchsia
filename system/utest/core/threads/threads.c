@@ -83,7 +83,7 @@ static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_
             ASSERT_EQ(packet.type, excp_type, "");
             break;
         } else {
-            ASSERT_EQ(zx_task_resume_from_exception(thread, eport, ZX_RESUME_EXCEPTION), ZX_OK, "");
+            ASSERT_EQ(zx_task_resume_from_exception(thread, eport, 0), ZX_OK, "");
         }
     }
     return true;
@@ -136,6 +136,12 @@ static bool set_debugger_exception_port(zx_handle_t* eport_out) {
                                           ZX_EXCEPTION_PORT_DEBUGGER),
               ZX_OK, "");
     return true;
+}
+
+static void clear_debugger_exception_port(void) {
+    zx_handle_t self = zx_process_self();
+    zx_task_bind_exception_port(self, ZX_HANDLE_INVALID, kExceptionPortKey,
+                                ZX_EXCEPTION_PORT_DEBUGGER);
 }
 
 static bool test_basics(void) {
@@ -635,7 +641,7 @@ static bool test_suspend_multiple(void) {
     // and exception resumption don't interact well and resuming from an
     // exception will resume the thread, even if there is an open suspend
     // token.
-/*
+
     zx_handle_t event;
     zxr_thread_t thread;
     zx_handle_t thread_h;
@@ -649,7 +655,7 @@ static bool test_suspend_multiple(void) {
     zx_handle_t exception_port = ZX_HANDLE_INVALID;
     ASSERT_TRUE(set_debugger_exception_port(&exception_port), "");
     ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK, "");
-    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_port, ZX_EXCP_UNDEFINED_INSTRUCTION,
+    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_port, ZX_EXCP_FATAL_PAGE_FAULT,
                                       ZX_EXCP_THREAD_STARTING), "");
 
     // The thread should now be blocked on a debugger exception.
@@ -677,9 +683,14 @@ static bool test_suspend_multiple(void) {
     ASSERT_EQ(zx_task_resume_from_exception(thread_h, exception_port, 23), ZX_ERR_INVALID_ARGS,
               "");
 
-    // Resume the exception, it should now be in a suspended state (due to the second token).
-    ASSERT_EQ(zx_task_resume_from_exception(thread_h, exception_port, ZX_RESUME_EXCEPTION), ZX_OK,
-              "");
+    // Resume the exception. It should be SUSPENDED now that the exception is complete (one could
+    // argue that it could still be BLOCKED also, but it's not in the current implementation).
+    // The transition to SUSPENDED happens asynchronously unlike some of the exception states.
+    ASSERT_EQ(zx_task_resume_from_exception(thread_h, exception_port, 0), ZX_OK, "");
+    zx_signals_t observed = 0u;
+    ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed),
+              ZX_OK, "");
+
     ASSERT_TRUE(get_thread_info(thread_h, &info), "");
     ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED, "");
 
@@ -689,9 +700,9 @@ static bool test_suspend_multiple(void) {
     ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING || info.state == ZX_THREAD_STATE_BLOCKED, "");
 
     // Clean up.
+    clear_debugger_exception_port();
     ASSERT_EQ(zx_task_kill(thread_h), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");
-*/
     END_TEST;
 }
 
@@ -715,7 +726,7 @@ static bool test_kill_suspended_thread(void) {
 
     // Attach to debugger port so we can see ZX_EXCP_THREAD_EXITING.
     zx_handle_t eport;
-    ASSERT_TRUE(set_debugger_exception_port(&eport),"");
+    ASSERT_TRUE(set_debugger_exception_port(&eport), "");
 
     // Reset the test memory location.
     arg.v = 100;
@@ -731,6 +742,7 @@ static bool test_kill_suspended_thread(void) {
     ASSERT_TRUE(wait_thread_excp_type(thread_h, eport, ZX_EXCP_THREAD_EXITING, 0), "");
 
     // Clean up.
+    clear_debugger_exception_port();
     ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(eport), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");

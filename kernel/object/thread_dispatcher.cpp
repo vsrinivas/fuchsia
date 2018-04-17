@@ -641,26 +641,24 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
 
     LTRACE_ENTRY_OBJ;
 
-    // Note: As far as userspace is concerned there is no state change
-    // that we would notify state tracker observers of, currently.
+    // Note: As far as userspace is concerned there is no state change that we would notify state
+    // tracker observers of, currently.
+    //
+    // Send message, wait for reply. Note that there is a "race" that we need handle: We need to
+    // send the exception report before going to sleep, but what if the receiver of the report gets
+    // it and processes it before we are asleep? This is handled by locking state_lock_ in places
+    // where the handler can see/modify thread state.
+
+    zx_status_t status = eport->SendPacket(this, report->header.type);
+    if (status != ZX_OK) {
+        // Can't send the request to the exception handler. Report the error, which will probably
+        // kill the process.
+        LTRACEF("SendPacket returned %d\n", status);
+        return status;
+    }
 
     {
         AutoLock lock(get_lock());
-
-        // Send message, wait for reply.
-        // Note that there is a "race" that we need handle: We need to send the
-        // exception report before going to sleep, but what if the receiver of the
-        // report gets it and processes it before we are asleep? This is handled by
-        // locking state_lock_ in places where the handler can see/modify
-        // thread state.
-
-        zx_status_t status = eport->SendPacket(this, report->header.type);
-        if (status != ZX_OK) {
-            LTRACEF("SendPacket returned %d\n", status);
-            // Treat the exception as unhandled.
-            *out_estatus = ExceptionStatus::TRY_NEXT;
-            return ZX_OK;
-        }
 
         // Mark that we're in an exception.
         thread_.exception_context = arch_context;
@@ -680,7 +678,6 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // exception response is received (requiring a second resume).
     // Exceptions and suspensions are essentially treated orthogonally.
 
-    zx_status_t status;
     do {
         status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
     } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
