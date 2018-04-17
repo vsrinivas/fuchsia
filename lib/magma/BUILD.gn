@@ -62,7 +62,7 @@ foreach(entry, icd_list) {
     "\"file_format_version\": \"1.0.0\",",
     "\"ICD\": {",
     "\"library_path\": \"$icd_name.so\",",
-    "\"abi_versions\": \"1.0.3\"",
+    "\"api_version\": \"1.0.68\"",
     "}",
     "}",
   ]
