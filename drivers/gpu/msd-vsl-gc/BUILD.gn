@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+VSL_GC_DEVICE_ID = "PDEV_DID_GPU_VSL_GC"
+
+driver_module("msd_vsl") {
+  output_name = "libmsd_vsl"
+  deps = [
+    ":msd_vsl_entry",
+    "src",
+  ]
+}
+
+driver_module("msd_vsl_test") {
+  testonly = true
+  output_name = "libmsd_vsl_test"
+  deps = [
+    ":msd_vsl_test_entry",
+    "src",
+  ]
+}
+
+magma_pdev_entry("msd_vsl_entry") {
+  pdev_device_id = VSL_GC_DEVICE_ID
+}
+
+magma_pdev_entry("msd_vsl_test_entry") {
+  pdev_device_id = VSL_GC_DEVICE_ID
+  test_entry = true
+}
+
+group("tests") {
+  testonly = true
+}

@@ -1,0 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+source_set("src") {
+  public_deps = [
+    "//garnet/lib/magma/include:msd_abi",
+  ]
+  sources = [
+    "msd_vsl_buffer.cc",
+    "msd_vsl_connection.cc",
+    "msd_vsl_device.cc",
+    "msd_vsl_driver.cc",
+    "msd_vsl_semaphore.cc",
+  ]
+  deps = [
+    "//garnet/lib/magma/src/magma_util",
+  ]
+}

@@ -77,6 +77,8 @@ package("magma") {
 
   deps = []
   resources = []
+  drivers = []
+
   if (have_libvulkan) {
     deps += [
       ":libmagma",
@@ -92,7 +94,7 @@ package("magma") {
     if (build_intel_gen) {
       # Remove
       deps += [ "$msd_intel_gen_build_root:msd_intel_core" ]
-      drivers = [
+      drivers += [
         {
           name = "libmsd_intel_core.so"
         },
@@ -119,20 +121,39 @@ package("magma") {
   if (build_msd_arm_mali) {
     if (magma_enable_developer_build) {
       deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
-      drivers = [
+      drivers += [
         {
           name = "libmsd_arm_test.so"
         },
       ]
     } else {
       deps += [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
-      drivers = [
+      drivers += [
         {
           name = "libmsd_arm.so"
         },
       ]
     }
   }
+
+  if (build_msd_vsl_gc) {
+    if (magma_enable_developer_build) {
+      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
+      drivers += [
+        {
+          name = "libmsd_vsl_test.so"
+        },
+      ]
+    } else {
+      deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl" ]
+      drivers += [
+        {
+          name = "libmsd_vsl.so"
+        },
+      ]
+    }
+  }
+
   foreach(entry, icd_list) {
     icd_name = entry.name
     resources += [
