@@ -40,13 +40,17 @@ zx_status_t stub_set_guest_bell_trap(async_t* async, async_guest_bell_trap_t* tr
 }
 
 const async_ops_t g_stub_ops = {
-    .now = stub_now,
-    .begin_wait = stub_begin_wait,
-    .cancel_wait = stub_cancel_wait,
-    .post_task = stub_post_task,
-    .cancel_task = stub_cancel_task,
-    .queue_packet = stub_queue_packet,
-    .set_guest_bell_trap = stub_set_guest_bell_trap,
+    .version = ASYNC_OPS_V1,
+    .reserved = 0,
+    .v1 = {
+        .now = stub_now,
+        .begin_wait = stub_begin_wait,
+        .cancel_wait = stub_cancel_wait,
+        .post_task = stub_post_task,
+        .cancel_task = stub_cancel_task,
+        .queue_packet = stub_queue_packet,
+        .set_guest_bell_trap = stub_set_guest_bell_trap,
+    },
 };
 
 } // namespace

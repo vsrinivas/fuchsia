@@ -33,13 +33,17 @@ static zx_status_t async_loop_set_guest_bell_trap(
     zx_handle_t guest, zx_vaddr_t addr, size_t length);
 
 static const async_ops_t async_loop_ops = {
-    .now = async_loop_now,
-    .begin_wait = async_loop_begin_wait,
-    .cancel_wait = async_loop_cancel_wait,
-    .post_task = async_loop_post_task,
-    .cancel_task = async_loop_cancel_task,
-    .queue_packet = async_loop_queue_packet,
-    .set_guest_bell_trap = async_loop_set_guest_bell_trap,
+    .version = ASYNC_OPS_V1,
+    .reserved = 0,
+    .v1 = {
+        .now = async_loop_now,
+        .begin_wait = async_loop_begin_wait,
+        .cancel_wait = async_loop_cancel_wait,
+        .post_task = async_loop_post_task,
+        .cancel_task = async_loop_cancel_task,
+        .queue_packet = async_loop_queue_packet,
+        .set_guest_bell_trap = async_loop_set_guest_bell_trap,
+    },
 };
 
 typedef struct thread_record {
@@ -556,10 +560,10 @@ static zx_status_t async_loop_set_guest_bell_trap(
                                            length, loop->port, (uintptr_t)trap);
     if (status != ZX_OK) {
         ZX_ASSERT_MSG(status == ZX_ERR_ACCESS_DENIED ||
-                      status == ZX_ERR_ALREADY_EXISTS ||
-                      status == ZX_ERR_INVALID_ARGS ||
-                      status == ZX_ERR_OUT_OF_RANGE ||
-                      status == ZX_ERR_WRONG_TYPE,
+                          status == ZX_ERR_ALREADY_EXISTS ||
+                          status == ZX_ERR_INVALID_ARGS ||
+                          status == ZX_ERR_OUT_OF_RANGE ||
+                          status == ZX_ERR_WRONG_TYPE,
                       "zx_guest_set_trap: status=%d", status);
     }
     return status;
