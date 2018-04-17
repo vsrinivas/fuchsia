@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 #include <ddk/driver.h>
+#include <zircon/pixelformat.h>
 
 #if __cplusplus
 

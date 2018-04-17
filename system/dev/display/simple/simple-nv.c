@@ -1,15 +1,20 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <ddk/binding.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
-#include <hw/pci.h>
+
+#include "simple-display.h"
 
 #define NV_GFX_VID (0x10de)
 
-extern zx_status_t nv_disp_bind(void* ctx, zx_device_t* dev);
+static zx_status_t nv_disp_bind(void* ctx, zx_device_t* dev) {
+    // framebuffer bar seems to be 1
+    return bind_simple_pci_display_bootloader(dev, "nv", 1u);
+}
 
 static zx_driver_ops_t nv_disp_driver_ops = {
     .version = DRIVER_OPS_VERSION,

@@ -4,14 +4,9 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
-MODULE := $(LOCAL_DIR)
+LOCAL_SRCS := $(LOCAL_DIR)/simple-display.cpp \
 
-MODULE_TYPE := driver
-
-MODULE_SRCS := $(LOCAL_DIR)/simple-display.cpp \
-	$(LOCAL_DIR)/simple-bochs.c
-
-MODULE_STATIC_LIBS := \
+LOCAL_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/edid \
@@ -20,6 +15,46 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+LOCAL_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+# bochs driver
+
+MODULE := $(LOCAL_DIR).bochs
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/simple-bochs.c
+
+MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
+
+MODULE_LIBS := $(LOCAL_LIBS)
+
+include make/module.mk
+
+# amd-kaveri driver
+
+MODULE := $(LOCAL_DIR).amd-kaveri
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/simple-amd-kaveri.c
+
+MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
+
+MODULE_LIBS := $(LOCAL_LIBS)
+
+include make/module.mk
+
+# nv driver
+
+MODULE := $(LOCAL_DIR).nv
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/simple-nv.c
+
+MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
+
+MODULE_LIBS := $(LOCAL_LIBS)
 
 include make/module.mk
