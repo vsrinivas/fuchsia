@@ -23,7 +23,7 @@ namespace testing {
 // repository meant to be used for testing, particularly in gtest unittests.
 class LedgerRepositoryForTesting {
  public:
-  explicit LedgerRepositoryForTesting(const std::string& repository_name);
+  LedgerRepositoryForTesting();
   ~LedgerRepositoryForTesting();
 
   ledger_internal::LedgerRepository* ledger_repository();

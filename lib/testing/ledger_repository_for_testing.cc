@@ -8,6 +8,7 @@
 
 #include <fuchsia/cpp/modular.h>
 #include "peridot/lib/common/teardown.h"
+#include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/ledger_client/constants.h"
 
@@ -15,11 +16,9 @@ namespace modular {
 
 namespace testing {
 
-LedgerRepositoryForTesting::LedgerRepositoryForTesting(
-    const std::string& repository_name)
+LedgerRepositoryForTesting::LedgerRepositoryForTesting()
     : application_context_(
-          component::ApplicationContext::CreateFromStartupInfo()),
-      tmp_dir_("/tmp/" + repository_name) {
+          component::ApplicationContext::CreateFromStartupInfo()) {
   AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
   ledger_config.args.push_back(kLedgerNoMinfsWaitFlag);

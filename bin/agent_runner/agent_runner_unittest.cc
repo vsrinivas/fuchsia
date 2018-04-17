@@ -13,6 +13,7 @@
 #include "lib/app/cpp/service_provider_impl.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/tasks/message_loop.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/agent_runner/agent_runner.h"
 #include "peridot/bin/component/message_queue_manager.h"
@@ -36,7 +37,7 @@ class AgentRunnerTest : public TestWithLedger {
     TestWithLedger::SetUp();
 
     mqm_.reset(new MessageQueueManager(
-        ledger_client(), MakePageId("0123456789123456"), "/tmp/test_mq_data"));
+        ledger_client(), MakePageId("0123456789123456"), mq_data_dir_.path()));
     entity_provider_runner_.reset(new EntityProviderRunner(nullptr));
     // The |UserIntelligenceProvider| below must be nullptr in order for agent
     // creation to be synchronous, which these tests assume.
@@ -63,6 +64,7 @@ class AgentRunnerTest : public TestWithLedger {
  private:
   FakeApplicationLauncher launcher_;
 
+  files::ScopedTempDir mq_data_dir_;
   std::unique_ptr<MessageQueueManager> mqm_;
   FakeAgentRunnerStorage agent_runner_storage_;
   std::unique_ptr<EntityProviderRunner> entity_provider_runner_;
