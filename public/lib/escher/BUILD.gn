@@ -37,6 +37,7 @@ config("public_includes") {
 config("public_preprocessor_definitions") {
   defines = [
     "VULKAN_HPP_NO_EXCEPTIONS",
+    "VULKAN_HPP_NO_SMART_HANDLE",
     "GLM_ENABLE_EXPERIMENTAL",
 
     # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]

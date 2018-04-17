@@ -5,8 +5,6 @@
 executable("escher_unittests") {
   testonly = true
 
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
-
   sources = [
     "geometry/bounding_box_unittest.cc",
     "gpu_mem_unittest.cc",
@@ -62,7 +60,9 @@ executable("escher_unittests") {
 source_set("gtest_vulkan") {
   testonly = true
 
-  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  public_configs = [
+    "//garnet/public/lib/escher:public_preprocessor_definitions",
+  ]
 
   public_deps = [
     "//third_party/googletest:gtest",
@@ -73,7 +73,7 @@ source_set("gtest_vulkan") {
   }
 
   if (is_linux) {
-    public_configs = [ "//garnet/public/lib/escher:vulkan_linux" ]
+    public_configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
 
   sources = [
