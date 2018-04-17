@@ -133,5 +133,29 @@ TEST_F(PageCloudImplTest, GetObject) {
   EXPECT_EQ("some_data", read_data);
 }
 
+TEST_F(PageCloudImplTest, GetObjectParseError) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  uint64_t size;
+  zx::socket data;
+  page_cloud_->GetObject(
+      convert::ToArray("some_id"),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
+                        &size, &data));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.get_document_records.size());
+
+  // Create empty response with no data field.
+  google::firestore::v1beta1::Document response;
+  firestore_service_.get_document_records.front().callback(grpc::Status(),
+                                                           response);
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::PARSE_ERROR, status);
+}
+
 }  // namespace
 }  // namespace cloud_provider_firestore
