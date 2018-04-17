@@ -72,24 +72,27 @@ void setup_fs_test(size_t disk_size, fs_test_type_t test_class) {
     }
 
     if (test_class == FS_TEST_FVM) {
+
         int fd = open(test_disk_path, O_RDWR);
         if (fd < 0) {
             fprintf(stderr, "[FAILED]: Could not open test disk\n");
             exit(-1);
-        } else if (fvm_init(fd, TEST_FVM_SLICE_SIZE) != ZX_OK) {
+        }
+        if (fvm_init(fd, TEST_FVM_SLICE_SIZE) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             exit(-1);
-        } else if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
+        }
+        if (ioctl_device_bind(fd, FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)) < 0) {
             fprintf(stderr, "[FAILED]: Could not bind disk to FVM driver\n");
             exit(-1);
-        } else if (wait_for_driver_bind(test_disk_path, "fvm")) {
+        }
+        snprintf(fvm_disk_path, sizeof(fvm_disk_path), "%s/fvm", test_disk_path);
+        if (wait_for_device(fvm_disk_path, ZX_SEC(3)) != ZX_OK) {
             fprintf(stderr, "[FAILED]: FVM driver never appeared at %s\n", test_disk_path);
             exit(-1);
         }
 
         // Open "fvm" driver
-        strcpy(fvm_disk_path, test_disk_path);
-        strcat(fvm_disk_path, "/fvm");
         close(fd);
         int fvm_fd;
         if ((fvm_fd = open(fvm_disk_path, O_RDWR)) < 0) {

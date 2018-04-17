@@ -53,20 +53,8 @@ char* Error(const char* fmt, ...) {
 bool WaitAndOpen(char* path, fbl::unique_fd* out) {
     BEGIN_HELPER;
 
-    // Recursively wait for parent directories to exist
-    char* parent = path;
-    char* sep = strrchr(path, '/');
-    char* child = sep + 1;
-    ASSERT_NONNULL(child);
-    *sep = '\0';
-    ASSERT_GT(strlen(parent), 0);
-    struct stat buf;
-    if (stat(parent, &buf) != 0) {
-        ASSERT_TRUE(WaitAndOpen(parent, nullptr), Error("failed to open %s", parent));
-    }
-    ASSERT_EQ(wait_for_driver_bind(parent, child), 0,
-              Error("failed while waiting to bind %s to %s", child, parent));
-    *sep = '/';
+    ASSERT_EQ(wait_for_device(path, ZX_SEC(3)), ZX_OK,
+              Error("failed while waiting to bind %s", path));
     fbl::unique_fd fd(open(path, O_RDWR));
     ASSERT_TRUE(fd, Error("failed to open %s", path));
     if (out) {

@@ -13,10 +13,11 @@
 
 __BEGIN_CDECLS
 
-// Wait for a "parent" device to have a child "driver" bound.
+// Wait for a device at "path" to become available.
 //
-// Return 0 on success, -1 on error.
-int wait_for_driver_bind(const char* parent, const char* driver);
+// Returns ZX_OK if the device is ready to be opened, or ZX_ERR_TIMED_OUT if
+// the device is not available after "timeout" has elapsed.
+int wait_for_device(const char* path, zx_duration_t timeout);
 
 // Creates a ramdisk  returns the full path to the ramdisk in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.

@@ -113,13 +113,13 @@ bool BlobfsTest::Init() {
                   "[FAILED]: Could not format disk with FVM");
         ASSERT_GE(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0,
                   "[FAILED]: Could not bind disk to FVM driver");
-        ASSERT_EQ(wait_for_driver_bind(ramdisk_path_, "fvm"), 0,
+
+        snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", ramdisk_path_);
+        ASSERT_EQ(wait_for_device(fvm_path_, ZX_SEC(3)), ZX_OK,
                   "[FAILED]: FVM driver never appeared");
         fd.reset();
 
         // Open "fvm" driver.
-        strcpy(fvm_path_, ramdisk_path_);
-        strcat(fvm_path_, "/fvm");
         fbl::unique_fd fvm_fd(open(fvm_path_, O_RDWR));
         ASSERT_GE(fvm_fd.get(), 0, "[FAILED]: Could not open FVM driver");
 

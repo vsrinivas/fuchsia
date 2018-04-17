@@ -270,12 +270,13 @@ fbl::unique_fd fvm_find_or_format(size_t slice_size) {
         return fbl::unique_fd();
     }
 
-    if (wait_for_driver_bind(path, "fvm")) {
+    char fvm_path[PATH_MAX];
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
+    if (wait_for_device(fvm_path, ZX_SEC(3)) != ZX_OK) {
         ERROR("Error waiting for fvm driver to bind\n");
         return fbl::unique_fd();
     }
-    strcat(path, "/fvm");
-    return fbl::unique_fd(open(path, O_RDWR));
+    return fbl::unique_fd(open(fvm_path, O_RDWR));
 }
 
 // Returns |ZX_OK| if |part_fd| is a child of |fvm_fd|.

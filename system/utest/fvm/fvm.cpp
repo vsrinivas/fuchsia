@@ -86,12 +86,15 @@ static int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_si
         goto fail;
     }
 
-    if (wait_for_driver_bind(disk_path_out, "fvm")) {
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/fvm", disk_path_out);
+    if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "fvm: Error waiting for fvm driver to bind\n");
         goto fail;
     }
-    strcpy(fvm_driver_out, disk_path_out);
-    strcat(fvm_driver_out, "/fvm");
+
+    // TODO(security): SEC-70.  This may overflow |fvm_driver_out|.
+    strcpy(fvm_driver_out, path);
 
     return 0;
 
@@ -124,13 +127,10 @@ static int FVMRebind(int fvm_fd, char* ramdisk_path, const partition_entry_t* en
     close(ramdisk_fd);
 
     // Wait for the ramdisk to rebind to a block driver
-    char* s = strrchr(ramdisk_path, '/');
-    *s = '\0';
-    if (wait_for_driver_bind(ramdisk_path, "block")) {
+    if (wait_for_device(ramdisk_path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "fvm rebind: Block driver did not rebind to ramdisk\n");
         return -1;
     }
-    *s = '/';
 
     ramdisk_fd = open(ramdisk_path, O_RDWR);
     if (ramdisk_fd < 0) {
@@ -144,33 +144,24 @@ static int FVMRebind(int fvm_fd, char* ramdisk_path, const partition_entry_t* en
         fprintf(stderr, "fvm rebind: Could not bind fvm driver\n");
         return -1;
     }
-    if (wait_for_driver_bind(ramdisk_path, "fvm")) {
+
+    char path[PATH_MAX];
+    snprintf(path, sizeof(path), "%s/fvm", ramdisk_path);
+    if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "fvm rebind: Error waiting for fvm driver to bind\n");
         return -1;
     }
 
-    char path[PATH_MAX];
-    strcpy(path, ramdisk_path);
-    strcat(path, "/fvm");
-
-    size_t path_len = strlen(path);
     for (size_t i = 0; i < entry_count; i++) {
-        char vpart_driver[256];
-        snprintf(vpart_driver, sizeof(vpart_driver), "%s-p-%zu",
-                 entries[i].name, entries[i].number);
-        if (wait_for_driver_bind(path, vpart_driver)) {
-            fprintf(stderr, "Failed to wait for %s / %s\n", path, vpart_driver);
+        snprintf(path, sizeof(path), "%s/fvm/%s-p-%zu/block", ramdisk_path, entries[i].name,
+                 entries[i].number);
+        if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
+            fprintf(stderr, "  Failed to wait for %s\n", path);
             return -1;
         }
-        strcat(path, "/");
-        strcat(path, vpart_driver);
-        if (wait_for_driver_bind(path, "block")) {
-            fprintf(stderr, "  Failed to wait for %s / block\n", path);
-            return -1;
-        }
-        path[path_len] = '\0';
     }
 
+    snprintf(path, sizeof(path), "%s/fvm", ramdisk_path);
     fvm_fd = open(path, O_RDWR);
     if (fvm_fd < 0) {
         fprintf(stderr, "fvm rebind: Failed to open fvm\n");
@@ -502,6 +493,7 @@ static bool TestLarge(void) {
     }
 
     char ramdisk_path[PATH_MAX];
+    char fvm_path[PATH_MAX];
     uint64_t blk_size = 512;
     uint64_t blk_count = 8 * (1 << 20);
     ASSERT_GE(create_ramdisk(blk_size, blk_count, ramdisk_path), 0);
@@ -520,7 +512,8 @@ static bool TestLarge(void) {
     ASSERT_EQ(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0);
     fd.reset();
 
-    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "fvm"), 0);
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", ramdisk_path);
+    ASSERT_EQ(wait_for_device(fvm_path, ZX_SEC(3)), ZX_OK);
     ASSERT_EQ(EndFVMTest(ramdisk_path), 0, "unmounting FVM");
     END_TEST;
 }

@@ -14,14 +14,17 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <fdio/watcher.h>
+#include <lib/zx/time.h>
 #include <zircon/device/block.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <fbl/unique_fd.h>
-#include <fdio/watcher.h>
 
 #include <fs-management/ramdisk.h>
 
@@ -29,29 +32,70 @@
 #define BLOCK_EXTENSION "block"
 
 static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
-    const char* wanted = *reinterpret_cast<const char**>(cookie);
+    char* wanted = static_cast<char*>(cookie);
     if (event == WATCH_EVENT_ADD_FILE && strcmp(fn, wanted) == 0) {
         return ZX_ERR_STOP;
     }
     return ZX_OK;
 }
 
-int wait_for_driver_bind(const char* parent, const char* driver) {
-    DIR* dir;
+static zx_status_t wait_for_device_impl(char* path, const zx::time& deadline) {
+    zx_status_t rc;
 
-    // Create the watcher before calling readdir; this prevents a
-    // race where the driver shows up between readdir + watching.
-    if ((dir = opendir(parent)) == nullptr) {
-        return -1;
+    // Peel off last path segment
+    char* sep = strrchr(path, '/');
+    if (path[0] == '\0' || (!sep)) {
+        fprintf(stderr, "invalid device path '%s'\n", path);
+        return ZX_ERR_BAD_PATH;
+    }
+    char* last = sep + 1;
+
+    *sep = '\0';
+    auto restore_path = fbl::MakeAutoCall([sep] { *sep = '/'; });
+
+    // Recursively check the path up to this point
+    struct stat buf;
+    if (stat(path, &buf) != 0 && (rc = wait_for_device_impl(path, deadline)) != ZX_OK) {
+        fprintf(stderr, "failed to bind '%s': %s\n", path, zx_status_get_string(rc));
+        return rc;
     }
 
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(3));
-    if (fdio_watch_directory(dirfd(dir), driver_watcher_cb, deadline, &driver) != ZX_ERR_STOP) {
-        closedir(dir);
-        return -1;
+    // Early exit if this segment is empty
+    if (last[0] == '\0') {
+        return ZX_OK;
     }
-    closedir(dir);
-    return 0;
+
+    // Open the parent directory
+    DIR* dir = opendir(path);
+    if (!dir) {
+        fprintf(stderr, "unable to open '%s'\n", path);
+        return ZX_ERR_NOT_FOUND;
+    }
+    auto close_dir = fbl::MakeAutoCall([&] { closedir(dir); });
+
+    // Wait for the next path segment to show up
+    rc = fdio_watch_directory(dirfd(dir), driver_watcher_cb, deadline.get(), last);
+    if (rc != ZX_ERR_STOP) {
+        fprintf(stderr, "error when waiting for '%s': %s\n", last, zx_status_get_string(rc));
+        return rc;
+    }
+
+    return ZX_OK;
+}
+
+// TODO(aarongreen): This is more generic than just fs-management, or even block devices.  Move this
+// (and its tests) out of ramdisk and to somewhere else?
+zx_status_t wait_for_device(const char* path, zx_duration_t timeout) {
+    if (!path || timeout == 0) {
+        fprintf(stderr, "invalid args: path='%s', timeout=%" PRIu64 "\n", path, timeout);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Make a mutable copy
+    char tmp[PATH_MAX];
+    snprintf(tmp, sizeof(tmp), "%s", path);
+    zx::time deadline = zx::deadline_after(zx::duration(timeout));
+    return wait_for_device_impl(tmp, deadline);
 }
 
 static int open_ramctl(void) {
@@ -62,28 +106,30 @@ static int open_ramctl(void) {
     return fd;
 }
 
-static int finish_create(ramdisk_ioctl_config_response_t* response,
-                         char *out_path, ssize_t r) {
+static int finish_create(ramdisk_ioctl_config_response_t* response, char* out_path, ssize_t r) {
     if (r < 0) {
         fprintf(stderr, "Could not configure ramdev\n");
         return -1;
     }
     response->name[r] = 0;
 
-    const size_t ramctl_path_len = strlen(RAMCTL_PATH);
-    strcpy(out_path, RAMCTL_PATH);
-    out_path[ramctl_path_len] = '/';
-    strcpy(out_path + ramctl_path_len + 1, response->name);
+    char path[PATH_MAX];
+    auto cleanup = fbl::MakeAutoCall([&path, response]() {
+        snprintf(path, sizeof(path), "%s/%s", RAMCTL_PATH, response->name);
+        destroy_ramdisk(path);
+    });
 
     // The ramdisk should have been created instantly, but it may take
     // a moment for the block device driver to bind to it.
-    if (wait_for_driver_bind(out_path, BLOCK_EXTENSION)) {
+    snprintf(path, sizeof(path), "%s/%s/%s", RAMCTL_PATH, response->name, BLOCK_EXTENSION);
+    if (wait_for_device(path, ZX_SEC(3)) != ZX_OK) {
         fprintf(stderr, "Error waiting for driver\n");
-        destroy_ramdisk(out_path);
         return -1;
     }
-    strcat(out_path, "/" BLOCK_EXTENSION);
 
+    // TODO(security): SEC-70.  This may overflow |out_path|.
+    strcpy(out_path, path);
+    cleanup.cancel();
     return 0;
 }
 

@@ -47,6 +47,41 @@ static int get_ramdisk(uint64_t blk_size, uint64_t blk_count) {
     return fd;
 }
 
+static bool ramdisk_test_wait_for_device(void) {
+    BEGIN_TEST;
+
+    EXPECT_EQ(wait_for_device("/", ZX_SEC(1)), ZX_ERR_BAD_PATH);
+
+    char path[PATH_MAX];
+    char mod[PATH_MAX];
+    if (create_ramdisk(512, 64, path)) {
+        return -1;
+    }
+
+    // Null path/zero timeout
+    EXPECT_EQ(wait_for_device(path, 0), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(wait_for_device(nullptr, ZX_SEC(1)), ZX_ERR_INVALID_ARGS);
+
+    // Trailing slash
+    snprintf(mod, sizeof(mod), "%s/", path);
+    EXPECT_EQ(wait_for_device(mod, ZX_SEC(1)), ZX_OK);
+
+    // Repeated slashes/empty path segment
+    char* sep = strrchr(path, '/');
+    ASSERT_NONNULL(sep);
+    size_t off = sep - path;
+    snprintf(&mod[off], sizeof(mod) - off, "/%s", sep);
+    printf("%s\n", mod);
+    EXPECT_EQ(wait_for_device(mod, ZX_SEC(1)), ZX_OK);
+
+    // Valid
+    EXPECT_EQ(wait_for_device(path, ZX_SEC(1)), ZX_OK);
+
+    ASSERT_GE(destroy_ramdisk(path), 0, "Could not destroy ramdisk device");
+
+    END_TEST;
+}
+
 static bool ramdisk_test_simple(void) {
     uint8_t buf[PAGE_SIZE];
     uint8_t out[PAGE_SIZE];
@@ -204,12 +239,7 @@ static bool ramdisk_test_rebind(void) {
 
     // Rebind the ramdisk driver
     ASSERT_EQ(ioctl_block_rr_part(fd), 0);
-    // Ensure that the block driver rebinds too.
-    char *path_end = strrchr(ramdisk_path, '/');
-    ASSERT_EQ(strcmp(path_end, "/block"), 0);
-    *path_end = '\0';
-    printf("ramdisk_test: [%s] waiting for child [%s]\n", ramdisk_path, "block");
-    ASSERT_EQ(wait_for_driver_bind(ramdisk_path, "block"), 0);
+    ASSERT_EQ(wait_for_device(ramdisk_path, ZX_SEC(3)), ZX_OK);
 
     ASSERT_GE(ioctl_ramdisk_unlink(fd), 0, "Could not unlink ramdisk device");
     ASSERT_EQ(close(fd), 0, "Could not close ramdisk device");
@@ -1405,6 +1435,7 @@ bool ramdisk_test_fifo_sleep_deferred(void) {
 }
 
 BEGIN_TEST_CASE(ramdisk_tests)
+RUN_TEST_SMALL(ramdisk_test_wait_for_device)
 RUN_TEST_SMALL(ramdisk_test_simple)
 RUN_TEST_SMALL(ramdisk_test_vmo)
 RUN_TEST_SMALL(ramdisk_test_filesystem)
