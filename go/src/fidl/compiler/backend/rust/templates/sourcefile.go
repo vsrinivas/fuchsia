@@ -14,6 +14,7 @@ extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 #[macro_use]
 extern crate fidl;
+#[macro_use]
 extern crate futures;
 {{ range $crate := .ExternCrates -}}
 extern crate {{ $crate }};

@@ -172,8 +172,6 @@ var reservedWords = map[string]bool{
 	"fidl":       true,
 	"futures":    true,
 	"zx":         true,
-	"response":   true,
-	"controller": true,
 	"async":      true,
 }
 
@@ -182,6 +180,7 @@ var reservedSuffixes = []string{
 	"Marker",
 	"Proxy",
 	"ProxyInterface",
+	"ControlHandle",
 	"Responder",
 	"Server",
 }

@@ -362,6 +362,7 @@ dependencies = [
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "parking_lot 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -17,11 +17,24 @@ use encoding2::{
 use futures::future::{self, Either, FutureResult, AndThen};
 use futures::prelude::*;
 use futures::task::Waker;
+use parking_lot::Mutex;
 use slab::Slab;
+use std::collections::VecDeque;
 use std::mem;
-use std::sync::{Arc, Mutex};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use self::zx::MessageBuf;
+
+/// Decode a new value of a decodable type from a transaction.
+fn decode_transaction_body<D: Decodable>(mut buf: zx::MessageBuf) -> Result<D, Error> {
+    let (bytes, handles) = buf.split_mut();
+    let header_len = <TransactionHeader as Decodable>::inline_size();
+    if bytes.len() < header_len { return Err(Error::OutOfRange); }
+    let (_header_bytes, body_bytes) = bytes.split_at(header_len);
+
+    let mut output = D::new_empty();
+    Decoder::decode_into(body_bytes, handles, &mut output)?;
+    Ok(output)
+}
 
 /// A FIDL client which can be used to send buffers and receive responses via a channel.
 #[derive(Debug, Clone)]
@@ -38,17 +51,6 @@ pub type QueryResponseFut<D> =
         RawQueryResponseFut,
         Result<D, Error>,
         fn(MessageBuf) -> Result<D, Error>>;
-
-fn decode_from_messagebuf<D: Decodable>(mut buf: MessageBuf) -> Result<D, Error> {
-    let (bytes, handles) = buf.split_mut();
-    let header_len = <TransactionHeader as Decodable>::inline_size();
-    if bytes.len() < header_len { return Err(Error::OutOfRange); }
-    let (_header_bytes, body_bytes) = bytes.split_at(header_len);
-
-    let mut output = D::new_empty();
-    Decoder::decode_into(body_bytes, handles, &mut output)?;
-    Ok(output)
-}
 
 /// A FIDL transaction id. Will not be zero for a message that includes a response.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -77,19 +79,36 @@ impl Txid {
     }
 }
 
-fn response_header_tx_id(buf: &[u8]) -> Result<Txid, Error> {
-    decode_transaction_header(buf).map(|(header, _bytes)| Txid(header.tx_id))
-}
-
 impl Client {
     /// Create a new client.
+    ///
+    /// `channel` is the asynchronous channel over which data is sent and received.
+    /// `event_ordinals` are the ordinals on which events will be received.
     pub fn new(channel: async::Channel) -> Client {
         Client {
             inner: Arc::new(ClientInner {
                 channel: channel,
-                received_messages_count: AtomicUsize::new(0),
-                message_interests: Mutex::new(Slab::new()),
+                message_interests: Mutex::new(Slab::<MessageInterest>::new()),
+                event_channel: Mutex::<EventChannel>::default(),
             })
+        }
+    }
+
+    /// Retrieve the stream of event messages for the `Client`.
+    /// Panics if the stream was already taken.
+    pub fn take_event_receiver(&self) -> EventReceiver {
+        {
+            let mut lock = self.inner.event_channel.lock();
+
+            if let EventListener::None = lock.listener {
+                lock.listener = EventListener::New;
+            } else {
+                panic!("Event stream was already taken");
+            }
+        }
+
+        EventReceiver {
+            inner: self.inner.clone(),
         }
     }
 
@@ -126,7 +145,7 @@ impl Client {
             Ok((buf, handles))
         });
 
-        res_fut.and_then(decode_from_messagebuf::<D>)
+        res_fut.and_then(decode_transaction_body::<D>)
     }
 
     /// Send a raw message without expecting a response.
@@ -151,7 +170,6 @@ impl Client {
         MessageResponse {
             id: Txid::from_interest_id(id),
             client: Some(self.inner.clone()),
-            last_registered_waker: None,
         }.right()
     }
 }
@@ -163,7 +181,6 @@ pub struct MessageResponse {
     id: Txid,
     // `None` if the message response has been recieved
     client: Option<Arc<ClientInner>>,
-    last_registered_waker: Option<Waker>,
 }
 
 impl Future for MessageResponse {
@@ -174,24 +191,14 @@ impl Future for MessageResponse {
         {
             let client = self.client.as_ref().ok_or(Error::PollAfterCompletion)?;
 
-            let current_waker_is_registered =
-                self.last_registered_waker
-                    .as_ref()
-                    // TODO: re-enable when "PartialEq for Waker" is resolved
-                    .map_or(false, |_waker| false/*task.will_notify_current()*/);
-
-            if !current_waker_is_registered {
-                let waker = cx.waker();
-                res = client.poll_recv(self.id, Some(&waker), cx);
-                self.last_registered_waker = Some(waker);
-            } else {
-                res = client.poll_recv(self.id, None, cx);
-            }
+            res = client.poll_recv_msg_response(self.id, cx);
         }
 
         // Drop the client reference if the response has been received
         if let Ok(Async::Ready(_)) = res {
-            self.client.take();
+            let client = self.client.take()
+                .expect("MessageResponse polled after completion");
+            client.wake_any();
         }
 
         res
@@ -201,7 +208,8 @@ impl Future for MessageResponse {
 impl Drop for MessageResponse {
     fn drop(&mut self) {
         if let Some(client) = &self.client {
-            client.deregister_msg_interest(InterestId::from_txid(self.id))
+            client.deregister_msg_interest(InterestId::from_txid(self.id));
+            client.wake_any();
         }
     }
 }
@@ -241,14 +249,59 @@ impl MessageInterest {
     }
 }
 
+/// A stream of events as `MessageBuf`s.
+#[derive(Debug)]
+pub struct EventReceiver {
+    inner: Arc<ClientInner>,
+}
+
+impl Stream for EventReceiver {
+    type Item = MessageBuf;
+    type Error = Error;
+
+    fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
+        match self.inner.poll_recv_event(cx) {
+            Ok(Async::Ready(x)) => Ok(Async::Ready(Some(x))),
+            Ok(Async::Pending) => Ok(Async::Pending),
+            Err(Error::ClientRead(zx::Status::PEER_CLOSED)) => {
+                Ok(Async::Ready(None))
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Drop for EventReceiver {
+    fn drop(&mut self) {
+        self.inner.event_channel.lock().listener = EventListener::None;
+        self.inner.wake_any();
+    }
+}
+
+#[derive(Debug, Default)]
+struct EventChannel {
+    listener: EventListener,
+    queue: VecDeque<MessageBuf>,
+}
+
+#[derive(Debug)]
+enum EventListener {
+    /// No one is listening for the event
+    None,
+    /// Someone is listening for the event but has not yet polled
+    New,
+    /// Someone is listening for the event and can be woken via the `Waker`
+    Some(Waker),
+}
+
+impl Default for EventListener {
+    fn default() -> Self { EventListener::None }
+}
+
 /// A shared client channel which tracks EXPECTED and received responses
 #[derive(Debug)]
 struct ClientInner {
     channel: async::Channel,
-
-    /// The number of `Some` entries in `message_interests`.
-    /// This is used to prevent unnecessary locking.
-    received_messages_count: AtomicUsize,
 
     /// A map of message interests to either `None` (no message received yet)
     /// or `Some(DecodeBuf)` when a message has been received.
@@ -256,6 +309,9 @@ struct ClientInner {
     /// by either receiving a message via a call to `poll_recv` or manually
     /// deregistering with `deregister_msg_interest`
     message_interests: Mutex<Slab<MessageInterest>>,
+
+    /// A queue of received events and a waker for the task to receive them.
+    event_channel: Mutex<EventChannel>,
 }
 
 impl ClientInner {
@@ -266,102 +322,147 @@ impl ClientInner {
     fn register_msg_interest(&self) -> InterestId {
         // TODO(cramertj) use `try_from` here and assert that the conversion from
         // `usize` to `u32` hasn't overflowed.
-        InterestId(self.message_interests.lock().unwrap().insert(
+        InterestId(self.message_interests.lock().insert(
             MessageInterest::WillPoll))
     }
 
-    /// Check for receipt of a message with a given ID.
-    fn poll_recv(
+    fn poll_recv_event(
         &self,
-        id: Txid,
-        waker_to_register_opt: Option<&Waker>,
-        cx: &mut task::Context
+        cx: &mut task::Context,
     ) -> Poll<MessageBuf, Error> {
-        // TODO(cramertj) return errors if one has occured _ever_ in poll_recv, not just if
-        // one happens on this call.
-        let txid = id;
-        let interest_id = InterestId::from_txid(txid);
+        let is_closed = self.recv_all(cx)?;
 
-        // Look to see if there are messages available
-        if self.received_messages_count.load(Ordering::Acquire) > 0 {
-            let mut message_interests = self.message_interests.lock().unwrap();
+        let mut lock = self.event_channel.lock();
 
-            // If a message was received for the ID in question,
-            // remove the message interest entry and return the response.
-            if message_interests.get(interest_id.as_raw_id()).expect("Polled unregistered interest").is_received() {
-                let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
-                self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
-                return Ok(Async::Ready(buf));
+        if let Some(msg_buf) = lock.queue.pop_front() {
+            Ok(Async::Ready(msg_buf))
+        } else {
+            lock.listener = EventListener::Some(cx.waker().clone());
+            if is_closed {
+                Err(Error::ClientRead(zx::Status::PEER_CLOSED))
+            } else {
+                Ok(Async::Pending)
             }
         }
+    }
 
-        // Receive messages from the channel until a message with the appropriate ID
-        // is found, or the channel is exhausted.
+    fn poll_recv_msg_response(
+        &self,
+        txid: Txid,
+        cx: &mut task::Context,
+    ) -> Poll<MessageBuf, Error> {
+        let is_closed = self.recv_all(cx)?;
+
+        let mut message_interests = self.message_interests.lock();
+        let interest_id = InterestId::from_txid(txid);
+        if message_interests.get(interest_id.as_raw_id())
+            .expect("Polled unregistered interest")
+            .is_received()
+        {
+            // If, by happy accident, we just raced to getting the result,
+            // then yay! Return success.
+            let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
+            Ok(Async::Ready(buf))
+        } else {
+            // Set the current waker to be notified when a response arrives.
+            *message_interests.get_mut(interest_id.as_raw_id())
+                .expect("Polled unregistered interest") =
+                    MessageInterest::Waiting(cx.waker().clone());
+
+            if is_closed {
+                Err(Error::ClientRead(zx::Status::PEER_CLOSED))
+            } else {
+                Ok(Async::Pending)
+            }
+        }
+    }
+
+    /// Poll for the receipt of any response message or an event.
+    ///
+    /// Returns whether or not the channel is closed.
+    fn recv_all(
+        &self,
+        cx: &mut task::Context,
+    ) -> Result<bool, Error> {
+        // TODO(cramertj) return errors if one has occured _ever_ in recv_all, not just if
+        // one happens on this call.
+
         loop {
             let mut buf = MessageBuf::new();
-            if let Async::Pending =
-                self.channel.recv_from(&mut buf, cx)
-                    .map_err(Error::ClientRead)?
-            {
-                let mut message_interests = self.message_interests.lock().unwrap();
+            // TODO(cramertj) use a custom waker in this `cx` so that futures which are dropped while
+            // registered as the current reader to wake don't cause the client to block until someone
+            // else happens to wake up.
+            match self.channel.recv_from(&mut buf, cx) {
+                Ok(Async::Ready(())) => {}
+                Ok(Async::Pending) => return Ok(false),
+                Err(zx::Status::PEER_CLOSED) => return Ok(true),
+                Err(e) => return Err(Error::ClientRead(e)),
+            }
 
-                if message_interests.get(interest_id.as_raw_id())
-                    .expect("Polled unregistered interst")
-                    .is_received()
+            let (header, _) = decode_transaction_header(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
+            if header.tx_id == 0 { // received an event
+                let mut lock = self.event_channel.lock();
+                lock.queue.push_back(buf);
+                if let EventListener::Some(ref waker) = lock.listener { waker.wake(); }
+            } else { // received a message response
+                let recvd_interest_id = InterestId::from_txid(Txid(header.tx_id));
+
+                // Look for a message interest with the given ID.
+                // If one is found, store the message so that it can be picked up later.
+                let mut message_interests = self.message_interests.lock();
+                let raw_recvd_interest_id = recvd_interest_id.as_raw_id();
+                if let Some(&MessageInterest::Discard) =
+                    message_interests.get(raw_recvd_interest_id)
                 {
-                    // If, by happy accident, we just raced to getting the result,
-                    // then yay! Return success.
-                    let buf = message_interests.remove(interest_id.as_raw_id()).unwrap_received();
-                    self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
-                    return Ok(Async::Ready(buf));
-                } else {
-                    // Set the current waker to be notified when a response arrives.
-                    if let Some(waker_to_register) = waker_to_register_opt {
-                        *message_interests.get_mut(interest_id.as_raw_id())
-                            .expect("Polled unregistered interest") =
-                                MessageInterest::Waiting(waker_to_register.clone());
+                    message_interests.remove(raw_recvd_interest_id);
+                } else if let Some(entry) = message_interests.get_mut(raw_recvd_interest_id) {
+                    let old_entry = mem::replace(entry, MessageInterest::Received(buf));
+                    if let MessageInterest::Waiting(waker) = old_entry {
+                        // Wake up the task to let them know a message has arrived.
+                        waker.wake();
                     }
-                    return Ok(Async::Pending);
-                }
-            }
-
-            // TODO(cramertj) handle control messages (e.g. epitaph)
-            let recvd_txid = response_header_tx_id(buf.bytes()).map_err(|_| Error::InvalidHeader)?;
-            let recvd_interest_id = InterestId::from_txid(recvd_txid);
-
-            // If a message was received for the ID in question,
-            // remove the message interest entry and return the response.
-            if recvd_txid == txid {
-                self.message_interests.lock().unwrap().remove(recvd_interest_id.as_raw_id());
-                return Ok(Async::Ready(buf));
-            }
-
-            // Look for a message interest with the given ID.
-            // If one is found, store the message so that it can be picked up later.
-            let mut message_interests = self.message_interests.lock().unwrap();
-            let raw_recvd_interest_id = recvd_interest_id.as_raw_id();
-            if let Some(&MessageInterest::Discard) =
-                message_interests.get(raw_recvd_interest_id)
-            {
-                message_interests.remove(raw_recvd_interest_id);
-            } else if let Some(entry) = message_interests.get_mut(raw_recvd_interest_id) {
-                let old_entry = mem::replace(entry, MessageInterest::Received(buf));
-                self.received_messages_count.fetch_add(1, Ordering::AcqRel);
-                if let MessageInterest::Waiting(waker) = old_entry {
-                    // Wake up the task to let them know a message has arrived.
-                    waker.wake();
                 }
             }
         }
     }
 
     fn deregister_msg_interest(&self, InterestId(id): InterestId) {
-        let mut lock = self.message_interests.lock().unwrap();
+        let mut lock = self.message_interests.lock();
         if lock[id].is_received() {
-            self.received_messages_count.fetch_sub(1, Ordering::AcqRel);
             lock.remove(id);
         } else {
             lock[id] = MessageInterest::Discard;
+        }
+    }
+
+    // Wakes up an arbitrary task that has begun polling on the channel so that
+    // it will call recv_all and be registered as the new channel reader.
+    fn wake_any(&self) {
+        // Try to wake up message interests first, rather than the event listener.
+        // The event listener is a stream, and so could be between poll_nexts,
+        // blocked on a message interest completing before it begins polling again.
+        // Waking up only the event listener in these cases would cause a deadlock
+        // since the channel wouldn't be read from by the awoken event listener,
+        // so the message interest the event listener was blocked on would never
+        // complete.
+        //
+        // Message interests, however, should always be actively polled once
+        // they've begun being polled on a task.
+        {
+            let lock = self.message_interests.lock();
+            for (_, message_interest) in lock.iter() {
+                if let MessageInterest::Waiting(waker) = message_interest {
+                    waker.wake();
+                    return
+                }
+            }
+        }
+        {
+            let lock = self.event_channel.lock();
+            if let EventListener::Some(waker) = &lock.listener {
+                waker.wake();
+                return;
+            }
         }
     }
 }
@@ -469,5 +570,72 @@ mod tests {
 
         let done = receiver.join(sender.err_into());
         executor.run_singlethreaded(done).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn event_cant_be_taken_twice() {
+        let _exec = async::Executor::new().unwrap();
+        let (client_end, _) = zircon::Channel::create().unwrap();
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        let _foo = client.take_event_receiver();
+        client.take_event_receiver();
+    }
+
+    #[test]
+    fn event_can_be_taken() {
+        let _exec = async::Executor::new().unwrap();
+        let (client_end, _) = zircon::Channel::create().unwrap();
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        client.take_event_receiver();
+    }
+
+    #[test]
+    fn event_received() {
+        let mut executor = async::Executor::new().unwrap();
+
+        let (client_end, server_end) = zircon::Channel::create().unwrap();
+        let client_end = async::Channel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // Send the event from the server
+        let server = async::Channel::from_channel(server_end).unwrap();
+        let event = &mut TransactionMessage {
+            header: TransactionHeader {
+                tx_id: 0,
+                flags: 0,
+                ordinal: 5,
+            },
+            body: &mut 55i32,
+        };
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        Encoder::encode(bytes, handles, event).expect("Encoding failure");
+        server.write(bytes, handles).expect("Server channel write failed");
+        drop(server);
+
+        let recv = client.take_event_receiver()
+            .into_future()
+            .and_then(|(x, stream)| {
+                let x = x.expect("should contain one element");
+                let x: i32 = decode_transaction_body(x).expect("failed to decode event");
+                assert_eq!(x, 55);
+                stream.into_future()
+            })
+            .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"))
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    &*format!("fidl error: {:?}", e))
+            });
+
+        // add a timeout to receiver so if test is broken it doesn't take forever
+        let recv = recv.on_timeout(
+            300.millis().after_now(),
+            || panic!("did not receive event in time!")
+        ).unwrap();
+
+        executor.run_singlethreaded(recv).unwrap();
     }
 }
