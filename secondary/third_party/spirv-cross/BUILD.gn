@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+config("public_preprocessor_definitions") {
+  defines = [
+    "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS",
+  ]
+}
+
+source_set("spirv-cross") {
+  public_configs = [
+    ":public_preprocessor_definitions",
+  ]
+
+  sources = [
+    # spirv-cross-core
+    "GLSL.std.450.h",
+    "spirv_common.hpp",
+    "spirv.hpp",
+    "spirv_cross.hpp",
+    "spirv_cross.cpp",
+    "spirv_cfg.hpp",
+    "spirv_cfg.cpp",
+    # spirv-cross-glsl
+    "spirv_glsl.cpp",
+    "spirv_glsl.hpp",
+    # spirv-cross-cpp
+    "spirv_cpp.hpp",
+    "spirv_cpp.cpp",
+    # spirv-cross-msl
+    "spirv_msl.hpp",
+    "spirv_msl.cpp",
+    # spirv-cross-hlsl
+    "spirv_hlsl.hpp",
+    "spirv_hlsl.cpp",
+    # spirv-cross-util
+    "spirv_cross_util.hpp",
+    "spirv_cross_util.cpp",
+  ]
+}
