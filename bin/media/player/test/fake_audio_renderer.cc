@@ -23,6 +23,10 @@ FakeAudioRenderer::FakeAudioRenderer() {
       {StreamType::kAudioEncodingLpcm},
       AudioStreamType::SampleFormat::kSigned16, Range<uint32_t>(1, 2),
       Range<uint32_t>(1, 88200)));
+
+  supported_stream_types_.push_back(AudioStreamTypeSet::Create(
+      {StreamType::kAudioEncodingLpcm}, AudioStreamType::SampleFormat::kFloat,
+      Range<uint32_t>(1, 2), Range<uint32_t>(1, 88200)));
 }
 
 }  // namespace test

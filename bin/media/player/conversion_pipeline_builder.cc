@@ -4,7 +4,6 @@
 
 #include "garnet/bin/media/player/conversion_pipeline_builder.h"
 
-#include "garnet/bin/media/audio/lpcm_reformatter.h"
 #include "garnet/bin/media/decode/decoder.h"
 #include "garnet/bin/media/framework/formatting.h"
 
@@ -197,11 +196,10 @@ AddResult AddTransformsForLpcm(const AudioStreamType& in_type,
   // transforms that handle more than one conversion.
   if (in_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
-    *output = graph
-                  ->ConnectOutputToNode(
-                      *output, graph->Add(LpcmReformatter::Create(
-                                   in_type, out_type_set.sample_format())))
-                  .output();
+    FXL_DCHECK(false)
+        << "conversion requires audio format change - not supported";
+    *out_type = nullptr;
+    return AddResult::kFailed;
   }
 
   if (!out_type_set.channels().contains(in_type.channels())) {

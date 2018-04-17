@@ -556,19 +556,8 @@ void ExpectRealSegmentsGraph(const Player& player) {
   EXPECT_TRUE(audio_decoder_node_ref.output().connected());
   EXPECT_EQ("FakeDecoder", audio_decoder_node_ref.GetGenericNode()->label());
 
-  NodeRef audio_reformatter_node_ref =
-      audio_decoder_node_ref.output().mate().node();
-  EXPECT_TRUE(audio_reformatter_node_ref);
-  EXPECT_EQ(1u, audio_reformatter_node_ref.input_count());
-  EXPECT_EQ(1u, audio_reformatter_node_ref.output_count());
-  EXPECT_TRUE(audio_reformatter_node_ref.input().connected());
-  EXPECT_TRUE(audio_reformatter_node_ref.input().prepared());
-  EXPECT_TRUE(audio_reformatter_node_ref.output().connected());
-  EXPECT_EQ("<not labelled>",
-            audio_reformatter_node_ref.GetGenericNode()->label());
-
   NodeRef audio_renderer_node_ref =
-      audio_reformatter_node_ref.output().mate().node();
+      audio_decoder_node_ref.output().mate().node();
   EXPECT_TRUE(audio_renderer_node_ref);
   EXPECT_EQ(1u, audio_renderer_node_ref.input_count());
   EXPECT_EQ(0u, audio_renderer_node_ref.output_count());
