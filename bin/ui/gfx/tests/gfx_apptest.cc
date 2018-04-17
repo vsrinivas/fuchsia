@@ -40,7 +40,7 @@ TEST_F(SceneManagerTest, ScheduleUpdateOutOfOrder) {
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
 
   // Briefly pump the message loop. Expect that the session is not destroyed.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
 
   // Present with an older presentation time.
   session->Present(0, CreateEventArray(1), CreateEventArray(1), callback);
@@ -61,14 +61,14 @@ TEST_F(SceneManagerTest, ScheduleUpdateInOrder) {
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
 
   // Briefly pump the message loop. Expect that the session is not destroyed.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
 
   // Present with the same presentation time.
   session->Present(1, CreateEventArray(1), CreateEventArray(1), callback);
 
   // Briefly pump the message loop. Expect that the session is not destroyed.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   RUN_MESSAGE_LOOP_UNTIL(engine()->GetSessionCount() == 1);
 }
 

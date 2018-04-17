@@ -203,7 +203,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(image_pipe->GetEscherImage());
 
   // Signal on the acquire fence.
@@ -212,7 +212,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   // Run until image1 is presented.
   for (int i = 0; !image_pipe->GetEscherImage() && i < 400; i++) {
     image_pipe->Update(0u, 0u);
-    ::mozart::test::RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
+    ::scenic::test::RunLoopWithTimeout(fxl::TimeDelta::FromMilliseconds(10));
   }
 
   ASSERT_TRUE(image_pipe->GetEscherImage());
@@ -235,7 +235,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
   }
 
   // The first image should not have been released.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
 
   // Make gradient the currently displayed image.
@@ -247,7 +247,7 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
-  ::mozart::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
+  ::scenic::test::RunLoopWithTimeout(kPumpMessageLoopDuration);
   ASSERT_EQ(image_pipe->GetEscherImage(), image1);
 
   // Signal on the acquire fence.
