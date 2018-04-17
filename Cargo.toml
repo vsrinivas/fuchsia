@@ -36,6 +36,7 @@ members =  [
   "public/rust/crates/fuchsia-ddk/examples/microorb",
   "public/rust/crates/fdio",
   "public/rust/crates/fuchsia-app",
+  "public/rust/crates/fuchsia-archive",
   "public/rust/crates/fuchsia-async",
   "public/rust/crates/fuchsia-syslog",
   "public/rust/crates/fuchsia-vfs",
