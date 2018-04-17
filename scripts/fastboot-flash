@@ -13,6 +13,8 @@ MKBOOTIMG="${DIR}/../third_party/tools/android/mkbootimg"
 
 MEMBASE=0x00000000
 KERNEL_OFFSET=0x1080000
+USE_LZ4=0
+BOOT_PART=boot
 
 BUILD_DIR=build-arm64
 CMDLINE="TERM=uart"
@@ -23,17 +25,25 @@ function HELP {
     echo "-c <cmd line>  : Extra command line options"
     echo "-m             : Add mexec option to command line"
     echo "-o <dir>       : Build directory"
+    echo "-M             : RAM Start address"
+    echo "-K             : Kernel offset"
+    echo "-z             : Use LZ4"
+    echo "-P             : Boot partition name"
     echo "-h for help"
     exit 1
 }
 
-while getopts "b:c:d:mo:h" FLAG; do
+while getopts "b:c:d:mo:M:K:P:zh" FLAG; do
     case $FLAG in
         b) BOARD="${OPTARG}";;
         c) CMDLINE+=" ${OPTARG}";;
         d) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
         o) BUILD_DIR="${OPTARG}";;
+        M) MEMBASE="${OPTARG}";;
+        K) KERNEL_OFFSET="${OPTARG}";;
+        P) BOOT_PART="${OPTARG}";;
+        z) USE_LZ4=1;;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -52,7 +62,11 @@ BOOTDATA_BIN="${BUILD_DIR}/${BOARD}-combo-bootdata.bin"
 ZBOOTDATA_BIN="${BUILD_DIR}/z${BOARD}-combo-bootdata.bin"
 OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 
-gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
+if [[ ${USE_LZ4} == 1 ]]; then
+    lz4 -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
+else
+    gzip -c ${BOOTDATA_BIN} > ${ZBOOTDATA_BIN}
+fi
 
 $MKBOOTIMG \
 --kernel "${ZBOOTDATA_BIN}" \
@@ -61,5 +75,5 @@ $MKBOOTIMG \
 --cmdline "${CMDLINE}" \
 -o "${OUT_IMAGE}"
 
-fastboot flash boot "${OUT_IMAGE}"
+fastboot flash "${BOOT_PART}" "${OUT_IMAGE}"
 fastboot reboot
