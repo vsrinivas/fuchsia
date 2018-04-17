@@ -24,7 +24,7 @@ FrameScheduler::FrameScheduler(Display* display)
 
 FrameScheduler::~FrameScheduler() {}
 
-void FrameScheduler::RequestFrame(uint64_t presentation_time) {
+void FrameScheduler::RequestFrame(zx_time_t presentation_time) {
   const bool should_schedule_frame =
       requested_presentation_times_.empty() ||
       requested_presentation_times_.top() > presentation_time;

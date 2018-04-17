@@ -62,7 +62,7 @@ class FrameScheduler {
 
   // Request a frame to be scheduled at or after |presentation_time|, which
   // may be in the past.
-  void RequestFrame(uint64_t presentation_time);
+  void RequestFrame(zx_time_t presentation_time);
 
  private:
   // Update the global scene and then draw it... maybe.  There are multiple
@@ -99,7 +99,7 @@ class FrameScheduler {
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 
-  std::priority_queue<uint64_t, std::vector<uint64_t>, std::greater<uint64_t>>
+  std::priority_queue<zx_time_t, std::vector<zx_time_t>, std::greater<zx_time_t>>
       requested_presentation_times_;
 
   uint64_t frame_number_ = 0;
