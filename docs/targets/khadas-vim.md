@@ -125,4 +125,9 @@ zircon: ./build-x86/tools/bootserver ./build-arm64/zircon.bin ./build-arm64/vim2
 garnet: fx set x64 --netboot; fx build; fx boot vim2
 ```
 
+### Fuchsia logo
 
+To update the the boot splash screen to be the Fuchsia logo, do this in fastboot mode:
+```
+fastboot flash logo kernel/target/arm64/board/vim2/firmware/logo.img
+```
