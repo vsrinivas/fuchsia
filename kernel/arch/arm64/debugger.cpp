@@ -21,17 +21,10 @@ static uint32_t kUserVisibleFlags = 0xf0000000;
 static constexpr uint64_t kSSMask = 1;
 
 zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
-    if (thread_stopped_in_exception(thread)) {
-        // TODO(dje): We could get called while processing a synthetic
-        // exception where there is no frame.
-        if (thread->exception_context->frame == NULL)
-            return ZX_ERR_NOT_SUPPORTED;
-    } else {
-        // TODO(dje): Punt if, for example, suspended in channel call.
-        // Can be removed when ZX-747 done.
-        if (thread->arch.suspended_general_regs == nullptr)
-            return ZX_ERR_NOT_SUPPORTED;
-    }
+    // Punt if registers aren't available. E.g.,
+    // ZX-563 (registers aren't available in synthetic exceptions)
+    if (thread->arch.suspended_general_regs == nullptr)
+        return ZX_ERR_NOT_SUPPORTED;
 
     struct arm64_iframe_long* in = thread->arch.suspended_general_regs;
     DEBUG_ASSERT(in);
@@ -47,17 +40,10 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
 }
 
 zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_general_regs_t* in) {
-    if (thread_stopped_in_exception(thread)) {
-        // TODO(dje): We could get called while processing a synthetic
-        // exception where there is no frame.
-        if (thread->exception_context->frame == NULL)
-            return ZX_ERR_NOT_SUPPORTED;
-    } else {
-        // TODO(dje): Punt if, for example, suspended in channel call.
-        // Can be removed when ZX-747 done.
-        if (thread->arch.suspended_general_regs == nullptr)
-            return ZX_ERR_NOT_SUPPORTED;
-    }
+    // Punt if registers aren't available. E.g.,
+    // ZX-563 (registers aren't available in synthetic exceptions)
+    if (thread->arch.suspended_general_regs == nullptr)
+        return ZX_ERR_NOT_SUPPORTED;
 
     struct arm64_iframe_long* out = thread->arch.suspended_general_regs;
     DEBUG_ASSERT(out);
@@ -73,8 +59,8 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
 }
 
 zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
-    // TODO(dje): Punt if, for example, suspended in channel call.
-    // Can be removed when ZX-747 done.
+    // Punt if registers aren't available. E.g.,
+    // ZX-563 (registers aren't available in synthetic exceptions)
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
     struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
@@ -83,8 +69,8 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
 }
 
 zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
-    // TODO(dje): Punt if, for example, suspended in channel call.
-    // Can be removed when ZX-747 done.
+    // Punt if registers aren't available. E.g.,
+    // ZX-563 (registers aren't available in synthetic exceptions)
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
     struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
