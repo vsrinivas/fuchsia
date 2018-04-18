@@ -13,6 +13,9 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .output_offset = S905_GPIOX_OUT,
         .output_shift = 0,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG4,
+        .pull_en_offset = S905_PULL_UP_EN_REG4,
+        .pin_start = S905_GPIOX_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOY Block
@@ -23,6 +26,9 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .output_offset = S905_GPIOY_OUT,
         .output_shift = 0,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG1,
+        .pull_en_offset = S905_PULL_UP_EN_REG1,
+        .pin_start = S905_GPIOY_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOZ Block
@@ -33,6 +39,9 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .output_offset = S905_GPIOZ_OUT,
         .output_shift = 0,
         .mmio_index = 0,
+        .pull_offset = 0, // not supported
+        .pull_en_offset = 0, // not supported
+        .pin_start = S905_GPIOZ_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIODV Block
@@ -43,6 +52,9 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .output_offset = S905_GPIODV_OUT,
         .output_shift = 0,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG0,
+        .pull_en_offset = S905_PULL_UP_EN_REG0,
+        .pin_start = S905_GPIODV_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOH Block
@@ -51,8 +63,11 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .oen_offset = S905_GPIOH_0EN,
         .input_offset = S905_GPIOH_IN,
         .output_offset = S905_GPIOH_OUT,
-        .output_shift = 0,
+        .output_shift = 20,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG1,
+        .pull_en_offset = S905_PULL_UP_EN_REG1,
+        .pin_start = S905_GPIOH_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOCLK Block
@@ -61,8 +76,11 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .oen_offset = S905_GPIOCLK_0EN,
         .input_offset = S905_GPIOCLK_IN,
         .output_offset = S905_GPIOCLK_OUT,
-        .output_shift = 0,
+        .output_shift = 28,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG3,
+        .pull_en_offset = S905_PULL_UP_EN_REG3,
+        .pin_start = S905_GPIOCLK_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOBOOT Block
@@ -73,6 +91,9 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .output_offset = S905_GPIOBOOT_OUT,
         .output_shift = 0,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG2,
+        .pull_en_offset = S905_PULL_UP_EN_REG2,
+        .pin_start = S905_GPIOBOOT_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOCARD Block
@@ -81,8 +102,11 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .oen_offset = S905_GPIOCARD_0EN,
         .input_offset = S905_GPIOCARD_IN,
         .output_offset = S905_GPIOCARD_OUT,
-        .output_shift = 0,
+        .output_shift = 20,
         .mmio_index = 0,
+        .pull_offset = S905_PULL_UP_REG2,
+        .pull_en_offset = S905_PULL_UP_EN_REG2,
+        .pin_start = S905_GPIOCARD_PIN_START,
         .lock = MTX_INIT,
     },
     // GPIOAO Block
@@ -91,8 +115,12 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
         .oen_offset = S905_AO_GPIO_OEN_OUT,
         .input_offset = S905_AO_GPIO_IN,
         .output_offset = S905_AO_GPIO_OEN_OUT,
-        .output_shift = 16, // output is shared with OEN
+        .output_shift = 0,
+        .output_write_shift = 16, // output is shared with OEN
         .mmio_index = 1,
+        .pull_offset = S905_PULL_UP_REG_AO,
+        .pull_en_offset = S905_PULL_UP_EN_REGAO,
+        .pin_start = S905_GPIOA0_PIN_START,
         .lock = MTX_INIT,
     },
 };
@@ -109,6 +137,15 @@ static aml_gpio_block_t s905_gpio_blocks[] = {
 #define REG_9 S905_PERIPHS_PIN_MUX_9
 #define AO_REG S905_AO_RTI_PIN_MUX_REG
 #define AO_REG_2 S905_AO_RTI_PIN_MUX_REG2
+
+static aml_gpio_interrupt_t s905_interrupt_block = {
+    .pin_0_3_select_offset =    S905_GPIO_0_3_PIN_SELECT,
+    .pin_4_7_select_offset =    S905_GPIO_4_7_PIN_SELECT,
+    .edge_polarity_offset =     S905_GPIO_INT_EDGE_POLARITY,
+    .filter_select_offset =     S905_GPIO_FILTER_SELECT,
+    .status_offset =            S905_GPIO_INT_STATUS,
+    .mask_offset =              S905_GPIO_INT_MASK,
+};
 
 static const aml_pinmux_block_t s905_pinmux_blocks[] = {
     // GPIOX Block

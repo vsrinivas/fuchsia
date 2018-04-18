@@ -138,10 +138,16 @@ static zx_status_t aml_gpio_config(void* ctx, uint32_t index, uint32_t flags) {
         uint32_t pull = flags & GPIO_PULL_MASK;
         uint32_t pull_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_offset);
         uint32_t pull_en_reg_val = READ32_GPIO_REG(block->mmio_index, block->pull_en_offset);
+        uint32_t pull_pin_index = pin_index;
+        if (block->output_write_shift) {
+            // Handling special case where output_offset is
+            // different for OEN/OUT/PU-PD for GPIOA0 block
+            pull_pin_index += block->output_write_shift;
+        }
         if (pull & GPIO_PULL_UP) {
-            pull_reg_val |= (1 << pin_index);
+            pull_reg_val |= (1 << pull_pin_index);
         } else {
-            pull_reg_val &= ~(1 << pin_index);
+            pull_reg_val &= ~(1 << pull_pin_index);
         }
         pull_en_reg_val |= (1 << pin_index);
         WRITE32_GPIO_REG(block->mmio_index, block->pull_offset, pull_reg_val);
@@ -478,11 +484,13 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_S905X:
         gpio->gpio_blocks = s905x_gpio_blocks;
         gpio->pinmux_blocks = s905x_pinmux_blocks;
+        gpio->gpio_interrupt = &s905x_interrupt_block;
         gpio->block_count = countof(s905x_gpio_blocks);
         break;
     case PDEV_PID_AMLOGIC_S905:
         gpio->gpio_blocks = s905_gpio_blocks;
         gpio->pinmux_blocks = s905_pinmux_blocks;
+        gpio->gpio_interrupt = &s905_interrupt_block;
         gpio->block_count = countof(s905_gpio_blocks);
         break;
     default:

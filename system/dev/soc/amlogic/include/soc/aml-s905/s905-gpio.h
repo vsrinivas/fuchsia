@@ -10,7 +10,7 @@
 #define S905_GPIODV_PINS   30
 #define S905_GPIOH_PINS    4
 #define S905_GPIOCLK_PINS  2
-#define S905_GPIOBOOT_PINS 16
+#define S905_GPIOBOOT_PINS 18
 #define S905_GPIOCARD_PINS 7
 #define S905_GPIOAO_PINS   14
 
@@ -75,3 +75,36 @@
 #define S905_AO_RTI_PIN_MUX_REG2 0x06
 #define S905_AO_GPIO_OEN_OUT     0x09   // OEN: [13:0], OUT: [25:16]
 #define S905_AO_GPIO_IN          0x0a
+
+#define S905_PULL_UP_REG0   0x3A
+#define S905_PULL_UP_REG1   0x3B
+#define S905_PULL_UP_REG2   0x3C
+#define S905_PULL_UP_REG3   0x3D
+#define S905_PULL_UP_REG4   0x3E
+#define S905_PULL_UP_REG_AO 0x0b
+
+#define S905_PULL_UP_EN_REG0   0x48
+#define S905_PULL_UP_EN_REG1   0x49
+#define S905_PULL_UP_EN_REG2   0x4A
+#define S905_PULL_UP_EN_REG3   0x4B
+#define S905_PULL_UP_EN_REG4   0x4C
+#define S905_PULL_UP_EN_REGAO  0x0b
+
+// These are relative to base address 0xc1100000 and in sizeof(uint32_t)
+#define S905_GPIO_INT_STATUS            0x2618
+#define S905_GPIO_INT_CLEAR             0x2619
+#define S905_GPIO_INT_MASK              0x261A
+#define S905_GPIO_INT_EDGE_POLARITY     0x2620
+#define S905_GPIO_0_3_PIN_SELECT        0x2621
+#define S905_GPIO_4_7_PIN_SELECT        0x2622
+#define S905_GPIO_FILTER_SELECT         0x2623
+
+#define S905_GPIOA0_PIN_START      0
+#define S905_GPIOZ_PIN_START       14
+#define S905_GPIOH_PIN_START       30
+#define S905_GPIOBOOT_PIN_START    34
+#define S905_GPIOCARD_PIN_START    52
+#define S905_GPIODV_PIN_START      59
+#define S905_GPIOY_PIN_START       89
+#define S905_GPIOX_PIN_START       106
+#define S905_GPIOCLK_PIN_START     129
