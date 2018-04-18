@@ -42,17 +42,19 @@ def GenSnapshotDeps(args):
 def WritePackageToManifest(manifest_file, dot_packages_file, depfile_sources,
                            package_name, package_path):
   path = urlparse.urlparse(package_path)
-  path_len = len(path.path)
+  abs_root_path = os.path.abspath(path.path)
   manifest_lib_path = os.path.join('data', 'dart-pkg', package_name, 'lib')
   for root, dirs, files in os.walk(path.path):
     for f in files:
       # TODO(zra): What other files are needed?
       if not f.endswith('.dart'):
         continue
-      full_path = os.path.join(root, f)
+      # gen_snapshot outputs all dependencies as abspaths, and some .packages
+      # files contain relpaths, so we must convert everything to an abspath.
+      full_path = os.path.abspath(os.path.join(root, f))
       # Only include files that are in depfile_sources
       if depfile_sources == None or full_path in depfile_sources:
-        relative_path = full_path[path_len:]
+        relative_path = os.path.relpath(full_path, abs_root_path)
         manifest_path = os.path.join(manifest_lib_path, relative_path)
         manifest_file.write(manifest_path + '=' + full_path + '\n')
   dot_packages_file.write(
