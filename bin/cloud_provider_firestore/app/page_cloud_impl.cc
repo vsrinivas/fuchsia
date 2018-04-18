@@ -42,6 +42,38 @@ std::string GetCommitBatchPath(fxl::StringView page_path,
                            kSeparator, encoded_batch_id});
 }
 
+google::firestore::v1beta1::StructuredQuery MakeCommitQuery(
+    std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null) {
+  google::firestore::v1beta1::StructuredQuery query;
+
+  // Sub-collections to be queried.
+  google::firestore::v1beta1::StructuredQuery::CollectionSelector& selector =
+      *query.add_from();
+  selector.set_collection_id(kCommitLogCollection);
+  selector.set_all_descendants(false);
+
+  // Ordering.
+  google::firestore::v1beta1::StructuredQuery::Order& order_by =
+      *query.add_order_by();
+  order_by.mutable_field()->set_field_path(kTimestampField);
+
+  // Filtering.
+  if (timestamp_or_null) {
+    google::firestore::v1beta1::StructuredQuery::Filter& filter =
+        *query.mutable_where();
+    google::firestore::v1beta1::StructuredQuery::FieldFilter& field_filter =
+        *filter.mutable_field_filter();
+
+    field_filter.mutable_field()->set_field_path(kTimestampField);
+    field_filter.set_op(
+        google::firestore::v1beta1::
+            StructuredQuery_FieldFilter_Operator_GREATER_THAN_OR_EQUAL);
+    field_filter.mutable_value()->mutable_timestamp_value()->Swap(
+        timestamp_or_null.get());
+  }
+  return query;
+}
+
 }  // namespace
 
 PageCloudImpl::PageCloudImpl(
@@ -117,10 +149,53 @@ void PageCloudImpl::AddCommits(fidl::VectorPtr<cloud_provider::Commit> commits,
   });
 }
 
-void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> /*min_position_token*/,
+void PageCloudImpl::GetCommits(fidl::VectorPtr<uint8_t> min_position_token,
                                GetCommitsCallback callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
+  std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
+  if (min_position_token) {
+    timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
+    if (!timestamp_or_null->ParseFromString(
+            convert::ToString(min_position_token))) {
+      callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
+      return;
+    }
+  }
+
+  auto request = google::firestore::v1beta1::RunQueryRequest();
+  request.set_parent(page_path_);
+  auto query = MakeCommitQuery(std::move(timestamp_or_null));
+  request.mutable_structured_query()->Swap(&query);
+
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback](auto call_credentials) mutable {
+    firestore_service_->RunQuery(
+        std::move(request), std::move(call_credentials),
+        [callback](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()), nullptr, nullptr);
+            return;
+          }
+
+          fidl::VectorPtr<cloud_provider::Commit> commits(
+              static_cast<size_t>(0u));
+          std::string timestamp;
+
+          for (const auto& response : result) {
+            fidl::VectorPtr<cloud_provider::Commit> batch_commits;
+            if (!response.has_document() ||
+                !DecodeCommitBatch(response.document(), &batch_commits,
+                                   &timestamp)) {
+              callback(cloud_provider::Status::PARSE_ERROR, nullptr, nullptr);
+            }
+
+            std::move(batch_commits->begin(), batch_commits->end(),
+                      std::back_inserter(*commits));
+          }
+
+          callback(cloud_provider::Status::OK, std::move(commits),
+                   convert::ToArray(timestamp));
+        });
+  });
 }
 
 void PageCloudImpl::AddObject(fidl::VectorPtr<uint8_t> id,

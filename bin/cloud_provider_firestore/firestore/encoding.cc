@@ -10,6 +10,7 @@
 namespace cloud_provider_firestore {
 namespace {
 constexpr char kCommitsKey[] = "commits";
+constexpr char kTimestampKey[] = "timestamp";
 constexpr char kIdKey[] = "id";
 constexpr char kDataKey[] = "data";
 }  // namespace
@@ -90,7 +91,22 @@ bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
     result.push_back(std::move(commit));
   }
 
-  // TODO(ppi): Read the server-assigned timestamp field.
+  // Read the timestamp field.
+  if (document.fields().count(kTimestampKey) == 1) {
+    const google::firestore::v1beta1::Value& timestamp_value =
+        document.fields().at(kTimestampKey);
+    if (!timestamp_value.has_timestamp_value()) {
+      return false;
+    }
+
+    if (!timestamp_value.timestamp_value().SerializeToString(timestamp)) {
+      return false;
+    }
+  } else if (document.fields().count(kTimestampKey) != 0) {
+    // The timestamp field should appear only 0 or 1 time.
+    return false;
+  }
+
   commits->swap(result);
   return true;
 }

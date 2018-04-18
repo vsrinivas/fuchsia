@@ -14,11 +14,21 @@
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "peridot/bin/cloud_provider_firestore/app/testing/test_credentials_provider.h"
+#include "peridot/bin/cloud_provider_firestore/firestore/encoding.h"
 #include "peridot/bin/cloud_provider_firestore/firestore/testing/test_firestore_service.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 namespace {
+
+void SetTimestamp(google::firestore::v1beta1::Document* document,
+                  int64_t seconds,
+                  int32_t nanos) {
+  google::protobuf::Timestamp& timestamp =
+      *((*document->mutable_fields())["timestamp"].mutable_timestamp_value());
+  timestamp.set_seconds(seconds);
+  timestamp.set_nanos(nanos);
+}
 
 class PageCloudImplTest : public gtest::TestWithMessageLoop {
  public:
@@ -79,6 +89,97 @@ TEST_F(PageCloudImplTest, AddCommits) {
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);
+}
+
+TEST_F(PageCloudImplTest, GetCommits) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  fidl::VectorPtr<cloud_provider::Commit> commits;
+  fidl::VectorPtr<uint8_t> position_token;
+  page_cloud_->GetCommits(
+      nullptr, callback::Capture(callback::SetWhenCalled(&callback_called),
+                                 &status, &commits, &position_token));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.run_query_records.size());
+
+  std::vector<google::firestore::v1beta1::RunQueryResponse> responses;
+  {
+    // First batch contains one commit.
+    fidl::VectorPtr<cloud_provider::Commit> batch_commits;
+    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id0"),
+                                                   convert::ToArray("data0")});
+    google::firestore::v1beta1::RunQueryResponse response;
+    ASSERT_TRUE(EncodeCommitBatch(batch_commits, response.mutable_document()));
+    SetTimestamp(response.mutable_document(), 100, 1);
+    responses.push_back(std::move(response));
+  }
+  {
+    // The second batch contains two commits.
+    fidl::VectorPtr<cloud_provider::Commit> batch_commits;
+    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id1"),
+                                                   convert::ToArray("data1")});
+    batch_commits.push_back(cloud_provider::Commit{convert::ToArray("id2"),
+                                                   convert::ToArray("data2")});
+    google::firestore::v1beta1::RunQueryResponse response;
+    ASSERT_TRUE(EncodeCommitBatch(batch_commits, response.mutable_document()));
+    SetTimestamp(response.mutable_document(), 100, 2);
+    responses.push_back(std::move(response));
+  }
+
+  firestore_service_.run_query_records.front().callback(grpc::Status::OK,
+                                                        std::move(responses));
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(cloud_provider::Status::OK, status);
+  ASSERT_TRUE(commits);
+  // The result should be a flat vector of all three commits.
+  EXPECT_EQ(3u, commits->size());
+
+  EXPECT_TRUE(position_token);
+  google::protobuf::Timestamp decoded_timestamp;
+  ASSERT_TRUE(
+      decoded_timestamp.ParseFromString(convert::ToString(position_token)));
+  EXPECT_EQ(100, decoded_timestamp.seconds());
+  EXPECT_EQ(2, decoded_timestamp.nanos());
+}
+
+TEST_F(PageCloudImplTest, GetCommitsQueryPositionToken) {
+  bool callback_called = false;
+  auto status = cloud_provider::Status::INTERNAL_ERROR;
+  fidl::VectorPtr<cloud_provider::Commit> commits;
+  google::protobuf::Timestamp timestamp;
+  timestamp.set_seconds(42);
+  timestamp.set_nanos(1);
+  std::string position_token_str;
+  ASSERT_TRUE(timestamp.SerializeToString(&position_token_str));
+  fidl::VectorPtr<uint8_t> position_token =
+      convert::ToArray(position_token_str);
+  page_cloud_->GetCommits(
+      std::move(position_token),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status,
+                        &commits, &position_token));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_EQ(1u, firestore_service_.run_query_records.size());
+
+  const google::firestore::v1beta1::RunQueryRequest& request =
+      firestore_service_.run_query_records.front().request;
+  EXPECT_TRUE(request.has_structured_query());
+  EXPECT_TRUE(request.structured_query().has_where());
+
+  const google::firestore::v1beta1::StructuredQuery::Filter& filter =
+      request.structured_query().where();
+  EXPECT_TRUE(filter.has_field_filter());
+  EXPECT_EQ("timestamp", filter.field_filter().field().field_path());
+  EXPECT_EQ(google::firestore::v1beta1::
+                StructuredQuery_FieldFilter_Operator_GREATER_THAN_OR_EQUAL,
+            filter.field_filter().op());
+  EXPECT_EQ(42, filter.field_filter().value().timestamp_value().seconds());
+  EXPECT_EQ(1, filter.field_filter().value().timestamp_value().nanos());
 }
 
 TEST_F(PageCloudImplTest, AddObject) {
