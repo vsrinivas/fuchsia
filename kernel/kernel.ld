@@ -9,14 +9,29 @@
 // https://opensource.org/licenses/MIT
 */
 
-ENTRY(_start)
+/*
+ * Symbols used in the kernel proper are defined with PROVIDE_HIDDEN:
+ * HIDDEN because everything in the kernel is STV_HIDDEN to make it
+ * clear that direct PC-relative references should be generated in PIC;
+ * PROVIDE because their only purpose is to satisfy kernel references.
+ */
+
 SECTIONS
 {
     . = KERNEL_BASE;
     PROVIDE_HIDDEN(__code_start = .);
 
+    /*
+     * This just leaves space in the memory image for the boot headers.
+     * The actual boot header will be constructed in image.S, which see.
+     */
     .text.boot0 : {
-        KEEP(*(.text.boot0))
+        /*
+         * Put some data in, or else the linker makes it a SHT_NOBITS
+         * section and that makes objcopy -O binary skip it in the image.
+         */
+        LONG(0xdeadbeef);
+        . += BOOT_HEADER_SIZE - 4;
     } :code
 
     . = ALIGN(8);
@@ -36,8 +51,25 @@ SECTIONS
         BYTE(0x45); BYTE(0x4e); BYTE(0x44); BYTE(0x53); /* ENDS */
      }
 
+    /*
+     * This is separate from .text just so gen-kaslr-relocs.sh can match
+     * it.  The relocation processor skips this section because this code
+     * all runs before the boot-time fixups are applied and has its own
+     * special relationship with the memory layouts.
+     */
     .text.boot : {
         *(.text.boot)
+    }
+
+    /*
+     * This is separate from .text just so gen-kaslr-relocs.sh can match
+     * it.  This section contains movabs instructions that get 64-bit
+     * address fixups in place.  This is safe because this code is never
+     * used until long after fixups have been applied.  In general, the
+     * script will refuse to handle fixups in text (i.e. code) sections.
+     */
+    .text.bootstrap16 : {
+        *(.text.bootstrap16)
     }
 
     .text : {
@@ -210,3 +242,19 @@ PHDRS
     data PT_LOAD FLAGS(6); /* PF_R|PF_W */
     note PT_NOTE FLAGS(4); /* PF_R */
 }
+
+/*
+ * This is not actually used since the entry point is set in image.ld,
+ * but it prevents the linker from warning about using a default address
+ * and it keeps --gc-sections from removing .text.boot.
+ */
+ENTRY(IMAGE_ELF_ENTRY)
+
+/*
+ * These special symbols below are made public so they are visible via
+ * --just-symbols to the link of image.S.
+ */
+
+IMAGE_LOAD_START = __code_start;
+IMAGE_LOAD_END = __data_end;
+IMAGE_MEMORY_END = _end;

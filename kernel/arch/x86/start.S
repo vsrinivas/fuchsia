@@ -12,7 +12,35 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/registers.h>
+#include <zircon/boot/multiboot.h>
 #include <zircon/tls.h>
+
+// TODO(mcgrathr): This is in a macro because it's used in both 32-bit mode
+// and in 64-bit mode with addresses known to be <4GB.  The assembly text
+// is the same either way, but it needs to be assembled separately for each.
+// In future, the 32-bit boot path should trampoline into the 64-bit path so
+// there will only be a 64-bit version of this.
+// NOTE: Clobbers %rax, %rcx, %rsi, %rdi.
+.macro move_fixups_and_zero_bss
+    // The fixup code in image.S runs in 64-bit mode with paging enabled,
+    // so we can't run it too early.  But it overlaps the bss, so we move
+    // it before zeroing the bss.  We can't delay zeroing the bss because
+    // the page tables we're about to set up are themselves in bss.
+
+    // The first word after the kernel image (at __data_end in our view)
+    // gives the size of the following code.  Copy it to _end.
+    mov PHYS(__data_end), %ecx
+    mov $PHYS(__data_end+4), %esi
+    mov $PHYS(_end), %edi
+    rep movsb // while (ecx-- > 0) *edi++ = *esi++;
+
+    // Now it's safe to zero the bss.
+    movl $PHYS(__bss_start), %edi
+    movl $PHYS(_end), %ecx
+    sub %edi, %ecx              // Compute the length of the bss in bytes.
+    xor %eax, %eax
+    rep stosb // while (ecx-- > 0) *edi++ = al;
+.endm
 
 /* shared code to set up a default 64bit page table structure */
 .macro page_table_init
@@ -81,9 +109,9 @@
     loop 0b
 .endm
 
-/* The magic number passed by a Multiboot-compliant boot loader. */
-#define MULTIBOOT_BOOTLOADER_MAGIC 0x2BADB002
-
+// This section name is known specially to kernel.ld and gen-kaslr-fixups.sh.
+// This code has relocations for absolute physical addresses, which do not get
+// adjusted by the boot-time fixups (which this code calls at the end).
 .section .text.boot, "ax", @progbits
 .code32
 FUNCTION_LABEL(_multiboot_start)
@@ -115,12 +143,7 @@ FUNCTION_LABEL(_multiboot_start)
     lret
 
 .Lfarjump:
-    /* zero the bss section */
-    movl $PHYS(__bss_start), %edi
-    movl $PHYS(_end), %ecx
-    sub %edi, %ecx              // Compute the length of the bss in bytes.
-    xor %eax, %eax
-    rep stosb // while (ecx-- > 0) *edi++ = al;
+    move_fixups_and_zero_bss
 
     // _multiboot_info is in bss, so now it's safe to set it.
     movl %ebx, PHYS(_multiboot_info)
@@ -175,6 +198,7 @@ farjump64:
     mov  $high_entry, %rax
     jmp  *%rax
 
+// The 64-bit entry path also gets here; see below.
 // This code runs at the final virtual address, so it should be pure PIC.
 .pushsection .text
 high_entry:
@@ -191,6 +215,12 @@ high_entry:
 
     /* reload the gdtr */
     lgdt _gdtr(%rip)
+
+    // move_fixups_and_zero_bss copied the fixup code to _end.
+    // It expects %rdi to contain the actual runtime address of __code_start.
+    lea __code_start(%rip), %rdi
+    call _end
+    // The fixup code won't be used again, so the memory can be reused now.
 
     // Set %gs.base to &bp_percpu.  It's statically initialized
     // with kernel_unsafe_sp set, so after this it's safe to call
@@ -241,15 +271,13 @@ FUNCTION_LABEL(_start)
     /* set up a temporary stack pointer */
     mov $PHYS(_kstack_end), %rsp
 
-    /* zero the bss */
-    lea __bss_start(%rip), %rdi
-    lea _end(%rip), %rcx
-    sub %rdi, %rcx              // Compute the length of the bss in bytes.
-    xor %eax, %eax
-    rep stosb // while (rcx-- > 0) *rdi++ = al;
+    // Save off the bootdata pointer in a register that won't get clobbered.
+    mov %esi, %ebx
+
+    move_fixups_and_zero_bss
 
     // _bootdata_base is in bss, so now it's safe to set it.
-    mov %esi, PHYS(_bootdata_base)
+    mov %ebx, PHYS(_bootdata_base)
 
     /* give the boot allocator a chance to compute the physical address of the kernel */
     call boot_alloc_init
@@ -282,3 +310,9 @@ FUNCTION_LABEL(_start)
 DATA(_kstack)
     .skip 4096
 DATA(_kstack_end)
+
+// These symbols are used by image.S.
+.global IMAGE_ELF_ENTRY
+.global IMAGE_MULTIBOOT_ENTRY
+IMAGE_ELF_ENTRY = _start
+IMAGE_MULTIBOOT_ENTRY = _multiboot_start

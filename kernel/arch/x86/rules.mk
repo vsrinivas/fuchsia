@@ -9,6 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
+BOOT_HEADER_SIZE ?= 0x70
 KERNEL_LOAD_OFFSET ?= 0x00100000 # 1MB
 KERNEL_BASE ?= 0xffffffff80100000 # has KERNEL_LOAD_OFFSET baked into it
 KERNEL_SIZE ?= 0x40000000 # 1GB
@@ -48,7 +49,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/faults.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/gdt.S \
-	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/hwp.cpp \
 	$(LOCAL_DIR)/idt.cpp \
 	$(LOCAL_DIR)/ioapic.cpp \
@@ -145,10 +145,5 @@ endif
 ifeq ($(call TOBOOL,$(ENABLE_NEW_BOOTDATA)),true)
 MODULE_DEFINES += ENABLE_NEW_BOOTDATA=1
 endif
-
-LINKER_SCRIPT += $(LOCAL_BUILDDIR)/kernel.ld
-
-# potentially generated files that should be cleaned out with clean make rule
-GENERATED += $(LOCAL_BUILDDIR)/kernel.ld
 
 include make/module.mk

@@ -29,8 +29,12 @@ page_table              .req x11
 cpuid                   .req x19
 page_table0             .req x20
 page_table1             .req x21
+kernel_vaddr            .req x22
 
-.section .text.boot, "a", @progbits
+// This code is purely position-independent and generates no relocations
+// that need boot-time fixup; gen-kaslr-fixup.sh ensures this (and would
+// ignore it if this code were in .text.boot, so don't put it there).
+.text
 FUNCTION(_start)
     /* Save the Boot info for the primary CPU only */
     mrs     cpuid, mpidr_el1
@@ -56,6 +60,16 @@ FUNCTION(_start)
     orr     tmp, tmp, #(1<<12) /* Enable icache */
     orr     tmp, tmp, #(1<<2)  /* Enable dcache/ucache */
     msr     sctlr_el1, tmp
+
+    // This can be any arbitrary (page-aligned) address >= KERNEL_ASPACE_BASE.
+    // TODO(SEC-31): Choose it randomly.
+    movlit  kernel_vaddr, KERNEL_BASE
+
+    // The fixup code appears right after the kernel image (at __data_end
+    // in our view).  It expects x0 to contain the actual runtime address
+    // of __code_start.
+    mov     x0, kernel_vaddr
+    bl      __data_end
 
     /* load the base of the translation tables */
     adr_global page_table0, tt_trampoline
@@ -117,7 +131,7 @@ FUNCTION(_start)
     /* map the kernel to a fixed address */
     /* note: mapping the kernel here with full rwx, this will get locked down later in vm initialization; */
     mov     x0, page_table1
-    mov     x1, KERNEL_BASE
+    mov     x1, kernel_vaddr
     adr_global x2, __code_start
     adr_global x3, _end
     sub     x3, x3, x2
@@ -192,8 +206,12 @@ FUNCTION(_start)
 .Lmmu_on_pc:
     isb
 
-    /* Jump to virtual code address */
-    movabs  tmp, .Lmmu_on_vaddr
+    // Map our current physical PC to the virtual PC and jump there.
+    // PC = next_PC - __code_start + kernel_vaddr
+    adr     tmp, .Lmmu_on_vaddr
+    adr     tmp2, __code_start
+    sub     tmp, tmp, tmp2
+    add     tmp, tmp, kernel_vaddr
     br      tmp
 
 .Lmmu_on_vaddr:
@@ -300,3 +318,7 @@ END_DATA(boot_cpu_unsafe_kstack)
 DATA(tt_trampoline)
     .skip 8 * MMU_PAGE_TABLE_ENTRIES_IDENT
 END_DATA(tt_trampoline)
+
+// This symbol is used by image.S.
+.global IMAGE_ELF_ENTRY
+IMAGE_ELF_ENTRY = _start

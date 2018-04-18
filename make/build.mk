@@ -14,13 +14,9 @@ ifneq (,$(EXTRA_BUILDRULES))
 -include $(EXTRA_BUILDRULES)
 endif
 
-$(OUTLKBIN): $(OUTLKELF)
-	$(call BUILDECHO,generating image $@)
-	$(NOECHO)$(OBJCOPY) -O binary $< $@
-
 # Generate an input linker script to define as symbols all the
 # variables set in makefiles that the linker script needs to use.
-LINKER_SCRIPT_VARS := KERNEL_BASE SMP_MAX_CPUS
+LINKER_SCRIPT_VARS := KERNEL_BASE SMP_MAX_CPUS BOOT_HEADER_SIZE
 DEFSYM_SCRIPT := $(BUILDDIR)/kernel-vars.ld
 $(DEFSYM_SCRIPT): FORCE
 	$(call BUILDECHO,generating $@)
@@ -41,6 +37,58 @@ ifeq ($(call TOBOOL,$(QUIET)),false)
 	$(NOECHO)$(SIZE) $@
 endif
 endif
+
+# Tell the linker to record all the relocations it applied.
+KERNEL_LDFLAGS += --emit-relocs
+
+# Use the --emit-relocs records to extract the fixups needed to relocate
+# the kernel at boot.
+OUTLKELF_FIXUPS := $(BUILDDIR)/$(LKNAME)-fixups.inc
+$(OUTLKELF_FIXUPS): scripts/gen-kaslr-fixups.sh $(OUTLKELF)
+	$(call BUILDECHO,extracting relocations into $@)
+	$(NOECHO)$(SHELLEXEC) $^ '$(READELF)' $@
+GENERATED += $(OUTLKELF_FIXUPS)
+
+# Canned sequence to convert an ELF file to a raw binary.
+define elf2bin-commands
+	$(call BUILDECHO,generating image $@)
+	$(NOECHO)$(OBJCOPY) -O binary $< $@
+endef
+
+# Extract the raw binary image of the kernel proper.
+OUTLKELF_RAW := $(OUTLKELF).bin
+$(OUTLKELF_RAW): $(OUTLKELF); $(elf2bin-commands)
+
+OUTLKELF_IMAGE_ASM := kernel/arch/$(ARCH)/image.S
+OUTLKELF_IMAGE_OBJ := $(BUILDDIR)/$(LKNAME).image.o
+ALLOBJS += $(OUTLKELF_IMAGE_OBJ)
+KERNEL_DEFINES += \
+    BOOT_HEADER_SIZE=$(BOOT_HEADER_SIZE) \
+    KERNEL_IMAGE='"$(OUTLKELF_RAW)"' \
+
+# Assemble the kernel image along with boot headers and relocation fixup code.
+# TODO(mcgrathr): Reuse compile.mk $(MODULE_ASMOBJS) commands here somehow.
+$(OUTLKELF_IMAGE_OBJ): $(OUTLKELF_IMAGE_ASM) $(OUTLKELF_FIXUPS) $(OUTLKELF_RAW)
+	@$(MKDIR)
+	$(call BUILDECHO, assembling $<)
+	$(NOECHO)$(CC) $(GLOBAL_OPTFLAGS)  \
+	    $(GLOBAL_COMPILEFLAGS) $(KERNEL_COMPILEFLAGS) $(ARCH_COMPILEFLAGS) \
+	    $(GLOBAL_ASMFLAGS) $(KERNEL_ASMFLAGS) $(ARCH_ASMFLAGS) \
+	    $(GLOBAL_INCLUDES) $(KERNEL_INCLUDES) -I$(BUILDDIR) \
+	    -c $< -MD -MP -MT $@ -MF $(@:.o=.d) -o $@
+
+# Now link the final load image, using --just-symbols to let image.S refer
+# to symbols defined in the kernel proper.
+$(OUTLKELF_IMAGE): $(OUTLKELF_IMAGE_OBJ) $(OUTLKELF) $(DEFSYM_SCRIPT) \
+		   kernel/image.ld
+	$(call BUILDECHO,linking $@)
+	@$(MKDIR)
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) --build-id=none \
+		       -o $@ -T kernel/image.ld --just-symbols $(OUTLKELF) \
+		       $(DEFSYM_SCRIPT) $(OUTLKELF_IMAGE_OBJ)
+
+# Finally, extract the raw binary of the kernel load image.
+$(OUTLKBIN): $(OUTLKELF_IMAGE); $(elf2bin-commands)
 
 $(OUTLKELF)-gdb.py: scripts/$(LKNAME).elf-gdb.py
 	$(call BUILDECHO, generating $@)

@@ -8,22 +8,20 @@
 #ifndef __PLATFORM_MULTIBOOT_H
 #define __PLATFORM_MULTIBOOT_H
 
-#include <stdint.h>
-
 /* magic number for multiboot header */
 #define MULTIBOOT_HEADER_MAGIC      0x1BADB002
 
-/* flags for multiboot header */
-#ifdef __ELF__
-#define MULTIBOOT_HEADER_FLAGS      0x00000003
-#else
-#define MULTIBOOT_HEADER_FLAGS      0x00010003
-#endif
+// Flags for multiboot header:
+//   0x00000002: Boot loader should provide memory map.
+//   0x00010000: *_addr fields in multiboot_header_t are used.
+#define MULTIBOOT_HEADER_FLAGS      0x00010002
 
 /* magic number passed by multiboot-compliant boot loaders */
 #define MULTIBOOT_BOOTLOADER_MAGIC  0x2BADB002
 
 #ifndef __ASSEMBLER__
+
+#include <stdint.h>
 
 /* multiboot header */
 typedef struct multiboot_header {

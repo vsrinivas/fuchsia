@@ -19,7 +19,6 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/exceptions_c.cpp \
 	$(LOCAL_DIR)/feature.cpp \
 	$(LOCAL_DIR)/fpu.cpp \
-	$(LOCAL_DIR)/header.S \
 	$(LOCAL_DIR)/mexec.S \
 	$(LOCAL_DIR)/mmu.cpp \
 	$(LOCAL_DIR)/periphmap.cpp \
@@ -67,6 +66,7 @@ GLOBAL_DEFINES += \
 # kernel is linked to run at the arbitrary address of -4GB
 # peripherals will be mapped just below this mark
 KERNEL_BASE := 0xffffffff00000000
+BOOT_HEADER_SIZE ?= 0x50
 
 KERNEL_DEFINES += \
 	KERNEL_BASE=$(KERNEL_BASE) \
