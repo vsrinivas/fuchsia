@@ -111,6 +111,7 @@ def main():
     env['GOOS'] = goos
     env['GOPATH'] = gopath
     env['ZIRCON_SYSROOT'] = args.zircon_sysroot
+    env['FUCHSIA_ROOT_OUT_DIR'] = os.path.abspath(args.root_out_dir)
 
     if goos == 'fuchsia':
         gengoroot = os.path.abspath(os.path.join(args.root_out_dir, 'goroot'))
@@ -131,7 +132,6 @@ def main():
       cmd += ['-x']
     cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
             output_name, args.package]
-
     retcode = subprocess.call(cmd, env=env)
 
     if retcode == 0 and args.unstripped_binname:
