@@ -9,6 +9,7 @@
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/scenic.h"
+#include "garnet/public/lib/escher/util/check_vulkan_support.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher_process_init.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -78,7 +79,13 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
 void GfxSystem::Initialize() {
   Display* display = display_manager_.default_display();
   if (!display) {
-    FXL_LOG(ERROR) << "No default display, Scenic system exiting";
+    FXL_LOG(ERROR) << "No default display, Graphics system exiting";
+    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    return;
+  }
+
+  if (!escher::VulkanIsSupported()) {
+    FXL_LOG(ERROR) << "No Vulkan on device, Graphics system exiting.";
     fsl::MessageLoop::GetCurrent()->PostQuitTask();
     return;
   }
