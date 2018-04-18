@@ -183,20 +183,26 @@ void NandDevice::Queue(nand_op_t* operation) {
             operation->completion_cb(operation, ZX_ERR_OUT_OF_RANGE);
             return;
         }
-
-        if (AddToList(operation)) {
-            completion_signal(&wake_signal_);
-        } else {
-            operation->completion_cb(operation, ZX_ERR_BAD_STATE);
-        }
         break;
     }
     case NAND_OP_ERASE:
-        // TODO(rvargas): implement.
+        if (!operation->erase.num_blocks ||
+            operation->erase.first_block >= params_.num_blocks ||
+            params_.num_blocks - operation->erase.first_block < operation->erase.num_blocks) {
+            operation->completion_cb(operation, ZX_ERR_OUT_OF_RANGE);
+            return;
+        }
+        break;
 
     default:
         operation->completion_cb(operation, ZX_ERR_NOT_SUPPORTED);
-        break;
+        return;
+    }
+
+    if (AddToList(operation)) {
+        completion_signal(&wake_signal_);
+    } else {
+        operation->completion_cb(operation, ZX_ERR_BAD_STATE);
     }
 }
 
@@ -247,6 +253,7 @@ int NandDevice::WorkerThread() {
 
         zx_status_t status = ZX_OK;
 
+        // Use the most likely values for now.
         uint32_t nand_addr = operation->rw.offset_nand * params_.page_size;
         uint64_t vmo_addr = operation->rw.offset_vmo * params_.page_size;
         uint32_t length = operation->rw.length * params_.page_size;
@@ -269,6 +276,16 @@ int NandDevice::WorkerThread() {
             status = zx_vmo_read(operation->rw.vmo, addr, vmo_addr, length);
             break;
 
+        case NAND_OP_ERASE: {
+            uint32_t block_size = params_.page_size * params_.pages_per_block;
+            nand_addr = operation->erase.first_block * block_size;
+            length = operation->erase.num_blocks * block_size;
+            addr = reinterpret_cast<char*>(mapped_addr_) + nand_addr;
+
+            memset(addr, 0xff, length);
+            status = ZX_OK;
+            break;
+        }
         default:
             ZX_DEBUG_ASSERT(false);  // Unexpected.
         }
