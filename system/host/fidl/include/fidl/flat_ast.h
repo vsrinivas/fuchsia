@@ -83,8 +83,8 @@ struct Constant {
     virtual ~Constant() {}
 
     enum struct Kind {
-        Identifier,
-        Literal,
+        kIdentifier,
+        kLiteral,
     };
 
     explicit Constant(Kind kind) : kind(kind) {}
@@ -93,14 +93,14 @@ struct Constant {
 };
 
 struct IdentifierConstant : Constant {
-    explicit IdentifierConstant(Name name) : Constant(Kind::Identifier), name(std::move(name)) {}
+    explicit IdentifierConstant(Name name) : Constant(Kind::kIdentifier), name(std::move(name)) {}
 
     Name name;
 };
 
 struct LiteralConstant : Constant {
     explicit LiteralConstant(std::unique_ptr<raw::Literal> literal)
-        : Constant(Kind::Literal), literal(std::move(literal)) {}
+        : Constant(Kind::kLiteral), literal(std::move(literal)) {}
 
     std::unique_ptr<raw::Literal> literal;
 };
@@ -166,13 +166,13 @@ struct Type {
     virtual ~Type() {}
 
     enum struct Kind {
-        Array,
-        Vector,
-        String,
-        Handle,
-        RequestHandle,
-        Primitive,
-        Identifier,
+        kArray,
+        kVector,
+        kString,
+        kHandle,
+        kRequestHandle,
+        kPrimitive,
+        kIdentifier,
     };
 
     explicit Type(Kind kind, uint32_t size) : kind(kind), size(size) {}
@@ -187,7 +187,7 @@ struct Type {
 
 struct ArrayType : public Type {
     ArrayType(uint32_t size, std::unique_ptr<Type> element_type, Size element_count)
-        : Type(Kind::Array, size), element_type(std::move(element_type)),
+        : Type(Kind::kArray, size), element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
     std::unique_ptr<Type> element_type;
@@ -203,7 +203,7 @@ struct ArrayType : public Type {
 struct VectorType : public Type {
     VectorType(std::unique_ptr<Type> element_type, Size element_count,
                types::Nullability nullability)
-        : Type(Kind::Vector, 16u), element_type(std::move(element_type)),
+        : Type(Kind::kVector, 16u), element_type(std::move(element_type)),
           element_count(std::move(element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
@@ -221,7 +221,7 @@ struct VectorType : public Type {
 
 struct StringType : public Type {
     StringType(Size max_size, types::Nullability nullability)
-        : Type(Kind::String, 16u), max_size(std::move(max_size)), nullability(nullability) {}
+        : Type(Kind::kString, 16u), max_size(std::move(max_size)), nullability(nullability) {}
 
     Size max_size;
     types::Nullability nullability;
@@ -235,7 +235,7 @@ struct StringType : public Type {
 
 struct HandleType : public Type {
     HandleType(types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::Handle, 4u), subtype(subtype), nullability(nullability) {}
+        : Type(Kind::kHandle, 4u), subtype(subtype), nullability(nullability) {}
 
     types::HandleSubtype subtype;
     types::Nullability nullability;
@@ -249,7 +249,7 @@ struct HandleType : public Type {
 
 struct RequestHandleType : public Type {
     RequestHandleType(Name name, types::Nullability nullability)
-        : Type(Kind::RequestHandle, 4u), name(std::move(name)), nullability(nullability) {}
+        : Type(Kind::kRequestHandle, 4u), name(std::move(name)), nullability(nullability) {}
 
     Name name;
     types::Nullability nullability;
@@ -264,30 +264,30 @@ struct RequestHandleType : public Type {
 struct PrimitiveType : public Type {
     static uint32_t SubtypeSize(types::PrimitiveSubtype subtype) {
         switch (subtype) {
-        case types::PrimitiveSubtype::Bool:
-        case types::PrimitiveSubtype::Int8:
-        case types::PrimitiveSubtype::Uint8:
+        case types::PrimitiveSubtype::kBool:
+        case types::PrimitiveSubtype::kInt8:
+        case types::PrimitiveSubtype::kUint8:
             return 1u;
 
-        case types::PrimitiveSubtype::Int16:
-        case types::PrimitiveSubtype::Uint16:
+        case types::PrimitiveSubtype::kInt16:
+        case types::PrimitiveSubtype::kUint16:
             return 2u;
 
-        case types::PrimitiveSubtype::Float32:
-        case types::PrimitiveSubtype::Status:
-        case types::PrimitiveSubtype::Int32:
-        case types::PrimitiveSubtype::Uint32:
+        case types::PrimitiveSubtype::kFloat32:
+        case types::PrimitiveSubtype::kStatus:
+        case types::PrimitiveSubtype::kInt32:
+        case types::PrimitiveSubtype::kUint32:
             return 4u;
 
-        case types::PrimitiveSubtype::Float64:
-        case types::PrimitiveSubtype::Int64:
-        case types::PrimitiveSubtype::Uint64:
+        case types::PrimitiveSubtype::kFloat64:
+        case types::PrimitiveSubtype::kInt64:
+        case types::PrimitiveSubtype::kUint64:
             return 8u;
         }
     }
 
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(Kind::Primitive, SubtypeSize(subtype)), subtype(subtype) {}
+        : Type(Kind::kPrimitive, SubtypeSize(subtype)), subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
 
@@ -296,7 +296,7 @@ struct PrimitiveType : public Type {
 
 struct IdentifierType : public Type {
     IdentifierType(Name name, types::Nullability nullability)
-        : Type(Kind::Identifier, 0u), name(std::move(name)), nullability(nullability) {}
+        : Type(Kind::kIdentifier, 0u), name(std::move(name)), nullability(nullability) {}
 
     Name name;
     types::Nullability nullability;
@@ -312,37 +312,37 @@ inline bool Type::operator<(const Type& other) const {
     if (kind != other.kind)
         return kind < other.kind;
     switch (kind) {
-    case Type::Kind::Array: {
+    case Type::Kind::kArray: {
         auto left_array = static_cast<const ArrayType*>(this);
         auto right_array = static_cast<const ArrayType*>(&other);
         return *left_array < *right_array;
     }
-    case Type::Kind::Vector: {
+    case Type::Kind::kVector: {
         auto left_vector = static_cast<const VectorType*>(this);
         auto right_vector = static_cast<const VectorType*>(&other);
         return *left_vector < *right_vector;
     }
-    case Type::Kind::String: {
+    case Type::Kind::kString: {
         auto left_string = static_cast<const StringType*>(this);
         auto right_string = static_cast<const StringType*>(&other);
         return *left_string < *right_string;
     }
-    case Type::Kind::Handle: {
+    case Type::Kind::kHandle: {
         auto left_handle = static_cast<const HandleType*>(this);
         auto right_handle = static_cast<const HandleType*>(&other);
         return *left_handle < *right_handle;
     }
-    case Type::Kind::RequestHandle: {
+    case Type::Kind::kRequestHandle: {
         auto left_request = static_cast<const RequestHandleType*>(this);
         auto right_request = static_cast<const RequestHandleType*>(&other);
         return *left_request < *right_request;
     }
-    case Type::Kind::Primitive: {
+    case Type::Kind::kPrimitive: {
         auto left_primitive = static_cast<const PrimitiveType*>(this);
         auto right_primitive = static_cast<const PrimitiveType*>(&other);
         return *left_primitive < *right_primitive;
     }
-    case Type::Kind::Identifier: {
+    case Type::Kind::kIdentifier: {
         auto left_identifier = static_cast<const IdentifierType*>(this);
         auto right_identifier = static_cast<const IdentifierType*>(&other);
         return *left_identifier < *right_identifier;
@@ -593,23 +593,23 @@ public:
             return false;
         }
         switch (constant->kind) {
-        case Constant::Kind::Identifier: {
+        case Constant::Kind::kIdentifier: {
             auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
             auto decl = LookupType(identifier_constant->name);
             if (!decl || decl->kind != Decl::Kind::kConst)
                 return false;
             return ParseIntegerConstant(static_cast<Const*>(decl)->value.get(), out_value);
         }
-        case Constant::Kind::Literal: {
+        case Constant::Kind::kLiteral: {
             auto literal_constant = static_cast<const LiteralConstant*>(constant);
             switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::String:
-            case raw::Literal::Kind::True:
-            case raw::Literal::Kind::False: {
+            case raw::Literal::Kind::kString:
+            case raw::Literal::Kind::kTrue:
+            case raw::Literal::Kind::kFalse: {
                 return false;
             }
 
-            case raw::Literal::Kind::Numeric: {
+            case raw::Literal::Kind::kNumeric: {
                 auto numeric_literal =
                     static_cast<const raw::NumericLiteral*>(literal_constant->literal.get());
                 return ParseIntegerLiteral<IntType>(numeric_literal, out_value);

@@ -45,22 +45,22 @@ enum {
 Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter)
     : lexer_(lexer), error_reporter_(error_reporter) {
     handle_subtype_table_ = {
-        {"process", types::HandleSubtype::Process},
-        {"thread", types::HandleSubtype::Thread},
-        {"vmo", types::HandleSubtype::Vmo},
-        {"channel", types::HandleSubtype::Channel},
-        {"event", types::HandleSubtype::Event},
-        {"port", types::HandleSubtype::Port},
-        {"interrupt", types::HandleSubtype::Interrupt},
-        {"log", types::HandleSubtype::Log},
-        {"socket", types::HandleSubtype::Socket},
-        {"resource", types::HandleSubtype::Resource},
-        {"eventpair", types::HandleSubtype::Eventpair},
-        {"job", types::HandleSubtype::Job},
-        {"vmar", types::HandleSubtype::Vmar},
-        {"fifo", types::HandleSubtype::Fifo},
-        {"guest", types::HandleSubtype::Guest},
-        {"timer", types::HandleSubtype::Timer},
+        {"process", types::HandleSubtype::kProcess},
+        {"thread", types::HandleSubtype::kThread},
+        {"vmo", types::HandleSubtype::kVmo},
+        {"channel", types::HandleSubtype::kChannel},
+        {"event", types::HandleSubtype::kEvent},
+        {"port", types::HandleSubtype::kPort},
+        {"interrupt", types::HandleSubtype::kInterrupt},
+        {"log", types::HandleSubtype::kLog},
+        {"socket", types::HandleSubtype::kSocket},
+        {"resource", types::HandleSubtype::kResource},
+        {"eventpair", types::HandleSubtype::kEventpair},
+        {"job", types::HandleSubtype::kJob},
+        {"vmar", types::HandleSubtype::kVmar},
+        {"fifo", types::HandleSubtype::kFifo},
+        {"guest", types::HandleSubtype::kGuest},
+        {"timer", types::HandleSubtype::kTimer},
     };
 
     last_token_ = Lex();
@@ -318,9 +318,9 @@ std::unique_ptr<raw::VectorType> Parser::ParseVectorType() {
             return Fail();
     }
 
-    auto nullability = types::Nullability::Nonnullable;
+    auto nullability = types::Nullability::kNonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = types::Nullability::Nullable;
+        nullability = types::Nullability::kNullable;
     }
 
     return std::make_unique<raw::VectorType>(std::move(element_type),
@@ -341,9 +341,9 @@ std::unique_ptr<raw::StringType> Parser::ParseStringType() {
             return Fail();
     }
 
-    auto nullability = types::Nullability::Nonnullable;
+    auto nullability = types::Nullability::kNonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = types::Nullability::Nullable;
+        nullability = types::Nullability::kNullable;
     }
 
     return std::make_unique<raw::StringType>(std::move(maybe_element_count), nullability);
@@ -354,7 +354,7 @@ std::unique_ptr<raw::HandleType> Parser::ParseHandleType() {
     if (!Ok())
         return Fail();
 
-    auto subtype = types::HandleSubtype::Handle;
+    auto subtype = types::HandleSubtype::kHandle;
     if (MaybeConsumeToken(Token::Kind::LeftAngle)) {
         if (!Ok())
             return Fail();
@@ -368,9 +368,9 @@ std::unique_ptr<raw::HandleType> Parser::ParseHandleType() {
             return Fail();
     }
 
-    auto nullability = types::Nullability::Nonnullable;
+    auto nullability = types::Nullability::kNonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = types::Nullability::Nullable;
+        nullability = types::Nullability::kNullable;
     }
 
     return std::make_unique<raw::HandleType>(subtype, nullability);
@@ -381,40 +381,40 @@ std::unique_ptr<raw::PrimitiveType> Parser::ParsePrimitiveType() {
 
     switch (Peek()) {
     case Token::Kind::Bool:
-        subtype = types::PrimitiveSubtype::Bool;
+        subtype = types::PrimitiveSubtype::kBool;
         break;
     case Token::Kind::Status:
-        subtype = types::PrimitiveSubtype::Status;
+        subtype = types::PrimitiveSubtype::kStatus;
         break;
     case Token::Kind::Int8:
-        subtype = types::PrimitiveSubtype::Int8;
+        subtype = types::PrimitiveSubtype::kInt8;
         break;
     case Token::Kind::Int16:
-        subtype = types::PrimitiveSubtype::Int16;
+        subtype = types::PrimitiveSubtype::kInt16;
         break;
     case Token::Kind::Int32:
-        subtype = types::PrimitiveSubtype::Int32;
+        subtype = types::PrimitiveSubtype::kInt32;
         break;
     case Token::Kind::Int64:
-        subtype = types::PrimitiveSubtype::Int64;
+        subtype = types::PrimitiveSubtype::kInt64;
         break;
     case Token::Kind::Uint8:
-        subtype = types::PrimitiveSubtype::Uint8;
+        subtype = types::PrimitiveSubtype::kUint8;
         break;
     case Token::Kind::Uint16:
-        subtype = types::PrimitiveSubtype::Uint16;
+        subtype = types::PrimitiveSubtype::kUint16;
         break;
     case Token::Kind::Uint32:
-        subtype = types::PrimitiveSubtype::Uint32;
+        subtype = types::PrimitiveSubtype::kUint32;
         break;
     case Token::Kind::Uint64:
-        subtype = types::PrimitiveSubtype::Uint64;
+        subtype = types::PrimitiveSubtype::kUint64;
         break;
     case Token::Kind::Float32:
-        subtype = types::PrimitiveSubtype::Float32;
+        subtype = types::PrimitiveSubtype::kFloat32;
         break;
     case Token::Kind::Float64:
-        subtype = types::PrimitiveSubtype::Float64;
+        subtype = types::PrimitiveSubtype::kFloat64;
         break;
     default:
         return Fail();
@@ -440,9 +440,9 @@ std::unique_ptr<raw::RequestHandleType> Parser::ParseRequestHandleType() {
     if (!Ok())
         return Fail();
 
-    auto nullability = types::Nullability::Nonnullable;
+    auto nullability = types::Nullability::kNonnullable;
     if (MaybeConsumeToken(Token::Kind::Question)) {
-        nullability = types::Nullability::Nullable;
+        nullability = types::Nullability::kNullable;
     }
 
     return std::make_unique<raw::RequestHandleType>(std::move(identifier), nullability);
@@ -454,11 +454,11 @@ std::unique_ptr<raw::Type> Parser::ParseType() {
         auto identifier = ParseCompoundIdentifier();
         if (!Ok())
             return Fail();
-        auto nullability = types::Nullability::Nonnullable;
+        auto nullability = types::Nullability::kNonnullable;
         if (MaybeConsumeToken(Token::Kind::Question)) {
             if (!Ok())
                 return Fail();
-            nullability = types::Nullability::Nullable;
+            nullability = types::Nullability::kNullable;
         }
         return std::make_unique<raw::IdentifierType>(std::move(identifier), nullability);
     }

@@ -202,9 +202,9 @@ private:
 };
 
 enum struct Behavior {
-    CHeader,
-    Tables,
-    JSON,
+    kCHeader,
+    kTables,
+    kJSON,
 };
 
 bool Parse(const fidl::SourceFile& source_file, fidl::IdentifierTable* identifier_table,
@@ -267,11 +267,11 @@ int main(int argc, char* argv[]) {
             Usage();
             exit(0);
         } else if (behavior_argument == "--c-header") {
-            outputs.emplace(Behavior::CHeader, Open(args->Claim(), std::ios::out));
+            outputs.emplace(Behavior::kCHeader, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--tables") {
-            outputs.emplace(Behavior::Tables, Open(args->Claim(), std::ios::out));
+            outputs.emplace(Behavior::kTables, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--json") {
-            outputs.emplace(Behavior::JSON, Open(args->Claim(), std::ios::out));
+            outputs.emplace(Behavior::kJSON, Open(args->Claim(), std::ios::out));
         } else if (behavior_argument == "--name") {
             library_name = args->Claim();
         } else if (behavior_argument == "--files") {
@@ -341,17 +341,17 @@ int main(int argc, char* argv[]) {
         auto& output_file = output.second;
 
         switch (behavior) {
-        case Behavior::CHeader: {
+        case Behavior::kCHeader: {
             fidl::CGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;
         }
-        case Behavior::Tables: {
+        case Behavior::kTables: {
             fidl::TablesGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;
         }
-        case Behavior::JSON: {
+        case Behavior::kJSON: {
             fidl::JSONGenerator generator(final_library);
             Generate(&generator, std::move(output_file));
             break;

@@ -134,10 +134,10 @@ template <typename Callback> void JSONGenerator::GenerateObject(Callback callbac
 
 void JSONGenerator::GenerateObjectPunctuation(Position position) {
     switch (position) {
-    case Position::First:
+    case Position::kFirst:
         EmitNewlineAndIndent(&json_file_, ++indent_level_);
         break;
-    case Position::Subsequent:
+    case Position::kSubsequent:
         EmitObjectSeparator(&json_file_, indent_level_);
         break;
     }
@@ -184,10 +184,10 @@ void JSONGenerator::Generate(types::HandleSubtype value) {
 
 void JSONGenerator::Generate(types::Nullability value) {
     switch (value) {
-    case types::Nullability::Nullable:
+    case types::Nullability::kNullable:
         EmitBoolean(&json_file_, true);
         break;
-    case types::Nullability::Nonnullable:
+    case types::Nullability::kNonnullable:
         EmitBoolean(&json_file_, false);
         break;
     }
@@ -203,25 +203,25 @@ void JSONGenerator::Generate(const raw::Identifier& value) {
 
 void JSONGenerator::Generate(const raw::Literal& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", NameRawLiteralKind(value.kind), Position::First);
+        GenerateObjectMember("kind", NameRawLiteralKind(value.kind), Position::kFirst);
 
         switch (value.kind) {
-        case raw::Literal::Kind::String: {
+        case raw::Literal::Kind::kString: {
             auto type = static_cast<const raw::StringLiteral*>(&value);
             EmitObjectSeparator(&json_file_, indent_level_);
             EmitObjectKey(&json_file_, indent_level_, "value");
             EmitLiteral(&json_file_, type->location.data());
             break;
         }
-        case raw::Literal::Kind::Numeric: {
+        case raw::Literal::Kind::kNumeric: {
             auto type = static_cast<const raw::NumericLiteral*>(&value);
             GenerateObjectMember("value", type->location.data());
             break;
         }
-        case raw::Literal::Kind::True: {
+        case raw::Literal::Kind::kTrue: {
             break;
         }
-        case raw::Literal::Kind::False: {
+        case raw::Literal::Kind::kFalse: {
             break;
         }
         }
@@ -230,15 +230,15 @@ void JSONGenerator::Generate(const raw::Literal& value) {
 
 void JSONGenerator::Generate(const flat::Constant& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::First);
+        GenerateObjectMember("kind", NameFlatConstantKind(value.kind), Position::kFirst);
 
         switch (value.kind) {
-        case flat::Constant::Kind::Identifier: {
+        case flat::Constant::Kind::kIdentifier: {
             auto type = static_cast<const flat::IdentifierConstant*>(&value);
             GenerateObjectMember("identifier", type->name);
             break;
         }
-        case flat::Constant::Kind::Literal: {
+        case flat::Constant::Kind::kLiteral: {
             auto type = static_cast<const flat::LiteralConstant*>(&value);
             GenerateObjectMember("literal", type->literal);
             break;
@@ -249,16 +249,16 @@ void JSONGenerator::Generate(const flat::Constant& value) {
 
 void JSONGenerator::Generate(const flat::Type& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", NameFlatTypeKind(value.kind), Position::First);
+        GenerateObjectMember("kind", NameFlatTypeKind(value.kind), Position::kFirst);
 
         switch (value.kind) {
-        case flat::Type::Kind::Array: {
+        case flat::Type::Kind::kArray: {
             auto type = static_cast<const flat::ArrayType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
             GenerateObjectMember("element_count", type->element_count.Value());
             break;
         }
-        case flat::Type::Kind::Vector: {
+        case flat::Type::Kind::kVector: {
             auto type = static_cast<const flat::VectorType*>(&value);
             GenerateObjectMember("element_type", type->element_type);
             if (type->element_count.Value() < flat::Size::Max().Value())
@@ -266,31 +266,31 @@ void JSONGenerator::Generate(const flat::Type& value) {
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case flat::Type::Kind::String: {
+        case flat::Type::Kind::kString: {
             auto type = static_cast<const flat::StringType*>(&value);
             if (type->max_size.Value() < flat::Size::Max().Value())
                 GenerateObjectMember("maybe_element_count", type->max_size.Value());
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case flat::Type::Kind::Handle: {
+        case flat::Type::Kind::kHandle: {
             auto type = static_cast<const flat::HandleType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case flat::Type::Kind::RequestHandle: {
+        case flat::Type::Kind::kRequestHandle: {
             auto type = static_cast<const flat::RequestHandleType*>(&value);
             GenerateObjectMember("subtype", type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
-        case flat::Type::Kind::Primitive: {
+        case flat::Type::Kind::kPrimitive: {
             auto type = static_cast<const flat::PrimitiveType*>(&value);
             GenerateObjectMember("subtype", type->subtype);
             break;
         }
-        case flat::Type::Kind::Identifier: {
+        case flat::Type::Kind::kIdentifier: {
             auto type = static_cast<const flat::IdentifierType*>(&value);
             GenerateObjectMember("identifier", type->name);
             GenerateObjectMember("nullable", type->nullability);
@@ -302,7 +302,7 @@ void JSONGenerator::Generate(const flat::Type& value) {
 
 void JSONGenerator::Generate(const raw::Attribute& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.value)
             GenerateObjectMember("value", value.value->location);
         else
@@ -334,7 +334,7 @@ void JSONGenerator::Generate(const flat::Name& value) {
 
 void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type);
@@ -344,7 +344,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
 
 void JSONGenerator::Generate(const flat::Enum& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("type", value.type);
@@ -354,14 +354,14 @@ void JSONGenerator::Generate(const flat::Enum& value) {
 
 void JSONGenerator::Generate(const flat::Enum::Member& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         GenerateObjectMember("value", value.value);
     });
 }
 
 void JSONGenerator::Generate(const flat::Interface& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("methods", value.methods);
@@ -370,7 +370,7 @@ void JSONGenerator::Generate(const flat::Interface& value) {
 
 void JSONGenerator::Generate(const flat::Interface::Method& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("ordinal", value.ordinal, Position::First);
+        GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("has_request", value.maybe_request != nullptr);
         if (value.maybe_request != nullptr) {
@@ -391,7 +391,7 @@ void JSONGenerator::Generate(const flat::Interface::Method& value) {
 
 void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("type", value.type, Position::kFirst);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("size", value.fieldshape.Size());
         GenerateObjectMember("alignment", value.fieldshape.Alignment());
@@ -401,7 +401,7 @@ void JSONGenerator::Generate(const flat::Interface::Method::Parameter& value) {
 
 void JSONGenerator::Generate(const flat::Struct& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -412,7 +412,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
 
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("type", value.type, Position::kFirst);
         GenerateObjectMember("name", value.name);
         if (value.maybe_default_value)
             GenerateObjectMember("maybe_default_value", value.maybe_default_value);
@@ -424,7 +424,7 @@ void JSONGenerator::Generate(const flat::Struct::Member& value) {
 
 void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("name", value.name, Position::First);
+        GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("members", value.members);
@@ -435,7 +435,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::First);
+        GenerateObjectMember("type", value.type, Position::kFirst);
         GenerateObjectMember("name", value.name);
         GenerateObjectMember("size", value.fieldshape.Size());
         GenerateObjectMember("alignment", value.fieldshape.Alignment());
@@ -447,7 +447,7 @@ void JSONGenerator::Generate(
     const std::pair<const StringView, std::unique_ptr<flat::Library>>& library_dependency) {
     const flat::Library* library = library_dependency.second.get();
     GenerateObject([&]() {
-        GenerateObjectMember("name", library->library_name_, Position::First);
+        GenerateObjectMember("name", library->library_name_, Position::kFirst);
         GenerateDeclarationsMember(library);
     });
 }
@@ -486,11 +486,11 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
 std::ostringstream JSONGenerator::Produce() {
     indent_level_ = 0;
     GenerateObject([&]() {
-        GenerateObjectMember("version", StringView("0.0.1"), Position::First);
+        GenerateObjectMember("version", StringView("0.0.1"), Position::kFirst);
 
         GenerateObjectMember("name", library_->library_name_);
 
-        GenerateObjectPunctuation(Position::Subsequent);
+        GenerateObjectPunctuation(Position::kSubsequent);
         EmitObjectKey(&json_file_, indent_level_, "library_dependencies");
         GenerateArray(library_->dependencies_->begin(), library_->dependencies_->end());
 

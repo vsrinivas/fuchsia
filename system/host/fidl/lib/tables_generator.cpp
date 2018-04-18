@@ -50,10 +50,10 @@ void Emit(std::ostream* file, types::HandleSubtype handle_subtype) {
 
 void Emit(std::ostream* file, types::Nullability nullability) {
     switch (nullability) {
-    case types::Nullability::Nullable:
+    case types::Nullability::kNullable:
         Emit(file, "::fidl::kNullable");
         break;
-    case types::Nullability::Nonnullable:
+    case types::Nullability::kNonnullable:
         Emit(file, "::fidl::kNonnullable");
         break;
     }
@@ -175,7 +175,7 @@ void TablesGenerator::Generate(const coded::RequestHandleType& request_type) {
     Emit(&tables_file_, "static const fidl_type_t ");
     Emit(&tables_file_, NameTable(request_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
-    Emit(&tables_file_, types::HandleSubtype::Channel);
+    Emit(&tables_file_, types::HandleSubtype::kChannel);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, request_type.nullability);
     Emit(&tables_file_, "));\n\n");
@@ -185,7 +185,7 @@ void TablesGenerator::Generate(const coded::InterfaceHandleType& interface_type)
     Emit(&tables_file_, "static const fidl_type_t ");
     Emit(&tables_file_, NameTable(interface_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedHandle(");
-    Emit(&tables_file_, types::HandleSubtype::Channel);
+    Emit(&tables_file_, types::HandleSubtype::kChannel);
     Emit(&tables_file_, ", ");
     Emit(&tables_file_, interface_type.nullability);
     Emit(&tables_file_, "));\n\n");
@@ -283,7 +283,7 @@ void TablesGenerator::GenerateForward(const coded::UnionType& union_type) {
 
 const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
     switch (type->kind) {
-    case flat::Type::Kind::Array: {
+    case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
         auto iter = array_type_map_.find(array_type);
         if (iter != array_type_map_.end())
@@ -298,7 +298,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_array_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::Vector: {
+    case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
         auto iter = vector_type_map_.find(vector_type);
         if (iter != vector_type_map_.end())
@@ -314,7 +314,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_vector_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::String: {
+    case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
         auto iter = string_type_map_.find(string_type);
         if (iter != string_type_map_.end())
@@ -327,7 +327,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_string_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::Handle: {
+    case flat::Type::Kind::kHandle: {
         auto handle_type = static_cast<const flat::HandleType*>(type);
         auto iter = handle_type_map_.find(handle_type);
         if (iter != handle_type_map_.end())
@@ -339,7 +339,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_handle_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::RequestHandle: {
+    case flat::Type::Kind::kRequestHandle: {
         auto request_type = static_cast<const flat::RequestHandleType*>(type);
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
@@ -352,7 +352,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_request_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::Primitive: {
+    case flat::Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
         auto iter = primitive_type_map_.find(primitive_type);
         if (iter != primitive_type_map_.end())
@@ -365,7 +365,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         coded_types_.push_back(std::move(coded_primitive_type));
         return coded_types_.back().get();
     }
-    case flat::Type::Kind::Identifier: {
+    case flat::Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<const flat::IdentifierType*>(type);
         auto iter = named_coded_types_.find(&identifier_type->name);
         if (iter == named_coded_types_.end()) {
@@ -377,7 +377,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         case coded::Type::Kind::kStruct: {
             // Structs were compiled as part of decl compilation,
             // but we may now need to generate the StructPointer.
-            if (identifier_type->nullability != types::Nullability::Nullable)
+            if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
             auto coded_struct_type = static_cast<coded::StructType*>(coded_type);
             coded_struct_type->referenced_by_pointer = true;
@@ -388,7 +388,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
         case coded::Type::Kind::kUnion: {
             // Unions were compiled as part of decl compilation,
             // but we may now need to generate the UnionPointer.
-            if (identifier_type->nullability != types::Nullability::Nullable)
+            if (identifier_type->nullability != types::Nullability::kNullable)
                 break;
             auto coded_union_type = static_cast<coded::UnionType*>(coded_type);
             coded_union_type->referenced_by_pointer = true;

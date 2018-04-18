@@ -105,29 +105,29 @@ TypeShape StringTypeShape() {
 
 TypeShape PrimitiveTypeShape(types::PrimitiveSubtype type) {
     switch (type) {
-    case types::PrimitiveSubtype::Int8:
+    case types::PrimitiveSubtype::kInt8:
         return kInt8TypeShape;
-    case types::PrimitiveSubtype::Int16:
+    case types::PrimitiveSubtype::kInt16:
         return kInt16TypeShape;
-    case types::PrimitiveSubtype::Int32:
+    case types::PrimitiveSubtype::kInt32:
         return kInt32TypeShape;
-    case types::PrimitiveSubtype::Int64:
+    case types::PrimitiveSubtype::kInt64:
         return kInt64TypeShape;
-    case types::PrimitiveSubtype::Uint8:
+    case types::PrimitiveSubtype::kUint8:
         return kUint8TypeShape;
-    case types::PrimitiveSubtype::Uint16:
+    case types::PrimitiveSubtype::kUint16:
         return kUint16TypeShape;
-    case types::PrimitiveSubtype::Uint32:
+    case types::PrimitiveSubtype::kUint32:
         return kUint32TypeShape;
-    case types::PrimitiveSubtype::Uint64:
+    case types::PrimitiveSubtype::kUint64:
         return kUint64TypeShape;
-    case types::PrimitiveSubtype::Bool:
+    case types::PrimitiveSubtype::kBool:
         return kBoolTypeShape;
-    case types::PrimitiveSubtype::Status:
+    case types::PrimitiveSubtype::kStatus:
         return kStatusTypeShape;
-    case types::PrimitiveSubtype::Float32:
+    case types::PrimitiveSubtype::kFloat32:
         return kFloat32TypeShape;
-    case types::PrimitiveSubtype::Float64:
+    case types::PrimitiveSubtype::kFloat64:
         return kFloat64TypeShape;
     }
 }
@@ -218,10 +218,10 @@ void Library::RegisterConst(Const* decl) {
     const Name* name = &decl->name;
     constants_.emplace(name, decl);
     switch (decl->type->kind) {
-    case Type::Kind::String:
+    case Type::Kind::kString:
         string_constants_.emplace(name, decl);
         break;
-    case Type::Kind::Primitive:
+    case Type::Kind::kPrimitive:
         primitive_constants_.emplace(name, decl);
         break;
     default:
@@ -243,7 +243,7 @@ bool Library::RegisterDecl(Decl* decl) {
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,
                               std::unique_ptr<Constant>* out_constant) {
     switch (raw_constant->kind) {
-    case raw::Constant::Kind::Identifier: {
+    case raw::Constant::Kind::kIdentifier: {
         auto identifier = static_cast<raw::IdentifierConstant*>(raw_constant.get());
         Name name;
         if (!CompileCompoundIdentifier(identifier->identifier.get(), location, &name)) {
@@ -252,7 +252,7 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
         *out_constant = std::make_unique<IdentifierConstant>(std::move(name));
         break;
     }
-    case raw::Constant::Kind::Literal: {
+    case raw::Constant::Kind::kLiteral: {
         auto literal = static_cast<raw::LiteralConstant*>(raw_constant.get());
         *out_constant = std::make_unique<LiteralConstant>(std::move(literal->literal));
         break;
@@ -264,7 +264,7 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
 bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation location,
                           std::unique_ptr<Type>* out_type) {
     switch (raw_type->kind) {
-    case raw::Type::Kind::Array: {
+    case raw::Type::Kind::kArray: {
         auto array_type = static_cast<raw::ArrayType*>(raw_type.get());
         std::unique_ptr<Type> element_type;
         if (!ConsumeType(std::move(array_type->element_type), location, &element_type))
@@ -281,7 +281,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
             std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
         break;
     }
-    case raw::Type::Kind::Vector: {
+    case raw::Type::Kind::kVector: {
         auto vector_type = static_cast<raw::VectorType*>(raw_type.get());
         std::unique_ptr<Type> element_type;
         if (!ConsumeType(std::move(vector_type->element_type), location, &element_type))
@@ -298,7 +298,7 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
                                                  vector_type->nullability);
         break;
     }
-    case raw::Type::Kind::String: {
+    case raw::Type::Kind::kString: {
         auto string_type = static_cast<raw::StringType*>(raw_type.get());
         Size element_count = Size::Max();
         if (string_type->maybe_element_count) {
@@ -312,12 +312,12 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
             std::make_unique<StringType>(std::move(element_count), string_type->nullability);
         break;
     }
-    case raw::Type::Kind::Handle: {
+    case raw::Type::Kind::kHandle: {
         auto handle_type = static_cast<raw::HandleType*>(raw_type.get());
         *out_type = std::make_unique<HandleType>(handle_type->subtype, handle_type->nullability);
         break;
     }
-    case raw::Type::Kind::RequestHandle: {
+    case raw::Type::Kind::kRequestHandle: {
         auto request_type = static_cast<raw::RequestHandleType*>(raw_type.get());
         Name name;
         if (!CompileCompoundIdentifier(request_type->identifier.get(), location, &name)) {
@@ -326,12 +326,12 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         *out_type = std::make_unique<RequestHandleType>(std::move(name), request_type->nullability);
         break;
     }
-    case raw::Type::Kind::Primitive: {
+    case raw::Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<raw::PrimitiveType*>(raw_type.get());
         *out_type = std::make_unique<PrimitiveType>(primitive_type->subtype);
         break;
     }
-    case raw::Type::Kind::Identifier: {
+    case raw::Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<raw::IdentifierType*>(raw_type.get());
         Name name;
         if (!CompileCompoundIdentifier(identifier_type->identifier.get(), location, &name)) {
@@ -372,7 +372,7 @@ bool Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
             return false;
         members.emplace_back(location, std::move(value));
     }
-    auto type = types::PrimitiveSubtype::Uint32;
+    auto type = types::PrimitiveSubtype::kUint32;
     if (enum_declaration->maybe_subtype)
         type = enum_declaration->maybe_subtype->subtype;
 
@@ -558,89 +558,89 @@ bool Library::TypecheckConst(const Const* const_declaration) {
     auto type = const_declaration->type.get();
     auto constant = const_declaration->value.get();
     switch (type->kind) {
-    case Type::Kind::Array:
+    case Type::Kind::kArray:
         return Fail("Tried to generate an array constant");
-    case Type::Kind::Vector:
+    case Type::Kind::kVector:
         return Fail("Tried to generate an vector constant");
-    case Type::Kind::Handle:
+    case Type::Kind::kHandle:
         return Fail("Tried to generate a handle constant");
-    case Type::Kind::RequestHandle:
+    case Type::Kind::kRequestHandle:
         return Fail("Tried to generate a request handle constant");
-    case Type::Kind::String: {
+    case Type::Kind::kString: {
         switch (constant->kind) {
-        case Constant::Kind::Identifier: {
+        case Constant::Kind::kIdentifier: {
             auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
             return TypecheckString(identifier_constant);
         }
-        case Constant::Kind::Literal: {
+        case Constant::Kind::kLiteral: {
             auto literal_constant = static_cast<const LiteralConstant*>(constant);
             switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::String:
+            case raw::Literal::Kind::kString:
                 return true;
-            case raw::Literal::Kind::Numeric:
+            case raw::Literal::Kind::kNumeric:
                 return Fail("Tried to assign a numeric literal into a string");
-            case raw::Literal::Kind::True:
-            case raw::Literal::Kind::False:
+            case raw::Literal::Kind::kTrue:
+            case raw::Literal::Kind::kFalse:
                 return Fail("Tried to assign a bool literal into a string");
             }
         }
         }
     }
-    case Type::Kind::Primitive: {
+    case Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<const PrimitiveType*>(type);
         switch (constant->kind) {
-        case Constant::Kind::Identifier: {
+        case Constant::Kind::kIdentifier: {
             auto identifier_constant = static_cast<const IdentifierConstant*>(constant);
             return TypecheckPrimitive(identifier_constant);
         }
-        case Constant::Kind::Literal: {
+        case Constant::Kind::kLiteral: {
             auto literal_constant = static_cast<const LiteralConstant*>(constant);
             switch (literal_constant->literal->kind) {
-            case raw::Literal::Kind::String:
+            case raw::Literal::Kind::kString:
                 return Fail("Tried to assign a string literal to a numeric constant");
-            case raw::Literal::Kind::Numeric:
+            case raw::Literal::Kind::kNumeric:
                 // TODO(kulakowski) Check the constants of numbers.
                 switch (primitive_type->subtype) {
-                case types::PrimitiveSubtype::Uint8:
-                case types::PrimitiveSubtype::Uint16:
-                case types::PrimitiveSubtype::Uint32:
-                case types::PrimitiveSubtype::Uint64:
-                case types::PrimitiveSubtype::Int8:
-                case types::PrimitiveSubtype::Int16:
-                case types::PrimitiveSubtype::Int32:
-                case types::PrimitiveSubtype::Int64:
-                case types::PrimitiveSubtype::Float32:
-                case types::PrimitiveSubtype::Float64:
+                case types::PrimitiveSubtype::kUint8:
+                case types::PrimitiveSubtype::kUint16:
+                case types::PrimitiveSubtype::kUint32:
+                case types::PrimitiveSubtype::kUint64:
+                case types::PrimitiveSubtype::kInt8:
+                case types::PrimitiveSubtype::kInt16:
+                case types::PrimitiveSubtype::kInt32:
+                case types::PrimitiveSubtype::kInt64:
+                case types::PrimitiveSubtype::kFloat32:
+                case types::PrimitiveSubtype::kFloat64:
                     return true;
-                case types::PrimitiveSubtype::Bool:
+                case types::PrimitiveSubtype::kBool:
                     return Fail("Tried to assign a numeric literal into a bool");
-                case types::PrimitiveSubtype::Status:
+                case types::PrimitiveSubtype::kStatus:
                     return Fail("Tried to assign a numeric literal into a status");
                 }
-            case raw::Literal::Kind::True:
-            case raw::Literal::Kind::False:
+            case raw::Literal::Kind::kTrue:
+            case raw::Literal::Kind::kFalse:
                 switch (primitive_type->subtype) {
-                case types::PrimitiveSubtype::Bool:
+                case types::PrimitiveSubtype::kBool:
                     return true;
-                case types::PrimitiveSubtype::Uint8:
-                case types::PrimitiveSubtype::Uint16:
-                case types::PrimitiveSubtype::Uint32:
-                case types::PrimitiveSubtype::Uint64:
-                case types::PrimitiveSubtype::Int8:
-                case types::PrimitiveSubtype::Int16:
-                case types::PrimitiveSubtype::Int32:
-                case types::PrimitiveSubtype::Int64:
-                case types::PrimitiveSubtype::Float32:
-                case types::PrimitiveSubtype::Float64:
+                case types::PrimitiveSubtype::kUint8:
+                case types::PrimitiveSubtype::kUint16:
+                case types::PrimitiveSubtype::kUint32:
+                case types::PrimitiveSubtype::kUint64:
+                case types::PrimitiveSubtype::kInt8:
+                case types::PrimitiveSubtype::kInt16:
+                case types::PrimitiveSubtype::kInt32:
+                case types::PrimitiveSubtype::kInt64:
+                case types::PrimitiveSubtype::kFloat32:
+                case types::PrimitiveSubtype::kFloat64:
                     return Fail("Tried to assign a bool into a numeric type");
-                case types::PrimitiveSubtype::Status:
+                case types::PrimitiveSubtype::kStatus:
                     return Fail("Tried to assign a bool into a status");
                 }
             }
         }
         }
     }
-    case Type::Kind::Identifier: {
+    case Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<const IdentifierType*>(type);
         auto decl = LookupType(identifier_type);
         switch (decl->kind) {
@@ -665,7 +665,7 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
     if (decl == nullptr) {
         // This wasn't a named type. Thus we are looking up a
         // top-level constant, of string or primitive type.
-        assert(type->kind == Type::Kind::String || type->kind == Type::Kind::Primitive);
+        assert(type->kind == Type::Kind::kString || type->kind == Type::Kind::kPrimitive);
         auto iter = constants_.find(&name);
         if (iter == constants_.end()) {
             return nullptr;
@@ -689,22 +689,22 @@ Decl* Library::LookupConstant(const Type* type, const Name& name) {
 Decl* Library::LookupType(const Type* type) const {
     for (;;) {
         switch (type->kind) {
-        case flat::Type::Kind::String:
-        case flat::Type::Kind::Handle:
-        case flat::Type::Kind::RequestHandle:
-        case flat::Type::Kind::Primitive:
+        case flat::Type::Kind::kString:
+        case flat::Type::Kind::kHandle:
+        case flat::Type::Kind::kRequestHandle:
+        case flat::Type::Kind::kPrimitive:
             return nullptr;
-        case flat::Type::Kind::Vector: {
+        case flat::Type::Kind::kVector: {
             type = static_cast<const flat::VectorType*>(type)->element_type.get();
             continue;
         }
-        case flat::Type::Kind::Array: {
+        case flat::Type::Kind::kArray: {
             type = static_cast<const flat::ArrayType*>(type)->element_type.get();
             continue;
         }
-        case flat::Type::Kind::Identifier: {
+        case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            if (identifier_type->nullability == types::Nullability::Nullable) {
+            if (identifier_type->nullability == types::Nullability::kNullable) {
                 return nullptr;
             }
             return LookupType(identifier_type->name);
@@ -737,7 +737,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     };
     auto maybe_add_constant = [this, &edges](const Type* type, const Constant* constant) -> bool {
         switch (constant->kind) {
-        case Constant::Kind::Identifier: {
+        case Constant::Kind::kIdentifier: {
             auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
             auto decl = LookupConstant(type, identifier->name);
             if (decl == nullptr) {
@@ -748,7 +748,7 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
             edges.insert(decl);
             break;
         }
-        case Constant::Kind::Literal: {
+        case Constant::Kind::kLiteral: {
             // Literals have no dependencies on other declarations.
             break;
         }
@@ -873,22 +873,22 @@ bool Library::CompileConst(Const* const_declaration) {
 
 bool Library::CompileEnum(Enum* enum_declaration) {
     switch (enum_declaration->type) {
-    case types::PrimitiveSubtype::Int8:
-    case types::PrimitiveSubtype::Int16:
-    case types::PrimitiveSubtype::Int32:
-    case types::PrimitiveSubtype::Int64:
-    case types::PrimitiveSubtype::Uint8:
-    case types::PrimitiveSubtype::Uint16:
-    case types::PrimitiveSubtype::Uint32:
-    case types::PrimitiveSubtype::Uint64:
+    case types::PrimitiveSubtype::kInt8:
+    case types::PrimitiveSubtype::kInt16:
+    case types::PrimitiveSubtype::kInt32:
+    case types::PrimitiveSubtype::kInt64:
+    case types::PrimitiveSubtype::kUint8:
+    case types::PrimitiveSubtype::kUint16:
+    case types::PrimitiveSubtype::kUint32:
+    case types::PrimitiveSubtype::kUint64:
         // These are allowed as enum subtypes. Compile the size and alignment.
         enum_declaration->typeshape = PrimitiveTypeShape(enum_declaration->type);
         break;
 
-    case types::PrimitiveSubtype::Bool:
-    case types::PrimitiveSubtype::Status:
-    case types::PrimitiveSubtype::Float32:
-    case types::PrimitiveSubtype::Float64:
+    case types::PrimitiveSubtype::kBool:
+    case types::PrimitiveSubtype::kStatus:
+    case types::PrimitiveSubtype::kFloat32:
+    case types::PrimitiveSubtype::kFloat64:
         // These are not allowed as enum subtypes.
         return Fail(*enum_declaration, "Enums cannot be bools, statuses, or floats");
     }
@@ -1093,7 +1093,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
                     "The name of a constant was used where a type was expected");
     }
     case Decl::Kind::kEnum: {
-        if (identifier_type->nullability == types::Nullability::Nullable) {
+        if (identifier_type->nullability == types::Nullability::kNullable) {
             // Enums aren't nullable!
             return Fail(identifier_type->name, "An enum was referred to as 'nullable'");
         } else {
@@ -1106,7 +1106,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         break;
     }
     case Decl::Kind::kStruct: {
-        if (identifier_type->nullability == types::Nullability::Nullable) {
+        if (identifier_type->nullability == types::Nullability::kNullable) {
             typeshape = kPointerTypeShape;
         } else {
             typeshape = static_cast<const Struct*>(named_decl)->typeshape;
@@ -1114,7 +1114,7 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
         break;
     }
     case Decl::Kind::kUnion: {
-        if (identifier_type->nullability == types::Nullability::Nullable) {
+        if (identifier_type->nullability == types::Nullability::kNullable) {
             typeshape = kPointerTypeShape;
         } else {
             typeshape = static_cast<const Union*>(named_decl)->typeshape;
@@ -1131,37 +1131,37 @@ bool Library::CompileIdentifierType(flat::IdentifierType* identifier_type,
 
 bool Library::CompileType(Type* type, TypeShape* out_typeshape) {
     switch (type->kind) {
-    case Type::Kind::Array: {
+    case Type::Kind::kArray: {
         auto array_type = static_cast<ArrayType*>(type);
         return CompileArrayType(array_type, out_typeshape);
     }
 
-    case Type::Kind::Vector: {
+    case Type::Kind::kVector: {
         auto vector_type = static_cast<VectorType*>(type);
         return CompileVectorType(vector_type, out_typeshape);
     }
 
-    case Type::Kind::String: {
+    case Type::Kind::kString: {
         auto string_type = static_cast<StringType*>(type);
         return CompileStringType(string_type, out_typeshape);
     }
 
-    case Type::Kind::Handle: {
+    case Type::Kind::kHandle: {
         auto handle_type = static_cast<HandleType*>(type);
         return CompileHandleType(handle_type, out_typeshape);
     }
 
-    case Type::Kind::RequestHandle: {
+    case Type::Kind::kRequestHandle: {
         auto request_type = static_cast<RequestHandleType*>(type);
         return CompileRequestHandleType(request_type, out_typeshape);
     }
 
-    case Type::Kind::Primitive: {
+    case Type::Kind::kPrimitive: {
         auto primitive_type = static_cast<PrimitiveType*>(type);
         return CompilePrimitiveType(primitive_type, out_typeshape);
     }
 
-    case Type::Kind::Identifier: {
+    case Type::Kind::kIdentifier: {
         auto identifier_type = static_cast<IdentifierType*>(type);
         return CompileIdentifierType(identifier_type, out_typeshape);
     }

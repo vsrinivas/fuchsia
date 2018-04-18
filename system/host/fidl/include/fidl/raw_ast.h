@@ -44,10 +44,10 @@ struct Literal {
     virtual ~Literal() {}
 
     enum struct Kind {
-        String,
-        Numeric,
-        True,
-        False,
+        kString,
+        kNumeric,
+        kTrue,
+        kFalse,
     };
 
     explicit Literal(Kind kind) : kind(kind) {}
@@ -56,31 +56,31 @@ struct Literal {
 };
 
 struct StringLiteral : public Literal {
-    explicit StringLiteral(SourceLocation location) : Literal(Kind::String), location(location) {}
+    explicit StringLiteral(SourceLocation location) : Literal(Kind::kString), location(location) {}
 
     SourceLocation location;
 };
 
 struct NumericLiteral : public Literal {
-    NumericLiteral(SourceLocation location) : Literal(Kind::Numeric), location(location) {}
+    NumericLiteral(SourceLocation location) : Literal(Kind::kNumeric), location(location) {}
 
     SourceLocation location;
 };
 
 struct TrueLiteral : public Literal {
-    TrueLiteral() : Literal(Kind::True) {}
+    TrueLiteral() : Literal(Kind::kTrue) {}
 };
 
 struct FalseLiteral : public Literal {
-    FalseLiteral() : Literal(Kind::False) {}
+    FalseLiteral() : Literal(Kind::kFalse) {}
 };
 
 struct Constant {
     virtual ~Constant() {}
 
     enum struct Kind {
-        Identifier,
-        Literal,
+        kIdentifier,
+        kLiteral,
     };
 
     explicit Constant(Kind kind) : kind(kind) {}
@@ -90,14 +90,14 @@ struct Constant {
 
 struct IdentifierConstant : Constant {
     explicit IdentifierConstant(std::unique_ptr<CompoundIdentifier> identifier)
-        : Constant(Kind::Identifier), identifier(std::move(identifier)) {}
+        : Constant(Kind::kIdentifier), identifier(std::move(identifier)) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
 };
 
 struct LiteralConstant : Constant {
     explicit LiteralConstant(std::unique_ptr<Literal> literal)
-        : Constant(Kind::Literal), literal(std::move(literal)) {}
+        : Constant(Kind::kLiteral), literal(std::move(literal)) {}
 
     std::unique_ptr<Literal> literal;
 };
@@ -121,13 +121,13 @@ struct Type {
     virtual ~Type() {}
 
     enum struct Kind {
-        Array,
-        Vector,
-        String,
-        Handle,
-        RequestHandle,
-        Primitive,
-        Identifier,
+        kArray,
+        kVector,
+        kString,
+        kHandle,
+        kRequestHandle,
+        kPrimitive,
+        kIdentifier,
     };
 
     explicit Type(Kind kind) : kind(kind) {}
@@ -137,7 +137,7 @@ struct Type {
 
 struct ArrayType : public Type {
     ArrayType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> element_count)
-        : Type(Kind::Array), element_type(std::move(element_type)),
+        : Type(Kind::kArray), element_type(std::move(element_type)),
           element_count(std::move(element_count)) {}
 
     std::unique_ptr<Type> element_type;
@@ -147,7 +147,7 @@ struct ArrayType : public Type {
 struct VectorType : public Type {
     VectorType(std::unique_ptr<Type> element_type, std::unique_ptr<Constant> maybe_element_count,
                types::Nullability nullability)
-        : Type(Kind::Vector), element_type(std::move(element_type)),
+        : Type(Kind::kVector), element_type(std::move(element_type)),
           maybe_element_count(std::move(maybe_element_count)), nullability(nullability) {}
 
     std::unique_ptr<Type> element_type;
@@ -157,7 +157,7 @@ struct VectorType : public Type {
 
 struct StringType : public Type {
     StringType(std::unique_ptr<Constant> maybe_element_count, types::Nullability nullability)
-        : Type(Kind::String), maybe_element_count(std::move(maybe_element_count)),
+        : Type(Kind::kString), maybe_element_count(std::move(maybe_element_count)),
           nullability(nullability) {}
 
     std::unique_ptr<Constant> maybe_element_count;
@@ -166,7 +166,7 @@ struct StringType : public Type {
 
 struct HandleType : public Type {
     HandleType(types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::Handle), subtype(subtype), nullability(nullability) {}
+        : Type(Kind::kHandle), subtype(subtype), nullability(nullability) {}
 
     types::HandleSubtype subtype;
     types::Nullability nullability;
@@ -175,7 +175,7 @@ struct HandleType : public Type {
 struct RequestHandleType : public Type {
     RequestHandleType(std::unique_ptr<CompoundIdentifier> identifier,
                       types::Nullability nullability)
-        : Type(Kind::RequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
+        : Type(Kind::kRequestHandle), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;
@@ -183,14 +183,14 @@ struct RequestHandleType : public Type {
 
 struct PrimitiveType : public Type {
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
-        : Type(Kind::Primitive), subtype(subtype) {}
+        : Type(Kind::kPrimitive), subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
 };
 
 struct IdentifierType : public Type {
     IdentifierType(std::unique_ptr<CompoundIdentifier> identifier, types::Nullability nullability)
-        : Type(Kind::Identifier), identifier(std::move(identifier)), nullability(nullability) {}
+        : Type(Kind::kIdentifier), identifier(std::move(identifier)), nullability(nullability) {}
 
     std::unique_ptr<CompoundIdentifier> identifier;
     types::Nullability nullability;

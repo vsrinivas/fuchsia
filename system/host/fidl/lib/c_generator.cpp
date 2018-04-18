@@ -58,7 +58,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
     std::ostringstream member_value;
 
     switch (type) {
-    case types::PrimitiveSubtype::Int8: {
+    case types::PrimitiveSubtype::kInt8: {
         int8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -69,7 +69,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << static_cast<int>(value);
         break;
     }
-    case types::PrimitiveSubtype::Int16: {
+    case types::PrimitiveSubtype::kInt16: {
         int16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -78,7 +78,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Int32: {
+    case types::PrimitiveSubtype::kInt32: {
         int32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -87,7 +87,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Int64: {
+    case types::PrimitiveSubtype::kInt64: {
         int64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -96,7 +96,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Uint8: {
+    case types::PrimitiveSubtype::kUint8: {
         uint8_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -107,7 +107,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << static_cast<unsigned int>(value);
         break;
     }
-    case types::PrimitiveSubtype::Uint16: {
+    case types::PrimitiveSubtype::kUint16: {
         uint16_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -116,7 +116,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Uint32: {
+    case types::PrimitiveSubtype::kUint32: {
         uint32_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -125,7 +125,7 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Uint64: {
+    case types::PrimitiveSubtype::kUint64: {
         uint64_t value;
         bool success = library->ParseIntegerConstant(constant, &value);
         if (!success) {
@@ -134,10 +134,10 @@ void EnumValue(types::PrimitiveSubtype type, const flat::Constant* constant,
         member_value << value;
         break;
     }
-    case types::PrimitiveSubtype::Bool:
-    case types::PrimitiveSubtype::Status:
-    case types::PrimitiveSubtype::Float32:
-    case types::PrimitiveSubtype::Float64:
+    case types::PrimitiveSubtype::kBool:
+    case types::PrimitiveSubtype::kStatus:
+    case types::PrimitiveSubtype::kFloat32:
+    case types::PrimitiveSubtype::kFloat64:
         assert(false && "bad primitive type for an enum");
         break;
     }
@@ -150,7 +150,7 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     for (;;) {
         switch (type->kind) {
         default: { return array_counts; }
-        case flat::Type::Kind::Array: {
+        case flat::Type::Kind::kArray: {
             auto array_type = static_cast<const flat::ArrayType*>(type);
             uint32_t element_count = array_type->element_count.Value();
             array_counts.push_back(element_count);
@@ -429,7 +429,7 @@ void CGenerator::ProduceUnionDeclaration(const NamedUnion& named_union) {
     uint32_t tag = 0u;
     for (const auto& member : named_union.union_info.members) {
         std::string tag_name = NameUnionTag(named_union.name, member);
-        auto union_tag_type = types::PrimitiveSubtype::Uint32;
+        auto union_tag_type = types::PrimitiveSubtype::kUint32;
         std::ostringstream value;
         value << tag;
         GenerateIntegerDefine(std::move(tag_name), union_tag_type, value.str());

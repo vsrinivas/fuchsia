@@ -35,8 +35,8 @@ public:
 
 private:
     enum class Position {
-        First,
-        Subsequent,
+        kFirst,
+        kSubsequent,
     };
 
     void GenerateEOF();
@@ -51,7 +51,7 @@ private:
 
     template <typename Type>
     void GenerateObjectMember(StringView key, const Type& value,
-                              Position position = Position::Subsequent);
+                              Position position = Position::kSubsequent);
 
     template <typename T> void Generate(const std::unique_ptr<T>& value);
 
@@ -93,7 +93,7 @@ private:
 
     void GenerateDeclarationsEntry(int count, const flat::Name& name, StringView decl);
     void GenerateDeclarationsMember(const flat::Library* library,
-                                    Position position = Position::Subsequent);
+                                    Position position = Position::kSubsequent);
 
     const flat::Library* library_;
     int indent_level_;
