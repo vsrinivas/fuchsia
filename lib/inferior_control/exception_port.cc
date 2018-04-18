@@ -98,7 +98,7 @@ void ExceptionPort::Quit() {
     zx_port_packet_t packet;
     memset(&packet, 0, sizeof(packet));
     packet.type = ZX_PKT_TYPE_USER;
-    eport_handle_.queue(&packet, 0);
+    eport_handle_.queue(&packet, 1);
   }
 
   io_thread_.join();
