@@ -2507,10 +2507,6 @@ void StoryControllerImpl::UpdateStoryState(const ModuleState state) {
 
 StoryControllerImpl::Connection* StoryControllerImpl::FindConnection(
     const fidl::VectorPtr<fidl::StringPtr>& module_path) {
-  fidl::StringPtr path;
-  if (module_path->size() >= 1) {
-    fidl::StringPtr path = module_path->at(module_path->size() - 1);
-  }
   for (auto& c : connections_) {
     if (c.module_data->module_path == module_path) {
       return &c;
