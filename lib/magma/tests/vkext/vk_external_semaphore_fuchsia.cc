@@ -79,7 +79,8 @@ bool VulkanTest::InitVulkan()
         return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
 
     std::vector<const char*> instance_extensions{
-        VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME};
+        VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
+        VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
     std::vector<const char*> device_extensions{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                                                VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME};
 
