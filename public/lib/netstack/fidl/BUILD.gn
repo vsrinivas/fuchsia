@@ -7,6 +7,8 @@ import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
 fidl("fidl") {
   name = "netstack"
 
+  sdk_candidate = true
+
   sources = [
     "netstack.fidl",
     "net_address.fidl",
