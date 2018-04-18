@@ -81,7 +81,6 @@ TypeShape CUnionTypeShape(const std::vector<flat::Union::Member>& members) {
 }
 
 TypeShape FidlStructTypeShape(std::vector<FieldShape*>* fields) {
-    // TODO(kulakowski) Fit-sort members.
     return CStructTypeShape(fields);
 }
 

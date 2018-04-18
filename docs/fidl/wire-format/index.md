@@ -18,9 +18,8 @@ purpose, goals, and requirements, as well as links to related documents.
 *   Optimized for Zircon IPC only; portability is not a goal.
 *   Optimized for direct memory access; inter-machine transport is not a goal.
 *   Optimized for 64-bit only; no accommodation for 32-bit environments.
-*   Uses uncompressed native datatypes with host-endianness, first-fit packing
-    of elements, and correct alignment to support in-place access of message
-    contents.
+*   Uses uncompressed native datatypes with host-endianness and correct
+    alignment to support in-place access of message contents.
 *   Compatible with C structure in-memory layout (with suitable field ordering
     and packing annotations).
 *   Structures are fixed size and inlined; variable-sized data is stored
@@ -340,8 +339,6 @@ job, process, port, resource, socket, thread, vmo</code></strong>
 ### Structs
 
 *   Record type consisting of a sequence of typed fields.
-*   Fields are first-fit packed in declaration order according to their
-    alignment factors.[^4]
 
 *   Alignment factor of structure is defined by maximal alignment factor of any
     of its fields.
@@ -401,11 +398,8 @@ struct Point { float32 x, y; };
 struct Color { float32 r, g, b; };
 ```
 
-When laying out **Circle**, its fields are first-fit packed in declaration
-order, considering each field in turn: **filled**, **center**, **radius**,
-**color**, **dashed**. We can see how **dashed** fills an alignment gap left by
-the need to align **center** to a 4 byte boundary. The Color content is padded
-to the 8 byte secondary object alignment boundary.
+The Color content is padded to the 8 byte secondary object alignment
+boundary.
 
 ![drawing](structs.png)
 
@@ -932,9 +926,3 @@ safety checks:
     value of the <strong><code>ZX_HANDLE_INVALID</code></strong> constant.
 [^3]: New handle types can easily be added to the language without affecting the
     wire format since all handles are transferred the same way.
-[^4]: First-fit packing reduces padding overhead. It isn't guaranteed to be
-    optimal but it is much easier to understand and implement than a best-fit
-    packing algorithm. When generating C-like structs from FIDL declarations,
-    it may be necessary for the code generator to reorder fields or add
-    packing annotations to ensure that the memory layout matches the wire
-    format.

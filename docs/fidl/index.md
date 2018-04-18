@@ -90,9 +90,8 @@ Requirements
 
 *   Just as efficient (speed and memory) as using hand-rolled data structures
     would be.
-*   Wire format uses uncompressed native datatypes with host-endianness,
-    first-fit packing of elements, and correct alignment to support in-place
-    access of message contents.
+*   Wire format uses uncompressed native datatypes with host-endianness and
+    correct alignment to support in-place access of message contents.
 *   No dynamic memory allocation is required to produce or to consume messages
     when their size is statically known or bounded.
 *   Explicitly handle ownership with move-only semantics.
