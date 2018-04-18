@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/imx8mevk.c \
     $(LOCAL_DIR)/imx8mevk-gpio.c \
+    $(LOCAL_DIR)/imx8mevk-gpu.c \
     $(LOCAL_DIR)/imx8mevk-usb.c \
 
 

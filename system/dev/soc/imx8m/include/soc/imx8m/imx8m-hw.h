@@ -41,6 +41,7 @@
 #define IMX8M_AIPS_GPT3_BASE                                0x302F0000
 #define IMX8M_AIPS_IOMUXC_BASE                              0x30330000
 #define IMX8M_AIPS_IOMUXC_GPR_BASE                          0x30340000
+#define IMX8M_AIPS_CCM_BASE                                 0x30380000
 #define IMX8M_AIPS_GPC_BASE                                 0x303A0000
 #define IMX8M_AIPS_PWM1_BASE                                0x30660000
 #define IMX8M_AIPS_PWM2_BASE                                0x30670000

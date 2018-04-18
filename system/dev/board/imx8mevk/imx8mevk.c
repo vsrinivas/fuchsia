@@ -135,6 +135,11 @@ static int imx8mevk_start_thread(void* arg) {
         goto fail;
     }
 
+    if ((status = imx_gpu_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "%s: imx_gpu_init failed %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+
     status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
     if (status != ZX_OK) {
         goto fail;
@@ -144,7 +149,6 @@ static int imx8mevk_start_thread(void* arg) {
         zxlogf(ERROR, "%s could not add display_dev: %d\n", __FUNCTION__, status);
         goto fail;
     }
-
 
     return ZX_OK;
 

@@ -14,11 +14,11 @@
 #include <ddk/protocol/usb-mode-switch.h>
 
 // BTI IDs for our devices
-enum
-{
+enum {
     BTI_BOARD,
     BTI_USB,
     BTI_DISPLAY,
+    BTI_GPU,
 };
 
 typedef struct {
@@ -37,4 +37,4 @@ typedef struct {
 
 zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus);
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus);
-
+zx_status_t imx_gpu_init(imx8mevk_bus_t* bus);
