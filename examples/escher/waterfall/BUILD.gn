@@ -20,6 +20,7 @@ executable("waterfall") {
   ]
   deps = [
     "//garnet/examples/escher/common",
+    "//garnet/public/lib/escher:vulkan",
   ]
 
   include_dirs = [
@@ -27,12 +28,4 @@ executable("waterfall") {
     "//garnet/public/lib/escher",
     "//third_party/glm",
   ]
-
-  if (is_fuchsia) {
-    deps += [ "//garnet/public/lib/vulkan" ]
-  }
-
-  if (is_linux) {
-    configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
-  }
 }

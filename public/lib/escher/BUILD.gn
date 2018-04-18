@@ -19,10 +19,15 @@ package("escher_tests") {
   ]
 }
 
-# When targeting Linux, we use a LunarG Vulkan SDK that we download from
-# Google storage (see //garnet/public/lib/escher/scripts/).
-if (is_linux) {
-  config("vulkan_linux") {
+config("vulkan_config") {
+  defines = [
+    "VULKAN_HPP_NO_EXCEPTIONS",
+    "VULKAN_HPP_NO_SMART_HANDLE",
+  ]
+
+  # When targeting Linux, we use a LunarG Vulkan SDK that we download from
+  # Google storage (see //garnet/public/lib/escher/scripts/).
+  if (is_linux) {
     vulkan_sdk = "//garnet/public/lib/escher/third_party/vulkansdk/x86_64"
     include_dirs = [ "$vulkan_sdk/include" ]
     lib_dirs = [ "$vulkan_sdk/lib" ]
@@ -30,14 +35,20 @@ if (is_linux) {
   }
 }
 
-config("public_includes") {
-  include_dirs = [ "//third_party/glm" ]
+source_set("vulkan") {
+  public_configs = [ ":vulkan_config" ]
+
+  if (is_fuchsia) {
+    public_deps = [
+      "//garnet/public/lib/vulkan",
+    ]
+  }
 }
 
-config("public_preprocessor_definitions") {
+config("glm_config") {
+  include_dirs = [ "//third_party/glm" ]
+
   defines = [
-    "VULKAN_HPP_NO_EXCEPTIONS",
-    "VULKAN_HPP_NO_SMART_HANDLE",
     "GLM_ENABLE_EXPERIMENTAL",
 
     # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
@@ -70,6 +81,7 @@ source_set("escher") {
   ]
 
   public_deps = [
+    ":vulkan",
     "//garnet/public/lib/escher/base:escher_base",
     "//garnet/public/lib/fxl",
   ]
@@ -245,10 +257,10 @@ source_set("escher") {
     "util/enum_count.h",
     "util/epsilon_compare.h",
     "util/hash.h",
-    "util/hashable.h",
-    "util/hasher.h",
     "util/hash_fnv_1a.h",
     "util/hash_map.h",
+    "util/hashable.h",
+    "util/hasher.h",
     "util/image_utils.cc",
     "util/image_utils.h",
     "util/object_pool.h",
@@ -307,25 +319,17 @@ source_set("escher") {
   ]
 
   public_configs = [
-    ":public_includes",
-    ":public_preprocessor_definitions",
+    ":glm_config",
     ":thread_safety_warning",
   ]
 
   if (is_fuchsia) {
-    public_deps += [
-      "//garnet/public/lib/images/fidl",
-      "//garnet/public/lib/vulkan",
-    ]
+    public_deps += [ "//garnet/public/lib/images/fidl" ]
     deps += [ "//zircon/public/lib/trace" ]
     sources += [
       "util/fuchsia_utils.cc",
       "util/fuchsia_utils.h",
     ]
-  }
-
-  if (is_linux) {
-    public_configs += [ "//garnet/public/lib/escher:vulkan_linux" ]
   }
 }
 
