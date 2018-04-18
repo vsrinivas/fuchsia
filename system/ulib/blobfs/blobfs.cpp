@@ -19,9 +19,10 @@
 #include <fdio/debug.h>
 #include <fs/block-txn.h>
 #include <fs/ticker.h>
+#include <lib/zx/event.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-#include <lib/zx/event.h>
 
 #define ZXDEBUG 0
 
@@ -132,7 +133,7 @@ zx_status_t VnodeBlob::InitVmos() {
         return status;
     }
 
-    ReadTxn txn(blobfs_.get());
+    ReadTxn txn(blobfs_);
     fs::Ticker ticker(blobfs_->CollectingMetrics());
     uint64_t start = inode_.start_block + DataStartBlock(blobfs_->info_);
     uint64_t length = BlobDataBlocks(inode_) + MerkleTreeBlocks(inode_);
@@ -165,14 +166,14 @@ uint64_t VnodeBlob::SizeData() const {
     return 0;
 }
 
-VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest)
-    : blobfs_(fbl::move(bs)),
+VnodeBlob::VnodeBlob(Blobfs* bs, const Digest& digest)
+    : blobfs_(bs),
       flags_(kBlobStateEmpty), syncing_(false), clone_watcher_(this) {
     digest.CopyTo(digest_, sizeof(digest_));
 }
 
-VnodeBlob::VnodeBlob(fbl::RefPtr<Blobfs> bs)
-    : blobfs_(fbl::move(bs)),
+VnodeBlob::VnodeBlob(Blobfs* bs)
+    : blobfs_(bs),
       flags_(kBlobStateEmpty | kBlobFlagDirectory),
       syncing_(false), clone_watcher_(this) {}
 
@@ -431,7 +432,7 @@ zx_status_t VnodeBlob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
         //
         // We'll release it when no client-held VMOs are in use.
         clone_ref_ = fbl::RefPtr<VnodeBlob>(this);
-        clone_watcher_.Begin(blobfs_->GetAsync());
+        clone_watcher_.Begin(blobfs_->async());
     }
 
     return ZX_OK;
@@ -492,7 +493,7 @@ zx_status_t VnodeBlob::VerifyBlob(Blobfs* bs, size_t node_index) {
     Digest digest(inode->merkle_root_hash);
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeBlob> vn =
-        fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(bs), digest));
+        fbl::AdoptRef(new (&ac) VnodeBlob(bs, digest));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -678,25 +679,37 @@ void Blobfs::FreeNode(WriteTxn* txn, size_t node_index) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-//TODO(planders): Make sure all client-side connections are properly destroyed before shutdown
-zx_status_t Blobfs::Unmount() {
+void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     TRACE_DURATION("blobfs", "Blobfs::Unmount");
 
-    // Ensure writeback buffer completes before auxilliary structures
-    // are deleted.
-    fsync(blockfd_.get());
+    // 1) Shutdown all external connections to blobfs.
+    ManagedVfs::Shutdown([this, cb = fbl::move(cb)] (zx_status_t status) mutable {
+        // 2) Flush all pending work to blobfs to the underlying storage.
+        Sync([this, cb = fbl::move(cb)](zx_status_t status) mutable {
+            async::PostTask(async(), [this, cb = fbl::move(cb)]() mutable {
+                // 3) Ensure the underlying disk has also flushed.
+                fsync(blockfd_.get());
 
-    DumpMetrics();
+                DumpMetrics();
 
-    // Explicitly delete this (rather than just letting the memory release when
-    // the process exits) to ensure that the block device's fifo has been
-    // closed.
-    delete this;
+                auto on_unmount = fbl::move(on_unmount_);
 
-    // TODO(smklein): To not bind filesystem lifecycle to a process, shut
-    // down (closing dispatcher) rather than calling exit.
-    exit(0);
-    return ZX_OK;
+                // Manually destroy Blobfs. The promise of Shutdown is that no
+                // connections are active, and destroying the Blobfs object
+                // should terminate all background workers.
+                delete this;
+
+                // Identify to the unmounting channel that we've completed teardown.
+                cb(ZX_OK);
+
+                // Identify to the mounting thread that the filesystem has
+                // terminated.
+                if (on_unmount) {
+                    on_unmount();
+                }
+            });
+        });
+    });
 }
 
 void Blobfs::WriteBitmap(WriteTxn* txn, uint64_t nblocks, uint64_t start_block) {
@@ -728,7 +741,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::RefPtr<VnodeBlob>* out) {
     }
 
     fbl::AllocChecker ac;
-    *out = fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(this), digest));
+    *out = fbl::AdoptRef(new (&ac) VnodeBlob(this, digest));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1083,10 +1096,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, const blobfs_info_t* info)
 Blobfs::~Blobfs() {
     writeback_ = nullptr;
 
-    // TODO(ZX-1923): This assertion should be re-instated when unmounting
-    // is capable of closing all connections before completion.
-    // ZX_ASSERT(open_hash_.is_empty());
-    open_hash_.clear();
+    ZX_ASSERT(open_hash_.is_empty());
     closed_hash_.clear();
 
     if (fifo_client_ != nullptr) {
@@ -1097,7 +1107,7 @@ Blobfs::~Blobfs() {
 }
 
 zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
-                           fbl::RefPtr<Blobfs>* out) {
+                           fbl::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
     zx_status_t status = blobfs_check_info(info, TotalBlocks(*info));
     if (status < 0) {
@@ -1106,10 +1116,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     }
 
     fbl::AllocChecker ac;
-    fbl::RefPtr<Blobfs> fs = fbl::AdoptRef(new (&ac) Blobfs(fbl::move(fd), info));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(fbl::move(fd), info));
 
     zx_handle_t fifo;
     ssize_t r;
@@ -1118,6 +1125,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
     } else if (kBlobfsBlockSize % fs->block_info_.block_size != 0) {
         return ZX_ERR_IO;
     } else if ((r = ioctl_block_get_fifos(fs->Fd(), &fifo)) < 0) {
+        fprintf(stderr, "Failed to mount blobfs: Someone else is using the block device\n");
         return static_cast<zx_status_t>(r);
     } else if (fs->TxnId() == TXNID_INVALID) {
         zx_handle_close(fifo);
@@ -1180,7 +1188,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
         return status;
     }
 
-    *out = fs;
+    *out = fbl::move(fs);
     return ZX_OK;
 }
 
@@ -1191,7 +1199,7 @@ zx_status_t Blobfs::InitializeVnodes() {
         if (inode->start_block >= kStartBlockMinimum) {
             fbl::AllocChecker ac;
             fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac)
-                VnodeBlob(fbl::RefPtr<Blobfs>(this), Digest(inode->merkle_root_hash)));
+                VnodeBlob(this, Digest(inode->merkle_root_hash)));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -1242,7 +1250,7 @@ fbl::RefPtr<VnodeBlob> Blobfs::VnodeUpgradeLocked(const uint8_t* key) {
 zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<VnodeBlob>* out) {
     fbl::AllocChecker ac;
     fbl::RefPtr<VnodeBlob> vn =
-        fbl::AdoptRef(new (&ac) VnodeBlob(fbl::RefPtr<Blobfs>(this)));
+        fbl::AdoptRef(new (&ac) VnodeBlob(this));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
@@ -1266,7 +1274,7 @@ zx_status_t Blobfs::LoadBitmaps() {
     return txn.Flush();
 }
 
-zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd) {
+zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd) {
     zx_status_t status;
 
     char block[kBlobfsBlockSize];
@@ -1301,25 +1309,34 @@ zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd) {
     return ZX_OK;
 }
 
-zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
-                         fbl::RefPtr<VnodeBlob>* out) {
+zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
+                         const blob_options_t* options, zx::channel root,
+                         fbl::Closure on_unmount) {
     zx_status_t status;
-    fbl::RefPtr<Blobfs> fs;
+    fbl::unique_ptr<Blobfs> fs;
 
     if ((status = blobfs_create(&fs, fbl::move(blockfd))) != ZX_OK) {
         return status;
     }
 
     fs->SetAsync(async);
-    if (metrics) {
+    fs->SetReadonly(options->readonly);
+    if (options->metrics) {
         fs->CollectMetrics();
     }
+    fs->SetUnmountCallback(fbl::move(on_unmount));
 
-    if ((status = fs->OpenRootNode(out)) != ZX_OK) {
+    fbl::RefPtr<VnodeBlob> vn;
+    if ((status = fs->OpenRootNode(&vn)) != ZX_OK) {
         fprintf(stderr, "blobfs: mount failed; could not get root blob\n");
         return status;
     }
 
+    if ((status = fs->ServeDirectory(fbl::move(vn), fbl::move(root))) != ZX_OK) {
+        fprintf(stderr, "blobfs: mount failed; could not serve root directory\n");
+        return status;
+    }
+    __UNUSED auto r = fs.release();
     return ZX_OK;
 }
 } // namespace blobfs

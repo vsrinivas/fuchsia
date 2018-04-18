@@ -24,20 +24,20 @@ namespace blobfs {
 class BlobfsChecker {
 public:
     BlobfsChecker();
-    void Init(fbl::RefPtr<Blobfs> vnode);
+    void Init(fbl::unique_ptr<Blobfs> vnode);
     void TraverseInodeBitmap();
     void TraverseBlockBitmap();
     zx_status_t CheckAllocatedCounts() const;
 
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsChecker);
-    fbl::RefPtr<Blobfs> blobfs_;
+    fbl::unique_ptr<Blobfs> blobfs_;
     uint32_t alloc_inodes_;
     uint32_t alloc_blocks_;
     uint32_t error_blobs_;
     uint32_t inode_blocks_;
 };
 
-zx_status_t blobfs_check(fbl::RefPtr<Blobfs> vnode);
+zx_status_t blobfs_check(fbl::unique_ptr<Blobfs> vnode);
 
 } // namespace blobfs

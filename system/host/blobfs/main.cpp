@@ -136,12 +136,12 @@ zx_status_t BlobfsCreator::Mkfs() {
 
 zx_status_t BlobfsCreator::Fsck() {
     zx_status_t status;
-    fbl::RefPtr<blobfs::Blobfs> vn;
+    fbl::unique_ptr<blobfs::Blobfs> vn;
     if ((status = blobfs::blobfs_create(&vn, fbl::move(fd_))) < 0) {
         return status;
     }
 
-    return blobfs::blobfs_check(vn);
+    return blobfs::blobfs_check(fbl::move(vn));
 }
 
 zx_status_t BlobfsCreator::Add() {
@@ -151,7 +151,7 @@ zx_status_t BlobfsCreator::Add() {
     }
 
     zx_status_t status = ZX_OK;
-    fbl::RefPtr<blobfs::Blobfs> blobfs;
+    fbl::unique_ptr<blobfs::Blobfs> blobfs;
     if ((status = blobfs_create(&blobfs, fbl::move(fd_))) != ZX_OK) {
         return status;
     }

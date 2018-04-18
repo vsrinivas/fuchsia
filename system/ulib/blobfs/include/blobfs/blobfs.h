@@ -27,6 +27,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/mapped-vmo.h>
+#include <fs/managed-vfs.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
 #include <fs/vfs.h>
@@ -119,9 +120,9 @@ public:
     }
 
     // Constructs the "directory" blob
-    VnodeBlob(fbl::RefPtr<Blobfs> bs);
+    VnodeBlob(Blobfs* bs);
     // Constructs actual blobs
-    VnodeBlob(fbl::RefPtr<Blobfs> bs, const Digest& digest);
+    VnodeBlob(Blobfs* bs, const Digest& digest);
 
     zx_status_t Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) final;
     zx_status_t Close() final;
@@ -223,7 +224,7 @@ private:
 
     WAVLTreeNodeState type_wavl_state_ = {};
 
-    const fbl::RefPtr<Blobfs> blobfs_;
+    Blobfs* const blobfs_;
     BlobFlags flags_ = {};
     fbl::atomic_bool syncing_;
 
@@ -265,22 +266,13 @@ struct MerkleRootTraits {
     }
 };
 
-class Blobfs : public fbl::RefCounted<Blobfs> {
+class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
     friend class VnodeBlob;
 
     static zx_status_t Create(fbl::unique_fd blockfd, const blobfs_info_t* info,
-                              fbl::RefPtr<Blobfs>* out);
-
-    void SetAsync(async_t* async) {
-        ZX_DEBUG_ASSERT(async_ == nullptr);
-        async_ = async;
-    }
-    async_t* GetAsync() const {
-        ZX_DEBUG_ASSERT(async_ != nullptr);
-        return async_;
-    }
+                              fbl::unique_ptr<Blobfs>* out);
 
     void CollectMetrics() { collecting_metrics_ = true; }
     bool CollectingMetrics() const { return collecting_metrics_; }
@@ -291,7 +283,11 @@ public:
         }
     }
 
-    zx_status_t Unmount();
+    void SetUnmountCallback(fbl::Closure closure) {
+        on_unmount_ = fbl::move(closure);
+    }
+
+    void Shutdown(fs::Vfs::ShutdownCallback closure) final;
     virtual ~Blobfs();
 
     // Invokes "open" on the root directory.
@@ -508,7 +504,6 @@ private:
     WAVLTreeByMerkle open_hash_ __TA_GUARDED(hash_lock_){}; // All 'in use' blobs.
     WAVLTreeByMerkle closed_hash_ __TA_GUARDED(hash_lock_){}; // All 'closed' blobs.
 
-    async_t* async_ = {};
     fbl::unique_fd blockfd_;
     block_info_t block_info_ = {};
     fifo_client_t* fifo_client_ = {};
@@ -528,9 +523,17 @@ private:
 
     bool collecting_metrics_ = false;
     BlobfsMetrics metrics_ = {};
+
+    fbl::Closure on_unmount_ = {};
 };
 
-zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
-zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd, bool metrics,
-                         fbl::RefPtr<VnodeBlob>* out);
+typedef struct {
+    bool readonly = false;
+    bool metrics = false;
+} blob_options_t;
+
+zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_mount(async_t* async, fbl::unique_fd blockfd,
+                         const blob_options_t* options, zx::channel root,
+                         fbl::Closure on_unmount);
 } // namespace blobfs

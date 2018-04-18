@@ -133,7 +133,7 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
     }
 
     fbl::unique_ptr<memfs_filesystem_t> fs = fbl::make_unique<memfs_filesystem_t>();
-    fs->vfs.set_async(async);
+    fs->vfs.SetAsync(async);
 
     fbl::RefPtr<memfs::VnodeDir> root;
     if ((status = memfs::createFilesystem("<tmp>", &fs->vfs, &root)) != ZX_OK) {

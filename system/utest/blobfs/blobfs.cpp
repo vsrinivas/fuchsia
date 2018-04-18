@@ -920,6 +920,35 @@ static bool EdgeAllocation(void) {
 }
 
 template <FsTestType TestType>
+static bool UmountWithOpenFile(void) {
+    BEGIN_TEST;
+    BlobfsTest blobfsTest(TestType);
+    ASSERT_TRUE(blobfsTest.Init(), "Mounting Blobfs");
+
+    fbl::unique_ptr<blob_info_t> info;
+    ASSERT_TRUE(GenerateBlob(1 << 16, &info));
+    int fd;
+    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+
+    // Intentionally don't close the file descriptor: Unmount anyway.
+    ASSERT_TRUE(blobfsTest.Remount());
+    // Just closing our local handle; the connection should be disconnected.
+    ASSERT_EQ(close(fd), -1);
+    ASSERT_EQ(errno, EPIPE);
+
+    fd = open(info->path, O_RDONLY);
+    ASSERT_GE(fd, 0, "Failed to open blob");
+    ASSERT_TRUE(VerifyContents(fd, info->data.get(), info->size_data));
+    ASSERT_EQ(close(fd), 0, "Could not close blob");
+
+    // TODO(smklein): Verify unmount while mapped doesn't break anything
+
+    ASSERT_EQ(unlink(info->path), 0);
+    ASSERT_TRUE(blobfsTest.Teardown(), "unmounting blobfs");
+    END_TEST;
+}
+
+template <FsTestType TestType>
 static bool CreateUmountRemountSmall(void) {
     BEGIN_TEST;
     BlobfsTest blobfsTest(TestType);
@@ -1931,6 +1960,7 @@ RUN_TEST_FOR_ALL_TYPES(MEDIUM, BadAllocation)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedBlob)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, CorruptedDigest)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, EdgeAllocation)
+RUN_TEST_FOR_ALL_TYPES(MEDIUM, UmountWithOpenFile)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, CreateUmountRemountSmall)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, EarlyRead)
 RUN_TEST_FOR_ALL_TYPES(MEDIUM, WaitForRead)

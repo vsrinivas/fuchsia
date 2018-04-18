@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -40,7 +41,7 @@ zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc);
 // active.
 zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
                           fbl::unique_ptr<Bcache> bc,
-                          zx::channel mount_channel);
+                          zx::channel mount_channel, fbl::Closure on_unmount);
 #endif
 
 } // namespace minfs

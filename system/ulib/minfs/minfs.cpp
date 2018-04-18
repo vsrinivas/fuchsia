@@ -22,6 +22,7 @@
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
+#include <lib/async/cpp/task.h>
 #include <lib/zx/event.h>
 
 #include "metrics.h"
@@ -813,7 +814,7 @@ void minfs_dir_init(void* bdata, ino_t ino_self, ino_t ino_parent) {
 }
 
 zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
-                          fbl::RefPtr<Minfs>* out) {
+                          fbl::unique_ptr<Minfs>* out) {
     zx_status_t status = minfs_check_info(info, bc.get());
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Minfs::Create failed to check info: %d\n", status);
@@ -826,11 +827,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
         return ZX_ERR_INVALID_ARGS;
     }
 #endif
-    fbl::AllocChecker ac;
-    fbl::RefPtr<Minfs> fs = fbl::AdoptRef(new (&ac) Minfs(fbl::move(bc), info));
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    auto fs = fbl::unique_ptr<Minfs>(new Minfs(fbl::move(bc), info));
     // determine how many blocks of inodes, allocation bitmaps,
     // and inode bitmaps there are
     uint32_t blocks = info->block_count;
@@ -936,7 +933,7 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
     }
 #endif
 
-    *out = fs;
+    *out = fbl::move(fs);
     return ZX_OK;
 }
 
@@ -951,7 +948,7 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
     }
     const minfs_info_t* info = reinterpret_cast<minfs_info_t*>(blk);
 
-    fbl::RefPtr<Minfs> fs;
+    fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("minfs: mount failed\n");
         return status;
@@ -963,19 +960,16 @@ zx_status_t minfs_mount(fbl::unique_ptr<minfs::Bcache> bc, fbl::RefPtr<VnodeMinf
         return status;
     }
 
-    if ((status = vn->Open(0, nullptr)) != ZX_OK) {
-        FS_TRACE_ERROR("minfs: cannot open root inode\n");
-        return status;
-    }
-
     ZX_DEBUG_ASSERT(vn->IsDirectory());
+    __UNUSED auto r = fs.release();
     *root_out = fbl::move(vn);
     return ZX_OK;
 }
 
 #ifdef __Fuchsia__
 zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
-                          fbl::unique_ptr<Bcache> bc, zx::channel mount_channel) {
+                          fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
+                          fbl::Closure on_unmount) {
     TRACE_DURATION("minfs", "MountAndServe");
 
     fbl::RefPtr<VnodeMinfs> vn;
@@ -984,32 +978,44 @@ zx_status_t MountAndServe(const minfs_options_t* options, async_t* async,
         return status;
     }
 
-    fbl::RefPtr<Minfs> vfs = vn->fs_;
+    Minfs* vfs = vn->fs_;
     vfs->SetReadonly(options->readonly);
     vfs->SetMetrics(options->metrics);
-    vfs->set_async(async);
+    vfs->SetUnmountCallback(fbl::move(on_unmount));
+    vfs->SetAsync(async);
     return vfs->ServeDirectory(fbl::move(vn), fbl::move(mount_channel));
 }
-#endif
 
-zx_status_t Minfs::Unmount() {
-#ifdef __Fuchsia__
-    // Ensure writeback buffer completes before auxilliary structures
-    // are deleted.
-    writeback_ = nullptr;
-#endif
-    bc_->Sync();
+void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
+    ManagedVfs::Shutdown([this, cb = fbl::move(cb)] (zx_status_t status) mutable {
+        Sync([this, cb = fbl::move(cb)](zx_status_t) mutable {
+            async::PostTask(async(), [this, cb = fbl::move(cb)]() mutable {
+                // Ensure writeback buffer completes before auxilliary structures
+                // are deleted.
+                writeback_ = nullptr;
+                bc_->Sync();
 
-    DumpMetrics();
-    // Explicitly delete this (rather than just letting the memory release when
-    // the process exits) to ensure that the block device's fifo has been
-    // closed.
-    delete this;
-    // TODO(smklein): To not bind filesystem lifecycle to a process, shut
-    // down (closing dispatcher) rather than calling exit.
-    exit(0);
-    return ZX_OK;
+                DumpMetrics();
+
+                auto on_unmount = fbl::move(on_unmount_);
+
+                // Explicitly delete this (rather than just letting the memory release when
+                // the process exits) to ensure that the block device's fifo has been
+                // closed.
+                delete this;
+
+                // Identify to the unmounting channel that teardown is complete.
+                cb(ZX_OK);
+
+                // Identify to the unmounting thread that teardown is complete.
+                if (on_unmount) {
+                    on_unmount();
+                }
+            });
+        });
+    });
 }
+#endif
 
 zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) {
     minfs_info_t info;

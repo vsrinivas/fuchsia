@@ -11,12 +11,12 @@
 
 namespace fs {
 
-ManagedVfs::ManagedVfs(async_t* async)
-    : Vfs(async), is_shutting_down_(false) {
-}
+ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
+
+ManagedVfs::ManagedVfs(async_t* async) : Vfs(async), is_shutting_down_(false) {}
 
 // Asynchronously drop all connections.
-void ManagedVfs::Shutdown(fbl::Closure handler) {
+void ManagedVfs::Shutdown(ShutdownCallback handler) {
     ZX_DEBUG_ASSERT(handler);
     zx_status_t status = async::PostTask(async(), [this, closure = fbl::move(handler)]() mutable {
         ZX_DEBUG_ASSERT(!shutdown_handler_);
@@ -53,8 +53,8 @@ void ManagedVfs::OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t stat
     ZX_DEBUG_ASSERT(shutdown_handler_);
     ZX_DEBUG_ASSERT(is_shutting_down_);
 
-    fbl::Closure handler = fbl::move(shutdown_handler_);
-    handler();
+    auto handler = fbl::move(shutdown_handler_);
+    handler(status);
 }
 
 void ManagedVfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {

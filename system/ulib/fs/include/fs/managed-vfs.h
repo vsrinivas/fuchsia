@@ -26,6 +26,7 @@ namespace fs {
 // dispatch loop before shutting down the ManagedVfs object.
 class ManagedVfs : public Vfs {
 public:
+    ManagedVfs();
     ManagedVfs(async_t* async);
 
     // Asynchronously drop all connections managed by the VFS.
@@ -34,7 +35,7 @@ public:
     // It is safe to delete ManagedVfs from within the closure.
     //
     // It is unsafe to call Shutdown multiple times.
-    void Shutdown(fbl::Closure handler);
+    void Shutdown(ShutdownCallback handler) override;
 
     // The ManagedVfs destructor is only safe to execute if
     // no connections are actively registered.
@@ -55,7 +56,7 @@ private:
 
     bool is_shutting_down_;
     async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_{this};
-    fbl::Closure shutdown_handler_;
+    ShutdownCallback shutdown_handler_;
 };
 
 } // namespace fs

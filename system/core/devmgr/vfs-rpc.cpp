@@ -189,8 +189,8 @@ VnodeDir* vfs_create_global_root() {
 
         memfs::global_loop.reset(new async::Loop());
         memfs::global_loop->StartThread("root-dispatcher");
-        memfs::root_vfs.set_async(memfs::global_loop->async());
-        memfs::system_vfs.set_async(memfs::global_loop->async());
+        memfs::root_vfs.SetAsync(memfs::global_loop->async());
+        memfs::system_vfs.SetAsync(memfs::global_loop->async());
     }
     return memfs::global_root.get();
 }

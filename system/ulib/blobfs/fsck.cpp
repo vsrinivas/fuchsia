@@ -75,11 +75,11 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
 BlobfsChecker::BlobfsChecker()
     : blobfs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), error_blobs_(0), inode_blocks_(0) {};
 
-void BlobfsChecker::Init(fbl::RefPtr<Blobfs> blob) {
-    blobfs_.reset(blob.get());
+void BlobfsChecker::Init(fbl::unique_ptr<Blobfs> blob) {
+    blobfs_ = fbl::move(blob);
 }
 
-zx_status_t blobfs_check(fbl::RefPtr<Blobfs> blob) {
+zx_status_t blobfs_check(fbl::unique_ptr<Blobfs> blob) {
     zx_status_t status = ZX_OK;
     BlobfsChecker chk;
     chk.Init(fbl::move(blob));

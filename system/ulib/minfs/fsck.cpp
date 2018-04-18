@@ -52,7 +52,7 @@ private:
     const char* CheckDataBlock(blk_t bno);
     zx_status_t CheckFile(minfs_inode_t* inode, ino_t ino);
 
-    fbl::RefPtr<Minfs> fs_;
+    fbl::unique_ptr<Minfs> fs_;
     RawBitmap checked_inodes_;
     RawBitmap checked_blocks_;
 
@@ -567,12 +567,12 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const minfs_info_t* i
         FS_TRACE_ERROR("MinfsChecker::Init Failed to reset checked blocks: %d\n", status);
         return status;
     }
-    fbl::RefPtr<Minfs> fs;
+    fbl::unique_ptr<Minfs> fs;
     if ((status = Minfs::Create(fbl::move(bc), info, &fs)) != ZX_OK) {
         FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
         return status;
     }
-    fs_ = fs;
+    fs_ = fbl::move(fs);
 
     return ZX_OK;
 }

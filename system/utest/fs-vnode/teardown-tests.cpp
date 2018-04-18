@@ -121,7 +121,8 @@ bool test_unposted_teardown() {
 
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
-    vfs->Shutdown([&vnode_destroyed, &shutdown_done]() {
+    vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
+        ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
@@ -150,7 +151,8 @@ bool test_posted_teardown() {
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
     ASSERT_EQ(async::PostTask(loop.async(), [&]() {
-        vfs->Shutdown([&vnode_destroyed, &shutdown_done]() {
+        vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
+            ZX_ASSERT(status == ZX_OK);
             // C) Issue an explicit shutdown, check that the Vnode has
             // already torn down.
             ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
@@ -179,7 +181,8 @@ bool test_teardown_delete_this() {
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
     fs::ManagedVfs* raw_vfs = vfs.release();
-    raw_vfs->Shutdown([&raw_vfs, &vnode_destroyed, &shutdown_done]() {
+    raw_vfs->Shutdown([&raw_vfs, &vnode_destroyed, &shutdown_done](zx_status_t status) {
+        ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         ZX_ASSERT(completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
@@ -204,7 +207,8 @@ bool test_teardown_slow_async_callback() {
 
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
-    vfs->Shutdown([&vnode_destroyed, &shutdown_done]() {
+    vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
+        ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         //
@@ -259,7 +263,8 @@ bool test_teardown_slow_clone() {
 
     completion_t* vnode_destroyed = &completions[2];
     completion_t shutdown_done;
-    vfs->Shutdown([&vnode_destroyed, &shutdown_done]() {
+    vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
+        ZX_ASSERT(status == ZX_OK);
         // C) Issue an explicit shutdown, check that the Vnode has
         // already torn down.
         //

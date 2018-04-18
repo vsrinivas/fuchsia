@@ -184,10 +184,17 @@ void Connection::HandleSignals(async_t* async, async::WaitBase* wait, zx_status_
         }
     }
 
-    // Give the dispatcher a chance to clean up.
-    if (status != ERR_DISPATCHER_DONE) {
+    bool call_close = (status != ERR_DISPATCHER_DONE);
+    Terminate(call_close);
+}
+
+void Connection::Terminate(bool call_close) {
+    if (call_close) {
+        // Give the dispatcher a chance to clean up.
         CallClose();
     } else {
+        // It's assumed that someone called the close handler
+        // prior to calling this function.
         set_closed();
     }
 
@@ -733,8 +740,29 @@ zx_status_t Connection::HandleMessage(zxrio_msg_t* msg) {
             do_ioctl = false;
             break;
         }
+        case IOCTL_VFS_UNMOUNT_FS: {
+            // Unmounting ioctls require Connection privileges
+            if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {
+                return ZX_ERR_ACCESS_DENIED;
+            }
+            bool fidl = ZXRIO_FIDL_MSG(msg->op);
+            zx_txid_t txid = msg->txid;
+
+            // "IOCTL_VFS_UNMOUNT_FS" is fatal to the requesting connections.
+            Vfs::ShutdownCallback closure([ch = fbl::move(channel_), txid, fidl]
+                                           (zx_status_t status) {
+                zxrio_msg_t msg;
+                memset(&msg, 0, sizeof(msg));
+                msg.txid = txid;
+                msg.op = fidl ? ZXFIDL_IOCTL : ZXRIO_IOCTL;
+                zxrio_write_response(ch.get(), status, &msg);
+            });
+            Vfs* vfs = vfs_;
+            Terminate(/* call_close= */ true);
+            vfs->Shutdown(fbl::move(closure));
+            return ERR_DISPATCHER_ASYNC;
+        }
         case IOCTL_VFS_UNMOUNT_NODE:
-        case IOCTL_VFS_UNMOUNT_FS:
         case IOCTL_VFS_GET_DEVICE_PATH:
             // Unmounting ioctls require Connection privileges
             if (!(flags_ & ZX_FS_RIGHT_ADMIN)) {

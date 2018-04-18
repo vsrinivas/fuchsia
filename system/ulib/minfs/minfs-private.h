@@ -11,6 +11,7 @@
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
+#include <fs/managed-vfs.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <sync/completion.h>
@@ -18,6 +19,7 @@
 #endif
 
 #include <fbl/algorithm.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -89,16 +91,20 @@ class VnodeMinfs;
 
 using SyncCallback = fs::Vnode::SyncCallback;
 
-class Minfs : public fs::Vfs, public fbl::RefCounted<Minfs> {
+class Minfs :
+#ifdef __Fuchsia__
+    public fs::ManagedVfs,
+#else
+    public fs::Vfs,
+#endif
+    public fbl::RefCounted<Minfs> {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 
     ~Minfs();
 
     static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const minfs_info_t* info,
-                              fbl::RefPtr<Minfs>* out);
-
-    zx_status_t Unmount();
+                              fbl::unique_ptr<Minfs>* out);
 
     // instantiate a vnode from an inode
     // the inode must exist in the file system
@@ -141,6 +147,9 @@ public:
     }
 
 #ifdef __Fuchsia__
+    void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = fbl::move(closure); }
+    void Shutdown(fs::Vfs::ShutdownCallback cb) final;
+
     // Returns a unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
@@ -235,6 +244,7 @@ private:
 
     bool collecting_metrics_ = false;
 #ifdef __Fuchsia__
+    fbl::Closure on_unmount_{};
     MinfsMetrics metrics_ = {};
     fbl::unique_ptr<MappedVmo> inode_table_{};
     fbl::unique_ptr<MappedVmo> info_vmo_{};
@@ -314,7 +324,7 @@ public:
     void fbl_recycle() final;
 
     // TODO(rvargas): Make private.
-    fbl::RefPtr<Minfs> fs_;
+    Minfs* const fs_;
 
 private:
     // Fsck can introspect Minfs

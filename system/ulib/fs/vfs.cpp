@@ -433,6 +433,10 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
     return vn->Serve(this, fbl::move(channel), ZX_FS_RIGHT_ADMIN);
 }
 
+void Vfs::Shutdown(ShutdownCallback closure) {
+    closure(ZX_ERR_NOT_SUPPORTED);
+}
+
 void Vfs::RegisterConnection(fbl::unique_ptr<Connection> connection) {
     // The connection will be destroyed by |UnregisterConnection()|.
     __UNUSED auto ptr = connection.release();

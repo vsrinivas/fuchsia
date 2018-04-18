@@ -320,7 +320,7 @@ bool PopulateBlobfs(const char* path, size_t nfiles, size_t max_size) {
     BEGIN_HELPER;
     fbl::unique_fd blobfd(open(path, O_RDWR, 0755));
     ASSERT_TRUE(blobfd, "Unable to open blobfs path");
-    fbl::RefPtr<blobfs::Blobfs> bs;
+    fbl::unique_ptr<blobfs::Blobfs> bs;
     ASSERT_EQ(blobfs::blobfs_create(&bs, fbl::move(blobfd)), ZX_OK,
               "Failed to create blobfs");
     for (unsigned i = 0; i < nfiles; i++) {

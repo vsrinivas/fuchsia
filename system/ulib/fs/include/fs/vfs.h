@@ -26,6 +26,7 @@
 #include <fbl/mutex.h>
 #endif // __Fuchsia__
 
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
@@ -128,6 +129,10 @@ public:
     void SetReadonly(bool value) __TA_EXCLUDES(vfs_lock_);
 
 #ifdef __Fuchsia__
+    // Unmounts the underlying filesystem.
+    using ShutdownCallback = fbl::Function<void(zx_status_t status)>;
+    virtual void Shutdown(ShutdownCallback closure);
+
     void TokenDiscard(zx::event ios_token) __TA_EXCLUDES(vfs_lock_);
     zx_status_t VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
                              zx::event* out) __TA_EXCLUDES(vfs_lock_);
@@ -143,7 +148,7 @@ public:
     Vfs(async_t* async);
 
     async_t* async() { return async_; }
-    void set_async(async_t* async) { async_ = async; }
+    void SetAsync(async_t* async) { async_ = async; }
 
     // Begins serving VFS messages over the specified connection.
     zx_status_t ServeConnection(fbl::unique_ptr<Connection> connection) __TA_EXCLUDES(vfs_lock_);

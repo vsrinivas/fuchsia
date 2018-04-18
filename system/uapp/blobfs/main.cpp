@@ -14,12 +14,13 @@
 #include <unistd.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zx/channel.h>
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
 #include <fbl/auto_call.h>
-#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/vfs.h>
 #include <trace-provider/provider.h>
@@ -28,14 +29,8 @@
 
 namespace {
 
-typedef struct {
-    bool readonly = false;
-    bool metrics = false;
-} blob_options_t;
-
-int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
-    bool readonly = options.readonly;
-    if (!readonly) {
+int do_blobfs_mount(fbl::unique_fd fd, blobfs::blob_options_t* options) {
+    if (!options->readonly) {
         block_info_t block_info;
         zx_status_t status = static_cast<zx_status_t>(ioctl_block_get_info(fd.get(), &block_info));
         if (status < ZX_OK) {
@@ -43,32 +38,27 @@ int do_blobfs_mount(fbl::unique_fd fd, const blob_options_t& options) {
                            fd.get(), status);
             return -1;
         }
-        readonly = block_info.flags & BLOCK_FLAG_READONLY;
+        options->readonly = block_info.flags & BLOCK_FLAG_READONLY;
     }
 
-    fbl::RefPtr<blobfs::VnodeBlob> vn;
-    async::Loop loop;
-    if (blobfs::blobfs_mount(loop.async(), fbl::move(fd), options.metrics, &vn) != ZX_OK) {
-        return -1;
-    }
-    zx_handle_t h = zx_get_startup_handle(PA_HND(PA_USER0, 0));
-    if (h == ZX_HANDLE_INVALID) {
+    zx::channel root = zx::channel(zx_get_startup_handle(PA_HND(PA_USER0, 0)));
+    if (!root.is_valid()) {
         FS_TRACE_ERROR("blobfs: Could not access startup handle to mount point\n");
         return -1;
     }
 
-    fs::Vfs vfs(loop.async());
-    vfs.SetReadonly(readonly);
-    zx_status_t status;
-    if ((status = vfs.ServeDirectory(fbl::move(vn), zx::channel(h))) != ZX_OK) {
-        return status;
-    }
+    async::Loop loop;
     trace::TraceProvider provider(loop.async());
+    auto loop_quit = [&loop]() { loop.Quit(); };
+    if (blobfs::blobfs_mount(loop.async(), fbl::move(fd), options,
+                             fbl::move(root), fbl::move(loop_quit)) != ZX_OK) {
+        return -1;
+    }
     loop.Run();
     return ZX_OK;
 }
 
-int do_blobfs_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
+int do_blobfs_mkfs(fbl::unique_fd fd, blobfs::blob_options_t* options) {
     uint64_t block_count;
     if (blobfs::blobfs_get_blockcount(fd.get(), &block_count)) {
         fprintf(stderr, "blobfs: cannot find end of underlying device\n");
@@ -80,16 +70,16 @@ int do_blobfs_mkfs(fbl::unique_fd fd, const blob_options_t& options) {
     return r;
 }
 
-int do_blobfs_check(fbl::unique_fd fd, const blob_options_t& options) {
-    fbl::RefPtr<blobfs::Blobfs> vn;
-    if (blobfs::blobfs_create(&vn, fbl::move(fd)) < 0) {
+int do_blobfs_check(fbl::unique_fd fd, blobfs::blob_options_t* options) {
+    fbl::unique_ptr<blobfs::Blobfs> blobfs;
+    if (blobfs::blobfs_create(&blobfs, fbl::move(fd)) < 0) {
         return -1;
     }
 
-    return blobfs::blobfs_check(vn);
+    return blobfs::blobfs_check(fbl::move(blobfs));
 }
 
-typedef int (*CommandFunction)(fbl::unique_fd fd, const blob_options_t& options);
+typedef int (*CommandFunction)(fbl::unique_fd fd, blobfs::blob_options_t* options);
 
 struct {
     const char* name;
@@ -124,7 +114,7 @@ int usage() {
 }
 
 // Process options/commands and return open fd to device
-int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* options) {
+int process_args(int argc, char** argv, CommandFunction* func, blobfs::blob_options_t* options) {
     while (1) {
         static struct option opts[] = {
             {"readonly", no_argument, nullptr, 'r'},
@@ -177,12 +167,12 @@ int process_args(int argc, char** argv, CommandFunction* func, blob_options_t* o
 
 int main(int argc, char** argv) {
     CommandFunction func = nullptr;
-    blob_options_t options;
+    blobfs::blob_options_t options;
     fbl::unique_fd fd(process_args(argc, argv, &func, &options));
 
     if (!fd) {
         return -1;
     }
 
-    return func(fbl::move(fd), options);
+    return func(fbl::move(fd), &options);
 }

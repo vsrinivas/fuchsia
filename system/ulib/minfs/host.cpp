@@ -15,6 +15,7 @@
 
 #include <fbl/limits.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 #include <fdio/vfs.h>
 #include <fs/vfs.h>
 #include <minfs/format.h>
@@ -89,8 +90,16 @@ int status_to_errno(zx_status_t status) {
 #define STATUS(status) \
     FAIL(status_to_errno(status))
 
-fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;
-fs::Vfs fake_vfs;
+// Ensure the order of these global destructors are ordered.
+// TODO(planders): Host-side tools should avoid using globals.
+struct fakeFs {
+    ~fakeFs() {
+        fake_root = nullptr;
+        fake_vfs = nullptr;
+    }
+    fbl::RefPtr<minfs::VnodeMinfs> fake_root = nullptr;
+    fbl::unique_ptr<fs::Vfs> fake_vfs = nullptr;
+} fakeFs;
 
 } // namespace anonymous
 
@@ -139,15 +148,23 @@ int emu_mount(const char* path) {
         return -1;
     }
 
-    return minfs::minfs_mount(fbl::move(bc), &fake_root);
+    int r = minfs::minfs_mount(fbl::move(bc), &fakeFs.fake_root);
+    if (r == 0) {
+        fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
+    }
+    return r;
 }
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-    return minfs::minfs_mount(fbl::move(bc), &fake_root) == ZX_OK ? 0 : -1;
+    int r = minfs::minfs_mount(fbl::move(bc), &fakeFs.fake_root) == ZX_OK ? 0 : -1;
+    if (r == 0) {
+        fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
+    }
+    return r;
 }
 
 bool emu_is_mounted() {
-    return fake_root != nullptr;
+    return fakeFs.fake_root != nullptr;
 }
 
 // Since this is a host-side tool, the client may be bringing
@@ -205,7 +222,7 @@ int emu_open(const char* path, int flags, mode_t mode) {
             fbl::RefPtr<fs::Vnode> vn_fs;
             fbl::StringPiece str(path + PREFIX_SIZE);
             flags = fdio_flags_to_zxio(flags);
-            zx_status_t status = fake_vfs.Open(fake_root, &vn_fs, str, &str, flags, mode);
+            zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn_fs, str, &str, flags, mode);
             if (status < 0) {
                 STATUS(status);
             }
@@ -354,8 +371,8 @@ int emu_fstat(int fd, struct stat* s) {
 
 int emu_stat(const char* fn, struct stat* s) {
     ZX_DEBUG_ASSERT_MSG(!host_path(fn), "'emu_' functions can only operate on target paths");
-    fbl::RefPtr<fs::Vnode> vn = fake_root;
-    fbl::RefPtr<fs::Vnode> cur = fake_root;
+    fbl::RefPtr<fs::Vnode> vn = fakeFs.fake_root;
+    fbl::RefPtr<fs::Vnode> cur = fakeFs.fake_root;
     zx_status_t status;
     const char* nextpath = nullptr;
     size_t len;
@@ -380,7 +397,7 @@ int emu_stat(const char* fn, struct stat* s) {
             return -ENOENT;
         }
         vn = fbl::RefPtr<fs::Vnode>::Downcast(vn_fs);
-        if (cur != fake_root) {
+        if (cur != fakeFs.fake_root) {
             cur->Close();
         }
         cur = vn;
@@ -388,7 +405,7 @@ int emu_stat(const char* fn, struct stat* s) {
     } while (nextpath != nullptr);
 
     status = do_stat(vn, s);
-    if (vn != fake_root) {
+    if (vn != fakeFs.fake_root) {
         vn->Close();
     }
     STATUS(status);
@@ -422,7 +439,7 @@ DIR* emu_opendir(const char* name) {
     ZX_DEBUG_ASSERT_MSG(!host_path(name), "'emu_' functions can only operate on target paths");
     fbl::RefPtr<fs::Vnode> vn;
     fbl::StringPiece path(name + PREFIX_SIZE);
-    zx_status_t status = fake_vfs.Open(fake_root, &vn, path, &path, O_RDONLY, 0);
+    zx_status_t status = fakeFs.fake_vfs->Open(fakeFs.fake_root, &vn, path, &path, O_RDONLY, 0);
     if (status != ZX_OK) {
         return nullptr;
     }

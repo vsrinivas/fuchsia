@@ -1640,26 +1640,6 @@ zx_status_t VnodeMinfs::Ioctl(uint32_t op, const void* in_buf, size_t in_len, vo
             return ZX_OK;
         }
 #ifdef __Fuchsia__
-        case IOCTL_VFS_UNMOUNT_FS: {
-            // TODO(ZX-1577): Avoid calling completion_wait here.
-            // Prefer to use dispatcher's async_t to be notified
-            // whenever Sync completes.
-            completion_t completion;
-            SyncCallback closure([&completion](zx_status_t status) {
-                if (status != ZX_OK) {
-                    FS_TRACE_ERROR("minfs unmount failed to sync; unmounting "
-                                   "anyway: %d\n", status);
-                }
-                completion_signal(&completion);
-            });
-
-            Sync(fbl::move(closure));
-            completion_wait(&completion, ZX_TIME_INFINITE);
-
-            // 'fs_' is deleted after Unmount is called.
-            *out_actual = 0;
-            return fs_->Unmount();
-        }
         case IOCTL_VFS_GET_DEVICE_PATH: {
             ssize_t len = fs_->bc_->GetDevicePath(static_cast<char*>(out_buf), out_len);
 

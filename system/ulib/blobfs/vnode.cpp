@@ -30,7 +30,7 @@ using digest::Digest;
 namespace blobfs {
 
 void VnodeBlob::fbl_recycle() {
-    if (GetState() != kBlobStatePurged) {
+    if (GetState() != kBlobStatePurged && !IsDirectory()) {
         // Relocate blobs which haven't been deleted to the closed cache.
         blobfs_->VnodeReleaseSoft(this);
     } else {
@@ -188,19 +188,6 @@ zx_status_t VnodeBlob::Ioctl(uint32_t op, const void* in_buf, size_t in_len, voi
         memcpy(info->name, kFsName, strlen(kFsName));
         *out_actual = sizeof(vfs_query_info_t) + strlen(kFsName);
         return ZX_OK;
-    }
-    case IOCTL_VFS_UNMOUNT_FS: {
-        // TODO(ZX-1577): Avoid calling completion_wait here.
-        // Prefer to use dispatcher's async_t to be notified
-        // whenever Sync completes.
-        completion_t completion;
-        SyncCallback closure([&completion](zx_status_t status) {
-            completion_signal(&completion);
-        });
-        Sync(fbl::move(closure));
-        completion_wait(&completion, ZX_TIME_INFINITE);
-        *out_actual = 0;
-        return blobfs_->Unmount();
     }
 #ifdef __Fuchsia__
     case IOCTL_VFS_GET_DEVICE_PATH: {

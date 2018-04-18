@@ -70,7 +70,7 @@ public:
     // The blobfs partition is expected to start at |offset| bytes into the file.
     static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
                               const fbl::Array<size_t>& extent_lengths,
-                              fbl::RefPtr<Blobfs>* out);
+                              fbl::unique_ptr<Blobfs>* out);
 
     ~Blobfs() {}
 
@@ -135,7 +135,7 @@ private:
     block_cache_t cache_;
 };
 
-zx_status_t blobfs_create(fbl::RefPtr<Blobfs>* out, fbl::unique_fd blockfd);
+zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 
 // blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
@@ -148,6 +148,6 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // |end| indicates the end of the blobfs partition (in bytes)
 // |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
-zx_status_t blobfs_create_sparse(fbl::RefPtr<Blobfs>* out, fbl::unique_fd fd, off_t start,
+zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_lengths);
 } // namespace blobfs

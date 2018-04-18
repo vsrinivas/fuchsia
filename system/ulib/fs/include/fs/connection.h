@@ -64,6 +64,8 @@ public:
 private:
     void HandleSignals(async_t* async, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
+    // Closes the connection and unregisters it from the VFS object.
+    void Terminate(bool call_close);
 
     // Method used to dispatch into filesystem.
     // Invoked by |HandleMessage()| or synthesized internally.
