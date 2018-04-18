@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 #include <unistd.h>
 
-#include "garnet/bin/media/util/file_channel.h"
+#include "lib/fsl/io/fd.h"
 #include "lib/fxl/files/file_descriptor.h"
 
 namespace media_player {
@@ -17,7 +17,7 @@ namespace media_player {
 // static
 std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
   return std::make_shared<FileReader>(
-      media::FdFromChannel(std::move(file_channel)));
+      fsl::OpenChannelAsFileDescriptor(std::move(file_channel)));
 }
 
 FileReader::FileReader(fxl::UniqueFD fd)

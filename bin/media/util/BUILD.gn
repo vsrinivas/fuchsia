@@ -7,8 +7,6 @@ import("//build/test.gni")
 source_set("util") {
   sources = [
     "fidl_publisher.h",
-    "file_channel.cc",
-    "file_channel.h",
   ]
 
   deps = [

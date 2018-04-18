@@ -123,7 +123,7 @@ class TimelineControlPoint : public MediaTimelineControlPoint,
 
   fidl::Binding<MediaTimelineControlPoint> control_point_binding_;
   fidl::Binding<TimelineConsumer> consumer_binding_;
-  FidlPublisher<GetStatusCallback> status_publisher_;
+  media::FidlPublisher<GetStatusCallback> status_publisher_;
   ProgramRangeSetCallback program_range_set_callback_;
   PrimeRequestedCallback prime_requested_callback_;
   ProgressStartedCallback progress_started_callback_;

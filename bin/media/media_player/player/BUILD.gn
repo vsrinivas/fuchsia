@@ -28,7 +28,6 @@ source_set("player") {
     "//garnet/bin/media/media_player/framework",
     "//garnet/bin/media/media_player/render",
     "//garnet/bin/media/media_player/util",
-    "//garnet/bin/media/util",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/fidl",

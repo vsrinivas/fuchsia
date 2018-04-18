@@ -11,10 +11,10 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "garnet/bin/media/util/file_channel.h"
 #include "garnet/examples/media/audio_player/audio_player_params.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/optional.h"
+#include "lib/fsl/io/fd.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/url/gurl.h"
@@ -53,8 +53,8 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
     url::GURL url = url::GURL(params.url());
 
     if (url.SchemeIsFile()) {
-      media_player_->SetFileSource(media::ChannelFromFd(
-          fxl::UniqueFD(open(url.path().c_str(), O_RDONLY))));
+      media_player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
+          fxl::UniqueFD(open(url.path().c_str(), O_RDONLY)).get()));
     } else {
       media_player_->SetHttpSource(params.url());
     }

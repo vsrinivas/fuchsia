@@ -12,7 +12,6 @@ executable("audio_player") {
   ]
 
   deps = [
-    "//garnet/bin/media/util",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/fidl",
