@@ -204,8 +204,8 @@ bool Syscall::validate() const {
         return false;
     }
 
-    if (is_vdso() && (is_blocking() || is_internal())) {
-        print_error("vdsocall cannot be blocking or internal");
+    if (is_vdso() && is_internal()) {
+        print_error("vdsocall cannot be internal");
         return false;
     }
 
