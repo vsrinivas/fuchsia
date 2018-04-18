@@ -155,6 +155,11 @@
              path="third_party/jinja2"
              remote="https://fuchsia.googlesource.com/third_party/jinja2"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/llvm"
+             path="third_party/llvm"
+             remote="https://fuchsia.googlesource.com/third_party/llvm"
+             revision="eea8107fac8b7780d6a31b1a416ac130e050139f"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/markupsafe"
              path="third_party/markupsafe"
              remote="https://fuchsia.googlesource.com/third_party/markupsafe"
