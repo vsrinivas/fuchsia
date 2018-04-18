@@ -6,7 +6,6 @@ package symbolize
 
 import (
 	"context"
-	"log"
 	"sync"
 )
 
@@ -54,7 +53,6 @@ func (d *Demuxer) Start(input <-chan InputLine, pctx context.Context) <-chan Out
 				if !ok {
 					return
 				}
-				log.Printf("demuxing %v\n", line)
 				line.lineno = lineno
 				lineno += 1
 				if toFilter, ok := d.filters[line.process]; ok {

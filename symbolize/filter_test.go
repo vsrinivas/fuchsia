@@ -5,7 +5,9 @@
 package symbolize
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -77,9 +79,7 @@ func ExampleBasic() {
 	line := ParseLine("\033[1m Error at {{{pc:0x123879c0}}}")
 	// print out a more precise form
 	line.Accept(&FilterVisitor{filter})
-	jsonify := &JsonVisitor{}
-	line.Accept(jsonify)
-	json, err := jsonify.GetJson()
+	json, err := GetLineJson(line)
 	if err != nil {
 		fmt.Printf("json did not parse correctly: %v", err)
 		return
@@ -117,5 +117,64 @@ func TestMalformed(t *testing.T) {
 
 	if line != nil {
 		t.Error("expected", nil, "got", line)
+	}
+}
+
+func EqualJson(a, b []byte) bool {
+	var j1, j2 interface{}
+	err := json.Unmarshal(a, &j1)
+	if err != nil {
+		panic(err.Error())
+	}
+	err = json.Unmarshal(b, &j2)
+	if err != nil {
+		panic(err.Error())
+	}
+	return reflect.DeepEqual(j1, j2)
+}
+
+func TestReset(t *testing.T) {
+	line := ParseLine("{{{reset}}}")
+
+	json, err := GetLineJson(line)
+	if err != nil {
+		t.Error("json did not parse correctly", err)
+	}
+
+	expectedJson := []byte("{\"type\":\"reset\"}")
+	if !EqualJson(json, expectedJson) {
+		t.Error("unexpected json output", "got", string(json), "expected", string(expectedJson))
+	}
+
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"out/libc.so", map[uint64][]SourceLocation{
+			0x44987: {{"memcpy.c", 76, "memcpy"}},
+		}},
+	})
+	// mock ids.txt
+	repo := NewRepo()
+	repo.AddObjects(map[string]string{
+		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
+	})
+
+	// make an actual filter using those two mock objects
+	filter := NewFilter(repo, symbo)
+
+	// add some context
+	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
+	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
+
+	addr := uint64(0x12389987)
+
+	if _, err := filter.FindSrcLocForAddress(addr); err != nil {
+		t.Error("expected", nil, "got", err)
+	}
+
+	// now forget the context
+	line.Accept(&FilterVisitor{filter})
+
+	if _, err := filter.FindSrcLocForAddress(addr); err == nil {
+		t.Error("expected non-nil error but got", err)
 	}
 }

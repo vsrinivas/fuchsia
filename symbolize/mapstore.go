@@ -89,3 +89,9 @@ func (m *MappingStore) Find(vaddr uint64) *Segment {
 func (m *MappingStore) Add(seg Segment) {
 	m.segments = append(m.segments, seg)
 }
+
+// Clear clears the mapping store of all previous information
+func (m *MappingStore) Clear() {
+	m.segments = nil
+	m.sorted = 0
+}

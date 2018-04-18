@@ -59,6 +59,12 @@ func (t *Text) Accept(visitor PresentationVisitor) {
 	visitor.VisitText(t)
 }
 
+type ResetElement struct{}
+
+func (r *ResetElement) Accept(visitor LineVisitor) {
+	visitor.VisitReset(r)
+}
+
 // ModuleElement represents a module element in the markup
 type ModuleElement struct {
 	mod Module
@@ -86,6 +92,7 @@ type PresentationVisitor interface {
 
 // LineVisitor is a visitor for lines
 type LineVisitor interface {
+	VisitReset(elem *ResetElement)
 	VisitModule(elem *ModuleElement)
 	VisitMapping(elem *MappingElement)
 	VisitGroup(elem *PresentationGroup)

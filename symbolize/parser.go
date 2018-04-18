@@ -118,8 +118,15 @@ func ParseMapping(b *ParserState) interface{} {
 	})
 }
 
+func ParseReset(b *ParserState) interface{} {
+	if b.expect("{{{reset}}}") {
+		return &ResetElement{}
+	}
+	return nil
+}
+
 func ParseContextualElement(b *ParserState) interface{} {
-	return b.choice(ParseModule, ParseMapping)
+	return b.choice(ParseModule, ParseMapping, ParseReset)
 }
 
 func ParsePresentationGroup(b *ParserState) interface{} {

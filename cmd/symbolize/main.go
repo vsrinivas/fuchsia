@@ -28,21 +28,21 @@ func main() {
 
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
 	repo := symbolize.NewRepo()
-  err := repo.AddObjectsFromIdsFile(idsPath)
-  if err != nil {
+	err := repo.AddObjectsFromIdsFile(idsPath)
+	if err != nil {
 		log.Fatal(err)
 	}
-  demuxer := symbolize.NewDemuxer(repo, symbolizer)
-  presenter := symbolize.NewBasicPresenter(os.Stdout)
+	demuxer := symbolize.NewDemuxer(repo, symbolizer)
+	presenter := symbolize.NewBasicPresenter(os.Stdout)
 
-  ctx := context.Background()
+	ctx := context.Background()
 
-  // Build the pipeline to start presenting.
+	// Build the pipeline to start presenting.
 	err = symbolizer.Start(ctx)
-  if err != nil {
-    log.Fatal(err)
-  }
-  inputLines := symbolize.StartParsing(os.Stdin, ctx)
-  outputLines := demuxer.Start(inputLines, ctx)
-  presenter.Start(outputLines)
+	if err != nil {
+		log.Fatal(err)
+	}
+	inputLines := symbolize.StartParsing(os.Stdin, ctx)
+	outputLines := demuxer.Start(inputLines, ctx)
+	presenter.Start(outputLines)
 }

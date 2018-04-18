@@ -7,7 +7,6 @@ package symbolize
 import (
 	"fmt"
 	"io"
-	"log"
 )
 
 // BasicPresenter is a presenter to output very basic uncolored output
@@ -28,7 +27,6 @@ func (b *BasicPresenter) WriteLine(res OutputLine) {
 // Start tells the basic presenter to start writing to its output
 func (b *BasicPresenter) Start(input <-chan OutputLine) {
 	for res := range input {
-		log.Printf("presenting %v", res)
 		b.WriteLine(res)
 	}
 }
@@ -46,6 +44,10 @@ func (b *BasicPresenter) VisitColor(node *ColorGroup) {
 
 func (b *BasicPresenter) VisitText(node *Text) {
 	fmt.Fprint(b.output, node.text)
+}
+
+func (b *BasicPresenter) VisitReset(elem *ResetElement) {
+	fmt.Fprintf(b.output, "{{{reset}}}")
 }
 
 func (b *BasicPresenter) VisitGroup(group *PresentationGroup) {

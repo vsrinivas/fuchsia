@@ -74,6 +74,12 @@ func NewFilter(repo *SymbolizerRepo, symbo Symbolizer) *Filter {
 	}
 }
 
+// Reset resets the filter so that it can work for a new process
+func (s *Filter) Reset() {
+	s.modules = make(map[uint64]Module)
+	s.symContext.Clear()
+}
+
 // AddModule updates the filter state to inform it of a new module
 func (s *Filter) AddModule(m Module) {
 	s.modules[m.id] = m
@@ -98,7 +104,6 @@ func (f *Filter) Start(input <-chan InputLine, output chan<- OutputLine, wgroup 
 				if !ok {
 					return
 				}
-				log.Printf("filtering %v\n", elem)
 				var res OutputLine
 				if res.line = ParseLine(elem.msg); res.line == nil {
 					log.Printf("warning malformed input %s", elem.msg)
@@ -139,6 +144,10 @@ func (f *FilterVisitor) VisitText(_ *Text) {
 	// This must be implemented in order to meet the interface but it has no effect.
 	// This visitor is supposed to do all of the non-parsing parts of constructing the AST.
 	// There is nothing to do for Text however.
+}
+
+func (f *FilterVisitor) VisitReset(elem *ResetElement) {
+	f.filter.Reset()
 }
 
 func (f *FilterVisitor) VisitGroup(group *PresentationGroup) {

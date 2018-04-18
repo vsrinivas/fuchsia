@@ -13,7 +13,13 @@ type JsonVisitor struct {
 	stack []json.RawMessage
 }
 
-func (j *JsonVisitor) GetJson() ([]byte, error) {
+func GetLineJson(line Line) ([]byte, error) {
+	var j JsonVisitor
+	line.Accept(&j)
+	return j.getJson()
+}
+
+func (j *JsonVisitor) getJson() ([]byte, error) {
 	if len(j.stack) != 1 {
 		return nil, fmt.Errorf("json did not fully parse: %d items on stack", len(j.stack))
 	}
@@ -92,6 +98,13 @@ func (j *JsonVisitor) VisitModule(elem *ModuleElement) {
 		Name:  elem.mod.name,
 		Build: elem.mod.build,
 		Id:    elem.mod.id,
+	})
+	j.stack = append(j.stack, msg)
+}
+
+func (j *JsonVisitor) VisitReset(elem *ResetElement) {
+	msg, _ := json.Marshal(map[string]string{
+		"type": "reset",
 	})
 	j.stack = append(j.stack, msg)
 }
