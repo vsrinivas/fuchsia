@@ -68,6 +68,13 @@ const pbus_gpio_t vim_display_gpios[] = {
     },
 };
 
+static const pbus_irq_t vim_display_irqs[] = {
+    {
+        .irq = S912_VIU1_VSYNC_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static const pbus_bti_t vim_display_btis[] = {
     {
         .iommu_index = 0,
@@ -84,6 +91,8 @@ static const pbus_dev_t display_dev = {
     .mmio_count = countof(vim_display_mmios),
     .gpios = vim_display_gpios,
     .gpio_count = countof(vim_display_gpios),
+    .irqs = vim_display_irqs,
+    .irq_count = countof(vim_display_irqs),
     .btis = vim_display_btis,
     .bti_count = countof(vim_display_btis),
 };
