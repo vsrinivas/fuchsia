@@ -719,6 +719,13 @@ syscall acpi_uefi_rsdp
     (handle: zx_handle_t)
     returns (uint64_t);
 
+# DDK Syscalls: SMC Calls
+
+syscall smc_call
+    (rsrc_handle: zx_handle_t, arg0: uint64_t, arg1: uint64_t,
+        arg2: uint64_t, arg3: uint64_t, out_smc_status: uint64_t[1] OUT)
+    returns (zx_status_t);
+
 # Resources
 
 syscall resource_create

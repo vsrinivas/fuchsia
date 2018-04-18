@@ -15,6 +15,9 @@
 #include <dev/interrupt.h>
 #include <dev/iommu.h>
 #include <dev/udisplay.h>
+#if ARCH_ARM64
+#include <dev/psci.h>
+#endif
 #include <vm/vm.h>
 #include <vm/vm_object_paged.h>
 #include <vm/vm_object_physical.h>
@@ -28,6 +31,7 @@
 #include <object/resources.h>
 #include <object/vm_object_dispatcher.h>
 #include <zxcpp/new.h>
+
 
 #if ARCH_X86
 #include <platform/pc/bootloader.h>
@@ -563,4 +567,24 @@ zx_status_t sys_irq_trigger(zx_handle_t handle,
                             uint32_t options,
                             zx_time_t timestamp) {
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t sys_smc_call(zx_handle_t rsrc_handle,
+                            uint64_t arg0,
+                            uint64_t arg1,
+                            uint64_t arg2,
+                            uint64_t arg3,
+                            user_out_ptr<uint64_t> out_smc_status) {
+#if ARCH_X86
+    return ZX_ERR_NOT_SUPPORTED;
+#else
+    zx_status_t status;
+    if ((status = validate_resource(rsrc_handle, ZX_RSRC_KIND_ROOT)) < 0) {
+        return status;
+    }
+    if (out_smc_status.get() == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return out_smc_status.copy_to_user(static_cast<uint64_t>(psci_smc_call(arg0, arg1, arg2, arg3)));
+#endif
 }

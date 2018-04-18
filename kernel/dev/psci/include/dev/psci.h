@@ -41,6 +41,8 @@
 #define PSCI_DISABLED                       -8
 #define PSCI_INVALID_ADDRESS                -9
 
+__BEGIN_CDECLS
+
 /* TODO NOTE: - currently these routines assume cpu topologies that are described only in AFF0 and AFF1.
             If a system is architected such that AFF2 or AFF3 are non-zero then this code will need
             to be revisited
@@ -76,3 +78,5 @@ void psci_system_off(void);
 void psci_system_reset(enum reboot_flags flags);
 
 uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
+
+__END_CDECLS

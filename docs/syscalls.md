@@ -139,6 +139,7 @@
 + [interrupt_wait](syscalls/interrupt_wait.md) - Wait for an interrupt on an interrupt object
 + [interrupt_get_timestamp](syscalls/interrupt_get_timestamp.md) - Get the timestamp for an interrupt
 + [interrupt_signal](syscalls/interrupt_signal.md) - Signals a virtual interrupt on an interrupt object
++ [smc_call](syscalls/smc_call.md) - Make an SMC call from user space
 + acpi_uefi_rsdp
 + mmap_device_io
 + set_framebuffer
