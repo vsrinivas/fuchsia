@@ -2,7 +2,7 @@
 
 MinFS is a simple, unix-like filesystem built for Zircon.
 
-It currently supports files up to 512MB in size.
+It currently supports files up to 4 GB in size.
 
 ## Using MinFS
 
@@ -102,5 +102,5 @@ Total: 0 partitions
  * To find out which block device/file system is mounted at each subdirectory
    under a given path, use the following command:
 ```
-> lsfs -b <PATH>
+> df <PATH>
 ```
