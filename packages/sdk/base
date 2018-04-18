@@ -9,6 +9,7 @@
         "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/pm",
         "garnet/packages/prod/runtime",
+        "garnet/packages/prod/run",
         "garnet/packages/prod/sbase",
         "garnet/packages/prod/tracing"
     ],
