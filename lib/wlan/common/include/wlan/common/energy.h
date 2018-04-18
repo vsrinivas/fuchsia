@@ -26,20 +26,66 @@
 namespace wlan {
 namespace common {
 
-typedef uint16_t mWatt;  // milliwatts. 10^(-3) Watt
+template <typename Storage, typename Unit> struct EnergyType {
+    Storage val;
+
+   protected:
+    explicit EnergyType(Storage v) : val(v) {}
+};
+
+// Below operators are defined only for the operands with matching template types.
+template <typename Storage, typename Unit>
+bool operator==(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val == rhs.val;
+}
+
+template <typename Storage, typename Unit>
+bool operator!=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val != rhs.val;
+}
+
+template <typename Storage, typename Unit>
+bool operator>(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val > rhs.val;
+}
+
+template <typename Storage, typename Unit>
+bool operator<(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val < rhs.val;
+}
+
+template <typename Storage, typename Unit>
+bool operator>=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val >= rhs.val;
+}
+
+template <typename Storage, typename Unit>
+bool operator<=(const EnergyType<Storage, Unit>& lhs, const EnergyType<Storage, Unit>& rhs) {
+    return lhs.val <= rhs.val;
+}
+
+// milliwatt. 10^(-3) Watt.
+struct mWatt : EnergyType<uint16_t, mWatt> {
+    explicit mWatt(uint16_t v = 0);
+};
 
 // IEEE Std 802.11-2016, Table 9-60, 9-71
 // For the use for SNR or relative comparison.
 // For precision of 1 dB step, See IEEE 802.11-2016, Table 6-7, 9-18, etc.
-typedef int8_t dB;  // 10 * log10(a ratio). Unitless ratio of two numbers.
+struct dB : EnergyType<int8_t, dB> {
+    explicit dB(int8_t v = 0);
+};
 
 // For precision of 0.5 dB step, See IEEE 802.11-2016, 9.4.2.41, 9.4.2.162,
-typedef int8_t dBh;  // dB encoded in half (0.5) dB step. Fuchsia unit.
+struct dBh : EnergyType<int16_t, dBh> {
+    explicit dBh(int16_t v = 0);
+};
 
+// TODO(porce): Implement dBq unit
 // For precision of 0.25 dB step, See IEEE 802.11-2016, 9.4.1.28-30, 9.4.1.49, Table 20-1
-typedef int16_t dBq;  // dB encoded in quarter (0.25) dB step. Fuchsia unit.
 
-typedef int8_t dBr;  // IEEE 802.11-2016, 20.3.2
+// TODO(porce): Implement dBr unit
+// IEEE 802.11-2016, 20.3.2
 
 // For ANPI, IEEE Std 802.11-2016, 11.11.9.4,
 // DataFrameRSSI, IEEE Std 802.11-2016, Table 6-7
@@ -47,67 +93,39 @@ typedef int8_t dBr;  // IEEE 802.11-2016, 20.3.2
 // Note, RXVECTOR's RSSI is unitless uint8_t.
 // For Transmit Power
 // See dot11MaximumTransmitPowerLevel, defined as int32_t
-typedef int8_t dBm;  // 10 * log10(mWatt)
+struct dBm : EnergyType<int8_t, dBm> {
+    explicit dBm(int8_t v = 0);
+};
 
 // IEEE Std 802.11-2016, 9.4.2.21.7, 9.4.2.38, 9.6.8.30, etc.
-typedef uint16_t dBmh;  // dBm encoded in half (0.5) dB step. Fuchsia unit.
+struct dBmh : EnergyType<int16_t, dBmh> {
+    explicit dBmh(int16_t v = 0);
+};
 
-typedef uint16_t dBmq;  // dBm encoded in quarter (0.25) dB step. Fuchsia unit.
-
-typedef uint8_t Rcpi;  // IEEE Std 802.11-2016, Table 9-154
-
-dBm to_dBm(mWatt val) {
-    return static_cast<dBm>(10.0 * log10(static_cast<float>(val)));
-}
-
-mWatt to_mWatt(dBm val) {
-    return static_cast<mWatt>(pow(10.0f, static_cast<float>(val) / 10.0f));
-}
-
-dBm add_dbm(dBm val1, dBm val2) {
-    dBm max = std::max(val1, val2);
-    dBm min = std::min(val1, val2);
-
-    constexpr dBm kBigGap = 9;  // Corresponds to 0.51 dB addition
-    if (max - min >= kBigGap) {
-        // the smaller one is negligible
-        return max;
-    }
-
-    float alpha = pow(10.0f, static_cast<float>((min - max) / 10.0f));
-    float beta = static_cast<dBm>(10.0f * log10(1 + alpha));
-    return max + beta;
-}
-
-dBm subtract_dbm(dBm val1, dBm val2) {
-    // Note, this is different from (dBm - dB) operation,
-    // which is naturally defined without restrictions on values.
-    ZX_DEBUG_ASSERT(val1 >= val2);  // Negative RF energy is yet to be defined.
-
-    dBm max = std::max(val1, val2);
-    dBm min = std::min(val1, val2);
-
-    constexpr dBm kBigGap = 9;  // Corresponds to 0.51 dB addition
-    if (max - min >= kBigGap) {
-        // the smaller one is negligible
-        return max;
-    }
-
-    float alpha = pow(10.0f, static_cast<float>((min - max) / 10.0f));
-    float beta = static_cast<dBm>(10.0f * log10(1 - alpha));
-    return max + beta;
-}
+dB to_dB(dBh u);
+dBh to_dBh(dB u);
+dBm to_dBm(dBmh u);
+dBmh to_dBmh(dBm u);
 
 // IEEE Std 802.11-2016, 9.5.1.19-20, Figure 9-391 Tx Power field
 // TODO(porce): Implement int8_t dBmTwosComplement(dBm val);
+typedef uint8_t Rcpi;  // IEEE Std 802.11-2016, Table 9-154
+Rcpi to_Rcpi(dBmh u, bool measured);
 
-Rcpi ToRcpi(dBm val, bool measured = true) {
-    if (!measured) { return 255; }
-    if (val < -109.5) { return 0; }
-    if (val >= 0) { return 220; }
+mWatt operator+(const mWatt& lhs, const mWatt& rhs);
+mWatt operator-(const mWatt& lhs, const mWatt& rhs);
+mWatt operator-(const mWatt& rhs);
 
-    return static_cast<Rcpi>(2 * (val + 110));
-}
+dB operator+(const dB& lhs, const dB& rhs);
+dB operator-(const dB& lhs, const dB& rhs);
+dB operator-(const dB& rhs);
+dBh operator+(const dBh& lhs, const dBh& rhs);
+dBh operator-(const dBh& lhs, const dBh& rhs);
+dBh operator-(const dBh& rhs);
+dBm operator+(const dBm& lhs, const dB& rhs);
+dBm operator-(const dBm& lhs, const dB& rhs);
+dBmh operator+(const dBmh& lhs, const dBh& rhs);
+dBmh operator-(const dBmh& lhs, const dBh& rhs);
 
 }  // namespace common
 }  // namespace wlan

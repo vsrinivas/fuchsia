@@ -10,6 +10,7 @@ source_set("common") {
   sources = [
     "channel.cpp",
     "element.cpp",
+    "energy.cpp",
     "include/wlan/common/action_frame.h",
     "include/wlan/common/bitfield.h",
     "include/wlan/common/channel.h",
