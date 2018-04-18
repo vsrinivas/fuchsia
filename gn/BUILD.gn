@@ -848,6 +848,32 @@ foreach(board, zircon_boards) {
     ]
   }
 
+  # Zircon Kernel Partition Image that boots the system from Blobfs
+  bootdata("zircon-boot-blob-${board}") {
+    deps = [
+      ":bootdata-blob-${board}"
+    ]
+    inputs = [
+      "${zircon_build_dir}/zircon.bin",
+    ]
+    foreach(label, deps) {
+      inputs += get_target_outputs(label)
+    }
+  }
+
+  # Zircon Kernel Partition Image that boots from netboot RAMDISK.
+  bootdata("zircon-netboot-${board}") {
+    deps = [
+      ":netboot-${board}"
+    ]
+    inputs = [
+      "${zircon_build_dir}/zircon.bin",
+    ]
+    foreach(label, deps) {
+      inputs += get_target_outputs(label)
+    }
+  }
+
   # arm64 kernels are not valid bootdata, and cannot be used to produce unified
   # kernel+bootdata images such as zedboot-{board}.bin
   if (target_cpu != "arm64") {
@@ -985,6 +1011,7 @@ group("netboot") {
   deps = []
   foreach(board, zircon_boards) {
     deps += [ ":netboot-${board}" ]
+    deps += [ ":zircon-netboot-${board}" ]
   }
 }
 
@@ -1002,6 +1029,7 @@ group("images") {
       ":local-${board}.esp.blk",
       ":zedboot-${board}.vboot",
       ":zircon-${board}.vboot",
+      ":zircon-boot-blob-${board}",
     ]
     if (target_cpu != "arm64") {
       deps += [ ":zedboot-${board}.esp.blk" ]
