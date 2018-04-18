@@ -11,10 +11,12 @@
 
 namespace media {
 
-// Creates an fdio channel for a file from an fd.
+// Creates an fdio channel for a file from an fd. A null channel is returned
+// on failure.
 zx::channel ChannelFromFd(fxl::UniqueFD fd);
 
-// Creates an fd from a fdio channel for a file.
+// Creates an fd from a fdio channel for a file. An invalid UniqueFD is returned
+// on failure.
 fxl::UniqueFD FdFromChannel(zx::channel file_channel);
 
 }  // namespace media
