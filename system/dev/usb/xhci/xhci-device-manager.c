@@ -13,6 +13,7 @@
 
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
+#include "xhci-transfer-common.h"
 #include "xhci-util.h"
 
 // list of devices pending result of enable slot command

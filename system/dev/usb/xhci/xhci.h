@@ -21,6 +21,7 @@
 
 #include "xhci-hw.h"
 #include "xhci-root-hub.h"
+#include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
 // choose ring sizes to allow each ring to fit in a single page
@@ -41,18 +42,6 @@
 #else
 #define XHCI_IO_BUFFER_UNCACHED IO_BUFFER_UNCACHED
 #endif
-
-// cache is coherent on x86
-// state for endpoint's current transfer
-typedef struct {
-    phys_iter_t         phys_iter;
-    uint32_t            packet_count;       // remaining packets to send
-    uint8_t             direction;
-    bool                needs_data_event;   // true if we still need to queue data event TRB
-    bool                needs_status;       // true if we still need to queue status TRB
-    bool                needs_transfer_trb; // true if we still need to queue transfer TRB
-    bool                needs_zlp;          // true if we still need to queue a zero length packet
-} xhci_transfer_state_t;
 
 typedef enum {
     EP_STATE_DEAD = 0, // device does not exist or has been removed

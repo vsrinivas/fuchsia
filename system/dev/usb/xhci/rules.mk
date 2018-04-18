@@ -15,6 +15,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/xhci-device-manager.c \
     $(LOCAL_DIR)/xhci-root-hub.c \
     $(LOCAL_DIR)/xhci-transfer.c \
+    $(LOCAL_DIR)/xhci-transfer-common.c \
     $(LOCAL_DIR)/xhci-trb.c \
     $(LOCAL_DIR)/xhci-util.c \
 
