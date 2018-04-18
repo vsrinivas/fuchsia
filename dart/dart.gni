@@ -1,0 +1,16 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Directory containing prebuilt Dart SDK.
+  # This must have in its `bin/` subdirectory `gen_snapshot.OS-CPU` binaries.
+  prebuilt_dart_sdk = "//topaz/tools/prebuilt-dart-sdk/${host_platform}"
+}
+
+dart_binary = "${prebuilt_dart_sdk}/bin/dart"
+
+gen_snapshot =
+    "${prebuilt_dart_sdk}/bin/gen_snapshot.${current_os}-${current_cpu}"
+gen_snapshot_product =
+    "${prebuilt_dart_sdk}/bin/gen_snapshot_product.${current_os}-${current_cpu}"

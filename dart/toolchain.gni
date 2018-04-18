@@ -9,6 +9,3 @@ dart_root_gen_dir = get_label_info("//bogus($dart_toolchain)", "root_gen_dir")
 # In order to access the target_gen_dir in the Dart toolchain from some location
 # in the source tree, use the following:
 #   dart_target_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
-
-dart_sdk_root_out_dir =
-    get_label_info("//bogus($dart_host_sdk_toolchain)", "root_out_dir")

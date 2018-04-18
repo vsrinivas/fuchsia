@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/clang/clang.gni")
 import("//build/dart/dart_library.gni")
 import("//build/dart/toolchain.gni")
 
@@ -61,10 +60,6 @@ template("dart_tool") {
     sources += [ rebase_path(invoker.main_dart, source_base) ]
   }
 
-  dart_sdk_label = "//third_party/dart:create_host_sdk"
-  dart_sdk_dir = "$dart_sdk_root_out_dir/dart-sdk"
-  dart_binary = "$dart_sdk_dir/bin/dart"
-
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
   depfile_path = "${snapshot_path}.d"
   dart_target_gen_dir =
@@ -72,8 +67,6 @@ template("dart_tool") {
   packages_path = "$dart_target_gen_dir/$dart_library_target_name.packages"
 
   snapshot_target_name = target_name + "_snapshot"
-
-  gn_run_binary = "//build/gn_run_binary.sh"
 
   # Creates a snapshot file.
   # The main advantage of snapshotting is that it sets up source dependencies
@@ -90,7 +83,7 @@ template("dart_tool") {
       snapshot_path,
     ]
 
-    script = gn_run_binary
+    script = dart_binary
 
     # The snapshot path needs to be rebased on top of the root build dir so
     # that the resulting depfile gets properly formatted.
@@ -99,8 +92,6 @@ template("dart_tool") {
     rebased_packages_path = rebase_path(packages_path)
 
     args = [
-      clang_prefix,
-      rebase_path(dart_binary, root_build_dir),
       "--snapshot=$rebased_snapshot_path",
       "--snapshot-depfile=$rebased_depfile_path",
       "--packages=$rebased_packages_path",
@@ -109,7 +100,6 @@ template("dart_tool") {
 
     deps = [
       ":$dart_library_target_name",
-      dart_sdk_label,
     ]
   }
 
@@ -129,10 +119,6 @@ template("dart_tool") {
       app_path,
     ]
 
-    inputs = [
-      gn_run_binary,
-    ]
-
     args = [
       "--out",
       rebase_path(app_path),
@@ -140,10 +126,6 @@ template("dart_tool") {
       rebase_path(dart_binary),
       "--snapshot",
       rebase_path(snapshot_path),
-      "--gn_run_binary",
-      rebase_path(gn_run_binary),
-      "--clang-bindir",
-      clang_prefix,
     ]
 
     deps = [

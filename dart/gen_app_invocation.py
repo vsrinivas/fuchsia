@@ -21,12 +21,6 @@ def main():
   parser.add_argument('--snapshot',
                       help='Path to the app snapshot',
                       required=True)
-  parser.add_argument('--gn_run_binary',
-                      help='Path to //build/gn_run_binary.sh script',
-                      required=True)
-  parser.add_argument('--clang-bindir',
-                      help='Path to Clang toolchain bin directory',
-                      required=True)
   args = parser.parse_args()
 
   app_file = args.out
@@ -36,7 +30,7 @@ def main():
 
   script_template = string.Template('''#!/bin/sh
 
-$gn_run_binary $clang_bindir $dart \\
+$dart \\
   $snapshot \\
   "$$@"
 ''')

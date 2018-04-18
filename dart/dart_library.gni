@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart.gni")
 import("//build/dart/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//third_party/flutter/lib/ui/dart_ui.gni")
@@ -121,14 +122,10 @@ if (current_toolchain == dart_toolchain) {
       deps = []
       package_files = []
       foreach(dep, dart_deps) {
-        deps += [
-          "${dep}_dot_packages",
-        ]
+        deps += [ "${dep}_dot_packages" ]
         dep_gen_dir = get_label_info(dep, "target_gen_dir")
         dep_name = get_label_info(dep, "name")
-        package_files += [
-          "$dep_gen_dir/$dep_name.packages",
-        ]
+        package_files += [ "$dep_gen_dir/$dep_name.packages" ]
       }
       if (defined(invoker.non_dart_deps)) {
         public_deps = invoker.non_dart_deps
@@ -140,22 +137,22 @@ if (current_toolchain == dart_toolchain) {
       ]
 
       sources = package_files + [
-        # Require a manifest file, allowing the analysis service to identify the
-        # package.
-        "$package_root/pubspec.yaml",
-      ]
+                  # Require a manifest file, allowing the analysis service to identify the
+                  # package.
+                  "$package_root/pubspec.yaml",
+                ]
 
       outputs = [
         dot_packages_file,
       ]
 
       args = [
-        "--out",
-        rebase_path(dot_packages_file),
-        "--source-dir",
-        rebase_path(source_dir),
-        "--deps",
-      ] + rebase_path(package_files)
+               "--out",
+               rebase_path(dot_packages_file),
+               "--source-dir",
+               rebase_path(source_dir),
+               "--deps",
+             ] + rebase_path(package_files)
 
       if (defined(package_name)) {
         args += [
@@ -175,13 +172,13 @@ if (current_toolchain == dart_toolchain) {
     source_file = "$target_gen_dir/$target_name.sources"
 
     assert(defined(invoker.sources), "Public sources must be defined")
-    gen_snapshot_label =
-        "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)"
-    gen_snapshot_dir = get_label_info(gen_snapshot_label, "root_out_dir")
-    gen_snapshot = "$gen_snapshot_dir/gen_snapshot"
 
     action(source_target_name) {
       script = "//build/dart/identify_sources.py"
+
+      inputs = [
+        gen_snapshot,
+      ]
 
       outputs = [
         source_file,
@@ -214,7 +211,6 @@ if (current_toolchain == dart_toolchain) {
 
       deps = [
         ":$dot_packages_target_name",
-        gen_snapshot_label,
       ]
     }
 
@@ -226,9 +222,7 @@ if (current_toolchain == dart_toolchain) {
       invocation_target_name = "${target_name}_analysis_runner"
       group_deps += [ ":$invocation_target_name" ]
 
-      dart_sdk_label = "//third_party/dart:create_host_sdk"
-      dart_sdk_dir = "$dart_sdk_root_out_dir/dart-sdk"
-      dart_bin = "$dart_sdk_dir/bin"
+      dart_bin = "$prebuilt_dart_sdk/bin"
       dart_analyzer_binary = "$dart_bin/dartanalyzer"
 
       action(invocation_target_name) {
@@ -237,12 +231,13 @@ if (current_toolchain == dart_toolchain) {
         deps = [
           ":$dot_packages_target_name",
           ":$source_target_name",
-          dart_sdk_label,
         ]
 
         inputs = [
+          dart_analyzer_binary,
           dot_packages_file,
           options_file,
+          source_file,
         ]
 
         outputs = [
@@ -259,7 +254,7 @@ if (current_toolchain == dart_toolchain) {
           "--dartanalyzer",
           rebase_path(dart_analyzer_binary),
           "--dart-sdk",
-          rebase_path(dart_sdk_dir),
+          rebase_path(prebuilt_dart_sdk),
           "--options",
           rebase_path(options_file),
         ]
@@ -344,7 +339,10 @@ if (current_toolchain == dart_toolchain) {
           output_file = "$target_gen_dir/$target_name.analyzed"
 
           inputs = [
+            dart_analyzer_binary,
+            dot_packages_file,
             options_file,
+            source_file,
           ]
 
           outputs = [
@@ -359,7 +357,7 @@ if (current_toolchain == dart_toolchain) {
             "--dartanalyzer",
             rebase_path(dart_analyzer_binary),
             "--dart-sdk",
-            rebase_path(dart_sdk_dir),
+            rebase_path(prebuilt_dart_sdk),
             "--options",
             rebase_path(options_file),
             "--stamp",
@@ -373,7 +371,6 @@ if (current_toolchain == dart_toolchain) {
           deps = [
             ":$dot_packages_target_name",
             ":$source_target_name",
-            dart_sdk_label,
           ]
         }
       }
@@ -393,30 +390,27 @@ if (current_toolchain == dart_toolchain) {
     #
 
     if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-      assert(defined(invoker.package_name),
+      assert(
+          defined(invoker.package_name),
           "Dart libraries published in SDKs must have an explicit package name")
       atom_name = invoker.package_name
 
       # Dependencies that should normally be included in any SDK containing this
       # target.
       sdk_deps = []
+
       # Path to manifest files for third-party dependencies.
       third_party_specs = []
       if (defined(invoker.deps)) {
-        sorted_deps = exec_script("//build/dart/sdk/sort_deps.py",
-                                  invoker.deps,
-                                  "scope")
+        sorted_deps =
+            exec_script("//build/dart/sdk/sort_deps.py", invoker.deps, "scope")
         foreach(dep, sorted_deps.local) {
           full_label = get_label_info(dep, "label_no_toolchain")
-          sdk_deps += [
-            "${full_label}_sdk",
-          ]
+          sdk_deps += [ "${full_label}_sdk" ]
         }
         foreach(dep, sorted_deps.third_party) {
           path = get_label_info(dep, "dir")
-          third_party_specs += [
-            rebase_path("$path/pubspec.yaml"),
-          ]
+          third_party_specs += [ rebase_path("$path/pubspec.yaml") ]
         }
       }
 
@@ -426,7 +420,6 @@ if (current_toolchain == dart_toolchain) {
       third_party_spec_file = "$target_gen_dir/${target_name}_3p.yaml"
 
       action(third_party_spec_target_name) {
-
         script = "//build/dart/sdk/gen_3p_manifest.py"
 
         outputs = [
@@ -434,12 +427,12 @@ if (current_toolchain == dart_toolchain) {
         ]
 
         args = [
-          "--out",
-          rebase_path(third_party_spec_file),
-          "--name",
-          atom_name,
-          "--specs",
-        ] + third_party_specs
+                 "--out",
+                 rebase_path(third_party_spec_file),
+                 "--name",
+                 atom_name,
+                 "--specs",
+               ] + third_party_specs
       }
 
       # List all the sources which will be included in the package.
