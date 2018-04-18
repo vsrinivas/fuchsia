@@ -4,8 +4,6 @@
 
 library modular;
 
-// import "lib/story/fidl/story_state.fidl";
-
 // Information about a story running on a particular device.
 struct PerDeviceStoryInfo {
   // The ID of the device.

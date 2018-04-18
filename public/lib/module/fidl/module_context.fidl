@@ -4,76 +4,67 @@
 
 library modular;
 
-// import "lib/app/fidl/service_provider.fidl";
-// import "lib/user_intelligence/fidl/intelligence_services.fidl";
-// import "lib/component/fidl/component_context.fidl";
-// import "lib/story/fidl/link.fidl";
-// import "lib/surface/fidl/container.fidl";
-// import "lib/surface/fidl/surface.fidl";
-// import "lib/module/fidl/module_controller.fidl";
-// import "lib/daisy/fidl/daisy.fidl";
-// import "lib/ui/views/fidl/view_token.fidl";
-
-// This interface is exposed to all modules in a story. It allows to
-// create Link instances and run Module instances.
+// This interface is exposed to all Module instances in a story. It allows to
+// create Link instances and run more Module instances.
 //
 // Next ordinal: 13
 [ServiceName="modular.ModuleContext"]
 interface ModuleContext {
   // Gets a Link instance with the given name.
   //
-  // The link instance has a name so that it can be recognized when the story
-  // is resumed. The name is unique in the scope of the Module instance. If the
-  // method is called again by the same Module instance, a new connection to
-  // the same Link instance is obtained.  It's up to the Module instance to
-  // ensure the name is unique within the scope of itself. A null |name| is
-  // allowed for backwards compatibility reasons. MI4-739
+  // The Link instance has a name so that it can be recognized when the story is
+  // resumed. The name is unique in the scope of the Module instance. If the
+  // method is called again with the same argument by the same Module instance,
+  // a new connection to the same Link instance is obtained. It's up to the
+  // Module instance to ensure the name is unique within the scope of itself. A
+  // null |name| is allowed for backwards compatibility reasons. MI4-739
   1: GetLink(string? name, request<Link> link);
 
   // Starts a new Module instance. The Module to execute is identified by the
-  // the contents of |daisy| and the Module instance is given a |name| in the
-  // scope of the starting Module instance. The view for the Module is given to
-  // the story shell for display.
+  // contents of |daisy| and the Module instance is given a |name| in the scope
+  // of the starting Module instance. The view for the Module is given to the
+  // story shell for display.
   //
-  // Providing a |surface_relation| will advise the StoryShell how to layout
+  // Providing a |surface_relation| advises the StoryShell how to layout
   // surfaces that the new module creates. If |surface_relation| is null then a
   // default relation is used.
   //
   // If the method is called again with the same |name| by the same Module
   // instance, but with different arguments (or with non-null service exchange
   // arguments), the existing Module instance is restarted with the changed
-  // arguments. If the other arguments don't change, just an additional module
-  // controller connection is made.
+  // arguments. If the other arguments don't change, just an additional
+  // ModuleController connection is made.
   //
   // The calling Module instance and the new Module instance may also interact
   // by exchanging ServiceProviders. The new Module instance may implement
   // |incoming_services|, if an interface request is supplied.
   2: StartModule(string name, Daisy daisy,
-                request<component.ServiceProvider>? incoming_services,
-                request<ModuleController> module_controller,
-                SurfaceRelation? surface_relation)
-                -> (StartModuleStatus @status);
+                 request<component.ServiceProvider>? incoming_services,
+                 request<ModuleController> module_controller,
+                 SurfaceRelation? surface_relation) -> (StartModuleStatus @status);
 
-  // Like StartModule(), but provides a |view_owner| explicitly instead of
-  // relying on the story shell for display. If a Module with the same
-  // |name| and |daisy| was already started, |view_owner| is closed.
+  // Like StartModule(), but requests a |view_owner| explicitly to embed the
+  // view of the requested Module instance in the view of the requesting Module
+  // instance, instead of relying on the story shell for display. If a Module
+  // instance with the same |name| and |daisy| is already running, |view_owner|
+  // is just closed.
   3: EmbedModule(string name, Daisy daisy,
-                request<component.ServiceProvider>? incoming_services,
-                request<ModuleController> module_controller,
-                request<views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
+                 request<component.ServiceProvider>? incoming_services,
+                 request<ModuleController> module_controller,
+                 request<views_v1_token.ViewOwner> view_owner) -> (StartModuleStatus @status);
 
   // DEPRECATED: Use EmbedModule().
   4: StartModuleDeprecated(string name, string module_url, string? link_name,
-                          request<component.ServiceProvider>? incoming_services,
-                          request<ModuleController> module_controller,
-                          request<views_v1_token.ViewOwner> view_owner);
+                           request<component.ServiceProvider>? incoming_services,
+                           request<ModuleController> module_controller,
+                           request<views_v1_token.ViewOwner> view_owner);
 
   // DEPRECATED: Use StartModule().
   5: StartModuleInShellDeprecated(string name, string module_url, string? link_name,
-                                 request<component.ServiceProvider>? incoming_services,
-                                 request<ModuleController> module_controller,
-                                 SurfaceRelation? surface_relation,
-                                 bool focused);
+                                  request<component.ServiceProvider>? incoming_services,
+                                  request<ModuleController> module_controller,
+                                  SurfaceRelation? surface_relation,
+                                  bool focused);
 
   // Like StartModule(), but starts multiple modules simultaneously and
   // specifies a custom layout for them (aka container).
@@ -85,43 +76,41 @@ interface ModuleContext {
                            vector<ContainerRelationEntry> relationships,
                            vector<ContainerNode> nodes);
 
-  // Gets the ComponentContext instance associated with this Module
-  // instance. This ComponentContext instance is unique to this
-  // particular Module instance.
+  // Gets the ComponentContext instance associated with this Module instance.
+  // This ComponentContext instance is unique to this particular Module
+  // instance.
   7: GetComponentContext(request<ComponentContext> context_request);
 
-  // Gets the IntelligenceServices service vendor associated with this
-  // module.
+  // Gets the IntelligenceServices service vendor associated with this Module
+  // instance.
   8: GetIntelligenceServices(request<IntelligenceServices> @request);
 
-  // Gets the id for this story which may be used to create a
-  // suggestion proposal to resume this story.
+  // Gets the id for this story which may be used to create a suggestion
+  // proposal to resume this story, especially by agents.
   9: GetStoryId() -> (string story_id);
 
-  // Requests that the current story and module gain focus.
-  // HACK(zbowling): This is temporary and ripe for abuse by modules authors.
-  // Callers should be limited, possibly by policy, from taking user focus.
+  // Requests that the current story and module gain focus. It's up to the story
+  // shell and user shell to honor that request.
   10: RequestFocus();
 
   // The Module instance holding this handle to the ModuleContext declares it's
-  // ready to run. The module context implementation notifies all
-  // ModuleWatchers registered on the ModuleController by calling
-  // OnStateChange(). See ModuleState for all states and transitions.
-  // TODO(vardhan): Deprecate this in favour of adding a return callback to
-  // Module.Initialize().
+  // ready to run. The ModuleContext implementation notifies all ModuleWatchers
+  // registered on the ModuleController by calling OnStateChange(). See
+  // ModuleState for all states and transitions. TODO(vardhan): Deprecate this
+  // in favour of adding a return callback to Module.Initialize().
   11: Ready();
 
   // The Module instance holding this handle to the ModuleContext declares it's
-  // done and wants to be torn down. The module context implementation notifies
+  // done and wants to be torn down. The ModuleContext implementation notifies
   // all ModuleWatchers registered on the ModuleController by calling
-  // OnStateChange(). The receiver is free to decide whether it's appropriate
-  // to Stop() the module. (It might be appropriate for the receiver to call
-  // Done() on its own instead.) See ModuleState for all states and
+  // OnStateChange(). The receiver is free to decide whether it's appropriate to
+  // Stop() the Module instance. (It might be appropriate for the receiver to
+  // call Done() on its own instead.) See ModuleState for all states and
   // transitions.
   12: Done();
 };
 
-// Communicates the status of the daisy resolution
+// Communicates the status of resolution of a Daisy to a Module.
 enum StartModuleStatus {
   SUCCESS = 0;
   NO_MODULES_FOUND = 1;

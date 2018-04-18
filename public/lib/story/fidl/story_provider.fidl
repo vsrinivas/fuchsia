@@ -13,7 +13,7 @@ library modular;
 // framework.
 interface StoryProvider {
   // Creates a new story. If |module_url| is supplied, adds it to the story as
-  // the first module.  The returned |story_id| can be used to obtain a
+  // the first module. The returned |story_id| can be used to obtain a
   // StoryController connection to perform actions on the newly created story,
   // specifically starting it.
   //

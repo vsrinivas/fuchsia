@@ -4,7 +4,7 @@
 
 library modular;
 
-// Module metadata that defined the runtime capabilities of a single module.
+// Metadata that define the runtime properties of a Module.
 struct ModuleManifest {
   // The relative path from the root of the package where the Module executable
   // file can be found.

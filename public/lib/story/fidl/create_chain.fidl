@@ -4,9 +4,6 @@
 
 library modular;
 
-// import "create_link.fidl";
-// import "peridot/public/lib/module/fidl/link_path.fidl";
-
 // Chains contain Links that are each keyed by a string.
 struct CreateChainInfo {
   // Contains instructions to create each key in the Chain.
@@ -19,8 +16,8 @@ struct ChainEntry {
 };
 
 union CreateChainPropertyInfo {
-  // Instructs the Chain to either re-use an existing Link (|link_path| is set)
-  // or create a new one (|create_link|) is set.
+  // Instructs the Chain to either use an existing Link (|link_path| is set) or
+  // create a new Link (|create_link| is set).
   LinkPath link_path;
   CreateLinkInfo create_link;
 };

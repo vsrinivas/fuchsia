@@ -7,31 +7,32 @@
 
 library modular;
 
-// import "lib/entity/fidl/entity.fidl";
-
-// This interface is implemented by the story runner. The Story
-// service instance acts as a factory for it.
+// This interface is implemented by the story runner. The Story service instance
+// acts as a factory for it.
 //
 // An instance of Link holds one of two types of values:
-// (1) a JSON string that can be modified incrementally or completely
+//
+// (1) A JSON string that can be modified incrementally or completely
 //     overwritten, depending on the use of Set() and Update(). The JSON string
 //     is set to "null" when the Link is created.
-// (2) an entity reference that can be set or retrieved with SetEntity() and
+//
+// (2) An entity reference that can be set or retrieved with SetEntity() and
 //     GetEntity().
 //
-// Each module receives a handle to one Link instance in its ModuleContext which
-// it receives in Module.Initialize(). It can access it by calling
-// ModuleContext.GetLink() with null as the link name. This instance is shared
-// with the parent Module if there is any, or with the StoryController client if
-// the Module is a top level Module of a Story. A Module can create additional
-// Link instances by calling ModuleContext.GetLink() with a non-null link name.
-// Why would it do that? For example to share the new Link instance with Modules
-// it requests to start in turn.
+// Each module receives one Link instance for each of the nouns in its verb
+// template in its ModuleContext which it receives in Module.Initialize() or in
+// its service namespace. It can access them by calling ModuleContext.GetLink()
+// with the noun as the link name. These instances are shared with the parent
+// Module if there is any, or with the StoryController client if the Module is a
+// top level Module of a Story. A Module can create additional Link instances by
+// calling ModuleContext.GetLink() with any other link name. Why would it do
+// that? To share the new Link instance with Modules it requests to start in
+// turn, or to record its own state in the story record, so that it is
+// transferred to other devices that run the same story, or to persist it for
+// later resumption of the story.
 //
 // A client may obtain another handle to the same Link instance by calling
-// GetLink() with the same name again. This can be used to create an extra
-// handle to register a watcher on. If the changes to the Link value are made
-// through the original handle, the watcher is notified of all such changes.
+// GetLink() with the same name again.
 //
 // A client of Link can set the JSON string stored in the instance and register
 // a handler (an implementation of the LinkWatcher interface) to be notified of
@@ -39,7 +40,7 @@ library modular;
 // of changes it itself makes to the Link value, depending on whether it
 // registers with WatchAll() or Watch(), respectively. If the client registers
 // with Watch(), then it will not be notified of changes made through the same
-// Link *connection.*
+// Link connection.
 //
 // TODO(jimbe) Add error reporting for JSON and Pointer errors.
 //
@@ -47,8 +48,8 @@ library modular;
 interface Link {
   // Sets the JSON schema that's used to validate changes to the Link.
   // Validation errors are not fatal. They are logged as a "Schema constraint
-  // violation", then the mutation is applied and execution continues.  Setting
-  // a schema is optional. If no schema is set, then all changes are allowed.
+  // violation", then the mutation is applied and execution continues. Setting a
+  // schema is optional. If no schema is set, then all changes are allowed.
   //
   // About JSON schema: http://json-schema.org/
   // Short ebook: https://spacetelescope.github.io/understanding-json-schema/
@@ -131,14 +132,14 @@ interface Link {
   // on. However, once a Link instance has no connections it is deleted and its
   // watchers disconnected. There are two modes of use of a LinkWatcher:
   //
-  // 1. For a client to obtain updates from a Link instance that is actively
-  //    used by a client, the client must retain both the Link connection and
-  //    the LinkWatcher connection, and reset both once the Link is no longer
-  //    used. This mode is most appropriate for Modules.
+  // 1. For a client to obtain updates from a Link instance that is used by a
+  //    client, the client must retain both the Link connection and the
+  //    LinkWatcher connection, and reset both once the Link is no longer used.
+  //    This mode is most appropriate for Modules.
   //
   // 2. For a client to obtain updates from a Link instance until it's no longer
-  //    actively used by any other client, and be notified of that situation (by
-  //    the LinkWatcher connection being closed), the client must not retain the
+  //    used by any other client, and be notified of that situation (by the
+  //    LinkWatcher connection being closed), the client must not retain the
   //    Link connection and retain only the LinkWatcher connection. This mode is
   //    most appropriate for Agents that use the
   //    StoryController.GetActiveLinks() inspection API to keep track of

@@ -4,31 +4,33 @@
 
 library modular;
 
-// import "lib/daisy/fidl/daisy.fidl";
-// import "lib/module/fidl/link_path.fidl";
-// import "lib/surface/fidl/surface.fidl";
-
-// Information about modules in a Story.
+// Information about a Module instance in a story.
 struct ModuleData {
-  // The URL of the module application.
+  // The URL of the Module binary.
   string module_url;
 
-  // The named path leading up to this module. The last name in this array is
-  // this module's name.
+  // The named path leading up to this Module instance. The last name in this
+  // array is the name by which the Module was started by the parent Module
+  // instance calling StartModule().
   vector<string> module_path;
 
-  // Contains instructions for how to build a Chain at runtime.
+  // Contains the information which Links of this Module instance are mapped
+  // from Links under other Module instances.
   ChainData chain_data;
 
-  // The name of the link the module was started with.
+  // The name of the link the Module instance was started with. OBSOLETE.
+  // Superseded by chain_data.
   LinkPath link_path;
 
-  // The way in which this module was first started in the story.
+  // The way in which this Module instance was first started in the story,
+  // either by request from another Module instance, by request from outside the
+  // story (i.e. by suggestion from an agent).
   ModuleSource module_source;
 
-  // The |surface_relation| that was used to start this module with. The same is
-  // used when re-inflating the module. A SurfaceRelation value of null
-  // represents an embedded module that is not managed by the story shell.
+  // The |surface_relation| that was used to start this Module instance with.
+  // The same is used when re-inflating the Module instance when the story is
+  // resumed. A SurfaceRelation value of null represents an embedded Module
+  // instance (started by EmbedModule()) that is not managed by the story shell.
   SurfaceRelation? surface_relation;
 
   // True if an externally-started module has called ModuleContext.Done() and
@@ -36,7 +38,7 @@ struct ModuleData {
   // was stopped by its parent module using ModuleController.Stop().
   bool module_stopped;
 
-  // The daisy that was issued to start this module.
+  // The daisy that was issued to start this Module instance.
   Daisy? daisy;
 };
 
