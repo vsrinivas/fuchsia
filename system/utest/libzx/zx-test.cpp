@@ -251,11 +251,17 @@ static bool time_test() {
     ASSERT_EQ(zx::duration::infinite().get(), ZX_TIME_INFINITE);
 
     ASSERT_EQ(zx::nsec(10).get(), ZX_NSEC(10));
+    ASSERT_EQ(zx::nsec(10).to_nsecs(), 10);
     ASSERT_EQ(zx::usec(10).get(), ZX_USEC(10));
+    ASSERT_EQ(zx::usec(10).to_usecs(), 10);
     ASSERT_EQ(zx::msec(10).get(), ZX_MSEC(10));
+    ASSERT_EQ(zx::msec(10).to_msecs(), 10);
     ASSERT_EQ(zx::sec(10).get(), ZX_SEC(10));
+    ASSERT_EQ(zx::sec(10).to_secs(), 10);
     ASSERT_EQ(zx::min(10).get(), ZX_MIN(10));
+    ASSERT_EQ(zx::min(10).to_mins(), 10);
     ASSERT_EQ(zx::hour(10).get(), ZX_HOUR(10));
+    ASSERT_EQ(zx::hour(10).to_hours(), 10);
 
     ASSERT_EQ((zx::time() + zx::usec(19)).get(), ZX_USEC(19));
     ASSERT_EQ((zx::time::infinite() - zx::time()).get(), ZX_TIME_INFINITE);

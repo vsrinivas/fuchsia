@@ -66,6 +66,18 @@ public:
     constexpr bool operator>(duration other) const { return value_ > other.value_; }
     constexpr bool operator>=(duration other) const { return value_ >= other.value_; }
 
+    constexpr uint64_t to_nsecs() const { return value_; }
+
+    constexpr uint64_t to_usecs() const { return value_ / ZX_USEC(1); }
+
+    constexpr uint64_t to_msecs() const { return value_ / ZX_MSEC(1); }
+
+    constexpr uint64_t to_secs() const { return value_ / ZX_SEC(1); }
+
+    constexpr uint64_t to_mins() const { return value_ / ZX_MIN(1); }
+
+    constexpr uint64_t to_hours() const { return value_ / ZX_HOUR(1); }
+
 private:
     zx_duration_t value_ = 0;
 };
