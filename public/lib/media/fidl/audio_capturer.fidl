@@ -4,9 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/media_transport.fidl";
-// import "lib/media/fidl/media_types.fidl";
-
 interface AudioCapturerClient {
   // Called when an AudioCapturer operating in AsyncCapture mode has a packet's
   // worth of data to deliver to the client.

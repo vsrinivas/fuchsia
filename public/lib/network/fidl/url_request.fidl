@@ -4,9 +4,6 @@
 
 library network;
 
-// import "lib/network/fidl/http_header.fidl";
-// import "lib/network/fidl/url_body.fidl";
-
 // Specify the cache behavior of the request.
 enum CacheMode {
   // Default behavior.

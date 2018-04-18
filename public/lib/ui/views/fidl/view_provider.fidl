@@ -4,9 +4,6 @@
 
 library views_v1;
 
-// import "lib/app/fidl/service_provider.fidl";
-// import "lib/ui/views/fidl/views.fidl";
-
 // Provides a View upon request.
 //
 // Applications should implement and expose this service so that they can

@@ -4,8 +4,6 @@
 
 library component;
 
-// import "lib/app/fidl/application_runner.fidl";
-
 // An interface for loading applications.
 [ServiceName="component.ApplicationLoader"]
 interface ApplicationLoader {

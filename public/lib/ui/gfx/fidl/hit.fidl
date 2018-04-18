@@ -4,8 +4,6 @@
 
 library gfx;
 
-// import "lib/ui/gfx/fidl/types.fidl";
-
 // Describes where a hit occurred within the content of a node tagged
 // by this session.
 //

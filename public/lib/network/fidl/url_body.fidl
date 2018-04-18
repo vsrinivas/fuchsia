@@ -4,9 +4,7 @@
 
 library network;
 
-using fsl;
-
-// import "lib/fsl/fidl/sized_vmo_transport.fidl";
+using mem;
 
 union URLBody {
   // A socket that will contain the streaming request or response body.

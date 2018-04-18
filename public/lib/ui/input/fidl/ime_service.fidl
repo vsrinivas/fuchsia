@@ -4,10 +4,6 @@
 
 library input;
 
-// import "lib/ui/input/fidl/text_editing.fidl";
-// import "lib/ui/input/fidl/text_input.fidl";
-// import "lib/ui/input/fidl/input_events.fidl";
-
 // The service provided by an IME
 [ServiceName="mozart::ImeService"]
 interface ImeService {

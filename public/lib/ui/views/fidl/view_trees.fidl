@@ -4,10 +4,6 @@
 
 library views_v1;
 
-// import "lib/app/fidl/service_provider.fidl";
-// import "lib/ui/views/fidl/view_containers.fidl";
-// import "lib/ui/views/fidl/view_tree_token.fidl";
-
 // A view tree is a top-level container for a hierarchy of views.
 // Each view is intended to operate independently from others and will
 // generally correspond to discrete interactive spaces such as separate

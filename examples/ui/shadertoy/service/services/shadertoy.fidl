@@ -4,9 +4,6 @@
 
 library shadertoy;
 
-// import "lib/ui/gfx/fidl/types.fidl";
-// import "lib/images/fidl/image_pipe.fidl";
-
 // Shadertoy (www.shadertoy.com) is an online community and tool for creating
 // and sharing GLSL shaders.  The genius of Shadertoy is that it side-steps the
 // need for tedious glue code to bind assets such and meshs to GPU shader code.

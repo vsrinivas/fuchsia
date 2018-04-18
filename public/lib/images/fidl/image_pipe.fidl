@@ -4,10 +4,6 @@
 
 library images;
 
-// import "lib/images/fidl/image_info.fidl";
-// import "lib/images/fidl/memory_type.fidl";
-// import "lib/images/fidl/presentation_info.fidl";
-
 // ImagePipe is a mechanism for streaming shared images between a producer
 // and a consumer which may be running in different processes.
 //

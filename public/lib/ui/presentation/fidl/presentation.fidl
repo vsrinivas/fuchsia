@@ -7,10 +7,6 @@ library presentation;
 using gfx;
 using input;
 
-// import "lib/ui/presentation/fidl/display_usage.fidl";
-// import "lib/ui/gfx/fidl/renderer.fidl";
-// import "lib/ui/input/fidl/input_events.fidl";
-
 // |Presentation.CaptureKeyboardEvent| will consume this listener interface and
 // call |OnEvent| when the registered keyboard event occurs.
 interface KeyboardCaptureListener {

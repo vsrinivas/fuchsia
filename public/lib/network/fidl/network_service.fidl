@@ -4,8 +4,6 @@
 
 library network;
 
-// import "lib/network/fidl/url_loader.fidl";
-
 [ServiceName="network::NetworkService"]
 interface NetworkService {
   1: CreateURLLoader(request<URLLoader> loader);

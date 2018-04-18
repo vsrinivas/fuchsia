@@ -4,8 +4,6 @@
 
 library input;
 
-// import "lib/ui/input/fidl/input_reports.fidl";
-
 // Service to receive input events.
 //
 // Input devices can describe their capabilities using |DeviceDescriptor|

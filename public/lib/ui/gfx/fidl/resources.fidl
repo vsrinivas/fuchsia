@@ -4,13 +4,6 @@
 
 library gfx;
 
-// import "lib/ui/gfx/fidl/nodes.fidl";
-// import "lib/ui/gfx/fidl/shapes.fidl";
-// import "lib/ui/gfx/fidl/types.fidl";
-// import "lib/images/fidl/image_info.fidl";
-// import "lib/images/fidl/image_pipe.fidl";
-// import "lib/images/fidl/memory_type.fidl";
-
 // These are all of the types of resources that can be created within a
 // |Session|.
 union ResourceArgs {

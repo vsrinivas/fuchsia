@@ -4,9 +4,6 @@
 
 library input;
 
-// import "lib/ui/geometry/fidl/geometry.fidl";
-// import "lib/ui/input/fidl/input_event_constants.fidl";
-
 enum KeyboardEventPhase {
   // When key is pressed down.
   PRESSED = 0;

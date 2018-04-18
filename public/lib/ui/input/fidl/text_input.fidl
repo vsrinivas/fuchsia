@@ -4,9 +4,6 @@
 
 library input;
 
-// import "lib/ui/input/fidl/text_editing.fidl";
-// import "lib/ui/input/fidl/input_events.fidl";
-
 enum KeyboardType {
   TEXT = 0;
   NUMBER = 1;

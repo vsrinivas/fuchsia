@@ -4,11 +4,6 @@
 
 library ui;
 
-// import "lib/ui/scenic/fidl/commands.fidl";
-// import "lib/ui/scenic/fidl/events.fidl";
-// import "lib/ui/gfx/fidl/types.fidl";
-// import "lib/ui/gfx/fidl/hit.fidl";
-
 // Client use Sessions to interact with a Mozart instance by enqueuing commands
 // that create or modify resources.
 interface Session {

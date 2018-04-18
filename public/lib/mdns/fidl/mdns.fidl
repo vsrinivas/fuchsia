@@ -4,8 +4,6 @@
 
 library mdns;
 
-// import "lib/netstack/fidl/net_address.fidl";
-
 // mDNS service interface.
 [ServiceName="mdns::MdnsService"]
 interface MdnsService {

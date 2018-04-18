@@ -4,10 +4,6 @@
 
 library network;
 
-// import "lib/network/fidl/network_error.fidl";
-// import "lib/network/fidl/url_request.fidl";
-// import "lib/network/fidl/url_response.fidl";
-
 struct URLLoaderStatus {
   // If the loader has failed due to a network level error, this field will be
   // set.

@@ -4,10 +4,6 @@
 
 library shadertoy;
 
-// import "garnet/examples/ui/shadertoy/service/services/shadertoy.fidl";
-// import "lib/images/fidl/image_pipe.fidl";
-// import "lib/ui/views/fidl/view_token.fidl";
-
 // ShadertoyFactory provides a number of methods for creating |Shadertoy|
 // instances.
 [ServiceName="mozart::example::ShadertoyFactory"]

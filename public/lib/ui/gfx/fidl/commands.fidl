@@ -4,10 +4,6 @@
 
 library gfx;
 
-// import "lib/ui/gfx/fidl/events.fidl";
-// import "lib/ui/gfx/fidl/renderer.fidl";
-// import "lib/ui/gfx/fidl/resources.fidl";
-
 // Commands that are used to modify the state of a |Session|.
 // TODO(MZ-237): reorder Command definitions to match the order in this union.
 union Command {

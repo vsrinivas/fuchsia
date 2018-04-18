@@ -4,10 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/audio_capturer.fidl";
-// import "lib/media/fidl/audio_renderer.fidl";
-// import "lib/media/fidl/media_renderer.fidl";
-
 [ServiceName="media::AudioServer"]
 interface AudioServer {
   1: CreateRenderer(request<AudioRenderer> audio_renderer, request<MediaRenderer> media_renderer);

@@ -4,9 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/media_result.fidl";
-// import "lib/media/fidl/media_types.fidl";
-
 // A special value which may be written into the PTS field in certain
 // circumstances.  For example, depending on the specific scenario,
 // kNoTimestamp may be used if...

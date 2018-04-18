@@ -6,8 +6,6 @@ library netconnector;
 
 using component;
 
-// import "lib/app/fidl/service_provider.fidl";
-
 // Special value for GetKnownDeviceNames version_last_seen parameter to
 // get the current status immediately.
 const uint64 kInitialKnownDeviceNames = 0;

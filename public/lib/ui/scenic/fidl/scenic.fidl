@@ -4,9 +4,6 @@
 
 library ui;
 
-// import "lib/ui/scenic/fidl/session.fidl";
-// import "lib/ui/gfx/fidl/display_info.fidl";
-
 [ServiceName="ui::Scenic"]
 interface Scenic {
   // Create a new Session, which is the primary way to interact with Mozart.

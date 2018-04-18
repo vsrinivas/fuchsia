@@ -4,10 +4,6 @@
 
 library views_v1;
 
-// import "lib/ui/scenic/fidl/scenic.fidl";
-// import "lib/ui/views/fidl/view_trees.fidl";
-// import "lib/ui/views/fidl/views.fidl";
-
 // Maximum length for a view or view tree label.
 const uint32 kLabelMaxLength = 32;
 

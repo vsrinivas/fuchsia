@@ -4,8 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/media_types.fidl";
-
 // A special value which will always cause an audio renderer to become
 // explicitly muted.
 const float32 kMutedGain = -160.0;

@@ -4,9 +4,6 @@
 
 library ui;
 
-// import "lib/ui/scenic/fidl/dummy_system/events.fidl";
-// import "lib/ui/gfx/fidl/events.fidl";
-
 union Event {
   gfx.Event gfx;
   scenic_dummy_system.DummySystemEvent dummy;

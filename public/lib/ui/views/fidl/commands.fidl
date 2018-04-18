@@ -4,8 +4,6 @@
 
 library views;
 
-// import "lib/app/fidl/service_provider.fidl";
-
 union Command {
   CreateViewCmd create_view;
   CreateViewHolderCmd create_view_holder;

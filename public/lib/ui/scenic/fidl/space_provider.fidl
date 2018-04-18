@@ -4,8 +4,6 @@
 
 library ui;
 
-// import "lib/app/fidl/service_provider.fidl";
-
 // Provides transform spaces for 3D content upon request.
 [ServiceName="ui::SpaceProvider"]
 interface SpaceProvider {

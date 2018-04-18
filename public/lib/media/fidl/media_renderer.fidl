@@ -4,10 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/media_transport.fidl";
-// import "lib/media/fidl/media_types.fidl";
-// import "lib/media/fidl/timeline_controller.fidl";
-
 // Models a service that renders content.
 interface MediaRenderer {
   // Gets the list of supported media types.

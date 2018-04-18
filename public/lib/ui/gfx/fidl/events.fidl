@@ -4,8 +4,6 @@
 
 library gfx;
 
-// import "lib/ui/gfx/fidl/types.fidl";
-
 // Reports metrics information.
 // This event type is only reported for node resources.
 const uint32 kMetricsEventMask = 1;

@@ -4,8 +4,6 @@
 
 library media;
 
-// import "lib/media/fidl/timelines.fidl";
-
 // Timing controller for a media graph.
 interface MediaTimelineController {
   // Associates a control point with the controller.
