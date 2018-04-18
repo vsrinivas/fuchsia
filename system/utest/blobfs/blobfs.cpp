@@ -92,9 +92,8 @@ bool BlobfsTest::Init() {
     ASSERT_EQ(state_, FsTestState::kInit);
     auto error = fbl::MakeAutoCall([this](){ state_ = FsTestState::kError; });
 
-    fbl::unique_fd dir_fd(mkdir(MOUNT_PATH, 0755));
-    ASSERT_TRUE(dir_fd || errno == EEXIST, "Could not create mount point for test filesystems");
-    dir_fd.reset();
+    ASSERT_TRUE(mkdir(MOUNT_PATH, 0755) == 0 || errno == EEXIST,
+                "Could not create mount point for test filesystems");
 
     if (gUseRealDisk) {
         strncpy(ramdisk_path_, gRealDiskInfo.disk_path, PATH_MAX);
