@@ -230,6 +230,11 @@
              path="third_party/shaderc/third_party/googletest"
              remote="https://fuchsia.googlesource.com/third_party/googletest"
              gerrithost="https://fuchsia-review.googlesource.com"/>
+    <project name="third_party/spirv-cross"
+             path="third_party/spirv-cross"
+             remote="https://fuchsia.googlesource.com/third_party/spirv-cross"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="3a8335eee078e3a5c06db8603c89f4f121ec5cfa"/>
     <project name="third_party/spirv-headers"
              path="third_party/shaderc/third_party/spirv-tools/external/spirv-headers"
              remote="https://fuchsia.googlesource.com/third_party/spirv-headers"
