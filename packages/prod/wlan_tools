@@ -1,0 +1,6 @@
+{
+    "packages": {
+        "wlantool": "//garnet/go/src/wlan:wlantool",
+        "wlantool2": "//garnet/bin/wlantool:wlantool2"
+    }
+}

@@ -3,6 +3,7 @@
         "garnet/packages/config/wlancfg",
         "garnet/packages/prod/wlancfg",
         "garnet/packages/prod/wlan_drivers",
+        "garnet/packages/prod/wlan_tools",
         "garnet/packages/prod/wlanstack"
     ]
 }
