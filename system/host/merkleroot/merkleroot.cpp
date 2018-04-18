@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2017, 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,19 +10,28 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <string>
+#include <thread>
 #include <unistd.h>
+#include <vector>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/string.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fbl/vector.h>
+
+namespace {
 
 using digest::Digest;
 using digest::MerkleTree;
 
-static void usage(char** argv) {
+struct FileEntry {
+    std::string filename;
+    char digest[Digest::kLength * 2 + 1]{};
+};
+
+void usage(char** argv) {
     fprintf(stderr, "Usage: %s [-o OUTPUT | -m MANIFEST] FILE...\n", argv[0]);
     fprintf(stderr, "\n\
 With -o, OUTPUT gets the same format normally written to stdout: HASH - FILE.\n\
@@ -32,8 +41,8 @@ Any argument may be \"@RSPFILE\" to be replaced with the contents of RSPFILE.\n\
     exit(1);
 }
 
-static int handle_argument(char** argv, FILE* outf, const char* separator,
-                           const char* arg) {
+int handle_argument(char** argv, const char* arg,
+                    std::vector<FileEntry>* entries) {
     if (arg[0] == '@') {
         FILE* rspfile = fopen(&arg[1], "r");
         if (!rspfile) {
@@ -43,7 +52,7 @@ static int handle_argument(char** argv, FILE* outf, const char* separator,
         while (!feof(rspfile) && !ferror(rspfile)) {
             char* filename = nullptr;
             if (fscanf(rspfile, " %ms", &filename) == 1) {
-                handle_argument(argv, outf, separator, filename);
+                handle_argument(argv, filename, entries);
                 free(filename);
             }
         }
@@ -53,69 +62,66 @@ static int handle_argument(char** argv, FILE* outf, const char* separator,
         }
         fclose(rspfile);
         return result;
+    } else {
+        entries->push_back({arg});
+        return 0;
+    }
+}
+
+void handle_entry(FileEntry* entry) {
+    fbl::unique_fd fd{open(entry->filename.c_str(), O_RDONLY)};
+    if (!fd){
+        perror(entry->filename.c_str());
+        exit(1);
+    }
+
+    struct stat info;
+    if (fstat(fd.get(), &info) < 0) {
+        perror("fstat");
+        exit(1);
+    }
+    if (!S_ISREG(info.st_mode)) {
+        return;
     }
 
     // Buffer one intermediate node's worth at a time.
     fbl::unique_ptr<uint8_t[]> tree;
-    char strbuf[Digest::kLength * 2 + 1];
     Digest digest;
-    struct stat info;
-    if (stat(arg, &info) < 0) {
-        perror("stat");
-        fprintf(stderr, "[-] Unable to stat '%s'.\n", arg);
-        fprintf(stderr, "usage: %s <filename>\n", argv[0]);
-        return 1;
-    }
-    if (!S_ISREG(info.st_mode)) {
-        return 0;
-    }
     size_t len = MerkleTree::GetTreeLength(info.st_size);
     fbl::AllocChecker ac;
     tree.reset(new (&ac) uint8_t[len]);
     if (!ac.check()) {
-        fprintf(stderr, "[-] Failed to allocate tree of %zu bytes.\n", len);
-        return 1;
-    }
-    int fd = open(arg, O_RDONLY);
-    if (fd < 0) {
-        perror("open");
-        fprintf(stderr, "[-] Failed to open '%s.\n", arg);
-        return 1;
+        perror("cannot allocate");
+        exit(1);
     }
     void* data = nullptr;
     if (info.st_size != 0) {
-        data = mmap(NULL, info.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    }
-    if (close(fd) < 0) {
-        perror("close");
-        fprintf(stderr, "[-] Failed to close '%s'\n", arg);
-        return 1;
+        data = mmap(NULL, info.st_size, PROT_READ, MAP_SHARED, fd.get(), 0);
     }
     if (info.st_size != 0 && data == MAP_FAILED) {
         perror("mmap");
-        fprintf(stderr, "[-] Failed to mmap '%s.\n", arg);
-        return 1;
+        exit(1);
     }
     zx_status_t rc =
         MerkleTree::Create(data, info.st_size, tree.get(), len, &digest);
     if (info.st_size != 0 && munmap(data, info.st_size) != 0) {
         perror("munmap");
-        fprintf(stderr, "[-] Failed to munmap '%s.\n", arg);
-        return 1;
+        exit(1);
     }
     if (rc != ZX_OK) {
-        fprintf(stderr, "[-] Merkle tree creation failed: %d\n", rc);
-        return 1;
+        fprintf(stderr, "%s: Merkle tree creation failed: %d\n",
+                entry->filename.c_str(), rc);
+        exit(1);
     }
-    rc = digest.ToString(strbuf, sizeof(strbuf));
+    rc = digest.ToString(entry->digest, sizeof(entry->digest));
     if (rc != ZX_OK) {
-        fprintf(stderr, "[-] Unable to print Merkle tree root: %d\n", rc);
-        return 1;
+        fprintf(stderr, "%s: Unable to print Merkle tree root: %d\n",
+                entry->filename.c_str(), rc);
+        exit(1);
     }
-    fprintf(outf, "%s%s%s\n", strbuf, separator, arg);
-
-    return 0;
 }
+
+}  // namespace
 
 int main(int argc, char** argv) {
     FILE* outf = stdout;
@@ -136,11 +142,45 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-    const char* separator = manifest ? "=" : " - ";
 
+    std::vector<FileEntry> entries;
     for (; argi < argc; ++argi) {
-        if (handle_argument(argv, outf, separator, argv[argi]))
+        if (handle_argument(argv, argv[argi], &entries))
             return 1;
     }
+
+    std::vector<std::thread> threads;
+    std::mutex mtx;
+    size_t next_entry = 0;
+    unsigned n_threads = std::thread::hardware_concurrency();
+    if (!n_threads) {
+        n_threads = 4;
+    }
+    if (n_threads > entries.size()) {
+        n_threads = entries.size();
+    }
+    for (unsigned i = n_threads; i > 0; --i) {
+        threads.push_back(std::thread([&] {
+                    while (true) {
+                        unsigned int j;
+                        mtx.lock();
+                        j = next_entry++;
+                        mtx.unlock();
+                        if (j >= entries.size()) {
+                            return;
+                        }
+                        handle_entry(&entries[j]);
+                    }
+                }));
+    }
+    for (unsigned i = 0; i < threads.size(); ++i) {
+        threads[i].join();
+    }
+
+    for (const auto& entry : entries) {
+        fprintf(outf, "%s%s%s\n",
+                entry.digest, manifest ? "=" : " - ", entry.filename.c_str());
+    }
+
     return 0;
 }
