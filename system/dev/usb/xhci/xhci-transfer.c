@@ -170,47 +170,15 @@ static zx_status_t xhci_start_transfer_locked(xhci_t* xhci, xhci_slot_t* slot, u
     }
 
     xhci_transfer_state_t* state = ep->transfer_state;
-    memset(state, 0, sizeof(*state));
-
-    if (req->header.length > 0) {
-        zx_status_t status = usb_request_physmap(req);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
-            return status;
-        }
+    zx_status_t status = xhci_transfer_state_init(state, req, ep->ep_type, ep->max_packet_size);
+    if (status != ZX_OK) {
+        return status;
     }
-
-
-    // compute number of packets needed for this transaction
-    if (req->header.length > 0) {
-        usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
-        zx_paddr_t dummy_paddr;
-        while (usb_request_phys_iter_next(&state->phys_iter, &dummy_paddr) > 0) {
-            state->packet_count++;
-        }
-    }
-
-    usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
-
-    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
-    if (setup) {
-        state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
-        state->needs_status = true;
-    } else {
-        state->direction = req->header.ep_address & USB_ENDPOINT_DIR_MASK;
-    }
-    state->needs_data_event = true;
-    // Zero length bulk transfers are allowed. We should have at least one transfer TRB
-    // to avoid consecutive event data TRBs on a transfer ring.
-    // See XHCI spec, section 4.11.5.2
-    state->needs_transfer_trb = ep->ep_type == USB_ENDPOINT_BULK;
-
-    // send zero length packet if send_zlp is set and transfer is a multiple of max packet size
-    state->needs_zlp = req->header.send_zlp && (req->header.length % ep->max_packet_size) == 0;
 
     size_t length = req->header.length;
     uint32_t interrupter_target = 0;
 
+    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
     if (setup) {
         // Setup Stage
         xhci_trb_t* trb = ring->current;

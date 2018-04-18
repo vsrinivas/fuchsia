@@ -22,6 +22,9 @@ typedef struct {
 
 void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb);
 
+zx_status_t xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
+                                     uint8_t ep_type, uint16_t ep_max_packet_size);
+
 // Queues TRBs on the given transfer ring for the Data stage of a USB transfer.
 // Whether TRBs will be queued depends on the given transfer state, and whether
 // there is space available on the transfer ring.

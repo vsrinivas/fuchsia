@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <string.h>
 
 #include "xhci-transfer-common.h"
 
@@ -12,6 +13,47 @@ void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     uint64_t paddr = io_buffer_phys(&ring->buffer) + index * sizeof(xhci_trb_t);
 
     zxlogf(LSPEW, "trb[%03d] %p: %08X %08X %08X %08X\n", index, (void *)paddr, ptr[0], ptr[1], ptr[2], ptr[3]);
+}
+
+zx_status_t xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
+                                     uint8_t ep_type, uint16_t ep_max_packet_size) {
+    memset(state, 0, sizeof(*state));
+
+    if (req->header.length > 0) {
+        zx_status_t status = usb_request_physmap(req);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: usb_request_physmap failed: %d\n", __FUNCTION__, status);
+            return status;
+        }
+    }
+
+    // compute number of packets needed for this transaction
+    if (req->header.length > 0) {
+        usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
+        zx_paddr_t dummy_paddr;
+        while (usb_request_phys_iter_next(&state->phys_iter, &dummy_paddr) > 0) {
+            state->packet_count++;
+        }
+    }
+
+    usb_request_phys_iter_init(&state->phys_iter, req, XHCI_MAX_DATA_BUFFER);
+
+    usb_setup_t* setup = (req->header.ep_address == 0 ? &req->setup : NULL);
+    if (setup) {
+        state->direction = setup->bmRequestType & USB_ENDPOINT_DIR_MASK;
+        state->needs_status = true;
+    } else {
+        state->direction = req->header.ep_address & USB_ENDPOINT_DIR_MASK;
+    }
+    state->needs_data_event = true;
+    // Zero length bulk transfers are allowed. We should have at least one transfer TRB
+    // to avoid consecutive event data TRBs on a transfer ring.
+    // See XHCI spec, section 4.11.5.2
+    state->needs_transfer_trb = ep_type == USB_ENDPOINT_BULK;
+
+    // send zero length packet if send_zlp is set and transfer is a multiple of max packet size
+    state->needs_zlp = req->header.send_zlp && (req->header.length % ep_max_packet_size) == 0;
+    return ZX_OK;
 }
 
 zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state_t* state,
