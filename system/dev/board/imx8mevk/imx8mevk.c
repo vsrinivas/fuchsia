@@ -29,6 +29,36 @@
 
 #include "imx8mevk.h"
 
+static zx_status_t imx8mevk_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
+    imx8mevk_bus_t* bus = ctx;
+    *out_mode = bus->initial_usb_mode;
+    return ZX_OK;
+}
+
+static zx_status_t imx8mevk_set_mode(void* ctx, usb_mode_t mode) {
+    imx8mevk_bus_t* bus = ctx;
+
+    if (mode == bus->usb_mode) {
+        return ZX_OK;
+    }
+    if (mode == USB_MODE_OTG) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // add or remove XHCI device
+    pbus_device_enable(&bus->pbus, PDEV_VID_GENERIC, PDEV_PID_GENERIC, PDEV_DID_USB_XHCI,
+                       mode == USB_MODE_HOST);
+
+    bus->usb_mode = mode;
+    return ZX_OK;
+}
+
+usb_mode_switch_protocol_ops_t usb_mode_switch_ops = {
+    .get_initial_mode = imx8mevk_get_initial_mode,
+    .set_mode = imx8mevk_set_mode,
+};
+
+
 /* iMX8M EVK Pin Mux Table TODO: Add all supported peripherals on EVK board */
 iomux_cfg_struct imx8mevk_pinmux[] = {
     // UART1 RX
@@ -58,6 +88,9 @@ static int imx8mevk_start_thread(void* arg) {
     zx_status_t status;
     imx8mevk_bus_t* bus = arg;
 
+    bus->usb_mode_switch.ops = &usb_mode_switch_ops;
+    bus->usb_mode_switch.ctx = bus;
+    bus->initial_usb_mode = USB_MODE_HOST;
     // TODO: Power and Clocks
 
     // start the gpio driver first so we can do our initial pinmux
@@ -73,6 +106,11 @@ static int imx8mevk_start_thread(void* arg) {
 
     if ((status = imx_usb_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "%s: failed %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+
+    status = pbus_set_protocol(&bus->pbus, ZX_PROTOCOL_USB_MODE_SWITCH, &bus->usb_mode_switch);
+    if (status != ZX_OK) {
         goto fail;
     }
 

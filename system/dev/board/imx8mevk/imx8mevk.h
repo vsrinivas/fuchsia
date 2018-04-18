@@ -11,12 +11,13 @@
 #include <ddk/protocol/iommu.h>
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/serial.h>
+#include <ddk/protocol/usb-mode-switch.h>
 
 // BTI IDs for our devices
 enum
 {
     BTI_BOARD,
-    BTI_USB_XHCI,
+    BTI_USB,
 };
 
 typedef struct {
@@ -27,7 +28,9 @@ typedef struct {
     zx_handle_t                 bti_handle;
     imx8m_t*                    imx8m;
     uint32_t                    soc_pid;
-
+    usb_mode_switch_protocol_t  usb_mode_switch;
+    usb_mode_t                  usb_mode;
+    usb_mode_t                  initial_usb_mode;
 } imx8mevk_bus_t;
 
 

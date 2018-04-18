@@ -13,21 +13,38 @@
 #include <hw/reg.h>
 #include "imx8mevk.h"
 
-#define BIT(nr)         (1UL << (nr))
-#define USBMIX_PHY_OFFSET       0xF0040
-#define PHY_CTRL0_REF_SSP_EN        BIT(2)
-#define PHY_CTRL1_RESET             BIT(0)
-#define PHY_CTRL1_ATERESET          BIT(3)
-#define PHY_CTRL1_VDATSRCENB0       BIT(19)
-#define PHY_CTRL1_VDATDETENB0       BIT(20)
-#define PHY_CTRL2_TXENABLEN0        BIT(8)
-#define USBMIX_PHY_OFFSET           0xF0040
-#define PHY_CTRL0_REF_SSP_EN        BIT(2)
-#define PHY_CTRL1_RESET             BIT(0)
-#define PHY_CTRL1_ATERESET          BIT(3)
-#define PHY_CTRL1_VDATSRCENB0       BIT(19)
-#define PHY_CTRL1_VDATDETENB0       BIT(20)
-#define PHY_CTRL2_TXENABLEN0        BIT(8)
+static const pbus_mmio_t dwc3_mmios[] = {
+    {
+        .base = IMX8M_USB2_BASE,
+        .length = IMX8M_USB2_LENGTH,
+    },
+};
+static const pbus_irq_t dwc3_irqs[] = {
+    {
+        .irq = IMX8M_A53_INTR_USB2,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+static const pbus_bti_t dwc3_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_USB,
+    },
+};
+
+static const pbus_dev_t dwc3_dev = {
+    .name = "dwc3",
+    .vid = PDEV_VID_GENERIC,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_USB_DWC3,
+    .mmios = dwc3_mmios,
+    .mmio_count = countof(dwc3_mmios),
+    .irqs = dwc3_irqs,
+    .irq_count = countof(dwc3_irqs),
+    .btis = dwc3_btis,
+    .bti_count = countof(dwc3_btis),
+};
+
 
 static const pbus_mmio_t xhci_mmios[] = {
     {
@@ -44,7 +61,7 @@ static const pbus_irq_t xhci_irqs[] = {
 static const pbus_bti_t xhci_btis[] = {
     {
         .iommu_index = 0,
-        .bti_id = BTI_USB_XHCI,
+        .bti_id = BTI_USB,
     },
 };
 
@@ -63,39 +80,67 @@ static const pbus_dev_t xhci_dev = {
 
 zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
     zx_status_t status;
-    uint32_t reg;
     zx_handle_t bti;
+
+    uint64_t smc_return = 0;
+    // turn on usb via smc calls
+    status = zx_smc_call(get_root_resource(), 0xC2000000, 0x03 ,2 ,1, &smc_return);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+    status = zx_smc_call(get_root_resource(), 0xC2000000, 0x03 ,3 ,1, &smc_return);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
     status = iommu_get_bti(&bus->iommu, 0, BTI_BOARD, &bti);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: iommu_get_bti failed %d\n", __FUNCTION__, status);
         return status;
     }
+
+    uint32_t reg;
     io_buffer_t usb_phy;
-    status = io_buffer_init_physical(&usb_phy, bti, IMX8M_USB1_BASE, IMX8M_USB1_LENGTH,
+    status = io_buffer_init_physical(&usb_phy, bti, IMX8M_USB2_BASE, IMX8M_USB2_LENGTH,
                                         get_root_resource(), ZX_CACHE_POLICY_UNCACHED_DEVICE);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s io_buffer_init_physical failed %d\n", __FUNCTION__, status);
         zx_handle_close(bti);
         return status;
     }
+
     volatile void* regs = io_buffer_virt(&usb_phy);
+    regs += USBMIX_PHY_OFFSET;
     //TODO: More stuff might be needed if we were to boot from our own bootloader.
     reg = readl(regs + 0x4);
     reg &= ~(PHY_CTRL1_VDATSRCENB0 | PHY_CTRL1_VDATDETENB0);
     reg |= PHY_CTRL1_RESET | PHY_CTRL1_ATERESET;
     writel(reg, regs + 0x4);
+
     reg = readl(regs + 0x0);
     reg |= PHY_CTRL0_REF_SSP_EN;
     writel(reg, regs + 0x0);
+
     reg = readl(regs + 0x8);
     reg |= PHY_CTRL2_TXENABLEN0;
     writel(reg, regs + 0x8);
+
     reg = readl(regs + 0x4);
     reg &= ~(PHY_CTRL1_RESET | PHY_CTRL1_ATERESET);
     writel(reg, regs + 0x4);
+
     io_buffer_release(&usb_phy);
+
     zx_handle_close(bti);
-    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, 0)) != ZX_OK) {
+
+    if ((status = pbus_device_add(&bus->pbus, &dwc3_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "hi3360_add_devices could not add dwc3_dev: %d\n", status);
+        return status;
+    }
+    // xhci_dev is enabled/disabled dynamically, so don't enable it here
+    if ((status = pbus_device_add(&bus->pbus, &xhci_dev, PDEV_ADD_DISABLED)) != ZX_OK) {
         zxlogf(ERROR, "%s could not add xhci_dev: %d\n", __FUNCTION__, status);
         return status;
     }
