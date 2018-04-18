@@ -164,8 +164,9 @@ def main():
                         # directory to the input path, which means that we have
                         # to re-pack the line with a path relative to the
                         # manifest.
-                        src = line.strip().split("=", 2)[1]
-                        blob_manifest.write(os.path.relpath(src, blob_manifest_dir) + "\n")
+                        dst, src = line.strip().split("=", 2)
+                        if not dst.startswith("meta/"):
+                            blob_manifest.write(os.path.relpath(src, blob_manifest_dir) + "\n")
 
                 with open(meta_far + ".merkle") as merklefile:
                     pkgsvr_index.write("%s/%d=%s\n" % (package, package_version, merklefile.readline().strip()))
