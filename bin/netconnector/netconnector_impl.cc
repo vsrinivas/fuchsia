@@ -41,8 +41,9 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
 
   if (!params->listen()) {
     // Start the listener.
-    NetConnectorPtr net_connector =
-        application_context_->ConnectToEnvironmentService<NetConnector>();
+    NetConnectorSyncPtr net_connector;
+    application_context_->ConnectToEnvironmentService(
+        net_connector.NewRequest());
     mdns::MdnsServicePtr mdns_service =
         application_context_->ConnectToEnvironmentService<mdns::MdnsService>();
 
@@ -51,25 +52,21 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
     }
 
     if (params_->show_devices()) {
-      net_connector->GetKnownDeviceNames(
-          kInitialKnownDeviceNames,
-          fxl::MakeCopyable([this, net_connector = std::move(net_connector)](
-                                uint64_t version,
-                                fidl::VectorPtr<fidl::StringPtr> device_names) {
-            if (device_names->size() == 0) {
-              std::cout << "No remote devices found\n";
-            } else {
-              for (auto& device_name : *device_names) {
-                std::cout << device_name << "\n";
-              }
-            }
+      uint64_t version;
+      fidl::VectorPtr<fidl::StringPtr> device_names;
+      net_connector->GetKnownDeviceNames(kInitialKnownDeviceNames, &version,
+                                         &device_names);
 
-            quit_callback_();
-          }));
-    } else {
-      quit_callback_();
+      if (device_names->size() == 0) {
+        std::cout << "No remote devices found\n";
+      } else {
+        for (auto& device_name : *device_names) {
+          std::cout << device_name << "\n";
+        }
+      }
     }
 
+    quit_callback_();
     return;
   }
 
