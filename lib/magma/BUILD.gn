@@ -75,46 +75,45 @@ package("magma") {
     testonly = true
   }
 
-  deps = []
+  deps = [
+    ":libmagma",
+  ]
+  libraries = [
+    {
+      name = "libmagma.so"
+    },
+  ]
+
   resources = []
   drivers = []
 
   if (have_libvulkan) {
-    deps += [
-      ":libmagma",
-      ":libvulkan",
-    ]
+    deps += [ ":libvulkan" ]
+  }
 
-    libraries = [
+  if (build_intel_gen) {
+    # Remove
+    deps += [ "$msd_intel_gen_build_root:msd_intel_core" ]
+    drivers += [
       {
-        name = "libmagma.so"
+        name = "libmsd_intel_core.so"
       },
     ]
 
-    if (build_intel_gen) {
-      # Remove
-      deps += [ "$msd_intel_gen_build_root:msd_intel_core" ]
+    if (magma_enable_developer_build) {
+      deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
       drivers += [
         {
-          name = "libmsd_intel_core.so"
+          name = "libmsd_intel_test.so"
         },
       ]
-
-      if (magma_enable_developer_build) {
-        deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
-        drivers += [
-          {
-            name = "libmsd_intel_test.so"
-          },
-        ]
-      } else {
-        deps += [ "$msd_intel_gen_build_root:msd_intel" ]
-        drivers += [
-          {
-            name = "libmsd_intel.so"
-          },
-        ]
-      }
+    } else {
+      deps += [ "$msd_intel_gen_build_root:msd_intel" ]
+      drivers += [
+        {
+          name = "libmsd_intel.so"
+        },
+      ]
     }
   }
 
@@ -196,7 +195,7 @@ package("magma-tools") {
 package("vkcube") {
   deprecated_system_image = true
 
-  if (have_libvulkan) {
+  if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps = [
       "//garnet/lib/magma/tests/vkcube",
     ]
