@@ -649,14 +649,6 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // it and processes it before we are asleep? This is handled by locking state_lock_ in places
     // where the handler can see/modify thread state.
 
-    zx_status_t status = eport->SendPacket(this, report->header.type);
-    if (status != ZX_OK) {
-        // Can't send the request to the exception handler. Report the error, which will probably
-        // kill the process.
-        LTRACEF("SendPacket returned %d\n", status);
-        return status;
-    }
-
     {
         AutoLock lock(get_lock());
 
@@ -671,6 +663,18 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
         exception_wait_port_ = eport;
 
         exception_status_ = ExceptionStatus::UNPROCESSED;
+    }
+
+    // There's no need to send the message under the lock, but we do need to
+    // make sure our exception state is up to date before sending the message:
+    // Otherwise a debugger could get the packet and observe our state before
+    // we've updated it. Thus send the packet after updating our state.
+    zx_status_t status = eport->SendPacket(this, report->header.type);
+    if (status != ZX_OK) {
+        // Can't send the request to the exception handler. Report the error, which will probably
+        // kill the process.
+        LTRACEF("SendPacket returned %d\n", status);
+        return status;
     }
 
     // Continue to wait for the exception response if we get suspended.
