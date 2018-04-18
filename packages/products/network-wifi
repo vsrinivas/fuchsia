@@ -1,0 +1,11 @@
+{
+  "imports": [
+        "garnet/packages/config/network",
+        "garnet/packages/config/wlancfg",
+        "garnet/packages/prod/netstack",
+        "garnet/packages/prod/runtime",
+        "garnet/packages/prod/wlan_drivers",
+        "garnet/packages/prod/wlancfg",
+        "garnet/packages/prod/wlanstack"
+  ]
+}
