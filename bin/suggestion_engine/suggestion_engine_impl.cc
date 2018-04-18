@@ -387,7 +387,7 @@ void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
     modular::Daisy daisy;
     fidl::Clone(add_module.daisy, &daisy);
     story_controller->AddModule(
-        nullptr, module_name, std::move(daisy),
+        add_module.surface_parent_module_path.Clone(), module_name, std::move(daisy),
         fidl::MakeOptional(add_module.surface_relation));
   } else {
     FXL_LOG(WARNING) << "Unable to add module; no story provider";

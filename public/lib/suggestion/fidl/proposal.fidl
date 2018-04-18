@@ -130,6 +130,10 @@ struct AddModule {
 
   // The relation to use when adding a module as a result of resolving the Daisy.
   SurfaceRelation surface_relation;
+
+  // The module path of an existing module to assign as the surface-relationship
+  // parent of this new module.
+  vector<string> surface_parent_module_path;
 };
 
 // An action that calls back to the proposal publisher to be performed.

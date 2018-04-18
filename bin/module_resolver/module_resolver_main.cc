@@ -173,6 +173,8 @@ class ModuleResolverApp : ContextListener {
     modular::Daisy daisy;
     daisy.url = module_result.module_id;
     fidl::VectorPtr<modular::NounEntry> nouns;
+
+    fidl::VectorPtr<fidl::StringPtr> parent_mod_path;
     for (const modular::ChainEntry& chain_entry :
          *module_result.create_chain_info.property_info) {
       modular::NounEntry noun_entry;
@@ -184,6 +186,20 @@ class ModuleResolverApp : ContextListener {
         modular::LinkPath link_path;
         fidl::Clone(create_chain_info.link_path(), &link_path);
         noun.set_link_path(std::move(link_path));
+        if (!parent_mod_path) {
+          // TODO(thatguy): Mod parent-child relationships are critical for the
+          // story shell, and right now the Framework only guarantees mod
+          // startup ordering based only on Module parent-child relationships:
+          // parent mods are always restarted before child mods. The Story
+          // Shell relies on this ordering to be deterministic: if we added
+          // modA before modB the first time around when creating the story,
+          // modB *must* be a descendant of modA. This method of using the
+          // link's module_path of the first link-based parameter we find
+          // expresses, in short "use the owner of the first shared link
+          // between this mod and another mod as the parent".
+          // MS-1473
+          parent_mod_path = noun.link_path().module_path.Clone();
+        }
       } else if (create_chain_info.is_create_link()) {
         noun.set_entity_reference(create_chain_info.create_link().initial_data);
       }
@@ -191,12 +207,12 @@ class ModuleResolverApp : ContextListener {
       nouns.push_back(std::move(noun_entry));
     }
     daisy.nouns = std::move(nouns);
-
     AddModule add_module;
     fidl::Clone(daisy, daisy_out);
     add_module.daisy = std::move(daisy);
     add_module.module_name = module_result.module_id;
     add_module.story_id = story_id;
+    add_module.surface_parent_module_path = std::move(parent_mod_path);
     Action action;
     action.set_add_module(std::move(add_module));
 
