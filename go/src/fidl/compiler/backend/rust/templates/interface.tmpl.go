@@ -149,7 +149,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
        }
       }
       Err(zx::Status::PEER_CLOSED) => {
-       // TODO(cramertj): propagate to on_closed handler rather than just stopping
+        return Ok(futures::Async::Ready(()));
       }
       Err(e) => return Err(fidl::Error::ServerRequestRead(e)),
     }
