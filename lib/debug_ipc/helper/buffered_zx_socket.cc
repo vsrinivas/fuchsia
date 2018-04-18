@@ -17,7 +17,7 @@ bool BufferedZxSocket::Init(zx::socket socket) {
   socket_ = std::move(socket);
   stream_.set_writer(this);
 
-  // Reagister for socket updates from the message loop.
+  // Register for socket updates from the message loop.
   MessageLoopZircon* loop = MessageLoopZircon::Current();
   FXL_DCHECK(loop);
   watch_handle_ = loop->WatchSocket(MessageLoop::WatchMode::kReadWrite,

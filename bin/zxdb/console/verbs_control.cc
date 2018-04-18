@@ -7,7 +7,9 @@
 #include <algorithm>
 
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 
@@ -15,8 +17,10 @@ namespace zxdb {
 
 namespace {
 
+// help ------------------------------------------------------------------------
+
 const char kHelpShortHelp[] =
-    R"(help / h)";
+    R"(help / h: Help.)";
 const char kHelpHelp[] =
     R"(help
 
@@ -115,6 +119,8 @@ Err DoHelp(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// quit ------------------------------------------------------------------------
+
 const char kQuitShortHelp[] =
     R"(quit / q: Quits the debugger.)";
 const char kQuitHelp[] =
@@ -128,6 +134,88 @@ Err DoQuit(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// connect ---------------------------------------------------------------------
+
+const char kConnectShortHelp[] =
+    R"(connect: Connect to a remote system for debugging.)";
+const char kConnectHelp[] =
+    R"(connect <remote_address>
+
+  Connectes to a debug_agent at the given address/port. Both IP address and
+  port are required.
+
+  See also "disconnect".
+
+Addresses
+
+  Addresses can be of the form "<host> <port>" or "<host>:<port>". When using
+  the latter form, IPv6 addresses must be [bracketed]. Otherwise the brackets
+  are optional.
+
+Examples
+
+  connect mystem.localnetwork 1234
+  connect mystem.localnetwork:1234
+  connect 192.168.0.4:1234
+  connect 192.168.0.4 1234
+  connect [1234:5678::9abc] 1234
+  connect 1234:5678::9abc 1234
+  connect [1234:5678::9abc]:1234
+)";
+
+Err DoConnect(ConsoleContext* context, const Command& cmd) {
+  // Can accept either one or two arg forms.
+  std::string host;
+  uint16_t port = 0;
+
+  if (cmd.args().size() == 0) {
+    return Err(ErrType::kInput, "Need host and port to connect to.");
+  } else if (cmd.args().size() == 1) {
+    Err err = ParseHostPort(cmd.args()[0], &host, &port);
+    if (err.has_error())
+      return err;
+  } else if (cmd.args().size() == 2) {
+    Err err = ParseHostPort(cmd.args()[0], cmd.args()[1], &host, &port);
+    if (err.has_error())
+      return err;
+  } else {
+    return Err(ErrType::kInput, "Too many arguments.");
+  }
+
+  context->session()->Connect(host, port, [](const Err& err) {
+      if (err.has_error())
+        Console::get()->Output(err);
+      else
+        Console::get()->Output("Connected successfully.");
+    });
+
+  return Err();
+}
+
+// disconnect ------------------------------------------------------------------
+
+const char kDisconnectShortHelp[] =
+    R"(disconnect: Disconnect from the remote system.)";
+const char kDisconnectHelp[] =
+    R"(disconnect
+
+  Disconnects from the remote system. There are no arguments.
+)";
+
+Err DoDisconnect(ConsoleContext* context, const Command& cmd) {
+  if (!cmd.args().empty())
+    return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
+
+  context->session()->Disconnect([](const Err& err) {
+      if (err.has_error())
+        Console::get()->Output(err);
+      else
+        Console::get()->Output("Disconnected successfully.");
+    });
+
+  return Err();
+}
+
 }  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -135,6 +223,11 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp, kHelpHelp);
   (*verbs)[Verb::kQuit] =
       VerbRecord(&DoQuit, {"quit", "q"}, kQuitShortHelp, kQuitHelp);
+  (*verbs)[Verb::kConnect] =
+      VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp);
+  (*verbs)[Verb::kDisconnect] =
+      VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
+                 kDisconnectHelp);
 }
 
 }  // namespace zxdb

@@ -12,6 +12,7 @@
 #include <fdio/io.h>
 #else
 #include <sys/ioctl.h>
+#include <termios.h>
 #endif
 
 #include "garnet/public/lib/fxl/logging.h"
@@ -59,7 +60,9 @@ LineInputBase::LineInputBase(const std::string& prompt) : prompt_(prompt) {
   history_.emplace_front();
 }
 
-LineInputBase::~LineInputBase() {}
+LineInputBase::~LineInputBase() {
+  EnsureNoRawMode();
+}
 
 void LineInputBase::BeginReadLine() {
   FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
@@ -156,6 +159,7 @@ void LineInputBase::Hide() {
   cmd += kTermClearToEnd;
 
   Write(cmd);
+  EnsureNoRawMode();
 }
 
 void LineInputBase::Show() {
@@ -234,12 +238,13 @@ void LineInputBase::HandleDelete() {
 }
 
 void LineInputBase::HandleEnter() {
-  Write(std::string(1, '\n'));
+  Write("\r\n");
 
   if (history_.size() == max_history_)
     history_.pop_back();
   std::string new_line = cur_line();
   history_[0] = new_line;
+  EnsureNoRawMode();
   editing_ = false;
 }
 
@@ -346,6 +351,8 @@ void LineInputBase::AcceptCompletion() {
 }
 
 void LineInputBase::RepaintLine() {
+  EnsureRawMode();
+
   std::string buf;
   buf.reserve(64);
 
@@ -388,6 +395,47 @@ LineInputStdout::~LineInputStdout() {}
 
 void LineInputStdout::Write(const std::string& data) {
   write(STDOUT_FILENO, data.data(), data.size());
+}
+
+void LineInputStdout::EnsureRawMode() {
+#if !defined(__Fuchsia__)
+  if (raw_mode_enabled_)
+    return;
+
+  if (!raw_termios_) {
+    if (!isatty(STDOUT_FILENO))
+      return;
+
+    // Don't commit until everything succeeds.
+    original_termios_ = std::make_unique<termios>();
+    if (tcgetattr(STDOUT_FILENO, original_termios_.get()) == -1)
+      return;
+
+    raw_termios_ = std::make_unique<termios>(*original_termios_);
+
+    raw_termios_->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw_termios_->c_oflag &= ~(OPOST);
+    raw_termios_->c_oflag |= OCRNL;
+    raw_termios_->c_cflag |= CS8;
+    raw_termios_->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw_termios_->c_cc[VMIN] = 1;
+    raw_termios_->c_cc[VTIME] = 0;
+  }
+
+  if (tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_termios_.get()) < 0)
+    return;
+
+  raw_mode_enabled_ = true;
+#endif
+}
+
+void LineInputStdout::EnsureNoRawMode() {
+  #if !defined(__Fuchsia__)
+  if (raw_mode_enabled_) {
+    tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
+    raw_mode_enabled_ = false;
+  }
+  #endif
 }
 
 LineInputBlockingStdio::LineInputBlockingStdio(const std::string& prompt)

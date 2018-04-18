@@ -6,6 +6,8 @@
 # but that aren't directly related to the protocol.
 static_library("helper") {
   sources = [
+    "buffered_fd.cc",
+    "buffered_fd.h",
     "message_loop.cc",
     "message_loop.h",
     "stream_buffer.cc",
@@ -19,6 +21,10 @@ static_library("helper") {
 
   if (current_toolchain == host_toolchain) {
     # Host toolchain.
+    sources += [
+      "message_loop_poll.cc",
+      "message_loop_poll.h",
+    ]
   } else {
     # Target toolchain.
     sources += [

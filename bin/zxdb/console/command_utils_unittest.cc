@@ -75,4 +75,50 @@ TEST(CommandUtils, ReadUint64Arg) {
   EXPECT_EQ("Invalid number \"notanumber\" when reading the code.", err.msg());
 }
 
+TEST(CommandUtils, ParseHostPort) {
+  std::string host;
+  uint16_t port;
+
+  // Host good.
+  EXPECT_FALSE(ParseHostPort("google.com:1234", &host, &port).has_error());
+  EXPECT_EQ("google.com", host);
+  EXPECT_EQ(1234, port);
+
+  EXPECT_FALSE(ParseHostPort("google.com", "1234", &host, &port).has_error());
+  EXPECT_EQ("google.com", host);
+  EXPECT_EQ(1234, port);
+
+  // IPv4 Good.
+  EXPECT_FALSE(ParseHostPort("192.168.0.1:1234", &host, &port).has_error());
+  EXPECT_EQ("192.168.0.1", host);
+  EXPECT_EQ(1234, port);
+
+  EXPECT_FALSE(ParseHostPort("192.168.0.1", "1234", &host, &port).has_error());
+  EXPECT_EQ("192.168.0.1", host);
+  EXPECT_EQ(1234, port);
+
+  // IPv6 Good.
+  EXPECT_FALSE(ParseHostPort("[1234::5678]:1234", &host, &port).has_error());
+  EXPECT_EQ("1234::5678", host);
+  EXPECT_EQ(1234, port);
+
+  EXPECT_FALSE(ParseHostPort("[1234::5678]", "1234", &host, &port).has_error());
+  EXPECT_EQ("1234::5678", host);
+  EXPECT_EQ(1234, port);
+
+  EXPECT_FALSE(ParseHostPort("1234::5678", "1234", &host, &port).has_error());
+  EXPECT_EQ("1234::5678", host);
+  EXPECT_EQ(1234, port);
+
+  // Missing ports.
+  EXPECT_TRUE(ParseHostPort("google.com", &host, &port).has_error());
+  EXPECT_TRUE(ParseHostPort("192.168.0.1", &host, &port).has_error());
+  EXPECT_TRUE(ParseHostPort("1234::5678", &host, &port).has_error());
+  EXPECT_TRUE(ParseHostPort("[1234::5678]", &host, &port).has_error());
+
+  // Bad port values.
+  EXPECT_TRUE(ParseHostPort("google.com:0", &host, &port).has_error());
+  EXPECT_TRUE(ParseHostPort("google.com:99999999", &host, &port).has_error());
+}
+
 }  // namespace zxdb

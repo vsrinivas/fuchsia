@@ -65,6 +65,8 @@ class MessageLoop {
   // a WatchHandle that scopes the watch operation (when the handle is
   // destroyed the watcher is unregistered).
   //
+  // This function must only be called on the message loop thread.
+  //
   // The watcher pointer must outlive the returned WatchHandle. Typically
   // the class implementing the FDWatcher would keep the WatchHandle as a
   // member. Must only be called on the message loop thread.

@@ -34,6 +34,14 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
 [[nodiscard]] Err ReadUint64Arg(const Command& cmd, size_t arg_index,
                                 const char* param_desc, uint64_t* out);
 
+// Parses a host and port. The two-argument version assumes the host and
+// port are given separately. The one-argument version assumes they're
+// separated by a colon.
+Err ParseHostPort(const std::string& in_host, const std::string& in_port,
+                  std::string* out_host, uint16_t* out_port);
+Err ParseHostPort(const std::string& input,
+                  std::string* out_host, uint16_t* out_port);
+
 std::string TargetStateToString(Target::State state);
 std::string ThreadStateToString(debug_ipc::ThreadRecord::State state);
 

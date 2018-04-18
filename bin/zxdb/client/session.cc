@@ -4,11 +4,14 @@
 
 #include "garnet/bin/zxdb/client/session.h"
 
+#include <arpa/inet.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
 #include "garnet/bin/zxdb/client/process_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
+#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
@@ -24,8 +27,11 @@ constexpr uint32_t kMaxMessageSize = 16777216;
 
 }  // namespace
 
+Session::Session() : system_(this) {}
+
 Session::Session(debug_ipc::StreamBuffer* stream)
     : stream_(stream), system_(this) {}
+
 Session::~Session() = default;
 
 void Session::OnStreamReadable() {
@@ -90,6 +96,19 @@ void Session::OnStreamReadable() {
 
     pending_.erase(found);
   }
+}
+
+bool Session::IsConnected() const {
+  return !!stream_;
+}
+
+void Session::Connect(const std::string& host, uint16_t port,
+                      std::function<void(const Err&)> callback) {
+  // TODO(brettw) implement this.
+}
+
+void Session::Disconnect(std::function<void(const Err&)> callback) {
+  // TODO(brettw) implement this.
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,

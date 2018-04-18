@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/console/command_utils.h"
 
 #include <inttypes.h>
+#include <limits>
 #include <stdio.h>
 
 #include "garnet/bin/zxdb/client/err.h"
@@ -64,6 +65,57 @@ Err ReadUint64Arg(const Command& cmd, size_t arg_index,
         cmd.args()[arg_index].c_str(), param_desc));
   }
   return Err();
+}
+
+Err ParseHostPort(const std::string& in_host, const std::string& in_port,
+                  std::string* out_host, uint16_t* out_port) {
+  if (in_host.empty())
+    return Err(ErrType::kInput, "No host component specified.");
+  if (in_port.empty())
+    return Err(ErrType::kInput, "No port component specified.");
+
+  // Trim brackets from the host name for IPv6 addresses.
+  if (in_host.front() == '[' && in_host.back() == ']')
+    *out_host = in_host.substr(1, in_host.size() - 2);
+  else
+    *out_host = in_host;
+
+  // Re-use paranoid int64 parsing.
+  uint64_t port64;
+  Err err = StringToUint64(in_port, &port64);
+  if (err.has_error())
+    return err;
+  if (port64 == 0 || port64 > std::numeric_limits<uint16_t>::max())
+    return Err(ErrType::kInput, "Port value out of range.");
+  *out_port = static_cast<uint16_t>(port64);
+
+  return Err();
+}
+
+Err ParseHostPort(const std::string& input,
+                  std::string* out_host, uint16_t* out_port) {
+  // Separate based on the last colon.
+  size_t colon = input.rfind(':');
+  if (colon == std::string::npos)
+    return Err(ErrType::kInput, "Expected colon to separate host/port.");
+
+  // If the host has a colon in it, it could be an IPv6 address. In this case,
+  // require brackets around it to differentiate the case where people
+  // supplied an IPv6 address and we just picked out the last component above.
+  std::string host = input.substr(0, colon);
+  if (host.empty())
+    return Err(ErrType::kInput, "No host component specified.");
+  if (host.find(':') != std::string::npos) {
+    if (host.front() != '[' || host.back() != ']') {
+      return Err(ErrType::kInput,
+                 "For IPv6 addresses use either: \"[::1]:1234\"\n"
+                 "or the two-parameter form: \"::1 1234");
+    }
+  }
+
+  std::string port = input.substr(colon + 1);
+
+  return ParseHostPort(host, port, out_host, out_port);
 }
 
 std::string TargetStateToString(Target::State state) {

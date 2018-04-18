@@ -11,26 +11,50 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
-#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/client_protocol.h"
+#include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+
+namespace debug_ipc {
+class BufferedFD;
+}
 
 namespace zxdb {
 
 class ProcessImpl;
 class ThreadImpl;
 
+// The session object manages the connection with the remote server.
 class Session {
  public:
-  // The stream buffer must outlive this class.
+  // Creates a session with no connection. All sending will fail until
+  // the callback associated with a Connect() call is issued.
+  Session();
+
+  // Creates with a previously-allocated connection. The pointer must outlive
+  // this class. In this mode, the stream can not be disconnected.
   explicit Session(debug_ipc::StreamBuffer* stream);
+
   ~Session();
 
   // Notification that data is available to be read on the StreamBuffer.
   void OnStreamReadable();
+
+  // Returns true if there is currently a connection.
+  bool IsConnected() const;
+
+  // Connects to a remote system. Calling when there is already a connection
+  // will issue the callback with an error.
+  void Connect(const std::string& host, uint16_t port,
+               std::function<void(const Err&)> callback);
+
+  // Disconnects from the remote system. Calling when there is no connection
+  // connection will issue the callback with an error.
+  void Disconnect(std::function<void(const Err&)> callback);
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
@@ -60,7 +84,20 @@ class Session {
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);
 
-  debug_ipc::StreamBuffer* stream_;  // Non-owning.
+  // Non-owning pointer to the connected stream. If this is non-null and
+  // connection_storage_ is null, the connection is persistent (made via the
+  // constructor) and can't be disconnected.
+  //
+  // This could be null when the connection_storage_ isn't when we're waiting
+  // for the initial connection.
+  debug_ipc::StreamBuffer* stream_ = nullptr;
+
+  // When using non-persistent connections (no connection passed in via the
+  // constructor), this will hold the underlying OS connection that is used
+  // to back stream_.
+  //
+  // Code should use stream_ for sending and receiving.
+  std::unique_ptr<debug_ipc::BufferedFD> connection_storage_;
 
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.

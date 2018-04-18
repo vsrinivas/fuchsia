@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+#if !defined(__Fuchsia__)
+struct termios;
+#endif
+
 namespace zxdb {
 
 // This class implements a push model for input of characters, allowing it to
@@ -73,6 +77,10 @@ class LineInputBase {
   // Abstract output function, overridden by a derived class to output to
   // screen.
   virtual void Write(const std::string& data) = 0;
+
+  // Enables and disables raw mode if applicable.
+  virtual void EnsureRawMode() {}
+  virtual void EnsureNoRawMode() {}
 
  private:
   void HandleEscapedInput(char c);
@@ -154,6 +162,21 @@ class LineInputStdout : public LineInputBase {
 
  protected:
   void Write(const std::string& str) override;
+
+  void EnsureRawMode() override;
+  void EnsureNoRawMode() override;
+
+ private:
+#if !defined(__Fuchsia__)
+  // The terminal is converted into raw mode when the prompt is visible and
+  // accepting input. Then it's switched back. This block tracks that
+  // information. Use unique_ptr to avoid bringing all terminal headers into
+  // this header.
+  bool raw_mode_enabled_ = false;
+  std::unique_ptr<termios> raw_termios_;
+  std::unique_ptr<termios> original_termios_;
+#endif
+
 };
 
 // A blocking implementation that reads from stdin and writes to stdout.
