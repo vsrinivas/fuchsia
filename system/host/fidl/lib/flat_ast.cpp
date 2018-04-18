@@ -274,8 +274,10 @@ bool Library::ConsumeType(std::unique_ptr<raw::Type> raw_type, SourceLocation lo
         Size element_count;
         if (!ParseSize(std::move(constant), &element_count))
             return Fail(location, "Unable to parse array element count");
-        // TODO(kulakowski) Overflow checking.
-        uint32_t size = element_count.Value() * element_type->size;
+        uint32_t size;
+        if (__builtin_mul_overflow(element_count.Value(), element_type->size, &size)) {
+            return Fail(location, "The array's size overflows a uint32_t");
+        }
         *out_type =
             std::make_unique<ArrayType>(size, std::move(element_type), std::move(element_count));
         break;
