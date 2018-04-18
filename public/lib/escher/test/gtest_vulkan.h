@@ -6,6 +6,7 @@
 #define GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_VULKAN_H_
 
 #include "garnet/public/lib/escher/test/gtest_vulkan_internal.h"
+#include "garnet/public/lib/escher/util/check_vulkan_support.h"
 
 // Tests declared using this macro are only registered with GTest when Vulkan
 // is available.
@@ -20,7 +21,6 @@
                  ::testing::internal::GetTypeId<test_fixture>())
 
 // Tests that require Vulkan are suppressed if Vulkan is not supported.
-#define VK_TESTS_SUPPRESSED() \
-  (!::testing::internal::escher::VulkanIsSupported())
+#define VK_TESTS_SUPPRESSED() (!escher::VulkanIsSupported())
 
 #endif  // GARNET_PUBLIC_LIB_ESCHER_TEST_GTEST_VULKAN_H_

@@ -68,6 +68,10 @@ source_set("gtest_vulkan") {
     "//third_party/googletest:gtest",
   ]
 
+  deps = [
+    "//garnet/public/lib/escher/util:check_vulkan_support",
+  ]
+
   sources = [
     "gtest_vulkan.cc",
     "gtest_vulkan.h",

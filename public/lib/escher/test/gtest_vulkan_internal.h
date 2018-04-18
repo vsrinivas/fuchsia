@@ -33,9 +33,6 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
   return new ::testing::internal::TestFactoryImpl<T>;
 }
 
-// Return true if it is possible to create a Vulkan instance/device.
-bool VulkanIsSupported();
-
 }  // namespace escher
 }  // namespace internal
 }  // namespace testing
