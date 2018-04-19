@@ -5,6 +5,10 @@
   </imports>
   <projects>
     <!-- Third Party -->
+    <project name="third_party/python/mock"
+             path="third_party/python/mock"
+             remote="https://fuchsia.googlesource.com/third_party/python/testing-cabal/mock"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
     <project name="third_party/rapidjson"
              path="third_party/rapidjson"
              remote="https://fuchsia.googlesource.com/third_party/rapidjson"
