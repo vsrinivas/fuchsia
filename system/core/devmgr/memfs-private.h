@@ -10,9 +10,10 @@
 #include <fdio/io.h>
 #include <fdio/remoteio.h>
 #include <fdio/vfs.h>
-#include <memfs/vnode.h>
 
 #ifdef __cplusplus
+
+#include <memfs/vnode.h>
 
 using VnodeMemfs = memfs::VnodeMemfs;
 using VnodeDir = memfs::VnodeDir;

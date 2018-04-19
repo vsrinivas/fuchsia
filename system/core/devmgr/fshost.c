@@ -7,7 +7,6 @@
 
 #include <bootdata/decompress.h>
 
-#include <bootfs/bootfs.h>
 #include <fdio/namespace.h>
 #include <fdio/util.h>
 #include <fdio/watcher.h>
@@ -28,7 +27,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <threads.h>
 
+#include "bootfs.h"
 #include "block-watcher.h"
 
 // When adding VMOs to the boot filesystem, add them under the directory
