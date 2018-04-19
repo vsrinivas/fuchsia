@@ -57,21 +57,20 @@ package("magma-nonhardware-tests") {
       {
         name = "msd_intel_gen_nonhardware_tests"
       },
-
       {
         name = "mesa_unit_tests"
       },
-
       {
         name = "state_pool"
       },
-
       {
         name = "state_pool_free_list_only"
       },
-
       {
         name = "state_pool_no_free"
+      },
+      {
+        name = "block_pool_no_free"
       },
     ]
   }
