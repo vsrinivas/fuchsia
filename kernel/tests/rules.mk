@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mem_tests.cpp \
     $(LOCAL_DIR)/preempt_disable_tests.cpp \
     $(LOCAL_DIR)/printf_tests.cpp \
+    $(LOCAL_DIR)/resource_tests.cpp \
     $(LOCAL_DIR)/sleep_tests.cpp \
     $(LOCAL_DIR)/string_tests.cpp \
     $(LOCAL_DIR)/sync_ipi_tests.cpp \

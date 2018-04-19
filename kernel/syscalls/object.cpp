@@ -22,7 +22,7 @@
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/resource_dispatcher.h>
-#include <object/resources.h>
+#include <object/resource.h>
 #include <object/socket_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
@@ -520,14 +520,18 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
     case ZX_INFO_RESOURCE: {
         // grab a reference to the dispatcher
         fbl::RefPtr<ResourceDispatcher> resource;
-        auto error = up->GetDispatcherWithRights(handle, ZX_RIGHT_NONE, &resource);
-        if (error < 0)
+        zx_status_t error = up->GetDispatcherWithRights(handle, ZX_RIGHT_NONE, &resource);
+        if (error != ZX_OK) {
             return error;
+        }
 
         // build the info structure
         zx_info_resource_t info = {};
         info.kind = resource->get_kind();
-        resource->get_range(&info.low, &info.high);
+        info.base = resource->get_base();
+        info.size = resource->get_size();
+        info.flags = resource->get_flags();
+        resource->get_name(info.name);
 
         return single_record_result(
             _buffer, buffer_size, _actual, _avail, &info, sizeof(info));

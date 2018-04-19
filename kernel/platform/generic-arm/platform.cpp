@@ -16,6 +16,7 @@
 #include <arch.h>
 #include <dev/display.h>
 #include <dev/hw_rng.h>
+#include <dev/interrupt.h>
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <dev/uart.h>
@@ -23,6 +24,7 @@
 #include <kernel/dpc.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
+#include <object/resource_dispatcher.h>
 #include <vm/kstack.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
@@ -53,6 +55,7 @@
 #include <libzbi/zbi-cpp.h>
 #include <pdev/pdev.h>
 #include <zircon/boot/image.h>
+#include <zircon/rights.h>
 #include <zircon/types.h>
 
 // Defined in start.S.
@@ -617,3 +620,34 @@ bool platform_serial_enabled(void) {
 bool platform_early_console_enabled() {
     return false;
 }
+
+// Initialize Resource system after the heap is initialized.
+static void arm_resource_dispatcher_init_hook(unsigned int rl) {
+    // 64 bit address space for MMIO on ARM64
+    zx_status_t status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_MMIO, 0,
+                                                                 UINT64_MAX);
+    if (status != ZX_OK) {
+        printf("Resources: Failed to initialize MMIO allocator: %d\n", status);
+    }
+    // Set up IRQs based on values from the GIC
+    status = ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ,
+                                                     interrupt_get_base_vector(),
+                                                     interrupt_get_max_vector());
+    if (status != ZX_OK) {
+        printf("Resources: Failed to initialize IRQ allocator: %d\n", status);
+    }
+
+    // The reference to the exclusive memory reservation is held here statically to
+    // make the lifecycle of it simple.
+    zx_rights_t rights;
+    static fbl::RefPtr<ResourceDispatcher> memory_dispatcher;
+    zx_status_t st = ResourceDispatcher::Create(&memory_dispatcher, &rights, ZX_RSRC_KIND_MMIO,
+                                                mem_arena.base, mem_arena.size,
+                                                ZX_RSRC_FLAG_EXCLUSIVE, "platform_memory");
+    if (st != ZX_OK) {
+        printf("ResourceDispatcher: failed to reserve memory allocation: %d!\n", st);
+        return;
+    }
+}
+
+LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP);

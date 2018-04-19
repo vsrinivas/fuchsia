@@ -705,7 +705,8 @@ syscall smc_call
 # Resources
 
 syscall resource_create
-    (parent_resource: zx_handle_t, kind: uint32_t, low: uint64_t, high: uint64_t)
+    (parent_rsrc: zx_handle_t, options: uint32_t, base: uint64_t, size: size_t,
+        name: char[name_size] IN, name_size: size_t)
     returns (zx_status_t, resource_out: zx_handle_t handle_acquire);
 
 # Hypervisor

@@ -14,7 +14,7 @@
 #include <libzbi/zbi-cpp.h>
 #include <mexec.h>
 #include <object/process_dispatcher.h>
-#include <object/resources.h>
+#include <object/resource.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform.h>
 #include <string.h>

@@ -342,13 +342,16 @@ typedef struct zx_info_kmem_stats {
 
 typedef struct zx_info_resource {
     // The resource kind, one of:
-    // {ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IOPORT, ZX_RSRC_KIND_IRQ,
-    // ZX_RSRC_KIND_HYPERVISOR }
+    // ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IRQ,
+    // ZX_RSRC_KIND_IOPORT, or ZX_RSRC_KIND_HYPERVISOR
     uint32_t kind;
-    // Resource's low value (inclusive)
-    uint64_t low;
-    // Resource's high value (inclusive)
-    uint64_t high;
+    // Resource's creation flags
+    uint32_t flags;
+    // Resource's base value (inclusive)
+    uint64_t base;
+    // Resource's length value
+    size_t size;
+    char name[ZX_MAX_NAME_LEN];
 } zx_info_resource_t;
 
 #define ZX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)

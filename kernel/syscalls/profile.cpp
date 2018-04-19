@@ -16,7 +16,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
-#include <object/resources.h>
+#include <object/resource.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>

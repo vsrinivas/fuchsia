@@ -76,9 +76,10 @@ static zx_status_t sysinfo_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
             return ZX_ERR_INVALID_ARGS;
         }
         zx_handle_t h;
+        const char name[] = "hypervisor";
         zx_status_t status = zx_resource_create(get_root_resource(),
                                                 ZX_RSRC_KIND_HYPERVISOR,
-                                                0, 0, &h);
+                                                0, 0, name, sizeof(name), &h);
         if (status < 0) {
             return status;
         }

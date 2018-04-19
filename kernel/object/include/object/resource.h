@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
@@ -18,22 +19,21 @@
 zx_status_t validate_resource(zx_handle_t handle, uint32_t kind);
 
 // Validates a resource based on type and low/high range;
-zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind,
-                                     uint64_t low, uint64_t high);
+zx_status_t validate_ranged_resource(zx_handle_t handle, uint32_t kind, uint64_t base, size_t len);
+
+#if ARCH_X86
+// Validates enabling ioport access bits for a given process based on a resource handle
+static inline zx_status_t validate_resource_ioport(zx_handle_t handle, uint64_t base, size_t len) {
+    return validate_ranged_resource(handle, ZX_RSRC_KIND_IOPORT, base, len);
+}
+#endif
 
 // Validates mapping an MMIO range based on a resource handle
-static inline zx_status_t validate_resource_mmio(
-    zx_handle_t handle, uintptr_t base, size_t length) {
-
-    if (length < 1 || UINT64_MAX - base < length) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return validate_ranged_resource(handle, ZX_RSRC_KIND_MMIO,
-                                    base, base + length - 1);
+static inline zx_status_t validate_resource_mmio(zx_handle_t handle, uint64_t base, size_t len) {
+    return validate_ranged_resource(handle, ZX_RSRC_KIND_MMIO, base, len);
 }
 
 // Validates creation of an interrupt object based on a resource handle
-static inline zx_status_t validate_resource_irq(zx_handle_t handle,
-                                                uint32_t irq) {
-    return validate_ranged_resource(handle, ZX_RSRC_KIND_IRQ, irq, irq);
+static inline zx_status_t validate_resource_irq(zx_handle_t handle, uint32_t irq) {
+    return validate_ranged_resource(handle, ZX_RSRC_KIND_IRQ, irq, 1);
 }

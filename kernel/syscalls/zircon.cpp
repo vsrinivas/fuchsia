@@ -23,7 +23,7 @@
 #include <object/handle.h>
 #include <object/log_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <object/resources.h>
+#include <object/resource.h>
 #include <object/thread_dispatcher.h>
 
 #include <fbl/alloc_checker.h>

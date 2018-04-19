@@ -20,7 +20,7 @@
 #include <lib/io.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
-#include <object/resources.h>
+#include <object/resource.h>
 
 #include <platform/debug.h>
 

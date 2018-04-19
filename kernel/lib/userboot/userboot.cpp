@@ -132,7 +132,8 @@ static zx_status_t get_job_handle(Handle** ptr) {
 static zx_status_t get_resource_handle(Handle** ptr) {
     zx_rights_t rights;
     fbl::RefPtr<ResourceDispatcher> root;
-    zx_status_t result = ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0);
+    zx_status_t result = ResourceDispatcher::Create(&root, &rights, ZX_RSRC_KIND_ROOT, 0, 0, 0,
+                                                    "root");
     if (result == ZX_OK)
         *ptr = Handle::Make(fbl::RefPtr<Dispatcher>(root.get()),
                             rights).release();

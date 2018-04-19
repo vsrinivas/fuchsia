@@ -17,7 +17,7 @@
 #include <lib/user_copy/user_ptr.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
-#include <object/resources.h>
+#include <object/resource.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object_physical.h>
 
