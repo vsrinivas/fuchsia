@@ -15,10 +15,6 @@ __BEGIN_CDECLS
 // vectors) counts as one step in the recursion depth.
 #define FIDL_RECURSION_DEPTH 32
 
-// An opaque struct representing the encoding of a particular fidl
-// type.
-typedef struct fidl_type fidl_type_t;
-
 // See
 // https://fuchsia.googlesource.com/zircon/+/HEAD/docs/fidl/c-language-bindings.md#fidl_encode
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
