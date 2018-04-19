@@ -31,6 +31,9 @@ magma_pdev_entry("msd_vsl_entry") {
 magma_pdev_entry("msd_vsl_test_entry") {
   pdev_device_id = VSL_GC_DEVICE_ID
   test_entry = true
+  deps = [
+    "tests/unit_tests:hardware_tests",
+  ]
 }
 
 group("tests") {
