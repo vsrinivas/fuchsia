@@ -7,6 +7,6 @@ import("//build/rust/toolchain.gni")
 
 rust_library("fidl_device_settings") {
   deps = [
-    "//garnet/public/lib/device_settings/fidl($rust_toolchain)",
+    "//garnet/public/lib/device_settings/fidl:fidl($rust_toolchain)",
   ]
 }

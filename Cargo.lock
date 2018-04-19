@@ -426,7 +426,6 @@ name = "fidl_geometry"
 version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
- "fidl_mem 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
@@ -439,7 +438,6 @@ dependencies = [
  "fidl 0.1.0",
  "fidl_geometry 0.1.0",
  "fidl_images 0.1.0",
- "fidl_mem 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
@@ -450,7 +448,6 @@ name = "fidl_images"
 version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
- "fidl_mem 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",
  "futures 0.2.0-alpha (registry+https://github.com/rust-lang/crates.io-index)",
@@ -462,7 +459,6 @@ version = "0.1.0"
 dependencies = [
  "fidl 0.1.0",
  "fidl_geometry 0.1.0",
- "fidl_mem 0.1.0",
  "fidl_views_v1_token 0.1.0",
  "fuchsia-async 0.1.0",
  "fuchsia-zircon 0.3.4",

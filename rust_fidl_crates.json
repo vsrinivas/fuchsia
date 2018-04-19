@@ -19,13 +19,13 @@
   },
   {
     "library_name": "device_settings",
-    "fidl_target": "//garnet/public/lib/device_settings/fidl:device_settings",
+    "fidl_target": "//garnet/public/lib/device_settings/fidl:fidl",
     "library_deps": [],
     "public": true
   },
   {
     "library_name": "logger",
-    "fidl_target": "//garnet/public/lib/logger/fidl:logger",
+    "fidl_target": "//garnet/public/lib/logger/fidl:fidl",
     "library_deps": [],
     "public": true
   },
@@ -56,7 +56,7 @@
   {
     "library_name": "network",
     "fidl_target": "//garnet/public/lib/network/fidl:fidl",
-    "library_deps": ["fsl", "netstack"],
+    "library_deps": ["mem", "netstack"],
     "public": true
   },
   {
@@ -143,17 +143,13 @@
   {
     "library_name": "images",
     "fidl_target": "//garnet/public/lib/images/fidl:fidl",
-    "library_deps": [
-      "fsl"
-    ],
+    "library_deps": [],
     "public": true
   },
   {
     "library_name": "geometry",
     "fidl_target": "//garnet/public/lib/ui/geometry/fidl:fidl",
-    "library_deps": [
-      "fsl"
-    ],
+    "library_deps": [],
     "public": true
   },
   {
