@@ -181,6 +181,19 @@ void XdrIntent(XdrContext* const xdr, Intent* const data) {
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
+void XdrNounConstraint(XdrContext* const xdr, NounConstraint* const data) {
+  xdr->Field("name", &data->name);
+  xdr->Field("type", &data->type);
+}
+
+void XdrModuleManifest(XdrContext* const xdr, ModuleManifest* const data) {
+  xdr->Field("binary", &data->binary);
+  xdr->Field("suggestion_headline", &data->suggestion_headline);
+  xdr->Field("action", &data->verb);
+  xdr->Field("parameters", &data->noun_constraints, XdrNounConstraint);
+  xdr->Field("composition_pattern", &data->composition_pattern);
+}
+
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
@@ -193,6 +206,9 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
 
   xdr->ReadErrorHandler([data] { data->chain_data.key_to_link_map.resize(0); })
       ->Field("chain_data", &data->chain_data, XdrChainData);
+
+  xdr->ReadErrorHandler([data] { data->module_manifest.reset(); })
+      ->Field("module_manifest", &data->module_manifest, XdrModuleManifest);
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
