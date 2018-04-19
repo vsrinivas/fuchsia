@@ -134,7 +134,8 @@ template("clang_toolchain") {
 
     tool("asm") {
       depfile = "{{output}}.d"
-      command = "$cc {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+      command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
         "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
