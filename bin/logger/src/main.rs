@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
-#![allow(stable_features)]
-#![feature(conservative_impl_trait, const_size_of)]
 
 extern crate byteorder;
 extern crate failure;

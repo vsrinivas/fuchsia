@@ -7,10 +7,8 @@
 // These features both have stable implementations and will become available on stable compilers
 // soon. They allow return types of `impl Future` rather than boxing or otherwise having to name
 // the future types.
-#![feature(conservative_impl_trait, universal_impl_trait)]
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![allow(stable_features)]
 
 extern crate failure;
 extern crate fidl;
