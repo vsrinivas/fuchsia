@@ -1,5 +1,7 @@
 #pragma once
 
+// This list must be consistent with
+// garnet/go/src/netstack/deviceid/eff_short_wordlist.go.
 const char dictionary[1296][6] = {
     "acid",
     "acorn",
