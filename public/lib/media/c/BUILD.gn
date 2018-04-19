@@ -35,6 +35,8 @@ test("tests") {
     "test/audio_wrapper.c",
   ]
 
+  libs = [ "zircon" ]
+
   deps = [
     ":c",
     "//third_party/googletest:gtest_main",
