@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("future") {
+  sources = [
+    "future.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
 source_set("future_value") {
   sources = [
     "future_value.h",
@@ -25,6 +36,7 @@ source_set("operation") {
   ]
 
   deps = [
+    ":future",
     "//garnet/public/lib/fsl",
   ]
 }
@@ -33,7 +45,36 @@ group("unittests") {
   testonly = true
 
   deps = [
+    ":future_unittest",
+    ":future_value_unittest",
     ":operation_unittest",
+  ]
+}
+
+source_set("future_unittest") {
+  testonly = true
+
+  sources = [
+    "future_unittest.cc",
+  ]
+
+  deps = [
+    ":future",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("future_value_unittest") {
+  testonly = true
+
+  sources = [
+    "future_value_unittest.cc",
+  ]
+
+  deps = [
+    ":future_value",
+    "//garnet/public/lib/gtest:gtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

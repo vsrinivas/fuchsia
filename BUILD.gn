@@ -89,6 +89,7 @@ group("modular_all") {
   testonly = true
 
   deps = [
+    ":future_unittests",
     ":modular_unittests",
     "bin/device_runner",
     "bin/device_runner:dev_device_shell",
@@ -115,7 +116,18 @@ executable("modular_unittests_bin") {
     "//peridot/bin/user_runner/story_runner:unittests",
     "//peridot/examples/counter_cpp:unittests",
     "//peridot/public/lib:unittests",
+    "//peridot/public/lib/async/cpp:unittests",
     "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("future_unittests_bin") {
+  testonly = true
+  output_name = "future_unittests"
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+    "//peridot/public/lib/async/cpp:unittests",
   ]
 }
 
@@ -130,6 +142,21 @@ package("modular_unittests") {
   tests = [
     {
       name = "modular_unittests"
+    },
+  ]
+}
+
+package("future_unittests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":future_unittests_bin",
+  ]
+
+  tests = [
+    {
+      name = "future_unittests"
     },
   ]
 }

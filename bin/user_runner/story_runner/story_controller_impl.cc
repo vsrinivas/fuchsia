@@ -14,6 +14,7 @@
 #include <views_v1/cpp/fidl.h>
 #include "lib/app/cpp/application_context.h"
 #include "lib/app/cpp/connect.h"
+#include "lib/async/cpp/future.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
@@ -461,48 +462,47 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
     // away. An internal module is stopped by its parent module, and it's up to
     // the parent module to defocus it first. TODO(mesch): Why not always
     // defocus?
+
+    auto future = Future<>::Create();
     if (story_controller_impl_->story_shell_ &&
         module_data_->module_source == ModuleSource::EXTERNAL) {
       story_controller_impl_->story_shell_->DefocusView(
-          PathString(module_data_->module_path), [this, flow] { Cont(flow); });
+          PathString(module_data_->module_path), future->Completer());
     } else {
-      Cont(flow);
-    }
-  }
-
-  void Cont(FlowToken flow) {
-    // Teardown the module, which discards the module controller. A parent
-    // module can call ModuleController.Stop() multiple times before the
-    // ModuleController connection gets disconnected by Teardown(). Therefore,
-    // this StopModuleCall Operation will cause the calls to be queued.
-    // The first Stop() will cause the ModuleController to be closed, and
-    // so subsequent Stop() attempts will not find a controller and will return.
-    auto* const i =
-        story_controller_impl_->FindConnection(module_data_->module_path);
-
-    if (!i) {
-      FXL_LOG(INFO) << "No ModuleController for Module"
-                    << " " << PathString(module_data_->module_path) << ". "
-                    << "Was ModuleContext.Stop() called twice?";
-      done_();
-      return;
+      future->Complete();
     }
 
-    // done_() must be called BEFORE the Teardown() done callback returns. See
-    // comment in StopModuleCall::Kill() before making changes here. Be aware
-    // that done_ is NOT the Done() callback of the Operation.
-    i->module_controller_impl->Teardown([this, flow] {
-      Cont1(flow);
-      done_();
+    future->Then([this, flow] {
+      // Teardown the module, which discards the module controller. A parent
+      // module can call ModuleController.Stop() multiple times before the
+      // ModuleController connection gets disconnected by Teardown(). Therefore,
+      // this StopModuleCall Operation will cause the calls to be queued.
+      // The first Stop() will cause the ModuleController to be closed, and
+      // so subsequent Stop() attempts will not find a controller and will
+      // return.
+      auto* const i =
+          story_controller_impl_->FindConnection(module_data_->module_path);
+
+      if (!i) {
+        FXL_LOG(INFO) << "No ModuleController for Module"
+                      << " " << PathString(module_data_->module_path) << ". "
+                      << "Was ModuleContext.Stop() called twice?";
+        done_();
+        return;
+      }
+
+      // done_() must be called BEFORE the Teardown() done callback returns. See
+      // comment in StopModuleCall::Kill() before making changes here. Be aware
+      // that done_ is NOT the Done() callback of the Operation.
+      i->module_controller_impl->Teardown([this, flow] {
+        for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
+          ModuleData module_data;
+          module_data_->Clone(&module_data);
+          (*i)->OnStopModule(std::move(module_data));
+        }
+        done_();
+      });
     });
-  }
-
-  void Cont1(FlowToken /*flow*/) {
-    for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
-      ModuleData module_data;
-      module_data_->Clone(&module_data);
-      (*i)->OnStopModule(std::move(module_data));
-    }
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -564,7 +564,8 @@ class StoryControllerImpl::ConnectLinkCall : public Operation<> {
   }
 
   void Cont(FlowToken token) {
-    if (!notify_watchers_) return;
+    if (!notify_watchers_)
+      return;
 
     for (auto& i : story_controller_impl_->links_watchers_.ptrs()) {
       LinkPath link_path;
@@ -771,97 +772,75 @@ class StoryControllerImpl::StopCall : public Operation<> {
       link->set_orphaned_handler(nullptr);
     }
 
+    std::vector<FuturePtr<>> did_teardowns;
+    did_teardowns.reserve(story_controller_impl_->connections_.size());
+
     // Tear down all connections with a ModuleController first, then the
     // links between them.
-    connections_count_ = story_controller_impl_->connections_.size();
-
-    if (connections_count_ == 0) {
-      StopStoryShell();
-    } else {
-      for (auto& connection : story_controller_impl_->connections_) {
-        connection.module_controller_impl->Teardown(
-            [this] { ConnectionDown(); });
-      }
+    for (auto& connection : story_controller_impl_->connections_) {
+      auto did_teardown = Future<>::Create();
+      connection.module_controller_impl->Teardown(did_teardown->Completer());
+      did_teardowns.emplace_back(did_teardown);
     }
+
+    Future<>::Wait(did_teardowns)
+        ->AsyncMap([this] {
+          auto did_teardown = Future<>::Create();
+          // If StopCall runs on a story that's not running, there is no story
+          // shell.
+          if (story_controller_impl_->story_shell_) {
+            story_controller_impl_->story_shell_app_->Teardown(
+                kBasicTimeout, did_teardown->Completer());
+          } else {
+            did_teardown->Complete();
+          }
+
+          return did_teardown;
+        })
+        ->AsyncMap([this] {
+          story_controller_impl_->story_shell_app_.reset();
+          story_controller_impl_->story_shell_.Unbind();
+          if (story_controller_impl_->story_context_binding_.is_bound()) {
+            // Close() dchecks if called while not bound.
+            story_controller_impl_->story_context_binding_.Unbind();
+          }
+
+          std::vector<FuturePtr<>> did_sync_links;
+          did_sync_links.reserve(story_controller_impl_->links_.size());
+
+          // The links don't need to be written now, because they all were
+          // written when they were last changed, but we need to wait for the
+          // last write request to finish, which is done with the Sync() request
+          // below.
+          for (auto& link : story_controller_impl_->links_) {
+            auto did_sync_link = Future<>::Create();
+            link->Sync(did_sync_link->Completer());
+            did_sync_links.emplace_back(did_sync_link);
+          }
+
+          return Future<>::Wait(did_sync_links);
+        })
+        ->Then([this] {
+          // Clear the remaining links and connections in case there are some
+          // left. At this point, no DisposeLink() calls can arrive anymore.
+          story_controller_impl_->links_.clear();
+          story_controller_impl_->connections_.clear();
+
+          // If this StopCall is part of a DeleteCall, then we don't notify
+          // story state changes; the pertinent state change will be the delete
+          // notification instead.
+          if (notify_) {
+            story_controller_impl_->SetState(StoryState::STOPPED);
+          } else {
+            story_controller_impl_->state_ = StoryState::STOPPED;
+          }
+
+          Done();
+        });
   }
-
-  void ConnectionDown() {
-    --connections_count_;
-    if (connections_count_ > 0) {
-      // Not the last call.
-      return;
-    }
-
-    StopStoryShell();
-  }
-
-  void StopStoryShell() {
-    // It StopCall runs on a story that's not running, there is no story shell.
-    if (story_controller_impl_->story_shell_) {
-      story_controller_impl_->story_shell_app_->Teardown(
-          kBasicTimeout, [this] { StoryShellDown(); });
-    } else {
-      StoryShellDown();
-    }
-  }
-
-  void StoryShellDown() {
-    story_controller_impl_->story_shell_app_.reset();
-    story_controller_impl_->story_shell_.Unbind();
-    if (story_controller_impl_->story_context_binding_.is_bound()) {
-      // Close() dchecks if called while not bound.
-      story_controller_impl_->story_context_binding_.Unbind();
-    }
-    StopLinks();
-  }
-
-  void StopLinks() {
-    links_count_ = story_controller_impl_->links_.size();
-    if (links_count_ == 0) {
-      Cleanup();
-      return;
-    }
-
-    // The links don't need to be written now, because they all were written
-    // when they were last changed, but we need to wait for the last write
-    // request to finish, which is done with the Sync() request below.
-    for (auto& link : story_controller_impl_->links_) {
-      link->Sync([this] { LinkDown(); });
-    }
-  }
-
-  void LinkDown() {
-    --links_count_;
-    if (links_count_ > 0) {
-      // Not the last call.
-      return;
-    }
-
-    Cleanup();
-  }
-
-  void Cleanup() {
-    // Clear the remaining links and connections in case there are some left. At
-    // this point, no DisposeLink() calls can arrive anymore.
-    story_controller_impl_->links_.clear();
-    story_controller_impl_->connections_.clear();
-
-    // If this StopCall is part of a DeleteCall, then we don't notify story
-    // state changes; the pertinent state change will be the delete notification
-    // instead.
-    if (notify_) {
-      story_controller_impl_->SetState(StoryState::STOPPED);
-    } else {
-      story_controller_impl_->state_ = StoryState::STOPPED;
-    }
-
-    Done();
-  };
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const bool notify_;  // Whether to notify state change; false in DeleteCall.
-  int connections_count_{};
-  int links_count_{};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StopCall);
 };
@@ -881,76 +860,72 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
     // why.
 
     // Read the module data.
+    auto did_read_data = Future<ModuleDataPtr>::Create();
     operation_queue_.Add(new ReadDataCall<ModuleData>(
         story_controller_impl_->page(), MakeModuleKey(module_path_),
-        false /* not_found_is_ok */, XdrModuleData, [this](ModuleDataPtr data) {
+        false /* not_found_is_ok */, XdrModuleData,
+        did_read_data->Completer()));
+
+    did_read_data
+        ->AsyncMap([this](ModuleDataPtr data) {
           module_data_ = std::move(data);
-          Cont1();
-        }));
-  }
 
-  void Cont1() {
-    // If the module is already marked as stopped, kill module.
-    if (module_data_->module_stopped) {
-      Kill();
-      return;
-    }
+          // If the module is already marked as stopped, thers's no need to
+          // update the module's data.
+          if (module_data_->module_stopped) {
+            return Future<>::CreateCompleted();
+          }
 
-    // Write the module data back, with module_stopped = true, which is a
-    // global state shared between machines to track when the module is
-    // explicitly stopped.
-    module_data_->module_stopped = true;
+          // Write the module data back, with module_stopped = true, which is a
+          // global state shared between machines to track when the module is
+          // explicitly stopped.
+          module_data_->module_stopped = true;
 
-    std::string key{MakeModuleKey(module_data_->module_path)};
-    // TODO(alhaad: This call may never continue if the data we're writing to
-    // the ledger is the same as the data already in there as that will not
-    // trigger an OnPageChange().
-    operation_queue_.Add(new BlockingModuleDataWriteCall(
-        story_controller_impl_, std::move(key), CloneOptional(module_data_),
-        [this] { Kill(); }));
-  }
-
-  void Kill() {
-    operation_queue_.Add(new KillModuleCall(story_controller_impl_,
-                                            std::move(module_data_), [this] {
-                                              // NOTE(alhaad): An interesting
-                                              // flow of control to keep in
-                                              // mind:
-                                              // 1. From ModuleController.Stop()
-                                              // which can only be called from
-                                              // FIDL, we call
-                                              // StoryControllerImpl.StopModule().
-                                              // 2.
-                                              // StoryControllerImpl.StopModule()
-                                              // pushes StopModuleCall onto the
-                                              // operation queue.
-                                              // 3. When operation becomes
-                                              // current, we write to ledger,
-                                              // block and continue on receiving
-                                              // OnPageChange from ledger.
-                                              // 4. We then call KillModuleCall
-                                              // on a sub operation queue.
-                                              // 5. KillModuleCall will call
-                                              // Teardown() on the same
-                                              // ModuleControllerImpl that had
-                                              // started
-                                              // ModuleController.Stop(). In the
-                                              // callback from Teardown(), it
-                                              // calls done_() (and NOT Done()).
-                                              // 6. done_() in KillModuleCall
-                                              // leads to the next line here,
-                                              // which calls Done() which would
-                                              // call the FIDL callback from
-                                              // ModuleController.Stop().
-                                              // 7. Done() on the next line also
-                                              // deletes this which deletes the
-                                              // still running KillModuleCall,
-                                              // but this is okay because the
-                                              // only thing that was left to do
-                                              // in KillModuleCall was FlowToken
-                                              // going out of scope.
-                                              Done();
-                                            }));
+          std::string key{MakeModuleKey(module_data_->module_path)};
+          // TODO(alhaad: This call may never continue if the data we're writing
+          // to the ledger is the same as the data already in there as that will
+          // not trigger an OnPageChange().
+          auto did_write_data = Future<>::Create();
+          operation_queue_.Add(new BlockingModuleDataWriteCall(
+              story_controller_impl_, std::move(key),
+              CloneOptional(module_data_), did_write_data->Completer()));
+          return did_write_data;
+        })
+        ->AsyncMap([this] {
+          auto did_kill_module = Future<>::Create();
+          operation_queue_.Add(new KillModuleCall(
+              story_controller_impl_, std::move(module_data_),
+              did_kill_module->Completer()));
+          return did_kill_module;
+        })
+        ->Then([this] {
+          // NOTE(alhaad): An interesting flow of control to keep in mind:
+          //
+          // 1. From ModuleController.Stop() which can only be called from FIDL,
+          // we call StoryControllerImpl.StopModule().
+          //
+          // 2.  StoryControllerImpl.StopModule() pushes StopModuleCall onto the
+          // operation queue.
+          //
+          // 3. When operation becomes current, we write to ledger, block and
+          // continue on receiving OnPageChange from ledger.
+          //
+          // 4. We then call KillModuleCall on a sub operation queue.
+          //
+          // 5. KillModuleCall will call Teardown() on the same
+          // ModuleControllerImpl that had started ModuleController.Stop(). In
+          // the callback from Teardown(), it calls done_() (and NOT Done()).
+          //
+          // 6. done_() in KillModuleCall leads to the next line here, which
+          // calls Done() which would call the FIDL callback from
+          // ModuleController.Stop().
+          //
+          // 7. Done() on the next line also deletes this which deletes the
+          // still running KillModuleCall, but this is okay because the only
+          // thing that was left to do in KillModuleCall was FlowToken going out
+          // of scope.
+          Done();
+        });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1162,6 +1137,9 @@ class StoryControllerImpl::ResolveModulesCall
     resolver_query_->action = intent_->action.name;
     resolver_query_->handler = intent_->action.handler;
 
+    std::vector<FuturePtr<>> did_create_constraints;
+    did_create_constraints.reserve(intent_->parameters->size());
+
     for (const auto& entry : *intent_->parameters) {
       const auto& name = entry.name;
       const auto& data = entry.data;
@@ -1197,20 +1175,21 @@ class StoryControllerImpl::ResolveModulesCall
               requesting_module_path_, data.link_name());
         }
 
-        ++outstanding_requests_;
+        auto did_resolve_parameter =
+            Future<ResolverParameterConstraintPtr>::Create();
         operation_queue_.Add(new ResolveParameterCall(
             story_controller_impl_, std::move(link_path),
+            did_resolve_parameter->Completer()));
+
+        auto did_create_constraint = did_resolve_parameter->Then(
             [this, flow, name](ResolverParameterConstraintPtr result) {
               auto entry = ResolverParameterConstraintEntry::New();
               entry->key = name;
               entry->constraint = std::move(*result);
               resolver_query_->parameter_constraints.push_back(
                   std::move(*entry));
-
-              if (--outstanding_requests_ == 0) {
-                Cont(flow);
-              }
-            }));
+            });
+        did_create_constraints.push_back(did_create_constraint);
 
       } else if (data.is_entity_type()) {
         auto parameter_constraint = ResolverParameterConstraint::New();
@@ -1232,17 +1211,17 @@ class StoryControllerImpl::ResolveModulesCall
       }
     }
 
-    if (outstanding_requests_ == 0) {
-      Cont(flow);
-    }
-  }
-
-  void Cont(FlowToken flow) {
-    story_controller_impl_->story_provider_impl_->module_resolver()
-        ->FindModules(std::move(*resolver_query_), nullptr,
-                      [this, flow](FindModulesResult result) {
-                        result_ = CloneOptional(result);
-                      });
+    Future<>::Wait(did_create_constraints)
+        ->AsyncMap([this, flow] {
+          auto did_find_modules = Future<FindModulesResult>::Create();
+          story_controller_impl_->story_provider_impl_->module_resolver()
+              ->FindModules(std::move(*resolver_query_), nullptr,
+                            did_find_modules->Completer());
+          return did_find_modules;
+        })
+        ->Then([this, flow](FindModulesResult result) {
+          result_ = CloneOptional(result);
+        });
   }
 
   OperationQueue operation_queue_;
@@ -1252,7 +1231,6 @@ class StoryControllerImpl::ResolveModulesCall
   const fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
 
   ResolverQueryPtr resolver_query_;
-  int outstanding_requests_{0};
   FindModulesResultPtr result_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ResolveModulesCall);
@@ -1294,33 +1272,33 @@ class StoryControllerImpl::AddIntentCall : public Operation<StartModuleStatus> {
   }
 
   void AddModuleFromResult(FlowToken flow, FindModulesResultPtr result) {
-    if (!result->modules->empty()) {
-      // Add the resulting module to story state.
-      const auto& module_result = result->modules->at(0);
-      create_chain_info_ = CreateChainInfo::New();
-      fidl::Clone(module_result.create_chain_info, create_chain_info_.get());
-
-      module_data_ = ModuleData::New();
-      module_data_->module_url = module_result.module_id;
-      module_data_->module_path = requesting_module_path_.Clone();
-      module_data_->module_path.push_back(module_name_);
-      module_data_->module_source = module_source_;
-      fidl::Clone(surface_relation_, &module_data_->surface_relation);
-      module_data_->module_stopped = false;
-      module_data_->intent = std::move(intent_);
-      fidl::Clone(module_result.manifest, &module_data_->module_manifest);
-
-      // Initialize the chain, which we need to do to get ChainData, which
-      // belongs in |module_data_|.
-      operation_queue_.Add(new InitializeChainCall(
-          story_controller_impl_, fidl::Clone(module_data_->module_path),
-          std::move(create_chain_info_), [this, flow](ChainDataPtr chain_data) {
-            WriteModuleData(flow, std::move(chain_data));
-          }));
+    if (result->modules->empty()) {
+      result_ = StartModuleStatus::NO_MODULES_FOUND;
       return;
     }
 
-    result_ = StartModuleStatus::NO_MODULES_FOUND;
+    // Add the resulting module to story state.
+    const auto& module_result = result->modules->at(0);
+    create_chain_info_ = CreateChainInfo::New();
+    fidl::Clone(module_result.create_chain_info, create_chain_info_.get());
+
+    module_data_ = ModuleData::New();
+    module_data_->module_url = module_result.module_id;
+    module_data_->module_path = requesting_module_path_.Clone();
+    module_data_->module_path.push_back(module_name_);
+    module_data_->module_source = module_source_;
+    fidl::Clone(surface_relation_, &module_data_->surface_relation);
+    module_data_->module_stopped = false;
+    module_data_->intent = std::move(intent_);
+    fidl::Clone(module_result.manifest, &module_data_->module_manifest);
+
+    // Initialize the chain, which we need to do to get ChainData, which
+    // belongs in |module_data_|.
+    operation_queue_.Add(new InitializeChainCall(
+        story_controller_impl_, fidl::Clone(module_data_->module_path),
+        std::move(create_chain_info_), [this, flow](ChainDataPtr chain_data) {
+          WriteModuleData(flow, std::move(chain_data));
+        }));
   }
 
   void WriteModuleData(FlowToken flow, ChainDataPtr chain_data) {
@@ -1419,7 +1397,11 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
     // Ledger Client issuing a ReadData() call and failing with a fatal error
     // when module_data cannot be found
     // TODO(djmurphy): follow up, probably make containers modules
+    std::vector<FuturePtr<StartModuleStatus>> did_add_intents;
+    did_add_intents.reserve(nodes_->size());
+
     for (size_t i = 0; i < nodes_->size(); ++i) {
+      auto did_add_intent = Future<StartModuleStatus>::Create();
       auto intent = Intent::New();
       nodes_->at(i)->intent.Clone(intent.get());
       operation_queue_.Add(new AddIntentCall(
@@ -1429,30 +1411,27 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
           fidl::MakeOptional(
               relation_map_[nodes_->at(i)->node_name]->relationship),
           nullptr /* view_owner_request */, ModuleSource::INTERNAL,
-          [this, flow](StartModuleStatus) { Cont(flow); }));
-    }
-  }
+          did_add_intent->Completer()));
 
-  void Cont(FlowToken flow) {
-    nodes_done_++;
+      did_add_intents.emplace_back(did_add_intent);
+    }
 
-    if (nodes_done_ < nodes_->size()) {
-      return;
-    }
-    if (!story_controller_impl_->story_shell_) {
-      return;
-    }
-    auto views = fidl::VectorPtr<modular::ContainerView>::New(nodes_->size());
-    for (size_t i = 0; i < nodes_->size(); i++) {
-      ContainerView view;
-      view.node_name = nodes_->at(i)->node_name;
-      view.owner = std::move(node_views_[nodes_->at(i)->node_name]);
-      views->at(i) = std::move(view);
-    }
-    story_controller_impl_->story_shell_->AddContainer(
-        container_name_, PathString(parent_module_path_),
-        std::move(*parent_relation_), std::move(layout_),
-        std::move(relationships_), std::move(views));
+    Future<StartModuleStatus>::Wait(did_add_intents)->Then([this, flow] {
+      if (!story_controller_impl_->story_shell_) {
+        return;
+      }
+      auto views = fidl::VectorPtr<modular::ContainerView>::New(nodes_->size());
+      for (size_t i = 0; i < nodes_->size(); i++) {
+        ContainerView view;
+        view.node_name = nodes_->at(i)->node_name;
+        view.owner = std::move(node_views_[nodes_->at(i)->node_name]);
+        views->at(i) = std::move(view);
+      }
+      story_controller_impl_->story_shell_->AddContainer(
+          container_name_, PathString(parent_module_path_),
+          std::move(*parent_relation_), std::move(layout_),
+          std::move(relationships_), std::move(views));
+    });
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -1465,7 +1444,6 @@ class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
   fidl::VectorPtr<ContainerRelationEntry> relationships_;
   const fidl::VectorPtr<ContainerNodePtr> nodes_;
   std::map<std::string, ContainerRelationEntryPtr> relation_map_;
-  size_t nodes_done_{};
 
   // map of node_name to view_owners
   std::map<fidl::StringPtr, views_v1_token::ViewOwnerPtr> node_views_;
