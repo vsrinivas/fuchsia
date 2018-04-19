@@ -154,7 +154,8 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
     if (!self) {
       return;
     }
-    Status status(event.return_params<SimpleReturnParams>()->status);
+
+    Status status = event.ToStatus();
     if (!status) {
       FXL_LOG(WARNING) << "Failed to cancel connection request - status: "
                        << status.ToString();

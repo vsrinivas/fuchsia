@@ -71,11 +71,6 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 
   FXL_DCHECK(!IsInitializing());
 
-  if (!hci_->Initialize()) {
-    FXL_LOG(ERROR) << "gap: Adapter: Failed to initialize HCI transport";
-    return false;
-  }
-
   init_state_ = State::kInitializing;
 
   FXL_DCHECK(init_seq_runner_->IsReady());

@@ -18,7 +18,7 @@ FakeControllerBase::FakeControllerBase() {}
 FakeControllerBase::~FakeControllerBase() {
   // When this destructor gets called any subclass state will be undefined. If
   // Stop() has not been called before reaching this point this can cause
-  // runtime errors when our MessageLoop handlers attempt to invoke the pure
+  // runtime errors when our event loop handlers attempt to invoke the pure
   // virtual methods of this class.
 }
 

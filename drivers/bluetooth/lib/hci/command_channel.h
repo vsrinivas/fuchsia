@@ -173,12 +173,6 @@ class CommandChannel final {
   // Returns the underlying channel handle.
   const zx::channel& channel() const { return channel_; }
 
-  // Sets the command timeout interval. This is intended for unit tests.
-  void set_command_timeout_ms(uint32_t value) {
-    FXL_DCHECK(value);
-    command_timeout_ms_ = value;
-  }
-
  private:
   // Represents a pending or running HCI command.
   class TransactionData {
@@ -257,7 +251,8 @@ class CommandChannel final {
 
   // Sends any queued commands that can be processed unambiguously
   // and complete.
-  void TrySendQueuedCommands();
+  void TrySendQueuedCommands()
+      __TA_EXCLUDES(send_queue_mutex_, event_handler_mutex_);
 
   // Sends |command|, adding an internal event handler if asynchronous.
   void SendQueuedCommand(QueuedCommand&& cmd)
@@ -318,10 +313,6 @@ class CommandChannel final {
   // Wait object for |channel_|
   async::WaitMethod<CommandChannel, &CommandChannel::OnChannelReady>
       channel_wait_{this};
-
-  // The command timeout value (in milliseconds) for pending transactions.
-  // If any transactions take longer than this, we shutdown automatically.
-  uint32_t command_timeout_ms_;
 
   // True if this CommandChannel has been initialized through a call to
   // Initialize().

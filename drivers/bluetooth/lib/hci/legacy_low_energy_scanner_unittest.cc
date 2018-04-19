@@ -19,7 +19,7 @@ using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
-constexpr int64_t kScanPeriodMs = 10;
+constexpr int64_t kScanPeriodMs = 10000;
 
 constexpr char kPlainAdvData[] = "Test";
 constexpr char kPlainScanRsp[] = "Data";
@@ -204,7 +204,6 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
   LowEnergyScanner::ScanStatus status;
   auto cb = [&status, this](LowEnergyScanner::ScanStatus in_status) {
     status = in_status;
-    message_loop()->QuitNow();
   };
 
   EXPECT_TRUE(scanner()->StartScan(
@@ -235,8 +234,9 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StartScan) {
       true /* filter_duplicates */, LEScanFilterPolicy::kNoWhiteList,
       kScanPeriodMs, cb));
 
-  // After 10 ms (kScanPeriodMs) the scan should stop by itself.
-  RunMessageLoop();
+  // After 10 s (kScanPeriodMs) the scan should stop by itself.
+  AdvanceTimeBy(zx::msec(kScanPeriodMs));
+  RunUntilIdle();
   EXPECT_EQ(LowEnergyScanner::ScanStatus::kComplete, status);
   EXPECT_FALSE(test_device()->le_scan_state().enabled);
   EXPECT_EQ(LowEnergyScanner::State::kIdle, scanner()->state());
@@ -431,12 +431,6 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   set_device_found_callback(
       [&results, this](const auto& result, const auto& data) {
         results[result.address] = std::make_pair(result, data.ToString());
-
-        // Stop the scan after observing the last fake device that we added.
-        // FakeController sends device found events for fake devices in the
-        // order in which they were added.
-        //if (result.address == kAddress5)
-        //  message_loop()->QuitNow();
       });
 
   // Perform an active scan indefinitely. This means that the scan period will
@@ -448,7 +442,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, StopDuringActiveScan) {
   RunUntilIdle();
   EXPECT_EQ(LowEnergyScanner::State::kScanning, scanner()->state());
 
-  // Run the message loop until we've seen an event for the last device that we
+  // Run the loop until we've seen an event for the last device that we
   // added. Fake Device 4 (i.e. kAddress4) is scannable but it never sends a
   // scan response so we expect that remain in the scanner's pending reports
   // list.

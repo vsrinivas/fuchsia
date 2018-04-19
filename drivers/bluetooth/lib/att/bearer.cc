@@ -117,9 +117,8 @@ OpCode MatchingTransactionCode(OpCode transaction_end_code) {
 }  // namespace
 
 // static
-fxl::RefPtr<Bearer> Bearer::Create(fbl::RefPtr<l2cap::Channel> chan,
-                                   uint32_t timeout) {
-  auto bearer = fxl::AdoptRef(new Bearer(std::move(chan), timeout));
+fxl::RefPtr<Bearer> Bearer::Create(fbl::RefPtr<l2cap::Channel> chan) {
+  auto bearer = fxl::AdoptRef(new Bearer(std::move(chan)));
   return bearer->Activate() ? bearer : nullptr;
 }
 
@@ -196,10 +195,8 @@ void Bearer::TransactionQueue::InvokeErrorAll(Status status) {
   }
 }
 
-Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan,
-               uint32_t transaction_timeout_ms)
+Bearer::Bearer(fbl::RefPtr<l2cap::Channel> chan)
     : chan_(std::move(chan)),
-      transaction_timeout_ms_(transaction_timeout_ms),
       next_remote_transaction_id_(1u),
       next_handler_id_(1u) {
   FXL_DCHECK(chan_);
@@ -454,7 +451,7 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
                     if (status == ZX_OK)
                       ShutDownInternal(true /* due_to_timeout */);
                   },
-                  transaction_timeout_ms_);
+                  kTransactionTimeoutMs);
 }
 
 void Bearer::SendErrorResponse(OpCode request_opcode,

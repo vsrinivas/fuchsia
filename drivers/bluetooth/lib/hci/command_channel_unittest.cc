@@ -96,14 +96,11 @@ TEST_F(HCI_CommandChannelTest, SingleRequestResponse) {
                                       .command_opcode));
         EXPECT_EQ(StatusCode::kHardwareFailure,
                   event.return_params<SimpleReturnParams>()->status);
-
-        // Quit the message loop to continue the test.
-        message_loop()->QuitNow();
       });
 
   test_obj = nullptr;
   EXPECT_FALSE(test_obj_deleted);
-  RunMessageLoop();
+  RunUntilIdle();
 
   // Make sure that the I/O thread is no longer holding on to |test_obj|.
   TearDown();
@@ -155,8 +152,6 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
     } else {
       EXPECT_EQ(kInquiryCompleteEventCode, event.event_code());
       EXPECT_TRUE(event.ToStatus());
-      // Quit the message loop to continue the test.
-      message_loop()->QuitNow();
     }
   };
 
@@ -171,7 +166,7 @@ TEST_F(HCI_CommandChannelTest, SingleAsynchronousRequest) {
   id = cmd_channel()->SendCommand(std::move(packet),
                                   dispatcher(), cb,
                                   kInquiryCompleteEventCode);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_EQ(2, cb_count);
 }
 
@@ -210,16 +205,13 @@ TEST_F(HCI_CommandChannelTest, SingleRequestWithStatusResponse) {
         kReset,
         le16toh(
             event.view().payload<CommandStatusEventParams>().command_opcode));
-
-    // Quit the message loop to continue the test.
-    message_loop()->QuitNow();
   };
 
   auto reset = CommandPacket::New(kReset);
   id = cmd_channel()->SendCommand(std::move(reset),
                                   dispatcher(), complete_cb,
                                   kCommandStatusEventCode);
-  RunMessageLoop();
+  RunUntilIdle();
 }
 
 // Tests:
@@ -626,11 +618,6 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
                     this](const EventPacket& event) {
     event_count1++;
     EXPECT_EQ(kTestEventCode1, event.event_code());
-
-    // The code below will send this event twice. Quit the message loop when we
-    // get the second event.
-    if (event_count1 == 2)
-      message_loop()->PostQuitTask();
   };
 
   auto id0 = cmd_channel()->AddEventHandler(kTestEventCode0, event_cb0,
@@ -666,7 +653,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   test_device()->SendCommandChannelPacket(cmd_status);
   test_device()->SendCommandChannelPacket(event1);
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_EQ(3, event_count0);
   EXPECT_EQ(2, event_count1);
@@ -686,7 +673,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerBasic) {
   test_device()->SendCommandChannelPacket(event0);
   test_device()->SendCommandChannelPacket(event1);
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_EQ(0, event_count0);
   EXPECT_EQ(2, event_count1);
@@ -729,12 +716,6 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
     EXPECT_EQ(kTestEventCode, event.event_code());
     EXPECT_EQ(1u, event.view().header().parameter_total_size);
     EXPECT_EQ(1u, event.view().payload_size());
-
-    // We post this task to the end of the message queue so that the quit call
-    // doesn't inherently guarantee that this callback gets invoked only once.
-    if (event_count == 2) {
-      message_loop()->PostQuitTask();
-    }
   };
 
   cmd_channel()->AddEventHandler(kTestEventCode, event_cb,
@@ -750,7 +731,7 @@ TEST_F(HCI_CommandChannelTest, EventHandlerEventWhileTransactionPending) {
                                   dispatcher(), nullptr);
   EXPECT_NE(0u, id);
 
-  RunMessageLoop();
+  RunUntilIdle();
 
   EXPECT_EQ(2, event_count);
 }
@@ -770,7 +751,6 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
     EXPECT_EQ(kTestSubeventCode0,
               event.view().payload<LEMetaEventParams>().subevent_code);
-    message_loop()->PostQuitTask();
   };
 
   int event_count1 = 0;
@@ -780,7 +760,6 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
     EXPECT_EQ(hci::kLEMetaEventCode, event.event_code());
     EXPECT_EQ(kTestSubeventCode1,
               event.view().payload<LEMetaEventParams>().subevent_code);
-    message_loop()->PostQuitTask();
   };
 
   auto id0 = cmd_channel()->AddLEMetaEventHandler(
@@ -801,17 +780,17 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   test_device()->StartAclChannel(test_acl_chan());
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_EQ(1, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(0, event_count1);
 
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(1, event_count1);
 
@@ -819,7 +798,7 @@ TEST_F(HCI_CommandChannelTest, LEMetaEventHandler) {
   cmd_channel()->RemoveEventHandler(id0);
   test_device()->SendCommandChannelPacket(le_meta_event_bytes0);
   test_device()->SendCommandChannelPacket(le_meta_event_bytes1);
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_EQ(2, event_count0);
   EXPECT_EQ(2, event_count1);
 }
@@ -855,14 +834,13 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] {
     closed_cb_called = true;
-    message_loop()->QuitNow();
   };
   transport()->SetTransportClosedCallback(closed_cb,
                                           dispatcher());
 
   async::PostTask(dispatcher(),
                   [this] { test_device()->CloseCommandChannel(); });
-  RunMessageLoop();
+  RunUntilIdle();
   EXPECT_TRUE(closed_cb_called);
 }
 
@@ -870,17 +848,13 @@ TEST_F(HCI_CommandChannelTest, TransportClosedCallback) {
 //  - All the queued and pending commands are notified via callbacks.
 //  - Shutdown happens.
 TEST_F(HCI_CommandChannelTest, CommandTimeout) {
+  constexpr uint32_t kCommandTimeoutMs = 5000;
+
   auto req_reset = common::CreateStaticByteBuffer(
       LowerBits(kReset), UpperBits(kReset),  // HCI_Reset opcode
       0x00                                   // parameter_total_size
   );
   test_device()->QueueCommandTransaction(CommandTransaction(req_reset, {}));
-
-  test_device()->StartCmdChannel(test_cmd_chan());
-  test_device()->StartAclChannel(test_acl_chan());
-
-  // Set a short timeout for fast tests.
-  cmd_channel()->set_command_timeout_ms(5);
 
   size_t cb_count = 0;
   CommandChannel::TransactionId id1, id2;
@@ -891,12 +865,10 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
     EXPECT_NE(0u, callback_id);
     EXPECT_TRUE(callback_id == id1 || callback_id == id2);
     EXPECT_EQ(kCommandStatusEventCode, event.event_code());
+
     const auto params = event.view().payload<CommandStatusEventParams>();
     EXPECT_EQ(StatusCode::kUnspecifiedError, params.status);
     EXPECT_EQ(kReset, params.command_opcode);
-    if (cb_count == 2) {
-      message_loop()->QuitNow();
-    }
   };
 
   auto packet = CommandPacket::New(kReset);
@@ -909,7 +881,11 @@ TEST_F(HCI_CommandChannelTest, CommandTimeout) {
                                    dispatcher(), cb);
   EXPECT_NE(0u, id2);
 
-  RunMessageLoop();
+  // Run the loop until the command timeout task gets scheduled.
+  RunUntilIdle();
+
+  AdvanceTimeBy(zx::msec(kCommandTimeoutMs));
+  RunUntilIdle();
 
   EXPECT_EQ(2u, cb_count);
 }

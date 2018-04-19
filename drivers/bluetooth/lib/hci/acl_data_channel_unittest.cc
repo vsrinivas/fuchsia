@@ -425,9 +425,6 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
       handle2_processed_count = 0;
       test_device()->SendCommandChannelPacket(event_buffer);
     }
-
-    if (total_packet_count == kExpectedTotalPacketCount)
-      message_loop()->PostQuitTask();
   };
   test_device()->SetDataCallback(data_cb, dispatcher());
 
@@ -446,15 +443,9 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
     }
   };
 
-  std::thread t1, t2, t3;
-  async::PostTask(dispatcher(), [&] {
-    t1 = std::thread(thread_func, kHandle0);
-    t2 = std::thread(thread_func, kHandle1);
-    t3 = std::thread(thread_func, kHandle2);
-  });
-
-  // Messages are sent on another thread, so wait here until they arrive.
-  RunMessageLoop();
+  auto t1 = std::thread(thread_func, kHandle0);
+  auto t2 = std::thread(thread_func, kHandle1);
+  auto t3 = std::thread(thread_func, kHandle2);
 
   if (t1.joinable())
     t1.join();
@@ -462,6 +453,9 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
     t2.join();
   if (t3.joinable())
     t3.join();
+
+  // Messages are sent on another thread, so wait here until they arrive.
+  RunUntilIdle();
 
   EXPECT_EQ(kExpectedTotalPacketCount / 3, handle0_total_packet_count);
   EXPECT_EQ(kExpectedTotalPacketCount / 3, handle1_total_packet_count);
@@ -502,7 +496,6 @@ TEST_F(HCI_ACLDataChannelTest, SendPackets) {
     int cur_no = packet.payload_bytes()[0];
     if (cur_no != seq_no + 1) {
       pass = false;
-      fsl::MessageLoop::GetCurrent()->QuitNow();
       return;
     }
 
@@ -540,8 +533,6 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   auto data_cb = [&received](const common::ByteBuffer& bytes) {
     FXL_DCHECK(bytes.size() >= sizeof(ACLDataHeader));
     received.push_back(std::make_unique<common::DynamicByteBuffer>(bytes));
-    if (received.size() == kExpectedPacketCount)
-      fsl::MessageLoop::GetCurrent()->QuitNow();
   };
   test_device()->SetDataCallback(data_cb, dispatcher());
 
@@ -561,26 +552,25 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   // Send each packet sequence on a different thread and make sure that each
   // sequence arrives atomically.
   std::thread threads[kThreadCount];
-  async::PostTask(dispatcher(), [this, &packets, &threads] {
-    auto thread_func = [&packets, this](size_t i) {
-      EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets[i]),
-                                                  Connection::LinkType::kLE));
-    };
+  auto thread_func = [&packets, this](size_t i) {
+    EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets[i]),
+                                                Connection::LinkType::kLE));
+  };
 
-    for (size_t i = 0; i < kThreadCount; ++i) {
-      threads[i] = std::thread(thread_func, i);
-    }
-  });
+  for (size_t i = 0; i < kThreadCount; ++i) {
+    threads[i] = std::thread(thread_func, i);
+  }
 
-  // Messages are sent on another thread, so wait here until they arrive.
-  RunMessageLoop();
-
+  // Wait until all threads have queued their packets.
   for (size_t i = 0; i < kThreadCount; ++i) {
     if (threads[i].joinable())
       threads[i].join();
   }
 
-  EXPECT_EQ(kExpectedPacketCount, received.size());
+  // Messages are sent on another thread, so wait here until they arrive.
+  RunUntilIdle();
+
+  ASSERT_EQ(kExpectedPacketCount, received.size());
 
   // Verify that the contents of |received| are in the correct sequence.
   for (size_t i = 0; i < kExpectedPacketCount; ++i) {

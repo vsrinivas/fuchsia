@@ -95,9 +95,6 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
   }
   FXL_VLOG(1) << "gap: BrEdrDiscoveryManager: starting inqiury";
 
-  if (!result_handler_id_) {
-  }
-
   auto inquiry =
       hci::CommandPacket::New(hci::kInquiry, sizeof(hci::InquiryCommandParams));
   auto params =
@@ -119,7 +116,12 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
           // Fallthrough for callback to pending sessions.
         }
 
-        if (event.event_code() == hci::kCommandStatusEventCode) {
+        // Resolve the request if the controller sent back a Command Complete or
+        // Status event.
+        // TODO(NET-770): Make it impossible for Command Complete to happen here
+        // and remove handling for it.
+        if (event.event_code() == hci::kCommandStatusEventCode ||
+            event.event_code() == hci::kCommandCompleteEventCode) {
           // Inquiry started, make sessions for our waiting callbacks.
           while (!self->pending_.empty()) {
             auto callback = self->pending_.front();
@@ -128,9 +130,11 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
           }
           return;
         }
+
         FXL_DCHECK(event.event_code() == hci::kInquiryCompleteEventCode);
 
         if (!status) {
+          FXL_VLOG(1) << "gap: inquiry command failed";
           return;
         }
 

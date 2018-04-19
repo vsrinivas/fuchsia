@@ -50,9 +50,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
  public:
   // Creates a new ATT Bearer. Returns nullptr if |chan| cannot be activated.
   // This can happen if the link is closed.
-  static fxl::RefPtr<Bearer> Create(
-      fbl::RefPtr<l2cap::Channel> chan,
-      uint32_t transaction_timeout_ms = kDefaultTransactionTimeoutMs);
+  static fxl::RefPtr<Bearer> Create(fbl::RefPtr<l2cap::Channel> chan);
 
   // Returns true if the underlying channel is open.
   bool is_open() const { return static_cast<bool>(chan_); }
@@ -157,16 +155,10 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Ends a request transaction with an error response.
   bool ReplyWithError(TransactionId id, Handle handle, ErrorCode error_code);
 
-  // Sets the transaction timeout interval. This is intended for unit tests.
-  void set_transaction_timeout_ms(uint32_t value) {
-    FXL_DCHECK(value);
-    transaction_timeout_ms_ = value;
-  }
-
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Bearer);
 
-  Bearer(fbl::RefPtr<l2cap::Channel> chan, uint32_t transaction_timeout_ms);
+  explicit Bearer(fbl::RefPtr<l2cap::Channel> chan);
   ~Bearer();
 
   // Returns false if activation fails. This is called by the factory method.
@@ -297,10 +289,6 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
   // Channel closed callback assigned to us via set_closed_callback().
   fxl::Closure closed_cb_;
-
-  // The timeout interval (in milliseconds) used for local initiated ATT
-  // transactions.
-  uint32_t transaction_timeout_ms_;
 
   // The state of outgoing ATT requests and indications
   TransactionQueue request_queue_;

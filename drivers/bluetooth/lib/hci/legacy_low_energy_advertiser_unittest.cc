@@ -66,7 +66,7 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
   LowEnergyAdvertiser::AdvertisingStatusCallback GetSuccessCallback() {
     return [this](uint32_t interval_ms, Status status) {
       last_status_ = status;
-      EXPECT_TRUE(status);
+      EXPECT_TRUE(status) << status.ToString();
     };
   }
 
@@ -186,12 +186,13 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
   bool enabled = true;
+  std::vector<bool> adv_states;
   test_device()->SetAdvertisingStateCallback(
-      [this, &enabled] {
-        // Quit the message loop if the advertising state changes.
-        if (enabled != test_device()->le_advertising_state().enabled) {
-          enabled = !enabled;
-          message_loop()->QuitNow();
+      [this, &adv_states, &enabled] {
+        bool new_enabled = test_device()->le_advertising_state().enabled;
+        if (enabled != new_enabled) {
+          adv_states.push_back(new_enabled);
+          enabled = new_enabled;
         }
       },
       dispatcher());
@@ -201,11 +202,10 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
       kHandle, Connection::Role::kSlave, kPeerAddress, params, transport()));
 
   // Advertising should get disabled and re-enabled.
-  RunMessageLoop();
-  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
-
-  RunMessageLoop();
-  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  RunUntilIdle();
+  ASSERT_EQ(2u, adv_states.size());
+  EXPECT_FALSE(adv_states[0]);
+  EXPECT_TRUE(adv_states[1]);
 }
 
 // - Starts the advertisement when asked and verifies that the parameters have
@@ -272,28 +272,26 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
   // Initiate a request to Stop and wait until it's partially in progress.
-  bool disabling = true;
-  auto disabled_cb = [this, &disabling] {
-    if (disabling && !test_device()->le_advertising_state().enabled) {
-      message_loop()->QuitNow();
+  bool enabled = true;
+  bool was_disabled = false;
+  auto adv_state_cb = [&] {
+    enabled = test_device()->le_advertising_state().enabled;
+    if (!was_disabled && !enabled) {
+      was_disabled = true;
+
+      // Starting now should cancel the stop sequence and succeed.
+      advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
+                                     GetSuccessCallback());
     }
   };
-  test_device()->SetAdvertisingStateCallback(disabled_cb,
-                                             dispatcher());
+  test_device()->SetAdvertisingStateCallback(adv_state_cb, dispatcher());
 
   EXPECT_TRUE(advertiser()->StopAdvertising(addr));
-  // Runs until we've _started_ disabling advetising.
-  RunMessageLoop();
 
-  // The stop sequence should have started.
-  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
-
-  // Starting now should cancel the stop sequence and succeed.
-  disabling = false;
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
-                                 GetSuccessCallback());
+  // Advertising should have been momentarily disabled.
   RunUntilIdle();
-  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(was_disabled);
+  EXPECT_TRUE(enabled);
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 }
 

@@ -12,9 +12,6 @@ namespace btlib {
 namespace att {
 namespace {
 
-// Short timeout interval used in test cases that exercise transaction timeouts.
-constexpr uint32_t kTestTimeoutMs = 10;
-
 constexpr OpCode kTestRequest = kFindInformationRequest;
 constexpr OpCode kTestResponse = kFindInformationResponse;
 constexpr OpCode kTestRequest2 = kExchangeMTURequest;
@@ -115,16 +112,12 @@ TEST_F(ATT_BearerTest, StartTransactionWrongMethodType) {
 }
 
 TEST_F(ATT_BearerTest, RequestTimeout) {
-  bearer()->set_transaction_timeout_ms(kTestTimeoutMs);
-
   // We expect the channel to be closed and the pending transaction to end in an
   // error.
   bool closed = false;
   bool err_cb_called = false;
   bearer()->set_closed_callback([&closed, &err_cb_called, this] {
     closed = true;
-    if (err_cb_called)
-      message_loop()->QuitNow();
   });
 
   auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
@@ -132,15 +125,15 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
     EXPECT_EQ(0, handle);
 
     err_cb_called = true;
-    if (closed)
-      message_loop()->QuitNow();
   };
 
   ASSERT_FALSE(fake_att_chan()->link_error());
   EXPECT_TRUE(bearer()->StartTransaction(common::NewBuffer(kTestRequest),
                                          NopCallback, err_cb));
 
-  RunMessageLoop();
+  AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
+  RunUntilIdle();
+
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
   EXPECT_TRUE(fake_att_chan()->link_error());
@@ -148,8 +141,6 @@ TEST_F(ATT_BearerTest, RequestTimeout) {
 
 // Queue many requests but make sure that FakeChannel only receives one.
 TEST_F(ATT_BearerTest, RequestTimeoutMany) {
-  bearer()->set_transaction_timeout_ms(kTestTimeoutMs);
-
   constexpr unsigned int kTransactionCount = 2;
   unsigned int chan_count = 0;
   auto chan_cb = [&chan_count](auto cb_packet) {
@@ -164,8 +155,6 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
 
   bearer()->set_closed_callback([&err_cb_count, &closed, this] {
     closed = true;
-    if (err_cb_count == kTransactionCount)
-      message_loop()->QuitNow();
   });
 
   auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
@@ -173,8 +162,6 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
     EXPECT_EQ(0, handle);
 
     err_cb_count++;
-    if (err_cb_count == kTransactionCount && closed)
-      message_loop()->QuitNow();
   };
 
   EXPECT_TRUE(bearer()->StartTransaction(
@@ -184,16 +171,23 @@ TEST_F(ATT_BearerTest, RequestTimeoutMany) {
       common::NewBuffer(kTestRequest2, 'T', 'e', 's', 't'), NopCallback,
       err_cb));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
+  // The first indication should have been sent and the second one queued.
   EXPECT_EQ(1u, chan_count);
+
+  EXPECT_FALSE(closed);
+  EXPECT_EQ(0u, err_cb_count);
+
+  // Make the request timeout.
+  AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
+  RunUntilIdle();
+
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);
 }
 
 TEST_F(ATT_BearerTest, IndicationTimeout) {
-  bearer()->set_transaction_timeout_ms(kTestTimeoutMs);
-
   // We expect the channel to be closed and the pending transaction to end in an
   // error.
   bool closed = false;
@@ -201,8 +195,6 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
 
   bearer()->set_closed_callback([&closed, &err_cb_called, this] {
     closed = true;
-    if (err_cb_called)
-      message_loop()->QuitNow();
   });
 
   auto err_cb = [&closed, &err_cb_called, this](Status status, Handle handle) {
@@ -210,22 +202,20 @@ TEST_F(ATT_BearerTest, IndicationTimeout) {
     EXPECT_EQ(0, handle);
 
     err_cb_called = true;
-    if (closed)
-      message_loop()->QuitNow();
   };
 
   EXPECT_TRUE(bearer()->StartTransaction(
       common::NewBuffer(kIndication, 'T', 'e', 's', 't'), NopCallback, err_cb));
 
-  RunMessageLoop();
+  AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
+  RunUntilIdle();
+
   EXPECT_TRUE(closed);
   EXPECT_TRUE(err_cb_called);
 }
 
 // Queue many indications but make sure that FakeChannel only receives one.
 TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
-  bearer()->set_transaction_timeout_ms(kTestTimeoutMs);
-
   constexpr unsigned int kTransactionCount = 2;
   constexpr uint8_t kIndValue1 = 1;
   constexpr uint8_t kIndValue2 = 2;
@@ -243,8 +233,6 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
 
   bearer()->set_closed_callback([&closed, &err_cb_count, this] {
     closed = true;
-    if (err_cb_count == kTransactionCount)
-      message_loop()->QuitNow();
   });
 
   auto err_cb = [&closed, &err_cb_count, this](Status status, Handle handle) {
@@ -252,8 +240,6 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
     EXPECT_EQ(0, handle);
 
     err_cb_count++;
-    if (err_cb_count == kTransactionCount && closed)
-      message_loop()->QuitNow();
   };
 
   EXPECT_TRUE(bearer()->StartTransaction(
@@ -261,9 +247,18 @@ TEST_F(ATT_BearerTest, IndicationTimeoutMany) {
   EXPECT_TRUE(bearer()->StartTransaction(
       common::NewBuffer(kIndication, kIndValue2), NopCallback, err_cb));
 
-  RunMessageLoop();
+  RunUntilIdle();
 
+  // The first indication should have been sent and the second one queued.
   EXPECT_EQ(1u, chan_count);
+
+  EXPECT_FALSE(closed);
+  EXPECT_EQ(0u, err_cb_count);
+
+  // Make the request timeout.
+  AdvanceTimeBy(zx::msec(kTransactionTimeoutMs));
+  RunUntilIdle();
+
   EXPECT_TRUE(closed);
   EXPECT_EQ(kTransactionCount, err_cb_count);
 }

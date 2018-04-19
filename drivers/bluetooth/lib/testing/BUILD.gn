@@ -13,6 +13,7 @@ source_set("test_base") {
 
   public_deps = [
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
   ]
 }
 

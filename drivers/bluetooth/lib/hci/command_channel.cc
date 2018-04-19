@@ -110,7 +110,6 @@ CommandChannel::CommandChannel(Transport* transport,
       transport_(transport),
       channel_(std::move(hci_command_channel)),
       channel_wait_(this, channel_.get(), ZX_CHANNEL_READABLE),
-      command_timeout_ms_(kCommandTimeoutMs),
       is_initialized_(false),
       allowed_command_packets_(1u) {
   FXL_DCHECK(transport_);
@@ -220,20 +219,26 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 
   std::lock_guard<std::mutex> lock(send_queue_mutex_);
 
-  if (next_transaction_id_ == 0u)
+  if (next_transaction_id_ == 0u) {
     next_transaction_id_++;
+  }
+
   TransactionId id = next_transaction_id_++;
   auto data = std::make_unique<TransactionData>(
       id, command_packet->opcode(), complete_event_code, std::move(callback),
       dispatcher);
+
   QueuedCommand command(std::move(command_packet), std::move(data));
+
   if (IsAsync(complete_event_code)) {
     std::lock_guard<std::mutex> event_lock(event_handler_mutex_);
     MaybeAddTransactionHandler(command.data.get());
   }
+
   send_queue_.push_back(std::move(command));
   async::PostTask(io_dispatcher_,
-      std::bind(&CommandChannel::TrySendQueuedCommands, this));
+                  std::bind(&CommandChannel::TrySendQueuedCommands, this));
+
   return id;
 }
 
@@ -309,21 +314,26 @@ void CommandChannel::TrySendQueuedCommands() {
   if (!is_initialized_)
     return;
 
+  FXL_DCHECK(async_get_default() == io_dispatcher_);
+
   if (allowed_command_packets_ == 0) {
     FXL_VLOG(2) << "hci: CommandChannel: controller queue full, waiting.";
     return;
   }
 
   std::lock_guard<std::mutex> lock(send_queue_mutex_);
+
   // Walk the waiting and see if any are sendable.
   for (auto it = send_queue_.begin();
        allowed_command_packets_ > 0 && it != send_queue_.end();) {
     std::lock_guard<std::mutex> event_lock(event_handler_mutex_);
+
     // Already a pending command with the same opcode, we can't send.
     if (pending_transactions_.count(it->data->opcode()) != 0) {
       ++it;
       continue;
     }
+
     // We can send this if we only expect one update, or if we aren't
     // waiting for another transaction to complete on the same event.
     // It is unlikely but possible to have commands with different opcodes
@@ -354,12 +364,14 @@ void CommandChannel::SendQueuedCommand(QueuedCommand&& cmd) {
 
   auto& transaction = cmd.data;
 
-  transaction->Start([ this, id = cmd.data->id() ] {
-    FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
-                   << " timed out, shutting down.";
-    ShutDownInternal();
-    // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
-  }, zx::msec(command_timeout_ms_));
+  transaction->Start(
+      [this, id = cmd.data->id()] {
+        FXL_LOG(ERROR) << "hci: CommandChannel: Command " << id
+                       << " timed out, shutting down.";
+        ShutDownInternal();
+        // TODO(jamuraa): Have Transport notice we've shutdown. (NET-620)
+      },
+      zx::msec(kCommandTimeoutMs));
 
   MaybeAddTransactionHandler(transaction.get());
 
@@ -456,7 +468,8 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
     return;
   }
 
-  // Asynchronous commands shouldn't finish with a Complete.
+  // TODO(NET-770): Do not allow asynchronous commands to finish with Command
+  // Complete.
   if (event_code == kCommandCompleteEventCode) {
     FXL_LOG(WARNING)
         << "hci: CommandChannel: async command received CommandComplete";

@@ -31,10 +31,8 @@ class AdapterTest : public TestingBase {
   ~AdapterTest() override = default;
 
   void SetUp() override {
+    TestingBase::SetUp();
     transport_closed_called_ = false;
-
-    SetUpTransport();
-    FXL_DCHECK(transport());
 
     adapter_ = std::make_unique<Adapter>(transport(),
                                          l2cap::testing::FakeLayer::Create(),
@@ -44,8 +42,10 @@ class AdapterTest : public TestingBase {
   }
 
   void TearDown() override {
-    if (adapter_->IsInitialized())
+    if (adapter_->IsInitialized()) {
       adapter_->ShutDown();
+    }
+
     adapter_ = nullptr;
     TestingBase::TearDown();
   }
@@ -53,7 +53,6 @@ class AdapterTest : public TestingBase {
   void InitializeAdapter(const Adapter::InitializeCallback& callback) {
     adapter_->Initialize(callback, [this] {
       transport_closed_called_ = true;
-      message_loop()->QuitNow();
     });
   }
 
@@ -77,12 +76,12 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoFeaturesSupported) {
   auto init_cb = [&, this](bool cb_success) {
     success = cb_success;
     init_cb_count++;
-    message_loop()->QuitNow();
   };
 
   // The controller supports nothing.
   InitializeAdapter(init_cb);
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(transport_closed_called());
@@ -94,7 +93,6 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   auto init_cb = [&, this](bool cb_success) {
     success = cb_success;
     init_cb_count++;
-    message_loop()->QuitNow();
   };
 
   // Enable LE support.
@@ -104,7 +102,8 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(init_cb);
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(transport_closed_called());
@@ -116,7 +115,6 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   auto init_cb = [&, this](bool cb_success) {
     success = cb_success;
     init_cb_count++;
-    message_loop()->QuitNow();
   };
 
   // Return valid buffer information and enable LE support. (This should
@@ -129,7 +127,8 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(init_cb);
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
@@ -142,7 +141,6 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
   auto init_cb = [&, this](bool cb_success) {
     success = cb_success;
     init_cb_count++;
-    message_loop()->QuitNow();
   };
 
   // Make all settings valid but make an HCI command fail.
@@ -153,7 +151,8 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
                                           hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(init_cb);
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(adapter()->state().IsLowEnergySupported());
@@ -166,7 +165,6 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   auto init_cb = [&, this](bool cb_success) {
     success = cb_success;
     init_cb_count++;
-    message_loop()->QuitNow();
   };
 
   FakeController::Settings settings;
@@ -174,7 +172,8 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(init_cb);
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
@@ -183,7 +182,8 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   // Deleting the FakeController should cause the transport closed callback to
   // get called.
   async::PostTask(dispatcher(), [this] { DeleteTestDevice(); });
-  RunMessageLoop();
+  RunUntilIdle();
+
   EXPECT_TRUE(transport_closed_called());
 }
 

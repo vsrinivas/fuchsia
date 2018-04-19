@@ -67,6 +67,8 @@ class Host final : public fxl::RefCountedThreadSafe<Host> {
   explicit Host(const bt_hci_protocol_t& hci_proto);
   ~Host();
 
+  bt_hci_protocol_t hci_proto_;
+
   fbl::RefPtr<::btlib::l2cap::L2CAP> l2cap_;
   std::unique_ptr<::btlib::gap::Adapter> gap_;
 

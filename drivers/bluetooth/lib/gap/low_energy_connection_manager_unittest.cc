@@ -37,8 +37,6 @@ const common::DeviceAddress kAddress1(common::DeviceAddress::Type::kLEPublic,
 const common::DeviceAddress kAddress2(common::DeviceAddress::Type::kBREDR,
                                       "00:00:00:00:00:03");
 
-constexpr int64_t kTestRequestTimeoutMs = 1;
-
 class LowEnergyConnectionManagerTest : public TestingBase {
  public:
   LowEnergyConnectionManagerTest() = default;
@@ -219,6 +217,8 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceFailure) {
 }
 
 TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
+  constexpr int64_t kTestRequestTimeoutMs = 20000;
+
   auto* dev = dev_cache()->NewDevice(kAddress0, true);
 
   // We add no fake devices to cause the request to time out.
@@ -227,7 +227,6 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   auto callback = [&status](auto cb_status, auto conn_ref) {
     EXPECT_FALSE(conn_ref);
     status = cb_status;
-    fsl::MessageLoop::GetCurrent()->QuitNow();
   };
 
   conn_mgr()->set_request_timeout_for_testing(kTestRequestTimeoutMs);
@@ -235,10 +234,15 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, ConnectSingleDeviceTimeout) {
   EXPECT_EQ(RemoteDevice::ConnectionState::kInitializing,
             dev->connection_state());
 
-  RunMessageLoop();
+  // Make sure the first HCI transaction completes before advancing the fake
+  // clock.
+  RunUntilIdle();
+
+  AdvanceTimeBy(zx::msec(kTestRequestTimeoutMs));
+  RunUntilIdle();
 
   EXPECT_FALSE(status);
-  EXPECT_EQ(common::HostError::kTimedOut, status.error());
+  EXPECT_EQ(common::HostError::kTimedOut, status.error()) << status.ToString();
   EXPECT_EQ(RemoteDevice::ConnectionState::kNotConnected,
             dev->connection_state());
 }

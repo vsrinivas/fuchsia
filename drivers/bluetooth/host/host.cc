@@ -16,23 +16,34 @@ using namespace btlib;
 
 namespace bthost {
 
-Host::Host(const bt_hci_protocol_t& hci_proto) {
-  auto dev = std::make_unique<hci::DdkDeviceWrapper>(hci_proto);
-  auto hci = hci::Transport::Create(std::move(dev));
-
-  l2cap_ = l2cap::L2CAP::Create(hci, "bt-host (l2cap)");
-  FXL_DCHECK(l2cap_);
-
-  gatt_host_ = GattHost::Create("bt-host (gatt)");
-  FXL_DCHECK(gatt_host_);
-
-  gap_ = std::make_unique<gap::Adapter>(hci, l2cap_, gatt_host_->profile());
-  FXL_DCHECK(gap_);
-}
+Host::Host(const bt_hci_protocol_t& hci_proto) : hci_proto_(hci_proto) {}
 
 Host::~Host() {}
 
 bool Host::Initialize(InitCallback callback) {
+  auto dev = std::make_unique<hci::DdkDeviceWrapper>(hci_proto_);
+  auto hci = hci::Transport::Create(std::move(dev));
+  if (!hci)
+    return false;
+
+  FXL_VLOG(1) << "bt-host: initializing HCI";
+  if (!hci->Initialize()) {
+    FXL_LOG(ERROR) << "bt-host: failed to initialize HCI transport";
+    return false;
+  }
+
+  l2cap_ = l2cap::L2CAP::Create(hci, "bt-host (l2cap)");
+  if (!l2cap_)
+    return false;
+
+  gatt_host_ = GattHost::Create("bt-host (gatt)");
+  if (!gatt_host_)
+    return false;
+
+  gap_ = std::make_unique<gap::Adapter>(hci, l2cap_, gatt_host_->profile());
+  if (!gap_)
+    return false;
+
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(l2cap_);
 
@@ -50,6 +61,7 @@ bool Host::Initialize(InitCallback callback) {
     callback(success);
   };
 
+  FXL_VLOG(1) << "bt-host: initializing GAP";
   return gap_->Initialize(gap_init_callback, [] {
     FXL_VLOG(1) << "bt-host: HCI transport has closed";
   });

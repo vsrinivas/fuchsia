@@ -85,6 +85,8 @@ zx_status_t HostDevice::Bind() {
   // Send the bootstrap message to Host. The Host object can only be accessed on
   // the Host thread.
   host_thread_runner_->PostTask([hci_proto, this] {
+    FXL_VLOG(2) << "bt-host: host thread start";
+
     std::lock_guard<std::mutex> lock(mtx_);
     host_ = fxl::MakeRefCounted<Host>(hci_proto);
     host_->Initialize([host = host_, this](bool success) {

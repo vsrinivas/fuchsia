@@ -46,8 +46,9 @@ class FakeControllerTest : public TestBase {
  protected:
   // TestBase overrides:
   void SetUp() override {
-    SetUpTransport();
-    transport_->Initialize(fsl::MessageLoop::GetCurrent()->async());
+    transport_ = hci::Transport::Create(
+        FakeControllerTest<FakeControllerType>::SetUpTestDevice());
+    transport_->Initialize(dispatcher());
   }
 
   void TearDown() override {
@@ -59,16 +60,10 @@ class FakeControllerTest : public TestBase {
     }
 
     RunUntilIdle();
+
     transport_ = nullptr;
     test_device_ = nullptr;
  }
-
-  // Creates a hci::Transport without directly initializing it (unlike SetUp(),
-  // which initializes the CommandChannel).
-  void SetUpTransport() {
-    transport_ = hci::Transport::Create(
-        FakeControllerTest<FakeControllerType>::SetUpTestDevice());
-  }
 
   // Directly initializes the ACL data channel and wires up its data rx
   // callback. It is OK to override the data rx callback after this is called.

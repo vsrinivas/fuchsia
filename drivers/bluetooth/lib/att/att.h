@@ -26,9 +26,9 @@ constexpr uint16_t kBREDRMinMTU = 48;
 // The maximum length of an attribute value (v5.0, Vol 3, Part F, 3.2.9).
 constexpr size_t kMaxAttributeValueLength = 512;
 
-// The default ATT protocol transaction timeout in milliseconds
+// The ATT protocol transaction timeout in milliseconds
 // (see v5.0, Vol 3, Part F, Section 3.3.3).
-constexpr uint32_t kDefaultTransactionTimeoutMs = 30000;
+constexpr uint32_t kTransactionTimeoutMs = 30000;
 
 // A server identifies each attribute using a 16-bit handle.
 using Handle = uint16_t;
