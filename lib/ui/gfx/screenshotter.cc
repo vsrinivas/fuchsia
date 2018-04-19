@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <functional>
+#include <utility>
 
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
@@ -43,11 +44,17 @@ void Screenshotter::OnCommandBufferDone(
   const uint8_t* row = image->memory()->mapped_ptr();
   FXL_CHECK(row != nullptr);
   row += sr_layout.offset;
+  uint32_t pixel;
   for (uint32_t y = 0; y < height; y++) {
-    const unsigned int* pixel = (const unsigned int*) row;
+    const uint8_t* pchannel = row;
     for (uint32_t x = 0; x < width; x++) {
-      file.write((char*) pixel, 3);
-      ++pixel;
+      // Image format is BGRA, PPM expects RGBA. So swap the channels.
+      uint8_t* channel = (uint8_t*) &pixel;
+      channel[0] = pchannel[2];
+      channel[1] = pchannel[1];
+      channel[2] = pchannel[0];
+      file.write((const char*) &pixel, 3);
+      pchannel += 4;
     }
     row += sr_layout.rowPitch;
   }
