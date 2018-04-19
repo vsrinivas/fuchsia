@@ -17,7 +17,7 @@ State,
   {{- else -}}
   {{ $interface.Name -}}Controller_ask_cramertj_to_fix_naming_now
   {{- end }}) -> {{ $method.CamelName }}Fut,
-  {{ $method.CamelName }}Fut: Future<Item = (), Error = Never>,
+  {{ $method.CamelName }}Fut: Future<Item = (), Error = Never> + Send,
   {{- end }}
 {{- end -}}
 {{- end -}}
@@ -80,7 +80,7 @@ impl {{ $interface.Name }}Proxy {
 pub trait {{ $interface.Name }} {
   {{- range $method := $interface.Methods }}
   {{- if $method.HasRequest }}
-  type {{ $method.CamelName }}Fut: Future<Item = (), Error = Never>;
+  type {{ $method.CamelName }}Fut: Future<Item = (), Error = Never> + Send;
   fn {{ $method.Name }} (&mut self,
    {{- range $request := $method.Request }}
    {{ $request.Name }}: {{ $request.Type }},
