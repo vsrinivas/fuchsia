@@ -7,6 +7,8 @@
 #include <memory>
 #include <string>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/gatt/gatt.h"
@@ -15,7 +17,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
 
@@ -35,8 +37,8 @@ class LowEnergyConnectionManager;
 class LowEnergyDiscoveryManager;
 
 // Represents the host-subsystem state for a Bluetooth controller. All
-// asynchronous callbacks are posted on the MessageLoop on which this Adapter
-// instances is created.
+// asynchronous callbacks are posted on the Loop on which this Adapter
+// instance is created.
 //
 // This class is not thread-safe and it is intended to be created, deleted, and
 // accessed on the same event loop. No internal locking is provided.
@@ -45,9 +47,9 @@ class LowEnergyDiscoveryManager;
 // supported.
 class Adapter final {
  public:
-  // A fsl::MessageLoop must have been initialized when an Adapter instance is
-  // created. The Adapter instance will use the MessageLoop it is created on for
-  // all of its asynchronous tasks.
+  // There must be an async_t dispatcher registered as a default when an Adapter
+  // instance is created. The Adapter instance will use it for all of its
+  // asynchronous tasks.
   //
   // This will take ownership of |hci_device|.
   explicit Adapter(fxl::RefPtr<hci::Transport> hci,
@@ -157,7 +159,7 @@ class Adapter final {
   // Uniquely identifies this adapter on the current system.
   std::string identifier_;
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
   fxl::RefPtr<hci::Transport> hci_;
 
   // Callback invoked to notify clients when the underlying transport is closed.
@@ -203,6 +205,7 @@ class Adapter final {
 
   // Objects that perform BR/EDR procedures.
   std::unique_ptr<BrEdrDiscoveryManager> bredr_discovery_manager_;
+  fxl::ThreadChecker thread_checker_;
 
   // This must remain the last member to make sure that all weak pointers are
   // invalidating before other members are destroyed.

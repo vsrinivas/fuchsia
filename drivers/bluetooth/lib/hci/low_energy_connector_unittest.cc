@@ -44,7 +44,7 @@ class LowEnergyConnectorTest : public TestingBase {
     test_device()->set_settings(settings);
 
     connector_ = std::make_unique<LowEnergyConnector>(
-        transport(), message_loop()->task_runner(),
+        transport(), dispatcher(),
         std::bind(&LowEnergyConnectorTest::OnIncomingConnectionCreated, this,
                   std::placeholders::_1));
 
@@ -52,7 +52,7 @@ class LowEnergyConnectorTest : public TestingBase {
         std::bind(&LowEnergyConnectorTest::OnConnectionStateChanged, this,
                   std::placeholders::_1, std::placeholders::_2,
                   std::placeholders::_3),
-        message_loop()->task_runner());
+        dispatcher());
 
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
@@ -318,7 +318,7 @@ TEST_F(HCI_LowEnergyConnectorTest, IncomingConnectDuringConnectionRequest) {
       LEOwnAddressType::kPublic, false, kTestAddress, defaults::kLEScanInterval,
       defaults::kLEScanWindow, kTestParams, callback, kTestTimeoutMs);
 
-  async::PostTask(message_loop()->async(), [kIncomingAddress, this] {
+  async::PostTask(dispatcher(), [kIncomingAddress, this] {
     LEConnectionCompleteSubeventParams event;
     std::memset(&event, 0, sizeof(event));
 

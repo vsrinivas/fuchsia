@@ -9,7 +9,6 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace btlib {
 namespace hci {
@@ -120,7 +119,7 @@ uint16_t TimeslicesToMilliseconds(uint16_t timeslices) {
 LegacyLowEnergyAdvertiser::LegacyLowEnergyAdvertiser(fxl::RefPtr<Transport> hci)
     : hci_(hci), starting_(false), connect_callback_(nullptr) {
   hci_cmd_runner_ = std::make_unique<SequentialCommandRunner>(
-      fsl::MessageLoop::GetCurrent()->task_runner(), hci_);
+      async_get_default(), hci_);
 }
 
 LegacyLowEnergyAdvertiser::~LegacyLowEnergyAdvertiser() {

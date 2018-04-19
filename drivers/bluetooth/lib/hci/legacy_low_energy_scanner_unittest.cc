@@ -54,7 +54,7 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     test_device()->set_settings(settings);
 
     scanner_ = std::make_unique<LegacyLowEnergyScanner>(
-        this, transport(), message_loop()->task_runner());
+        this, transport(), dispatcher());
 
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());

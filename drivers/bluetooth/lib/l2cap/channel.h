@@ -161,6 +161,7 @@ class ChannelImpl : public Channel {
 
   std::mutex mtx_;
 
+  bool active_  __TA_GUARDED(mtx_);
   async_t* dispatcher_ __TA_GUARDED(mtx_);
   RxCallback rx_cb_ __TA_GUARDED(mtx_);
   ClosedCallback closed_cb_ __TA_GUARDED(mtx_);

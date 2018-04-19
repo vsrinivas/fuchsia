@@ -182,7 +182,7 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
 
   // Deleting the FakeController should cause the transport closed callback to
   // get called.
-  async::PostTask(message_loop()->async(), [this] { DeleteTestDevice(); });
+  async::PostTask(dispatcher(), [this] { DeleteTestDevice(); });
   RunMessageLoop();
   EXPECT_TRUE(transport_closed_called());
 }

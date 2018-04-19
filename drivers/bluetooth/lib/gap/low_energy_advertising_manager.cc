@@ -99,20 +99,20 @@ void LowEnergyAdvertisingManager::StartAdvertising(
     };
   }
   auto status_cb =
-      fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), status_callback](
-                            uint32_t, hci::Status status) mutable {
-        if (!self)
-          return;
+    fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), status_callback](
+                          uint32_t, hci::Status status) mutable {
+      if (!self)
+        return;
 
-        if (!status) {
-          status_callback("", status);
-          return;
-        }
+      if (!status) {
+        status_callback("", status);
+        return;
+      }
 
-        const std::string& id = ad_ptr->id();
-        self->advertisements_.emplace(id, std::move(ad_ptr));
-        status_callback(id, status);
-      });
+      const std::string& id = ad_ptr->id();
+      self->advertisements_.emplace(id, std::move(ad_ptr));
+      status_callback(id, status);
+    });
 
   // Serialize the data
   auto data_block =

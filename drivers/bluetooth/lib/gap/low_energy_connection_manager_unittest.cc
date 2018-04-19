@@ -61,7 +61,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
     // TODO(armansito): Pass a fake connector here.
     connector_ = std::make_unique<hci::LowEnergyConnector>(
-        transport(), message_loop()->task_runner(),
+        transport(), dispatcher(),
         [this](auto link) { OnIncomingConnection(std::move(link)); });
 
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
@@ -71,7 +71,7 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     test_device()->SetConnectionStateCallback(
         fbl::BindMember(
             this, &LowEnergyConnectionManagerTest::OnConnectionStateChanged),
-        message_loop()->task_runner());
+        dispatcher());
 
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
@@ -772,8 +772,7 @@ TEST_F(GAP_LowEnergyConnectionManagerTest, L2CAPLEConnectionParameterUpdate) {
     fake_dev_cb_called = true;
     actual = params;
   };
-  test_device()->SetLEConnectionParametersCallback(
-      fake_dev_cb, message_loop()->task_runner());
+  test_device()->SetLEConnectionParametersCallback(fake_dev_cb, dispatcher());
 
   auto conn_params_cb = [&conn_params_cb_called, &conn_ref](const auto& dev) {
     EXPECT_EQ(conn_ref->device_identifier(), dev.identifier());

@@ -27,13 +27,13 @@ LowEnergyConnector::PendingRequest::PendingRequest(
       status_callback(status_callback) {}
 
 LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
-                                       fxl::RefPtr<fxl::TaskRunner> task_runner,
+                                       async_t* dispatcher,
                                        IncomingConnectionDelegate delegate)
-    : task_runner_(task_runner),
+    : dispatcher_(dispatcher),
       hci_(hci),
       delegate_(std::move(delegate)),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(hci_);
   FXL_DCHECK(delegate_);
 
@@ -44,7 +44,7 @@ LowEnergyConnector::LowEnergyConnector(fxl::RefPtr<Transport> hci,
         if (self)
           self->OnConnectionCompleteEvent(event);
       },
-      task_runner_);
+      dispatcher_);
 }
 
 LowEnergyConnector::~LowEnergyConnector() {
@@ -62,7 +62,7 @@ bool LowEnergyConnector::CreateConnection(
     const LEPreferredConnectionParameters& initial_parameters,
     const StatusCallback& status_callback,
     int64_t timeout_ms) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(status_callback);
   FXL_DCHECK(peer_address.type() != common::DeviceAddress::Type::kBREDR);
   FXL_DCHECK(timeout_ms > 0);
@@ -121,7 +121,7 @@ bool LowEnergyConnector::CreateConnection(
                                             zx::msec(timeout_ms));
   };
 
-  hci_->command_channel()->SendCommand(std::move(request), task_runner_,
+  hci_->command_channel()->SendCommand(std::move(request), dispatcher_,
                                        complete_cb, kCommandStatusEventCode);
 
   return true;
@@ -163,7 +163,7 @@ void LowEnergyConnector::CancelInternal(bool timed_out) {
   };
 
   auto cancel = CommandPacket::New(kLECreateConnectionCancel);
-  hci_->command_channel()->SendCommand(std::move(cancel), task_runner_,
+  hci_->command_channel()->SendCommand(std::move(cancel), dispatcher_,
                                        complete_cb);
 }
 

@@ -6,13 +6,14 @@
 
 #include <set>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/sequential_command_runner.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace hci {
@@ -82,7 +83,7 @@ class LowEnergyScanner {
 
   LowEnergyScanner(Delegate* delegate,
                    fxl::RefPtr<Transport> hci,
-                   fxl::RefPtr<fxl::TaskRunner> task_runner);
+                   async_t* dispatcher);
   virtual ~LowEnergyScanner() = default;
 
   // Returns the current Scan state.
@@ -153,7 +154,7 @@ class LowEnergyScanner {
   virtual bool StopScan() = 0;
 
  protected:
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+  async_t* dispatcher() const { return dispatcher_; }
   Transport* transport() const { return transport_.get(); }
   SequentialCommandRunner* hci_cmd_runner() const {
     return hci_cmd_runner_.get();
@@ -168,7 +169,7 @@ class LowEnergyScanner {
   Delegate* delegate_;  // weak
 
   // Task runner for all asynchronous tasks.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
 
   // The HCI transport.
   fxl::RefPtr<Transport> transport_;

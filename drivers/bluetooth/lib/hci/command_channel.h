@@ -16,6 +16,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
@@ -24,12 +25,10 @@
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace hci {
@@ -65,7 +64,7 @@ class CommandChannel final {
   using TransactionId = size_t;
 
   // Queues the given |command_packet| to be sent to the controller and returns
-  // a transaction ID. The given |callback| will be posted on |task_runner| to
+  // a transaction ID. The given |callback| will be posted on |dispatcher| to
   // be processed on the appropriate thread requested by the caller.
   //
   // This call takes ownership of the contents of |command_packet|.
@@ -107,7 +106,7 @@ class CommandChannel final {
       std::function<void(TransactionId id, const EventPacket& event)>;
   TransactionId SendCommand(
       std::unique_ptr<CommandPacket> command_packet,
-      fxl::RefPtr<fxl::TaskRunner> task_runner,
+      async_t* dispatcher,
       CommandCallback callback,
       const EventCode complete_event_code = kCommandCompleteEventCode);
 
@@ -121,7 +120,7 @@ class CommandChannel final {
 
   // Registers an event handler for HCI events that match |event_code|. Incoming
   // HCI event packets that are not associated with a pending command sequence
-  // will be posted on the given |task_runner| via the given |event_callback|.
+  // will be posted on the given |dispatcher| via the given |event_callback|.
   // The returned ID can be used to unregister a previously registered event
   // handler.
   //
@@ -144,7 +143,7 @@ class CommandChannel final {
   // long-lived event handler and ending transactions on CommandStatus is
   // recommended.
   //
-  // If |task_runner| corresponds to the I/O thread's task runner, then the
+  // If |dispatcher| corresponds to the I/O thread's dispatcher, then the
   // callback will be executed as soon as the event is received from the command
   // channel. No delayed task posting will occur.
   //
@@ -154,7 +153,7 @@ class CommandChannel final {
   //    - HCI_LE_Meta event code (use AddLEMetaEventHandler instead).
   EventHandlerId AddEventHandler(EventCode event_code,
                                  EventCallback event_callback,
-                                 fxl::RefPtr<fxl::TaskRunner> task_runner);
+                                 async_t* dispatcher);
 
   // Works just like AddEventHandler but the passed in event code is only valid
   // within the LE Meta Event sub-event code namespace. |event_callback| will
@@ -165,7 +164,7 @@ class CommandChannel final {
   EventHandlerId AddLEMetaEventHandler(
       EventCode subevent_code,
       EventCallback event_callback,
-      fxl::RefPtr<fxl::TaskRunner> task_runner);
+      async_t* dispatcher);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -188,7 +187,7 @@ class CommandChannel final {
                     OpCode opcode,
                     EventCode complete_event_code,
                     CommandCallback callback,
-                    fxl::RefPtr<fxl::TaskRunner> task_runner);
+                    async_t* dispatcher);
     ~TransactionData();
 
     // Starts the transaction timer, which will call timeout_cb if it's not
@@ -201,7 +200,7 @@ class CommandChannel final {
     // Makes an EventCallback that calls the callback correctly.
     EventCallback MakeCallback() const;
 
-    fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+    async_t* dispatcher() const { return dispatcher_; }
     EventCode complete_event_code() const { return complete_event_code_; }
     OpCode opcode() const { return opcode_; }
     TransactionId id() const { return id_; }
@@ -214,7 +213,7 @@ class CommandChannel final {
     OpCode opcode_;
     EventCode complete_event_code_;
     CommandCallback callback_;
-    fxl::RefPtr<fxl::TaskRunner> task_runner_;
+    async_t* dispatcher_;
     async::TaskClosure timeout_task_;
     EventHandlerId handler_id_;
 
@@ -246,7 +245,7 @@ class CommandChannel final {
     EventCode event_code;
     EventCallback event_callback;
     bool is_le_meta_subevent;
-    fxl::RefPtr<fxl::TaskRunner> task_runner;
+    async_t* dispatcher;
   };
 
   void ShutDownInternal()
@@ -269,7 +268,7 @@ class CommandChannel final {
   EventHandlerId NewEventHandler(EventCode event_code,
                                  bool is_le_meta,
                                  EventCallback event_callback,
-                                 fxl::RefPtr<fxl::TaskRunner> task_runner)
+                                 async_t* dispatcher)
       __TA_REQUIRES(event_handler_mutex_);
 
   // Notifies any matching event handler for |event|.
@@ -328,8 +327,8 @@ class CommandChannel final {
   // Initialize().
   std::atomic_bool is_initialized_;
 
-  // The task runner used for posting tasks on the HCI transport I/O thread.
-  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
+  // The dispatcher used for posting tasks on the HCI transport I/O thread.
+  async_t* io_dispatcher_;
 
   // Guards |send_queue_|. |send_queue_| can get accessed by threads that call
   // SendCommand() as well as from |io_thread_|.

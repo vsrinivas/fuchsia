@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 
   bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(),
-                                message_loop.task_runner());
+                                message_loop.async());
   RegisterCommands(&cmd_data, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {

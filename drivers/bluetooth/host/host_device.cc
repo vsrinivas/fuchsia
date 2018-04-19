@@ -9,6 +9,7 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/lib/bluetooth/c/bt_host.h"
 #include "lib/fsl/threading/create_thread.h"
+#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 #include "host.h"

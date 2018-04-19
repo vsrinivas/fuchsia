@@ -4,9 +4,10 @@
 
 #include "bredr_discovery_manager.h"
 
+#include <lib/async/default.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 #include "remote_device_cache.h"
 
@@ -38,19 +39,18 @@ void BrEdrDiscoverySession::NotifyError() const {
 BrEdrDiscoveryManager::BrEdrDiscoveryManager(fxl::RefPtr<hci::Transport> hci,
                                              RemoteDeviceCache* device_cache)
     : hci_(hci),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+      dispatcher_(async_get_default()),
       cache_(device_cache),
       result_handler_id_(0u),
       weak_ptr_factory_(this) {
   FXL_DCHECK(cache_);
   FXL_DCHECK(hci_);
-  FXL_DCHECK(task_runner_);
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(dispatcher_);
 
   result_handler_id_ = hci_->command_channel()->AddEventHandler(
       hci::kInquiryResultEventCode,
       fbl::BindMember(this, &BrEdrDiscoveryManager::InquiryResult),
-      task_runner_);
+      dispatcher_);
   FXL_DCHECK(result_handler_id_);
   // TODO(NET-729): add event handlers for the other inquiry modes
 }
@@ -105,7 +105,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
   params->lap = hci::kGIAC;
   params->inquiry_length = hci::kInquiryLengthMax;
   hci_->command_channel()->SendCommand(
-      std::move(inquiry), task_runner_,
+      std::move(inquiry), dispatcher_,
       [self = weak_ptr_factory_.GetWeakPtr()](auto, const auto& event) {
         if (!self) {
           return;
@@ -147,7 +147,7 @@ void BrEdrDiscoveryManager::StopInquiry() {
 
   auto inq_cancel = hci::CommandPacket::New(hci::kInquiryCancel);
   hci_->command_channel()->SendCommand(
-      std::move(inq_cancel), task_runner_, [](long, const auto& event) {
+      std::move(inq_cancel), dispatcher_, [](long, const auto& event) {
         auto status = event.ToStatus();
         if (!status) {
           FXL_LOG(WARNING)

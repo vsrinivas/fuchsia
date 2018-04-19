@@ -54,7 +54,7 @@ class LowEnergyDiscoveryManagerTest : public TestingBase {
     test_device()->SetScanStateCallback(
         std::bind(&LowEnergyDiscoveryManagerTest::OnScanStateChanged, this,
                   std::placeholders::_1),
-        message_loop()->task_runner());
+        dispatcher());
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
   }

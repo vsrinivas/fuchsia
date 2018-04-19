@@ -67,19 +67,19 @@ LowEnergyDiscoveryManager::LowEnergyDiscoveryManager(
     Mode mode,
     fxl::RefPtr<hci::Transport> hci,
     RemoteDeviceCache* device_cache)
-    : task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+    : dispatcher_(async_get_default()),
       device_cache_(device_cache),
       weak_ptr_factory_(this) {
   FXL_DCHECK(hci);
-  FXL_DCHECK(task_runner_);
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(device_cache_);
 
   // We currently do not support the Extended Advertising feature.
   FXL_DCHECK(mode == Mode::kLegacy);
 
   scanner_ =
-      std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, task_runner_);
+      std::make_unique<hci::LegacyLowEnergyScanner>(this, hci, dispatcher_);
 }
 
 LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
@@ -88,7 +88,7 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
 
 void LowEnergyDiscoveryManager::StartDiscovery(
     const SessionCallback& callback) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: StartDiscovery";
 
@@ -110,10 +110,10 @@ void LowEnergyDiscoveryManager::StartDiscovery(
   if (!sessions_.empty()) {
     // Invoke |callback| asynchronously.
     auto session = AddSession();
-    task_runner_->PostTask(
-        fxl::MakeCopyable([ callback, session = std::move(session) ]() mutable {
-          callback(std::move(session));
-        }));
+    async::PostTask(dispatcher_,
+      [ callback, session = std::move(session) ]() mutable {
+        callback(std::move(session));
+      });
     return;
   }
 
@@ -136,7 +136,7 @@ LowEnergyDiscoveryManager::AddSession() {
 
 void LowEnergyDiscoveryManager::RemoveSession(
     LowEnergyDiscoverySession* session) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(session);
 
   // Only active sessions are allowed to call this method. If there is at least
@@ -154,7 +154,7 @@ void LowEnergyDiscoveryManager::RemoveSession(
 void LowEnergyDiscoveryManager::OnDeviceFound(
     const hci::LowEnergyScanResult& result,
     const common::ByteBuffer& data) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   auto device = device_cache_->FindDeviceByAddress(result.address);
   if (!device) {

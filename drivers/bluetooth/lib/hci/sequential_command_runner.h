@@ -6,12 +6,14 @@
 
 #include <queue>
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "lib/fxl/functional/cancelable_callback.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
 namespace hci {
@@ -33,7 +35,7 @@ class Transport;
 // SequentialCommandRunner is being constructed.
 class SequentialCommandRunner final {
  public:
-  SequentialCommandRunner(fxl::RefPtr<fxl::TaskRunner> task_runner,
+  SequentialCommandRunner(async_t* dispatcher,
                           fxl::RefPtr<Transport> transport);
   ~SequentialCommandRunner();
 
@@ -87,7 +89,7 @@ class SequentialCommandRunner final {
   void Reset();
   void NotifyStatusAndReset(Status status);
 
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
   fxl::RefPtr<Transport> transport_;
 
   using CommandQueue = std::queue<
@@ -105,6 +107,8 @@ class SequentialCommandRunner final {
   // This number is used to detect cancelation of a sequence from a
   // CommandCompleteCallback.
   uint64_t sequence_number_;
+
+  fxl::ThreadChecker thread_checker_;
 
   // The callback we pass to the HCI CommandChannel for command execution.
   // This can be cancelled and erased at any time.

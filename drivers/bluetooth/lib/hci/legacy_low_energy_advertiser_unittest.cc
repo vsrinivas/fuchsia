@@ -194,7 +194,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
           message_loop()->QuitNow();
         }
       },
-      message_loop()->task_runner());
+      dispatcher());
 
   LEConnectionParameters params;
   advertiser()->OnIncomingConnection(std::make_unique<Connection>(
@@ -279,7 +279,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
     }
   };
   test_device()->SetAdvertisingStateCallback(disabled_cb,
-                                             message_loop()->task_runner());
+                                             dispatcher());
 
   EXPECT_TRUE(advertiser()->StopAdvertising(addr));
   // Runs until we've _started_ disabling advetising.

@@ -31,18 +31,18 @@ SignalingChannel::SignalingChannel(fbl::RefPtr<Channel> chan,
 }
 
 SignalingChannel::~SignalingChannel() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  IsCreationThreadCurrent();
 }
 
 bool SignalingChannel::SendPacket(CommandCode code,
                                   uint8_t identifier,
                                   const common::ByteBuffer& data) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  IsCreationThreadCurrent();
   return Send(BuildPacket(code, identifier, data));
 }
 
 bool SignalingChannel::Send(std::unique_ptr<const common::ByteBuffer> packet) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  IsCreationThreadCurrent();
   FXL_DCHECK(packet);
   FXL_DCHECK(packet->size() >= sizeof(CommandHeader));
 
@@ -101,14 +101,14 @@ bool SignalingChannel::SendCommandReject(uint8_t identifier,
 }
 
 void SignalingChannel::OnChannelClosed() {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  IsCreationThreadCurrent();
   FXL_DCHECK(is_open());
 
   is_open_ = false;
 }
 
 void SignalingChannel::OnRxBFrame(const SDU& sdu) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  IsCreationThreadCurrent();
 
   if (!is_open())
     return;

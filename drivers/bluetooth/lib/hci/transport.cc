@@ -8,7 +8,6 @@
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/logging.h"
 
 #include "device_wrapper.h"
@@ -23,7 +22,10 @@ fxl::RefPtr<Transport> Transport::Create(
 }
 
 Transport::Transport(std::unique_ptr<DeviceWrapper> hci_device)
-    : hci_device_(std::move(hci_device)), is_initialized_(false) {
+    : hci_device_(std::move(hci_device)),
+      is_initialized_(false),
+      io_dispatcher_(nullptr),
+      closed_cb_dispatcher_(nullptr) {
   FXL_DCHECK(hci_device_);
 }
 
@@ -32,7 +34,7 @@ Transport::~Transport() {
   // from any thread and calling ShutDown() would be unsafe.
 }
 
-bool Transport::Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner) {
+bool Transport::Initialize(async_t* dispatcher) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(hci_device_);
   FXL_DCHECK(!command_channel_);
@@ -46,15 +48,16 @@ bool Transport::Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner) {
     return false;
   }
 
-  if (task_runner) {
-    io_task_runner_ = task_runner;
+  if (dispatcher) {
+    io_dispatcher_ = dispatcher;
   } else {
-    io_thread_ = fsl::CreateThread(&io_task_runner_, "hci-transport-io");
+    io_loop_ = std::make_unique<async::Loop>();
+    io_loop_->StartThread("hci-transport-io");
+    io_dispatcher_ = io_loop_->async();
   }
 
   // We watch for handle errors and closures to perform the necessary clean up.
   WatchChannelClosed(channel, cmd_channel_wait_);
-
   command_channel_ = std::make_unique<CommandChannel>(this, std::move(channel));
   command_channel_->Initialize();
 
@@ -89,14 +92,14 @@ bool Transport::InitializeACLDataChannel(
 
 void Transport::SetTransportClosedCallback(
     const fxl::Closure& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
   FXL_DCHECK(!closed_cb_);
-  FXL_DCHECK(!closed_cb_task_runner_);
+  FXL_DCHECK(!closed_cb_dispatcher_);
 
   closed_cb_ = callback;
-  closed_cb_task_runner_ = task_runner;
+  closed_cb_dispatcher_ = dispatcher;
 }
 
 void Transport::ShutDown() {
@@ -112,33 +115,29 @@ void Transport::ShutDown() {
     command_channel_->ShutDown();
   }
 
-  bool owns_thread = io_thread_.joinable();
-  io_task_runner_->PostTask([this, owns_thread, ref = fxl::Ref(this)] {
-    FXL_DCHECK(fsl::MessageLoop::GetCurrent());
-
+  async::PostTask(io_dispatcher_, [this] {
     cmd_channel_wait_.Cancel();
     if (acl_data_channel_) {
       acl_channel_wait_.Cancel();
     }
-
-    // If own the IO thread, end it's message loop.
-    if (owns_thread)
-      fsl::MessageLoop::GetCurrent()->QuitNow();
+    if (io_loop_) {
+      io_loop_->Shutdown();
+    }
   });
 
-  if (owns_thread)
-    io_thread_.join();
-
+  if (io_loop_) {
+    io_loop_->JoinThreads();
+  }
 
   // We avoid deallocating the channels here as they *could* still be accessed
-  // by other threads. It's OK to clear |io_task_runner_| as the channels hold
+  // by other threads. It's OK to clear |io_dispatcher_| as the channels hold
   // their own references to it.
   //
-  // Once |io_thread_| joins above, |io_task_runner_| may be defunct. However,
+  // Once |io_loop_| joins above, |io_dispatcher_| may be defunct. However,
   // the channels are allowed to keep posting tasks on it (which will never
   // execute).
 
-  io_task_runner_ = nullptr;
+  io_dispatcher_ = nullptr;
 
   is_initialized_ = false;
 
@@ -151,8 +150,8 @@ bool Transport::IsInitialized() const {
 
 void Transport::WatchChannelClosed(const zx::channel& channel,
                                    Waiter& wait) {
-  io_task_runner_->PostTask([handle = channel.get(), &wait,
-                             this, ref = fxl::Ref(this)] {
+  async::PostTask(io_dispatcher_,
+    [handle = channel.get(), &wait, this, ref = fxl::Ref(this)] {
     wait.set_object(handle);
     wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
     zx_status_t status = wait.Begin(async_get_default());
@@ -165,7 +164,7 @@ void Transport::WatchChannelClosed(const zx::channel& channel,
 }
 
 void Transport::OnChannelClosed(
-    async_t* async,
+    async_t* dispatcher,
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
@@ -180,9 +179,6 @@ void Transport::OnChannelClosed(
 }
 
 void Transport::NotifyClosedCallback() {
-  FXL_DCHECK(!io_task_runner_ ||
-             io_task_runner_->RunsTasksOnCurrentThread());
-
   // Clear the handlers so that we stop receiving events.
   cmd_channel_wait_.Cancel();
   if (acl_data_channel_) {
@@ -191,7 +187,7 @@ void Transport::NotifyClosedCallback() {
 
   FXL_LOG(INFO) << "hci: Transport: HCI channel(s) were closed";
   if (closed_cb_)
-    closed_cb_task_runner_->PostTask(closed_cb_);
+    async::PostTask(closed_cb_dispatcher_, closed_cb_);
 }
 
 }  // namespace hci

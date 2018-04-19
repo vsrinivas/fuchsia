@@ -98,7 +98,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunner) {
   auto cb = [&](const EventPacket& event) { cb_called++; };
 
   // Sequence 1 (test)
-  SequentialCommandRunner cmd_runner(message_loop()->task_runner(),
+  SequentialCommandRunner cmd_runner(dispatcher(),
                                      transport());
   EXPECT_FALSE(cmd_runner.HasQueuedCommands());
 
@@ -234,7 +234,7 @@ TEST_F(HCI_SequentialCommandRunnerTest, SequentialCommandRunnerCancel) {
   auto cb = [&](const EventPacket& event) { cb_called++; };
 
   // Sequence 1: Sequence will be cancelled after the first command.
-  SequentialCommandRunner cmd_runner(message_loop()->task_runner(),
+  SequentialCommandRunner cmd_runner(dispatcher(),
                                      transport());
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode), cb);
   cmd_runner.QueueCommand(CommandPacket::New(kTestOpCode),

@@ -9,6 +9,7 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/async/default.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -135,17 +136,17 @@ class FakeController : public FakeControllerBase,
   // Sets a callback to be invoked when the scan state changes.
   using ScanStateCallback = std::function<void(bool enabled)>;
   void SetScanStateCallback(const ScanStateCallback& callback,
-                            fxl::RefPtr<fxl::TaskRunner> task_runner);
+                            async_t* dispatcher);
 
   // Sets a callback to be invoked when the LE Advertising state changes.
   void SetAdvertisingStateCallback(const fxl::Closure& callback,
-                                   fxl::RefPtr<fxl::TaskRunner> task_runner);
+                                   async_t* dispatcher);
 
   // Sets a callback to be invoked on connection events.
   using ConnectionStateCallback = std::function<
       void(const common::DeviceAddress&, bool connected, bool canceled)>;
   void SetConnectionStateCallback(const ConnectionStateCallback& callback,
-                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
+                                  async_t* dispatcher);
 
   // Sets a callback to be invoked when LE connection parameters are updated for
   // a fake device.
@@ -154,7 +155,7 @@ class FakeController : public FakeControllerBase,
                          const hci::LEConnectionParameters&)>;
   void SetLEConnectionParametersCallback(
       const LEConnectionParametersCallback& callback,
-      fxl::RefPtr<fxl::TaskRunner> task_runner);
+      async_t* dispatcher);
 
   // Sends a HCI event with the given parameters.
   void SendEvent(hci::EventCode event_code, const common::ByteBuffer& payload);
@@ -198,9 +199,9 @@ class FakeController : public FakeControllerBase,
   void Disconnect(const common::DeviceAddress& addr);
 
  private:
-  // Returns the current thread's task runner.
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const {
-    return fsl::MessageLoop::GetCurrent()->task_runner();
+  // Returns the current thread's task dispatcher.
+  async_t* dispatcher() const {
+    return async_get_default();
   }
 
   // Finds and returns the FakeDevice with the given parameters or nullptr if no
@@ -283,16 +284,16 @@ class FakeController : public FakeControllerBase,
   std::vector<std::unique_ptr<FakeDevice>> le_devices_;
 
   ScanStateCallback scan_state_cb_;
-  fxl::RefPtr<fxl::TaskRunner> scan_state_cb_runner_;
+  async_t* scan_state_cb_dispatcher_;
 
   fxl::Closure advertising_state_cb_;
-  fxl::RefPtr<fxl::TaskRunner> advertising_state_cb_runner_;
+  async_t* advertising_state_cb_dispatcher_;
 
   ConnectionStateCallback conn_state_cb_;
-  fxl::RefPtr<fxl::TaskRunner> conn_state_cb_runner_;
+  async_t* conn_state_cb_dispatcher_;
 
   LEConnectionParametersCallback le_conn_params_cb_;
-  fxl::RefPtr<fxl::TaskRunner> le_conn_params_cb_runner_;
+  async_t* le_conn_params_cb_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeController);
 };

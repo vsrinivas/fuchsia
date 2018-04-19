@@ -89,7 +89,7 @@ void Connection::Close(StatusCode reason) {
   params->reason = reason;
 
   hci_->command_channel()->SendCommand(
-      std::move(disconn), fsl::MessageLoop::GetCurrent()->task_runner(),
+      std::move(disconn), async_get_default(),
       status_cb, kCommandStatusEventCode);
 }
 

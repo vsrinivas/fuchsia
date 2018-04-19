@@ -31,11 +31,11 @@ class GATT_RemoteServiceManagerTest : public ::btlib::testing::TestBase {
  protected:
   void SetUp() override {
     auto client =
-        std::make_unique<testing::FakeClient>(message_loop()->async());
+        std::make_unique<testing::FakeClient>(dispatcher());
     fake_client_ = client.get();
 
     mgr_ = std::make_unique<RemoteServiceManager>(std::move(client),
-                                                  message_loop()->async());
+                                                  dispatcher());
   }
 
   void TearDown() override { mgr_ = nullptr; }

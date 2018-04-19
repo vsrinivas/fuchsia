@@ -28,10 +28,19 @@ Channel::Channel(ChannelId id, hci::Connection::LinkType link_type)
 
 namespace internal {
 
+void RunTask(async_t* dispatcher, fbl::Closure task) {
+  if (dispatcher) {
+    async::PostTask(dispatcher, std::move(task));
+    return;
+  }
+  task();
+}
+
 ChannelImpl::ChannelImpl(ChannelId id,
                          fxl::WeakPtr<internal::LogicalLink> link,
                          std::list<PDU> buffered_pdus)
     : Channel(id, link->type()),
+      active_(false),
       dispatcher_(nullptr),
       link_(link),
       pending_rx_sdus_(std::move(buffered_pdus)) {
@@ -43,32 +52,41 @@ bool ChannelImpl::Activate(RxCallback rx_callback,
                            async_t* dispatcher) {
   FXL_DCHECK(rx_callback);
   FXL_DCHECK(closed_callback);
-  FXL_DCHECK(dispatcher);
 
-  std::lock_guard<std::mutex> lock(mtx_);
+  fbl::Closure task;
+  bool run_task = false;
 
-  // Activating on a closed link has no effect. We also clear this on
-  // deactivation to prevent a channel from being activated more than once.
-  if (!link_)
-    return false;
+  {
+    std::lock_guard<std::mutex> lock(mtx_);
 
-  FXL_DCHECK(!dispatcher_);
-  dispatcher_ = dispatcher;
-  rx_cb_ = std::move(rx_callback);
-  closed_cb_ = std::move(closed_callback);
+    // Activating on a closed link has no effect. We also clear this on
+    // deactivation to prevent a channel from being activated more than once.
+    if (!link_)
+      return false;
 
-  // Route the buffered packets.
-  if (!pending_rx_sdus_.empty()) {
-    async::PostTask(
-        dispatcher_,
-        [func = rx_cb_, pending = std::move(pending_rx_sdus_)]() mutable {
-          while (!pending.empty()) {
-            func(std::move(pending.front()));
-            pending.pop();
-          }
-        });
+    FXL_DCHECK(!active_);
+    active_ = true;
+    FXL_DCHECK(!dispatcher_);
+    dispatcher_ = dispatcher;
+    rx_cb_ = std::move(rx_callback);
+    closed_cb_ = std::move(closed_callback);
 
-    FXL_DCHECK(pending_rx_sdus_.empty());
+    // Route the buffered packets.
+    if (!pending_rx_sdus_.empty()) {
+      run_task = true;
+      dispatcher = dispatcher_;
+      task = [func = rx_cb_, pending = std::move(pending_rx_sdus_)]() mutable {
+        while (!pending.empty()) {
+          func(std::move(pending.front()));
+          pending.pop();
+        }
+      };
+      FXL_DCHECK(pending_rx_sdus_.empty());
+    }
+  }
+
+  if (run_task) {
+    RunTask(dispatcher, std::move(task));
   }
 
   return true;
@@ -78,12 +96,12 @@ void ChannelImpl::Deactivate() {
   std::lock_guard<std::mutex> lock(mtx_);
 
   // De-activating on a closed link has no effect.
-  if (!link_ || !dispatcher_) {
+  if (!link_ || !active_) {
     link_.reset();
     return;
   }
 
-  FXL_DCHECK(dispatcher_);
+  active_ = false;
   dispatcher_ = nullptr;
   rx_cb_ = {};
   closed_cb_ = {};
@@ -104,7 +122,7 @@ void ChannelImpl::SignalLinkError() {
   std::lock_guard<std::mutex> lock(mtx_);
 
   // Cannot signal an error on a closed or deactivated link.
-  if (!link_ || !dispatcher_)
+  if (!link_ || !active_)
     return;
 
   async::PostTask(link_->dispatcher(), [link = link_] { link->SignalError(); });
@@ -127,7 +145,7 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
   }
 
   // Drop the packet if the channel is inactive.
-  if (!dispatcher_)
+  if (!active_)
     return false;
 
   async::PostTask(link_->dispatcher(),
@@ -141,37 +159,52 @@ bool ChannelImpl::Send(std::unique_ptr<const common::ByteBuffer> sdu) {
 }
 
 void ChannelImpl::OnLinkClosed() {
-  std::lock_guard<std::mutex> lock(mtx_);
+  async_t* dispatcher;
+  fbl::Closure task;
 
-  if (!link_ || !dispatcher_) {
-    link_.reset();
-    return;
+  {
+    std::lock_guard<std::mutex> lock(mtx_);
+
+    if (!link_ || !active_) {
+      link_.reset();
+      return;
+    }
+
+    FXL_DCHECK(closed_cb_);
+    dispatcher = dispatcher_;
+    task = std::move(closed_cb_);
+    active_ = false;
+    dispatcher_ = nullptr;
   }
 
-  FXL_DCHECK(closed_cb_);
-
-  async::PostTask(dispatcher_, std::move(closed_cb_));
-  dispatcher_ = nullptr;
+  RunTask(dispatcher, std::move(task));
 }
 
 void ChannelImpl::HandleRxPdu(PDU&& pdu) {
-  // TODO(armansito): This is the point where the channel mode implementation
-  // should take over the PDU. Since we only support basic mode: SDU == PDU.
+  async_t* dispatcher;
+  fbl::Closure task;
 
-  std::lock_guard<std::mutex> lock(mtx_);
+  {
+    // TODO(armansito): This is the point where the channel mode implementation
+    // should take over the PDU. Since we only support basic mode: SDU == PDU.
 
-  // This will only be called on a live link.
-  FXL_DCHECK(link_);
+    std::lock_guard<std::mutex> lock(mtx_);
 
-  // Buffer the packets if the channel hasn't been activated.
-  if (!dispatcher_) {
-    pending_rx_sdus_.emplace(std::forward<PDU>(pdu));
-    return;
+    // This will only be called on a live link.
+    FXL_DCHECK(link_);
+
+    // Buffer the packets if the channel hasn't been activated.
+    if (!active_) {
+      pending_rx_sdus_.emplace(std::forward<PDU>(pdu));
+      return;
+    }
+
+    dispatcher = dispatcher_;
+    task = [func = rx_cb_, pdu = std::move(pdu)] { func(pdu); };
+
+    FXL_DCHECK(rx_cb_);
   }
-
-  FXL_DCHECK(rx_cb_);
-  async::PostTask(dispatcher_,
-                  [func = rx_cb_, pdu = std::move(pdu)] { func(pdu); });
+  RunTask(dispatcher, std::move(task));
 }
 
 }  // namespace internal

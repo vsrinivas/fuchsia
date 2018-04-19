@@ -13,7 +13,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/random/uuid.h"
 
 #include "bredr_discovery_manager.h"
@@ -29,6 +28,7 @@ Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
                  fbl::RefPtr<l2cap::L2CAP> l2cap,
                  fbl::RefPtr<gatt::GATT> gatt)
     : identifier_(fxl::GenerateUUID()),
+      dispatcher_(async_get_default()),
       hci_(hci),
       init_state_(State::kNotInitialized),
       l2cap_(l2cap),
@@ -38,13 +38,11 @@ Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
   FXL_DCHECK(l2cap_);
   FXL_DCHECK(gatt_);
 
-  auto message_loop = fsl::MessageLoop::GetCurrent();
-  FXL_DCHECK(message_loop)
-      << "gap: Adapter: Must be created on a valid MessageLoop";
+  FXL_DCHECK(dispatcher_)
+      << "gap: Adapter: Must be created on a thread with a dispatcher";
 
-  task_runner_ = message_loop->task_runner();
   init_seq_runner_ =
-      std::make_unique<hci::SequentialCommandRunner>(task_runner_, hci_);
+      std::make_unique<hci::SequentialCommandRunner>(dispatcher_, hci_);
 
   auto self = weak_ptr_factory_.GetWeakPtr();
   hci_->SetTransportClosedCallback(
@@ -52,7 +50,7 @@ Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
         if (self)
           self->OnTransportClosed();
       },
-      task_runner_);
+      dispatcher_);
 }
 
 Adapter::~Adapter() {
@@ -62,7 +60,7 @@ Adapter::~Adapter() {
 
 bool Adapter::Initialize(const InitializeCallback& callback,
                          const fxl::Closure& transport_closed_cb) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_DCHECK(transport_closed_cb);
 
@@ -151,7 +149,7 @@ bool Adapter::Initialize(const InitializeCallback& callback,
 }
 
 void Adapter::ShutDown() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_VLOG(1) << "gap: shutting down";
 
   if (IsInitializing()) {
@@ -167,7 +165,7 @@ bool Adapter::IsDiscovering() const {
 }
 
 void Adapter::InitializeStep2(const InitializeCallback& callback) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(IsInitializing());
 
   // Low Energy MUST be supported. We don't support BR/EDR-only controllers.
@@ -281,7 +279,7 @@ void Adapter::InitializeStep2(const InitializeCallback& callback) {
 }
 
 void Adapter::InitializeStep3(const InitializeCallback& callback) {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(IsInitializing());
 
   if (!state_.bredr_data_buffer_info().IsAvailable() &&
@@ -407,7 +405,7 @@ void Adapter::InitializeStep4(const InitializeCallback& callback) {
 
   hci_le_advertiser_ = std::make_unique<hci::LegacyLowEnergyAdvertiser>(hci_);
   hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
-      hci_, task_runner_, std::move(incoming_conn_cb));
+      hci_, dispatcher_, std::move(incoming_conn_cb));
 
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
@@ -455,7 +453,7 @@ uint64_t Adapter::BuildLEEventMask() {
 }
 
 void Adapter::CleanUp() {
-  FXL_DCHECK(task_runner_->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   init_state_ = State::kNotInitialized;
   state_ = AdapterState();

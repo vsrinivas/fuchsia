@@ -4,25 +4,26 @@
 
 #pragma once
 
+#include <lib/async/dispatcher.h>
+
 #include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace hcitool {
 
 class CommandData final {
  public:
   CommandData(::btlib::hci::CommandChannel* cmd_channel,
-              fxl::RefPtr<fxl::TaskRunner> task_runner)
-      : cmd_channel_(cmd_channel), task_runner_(task_runner) {}
+              async_t* dispatcher)
+      : cmd_channel_(cmd_channel), dispatcher_(dispatcher) {}
 
   ::btlib::hci::CommandChannel* cmd_channel() const { return cmd_channel_; }
-  fxl::RefPtr<fxl::TaskRunner> task_runner() const { return task_runner_; }
+  async_t* dispatcher() const { return dispatcher_; }
 
  private:
   ::btlib::hci::CommandChannel* cmd_channel_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
 };
 
 void RegisterCommands(const CommandData* data,

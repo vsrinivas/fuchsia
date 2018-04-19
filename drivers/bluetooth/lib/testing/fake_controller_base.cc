@@ -4,6 +4,7 @@
 
 #include "fake_controller_base.h"
 
+#include <lib/async/default.h>
 #include <zircon/status.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"

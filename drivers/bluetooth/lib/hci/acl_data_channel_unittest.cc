@@ -103,7 +103,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketBREDRBuffer) {
   test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
+  async::PostTask(dispatcher(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -179,7 +179,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketLEBuffer) {
   // Queue up 12 packets in total, distributed among the two connection handles
   // and link types. Since the BR/EDR MTU is zero, we expect to only see LE
   // packets transmitted.
-  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
+  async::PostTask(dispatcher(), [this, kHandle0, kHandle1] {
     for (size_t i = 0; i < kTotalAttempts; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       auto packet =
@@ -258,7 +258,7 @@ TEST_F(HCI_ACLDataChannelTest, SendLEPacketBothBuffers) {
   test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
+  async::PostTask(dispatcher(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -332,7 +332,7 @@ TEST_F(HCI_ACLDataChannelTest, SendBREDRPacketBothBuffers) {
   test_device()->SetDataCallback(data_callback, dispatcher());
 
   // Queue up 10 packets in total, distributed among the two connection handles.
-  async::PostTask(message_loop()->async(), [this, kHandle0, kHandle1] {
+  async::PostTask(dispatcher(), [this, kHandle0, kHandle1] {
     for (int i = 0; i < 10; ++i) {
       ConnectionHandle handle = (i % 2) ? kHandle1 : kHandle0;
       Connection::LinkType ll_type =
@@ -447,7 +447,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketFromMultipleThreads) {
   };
 
   std::thread t1, t2, t3;
-  async::PostTask(message_loop()->async(), [&] {
+  async::PostTask(dispatcher(), [&] {
     t1 = std::thread(thread_func, kHandle0);
     t2 = std::thread(thread_func, kHandle1);
     t3 = std::thread(thread_func, kHandle2);
@@ -561,7 +561,7 @@ TEST_F(HCI_ACLDataChannelTest, SendPacketsAtomically) {
   // Send each packet sequence on a different thread and make sure that each
   // sequence arrives atomically.
   std::thread threads[kThreadCount];
-  async::PostTask(message_loop()->async(), [this, &packets, &threads] {
+  async::PostTask(dispatcher(), [this, &packets, &threads] {
     auto thread_func = [&packets, this](size_t i) {
       EXPECT_TRUE(acl_data_channel()->SendPackets(std::move(packets[i]),
                                                   Connection::LinkType::kLE));
@@ -628,7 +628,7 @@ TEST_F(HCI_ACLDataChannelTest, ReceiveData) {
   // Valid packet on handle 2.
   auto valid1 = common::CreateStaticByteBuffer(0x02, 0x00, 0x01, 0x00, 0x00);
 
-  async::PostTask(message_loop()->async(), [&, this] {
+  async::PostTask(dispatcher(), [&, this] {
     test_device()->SendACLDataChannelPacket(invalid0);
     test_device()->SendACLDataChannelPacket(invalid1);
     test_device()->SendACLDataChannelPacket(valid0);
@@ -648,9 +648,9 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallback) {
   bool closed_cb_called = false;
   auto closed_cb = [&closed_cb_called, this] { closed_cb_called = true; };
   transport()->SetTransportClosedCallback(closed_cb,
-                                          message_loop()->task_runner());
+                                          dispatcher());
 
-  async::PostTask(message_loop()->async(),
+  async::PostTask(dispatcher(),
                   [this] { test_device()->CloseACLDataChannel(); });
   RunUntilIdle();
   EXPECT_TRUE(closed_cb_called);
@@ -662,11 +662,11 @@ TEST_F(HCI_ACLDataChannelTest, TransportClosedCallbackBothChannels) {
   int closed_cb_count = 0;
   auto closed_cb = [&closed_cb_count] { closed_cb_count++; };
   transport()->SetTransportClosedCallback(closed_cb,
-                                          message_loop()->task_runner());
+                                          dispatcher());
 
   // We'll send closed events for both channels. The closed callback should get
   // invoked only once.
-  async::PostTask(message_loop()->async(), [this] {
+  async::PostTask(dispatcher(), [this] {
     test_device()->CloseACLDataChannel();
     test_device()->CloseCommandChannel();
   });

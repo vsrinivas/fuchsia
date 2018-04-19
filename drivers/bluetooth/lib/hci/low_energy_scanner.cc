@@ -27,17 +27,17 @@ LowEnergyScanResult::LowEnergyScanResult(const common::DeviceAddress& address,
 
 LowEnergyScanner::LowEnergyScanner(Delegate* delegate,
                                    fxl::RefPtr<Transport> hci,
-                                   fxl::RefPtr<fxl::TaskRunner> task_runner)
+                                   async_t* dispatcher)
     : state_(State::kIdle),
       delegate_(delegate),
-      task_runner_(task_runner),
+      dispatcher_(dispatcher),
       transport_(hci) {
   FXL_DCHECK(delegate_);
   FXL_DCHECK(transport_);
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(dispatcher_);
 
   hci_cmd_runner_ =
-      std::make_unique<SequentialCommandRunner>(task_runner_, transport_);
+      std::make_unique<SequentialCommandRunner>(dispatcher_, transport_);
 }
 
 }  // namespace hci

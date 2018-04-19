@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/optional.h"
@@ -19,7 +20,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
+#include "lib/fxl/synchronization/thread_checker.h"
 
 namespace btlib {
 namespace hci {
@@ -41,7 +42,7 @@ class LowEnergyConnector {
   // The constructor expects the following arguments:
   //   - |hci|: The HCI transport this should operate on.
   //
-  //   - |task_runner|: The task runner that will be used to run all
+  //   - |dispatcher|: The dispatcher that will be used to run all
   //     asynchronous operations. This must be bound to the thread on which the
   //     LowEnergyConnector is created.
   //
@@ -50,7 +51,7 @@ class LowEnergyConnector {
   using IncomingConnectionDelegate =
       std::function<void(ConnectionPtr connection)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
-                     fxl::RefPtr<fxl::TaskRunner> task_runner,
+                     async_t* dispatcher,
                      IncomingConnectionDelegate delegate);
 
   // Deleting an instance cancels any pending connection request.
@@ -119,7 +120,7 @@ class LowEnergyConnector {
   void OnCreateConnectionTimeout();
 
   // Task runner for all asynchronous tasks.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
 
   // The HCI transport.
   fxl::RefPtr<Transport> hci_;
@@ -140,6 +141,8 @@ class LowEnergyConnector {
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;
+
+  fxl::ThreadChecker thread_checker_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

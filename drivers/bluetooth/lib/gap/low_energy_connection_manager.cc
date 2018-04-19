@@ -29,16 +29,16 @@ class LowEnergyConnection {
  public:
   LowEnergyConnection(const std::string& id,
                       std::unique_ptr<hci::Connection> link,
-                      fxl::RefPtr<fxl::TaskRunner> task_runner,
+                      async_t* dispatcher,
                       fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr)
       : id_(id),
         link_(std::move(link)),
-        task_runner_(task_runner),
+        dispatcher_(dispatcher),
         conn_mgr_(conn_mgr),
         weak_ptr_factory_(this) {
     FXL_DCHECK(!id_.empty());
     FXL_DCHECK(link_);
-    FXL_DCHECK(task_runner_);
+    FXL_DCHECK(dispatcher_);
     FXL_DCHECK(conn_mgr_);
   }
 
@@ -96,7 +96,7 @@ class LowEnergyConnection {
     };
 
     l2cap->OpenFixedChannel(link_->handle(), l2cap::kATTChannelId, callback,
-                            async_get_default());
+                            dispatcher_);
   }
 
   size_t ref_count() const { return refs_.size(); }
@@ -116,7 +116,7 @@ class LowEnergyConnection {
 
   std::string id_;
   std::unique_ptr<hci::Connection> link_;
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  async_t* dispatcher_;
   fxl::WeakPtr<LowEnergyConnectionManager> conn_mgr_;
 
   // LowEnergyConnectionManager is responsible for making sure that these
@@ -184,13 +184,13 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
     fbl::RefPtr<gatt::GATT> gatt)
     : hci_(hci),
       request_timeout_ms_(kLECreateConnectionTimeoutMs),
-      task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+      dispatcher_(async_get_default()),
       device_cache_(device_cache),
       l2cap_(l2cap),
       gatt_(gatt),
       connector_(connector),
       weak_ptr_factory_(this) {
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(device_cache_);
   FXL_DCHECK(l2cap_);
   FXL_DCHECK(gatt_);
@@ -209,7 +209,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
         if (self)
           self->OnDisconnectionComplete(event);
       },
-      task_runner_);
+      dispatcher_);
 
   conn_update_cmpl_handler_id_ = hci_->command_channel()->AddLEMetaEventHandler(
       hci::kLEConnectionUpdateCompleteSubeventCode,
@@ -217,7 +217,7 @@ LowEnergyConnectionManager::LowEnergyConnectionManager(
         if (self)
           self->OnLEConnectionUpdateComplete(event);
       },
-      task_runner_);
+      dispatcher_);
 }
 
 LowEnergyConnectionManager::~LowEnergyConnectionManager() {
@@ -294,8 +294,8 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
   // succeed.
   auto conn_ref = AddConnectionRef(device_identifier);
   if (conn_ref) {
-    task_runner_->PostTask(
-        fxl::MakeCopyable([conn_ref = std::move(conn_ref),
+    async::PostTask(dispatcher_,
+        [conn_ref = std::move(conn_ref),
                            callback = std::move(callback)]() mutable {
           // Do not report success if the link has been disconnected (e.g. via
           // Disconnect() or other circumstances).
@@ -307,7 +307,7 @@ bool LowEnergyConnectionManager::Connect(const std::string& device_identifier,
           } else {
             callback(hci::Status(), std::move(conn_ref));
           }
-        }));
+        });
 
     return true;
   }
@@ -493,11 +493,11 @@ LowEnergyConnectionRefPtr LowEnergyConnectionManager::InitializeConnection(
 
   l2cap_->RegisterLE(link->handle(), link->role(),
                      std::move(conn_param_update_cb), std::move(link_error_cb),
-                     async_get_default());
+                     dispatcher_);
 
   // Initialize connection.
   auto conn = std::make_unique<internal::LowEnergyConnection>(
-      device_id, std::move(link), task_runner_, weak_ptr_factory_.GetWeakPtr());
+      device_id, std::move(link), dispatcher_, weak_ptr_factory_.GetWeakPtr());
   conn->InitializeFixedChannels(l2cap_, gatt_);
 
   auto first_ref = conn->AddRef();
@@ -800,7 +800,7 @@ void LowEnergyConnectionManager::UpdateConnectionParams(
     }
   };
 
-  hci_->command_channel()->SendCommand(std::move(command), task_runner_,
+  hci_->command_channel()->SendCommand(std::move(command), dispatcher_,
                                        status_cb, hci::kCommandStatusEventCode);
 }
 

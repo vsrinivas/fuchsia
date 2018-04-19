@@ -47,7 +47,7 @@ class FakeControllerTest : public TestBase {
   // TestBase overrides:
   void SetUp() override {
     SetUpTransport();
-    transport_->Initialize(fsl::MessageLoop::GetCurrent()->task_runner());
+    transport_->Initialize(fsl::MessageLoop::GetCurrent()->async());
   }
 
   void TearDown() override {
@@ -58,9 +58,10 @@ class FakeControllerTest : public TestBase {
       transport_->ShutDown();
     }
 
+    RunUntilIdle();
     transport_ = nullptr;
     test_device_ = nullptr;
-  }
+ }
 
   // Creates a hci::Transport without directly initializing it (unlike SetUp(),
   // which initializes the CommandChannel).
@@ -81,7 +82,7 @@ class FakeControllerTest : public TestBase {
     transport_->acl_data_channel()->SetDataRxHandler(
         std::bind(&FakeControllerTest<FakeControllerType>::OnDataReceived, this,
                   std::placeholders::_1),
-        TestBase::message_loop()->async());
+        TestBase::dispatcher());
 
     return true;
   }
@@ -144,7 +145,7 @@ class FakeControllerTest : public TestBase {
       return;
 
     async::PostTask(
-        TestBase::message_loop()->async(),
+        TestBase::dispatcher(),
         fxl::MakeCopyable([this, packet = std::move(data_packet)]() mutable {
           data_received_callback_(std::move(packet));
         }));

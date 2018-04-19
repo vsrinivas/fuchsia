@@ -10,16 +10,16 @@
 #include <thread>
 
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace hci {
@@ -44,7 +44,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
       std::unique_ptr<DeviceWrapper> hci_device);
 
   // Initializes the HCI command channel and starts the I/O event loop.
-  // I/O events are run on the task_runner given, or a new I/O thread
+  // I/O events are run on the dispatcher given, or a new I/O thread
   // is started if one is not given.
   //
   // The ACLDataChannel will be left uninitialized. The ACLDataChannel must be
@@ -54,7 +54,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // This method is NOT thread-safe! Care must be taken such that the public
   // methods of this class and those of the individual channel classes are not
   // called in a manner that would race with the execution of Initialize().
-  bool Initialize(fxl::RefPtr<fxl::TaskRunner> task_runner = nullptr);
+  bool Initialize(async_t* dispatcher = nullptr);
 
   // Initializes the ACL data channel with the given parameters. Returns false
   // if an error occurs during initialization. Initialize() must have been
@@ -81,22 +81,22 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // Returns a pointer to the HCI ACL data flow control handler.
   ACLDataChannel* acl_data_channel() const { return acl_data_channel_.get(); }
 
-  // Returns the I/O thread task runner. If this is called when this Transport
+  // Returns the I/O thread dispatcher. If this is called when this Transport
   // instance is not initialized, the return value will be nullptr.
-  fxl::RefPtr<fxl::TaskRunner> io_task_runner() const {
-    return io_task_runner_;
+  async_t*  io_dispatcher() const {
+    return io_dispatcher_;
   }
 
   // Set a callback that should be invoked when any one of the underlying
   // channels gets closed for any reason (e.g. the HCI device has disappeared)
-  // and the task runner on which the callback should be posted.
+  // and the dispatcher on which the callback should be posted.
   //
   // When this callback is called the channels will be in an invalid state and
   // packet processing is no longer guaranteed to work. It is the responsibility
   // of the callback implementation to clean up this Transport instance by
   // calling ShutDown() and/or deleting it.
   void SetTransportClosedCallback(const fxl::Closure& callback,
-                                  fxl::RefPtr<fxl::TaskRunner> task_runner);
+                                  async_t* dispatcher);
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(Transport);
@@ -105,7 +105,7 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   ~Transport();
 
   // Channel closed callback.
-  void OnChannelClosed(async_t* async,
+  void OnChannelClosed(async_t* dispatcher,
                        async::WaitBase* wait,
                        zx_status_t status,
                        const zx_packet_signal_t* signal);
@@ -127,15 +127,16 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   // The state of the initialization sequence.
   std::atomic_bool is_initialized_;
 
-  // The thread that performs all HCI I/O operations.
-  std::thread io_thread_;
+  // The loop that performs all HCI I/O operations. This is initialized with its
+  // own separate thread.
+  std::unique_ptr<async::Loop> io_loop_;
 
   // async::Waits for the command and ACL channels
   Waiter cmd_channel_wait_{this};
   Waiter acl_channel_wait_{this};
 
-  // The task runner used for posting tasks on the HCI transport I/O thread.
-  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
+  // The dispatcher used for posting tasks on the HCI transport I/O thread.
+  async_t* io_dispatcher_;
 
   // The ACL data flow control handler.
   std::unique_ptr<ACLDataChannel> acl_data_channel_;
@@ -144,9 +145,9 @@ class Transport final : public fxl::RefCountedThreadSafe<Transport> {
   std::unique_ptr<CommandChannel> command_channel_;
 
   // Callback invoked when the transport is closed (due to a channel error) and
-  // its task runner.
+  // its dispatcher.
   fxl::Closure closed_cb_;
-  fxl::RefPtr<fxl::TaskRunner> closed_cb_task_runner_;
+  async_t* closed_cb_dispatcher_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Transport);
 };

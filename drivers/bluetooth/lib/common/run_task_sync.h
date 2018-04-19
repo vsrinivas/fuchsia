@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include <lib/async/dispatcher.h>
+
 #include "lib/fxl/functional/closure.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 namespace common {
@@ -18,8 +18,7 @@ namespace common {
 //
 // NOTE: This should generally be avoided. This is primarily intended for
 // synchronous setup/shutdown sequences and unit tests.
-void RunTaskSync(const fxl::Closure& callback,
-                 fxl::RefPtr<fxl::TaskRunner> task_runner);
+void RunTaskSync(const fxl::Closure& callback, async_t* dispatcher);
 
 }  // namespace common
 }  // namespace btlib

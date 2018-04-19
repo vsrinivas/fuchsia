@@ -5,6 +5,7 @@
 #include "fake_controller.h"
 
 #include <endian.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
@@ -119,7 +120,14 @@ FakeController::LEAdvertisingState::LEAdvertisingState()
 }
 
 FakeController::FakeController()
-    : next_conn_handle_(0u), le_connect_pending_(false), next_le_sig_id_(1u) {}
+    : next_conn_handle_(0u),
+    le_connect_pending_(false),
+    next_le_sig_id_(1u),
+    scan_state_cb_dispatcher_(nullptr),
+    advertising_state_cb_dispatcher_(nullptr),
+    conn_state_cb_dispatcher_(nullptr),
+    le_conn_params_cb_dispatcher_(nullptr) {
+}
 
 FakeController::~FakeController() { Stop(); }
 
@@ -139,42 +147,42 @@ void FakeController::AddLEDevice(std::unique_ptr<FakeDevice> le_device) {
 
 void FakeController::SetScanStateCallback(
     const ScanStateCallback& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
 
   scan_state_cb_ = callback;
-  scan_state_cb_runner_ = task_runner;
+  scan_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetAdvertisingStateCallback(
     const fxl::Closure& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
 
   advertising_state_cb_ = callback;
-  advertising_state_cb_runner_ = task_runner;
+  advertising_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetConnectionStateCallback(
     const ConnectionStateCallback& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
 
   conn_state_cb_ = callback;
-  conn_state_cb_runner_ = task_runner;
+  conn_state_cb_dispatcher_ = dispatcher;
 }
 
 void FakeController::SetLEConnectionParametersCallback(
     const LEConnectionParametersCallback& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
 
   le_conn_params_cb_ = callback;
-  le_conn_params_cb_runner_ = task_runner;
+  le_conn_params_cb_dispatcher_ = dispatcher;
 }
 
 FakeDevice* FakeController::FindDeviceByAddress(
@@ -311,7 +319,7 @@ void FakeController::SendL2CAPCFrame(hci::ConnectionHandle handle,
 
 void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
                                       hci::LEConnectionRole role) {
-  task_runner()->PostTask([addr, role, this] {
+  async::PostTask(dispatcher(), [addr, role, this] {
     FakeDevice* dev = FindDeviceByAddress(addr);
     if (!dev) {
       FXL_LOG(WARNING) << "FakeController: no device found with address: "
@@ -360,38 +368,38 @@ void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
 void FakeController::L2CAPConnectionParameterUpdate(
     const common::DeviceAddress& addr,
     const hci::LEPreferredConnectionParameters& params) {
-  task_runner()->PostTask([addr, params, this] {
-    FakeDevice* dev = FindDeviceByAddress(addr);
-    if (!dev) {
-      FXL_LOG(WARNING) << "FakeController: no device found with address: "
-                       << addr.ToString();
-      return;
-    }
+      async::PostTask(dispatcher(), [addr, params, this] {
+        FakeDevice* dev = FindDeviceByAddress(addr);
+        if (!dev) {
+          FXL_LOG(WARNING) << "FakeController: no device found with address: "
+                          << addr.ToString();
+          return;
+        }
 
-    if (!dev->connected()) {
-      FXL_LOG(WARNING) << "FakeController: device not connected";
-      return;
-    }
+        if (!dev->connected()) {
+          FXL_LOG(WARNING) << "FakeController: device not connected";
+          return;
+        }
 
-    FXL_DCHECK(!dev->logical_links().empty());
+        FXL_DCHECK(!dev->logical_links().empty());
 
-    l2cap::ConnectionParameterUpdateRequestPayload payload;
-    payload.interval_min = htole16(params.min_interval());
-    payload.interval_max = htole16(params.max_interval());
-    payload.slave_latency = htole16(params.max_latency());
-    payload.timeout_multiplier = htole16(params.supervision_timeout());
+        l2cap::ConnectionParameterUpdateRequestPayload payload;
+        payload.interval_min = htole16(params.min_interval());
+        payload.interval_max = htole16(params.max_interval());
+        payload.slave_latency = htole16(params.max_latency());
+        payload.timeout_multiplier = htole16(params.supervision_timeout());
 
-    // TODO(armansito): Instead of picking the first handle we should pick the
-    // handle that matches the current LE-U link.
-    SendL2CAPCFrame(*dev->logical_links().begin(), true,
-                    l2cap::kConnectionParameterUpdateRequest,
-                    NextL2CAPCommandId(),
-                    common::BufferView(&payload, sizeof(payload)));
-  });
+        // TODO(armansito): Instead of picking the first handle we should pick
+        // the handle that matches the current LE-U link.
+        SendL2CAPCFrame(*dev->logical_links().begin(), true,
+                        l2cap::kConnectionParameterUpdateRequest,
+                        NextL2CAPCommandId(),
+                        common::BufferView(&payload, sizeof(payload)));
+      });
 }
 
 void FakeController::Disconnect(const common::DeviceAddress& addr) {
-  task_runner()->PostTask([addr, this] {
+  async::PostTask(dispatcher(), [addr, this] {
     FakeDevice* dev = FindDeviceByAddress(addr);
     if (!dev || !dev->connected()) {
       FXL_LOG(WARNING)
@@ -457,7 +465,7 @@ void FakeController::SendAdvertisingReports() {
   // We'll send new reports for the same devices if duplicate filtering is
   // disabled.
   if (!le_scan_state_.filter_duplicates) {
-    task_runner()->PostTask([this] { SendAdvertisingReports(); });
+    async::PostTask(dispatcher(), [this] { SendAdvertisingReports(); });
   }
 }
 
@@ -465,8 +473,8 @@ void FakeController::NotifyAdvertisingState() {
   if (!advertising_state_cb_)
     return;
 
-  FXL_DCHECK(advertising_state_cb_runner_);
-  advertising_state_cb_runner_->PostTask(advertising_state_cb_);
+  FXL_DCHECK(advertising_state_cb_dispatcher_);
+  async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_);
 }
 
 void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
@@ -475,8 +483,8 @@ void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
   if (!conn_state_cb_)
     return;
 
-  FXL_DCHECK(conn_state_cb_runner_);
-  conn_state_cb_runner_->PostTask([
+  FXL_DCHECK(conn_state_cb_dispatcher_);
+  async::PostTask(conn_state_cb_dispatcher_, [
     addr, connected, canceled, cb = conn_state_cb_
   ] { cb(addr, connected, canceled); });
 }
@@ -487,8 +495,8 @@ void FakeController::NotifyLEConnectionParameters(
   if (!le_conn_params_cb_)
     return;
 
-  FXL_DCHECK(le_conn_params_cb_runner_);
-  le_conn_params_cb_runner_->PostTask(
+  FXL_DCHECK(le_conn_params_cb_dispatcher_);
+  async::PostTask(le_conn_params_cb_dispatcher_,
       [addr, params, cb = le_conn_params_cb_] { cb(addr, params); });
 }
 
@@ -588,7 +596,8 @@ void FakeController::OnLECreateConnectionCommandReceived(
     SendLEMetaEvent(hci::kLEConnectionCompleteSubeventCode,
                     common::BufferView(&response, sizeof(response)));
   });
-  task_runner()->PostTask([cb = pending_le_connect_rsp_.callback()] { cb(); });
+  async::PostTask(dispatcher(),
+      [cb = pending_le_connect_rsp_.callback()] { cb(); });
 }
 
 void FakeController::OnLEConnectionUpdateCommandReceived(
@@ -935,8 +944,8 @@ void FakeController::OnCommandPacketReceived(
       // event. This guarantees that single-threaded unit tests receive the scan
       // state update BEFORE the HCI command sequence terminates.
       if (scan_state_cb_) {
-        FXL_DCHECK(scan_state_cb_runner_);
-        scan_state_cb_runner_->PostTask([
+        FXL_DCHECK(scan_state_cb_dispatcher_);
+        async::PostTask(scan_state_cb_dispatcher_, [
           cb = scan_state_cb_, enabled = le_scan_state_.enabled
         ] { cb(enabled); });
       }

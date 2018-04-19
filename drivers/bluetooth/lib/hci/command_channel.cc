@@ -43,19 +43,19 @@ CommandChannel::TransactionData::TransactionData(
     OpCode opcode,
     EventCode complete_event_code,
     CommandCallback callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
+    async_t* dispatcher)
     : id_(id),
       opcode_(opcode),
       complete_event_code_(complete_event_code),
       callback_(std::move(callback)),
-      task_runner_(task_runner),
+      dispatcher_(dispatcher),
       handler_id_(0u) {
   FXL_DCHECK(id != 0u);
-  FXL_DCHECK(task_runner_);
+  FXL_DCHECK(dispatcher_);
 }
 
 CommandChannel::TransactionData::~TransactionData() {
-  if (!callback_ || !task_runner_) {
+  if (!callback_ || !dispatcher_) {
     return;
   }
 
@@ -88,15 +88,12 @@ void CommandChannel::TransactionData::Complete(
   if (!callback_) {
     return;
   }
-  if (task_runner_->RunsTasksOnCurrentThread()) {
-    callback_(id_, *event);
-  } else {
-    task_runner_->PostTask(fxl::MakeCopyable([event = std::move(event),
-                                              callback = std::move(callback_),
-                                              transaction_id = id_]() mutable {
-      callback(transaction_id, *event);
-    }));
-  }
+  async::PostTask(dispatcher_,
+      [ event = std::move(event),
+        callback = std::move(callback_),
+        transaction_id = id_]() mutable {
+    callback(transaction_id, *event);
+  });
   callback_ = nullptr;
 }
 
@@ -140,8 +137,8 @@ void CommandChannel::Initialize() {
     FXL_LOG(INFO) << "hci: CommandChannel: started I/O handler";
   };
 
-  io_task_runner_ = transport_->io_task_runner();
-  common::RunTaskSync(setup_handler_task, io_task_runner_);
+  io_dispatcher_ = transport_->io_dispatcher();
+  common::RunTaskSync(setup_handler_task, io_dispatcher_);
 
   if (channel_wait_.object() == ZX_HANDLE_INVALID)
     return;
@@ -158,13 +155,11 @@ void CommandChannel::ShutDown() {
 
   FXL_LOG(INFO) << "hci: CommandChannel: shutting down";
 
-  common::RunTaskSync([this] { ShutDownInternal(); }, io_task_runner_);
-  io_task_runner_ = nullptr;
+  common::RunTaskSync([this] { ShutDownInternal(); }, io_dispatcher_);
+  io_dispatcher_ = nullptr;
 }
 
 void CommandChannel::ShutDownInternal() {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-
   FXL_LOG(INFO) << "hci: CommandChannel: Removing I/O handler";
 
   // Prevent new command packets from being queued.
@@ -195,7 +190,7 @@ void CommandChannel::ShutDownInternal() {
 
 CommandChannel::TransactionId CommandChannel::SendCommand(
     std::unique_ptr<CommandPacket> command_packet,
-    fxl::RefPtr<fxl::TaskRunner> task_runner,
+    async_t* dispatcher,
     CommandCallback callback,
     const EventCode complete_event_code) {
   if (!is_initialized_) {
@@ -230,14 +225,14 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
   TransactionId id = next_transaction_id_++;
   auto data = std::make_unique<TransactionData>(
       id, command_packet->opcode(), complete_event_code, std::move(callback),
-      task_runner);
+      dispatcher);
   QueuedCommand command(std::move(command_packet), std::move(data));
   if (IsAsync(complete_event_code)) {
     std::lock_guard<std::mutex> event_lock(event_handler_mutex_);
     MaybeAddTransactionHandler(command.data.get());
   }
   send_queue_.push_back(std::move(command));
-  io_task_runner_->PostTask(
+  async::PostTask(io_dispatcher_,
       std::bind(&CommandChannel::TrySendQueuedCommands, this));
   return id;
 }
@@ -245,7 +240,7 @@ CommandChannel::TransactionId CommandChannel::SendCommand(
 CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
     EventCode event_code,
     EventCallback event_callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   if (event_code == kCommandStatusEventCode ||
       event_code == kCommandCompleteEventCode ||
       event_code == kLEMetaEventCode) {
@@ -260,7 +255,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
   }
 
   auto id = NewEventHandler(event_code, false /* is_le_meta */,
-                            std::move(event_callback), task_runner);
+                            std::move(event_callback), dispatcher);
   event_code_handlers_[event_code] = id;
   return id;
 }
@@ -268,7 +263,7 @@ CommandChannel::EventHandlerId CommandChannel::AddEventHandler(
 CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
     EventCode subevent_code,
     EventCallback event_callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   std::lock_guard<std::mutex> lock(event_handler_mutex_);
 
   if (subevent_code_handlers_.find(subevent_code) !=
@@ -280,7 +275,7 @@ CommandChannel::EventHandlerId CommandChannel::AddLEMetaEventHandler(
   }
 
   auto id = NewEventHandler(subevent_code, true /* is_le_meta */,
-                            std::move(event_callback), task_runner);
+                            std::move(event_callback), dispatcher);
   subevent_code_handlers_[subevent_code] = id;
   return id;
 }
@@ -313,7 +308,6 @@ void CommandChannel::RemoveEventHandlerInternal(EventHandlerId id) {
 void CommandChannel::TrySendQueuedCommands() {
   if (!is_initialized_)
     return;
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
 
   if (allowed_command_packets_ == 0) {
     FXL_VLOG(2) << "hci: CommandChannel: controller queue full, waiting.";
@@ -386,7 +380,7 @@ void CommandChannel::MaybeAddTransactionHandler(TransactionData* data) {
 
   // The handler hasn't been added yet.
   auto id = NewEventHandler(data->complete_event_code(), false,
-                            data->MakeCallback(), data->task_runner());
+                            data->MakeCallback(), data->dispatcher());
   FXL_DCHECK(id != 0u);
   data->set_handler_id(id);
   expiring_event_handler_ids_.insert(id);
@@ -397,17 +391,17 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
     EventCode event_code,
     bool is_le_meta,
     EventCallback event_callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(event_code);
   FXL_DCHECK(event_callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
 
   auto id = next_event_handler_id_++;
   EventHandlerData data;
   data.id = id;
   data.event_code = event_code;
   data.event_callback = std::move(event_callback);
-  data.task_runner = task_runner;
+  data.dispatcher = dispatcher;
   data.is_le_meta_subevent = is_le_meta;
 
   FXL_DCHECK(event_handler_id_map_.find(id) == event_handler_id_map_.end());
@@ -419,7 +413,6 @@ CommandChannel::EventHandlerId CommandChannel::NewEventHandler(
 void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
   hci::EventCode event_code = event->event_code();
 
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(event_code == kCommandStatusEventCode ||
              event_code == kCommandCompleteEventCode);
 
@@ -478,8 +471,6 @@ void CommandChannel::UpdateTransaction(std::unique_ptr<EventPacket> event) {
 }
 
 void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
-
   EventCode event_code;
   const std::unordered_map<EventCode, EventHandlerId>* event_handlers;
 
@@ -499,7 +490,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
   }
 
   EventCallback callback;
-  fxl::RefPtr<fxl::TaskRunner> task_runner;
+  async_t* dispatcher;
 
   {
     std::lock_guard<std::mutex> lock(event_handler_mutex_);
@@ -510,7 +501,7 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     FXL_DCHECK(handler.event_code == event_code);
 
     callback = handler.event_callback;
-    task_runner = handler.task_runner;
+    dispatcher = handler.dispatcher;
 
     auto expired_it = expiring_event_handler_ids_.find(iter->second);
     if (expired_it != expiring_event_handler_ids_.end()) {
@@ -519,14 +510,14 @@ void CommandChannel::NotifyEventHandler(std::unique_ptr<EventPacket> event) {
     }
   }
 
-  if (task_runner->RunsTasksOnCurrentThread()) {
+  if (thread_checker_.IsCreationThreadCurrent()) {
     callback(*event);
     return;
   }
 
-  // Post the event on the requested task runner.
-  task_runner->PostTask(fxl::MakeCopyable(
-      [event = std::move(event), callback]() mutable { callback(*event); }));
+  // Post the event on the requested dispatcher.
+  async::PostTask(dispatcher,
+      [event = std::move(event), callback]() mutable { callback(*event); });
 }
 
 void CommandChannel::OnChannelReady(
@@ -534,7 +525,6 @@ void CommandChannel::OnChannelReady(
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
-  FXL_DCHECK(io_task_runner_->RunsTasksOnCurrentThread());
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {

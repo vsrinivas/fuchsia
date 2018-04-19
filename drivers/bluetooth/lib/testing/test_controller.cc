@@ -36,7 +36,9 @@ common::DynamicByteBuffer CommandTransaction::PopNextReply() {
 }
 
 TestController::TestController()
-    : FakeControllerBase(), data_dispatcher_(nullptr) {}
+    : FakeControllerBase(),
+      data_dispatcher_(nullptr),
+      transaction_dispatcher_(nullptr) {}
 
 TestController::~TestController() { Stop(); }
 
@@ -57,14 +59,14 @@ void TestController::SetDataCallback(const DataCallback& callback,
 
 void TestController::SetTransactionCallback(
     const fxl::Closure& callback,
-    fxl::RefPtr<fxl::TaskRunner> task_runner) {
+    async_t* dispatcher) {
   FXL_DCHECK(callback);
-  FXL_DCHECK(task_runner);
+  FXL_DCHECK(dispatcher);
   FXL_DCHECK(!transaction_callback_);
-  FXL_DCHECK(!transaction_task_runner_);
+  FXL_DCHECK(!transaction_dispatcher_);
 
   transaction_callback_ = callback;
-  transaction_task_runner_ = task_runner;
+  transaction_dispatcher_ = dispatcher;
 }
 
 void TestController::OnCommandPacketReceived(
@@ -85,7 +87,7 @@ void TestController::OnCommandPacketReceived(
 
   cmd_transactions_.pop();
   if (transaction_callback_)
-    transaction_task_runner_->PostTask(transaction_callback_);
+    async::PostTask(transaction_dispatcher_, transaction_callback_);
 }
 
 void TestController::OnACLDataPacketReceived(

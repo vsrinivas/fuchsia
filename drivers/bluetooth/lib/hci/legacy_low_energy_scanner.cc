@@ -45,13 +45,13 @@ LegacyLowEnergyScanner::PendingScanResult::PendingScanResult(
 LegacyLowEnergyScanner::LegacyLowEnergyScanner(
     Delegate* delegate,
     fxl::RefPtr<Transport> hci,
-    fxl::RefPtr<fxl::TaskRunner> task_runner)
-    : LowEnergyScanner(delegate, hci, task_runner), active_scanning_(false) {
+    async_t* dispatcher)
+    : LowEnergyScanner(delegate, hci, dispatcher), active_scanning_(false) {
   event_handler_id_ = transport()->command_channel()->AddLEMetaEventHandler(
       kLEAdvertisingReportSubeventCode,
       std::bind(&LegacyLowEnergyScanner::OnAdvertisingReportEvent, this,
                 std::placeholders::_1),
-      this->task_runner());
+      this->dispatcher());
 }
 
 LegacyLowEnergyScanner::~LegacyLowEnergyScanner() {
@@ -65,7 +65,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
                                        LEScanFilterPolicy filter_policy,
                                        int64_t period_ms,
                                        const ScanStatusCallback& callback) {
-  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_DCHECK(period_ms == kPeriodInfinite || period_ms > 0);
   FXL_DCHECK(scan_interval <= kLEScanIntervalMax &&
@@ -138,9 +138,9 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
         if (IsScanning())
           StopScanInternal(false);
       });
-      task_runner()->PostDelayedTask(
+      async::PostDelayedTask(dispatcher(),
           scan_timeout_cb_.callback(),
-          fxl::TimeDelta::FromMilliseconds(period_ms));
+          zx::msec(period_ms));
     }
 
     set_state(State::kScanning);
@@ -152,7 +152,7 @@ bool LegacyLowEnergyScanner::StartScan(bool active,
 }
 
 bool LegacyLowEnergyScanner::StopScan() {
-  FXL_DCHECK(task_runner()->RunsTasksOnCurrentThread());
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
   if (state() == State::kStopping || state() == State::kIdle) {
     FXL_VLOG(1)

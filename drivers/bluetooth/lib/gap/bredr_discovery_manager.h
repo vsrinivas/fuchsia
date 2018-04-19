@@ -8,10 +8,10 @@
 #include <unordered_set>
 
 #include <fbl/function.h>
+#include <lib/async/dispatcher.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
@@ -127,8 +127,8 @@ class BrEdrDiscoveryManager final {
   // The HCI Transport
   fxl::RefPtr<hci::Transport> hci_;
 
-  // The task runner that we use for invoking callbacks asynchronously.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  // The dispatcher that we use for invoking callbacks asynchronously.
+  async_t* dispatcher_;
 
   // Device cache to use.
   // We hold a raw pointer is because it must out-live us.

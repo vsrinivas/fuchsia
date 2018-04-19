@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include <fbl/function.h>
+#include <lib/async/dispatcher.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
@@ -19,7 +20,6 @@
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
 #include "lib/fxl/synchronization/thread_checker.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 namespace btlib {
 
@@ -73,7 +73,7 @@ class RemoteDeviceCache;
 // EXAMPLE:
 //     btlib::gap::LowEnergyDiscoveryManager discovery_manager(
 //         btlib::gap::LowEnergyDiscoveryManager::Mode::kLegacy,
-//         transport, task_runner);
+//         transport, dispatcher);
 //     ...
 //
 //     std::unique_ptr<btlib::gap::LowEnergyDiscoverySession> session;
@@ -218,8 +218,8 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // Tells the scanner to start scanning.
   void StartScan();
 
-  // The task runner that we use for invoking callbacks asynchronously.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
+  // The dispatcher that we use for invoking callbacks asynchronously.
+  async_t* dispatcher_;
 
   // The device cache that we use for storing and looking up scan results. We
   // hold a raw pointer as we expect this to out-live us.
@@ -250,6 +250,8 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
 
   // The scanner that performs the HCI procedures.
   std::unique_ptr<hci::LowEnergyScanner> scanner_;
+
+  fxl::ThreadChecker thread_checker_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

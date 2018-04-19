@@ -8,7 +8,6 @@
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_advertiser.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace btlib {
@@ -74,9 +73,6 @@ class LowEnergyAdvertisingManager {
   // object).
   std::unordered_map<std::string, std::unique_ptr<ActiveAdvertisement>>
       advertisements_;
-
-  // The task loop that the advertisement requests will run on.
-  fxl::RefPtr<fxl::TaskRunner> task_runner_;
 
   // Used to communicate with the controller. |advertiser_| must outlive this
   // advertising manager.

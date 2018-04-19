@@ -1990,7 +1990,7 @@ TEST_F(GATT_ServerTest, SendNotificationEmpty) {
   );
   // clang-format on
 
-  async::PostTask(message_loop()->async(), [=] {
+  async::PostTask(dispatcher(), [=] {
     server()->SendNotification(kHandle, kTestValue, false);
   });
 
@@ -2009,7 +2009,7 @@ TEST_F(GATT_ServerTest, SendNotification) {
   );
   // clang-format on
 
-  async::PostTask(message_loop()->async(), [=] {
+  async::PostTask(dispatcher(), [=] {
     server()->SendNotification(kHandle, kTestValue, false);
   });
 
@@ -2027,7 +2027,7 @@ TEST_F(GATT_ServerTest, SendIndicationEmpty) {
   );
   // clang-format on
 
-  async::PostTask(message_loop()->async(), [=] {
+  async::PostTask(dispatcher(), [=] {
     server()->SendNotification(kHandle, kTestValue, true);
   });
 
@@ -2046,7 +2046,7 @@ TEST_F(GATT_ServerTest, SendIndication) {
   );
   // clang-format on
 
-  async::PostTask(message_loop()->async(), [=] {
+  async::PostTask(dispatcher(), [=] {
     server()->SendNotification(kHandle, kTestValue, true);
   });
 

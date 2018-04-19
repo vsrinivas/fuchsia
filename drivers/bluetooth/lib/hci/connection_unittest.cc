@@ -73,7 +73,7 @@ TEST_F(HCI_ConnectionTest, Close) {
         callback_called = true;
         message_loop()->QuitNow();
       },
-      message_loop()->task_runner());
+      dispatcher());
 
   Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
                         transport());
@@ -115,7 +115,7 @@ TEST_F(HCI_ConnectionTest, CloseError) {
         callback_called = true;
         message_loop()->QuitNow();
       },
-      message_loop()->task_runner());
+      dispatcher());
 
   Connection connection(kTestHandle, kTestRole, kTestAddress, kTestParams,
                         transport());
