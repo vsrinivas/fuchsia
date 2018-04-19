@@ -148,21 +148,21 @@ Requirements
 The FIDL wire format specified how FIDL messages are represented in memory for
 transmission over IPC.
 
-The fidl wire format is documented [FIDL: Wire Format Specification](here).
+The fidl wire format is documented [FIDL: Wire Format Specification].
 
 ### FIDL Language
 
 The FIDL language is the syntax by which interfaces are described in ***.fidl**
 files.
 
-The fidl language is documented [FIDL: Language Specification](here).
+The fidl language is documented [FIDL: Language Specification].
 
 ### FIDL Compiler
 
 The FIDL compiler generates code for programs to use and implement interfaces
 described by the FIDL language.
 
-The fidl compiler is documented [FIDL: Compiler Specification](here).
+The fidl compiler is documented [FIDL: Compiler Specification].
 
 ### FIDL Bindings
 
