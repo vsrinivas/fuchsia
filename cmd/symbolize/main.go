@@ -42,7 +42,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	inputLines := symbolize.StartParsing(os.Stdin, ctx)
-	outputLines := demuxer.Start(inputLines, ctx)
+	inputLines := symbolize.StartParsing(ctx, os.Stdin)
+	outputLines := demuxer.Start(ctx, inputLines)
 	presenter.Start(outputLines)
 }

@@ -189,9 +189,8 @@ func ParseLogLine(line string) (InputLine, error) {
 	return out, fmt.Errorf("malformed serial log line")
 }
 
-func StartParsing(reader io.Reader, pctx context.Context) <-chan InputLine {
+func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	out := make(chan InputLine)
-	ctx, _ := context.WithCancel(pctx)
 	go func() {
 		defer close(out)
 		scanner := bufio.NewScanner(reader)

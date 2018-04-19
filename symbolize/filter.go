@@ -8,15 +8,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 )
 
-type InputLine struct {
-	msg     string
+type LogLine struct {
 	time    float64
 	process uint64
 	thread  uint64
-	lineno  uint64
+}
+
+type InputLine struct {
+	LogLine
+	msg string
 }
 
 // Later this will be more general.
@@ -35,11 +37,8 @@ type Module struct {
 }
 
 type OutputLine struct {
-	time    float64
-	process uint64
-	thread  uint64
-	lineno  uint64
-	line    Line
+	LogLine
+	line Line
 }
 
 // Filter represents the state needed to process a log.
@@ -91,11 +90,9 @@ func (s *Filter) AddSegment(seg Segment) {
 }
 
 // Start tells the filter to start consuming input and produce output.
-func (f *Filter) Start(input <-chan InputLine, output chan<- OutputLine, wgroup *sync.WaitGroup, pctx context.Context) {
-	ctx, _ := context.WithCancel(pctx)
+func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan OutputLine {
+	out := make(chan OutputLine)
 	go func() {
-		wgroup.Add(1)
-		defer wgroup.Done()
 		for {
 			select {
 			case <-ctx.Done():
@@ -115,10 +112,11 @@ func (f *Filter) Start(input <-chan InputLine, output chan<- OutputLine, wgroup 
 				res.time = elem.time
 				res.thread = elem.thread
 				res.process = elem.process
-				output <- res
+				out <- res
 			}
 		}
 	}()
+	return out
 }
 
 type FilterVisitor struct {

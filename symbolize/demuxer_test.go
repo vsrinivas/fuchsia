@@ -44,11 +44,10 @@ func ExampleDemux() {
 
 	// start sending InputLines to the demuxer
 	ctx := context.Background()
-	in := StartParsing(strings.NewReader(msg), ctx)
+	in := StartParsing(ctx, strings.NewReader(msg))
 	// start the demuxer which will cause filters to send output lines to 'out'
-	out := demuxer.Start(in, ctx)
+	out := demuxer.Start(ctx, in)
 
-	// Remuxxing isn't happening right now so this test won't work for more than once pid
 	presenter := NewBasicPresenter(os.Stdout)
 	presenter.Start(out)
 

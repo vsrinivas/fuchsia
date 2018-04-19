@@ -6,19 +6,72 @@ package symbolize
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"sync"
 )
+
+type remuxer struct {
+	seq    chan (<-chan OutputLine)
+	out    chan<- OutputLine
+	wgroup sync.WaitGroup
+}
+
+func newRemuxer() *remuxer {
+	return &remuxer{seq: make(chan (<-chan OutputLine), 1024)}
+}
+
+func (r *remuxer) sequence(in <-chan OutputLine) {
+	r.wgroup.Add(1)
+	r.seq <- in
+}
+
+func (r *remuxer) start(ctx context.Context) (<-chan OutputLine, error) {
+	if r.out != nil {
+		return nil, fmt.Errorf("Attempt to start an already running remuxer")
+	}
+	out := make(chan OutputLine)
+	r.out = out
+	go func() {
+		defer close(r.out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case in, ok := <-r.seq:
+				if !ok {
+					return
+				}
+				r.out <- (<-in)
+				r.wgroup.Done()
+			}
+		}
+	}()
+	return out, nil
+}
+
+func (r *remuxer) stop() error {
+	r.wgroup.Wait()
+	if r.out == nil {
+		return fmt.Errorf("Attempt to stop a remuxer that hasn't been started")
+	}
+	close(r.out)
+	return nil
+}
+
+type pipe struct {
+	in  chan<- InputLine
+	out <-chan OutputLine
+}
 
 // Demuxer demultiplexes incomming input lines, spins up new filters, and sends them input lines.
 type Demuxer struct {
 	// Spin up new filters as new procsses are found.
-	filters map[uint64]chan<- InputLine
+	filters map[uint64]pipe
 	// Use same symbolizer for all
 	symbolizer Symbolizer
 	// Use same repo for all
 	repo *SymbolizerRepo
-	// We need a wait group
-	wgroup sync.WaitGroup
 }
 
 // NewDemuxer creates a new demuxer.
@@ -26,23 +79,28 @@ func NewDemuxer(repo *SymbolizerRepo, symbo Symbolizer) *Demuxer {
 	return &Demuxer{
 		repo:       repo,
 		symbolizer: symbo,
-		filters:    make(map[uint64]chan<- InputLine),
+		filters:    make(map[uint64]pipe),
 	}
 }
 
 // Start tells the demuxer to start consuming input and dispatching to the filters.
-func (d *Demuxer) Start(input <-chan InputLine, pctx context.Context) <-chan OutputLine {
-	var lineno uint64
-	out := make(chan OutputLine)
-	ctx, _ := context.WithCancel(pctx)
+func (d *Demuxer) Start(ctx context.Context, input <-chan InputLine) <-chan OutputLine {
+	// Create the remuxer.
+	remux := newRemuxer()
+	out, err := remux.start(ctx)
+	if err != nil {
+		log.Fatal("Failed to start remuxer in case where that should never happen.")
+	}
 	go func() {
-		//dd Clean up the channels/goroutines when we're done
+		// Clean up the channels/goroutines when we're done
 		defer func() {
-			for _, toFilter := range d.filters {
-				close(toFilter)
+			for _, pipe := range d.filters {
+				close(pipe.in)
 			}
-			d.wgroup.Wait()
-			close(out)
+			err := remux.stop()
+			if err != nil {
+				log.Printf("warning: %v", err)
+			}
 		}()
 		// Start multiplexing things out
 		for {
@@ -53,18 +111,18 @@ func (d *Demuxer) Start(input <-chan InputLine, pctx context.Context) <-chan Out
 				if !ok {
 					return
 				}
-				line.lineno = lineno
-				lineno += 1
-				if toFilter, ok := d.filters[line.process]; ok {
-					// Send the input to the approprite filter.
-					toFilter <- line
-				} else {
-					toFilter := make(chan InputLine)
+				var fpipe pipe
+				if fpipe, ok = d.filters[line.process]; !ok {
+					fin := make(chan InputLine)
 					// Spin up a new Filter for this process.
-					NewFilter(d.repo, d.symbolizer).Start(toFilter, out, &d.wgroup, ctx)
-					d.filters[line.process] = toFilter
-					toFilter <- line
+					filt := NewFilter(d.repo, d.symbolizer)
+					fout := filt.Start(ctx, fin)
+					fpipe = pipe{in: fin, out: fout}
+					d.filters[line.process] = fpipe
 				}
+				// sequence a read from fpipe.out
+				remux.sequence(fpipe.out)
+				fpipe.in <- line
 			}
 		}
 	}()
