@@ -1342,65 +1342,6 @@ class StoryControllerImpl::DeleteCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteCall);
 };
 
-class StoryControllerImpl::StartCall : Operation<> {
- public:
-  StartCall(OperationContainer* const container,
-            StoryControllerImpl* const story_controller_impl,
-            fidl::InterfaceRequest<views_v1_token::ViewOwner> request)
-      : Operation("StoryControllerImpl::StartCall", container, [] {}),
-        story_controller_impl_(story_controller_impl),
-        request_(std::move(request)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // If the story is running, we do nothing and close the view owner request.
-    if (story_controller_impl_->IsRunning()) {
-      FXL_LOG(INFO)
-          << "StoryControllerImpl::StartCall() while already running: ignored.";
-      return;
-    }
-
-    story_controller_impl_->track_root_module_state_ = true;
-    story_controller_impl_->StartStoryShell(std::move(request_));
-
-    // Start *all* the root modules, not just the first one, with their
-    // respective links.
-    new ReadAllDataCall<ModuleData>(
-        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
-        XdrModuleData, [this, flow](fidl::VectorPtr<ModuleData> data) {
-          for (auto& module_data : *data) {
-            if (module_data.module_source == ModuleSource::EXTERNAL &&
-                !module_data.module_stopped) {
-              new StartModuleInShellCall(
-                  &operation_queue_, story_controller_impl_,
-                  module_data.module_path, module_data.module_url,
-                  module_data.link_path.link_name,
-                  nullptr /* module_manifest */, nullptr /* chain_data */,
-                  nullptr /* incoming_services */,
-                  nullptr /* module_controller_request */,
-                  CloneOptional(module_data.surface_relation), true,
-                  module_data.module_source, std::move(module_data.intent),
-                  [flow] {});
-            }
-          }
-
-          story_controller_impl_->state_ = StoryState::STARTING;
-          story_controller_impl_->NotifyStateChange();
-        });
-  };
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  fidl::InterfaceRequest<views_v1_token::ViewOwner> request_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
-};
-
 class StoryControllerImpl::LedgerNotificationCall : Operation<> {
  public:
   LedgerNotificationCall(OperationContainer* const container,
@@ -1913,6 +1854,94 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
   StartModuleStatus result_{StartModuleStatus::NO_MODULES_FOUND};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(AddIntentCall);
+};
+
+class StoryControllerImpl::StartCall : Operation<> {
+ public:
+  StartCall(OperationContainer* const container,
+            StoryControllerImpl* const story_controller_impl,
+            fidl::InterfaceRequest<views_v1_token::ViewOwner> request)
+      : Operation("StoryControllerImpl::StartCall", container, [] {}),
+        story_controller_impl_(story_controller_impl),
+        request_(std::move(request)) {
+    Ready();
+  }
+
+ private:
+  void Run() override {
+    FlowToken flow{this};
+
+    // If the story is running, we do nothing and close the view owner request.
+    if (story_controller_impl_->IsRunning()) {
+      FXL_LOG(INFO)
+          << "StoryControllerImpl::StartCall() while already running: ignored.";
+      return;
+    }
+
+    story_controller_impl_->track_root_module_state_ = true;
+    story_controller_impl_->StartStoryShell(std::move(request_));
+
+    // Start *all* the root modules, not just the first one, with their
+    // respective links.
+    new ReadAllDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(), kModuleKeyPrefix,
+        XdrModuleData, [this, flow](fidl::VectorPtr<ModuleData> data) {
+          Cont(flow, std::move(data));
+        });
+  }
+
+  void Cont(FlowToken flow, fidl::VectorPtr<ModuleData> data) {
+    for (auto& module_data : *data) {
+      if (module_data.module_source == ModuleSource::EXTERNAL &&
+          !module_data.module_stopped) {
+        if (module_data.intent) {
+          fidl::VectorPtr<fidl::StringPtr> parent_module_path =
+              fidl::Clone(module_data.module_path);
+          parent_module_path->pop_back();
+          fidl::StringPtr module_name = module_data.module_path->at(
+              module_data.module_path->size() - 1);
+          new AddIntentCall(
+              &operation_queue_,
+              story_controller_impl_,
+              std::move(parent_module_path),
+              std::move(module_name),
+              std::move(*module_data.intent),
+              nullptr /* incoming_services */,
+              nullptr /* module_controller_request */,
+              CloneOptional(module_data.surface_relation),
+              nullptr /* view_owner_request */,
+              std::move(module_data.module_source),
+              [flow](StartModuleStatus) {});
+        } else {
+          new StartModuleInShellCall(
+              &operation_queue_,
+              story_controller_impl_,
+              module_data.module_path,
+              module_data.module_url,
+              module_data.link_path.link_name,
+              nullptr /* module_manifest */,
+              nullptr /* chain_data) */,
+              nullptr /* incoming_services */,
+              nullptr /* module_controller_request */,
+              CloneOptional(module_data.surface_relation),
+              true /* focus */,
+              std::move(module_data.module_source),
+              nullptr /* intent */,
+              [flow] {});
+        }
+      }
+    }
+
+    story_controller_impl_->state_ = StoryState::STARTING;
+    story_controller_impl_->NotifyStateChange();
+  }
+
+  StoryControllerImpl* const story_controller_impl_;  // not owned
+  fidl::InterfaceRequest<views_v1_token::ViewOwner> request_;
+
+  OperationQueue operation_queue_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(StartCall);
 };
 
 StoryControllerImpl::StoryControllerImpl(
