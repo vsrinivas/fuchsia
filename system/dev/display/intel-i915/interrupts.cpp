@@ -73,6 +73,10 @@ int Interrupts::IrqLoop() {
             HandlePipeInterrupt(registers::PIPE_A);
         }
 
+        if (interrupt_ctrl.reg_value() & interrupt_mask_) {
+            interrupt_cb_(interrupt_cb_data_, interrupt_ctrl.reg_value());
+        }
+
         interrupt_ctrl.set_enable_mask(1);
         interrupt_ctrl.WriteTo(controller_->mmio_space());
     }
@@ -127,6 +131,17 @@ void Interrupts::EnableHotplugInterrupts() {
         enable.ddi_bit(ddi).set(enabled);
         enable.WriteTo(controller_->mmio_space());
     }
+}
+
+zx_status_t Interrupts::SetInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
+                                             void *data, uint32_t interrupt_mask) {
+    if (callback != nullptr && interrupt_cb_ != nullptr) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    interrupt_cb_ = callback;
+    interrupt_cb_data_ = data;
+    interrupt_mask_ = interrupt_mask;
+    return ZX_OK;
 }
 
 zx_status_t Interrupts::Init(Controller* controller) {

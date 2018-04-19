@@ -123,12 +123,17 @@ bool DisplayDevice::Init() {
         return false;
     }
 
-    status = controller_->gtt()->Insert(framebuffer_vmo_, framebuffer_size_,
-                                        registers::PlaneSurface::kLinearAlignment,
-                                        registers::PlaneSurface::kTrailingPtePadding,
-                                        &fb_gfx_addr_);
+    status = controller_->gtt()->AllocRegion(framebuffer_size_,
+                                             registers::PlaneSurface::kLinearAlignment,
+                                             registers::PlaneSurface::kTrailingPtePadding,
+                                             &fb_gfx_addr_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: Failed to allocate gfx address for framebuffer %d\n", status);
+        return false;
+    }
+    status = fb_gfx_addr_->PopulateRegion(framebuffer_vmo_.get(), 0, framebuffer_size_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to populate gfx address for framebuffer %d\n", status);
         return false;
     }
 

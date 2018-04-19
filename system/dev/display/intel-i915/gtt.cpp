@@ -92,70 +92,23 @@ zx_status_t Gtt::Init(Controller* controller) {
     }
     controller_->mmio_space()->Read<uint32_t>(get_pte_offset(i - i)); // Posting read
 
-    size_t gfx_mem_size = gtt_size / sizeof(uint64_t) * PAGE_SIZE;
-    return region_allocator_.AddRegion({ .base = 0, .size = gfx_mem_size });
+    gfx_mem_size_ = gtt_size / sizeof(uint64_t) * PAGE_SIZE;
+    return region_allocator_.AddRegion({ .base = 0, .size = gfx_mem_size_ });
 }
 
-zx_status_t Gtt::Insert(const zx::vmo& buffer,
-                        uint32_t length, uint32_t align_pow2, uint32_t pte_padding,
-                        fbl::unique_ptr<const GttRegion>* gtt_out) {
+zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
+                             uint32_t pte_padding, fbl::unique_ptr<GttRegion>* region_out) {
+    uint32_t region_length = ROUNDUP(length, PAGE_SIZE) + (pte_padding * PAGE_SIZE);
     fbl::AllocChecker ac;
     auto r = fbl::make_unique_checked<GttRegion>(&ac, this);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-
-    uint32_t region_length = ROUNDUP(length, PAGE_SIZE) + (pte_padding * PAGE_SIZE);
     if (region_allocator_.GetRegion(region_length, align_pow2, r->region_) != ZX_OK) {
         return ZX_ERR_NO_RESOURCES;
     }
-
-    zx_paddr_t paddrs[kEntriesPerPinTxn];
-    zx_status_t status;
-    uint32_t num_pages = ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE;
-    uint64_t vmo_offset = 0;
-    uint32_t pte_idx = static_cast<uint32_t>(r->base() / PAGE_SIZE);
-    uint32_t pte_idx_end = pte_idx + num_pages;
-
-    size_t num_pins = ROUNDUP(length, min_contiguity_) / min_contiguity_;
-    r->pmts_.reserve(num_pins, &ac);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    while (pte_idx < pte_idx_end) {
-        uint64_t cur_len = (pte_idx_end - pte_idx) * PAGE_SIZE;
-        if (cur_len > kEntriesPerPinTxn * min_contiguity_) {
-            cur_len = kEntriesPerPinTxn * min_contiguity_;
-        }
-
-        uint64_t actual_entries = ROUNDUP(cur_len, min_contiguity_) / min_contiguity_;
-        zx::pmt pmt;
-        status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, buffer,
-                          vmo_offset, cur_len, paddrs, actual_entries, &pmt);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
-            return status;
-        }
-        vmo_offset += cur_len;
-        r->mapped_end_ = static_cast<uint32_t>(vmo_offset);
-        r->pmts_.push_back(fbl::move(pmt), &ac);
-        ZX_DEBUG_ASSERT(ac.check()); // Shouldn't fail because of the reserve above.
-
-        for (unsigned i = 0; i < actual_entries; i++) {
-            for (unsigned j = 0; j < min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
-                uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE, true);
-                controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
-            }
-        }
-    }
-    uint64_t padding_pte = gen_pte_encode(scratch_buffer_paddr_, true);
-    for (unsigned i = 0; i < pte_padding; i++) {
-        controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
-    }
-    controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
-
-    *gtt_out = fbl::move(r);
+    r->pte_padding_ = pte_padding;
+    *region_out = fbl::move(r);
     return ZX_OK;
 }
 
@@ -176,6 +129,71 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_paddi
 GttRegion::GttRegion(Gtt* gtt) : gtt_(gtt) {}
 
 GttRegion::~GttRegion() {
+    ClearRegion(false);
+}
+
+zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
+                                      uint64_t length, bool writable) {
+    if ((PAGE_SIZE * pte_padding_) + length > region_->size) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (mapped_end_ != 0) {
+        return ZX_ERR_ALREADY_BOUND;
+    }
+    vmo_ = vmo;
+
+    zx_paddr_t paddrs[kEntriesPerPinTxn];
+    zx_status_t status;
+    uint32_t num_pages = static_cast<uint32_t>(ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE);
+    uint64_t vmo_offset = page_offset * PAGE_SIZE;
+    uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
+    uint32_t pte_idx_end = pte_idx + num_pages;
+
+    size_t num_pins = ROUNDUP(length, gtt_->min_contiguity_) / gtt_->min_contiguity_;
+    fbl::AllocChecker ac;
+    pmts_.reserve(num_pins, &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    int32_t flags = ZX_BTI_COMPRESS | ZX_BTI_PERM_READ | (writable ? ZX_BTI_PERM_WRITE : 0);
+    while (pte_idx < pte_idx_end) {
+        uint64_t cur_len = (pte_idx_end - pte_idx) * PAGE_SIZE;
+        if (cur_len > kEntriesPerPinTxn * gtt_->min_contiguity_) {
+            cur_len = kEntriesPerPinTxn * gtt_->min_contiguity_;
+        }
+
+        uint64_t actual_entries = ROUNDUP(cur_len, gtt_->min_contiguity_) / gtt_->min_contiguity_;
+        zx::pmt pmt;
+        status = gtt_->bti_.pin(flags, zx::unowned_vmo::wrap(vmo_),
+                                vmo_offset, cur_len, paddrs, actual_entries, &pmt);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
+            return status;
+        }
+        vmo_offset += cur_len;
+        mapped_end_ = static_cast<uint32_t>(vmo_offset);
+        pmts_.push_back(fbl::move(pmt), &ac);
+        ZX_DEBUG_ASSERT(ac.check()); // Shouldn't fail because of the reserve above.
+
+        for (unsigned i = 0; i < actual_entries; i++) {
+            for (unsigned j = 0;
+                    j < gtt_->min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
+                uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE, true);
+                gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), pte);
+            }
+        }
+    }
+    uint64_t padding_pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, true);
+    for (unsigned i = 0; i < pte_padding_; i++) {
+        gtt_->controller_->mmio_space()->Write<uint64_t>(get_pte_offset(pte_idx++), padding_pte);
+    }
+
+    gtt_->controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1)); // Posting read
+    return ZX_OK;
+}
+
+void GttRegion::ClearRegion(bool close_vmo) {
     uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
     uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_, false);
     auto mmio_space = gtt_->controller_->mmio_space();
@@ -192,6 +210,13 @@ GttRegion::~GttRegion() {
              zxlogf(INFO, "Error unpinning gtt region\n");
         }
     }
+    pmts_.reset();
+    mapped_end_ = 0;
+
+    if (close_vmo && vmo_ != ZX_HANDLE_INVALID) {
+        zx_handle_close(vmo_);
+    }
+    vmo_ = ZX_HANDLE_INVALID;
 }
 
 } // namespace i915

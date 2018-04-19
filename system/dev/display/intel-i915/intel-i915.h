@@ -6,6 +6,7 @@
 
 #if __cplusplus
 
+#include <ddk/protocol/intel-gpu-core.h>
 #include <ddk/protocol/pci.h>
 #include <ddktl/protocol/display-controller.h>
 
@@ -50,6 +51,21 @@ public:
     uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t AllocateVmo(uint64_t size, zx_handle_t* vmo_out);
 
+    zx_status_t ReadPciConfig16(uint16_t addr, uint16_t* value_out);
+    zx_status_t MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out);
+    zx_status_t UnmapPciMmio(uint32_t pci_bar);
+    zx_status_t GetPciBti(uint32_t index, zx_handle_t* bti_out);
+    zx_status_t RegisterInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
+                                          void* data, uint32_t interrupt_mask);
+    zx_status_t UnregisterInterruptCallback();
+    uint64_t GttGetSize();
+    zx_status_t GttAlloc(uint64_t page_count, uint64_t* addr_out);
+    zx_status_t GttFree(uint64_t addr);
+    zx_status_t GttClear(uint64_t addr);
+    zx_status_t GttInsert(uint64_t addr, zx_handle_t buffer,
+                          uint64_t page_offset, uint64_t page_count);
+    void GpuRelease();
+
     pci_protocol_t* pci() { return &pci_; }
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
@@ -74,6 +90,10 @@ private:
     void AllocDisplayBuffers();
     DisplayDevice* FindDevice(int32_t display_id);
 
+    zx_device_t* zx_gpu_dev_;
+    bool gpu_released_ = false;
+    bool display_released_ = false;
+
     void* dc_cb_ctx_;
     display_controller_cb_t* dc_cb_;
 
@@ -82,12 +102,18 @@ private:
     Interrupts interrupts_;
 
     pci_protocol_t pci_;
-
+    struct {
+        void* base;
+        uint64_t size;
+        zx_handle_t vmo;
+        int32_t count;
+    } mapped_bars_[PCI_MAX_BAR_COUNT];
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
-    zx_handle_t regs_handle_;
 
     // These regions' VMOs are not owned
-    fbl::Vector<fbl::unique_ptr<const GttRegion>> imported_images_;
+    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_images_;
+    // These regions' VMOs are owned
+    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_gtt_regions_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.

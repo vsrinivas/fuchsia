@@ -21,15 +21,23 @@ public:
     explicit GttRegion(Gtt* gtt);
     ~GttRegion();
 
+    zx_status_t PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
+                               uint64_t length, bool writable = false);
+    void ClearRegion(bool close_vmo);
+
     uint64_t base() const { return region_->base; }
     uint64_t size() const { return region_->size; }
-
 private:
     fbl::unique_ptr<const RegionAllocator::Region> region_;
     Gtt* gtt_;
 
     fbl::Vector<zx::pmt> pmts_;
-    uint32_t mapped_end_;
+    uint32_t mapped_end_ = 0;
+    uint32_t pte_padding_;
+    // The region's current vmo. The region does not own the vmo handle; it
+    // is up to the owner of the region to determine when the vmo should be
+    // closed.
+    zx_handle_t vmo_ = ZX_HANDLE_INVALID;
 
     friend class Gtt;
 };
@@ -39,12 +47,16 @@ public:
     Gtt();
     ~Gtt();
     zx_status_t Init(Controller* controller);
-    zx_status_t Insert(const zx::vmo& buffer,
-                       uint32_t length, uint32_t align_pow2, uint32_t pte_padding,
-                       fbl::unique_ptr<const GttRegion>* gtt_out);
+    zx_status_t AllocRegion(uint32_t length,
+                            uint32_t align_pow2, uint32_t pte_padding,
+                            fbl::unique_ptr<GttRegion>* region_out);
     void SetupForMexec(uintptr_t stolen_fb, uint32_t length, uint32_t pte_padding);
+
+    uint64_t size() const { return gfx_mem_size_; }
 private:
     Controller* controller_;
+
+    uint64_t gfx_mem_size_;
     RegionAllocator region_allocator_;
     zx::vmo scratch_buffer_;
     zx::bti bti_;

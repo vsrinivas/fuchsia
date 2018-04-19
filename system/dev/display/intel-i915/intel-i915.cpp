@@ -66,6 +66,75 @@ bool pipe_in_use(const fbl::Vector<i915::DisplayDevice*>& displays, registers::P
 static inline bool is_modesetting_enabled(uint16_t device_id) {
     return ENABLE_MODESETTING && i915::is_gen9(device_id);
 }
+
+static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_out) {
+    return static_cast<i915::Controller*>(ctx)->ReadPciConfig16(addr, value_out);
+}
+
+static zx_status_t map_pci_mmio(void* ctx, uint32_t pci_bar, void** addr_out, uint64_t* size_out) {
+    return static_cast<i915::Controller*>(ctx)->MapPciMmio(pci_bar, addr_out, size_out);
+}
+
+static zx_status_t unmap_pci_mmio(void* ctx, uint32_t pci_bar) {
+    return static_cast<i915::Controller*>(ctx)->UnmapPciMmio(pci_bar);
+}
+
+static zx_status_t get_pci_bti(void* ctx, uint32_t index, zx_handle_t* bti_out) {
+    return static_cast<i915::Controller*>(ctx)->GetPciBti(index, bti_out);
+}
+
+static zx_status_t register_interrupt_callback(void* ctx,
+                                               zx_intel_gpu_core_interrupt_callback_t callback,
+                                               void* data, uint32_t interrupt_mask) {
+    return static_cast<i915::Controller*>(ctx)
+            ->RegisterInterruptCallback(callback, data, interrupt_mask);
+}
+
+static zx_status_t unregister_interrupt_callback(void* ctx) {
+    return static_cast<i915::Controller*>(ctx)->UnregisterInterruptCallback();
+}
+
+static uint64_t gtt_get_size(void* ctx) {
+    return static_cast<i915::Controller*>(ctx)->GttGetSize();
+}
+
+static zx_status_t gtt_alloc(void* ctx, uint64_t page_count, uint64_t* addr_out) {
+    return static_cast<i915::Controller*>(ctx)->GttAlloc(page_count, addr_out);
+}
+
+static zx_status_t gtt_free(void* ctx, uint64_t addr) {
+    return static_cast<i915::Controller*>(ctx)->GttFree(addr);
+}
+
+static zx_status_t gtt_clear(void* ctx, uint64_t addr) {
+    return static_cast<i915::Controller*>(ctx)->GttClear(addr);
+}
+
+static zx_status_t gtt_insert(void* ctx, uint64_t addr, zx_handle_t buffer, uint64_t page_offset,
+                              uint64_t page_count) {
+    return static_cast<i915::Controller*>(ctx)->GttInsert(addr, buffer, page_offset, page_count);
+}
+
+static zx_intel_gpu_core_protocol_ops_t i915_gpu_core_protocol_ops = {
+    .read_pci_config_16 = read_pci_config_16,
+    .map_pci_mmio = map_pci_mmio,
+    .unmap_pci_mmio = unmap_pci_mmio,
+    .get_pci_bti = get_pci_bti,
+    .register_interrupt_callback = register_interrupt_callback,
+    .unregister_interrupt_callback = unregister_interrupt_callback,
+    .gtt_get_size = gtt_get_size,
+    .gtt_alloc = gtt_alloc,
+    .gtt_free = gtt_free,
+    .gtt_clear = gtt_clear,
+    .gtt_insert = gtt_insert
+};
+
+static void gpu_release(void* ctx) {
+    static_cast<i915::Controller*>(ctx)->GpuRelease();
+}
+
+static zx_protocol_device_t i915_gpu_core_device_proto = {};
+
 } // namespace
 
 namespace i915 {
@@ -599,11 +668,15 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
 
     uint32_t length = image->height * ZX_PIXEL_FORMAT_BYTES(image->pixel_format) *
             registers::PlaneSurfaceStride::compute_linear_stride(image->width, image->pixel_format);
-    fbl::unique_ptr<const GttRegion> gtt_region;
-    zx_status_t status = gtt_.Insert(vmo, length,
-                                     registers::PlaneSurface::kLinearAlignment,
-                                     registers::PlaneSurface::kTrailingPtePadding,
-                                     &gtt_region);
+    fbl::unique_ptr<GttRegion> gtt_region;
+    zx_status_t status = gtt_.AllocRegion(length,
+                                          registers::PlaneSurface::kLinearAlignment,
+                                          registers::PlaneSurface::kTrailingPtePadding,
+                                          &gtt_region);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
     if (status != ZX_OK) {
         return status;
     }
@@ -663,6 +736,121 @@ zx_status_t Controller::AllocateVmo(uint64_t size, zx_handle_t* vmo_out) {
     return zx_vmo_create(size, 0, vmo_out);
 }
 
+// Intel GPU core methods
+
+zx_status_t Controller::ReadPciConfig16(uint16_t addr, uint16_t* value_out) {
+    return pci_config_read16(&pci_, addr, value_out);
+}
+
+zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* size_out) {
+    if (pci_bar > PCI_MAX_BAR_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (mapped_bars_[pci_bar].count == 0) {
+        zx_status_t status = pci_map_bar(&pci_, pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                         &mapped_bars_[pci_bar].base,
+                                         &mapped_bars_[pci_bar].size,
+                                         &mapped_bars_[pci_bar].vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    *addr_out = mapped_bars_[pci_bar].base;
+    *size_out = mapped_bars_[pci_bar].size;
+    mapped_bars_[pci_bar].count++;
+    return ZX_OK;
+}
+
+zx_status_t Controller::UnmapPciMmio(uint32_t pci_bar) {
+    if (pci_bar > PCI_MAX_BAR_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (mapped_bars_[pci_bar].count == 0) {
+        return ZX_OK;
+    }
+    if (--mapped_bars_[pci_bar].count == 0) {
+        zx_vmar_unmap(zx_vmar_root_self(),
+                      reinterpret_cast<uintptr_t>(mapped_bars_[pci_bar].base),
+                      mapped_bars_[pci_bar].size);
+        zx_handle_close(mapped_bars_[pci_bar].vmo);
+    }
+    return ZX_OK;
+}
+
+zx_status_t Controller::GetPciBti(uint32_t index, zx_handle_t* bti_out) {
+    return pci_get_bti(&pci_, index, bti_out);
+}
+
+zx_status_t Controller::RegisterInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
+                                                  void* data, uint32_t interrupt_mask) {
+    return interrupts_.SetInterruptCallback(callback, data, interrupt_mask);
+}
+
+zx_status_t Controller::UnregisterInterruptCallback() {
+    interrupts_.SetInterruptCallback(nullptr, nullptr, 0);
+    return ZX_OK;
+}
+
+uint64_t Controller::GttGetSize() {
+    return gtt_.size();
+}
+
+zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
+    uint64_t length = page_count * PAGE_SIZE;
+    if (length > gtt_.size()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    fbl::unique_ptr<GttRegion> region;
+    zx_status_t status = gtt_.AllocRegion(static_cast<uint32_t>(page_count * PAGE_SIZE),
+                                          PAGE_SIZE, 0, &region);
+    if (status != ZX_OK) {
+        return status;
+    }
+    *addr_out = region->base();
+
+    imported_gtt_regions_.push_back(fbl::move(region));
+    return ZX_OK;
+}
+
+zx_status_t Controller::GttFree(uint64_t addr) {
+    for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
+        if (imported_gtt_regions_[i]->base() == addr) {
+            imported_gtt_regions_.erase(i)->ClearRegion(true);
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Controller::GttClear(uint64_t addr) {
+    for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
+        if (imported_gtt_regions_[i]->base() == addr) {
+            imported_gtt_regions_[i]->ClearRegion(true);
+            return ZX_OK;
+        }
+    }
+    return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Controller::GttInsert(uint64_t addr, zx_handle_t buffer,
+                                  uint64_t page_offset, uint64_t page_count) {
+    for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
+        if (imported_gtt_regions_[i]->base() == addr) {
+            return imported_gtt_regions_[i]->PopulateRegion(buffer, page_offset,
+                                                            page_count * PAGE_SIZE,
+                                                            true /* writable */);
+        }
+    }
+    return ZX_ERR_INVALID_ARGS;
+}
+
+void Controller::GpuRelease() {
+    gpu_released_ = true;
+    if (display_released_) {
+        delete this;
+    }
+}
+
 // Ddk methods
 
 void Controller::DdkUnbind() {
@@ -670,10 +858,14 @@ void Controller::DdkUnbind() {
         device_remove(display_devices_.erase(0)->zxdev());
     }
     device_remove(zxdev());
+    device_remove(zx_gpu_dev_);
 }
 
 void Controller::DdkRelease() {
-    delete this;
+    display_released_ = true;
+    if (gpu_released_) {
+        delete this;
+    }
 }
 
 zx_status_t Controller::DdkSuspend(uint32_t hint) {
@@ -779,10 +971,9 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     zxlogf(TRACE, "i915: mapping registers\n");
     // map register window
-    uintptr_t regs;
-    uint64_t regs_size;
-    status = pci_map_bar(&pci_, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                              reinterpret_cast<void**>(&regs), &regs_size, &regs_handle_);
+    void* regs;
+    uint64_t size;
+    status = MapPciMmio(0u, &regs, &size);
     if (status != ZX_OK) {
         zxlogf(ERROR, "i915: failed to map bar 0: %d\n", status);
         return status;
@@ -839,6 +1030,25 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return status;
     }
 
+    i915_gpu_core_device_proto.version = DEVICE_OPS_VERSION;
+    i915_gpu_core_device_proto.release = gpu_release;
+    // zx_gpu_dev_ is removed when unbind is called for zxdev() (in ::DdkUnbind),
+    // so it's not necessary to give it its own unbind method.
+
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "intel-gpu-core";
+    args.ctx = this;
+    args.ops = &i915_gpu_core_device_proto;
+    args.proto_id = ZX_PROTOCOL_INTEL_GPU_CORE;
+    args.proto_ops = &i915_gpu_core_protocol_ops;
+    status = device_add(zxdev(), &args, &zx_gpu_dev_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to publish gpu core device %d\n", status);
+        device_remove(zxdev());
+        return status;
+    }
+
     if (is_modesetting_enabled(device_id_)) {
         interrupts_.FinishInit();
     }
@@ -858,9 +1068,16 @@ Controller::~Controller() {
     interrupts_.Destroy();
     if (mmio_space_) {
         EnableBacklight(false);
-
-        zx_handle_close(regs_handle_);
-        regs_handle_ = ZX_HANDLE_INVALID;
+    }
+    // Drop our own reference to bar 0. No-op if we failed before we mapped it.
+    UnmapPciMmio(0u);
+    // Release anything leaked by the gpu-core client.
+    for (unsigned i = 0; i < PCI_MAX_BAR_COUNT; i++) {
+        if (mapped_bars_[i].count) {
+            zxlogf(INFO, "Leaked bar %d\n", i);
+            mapped_bars_[i].count = 1;
+            UnmapPciMmio(i);
+        }
     }
 }
 

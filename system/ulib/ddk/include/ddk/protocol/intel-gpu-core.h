@@ -14,7 +14,7 @@ typedef void (*zx_intel_gpu_core_interrupt_callback_t)(void* data,
 
 typedef struct zx_intel_gpu_core_protocol_ops {
     // Reads 16 bits from pci config space; returned in |value_out|.
-    zx_status_t (*read_pci_config_16)(void* ctx, uint64_t addr, uint16_t* value_out);
+    zx_status_t (*read_pci_config_16)(void* ctx, uint16_t addr, uint16_t* value_out);
 
     // Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
     // |size_out|.

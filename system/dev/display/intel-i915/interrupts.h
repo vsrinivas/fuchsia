@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ddk/protocol/intel-gpu-core.h>
 #include <fbl/macros.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -26,6 +27,8 @@ public:
     void Destroy();
 
     void EnablePipeVsync(registers::Pipe pipe, bool enable);
+    zx_status_t SetInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
+                                     void* data, uint32_t interrupt_mask);
 
     int IrqLoop();
 private:
@@ -38,6 +41,10 @@ private:
 
     zx::handle irq_;
     thrd_t irq_thread_;
+
+    zx_intel_gpu_core_interrupt_callback_t interrupt_cb_;
+    void* interrupt_cb_data_;
+    uint32_t interrupt_mask_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Interrupts);
 };

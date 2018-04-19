@@ -84,7 +84,7 @@ private:
     uintptr_t framebuffer_;
     uint32_t framebuffer_size_;
     zx::vmo framebuffer_vmo_;
-    fbl::unique_ptr<const GttRegion> fb_gfx_addr_;
+    fbl::unique_ptr<GttRegion> fb_gfx_addr_;
 
     bool inited_;
     zx_display_info_t info_;
