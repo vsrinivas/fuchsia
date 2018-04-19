@@ -392,7 +392,7 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
 
     // Configure GPIO Interrupt EDGE and Polarity
     uint32_t mode_reg_val = READ32_GPIO_INTERRUPT_REG(interrupt->edge_polarity_offset);
-    if (GPIO_POLARITY_HIGH) {
+    if (polarity == GPIO_POLARITY_HIGH) {
         mode_reg_val &= ~((1 << irq_index) << GPIO_INTERRUPT_POLARITY_SHIFT);
     } else {
         mode_reg_val |= ((1 << irq_index) << GPIO_INTERRUPT_POLARITY_SHIFT);
