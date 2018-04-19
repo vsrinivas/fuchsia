@@ -160,7 +160,7 @@ GLOBAL_COMPILEFLAGS += -DENABLE_NEW_IRQ_API=1
 endif
 #GLOBAL_CPPFLAGS += -Weffc++
 GLOBAL_ASMFLAGS :=
-GLOBAL_LDFLAGS := -nostdlib --build-id
+GLOBAL_LDFLAGS := -nostdlib --build-id -z noexecstack
 ifeq ($(call TOBOOL,$(USE_LLD)),true)
 GLOBAL_LDFLAGS += -color-diagnostics
 endif

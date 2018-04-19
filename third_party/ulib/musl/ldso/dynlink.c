@@ -751,6 +751,15 @@ __NO_SAFESTACK NO_ASAN static zx_status_t map_library(zx_handle_t vmo,
                 first_note = ph;
             last_note = ph;
             break;
+        case PT_GNU_STACK:
+            if (ph->p_flags & PF_X) {
+                error("%s requires executable stack"
+                      " (built with -z execstack?),"
+                      " which Fuchsia will never support",
+                      dso->soname == NULL ? dso->l_map.l_name : dso->soname);
+                goto noexec;
+            }
+            break;
         }
     }
     if (!dyn)
