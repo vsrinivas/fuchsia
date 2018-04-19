@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/mxerror"
+	"syscall/zx/zxwait"
 	"time"
 	"wlan/eapol"
 )
@@ -266,7 +267,7 @@ func (c *Client) watchMLMEChan(timeout time.Duration) *mlmeResult {
 		deadline = zx.Sys_deadline_after(
 			zx.Duration(timeout.Nanoseconds()))
 	}
-	obs, err := c.mlmeChan.Handle().WaitOne(
+	obs, err := zxwait.Wait(*c.mlmeChan.Handle(),
 		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 		deadline)
 	return &mlmeResult{obs, err}

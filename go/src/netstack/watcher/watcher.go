@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/zxwait"
 )
 
 // Watcher watches a directory, send the name of any new file to
@@ -76,7 +77,7 @@ func (w *Watcher) start() {
 }
 
 func (w *Watcher) wait() (string, uint, error) {
-	_, err := w.h.Handle().WaitOne(zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
+	_, err := zxwait.Wait(*w.h.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.TimensecInfinite)
 	if err != nil {
 		return "", 0, err
 	}

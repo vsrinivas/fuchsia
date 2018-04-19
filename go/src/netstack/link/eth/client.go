@@ -48,6 +48,7 @@ import (
 	"sync"
 	"syscall"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"unsafe"
 
 	"netstack/trace"
@@ -395,7 +396,7 @@ func (c *Client) WaitSend() error {
 			return err
 		}
 		// Errors from waiting handled in txComplete.
-		c.tx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
+		zxwait.Wait(c.tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite)
 	}
 }
 
@@ -403,7 +404,7 @@ func (c *Client) WaitSend() error {
 // or the client is closed.
 func (c *Client) WaitRecv() {
 	for {
-		obs, err := c.rx.WaitOne(zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
+		obs, err := zxwait.Wait(c.rx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed|ZXSIO_ETH_SIGNAL_STATUS, zx.TimensecInfinite)
 		if err != nil || obs&zx.SignalFIFOPeerClosed != 0 {
 			c.Close()
 		} else if obs&ZXSIO_ETH_SIGNAL_STATUS != 0 {

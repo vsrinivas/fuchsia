@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 )
 
 // ServiceRequest is an abstraction over a FIDL interface request which is
@@ -83,7 +84,7 @@ func (p *Proxy) Recv(ordinal uint32, resp Payload) error {
 
 	// Wait on the channel to be readable or close.
 	h := zx.Handle(p.Channel)
-	sigs, err := h.WaitOne(
+	sigs, err := zxwait.Wait(h,
 		zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
 		zx.TimensecInfinite,
 	)

@@ -14,6 +14,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/mxerror"
 	"syscall/zx/zxsocket"
+	"syscall/zx/zxwait"
 	"time"
 
 	"app/context"
@@ -106,9 +107,6 @@ type iostate struct {
 
 // loopSocketWrite connects libc write to the network stack for TCP sockets.
 //
-// TODO: replace WaitOne with a method that parks goroutines when waiting
-// for a signal on a zx.Socket.
-//
 // As written, we have two netstack threads per socket.
 // That's not so bad for small client work, but even a client OS is
 // eventually going to feel the overhead of this.
@@ -118,7 +116,7 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 	dataHandle := zx.Socket(ios.dataHandle)
 
 	// Warm up.
-	_, err := dataHandle.WaitOne(
+	_, err := zxwait.Wait(ios.dataHandle,
 		zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
 			zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 		zx.TimensecInfinite)
@@ -150,7 +148,7 @@ func (ios *iostate) loopSocketWrite(stk *stack.Stack) {
 			}
 			return
 		case zx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(
+			obs, err := zxwait.Wait(ios.dataHandle,
 				zx.SignalSocketReadable|zx.SignalSocketReadDisabled|
 					zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 				zx.TimensecInfinite)
@@ -216,7 +214,7 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 		if !connected {
 			sigs |= ZXSIO_SIGNAL_CONNECTED
 		}
-		obs, err := dataHandle.WaitOne(sigs, zx.TimensecInfinite)
+		obs, err := zxwait.Wait(ios.dataHandle, sigs, zx.TimensecInfinite)
 		switch mxerror.Status(err) {
 		case zx.ErrOk:
 			// NOP
@@ -298,7 +296,7 @@ func (ios *iostate) loopSocketRead(stk *stack.Stack) {
 				if debug2 {
 					log.Printf("loopSocketRead: got zx.ErrShouldWait")
 				}
-				obs, err := dataHandle.WaitOne(
+				obs, err := zxwait.Wait(ios.dataHandle,
 					zx.SignalSocketWritable|zx.SignalSocketWriteDisabled|
 						zx.SignalSocketPeerClosed,
 					zx.TimensecInfinite)
@@ -400,7 +398,7 @@ func (ios *iostate) loopDgramWrite(stk *stack.Stack) {
 		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return
 		case zx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
+			obs, err := zxwait.Wait(ios.dataHandle, zx.SignalSocketReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
@@ -468,7 +466,7 @@ func (ios *iostate) loopControl(s *socketServer, cookie int64) {
 		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 			return
 		case zx.ErrShouldWait:
-			obs, err := dataHandle.WaitOne(zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
+			obs, err := zxwait.Wait(ios.dataHandle, zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING, zx.TimensecInfinite)
 			switch mxerror.Status(err) {
 			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
 				return
@@ -1022,7 +1020,7 @@ func (s *socketServer) loopListen(ios *iostate, inCh chan struct{}) {
 		case <-ios.listenLoopClosing:
 			return
 		}
-		obs, err := ios.dataHandle.WaitOne(
+		obs, err := zxwait.Wait(ios.dataHandle,
 			zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 			zx.TimensecInfinite)
 		switch mxerror.Status(err) {
