@@ -33,7 +33,7 @@ if [ $# -ne 3 ]; then
   usage
 fi
 
-AWK=mawk
+AWK=awk
 KERNEL="$1"
 READELF="$2"
 OUTFILE="$3"
@@ -46,6 +46,32 @@ BEGIN {
     address_prefix = "";
     fixup_types["R_X86_64_64"] = 1;
     fixup_types["R_AARCH64_ABS64"] = 1;
+}
+# In GNU awk, this is just: return strtonum("0x" string)
+# But for least-common-denominator awk, you really have to do it by hand.
+function hex2num(string) {
+    hexdigits["0"] = 0;
+    hexdigits["1"] = 1;
+    hexdigits["2"] = 2;
+    hexdigits["3"] = 3;
+    hexdigits["4"] = 4;
+    hexdigits["5"] = 5;
+    hexdigits["6"] = 6;
+    hexdigits["7"] = 7;
+    hexdigits["8"] = 8;
+    hexdigits["9"] = 9;
+    hexdigits["a"] = 10;
+    hexdigits["b"] = 11;
+    hexdigits["c"] = 12;
+    hexdigits["d"] = 13;
+    hexdigits["e"] = 14;
+    hexdigits["f"] = 15;
+    hexval = 0;
+    while (string != "") {
+      hexval = (hexval * 16) + hexdigits[substr(string, 1, 1)];
+      string = substr(string, 2, length(string) - 1);
+    }
+    return hexval;
 }
 $1 == "Relocation" && $2 == "section" {
     secname = $3;
@@ -68,7 +94,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
 }
 {
     # awk handles large integers poorly, so factor out the high 40 bits.
-    this_prefix = substr($1, 0, 10)
+    this_prefix = substr($1, 1, 10)
     raw_offset = substr($1, 10)
     if (address_prefix == "") {
         address_prefix = this_prefix;
@@ -77,7 +103,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         status = 1;
         next;
     }
-    r_offset = sprintf("%u", "0x" raw_offset) + 0;
+    r_offset = hex2num(raw_offset);
     type = $3;
     if (!(type in fixup_types)) {
         bad = "reloc type " + type
@@ -130,14 +156,14 @@ END {
             run_length = 2;
         } else {
             if (run_length > 0) {
-                printf "fixup 0x%s%07x, %u, %u // %s\n", address_prefix, run_start, run_length, run_stride, reloc_secname[run_start];
+                printf "fixup 0x%s%.*x, %u, %u // %s\n", address_prefix, 16 - length(address_prefix), run_start, run_length, run_stride, reloc_secname[run_start];
             }
             run_start = offset;
             run_length = 1;
             run_stride = 8;
         }
     }
-    printf "fixup 0x%s%07x, %u, %u // %s\n", address_prefix, run_start, run_length, run_stride, reloc_secname[run_start];
+    printf "fixup 0x%s%.*x, %u, %u // %s\n", address_prefix, 16 - length(address_prefix), run_start, run_length, run_stride, reloc_secname[run_start];
     exit(status);
 }'
 }
