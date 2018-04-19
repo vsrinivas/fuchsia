@@ -4,17 +4,19 @@
 
 #pragma once
 
-#include <wlan/mlme/eapol.h>
 #include <wlan/mlme/device_interface.h>
+#include <wlan/mlme/eapol.h>
 #include <wlan/mlme/frame_handler.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/sequence.h>
 
+#include <fuchsia/c/wlan_stats.h>
 #include <fuchsia/cpp/wlan_mlme.h>
 
 #include <fbl/unique_ptr.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/common/moving_average.h>
+#include <wlan/common/stats.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
 
@@ -147,6 +149,7 @@ class Station : public FrameHandler {
     eapol::PortState controlled_port_ = eapol::PortState::kBlocked;
 
     wlan_channel_t join_chan_;
+    common::WlanStats<common::ClientMlmeStats, wlan_stats_ClientMlmeStats> stats_;
 };
 
 }  // namespace wlan

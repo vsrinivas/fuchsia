@@ -18,3 +18,11 @@ fidl("service") {
     "wlan_service.fidl",
   ]
 }
+
+
+fidl("stats") {
+  name = "wlan_stats"
+  sources = [
+    "wlan_stats.fidl"
+  ]
+}

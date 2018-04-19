@@ -22,12 +22,14 @@ source_set("common") {
     "include/wlan/common/mac_frame.h",
     "include/wlan/common/macaddr.h",
     "include/wlan/common/moving_average.h",
+    "include/wlan/common/stats.h",
     "mac_frame.cpp",
     "macaddr.cpp",
   ]
 
   public_deps = [
     "//garnet/public/lib/wlan/fidl:mlme",
+    "//garnet/public/lib/wlan/fidl:stats",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]

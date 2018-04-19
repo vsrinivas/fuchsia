@@ -1,0 +1,33 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library wlan_stats;
+
+struct Counter {
+  uint64 count;
+  string name;
+};
+
+struct PacketCounter {
+  Counter in;
+  Counter out;
+  Counter drop;
+};
+
+
+// LINT.IfChange
+struct DispatcherStats {
+  PacketCounter any_packet;
+  PacketCounter mgmt_frame;
+  PacketCounter ctrl_frame;
+  PacketCounter data_frame;
+};
+
+struct ClientMlmeStats {
+  PacketCounter svc_msg;
+  PacketCounter data_frame;
+  PacketCounter mgmt_frame;
+};
+
+// LINT.ThenChange(//garnet/lib/wlan/common/include/wlan/common/stats.h)

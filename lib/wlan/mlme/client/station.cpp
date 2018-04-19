@@ -7,6 +7,7 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/logging.h>
+#include <wlan/common/stats.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -14,6 +15,8 @@
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
+
+#include <fuchsia/c/wlan_stats.h>
 
 #include <cstring>
 #include <utility>
@@ -44,6 +47,7 @@ void Station::Reset() {
 }
 
 zx_status_t Station::HandleMlmeMessage(const wlan_mlme::Method& method) {
+    WLAN_STATS_INC(svc_msg.in);
     // Always allow MLME-JOIN.request.
     if (method == wlan_mlme::Method::JOIN_request) { return ZX_OK; }
     // Drop other MLME requests if there is no BSSID set yet.
@@ -355,9 +359,14 @@ zx_status_t Station::HandleMlmeAssocReq(const wlan_mlme::AssociateRequest& req) 
 }
 
 zx_status_t Station::HandleMgmtFrame(const MgmtFrameHeader& hdr) {
+    WLAN_STATS_INC(mgmt_frame.in);
     // Drop management frames if either, there is no BSSID set yet,
     // or the frame is not from the BSS.
-    if (bssid() == nullptr || *bssid() != hdr.addr3) { return ZX_ERR_STOP; }
+    if (bssid() == nullptr || *bssid() != hdr.addr3) {
+        WLAN_STATS_INC(mgmt_frame.drop);
+        return ZX_ERR_STOP;
+    }
+    WLAN_STATS_INC(mgmt_frame.out);
     return ZX_OK;
 }
 
@@ -634,6 +643,7 @@ zx_status_t Station::HandleAddBaResponseFrame(
 }
 
 zx_status_t Station::HandleDataFrame(const DataFrameHeader& hdr) {
+    WLAN_STATS_INC(data_frame.in);
     if (state_ != WlanState::kAssociated) { return ZX_OK; }
 
     auto from_bss = (bssid() != nullptr && *bssid() == hdr.addr2);
