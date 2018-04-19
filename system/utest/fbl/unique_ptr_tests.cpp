@@ -521,6 +521,19 @@ static bool uptr_upcasting() {
     EXPECT_FALSE(test_res);
 #endif
 
+    // This should work even though B has no virtual destructor.
+    {
+        fbl::AllocChecker ac;
+        fbl::unique_ptr<B> ptr(new (&ac) B());
+        ASSERT_TRUE(ac.check());
+
+        fbl::unique_ptr<const B> const_ptr;
+        const_ptr = fbl::move(ptr);
+
+        EXPECT_NULL(ptr);
+        EXPECT_NONNULL(const_ptr);
+    }
+
 #if TEST_WILL_NOT_COMPILE || 0
     // This should not work.  D has a virtual destructor, but it is not a base
     // class of C.

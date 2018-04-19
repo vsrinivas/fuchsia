@@ -89,11 +89,11 @@ public:
     // Implicit upcasting via construction.
     //
     // We permit implicit casting of a unique_ptr<U> to a unique_ptr<T> as long
-    // as...
+    // as the following conditions both hold:
     //
     // 1) U* is implicitly convertible to a T*
-    // 2) Neither T nor U are a class/struct type, or both T and U are
-    //    class/struct types, and T has a virtual destructor.
+    // 2) T is the same as const U, neither T nor U are a class/struct type, or
+    //    both T and U are class/struct types and T has a virtual destructor.
     //
     // Note: we do this via an implicit converting constructor (instead of a
     // user-defined conversion operator) so that we can demand that we are
@@ -107,10 +107,12 @@ public:
     template <typename U,
               typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
     unique_ptr(unique_ptr<U>&& o) : ptr_(o.release()) {
-        static_assert((is_class<T>::value == is_class<U>::value) &&
-                     (!is_class<T>::value || has_virtual_destructor<T>::value),
-                "Cannot convert unique_ptr<U> to unique_ptr<T> unless neither T "
-                "nor U are class/struct types, or T has a virtual destructor");
+        static_assert(is_same<T, const U>::value ||
+                (is_class<T>::value == is_class<U>::value &&
+                     (!is_class<T>::value || has_virtual_destructor<T>::value)),
+                "Cannot convert unique_ptr<U> to unique_ptr<T> unless T is the same "
+                "as const U, neither T nor U are class/struct types, or T has a "
+                "virtual destructor");
     }
 
 private:
