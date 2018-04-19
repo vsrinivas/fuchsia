@@ -18,9 +18,9 @@ void threads_test_wait_fn(void* arg);
 void threads_test_wait_detach_fn(void* arg);
 
 // The arg is an event which will be waited on for signal 0 (to synchronize the beginning), then
-// it will issue a __builtin_trap() (causing an undefined instruction exception --
-// useful for testing exceptions), then it will sleep infinitely.
-void threads_test_wait_trap_infinite_sleep_fn(void* arg);
+// it will issue a debug break instruction (causing a SW_BREAKPOINT exception), then it will sleep
+// infinitely.
+void threads_test_wait_break_infinite_sleep_fn(void* arg);
 
 // This thread function busyloops forever. The arg is ignored.
 void threads_test_busy_fn(void* arg);

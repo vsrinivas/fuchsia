@@ -72,9 +72,29 @@ static bool resume_thread_synchronous(zx_handle_t thread, zx_handle_t suspend_to
     return true;
 }
 
+// Updates the thread state to advance over a software breakpoint instruction, assuming the
+// breakpoint was just hit. This does not resume the thread, only updates its state.
+static bool advance_over_breakpoint(zx_handle_t thread) {
+#if defined(__aarch64__)
+    // Advance 4 bytes to the next instruction after the debug break.
+    struct zx_thread_state_general_regs regs;
+    ASSERT_EQ(zx_thread_read_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+              ZX_OK, "");
+    regs.pc += 4;
+    ASSERT_EQ(zx_thread_write_state(thread, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
+              ZX_OK, "");
+#elif defined(__x86_64__)
+    // x86 sets the instruction pointer to the following instruction so needs no update.
+#else
+#error Not supported on this platform.
+#endif
+    return true;
+}
+
 // Waits for the exception type excp_type, ignoring exceptions of type ignore_type (these will
 // just resume the thread), and issues errors for anything else.
-static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_t excp_type, uint32_t ignore_type) {
+static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t eport, uint32_t excp_type,
+                                  uint32_t ignore_type) {
     zx_port_packet_t packet;
     while (true) {
         ASSERT_EQ(zx_port_wait(eport, ZX_TIME_INFINITE, &packet, 1), ZX_OK, "");
@@ -647,7 +667,7 @@ static bool test_suspend_multiple(void) {
     zx_handle_t thread_h;
 
     ASSERT_EQ(zx_event_create(0, &event), ZX_OK, "");
-    ASSERT_TRUE(start_thread(threads_test_wait_trap_infinite_sleep_fn, &event, &thread,
+    ASSERT_TRUE(start_thread(threads_test_wait_break_infinite_sleep_fn, &event, &thread,
                              &thread_h), "");
 
     // The thread will now be blocked on the event. Wake it up and catch the trap (undefined
@@ -655,7 +675,7 @@ static bool test_suspend_multiple(void) {
     zx_handle_t exception_port = ZX_HANDLE_INVALID;
     ASSERT_TRUE(set_debugger_exception_port(&exception_port), "");
     ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK, "");
-    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_port, ZX_EXCP_FATAL_PAGE_FAULT,
+    ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_port, ZX_EXCP_SW_BREAKPOINT,
                                       ZX_EXCP_THREAD_STARTING), "");
 
     // The thread should now be blocked on a debugger exception.
@@ -663,6 +683,8 @@ static bool test_suspend_multiple(void) {
     ASSERT_TRUE(get_thread_info(thread_h, &info), "");
     ASSERT_EQ(info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_DEBUGGER, "");
     ASSERT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+
+    advance_over_breakpoint(thread_h);
 
     // Suspend twice (on top of the existing exception). Don't use the synchronous suspend since
     // it's blocked already.
@@ -703,6 +725,7 @@ static bool test_suspend_multiple(void) {
     clear_debugger_exception_port();
     ASSERT_EQ(zx_task_kill(thread_h), ZX_OK, "");
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK, "");
+
     END_TEST;
 }
 

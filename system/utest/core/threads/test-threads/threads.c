@@ -33,14 +33,19 @@ void threads_test_wait_detach_fn(void* arg) {
     zx_thread_exit();
 }
 
-void threads_test_wait_trap_infinite_sleep_fn(void* arg) {
+void threads_test_wait_break_infinite_sleep_fn(void* arg) {
     zx_handle_t event = *(zx_handle_t*)arg;
     zx_object_wait_one(event, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
 
     // Don't use builtin_trap since the compiler might assume everything after that call can't
     // execute and will remove the zx_nanosleep below.
-    volatile int* null_int_ptr = NULL;
-    *null_int_ptr = 12345;
+#if defined(__aarch64__)
+    __asm__ volatile("brk 0");
+#elif defined(__x86_64__)
+    __asm__ volatile("int3");
+#else
+#error Not supported on this platform.
+#endif
 
     zx_nanosleep(UINT64_MAX);
 }
