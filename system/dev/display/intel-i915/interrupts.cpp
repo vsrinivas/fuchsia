@@ -73,8 +73,11 @@ int Interrupts::IrqLoop() {
             HandlePipeInterrupt(registers::PIPE_A);
         }
 
-        if (interrupt_ctrl.reg_value() & interrupt_mask_) {
-            interrupt_cb_(interrupt_cb_data_, interrupt_ctrl.reg_value());
+        {
+            fbl::AutoLock lock(&lock_);
+            if (interrupt_ctrl.reg_value() & interrupt_mask_) {
+                interrupt_cb_(interrupt_cb_data_, interrupt_ctrl.reg_value());
+            }
         }
 
         interrupt_ctrl.set_enable_mask(1);
@@ -94,8 +97,6 @@ void Interrupts::HandlePipeInterrupt(registers::Pipe pipe) {
 }
 
 void Interrupts::EnablePipeVsync(registers::Pipe pipe, bool enable) {
-    pipe_vsyncs_[pipe] = enable;
-
     registers::PipeRegs regs(pipe);
     auto mask_reg = regs.PipeDeInterrupt(regs.kMaskReg).FromValue(0);
     mask_reg.set_vsync(!enable);
@@ -135,6 +136,7 @@ void Interrupts::EnableHotplugInterrupts() {
 
 zx_status_t Interrupts::SetInterruptCallback(zx_intel_gpu_core_interrupt_callback_t callback,
                                              void *data, uint32_t interrupt_mask) {
+    fbl::AutoLock lock(&lock_);
     if (callback != nullptr && interrupt_cb_ != nullptr) {
         return ZX_ERR_ALREADY_BOUND;
     }
@@ -147,6 +149,8 @@ zx_status_t Interrupts::SetInterruptCallback(zx_intel_gpu_core_interrupt_callbac
 zx_status_t Interrupts::Init(Controller* controller) {
     controller_ = controller;
     hwreg::RegisterIo* mmio_space = controller_->mmio_space();
+
+    mtx_init(&lock_, mtx_plain);
 
     // Disable interrupts here, re-enable them in ::FinishInit()
     auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space);
@@ -189,11 +193,6 @@ void Interrupts::FinishInit() {
 
 void Interrupts::Resume() {
     EnableHotplugInterrupts();
-    for (unsigned i = 0; i < registers::kPipeCount; i++) {
-        if (pipe_vsyncs_[i]) {
-            EnablePipeVsync(static_cast<registers::Pipe>(i), true);
-        }
-    }
 }
 
 } // namespace i915

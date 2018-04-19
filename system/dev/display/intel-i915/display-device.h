@@ -89,6 +89,7 @@ private:
     bool inited_;
     zx_display_info_t info_;
     edid::Edid edid_;
+    bool is_enabled_;
 };
 
 } // namespace i915

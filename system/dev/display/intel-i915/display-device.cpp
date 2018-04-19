@@ -173,6 +173,10 @@ bool DisplayDevice::Resume() {
         return false;
     }
 
+    if (is_enabled_) {
+        controller_->interrupts()->EnablePipeVsync(pipe_, true);
+    }
+
     registers::PipeRegs pipe_regs(pipe());
 
     auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(controller_->mmio_space());
@@ -188,6 +192,15 @@ bool DisplayDevice::Resume() {
 }
 
 void DisplayDevice::ApplyConfiguration(display_config_t* config) {
+    bool enabled = config != nullptr;
+    if (enabled != is_enabled_) {
+        controller_->interrupts()->EnablePipeVsync(pipe_, enabled);
+        is_enabled_ = enabled;
+    }
+    if (!is_enabled_) {
+        return;
+    }
+
     registers::PipeRegs pipe_regs(pipe());
 
     uint32_t base_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(config->image.handle));

@@ -35,16 +35,16 @@ private:
     void EnableHotplugInterrupts();
     void HandlePipeInterrupt(registers::Pipe pipe);
 
-    bool pipe_vsyncs_[registers::kPipeCount];
-
-    Controller* controller_;
+    Controller* controller_; // Assume that controller callbacks are threadsafe
 
     zx::handle irq_;
     thrd_t irq_thread_;
 
-    zx_intel_gpu_core_interrupt_callback_t interrupt_cb_;
-    void* interrupt_cb_data_;
-    uint32_t interrupt_mask_;
+    zx_intel_gpu_core_interrupt_callback_t interrupt_cb_ __TA_GUARDED(lock_);
+    void* interrupt_cb_data_ __TA_GUARDED(lock_);
+    uint32_t interrupt_mask_ __TA_GUARDED(lock_);
+
+    mtx_t lock_;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Interrupts);
 };

@@ -157,72 +157,92 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
     zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
     DisplayDevice* device = nullptr;
     bool was_kernel_framebuffer = false;
-    for (size_t i = 0; i < display_devices_.size(); i++) {
-        if (display_devices_[i]->ddi() == ddi) {
-            if (display_devices_[i]->HandleHotplug(long_pulse)) {
-                zxlogf(SPEW, "i915: hotplug handled by device\n");
-                return;
+    int32_t display_added = -1;
+    int32_t display_removed = -1;
+
+    acquire_dc_cb_lock();
+    {
+        fbl::AutoLock lock(&display_lock_);
+
+        for (size_t i = 0; i < display_devices_.size(); i++) {
+            if (display_devices_[i]->ddi() == ddi) {
+                if (display_devices_[i]->HandleHotplug(long_pulse)) {
+                    zxlogf(SPEW, "i915: hotplug handled by device\n");
+                    release_dc_cb_lock();
+                    return;
+                }
+                device = display_devices_.erase(i);
+                was_kernel_framebuffer = i == 0;
+                break;
             }
-            device = display_devices_.erase(i);
-            was_kernel_framebuffer = i == 0;
-            break;
         }
-    }
-    if (device) { // Existing device was unplugged
-        if (was_kernel_framebuffer) {
-            if (display_devices_.is_empty()) {
-                zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+        if (device) { // Existing device was unplugged
+            if (was_kernel_framebuffer) {
+                if (display_devices_.is_empty()) {
+                    zx_set_framebuffer_vmo(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+                } else {
+                    DisplayDevice* new_device = display_devices_[0];
+                    zx_set_framebuffer_vmo(get_root_resource(),
+                                           new_device->framebuffer_vmo().get(),
+                                           static_cast<uint32_t>(new_device->framebuffer_size()),
+                                           new_device->info().format, new_device->info().width,
+                                           new_device->info().height, new_device->info().stride);
+                }
+            }
+            device->DdkRemove();
+            zxlogf(SPEW, "Display unplugged\n");
+            display_removed = device->id();
+        } else { // New device was plugged in
+            fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
+            if (!device) {
+                zxlogf(INFO, "i915: failed to init hotplug display\n");
             } else {
-                DisplayDevice* new_device = display_devices_[0];
-                zx_set_framebuffer_vmo(get_root_resource(),
-                                       new_device->framebuffer_vmo().get(),
-                                       static_cast<uint32_t>(new_device->framebuffer_size()),
-                                       new_device->info().format, new_device->info().width,
-                                       new_device->info().height, new_device->info().stride);
+                int id = device->id();
+                if (AddDisplay(fbl::move(device)) == ZX_OK) {
+                    zxlogf(SPEW, "Display connected\n");
+                    display_added = id;
+                } else {
+                    zxlogf(INFO, "Failed to add display %d\n", ddi);
+                }
             }
         }
-        device->DdkRemove();
-        zxlogf(SPEW, "Display unplugged\n");
-
-        if (dc_cb_) {
-            int id = device->id();
-            dc_cb_->on_displays_changed(dc_cb_ctx_, NULL, 0, &id, 1);
-        }
-    } else { // New device was plugged in
-        fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
-        if (!device) {
-            zxlogf(INFO, "i915: failed to init hotplug display\n");
-            return;
-        }
-
-        int id = device->id();
-        if (AddDisplay(fbl::move(device)) != ZX_OK) {
-            zxlogf(INFO, "Failed to add display %d\n", ddi);
-            return;
-        } else {
-            zxlogf(SPEW, "Display connected\n");
-        }
-        if (dc_cb_) {
-            dc_cb_->on_displays_changed(dc_cb_ctx_, &id, 1, NULL, 0);
-        }
     }
+    if (dc_cb() && (display_added >= 0 || display_removed >= 0)) {
+        dc_cb()->on_displays_changed(dc_cb_ctx_,
+                                     &display_added, display_added >= 0,
+                                     &display_removed, display_removed >= 0);
+    }
+    release_dc_cb_lock();
 }
 
 void Controller::HandlePipeVsync(registers::Pipe pipe) {
-    if (!dc_cb_) {
+    acquire_dc_cb_lock();
+
+    if (!dc_cb()) {
+        release_dc_cb_lock();
         return;
     }
 
-    for (auto display : display_devices_) {
-        if (display->pipe() == pipe) {
-            registers::PipeRegs regs(pipe);
-            auto live_surface = regs.PlaneSurfaceLive().ReadFrom(mmio_space());
-            void* handle = reinterpret_cast<void*>(
-                    live_surface.surface_base_addr() << live_surface.kPageShift);
-            dc_cb_->on_display_vsync(dc_cb_ctx_, display->id(), handle);
-            return;
+    int32_t id = -1;
+    void* handle = nullptr;
+    {
+        fbl::AutoLock lock(&display_lock_);
+        for (auto display : display_devices_) {
+            if (display->pipe() == pipe) {
+                registers::PipeRegs regs(pipe);
+                auto live_surface = regs.PlaneSurfaceLive().ReadFrom(mmio_space());
+                handle = reinterpret_cast<void*>(
+                        live_surface.surface_base_addr() << live_surface.kPageShift);
+                id = display->id();
+                break;
+            }
         }
     }
+
+    if (id >= 0) {
+        dc_cb()->on_display_vsync(dc_cb_ctx_, id, handle);
+    }
+    release_dc_cb_lock();
 }
 
 DisplayDevice* Controller::FindDevice(int32_t display_id) {
@@ -563,29 +583,37 @@ zx_status_t Controller::InitDisplays() {
     if (is_modesetting_enabled(device_id_)) {
         BringUpDisplayEngine(false);
 
-        for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-            auto disp_device = InitDisplay(registers::kDdis[i]);
-            if (disp_device) {
-                if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
-                    zxlogf(INFO, "Failed to add display %d\n", i);
+        acquire_dc_cb_lock();
+        int displays[registers::kDdiCount];
+        uint32_t display_count;
+        {
+            fbl::AutoLock lock(&display_lock_);
+            for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+                auto disp_device = InitDisplay(registers::kDdis[i]);
+                if (disp_device) {
+                    if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
+                        zxlogf(INFO, "Failed to add display %d\n", i);
+                    }
                 }
+            }
+            display_count = static_cast<uint32_t>(display_devices_.size());
+            for (unsigned i = 0; i < display_count; i++) {
+                displays[i] = display_devices_[i]->id();
             }
         }
 
         // TODO(stevensd): Once displays are no longer real ddk devices, move
-        // InitDisplays before DdkAdd so that dc_cb_ can't be set before here.
-        if (dc_cb_ && !display_devices_.is_empty()) {
-            int displays[registers::kDdiCount];
-            for (unsigned i = 0; i < display_devices_.size(); i++) {
-                displays[i] = display_devices_[i]->id();
-            }
-
-            dc_cb_->on_displays_changed(dc_cb_ctx_, displays,
-                                        static_cast<uint32_t>(display_devices_.size()), NULL, 0);
+        // InitDisplays before DdkAdd so that dc_cb_ can't be set before here. Also
+        // remove the requirement for dc_cb_lock()
+        if (display_count && dc_cb()) {
+            dc_cb()->on_displays_changed(dc_cb_ctx_, displays, display_count, nullptr, 0);
         }
+        release_dc_cb_lock();
 
         return ZX_OK;
     } else {
+        fbl::AutoLock lock(&display_lock_);
+
         fbl::AllocChecker ac;
         // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
         auto disp_device = fbl::make_unique_checked<BootloaderDisplay>(
@@ -631,20 +659,27 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
 // DisplayController methods
 
 void Controller::SetDisplayControllerCb(void* cb_ctx, display_controller_cb_t* cb) {
+    acquire_dc_cb_lock();
     dc_cb_ctx_ = cb_ctx;
-    dc_cb_ = cb;
+    _dc_cb_ = cb;
 
     int displays[registers::kDdiCount];
-    for (unsigned i = 0; i < display_devices_.size(); i++) {
-        displays[i] = display_devices_[i]->id();
+    uint32_t size;
+    {
+        fbl::AutoLock lock(&display_lock_);
+        size = static_cast<uint32_t>(display_devices_.size());
+        for (unsigned i = 0; i < size; i++) {
+            displays[i] = display_devices_[i]->id();
+        }
     }
 
-    cb->on_displays_changed(cb_ctx, displays,
-                            static_cast<uint32_t>(display_devices_.size()), NULL, 0);
+    cb->on_displays_changed(cb_ctx, displays, size, NULL, 0);
+    release_dc_cb_lock();
 }
 
 zx_status_t Controller::GetDisplayInfo(int32_t display_id, display_info_t* info) {
     DisplayDevice* device;
+    fbl::AutoLock lock(&display_lock_);
     if ((device = FindDevice(display_id)) == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -660,6 +695,7 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
         return ZX_ERR_INVALID_ARGS;
     }
 
+    fbl::AutoLock lock(&gtt_lock_);
     fbl::AllocChecker ac;
     imported_images_.reserve(imported_images_.size() + 1, &ac);
     if (!ac.check()) {
@@ -687,6 +723,7 @@ zx_status_t Controller::ImportVmoImage(image_t* image, const zx::vmo& vmo, size_
 }
 
 void Controller::ReleaseImage(image_t* image) {
+    fbl::AutoLock lock(&gtt_lock_);
     for (unsigned i = 0; i < imported_images_.size(); i++) {
         if (imported_images_[i]->base() == reinterpret_cast<uint64_t>(image->handle)) {
             imported_images_.erase(i);
@@ -696,6 +733,7 @@ void Controller::ReleaseImage(image_t* image) {
 }
 
 bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t display_count) {
+    fbl::AutoLock lock(&display_lock_);
     for (unsigned i = 0; i < display_count; i++) {
         auto* config = display_config[i];
         if (!FindDevice(config->display_id)) {
@@ -712,6 +750,7 @@ bool Controller::CheckConfiguration(display_config_t** display_config, uint32_t 
 
 void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t display_count) {
     ZX_DEBUG_ASSERT(CheckConfiguration(display_config, display_count));
+    fbl::AutoLock lock(&display_lock_);
 
     for (auto display : display_devices_) {
         display_config_t* config = nullptr;
@@ -724,7 +763,6 @@ void Controller::ApplyConfiguration(display_config_t** display_config, uint32_t 
         if (config != nullptr) {
             display->ApplyConfiguration(config);
         }
-        interrupts_.EnablePipeVsync(display->pipe(), config != nullptr);
     }
 }
 
@@ -746,6 +784,7 @@ zx_status_t Controller::MapPciMmio(uint32_t pci_bar, void** addr_out, uint64_t* 
     if (pci_bar > PCI_MAX_BAR_COUNT) {
         return ZX_ERR_INVALID_ARGS;
     }
+    fbl::AutoLock lock(&bar_lock_);
     if (mapped_bars_[pci_bar].count == 0) {
         zx_status_t status = pci_map_bar(&pci_, pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                                          &mapped_bars_[pci_bar].base,
@@ -765,6 +804,7 @@ zx_status_t Controller::UnmapPciMmio(uint32_t pci_bar) {
     if (pci_bar > PCI_MAX_BAR_COUNT) {
         return ZX_ERR_INVALID_ARGS;
     }
+    fbl::AutoLock lock(&bar_lock_);
     if (mapped_bars_[pci_bar].count == 0) {
         return ZX_OK;
     }
@@ -792,11 +832,13 @@ zx_status_t Controller::UnregisterInterruptCallback() {
 }
 
 uint64_t Controller::GttGetSize() {
+    fbl::AutoLock lock(&gtt_lock_);
     return gtt_.size();
 }
 
 zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
     uint64_t length = page_count * PAGE_SIZE;
+    fbl::AutoLock lock(&gtt_lock_);
     if (length > gtt_.size()) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -813,6 +855,7 @@ zx_status_t Controller::GttAlloc(uint64_t page_count, uint64_t* addr_out) {
 }
 
 zx_status_t Controller::GttFree(uint64_t addr) {
+    fbl::AutoLock lock(&gtt_lock_);
     for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
         if (imported_gtt_regions_[i]->base() == addr) {
             imported_gtt_regions_.erase(i)->ClearRegion(true);
@@ -823,6 +866,7 @@ zx_status_t Controller::GttFree(uint64_t addr) {
 }
 
 zx_status_t Controller::GttClear(uint64_t addr) {
+    fbl::AutoLock lock(&gtt_lock_);
     for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
         if (imported_gtt_regions_[i]->base() == addr) {
             imported_gtt_regions_[i]->ClearRegion(true);
@@ -834,6 +878,7 @@ zx_status_t Controller::GttClear(uint64_t addr) {
 
 zx_status_t Controller::GttInsert(uint64_t addr, zx_handle_t buffer,
                                   uint64_t page_offset, uint64_t page_count) {
+    fbl::AutoLock lock(&gtt_lock_);
     for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
         if (imported_gtt_regions_[i]->base() == addr) {
             return imported_gtt_regions_[i]->PopulateRegion(buffer, page_offset,
@@ -854,6 +899,7 @@ void Controller::GpuRelease() {
 // Ddk methods
 
 void Controller::DdkUnbind() {
+    fbl::AutoLock lock(&display_lock_);
     while (!display_devices_.is_empty()) {
         device_remove(display_devices_.erase(0)->zxdev());
     }
@@ -892,7 +938,10 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
         uintptr_t fb = bdsm_reg.base_phys_addr() << bdsm_reg.base_phys_addr_shift;
         uint32_t fb_size = stride * height * ZX_PIXEL_FORMAT_BYTES(format);
 
-        gtt_.SetupForMexec(fb, fb_size, registers::PlaneSurface::kTrailingPtePadding);
+        {
+            fbl::AutoLock lock(&gtt_lock_);
+            gtt_.SetupForMexec(fb, fb_size, registers::PlaneSurface::kTrailingPtePadding);
+        }
 
         // Try to map the framebuffer and clear it. If not, oh well.
         void* gmadr;
@@ -904,17 +953,20 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
             zx_handle_close(gmadr_handle);
         }
 
-        for (auto* display : display_devices_) {
-            // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
-            registers::PipeRegs pipe_regs(display->pipe());
+        {
+            fbl::AutoLock lock(&display_lock_);
+            for (auto* display : display_devices_) {
+                // TODO(ZX-1413): Reset/scale the display to ensure the buffer displays properly
+                registers::PipeRegs pipe_regs(display->pipe());
 
-            auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
-            plane_stride.set_linear_stride(stride, format);
-            plane_stride.WriteTo(mmio_space_.get());
+                auto plane_stride = pipe_regs.PlaneSurfaceStride().ReadFrom(mmio_space_.get());
+                plane_stride.set_linear_stride(stride, format);
+                plane_stride.WriteTo(mmio_space_.get());
 
-            auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());
-            plane_surface.set_surface_base_addr(0);
-            plane_surface.WriteTo(mmio_space_.get());
+                auto plane_surface = pipe_regs.PlaneSurface().ReadFrom(mmio_space_.get());
+                plane_surface.set_surface_base_addr(0);
+                plane_surface.WriteTo(mmio_space_.get());
+            }
         }
     }
     return ZX_OK;
@@ -935,6 +987,7 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
             .set_ddi_a_lane_capability_control(ddi_a_lane_capability_control_)
             .WriteTo(mmio_space_.get());
 
+    fbl::AutoLock lock(&display_lock_);
     for (auto& disp : display_devices_) {
         if (!disp->Resume()) {
             zxlogf(ERROR, "Failed to resume display\n");
@@ -1009,9 +1062,12 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     zxlogf(TRACE, "i915: mapping gtt\n");
-    if ((status = gtt_.Init(this)) != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to init gtt %d\n", status);
-        return status;
+    {
+        fbl::AutoLock lock(&gtt_lock_);
+        if ((status = gtt_.Init(this)) != ZX_OK) {
+            zxlogf(ERROR, "i915: failed to init gtt %d\n", status);
+            return status;
+        }
     }
 
     status = DdkAdd("intel_i915");
@@ -1062,7 +1118,12 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 }
 
 Controller::Controller(zx_device_t* parent)
-    : DeviceType(parent), power_(this) {}
+    : DeviceType(parent), power_(this) {
+    mtx_init(&display_lock_, mtx_plain);
+    mtx_init(&gtt_lock_, mtx_plain);
+    mtx_init(&bar_lock_, mtx_plain);
+    mtx_init(&_dc_cb_lock_, mtx_plain);
+}
 
 Controller::~Controller() {
     interrupts_.Destroy();
@@ -1072,6 +1133,7 @@ Controller::~Controller() {
     // Drop our own reference to bar 0. No-op if we failed before we mapped it.
     UnmapPciMmio(0u);
     // Release anything leaked by the gpu-core client.
+    fbl::AutoLock lock(&bar_lock_);
     for (unsigned i = 0; i < PCI_MAX_BAR_COUNT; i++) {
         if (mapped_bars_[i].count) {
             zxlogf(INFO, "Leaked bar %d\n", i);

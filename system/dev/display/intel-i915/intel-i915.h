@@ -69,6 +69,7 @@ public:
     pci_protocol_t* pci() { return &pci_; }
     hwreg::RegisterIo* mmio_space() { return mmio_space_.get(); }
     Gtt* gtt() { return &gtt_; }
+    Interrupts* interrupts() { return &interrupts_; }
     uint16_t device_id() const { return device_id_; }
     const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
     Power* power() { return &power_; }
@@ -84,22 +85,42 @@ public:
 private:
     void EnableBacklight(bool enable);
     zx_status_t InitDisplays();
-    fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi);
-    zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display);
+    fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
+    zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
     bool BringUpDisplayEngine(bool resume);
     void AllocDisplayBuffers();
-    DisplayDevice* FindDevice(int32_t display_id);
+    DisplayDevice* FindDevice(int32_t display_id) __TA_REQUIRES(display_lock_);
 
     zx_device_t* zx_gpu_dev_;
     bool gpu_released_ = false;
     bool display_released_ = false;
 
-    void* dc_cb_ctx_;
-    display_controller_cb_t* dc_cb_;
+    void* dc_cb_ctx_ __TA_GUARDED(_dc_cb_lock_);
+    display_controller_cb_t* _dc_cb_ __TA_GUARDED(_dc_cb_lock_);
+    mtx_t _dc_cb_lock_;
 
-    Gtt gtt_;
-    IgdOpRegion igd_opregion_;
-    Interrupts interrupts_;
+    // To prevent deadlocks, require that only the callback lock is held when making
+    // callbacks and that the callback lock is acquired before any other locks.
+    display_controller_cb_t* dc_cb() __TA_REQUIRES(_dc_cb_lock_)
+                                     __TA_EXCLUDES(display_lock_, gtt_lock_, bar_lock_) {
+        return _dc_cb_;
+    }
+    // TODO: Use __TA_ACQUIRED_BEFORE when it works as well as __TA_EXCLUDES
+    void acquire_dc_cb_lock() __TA_ACQUIRE(_dc_cb_lock_)
+                              __TA_EXCLUDES(display_lock_, gtt_lock_, bar_lock_) {
+        mtx_lock(&_dc_cb_lock_);
+    }
+    void release_dc_cb_lock() __TA_RELEASE(_dc_cb_lock_) { mtx_unlock(&_dc_cb_lock_); }
+
+    Gtt gtt_ __TA_GUARDED(gtt_lock_);
+    mtx_t gtt_lock_;
+    // These regions' VMOs are not owned
+    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_images_ __TA_GUARDED(gtt_lock_);
+    // These regions' VMOs are owned
+    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_gtt_regions_ __TA_GUARDED(gtt_lock_);
+
+    IgdOpRegion igd_opregion_; // Read only, no locking
+    Interrupts interrupts_; // Internal locking
 
     pci_protocol_t pci_;
     struct {
@@ -107,18 +128,17 @@ private:
         uint64_t size;
         zx_handle_t vmo;
         int32_t count;
-    } mapped_bars_[PCI_MAX_BAR_COUNT];
+    } mapped_bars_[PCI_MAX_BAR_COUNT] __TA_GUARDED(bar_lock_);
+    mtx_t bar_lock_;
+    // The mmio_space_ unique_ptr is read only. The internal registers are
+    // guarded by various locks where appropriate.
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space_;
-
-    // These regions' VMOs are not owned
-    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_images_;
-    // These regions' VMOs are owned
-    fbl::Vector<fbl::unique_ptr<GttRegion>> imported_gtt_regions_;
 
     // References to displays. References are owned by devmgr, but will always
     // be valid while they are in this vector.
-    fbl::Vector<DisplayDevice*> display_devices_;
-    int32_t next_id_ = 0;
+    fbl::Vector<DisplayDevice*> display_devices_ __TA_GUARDED(display_lock_);
+    int32_t next_id_ __TA_GUARDED(display_lock_) = 0;
+    mtx_t display_lock_;
 
     Power power_;
     PowerWellRef cd_clk_power_well_;
