@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/machina/block_dispatcher.h"
+#include "garnet/lib/machina/volatile_write_block_dispatcher.h"
 
 #include "gtest/gtest.h"
 
@@ -41,13 +41,21 @@ class StaticDispatcher : public BlockDispatcher {
     }                                      \
   } while (0)
 
-TEST(BlockDispatcherTest, VolatileWriteBlock) {
+fbl::unique_ptr<VolatileWriteBlockDispatcher> CreateDispatcher() {
   fbl::unique_ptr<BlockDispatcher> dispatcher;
-  ASSERT_EQ(ZX_OK,
-            BlockDispatcher::CreateVolatileWrapper(
+  zx_status_t status =
+    BlockDispatcher::CreateVolatileWrapper(
                 fbl::make_unique<StaticDispatcher>(kDispatcherSize, 0xab),
-                &dispatcher));
+                &dispatcher);
+  if (status != ZX_OK) {
+    return nullptr;
+  }
+  return fbl::unique_ptr<VolatileWriteBlockDispatcher>(
+      reinterpret_cast<VolatileWriteBlockDispatcher*>(dispatcher.release()));
+}
 
+TEST(BlockDispatcherTest, VolatileWriteBlock) {
+  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
   uint8_t block[512] = {};
   ASSERT_EQ(ZX_OK, dispatcher->Read(0, block, sizeof(block)));
   ASSERT_BLOCK_VALUE(block, 0xab, sizeof(block));
@@ -60,11 +68,7 @@ TEST(BlockDispatcherTest, VolatileWriteBlock) {
 }
 
 TEST(BlockDispatcherTest, VolatileWriteBlockComplex) {
-  fbl::unique_ptr<BlockDispatcher> dispatcher;
-  ASSERT_EQ(ZX_OK,
-            BlockDispatcher::CreateVolatileWrapper(
-                fbl::make_unique<StaticDispatcher>(kDispatcherSize, 0xab),
-                &dispatcher));
+  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
 
   // Write blocks 0 & 2, blocks 1 & 3 will hit the static dispatcher.
   uint8_t block[512];
@@ -81,11 +85,7 @@ TEST(BlockDispatcherTest, VolatileWriteBlockComplex) {
 }
 
 TEST(BlockDispatcherTest, VolatileWriteBadRequest) {
-  fbl::unique_ptr<BlockDispatcher> dispatcher;
-  ASSERT_EQ(ZX_OK,
-            BlockDispatcher::CreateVolatileWrapper(
-                fbl::make_unique<StaticDispatcher>(kDispatcherSize, 0xab),
-                &dispatcher));
+  fbl::unique_ptr<VolatileWriteBlockDispatcher> dispatcher = CreateDispatcher();
 
   uint8_t block[512] = {};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, dispatcher->Read(1, block, sizeof(block)));
