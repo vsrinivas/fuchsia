@@ -55,6 +55,7 @@ union Action {
   AddModuleToStory add_module_to_story;
   AddModule add_module;
   CustomAction custom_action;
+  QueryAction query_action;
 
   // TODO(thatguy): Add other actions.
 };
@@ -142,4 +143,13 @@ struct AddModule {
 // selected.
 interface CustomAction {
   1: Execute() -> (vector<Action?>? actions);
+};
+
+
+// Performs a query with the given text. Once the proposals from the query are
+// received, the first top-ranked proposal (not necessarily first proposal
+// received) is jackpotted (automatically selected).
+struct QueryAction {
+  // The input for the query.
+  UserInput input;
 };

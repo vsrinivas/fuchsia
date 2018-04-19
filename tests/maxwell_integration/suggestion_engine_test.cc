@@ -761,6 +761,46 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
             story_provider()->story_controller().last_added_module());
 }
 
+TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
+  AskProposinator p(suggestion_engine());
+  StartListening(10);
+
+  modular::UserInput user_input;
+  user_input.text = "test query";
+  modular::QueryAction query_action;
+  query_action.input = std::move(user_input);
+  modular::Action action;
+  action.set_query_action(std::move(query_action));
+  fidl::VectorPtr<modular::Action> actions;
+  actions.push_back(std::move(action));
+  p.Propose("1", std::move(actions));
+
+  WaitUntilIdle();
+  EXPECT_EQ(1, suggestion_count());
+
+  // Suggestion is selected.
+  auto suggestion_id = GetOnlySuggestion()->uuid;
+  AcceptSuggestion(suggestion_id);
+
+  // Expect query handler to be called with the query action input.
+  p.WaitForQuery();
+  EXPECT_EQ(p.query(), "test query");
+
+  // Response from QueryHandler.
+  modular::CreateStory create_story;
+  create_story.module_id = "foo://bar";
+  modular::Action action2;
+  action2.set_create_story(std::move(create_story));
+  fidl::VectorPtr<modular::Action> suggested_actions;
+  suggested_actions.push_back(std::move(action2));
+  p.ProposeForAsk("2", "suggestion", modular::AnnoyanceType::NONE,
+                  std::move(suggested_actions));
+  p.Commit();
+
+  WaitUntilIdle();
+  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
+}
+
 TEST_F(AskTest, DefaultAsk) {
   AskProposinator p(suggestion_engine());
 

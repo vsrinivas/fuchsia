@@ -18,6 +18,7 @@
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
 
+#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/kronk_ranking_feature.h"
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
@@ -27,11 +28,19 @@
 
 namespace modular {
 
+namespace {
+
+constexpr int kQueryActionMaxResults = 1;
+
+}  // namespace
+
 SuggestionEngineImpl::SuggestionEngineImpl(
     component::ApplicationContext* app_context)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
-      context_listener_binding_(this) {
+      context_listener_binding_(this),
+      auto_select_first_query_listener_(this),
+      auto_select_first_query_listener_binding_(&auto_select_first_query_listener_) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -75,8 +84,8 @@ void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
                                  UserInput input,
                                  int count) {
   // TODO(jwnichols): I'm not sure this is correct or should be here
-  for (auto& listener : speech_listeners_.ptrs()) {
-    (*listener)->OnStatusChanged(SpeechStatus::PROCESSING);
+  for (auto& speech_listener : speech_listeners_.ptrs()) {
+    (*speech_listener)->OnStatusChanged(SpeechStatus::PROCESSING);
   }
 
   // Process:
@@ -278,6 +287,10 @@ void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
         PerformAddModuleAction(action);
         break;
       }
+      case Action::Tag::kQueryAction: {
+        PerformQueryAction(action);
+        break;
+      }
       case Action::Tag::kCustomAction: {
         PerformCustomAction(&action, source_url, story_color);
         break;
@@ -411,6 +424,14 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
           PerformActions(std::move(non_null_actions), source_url, story_color);
         }
       }));
+}
+
+void SuggestionEngineImpl::PerformQueryAction(const Action& action) {
+  // TODO(miguelfrde): instead of keeping a AutoSelectFirstQueryListener as an
+  // attribute. Create and move here through an internal structure.
+  const auto& query_action = action.query_action();
+  Query(auto_select_first_query_listener_binding_.NewBinding(),
+        query_action.input, kQueryActionMaxResults);
 }
 
 void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {

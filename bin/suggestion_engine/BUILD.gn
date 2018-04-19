@@ -24,6 +24,8 @@ executable("bin") {
   output_name = "suggestion_engine"
 
   sources = [
+    "auto_select_first_query_listener.cc",
+    "auto_select_first_query_listener.h",
     "next_processor.cc",
     "next_processor.h",
     "proposal_publisher_impl.cc",

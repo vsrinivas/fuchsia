@@ -14,6 +14,7 @@
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"
+#include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/next_processor.h"
 #include "peridot/bin/suggestion_engine/proposal_publisher_impl.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
@@ -181,6 +182,8 @@ class SuggestionEngineImpl : public ContextListener,
 
   void PerformAddModuleAction(const Action& action);
 
+  void PerformQueryAction(const Action& action);
+
   void PerformCustomAction(Action* action,
                            const std::string& source_url,
                            uint32_t story_color);
@@ -252,6 +255,10 @@ class SuggestionEngineImpl : public ContextListener,
   ContextUpdatePtr latest_context_update_;
 
   std::unique_ptr<QueryProcessor> active_query_;
+
+  // Used to jackpot a suggestion when a QueryAction is executed.
+  AutoSelectFirstQueryListener auto_select_first_query_listener_;
+  fidl::Binding<QueryListener> auto_select_first_query_listener_binding_;
 
   media::AudioServerPtr audio_server_;
   media::MediaRendererPtr media_renderer_;

@@ -45,8 +45,9 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
     async::PostDelayedTask(
         async_get_default(),
         [w = weak_ptr_factory_.GetWeakPtr()] {
-          if (w)
+          if (w) {
             w->TimeOut();
+          }
         },
         kQueryTimeout);
   }
@@ -56,8 +57,9 @@ QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
 // beware that this may not happen until after the next QueryProcessor has been
 // constructed (active_query_ = std::make_unique...).
 QueryProcessor::~QueryProcessor() {
-  if (!request_ended_)
+  if (!request_ended_) {
     EndRequest();
+  }
 }
 
 void QueryProcessor::AddProposal(const std::string& source_url,
@@ -78,8 +80,9 @@ void QueryProcessor::DispatchQuery(const QueryHandlerRecord& handler_record) {
       input_,
       [w = weak_ptr_factory_.GetWeakPtr(),
        handler_url = handler_record.url](QueryResponse response) {
-        if (w)
+        if (w) {
           w->HandlerCallback(handler_url, std::move(response));
+        }
       });
 }
 
@@ -166,8 +169,9 @@ void QueryProcessor::NotifyOfResults() {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
 
-  if (window)
+  if (window) {
     listener_->OnQueryResults(std::move(window));
+  }
 }
 
 }  // namespace modular

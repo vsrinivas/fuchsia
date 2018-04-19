@@ -67,6 +67,7 @@ double ModPairRankingFeature::ComputeFeatureInternal(
       }
       case Action::Tag::kCustomAction:
       case Action::Tag::kFocusStory:
+      case Action::Tag::kQueryAction:
       case Action::Tag::Invalid:
         continue;
     }
