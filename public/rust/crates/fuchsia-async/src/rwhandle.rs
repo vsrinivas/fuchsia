@@ -60,7 +60,13 @@ impl<T> RWHandle<T> where T: AsHandleRef {
         let ehandle = EHandle::local();
 
         let receiver = ehandle.register_receiver(Arc::new(RWPacketReceiver {
-            signals: AtomicUsize::new(0),
+            // Optimistically assume that the handle is readable and writable.
+            // Reads and writes will be attempted before queueing a packet.
+            // This makes handles slightly faster to read/write the first time
+            // they're accessed after being created, provided they start off as
+            // readable or writable. In return, there will be an extra wasted
+            // syscall per read/write if the handle is not readable or writable.
+            signals: AtomicUsize::new(READABLE | WRITABLE),
             read_task: AtomicWaker::new(),
             write_task: AtomicWaker::new(),
         }));
@@ -69,11 +75,6 @@ impl<T> RWHandle<T> where T: AsHandleRef {
             handle,
             receiver,
         };
-
-        // Need to schedule packets to maintain the invariant that
-        // if !READABLE or !WRITABLE a packet has been scheduled.
-        rwhandle.schedule_packet(zx::Signals::OBJECT_READABLE)?;
-        rwhandle.schedule_packet(zx::Signals::OBJECT_WRITABLE)?;
 
         // Make sure we get notifications when the handle closes.
         rwhandle.schedule_packet(zx::Signals::OBJECT_PEER_CLOSED)?;
