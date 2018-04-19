@@ -904,7 +904,10 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
 
     story_controller_impl_->pending_views_.emplace(std::make_pair(
         PathString(module_path_),
-        std::make_pair(module_path_.Clone(), std::move(view_owner_))));
+        PendingView{module_path_.Clone(),
+              std::move(module_manifest_),
+              std::move(surface_relation_),
+              std::move(view_owner_)}));
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
@@ -2161,7 +2164,7 @@ void StoryControllerImpl::ProcessPendingViews() {
   std::vector<fidl::StringPtr> added_keys;
 
   for (auto& kv : pending_views_) {
-    auto* const connection = FindConnection(kv.second.first);
+    auto* const connection = FindConnection(kv.second.module_path);
     if (!connection) {
       continue;
     }
@@ -2176,11 +2179,11 @@ void StoryControllerImpl::ProcessPendingViews() {
       continue;
     }
 
-    const auto view_id = PathString(kv.second.first);
+    const auto view_id = PathString(kv.second.module_path);
     story_shell_->ConnectView(
-        std::move(kv.second.second), view_id, anchor_view_id,
-        CloneOptional(connection->module_data->surface_relation),
-        nullptr /* module_manifest */);
+        std::move(kv.second.view_owner), view_id, anchor_view_id,
+        std::move(kv.second.surface_relation),
+        std::move(kv.second.module_manifest));
     connected_views_.emplace(view_id);
 
     added_keys.push_back(kv.first);
