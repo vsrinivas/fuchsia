@@ -301,6 +301,9 @@ var (
 	GUIDFuchsiaData      = mustNewGUID("08185F0C-892D-428A-A789-DBEEC8F55E6A")
 	GUIDFuchsiaBlob      = mustNewGUID("2967380E-134C-4CBB-B6DA-17E7CE1CA45D")
 	GUIDFuchsiaFVM       = mustNewGUID("41D0E340-57E3-954E-8C1E-17ECAC44CFF5")
+	GUIDFuchsiaZirconA   = mustNewGUID("DE30CC86-1F4A-4A31-93C4-66F147D33E05")
+	GUIDFuchsiaZirconB   = mustNewGUID("23CC04DF-C278-4CE7-8471-897D1A4BCDF7")
+	GUIDFuchsiaZirconR   = mustNewGUID("A0E5CF57-2DEF-46BE-A80C-A2067C37CD49")
 )
 
 // GUIDS contains a map of known GUIDS to their names.
@@ -323,6 +326,9 @@ var GUIDS = map[string]GUID{
 	"fuchsia-system":     GUIDFuchsiaSystem,
 	"fuchsia-data":       GUIDFuchsiaData,
 	"fuchsia-blob":       GUIDFuchsiaBlob,
+	"zircon-a":           GUIDFuchsiaZirconA,
+	"zircon-b":           GUIDFuchsiaZirconB,
+	"zircon-r":           GUIDFuchsiaZirconR,
 }
 
 // ReadHeader reads a single GPT header from r.

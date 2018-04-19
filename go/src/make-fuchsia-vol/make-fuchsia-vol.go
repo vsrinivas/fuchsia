@@ -48,6 +48,12 @@ var (
 	blob        = flag.String("blob", "", "path to blob partition image (not used with ramdisk)")
 	data        = flag.String("data", "", "path to data partition image (not used with ramdisk)")
 
+	abr     = flag.Bool("abr", false, "add Zircon-{A,B,R} partitions")
+	zirconA = flag.String("zirconA", "", "path to partition image for Zircon-A")
+	zirconB = flag.String("zirconB", "", "path to partition image for Zircon-B")
+	zirconR = flag.String("zirconR", "", "path to partition image for Zircon-R")
+	abrSize = flag.Int64("abr-size", 16*1024*1024, "Kernel partition size for A/B/R")
+
 	board = flag.String("board", "pc", "Zircon board name to use/build for")
 
 	blockSize           = flag.Int64("block-size", 0, "the block size of the target disk (0 means detect)")
@@ -131,6 +137,19 @@ func main() {
 			if _, err := os.Stat(*grubCoreImg); err != nil {
 				log.Fatalf("%q not found, you may need to run scripts/grubdisk/build-all.sh", *grubCoreImg)
 			}
+		}
+	}
+
+	if *abr {
+		if *zirconA == "" {
+			needFuchsiaBuildDir()
+			*zirconA = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("zircon-boot-blob-%s.bin", *board))
+		}
+		if *zirconB == "" {
+			*zirconB = *zirconA
+		}
+		if *zirconR == "" {
+			*zirconR = filepath.Join(*fuchsiaBuildDir, fmt.Sprintf("images/zedboot-%s.bin", *board))
 		}
 	}
 
@@ -349,6 +368,36 @@ func main() {
 		SizeInLBA:     uint32(efiEnd),
 	}
 
+	var aStart, bStart, rStart uint64
+	if *abr {
+		aStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconA,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("zircon-a"),
+			StartingLBA:         aStart,
+			EndingLBA:           end,
+		})
+
+		bStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconB,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("zircon-b"),
+			StartingLBA:         bStart,
+			EndingLBA:           end,
+		})
+
+		rStart, end = optimialBlockAlign(end, uint64(*abrSize), logical, physical, optimal)
+		g.Primary.Partitions = append(g.Primary.Partitions, gpt.PartitionEntry{
+			PartitionTypeGUID:   gpt.GUIDFuchsiaZirconR,
+			UniquePartitionGUID: gpt.NewRandomGUID(),
+			PartitionName:       gpt.NewPartitionName("zircon-r"),
+			StartingLBA:         rStart,
+			EndingLBA:           end,
+		})
+	}
+
 	var fvmStart uint64
 
 	fvmStart, end = optimialBlockAlign(end+1, uint64(*fvmSize), logical, physical, optimal)
@@ -410,6 +459,9 @@ func main() {
 		f.Sync()
 	}
 
+	aStart = aStart * logical
+	bStart = bStart * logical
+	rStart = rStart * logical
 	efiStart = efiStart * logical
 	fvmStart = fvmStart * logical
 
@@ -462,6 +514,15 @@ func main() {
 
 	f.Sync()
 
+	if *abr {
+		log.Print("Populating A/B/R partitions")
+		partitionCopy(f, int64(aStart), *abrSize, *zirconA)
+		partitionCopy(f, int64(bStart), *abrSize, *zirconB)
+		partitionCopy(f, int64(rStart), *abrSize, *zirconR)
+	}
+
+	f.Sync()
+
 	if !*ramdiskOnly {
 		log.Print("Populating FVM in GPT image")
 		fvm(disk, int64(fvmStart), *fvmSize, "create", "--blob", *blob, "--data", *data)
@@ -473,6 +534,22 @@ func main() {
 	}
 
 	log.Printf("Done")
+}
+
+func partitionCopy(f *os.File, start, size int64, path string) {
+	input, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("partition copy failed for input: %s: %s", path, err)
+	}
+	defer input.Close()
+	r := io.LimitReader(input, size)
+	if _, err := f.Seek(start, os.SEEK_SET); err != nil {
+		log.Fatalf("partition copy failed for input: %s: %s", path, err)
+	}
+	_, err = io.Copy(f, r)
+	if err != nil {
+		log.Fatalf("partition copy failed for input: %s: %s", path, err)
+	}
 }
 
 func fvm(disk string, offset, size int64, command string, args ...string) {
