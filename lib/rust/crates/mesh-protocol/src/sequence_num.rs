@@ -73,21 +73,21 @@ impl SequenceNum {
             panic!("Too many outstanding messages")
         };
         match self {
-            &Num(seq) => Writer {
-                seq: seq,
+            Num(seq) => Writer {
+                seq: *seq,
                 width,
                 extra: WriteExtra::Nothing,
             },
-            &Fork(stream, ref buf) => Writer {
+            Fork(stream, buf) => Writer {
                 seq: 0,
                 width,
                 extra: WriteExtra::Fork(
-                    varint::Writer::new(stream),
+                    varint::Writer::new(*stream),
                     varint::Writer::new(buf.len() as u64),
                     buf,
                 ),
             },
-            &AcceptIntro(ref buf) => Writer {
+            AcceptIntro(buf) => Writer {
                 seq: 0,
                 width,
                 extra: WriteExtra::AcceptIntro(varint::Writer::new(buf.len() as u64), buf),
@@ -100,11 +100,11 @@ impl PartialEq for SequenceNum {
     fn eq(&self, other: &Self) -> bool {
         use sequence_num::SequenceNum::*;
         match (self, other) {
-            (&Num(a), &Num(b)) => a == b,
-            (&Num(_), _) => false,
-            (_, &Num(_)) => false,
-            (&Fork(ref a, ref p), &Fork(ref b, ref q)) => a == b && p == q,
-            (&AcceptIntro(ref a), &AcceptIntro(ref b)) => a == b,
+            (Num(a), Num(b)) => a == b,
+            (Num(_), _) => false,
+            (_, Num(_)) => false,
+            (Fork(a, p), Fork(b, q)) => a == b && p == q,
+            (AcceptIntro(a), AcceptIntro(b)) => a == b,
             _ => false,
         }
     }
@@ -114,13 +114,13 @@ impl PartialOrd for SequenceNum {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         use sequence_num::SequenceNum::*;
         match (self, other) {
-            (&Num(a), &Num(b)) => a.partial_cmp(&b),
-            (&Num(a), _) => a.partial_cmp(&0),
-            (_, &Num(b)) => 0.partial_cmp(&b),
-            (&Fork(ref a, ref p), &Fork(ref b, ref q)) if a == b && p == q => {
+            (Num(a), &Num(b)) => a.partial_cmp(&b),
+            (Num(a), _) => a.partial_cmp(&0),
+            (_, Num(b)) => 0.partial_cmp(&b),
+            (Fork(a, p), Fork(b, q)) if a == b && p == q => {
                 Some(cmp::Ordering::Equal)
             }
-            (&AcceptIntro(ref a), &AcceptIntro(ref b)) if a == b => Some(cmp::Ordering::Equal),
+            (AcceptIntro(a), AcceptIntro(b)) if a == b => Some(cmp::Ordering::Equal),
             (_, _) => None,
         }
     }
@@ -144,10 +144,10 @@ pub struct Writer<'a> {
 
 impl<'a> Writer<'a> {
     pub fn len(&self) -> usize {
-        self.width as usize + match self.extra {
+        self.width as usize + match &self.extra {
             WriteExtra::Nothing => 0,
-            WriteExtra::Fork(ref w1, ref w2, ref b) => 1 + w1.len() + w2.len() + b.len(),
-            WriteExtra::AcceptIntro(ref w, ref b) => 1 + w.len() + b.len(),
+            WriteExtra::Fork(w1, w2, b) => 1 + w1.len() + w2.len() + b.len(),
+            WriteExtra::AcceptIntro(w, b) => 1 + w.len() + b.len(),
         }
     }
 
@@ -162,15 +162,15 @@ impl<'a> Writer<'a> {
             buf.put_u8((s & 0xff) as u8);
             s >>= 8;
         }
-        match self.extra {
+        match &self.extra {
             WriteExtra::Nothing => {}
-            WriteExtra::Fork(ref w1, ref w2, ref b) => {
+            WriteExtra::Fork(w1, w2, b) => {
                 buf.put_u8(0);
                 w1.write(buf);
                 w2.write(buf);
                 buf.put_slice(b);
             }
-            WriteExtra::AcceptIntro(ref w, ref b) => {
+            WriteExtra::AcceptIntro(w, b) => {
                 buf.put_u8(1);
                 w.write(buf);
                 buf.put_slice(b);

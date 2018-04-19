@@ -82,15 +82,15 @@ pub struct MockStreamHolder<L> {
 
 impl<L> mesh_router::StreamDataHolder for MockStreamHolder<L> {
     fn stream_data(&self) -> &mesh_router::StreamData {
-        match self.stream {
-            Some(ref x) => x,
+        match &self.stream {
+            Some(x) => x,
             None => panic!("Stream not yet created"),
         }
     }
 
     fn stream_data_mut(&mut self) -> &mut mesh_router::StreamData {
-        match self.stream {
-            Some(ref mut x) => x,
+        match &mut self.stream {
+            Some(x) => x,
             None => panic!("Stream not yet created"),
         }
     }

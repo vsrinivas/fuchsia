@@ -65,8 +65,8 @@ pub struct PrivateHeaderWriter {
 
 fn priv_opt_len(f: &Option<varint::Writer>) -> usize {
     match f {
-        &Some(ref l) => 1 + l.len(),
-        &None => 0,
+        Some(l) => 1 + l.len(),
+        None => 0,
     }
 }
 
@@ -75,18 +75,18 @@ where
     B: BufMut,
 {
     match f {
-        &Some(ref l) => {
+        Some(l) => {
             buf.put_u8(index);
             l.write(buf);
         }
-        &None => (),
+        None => (),
     }
 }
 
 fn sz_opt(f: &Option<varint::Writer>) -> u64 {
     match f {
-        &Some(ref l) => 1 + l.len() as u64,
-        &None => 0,
+        Some(l) => 1 + l.len() as u64,
+        None => 0,
     }
 }
 
@@ -166,8 +166,8 @@ impl PrivateHeaderWriter {
     pub fn wire_size(&self) -> u64 {
         self.private_header_length_writer.len() as u64 + sz_opt(&self.grant_bytes_writer)
             + match &self.payload_len_writer {
-                &None => 0,
-                &Some(ref l) => l.len() as u64,
+                None => 0,
+                Some(l) => l.len() as u64,
             }
     }
 
@@ -179,8 +179,8 @@ impl PrivateHeaderWriter {
         self.private_header_length_writer.write(buf);
         write_opt(buf, &self.grant_bytes_writer, 1);
         match &self.payload_len_writer {
-            &None => (),
-            &Some(ref b) => b.write(buf),
+            None => (),
+            Some(b) => b.write(buf),
         };
     }
 }

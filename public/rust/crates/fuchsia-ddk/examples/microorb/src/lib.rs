@@ -236,14 +236,12 @@ impl MicroOrb {
     }
 
     fn get_cached_serial(&mut self) -> Result<&str, Status> {
-        match self.serial {
+        match &self.serial {
             None => {
                 self.serial = Some(self.get_serial()?);
                 Ok(self.serial.as_ref().unwrap())
             },
-            Some(ref serial) => {
-                Ok(&serial)
-            },
+            Some(serial) => Ok(serial),
         }
     }
 

@@ -306,7 +306,7 @@ where
         let fut = if rh.dst == self.id {
             let rh_stream = rh.stream;
             let rh_src = rh.src;
-            let fut = match rh.seq {
+            let fut = match &rh.seq {
                 mesh_protocol::SequenceNum::Num(_) => self.streams
                     .borrow_mut()
                     .lookup(LocalStreamId {
@@ -330,7 +330,7 @@ where
                     .left(),
                 // TODO(cramertj): Right() here is needed because future::Either defines left,
                 // right... defeating .left().right() pattern
-                mesh_protocol::SequenceNum::Fork(src, ref arg) => future::Either::Right({
+                mesh_protocol::SequenceNum::Fork(src, arg) => future::Either::Right({
                     // TODO(ctiller): eliminate copy of arg
                     let arg_clone = arg.clone();
                     let handler_clone = self.handler.clone();
@@ -338,7 +338,7 @@ where
                         .borrow_mut()
                         .lookup(LocalStreamId {
                             peer: rh_src,
-                            stream_id: src,
+                            stream_id: *src,
                         })
                         .and_then(move |s| {
                             let result = handler_clone.borrow_mut().stream_fork(
@@ -355,7 +355,7 @@ where
                         });
                     self.add_new_stream(incoming_fut).left()
                 }),
-                mesh_protocol::SequenceNum::AcceptIntro(ref arg) => future::Either::Right({
+                mesh_protocol::SequenceNum::AcceptIntro(arg) => future::Either::Right({
                     let incoming_fut = self.handler.borrow_mut()
                         // TODO(ctiller): eliminate copy
                         .intro(StreamData {

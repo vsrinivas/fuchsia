@@ -117,8 +117,8 @@ impl AtomicFuture {
 
                             // We know that the future is still there and hasn't completed
                             // because `state` != `DONE`
-                            let (ref mut future, ref mut map) =
-                                *opt.as_mut().expect("Missing future in AtomicFuture");
+                            let (future, map) =
+                                opt.as_mut().expect("Missing future in AtomicFuture");
 
                             let cx = &mut task::Context::new(
                                 map,

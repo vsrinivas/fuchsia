@@ -189,7 +189,7 @@ impl Executor {
 
         // Spawn a future which will set the result upon completion.
         Inner::spawn(&self.inner, Box::new(future.then(move |fut_result| {
-            let &(ref lock, ref cvar) = &*pair2;
+            let (lock, cvar) = &*pair2;
             let mut result = lock.lock();
             *result = Some(fut_result);
             cvar.notify_one();
@@ -201,7 +201,7 @@ impl Executor {
         self.create_worker_threads(num_threads);
 
         // Wait until the signal the future has completed.
-        let &(ref lock, ref cvar) = &*pair;
+        let (lock, cvar) = &*pair;
         let mut result = lock.lock();
         while result.is_none() {
             cvar.wait(&mut result);

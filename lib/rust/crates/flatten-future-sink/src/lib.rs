@@ -40,9 +40,9 @@ impl<F> Sink for FlattenSink<F> where F: Future, <F as Future>::Item: Sink<SinkE
     type SinkError = <<F as Future>::Item as Sink>::SinkError;
 
     fn poll_ready(&mut self, cx: &mut task::Context) -> Result<Async<()>, Self::SinkError> {
-        let mut resolved_stream = match self.st {
-            State::Ready(ref mut s) => return s.poll_ready(cx),
-            State::Waiting(ref mut f) => match f.poll(cx)? {
+        let mut resolved_stream = match &mut self.st {
+            State::Ready(s) => return s.poll_ready(cx),
+            State::Waiting(f) => match f.poll(cx)? {
                 Async::Pending => return Ok(Async::Pending),
                 Async::Ready(s) => s,
             },
@@ -54,16 +54,16 @@ impl<F> Sink for FlattenSink<F> where F: Future, <F as Future>::Item: Sink<SinkE
     }
 
     fn start_send(&mut self, item: Self::SinkItem) -> Result<(), Self::SinkError> {
-        match self.st {
-            State::Ready(ref mut s) => s.start_send(item),
+        match &mut self.st {
+            State::Ready(s) => s.start_send(item),
             State::Waiting(_) => panic!("poll_ready not called first"),
             State::Closed => panic!("start_send called after eof"),
         }
     }
 
     fn poll_flush(&mut self, cx: &mut task::Context) -> Result<Async<()>, Self::SinkError> {
-        match self.st {
-            State::Ready(ref mut s) => s.poll_flush(cx),
+        match &mut self.st {
+            State::Ready(s) => s.poll_flush(cx),
             // if sink not yet resolved, nothing written ==> everything flushed
             State::Waiting(_) => Ok(Async::Ready(())),
             State::Closed => panic!("poll_flush called after eof"),
@@ -71,7 +71,7 @@ impl<F> Sink for FlattenSink<F> where F: Future, <F as Future>::Item: Sink<SinkE
     }
 
     fn poll_close(&mut self, cx: &mut task::Context) -> Result<Async<()>, Self::SinkError> {
-        if let State::Ready(ref mut s) = self.st {
+        if let State::Ready(s) = &mut self.st {
             try_ready!(s.poll_close(cx));
         }
         self.st = State::Closed;

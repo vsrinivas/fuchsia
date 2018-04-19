@@ -18,10 +18,10 @@ use futures::io::AllowStdIo;
 
 fn print_headers(resp: &netsvc::UrlResponse) {
     println!(">>> Headers <<<");
-    if let Some(ref status) = resp.status_line {
+    if let Some(status) = &resp.status_line {
         println!("  {}", status);
     }
-    if let Some(ref hdrs) = resp.headers {
+    if let Some(hdrs) = &resp.headers {
         for hdr in hdrs {
             println!("  {}={}", hdr.name, hdr.value);
         }

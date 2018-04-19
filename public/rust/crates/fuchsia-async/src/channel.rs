@@ -135,8 +135,7 @@ impl<T> Future for RecvMsg<T>
 
     fn poll(&mut self, cx: &mut task::Context) -> Poll<Self::Item, Self::Error> {
         {
-            let (ref chan, ref mut buf) =
-                *self.0.as_mut().expect("polled a RecvMsg after completion");
+            let (chan, buf) = self.0.as_mut().expect("polled a RecvMsg after completion");
             try_ready!(chan.recv_from(buf.borrow_mut(), cx));
         }
         let (chan, buf) = self.0.take().unwrap();
@@ -168,13 +167,13 @@ impl<F,U> Future for ChainServer<F,U>
         // loop because we might get a new future we have to poll immediately.
         // we only return on error or Async::Pending
         loop {
-            let new_state = match self.state {
-                ServerState::Waiting(ref mut recv) => {
+            let new_state = match &mut self.state {
+                ServerState::Waiting(recv) => {
                     let chanbuf = try_ready!(recv.poll(cx));
                     let fut = (self.callback)(chanbuf).into_future();
                     ServerState::Processing(fut)
                 },
-                ServerState::Processing(ref mut fut) => {
+                ServerState::Processing(fut) => {
                     let (chan, buf) = try_ready!(fut.poll(cx));
                     let recv = chan.recv_msg(buf);
                     ServerState::Waiting(recv)

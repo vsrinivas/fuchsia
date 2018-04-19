@@ -53,7 +53,7 @@ where
         let mut m = self.m.borrow_mut();
         let v = m.entry(key).or_insert_with(|| Waiting(Slab::new()));
         let mut waiters = Slab::new();
-        if let &mut Waiting(ref mut w) = v {
+        if let Waiting(w) = v {
             swap(w, &mut waiters);
         } else {
             ec()?;
@@ -102,7 +102,7 @@ where
         use async_map::MaybeWaiting::*;
         for (_, val) in self.m.borrow_mut().iter_mut() {
             let mut waiters = Slab::new();
-            if let &mut Waiting(ref mut w) = val {
+            if let &mut Waiting(w) = val {
                 swap(w, &mut waiters);
             } else {
                 return;
@@ -142,15 +142,15 @@ where
             .entry(self.key.clone())
             .or_insert_with(|| Waiting(Slab::new()))
         {
-            &mut Waiting(ref mut w) => {
+            Waiting(w) => {
                 match self.waker {
                     None => self.waker = Some(w.insert(cx.waker().clone())),
                     Some(idx) => w[idx] = cx.waker().clone(),
                 };
                 Ok(Async::Pending)
             }
-            &mut Obj(ref x) => Ok(Async::Ready(x.clone())),
-            &mut Failed(ref f) => Err(f.clone().into()),
+            Obj(x) => Ok(Async::Ready(x.clone())),
+            Failed(f) => Err(f.clone().into()),
         }
     }
 }

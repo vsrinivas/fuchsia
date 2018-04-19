@@ -854,8 +854,8 @@ impl Encodable for Option<zx::Handle> {
     fn inline_align(&self) -> usize { 4 }
     fn inline_size(&self) -> usize { 4 }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        match *self {
-            Some(ref mut handle) => handle.encode(encoder),
+        match self {
+            Some(handle) => handle.encode(encoder),
             None => ALLOC_ABSENT_U32.encode(encoder),
         }
     }
@@ -919,8 +919,8 @@ macro_rules! handle_based_codable {
             fn encode(&mut self, encoder: &mut $crate::encoding2::Encoder)
                 -> $crate::Result<()>
             {
-                match *self {
-                    Some(ref mut handle) => fidl2_encode!(handle, encoder),
+                match self {
+                    Some(handle) => fidl2_encode!(handle, encoder),
                     None => fidl2_encode!(&mut $crate::encoding2::ALLOC_ABSENT_U32, encoder),
                 }
             }
@@ -977,8 +977,8 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
         fidl2_inline_size!(u64)
     }
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
-        match *self {
-            Some(ref mut inner) => {
+        match self {
+            Some(inner) => {
                 ALLOC_PRESENT_U64.encode(encoder)?;
                 encoder.write_out_of_line(
                     (*inner).inline_size(),
@@ -1012,7 +1012,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
             ALLOC_PRESENT_U64 => {
                 // Loop will only run once to set `self` to `Some` before decoding innards
                 loop {
-                    if let Some(ref mut inner) = *self {
+                    if let Some(inner) = self {
                         return decoder.read_out_of_line(
                             <T as Decodable>::inline_size(),
                             |decoder| (*inner).decode(decoder));
@@ -1154,8 +1154,8 @@ macro_rules! fidl2_union {
                 fidl2_encode!(&mut member_index, encoder)?;
 
                 encoder.recurse(|encoder| {
-                    match *self { $(
-                        $name::$member_name ( ref mut val ) => {
+                    match self { $(
+                        $name::$member_name ( val ) => {
                             // Jump to offset minus 4-byte tag
                             encoder.next_slice($member_offset - 4)?;
                             // Encode value
@@ -1199,8 +1199,8 @@ macro_rules! fidl2_union {
                             // Loop will only ever run once-- if the variant is not correct,
                             // it is fixed up.
                             loop {
-                                match *self {
-                                    $name::$member_name(ref mut val) => {
+                                match self {
+                                    $name::$member_name(val) => {
                                         fidl2_decode!(val, decoder)?;
                                         break;
                                     }
@@ -1645,8 +1645,8 @@ mod test {
         }
 
         for string in vec![String::new(), "hello world!".to_string()] {
-            match encode_decode(&mut NumOrStr::Str(string.clone())) {
-                NumOrStr::Str(ref out_str) if out_str == &string => {},
+            match &encode_decode(&mut NumOrStr::Str(string.clone())) {
+                NumOrStr::Str(out_str) if out_str == &string => {},
                 x => panic!("unexpected decoded value {:?}", x),
             }
         }

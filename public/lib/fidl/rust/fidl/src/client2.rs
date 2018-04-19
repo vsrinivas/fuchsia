@@ -200,7 +200,7 @@ impl Future for MessageResponse {
 
 impl Drop for MessageResponse {
     fn drop(&mut self) {
-        if let Some(ref client) = self.client {
+        if let Some(client) = &self.client {
             client.deregister_msg_interest(InterestId::from_txid(self.id))
         }
     }
@@ -211,7 +211,7 @@ impl Drop for MessageResponse {
 /// that a response message has arrived.
 #[derive(Debug)]
 enum MessageInterest {
-    /// A new `MessageInterest` 
+    /// A new `MessageInterest`
     WillPoll,
     /// A task is waiting to receive a response, and can be awoken with `Waker`.
     Waiting(Waker),

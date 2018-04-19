@@ -95,10 +95,7 @@ impl StreamType {
         &mut self, cx: &mut Context, seq: u64, peer: mesh_protocol::NodeId, stream_id: u64,
     ) -> PollResult {
         match self {
-            StreamType::ReliableOrdered {
-                ref mut tip,
-                ref mut pending,
-            } => match seq.cmp(tip) {
+            StreamType::ReliableOrdered { tip, pending } => match seq.cmp(tip) {
                 Ordering::Equal => {
                     pending.remove(tip);
                     *tip += 1;
@@ -119,11 +116,7 @@ impl StreamType {
                     seq,
                 }),
             },
-            StreamType::ReliableUnordered {
-                ref mut tip,
-                ref mut seen_mask,
-                ref mut pending,
-            } => match seq.cmp(tip) {
+            StreamType::ReliableUnordered { tip, seen_mask, pending } => match seq.cmp(tip) {
                 Ordering::Equal => {
                     let out = if *seen_mask & 1 != 1 {
                         PollResult::Accept
@@ -173,7 +166,7 @@ impl StreamType {
                     seq,
                 }),
             },
-            StreamType::UnreliableOrdered { ref mut tip } => if *tip >= seq {
+            StreamType::UnreliableOrdered { tip } => if *tip >= seq {
                 *tip = seq + 1;
                 PollResult::Accept
             } else {
@@ -183,10 +176,7 @@ impl StreamType {
                     seq,
                 })
             },
-            StreamType::UnreliableUnordered {
-                ref mut tip,
-                ref mut seen_mask,
-            } => match seq.cmp(tip) {
+            StreamType::UnreliableUnordered { tip, seen_mask } => match seq.cmp(tip) {
                 Ordering::Equal => {
                     let out = if *seen_mask & 1 != 1 {
                         PollResult::Accept
@@ -225,7 +215,7 @@ impl StreamType {
                     seq,
                 }),
             },
-            StreamType::LastMessageReliable { ref mut tip } => if seq >= *tip {
+            StreamType::LastMessageReliable { tip } => if seq >= *tip {
                 *tip = seq + 1;
                 PollResult::Accept
             } else {
