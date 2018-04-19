@@ -5,8 +5,10 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/usb-request.h>
 
 #include "xdc-hw.h"
+#include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
 // The type and length fields for a string descriptor are one byte each.
@@ -18,8 +20,17 @@
 #define IN_EP_IDX              1
 #define NUM_EPS                2
 
+// See XHCI Spec, 7.6.3.2
+#define EP_CTX_MAX_PACKET_SIZE 1024
+
 typedef struct {
     xhci_transfer_ring_t transfer_ring;
+    list_node_t queued_reqs;     // requests waiting to be processed
+    usb_request_t* current_req;  // request currently being processed
+    list_node_t pending_reqs;    // processed requests waiting for completion, including current_req
+    xhci_transfer_state_t transfer_state;  // transfer state for current_req
+    mtx_t lock;
+    uint8_t direction;  // USB_DIR_OUT or USB_DIR_IN
 } xdc_endpoint_t;
 
 typedef struct {
@@ -63,8 +74,11 @@ typedef struct {
     bool connected;
     // The last connection time in nanoseconds, with respect to the monotonic clock.
     zx_time_t last_conn;
+
+    mtx_t configured_mutex;
     // Whether the Debug Device is in the Configured state.
     bool configured;
+
     // Whether to suspend all activity.
     atomic_bool suspended;
 } xdc_t;

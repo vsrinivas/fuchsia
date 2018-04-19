@@ -26,9 +26,6 @@
 #define EVENT_RING_SIZE        (PAGE_SIZE / sizeof(xhci_trb_t))
 #define TRANSFER_RING_SIZE     (PAGE_SIZE / sizeof(xhci_trb_t))
 
-// See XHCI Spec, 7.6.3.2
-#define EP_CTX_MAX_PACKET_SIZE 1024
-
 // The maximum duration to transition from connected to configured state.
 #define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
 
@@ -91,7 +88,13 @@ static zx_status_t xdc_endpoint_ctx_init(xdc_t* xdc, uint32_t ep_idx) {
     if (ep_idx >= NUM_EPS) {
         return ZX_ERR_INVALID_ARGS;
     }
+    // Initialize the endpoint.
     xdc_endpoint_t* ep = &xdc->eps[ep_idx];
+    list_initialize(&ep->queued_reqs);
+    list_initialize(&ep->pending_reqs);
+    mtx_init(&ep->lock, mtx_plain);
+    ep->direction = ep_idx == IN_EP_IDX ? USB_DIR_IN : USB_DIR_OUT;
+
     zx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, xdc->bti_handle,
                                                  TRANSFER_RING_SIZE);
     if (status != ZX_OK) {
@@ -192,6 +195,8 @@ static zx_status_t xdc_event_ring_init(xdc_t* xdc) {
 }
 
 static zx_status_t xdc_init(xdc_t* xdc) {
+    mtx_init(&xdc->configured_mutex, mtx_plain);
+
     // Initialize the Device Descriptor Info Registers.
     XHCI_WRITE32(&xdc->debug_cap_regs->dcddi1, XDC_VENDOR_ID << DCDDI1_VENDOR_ID_START);
     XHCI_WRITE32(&xdc->debug_cap_regs->dcddi2,
@@ -221,6 +226,24 @@ static void xdc_shutdown(xdc_t* xdc) {
 
     XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, 0);
     xdc_wait_bits(&xdc->debug_cap_regs->dcctrl, DCCTRL_DCR, 0);
+
+    mtx_lock(&xdc->configured_mutex);
+    xdc->configured = false;
+    mtx_unlock(&xdc->configured_mutex);
+
+    for (uint32_t i = 0; i < NUM_EPS; ++i) {
+        xdc_endpoint_t* ep = &xdc->eps[i];
+
+        mtx_lock(&ep->lock);
+        usb_request_t* req;
+        while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+        while ((req = list_remove_tail_type(&ep->queued_reqs, usb_request_t, node)) != NULL) {
+            usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+        mtx_unlock(&ep->lock);
+    }
 
     zxlogf(TRACE, "xdc_shutdown succeeded\n");
 }
@@ -322,9 +345,12 @@ static void xdc_handle_events(xdc_t* xdc) {
 static void xdc_check_configuration_state(xdc_t* xdc) {
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
 
+    mtx_lock(&xdc->configured_mutex);
+
     if (dcctrl & DCCTRL_DRC) {
         zxlogf(TRACE, "xdc configured exit\n");
         // Need to clear the bit to re-enable the DCDB.
+        // TODO(jocelyndang): check if we need to update the transfer ring as per 7.6.4.4.
         XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, dcctrl);
         xdc->configured = false;
     }
@@ -356,6 +382,8 @@ static void xdc_check_configuration_state(xdc_t* xdc) {
             xdc->connected = false;
         }
     }
+
+    mtx_unlock(&xdc->configured_mutex);
 }
 
 zx_status_t xdc_poll(xdc_t* xdc) {

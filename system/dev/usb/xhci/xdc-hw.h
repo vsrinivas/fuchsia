@@ -71,6 +71,14 @@ typedef volatile struct {
 
 static_assert(sizeof(xdc_context_data_t) == 0xC0, "xdc context data wrong size");
 
+// Debug Capability Doorbell Register (DCDB) bits
+#define DCDB_DB_START                     8
+#define DCDB_DB_BITS                      8
+
+// Doorbell values to write to the DCDB.
+#define DCDB_DB_EP_OUT                    0
+#define DCDB_DB_EP_IN                     1
+
 // Debug Capability Control Register (DCCTRL) bits
 #define DCCTRL_DCR                   (1 << 0)
 #define DCCTRL_LSE                   (1 << 1)
