@@ -1833,7 +1833,10 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
             std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
             std::move(view_owner_request_),
-            fidl::MakeOptional(std::move(intent_)), [flow] {});
+            fidl::MakeOptional(std::move(intent_)), [this, flow] {
+              // StartModuleInShellCall above already calls ProcessPendingViews().
+              story_controller_impl_->ProcessPendingViews();
+            });
       }
 
       result_ = StartModuleStatus::SUCCESS;
