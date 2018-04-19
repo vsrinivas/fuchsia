@@ -39,10 +39,9 @@ Escher can also build on Linux.  In order to do so, you need to:
   * specify that you want to build only the Escher module, for Linux:
     ```
     cd $FUCHSIA_DIR
-    fx set x64  --packages garnet/packages/experimental/examples_escher_linux,garnet/packages/experimental/tests_escher_linux,garnet/packages/examples/fidl_echo
+    fx set x64  --packages garnet/packages/experimental/examples_escher_linux,garnet/packages/experimental/tests_escher_linux,garnet/packages/examples/fidl
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
-    * There may be a spurious error regarding `skia_use_sfntly`; ignore it.
     * `cobalt_client` shouldn't be necessary; it only is due to a bug where the build system expects there to be a non-empty system image.
     * NOTE!! These commands may conflict with the Vulkan SDK on your LD_LIBRARY_PATH.  It is probably best to run these commands in one terminal window, then switch to another and setting LD_LIBRARY_PATH before Building
     and running.
