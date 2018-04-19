@@ -118,7 +118,7 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
     uint32_t types[ZX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
-    snprintf(buf, buf_len, "%4u: %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
+    snprintf(buf, buf_len, "%4u: %4u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u %3u",
              handle_count,
              types[ZX_OBJ_TYPE_JOB],
              types[ZX_OBJ_TYPE_PROCESS],
@@ -135,12 +135,13 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
              types[ZX_OBJ_TYPE_LOG] + types[ZX_OBJ_TYPE_RESOURCE] +
              types[ZX_OBJ_TYPE_GUEST] + types[ZX_OBJ_TYPE_VCPU] +
              types[ZX_OBJ_TYPE_IOMMU] + types[ZX_OBJ_TYPE_BTI] +
-             types[ZX_OBJ_TYPE_PROFILE] + types[ZX_OBJ_TYPE_PMT]
+             types[ZX_OBJ_TYPE_PROFILE] + types[ZX_OBJ_TYPE_PMT] +
+             types[ZX_OBJ_TYPE_SUSPEND_TOKEN]
              );
 }
 
 void DumpProcessList() {
-    printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi [name]\n", "id");
+    printf("%7s  #h:  #jb #pr #th #vo #vm #ch #ev #po #so #tm #fi #?? [name]\n", "id");
 
     auto walker = MakeProcessWalker([](ProcessDispatcher* process) {
         char handle_counts[(ZX_OBJ_TYPE_LAST * 4) + 1 + /*slop*/ 16];
