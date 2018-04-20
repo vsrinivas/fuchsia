@@ -36,6 +36,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/loader-service \
     system/ulib/async \
     system/ulib/async-loop \
+    system/ulib/sync \
     third_party/ulib/lz4 \
     system/ulib/port \
     system/ulib/driver-info \
@@ -76,6 +77,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     system/ulib/fbl \
     system/ulib/gpt \
+    system/ulib/sync \
     system/ulib/trace \
     system/ulib/zx \
     system/ulib/zxcpp \

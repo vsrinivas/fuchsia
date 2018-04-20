@@ -21,6 +21,7 @@
 #include <fs/vfs.h>
 #include <memfs/memfs.h>
 #include <memfs/vnode.h>
+#include <sync/completion.h>
 #include <zircon/device/vfs.h>
 
 #include "dnode.h"
@@ -164,19 +165,20 @@ zx_status_t memfs_install_at(async_t* async, const char* path) {
 
     status = fdio_ns_bind(ns, path, root);
     if (status != ZX_OK) {
-        memfs_free_filesystem(fs, 0);
+        memfs_free_filesystem(fs, nullptr);
         zx_handle_close(root);
         return status;
     }
 
-    // We leak |fs| because there's no way to spin down the file system.
-    // See ZX-1576 for more details.
     return ZX_OK;
 }
 
-zx_status_t memfs_free_filesystem(memfs_filesystem_t* fs, zx_duration_t timeout) {
+void memfs_free_filesystem(memfs_filesystem_t* fs, completion_t* unmounted) {
     ZX_DEBUG_ASSERT(fs != nullptr);
-    zx_status_t status = fs->vfs.UninstallAll(zx_deadline_after(timeout));
-    delete fs;
-    return status;
+    fs->vfs.Shutdown([fs, unmounted](zx_status_t status) {
+        delete fs;
+        if (unmounted) {
+            completion_signal(unmounted);
+        }
+    });
 }

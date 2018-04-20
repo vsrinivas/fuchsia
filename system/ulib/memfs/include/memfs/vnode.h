@@ -14,6 +14,7 @@
 
 #ifdef __cplusplus
 
+#include <fs/managed-vfs.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fbl/atomic.h>
@@ -160,7 +161,7 @@ private:
     bool have_local_clone_;
 };
 
-class Vfs : public fs::Vfs {
+class Vfs : public fs::ManagedVfs {
 public:
     zx_status_t CreateFromVmo(VnodeDir* parent, bool vmofile, fbl::StringPiece name,
                               zx_handle_t vmo, zx_off_t off,

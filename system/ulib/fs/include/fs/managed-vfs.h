@@ -14,7 +14,6 @@
 #include <fbl/unique_ptr.h>
 #include <fs/connection.h>
 #include <fs/vfs.h>
-#include <sync/completion.h>
 
 namespace fs {
 
@@ -29,6 +28,13 @@ public:
     ManagedVfs();
     ManagedVfs(async_t* async);
 
+    // The ManagedVfs destructor is only safe to execute if
+    // no connections are actively registered.
+    //
+    // To ensure that this state is achieved, it is recommended that
+    // clients issue a call to |Shutdown| before calling the destructor.
+    ~ManagedVfs() override;
+
     // Asynchronously drop all connections managed by the VFS.
     //
     // Invokes |handler| once when all connections are destroyed.
@@ -37,21 +43,18 @@ public:
     // It is unsafe to call Shutdown multiple times.
     void Shutdown(ShutdownCallback handler) override;
 
-    // The ManagedVfs destructor is only safe to execute if
-    // no connections are actively registered.
-    //
-    // To ensure that this state is achieved, it is recommended that
-    // clients issue a call to |Shutdown| before calling the destructor.
-    ~ManagedVfs() override;
-
+private:
+    // Posts the task for OnShutdownComplete if it is safe to do so.
     void CheckForShutdownComplete();
+
+    // Invokes the handler from |Shutdown| once all connections have been
+    // released. Additionally, unmounts all sub-mounted filesystems, if any
+    // exist.
     void OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t status);
 
-protected:
     void RegisterConnection(fbl::unique_ptr<Connection> connection) final;
     void UnregisterConnection(Connection* connection) final;
 
-private:
     fbl::DoublyLinkedList<fbl::unique_ptr<Connection>> connections_;
 
     bool is_shutting_down_;

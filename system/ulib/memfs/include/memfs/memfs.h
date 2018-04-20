@@ -5,6 +5,7 @@
 #pragma once
 
 #include <lib/async/dispatcher.h>
+#include <sync/completion.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -21,13 +22,13 @@ zx_status_t memfs_create_filesystem(async_t* async, memfs_filesystem_t** fs_out,
                                     zx_handle_t* root_out);
 
 // Frees a MemFS filesystem, unmounting any sub-filesystems that
-// may exist. Waits up to a length of time equal to |timeout| before
-// closing remote filesystems and exiting.
+// may exist.
 //
-// Requires the async handler supplied during creation to be shutdown
-// before calling.
-// TODO(smklein): Remove this requirement.
-zx_status_t memfs_free_filesystem(memfs_filesystem_t* fs, zx_duration_t timeout);
+// Requires that the async handler dispatcher provided to
+// |memfs_create_filesystem| still be running.
+//
+// Signals the optional argument |unmounted| when memfs has torn down.
+void memfs_free_filesystem(memfs_filesystem_t* fs, completion_t* unmounted);
 
 // Creates an in-memory file system and installs it into the local namespace at
 // the given path.

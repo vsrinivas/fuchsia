@@ -15,6 +15,10 @@ ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
 
 ManagedVfs::ManagedVfs(async_t* async) : Vfs(async), is_shutting_down_(false) {}
 
+ManagedVfs::~ManagedVfs() {
+    ZX_DEBUG_ASSERT(connections_.is_empty());
+}
+
 // Asynchronously drop all connections.
 void ManagedVfs::Shutdown(ShutdownCallback handler) {
     ZX_DEBUG_ASSERT(handler);
@@ -36,10 +40,6 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-ManagedVfs::~ManagedVfs() {
-    ZX_DEBUG_ASSERT(connections_.is_empty());
-}
-
 // Trigger "OnShutdownComplete" if all preconditions have been met.
 void ManagedVfs::CheckForShutdownComplete() {
     if (connections_.is_empty() && is_shutting_down_) {
@@ -53,6 +53,7 @@ void ManagedVfs::OnShutdownComplete(async_t*, async::TaskBase*, zx_status_t stat
     ZX_DEBUG_ASSERT(shutdown_handler_);
     ZX_DEBUG_ASSERT(is_shutting_down_);
 
+    UninstallAll(zx_deadline_after(ZX_SEC(5)));
     auto handler = fbl::move(shutdown_handler_);
     handler(status);
 }

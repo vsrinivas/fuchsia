@@ -22,13 +22,15 @@ bool test_memfs_null() {
     BEGIN_TEST;
 
     async::Loop loop;
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
     memfs_filesystem_t* vfs;
     zx_handle_t root;
 
     ASSERT_EQ(memfs_create_filesystem(loop.async(), &vfs, &root), ZX_OK);
     ASSERT_EQ(zx_handle_close(root), ZX_OK);
-    loop.Shutdown();
-    ASSERT_EQ(memfs_free_filesystem(vfs, 0), ZX_OK);
+    completion_t unmounted;
+    memfs_free_filesystem(vfs, &unmounted);
+    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     END_TEST;
 }
@@ -71,8 +73,9 @@ bool test_memfs_basic() {
     ASSERT_NULL(readdir(d));
 
     ASSERT_EQ(closedir(d), 0);
-    loop.Shutdown();
-    ASSERT_EQ(memfs_free_filesystem(vfs, 0), ZX_OK);
+    completion_t unmounted;
+    memfs_free_filesystem(vfs, &unmounted);
+    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     END_TEST;
 }
@@ -156,8 +159,9 @@ bool test_memfs_close_during_access() {
     // the filesystem.
     usleep(1000);
 
-    loop.Shutdown();
-    ASSERT_EQ(memfs_free_filesystem(vfs, 0), ZX_OK);
+    completion_t unmounted;
+    memfs_free_filesystem(vfs, &unmounted);
+    ASSERT_EQ(completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
 
     int result;
     ASSERT_EQ(thrd_join(worker, &result), thrd_success);
@@ -167,7 +171,7 @@ bool test_memfs_close_during_access() {
     ASSERT_LT(openat(dirfd(d), "foo", O_CREAT | O_RDWR), 0);
     ASSERT_EQ(errno, EPIPE, "Expected connection to remote server to be closed");
 
-    // Since the message loop has terminated, this will
+    // Since the filesystem has terminated, this will
     // only close the client side of the connection.
     ASSERT_EQ(closedir(d), 0);
 
