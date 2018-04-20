@@ -15,8 +15,10 @@ static constexpr uint32_t kKvmSystemTimeMsr = 0x4b564d01;
 static constexpr uint32_t kKvmBootTimeOld = 0x11;
 static constexpr uint32_t kKvmBootTime = 0x4b564d00;
 
-static constexpr uint32_t kKvmFeatureClockSourceOld = 1 << 0;
-static constexpr uint32_t kKvmFeatureClockSource = 1 << 3;
+static constexpr uint32_t kKvmFeatureClockSourceOld = 1u << 0;
+static constexpr uint32_t kKvmFeatureClockSource = 1u << 3;
+
+static constexpr uint8_t kKvmSystemTimeStable = 1u << 0;
 
 // Both structures below are part of the ABI used by Xen and KVM, this ABI is not
 // defined by use we just follow it. For more detail please refer to the
@@ -49,7 +51,6 @@ struct pvclock_system_time {
 static_assert(sizeof(struct pvclock_system_time) == 32, "sizeof(pvclock_system_time) should be 32");
 
 zx_status_t pvclock_init();
-
 bool pvclock_is_present();
-
+bool pvclock_is_stable();
 uint64_t pvclock_get_tsc_freq();

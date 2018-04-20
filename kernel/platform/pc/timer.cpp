@@ -17,6 +17,7 @@
 #include <arch/x86.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/pvclock.h>
 #include <arch/x86/timer_freq.h>
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
@@ -418,10 +419,10 @@ static uint64_t calibrate_tsc_count(uint16_t duration_ms) {
     return best_time;
 }
 
-static void calibrate_tsc(void) {
+static void calibrate_tsc(bool has_pvclock) {
     ASSERT(arch_ints_disabled());
 
-    const uint64_t tsc_freq = x86_lookup_tsc_freq();
+    const uint64_t tsc_freq = has_pvclock ? pvclock_get_tsc_freq() : x86_lookup_tsc_freq();
     if (tsc_freq != 0) {
         tsc_ticks_per_ms = tsc_freq / 1000;
         printf("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
@@ -470,10 +471,19 @@ static void pc_init_timer(uint level) {
                          (cpu_model->family == 0x6 && cpu_model->model == 0xd) ||
                          (cpu_model->family == 0xf && cpu_model->model < 0x3));
     }
-
     invariant_tsc = x86_feature_test(X86_FEATURE_INVAR_TSC);
-    bool has_hpet = hpet_is_present();
 
+    bool has_pvclock = pvclock_is_present();
+    if (has_pvclock) {
+        zx_status_t status = pvclock_init();
+        if (status == ZX_OK) {
+            invariant_tsc = pvclock_is_stable();
+        } else {
+            has_pvclock = false;
+        }
+    }
+
+    bool has_hpet = hpet_is_present();
     if (has_hpet) {
         calibration_clock = CLOCK_HPET;
         const uint64_t hpet_ms_rate = hpet_ticks_per_ms();
@@ -496,7 +506,7 @@ static void pc_init_timer(uint level) {
     }
 
     if (use_invariant_tsc) {
-        calibrate_tsc();
+        calibrate_tsc(has_pvclock);
 
         // Program PIT in the software strobe configuration, but do not load
         // the count.  This will pause the PIT.
@@ -506,7 +516,7 @@ static void pc_init_timer(uint level) {
         if (constant_tsc || invariant_tsc) {
             // Calibrate the TSC even though it's not as good as we want, so we
             // can still let folks still use it for cheap timing.
-            calibrate_tsc();
+            calibrate_tsc(has_pvclock);
         }
 
         if (has_hpet && (!force_wallclock || !strcmp(force_wallclock, "hpet"))) {
