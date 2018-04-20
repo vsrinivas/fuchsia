@@ -205,14 +205,13 @@ def main():
                         default=sys.stdin,
                         help="File to read from, stdin by default")
     parser.add_argument("--build-dir", "-b", nargs="*",
-                        help="List of build directories to search instead of"
-                             " the default Fuchsia build directory"
-                             " (out/<variant>-<arch>)")
+                        help="List of build directories to search instead of the default (out/x64)")
     parser.add_argument("--disassemble", "-d", action="store_true",
                         help="Show disassembly of each function")
     parser.add_argument("--stack_size", "-s", type=int,
                         default=256*1024,
-                        help="Change the assumed size of the stack (e.g. use 1048576 for ftl or mtl default thread size")
+                        help="Change the assumed size of the stack (e.g. use 1048576 for ftl or "
+                             "mtl default thread size")
     parser.add_argument("--echo", dest="echo", action="store_true",
                         help="Echo lines of input (on by default)")
     parser.add_argument("--no-echo", dest="echo", action="store_false",
@@ -242,9 +241,8 @@ def main():
         # Plus this is only used as a fallback in case the file isn't found
         # in ids.txt.
         fuchsia_build_dir = os.path.abspath(os.path.join(
-            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "debug-x64"))
-        fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir,
-            "exe.unstripped")
+            os.path.dirname(SCRIPT_DIR), os.pardir, "out", "x64"))
+        fuchsia_unstripped_dir = os.path.join(fuchsia_build_dir, "exe.unstripped")
         build_dirs = [fuchsia_unstripped_dir, fuchsia_build_dir] + build_dirs
 
     # Parsing vars
@@ -308,7 +306,8 @@ def main():
                         message = "Overflowed stack"
                     else:
                         message = "Potentially overflowed stack"
-                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" % (message, total_stack_size, args.stack_size))
+                    writeline("WARNING: %s (total usage: %d, stack size: %d)\n" %
+                        (message, total_stack_size, args.stack_size))
                     for frame, size in frame_sizes:
                         writeline("#%s: %d bytes\n" % (frame, size))
                 # Since we don't have the last stack frame, leave some leeway
@@ -385,10 +384,12 @@ def main():
                     continue
                 else:
                     # can't find dso_full_path
-                    processed_lines.append("#%s: unknown, can't find full path for %s\n" % (frame_num, dso))
+                    processed_lines.append("#%s: unknown, can't find full path for %s\n" %
+                        (frame_num, dso))
             else:
                 # bt_with_offset_re failed
-                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line\n" % (frame_num,))
+                processed_lines.append("#%s: unknown, can't find pc, sp or app/library in line\n" %
+                    (frame_num,))
 
         # Zircon Specific Handling
         if zircon_crash_re.search(line):
@@ -396,8 +397,8 @@ def main():
             if zircon_elf_path:
                 zircon_bt = True
             else:
-                sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need to build "
-                                  "zircon or specify the build directory with -b?\n")
+                sys.stderr.write("Symbolize could not find the zircon elf binary. Perhaps you need "
+                                  "to build zircon or specify the build directory with -b?\n")
             continue
 
         m = zircon_pc_re.search(line)
@@ -440,11 +441,13 @@ def main():
                         offset = candidate_offset
                         dso = candidate_dso
             if offset is None:
-                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x\n" % (frame_num, addr))
+                processed_lines.append("#%s: unknown, can't find DSO for addr 0x%x\n" %
+                    (frame_num, addr))
                 continue
             dso_full_path = find_dso_full_path(dso, args.app, name_to_buildid, build_dirs)
             if not dso_full_path:
-                processed_lines.append("#%s: unknown, can't find full path for %s\n" % (frame_num, dso))
+                processed_lines.append("#%s: unknown, can't find full path for %s\n" %
+                    (frame_num, dso))
                 continue
 
             prefix = "bt#%s: 0x%x => " % (frame_num, addr)
