@@ -101,6 +101,10 @@ else
   echo "WARNING: Unable to locate initrd image"
 fi
 
+# Remove any deleted file data. This allows the sparse image files to be more
+# efficiently compressed.
+sudo fstrim -v "${MOUNTPOINT}"
+
 sudo -v -p "[sudo] Enter password to unmount filesystems"
 sudo umount "${MOUNTPOINT}/proc"
 sudo umount "${MOUNTPOINT}/dev"
