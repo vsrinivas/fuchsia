@@ -11,7 +11,6 @@
 #include <lib/async/dispatcher.h>
 #include <zircon/compiler.h>
 
-#include "garnet/drivers/bluetooth/lib/common/cancelable_callback.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
