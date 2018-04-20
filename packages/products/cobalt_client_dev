@@ -8,7 +8,7 @@
         "garnet/packages/prod/netstack",
         "garnet/packages/prod/network",
         "garnet/packages/prod/runtime",
-        "garnet/packages/products/installer"
+        "garnet/packages/products/network-installer"
     ],
     "packages": {
         "cobalt": "//garnet/bin/cobalt:cobalt",
