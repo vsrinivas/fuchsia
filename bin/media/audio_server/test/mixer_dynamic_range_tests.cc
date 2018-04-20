@@ -59,6 +59,8 @@ TEST(DynamicRange, Epsilon) {
   EXPECT_GE(unity_level_db, 0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_LE(unity_level_db, 0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSourceFloat);
+  AudioResult::LevelToleranceSourceFloat =
+      fmax(AudioResult::LevelToleranceSourceFloat, abs(unity_level_db));
 
   // Accumulator has <28 precision bits: kPrevScaleEpsilon must < 0x0FFFFFFF.
   static_assert(AudioResult::kPrevScaleEpsilon < Gain::kUnityScale - 1,
@@ -81,6 +83,9 @@ TEST(DynamicRange, Epsilon) {
   EXPECT_LE(
       AudioResult::LevelEpsilonDown,
       AudioResult::kPrevLevelEpsilonDown + AudioResult::kPrevDynRangeTolerance);
+  AudioResult::DynRangeTolerance = fmax(
+      AudioResult::DynRangeTolerance,
+      abs(AudioResult::LevelEpsilonDown - AudioResult::kPrevLevelEpsilonDown));
 
   EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
   EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
@@ -100,6 +105,9 @@ TEST(DynamicRange, 60Down) {
             -60.0 - AudioResult::kPrevDynRangeTolerance);
   EXPECT_LE(AudioResult::Level60Down,
             -60.0 + AudioResult::kPrevDynRangeTolerance);
+  AudioResult::DynRangeTolerance = fmax(AudioResult::DynRangeTolerance,
+                                        abs(AudioResult::Level60Down + 60.0));
+
   EXPECT_GE(AudioResult::Sinad60Down, AudioResult::kPrevSinad60Down);
 
   // Equivalent gain combo (per-stream, master) should make identical results.
@@ -151,6 +159,8 @@ TEST(DynamicRange, MonoToStereo) {
 
   EXPECT_GE(level_left_db, 0 - AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_LE(level_left_db, 0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  AudioResult::LevelToleranceSourceFloat =
+      fmax(AudioResult::LevelToleranceSourceFloat, abs(level_left_db));
 
   EXPECT_GE(sinad_left_db, AudioResult::kPrevFloorSourceFloat);
 }
@@ -189,19 +199,25 @@ TEST(DynamicRange, StereoToMono) {
             frac_src_offset);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
-  double magn_signal, magn_other, level_mono_db;
+  double magn_signal, magn_other;
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  level_mono_db = ValToDb(magn_signal / kFullScaleAccumAmplitude);
+  AudioResult::LevelStereoMono =
+      ValToDb(magn_signal / kFullScaleAccumAmplitude);
   AudioResult::FloorStereoMono = ValToDb(kFullScaleAccumAmplitude / magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
-  EXPECT_GE(level_mono_db, AudioResult::kPrevLevelStereoMono -
-                               AudioResult::kPrevLevelToleranceStereoMono);
-  EXPECT_LE(level_mono_db, AudioResult::kPrevLevelStereoMono +
-                               AudioResult::kPrevLevelToleranceStereoMono);
+  EXPECT_GE(AudioResult::LevelStereoMono,
+            AudioResult::kPrevLevelStereoMono -
+                AudioResult::kPrevLevelToleranceStereoMono);
+  EXPECT_LE(AudioResult::LevelStereoMono,
+            AudioResult::kPrevLevelStereoMono +
+                AudioResult::kPrevLevelToleranceStereoMono);
+  AudioResult::LevelToleranceStereoMono = fmax(
+      AudioResult::LevelToleranceStereoMono,
+      abs(AudioResult::LevelStereoMono - AudioResult::kPrevLevelStereoMono));
 
   EXPECT_GE(AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 }
@@ -285,6 +301,8 @@ TEST(DynamicRange, Mix_8) {
 
   EXPECT_GE(AudioResult::LevelMix8, 0.0 - AudioResult::kPrevLevelToleranceMix8);
   EXPECT_LE(AudioResult::LevelMix8, 0.0 + AudioResult::kPrevLevelToleranceMix8);
+  AudioResult::LevelToleranceMix8 =
+      fmax(AudioResult::LevelToleranceMix8, abs(AudioResult::LevelMix8));
 
   // 8-bit noise floor should be approx -48dBFS. Because 8-bit sources are
   // normalized up to 16-bit level, they can take advantage of fractional
@@ -298,6 +316,8 @@ TEST(DynamicRange, Mix_16) {
 
   EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kPrevLevelToleranceMix16);
   EXPECT_LE(AudioResult::LevelMix16, AudioResult::kPrevLevelToleranceMix16);
+  AudioResult::LevelToleranceMix16 =
+      fmax(AudioResult::LevelToleranceMix16, abs(AudioResult::LevelMix16));
 
   // 16-bit noise floor should be approx -96dBFS. Noise is summed along with
   // signal; therefore we expect sinad of ~90 dB.
@@ -313,6 +333,8 @@ TEST(DynamicRange, Mix_Float) {
             -AudioResult::kPrevLevelToleranceMixFloat);
   EXPECT_LE(AudioResult::LevelMixFloat,
             AudioResult::kPrevLevelToleranceMixFloat);
+  AudioResult::LevelToleranceMixFloat = fmax(
+      AudioResult::LevelToleranceMixFloat, abs(AudioResult::LevelMixFloat));
 
   // This should be same as 16-bit (~91dB), per accumulator precision. Once we
   // increase accumulator precision, we expect this to improve, while Mix_16

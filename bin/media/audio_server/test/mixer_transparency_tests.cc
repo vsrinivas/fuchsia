@@ -272,7 +272,6 @@ TEST(PassThru, Accumulate) {
 
   int32_t expect2[] = {-0x10E100, 0x092900, 0x1A8500, -0x223D00};  // =source
   NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
-
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum) / 2);

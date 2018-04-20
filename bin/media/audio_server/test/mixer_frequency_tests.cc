@@ -80,33 +80,46 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
 
 // Measure level response and noise floor for 1kHz sine from 8-bit source.
 TEST(NoiseFloor, Source_8) {
-  double level_db =
+  AudioResult::LevelSource8 =
       MeasureSourceNoiseFloor<uint8_t>(&AudioResult::FloorSource8);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceSource8);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceSource8);
+  EXPECT_GE(AudioResult::LevelSource8,
+            0.0 - AudioResult::kPrevLevelToleranceSource8);
+  EXPECT_LE(AudioResult::LevelSource8,
+            0.0 + AudioResult::kPrevLevelToleranceSource8);
+  AudioResult::LevelToleranceSource8 =
+      fmax(AudioResult::LevelToleranceSource8, abs(AudioResult::LevelSource8));
 
   EXPECT_GE(AudioResult::FloorSource8, AudioResult::kPrevFloorSource8);
 }
 
 // Measure level response and noise floor for 1kHz sine from 16bit source.
 TEST(NoiseFloor, Source_16) {
-  double level_db =
+  AudioResult::LevelSource16 =
       MeasureSourceNoiseFloor<int16_t>(&AudioResult::FloorSource16);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceSource16);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceSource16);
+  EXPECT_GE(AudioResult::LevelSource16,
+            0.0 - AudioResult::kPrevLevelToleranceSource16);
+  EXPECT_LE(AudioResult::LevelSource16,
+            0.0 + AudioResult::kPrevLevelToleranceSource16);
+  AudioResult::LevelToleranceSource16 = fmax(
+      AudioResult::LevelToleranceSource16, abs(AudioResult::LevelSource16));
 
   EXPECT_GE(AudioResult::FloorSource16, AudioResult::kPrevFloorSource16);
 }
 
 // Measure level response and noise floor for 1kHz sine from 16bit source.
 TEST(NoiseFloor, Source_Float) {
-  double level_db =
+  AudioResult::LevelSourceFloat =
       MeasureSourceNoiseFloor<float>(&AudioResult::FloorSourceFloat);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_GE(AudioResult::LevelSourceFloat,
+            0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_LE(AudioResult::LevelSourceFloat,
+            0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
+  AudioResult::LevelToleranceSourceFloat =
+      fmax(AudioResult::LevelToleranceSourceFloat,
+           abs(AudioResult::LevelSourceFloat));
 
   EXPECT_GE(AudioResult::FloorSourceFloat, AudioResult::kPrevFloorSourceFloat);
 }
@@ -165,33 +178,46 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
 
 // Measure level response and noise floor for 1kHz sine, to an 8bit output.
 TEST(NoiseFloor, Output_8) {
-  double level_db =
+  AudioResult::LevelOutput8 =
       MeasureOutputNoiseFloor<uint8_t>(&AudioResult::FloorOutput8);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceOutput8);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceOutput8);
+  EXPECT_GE(AudioResult::LevelOutput8,
+            0.0 - AudioResult::kPrevLevelToleranceOutput8);
+  EXPECT_LE(AudioResult::LevelOutput8,
+            0.0 + AudioResult::kPrevLevelToleranceOutput8);
+  AudioResult::LevelToleranceOutput8 =
+      fmax(AudioResult::LevelToleranceOutput8, abs(AudioResult::LevelOutput8));
 
   EXPECT_GE(AudioResult::FloorOutput8, AudioResult::kPrevFloorOutput8);
 }
 
 // Measure level response and noise floor for 1kHz sine, to a 16bit output.
 TEST(NoiseFloor, Output_16) {
-  double level_db =
+  AudioResult::LevelOutput16 =
       MeasureOutputNoiseFloor<int16_t>(&AudioResult::FloorOutput16);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceOutput16);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceOutput16);
+  EXPECT_GE(AudioResult::LevelOutput16,
+            0.0 - AudioResult::kPrevLevelToleranceOutput16);
+  EXPECT_LE(AudioResult::LevelOutput16,
+            0.0 + AudioResult::kPrevLevelToleranceOutput16);
+  AudioResult::LevelToleranceOutput16 = fmax(
+      AudioResult::LevelToleranceOutput16, abs(AudioResult::LevelOutput16));
 
   EXPECT_GE(AudioResult::FloorOutput16, AudioResult::kPrevFloorOutput16);
 }
 
 // Measure level response and noise floor for 1kHz sine, to a 16bit output.
 TEST(NoiseFloor, Output_Float) {
-  double level_db =
+  AudioResult::LevelOutputFloat =
       MeasureOutputNoiseFloor<float>(&AudioResult::FloorOutputFloat);
 
-  EXPECT_GE(level_db, 0.0 - AudioResult::kPrevLevelToleranceOutputFloat);
-  EXPECT_LE(level_db, 0.0 + AudioResult::kPrevLevelToleranceOutputFloat);
+  EXPECT_GE(AudioResult::LevelOutputFloat,
+            0.0 - AudioResult::kPrevLevelToleranceOutputFloat);
+  EXPECT_LE(AudioResult::LevelOutputFloat,
+            0.0 + AudioResult::kPrevLevelToleranceOutputFloat);
+  AudioResult::LevelToleranceOutputFloat =
+      fmax(AudioResult::LevelToleranceOutputFloat,
+           abs(AudioResult::LevelOutputFloat));
 
   EXPECT_GE(AudioResult::FloorOutputFloat, AudioResult::kPrevFloorOutputFloat);
 }
@@ -296,6 +322,8 @@ void EvaluateFreqRespResults(double* freq_resp_results,
     EXPECT_LE(freq_resp_results[freq],
               0.0 + AudioResult::kPrevLevelToleranceInterpolation)
         << freq;
+    AudioResult::LevelToleranceInterpolation =
+        fmax(AudioResult::LevelToleranceInterpolation, freq_resp_results[freq]);
   }
 }
 

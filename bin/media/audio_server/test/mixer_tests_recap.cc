@@ -93,6 +93,7 @@ TEST(Recap, FreqResp) {
                         ? idx
                         : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6u Hz", FrequencySet::kRefFreqsTranslated[freq]);
+
     if (FrequencySet::UseFullFrequencySet) {
       if (AudioResult::kPrevFreqRespLinearUnity[freq] !=
           -std::numeric_limits<double>::infinity()) {
