@@ -115,6 +115,8 @@ static uint32_t BuildHandleStats(const ProcessDispatcher& pd,
 // buffer as strings.
 static void FormatHandleTypeCount(const ProcessDispatcher& pd,
                                   char *buf, size_t buf_len) {
+    static_assert(ZX_OBJ_TYPE_LAST == 28, "need to update table below");
+
     uint32_t types[ZX_OBJ_TYPE_LAST] = {0};
     uint32_t handle_count = BuildHandleStats(pd, types, sizeof(types));
 
