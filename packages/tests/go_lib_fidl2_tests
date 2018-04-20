@@ -1,5 +1,0 @@
-{
-    "packages": {
-        "go_lib_fidl2_tests": "//garnet/public/lib/fidl/go/src/fidl/bindings2:go_lib_fidl2_tests"
-    }
-}

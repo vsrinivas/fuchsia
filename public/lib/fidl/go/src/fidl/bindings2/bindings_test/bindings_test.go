@@ -8,6 +8,9 @@ import (
 	"syscall/zx"
 	"testing"
 	"time"
+
+	. "fidl/bindings2"
+	. "fuchsia/go/go_fidl_bindings_test"
 )
 
 type Test1Impl struct{}

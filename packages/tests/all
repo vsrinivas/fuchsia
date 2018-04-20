@@ -15,7 +15,7 @@
         "garnet/packages/tests/fsl",
         "garnet/packages/tests/fxl",
         "garnet/packages/tests/go_far_tests",
-        "garnet/packages/tests/go_lib_fidl2_tests",
+        "garnet/packages/tests/go_fidl_bindings_tests",
         "garnet/packages/tests/go_merkle_tests",
         "garnet/packages/tests/go_stdlib_tests",
         "garnet/packages/tests/guest",

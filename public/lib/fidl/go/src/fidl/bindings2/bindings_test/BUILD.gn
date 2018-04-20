@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+
+fidl("test_fidl") {
+  name = "go_fidl_bindings_test"
+  sources = [
+    "test.fidl",
+  ]
+}
+
+go_test("go_fidl_bindings_test") {
+  gopackage = "fuchsia.googlesource.com/fidl/bindings2/bindings_test"
+  go_dependencies = [
+    {
+      package = "fuchsia.googlesource.com/fidl/bindings2/bindings_test"
+    },
+  ]
+  extra_dependencies = [
+    "//garnet/public/lib/fidl/go/src/fidl",
+    ":test_fidl($go_toolchain)",
+  ]
+}
+
+package("go_fidl_bindings_tests") {
+  deprecated_system_image = true
+
+  deps = [
+    ":go_fidl_bindings_test",
+  ]
+
+  tests = [ {
+        name = "go_fidl_bindings_test"
+      } ]
+}

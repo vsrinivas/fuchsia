@@ -8,6 +8,9 @@ import (
 	"reflect"
 	"syscall/zx"
 	"testing"
+
+	. "fidl/bindings2"
+	. "fuchsia/go/go_fidl_bindings_test"
 )
 
 func testIdentity(t *testing.T, input Payload, expectSize int, output Payload) {
