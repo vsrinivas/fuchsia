@@ -17,7 +17,7 @@ class Packet;
 class Scanner;
 class Station;
 
-// ClientMlme is a MLME which operates in non-AP mode. It is not thread-safe.
+// ClientMlme is a MLME which operates in non-AP role. It is not thread-safe.
 class ClientMlme : public Mlme {
    public:
     explicit ClientMlme(DeviceInterface* device);

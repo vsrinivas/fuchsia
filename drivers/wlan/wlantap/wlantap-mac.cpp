@@ -43,12 +43,12 @@ uint32_t ConvertDriverFeatures(const ::fidl::VectorPtr<wlan_device::DriverFeatur
     return ret;
 }
 
-uint16_t ConvertMacModes(const ::fidl::VectorPtr<wlan_device::MacRole>& roles) {
+uint16_t ConvertMacRoles(const ::fidl::VectorPtr<wlan_device::MacRole>& roles) {
     uint16_t ret = 0;
     for (auto role : *roles) {
         switch (role) {
-            case wlan_device::MacRole::AP: ret |= WLAN_MAC_MODE_AP; break;
-            case wlan_device::MacRole::CLIENT: ret |= WLAN_MAC_MODE_STA; break;
+            case wlan_device::MacRole::AP: ret |= WLAN_MAC_ROLE_AP; break;
+            case wlan_device::MacRole::CLIENT: ret |= WLAN_MAC_ROLE_CLIENT; break;
         }
     }
     return ret;
@@ -131,7 +131,7 @@ struct WlantapMacImpl : WlantapMac {
         info->supported_phys = ConvertSupportedPhys(self.phy_config_->phy_info.supported_phys);
         info->driver_features = ConvertDriverFeatures(
             self.phy_config_->phy_info.driver_features);
-        info->mac_modes = ConvertMacModes(self.phy_config_->phy_info.mac_roles);
+        info->mac_roles = ConvertMacRoles(self.phy_config_->phy_info.mac_roles);
         info->caps = ConvertCaps(self.phy_config_->phy_info.caps);
         info->num_bands = std::min(self.phy_config_->phy_info.bands->size(),
                                    static_cast<size_t>(WLAN_MAX_BANDS));

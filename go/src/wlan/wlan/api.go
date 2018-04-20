@@ -178,15 +178,15 @@ func PrintDeviceQueryResponse(resp *mlme.DeviceQueryResponse) {
 	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
 		resp.MacAddr[0], resp.MacAddr[1], resp.MacAddr[2],
 		resp.MacAddr[3], resp.MacAddr[4], resp.MacAddr[5])
-	log.Print("  Modes:")
-	for _, mode := range resp.Modes {
-		switch mode {
-		case mlme.MacModeSta:
-			log.Print("    STA")
-		case mlme.MacModeAp:
+	log.Print("  Roles:")
+	for _, role := range resp.Roles {
+		switch role {
+		case mlme.MacRoleClient:
+			log.Print("    CLIENT")
+		case mlme.MacRoleAp:
 			log.Print("    AP")
 		default:
-			log.Printf("    Unknown(%v)", mode)
+			log.Printf("    Unknown(%v)", role)
 		}
 	}
 	for i, band := range resp.Bands {

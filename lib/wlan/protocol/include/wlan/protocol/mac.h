@@ -76,13 +76,13 @@ enum {
 
 enum {
     // Device supports operation as a non-AP station (i.e., a client of an AP).
-    WLAN_MAC_MODE_STA = (1 << 0),
+    WLAN_MAC_ROLE_CLIENT = (1 << 0),
     // Device supports operation as an access point.
-    WLAN_MAC_MODE_AP = (1 << 1),
+    WLAN_MAC_ROLE_AP = (1 << 1),
     // TODO: IBSS, PBSS, mesh
 };
 
-#define WLAN_MAC_MODE_ALL (WLAN_MAC_MODE_STA | WLAN_MAC_MODE_AP)
+#define WLAN_MAC_ROLE_ALL (WLAN_MAC_ROLE_CLIENT | WLAN_MAC_ROLE_AP)
 
 // Basic capabilities. IEEE Std 802.11-2016, 9.4.1.4
 enum {
@@ -150,8 +150,8 @@ typedef struct wlanmac_info {
     uint16_t supported_phys;
     // Bitmask indicating the WLAN_DRIVER_FEATURE_* values supported by the driver and hardware.
     uint32_t driver_features;
-    // Bitmask representing supported modes.
-    uint16_t mac_modes;
+    // Bitmask representing supported roles.
+    uint16_t mac_roles;
     // Bitmask indicating WLAN_CAP_* capabilities supported by the hardware.
     uint32_t caps;
     // Supported bands.

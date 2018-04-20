@@ -31,8 +31,8 @@ struct DeviceQueryRequest {
 
 // DEVICE_QUERY.confirm
 
-enum MacMode {
-    STA = 1;
+enum MacRole {
+    CLIENT = 1;
     AP = 2;
 };
 
@@ -46,7 +46,7 @@ struct BandCapabilities {
 // necessary for the SME.
 struct DeviceQueryResponse {
     array<uint8>:6 mac_addr;
-    vector<MacMode> modes;
+    vector<MacRole> roles;
     vector<BandCapabilities> bands;
 };
 

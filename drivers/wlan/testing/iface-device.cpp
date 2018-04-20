@@ -87,7 +87,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
     // Fill out a minimal set of wlan device capabilities
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     info->driver_features = 0;
-    info->mac_modes = WLAN_MAC_MODE_STA;
+    info->mac_roles = WLAN_MAC_ROLE_CLIENT;
     info->caps = 0;
     info->num_bands = 2;
     // clang-format off

@@ -3503,7 +3503,7 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
 
     info->supported_phys = WLAN_PHY_DSSS | WLAN_PHY_CCK | WLAN_PHY_OFDM | WLAN_PHY_HT;
     // TODO(tkilbourn): update this when we add AP support
-    info->mac_modes = WLAN_MAC_MODE_STA;
+    info->mac_roles = WLAN_MAC_ROLE_CLIENT;
     info->caps = WLAN_CAP_SHORT_PREAMBLE | WLAN_CAP_SHORT_SLOT_TIME;
     info->num_bands = 1;
     info->bands[0] = {

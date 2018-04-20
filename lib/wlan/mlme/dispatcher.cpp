@@ -53,7 +53,7 @@ zx_status_t Dispatcher::HandlePacket(const Packet* packet) {
     finspect("Packet: %s\n", debug::Describe(*packet).c_str());
 
     // If there is no active MLME, block all packets but service ones.
-    // MLME-JOIN.request and MLME-START.request implicitly select a mode and initialize the
+    // MLME-JOIN.request and MLME-START.request implicitly select a role and initialize the
     // MLME. DEVICE_QUERY.request is used to obtain device capabilities.
 
     auto service_msg = (packet->peer() == Packet::Peer::kService);
@@ -304,7 +304,7 @@ zx_status_t Dispatcher::HandleMgmtPacket(const Packet* packet) {
     }
     default:
         if (!dst.IsBcast()) {
-            // TODO(porce): Evolve this logic to support AP mode.
+            // TODO(porce): Evolve this logic to support AP role.
             debugf("Rxed Mgmt frame (type: %d) but not handled\n", hdr->fc.subtype());
         }
         break;
@@ -482,9 +482,9 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
 
     memcpy(resp.mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);
 
-    resp.modes->resize(0);
-    if (info.mac_modes & WLAN_MAC_MODE_STA) { resp.modes->push_back(wlan_mlme::MacMode::STA); }
-    if (info.mac_modes & WLAN_MAC_MODE_AP) { resp.modes->push_back(wlan_mlme::MacMode::AP); }
+    resp.roles->resize(0);
+    if (info.mac_roles & WLAN_MAC_ROLE_CLIENT) { resp.roles->push_back(wlan_mlme::MacRole::CLIENT); }
+    if (info.mac_roles & WLAN_MAC_ROLE_AP) { resp.roles->push_back(wlan_mlme::MacRole::AP); }
 
     resp.bands->resize(0);
     for (uint8_t band_idx = 0; band_idx < info.num_bands; band_idx++) {

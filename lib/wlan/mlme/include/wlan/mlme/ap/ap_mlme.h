@@ -15,7 +15,7 @@
 
 namespace wlan {
 
-// ApMlme is an MLME which operates in AP mode. It is not thread-safe.
+// ApMlme is an MLME which operates in AP role. It is not thread-safe.
 class ApMlme : public Mlme {
    public:
     explicit ApMlme(DeviceInterface* device);
