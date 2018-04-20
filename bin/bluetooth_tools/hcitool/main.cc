@@ -8,14 +8,16 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/auto_call.h"
 #include "lib/fxl/log_settings.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -69,11 +71,13 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  fsl::MessageLoop message_loop;
+  // Make sure the HCI Transport gets shut down cleanly upon exit.
+  auto ac = fxl::MakeAutoCall([&hci] { hci->ShutDown(); });
+
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   bluetooth_tools::CommandDispatcher dispatcher;
-  hcitool::CommandData cmd_data(hci->command_channel(),
-                                message_loop.async());
+  hcitool::CommandData cmd_data(hci->command_channel(), loop.async());
   RegisterCommands(&cmd_data, &dispatcher);
 
   if (cl.positional_args().empty() || cl.positional_args()[0] == "help") {
@@ -81,7 +85,7 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
-  auto complete_cb = [&message_loop] { message_loop.PostQuitTask(); };
+  auto complete_cb = [&] { loop.Shutdown(); };
 
   bool cmd_found;
   if (!dispatcher.ExecuteCommand(cl.positional_args(), complete_cb,
@@ -91,7 +95,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  message_loop.Run();
+  loop.Run();
 
   return EXIT_SUCCESS;
 }

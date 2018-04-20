@@ -5,8 +5,6 @@
 #pragma once
 
 #include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 
 #include "command_channel.h"
 
