@@ -1,5 +1,5 @@
 {
     "labels": [
-        "//build/tools/json_validator(//build/toolchain:host_x64)"
+        "//build/tools/json_validator:install"
     ]
 }
