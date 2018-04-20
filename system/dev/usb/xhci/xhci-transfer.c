@@ -555,7 +555,7 @@ int xhci_control_request(xhci_t* xhci, uint32_t slot_id, uint8_t request_type, u
             status = ZX_ERR_TIMED_OUT;
         }
     }
-    zxlogf(TRACE, "xhci_cancel_transfer got %d\n", status);
+    zxlogf(TRACE, "xhci_control_transfer got %d\n", status);
     if (status == ZX_OK) {
         status = req->response.actual;
 

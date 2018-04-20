@@ -52,6 +52,15 @@ zx_status_t usb_device_set_interface(usb_device_t* device, uint8_t interface_id,
     return ZX_ERR_INVALID_ARGS;
 }
 
+void usb_device_set_hub_interface(usb_device_t* device, usb_hub_interface_t* hub_intf) {
+    mtx_lock(&device->interface_mutex);
+    device->isHub = true;
+    if (hub_intf) {
+        memcpy(&device->hub_intf, hub_intf, sizeof(device->hub_intf));
+    }
+    mtx_unlock(&device->interface_mutex);
+}
+
 static usb_configuration_descriptor_t* get_config_desc(usb_device_t* dev, int config) {
     int num_configurations = dev->device_desc.bNumConfigurations;
     for (int i = 0; i < num_configurations; i++) {

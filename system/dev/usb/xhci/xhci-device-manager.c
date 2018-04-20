@@ -124,12 +124,19 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     uint32_t tt_port_number = 0;
     if (hub_address != 0 && (speed == USB_SPEED_LOW || speed == USB_SPEED_FULL)) {
         xhci_slot_t* hub_slot = &xhci->slots[hub_address];
-        if (hub_slot->speed == USB_SPEED_HIGH) {
-            mtt = XHCI_GET_BITS32(&slot->sc->sc0, SLOT_CTX_MTT_START, SLOT_CTX_MTT_BITS);
+        tt_hub_slot_id =  XHCI_GET_BITS32(&hub_slot->sc->sc2, SLOT_CTX_TT_HUB_SLOT_ID_START,
+                                          SLOT_CTX_TT_HUB_SLOT_ID_BITS);
+        if (tt_hub_slot_id) {
+            tt_port_number = XHCI_GET_BITS32(&hub_slot->sc->sc2,  SLOT_CTX_TT_PORT_NUM_START,
+                                             SLOT_CTX_TT_PORT_NUM_BITS);
+            mtt = XHCI_GET_BITS32(&hub_slot->sc->sc0, SLOT_CTX_MTT_START, SLOT_CTX_MTT_BITS);
+        } else if (hub_slot->speed == USB_SPEED_HIGH) {
+            mtt = XHCI_GET_BITS32(&hub_slot->sc->sc0, SLOT_CTX_MTT_START, SLOT_CTX_MTT_BITS);
             tt_hub_slot_id = hub_address;
             tt_port_number = port;
         }
     }
+
     XHCI_SET_BITS32(&sc->sc0, SLOT_CTX_MTT_START, SLOT_CTX_MTT_BITS, mtt);
     XHCI_SET_BITS32(&sc->sc2, SLOT_CTX_TT_HUB_SLOT_ID_START, SLOT_CTX_TT_HUB_SLOT_ID_BITS,
                     tt_hub_slot_id);
@@ -168,9 +175,49 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
     // then send the address device command
     for (int i = 0; i < 5; i++) {
         status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
-                                   (slot_id << TRB_SLOT_ID_START));
-        if (status != ZX_ERR_TIMED_OUT) {
+                                 (slot_id << TRB_SLOT_ID_START));
+        if (status == ZX_OK) {
             break;
+        } else if (status != ZX_ERR_TIMED_OUT) {
+            usb_bus_reset_hub_port(&xhci->bus, hub_address, port);
+            status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
+                                      ((slot_id << TRB_SLOT_ID_START) | TRB_ADDRESS_DEVICE_BSR));
+            if (status != ZX_OK) {
+                break;
+            }
+            usb_device_descriptor_t device_desc;
+            // Based on XHCI spec 4.6.5, some legacy devices expect
+            // device descriptor request prior to SET_ADDRESS request.
+            status = xhci_get_descriptor(xhci, slot_id, USB_TYPE_STANDARD, USB_DT_DEVICE << 8, 0,
+                                         &device_desc, 8);
+            if (status != ZX_OK) {
+                break;
+            }
+            switch (device_desc.bMaxPacketSize0) {
+                case 8:
+                case 16:
+                case 32:
+                case 64:
+                case 255:
+                    if (device_desc.bDescriptorType != USB_DT_DEVICE) {
+                        status = ZX_ERR_IO;
+                    }
+                    break;
+                default:
+                    status = ZX_ERR_IO;
+                    break;
+            }
+            if (status != ZX_OK) {
+                break;
+            }
+            XHCI_SET_BITS32(&ep0c->epc1, EP_CTX_MAX_PACKET_SIZE_START, EP_CTX_MAX_PACKET_SIZE_BITS,
+                            device_desc.bMaxPacketSize0);
+            zx_nanosleep(zx_deadline_after(ZX_USEC(1000)));
+            status = xhci_send_command(xhci, TRB_CMD_ADDRESS_DEVICE, icc_phys,
+                                       (slot_id << TRB_SLOT_ID_START));
+            if (status != ZX_OK){
+                break;
+            }
         }
     }
     mtx_unlock(&xhci->input_context_lock);
@@ -243,7 +290,7 @@ static void xhci_disable_slot(xhci_t* xhci, uint32_t slot_id) {
 
 static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
                                                 usb_speed_t speed) {
-    zxlogf(TRACE, "xhci_handle_enumerate_device\n");
+    zxlogf(TRACE, "xhci_handle_enumerate_device hub_address:%d port %d\n", hub_address, port);
     zx_status_t result = ZX_OK;
     uint32_t slot_id = 0;
 
@@ -262,7 +309,8 @@ static zx_status_t xhci_handle_enumerate_device(xhci_t* xhci, uint32_t hub_addre
     if (result != ZX_OK) {
         goto disable_slot_exit;
     }
-
+    // Let SET_ADDRESS settle down
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
     // read first 8 bytes of device descriptor to fetch ep0 max packet size
     usb_device_descriptor_t device_descriptor;
     for (int i = 0; i < 5; i++) {
@@ -678,6 +726,7 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
     if (speed == USB_SPEED_HIGH) {
         ttt = (descriptor->wHubCharacteristics >> 5) & 3;
     }
+    //TODO: Check for MTT. Needs a hook for calling set_interface from usb layer.
 
     mtx_lock(&xhci->input_context_lock);
     xhci_input_control_context_t* icc = (xhci_input_control_context_t*)xhci->input_context;

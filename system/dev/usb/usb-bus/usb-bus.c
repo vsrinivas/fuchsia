@@ -40,9 +40,24 @@ static void bus_remove_device(void* ctx, uint32_t device_id) {
     }
 }
 
+static void bus_reset_hub_port(void* ctx, uint32_t hub_id, uint32_t port) {
+    usb_bus_t* bus = ctx;
+    if (hub_id >= bus->max_device_count) {
+        zxlogf(ERROR, "hub_id out of range in usb_bus_reset_hub_port\n");
+        return;
+    }
+    usb_device_t* device = bus->devices[hub_id];
+    if (!device || !device->isHub) {
+        zxlogf(ERROR, "hub not found in usb_bus_reset_hub_port\n");
+        return;
+    }
+    usb_hub_reset_port(&device->hub_intf, port);
+}
+
 static usb_bus_interface_ops_t _bus_interface = {
     .add_device = bus_add_device,
     .remove_device = bus_remove_device,
+    .reset_hub_port = bus_reset_hub_port,
 };
 
 static zx_status_t bus_configure_hub(void* ctx, zx_device_t* hub_device, usb_speed_t speed,
@@ -73,10 +88,22 @@ static zx_status_t bus_device_removed(void* ctx, zx_device_t* hub_device, int po
     return usb_hci_hub_device_removed(&bus->hci, hub_id, port);
 }
 
+static zx_status_t bus_set_hub_interface(void* ctx, zx_device_t* usb_device, usb_hub_interface_t* hub) {
+    usb_bus_t* bus = ctx;
+    uint32_t usb_device_id;
+    if (usb_interface_get_device_id(usb_device, &usb_device_id) != ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+    usb_device_t* usb_dev = bus->devices[usb_device_id];
+    usb_device_set_hub_interface(usb_dev, hub);
+    return ZX_OK;
+}
+
 static usb_bus_protocol_ops_t _bus_protocol = {
     .configure_hub = bus_configure_hub,
     .hub_device_added = bus_device_added,
     .hub_device_removed = bus_device_removed,
+    .set_hub_interface = bus_set_hub_interface,
 };
 
 static void usb_bus_unbind(void* ctx) {

@@ -464,6 +464,7 @@ typedef volatile struct {
 #define TRB_SLOT_ID_BITS            8
 #define TRB_ENDPOINT_ID_START       16
 #define TRB_ENDPOINT_ID_BITS        5
+#define TRB_ADDRESS_DEVICE_BSR      (1 << 9)
 
 // Slot context bits (sc0)
 #define SLOT_CTX_ROUTE_STRING_START         0
