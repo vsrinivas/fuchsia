@@ -1,7 +1,7 @@
 # Layout of package directories
 
 Each [layer](/development/source_code/layers.md) of the Fuchsia source tree
-contains a top-level directory called `package` containing all the
+contains a top-level directory called `packages` containing all the
 [build packages](packages.md) for that layer. The present document describes
 the packages that are common to all of the layers. Each layer will introduce
 additional packages specific to that layer.
@@ -65,5 +65,7 @@ The [`//scripts/packages/verify_layer`][verify-layer] tool is used to verify
 that a layer's `packages` directory's structure matches the description in the
 present document.
 
+Note that only package files are allowed in such a directory, with the exception
+of `README.md` files for documentation purposes.
 
 [verify-layer]: https://fuchsia.googlesource.com/scripts/+/master/packages/README.md
