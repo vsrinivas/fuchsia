@@ -13,7 +13,7 @@ State,
   {{ $method.CamelName }}: FnMut(&mut State,
   {{- range $request := $method.Request -}} {{ $request.Type -}},{{- end -}}
   {{- if $method.HasResponse -}}
-  {{- $interface.Name -}}{{- $method.CamelName -}}Response
+  {{- $interface.Name -}}{{- $method.CamelName -}}Responder
   {{- else -}}
   {{ $interface.Name -}}Controller_ask_cramertj_to_fix_naming_now
   {{- end }}) -> {{ $method.CamelName }}Fut,
@@ -86,7 +86,7 @@ pub trait {{ $interface.Name }} {
    {{ $request.Name }}: {{ $request.Type }},
    {{- end }}
    {{- if $method.HasResponse }}
-   response_chan: {{ $interface.Name }}{{ $method.CamelName }}Response,
+   response_chan: {{ $interface.Name }}{{ $method.CamelName }}Responder,
    {{- else }}
    controller: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now
    {{- end }}
@@ -183,7 +183,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
         {{- end -}}
         {{- end -}}
         {{- if $method.HasResponse -}}
-        {{- $interface.Name -}}{{- $method.CamelName -}}Response {
+        {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
           controller,
           tx_id: header.tx_id,
           channel: self.channel.clone(),
@@ -238,7 +238,7 @@ impl<
    {{ $request.Name }}: {{ $request.Type }},
    {{- end }}
    {{- if $method.HasResponse }}
-   response_chan: {{ $interface.Name }}{{ $method.CamelName}}Response
+   response_chan: {{ $interface.Name }}{{ $method.CamelName}}Responder
    {{- else }}
    response_chan: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now
    {{- end }}
@@ -264,13 +264,13 @@ pub struct {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now {
 /* beginning of response types */
 {{- range $method := $interface.Methods }}
 {{- if $method.HasResponse }}
-pub struct {{ $interface.Name }}{{ $method.CamelName }}Response {
+pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
   controller: {{ $interface.Name }}Controller_ask_cramertj_to_fix_naming_now,
   tx_id: u32,
   channel: ::std::sync::Arc<async::Channel>,
 }
 
-impl {{ $interface.Name }}{{ $method.CamelName }}Response {
+impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
   // TODO(cramertj): add ability to kill channel (w/ optional epitaph), send events
   // (by delegating to self.controller)
 

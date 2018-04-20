@@ -96,8 +96,6 @@ type Root struct {
 	Interfaces   []Interface
 }
 
-// TODO(armansito): Add the ability to detect suffix clashes and maintain a list
-// of reserved suffixes.
 var reservedWords = map[string]bool{
 	"as":       true,
 	"box":      true,
@@ -179,14 +177,31 @@ var reservedWords = map[string]bool{
 	"async":      true,
 }
 
+var reservedSuffixes = []string{
+	"Impl",
+	"Marker",
+	"Proxy",
+	"Responder",
+	"Server",
+}
+
 func isReservedWord(str string) bool {
 	_, ok := reservedWords[str]
 	return ok
 }
 
+func hasReservedSuffix(str string) bool {
+	for _, suffix := range reservedSuffixes {
+		if strings.HasSuffix(str, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 func changeIfReserved(val types.Identifier) string {
 	str := string(val)
-	if isReservedWord(str) {
+	if hasReservedSuffix(str) || isReservedWord(str) {
 		return str + "_"
 	}
 	return str
