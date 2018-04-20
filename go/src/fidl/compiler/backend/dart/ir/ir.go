@@ -75,7 +75,9 @@ type Interface struct {
 	ServiceName string
 	ProxyName   string
 	BindingName string
+	EventsName  string
 	Methods     []Method
+	HasEvents   bool
 }
 
 type Method struct {
@@ -88,6 +90,7 @@ type Method struct {
 	HasResponse  bool
 	Response     []Parameter
 	ResponseSize int
+	CallbackType string
 	TypeSymbol   string
 	TypeExpr     string
 }
@@ -550,7 +553,9 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		val.GetAttribute("ServiceName"),
 		c.compileUpperCamelCompoundIdentifier(ci, "Proxy"),
 		c.compileUpperCamelCompoundIdentifier(ci, "Binding"),
+		c.compileUpperCamelCompoundIdentifier(ci, "Events"),
 		[]Method{},
+		false,
 	}
 
 	if r.ServiceName == "" {
@@ -571,10 +576,14 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasResponse,
 			response,
 			v.ResponseSize,
+			fmt.Sprintf("%s%sCallback", r.Name, v.Name),
 			fmt.Sprintf("_k%s_%s_Type", r.Name, v.Name),
 			typeExprForMethod(request, response),
 		}
 		r.Methods = append(r.Methods, m)
+		if !v.HasRequest && v.HasResponse {
+			r.HasEvents = true
+		}
 	}
 
 	return r
