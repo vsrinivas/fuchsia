@@ -4,44 +4,8 @@
 
 library modular_auth;
 
-// Specifies the success/failure status.
-enum Status {
-  OK = 0;
-  BAD_REQUEST = 1;
-  BAD_RESPONSE = 2;
-  OAUTH_SERVER_ERROR = 3;
-  USER_CANCELLED = 4;
-  NETWORK_ERROR = 5;
-  INTERNAL_ERROR = 6;
-};
-
-// Authentication errors returned by Token Manager. It contains error status
-// code along with a detailed error message.
-struct AuthErr {
-  Status @status;
-  string message;
-};
-
-// Stores attributes related to a firebase auth token for a given firebase api
-// key. These tokens are obtained by agents using
-// TokenProvider.GetFirebaseAuthToken().
-//
-// These tokens are minted by the Firebase Auth servers and are meant to be
-// used for authorizing users into Firebase services such as DB and storage.
-struct FirebaseToken {
-  // Use this as the auth token in firebase database and storage requests.
-  string id_token;
-
-  // Use this to uniquely identify users.
-  string local_id;
-
-  // Use this to uniquely identify user's email address provided by the
-  // Identity Provider.
-  string email;
-};
-
-// This interface provides tokens for the currently logged-in user.
-// This service can be obtained by agents via AgentContext.GetTokenProvider().
+// This interface provides tokens to Agents for their current user. This service
+// can be obtained by agents via AgentContext.GetTokenProvider().
 [ServiceName="modular.auth.TokenProvider"]
 interface TokenProvider {
   // Gets the access token (with pre-defined scopes) for this user. Access token
@@ -68,4 +32,39 @@ interface TokenProvider {
 
   // Returns the client id used to fetch the above tokens.
   4: GetClientId() -> (string? client_id);
+};
+
+// Authentication errors returned by Token Manager. It contains error status
+// code along with a detailed error message.
+struct AuthErr {
+  Status @status;
+  string message;
+};
+
+// Specifies the success/failure status.
+enum Status {
+  OK = 0;
+  BAD_REQUEST = 1;
+  BAD_RESPONSE = 2;
+  OAUTH_SERVER_ERROR = 3;
+  USER_CANCELLED = 4;
+  NETWORK_ERROR = 5;
+  INTERNAL_ERROR = 6;
+};
+
+// Stores attributes related to a firebase auth token for a given firebase api
+// key. These tokens are obtained by agents using
+// TokenProvider.GetFirebaseAuthToken().
+//
+// These tokens are minted by the Firebase Auth servers and are meant to be used
+// for authorizing users into Firebase services such as DB and storage.
+struct FirebaseToken {
+  // The auth token in firebase database and storage requests.
+  string id_token;
+
+  // Uniquely identifies the user.
+  string local_id;
+
+  // User's email address as provided by the Identity Provider.
+  string email;
 };

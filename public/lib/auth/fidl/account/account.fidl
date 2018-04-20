@@ -38,15 +38,13 @@ struct Account {
 // identifiers for users to interact with the system and may provide information
 // about the user that is known to the provider.
 enum IdentityProvider {
-  // An identity provider that's used for development and
-  // testing. If this identity provider is chosen, the Framework will continue
-  // as if it has identified the user. Note that the users that use this id
-  // provider would not get cloud ledger access (unless done via a side
-  // channel).
+  // An identity provider that's used for development and testing. If this
+  // identity provider is chosen, the Framework will continue as if it has
+  // identified the user. Note that the users that use this id provider would
+  // not get cloud ledger access (unless done via a side channel).
   DEV = 0;
 
   // Uses Google as the identity provider. Doing this requires a working network
   // connection and a web view.
   GOOGLE = 1;
 };
-
