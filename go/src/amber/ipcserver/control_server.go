@@ -38,7 +38,7 @@ func NewControlSrvr(d *daemon.DaemonProvider, r *source.TickGenerator) *ControlS
 	a := make(chan string, 5)
 	c := make(chan *completeUpdateRequest, 1)
 	w := make(chan *startUpdateRequest, 1)
-	m := NewActivationMonitor(c, w, a)
+	m := NewActivationMonitor(c, w, a, daemon.WriteUpdateToPkgFS)
 	go m.Do()
 
 	return &ControlSrvr{

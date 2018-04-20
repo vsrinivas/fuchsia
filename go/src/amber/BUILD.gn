@@ -170,6 +170,10 @@ test_targets = [
     name = "amber_cmd_publish_test"
     gopkg = "amber/cmd/publish"
   },
+  {
+    name = "amber_fidl_test"
+    gopkg = "amber/ipcserver"
+  }
 ]
 foreach(test, test_targets) {
   go_test(test.name) {

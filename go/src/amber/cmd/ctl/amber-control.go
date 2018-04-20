@@ -112,13 +112,12 @@ func main() {
 			if err == nil {
 				defer c.Close()
 				b := make([]byte, 1024)
-				d := []zx.Handle{}
 				for {
 					sigs, err := zxwait.Wait(*c.Handle(),
 						zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
 						zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
 					if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
-						bs, _, err := c.Read(b, d, 0)
+						bs, _, err := c.Read(b, []zx.Handle{}, 0)
 						if err == nil {
 							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
 							break

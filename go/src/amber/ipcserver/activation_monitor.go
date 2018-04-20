@@ -7,7 +7,6 @@ package ipcserver
 import (
 	"amber/daemon"
 	"amber/lg"
-	"log"
 	"os"
 	"sync"
 	"syscall/zx"
@@ -15,6 +14,7 @@ import (
 
 type ActivationMonitor struct {
 	waitList     map[string][]*zx.Channel
+	write        func(*daemon.GetResult) (string, error)
 	CompleteReqs <-chan *completeUpdateRequest
 	WriteReqs    <-chan *startUpdateRequest
 	Acts         <-chan string
@@ -32,11 +32,12 @@ type completeUpdateRequest struct {
 }
 
 func NewActivationMonitor(cr <-chan *completeUpdateRequest, wr <-chan *startUpdateRequest,
-	activations <-chan string) *ActivationMonitor {
+	activations <-chan string, writeFunc func(*daemon.GetResult) (string, error)) *ActivationMonitor {
 	a := ActivationMonitor{
 		CompleteReqs: cr,
 		WriteReqs:    wr,
 		Acts:         activations,
+		write:        writeFunc,
 	}
 	a.waitList = make(map[string][]*zx.Channel)
 	return &a
@@ -50,8 +51,9 @@ func (am *ActivationMonitor) Do() {
 				am.CompleteReqs = nil
 				break
 			}
+			lg.Log.Printf("Blocking update request received for %q\n", r.pkgData.Update.Merkle)
 			if _, ok := am.waitList[r.pkgData.Update.Merkle]; !ok {
-				if _, err := daemon.WriteUpdateToPkgFS(r.pkgData); err != nil {
+				if _, err := am.write(r.pkgData); err != nil {
 					if os.IsExist(err) {
 						lg.Log.Println("Package meta far already present, assuming package is available")
 						r.replyChan.Write([]byte(r.pkgData.Update.Merkle), []zx.Handle{}, 0)
@@ -67,7 +69,7 @@ func (am *ActivationMonitor) Do() {
 				am.WriteReqs = nil
 				break
 			}
-			if _, err := daemon.WriteUpdateToPkgFS(r.pkgData); err != nil {
+			if _, err := am.write(r.pkgData); err != nil {
 				if !os.IsExist(err) {
 					r.err = err
 				}
@@ -79,6 +81,7 @@ func (am *ActivationMonitor) Do() {
 			if !ok {
 				am.Acts = nil
 			}
+			lg.Log.Printf("Getting availablility for %q", pkg)
 			if l, ok := am.waitList[pkg]; ok {
 				for _, wtrChan := range l {
 					wtrChan.Write([]byte(pkg), []zx.Handle{}, 0)
@@ -89,7 +92,7 @@ func (am *ActivationMonitor) Do() {
 		}
 
 		if am.CompleteReqs == nil && am.WriteReqs == nil && am.Acts == nil {
-			log.Println("All channels closed, exiting.")
+			lg.Log.Println("All channels closed, exiting.")
 			return
 		}
 	}
