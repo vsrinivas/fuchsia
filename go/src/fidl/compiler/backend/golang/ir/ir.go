@@ -279,6 +279,9 @@ type compiler struct {
 
 	// decls contains all top-level declarations for the FIDL source.
 	decls types.DeclMap
+
+	// library is the name of the current library
+	library types.LibraryIdentifier
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -361,7 +364,7 @@ var handleTypes = map[types.HandleSubtype]string{
 	types.Vmar:    "_zx.VMAR",
 }
 
-func exportIdentifier(name types.EncodedIdentifier) types.CompoundIdentifier {
+func exportIdentifier(name types.EncodedCompoundIdentifier) types.CompoundIdentifier {
 	ci := types.ParseCompoundIdentifier(name)
 	ci.Name = types.Identifier(common.ToUpperCamelCase(string(ci.Name)))
 	return ci
@@ -381,6 +384,18 @@ func changeIfReserved(val types.Identifier, ext string) string {
 	return str
 }
 
+func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
+	if len(ci.Library) != len(c.library) {
+		return true
+	}
+	for i, part := range c.library {
+		if ci.Library[i] != part {
+			return true
+		}
+	}
+	return false
+}
+
 func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext string) string {
 	str := string(id)
 	if export {
@@ -391,11 +406,12 @@ func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext strin
 	return changeIfReserved(types.Identifier(str), ext)
 }
 
-func (_ *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
-	ci := exportIdentifier(ei)
+func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
+	ci := exportIdentifier(eci)
 	strs := []string{}
-	if ci.Library != "" {
-		strs = append(strs, changeIfReserved(ci.Library, "")+".")
+	if c.inExternalLibrary(ci) {
+		// TODO(FIDL-159) handle more than one library name component
+		strs = append(strs, changeIfReserved(ci.Library[0], "")+".")
 	}
 	strs = append(strs, changeIfReserved(ci.Name, ext))
 	return strings.Join(strs, "")
@@ -592,7 +608,7 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 	}
 }
 
-func (c *compiler) compileMethod(ifaceName types.EncodedIdentifier, val types.Method) Method {
+func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
 		Name:            methodName,
@@ -646,7 +662,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
 func Compile(fidlData types.Root) Root {
-	c := compiler{decls: fidlData.Decls}
+	libraryName := types.ParseLibraryName(fidlData.Name)
+	c := compiler{decls: fidlData.Decls, library: libraryName}
 	r := Root{Name: string(fidlData.Name)}
 	for _, v := range fidlData.Consts {
 		r.Consts = append(r.Consts, c.compileConst(v))

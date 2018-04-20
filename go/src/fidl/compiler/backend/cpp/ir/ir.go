@@ -65,7 +65,6 @@ type UnionMember struct {
 type Struct struct {
 	Namespace string
 	Name      string
-	CName     string
 	TableType string
 	Members   []StructMember
 	Size      int
@@ -326,22 +325,36 @@ func changeIfReserved(i types.Identifier, ext string) string {
 	return str
 }
 
-func formatDestructor(ei types.EncodedIdentifier) string {
-	val := types.ParseCompoundIdentifier(ei)
+func formatDestructor(eci types.EncodedCompoundIdentifier) string {
+	val := types.ParseCompoundIdentifier(eci)
 	return fmt.Sprintf("~%s", changeIfReserved(val.Name, ""))
 }
 
 type compiler struct {
-	namespace string
-	decls     *types.DeclMap
-	library   string
+	namespace       string
+	decls           *types.DeclMap
+	library         types.LibraryIdentifier
+	compiledLibrary string
 }
 
-func (c *compiler) compileCompoundIdentifier(ei types.EncodedIdentifier, ext string) string {
-	val := types.ParseCompoundIdentifier(ei)
+func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
+	if len(ci.Library) != len(c.library) {
+		return true
+	}
+	for i, part := range c.library {
+		if ci.Library[i] != part {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
+	val := types.ParseCompoundIdentifier(eci)
 	strs := []string{}
-	if val.Library != "" {
-		strs = append(strs, changeIfReserved(val.Library, ""))
+	if c.isInExternalLibrary(val) {
+		// TODO(FIDL-160) handle more than one library name component
+		strs = append(strs, changeIfReserved(val.Library[0], ""))
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
@@ -530,11 +543,11 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.HasRequest,
 			c.compileParameterArray(v.Request),
 			v.RequestSize,
-			fmt.Sprintf("%s%s%sRequestTable", c.library, r.Name, v.Name),
+			fmt.Sprintf("%s_%s%sRequestTable", c.compiledLibrary, r.Name, v.Name),
 			v.HasResponse,
 			c.compileParameterArray(v.Response),
 			v.ResponseSize,
-			fmt.Sprintf("%s%s%s%s", c.library, r.Name, v.Name, responseTypeNameSuffix),
+			fmt.Sprintf("%s_%s%s%s", c.compiledLibrary, r.Name, v.Name, responseTypeNameSuffix),
 			callbackType,
 			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
 			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
@@ -566,8 +579,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		c.namespace,
 		name,
-		"::" + name,
-		fmt.Sprintf("%s%sTable", c.library, name),
+		fmt.Sprintf("%s_%sTable", c.compiledLibrary, name),
 		[]StructMember{},
 		val.Size,
 	}
@@ -607,15 +619,18 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(r types.Root) Root {
 	root := Root{}
+	library := types.ParseLibraryName(r.Name)
 	c := compiler{
-		changeIfReserved(r.Name, ""),
+		// TODO(FIDL-160) handle more than one library name component
+		changeIfReserved(library[0], ""),
 		&r.Decls,
+		types.ParseLibraryName(r.Name),
 		string(r.Name),
 	}
 
 	root.Namespace = c.namespace
 
-	decls := map[types.EncodedIdentifier]Decl{}
+	decls := map[types.EncodedCompoundIdentifier]Decl{}
 
 	for _, v := range r.Consts {
 		d := c.compileConst(v)

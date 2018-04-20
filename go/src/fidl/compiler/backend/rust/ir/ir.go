@@ -244,15 +244,29 @@ var handleSubtypes = map[types.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls *types.DeclMap
+	decls   *types.DeclMap
+	library types.LibraryIdentifier
+}
+
+func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
+	if len(ci.Library) != len(c.library) {
+		return true
+	}
+	for i, part := range c.library {
+		if ci.Library[i] != part {
+			return true
+		}
+	}
+	return false
 }
 
 func compileCamelIdentifier(val types.Identifier) string {
 	return common.ToUpperCamelCase(changeIfReserved(val))
 }
 
-func compileLibraryName(val types.Identifier) string {
-	return changeIfReserved("fidl_" + val)
+func compileLibraryName(val types.LibraryIdentifier) string {
+	// TODO(FIDL-158) handle more than one library name component
+	return changeIfReserved("fidl_" + val[0])
 }
 
 func compileSnakeIdentifier(val types.Identifier) string {
@@ -263,9 +277,9 @@ func compileScreamingSnakeIdentifier(val types.Identifier) string {
 	return common.ConstNameToAllCapsSnake(changeIfReserved(val))
 }
 
-func compileCompoundIdentifier(val types.CompoundIdentifier) string {
+func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
-	if val.Library != "" {
+	if c.inExternalLibrary(val) {
 		strs = append(strs, compileLibraryName(val.Library))
 	}
 	str := changeIfReserved(val.Name)
@@ -273,22 +287,22 @@ func compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	return strings.Join(strs, "::")
 }
 
-func compileCamelCompoundIdentifier(ei types.EncodedIdentifier) string {
-	val := types.ParseCompoundIdentifier(ei)
+func (c *compiler) compileCamelCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
+	val := types.ParseCompoundIdentifier(eci)
 	val.Name = types.Identifier(compileCamelIdentifier(val.Name))
-	return compileCompoundIdentifier(val)
+	return c.compileCompoundIdentifier(val)
 }
 
-func compileSnakeCompoundIdentifier(ei types.EncodedIdentifier) string {
-	val := types.ParseCompoundIdentifier(ei)
+func (c *compiler) compileSnakeCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
+	val := types.ParseCompoundIdentifier(eci)
 	val.Name = types.Identifier(compileSnakeIdentifier(val.Name))
-	return compileCompoundIdentifier(val)
+	return c.compileCompoundIdentifier(val)
 }
 
-func compileScreamingSnakeCompoundIdentifier(ei types.EncodedIdentifier) string {
-	val := types.ParseCompoundIdentifier(ei)
+func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
+	val := types.ParseCompoundIdentifier(eci)
 	val.Name = types.Identifier(compileScreamingSnakeIdentifier(val.Name))
-	return compileCompoundIdentifier(val)
+	return c.compileCompoundIdentifier(val)
 }
 
 func compileLiteral(val types.Literal) string {
@@ -309,10 +323,10 @@ func compileLiteral(val types.Literal) string {
 	}
 }
 
-func compileConstant(val types.Constant) string {
+func (c *compiler) compileConstant(val types.Constant) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return compileScreamingSnakeCompoundIdentifier(val.Identifier)
+		return c.compileScreamingSnakeCompoundIdentifier(val.Identifier)
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal)
 	default:
@@ -322,18 +336,19 @@ func compileConstant(val types.Constant) string {
 }
 
 func (c *compiler) compileConst(val types.Const) Const {
+	name := c.compileScreamingSnakeCompoundIdentifier(val.Name)
 	var r Const
 	if val.Type.Kind == types.StringType {
 		r = Const{
 			Type:  "&str",
-			Name:  compileScreamingSnakeCompoundIdentifier(val.Name),
-			Value: compileConstant(val.Value),
+			Name:  name,
+			Value: c.compileConstant(val.Value),
 		}
 	} else {
 		r = Const{
 			Type:  c.compileType(val.Type).Decl,
-			Name:  compileScreamingSnakeCompoundIdentifier(val.Name),
-			Value: compileConstant(val.Value),
+			Name:  name,
+			Value: c.compileConstant(val.Value),
 		}
 	}
 	return r
@@ -381,7 +396,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
 	case types.RequestType:
-		r = compileCamelCompoundIdentifier(val.RequestSubtype)
+		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
 		r = fmt.Sprintf("fidl::endpoints2::ServerEnd<%sMarker>", r)
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
@@ -389,7 +404,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.PrimitiveType:
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		t := compileCamelCompoundIdentifier(val.Identifier)
+		t := c.compileCamelCompoundIdentifier(val.Identifier)
 		declType, ok := (*c.decls)[val.Identifier]
 		if !ok {
 			log.Fatal("unknown identifier: ", val.Identifier)
@@ -425,9 +440,9 @@ func (c *compiler) compileType(val types.Type) Type {
 	}
 }
 
-func compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
-		compileCamelCompoundIdentifier(val.Name),
+		c.compileCamelCompoundIdentifier(val.Name),
 		compilePrimitiveSubtype(val.Type),
 		[]EnumMember{},
 	}
@@ -435,7 +450,7 @@ func compileEnum(val types.Enum) Enum {
 		e.Members = append(e.Members, EnumMember{
 			Name:      compileCamelIdentifier(v.Name),
 			ConstName: compileScreamingSnakeIdentifier(v.Name),
-			Value:     compileConstant(v.Value),
+			Value:     c.compileConstant(v.Value),
 		})
 	}
 	return e
@@ -458,7 +473,7 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
-		compileCamelCompoundIdentifier(val.Name),
+		c.compileCamelCompoundIdentifier(val.Name),
 		[]Method{},
 		strings.Trim(val.GetAttribute("ServiceName"), "\""),
 	}
@@ -495,7 +510,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val types.Struct) Struct {
-	name := compileCamelCompoundIdentifier(val.Name)
+	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
 		Name:      name,
 		Members:   []StructMember{},
@@ -520,7 +535,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Name:      compileCamelCompoundIdentifier(val.Name),
+		Name:      c.compileCamelCompoundIdentifier(val.Name),
 		Members:   []UnionMember{},
 		Size:      val.Size,
 		Alignment: val.Alignment,
@@ -535,11 +550,12 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(r types.Root) Root {
 	root := Root{}
-	c := compiler{&r.Decls}
+	c := compiler{&r.Decls, types.ParseLibraryName(r.Name)}
 
 	for _, l := range r.Libraries {
 		if l.Name != r.Name {
-			root.ExternCrates = append(root.ExternCrates, compileLibraryName(l.Name))
+			library := types.ParseLibraryName(l.Name)
+			root.ExternCrates = append(root.ExternCrates, compileLibraryName(library))
 		}
 	}
 
@@ -548,7 +564,7 @@ func Compile(r types.Root) Root {
 	}
 
 	for _, v := range r.Enums {
-		root.Enums = append(root.Enums, compileEnum(v))
+		root.Enums = append(root.Enums, c.compileEnum(v))
 	}
 
 	for _, v := range r.Interfaces {

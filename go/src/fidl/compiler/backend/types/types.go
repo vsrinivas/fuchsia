@@ -26,33 +26,45 @@ implement field, name, or type resolution and analysis.
 
 type Identifier string
 
-type EncodedIdentifier string
+type LibraryIdentifier []Identifier
 
 type CompoundIdentifier struct {
-	Library     Identifier
-	Name        Identifier
+	Library LibraryIdentifier
+	Name    Identifier
 }
 
-func ParseCompoundIdentifier(ei EncodedIdentifier) CompoundIdentifier {
-	s := string(ei)
-	parts := strings.SplitN(s, "/", 2)
-	var library Identifier
-	var name Identifier
-	if len(parts) == 2 {
-		library = Identifier(parts[0])
-		name = Identifier(parts[1])
-	} else {
-		library = Identifier("")
-		name = Identifier(s)
+type EncodedLibraryIdentifier string
+
+type EncodedCompoundIdentifier string
+
+func ParseLibraryName(eli EncodedLibraryIdentifier) LibraryIdentifier {
+	raw_parts := strings.Split(string(eli), ".")
+	parts := make([]Identifier, len(raw_parts))
+	for i, raw_part := range raw_parts {
+		parts[i] = Identifier(raw_part)
 	}
+	return LibraryIdentifier(parts)
+}
+
+func ParseCompoundIdentifier(eci EncodedCompoundIdentifier) CompoundIdentifier {
+	parts := strings.SplitN(string(eci), "/", 2)
+	raw_library := ""
+	raw_name := parts[0]
+	if len(parts) == 2 {
+		raw_library = parts[0]
+		raw_name = parts[1]
+	}
+	library := ParseLibraryName(EncodedLibraryIdentifier(raw_library))
+	name := Identifier(raw_name)
 	return CompoundIdentifier{library, name}
 }
 
-func EnsureLibrary(l Identifier, ei EncodedIdentifier) EncodedIdentifier {
-	if strings.Index(string(ei), "/") != -1 {
-		return ei
+func EnsureLibrary(l EncodedLibraryIdentifier, eci EncodedCompoundIdentifier) EncodedCompoundIdentifier {
+	if strings.Index(string(eci), "/") != -1 {
+		return eci
 	}
-	return EncodedIdentifier(fmt.Sprintf("%s/%s", l, ei))
+	new_eci := strings.Join([]string{string(l), "/", string(eci)}, "")
+	return EncodedCompoundIdentifier(new_eci)
 }
 
 type Ordinal uint32
@@ -119,9 +131,9 @@ const (
 )
 
 type Constant struct {
-	Kind       ConstantKind      `json:"kind"`
-	Identifier EncodedIdentifier `json:"identifier,omitempty"`
-	Literal    Literal           `json:"literal,omitempty"`
+	Kind       ConstantKind              `json:"kind"`
+	Identifier EncodedCompoundIdentifier `json:"identifier,omitempty"`
+	Literal    Literal                   `json:"literal,omitempty"`
 }
 
 type TypeKind string
@@ -141,9 +153,9 @@ type Type struct {
 	ElementType      *Type
 	ElementCount     *int
 	HandleSubtype    HandleSubtype
-	RequestSubtype   EncodedIdentifier
+	RequestSubtype   EncodedCompoundIdentifier
 	PrimitiveSubtype PrimitiveSubtype
-	Identifier       EncodedIdentifier
+	Identifier       EncodedCompoundIdentifier
 	Nullable         bool
 }
 
@@ -244,11 +256,11 @@ type Attribute struct {
 
 // Union represents the declaration of a FIDL2 union.
 type Union struct {
-	Attributes []Attribute       `json:"maybe_attributes,omitempty"`
-	Name       EncodedIdentifier `json:"name"`
-	Members    []UnionMember     `json:"members"`
-	Size       int               `json:"size"`
-	Alignment  int               `json:"alignment"`
+	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Members    []UnionMember             `json:"members"`
+	Size       int                       `json:"size"`
+	Alignment  int                       `json:"alignment"`
 }
 
 func (d *Union) GetAttribute(name Identifier) string {
@@ -269,11 +281,11 @@ type UnionMember struct {
 
 // Struct represents a declaration of a FIDL2 struct.
 type Struct struct {
-	Attributes []Attribute       `json:"maybe_attributes,omitempty"`
-	Name       EncodedIdentifier `json:"name"`
-	Members    []StructMember    `json:"members"`
-	Size       int               `json:"size"`
-	Alignment  int               `json:"alignment"`
+	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Members    []StructMember            `json:"members"`
+	Size       int                       `json:"size"`
+	Alignment  int                       `json:"alignment"`
 }
 
 func (d *Struct) GetAttribute(name Identifier) string {
@@ -295,9 +307,9 @@ type StructMember struct {
 
 // Interface represents the declaration of a FIDL2 interface.
 type Interface struct {
-	Attributes []Attribute       `json:"maybe_attributes,omitempty"`
-	Name       EncodedIdentifier `json:"name"`
-	Methods    []Method          `json:"methods"`
+	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Methods    []Method                  `json:"methods"`
 }
 
 func (d *Interface) GetAttribute(name Identifier) string {
@@ -330,10 +342,10 @@ type Parameter struct {
 
 // Enum represents a FIDL2 delcaration of an enum.
 type Enum struct {
-	Attributes []Attribute       `json:"maybe_attributes,omitempty"`
-	Type       PrimitiveSubtype  `json:"type"`
-	Name       EncodedIdentifier `json:"name"`
-	Members    []EnumMember      `json:"members"`
+	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Type       PrimitiveSubtype          `json:"type"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Members    []EnumMember              `json:"members"`
 }
 
 func (d *Enum) GetAttribute(name Identifier) string {
@@ -353,10 +365,10 @@ type EnumMember struct {
 
 // Const represents a FIDL2 declaration of a named constant.
 type Const struct {
-	Attributes []Attribute       `json:"maybe_attributes,omitempty"`
-	Type       Type              `json:"type"`
-	Name       EncodedIdentifier `json:"name"`
-	Value      Constant          `json:"value"`
+	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
+	Type       Type                      `json:"type"`
+	Name       EncodedCompoundIdentifier `json:"name"`
+	Value      Constant                  `json:"value"`
 }
 
 func (d *Const) GetAttribute(name Identifier) string {
@@ -378,31 +390,24 @@ const (
 	UnionDeclType              = "union"
 )
 
-// The keys are encoded string forms of CompoundIdentifier.
-// These look like (when there is a library)
-//     LIB/DECL-DECL-ID
-//     LIB/ID
-// or (when there is not)
-//     DECL-DECL-ID
-//     ID
-type DeclMap map[EncodedIdentifier]DeclType
+type DeclMap map[EncodedCompoundIdentifier]DeclType
 
 // Library represents a FIDL2 dependency on a separate library.
 type Library struct {
-	Name  Identifier `json:"name,omitempty"`
-	Decls DeclMap    `json:"declarations,omitempty"`
+	Name  EncodedLibraryIdentifier `json:"name,omitempty"`
+	Decls DeclMap                  `json:"declarations,omitempty"`
 }
 
 // Root is the top-level object for a FIDL2 library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name       Identifier          `json:"name,omitempty"`
-	Consts     []Const             `json:"const_declarations,omitempty"`
-	Enums      []Enum              `json:"enum_declarations,omitempty"`
-	Interfaces []Interface         `json:"interface_declarations,omitempty"`
-	Structs    []Struct            `json:"struct_declarations,omitempty"`
-	Unions     []Union             `json:"union_declarations,omitempty"`
-	DeclOrder  []EncodedIdentifier `json:"declaration_order,omitempty"`
-	Decls      DeclMap             `json:"declarations,omitempty"`
-	Libraries  []Library           `json:"library_dependencies,omitempty"`
+	Name       EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Consts     []Const                     `json:"const_declarations,omitempty"`
+	Enums      []Enum                      `json:"enum_declarations,omitempty"`
+	Interfaces []Interface                 `json:"interface_declarations,omitempty"`
+	Structs    []Struct                    `json:"struct_declarations,omitempty"`
+	Unions     []Union                     `json:"union_declarations,omitempty"`
+	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
+	Decls      DeclMap                     `json:"declarations,omitempty"`
+	Libraries  []Library                   `json:"library_dependencies,omitempty"`
 }

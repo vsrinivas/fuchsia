@@ -289,14 +289,6 @@ func libraryPrefix(library types.Identifier) string {
 	return fmt.Sprintf("lib$%s", string(library))
 }
 
-func typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
-	t := fmt.Sprintf("k%s_Type", ident.Name)
-	if ident.Library != "" {
-		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library), t)
-	}
-	return t
-}
-
 func isReservedWord(str string) bool {
 	_, ok := reservedWords[str]
 	return ok
@@ -310,7 +302,29 @@ func changeIfReserved(str string) string {
 }
 
 type compiler struct {
-	decls *types.DeclMap
+	decls   *types.DeclMap
+	library types.LibraryIdentifier
+}
+
+func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
+	if len(ci.Library) != len(c.library) {
+		return true
+	}
+	for i, part := range c.library {
+		if ci.Library[i] != part {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *compiler) typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
+	t := fmt.Sprintf("k%s_Type", ident.Name)
+	if c.inExternalLibrary(ident) {
+		// TODO(FIDL-161) handle more than one library name component
+		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library[0]), t)
+	}
+	return t
 }
 
 func (c *compiler) compileUpperCamelIdentifier(val types.Identifier) string {
@@ -323,8 +337,9 @@ func (c *compiler) compileLowerCamelIdentifier(val types.Identifier) string {
 
 func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
 	strs := []string{}
-	if val.Library != "" {
-		strs = append(strs, libraryPrefix(val.Library))
+	if c.inExternalLibrary(val) {
+		// TODO(FIDL-161) handle more than one library name component
+		strs = append(strs, libraryPrefix(val.Library[0]))
 	}
 	strs = append(strs, changeIfReserved(string(val.Name)))
 	return strings.Join(strs, ".")
@@ -461,7 +476,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			fallthrough
 		case types.UnionDeclType:
 			r.Decl = t
-			r.typeExpr = typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+			r.typeExpr = c.typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
 			if val.Nullable {
 				r.typeExpr = fmt.Sprintf("const $fidl.PointerType<%s>(element: %s)",
 					t, r.typeExpr)
@@ -497,7 +512,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	e := Enum{
 		n,
 		[]EnumMember{},
-		typeSymbolForCompoundIdentifier(ci),
+		c.typeSymbolForCompoundIdentifier(ci),
 		fmt.Sprintf("const $fidl.EnumType<%s>(type: %s, ctor: %s._ctor)", n, typeExprForPrimitiveSubtype(val.Type), n),
 	}
 	for _, v := range val.Members {
@@ -589,7 +604,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		c.compileUpperCamelCompoundIdentifier(ci, ""),
 		[]StructMember{},
-		typeSymbolForCompoundIdentifier(ci),
+		c.typeSymbolForCompoundIdentifier(ci),
 		"",
 	}
 
@@ -624,7 +639,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		c.compileUpperCamelCompoundIdentifier(ci, ""),
 		c.compileUpperCamelCompoundIdentifier(ci, "Tag"),
 		[]UnionMember{},
-		typeSymbolForCompoundIdentifier(ci),
+		c.typeSymbolForCompoundIdentifier(ci),
 		"",
 	}
 
@@ -642,7 +657,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 
 func Compile(r types.Root) Root {
 	root := Root{}
-	c := compiler{&r.Decls}
+	c := compiler{&r.Decls, types.ParseLibraryName(r.Name)}
 
 	root.LibraryName = fmt.Sprintf("fuchsia.fidl.%s", r.Name)
 
@@ -671,9 +686,11 @@ func Compile(r types.Root) Root {
 			// We don't need to import our own package.
 			continue
 		}
+		// TODO(FIDL-161) handle more than one library name component
+		library := types.ParseLibraryName(l.Name)[0]
 		root.Imports = append(root.Imports, Import{
-			fmt.Sprintf("package:fuchsia.fidl.%s/%s.dart", l.Name, l.Name),
-			libraryPrefix(l.Name),
+			fmt.Sprintf("package:fuchsia.fidl.%s/%s.dart", library, library),
+			libraryPrefix(library),
 		})
 	}
 
