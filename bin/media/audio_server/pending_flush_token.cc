@@ -18,8 +18,9 @@ void PendingFlushToken::fbl_recycle() {
     was_recycled_ = true;
     FXL_DCHECK(server_);
     server_->ScheduleFlushCleanup(fbl::unique_ptr<PendingFlushToken>(this));
+  } else {
+    delete this;
   }
-  delete this;
 }
 
 }  // namespace audio
