@@ -66,7 +66,7 @@ func main() {
 	dp := daemon.NewDaemonProvider()
 	go ticker.Run()
 
-	go startFIDLSvr(dp, ticker)
+	startFIDLSvr(dp, ticker)
 
 	go startupDaemon(*addr, *store, keys, ticker, dp)
 	defer dp.Daemon().CancelAll()

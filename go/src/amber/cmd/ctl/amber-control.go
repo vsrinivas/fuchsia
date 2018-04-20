@@ -111,17 +111,17 @@ func main() {
 			c, err := proxy.GetUpdateComplete(*pkgName, nil)
 			if err == nil {
 				defer c.Close()
-				b := make([]byte, 1024, 1024)
+				b := make([]byte, 1024)
 				d := []zx.Handle{}
-				fmt.Printf("About to read channel %d %d\n", zx.SignalChannelReadable, zx.SignalChannelPeerClosed)
 				for {
-					sigs, _ := zxwait.Wait(*c.Handle(),
+					sigs, err := zxwait.Wait(*c.Handle(),
 						zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
 						zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
 					if sigs&zx.SignalChannelReadable == zx.SignalChannelReadable {
 						bs, _, err := c.Read(b, d, 0)
 						if err == nil {
 							fmt.Printf("Wrote update to blob %s\n", string(b[0:bs]))
+							break
 						} else {
 							fmt.Printf("Error reading response from channel: %s\n", err)
 							break
@@ -129,6 +129,9 @@ func main() {
 					}
 					if sigs&zx.SignalChannelPeerClosed == zx.SignalChannelPeerClosed {
 						fmt.Println("Error: response channel closed unexpectedly.")
+						break
+					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
+						fmt.Printf("Error awaiting response from channel: %s\n", err)
 						break
 					} else if err != nil && err.(zx.Error).Status != zx.ErrTimedOut {
 						fmt.Printf("Error awaiting response from channel: %s\n", err)

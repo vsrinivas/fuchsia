@@ -430,7 +430,7 @@ func WriteUpdateToPkgFS(data *GetResult) (string, error) {
 	if e != nil {
 		// if the file already exists, treat as success
 		if os.IsExist(e) {
-			return dstPath, nil
+			return dstPath, e
 		}
 		return "", NewErrProcessPackage("couldn't open file to write update %s", e)
 	}
