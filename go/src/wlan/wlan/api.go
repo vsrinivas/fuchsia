@@ -5,51 +5,10 @@
 package wlan
 
 import (
-	bindings "fidl/bindings"
 	"fmt"
 	mlme "fuchsia/go/wlan_mlme"
 	"log"
 )
-
-type APIHeader struct {
-	txid    uint64
-	flags   uint32
-	ordinal int32
-}
-
-func (h *APIHeader) Encode(enc *bindings.Encoder) error {
-	// Create a method call header, similar to that of FIDL2
-	enc.StartStruct(16, 0)
-	defer enc.Finish()
-
-	if err := enc.WriteUint64(h.txid); err != nil {
-		return fmt.Errorf("could not encode txid: %v", err)
-	}
-	if err := enc.WriteUint32(h.flags); err != nil {
-		return fmt.Errorf("could not encode flags: %v", err)
-	}
-	if err := enc.WriteInt32(h.ordinal); err != nil {
-		return fmt.Errorf("could not encode ordinal: %v", err)
-	}
-	return nil
-}
-
-func (h *APIHeader) Decode(decoder *bindings.Decoder) error {
-	_, err := decoder.StartStruct()
-	if err != nil {
-		return err
-	}
-	defer decoder.Finish()
-
-	if h.txid, err = decoder.ReadUint64(); err != nil {
-		return err
-	}
-	if h.flags, err = decoder.ReadUint32(); err != nil {
-		return err
-	}
-	h.ordinal, err = decoder.ReadInt32()
-	return err
-}
 
 func PrintBssDescription(bss *mlme.BssDescription) {
 	log.Printf("  * BSSID: %02x:%02x:%02x:%02x:%02x:%02x",
