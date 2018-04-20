@@ -205,8 +205,8 @@ typedef struct {
     (__has_feature(address_sanitizer) ? ZIRCON_DRIVER_NOTE_FLAG_ASAN : 0)
 
 typedef struct {
-    alignas(4) zircon_driver_note_header_t header;
-    alignas(4) zircon_driver_note_payload_t payload;
+    zircon_driver_note_header_t header;
+    zircon_driver_note_payload_t payload;
 } zircon_driver_note_t;
 
 static_assert(offsetof(zircon_driver_note_t, payload) ==
@@ -227,6 +227,18 @@ static_assert(offsetof(zircon_driver_note_t, payload) ==
 // warning/error about that.  The attribute must appear on the "extern"
 // declaration of the variable instead.
 
+// We explicitly align the note to 4 bytes.  That's its natural alignment
+// anyway, but the compilers sometimes like to over-align as an
+// optimization while other tools sometimes like to complain if SHT_NOTE
+// sections are over-aligned (since this could result in padding being
+// inserted that makes it violate the ELF note format).  Standard C11
+// doesn't permit alignas(...) on a type but we could use __ALIGNED(4) on
+// all the types (i.e. GNU __attribute__ syntax instead of C11 syntax).
+// But the alignment of the types is not actually the issue: it's the
+// compiler deciding to over-align the individual object regardless of its
+// type's alignment, so we have to explicitly set the alignment of the
+// object to defeat any compiler default over-alignment.
+
 #define ZIRCON_DRIVER_BEGIN(Driver,Ops,VendorName,Version,BindCount) \
 zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {\
     /* .ops = */ &(Ops),\
@@ -235,7 +247,7 @@ zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {\
 };\
 extern const struct zircon_driver_note __zircon_driver_note__ __EXPORT;\
 __SECTION(".note.zircon.driver." #Driver) ZIRCON_DRIVER_NOTE_ASAN \
-const struct zircon_driver_note {\
+alignas(4) const struct zircon_driver_note {\
     zircon_driver_note_t note;\
     zx_bind_inst_t binding[BindCount];\
 } __zircon_driver_note__ = {\
