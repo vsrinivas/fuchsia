@@ -8,7 +8,6 @@ executable("validation") {
   output_name = "cloud_provider_validation_tests"
 
   sources = [
-    "app.cc",
     "convert.cc",
     "convert.h",
     "device_set_test.cc",
@@ -21,6 +20,7 @@ executable("validation") {
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/test_runner/cpp:gtest_main",
     "//peridot/public/lib/cloud_provider/fidl",
     "//third_party/googletest:gtest",
   ]
