@@ -340,7 +340,8 @@ typedef struct zx_info_kmem_stats {
 
 typedef struct zx_info_resource {
     // The resource kind, one of:
-    // {ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IOPORT, ZX_RSRC_KIND_IRQ}
+    // {ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IOPORT, ZX_RSRC_KIND_IRQ,
+    // ZX_RSRC_KIND_HYPERVISOR }
     uint32_t kind;
     // Resource's low value (inclusive)
     uint64_t low;

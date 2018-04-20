@@ -526,7 +526,7 @@ The resource kind is one of
 *   *ZX_RSRC_KIND_MMIO*
 *   *ZX_RSRC_KIND_IOPORT*
 *   *ZX_RSRC_KIND_IRQ*
-
+*   *ZX_RSRC_KIND_HYPERVISOR*
 ### ZX_INFO_BTI
 
 *handle* type: **Bus Transaction Initiator**
