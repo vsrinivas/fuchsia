@@ -55,7 +55,7 @@ Allowed operations: **get**, **set**
 
 The name of the object, as a NUL-terminated string.
 
-### ZX_PROP_REGISTER_FS
+### ZX_PROP_REGISTER_FS and ZX_PROP_REGISTER_GS
 
 *handle* type: **Thread**
 
@@ -63,8 +63,8 @@ The name of the object, as a NUL-terminated string.
 
 Allowed operations: **set**
 
-The value of the x86 FS segment register. `value` must be a canonical
-address, and must be a userspace address.
+The value of the x86 FS or GS segment register. `value` must be a
+canonical address, and must be a userspace address.
 
 Only defined for x86-64.
 

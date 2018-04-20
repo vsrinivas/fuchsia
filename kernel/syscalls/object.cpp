@@ -761,6 +761,23 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             write_msr(X86_MSR_IA32_FS_BASE, addr);
             return ZX_OK;
         }
+        case ZX_PROP_REGISTER_GS: {
+            if (size < sizeof(uintptr_t))
+                return ZX_ERR_BUFFER_TOO_SMALL;
+            zx_status_t status = is_current_thread(&dispatcher);
+            if (status != ZX_OK)
+                return status;
+            uintptr_t addr;
+            status = _value.reinterpret<const uintptr_t>().copy_from_user(&addr);
+            if (status != ZX_OK)
+                return status;
+            if (!x86_is_vaddr_canonical(addr))
+                return ZX_ERR_INVALID_ARGS;
+            if (!is_user_address(addr))
+                return ZX_ERR_INVALID_ARGS;
+            write_msr(X86_MSR_IA32_KERNEL_GS_BASE, addr);
+            return ZX_OK;
+        }
 #endif
         case ZX_PROP_PROCESS_DEBUG_ADDR: {
             if (size < sizeof(uintptr_t))

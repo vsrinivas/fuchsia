@@ -345,7 +345,14 @@ static bool channel_depth_test(void) {
 
 #if defined(__x86_64__)
 
-int do_nothing(void* arg) {
+static uintptr_t read_gs(void) {
+    uintptr_t gs;
+    __asm__ __volatile__("mov %%gs:0,%0"
+                         : "=r"(gs));
+    return gs;
+}
+
+static int do_nothing(void* unused) {
     for (;;) {
     }
     return 0;
@@ -400,6 +407,58 @@ static bool fs_invalid_test(void) {
     END_TEST;
 }
 
+static bool gs_test(void) {
+    BEGIN_TEST;
+
+    // First test the success case.
+    const uintptr_t expected = 0xfeedfacefeedface;
+
+    uintptr_t gs_storage = expected;
+    uintptr_t gs_location = (uintptr_t)&gs_storage;
+
+    zx_status_t status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS,
+                                                &gs_location, sizeof(gs_location));
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(read_gs(), expected, "");
+
+    // All the failures:
+
+    // Try a thread other than the current one.
+    thrd_t t;
+    int success = thrd_create(&t, &do_nothing, NULL);
+    ASSERT_EQ(success, thrd_success, "");
+    zx_handle_t other_thread = thrd_get_zx_handle(t);
+    status = zx_object_set_property(other_thread, ZX_PROP_REGISTER_GS,
+                                    &gs_location, sizeof(gs_location));
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
+
+    // Try a non-thread object type.
+    status = zx_object_set_property(zx_process_self(), ZX_PROP_REGISTER_GS,
+                                    &gs_location, sizeof(gs_location));
+    ASSERT_EQ(status, ZX_ERR_WRONG_TYPE, "");
+
+    // Not enough buffer to hold the property value.
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS,
+                                    &gs_location, sizeof(gs_location) - 1);
+    ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "");
+
+    // A non-canonical vaddr.
+    uintptr_t noncanonical_gs_location = gs_location | (1ull << 47);
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS,
+                                    &noncanonical_gs_location,
+                                    sizeof(noncanonical_gs_location));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
+
+    // A non-userspace vaddr.
+    uintptr_t nonuserspace_gs_location = 0xffffffff40000000;
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_GS,
+                                    &nonuserspace_gs_location,
+                                    sizeof(nonuserspace_gs_location));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
 #endif // defined(__x86_64__)
 
 BEGIN_TEST_CASE(property_tests)
@@ -412,6 +471,7 @@ RUN_TEST(socket_buffer_test);
 RUN_TEST(channel_depth_test);
 #if defined(__x86_64__)
 RUN_TEST(fs_invalid_test)
+RUN_TEST(gs_test)
 #endif
 END_TEST_CASE(property_tests)
 

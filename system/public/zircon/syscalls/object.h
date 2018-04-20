@@ -353,13 +353,12 @@ typedef struct zx_info_resource {
 
 // Object properties.
 
-// "2" is unused and can be recycled.
-
 // Argument is a char[ZX_MAX_NAME_LEN].
 #define ZX_PROP_NAME                        3u
 
 #if __x86_64__
 // Argument is a uintptr_t.
+#define ZX_PROP_REGISTER_GS                 2u
 #define ZX_PROP_REGISTER_FS                 4u
 #endif
 
