@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use config::{self, Config};
+use fidl;
 use futures::prelude::*;
 use futures::{future, stream};
 use std::sync::Arc;
 use wlan;
-use wlan_service::{self, DeviceListener, DeviceListenerImpl, DeviceServiceProxyInterface};
+use wlan_service::{self, DeviceServiceEvent, DeviceServiceProxyInterface};
 use zx;
 
 #[derive(Debug)]
@@ -19,8 +20,38 @@ where
     config: Config,
 }
 
+pub fn handle_event<Proxy>(
+    listener: &Arc<Listener<Proxy>>, evt: DeviceServiceEvent,
+) -> impl Future<Item = (), Error = fidl::Error>
+where Proxy: DeviceServiceProxyInterface,
+{
+    println!("wlancfg got event: {:?}", evt);
+    match evt {
+        DeviceServiceEvent::OnPhyAdded { id } => on_phy_added(
+            listener, id,
+            ).map_err(|e| e.never_into())
+            .left_future()
+            .left_future(),
+        DeviceServiceEvent::OnPhyRemoved { id } => on_phy_removed(
+            listener, id,
+            ).map_err(|e| e.never_into())
+            .right_future()
+            .left_future(),
+        DeviceServiceEvent::OnIfaceAdded { id } => on_iface_added(
+            listener, id,
+            ).map_err(|e| e.never_into())
+            .left_future()
+            .right_future(),
+        DeviceServiceEvent::OnIfaceRemoved { id } => on_iface_removed(
+            listener, id,
+            ).map_err(|e| e.never_into())
+            .right_future()
+            .right_future(),
+    }
+}
+
 fn on_phy_added<Proxy>(
-    listener: &Arc<Listener<Proxy>>, id: u16
+    listener: &Arc<Listener<Proxy>>, id: u16,
 ) -> impl Future<Item = (), Error = Never>
 where
     Proxy: DeviceServiceProxyInterface,
@@ -77,7 +108,7 @@ where
 }
 
 fn on_phy_removed<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, id: u16
+    _listener: &Arc<Listener<Proxy>>, id: u16,
 ) -> impl Future<Item = (), Error = Never>
 where
     Proxy: DeviceServiceProxyInterface,
@@ -87,22 +118,22 @@ where
 }
 
 fn on_iface_added<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, phy_id: u16, iface_id: u16
+    _listener: &Arc<Listener<Proxy>>, id: u16,
 ) -> impl Future<Item = (), Error = Never>
 where
     Proxy: DeviceServiceProxyInterface,
 {
-    println!("wlancfg: iface added: {} (phy={})", iface_id, phy_id);
+    println!("wlancfg: iface added: {}", id);
     future::ok(())
 }
 
 fn on_iface_removed<Proxy>(
-    _listener: &Arc<Listener<Proxy>>, phy_id: u16, iface_id: u16
+    _listener: &Arc<Listener<Proxy>>, id: u16,
 ) -> impl Future<Item = (), Error = Never>
 where
     Proxy: DeviceServiceProxyInterface,
 {
-    println!("wlancfg: iface removed: {} (phy={}", iface_id, phy_id);
+    println!("wlancfg: iface removed: {}", id);
     future::ok(())
 }
 
@@ -110,24 +141,7 @@ impl<Proxy> Listener<Proxy>
 where
     Proxy: DeviceServiceProxyInterface,
 {
-    pub fn new(proxy: Proxy, config: Config) -> Self {
-        Listener { proxy, config }
-    }
-}
-
-pub fn device_listener<Proxy>(state: Listener<Proxy>) -> impl DeviceListener
-where
-    Proxy: DeviceServiceProxyInterface,
-{
-    DeviceListenerImpl {
-        state: Arc::new(state),
-        on_open: |_, _| future::ok(()),
-        on_phy_added: |state, id, _| on_phy_added(state, id),
-
-        on_phy_removed: |state, id, _| on_phy_removed(state, id),
-
-        on_iface_added: |state, phy_id, iface_id, _| on_iface_added(state, phy_id, iface_id),
-
-        on_iface_removed: |state, phy_id, iface_id, _| on_iface_removed(state, phy_id, iface_id),
+    pub fn new(proxy: Proxy, config: Config) -> Arc<Self> {
+        Arc::new(Listener { proxy, config })
     }
 }

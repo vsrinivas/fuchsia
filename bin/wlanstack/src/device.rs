@@ -27,11 +27,7 @@ impl PhyDevice {
     fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, Error> {
         let dev = wlan_dev::Device::new(path)?;
         let proxy = wlan_dev::connect_wlan_phy(&dev)?;
-        Ok(PhyDevice {
-            id,
-            proxy,
-            dev,
-        })
+        Ok(PhyDevice { id, proxy, dev })
     }
 }
 
@@ -44,6 +40,14 @@ pub trait EventListener: Send {
     /// Called when a phy device is removed. On error, the listener is removed from the
     /// `DeviceManager`.
     fn on_phy_removed(&self, id: u16) -> Result<(), Error>;
+
+    /// Called when an iface device is added. On error, the listener is removed from the
+    /// `DeviceManager`.
+    fn on_iface_added(&self, id: u16) -> Result<(), Error>;
+
+    /// Called when an iface device is removed. On error, the listener is removed from
+    /// the `DeviceManager`.
+    fn on_iface_removed(&self, id: u16) -> Result<(), Error>;
 }
 
 pub type DevMgrRef = Arc<Mutex<DeviceManager>>;
@@ -74,6 +78,18 @@ impl DeviceManager {
         self.phys.remove(&id);
         self.listeners
             .retain(|listener| listener.on_phy_removed(id).is_ok());
+    }
+
+    fn add_iface(&mut self, id: u16) {
+        // TODO(tkilbourn): store iface devices in the SME
+        self.listeners
+            .retain(|listener| listener.on_iface_added(id).is_ok());
+    }
+
+    fn rm_iface(&mut self, id: u16) {
+        // TODO(tkilbourn): remove iface devices from the SME
+        self.listeners
+            .retain(|listener| listener.on_iface_removed(id).is_ok());
     }
 
     /// Retrieves information about all the phy devices managed by this `DeviceManager`.
@@ -108,21 +124,21 @@ impl DeviceManager {
             .query()
             .map_err(|_| zx::Status::INTERNAL)
             .and_then(move |response| {
-                zx::Status::ok(response.status).into_future().map(move |()| {
-                    let mut info = response.info;
-                    info.id = phy_id;
-                    info.dev_path = Some(phy_path);
-                    info
-                })
+                zx::Status::ok(response.status)
+                    .into_future()
+                    .map(move |()| {
+                        let mut info = response.info;
+                        info.id = phy_id;
+                        info.dev_path = Some(phy_path);
+                        info
+                    })
             })
             .right_future()
     }
 
     /// Creates an interface on the phy with the given id.
     pub fn create_iface(
-        &mut self,
-        phy_id: u16,
-        role: wlan::MacRole,
+        &mut self, phy_id: u16, role: wlan::MacRole,
     ) -> impl Future<Item = u16, Error = zx::Status> + Send {
         let phy = match self.phys.get(&phy_id) {
             Some(p) => p,
@@ -144,9 +160,7 @@ impl DeviceManager {
 
     /// Destroys an interface with the given ids.
     pub fn destroy_iface(
-        &mut self,
-        phy_id: u16,
-        iface_id: u16,
+        &mut self, phy_id: u16, iface_id: u16,
     ) -> impl Future<Item = (), Error = zx::Status> {
         let phy = match self.phys.get(&phy_id) {
             Some(p) => p,
@@ -173,10 +187,7 @@ impl DeviceManager {
 }
 
 fn new_watcher<P, OnAdd, OnRm>(
-    path: P,
-    devmgr: DevMgrRef,
-    on_add: OnAdd,
-    on_rm: OnRm,
+    path: P, devmgr: DevMgrRef, on_add: OnAdd, on_rm: OnRm,
 ) -> impl Future<Item = (), Error = Error>
 where
     OnAdd: Fn(DevMgrRef, &Path),
@@ -211,8 +222,7 @@ where
 /// Creates a `futures::Stream` that adds phy devices to the `DeviceManager` as they appear at the
 /// given path.
 pub fn new_phy_watcher<P: AsRef<Path>>(
-    path: P,
-    devmgr: DevMgrRef,
+    path: P, devmgr: DevMgrRef,
 ) -> impl Future<Item = (), Error = Error> {
     new_watcher(
         path,
@@ -243,17 +253,20 @@ pub fn new_phy_watcher<P: AsRef<Path>>(
 /// the given path.
 /// TODO(tkilbourn): add the iface to `DeviceManager`
 pub fn new_iface_watcher<P: AsRef<Path>>(
-    path: P,
-    devmgr: DevMgrRef,
+    path: P, devmgr: DevMgrRef,
 ) -> impl Future<Item = (), Error = Error> {
     new_watcher(
         path,
         devmgr,
-        |_, path| {
+        |devmgr, path| {
             info!("found iface at {}", path.to_string_lossy());
+            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
+            devmgr.lock().add_iface(id);
         },
-        |_, path| {
+        |devmgr, path| {
             info!("removing iface at {}", path.to_string_lossy());
+            let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
+            devmgr.lock().rm_iface(id);
         },
     )
 }

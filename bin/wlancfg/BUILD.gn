@@ -25,7 +25,6 @@ rustc_binary("bin") {
 }
 
 package("wlancfg") {
-
   deps = [
     ":bin",
   ]
@@ -41,8 +40,8 @@ package("wlancfg") {
 
   resources = [
     {
-        path = rebase_path("config/default.json")
-        dest = "default.json"
+      path = rebase_path("config/default.json")
+      dest = "default.json"
     },
   ]
 }

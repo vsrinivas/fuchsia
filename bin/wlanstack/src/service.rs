@@ -8,7 +8,7 @@ use failure::Error;
 use fidl;
 use futures::future::{self, FutureResult};
 use futures::{Future, FutureExt, Never, StreamExt};
-use wlan_service::{self, DeviceListenerProxy, DeviceService, DeviceServiceImpl};
+use wlan_service::{self, DeviceService, DeviceServiceControlHandle, DeviceServiceImpl};
 use zx;
 
 fn catch_and_log_err<F>(ctx: &'static str, f: F) -> FutureResult<(), Never>
@@ -23,8 +23,7 @@ where
 }
 
 pub fn device_service(
-    devmgr: DevMgrRef,
-    channel: async::Channel,
+    devmgr: DevMgrRef, channel: async::Channel,
 ) -> impl Future<Item = (), Error = Never> {
     DeviceServiceImpl {
         state: devmgr,
@@ -99,12 +98,10 @@ pub fn device_service(
                 })
         },
 
-        register_listener: |state, listener, c| {
+        register_listener: |state, c| {
             catch_and_log_err("register_listener", || {
                 debug!("register listener");
-                if let Ok(proxy) = listener.into_proxy() {
-                    state.lock().add_listener(Box::new(proxy));
-                }
+                state.lock().add_listener(Box::new(c.controller().clone()));
                 c.send(zx::Status::OK.into_raw())
             })
         },
@@ -112,12 +109,20 @@ pub fn device_service(
         .recover(|e| eprintln!("error running wlan device service: {:?}", e))
 }
 
-impl device::EventListener for DeviceListenerProxy {
+impl device::EventListener for DeviceServiceControlHandle {
     fn on_phy_added(&self, id: u16) -> Result<(), Error> {
-        DeviceListenerProxy::on_phy_added(self, id).map_err(|e| e.into())
+        self.send_on_phy_added(id).map_err(Into::into)
     }
 
     fn on_phy_removed(&self, id: u16) -> Result<(), Error> {
-        DeviceListenerProxy::on_phy_removed(self, id).map_err(|e| e.into())
+        self.send_on_phy_removed(id).map_err(Into::into)
+    }
+
+    fn on_iface_added(&self, id: u16) -> Result<(), Error> {
+        self.send_on_iface_added(id).map_err(Into::into)
+    }
+
+    fn on_iface_removed(&self, id: u16) -> Result<(), Error> {
+        self.send_on_iface_removed(id).map_err(Into::into)
     }
 }
