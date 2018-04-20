@@ -58,3 +58,17 @@ MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
 MODULE_LIBS := $(LOCAL_LIBS)
 
 include make/module.mk
+
+# intel driver
+
+MODULE := $(LOCAL_DIR).intel
+
+MODULE_TYPE := driver
+
+MODULE_SRCS := $(LOCAL_SRCS) $(LOCAL_DIR)/simple-intel.c
+
+MODULE_STATIC_LIBS := $(LOCAL_STATIC_LIBS)
+
+MODULE_LIBS := $(LOCAL_LIBS)
+
+include make/module.mk

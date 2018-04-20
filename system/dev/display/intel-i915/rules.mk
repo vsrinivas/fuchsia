@@ -12,7 +12,6 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/bind.c \
-    $(LOCAL_DIR)/bootloader-display.cpp \
     $(LOCAL_DIR)/display-device.cpp \
     $(LOCAL_DIR)/dp-display.cpp \
     $(LOCAL_DIR)/gtt.cpp \

@@ -25,7 +25,6 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
-#include "bootloader-display.h"
 #include "dp-display.h"
 #include "hdmi-display.h"
 #include "intel-i915.h"
@@ -48,8 +47,6 @@
 
 #define FLAGS_BACKLIGHT 1
 
-#define ENABLE_MODESETTING 1
-
 namespace {
 static const zx_pixel_format_t supported_formats[1] = { ZX_PIXEL_FORMAT_ARGB_8888 };
 
@@ -61,10 +58,6 @@ bool pipe_in_use(const fbl::Vector<fbl::unique_ptr<i915::DisplayDevice>>& displa
         }
     }
     return false;
-}
-
-static inline bool is_modesetting_enabled(uint16_t device_id) {
-    return ENABLE_MODESETTING && i915::is_gen9(device_id);
 }
 
 static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_out) {
@@ -572,36 +565,17 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     return nullptr;
 }
 
-zx_status_t Controller::InitDisplays() {
+void Controller::InitDisplays() {
     fbl::AutoLock lock(&display_lock_);
-    if (is_modesetting_enabled(device_id_)) {
-        BringUpDisplayEngine(false);
+    BringUpDisplayEngine(false);
 
-        for (uint32_t i = 0; i < registers::kDdiCount; i++) {
-            auto disp_device = InitDisplay(registers::kDdis[i]);
-            if (disp_device) {
-                if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
-                    zxlogf(INFO, "Failed to add display %d\n", i);
-                }
+    for (uint32_t i = 0; i < registers::kDdiCount; i++) {
+        auto disp_device = InitDisplay(registers::kDdis[i]);
+        if (disp_device) {
+            if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
+                zxlogf(INFO, "Failed to add display %d\n", i);
             }
         }
-        return ZX_OK;
-    } else {
-
-        fbl::AllocChecker ac;
-        // The DDI doesn't actually matter, so just say DDI A. The BIOS does use PIPE_A.
-        auto disp_device = fbl::make_unique_checked<BootloaderDisplay>(
-                &ac, this, next_id_, registers::DDI_A, registers::PIPE_A);
-        if (!ac.check()) {
-            zxlogf(ERROR, "i915: failed to alloc disp_device\n");
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        if (!reinterpret_cast<DisplayDevice*>(disp_device.get())->Init()) {
-            zxlogf(ERROR, "i915: failed to init display\n");
-            return ZX_ERR_INTERNAL;
-        }
-        return AddDisplay(fbl::move(disp_device));
     }
 }
 
@@ -987,13 +961,10 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         flags_ |= FLAGS_BACKLIGHT;
     }
 
-    zx_status_t status;
-    if (is_modesetting_enabled(device_id_)) {
-        status = igd_opregion_.Init(&pci_);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
-            return status;
-        }
+    zx_status_t status = igd_opregion_.Init(&pci_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
+        return status;
     }
 
     zxlogf(TRACE, "i915: mapping registers\n");
@@ -1026,13 +997,11 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     ddi_a_lane_capability_control_ = registers::DdiRegs(registers::DDI_A).DdiBufControl()
             .ReadFrom(mmio_space_.get()).ddi_a_lane_capability_control();
 
-    if (is_modesetting_enabled(device_id_)) {
-        zxlogf(TRACE, "i915: initialzing hotplug\n");
-        status = interrupts_.Init(this);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "i915: failed to init hotplugging\n");
-            return status;
-        }
+    zxlogf(TRACE, "i915: initialzing hotplug\n");
+    status = interrupts_.Init(this);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "i915: failed to init hotplugging\n");
+        return status;
     }
 
     zxlogf(TRACE, "i915: mapping gtt\n");
@@ -1045,10 +1014,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     zxlogf(TRACE, "i915: initializing displays\n");
-    status = InitDisplays();
-    if (status != ZX_OK) {
-        return status;
-    }
+    InitDisplays();
 
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {
@@ -1078,9 +1044,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
         return status;
     }
 
-    if (is_modesetting_enabled(device_id_)) {
-        interrupts_.FinishInit();
-    }
+    interrupts_.FinishInit();
 
     // TODO remove when the gfxconsole moves to user space
     EnableBacklight(true);

@@ -84,7 +84,7 @@ public:
     registers::Dpll SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate);
 private:
     void EnableBacklight(bool enable);
-    zx_status_t InitDisplays();
+    void InitDisplays();
     fbl::unique_ptr<DisplayDevice> InitDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
     zx_status_t AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) __TA_REQUIRES(display_lock_);
     bool BringUpDisplayEngine(bool resume);
