@@ -8,10 +8,12 @@
 
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <zircon/device/ram-nand.h>
 #include <zircon/types.h>
 
-#include "ram-nand.h"
+#include "device.h"
 #include "ram-nand-ctl.h"
 
 namespace {
@@ -24,12 +26,13 @@ class RamNandCtl : public RamNandCtlDeviceType {
     explicit RamNandCtl(zx_device_t* parent) : RamNandCtlDeviceType(parent) {}
 
     zx_status_t Bind() { return DdkAdd("nand-ctl"); }
-    void DdkRelease() {}
+    void DdkRelease() { delete this; }
 
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
   private:
     zx_status_t CreateDevice(const NandParams& params, void* out_buf, size_t* out_actual);
+    DISALLOW_COPY_ASSIGN_AND_MOVE(RamNandCtl);
 };
 
 zx_status_t RamNandCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
@@ -54,28 +57,21 @@ zx_status_t RamNandCtl::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
 zx_status_t RamNandCtl::CreateDevice(const NandParams& params, void* out_buf,
                                      size_t* out_actual) {
     fbl::AllocChecker checker;
-    fbl::unique_ptr<NandDevice> device(new (&checker) NandDevice(params));
+    fbl::unique_ptr<RamNandDevice> device(new (&checker) RamNandDevice(zxdev(), params));
     if (!checker.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    device_add_args_t args;
-    zx_status_t status = device->Init([](zx_device_t* dev) { device_remove(dev); }, &args);
+    zx_status_t status = device->Bind();
     if (status != ZX_OK) {
         return status;
     }
 
-    zx_device_t* zx_device;
-    if ((status = device_add(zxdev(), &args, &zx_device)) != ZX_OK) {
-        return status;
-    }
-    device->SetDevice(zx_device);
-
-    *out_actual = strlen(args.name);
-    strcpy(static_cast<char*>(out_buf), args.name);
+    *out_actual = strlen(device->name());
+    strcpy(static_cast<char*>(out_buf), device->name());
 
     // devmgr is now in charge of the device.
-    __UNUSED NandDevice* dummy = device.release();
+    __UNUSED RamNandDevice* dummy = device.release();
     return ZX_OK;
 }
 

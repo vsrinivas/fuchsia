@@ -8,6 +8,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
+#include <zircon/device/ram-nand.h>
 #include <zircon/process.h>
 
 #include "ram-nand.h"
@@ -22,21 +23,18 @@ const int kNumPages = kBlockSize * kNumBlocks;
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
+    char name[NAME_MAX];
     {
         NandDevice device(params);
 
-        device_add_args_t args;
-        ASSERT_EQ(ZX_OK, device.Init(nullptr, &args));
-        EXPECT_EQ(&device, args.ctx);
-        EXPECT_EQ(0, strncmp("ram-nand-0", args.name, 32));
-        EXPECT_EQ(ZX_PROTOCOL_NAND, args.proto_id);
+        ASSERT_EQ(ZX_OK, device.Init(name));
+        EXPECT_EQ(0, strncmp("ram-nand-0", name, NAME_MAX));
     }
     {
         NandDevice device(params);
 
-        device_add_args_t args;
-        ASSERT_EQ(ZX_OK, device.Init(nullptr, &args));
-        EXPECT_EQ(0, strncmp("ram-nand-1", args.name, 32));
+        ASSERT_EQ(ZX_OK, device.Init(name));
+        EXPECT_EQ(0, strncmp("ram-nand-1", name, NAME_MAX));
     }
     END_TEST;
 }
@@ -54,59 +52,27 @@ fbl::unique_ptr<NandDevice> CreateDevice(size_t* operation_size) {
         device->Query(&info, operation_size);
     }
 
-    device_add_args_t args;
-    if (device->Init(nullptr, &args) != ZX_OK) {
+    char name[NAME_MAX];
+    if (device->Init(name) != ZX_OK) {
         return nullptr;
     }
     return fbl::move(device);
 }
-
-class UnbindChecker;
-UnbindChecker* g_unbind = nullptr;  // Only valid during the test.
-
-class UnbindChecker {
-  public:
-    explicit UnbindChecker(zx_device_t* device) : device_(device) {}
-    ~UnbindChecker() {}
-
-    bool AllOk() const { return ok_; }
-
-    static void UnbindCallback(zx_device_t* device) {
-        if (g_unbind->called_) {
-            g_unbind->ok_ = false;
-        } else {
-            g_unbind->ok_ = (device == g_unbind->device_);
-        }
-        g_unbind->called_ = true;
-    }
-
-  private:
-    zx_device_t* device_;
-    bool ok_ = false;
-    bool called_ = false;
-    DISALLOW_COPY_ASSIGN_AND_MOVE(UnbindChecker);
-};
 
 bool BasicDeviceProtocolTest() {
     BEGIN_TEST;
     NandParams params(kPageSize, kBlockSize, kNumBlocks, 6, 0);  // 6 bits of ECC, no OOB.
     NandDevice device(params);
 
-    zx_device_t* zx_dev = reinterpret_cast<zx_device_t*>(42);
-    UnbindChecker checker(zx_dev);
-    g_unbind = &checker;
-
-    device_add_args_t args;
-    ASSERT_EQ(ZX_OK, device.Init(&checker.UnbindCallback, &args));
-    device.SetDevice(zx_dev);
+    char name[NAME_MAX];
+    ASSERT_EQ(ZX_OK, device.Init(name));
 
     ASSERT_EQ(kPageSize * kNumPages, device.GetSize());
 
     device.Unbind();
-    ASSERT_TRUE(checker.AllOk());
 
-    device.Unbind();
-    ASSERT_FALSE(checker.AllOk());
+    ASSERT_EQ(ZX_ERR_BAD_STATE,
+              device.Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
     END_TEST;
 }
 

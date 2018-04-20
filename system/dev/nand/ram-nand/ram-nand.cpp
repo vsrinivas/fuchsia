@@ -11,6 +11,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <zircon/assert.h>
+#include <zircon/device/ram-nand.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -21,63 +22,9 @@ struct RamNandOp {
     list_node_t node;
 };
 
-void DeviceUnbind(void* ctx) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    device->Unbind();
-}
-
-zx_status_t DeviceIoctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                        void* out_buf, size_t out_len, size_t* out_actual) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    return device->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
-}
-
-zx_off_t DeviceGetSize(void* ctx) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    return device->GetSize();
-}
-
-void DeviceRelease(void* ctx) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    delete device;
-}
-
-void Query(void* ctx, nand_info_t* info_out, size_t* nand_op_size_out) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    device->Query(info_out, nand_op_size_out);
-}
-
-void Queue(void* ctx, nand_op_t* operation) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    device->Queue(operation);
-}
-
-void GetBadBlockList(void* ctx, uint32_t* bad_blocks, uint32_t bad_block_len,
-                     uint32_t* num_bad_blocks) {
-    NandDevice* device = static_cast<NandDevice*>(ctx);
-    device->GetBadBlockList(bad_blocks, bad_block_len, num_bad_blocks);
-}
-
-nand_protocol_ops_t g_nand_protocol = {
-    .query = Query,
-    .queue = Queue,
-    .get_bad_block_list = GetBadBlockList,
-};
-
-zx_protocol_device_t g_device_protocol = {};
-
-void InitProtocols() {
-    g_device_protocol.version = DEVICE_OPS_VERSION;
-    g_device_protocol.ioctl = DeviceIoctl;
-    g_device_protocol.get_size = DeviceGetSize;
-    g_device_protocol.unbind = DeviceUnbind;
-    g_device_protocol.release = DeviceRelease;
-}
-
 }  // namespace
 
 NandDevice::NandDevice(const NandParams& params) : params_(params) {
-    memset(name_, 0, sizeof(name_));
 }
 
 NandDevice::~NandDevice() {
@@ -102,13 +49,9 @@ NandDevice::~NandDevice() {
     }
 }
 
-zx_status_t NandDevice::Init(RemoveCallback remove_callback, device_add_args_t* device_args) {
+zx_status_t NandDevice::Init(char name[NAME_MAX]) {
     static uint64_t dev_count = 0;
-    if (!dev_count) {
-        InitProtocols();
-    }
-
-    snprintf(name_, sizeof(name_), "ram-nand-%" PRIu64, dev_count++);
+    snprintf(name, NAME_MAX, "ram-nand-%" PRIu64, dev_count++);
 
     zx_status_t status = zx::vmo::create(GetSize(), 0, &vmo_);
     if (status != ZX_OK) {
@@ -128,25 +71,12 @@ zx_status_t NandDevice::Init(RemoveCallback remove_callback, device_add_args_t* 
     }
     thread_created_ = true;
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = name_;
-    args.ctx = this;
-    args.ops = &g_device_protocol;
-    args.proto_id = ZX_PROTOCOL_NAND;
-    args.proto_ops = &g_nand_protocol;
-    *device_args = args;
-
-    remove_callback_ = remove_callback;
     return ZX_OK;
 }
 
 void NandDevice::Unbind() {
     Kill();
     completion_signal(&wake_signal_);
-    if (remove_callback_) {
-        remove_callback_(zx_device_);
-    }
 }
 
 zx_status_t NandDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,

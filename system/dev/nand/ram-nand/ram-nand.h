@@ -5,17 +5,14 @@
 #pragma once
 
 #include <inttypes.h>
+#include <limits.h>
 #include <threads.h>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/protocol/nand.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fbl/vector.h>
 #include <lib/zx/vmo.h>
 #include <sync/completion.h>
-#include <zircon/device/ram-nand.h>
 #include <zircon/listnode.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -42,10 +39,6 @@ struct NandParams : public nand_info_t {
     }
 };
 
-// Callback to remove a NandDevice (from the Device Manager). Basically an
-// embedder provided pointer to device_remove().
-typedef void (*RemoveCallback)(zx_device_t* device);
-
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice {
   public:
@@ -55,11 +48,7 @@ class NandDevice {
     // Performs the object initialization, returning the required data to create
     // an actual device (to call device_add()). The provided callback will be
     // called when this device must be removed from the system.
-    zx_status_t Init(RemoveCallback remove_callback, device_add_args_t* device_args);
-
-    // Stores the device pointer that represents this object (as returned by
-    // device_add()).
-    void SetDevice(zx_device_t* device) { zx_device_ = device; }
+    zx_status_t Init(char name[NAME_MAX]);
 
     // Device protocol implementation.
     uint64_t GetSize() const { return params_.GetSize(); }
@@ -86,8 +75,6 @@ class NandDevice {
     zx_status_t ReadWriteOob(nand_op_t* operation);
     zx_status_t Erase(nand_op_t* operation);
 
-    zx_device_t* zx_device_ = nullptr;
-    RemoveCallback remove_callback_ = nullptr;
     uintptr_t mapped_addr_ = 0;
     zx::vmo vmo_;
 
@@ -101,7 +88,6 @@ class NandDevice {
 
     completion_t wake_signal_;
     thrd_t worker_;
-    char name_[NAME_MAX];
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
