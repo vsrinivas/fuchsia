@@ -33,7 +33,7 @@ impl fidl::endpoints2::ServiceMarker for {{ $interface.Name }}Marker {
   const NAME: &'static str = "{{ $interface.ServiceName }}";
 }
 
-pub trait {{ $interface.Name }}ProxyInterface {
+pub trait {{ $interface.Name }}ProxyInterface: Send + Sync {
   {{- range $method := $interface.Methods }}
   {{- if $method.HasResponse }}
   type {{ $method.CamelName }}ResponseFut: Future<Item = (
