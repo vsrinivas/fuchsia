@@ -6,10 +6,12 @@
 
 #[macro_use]
 extern crate bitfield;
+extern crate bytes;
 #[macro_use]
 extern crate nom;
 extern crate test;
 
+use bytes::Bytes;
 use nom::{be_u16, be_u64, be_u8};
 
 // IEEE Std 802.1X-2010, 11.9, Table 11-5
@@ -63,7 +65,7 @@ impl Default for KeyInformation {
 
 // IEEE Std 802.11-2016, 12.7.2, Figure 12-32
 #[derive(Default, Debug)]
-pub struct KeyFrame<'a> {
+pub struct KeyFrame {
     pub version: u8,
     pub packet_type: u8,
     pub packet_body_len: u16,
@@ -72,13 +74,13 @@ pub struct KeyFrame<'a> {
     pub key_info: KeyInformation,
     pub key_len: u16,
     pub key_replay_counter: u64,
-    pub key_nonce: &'a [u8], // 32 octets
-    pub key_iv: &'a [u8],    // 16 octets
+    pub key_nonce: Bytes, // 32 octets
+    pub key_iv: Bytes,    // 16 octets
     pub key_rsc: u64,
     // 8 octests reserved.
-    pub key_mic: &'a [u8], // AKM dependent size
+    pub key_mic: Bytes, // AKM dependent size
     pub key_data_len: u16,
-    pub key_data: &'a [u8],
+    pub key_data: Bytes,
 }
 
 named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
@@ -107,12 +109,12 @@ named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
                key_info: key_info,
                key_len: key_len,
                key_replay_counter: key_replay_counter,
-               key_mic: key_mic,
+               key_mic: Bytes::from(key_mic),
                key_rsc: key_rsc,
-               key_iv: key_iv,
-               key_nonce: key_nonce,
+               key_iv: Bytes::from(key_iv),
+               key_nonce: Bytes::from(key_nonce),
                key_data_len: key_data_len,
-               key_data: key_data,
+               key_data: Bytes::from(key_data),
            })
     )
 );

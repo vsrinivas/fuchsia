@@ -4,6 +4,7 @@
 #![allow(dead_code)]
 
 use super::{Error, Result};
+use bytes::Bytes;
 use std::fmt;
 use suite_selector;
 
@@ -32,12 +33,12 @@ pub const BIP_GMAC_256: u8 = 12;
 pub const BIP_CMAC_256: u8 = 13;
 // 14-255 - Reserved.
 
-pub struct Cipher<'a> {
-    pub oui: &'a [u8],
+pub struct Cipher {
+    pub oui: Bytes,
     pub suite_type: u8,
 }
 
-impl<'a> Cipher<'a> {
+impl Cipher {
     /// Reserved and vendor specific cipher suites have no known usage and require special
     /// treatments.
     fn has_known_usage(&self) -> bool {
@@ -46,7 +47,7 @@ impl<'a> Cipher<'a> {
 
     pub fn is_vendor_specific(&self) -> bool {
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-131
-        !self.oui.eq(&suite_selector::OUI)
+        !&self.oui[..].eq(&suite_selector::OUI)
     }
 
     pub fn is_reserved(&self) -> bool {
@@ -101,10 +102,10 @@ impl<'a> Cipher<'a> {
     }
 }
 
-impl<'a> suite_selector::Factory<'a> for Cipher<'a> {
-    type Suite = Cipher<'a>;
+impl suite_selector::Factory for Cipher {
+    type Suite = Cipher;
 
-    fn new(oui: &'a [u8], suite_type: u8) -> Result<Self::Suite> {
+    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite> {
         if oui.len() != 3 {
             Err(Error::InvalidOuiLength(oui.len()))
         } else {
@@ -113,7 +114,7 @@ impl<'a> suite_selector::Factory<'a> for Cipher<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Cipher<'a> {
+impl fmt::Debug for Cipher {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,

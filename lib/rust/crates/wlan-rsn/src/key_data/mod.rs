@@ -11,9 +11,9 @@ use std::mem;
 use {Error, Result};
 
 #[derive(Debug)]
-pub enum Element<'a> {
+pub enum Element {
     Gtk(kde::Header, kde::Gtk),
-    Rsne(rsne::Rsne<'a>),
+    Rsne(rsne::Rsne),
     Padding,
     UnsupportedKde(kde::Header),
     UnsupportedIe(u8, u8),

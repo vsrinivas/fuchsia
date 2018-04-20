@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use akm::Akm;
+use bytes::Bytes;
 use cipher::Cipher;
 use crypto_utils::prf;
 use std::cmp::{max, min};
@@ -112,8 +113,8 @@ mod tests {
     }
 
     fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk> {
-        let akm = Akm::new(&OUI[..], akm_suite).unwrap();
-        let cipher = Cipher::new(&OUI[..], cipher_suite).unwrap();
+        let akm = Akm::new(Bytes::from(&OUI[..]), akm_suite).unwrap();
+        let cipher = Cipher::new(Bytes::from(&OUI[..]), cipher_suite).unwrap();
         new(
             &data.pmk[..],
             &data.aa,

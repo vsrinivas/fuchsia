@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use super::{Error, Result};
+use bytes::Bytes;
 
-pub type Pmkid<'a> = &'a [u8];
+pub type Pmkid = Bytes;
 
-pub fn new<'a>(pmkid: &'a [u8]) -> Result<Pmkid> {
+pub fn new(pmkid: Bytes) -> Result<Pmkid> {
     if pmkid.len() != 16 {
         Err(Error::InvalidPmkidLength(pmkid.len()))
     } else {

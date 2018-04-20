@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use super::Result;
+use bytes::Bytes;
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 
-pub trait Factory<'a> {
+pub trait Factory {
     type Suite;
 
-    fn new(oui: &'a [u8], suite_type: u8) -> Result<Self::Suite>;
+    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite>;
 }

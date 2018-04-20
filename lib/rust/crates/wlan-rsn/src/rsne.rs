@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use akm;
+use bytes::Bytes;
 use cipher;
 use pmkid;
 use suite_selector;
@@ -17,30 +18,32 @@ pub const ID: u8 = 48;
 
 // IEEE 802.11-2016, 9.4.2.25.1
 #[derive(Default, Debug)]
-pub struct Rsne<'a> {
+pub struct Rsne {
     pub element_id: u8,
     pub length: u8,
     pub version: u16,
-    pub group_data_cipher_suite: Option<cipher::Cipher<'a>>,
-    pub pairwise_cipher_suites: Vec<cipher::Cipher<'a>>,
-    pub akm_suites: Vec<akm::Akm<'a>>,
+    pub group_data_cipher_suite: Option<cipher::Cipher>,
+    pub pairwise_cipher_suites: Vec<cipher::Cipher>,
+    pub akm_suites: Vec<akm::Akm>,
     pub rsn_capabilities: u16,
-    pub pmkids: Vec<pmkid::Pmkid<'a>>,
-    pub group_mgmt_cipher_suite: Option<cipher::Cipher<'a>>,
+    pub pmkids: Vec<pmkid::Pmkid>,
+    pub group_mgmt_cipher_suite: Option<cipher::Cipher>,
 }
 
 fn read_suite_selector<'a, T>(input: &'a [u8]) -> IResult<&'a [u8], T>
 where
-    T: suite_selector::Factory<'a, Suite = T>,
+    T: suite_selector::Factory<Suite = T>,
 {
     let (i1, bytes) = try_parse!(input, take!(4));
-    let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(&bytes[0..3], bytes[3])));
+    let oui = Bytes::from(&bytes[0..3]);
+    let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(oui, bytes[3])));
     return IResult::Done(i2, ctor_result);
 }
 
 fn read_pmkid<'a>(input: &'a [u8]) -> IResult<&'a [u8], pmkid::Pmkid> {
     let (i1, bytes) = try_parse!(input, take!(16));
-    let (i2, result) = try_parse!(i1, expr_res!(pmkid::new(&bytes)));
+    let pmkid_data = Bytes::from(bytes);
+    let (i2, result) = try_parse!(i1, expr_res!(pmkid::new(pmkid_data)));
     return IResult::Done(i2, result);
 }
 
