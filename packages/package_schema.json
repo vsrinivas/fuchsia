@@ -24,6 +24,7 @@
       }
     }
   },
+  "minProperties": 1,
   "additionalProperties": false,
   "definitions": {
     "gnLabel": {
