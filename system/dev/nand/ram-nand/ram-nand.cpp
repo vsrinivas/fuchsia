@@ -29,7 +29,7 @@ void DeviceUnbind(void* ctx) {
 zx_status_t DeviceIoctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
                         void* out_buf, size_t out_len, size_t* out_actual) {
     NandDevice* device = static_cast<NandDevice*>(ctx);
-    return device->IoCtl(op, in_buf, in_len, out_buf, out_len, out_actual);
+    return device->Ioctl(op, in_buf, in_len, out_buf, out_len, out_actual);
 }
 
 zx_off_t DeviceGetSize(void* ctx) {
@@ -149,7 +149,7 @@ void NandDevice::Unbind() {
     }
 }
 
-zx_status_t NandDevice::IoCtl(uint32_t op, const void* in_buf, size_t in_len,
+zx_status_t NandDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                               void* out_buf, size_t out_len, size_t* out_actual) {
     {
         fbl::AutoLock lock(&lock_);

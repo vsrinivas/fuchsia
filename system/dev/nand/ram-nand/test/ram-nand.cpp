@@ -115,11 +115,11 @@ bool UnlinkTest() {
     fbl::unique_ptr<NandDevice> device = CreateDevice(nullptr);
     ASSERT_TRUE(device);
 
-    ASSERT_EQ(ZX_OK, device->IoCtl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+    ASSERT_EQ(ZX_OK, device->Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
 
     // The device is "dead" now.
     ASSERT_EQ(ZX_ERR_BAD_STATE,
-              device->IoCtl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
+              device->Ioctl(IOCTL_RAM_NAND_UNLINK, nullptr, 0, nullptr, 0, nullptr));
     END_TEST;
 }
 
@@ -144,7 +144,7 @@ bool BadBlockListTest() {
 
     uint32_t bad_blocks[] = {1, 3, 5};
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-              device->IoCtl(IOCTL_RAM_NAND_SET_BAD_BLOCKS, bad_blocks, sizeof(bad_blocks),
+              device->Ioctl(IOCTL_RAM_NAND_SET_BAD_BLOCKS, bad_blocks, sizeof(bad_blocks),
                             nullptr, 0, nullptr));
 
     uint32_t result[4];

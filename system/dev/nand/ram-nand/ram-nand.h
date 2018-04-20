@@ -64,7 +64,7 @@ class NandDevice {
     // Device protocol implementation.
     uint64_t GetSize() const { return params_.GetSize(); }
     void Unbind();
-    zx_status_t IoCtl(uint32_t op, const void* in_buf, size_t in_len,
+    zx_status_t Ioctl(uint32_t op, const void* in_buf, size_t in_len,
                       void* out_buf, size_t out_len, size_t* out_actual);
 
     // NAND protocol implementation.
