@@ -8,7 +8,6 @@
 #include "garnet/drivers/bluetooth/lib/gap/random_address_generator.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/random/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -71,7 +70,7 @@ void LowEnergyAdvertisingManager::StartAdvertising(
     const ConnectionCallback& connect_callback,
     uint32_t interval_ms,
     bool anonymous,
-    const AdvertisingStatusCallback& status_callback) {
+    AdvertisingStatusCallback status_callback) {
   // Can't be anonymous and connectable
   if (anonymous && connect_callback) {
     FXL_LOG(WARNING) << "Can't advertise anonymously and connectable!";
@@ -98,21 +97,21 @@ void LowEnergyAdvertisingManager::StartAdvertising(
       connect_callback(id, std::move(link));
     };
   }
-  auto status_cb =
-    fxl::MakeCopyable([self, ad_ptr = std::move(ad_ptr), status_callback](
-                          uint32_t, hci::Status status) mutable {
-      if (!self)
-        return;
+  auto status_cb = [self, ad_ptr = std::move(ad_ptr),
+                    status_callback = std::move(status_callback)](
+                       uint32_t, hci::Status status) mutable {
+    if (!self)
+      return;
 
-      if (!status) {
-        status_callback("", status);
-        return;
-      }
+    if (!status) {
+      status_callback("", status);
+      return;
+    }
 
-      const std::string& id = ad_ptr->id();
-      self->advertisements_.emplace(id, std::move(ad_ptr));
-      status_callback(id, status);
-    });
+    const std::string& id = ad_ptr->id();
+    self->advertisements_.emplace(id, std::move(ad_ptr));
+    status_callback(id, status);
+  };
 
   // Serialize the data
   auto data_block =
@@ -126,7 +125,8 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 
   // Call StartAdvertising, with the callback
   advertiser_->StartAdvertising(address, *data_block, *scan_rsp_block,
-                                adv_conn_cb, interval_ms, anonymous, status_cb);
+                                adv_conn_cb, interval_ms, anonymous,
+                                std::move(status_cb));
 }
 
 bool LowEnergyAdvertisingManager::StopAdvertising(

@@ -13,7 +13,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 
@@ -138,11 +137,10 @@ class FakeControllerTest : public TestBase {
     if (!data_received_callback_)
       return;
 
-    async::PostTask(
-        TestBase::dispatcher(),
-        fxl::MakeCopyable([this, packet = std::move(data_packet)]() mutable {
-          data_received_callback_(std::move(packet));
-        }));
+    async::PostTask(TestBase::dispatcher(),
+                    [this, packet = std::move(data_packet)]() mutable {
+                      data_received_callback_(std::move(packet));
+                    });
   }
 
   std::unique_ptr<FakeControllerType> test_device_;

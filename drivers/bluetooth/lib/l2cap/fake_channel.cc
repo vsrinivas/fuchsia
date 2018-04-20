@@ -6,8 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "lib/fxl/functional/make_copyable.h"
-
 namespace btlib {
 namespace l2cap {
 namespace testing {

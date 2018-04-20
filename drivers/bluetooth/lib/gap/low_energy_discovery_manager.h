@@ -183,8 +183,8 @@ class LowEnergyDiscoveryManager final : public hci::LowEnergyScanner::Delegate {
   // TODO(armansito): Implement option to disable duplicate filtering. Would
   // this require software filtering for clients that did not request it?
   using SessionCallback =
-      std::function<void(std::unique_ptr<LowEnergyDiscoverySession>)>;
-  void StartDiscovery(const SessionCallback& callback);
+      fbl::Function<void(std::unique_ptr<LowEnergyDiscoverySession>)>;
+  void StartDiscovery(SessionCallback callback);
 
   // Sets a new scan period to any future and ongoing discovery procedures.
   void set_scan_period(int64_t period_ms) { scan_period_ = period_ms; }

@@ -137,7 +137,7 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
     const ConnectionCallback& connect_callback,
     uint32_t interval_ms,
     bool anonymous,
-    const AdvertisingStatusCallback& callback) {
+    AdvertisingStatusCallback callback) {
   FXL_DCHECK(callback);
   FXL_DCHECK(address.type() != common::DeviceAddress::Type::kBREDR);
 
@@ -225,8 +225,9 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   // Enable advertising.
   hci_cmd_runner_->QueueCommand(BuildEnablePacket(GenericEnableParam::kEnable));
 
-  hci_cmd_runner_->RunCommands([this, address, interval_slices, callback,
-                                connect_callback](Status status) {
+  hci_cmd_runner_->RunCommands([this, address, interval_slices,
+                                callback = std::move(callback),
+                                connect_callback](Status status) mutable {
     FXL_DCHECK(starting_);
     starting_ = false;
 

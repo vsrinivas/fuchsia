@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <fbl/function.h>
+
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -51,13 +53,13 @@ class LowEnergyAdvertisingManager {
       std::function<void(std::string advertisement_id,
                          std::unique_ptr<hci::Connection> link)>;
   using AdvertisingStatusCallback =
-      std::function<void(std::string advertisement_id, hci::Status status)>;
+      fbl::Function<void(std::string advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingStatusCallback& status_callback);
+                        AdvertisingStatusCallback status_callback);
 
   // Stop advertising the advertisement with the id |advertisement_id|
   // Returns true if an advertisement was stopped, and false otherwise.

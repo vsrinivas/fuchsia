@@ -36,14 +36,13 @@ void SequentialCommandRunner::QueueCommand(
   command_queue_.push(std::make_pair(std::move(command_packet), callback));
 }
 
-void SequentialCommandRunner::RunCommands(
-    const StatusCallback& status_callback) {
+void SequentialCommandRunner::RunCommands(StatusCallback status_callback) {
   FXL_DCHECK(!status_callback_);
   FXL_DCHECK(status_callback);
   FXL_DCHECK(!command_queue_.empty());
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
 
-  status_callback_ = status_callback;
+  status_callback_ = std::move(status_callback);
   sequence_number_++;
 
   RunNextQueuedCommand();
@@ -132,7 +131,7 @@ void SequentialCommandRunner::Reset() {
 
 void SequentialCommandRunner::NotifyStatusAndReset(Status status) {
   FXL_DCHECK(status_callback_);
-  auto status_cb = status_callback_;
+  auto status_cb = std::move(status_callback_);
   Reset();
   status_cb(status);
 }

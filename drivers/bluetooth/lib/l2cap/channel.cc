@@ -4,7 +4,6 @@
 
 #include "channel.h"
 
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 

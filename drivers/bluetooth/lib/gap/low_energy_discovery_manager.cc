@@ -6,7 +6,6 @@
 
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_scanner.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 #include "remote_device.h"
@@ -86,8 +85,7 @@ LowEnergyDiscoveryManager::~LowEnergyDiscoveryManager() {
   // TODO(armansito): Invalidate all known session objects here.
 }
 
-void LowEnergyDiscoveryManager::StartDiscovery(
-    const SessionCallback& callback) {
+void LowEnergyDiscoveryManager::StartDiscovery(SessionCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
   FXL_DCHECK(callback);
   FXL_LOG(INFO) << "gap: LowEnergyDiscoveryManager: StartDiscovery";
@@ -100,7 +98,7 @@ void LowEnergyDiscoveryManager::StartDiscovery(
       (scanner_->state() == hci::LowEnergyScanner::State::kStopping &&
        sessions_.empty())) {
     FXL_DCHECK(!scanner_->IsScanning());
-    pending_.push(callback);
+    pending_.push(std::move(callback));
     return;
   }
 
@@ -110,16 +108,16 @@ void LowEnergyDiscoveryManager::StartDiscovery(
   if (!sessions_.empty()) {
     // Invoke |callback| asynchronously.
     auto session = AddSession();
-    async::PostTask(dispatcher_,
-      [ callback, session = std::move(session) ]() mutable {
-        callback(std::move(session));
-      });
+    async::PostTask(dispatcher_, [callback = std::move(callback),
+                                  session = std::move(session)]() mutable {
+      callback(std::move(session));
+    });
     return;
   }
 
   FXL_DCHECK(scanner_->state() == hci::LowEnergyScanner::State::kIdle);
 
-  pending_.push(callback);
+  pending_.push(std::move(callback));
   StartScan();
 }
 
@@ -186,10 +184,10 @@ void LowEnergyDiscoveryManager::OnScanStatus(
       // callbacks issue a retry the new requests will get re-queued and
       // notified of failure in the same loop here.
       while (!pending_.empty()) {
-        auto& callback = pending_.front();
-        callback(nullptr);
-
+        auto callback = std::move(pending_.front());
         pending_.pop();
+
+        callback(nullptr);
       }
       break;
     }
@@ -207,10 +205,10 @@ void LowEnergyDiscoveryManager::OnScanStatus(
         std::generate(new_sessions, new_sessions + count,
                       [this] { return AddSession(); });
         for (size_t i = 0; i < count; i++) {
-          auto& callback = pending_.front();
-          callback(std::move(new_sessions[i]));
-
+          auto callback = std::move(pending_.front());
           pending_.pop();
+
+          callback(std::move(new_sessions[i]));
         }
       }
       FXL_DCHECK(pending_.empty());
@@ -224,8 +222,10 @@ void LowEnergyDiscoveryManager::OnScanStatus(
 
       // Some clients might have requested to start scanning while we were
       // waiting for it to stop. Restart scanning if that is the case.
-      if (!pending_.empty())
+      if (!pending_.empty()) {
         StartScan();
+      }
+
       break;
     case hci::LowEnergyScanner::ScanStatus::kComplete:
       FXL_VLOG(2) << "gap: LowEnergyDiscoveryManager: end of scan period";

@@ -8,7 +8,6 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 #include "helpers.h"
@@ -109,39 +108,38 @@ void LowEnergyPeripheralServer::StartAdvertising(
   }
   // |delegate| is temporarily held by the result callback, which will close the
   // delegate channel if the advertising fails (after returning the status)
-  auto advertising_status_cb = fxl::MakeCopyable(
-      [self, callback, delegate = std::move(delegate)](
-          std::string ad_id, ::btlib::hci::Status status) mutable {
-        if (!self)
-          return;
+  auto advertising_status_cb = [self, callback, delegate = std::move(delegate)](
+                                   std::string ad_id,
+                                   ::btlib::hci::Status status) mutable {
+    if (!self)
+      return;
 
-        if (!status) {
-          FXL_VLOG(1) << "Failed to start advertising: " << status.ToString();
-          callback(
-              fidl_helpers::StatusToFidl(status, MessageFromStatus(status)),
-              "");
-          return;
+    if (!status) {
+      FXL_VLOG(1) << "Failed to start advertising: " << status.ToString();
+      callback(fidl_helpers::StatusToFidl(status, MessageFromStatus(status)),
+               "");
+      return;
+    }
+
+    auto delegate_ptr = delegate.Bind();
+
+    // Set the error handler for connectable advertisements only (i.e. if a
+    // delegate was provided).
+    if (delegate_ptr) {
+      delegate_ptr.set_error_handler([self, ad_id] {
+        if (self) {
+          self->StopAdvertisingInternal(ad_id);
         }
-
-        auto delegate_ptr = delegate.Bind();
-
-        // Set the error handler for connectable advertisements only (i.e. if a
-        // delegate was provided).
-        if (delegate_ptr) {
-          delegate_ptr.set_error_handler([self, ad_id] {
-            if (self) {
-              self->StopAdvertisingInternal(ad_id);
-            }
-          });
-        }
-
-        self->instances_[ad_id] = InstanceData(ad_id, std::move(delegate_ptr));
-        callback(Status(), ad_id);
       });
+    }
+
+    self->instances_[ad_id] = InstanceData(ad_id, std::move(delegate_ptr));
+    callback(Status(), ad_id);
+  };
 
   advertising_manager->StartAdvertising(ad_data, scan_data, connect_cb,
                                         interval, anonymous,
-                                        advertising_status_cb);
+                                        std::move(advertising_status_cb));
 }
 
 void LowEnergyPeripheralServer::StopAdvertising(

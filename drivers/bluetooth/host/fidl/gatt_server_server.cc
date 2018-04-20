@@ -10,8 +10,6 @@
 #include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 #include "garnet/drivers/bluetooth/lib/gatt/server.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 #include "helpers.h"
 
 using bluetooth::ErrorCode;

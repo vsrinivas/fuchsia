@@ -33,7 +33,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingStatusCallback& callback) override;
+                        AdvertisingStatusCallback callback) override;
 
   // If called while a stop request is pending, returns false.
   // If called while a start request is pending, then cancels the start

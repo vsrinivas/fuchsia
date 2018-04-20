@@ -64,7 +64,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
                         const ConnectionCallback& connect_callback,
                         uint32_t interval_ms,
                         bool anonymous,
-                        const AdvertisingStatusCallback& callback) override {
+                        AdvertisingStatusCallback callback) override {
     if (!pending_error_) {
       callback(0, pending_error_);
       pending_error_ = hci::Status();

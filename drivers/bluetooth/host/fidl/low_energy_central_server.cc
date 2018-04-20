@@ -4,7 +4,6 @@
 
 #include "low_energy_central_server.h"
 
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -88,8 +87,8 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
 
   requesting_scan_ = true;
   adapter()->le_discovery_manager()->StartDiscovery(
-      fxl::MakeCopyable([self = weak_ptr_factory_.GetWeakPtr(),
-                         filter = std::move(filter), callback](auto session) {
+      [self = weak_ptr_factory_.GetWeakPtr(), filter = std::move(filter),
+       callback](auto session) {
         if (!self)
           return;
 
@@ -121,7 +120,7 @@ void LowEnergyCentralServer::StartScan(ScanFilterPtr filter,
         self->scan_session_ = std::move(session);
         self->NotifyScanStateChanged(true);
         callback(Status());
-      }));
+      });
 }
 
 void LowEnergyCentralServer::StopScan() {
