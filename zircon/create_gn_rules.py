@@ -216,7 +216,7 @@ def generate_compiled_library(package, context):
             (file, _) = extract_file(name, path, context)
             if 'debug/' in name:
                 data.debug_prebuilt = '//%s' % file
-                data.lib_name = os.path.basename(file)
+                data.lib_name = os.path.basename(name)
             elif '.so.strip' in file:
                 data.has_impl_prebuilt = True
                 data.impl_prebuilt = '//%s' % file
