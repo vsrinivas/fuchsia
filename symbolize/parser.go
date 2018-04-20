@@ -20,6 +20,7 @@ const (
 	modulePrefix string = "{{{module:"
 	mmapPrefix   string = "{{{mmap:"
 	pcPrefix     string = "{{{pc:"
+	btPrefix     string = "{{{bt:"
 )
 
 func findIndex(s ParserState, sub string) int {
@@ -43,6 +44,20 @@ func ParseText(b *ParserState) interface{} {
 	text := string((*b)[:idx])
 	*b = (*b)[idx:]
 	return &Text{text}
+}
+
+func ParseBt(b *ParserState) interface{} {
+	return b.prefix(btPrefix, func(b *ParserState) interface{} {
+		num, err := b.intBefore(":")
+		if err != nil {
+			return nil
+		}
+		addr, err := b.intBefore(elemSuffix)
+		if err != nil {
+			return nil
+		}
+		return &BacktraceElement{num: num, vaddr: addr}
+	})
 }
 
 func ParsePc(b *ParserState) interface{} {
@@ -132,7 +147,7 @@ func ParseContextualElement(b *ParserState) interface{} {
 func ParsePresentationGroup(b *ParserState) interface{} {
 	var p PresentationGroup
 	b.many(&p.children, func(b *ParserState) interface{} {
-		return b.choice(ParseColor, ParsePc, ParseText)
+		return b.choice(ParseColor, ParsePc, ParseBt, ParseText)
 	})
 	return &p
 }

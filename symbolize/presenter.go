@@ -31,6 +31,15 @@ func (b *BasicPresenter) Start(input <-chan OutputLine) {
 	}
 }
 
+func (b *BasicPresenter) VisitBt(node *BacktraceElement) {
+	for i, loc := range node.locs {
+		fmt.Fprintf(b.output, "%s at %s:%d", loc.function, loc.file, loc.line)
+		if i != len(node.locs)-1 {
+			fmt.Fprint(b.output, " inlined from ")
+		}
+	}
+}
+
 func (b *BasicPresenter) VisitPc(node *PCElement) {
 	fmt.Fprintf(b.output, "%s:%d", node.loc.file, node.loc.line)
 }

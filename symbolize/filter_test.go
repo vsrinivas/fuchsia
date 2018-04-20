@@ -133,6 +133,55 @@ func EqualJson(a, b []byte) bool {
 	return reflect.DeepEqual(j1, j2)
 }
 
+func TestBacktrace(t *testing.T) {
+	line := ParseLine("Error at {{{bt:0:0x12389987}}}")
+
+	if line == nil {
+		t.Error("got", nil, "expected", "not nil")
+		return
+	}
+
+	// mock the input and outputs of llvm-symbolizer
+	symbo := newMockSymbolizer([]mockModule{
+		{"out/libc.so", map[uint64][]SourceLocation{
+			0x44987: {{"duff.h", 64, "duffcopy"}, {"memcpy.c", 76, "memcpy"}},
+		}},
+	})
+	// mock ids.txt
+	repo := NewRepo()
+	repo.AddObjects(map[string]string{
+		"be4c4336e20b734db97a58e0f083d0644461317c": "out/libc.so",
+	})
+
+	// make an actual filter using those two mock objects
+	filter := NewFilter(repo, symbo)
+
+	// add some context
+	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
+	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
+	line.Accept(&FilterVisitor{filter})
+
+	json, err := GetLineJson(line)
+	if err != nil {
+		t.Error("json did not parse correctly", err)
+	}
+
+	expectedJson := []byte(`{
+    "type": "group",
+    "children": [
+      {"type": "text", "text": "Error at "},
+      {"type": "bt", "vaddr": 305699207, "num": 0, "locs":[
+        {"line": 64, "function": "duffcopy", "file": "duff.h"},
+        {"line": 76, "function": "memcpy", "file": "memcpy.c"}
+      ]}
+    ]
+  }`)
+
+	if !EqualJson(json, expectedJson) {
+		t.Error("unexpected json output", "got", string(json), "expected", string(expectedJson))
+	}
+}
+
 func TestReset(t *testing.T) {
 	line := ParseLine("{{{reset}}}")
 

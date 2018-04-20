@@ -30,6 +30,16 @@ type SourceLocation struct {
 	function string
 }
 
+type BacktraceElement struct {
+	vaddr uint64
+	num   uint64
+	locs  []SourceLocation
+}
+
+func (b *BacktraceElement) Accept(visitor PresentationVisitor) {
+	visitor.VisitBt(b)
+}
+
 // PcElement is an AST node representing a pc element in the markup
 type PCElement struct {
 	vaddr uint64
@@ -85,6 +95,7 @@ func (s *MappingElement) Accept(visitor LineVisitor) {
 
 // PresentationVisistor is a visitor for presentables
 type PresentationVisitor interface {
+	VisitBt(elem *BacktraceElement)
 	VisitPc(elem *PCElement)
 	VisitColor(node *ColorGroup)
 	VisitText(node *Text)

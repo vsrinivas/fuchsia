@@ -125,6 +125,14 @@ type FilterVisitor struct {
 	filter *Filter
 }
 
+func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
+	locs, err := f.filter.FindSrcLocForAddress(elem.vaddr)
+	if err != nil {
+		log.Printf("warning: %v", err)
+	}
+	elem.locs = locs
+}
+
 func (f *FilterVisitor) VisitPc(elem *PCElement) {
 	locs, err := f.filter.FindSrcLocForAddress(elem.vaddr)
 	if err != nil {

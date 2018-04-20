@@ -26,6 +26,34 @@ func (j *JsonVisitor) getJson() ([]byte, error) {
 	return json.MarshalIndent(j.stack[0], "", "\t")
 }
 
+func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
+	type loc struct {
+		File     string `json:"file"`
+		Line     int    `json:"line"`
+		Function string `json:"function"`
+	}
+	var locs []loc
+	for _, srcloc := range elem.locs {
+		locs = append(locs, loc{
+			File: srcloc.file,
+			Line: srcloc.line,
+			Function: srcloc.function,
+		})
+	}
+	msg, _ := json.Marshal(struct {
+		Tipe  string `json:"type"`
+		Vaddr uint64 `json:"vaddr"`
+		Num   uint64 `json:"num"`
+		Locs  []loc  `json:"locs"`
+	}{
+		Tipe:  "bt",
+		Vaddr: elem.vaddr,
+		Num:   elem.num,
+		Locs:  locs,
+	})
+	j.stack = append(j.stack, msg)
+}
+
 func (j *JsonVisitor) VisitPc(elem *PCElement) {
 	msg, _ := json.Marshal(struct {
 		Tipe     string `json:"type"`
