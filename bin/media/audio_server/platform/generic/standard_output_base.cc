@@ -247,8 +247,9 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
     bool setup_done = false;
     fbl::RefPtr<AudioPacketRef> pkt_ref;
 
-    bool release_renderer_packet = false;
+    bool release_renderer_packet;
     while (true) {
+      release_renderer_packet = false;
       // Try to grab the front of the packet queue.  If it has been flushed
       // since the last time we grabbed it, be sure to reset our mixer's
       // internal filter state.
@@ -283,7 +284,6 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       release_renderer_packet = (task_type == TaskType::Mix)
                                     ? ProcessMix(renderer, info, pkt_ref)
                                     : ProcessTrim(renderer, info, pkt_ref);
-
       // If we produced enough output frames, then we are done with this mix,
       // regardless of what we should now do with the renderer packet.
       if (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames) {
