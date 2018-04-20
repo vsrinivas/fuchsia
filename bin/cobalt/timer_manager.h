@@ -44,8 +44,10 @@ class TimerManager {
   // The destructor will stop the expiry thread which deletes expired timers.
   ~TimerManager();
 
-  // Checks if the given TimerVal is initialized or empty.
-  static bool isInitialized(const TimerVal& timer_val);
+  // Checks if the given TimerVal contains all the information it needs to send
+  // an observation. That means it was populated by both StartTimer and EndTimer
+  // calls.
+  static bool isReady(const TimerVal& timer_val);
 
   // Checks if the given TimerVal contains a multipart observation.
   static bool isMultipart(const TimerVal& timer_val);

@@ -14,7 +14,7 @@ using std::string;
 TimerManager::TimerManager() {}
 TimerManager::~TimerManager() {}
 
-bool TimerManager::isInitialized(const TimerVal& timer_val){
+bool TimerManager::isReady(const TimerVal& timer_val){
 	return timer_val.start_timestamp > 0 && timer_val.end_timestamp > 0;
 }
 

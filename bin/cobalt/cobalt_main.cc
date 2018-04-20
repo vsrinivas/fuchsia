@@ -164,6 +164,9 @@ class CobaltEncoderImpl : public CobaltEncoder {
       fidl::VectorPtr<BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override;
 
+  template <class CB>
+  void AddTimerObservationIfReady(const TimerVal& timer_val, CB callback);
+
   void StartTimer(
       uint32_t metric_id,
       uint32_t encoding_id,
@@ -364,6 +367,26 @@ void CobaltEncoderImpl::AddIntBucketDistribution(
   AddEncodedObservation(&result, callback);
 }
 
+template <class CB>
+void CobaltEncoderImpl::AddTimerObservationIfReady(const TimerVal& timer_val,
+                                                   CB callback){
+  if (!TimerManager::isReady(timer_val)) {
+    // TimerManager has not received both StartTimer and EndTimer calls. Return
+    // OK status and wait for the other call.
+    callback(Status::OK);
+    return;
+  }
+
+  if(TimerManager::isMultipart(timer_val)){
+    // TODO(ninai) Add a Multipart Observation
+  } else {
+    AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
+                      timer_val.end_timestamp - timer_val.start_timestamp,
+                      callback);
+  }
+}
+
+
 void CobaltEncoderImpl::StartTimer(
     uint32_t metric_id,
     uint32_t encoding_id,
@@ -384,21 +407,7 @@ void CobaltEncoderImpl::StartTimer(
     return;
   }
 
-  // TODO(ninai): abstract this code into AddTimerObservationIfReady().
-  if (timer_val.end_timestamp == 0) {
-    // TimerManager has not seen an EndTimer call yet so we return OK and wait
-    // for the call.
-    callback(Status::OK);
-    return;
-  }
-
-  if(TimerManager::isMultipart(timer_val)){
-    // TODO(ninai) Add a Multipart Observation
-  } else {
-    AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
-                      timer_val.end_timestamp - timer_val.start_timestamp,
-                      callback);
-  }
+  AddTimerObservationIfReady(timer_val, callback);
 }
 
 void CobaltEncoderImpl::EndTimer(
@@ -419,16 +428,7 @@ void CobaltEncoderImpl::EndTimer(
     return;
   }
 
-  if (timer_val.start_timestamp == 0) {
-    // TimerManager has not seen a StartTimer call yet so we return OK and wait
-    // for the call.
-    callback(Status::OK);
-    return;
-  }
-
-  AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
-                    timer_val.end_timestamp - timer_val.start_timestamp,
-                    callback);
+  AddTimerObservationIfReady(timer_val, callback);
 }
 
 void CobaltEncoderImpl::EndTimerMultiPart(
@@ -452,14 +452,7 @@ void CobaltEncoderImpl::EndTimerMultiPart(
     return;
   }
 
-  if (timer_val.start_timestamp == 0) {
-    // TimerManager has not seen a StartTimer call yet so we return OK and wait
-    // for the call.
-    callback(Status::OK);
-    return;
-  }
-
-  // TODO(ninai) Add a Multipart Observation
+  AddTimerObservationIfReady(timer_val, callback);
 }
 
 void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {
