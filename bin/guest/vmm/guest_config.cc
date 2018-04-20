@@ -245,6 +245,8 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   while (std::getline(tokenStream, token, ',')) {
     if (token == "fdio") {
       out->data_plane = machina::BlockDispatcher::DataPlane::FDIO;
+    } else if (token == "qcow") {
+      out->data_plane = machina::BlockDispatcher::DataPlane::QCOW;
     } else if (token == "rw") {
       out->mode = machina::BlockDispatcher::Mode::RW;
     } else if (token == "ro") {

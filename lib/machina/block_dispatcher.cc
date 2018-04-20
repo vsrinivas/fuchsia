@@ -21,6 +21,7 @@
 #include <zircon/device/block.h>
 
 #include "garnet/lib/machina/phys_mem.h"
+#include "garnet/lib/machina/qcow.h"
 #include "garnet/lib/machina/volatile_write_block_dispatcher.h"
 #include "lib/fxl/logging.h"
 
@@ -200,6 +201,8 @@ zx_status_t BlockDispatcher::CreateFromFd(
   switch (data_plane) {
     case DataPlane::FDIO:
       return FdioBlockDispatcher::Create(fd, file_size, read_only, dispatcher);
+    case DataPlane::QCOW:
+      return QcowDispatcher::Create(fd, read_only, dispatcher);
     default:
       FXL_LOG(ERROR) << "Unsupported block dispatcher data plane";
       return ZX_ERR_INVALID_ARGS;

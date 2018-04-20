@@ -12,6 +12,11 @@ declare_args() {
   # If set to true, a USB drive should be formatted using |build-usb.sh| and
   # inserted in the target device prior to launching a debian-guest.
   debian_guest_usb_root = false
+
+  # Package the rootfs as a QCOW image (as opposed to a flat file).
+  #
+  # This argument has no effect if |debain_guest_usb_root| is true.
+  debian_guest_qcow = true
 }
 
 if (target_cpu == "x64") {
@@ -41,10 +46,19 @@ guest_package("debian_guest") {
     block_devices = [ "type-guid:${partition_guid},rw,fdio" ]
   } else {
     disk_name = "filesystem.img"
-    resources = [ {
-          path = rebase_path("${image_dir}/rootfs.img")
-          dest = disk_name
-        } ]
-    block_devices = [ "/guest/data/${disk_name},ro,volatile" ]
+    if (debian_guest_qcow) {
+      disk_path = rebase_path("${image_dir}/rootfs.qcow2")
+      disk_options = "ro,qcow,volatile"
+    } else {
+      disk_path = rebase_path("${image_dir}/rootfs.img")
+      disk_options = "ro,volatile"
+    }
+    resources = [
+      {
+        path = disk_path
+        dest = disk_name
+      },
+    ]
+    block_devices = [ "/guest/data/${disk_name},${disk_options}" ]
   }
 }

@@ -23,6 +23,7 @@ class BlockDispatcher {
   };
   enum class DataPlane {
     FDIO,
+    QCOW,
   };
   enum class GuidType {
     NONE,
