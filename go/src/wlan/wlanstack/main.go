@@ -6,7 +6,7 @@ package main
 
 import (
 	"app/context"
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"fuchsia/go/wlan_service"
 	"netstack/watcher"
@@ -159,13 +159,13 @@ func main() {
 
 	ws := &Wlanstack{}
 
-	service := &bindings2.BindingSet{}
+	service := &bindings.BindingSet{}
 	ctx := context.CreateFromStartupInfo()
 	ctx.OutgoingService.AddService(wlan_service.WlanName, func(c zx.Channel) error {
 		_, err := service.Add(&wlan_service.WlanStub{Impl: ws}, c, nil)
 		return err
 	})
-	go bindings2.Serve()
+	go bindings.Serve()
 	ctx.Serve()
 
 	ws.readConfigFile()

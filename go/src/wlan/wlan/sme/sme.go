@@ -1,7 +1,7 @@
 package sme
 
 import (
-	bindings "fidl/bindings2"
+	bindings "fidl/bindings"
 )
 
 type Transport interface {

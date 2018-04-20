@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"app/context"
-	"fidl/bindings2"
+	"fidl/bindings"
 	"netstack/link/eth"
 	"syscall/zx"
 
@@ -104,7 +104,7 @@ func getInterfaces() (out []nsfidl.NetInterface) {
 }
 
 func (ni *netstackImpl) RegisterListener(listener nsfidl.NotificationListenerInterface) (err error) {
-	if bindings2.Proxy(listener).IsValid() {
+	if bindings.Proxy(listener).IsValid() {
 		ni.listener = listener
 	}
 	return nil
@@ -333,12 +333,12 @@ func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (result 
 }
 
 func (ni *netstackImpl) onInterfacesChanged(interfaces []nsfidl.NetInterface) {
-	if bindings2.Proxy(ni.listener).IsValid() {
+	if bindings.Proxy(ni.listener).IsValid() {
 		ni.listener.OnInterfacesChanged(interfaces)
 	}
 }
 
-var netstackService *bindings2.BindingSet
+var netstackService *bindings.BindingSet
 
 // AddNetstackService registers the NetstackService with the application context,
 // allowing it to respond to FIDL queries.
@@ -346,7 +346,7 @@ func AddNetstackService(ctx *context.Context) error {
 	if netstackService != nil {
 		return fmt.Errorf("AddNetworkService must be called only once")
 	}
-	netstackService = &bindings2.BindingSet{}
+	netstackService = &bindings.BindingSet{}
 	ctx.OutgoingService.AddService(nsfidl.NetstackName, func(c zx.Channel) error {
 		_, err := netstackService.Add(&nsfidl.NetstackStub{
 			Impl: &netstackImpl{},

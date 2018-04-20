@@ -14,7 +14,7 @@ import (
 	"github.com/google/netstack/tcpip"
 
 	"app/context"
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"fuchsia/go/netstack"
 )
@@ -70,15 +70,15 @@ func (a *testApp) getAddr(name string) {
 
 func (a *testApp) listen() {
 	fmt.Printf("Listening for changes...\n")
-	service := &bindings2.BindingSet{}
-	r, p, err := bindings2.NewInterfaceRequest()
+	service := &bindings.BindingSet{}
+	r, p, err := bindings.NewInterfaceRequest()
 	if err != nil {
 		panic(err.Error())
 	}
 	service.Add(&netstack.NotificationListenerStub{Impl: a}, r.Channel, nil)
 	a.netstack.RegisterListener(netstack.NotificationListenerInterface(*p))
 
-	bindings2.Serve()
+	bindings.Serve()
 }
 
 // Implements netstack.NotificationListener.

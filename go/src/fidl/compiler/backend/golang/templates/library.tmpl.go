@@ -14,7 +14,7 @@ package {{ .Name }}
 
 import (
 {{- if .NeedsBindings }}
-	_bindings "fidl/bindings2"
+	_bindings "fidl/bindings"
 {{- end }}
 {{- if .NeedsSyscallZx }}
 	_zx "syscall/zx"

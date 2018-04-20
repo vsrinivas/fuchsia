@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	. "fidl/bindings2"
+	. "fidl/bindings"
 	. "fuchsia/go/go_fidl_bindings_test"
 )
 

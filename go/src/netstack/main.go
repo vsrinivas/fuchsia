@@ -12,7 +12,7 @@ import (
 	"netstack/link/eth"
 	"netstack/watcher"
 
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/arp"
@@ -51,7 +51,7 @@ func main() {
 		log.Fatal(err)
 	}
 	ctx.Serve()
-	go bindings2.Serve()
+	go bindings.Serve()
 
 	arena, err := eth.NewArena()
 	if err != nil {

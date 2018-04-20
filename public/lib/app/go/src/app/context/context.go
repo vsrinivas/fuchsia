@@ -5,7 +5,7 @@
 package context
 
 import (
-	"fidl/bindings2"
+	"fidl/bindings"
 	"fmt"
 	"svc/svcns"
 
@@ -27,7 +27,7 @@ type Context struct {
 	OutgoingService *svcns.Namespace
 	Launcher        *component.ApplicationLauncherInterface
 	appServices     zx.Handle
-	services        bindings2.BindingSet
+	services        bindings.BindingSet
 }
 
 // TODO: define these in syscall/zx/mxruntime
@@ -89,18 +89,18 @@ func (c *Context) Serve() {
 	if c.appServices.IsValid() {
 		stub := component.ServiceProviderStub{Impl: c.OutgoingService}
 		c.services.Add(&stub, zx.Channel(c.appServices), nil)
-		go bindings2.Serve()
+		go bindings.Serve()
 	}
 	if c.OutgoingService.Dispatcher != nil {
 		go c.OutgoingService.Dispatcher.Serve()
 	}
 }
 
-func (c *Context) ConnectToEnvService(r bindings2.ServiceRequest) {
+func (c *Context) ConnectToEnvService(r bindings.ServiceRequest) {
 	c.connector.ConnectToEnvService(r)
 }
 
-func (c *Connector) ConnectToEnvService(r bindings2.ServiceRequest) {
+func (c *Connector) ConnectToEnvService(r bindings.ServiceRequest) {
 	c.ConnectToEnvServiceAt(r.Name(), r.ToChannel())
 }
 

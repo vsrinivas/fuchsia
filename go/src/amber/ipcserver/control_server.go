@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"fuchsia/go/amber"
 
@@ -25,11 +25,11 @@ type ControlSrvr struct {
 	daemonGate sync.Once
 	daemon     *daemon.Daemon
 	pinger     *source.TickGenerator
-	bs         bindings2.BindingSet
+	bs         bindings.BindingSet
 }
 
 func NewControlSrvr(d *daemon.DaemonProvider, r *source.TickGenerator) *ControlSrvr {
-	go bindings2.Serve()
+	go bindings.Serve()
 	return &ControlSrvr{daemonSrc: d, pinger: r}
 }
 

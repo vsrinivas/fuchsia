@@ -8,7 +8,7 @@ import (
 	"log"
 
 	"app/context"
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"syscall/zx"
 
@@ -30,7 +30,7 @@ func main() {
 		return err
 	})
 	c.Serve()
-	go bindings2.Serve()
+	go bindings.Serve()
 
 	select {}
 }

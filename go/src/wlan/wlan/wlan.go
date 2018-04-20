@@ -5,7 +5,7 @@
 package wlan
 
 import (
-	bindings "fidl/bindings2"
+	bindings "fidl/bindings"
 	"fmt"
 	mlme "fuchsia/go/wlan_mlme"
 	"fuchsia/go/wlan_service"

@@ -14,10 +14,10 @@ fidl("test_fidl") {
 }
 
 go_test("go_fidl_bindings_test") {
-  gopackage = "fuchsia.googlesource.com/fidl/bindings2/bindings_test"
+  gopackage = "fuchsia.googlesource.com/fidl/bindings/bindings_test"
   go_dependencies = [
     {
-      package = "fuchsia.googlesource.com/fidl/bindings2/bindings_test"
+      package = "fuchsia.googlesource.com/fidl/bindings/bindings_test"
     },
   ]
   extra_dependencies = [

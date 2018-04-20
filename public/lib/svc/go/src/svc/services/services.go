@@ -7,7 +7,7 @@
 package services
 
 import (
-	"fidl/bindings2"
+	"fidl/bindings"
 
 	"syscall/zx"
 	"syscall/zx/fdio"
@@ -63,6 +63,6 @@ func (p *Provider) ConnectToServiceAt(c zx.Channel, path string) error {
 
 // ConnectToService connects an InterfaceRequest to a service in the directory referenced
 // by the Provider using the interface name as the path.
-func (p *Provider) ConnectToService(sr bindings2.ServiceRequest) error {
+func (p *Provider) ConnectToService(sr bindings.ServiceRequest) error {
 	return p.ConnectToServiceAt(sr.ToChannel(), sr.Name())
 }
