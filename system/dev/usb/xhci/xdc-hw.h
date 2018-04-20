@@ -79,6 +79,25 @@ static_assert(sizeof(xdc_context_data_t) == 0xC0, "xdc context data wrong size")
 #define DCCTRL_MAX_BURST_BITS        8
 #define DCCTRL_DCE                   (1 << 31)
 
+// Debug Capability Status Register (DCST) bits
+#define DCST_ER_NOT_EMPTY_START           0
+#define DCST_ER_NOT_EMPTY_BITS            1
+#define DCST_PORT_NUM_START               24
+#define DCST_PORT_NUM_BITS                8
+
+// Debug Capability Port Status and Control Register (DCPORTSC) bits
+#define DCPORTSC_CCS                      (1 << 0)
+#define DCPORTSC_PED                      (1 << 1)
+#define DCPORTSC_PR                       (1 << 4)
+#define DCPORTSC_PLS_START                5
+#define DCPORTSC_PLS_BITS                 4
+#define DCPORTSC_PS_START                 10
+#define DCPORTSC_PS_BITS                  4
+#define DCPORTSC_CSC                      (1 << 17)
+#define DCPORTSC_PRC                      (1 << 21)
+#define DCPORTSC_PLC                      (1 << 22)
+#define DCPORTSC_CEC                      (1 << 23)
+
 // Debug Capability Device Descriptor Info Register 1 (DCDDI1) bits
 #define DCDDI1_VENDOR_ID_START       16
 #define DCDDI1_VENDOR_ID_BITS        16

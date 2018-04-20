@@ -39,6 +39,12 @@
 #define IN_EP_IDX              1
 #define NUM_EPS                2
 
+// The maximum duration to transition from connected to configured state.
+#define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
+
+// TODO(jocelyndang): tweak this.
+#define POLL_INTERVAL ZX_MSEC(100)
+
 typedef struct {
     xhci_transfer_ring_t transfer_ring;
 } xdc_endpoint_t;
@@ -79,6 +85,15 @@ typedef struct {
     xdc_endpoint_t eps[NUM_EPS];
 
     thrd_t start_thread;
+
+    // Whether a Root Hub Port is connected to a Debug Host and assigned to the Debug Capability.
+    bool connected;
+    // The last connection time in nanoseconds, with respect to the monotonic clock.
+    zx_time_t last_conn;
+    // Whether the Debug Device is in the Configured state.
+    bool configured;
+    // Whether to suspend all activity.
+    atomic_bool suspended;
 } xdc_t;
 
 static void xdc_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
@@ -257,6 +272,8 @@ static zx_status_t xdc_init(xdc_t* xdc) {
 static void xdc_shutdown(xdc_t* xdc) {
     zxlogf(TRACE, "xdc_shutdown\n");
 
+    atomic_store(&xdc->suspended, true);
+
     int res;
     thrd_join(xdc->start_thread, &res);
     if (res != 0) {
@@ -315,13 +332,120 @@ static zx_protocol_device_t xdc_proto = {
     .release = xdc_release
 };
 
+static void xdc_handle_port_status_change(xdc_t* xdc) {
+    uint32_t dcportsc = XHCI_READ32(&xdc->debug_cap_regs->dcportsc);
+
+    if (dcportsc & DCPORTSC_CSC) {
+        xdc->connected = dcportsc & DCPORTSC_CCS;
+        if (xdc->connected) {
+            xdc->last_conn = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        }
+        zxlogf(TRACE, "Port: Connect Status Change, connected: %d\n", xdc->connected != 0);
+    }
+    if (dcportsc & DCPORTSC_PRC) {
+        zxlogf(TRACE, "Port: Port Reset complete\n");
+    }
+    if (dcportsc & DCPORTSC_PLC) {
+        zxlogf(TRACE, "Port: Port Link Status Change\n");
+    }
+    if (dcportsc & DCPORTSC_CEC) {
+        zxlogf(TRACE, "Port: Port Config Error detected\n");
+    }
+
+    // Ack change events.
+    XHCI_WRITE32(&xdc->debug_cap_regs->dcportsc, dcportsc);
+}
+
+static void xdc_handle_events(xdc_t* xdc) {
+    xhci_event_ring_t* er = &xdc->event_ring;
+
+    // process all TRBs with cycle bit matching our CCS
+    while ((XHCI_READ32(&er->current->control) & TRB_C) == er->ccs) {
+        uint32_t type = trb_get_type(er->current);
+        switch (type) {
+        case TRB_EVENT_PORT_STATUS_CHANGE:
+            xdc_handle_port_status_change(xdc);
+            break;
+        default:
+            zxlogf(ERROR, "xdc_handle_events: unhandled event type %d\n", type);
+            break;
+        }
+
+        er->current++;
+        if (er->current == er->end) {
+            er->current = er->start;
+            er->ccs ^= TRB_C;
+        }
+    }
+    xdc_update_erdp(xdc);
+}
+
+static void xdc_check_configuration_state(xdc_t* xdc) {
+    uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
+
+    if (dcctrl & DCCTRL_DRC) {
+        zxlogf(TRACE, "xdc configured exit\n");
+        // Need to clear the bit to re-enable the DCDB.
+        XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, dcctrl);
+        xdc->configured = false;
+    }
+
+    // Just entered the Configured state.
+    if (!xdc->configured && (dcctrl & DCCTRL_DCR)) {
+        uint32_t port = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_PORT_NUM_START,
+                                        DCST_PORT_NUM_BITS);
+        if (port == 0) {
+            zxlogf(ERROR, "xdc could not get port number\n");
+        } else {
+            xdc->configured = true;
+            zxlogf(INFO, "xdc configured on port: %u\n", port);
+        }
+    }
+
+    // If it takes too long to enter the configured state, we should toggle the
+    // DCE bit to retry the Debug Device enumeration process. See last paragraph of
+    // 7.6.4.1 of XHCI spec.
+    if (xdc->connected && !xdc->configured) {
+        zx_duration_t waited_ns = zx_clock_get(ZX_CLOCK_MONOTONIC) - xdc->last_conn;
+
+        if (waited_ns > TRANSITION_CONFIGURED_THRESHOLD) {
+            zxlogf(ERROR, "xdc failed to enter configured state, toggling DCE\n");
+            XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, 0);
+            XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, DCCTRL_LSE | DCCTRL_DCE);
+
+            // We won't get the disconnect event from disabling DCE, so update it now.
+            xdc->connected = false;
+        }
+    }
+}
+
+zx_status_t xdc_poll(xdc_t* xdc) {
+    for (;;) {
+        if (atomic_load(&xdc->suspended)) {
+            zxlogf(INFO, "suspending xdc, exiting poll loop");
+            break;
+        }
+
+        uint32_t dcst = XHCI_GET_BITS32(&xdc->debug_cap_regs->dcst, DCST_ER_NOT_EMPTY_START,
+                                        DCST_ER_NOT_EMPTY_BITS);
+        if (dcst) {
+            xdc_handle_events(xdc);
+        }
+
+        xdc_check_configuration_state(xdc);
+
+        zx_nanosleep(zx_deadline_after(POLL_INTERVAL));
+    }
+    return ZX_OK;
+}
+
 static int xdc_start_thread(void* arg) {
     xdc_t* xdc = arg;
 
     zxlogf(TRACE, "about to enable XHCI DBC\n");
     XHCI_WRITE32(&xdc->debug_cap_regs->dcctrl, DCCTRL_LSE | DCCTRL_DCE);
 
-    return 0;
+    return xdc_poll(xdc);
 }
 
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio) {
