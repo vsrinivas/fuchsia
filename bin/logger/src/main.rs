@@ -20,12 +20,12 @@ extern crate futures;
 use app::server::ServicesServer;
 use failure::{Error, ResultExt};
 use fidl::endpoints2::ServiceMarker;
+use futures::future::ok as fok;
 use futures::FutureExt;
 use futures::StreamExt;
-use futures::future::ok as fok;
 use parking_lot::Mutex;
 use std::collections::HashSet;
-use std::collections::VecDeque;
+use std::collections::{vec_deque, VecDeque};
 use std::sync::Arc;
 
 use fidl_logger::{Log, LogImpl, LogLevelFilter, LogListenerProxy, LogMarker, LogMessage, LogSink,
@@ -33,8 +33,8 @@ use fidl_logger::{Log, LogImpl, LogLevelFilter, LogListenerProxy, LogMarker, Log
 
 pub mod logger;
 
-// Store 1000 log messages and delete on FIFO basis.
-const OLD_MSGS_BUF_SIZE: usize = 1000;
+// Store 4 MB of log messages and delete on FIFO basis.
+const OLD_MSGS_BUF_SIZE: usize = 4 * 1024 * 1024;
 
 struct ListenerWrapper {
     listener: LogListenerProxy,
@@ -81,9 +81,68 @@ impl ListenerWrapper {
     }
 }
 
+/// A Memory bounded buffer. MemoryBoundedBuffer does not calculate the size of `item`,
+/// rather it takes the size as argument and then maintains its internal buffer.
+/// Oldest item(s) are deleted in the event of buffer overflow.
+struct MemoryBoundedBuffer<T> {
+    inner: VecDeque<(T, usize)>,
+    total_size: usize,
+    capacity: usize,
+}
+
+/// `MemoryBoundedBuffer` mutable iterator.
+struct IterMut<'a, T: 'a> {
+    inner: vec_deque::IterMut<'a, (T, usize)>,
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    #[inline]
+    fn next(&mut self) -> Option<&'a mut T> {
+        self.inner.next().map(|(i, _)| i)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<T> MemoryBoundedBuffer<T> {
+    /// capacity in bytes
+    pub fn new(capacity: usize) -> MemoryBoundedBuffer<T> {
+        assert!(capacity > 0, "capacity should be more than 0");
+        MemoryBoundedBuffer {
+            inner: VecDeque::new(),
+            capacity: capacity,
+            total_size: 0,
+        }
+    }
+
+    /// size in bytes
+    pub fn push(&mut self, item: T, size: usize) {
+        self.inner.push_back((item, size));
+        self.total_size += size;
+        while self.total_size > self.capacity {
+            if let Some((_i, s)) = self.inner.pop_front() {
+                self.total_size -= s;
+            } else {
+                panic!("this should not happen");
+            }
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<T> {
+        IterMut {
+            inner: self.inner.iter_mut(),
+        }
+    }
+}
+
 struct LogManagerShared {
     listeners: Vec<ListenerWrapper>,
-    log_msg_buffer: VecDeque<LogMessage>,
+    log_msg_buffer: MemoryBoundedBuffer<LogMessage>,
 }
 
 #[derive(Clone)]
@@ -142,7 +201,7 @@ fn spawn_log_manager(state: LogManager, chan: async::Channel) {
                     }
                 }
                 let mut shared_members = state.shared_members.lock();
-                for msg in &mut shared_members.log_msg_buffer.iter_mut().rev() {
+                for msg in shared_members.log_msg_buffer.iter_mut() {
                     if ListenerStatus::Fine != lw.send_log(msg) {
                         return fok(());
                     }
@@ -171,11 +230,10 @@ fn spawn_log_sink(state: LogManager, chan: async::Channel) {
                 };
 
                 let shared_members = state.shared_members.clone();
-                let f = ls.for_each(move |mut log_msg| {
+                let f = ls.for_each(move |(mut log_msg, size)| {
                     let mut shared_members = shared_members.lock();
                     run_listeners(&mut shared_members.listeners, &mut log_msg);
-                    shared_members.log_msg_buffer.push_front(log_msg);
-                    shared_members.log_msg_buffer.truncate(OLD_MSGS_BUF_SIZE);
+                    shared_members.log_msg_buffer.push(log_msg, size);
                     Ok(())
                 }).map(|_s| ());
 
@@ -200,7 +258,7 @@ fn main_wrapper() -> Result<(), Error> {
     let mut executor = async::Executor::new().context("unable to create executor")?;
     let shared_members = Arc::new(Mutex::new(LogManagerShared {
         listeners: Vec::new(),
-        log_msg_buffer: VecDeque::with_capacity(OLD_MSGS_BUF_SIZE),
+        log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
     }));
     let shared_members_clone = shared_members.clone();
     let server_fut = ServicesServer::new()
@@ -237,6 +295,40 @@ mod tests {
                       LogSinkProxy};
     use logger::fx_log_packet_t;
     use zx::prelude::*;
+
+    mod memory_bounded_buffer {
+        use super::*;
+
+        #[test]
+        fn test_simple() {
+            let mut m = MemoryBoundedBuffer::new(12);
+            m.push(1, 4);
+            m.push(2, 4);
+            m.push(3, 4);
+            assert_eq!(
+                &m.iter_mut().collect::<Vec<&mut i32>>()[..],
+                &[&mut 1, &mut 2, &mut 3]
+            );
+        }
+
+        #[test]
+        fn test_bound() {
+            let mut m = MemoryBoundedBuffer::new(12);
+            m.push(1, 4);
+            m.push(2, 4);
+            m.push(3, 5);
+            assert_eq!(
+                &m.iter_mut().collect::<Vec<&mut i32>>()[..],
+                &[&mut 2, &mut 3]
+            );
+            m.push(4, 4);
+            m.push(5, 4);
+            assert_eq!(
+                &m.iter_mut().collect::<Vec<&mut i32>>()[..],
+                &[&mut 4, &mut 5]
+            );
+        }
+    }
 
     struct LogListenerState {
         expected: Vec<LogMessage>,
@@ -302,7 +394,7 @@ mod tests {
     }
 
     fn setup_listener(
-        ll: LogListenerState, lp: LogProxy, mut filter_options: Option<Box<LogFilterOptions>>
+        ll: LogListenerState, lp: LogProxy, mut filter_options: Option<Box<LogFilterOptions>>,
     ) {
         let (remote, local) = zx::Channel::create().expect("failed to create zx channel");
         let mut remote_ptr = fidl::endpoints2::ClientEnd::<LogListenerMarker>::new(remote);
@@ -323,7 +415,7 @@ mod tests {
         let (sin, sout) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
         let shared_members = Arc::new(Mutex::new(LogManagerShared {
             listeners: Vec::new(),
-            log_msg_buffer: VecDeque::new(),
+            log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
         }));
 
         let lm = LogManager {

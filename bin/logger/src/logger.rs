@@ -70,7 +70,7 @@ impl LoggerStream {
     }
 }
 
-fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
+fn convert_to_log_message(bytes: &[u8]) -> Option<(LogMessage, usize)> {
     // Check that data has metadata and first 1 byte is integer and last byte is NULL.
     if bytes.len() < METADATA_SIZE + mem::size_of::<uint8_t>() || bytes[bytes.len() - 1] != 0 {
         return None;
@@ -122,6 +122,7 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
             let str_buf: String = str_slice.to_owned();
             found_msg = true;
             l.msg = str_buf;
+            pos = pos + l.msg.len() + 1;
             break;
         }
         i = i + 1;
@@ -129,11 +130,14 @@ fn convert_to_log_message(bytes: &[u8]) -> Option<LogMessage> {
     if !found_msg {
         return None;
     }
-    Some(l)
+    Some((l, pos))
 }
 
 impl Stream for LoggerStream {
-    type Item = LogMessage;
+    /// It returns log message and the size of the packet received.
+    /// The size does not include the metadata size taken by
+    /// LogMessage data structure.
+    type Item = (LogMessage, usize);
     type Error = io::Error;
 
     fn poll_next(&mut self, cx: &mut task::Context) -> Poll<Option<Self::Item>, Self::Error> {
@@ -238,8 +242,9 @@ mod tests {
         expected_p.tags.push(String::from("AAAAA"));
         let calltimes = Arc::new(AtomicUsize::new(0));
         let c = calltimes.clone();
-        let f = ls.for_each(move |msg| {
+        let f = ls.for_each(move |(msg, s)| {
             assert_eq!(msg, expected_p);
+            assert_eq!(s, METADATA_SIZE + 6 /* tag */+ 6 /* msg */);
             c.fetch_add(1, Ordering::Relaxed);
             Ok(())
         }).map(|_s| ());
@@ -315,7 +320,7 @@ mod tests {
             msg: String::from("BBBBB"),
         };
         expected_p.tags.push(String::from("AAAAAAAAAAA"));
-        let mut s = Some(expected_p);
+        let mut s = Some((expected_p, METADATA_SIZE + 18));
         {
             memset(&mut p.data[..], 13, 66, 5);
             let buffer = to_u8_slice(&p);
@@ -333,10 +338,10 @@ mod tests {
         // test 2 tags with message
         {
             memset(&mut p.data[..], 19, 67, 5);
-            expected_p = s.unwrap();
+            expected_p = s.unwrap().0;
             expected_p.tags.push(String::from("BBBBB"));
             expected_p.msg = String::from("CCCCC");
-            s = Some(expected_p);
+            s = Some((expected_p, METADATA_SIZE + 24));
             let buffer = to_u8_slice(&p);
             assert_eq!(convert_to_log_message(&buffer[0..METADATA_SIZE + 25]), s);
         }
@@ -356,7 +361,7 @@ mod tests {
             let ascii = (65 + i) as c_char;
             memset(&mut p.data[..], 1 + 3 * i, ascii, 5);
             p.data[1 + 3 * i + 5] = 0;
-            expected_p = s.unwrap();
+            expected_p = s.unwrap().0;
             expected_p.tags.clear();
             {
                 let mut i: u8 = 0;
@@ -368,7 +373,10 @@ mod tests {
                 let msg = vec![65 + i, 65 + i, 65 + i, 65 + i, 65 + i];
                 expected_p.msg = String::from_utf8(msg).unwrap();
             }
-            s = Some(expected_p);
+            s = Some((
+                expected_p,
+                METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize) + 5,
+            ));
             let buffer = to_u8_slice(&p);
             assert_eq!(
                 convert_to_log_message(
@@ -395,9 +403,12 @@ mod tests {
         // test max tags with empty message
         {
             p.data[1 + 3 * FX_LOG_MAX_TAGS as usize] = 0;
-            expected_p = s.unwrap();
+            expected_p = s.unwrap().0;
             expected_p.msg = String::from("");
-            s = Some(expected_p);
+            s = Some((
+                expected_p,
+                METADATA_SIZE + 1 + 3 * (FX_LOG_MAX_TAGS as usize),
+            ));
             let buffer = to_u8_slice(&p);
             assert_eq!(
                 convert_to_log_message(
@@ -411,10 +422,10 @@ mod tests {
         {
             p.data[0] = 0;
             p.data[3] = 0;
-            expected_p = s.unwrap();
+            expected_p = s.unwrap().0;
             expected_p.msg = String::from("AA");
             expected_p.tags.clear();
-            s = Some(expected_p);
+            s = Some((expected_p, METADATA_SIZE + 3));
             let buffer = to_u8_slice(&p);
             assert_eq!(convert_to_log_message(&buffer[0..(METADATA_SIZE + 4)]), s);
         }
