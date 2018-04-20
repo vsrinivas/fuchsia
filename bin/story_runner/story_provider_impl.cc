@@ -8,9 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
-
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/views_v1.h>

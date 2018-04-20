@@ -7,11 +7,10 @@
 
 #include <vector>
 
+#include <fuchsia/cpp/modular.h>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
-#include <fuchsia/cpp/modular.h>
 
 namespace modular {
 

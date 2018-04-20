@@ -4,7 +4,6 @@
 
 #include "peridot/bin/story_runner/chain_impl.h"
 
-#include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
