@@ -38,8 +38,6 @@ void Graph::RemoveNode(NodeRef node) {
   sources_.remove(stage);
   sinks_.remove(stage);
   stages_.remove(stage->shared_from_this());
-
-  delete stage;
 }
 
 NodeRef Graph::Connect(const OutputRef& output, const InputRef& input) {

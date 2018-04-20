@@ -36,7 +36,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void WhenInitialized(std::function<void(Result)> callback) override;
 
-  const std::vector<DemuxStream*>& streams() const override;
+  const std::vector<std::unique_ptr<DemuxStream>>& streams() const override;
 
   void Seek(int64_t position, SeekCallback callback) override;
 
@@ -131,7 +131,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   // These should be stable after init until the desctructor terminates.
   std::shared_ptr<Reader> reader_;
-  std::vector<DemuxStream*> streams_;
+  std::vector<std::unique_ptr<DemuxStream>> streams_;
   Incident init_complete_;
   Result result_;
   async_t* async_;
@@ -176,7 +176,8 @@ void FfmpegDemuxImpl::WhenInitialized(std::function<void(Result)> callback) {
   init_complete_.When([this, callback]() { callback(result_); });
 }
 
-const std::vector<Demux::DemuxStream*>& FfmpegDemuxImpl::streams() const {
+const std::vector<std::unique_ptr<Demux::DemuxStream>>&
+FfmpegDemuxImpl::streams() const {
   return streams_;
 }
 
@@ -235,7 +236,7 @@ void FfmpegDemuxImpl::Worker() {
 
   CopyMetadata(format_context_->metadata, metadata_map);
   for (uint32_t i = 0; i < format_context_->nb_streams; i++) {
-    streams_.push_back(new FfmpegDemuxStream(*format_context_, i));
+    streams_.emplace_back(new FfmpegDemuxStream(*format_context_, i));
     CopyMetadata(format_context_->streams[i]->metadata, metadata_map);
   }
 

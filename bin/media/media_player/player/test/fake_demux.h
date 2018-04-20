@@ -35,7 +35,9 @@ class FakeDemux : public Demux {
     callback(Result::kOk);
   }
 
-  const std::vector<DemuxStream*>& streams() const override { return streams_; }
+  const std::vector<std::unique_ptr<DemuxStream>>& streams() const override {
+    return streams_;
+  }
 
   void Seek(int64_t position, SeekCallback callback) override {}
 
@@ -66,8 +68,7 @@ class FakeDemux : public Demux {
   };
 
   StatusCallback status_callback_;
-  std::vector<DemuxStream*> streams_;
-  std::vector<std::unique_ptr<DemuxStreamImpl>> stream_impls_;
+  std::vector<std::unique_ptr<DemuxStream>> streams_;
 };
 
 }  // namespace test

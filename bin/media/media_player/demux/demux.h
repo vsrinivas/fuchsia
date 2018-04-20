@@ -55,7 +55,7 @@ class Demux : public ActiveMultistreamSource {
 
   // Gets the stream collection. This method should not be called until the
   // WhenInitialized callback has been called.
-  virtual const std::vector<DemuxStream*>& streams() const = 0;
+  virtual const std::vector<std::unique_ptr<DemuxStream>>& streams() const = 0;
 
   // Seeks to the specified position and calls the callback. THE CALLBACK MAY
   // BE CALLED ON AN ARBITRARY THREAD.

@@ -19,6 +19,9 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
   AvIoContextOpaque* av_io_context =
       reinterpret_cast<AvIoContextOpaque*>(context->opaque);
   FXL_DCHECK(av_io_context);
+  // This is the matching delete for the new that happens in
+  // AvIoContext::Create. This is part of the deleter for the io context, which
+  // is managed by AvIoContextPtr, a unique_ptr that uses this deleter.
   delete av_io_context;
   av_free(context->buffer);
   av_free(context);
@@ -34,6 +37,8 @@ Result AvIoContext::Create(std::shared_ptr<Reader> reader,
 
   InitFfmpeg();
 
+  // Using a raw pointer here, because the io context doesn't understand smart
+  // pointers.
   AvIoContextOpaque* avIoContextOpaque = new AvIoContextOpaque(reader);
   Result result = avIoContextOpaque->describe_result_;
   if (result != Result::kOk) {

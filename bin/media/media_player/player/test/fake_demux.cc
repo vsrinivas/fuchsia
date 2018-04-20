@@ -17,12 +17,12 @@ std::shared_ptr<FakeDemux> FakeDemux::Create() {
 }
 
 FakeDemux::FakeDemux() {
-  stream_impls_.push_back(std::make_unique<DemuxStreamImpl>(
+  streams_.push_back(std::make_unique<DemuxStreamImpl>(
       0,
       AudioStreamType::Create(StreamType::kAudioEncodingVorbis, nullptr,
                               AudioStreamType::SampleFormat::kFloat, 2, 44100),
       media::TimelineRate(1, 1)));
-  stream_impls_.push_back(std::make_unique<DemuxStreamImpl>(
+  streams_.push_back(std::make_unique<DemuxStreamImpl>(
       1,
       VideoStreamType::Create(StreamType::kVideoEncodingTheora, nullptr,
                               VideoStreamType::VideoProfile::kNotApplicable,
@@ -30,9 +30,6 @@ FakeDemux::FakeDemux() {
                               VideoStreamType::ColorSpace::kNotApplicable, 1920,
                               1080, 1920, 1080, 1, 1, {}, {}),
       media::TimelineRate(1, 1)));
-
-  streams_.push_back(stream_impls_[0].get());
-  streams_.push_back(stream_impls_[1].get());
 }
 
 }  // namespace test
