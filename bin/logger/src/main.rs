@@ -238,10 +238,6 @@ mod tests {
     use logger::fx_log_packet_t;
     use zx::prelude::*;
 
-    const FX_LOG_INFO: i32 = 0;
-    const FX_LOG_WARNING: i32 = 1;
-    const FX_LOG_ERROR: i32 = 2;
-
     struct LogListenerState {
         expected: Vec<LogMessage>,
         done: Arc<AtomicBool>,
@@ -353,7 +349,7 @@ mod tests {
         let mut p: fx_log_packet_t = Default::default();
         p.metadata.pid = 1;
         p.metadata.tid = 1;
-        p.metadata.severity = FX_LOG_WARNING;
+        p.metadata.severity = LogLevelFilter::Warn.into_primitive().into();
         p.metadata.dropped_logs = 2;
         p.data[0] = 5;
         memset(&mut p.data[..], 1, 65, 5);
@@ -369,7 +365,7 @@ mod tests {
         log_sink_proxy
             .connect(&mut sout)
             .expect("unable to connect");
-        p.metadata.severity = FX_LOG_INFO;
+        p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
         sin.write(to_u8_slice(&mut p)).unwrap();
 
         let mut lm1 = LogMessage {
@@ -382,7 +378,7 @@ mod tests {
             tags: vec![String::from("AAAAA")],
         };
         let lm2 = copy_log_message(&lm1);
-        lm1.severity = FX_LOG_WARNING;
+        lm1.severity = LogLevelFilter::Warn.into_primitive().into();
         let mut lm3 = copy_log_message(&lm2);
         lm3.pid = 2;
         let done = Arc::new(AtomicBool::new(false));
@@ -522,7 +518,7 @@ mod tests {
                 let mut p2 = p.clone();
                 p2.metadata.pid = 0;
                 p2.metadata.tid = 0;
-                p2.metadata.severity = FX_LOG_ERROR;
+                p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
                 let lm = LogMessage {
                     pid: p2.metadata.pid,
                     tid: p2.metadata.tid,
@@ -560,7 +556,7 @@ mod tests {
                 p.metadata.pid = 0;
                 p.metadata.tid = 0;
                 let mut p2 = p.clone();
-                p2.metadata.severity = FX_LOG_ERROR;
+                p2.metadata.severity = LogLevelFilter::Error.into_primitive().into();
                 let mut p3 = p.clone();
                 p3.metadata.pid = 1;
                 let lm = LogMessage {

@@ -8,8 +8,8 @@ use fidl_logger::LogMessage;
 use futures::io;
 use futures::prelude::*;
 use libc::{c_char, c_int, uint32_t, uint64_t, uint8_t};
-use std::{mem, str};
 use std::cell::RefCell;
+use std::{mem, str};
 use zx;
 
 type FxLogSeverityT = c_int;
@@ -153,8 +153,8 @@ mod tests {
     use super::*;
 
     use std::slice;
-    use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
     use zx::prelude::*;
 
     #[repr(C, packed)]
