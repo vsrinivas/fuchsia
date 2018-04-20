@@ -28,4 +28,14 @@ chsh -s /bin/bash ${username}
 echo "machina-guest" > /etc/hostname
 echo "127.0.1.1    machina-guest" >> /etc/hosts
 
+# Add some modules to the initramfs. The console and GPU are useful to have
+# before the rootfs mounts in case things go off the rails.
+cat >> /etc/initramfs-tools/modules << EOF
+virtio_console
+virtio_blk
+virtio_gpu
+EOF
+
+update-initramfs -u
+
 apt clean

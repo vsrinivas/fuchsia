@@ -33,7 +33,7 @@ if (target_cpu == "x64") {
 }
 
 guest_package("debian_guest") {
-  cmdline = "${arch_cmdline} console=hvc0 console=tty0 root=/dev/vda rw"
+  cmdline = "${arch_cmdline} root=/dev/vda rw"
   linux = "${image_dir}/vmlinuz"
   ramdisk = "${image_dir}/initrd.img"
 
