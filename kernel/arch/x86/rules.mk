@@ -119,6 +119,9 @@ endif
 GLOBAL_LDFLAGS += -z max-page-size=4096
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)
 KERNEL_COMPILEFLAGS += -falign-jumps=1 -falign-loops=1 -falign-functions=4
+# Don't over-align data by default, which GCC always did before.
+# Newer binutils complains about over-aligned SHT_NOTE sections.
+GLOBAL_COMPILEFLAGS += -malign-data=abi
 endif
 
 # hard disable floating point in the kernel
