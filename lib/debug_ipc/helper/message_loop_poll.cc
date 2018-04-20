@@ -136,6 +136,8 @@ void MessageLoopPoll::OnFDReadable(int fd) {
   int nread = HANDLE_EINTR(read(wakeup_pipe_out_.get(), &buf, 1));
   FXL_DCHECK(nread == 1);
 
+  // ProcessPendingTask must be called with the lock held.
+  std::lock_guard<std::mutex> guard(mutex_);
   if (ProcessPendingTask())
     SetHasTasks();
 }
@@ -183,7 +185,9 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
 
   auto found = watches_.find(watch_id);
   if (found == watches_.end()) {
-    FXL_NOTREACHED();
+    // Handle could have been just closed. Since all signaled handles are
+    // notified for one call to poll(), a previous callback could have removed
+    // a watch.
     return;
   }
   FXL_DCHECK(fd == found->second.fd);

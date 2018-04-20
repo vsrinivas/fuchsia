@@ -5,12 +5,12 @@
 #include <stdio.h>
 
 #include <arpa/inet.h>
-#include <fdio/io.h>
-#include <launchpad/launchpad.h>
-#include <lib/zx/process.h>
+#include <fcntl.h>
+#include <memory>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "garnet/bin/debug_agent/debug_agent.h"
 #include "garnet/bin/debug_agent/remote_api_adapter.h"
@@ -52,6 +52,10 @@ bool SocketConnection::Accept(int server_fd) {
     fprintf(stderr, "Couldn't accept connection.\n");
     return false;
   }
+  if (fcntl(client.get(), F_SETFL, O_NONBLOCK) < 0) {
+    fprintf(stderr, "Couldn't make port nonblocking.\n");
+    return false;
+  }
 
   if (!buffer_.Init(std::move(client))) {
     fprintf(stderr, "Error waiting for data.\n");
@@ -65,6 +69,7 @@ bool SocketConnection::Accept(int server_fd) {
   buffer_.set_data_available_callback(
       [adapter = adapter_.get()](){ adapter->OnStreamReadable(); });
 
+  printf("Accepted connection.\n");
   return true;
 }
 
@@ -111,7 +116,7 @@ bool SocketServer::Run(int port) {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_addr.s_addr = INADDR_ANY;
   addr.sin_port = htons(port);
   if (bind(server_socket_.get(), reinterpret_cast<sockaddr*>(&addr),
            sizeof(addr)) < 0) {

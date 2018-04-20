@@ -17,14 +17,9 @@ int main(int argc, char* argv[]) {
   // call which will mark the message loop as not-current.
   {
     debug_ipc::BufferedFD buffer;
-    // TODO(brettw) hook this up to a socket.
-    if (!buffer.Init(fxl::UniqueFD())) {
-      fprintf(stderr, "Can't hook up stream.");
-      return 1;
-    }
 
     // Route data from buffer -> session.
-    zxdb::Session session(&buffer.stream());
+    zxdb::Session session;
     buffer.set_data_available_callback(
         [&session](){ session.OnStreamReadable(); });
 
