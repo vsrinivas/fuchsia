@@ -74,11 +74,13 @@ void Host::ShutDown() {
   // Closes all FIDL channels owned by |host_server_|.
   host_server_ = nullptr;
 
-  // This shuts down the GATT profile and all of its clients.
+  // This shuts down the GATT profile and L2CAP and all of their clients.
   gatt_host_->ShutDown();
-
-  gap_->ShutDown();
   l2cap_->ShutDown();
+
+  // Make sure that |gap_| gets shut down and destroyed on its creation thread
+  // as it is not thread-safe.
+  gap_ = nullptr;
 }
 
 void Host::BindHostInterface(zx::channel channel) {

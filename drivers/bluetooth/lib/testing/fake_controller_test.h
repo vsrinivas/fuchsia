@@ -13,7 +13,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -83,8 +82,8 @@ class FakeControllerTest : public TestBase {
   }
 
   // Sets a callback which will be invoked when we receive packets from the test
-  // controller. |callback| will be posted on the test main loop (i.e.
-  // TestBase::message_loop_), thus no locking is necessary within the callback.
+  // controller. |callback| will be posted on the test loop, thus no locking is
+  // necessary within the callback.
   //
   // InitializeACLDataChannel() must be called once and its data rx handler must
   // not be overridden by tests for |callback| to work.

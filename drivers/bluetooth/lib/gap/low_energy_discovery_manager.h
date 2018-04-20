@@ -96,7 +96,7 @@ class RemoteDeviceCache;
 //
 // NOTE: These classes are not thread-safe. An instance of
 // LowEnergyDiscoveryManager is bound to its creation thread and the associated
-// TaskRunner and must be accessed and destroyed on the same thread.
+// dispatcher and must be accessed and destroyed on the same thread.
 
 // Represents a LE device discovery session initiated via
 // LowEnergyDiscoveryManager::StartDiscovery(). Instances cannot be created

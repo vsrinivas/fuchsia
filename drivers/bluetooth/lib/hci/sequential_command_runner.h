@@ -30,7 +30,7 @@ class Transport;
 // Only commands that terminate with the HCI_Command_Complete event are
 // currently supported.
 //
-// This class is not thread-safe. The TaskRunner that is provided during
+// This class is not thread-safe. The dispatcher that is provided during
 // initialization must be bound to the thread on which the instance of
 // SequentialCommandRunner is being constructed.
 class SequentialCommandRunner final {

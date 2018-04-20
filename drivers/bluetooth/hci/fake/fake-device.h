@@ -9,13 +9,13 @@
 #include <ddk/protocol/test.h>
 
 #include <fbl/unique_ptr.h>
-
-#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
-#include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
+#include <lib/async-loop/cpp/loop.h>
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 
 namespace bthci_fake {
 
@@ -39,9 +39,9 @@ class Device {
   zx_status_t OpenChan(Channel chan_type, zx_handle_t* chan);
 
  private:
+  async::Loop loop_ __TA_GUARDED(device_lock_);
   fbl::RefPtr<btlib::testing::FakeController> fake_device_
       __TA_GUARDED(device_lock_);
-  fxl::RefPtr<fxl::TaskRunner> task_runner_ __TA_GUARDED(device_lock_);
 
   std::mutex device_lock_;
 

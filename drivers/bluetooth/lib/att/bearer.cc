@@ -4,10 +4,11 @@
 
 #include "bearer.h"
 
+#include <lib/async/default.h>
+
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace btlib {

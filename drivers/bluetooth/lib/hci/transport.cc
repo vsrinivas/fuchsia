@@ -121,7 +121,7 @@ void Transport::ShutDown() {
       acl_channel_wait_.Cancel();
     }
     if (io_loop_) {
-      io_loop_->Shutdown();
+      io_loop_->Quit();
     }
   });
 

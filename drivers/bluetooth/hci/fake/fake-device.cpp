@@ -7,12 +7,10 @@
 #include <thread>
 
 #include <ddk/protocol/bt-hci.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include "lib/fsl/threading/create_thread.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 
@@ -70,8 +68,6 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  std::thread controller_thread = fsl::CreateThread(&task_runner_, "bthci-fake");
-
   FakeController::Settings settings;
   settings.ApplyLEOnlyDefaults();
   std::lock_guard<std::mutex> lock(device_lock_);
@@ -93,7 +89,8 @@ zx_status_t Device::Bind() {
   device->SetAdvertisingData(kAdvData0);
   fake_device_->AddLEDevice(std::move(device));
 
-  controller_thread.detach();
+  loop_.StartThread("bthci-fake");
+
   return status;
 }
 
@@ -101,10 +98,13 @@ void Device::Release() { delete this; }
 
 void Device::Unbind() {
   std::lock_guard<std::mutex> lock(device_lock_);
-  task_runner_->PostTask([fake_dev = fake_device_] {
+  async::PostTask(loop_.async(), [loop = &loop_, fake_dev = fake_device_] {
     fake_dev->Stop();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+    loop->Quit();
   });
+
+  loop_.JoinThreads();
+
   device_remove(zxdev_);
 }
 
@@ -137,15 +137,15 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t* out_channel) {
   std::lock_guard<std::mutex> lock(device_lock_);
 
   if (chan_type == Channel::COMMAND) {
-    task_runner_->PostTask(fxl::MakeCopyable(
-        [device = fake_device_, in = std::move(in)]() mutable {
-          device->StartCmdChannel(std::move(in));
-        }));
+    async::PostTask(loop_.async(),
+                    [device = fake_device_, in = std::move(in)]() mutable {
+                      device->StartCmdChannel(std::move(in));
+                    });
   } else if (chan_type == Channel::ACL) {
-    task_runner_->PostTask(fxl::MakeCopyable(
-        [device = fake_device_, in = std::move(in)]() mutable {
-          device->StartAclChannel(std::move(in));
-        }));
+    async::PostTask(loop_.async(),
+                    [device = fake_device_, in = std::move(in)]() mutable {
+                      device->StartAclChannel(std::move(in));
+                    });
   } else {
     return ZX_ERR_NOT_SUPPORTED;
   }

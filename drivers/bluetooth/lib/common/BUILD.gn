@@ -6,8 +6,6 @@ source_set("common") {
   sources = [
     "byte_buffer.cc",
     "byte_buffer.h",
-    "create_thread.cc",
-    "create_thread.h",
     "device_address.cc",
     "device_address.h",
     "device_class.cc",

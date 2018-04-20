@@ -92,9 +92,8 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   // The GATT profile.
   fbl::RefPtr<btlib::gatt::GATT> gatt_;
 
-  // All currently active FIDL connections. These involve FIDL bindings that are
-  // bound to |task_runner_|. These objects are highly thread hostile and must
-  // be accessed only from |task_runner_|'s thread.
+  // All currently active FIDL connections. These objects are thread hostile and
+  // must be accessed only via the TaskDomain dispatcher.
   std::unordered_map<GattServerServer*, std::unique_ptr<GattServerServer>>
       server_servers_;
 

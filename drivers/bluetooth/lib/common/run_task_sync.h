@@ -11,9 +11,9 @@
 namespace btlib {
 namespace common {
 
-// Posts |callback| on |task_runner| and waits for it to finish running.
+// Posts |callback| on |dispatcher| and waits for it to finish running.
 // |callback| will always finish running before this function returns.
-// |task_runner| cannot be bound to the thread on which this function gets
+// |dispatcher| cannot be bound to the thread on which this function gets
 // called.
 //
 // NOTE: This should generally be avoided. This is primarily intended for

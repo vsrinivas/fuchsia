@@ -5,7 +5,6 @@
 #include "task_domain.h"
 
 #include <fbl/ref_counted.h>
-#include <lib/async-loop/cpp/loop.h>
 
 #include "gtest/gtest.h"
 
