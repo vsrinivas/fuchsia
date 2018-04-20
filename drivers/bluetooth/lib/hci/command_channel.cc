@@ -538,6 +538,8 @@ void CommandChannel::OnChannelReady(
     async::WaitBase* wait,
     zx_status_t status,
     const zx_packet_signal_t* signal) {
+
+  FXL_DCHECK(async_get_default() == io_dispatcher_);
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   if (status != ZX_OK) {

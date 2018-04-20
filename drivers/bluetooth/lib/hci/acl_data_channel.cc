@@ -201,7 +201,7 @@ size_t ACLDataChannel::GetBufferMTU(Connection::LinkType ll_type) const {
 
 void ACLDataChannel::NumberOfCompletedPacketsCallback(
     const EventPacket& event) {
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(async_get_default() == io_dispatcher_);
   FXL_DCHECK(event.event_code() == kNumberOfCompletedPacketsEventCode);
 
   const auto& payload =
@@ -385,7 +385,7 @@ void ACLDataChannel::OnChannelReady(
     return;
   }
 
-  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(async_get_default() == io_dispatcher_);
   FXL_DCHECK(signal->observed & ZX_CHANNEL_READABLE);
 
   std::lock_guard<std::mutex> lock(rx_mutex_);
