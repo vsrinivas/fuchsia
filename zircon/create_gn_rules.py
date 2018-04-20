@@ -207,7 +207,7 @@ def generate_compiled_library(package, context):
         (name, path) = libs.items()[0]
         (file, _) = extract_file(name, path, context)
         data.prebuilt = '//%s' % file
-        data.lib_name = os.path.basename(file)
+        data.lib_name = os.path.basename(name)
     # TODO(jamesr): Delete the == 2 path once Zircon rolls up through all layers
     elif len(libs) == 2 or len(libs) == 3:
         # Shared library.
