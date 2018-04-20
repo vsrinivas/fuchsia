@@ -5,7 +5,6 @@
 #include <chrono>
 #include <thread>
 
-#include "magma_util/sleep.h"
 #include "platform_futex.h"
 #include "gtest/gtest.h"
 
@@ -50,7 +49,7 @@ public:
                 thread.join();
                 break;
             }
-            magma::msleep(1);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         EXPECT_LT(retry, max_retry);

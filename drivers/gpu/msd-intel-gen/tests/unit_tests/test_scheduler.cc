@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_bus_mapper.h"
 #include "mock/mock_mapped_batch.h"

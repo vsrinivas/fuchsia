@@ -7,13 +7,13 @@
 #include "device_id.h"
 #include "instructions.h"
 #include "magma_util/macros.h"
-#include "magma_util/sleep.h"
 #include "msd_intel_buffer.h"
 #include "msd_intel_connection.h"
 #include "platform_trace.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
+#include <thread>
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base)
@@ -461,14 +461,14 @@ bool EngineCommandStreamer::Reset()
             do {
                 if (registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), engine))
                     return true;
-                magma::msleep(kRetryMs);
+                std::this_thread::sleep_for(std::chrono::milliseconds(kRetryMs));
                 elapsed = std::chrono::high_resolution_clock::now() - start;
 
             } while (elapsed.count() < kRetryTimeoutMs);
 
             return DRETF(false, "reset failed to complete");
         }
-        magma::msleep(kRetryMs);
+        std::this_thread::sleep_for(std::chrono::milliseconds(kRetryMs));
         elapsed = std::chrono::high_resolution_clock::now() - start;
 
     } while (elapsed.count() < kRetryTimeoutMs);

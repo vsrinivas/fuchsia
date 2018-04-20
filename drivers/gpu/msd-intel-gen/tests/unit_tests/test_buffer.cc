@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "gpu_mapping_cache.h"
-#include "magma_util/sleep.h"
 #include "mock/mock_address_space.h"
 #include "mock/mock_bus_mapper.h"
 #include "msd_intel_buffer.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 class TestMsdIntelBuffer {
 public:
@@ -280,11 +280,11 @@ public:
             },
             buffer.get(), &val);
 
-        magma::msleep(1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         ++val;
         buffer->DecrementInflightCounter();
 
-        magma::msleep(1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         ++val;
         buffer->DecrementInflightCounter();
 

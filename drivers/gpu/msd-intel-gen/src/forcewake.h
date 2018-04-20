@@ -7,8 +7,8 @@
 
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
-#include "magma_util/sleep.h"
 #include "registers.h"
+#include <thread>
 
 class ForceWake {
 public:
@@ -43,7 +43,7 @@ private:
             status = registers::ForceWake::read_status(reg_io, domain);
             if (((status >> kThreadShift) & 1) == (set ? 1 : 0))
                 return;
-            magma::msleep(1);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
             DLOG("forcewake wait retrying");
         }
         DLOG("timed out waiting for forcewake, status 0x%x", status);
