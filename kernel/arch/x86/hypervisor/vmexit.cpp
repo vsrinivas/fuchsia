@@ -35,23 +35,25 @@
 
 #define LOCAL_TRACE 0
 
-static const uint64_t kLocalApicPhysBase =
+static constexpr uint64_t kLocalApicPhysBase =
     APIC_PHYS_BASE | IA32_APIC_BASE_XAPIC_ENABLE | IA32_APIC_BASE_X2APIC_ENABLE;
 
-static const uint64_t kX2ApicMsrBase = 0x800;
-static const uint64_t kX2ApicMsrMax = 0x83f;
+static constexpr uint64_t kX2ApicMsrBase = 0x800;
+static constexpr uint64_t kX2ApicMsrMax = 0x83f;
 
-static const uint64_t kMiscEnableFastStrings = 1u << 0;
+static constexpr uint64_t kMiscEnableFastStrings = 1u << 0;
 
-static const uint32_t kFirstExtendedStateComponent = 2;
-static const uint32_t kLastExtendedStateComponent = 9;
+static constexpr uint32_t kFirstExtendedStateComponent = 2;
+static constexpr uint32_t kLastExtendedStateComponent = 9;
 // From Volume 1, Section 13.4.
-static const uint32_t kXsaveLegacyRegionSize = 512;
-static const uint32_t kXsaveHeaderSize = 64;
+static constexpr uint32_t kXsaveLegacyRegionSize = 512;
+static constexpr uint32_t kXsaveHeaderSize = 64;
 
-static const char kHypVendorId[] = "KVMKVMKVM\0\0\0";
-static const size_t kHypVendorIdLength = 12;
+static constexpr char kHypVendorId[] = "KVMKVMKVM\0\0\0";
+static constexpr size_t kHypVendorIdLength = 12;
 static_assert(sizeof(kHypVendorId) - 1 == kHypVendorIdLength, "");
+
+static constexpr uint64_t kKvmFeatureNoIoDelay = 1u << 1;
 
 extern "C" void x86_call_external_interrupt_handler(uint64_t vector);
 
@@ -278,7 +280,8 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
     }
     case X86_CPUID_KVM_FEATURES:
         // We support KVM clock.
-        guest_state->rax = kKvmFeatureClockSourceOld | kKvmFeatureClockSource;
+        guest_state->rax =
+            kKvmFeatureClockSourceOld | kKvmFeatureClockSource | kKvmFeatureNoIoDelay;
         guest_state->rbx = 0;
         guest_state->rcx = 0;
         guest_state->rdx = 0;
