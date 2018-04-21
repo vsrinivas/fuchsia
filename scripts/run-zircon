@@ -355,7 +355,7 @@ case $ARCH in
         ARGS+=" -machine q35 -kernel $BUILDDIR/zircon.bin"
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
         if (( $DO_KVM )); then
-          ARGS+=" -enable-kvm -cpu host,migratable=no"
+          ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
         else
           ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
         fi
