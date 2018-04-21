@@ -19,8 +19,7 @@
 
 namespace {
 
-constexpr char kModuleUrl[] =
-    "file:///system/test/modular_tests/common_null_module";
+constexpr char kModuleUrl[] = "common_null_module";
 
 // A simple link watcher implementation allows to specify the actual
 // notification callback as a lambda and update it dynamically.

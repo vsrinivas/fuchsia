@@ -1,0 +1,6 @@
+{
+  "binary": "common_done_module",
+  "suggestion_headline": "Done module",
+  "action": "com.google.fuchsia.common.done",
+  "composition_pattern": "ticker"
+}

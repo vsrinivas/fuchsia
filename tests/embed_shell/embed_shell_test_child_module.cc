@@ -14,8 +14,7 @@ using modular::testing::TestPoint;
 namespace {
 
 constexpr char kChildModuleName[] = "child";
-constexpr char kChildModuleUrl[] =
-    "file:///system/test/modular_tests/common_null_module";
+constexpr char kChildModuleUrl[] = "common_null_module";
 
 class ChildApp : modular::ModuleWatcher {
  public:

@@ -26,10 +26,8 @@
 
 namespace {
 
-constexpr char kDoneModuleUrl[] =
-    "file:///system/test/modular_tests/common_done_module";
-constexpr char kNullModuleUrl[] =
-    "file:///system/test/modular_tests/common_null_module";
+constexpr char kDoneModuleUrl[] = "common_done_module";
+constexpr char kNullModuleUrl[] = "common_null_module";
 
 class Settings {
  public:

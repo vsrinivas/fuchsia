@@ -46,7 +46,6 @@ package("modular_tests") {
     ":run_modular_tests.sh",
     "chain",
     "clipboard",
-    "common",
     "component_context",
     "context_link",
     "dev_token_manager",
@@ -89,14 +88,6 @@ package("modular_tests") {
     {
       name = "clipboard_test_module"
       dest = "modular_tests/clipboard_test_module"
-    },
-    {
-      name = "common_done_module"
-      dest = "modular_tests/common_done_module"
-    },
-    {
-      name = "common_null_module"
-      dest = "modular_tests/common_null_module"
     },
     {
       name = "component_context_test_module"

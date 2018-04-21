@@ -3,6 +3,9 @@
         "peridot/packages/prod/modular"
     ],
     "packages": {
+        "common_done_module": "//peridot/tests/common:common_done_module",
+        "common_module_index": "//peridot/tests/common:common_module_index",
+        "common_null_module": "//peridot/tests/common:common_null_module",
         "dev_device_shell": "//peridot/bin/device_runner:dev_device_shell",
         "dev_story_shell": "//peridot/bin/story_runner:dev_story_shell",
         "dev_user_shell": "//peridot/bin/user_runner:dev_user_shell",

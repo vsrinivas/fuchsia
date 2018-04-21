@@ -2,21 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
+import("//peridot/build/module_manifest.gni")
+
 group("common") {
   testonly = true
 
   public_deps = [
-    ":common_done_module",
-    ":common_null_module",
+    ":common_done_module_bin",
+    ":common_null_module_bin",
   ]
 }
 
-executable("common_done_module") {
+executable("common_done_module_bin") {
   testonly = true
+
+  output_name = "common_done_module"
 
   sources = [
     "common_done_module.cc",
   ]
+
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
@@ -26,17 +32,73 @@ executable("common_done_module") {
   ]
 }
 
-executable("common_null_module") {
+verify_module_manifest("common_done_module_manifest_verified") {
+  module_manifest = "common_done_module_manifest.json"
+  original_target_name = "common_done_module_manifest.json"
+}
+
+package("common_done_module") {
   testonly = true
+
+  deps = [
+    ":common_done_module_bin",
+    ":common_done_module_manifest_verified",
+  ]
+
+  binary = "common_done_module"
+
+  meta = [
+    {
+       path = rebase_path("common_done_module_manifest.json")
+       dest = "module.json"
+    },
+  ]
+}
+
+executable("common_null_module_bin") {
+  testonly = true
+
+  output_name = "common_null_module"
 
   sources = [
     "common_null_module.cc",
   ]
+
   deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/views/fidl:v1",
     "//peridot/lib/testing",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+verify_module_manifest("common_null_module_manifest_verified") {
+  module_manifest = "common_null_module_manifest.json"
+  original_target_name = "common_null_module_manifest.json"
+}
+
+package("common_null_module") {
+  testonly = true
+
+  deps = [
+    ":common_null_module_bin",
+    ":common_null_module_manifest_verified",
+  ]
+
+  binary = "common_null_module"
+
+  meta = [
+    {
+       path = rebase_path("common_null_module_manifest.json")
+       dest = "module.json"
+    },
+  ]
+}
+
+initial_module_packages("common_module_index") {
+  packages = [
+    "common_null_module",
+    "common_done_module",
   ]
 }
