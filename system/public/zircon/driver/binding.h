@@ -246,8 +246,8 @@ zx_driver_rec_t __zircon_driver_rec__ __EXPORT = {\
     /* .log_flags = */ 7, /* DDK_LOG_ERROR | DDK_LOG_WARN | DDK_LOG_INFO */\
 };\
 extern const struct zircon_driver_note __zircon_driver_note__ __EXPORT;\
-__SECTION(".note.zircon.driver." #Driver) ZIRCON_DRIVER_NOTE_ASAN \
-alignas(4) const struct zircon_driver_note {\
+alignas(4) __SECTION(".note.zircon.driver." #Driver) ZIRCON_DRIVER_NOTE_ASAN \
+const struct zircon_driver_note {\
     zircon_driver_note_t note;\
     zx_bind_inst_t binding[BindCount];\
 } __zircon_driver_note__ = {\
