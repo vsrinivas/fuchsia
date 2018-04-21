@@ -6,7 +6,6 @@
 
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/mlme/enum.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/macaddr_map.h>
 
