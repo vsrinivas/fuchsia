@@ -102,7 +102,7 @@ def check_all(directory, dep_map, layer, is_root=True):
         for file in filenames:
             if is_root and (file in ROOT_CANONICAL_PACKAGES or file == layer):
                 continue
-            if file in CANONICAL_PACKAGES:
+            if file in CANONICAL_PACKAGES or file in NON_PACKAGE_FILES:
                 continue
             package = os.path.join(dirpath, file)
             if not verify(package):
