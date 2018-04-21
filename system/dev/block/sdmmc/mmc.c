@@ -65,7 +65,6 @@ static zx_status_t mmc_set_bus_width(sdmmc_device_t* dev, sdmmc_bus_width_t bus_
             return ZX_ERR_INTERNAL;
         }
     }
-
     dev->bus_width = bus_width;
     return ZX_OK;
 }
@@ -75,7 +74,7 @@ static uint8_t mmc_select_bus_width(sdmmc_device_t* dev) {
     uint8_t bus_widths[] = { SDMMC_BUS_WIDTH_8, MMC_EXT_CSD_BUS_WIDTH_8,
                              SDMMC_BUS_WIDTH_4, MMC_EXT_CSD_BUS_WIDTH_4,
                              SDMMC_BUS_WIDTH_1, MMC_EXT_CSD_BUS_WIDTH_1 };
-    for (unsigned i = 0; i < sizeof(bus_widths)/sizeof(unsigned); i += 2) {
+    for (unsigned i = 0; i < (sizeof(bus_widths)/sizeof(uint8_t)); i += 2) {
         if (mmc_set_bus_width(dev, bus_widths[i], bus_widths[i+1]) == ZX_OK) {
             break;
         }

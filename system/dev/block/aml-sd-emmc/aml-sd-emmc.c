@@ -177,18 +177,6 @@ static zx_status_t aml_sd_emmc_set_bus_width(void* ctx, uint32_t bw) {
     return ZX_OK;
 }
 
-static void aml_sd_emmc_hw_reset(void* ctx) {
-    aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
-    if (dev->gpio_count == 1) {
-        //Currently we only have 1 gpio
-        gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
-        gpio_write(&dev->gpio, 0, 0);
-        usleep(10 * 1000);
-        gpio_write(&dev->gpio, 0, 1);
-    }
-    aml_sd_emmc_set_bus_width(ctx, 0);
-}
-
 static zx_status_t aml_sd_emmc_perform_tuning(void* ctx) {
     //TODO: Do the tuning here
     return ZX_OK;
@@ -197,10 +185,8 @@ static zx_status_t aml_sd_emmc_perform_tuning(void* ctx) {
 static zx_status_t aml_sd_emmc_set_bus_freq(void* ctx, uint32_t freq) {
     aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
     aml_sd_emmc_regs_t* regs = dev->regs;
-
     uint32_t clk = 0, clk_src = 0, clk_div = 0;
     uint32_t clk_val = regs->sd_emmc_clock;
-
     uint32_t config = regs->sd_emmc_cfg;
 
     if (freq == 0) {
@@ -230,16 +216,41 @@ static zx_status_t aml_sd_emmc_set_bus_freq(void* ctx, uint32_t freq) {
 
     update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK, AML_SD_EMMC_CLOCK_CFG_DIV_LOC, clk_div);
     update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_SRC_MASK, AML_SD_EMMC_CLOCK_CFG_SRC_LOC, clk_src);
+
+    regs->sd_emmc_clock = clk_val;
+    return ZX_OK;
+}
+
+static void aml_sd_emmc_hw_reset(void* ctx) {
+    aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
+    aml_sd_emmc_regs_t* regs = dev->regs;
+    if (dev->gpio_count == 1) {
+        //Currently we only have 1 gpio
+        gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
+        gpio_write(&dev->gpio, 0, 0);
+        usleep(10 * 1000);
+        gpio_write(&dev->gpio, 0, 1);
+    }
+    uint32_t config = regs->sd_emmc_cfg;
+    uint32_t clk_val = regs->sd_emmc_clock;
+
+    update_bits(&config, AML_SD_EMMC_CFG_BL_LEN_MASK, AML_SD_EMMC_CFG_BL_LEN_LOC, 9);
+    update_bits(&config, AML_SD_EMMC_CFG_RESP_TIMEOUT_MASK, AML_SD_EMMC_CFG_RESP_TIMEOUT_LOC, 8);
+    update_bits(&config, AML_SD_EMMC_CFG_RC_CC_MASK, AML_SD_EMMC_CFG_RC_CC_LOC, 4);
+
     update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_CO_PHASE_MASK,
                 AML_SD_EMMC_CLOCK_CFG_CO_PHASE_LOC, 2);
     update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_RX_PHASE_MASK,
                 AML_SD_EMMC_CLOCK_CFG_RX_PHASE_LOC, 0);
-    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_TX_PHASE_MASK,
-                AML_SD_EMMC_CLOCK_CFG_TX_PHASE_LOC, 2);
+    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_RX_DELAY_MASK, AML_SD_EMMC_CLOCK_CFG_RX_DELAY_LOC,
+                0);
     clk_val |= AML_SD_EMMC_CLOCK_CFG_ALWAYS_ON;
 
     regs->sd_emmc_clock = clk_val;
-    return ZX_OK;
+    regs->sd_emmc_cfg = config;
+
+    aml_sd_emmc_set_bus_width(ctx, SDMMC_BUS_WIDTH_1);
+    aml_sd_emmc_set_bus_freq(ctx, AML_SD_EMMC_MIN_FREQ - 1);
 }
 
 static zx_status_t aml_sd_emmc_set_bus_timing(void* ctx, sdmmc_timing_t timing) {
@@ -247,6 +258,7 @@ static zx_status_t aml_sd_emmc_set_bus_timing(void* ctx, sdmmc_timing_t timing) 
     aml_sd_emmc_regs_t* regs = dev->regs;
 
     uint32_t config = regs->sd_emmc_cfg;
+    uint32_t clk_val = regs->sd_emmc_clock;
 
     if (timing == SDMMC_TIMING_HS400 || timing == SDMMC_TIMING_HSDDR) {
         if (timing == SDMMC_TIMING_HS400) {
@@ -255,11 +267,20 @@ static zx_status_t aml_sd_emmc_set_bus_timing(void* ctx, sdmmc_timing_t timing) 
             config &= ~AML_SD_EMMC_CFG_CHK_DS;
         }
         config |= AML_SD_EMMC_CFG_DDR;
+        uint32_t clk_div = get_bits(clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK,
+                                    AML_SD_EMMC_CLOCK_CFG_DIV_LOC);
+        if (clk_div & 0x01) {
+            clk_div++;
+        }
+        clk_div /= 2;
+        update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK, AML_SD_EMMC_CLOCK_CFG_DIV_LOC,
+                    clk_div);
     } else {
         config &= ~AML_SD_EMMC_CFG_DDR;
     }
 
     regs->sd_emmc_cfg = config;
+    regs->sd_emmc_clock = clk_val;
     return ZX_OK;
 }
 
@@ -288,7 +309,13 @@ zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req) {
         if (!(req->cmd_flags & SDMMC_RESP_CRC_CHECK)){
             cmd |= AML_SD_EMMC_CMD_INFO_RESP_NO_CRC;
         }
+
+        if (req->cmd_flags & SDMMC_RESP_LEN_48B) {
+            cmd |= AML_SD_EMMC_CMD_INFO_R1B;
+        }
+
         desc->resp_addr = (unsigned long)req->response;
+        cmd &= ~AML_SD_EMMC_CMD_INFO_RESP_NUM;
     }
 
     if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
@@ -328,8 +355,9 @@ zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req) {
 
     // TODO(ravoorir): Use DMA descriptors to queue multiple commands
     AML_SD_EMMC_TRACE("SUBMIT cmd_idx: %d cmd_cfg: 0x%x cmd_dat: 0x%x cmd_arg: 0x%x\n",
-                get_bits(cmd, AML_SD_EMMC_CMD_INFO_CMD_IDX_MASK, AML_SD_EMMC_CMD_INFO_CMD_IDX_LOC),
-                desc->cmd_info, desc->data_addr, desc->cmd_arg);
+                       get_bits(cmd, AML_SD_EMMC_CMD_INFO_CMD_IDX_MASK,
+                                AML_SD_EMMC_CMD_INFO_CMD_IDX_LOC),
+                       desc->cmd_info, desc->data_addr, desc->cmd_arg);
     regs->sd_emmc_status = AML_SD_EMMC_IRQ_ALL_CLEAR;
     regs->sd_emmc_cmd_cfg = desc->cmd_info;
     regs->sd_emmc_cmd_dat = desc->data_addr;
@@ -395,7 +423,7 @@ zx_status_t aml_sd_emmc_request(void *ctx, sdmmc_req_t* req) {
     return ZX_OK;
 }
 
-static zx_protocol_device_t dev_device_proto = {
+static zx_protocol_device_t aml_sd_emmc_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = aml_sd_emmc_release,
 };
@@ -443,8 +471,8 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
     }
 
     dev->gpio_count = info.gpio_count;
-    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330 |
-                       SDMMC_HOST_CAP_ADMA2;
+    //TODO(ravoorir): Add DMA capability when DMA descriptors are supported
+    dev->info.caps = SDMMC_HOST_CAP_BUS_WIDTH_8 | SDMMC_HOST_CAP_VOLTAGE_330;
     //TODO(ravoorir): This is set arbitrarily for now.
     //Set it to max num of DMA desc * PAGE_SIZE  when implementing DMA descriptors
     dev->info.max_transfer_size = 2 * PAGE_SIZE;
@@ -473,7 +501,7 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "aml-sd-emmc",
         .ctx = dev,
-        .ops = &dev_device_proto,
+        .ops = &aml_sd_emmc_device_proto,
         .proto_id = ZX_PROTOCOL_SDMMC,
         .proto_ops = &aml_sdmmc_proto,
     };
@@ -483,7 +511,6 @@ static zx_status_t aml_sd_emmc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
     return ZX_OK;
-
 fail:
     aml_sd_emmc_release(dev);
     return status;
