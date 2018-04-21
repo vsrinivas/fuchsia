@@ -1,5 +1,6 @@
 {
   "binary": "common_null_module",
   "suggestion_headline": "Null module",
-  "action": "com.google.fuchsia.common.null"
+  "action": "com.google.fuchsia.common.null",
+  "composition_pattern": "ticker"
 }
