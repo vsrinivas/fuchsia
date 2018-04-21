@@ -55,7 +55,15 @@
 
 // A Zircon Partition Map
 // Content: bootdata_partition_map_t
+// The bootdata_t.extra field is used as a board specific index
+// to specify which device the partition map applies to.
 #define BOOTDATA_PARTITION_MAP    (0x54524150) // PART
+
+// MAC Address for Ethernet, Wifi, Bluetooth, etc.
+// Content: uint8_t[] (variable length based on type of MAC address)
+// The bootdata_t.extra field is used as a board specific index
+// to specify which device the MAC address applies to.
+#define BOOTDATA_MAC_ADDRESS      (0x4142414D) // MACA
 
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
@@ -196,12 +204,8 @@ typedef struct {
 typedef struct {
     uint64_t block_count;
     uint64_t block_size;
-    // pdev_vid/pid/did are used to match partition map to
-    // appropriate block device on the platform bus
-    uint32_t pdev_vid;
-    uint32_t pdev_pid;
-    uint32_t pdev_did;
     uint32_t partition_count;
+    uint32_t reserved;
     char guid[BOOTDATA_PART_GUID_LEN];
     bootdata_partition_t partitions[];
 } bootdata_partition_map_t;
