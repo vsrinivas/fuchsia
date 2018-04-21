@@ -21,6 +21,7 @@ executable("escher_unittests") {
     "util/hash_unittest.cc",
     "util/hashable_unittest.cc",
     "util/hashmap_unittest.cc",
+    "util/object_pool_unittest.cc",
     "vk/buffer_unittest.cc",
     "vk/shader_module_template_unittest.cc",
   ]

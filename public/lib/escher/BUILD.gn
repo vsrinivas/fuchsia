@@ -251,6 +251,7 @@ source_set("escher") {
     "util/hash_map.h",
     "util/image_utils.cc",
     "util/image_utils.h",
+    "util/object_pool.h",
     "util/stopwatch.h",
     "util/trace_macros.h",
     "vk/buffer.cc",
