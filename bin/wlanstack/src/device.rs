@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async;
 use failure::Error;
 use futures::prelude::*;
 use futures::{future, stream};
@@ -16,6 +17,7 @@ use std::fs::File;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{thread, time};
 
 struct PhyDevice {
     id: u16,
@@ -24,10 +26,28 @@ struct PhyDevice {
 }
 
 impl PhyDevice {
-    fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, Error> {
+    fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, zx::Status> {
         let dev = wlan_dev::Device::new(path)?;
         let proxy = wlan_dev::connect_wlan_phy(&dev)?;
         Ok(PhyDevice { id, proxy, dev })
+    }
+}
+
+struct IfaceDevice {
+    id: u16,
+    _proxy: async::Channel,
+    _dev: wlan_dev::Device,
+}
+
+impl IfaceDevice {
+    fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, zx::Status> {
+        let dev = wlan_dev::Device::new(path)?;
+        let proxy = wlan_dev::connect_wlan_iface(&dev)?;
+        Ok(IfaceDevice {
+            id,
+            _proxy: proxy,
+            _dev: dev,
+        })
     }
 }
 
@@ -55,6 +75,7 @@ pub type DevMgrRef = Arc<Mutex<DeviceManager>>;
 /// Manages the wlan devices used by the wlanstack.
 pub struct DeviceManager {
     phys: HashMap<u16, PhyDevice>,
+    ifaces: HashMap<u16, IfaceDevice>,
     listeners: Vec<Box<EventListener>>,
 }
 
@@ -63,6 +84,7 @@ impl DeviceManager {
     pub fn new() -> Self {
         DeviceManager {
             phys: HashMap::new(),
+            ifaces: HashMap::new(),
             listeners: Vec::new(),
         }
     }
@@ -80,14 +102,15 @@ impl DeviceManager {
             .retain(|listener| listener.on_phy_removed(id).is_ok());
     }
 
-    fn add_iface(&mut self, id: u16) {
-        // TODO(tkilbourn): store iface devices in the SME
+    fn add_iface(&mut self, iface: IfaceDevice) {
+        let id = iface.id;
+        self.ifaces.insert(iface.id, iface);
         self.listeners
             .retain(|listener| listener.on_iface_added(id).is_ok());
     }
 
     fn rm_iface(&mut self, id: u16) {
-        // TODO(tkilbourn): remove iface devices from the SME
+        self.ifaces.remove(&id);
         self.listeners
             .retain(|listener| listener.on_iface_removed(id).is_ok());
     }
@@ -261,7 +284,20 @@ pub fn new_iface_watcher<P: AsRef<Path>>(
         |devmgr, path| {
             info!("found iface at {}", path.to_string_lossy());
             let id = u16::from_str(&path.file_name().unwrap().to_string_lossy()).unwrap();
-            devmgr.lock().add_iface(id);
+
+            // Temporarily delay opening the iface since only one service may open a channel to a
+            // device at a time. If the legacy wlantack is running, it should take priority. For
+            // development of wlanstack2, kill the wlanstack process first to let wlanstack2 take
+            // over.
+            debug!("sleeping 100ms...");
+            let open_delay = time::Duration::from_millis(100);
+            thread::sleep(open_delay);
+
+            match IfaceDevice::new(id, path) {
+                Ok(dev) => devmgr.lock().add_iface(dev),
+                Err(zx::Status::ALREADY_BOUND) => info!("iface already open, deferring"),
+                Err(e) => error!("could not open iface: {:?}", e),
+            }
         },
         |devmgr, path| {
             info!("removing iface at {}", path.to_string_lossy());
