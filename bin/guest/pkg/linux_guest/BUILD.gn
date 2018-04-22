@@ -62,7 +62,7 @@ guest_package("linux_guest") {
   if (target_cpu == "arm64") {
     cmdline = "earlycon=pl011,0xfff32000"
   } else if (target_cpu == "x64") {
-    cmdline = "earlycon=uart,io,0x3f8 io_delay=none"
+    cmdline = "earlycon=uart,io,0x3f8"
   }
   cmdline += " console=hvc0 console=tty0"
 
