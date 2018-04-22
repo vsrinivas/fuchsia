@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/synchronization/sleep.h"
 
 namespace btlib {

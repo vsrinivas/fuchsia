@@ -6,8 +6,6 @@ source_set("threading") {
   visibility = [ "//garnet/public/lib/fsl/*" ]
 
   sources = [
-    "create_thread.cc",
-    "create_thread.h",
     "thread.cc",
     "thread.h",
   ]

@@ -49,7 +49,6 @@ executable("fsl_unittests") {
     "syslogger/init_unittest.cc",
     "tasks/fd_waiter_unittest.cc",
     "tasks/message_loop_unittest.cc",
-    "threading/create_thread_unittest.cc",
     "threading/thread_unittest.cc",
     "types/type_converters_unittest.cc",
     "vmo/file_unittest.cc",

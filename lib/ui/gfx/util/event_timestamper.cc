@@ -5,7 +5,6 @@
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
 
 #include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/create_thread.h"
 
 namespace scenic {
 namespace gfx {

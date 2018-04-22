@@ -12,7 +12,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_controller.h"
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
