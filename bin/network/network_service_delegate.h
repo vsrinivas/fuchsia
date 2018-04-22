@@ -14,7 +14,7 @@ namespace network {
 
 class NetworkServiceDelegate {
  public:
-  NetworkServiceDelegate();
+  NetworkServiceDelegate(async_t* dispatcher);
   ~NetworkServiceDelegate();
 
  private:

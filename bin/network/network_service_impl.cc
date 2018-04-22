@@ -5,7 +5,10 @@
 #include "network_service_impl.h"
 
 #include <utility>
+
 #include <fdio/limits.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/network/net_adapters.h"
 #include "garnet/bin/network/net_errors.h"
@@ -14,8 +17,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
-#include "lib/fsl/threading/thread.h"
 
 namespace network {
 
@@ -36,11 +37,13 @@ class NetworkServiceImpl::UrlLoaderContainer
     : public URLLoaderImpl::Coordinator {
  public:
   UrlLoaderContainer(URLLoaderImpl::Coordinator* top_coordinator,
+                     async_t* main_dispatcher,
                      fidl::InterfaceRequest<URLLoader> request)
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
-        main_task_runner_(fsl::MessageLoop::GetCurrent()->task_runner()),
+        main_dispatcher_(main_dispatcher),
         weak_ptr_factory_(this) {
+    FXL_DCHECK(main_dispatcher_);
     weak_ptr_ = weak_ptr_factory_.GetWeakPtr();
   }
 
@@ -48,9 +51,8 @@ class NetworkServiceImpl::UrlLoaderContainer
 
   void Start() {
     stopped_ = false;
-    thread_.Run();
-    io_task_runner_ = thread_.TaskRunner();
-    io_task_runner_->PostTask([this] { StartOnIOThread(); });
+    io_loop_.StartThread();
+    async::PostTask(io_loop_.async(), [this] { StartOnIOThread(); });
   }
 
   void set_on_done(fxl::Closure on_done) { on_done_ = std::move(on_done); }
@@ -60,7 +62,7 @@ class NetworkServiceImpl::UrlLoaderContainer
   void RequestNetworkSlot(
       std::function<void(fxl::Closure)> slot_request) override {
     // On IO Thread.
-    main_task_runner_->PostTask(
+    async::PostTask(main_dispatcher_,
         [ weak_this = weak_ptr_, slot_request = std::move(slot_request) ] {
           // On Main Thread.
           if (!weak_this)
@@ -74,13 +76,13 @@ class NetworkServiceImpl::UrlLoaderContainer
               return;
             }
             weak_this->on_inactive_ = std::move(on_inactive);
-            weak_this->io_task_runner_->PostTask([
-              weak_this, main_task_runner = weak_this->main_task_runner_,
+            async::PostTask(weak_this->io_loop_.async(), [
+              weak_this, main_dispatcher = weak_this->main_dispatcher_,
               slot_request = std::move(slot_request)
             ] {
               // On IO Thread.
-              slot_request([weak_this, main_task_runner]() {
-                main_task_runner->PostTask([weak_this]() {
+              slot_request([weak_this, main_dispatcher]() {
+                async::PostTask(main_dispatcher, [weak_this]() {
                   // On Main Thread.
                   if (!weak_this)
                     return;
@@ -99,7 +101,7 @@ class NetworkServiceImpl::UrlLoaderContainer
     if (joined_)
       return;
     joined_ = true;
-    thread_.Join();
+    io_loop_.JoinThreads();
     if (on_inactive_)
       on_inactive_();
     if (on_done_)
@@ -110,7 +112,7 @@ class NetworkServiceImpl::UrlLoaderContainer
     if (stopped_)
       return;
     stopped_ = true;
-    io_task_runner_->PostTask([this] { StopOnIOThread(); });
+    async::PostTask(io_loop_.async(), [this] { StopOnIOThread(); });
   }
 
   void StartOnIOThread() {
@@ -123,8 +125,8 @@ class NetworkServiceImpl::UrlLoaderContainer
   void StopOnIOThread() {
     binding_.reset();
     url_loader_.reset();
-    fsl::MessageLoop::GetCurrent()->QuitNow();
-    main_task_runner_->PostTask([this] { JoinAndNotify(); });
+    io_loop_.Quit();
+    async::PostTask(main_dispatcher_, [this] { JoinAndNotify(); });
   }
 
   // This is set on the constructor, and then accessed on the io thread.
@@ -134,13 +136,11 @@ class NetworkServiceImpl::UrlLoaderContainer
   URLLoaderImpl::Coordinator* top_coordinator_;
   fxl::Closure on_inactive_;
   fxl::Closure on_done_;
-  fsl::Thread thread_;
   bool stopped_ = true;
   bool joined_ = false;
 
-  // There are thread-safe.
-  fxl::RefPtr<fxl::TaskRunner> main_task_runner_;
-  fxl::RefPtr<fxl::TaskRunner> io_task_runner_;
+  async_t* const main_dispatcher_;
+  async::Loop io_loop_;
 
   // The binding and the implementation can only be accessed on the io thread.
   std::unique_ptr<fidl::Binding<URLLoader>> binding_;
@@ -155,7 +155,10 @@ class NetworkServiceImpl::UrlLoaderContainer
   FXL_DISALLOW_COPY_AND_ASSIGN(UrlLoaderContainer);
 };
 
-NetworkServiceImpl::NetworkServiceImpl() : available_slots_(kMaxSlots) {}
+NetworkServiceImpl::NetworkServiceImpl(async_t* dispatcher)
+  : dispatcher_(dispatcher), available_slots_(kMaxSlots) {
+  FXL_DCHECK(dispatcher_);
+}
 
 NetworkServiceImpl::~NetworkServiceImpl() = default;
 
@@ -166,7 +169,7 @@ void NetworkServiceImpl::AddBinding(
 
 void NetworkServiceImpl::CreateURLLoader(
     fidl::InterfaceRequest<URLLoader> request) {
-  loaders_.emplace_back(this, std::move(request));
+  loaders_.emplace_back(this, dispatcher_, std::move(request));
   UrlLoaderContainer* container = &loaders_.back();
   container->set_on_done([this, container] {
     loaders_.erase(std::find_if(loaders_.begin(), loaders_.end(),

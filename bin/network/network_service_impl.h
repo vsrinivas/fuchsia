@@ -5,23 +5,24 @@
 #ifndef GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 #define GARNET_BIN_NETWORK_NETWORK_SERVICE_IMPL_H_
 
-#include <lib/zx/channel.h>
-
 #include <list>
 #include <queue>
+
+#include <fuchsia/cpp/network.h>
+#include <lib/async/dispatcher.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/network/url_loader_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fxl/functional/closure.h"
-#include <fuchsia/cpp/network.h>
 
 namespace network {
 
 class NetworkServiceImpl : public NetworkService,
                            public URLLoaderImpl::Coordinator {
  public:
-  NetworkServiceImpl();
+  NetworkServiceImpl(async_t* dispatcher);
   ~NetworkServiceImpl() override;
 
   void AddBinding(fidl::InterfaceRequest<NetworkService> request);
@@ -40,6 +41,7 @@ class NetworkServiceImpl : public NetworkService,
 
   void OnSlotReturned();
 
+  async_t* const dispatcher_;
   size_t available_slots_;
   fidl::BindingSet<NetworkService> bindings_;
   std::list<UrlLoaderContainer> loaders_;
