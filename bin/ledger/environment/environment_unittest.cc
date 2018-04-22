@@ -4,14 +4,15 @@
 
 #include "peridot/bin/ledger/environment/environment.h"
 
+#include <lib/async-loop/cpp/loop.h>
+
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 
 namespace ledger {
 namespace {
 
 TEST(Environment, InitializationOfAsync) {
-  fsl::MessageLoop loop;
+  async::Loop loop;
   Environment env(loop.async());
 
   EXPECT_EQ(loop.async(), env.async());
