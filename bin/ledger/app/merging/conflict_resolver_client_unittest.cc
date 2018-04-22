@@ -12,7 +12,6 @@
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
@@ -90,8 +89,10 @@ class ConflictResolverClientTest : public test::TestWithPageStorage {
 class ConflictResolverImpl : public ConflictResolver {
  public:
   explicit ConflictResolverImpl(
-      fidl::InterfaceRequest<ConflictResolver> request)
-      : binding_(this, std::move(request)) {
+      fidl::InterfaceRequest<ConflictResolver> request,
+      fxl::Closure quit_callback)
+      : binding_(this, std::move(request)),
+        quit_callback_(std::move(quit_callback)) {
     binding_.set_error_handler([this] { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
@@ -129,10 +130,11 @@ class ConflictResolverImpl : public ConflictResolver {
     requests.emplace_back(std::move(left_version), std::move(right_version),
                           std::move(common_version),
                           std::move(result_provider));
-    fsl::MessageLoop::GetCurrent()->PostQuitTask();
+    quit_callback_();
   }
 
   fidl::Binding<ConflictResolver> binding_;
+  fxl::Closure quit_callback_;
 };
 
 TEST_F(ConflictResolverClientTest, Error) {
@@ -145,7 +147,7 @@ TEST_F(ConflictResolverClientTest, Error) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest());
+      conflict_resolver_ptr.NewRequest(), [this] {message_loop_.QuitNow(); });
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -201,7 +203,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest());
+      conflict_resolver_ptr.NewRequest(), [this] { message_loop_.QuitNow(); });
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -280,7 +282,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
   ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest());
+      conflict_resolver_ptr.NewRequest(), [this] { message_loop_.QuitNow(); });
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 

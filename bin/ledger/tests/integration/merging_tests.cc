@@ -431,7 +431,7 @@ TEST_P(MergingIntegrationTest, Merging) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -440,7 +440,7 @@ TEST_P(MergingIntegrationTest, Merging) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -526,7 +526,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   ledger::ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
       ledger::MergePolicy::CUSTOM, resolver_factory_ptr.NewRequest(),
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+      [this] { message_loop_.QuitNow(); });
   resolver_factory->set_use_dummy_resolver(true);
   ledger::LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(
@@ -540,7 +540,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -549,7 +549,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -613,7 +613,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   resolver_factory_ptr = nullptr;  // Suppress misc-use-after-move.
   resolver_factory = std::make_unique<TestConflictResolverFactory>(
       ledger::MergePolicy::LAST_ONE_WINS, resolver_factory_ptr.NewRequest(),
-      [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+      [this] { message_loop_.QuitNow(); });
   ledger_ptr->SetConflictResolverFactory(
       std::move(resolver_factory_ptr),
       [](ledger::Status status) { EXPECT_EQ(ledger::Status::OK, status); });
@@ -755,7 +755,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page1->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1210,7 +1210,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot;
   page1->GetSnapshot(
       snapshot.NewRequest(), nullptr, std::move(watcher_ptr),
@@ -1874,7 +1874,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   // Watch for the change.
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page1->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher_ptr),

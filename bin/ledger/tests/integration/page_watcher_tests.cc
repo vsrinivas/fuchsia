@@ -13,7 +13,6 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/time/time_delta.h"
@@ -70,7 +69,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -127,7 +126,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   auto instance = NewLedgerAppInstance();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   {
     ledger::PagePtr page = instance->GetTestPage();
@@ -160,7 +159,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
 
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -202,7 +201,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -261,7 +260,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -320,7 +319,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -350,7 +349,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -394,7 +393,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -403,7 +402,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -451,7 +450,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("Bob", ToString(change.changed_entries->at(0).value));
 
   async::PostDelayedTask(async_get_default(),
-                         [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); },
+                         [this] { message_loop_.QuitNow(); },
                          zx::sec(1));
   fsl::MessageLoop::GetCurrent()->Run();
   // A merge happens now. Only the first watcher should see a change.
@@ -470,7 +469,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   ledger::PageSnapshotPtr snapshot;
   page->GetSnapshot(
@@ -501,7 +500,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
   ledger::PageWatcherPtr watcher1_ptr;
   Watcher watcher1(watcher1_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot1;
   page1->GetSnapshot(
       snapshot1.NewRequest(), nullptr, std::move(watcher1_ptr),
@@ -510,7 +509,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
 
   ledger::PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(),
-                   [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                   [this] { message_loop_.QuitNow(); });
   ledger::PageSnapshotPtr snapshot2;
   page2->GetSnapshot(
       snapshot2.NewRequest(), nullptr, std::move(watcher2_ptr),
@@ -641,7 +640,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   auto callback_statusok = [](ledger::Status status) {
     EXPECT_EQ(ledger::Status::OK, status);
@@ -679,7 +678,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   ledger::PagePtr page = instance->GetTestPage();
   ledger::PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(),
-                  [] { fsl::MessageLoop::GetCurrent()->PostQuitTask(); });
+                  [this] { message_loop_.QuitNow(); });
 
   auto callback_statusok = [](ledger::Status status) {
     EXPECT_EQ(ledger::Status::OK, status);

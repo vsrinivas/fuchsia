@@ -4,8 +4,6 @@
 
 #include "peridot/bin/ledger/testing/test_with_coroutines.h"
 
-#include "lib/fsl/tasks/message_loop.h"
-
 namespace test {
 
 namespace {
@@ -17,8 +15,9 @@ namespace {
 // calls |ContinueIfNeeded| when the loop exits.
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
-  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate)
-      : delegate_(delegate) {}
+  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
+                                fxl::Closure quit_callback)
+      : delegate_(delegate), quit_callback_(std::move(quit_callback)) {}
 
   coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
 
@@ -29,7 +28,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
       delegate_->Continue(status);
       return;
     }
-    fsl::MessageLoop::GetCurrent()->QuitNow();
+    quit_callback_();
     need_to_continue_ = true;
   }
 
@@ -43,6 +42,7 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 
  private:
   coroutine::CoroutineHandler* delegate_;
+  fxl::Closure quit_callback_;
   bool need_to_continue_ = false;
 };
 
@@ -54,8 +54,12 @@ void TestWithCoroutines::RunInCoroutine(
     std::function<void(coroutine::CoroutineHandler*)> run_test) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
-  coroutine_service_.StartCoroutine([&](coroutine::CoroutineHandler* handler) {
-    test_handler = std::make_unique<TestCoroutineHandler>(handler);
+  fxl::Closure quit_callback = [this] { message_loop_.QuitNow(); };
+  coroutine_service_.StartCoroutine(
+      [&, quit_callback = std::move(quit_callback)] (
+          coroutine::CoroutineHandler* handler) {
+    test_handler = std::make_unique<TestCoroutineHandler>(
+        handler, quit_callback);
     run_test(test_handler.get());
     ended = true;
   });
