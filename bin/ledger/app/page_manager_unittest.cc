@@ -13,7 +13,6 @@
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"

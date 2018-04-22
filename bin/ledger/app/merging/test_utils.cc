@@ -8,7 +8,6 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/encryption/primitives/hash.h"
 #include "peridot/bin/ledger/storage/impl/page_storage_impl.h"

@@ -14,7 +14,6 @@
 
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"

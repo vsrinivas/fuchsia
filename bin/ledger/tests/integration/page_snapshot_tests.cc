@@ -10,7 +10,6 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"

@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <fuchsia/cpp/ledger.h>
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/storage/public/commit.h"
 #include "peridot/bin/ledger/storage/public/page_storage.h"
 

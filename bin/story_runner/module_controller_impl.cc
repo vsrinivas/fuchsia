@@ -12,7 +12,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "peridot/bin/story_runner/story_controller_impl.h"
 #include "peridot/lib/common/teardown.h"

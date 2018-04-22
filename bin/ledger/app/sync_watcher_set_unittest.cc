@@ -10,7 +10,6 @@
 #include "garnet/lib/gtest/test_with_message_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 
 namespace ledger {

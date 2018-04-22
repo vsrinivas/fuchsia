@@ -8,7 +8,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/handles/object_info.h"

@@ -13,7 +13,6 @@
 #include "lib/fxl/functional/closure.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/bin/ledger/cloud_sync/impl/batch_download.h"
 #include "peridot/bin/ledger/cloud_sync/public/sync_state_watcher.h"
 #include "peridot/bin/ledger/encryption/public/encryption_service.h"

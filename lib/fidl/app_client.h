@@ -14,7 +14,6 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/common/async_holder.h"

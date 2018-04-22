@@ -8,7 +8,6 @@
 
 #include <lib/async/cpp/task.h>
 
-#include "lib/fsl/threading/create_thread.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"
 

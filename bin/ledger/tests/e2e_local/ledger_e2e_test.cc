@@ -13,7 +13,6 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"

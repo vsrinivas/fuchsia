@@ -7,11 +7,9 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/zx/time.h>
 
-#include "garnet/lib/callback/synchronous_task.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/convert/convert.h"
 
 namespace test {

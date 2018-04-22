@@ -16,7 +16,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_printf.h"

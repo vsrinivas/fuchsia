@@ -11,7 +11,6 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/app/constants.h"
 #include "peridot/bin/ledger/app/merging/test_utils.h"

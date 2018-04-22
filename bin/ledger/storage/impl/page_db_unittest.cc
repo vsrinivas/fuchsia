@@ -13,7 +13,6 @@
 
 #include "garnet/lib/callback/set_when_called.h"
 #include "gtest/gtest.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"

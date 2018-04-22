@@ -10,7 +10,6 @@
 #include "garnet/lib/callback/capture.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"

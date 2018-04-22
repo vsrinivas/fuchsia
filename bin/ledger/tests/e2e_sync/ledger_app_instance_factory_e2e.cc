@@ -7,12 +7,11 @@
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 
 #include <fuchsia/cpp/cloud_provider_firebase.h>
-#include "garnet/lib/callback/synchronous_task.h"
+
 #include "gtest/gtest.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/socket/strings.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/svc/cpp/services.h"

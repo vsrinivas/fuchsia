@@ -13,7 +13,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/fidl/app_client.h"
 
 namespace modular {

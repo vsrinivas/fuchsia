@@ -20,7 +20,6 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/tasks/task_runner.h"
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/lib/testing/reporting.h"
