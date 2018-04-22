@@ -38,8 +38,8 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
 fn get_proxy() -> Result<(async::Executor, wlan::PhyProxy), Error> {
     let executor = async::Executor::new().context("error creating event loop")?;
 
-    let phy = wlan_dev::WlanPhy::new(DEV_WLANPHY)?;
-    let proxy = phy.connect()?;
+    let phy = wlan_dev::Device::new(DEV_WLANPHY)?;
+    let proxy = wlan_dev::connect_wlan_phy(&phy)?;
     Ok((executor, proxy))
 }
 

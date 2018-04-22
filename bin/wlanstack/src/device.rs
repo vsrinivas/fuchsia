@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use async;
 use failure::Error;
 use futures::prelude::*;
 use futures::{future, stream};
@@ -21,15 +20,16 @@ use std::sync::Arc;
 struct PhyDevice {
     id: u16,
     proxy: wlan::PhyProxy,
-    dev: wlan_dev::WlanPhy,
+    dev: wlan_dev::Device,
 }
 
 impl PhyDevice {
     fn new<P: AsRef<Path>>(id: u16, path: P) -> Result<Self, Error> {
-        let dev = wlan_dev::WlanPhy::new(path)?;
+        let dev = wlan_dev::Device::new(path)?;
+        let proxy = wlan_dev::connect_wlan_phy(&dev)?;
         Ok(PhyDevice {
             id,
-            proxy: dev.connect()?,
+            proxy,
             dev,
         })
     }
@@ -226,15 +226,7 @@ pub fn new_phy_watcher<P: AsRef<Path>>(
             // This could fail if the device were to go away in between our receiving the watcher
             // message and here. TODO(tkilbourn): handle this case more cleanly.
             let phy = PhyDevice::new(id, path).expect("Failed to open phy device");
-            async::spawn(
-                phy.proxy
-                    .query()
-                    .and_then(move |_resp| {
-                        devmgr.lock().add_phy(phy);
-                        Ok(())
-                    })
-                    .recover(|e| eprintln!("Could not query/add wlan phy device: {:?}", e)),
-            );
+            devmgr.lock().add_phy(phy);
         },
         |devmgr, path| {
             info!("removing phy at {}", path.to_string_lossy());

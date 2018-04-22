@@ -21,38 +21,42 @@ use std::path::{Path, PathBuf};
 
 mod sys;
 
-/// Represents a WLAN Phy device node.
-pub struct WlanPhy {
-    dev_path: PathBuf,
-    dev_node: File,
+/// Represents a device node.
+pub struct Device {
+    path: PathBuf,
+    node: File,
 }
 
-impl WlanPhy {
-    /// Opens the given path and creates a `WlanPhy` for that device node.
+impl Device {
+    /// Opens the given path and creates a `Device` for that device node.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let dev = OpenOptions::new().read(true).write(true).open(&path)?;
-        Ok(WlanPhy {
-            dev_path: PathBuf::from(fdio::device_get_topo_path(&dev)?),
-            dev_node: dev,
+        Ok(Self {
+            path: PathBuf::from(fdio::device_get_topo_path(&dev)?),
+            node: dev,
         })
     }
 
     /// Returns a reference to the topological path of the device.
     pub fn path(&self) -> &Path {
-        &self.dev_path
-    }
-
-    /// Retrieves a zircon channel to the WLAN Phy device, for use with the WLAN Phy fidl service.
-    pub fn connect(&self) -> Result<wlan::PhyProxy, zx::Status> {
-        let chan = sys::connect_wlanphy_device(&self.dev_node).map_err(|_| zx::Status::INTERNAL)?;
-        Ok(wlan::PhyProxy::new(async::Channel::from_channel(chan)?))
+        &self.path
     }
 }
 
-impl fmt::Debug for WlanPhy {
+/// Connects to a `Device` that represents a wlan phy.
+pub fn connect_wlan_phy(dev: &Device) -> Result<wlan::PhyProxy, zx::Status> {
+    let chan = sys::connect_wlanphy_device(&dev.node)?;
+    Ok(wlan::PhyProxy::new(async::Channel::from_channel(chan)?))
+}
+
+/// Connects to a `Device` that represents a wlan iface.
+pub fn connect_wlan_iface(dev: &Device) -> Result<async::Channel, zx::Status> {
+    let chan = sys::connect_wlaniface_device(&dev.node)?;
+    Ok(async::Channel::from_channel(chan)?)
+}
+
+impl fmt::Debug for Device {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.debug_struct("WlanPhy")
-            .field("path", &self.dev_path)
-            .finish()
+        f.debug_struct("Device").field("path", &self.path).finish()
     }
 }
