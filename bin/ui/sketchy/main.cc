@@ -14,7 +14,11 @@ int main(int argc, const char** argv) {
   {
     // Only enable Vulkan validation layers when in debug mode.
     escher::VulkanInstance::Params instance_params(
-        {{}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+        {{},
+         {VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+          VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
+          VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
+         false});
 #if !defined(NDEBUG)
     instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
@@ -23,7 +27,11 @@ int main(int argc, const char** argv) {
 
     auto vulkan_device = escher::VulkanDeviceQueues::New(
         vulkan_instance,
-        {{VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME}, vk::SurfaceKHR()});
+        {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
+          VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+          VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+          VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
+         vk::SurfaceKHR()});
 
     escher::Escher escher(vulkan_device);
 
