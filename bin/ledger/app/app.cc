@@ -8,15 +8,14 @@
 #include <memory>
 #include <utility>
 
-#include <lib/async/dispatcher.h>
+#include <fuchsia/cpp/ledger_internal.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>
 
-#include <fuchsia/cpp/ledger_internal.h>
 #include "garnet/lib/backoff/exponential_backoff.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/log_settings_command_line.h"
@@ -62,6 +61,7 @@ class App : public ledger_internal::LedgerController {
  public:
   explicit App(AppParams app_params)
       : app_params_(app_params),
+        loop_(&kAsyncLoopConfigMakeDefault),
         trace_provider_(loop_.async()),
         application_context_(
             component::ApplicationContext::CreateFromStartupInfo()),
@@ -103,10 +103,10 @@ class App : public ledger_internal::LedgerController {
 
  private:
   // LedgerController:
-  void Terminate() override { loop_.PostQuitTask(); }
+  void Terminate() override { loop_.Quit(); }
 
   const AppParams app_params_;
-  fsl::MessageLoop loop_;
+  async::Loop loop_;
   trace::TraceProvider trace_provider_;
   std::unique_ptr<component::ApplicationContext> application_context_;
   fxl::AutoCall<fxl::Closure> cobalt_cleaner_;
