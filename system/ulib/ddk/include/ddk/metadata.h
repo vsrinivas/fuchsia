@@ -14,3 +14,6 @@
 // Content: bootdata_partition_map_t
 #define DEVICE_METADATA_PARTITION_MAP   (0x54524150) // PART
 
+// maximum size of DEVICE_METADATA_PARTITION_MAP data
+#define METADATA_PARTITION_MAP_MAX 4096
+

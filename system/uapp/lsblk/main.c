@@ -129,6 +129,9 @@ static int cmd_list_blk(void) {
         if (block_info.flags & BLOCK_FLAG_REMOVABLE) {
             strlcat(flags, "RE ", sizeof(flags));
         }
+        if (block_info.flags & BLOCK_FLAG_BOOTPART) {
+            strlcat(flags, "BP ", sizeof(flags));
+        }
 devdone:
         close(fd);
         printf("%-3s %4s %-14s %-20s %-6s %s\n",

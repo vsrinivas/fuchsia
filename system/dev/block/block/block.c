@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/binding.h>
+#include <ddk/metadata.h>
 
 #include <assert.h>
 #include <inttypes.h>
@@ -15,6 +16,7 @@
 #include <sys/param.h>
 #include <threads.h>
 #include <sync/completion.h>
+#include <zircon/boot/bootdata.h>
 #include <zircon/device/block.h>
 #include <zircon/process.h>
 #include <zircon/types.h>
@@ -34,6 +36,9 @@ typedef struct blkdev {
 
     BlockServer* bs;
     bool dead; // Release has been called; we should free memory and leave.
+
+    // true if we have metadata for a bootdata partition map
+    bool has_bootpart;
 
     mtx_t iolock;
     zx_handle_t iovmo;
@@ -198,7 +203,6 @@ static zx_status_t blkdev_rebind(blkdev_t* bdev) {
     return device_rebind(bdev->zxdev);
 }
 
-
 static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
                             size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     blkdev_t* blkdev = ctx;
@@ -219,7 +223,27 @@ static zx_status_t blkdev_ioctl(void* ctx, uint32_t op, const void* cmd,
     }
     case IOCTL_BLOCK_RR_PART:
         return blkdev_rebind(blkdev);
+    case IOCTL_BLOCK_GET_INFO: {
+        size_t actual;
+        zx_status_t status = device_ioctl(blkdev->parent, op, cmd, cmdlen, reply, max, &actual);
+        if (status == ZX_OK) {
+            if (actual >= sizeof(block_info_t)) {
+                block_info_t* info = (block_info_t*)reply;
+                // set or clear BLOCK_FLAG_BOOTPART appropriately
+                if (blkdev->has_bootpart) {
+                    info->flags |= BLOCK_FLAG_BOOTPART;
+                } else {
+                    info->flags &= ~BLOCK_FLAG_BOOTPART;
+                }
+            }
+            if (out_actual) {
+                *out_actual = actual;
+            }
+        }
+        return status;
+    }
     default:
+        // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
         return device_ioctl(blkdev->parent, op, cmd, cmdlen, reply, max, out_actual);
     }
 }
@@ -390,6 +414,16 @@ static zx_status_t block_driver_bind(void* ctx, zx_device_t* dev) {
                device_get_name(dev), bsz);
         status = ZX_ERR_NOT_SUPPORTED;
         goto fail;
+    }
+
+    // check to see if we have a bootdata partition map
+    // and set BLOCK_FLAG_BOOTPART accordingly
+    uint8_t buffer[METADATA_PARTITION_MAP_MAX];
+    size_t actual;
+    status = device_get_metadata(dev, DEVICE_METADATA_PARTITION_MAP, buffer, sizeof(buffer),
+                                 &actual);
+    if (status == ZX_OK && actual >= sizeof(bootdata_partition_map_t)) {
+        bdev->has_bootpart = true;
     }
 
     device_add_args_t args = {

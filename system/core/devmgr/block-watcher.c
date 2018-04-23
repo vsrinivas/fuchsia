@@ -214,6 +214,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 #define FVM_DRIVER_LIB "/boot/driver/fvm.so"
 #define GPT_DRIVER_LIB "/boot/driver/gpt.so"
 #define MBR_DRIVER_LIB "/boot/driver/mbr.so"
+#define BOOTPART_DRIVER_LIB "/boot/driver/bootpart.so"
 #define STRLEN(s) sizeof(s) / sizeof((s)[0])
 
 static zx_status_t block_device_added(int dirfd, int event, const char* name, void* cookie) {
@@ -226,6 +227,13 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
 
     int fd;
     if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
+        return ZX_OK;
+    }
+
+    block_info_t info;
+    if (ioctl_block_get_info(fd, &info) >= 0 && info.flags & BLOCK_FLAG_BOOTPART) {
+        ioctl_device_bind(fd, BOOTPART_DRIVER_LIB, STRLEN(BOOTPART_DRIVER_LIB));
+        close(fd);
         return ZX_OK;
     }
 

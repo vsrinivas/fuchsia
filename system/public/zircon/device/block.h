@@ -87,6 +87,8 @@
 
 #define BLOCK_FLAG_READONLY 0x00000001
 #define BLOCK_FLAG_REMOVABLE 0x00000002
+#define BLOCK_FLAG_BOOTPART 0x00000004  // block device has bootdata partition map
+                                        // provided by device metadata
 
 typedef struct {
     uint64_t block_count;       // The number of blocks in this block device
