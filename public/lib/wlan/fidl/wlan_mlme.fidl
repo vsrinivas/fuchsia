@@ -550,7 +550,6 @@ enum Method {
     STOP_request = 22;
 
     // MLME-STOP.confirm
-    // Args: StopConfirm
     STOP_confirm = 23;
 
     // MLME-SETKEYS.request
@@ -584,4 +583,60 @@ enum Method {
 
     // Args: DeviceQueryConfirm
     DEVICE_QUERY_confirm = 31;
+};
+
+// Because these methods rely on an external entity to provide a response, events are used instead
+// of return values.
+interface MLME {
+    1: ScanReq(ScanRequest req);
+    2: -> ScanConf(ScanConfirm resp);
+
+    3: JoinReq(JoinRequest req);
+    4: -> JoinConf(JoinConfirm resp);
+
+    5: AuthenticateReq(AuthenticateRequest req);
+    6: -> AuthenticateConf(AuthenticateConfirm resp);
+
+    7: AuthenticateInd(AuthenticateIndication ind);
+    8: -> AuthenticateResp(AuthenticateResponse resp);
+
+    9: DeauthenticateReq(DeauthenticateRequest req);
+    10: -> DeauthenticateConf(DeauthenticateConfirm resp);
+
+    11: -> DeauthenticateInd(DeauthenticateIndication ind);
+
+    12: AssociateReq(AssociateRequest req);
+    13: -> AssociateConf(AssociateConfirm resp);
+
+    14: AssociateInd(AssociateIndication ind);
+    15: -> AssociateResp(AssociateResponse resp);
+
+    16: DisassociateReq(DisassociateRequest req);
+    17: -> DisassociateConf(DisassociateConfirm resp);
+
+    18: -> DisassociateInd(DisassociateIndication ind);
+
+    19: ResetReq(ResetRequest req);
+
+    20: StartReq(StartRequest req);
+    21: -> StartConf(StartConfirm resp);
+
+    22: StopReq(StopRequest req);
+    23: -> StopConf();
+
+    24: SetKeysReq(SetKeysRequest req);
+
+    25: DeleteKeysReq(DeleteKeysRequest req);
+
+    26: EapolReq(EapolRequest req);
+    27: -> EapolConf(EapolConfirm resp);
+
+    // The following are extensions to the 802.11 MLME SAP interface.
+
+    28: -> SignalReport(SignalReportIndication ind);
+
+    29: -> EapolInd(EapolIndication ind);
+
+    30: DeviceQueryReq(DeviceQueryRequest req);
+    31: -> DeviceQueryConf(DeviceQueryConfirm resp);
 };
