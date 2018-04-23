@@ -121,6 +121,7 @@ static zx_status_t platform_dev_get_device_info(void* ctx, pdev_device_info_t* o
     out_info->i2c_channel_count = dev->i2c_channel_count;
     out_info->clk_count = dev->clk_count;
     out_info->bti_count = dev->bti_count;
+    out_info->boot_metadata_count = dev->boot_metadata_count;
 
     return ZX_OK;
 }
@@ -451,6 +452,7 @@ void platform_dev_free(platform_dev_t* dev) {
     free(dev->i2c_channels);
     free(dev->clks);
     free(dev->btis);
+    free(dev->boot_metadata);
     free(dev);
 }
 
@@ -533,6 +535,16 @@ zx_status_t platform_device_add(platform_bus_t* bus, const pbus_dev_t* pdev, uin
         memcpy(dev->btis, pdev->btis, sz);
         dev->bti_count = pdev->bti_count;
     }
+    if (pdev->boot_metadata_count) {
+        const size_t sz = pdev->boot_metadata_count * sizeof(*pdev->boot_metadata);
+        dev->boot_metadata = malloc(sz);
+        if (!dev->boot_metadata) {
+            status = ZX_ERR_NO_MEMORY;
+            goto fail;
+        }
+        memcpy(dev->boot_metadata, pdev->boot_metadata, sz);
+        dev->boot_metadata_count = pdev->boot_metadata_count;
+    }
 
     dev->bus = bus;
     dev->flags = flags;
@@ -554,6 +566,26 @@ fail:
     }
 
     return status;
+}
+
+static zx_status_t platform_device_add_metadata(platform_dev_t* dev, uint32_t index) {
+    uint32_t type = dev->boot_metadata[index].type;
+    uint32_t extra = dev->boot_metadata[index].extra;
+    platform_bus_t* bus = dev->bus;
+    uint8_t* metadata = bus->metadata;
+    zx_off_t offset = 0;
+
+    while (offset < bus->metadata_size) {
+        bootdata_t* bootdata = (bootdata_t*)metadata;
+        size_t length = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata->length);
+
+        if (bootdata->type == type && bootdata->extra == extra) {
+            return device_add_metadata(dev->zxdev, type, bootdata + 1, length - sizeof(bootdata_t));
+        }
+        metadata += length;
+        offset += length;
+    }
+    return ZX_ERR_NOT_FOUND;
 }
 
 zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
@@ -593,8 +625,23 @@ zx_status_t platform_device_enable(platform_dev_t* dev, bool enable) {
         if (dev->did == PDEV_DID_KPCI) {
             parent = device_get_parent(parent);
         }
+
+        if (dev->boot_metadata_count) {
+            // keep device invisible until we add its metadata
+            args.flags |= DEVICE_ADD_INVISIBLE;
+        }
         status = device_add(parent, &args, &dev->zxdev);
-    } else if (!enable && dev->enabled) {
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        if (dev->boot_metadata_count) {
+            for (uint32_t i = 0; i < dev->boot_metadata_count; i++) {
+                platform_device_add_metadata(dev, i);
+            }
+            device_make_visible(dev->zxdev);
+        }
+     } else if (!enable && dev->enabled) {
         device_remove(dev->zxdev);
         dev->zxdev = NULL;
     }

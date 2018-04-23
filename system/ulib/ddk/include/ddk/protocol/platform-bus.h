@@ -41,6 +41,12 @@ typedef struct {
     uint32_t    bti_id;
 } pbus_bti_t;
 
+// bootdata record to add as device metadata
+typedef struct {
+    uint32_t    type;   // matching bootdata_t.type
+    uint32_t    extra;  // matching bootdata_t.extra
+} pbus_boot_metadata_t;
+
 typedef struct {
     const char* name;
     uint32_t vid;   // BIND_PLATFORM_DEV_VID
@@ -59,6 +65,8 @@ typedef struct {
     uint32_t clk_count;
     const pbus_bti_t* btis;
     uint32_t bti_count;
+    const pbus_boot_metadata_t* boot_metadata;
+    uint32_t boot_metadata_count;
 } pbus_dev_t;
 
 // flags for pbus_device_add()
@@ -75,6 +83,8 @@ typedef struct {
     zx_status_t (*device_add)(void* ctx, const pbus_dev_t* dev, uint32_t flags);
     zx_status_t (*device_enable)(void* ctx, uint32_t vid, uint32_t pid, uint32_t did, bool enable);
     const char* (*get_board_name)(void* ctx);
+    zx_status_t (*publish_boot_metadata)(void* ctx, uint32_t type, uint32_t extra,
+                 const char* path);
 } platform_bus_protocol_ops_t;
 
 typedef struct {
@@ -107,6 +117,11 @@ static inline zx_status_t pbus_device_enable(platform_bus_protocol_t* pbus, uint
 
 static inline const char* pbus_get_board_name(platform_bus_protocol_t* pbus) {
     return pbus->ops->get_board_name(pbus->ctx);
+}
+
+static inline zx_status_t pbus_publish_boot_metadata(platform_bus_protocol_t* pbus, uint32_t type,
+                                                     uint32_t extra, const char* path) {
+    return pbus->ops->publish_boot_metadata(pbus->ctx, type, extra, path);
 }
 
 __END_CDECLS;

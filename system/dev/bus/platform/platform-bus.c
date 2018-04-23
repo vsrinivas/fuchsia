@@ -105,12 +105,33 @@ static const char* platform_bus_get_board_name(void* ctx) {
     return bus->platform_id.board_name;
 }
 
+static zx_status_t platform_bus_publish_boot_metadata(void* ctx, uint32_t type, uint32_t extra,
+                                                      const char* path) {
+    platform_bus_t* bus = ctx;
+    uint8_t* metadata = bus->metadata;
+    zx_off_t offset = 0;
+
+    while (offset < bus->metadata_size) {
+        bootdata_t* bootdata = (bootdata_t*)metadata;
+        size_t length = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata->length);
+
+        if (bootdata->type == type && bootdata->extra == extra) {
+            return device_publish_metadata(bus->zxdev, path, type, bootdata + 1,
+                                           length - sizeof(bootdata_t));
+        }
+        metadata += length;
+        offset += length;
+    }
+    return ZX_ERR_NOT_FOUND;
+}
+
 static platform_bus_protocol_ops_t platform_bus_proto_ops = {
     .set_protocol = platform_bus_set_protocol,
     .wait_protocol = platform_bus_wait_protocol,
     .device_add = platform_bus_device_add,
     .device_enable = platform_bus_device_enable,
     .get_board_name = platform_bus_get_board_name,
+    .publish_boot_metadata = platform_bus_publish_boot_metadata,
 };
 
 // not static so we can access from platform_dev_get_protocol()
@@ -171,7 +192,7 @@ static void platform_bus_release(void* ctx) {
     }
 
     zx_handle_close(bus->dummy_iommu_handle);
-
+    free(bus->metadata);
     free(bus);
 }
 
@@ -192,6 +213,7 @@ static zx_protocol_device_t sys_device_proto = {
 
 static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t vmo) {
     bootdata_t bootdata;
+
     zx_status_t status = zx_vmo_read(vmo, &bootdata, 0, sizeof(bootdata));
     if (status != ZX_OK) {
         return status;
@@ -204,7 +226,12 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
         zxlogf(ERROR, "platform_bus: bootdata v1 not supported\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
-    size_t len = bootdata.length;
+
+    size_t bootdata_length = bootdata.length;
+
+    // compute size of bootdata records we need to save for metadata
+    size_t metadata_size = 0;
+    size_t len = bootdata_length;
     size_t off = sizeof(bootdata);
 
     while (len > sizeof(bootdata)) {
@@ -218,12 +245,12 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
             break;
         }
         switch (bootdata.type) {
-        case BOOTDATA_CONTAINER:
+        case BOOTDATA_PARTITION_MAP:
+        case BOOTDATA_MAC_ADDRESS:
+            metadata_size += itemlen;
+            break;
             zxlogf(ERROR, "platform_bus: unexpected bootdata container header\n");
             return ZX_ERR_INTERNAL;
-        case BOOTDATA_PLATFORM_ID:
-            return zx_vmo_read(vmo, &bus->platform_id, off + sizeof(bootdata_t),
-                                 sizeof(bus->platform_id));
         default:
             break;
         }
@@ -231,8 +258,62 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
         len -= itemlen;
     }
 
-     zxlogf(ERROR, "platform_bus: BOOTDATA_PLATFORM_ID not found\n");
-     return ZX_ERR_INTERNAL;
+    if (metadata_size) {
+        bus->metadata = malloc(metadata_size);
+        if (!bus->metadata) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+
+    bool got_platform_id = false;
+    zx_off_t metadata_offset = 0;
+    uint8_t* metadata = (uint8_t*)bus->metadata;
+    len = bootdata_length;
+    off = sizeof(bootdata);
+
+    // find platform ID record and copy metadata records
+    while (len > sizeof(bootdata)) {
+        zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
+        if (status < 0) {
+            break;
+        }
+        size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
+        if (itemlen > len) {
+            zxlogf(ERROR, "platform_bus: bootdata item too large (%zd > %zd)\n", itemlen, len);
+            break;
+        }
+        switch (bootdata.type) {
+        case BOOTDATA_PLATFORM_ID:
+            status = zx_vmo_read(vmo, &bus->platform_id, off + sizeof(bootdata_t),
+                                 sizeof(bus->platform_id));
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
+                return status;
+            }
+            got_platform_id = true;
+            break;
+        case BOOTDATA_PARTITION_MAP:
+        case BOOTDATA_MAC_ADDRESS:
+            status = zx_vmo_read(vmo, metadata + metadata_offset, off, itemlen);
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
+                return status;
+            }
+            metadata_offset += itemlen;
+            break;
+        default:
+            break;
+        }
+        off += itemlen;
+        len -= itemlen;
+    }
+    bus->metadata_size = metadata_size;
+
+    if (!got_platform_id) {
+         zxlogf(ERROR, "platform_bus: BOOTDATA_PLATFORM_ID not found\n");
+        return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
 }
 
 static zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,

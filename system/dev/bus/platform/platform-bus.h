@@ -33,6 +33,8 @@ typedef struct {
     iommu_protocol_t iommu;
     zx_handle_t resource;   // root resource for platform bus
     bootdata_platform_id_t platform_id;
+    uint8_t* metadata;   // metadata extracted from bootdata
+    size_t metadata_size;
 
     list_node_t devices;    // list of platform_dev_t
 
@@ -63,12 +65,14 @@ typedef struct {
     pbus_i2c_channel_t* i2c_channels;
     pbus_clk_t* clks;
     pbus_bti_t* btis;
+    pbus_boot_metadata_t* boot_metadata;
     uint32_t mmio_count;
     uint32_t irq_count;
     uint32_t gpio_count;
     uint32_t i2c_channel_count;
     uint32_t clk_count;
     uint32_t bti_count;
+    uint32_t boot_metadata_count;
 } platform_dev_t;
 
 // platform-bus.c
