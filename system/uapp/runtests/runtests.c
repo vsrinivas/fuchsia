@@ -15,10 +15,12 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <unittest/unittest.h>
@@ -39,8 +41,15 @@ typedef struct test {
     list_node_t node;
     test_result_t result;
     int rc; // Return code.
+    // TODO(ZX-2050): Track duration of test binary.
     char name[0];
 } test_t;
+
+typedef uint64_t nsecs_t;
+
+static nsecs_t now(void) {
+    return zx_clock_get(ZX_CLOCK_MONOTONIC);
+}
 
 // Creates a new test_t and appends it to the linked list |tests|.
 //
@@ -521,6 +530,8 @@ int main(int argc, char** argv) {
     const char** test_globs = NULL;
     const char* output_dir = NULL;
 
+    nsecs_t start_time = now();
+
     int i = 1;
     while (i < argc) {
         if (strcmp(argv[i], "-q") == 0) {
@@ -723,9 +734,15 @@ int main(int argc, char** argv) {
         globfree(&resolved_globs);
     }
 
+    // TODO(ZX-2051): Include total duration in summary.json.
+    nsecs_t end_time = now();
+    uint64_t time_taken_ms = (end_time - start_time) / 1000000;
+
     // Print this last, since some infra recipes will shut down the fuchsia
     // environment once it appears.
-    printf("\nSUMMARY: Ran %d tests: %d failed\n", total_count, failed_count);
+    printf("\nSUMMARY: Ran %d tests: %d failed (%" PRIu64 ".%03u sec)\n",
+           total_count, failed_count,
+           time_taken_ms / 1000, (unsigned) (time_taken_ms % 1000));
 
     return failed_count ? 1 : 0;
 }
