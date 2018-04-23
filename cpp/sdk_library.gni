@@ -11,6 +11,10 @@ import("//build/sdk/sdk_atom.gni")
 #   type (required)
 #     GN template type for the library.
 #
+#   category (required)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
 #   sdk_name (optional)
 #     Name of the library in the SDK.
 #     If not specified, a name is inferred from the target's label.
@@ -87,6 +91,13 @@ template("sdk_library") {
       name_file = atom_name_file
     } else {
       name = atom_name
+    }
+
+    if (defined(invoker.category)) {
+      category = invoker.category
+    } else {
+      # TODO(DX-89): remove default value and assert existence above.
+      category = "partner"
     }
 
     tags = [ "type:sources" ]

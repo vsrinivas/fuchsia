@@ -32,6 +32,7 @@ group("sysroot") {
 sdk_atom("sysroot_sdk") {
   domain = "cpp"
   name = "system"
+  category = "partner"
 
   tags = [
     "type:sysroot",

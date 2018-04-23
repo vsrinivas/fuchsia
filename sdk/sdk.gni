@@ -13,6 +13,10 @@ import("sdk_molecule.gni")
 #     Name of the SDK.
 #     Defaults to the target's name.
 #
+#   category (required)
+#     Describes the minimum category that atoms in this SDK must have.
+#     See //build/sdk/sdk_atom.gni for possible values.
+#
 #   export (optional)
 #     Whether to export the contents of this SDK to the output directory.
 #     This is useful when an SDK-like file structure is needed as part of the
@@ -69,6 +73,13 @@ template("sdk") {
                              "export",
                              "old_school",
                            ])
+
+    if (defined(invoker.category)) {
+      category = invoker.category
+    } else {
+      # TODO(DX-89): remove default value and assert existence above.
+      category = "partner"
+    }
 
     metadata = [
       {

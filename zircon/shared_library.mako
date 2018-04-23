@@ -114,6 +114,7 @@ group("${data.name}") {
 sdk_atom("${data.name}_sdk") {
   domain = "cpp"
   name = "${data.name}"
+  category = "partner"
 
   tags = [
     "type:compiled_shared",

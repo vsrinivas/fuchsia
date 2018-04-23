@@ -25,9 +25,9 @@ import("//build/rust/toolchain.gni")
 #     Name of the library.
 #     Defaults to the target's name.
 #
-#   sdk_candidate (optional)
-#     Whether this library may be included in an SDK.
-#     Defaults to false.
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
 
 template("fidl") {
   if (current_toolchain == fidl_toolchain) {

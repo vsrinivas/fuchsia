@@ -8,6 +8,10 @@ import("//build/sdk/sdk_atom.gni")
 #
 # Parameters
 #
+#   category (required)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
 #   no_headers (optional)
 #     Whether to include the library's headers in the SDK.
 #     Defaults to false.
@@ -113,6 +117,13 @@ template("prebuilt_shared_library") {
       name = atom_name
     }
     tags = [ "type:compiled_shared" ]
+
+    if (defined(invoker.category)) {
+      category = invoker.category
+    } else {
+      # TODO(DX-89): remove default value and assert existence above.
+      category = "partner"
+    }
 
     if (is_fuchsia) {
       tags += [ "arch:target" ]

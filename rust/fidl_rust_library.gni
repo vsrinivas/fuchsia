@@ -13,7 +13,9 @@ template("fidl_rust_library") {
   not_needed(invoker, [
     "deps",
     "public_deps",
+    # TODO(DX-89): remove this.
     "sdk_candidate",
+    "sdk_category",
     "sources",
   ])
 

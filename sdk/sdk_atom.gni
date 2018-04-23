@@ -24,7 +24,7 @@
 #
 #   category
 #     Describes the availability of the atom.
-#     Possible values:
+#     Possible values, from most restrictive to least restrictive:
 #       - excluded     : the atom may not be included in SDKs;
 #       - experimental : the atom is available with no quality guarantee;
 #       - internal     : the atom is exposed within the Fuchsia tree;
@@ -95,12 +95,8 @@ template("sdk_atom") {
   assert(defined(invoker.domain), "Must define a domain name")
   domain_name = invoker.domain
 
-  # TODO(DX-89): remove default value.
-  if (defined(invoker.category)) {
-    category = invoker.category
-  } else {
-    category = "partner"
-  }
+  assert(defined(invoker.category), "Must define an SDK category")
+  category = invoker.category
 
   if (defined(invoker.name)) {
     name_args = [

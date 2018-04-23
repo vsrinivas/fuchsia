@@ -11,6 +11,10 @@ import("//build/cpp/sdk_library.gni")
 #
 # Parameters
 #
+#   category (required)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
 #   sdk_name (optional)
 #     Name of the library in the SDK.
 #     If not specified, a name is inferred from the target's label.

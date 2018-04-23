@@ -12,7 +12,7 @@ import("//build/sdk/sdk_atom.gni")
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
 #   - name;
-#   - sdk_candidate;
+#   - sdk_category;
 #   - sources.
 
 template("fidl_library") {
@@ -183,7 +183,12 @@ template("fidl_library") {
     ]
   }
 
+  # TODO(DX-89): remove default value.
   if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+    invoker.sdk_category = "partner"
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
     library_name = target_name
     if (defined(invoker.name)) {
       library_name = invoker.name
@@ -192,6 +197,8 @@ template("fidl_library") {
     sdk_atom("${target_name}_sdk") {
       domain = "fidl"
       name = library_name
+
+      category = invoker.sdk_category
 
       files = []
       foreach(source, invoker.sources) {

@@ -8,9 +8,9 @@ import("//build/go/go_build.gni")
 #
 # Parameters
 #
-#   sdk_candidate (optional)
-#     Whether the binary may be included in an SDK.
-#     Defaults to false.
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
 
 template("go_binary") {
   go_build(target_name) {

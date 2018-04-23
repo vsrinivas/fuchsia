@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-from sdk_common import detect_collisions, gather_dependencies
+from sdk_common import detect_category_violations, detect_collisions, gather_dependencies
 
 
 def main():
@@ -26,12 +26,19 @@ def main():
                         help='Metadata to attach to the manifest',
                         action='append',
                         default=[])
+    parser.add_argument('--category',
+                        help='Minimum publication level',
+                        required=False)
     args = parser.parse_args()
 
     (direct_deps, atoms) = gather_dependencies(args.deps)
     if detect_collisions(atoms):
         print('Name collisions detected!')
         return 1
+    if args.category:
+        if detect_category_violations(args.category, atoms):
+            print('Publication level violations detected!')
+            return 1
     ids = []
     if args.is_group:
         ids = map(lambda i: i.json, sorted(list(direct_deps)))

@@ -12,7 +12,7 @@ import("//build/fidl/toolchain.gni")
 # The parameters for this template are defined in //build/fidl/fidl.gni. The
 # relevant parameters in this template are:
 #   - name;
-#   - sdk_candidate.
+#   - sdk_category.
 
 template("fidl_dart") {
   assert(current_toolchain == dart_toolchain,
@@ -93,12 +93,11 @@ template("fidl_dart") {
   dart_library(main_target_name) {
     forward_variables_from(invoker, [
       "testonly",
+      # TODO(DX-89): remove this parameter.
+      "sdk_candidate",
+      "sdk_category",
       "visibility",
     ])
-
-    if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
-      sdk_candidate = true
-    }
 
     package_root = root_dir
 

@@ -6,6 +6,10 @@
 #
 # Parameters
 #
+#   category (optional)
+#     Describes the minimum category that atoms in this molecule must have.
+#     See //build/sdk/sdk_atom.gni for possible values.
+#
 #   deps (optional)
 #     List of GN labels referencing the elements of this group.
 #     These labels must point to "sdk_atom" or "sdk_molecule" targets.
@@ -75,6 +79,13 @@ template("sdk_molecule") {
              rebase_path(manifest),
              "--deps",
            ] + dep_manifests + metadata
+
+    if (defined(invoker.category)) {
+      args += [
+        "--category",
+        invoker.category,
+      ]
+    }
 
     if (is_group) {
       args += [ "--is-group" ]

@@ -58,11 +58,9 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
-#   sdk_candidate (optional)
-#     Whether this library may be included in SDKs.
-#     Note that the resulting SDK target will only be available in the Dart
-#     toolchain.
-#     Defaults to false.
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
 #
 # Example of usage:
 #
@@ -388,7 +386,12 @@ if (current_toolchain == dart_toolchain) {
     # SDK support
     #
 
+    # TODO(DX-89): remove default value.
     if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+      invoker.sdk_category = "partner"
+    }
+
+    if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
       assert(
           defined(invoker.package_name),
           "Dart libraries published in SDKs must have an explicit package name")
@@ -466,6 +469,8 @@ if (current_toolchain == dart_toolchain) {
       sdk_atom("${target_name}_sdk") {
         domain = "dart"
         name = atom_name
+
+        category = invoker.sdk_category
 
         deps = sdk_deps
 
