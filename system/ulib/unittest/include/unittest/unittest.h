@@ -5,7 +5,11 @@
 #pragma once
 
 /*
- * Macros for writing unit tests.
+ * The Unittest API.
+ *
+ * The API consists of some functions for invoking Unittest, all prefixed
+ * with unittest_, and some macros for registering testcases as well as
+ * performing tests.
  *
  * Sample usage:
  *
@@ -44,7 +48,18 @@
  *
  *      END_TEST;
  * }
+ *
+ * The main() function of the test is expected to call unittest_run_all_tests.
+ * By default it will run all registered tests, but it also provides an option
+ * for running individual tests. Run the test binary with --help for details.
+ *
+ * Test binaries may recognize their own command line options. Make sure they
+ * don't interfere with Unittests's options. See unittest/README.md for rules
+ * on argv processing. To have test-specific options included in --help
+ * output register a function that prints the test-specific help with
+ * unittest_register_test_help_printer().
  */
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -610,6 +625,14 @@ bool unittest_run_all_tests(int argc, char** argv);
  * Runs a single test case.
  */
 bool unittest_run_one_test(struct test_case_element* elem, test_type_t type);
+
+/*
+ * Register a function to print test-specific options in the output of --help.
+ * Only one help printer may be registered, each new call replaces any
+ * previously registered function.
+ */
+typedef void unittest_help_printer_type(FILE* output);
+void unittest_register_test_help_printer(unittest_help_printer_type* func);
 
 /*
  * Returns false if expected does not equal actual and prints msg and a hexdump8
