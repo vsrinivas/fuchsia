@@ -13,7 +13,6 @@
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <limits.h>
-#include <stdatomic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,8 +39,6 @@ typedef struct gptpart_device {
 
     block_info_t info;
     size_t block_op_size;
-
-    atomic_int writercount;
 } gptpart_device_t;
 
 struct guid {
@@ -69,10 +66,6 @@ static void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
 static uint64_t get_lba_count(gptpart_device_t* dev) {
     // last LBA is inclusive
     return dev->gpt_entry.last - dev->gpt_entry.first + 1;
-}
-
-static zx_off_t to_parent_offset(gptpart_device_t* dev, zx_off_t offset) {
-    return offset + dev->gpt_entry.first * dev->info.block_size;
 }
 
 static bool validate_header(const gpt_t* header, const block_info_t* info) {
