@@ -352,109 +352,109 @@ struct EapolConfirm {
 enum Method {
     // MLME-SCAN.request
     // Args: ScanRequest
-    SCAN_request = 0;
+    SCAN_request = 1;
 
     // MLME-SCAN.confirm
     // Args: ScanConfirm
-    SCAN_confirm = 1;
+    SCAN_confirm = 2;
 
     // MLME-JOIN.request
     // Args: JoinRequest
-    JOIN_request = 2;
+    JOIN_request = 3;
 
     // MLME-JOIN.confirm
     // Args: JoinConfirm
-    JOIN_confirm = 3;
+    JOIN_confirm = 4;
 
     // MLME-AUTHENTICATE.request
     // Args: AuthenticateRequest
-    AUTHENTICATE_request = 4;
+    AUTHENTICATE_request = 5;
 
     // MLME-AUTHENTICATE.confirm
     // Args: AuthenticateConfirm
-    AUTHENTICATE_confirm = 5;
+    AUTHENTICATE_confirm = 6;
 
     // MLME-DEAUTHENTICATE.request
     // Args: DeauthenticateRequest
-    DEAUTHENTICATE_request = 6;
+    DEAUTHENTICATE_request = 7;
 
     // MLME-DEAUTHENTICATE.confirm
     // Args: DeauthenticateConfirm
-    DEAUTHENTICATE_confirm = 7;
+    DEAUTHENTICATE_confirm = 8;
 
     // MLME-DEAUTHENTICATE.indication
     // Args: DeauthenticateIndication
-    DEAUTHENTICATE_indication = 8;
+    DEAUTHENTICATE_indication = 9;
 
     // MLME-ASSOCIATE.request
     // Args: AssociateRequest
-    ASSOCIATE_request = 9;
+    ASSOCIATE_request = 10;
 
     // MLME-ASSOCIATE.confirm
     // Args: AssociateConfirm
-    ASSOCIATE_confirm = 10;
+    ASSOCIATE_confirm = 11;
 
     // MLME-DISASSOCIATE.request
     // Args: DisassociateRequest
-    DISASSOCIATE_request = 11;
+    DISASSOCIATE_request = 12;
 
     // MLME-DISASSOCIATE.confirm
     // Args: DisassociateConfirm
-    DISASSOCIATE_confirm = 12;
+    DISASSOCIATE_confirm = 13;
 
     // MLME-DISASSOCIATE.indication
     // Args: DisassociateIndication
-    DISASSOCIATE_indication = 13;
+    DISASSOCIATE_indication = 14;
 
     // MLME-RESET.request
     // Args: ResetRequest
-    RESET_request = 14;
+    RESET_request = 15;
 
     // MLME-START.request
     // Args: StartRequest
-    START_request = 15;
+    START_request = 16;
 
     // MLME-START.confirm
     // Args: StartConfirm
-    START_confirm = 16;
+    START_confirm = 17;
 
     // MLME-STOP.request
     // Args: StopRequest
-    STOP_request = 17;
+    STOP_request = 18;
 
     // MLME-STOP.confirm
     // Args: StopConfirm
-    STOP_confirm = 18;
+    STOP_confirm = 19;
 
     // MLME-SETKEYS.request
     // Args: SetKeysRequest
-    SETKEYS_request = 19;
+    SETKEYS_request = 20;
 
     // MLME-DELETEKEYS.request
     // Args: DeleteKeysRequest
-    DELETEKEYS_request = 20;
+    DELETEKEYS_request = 21;
 
     // MLME-EAPOL.request
     // Args: EapolRequest
-    EAPOL_request = 21;
+    EAPOL_request = 22;
 
     // MLME-EAPOL.confirm
     // Args: EapolConfirm
-    EAPOL_confirm = 22;
+    EAPOL_confirm = 23;
 
 
     // Custom primitives extending 802.11 MLME SAP interface.
     // See: wlan_mlme_ext.fidl
 
     // Args: SignalReportIndication
-    SIGNAL_REPORT_indication = 23;
+    SIGNAL_REPORT_indication = 24;
 
     // Args: EapolIndication
-    EAPOL_indication = 24;
+    EAPOL_indication = 25;
 
     // Args: DeviceQueryRequest
-    DEVICE_QUERY_request = 25;
+    DEVICE_QUERY_request = 26;
 
     // Args: DeviceQueryConfirm
-    DEVICE_QUERY_confirm = 26;
+    DEVICE_QUERY_confirm = 27;
 };

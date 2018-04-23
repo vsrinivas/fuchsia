@@ -49,7 +49,6 @@ type Client struct {
 	apCfg    *APConfig
 	ap       *AP
 	staAddr  [6]uint8
-	txid     uint32
 	eapolC   *eapol.Client
 	wlanInfo *mlme.DeviceQueryConfirm
 
@@ -239,8 +238,9 @@ event_loop:
 }
 
 func (c *Client) SendMessage(msg bindings.Payload, ordinal uint32) error {
+	// All MLME messages are one-way, so the txid is 0.
 	h := &bindings.MessageHeader{
-		Txid:    c.nextTxid(),
+		Txid:    0,
 		Flags:   0,
 		Ordinal: ordinal,
 	}
@@ -311,12 +311,6 @@ func (c *Client) handleResponse(obs zx.Signals, err error) (state, error) {
 		return nil, fmt.Errorf("unknown error: %v", err)
 	}
 	return nextState, nil
-}
-
-func (c *Client) nextTxid() (txid uint32) {
-	txid = c.txid
-	c.txid++
-	return
 }
 
 func parseResponse(buf []byte) (interface{}, error) {
