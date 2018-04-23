@@ -23,9 +23,6 @@
 
 namespace ledger {
 
-using NetConnectorFactory = std::function<netconnector::NetConnectorPtr()>;
-using TokenProviderFactory = std::function<modular_auth::TokenProviderPtr()>;
-
 class LedgerRepositoryFactoryImpl
     : public ledger_internal::LedgerRepositoryFactory {
  public:

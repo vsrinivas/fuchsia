@@ -49,11 +49,16 @@ FakeNetConnector* NetConnectorFactory::Holder::impl() {
 }
 
 void NetConnectorFactory::Holder::OnEmpty() {
-  if (on_disconnect_) {
-    on_disconnect_();
-  }
+  // We need to deregister ourselves from the list of active devices (call
+  // |on_empty_|) before updating the pending host list callbacks (call
+  // |on_disconnect_|). As |on_empty_| destroys |this|, we move |on_disconnect_|
+  // locally to be able to call it later.
+  auto on_disconnect = std::move(on_disconnect_);
   if (on_empty_) {
     on_empty_();
+  }
+  if (on_disconnect) {
+    on_disconnect();
   }
 }
 

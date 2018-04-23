@@ -22,8 +22,7 @@ namespace {
 
 class NetConnectorFactoryTest : public gtest::TestWithMessageLoop {
  public:
-  NetConnectorFactoryTest()
-      : environment_(message_loop_.async()) {}
+  NetConnectorFactoryTest() : environment_(message_loop_.async()) {}
   ~NetConnectorFactoryTest() override {}
 
  protected:
@@ -65,7 +64,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 }
 
 // Verifies that the host list is correct for two hosts.
-TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
+TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   netconnector::NetConnectorPtr netconnector1;
   factory_.AddBinding("host1", netconnector1.NewRequest());
 
@@ -81,7 +80,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
   EXPECT_TRUE(called);
 
   called = false;
-  uint64_t new_version;
+  uint64_t new_version = version;
   netconnector1->GetKnownDeviceNames(
       version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
                                  &host_list));
@@ -120,6 +119,60 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts) {
                                      &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
+  ASSERT_GE(1u, host_list->size());
+  EXPECT_EQ(1u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
+}
+
+// Verifies that the host list is correct for two hosts when calls are chained,
+// ie. when we have a pending call for a new host list waiting when a host
+// connects or disconnects.
+TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
+  netconnector::NetConnectorPtr netconnector1;
+  factory_.AddBinding("host1", netconnector1.NewRequest());
+
+  bool called = false;
+  uint64_t version = 0;
+  fidl::VectorPtr<fidl::StringPtr> host_list;
+  netconnector1->GetKnownDeviceNames(
+      netconnector::kInitialKnownDeviceNames,
+      callback::Capture(callback::SetWhenCalled(&called), &version,
+                        &host_list));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
+  called = false;
+  uint64_t new_version = version;
+  netconnector1->GetKnownDeviceNames(
+      version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
+                                 &host_list));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+
+  netconnector::NetConnectorPtr netconnector2;
+  factory_.AddBinding("host2", netconnector2.NewRequest());
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_NE(new_version, version);
+  ASSERT_GE(2u, host_list->size());
+  EXPECT_EQ(2u, host_list->size());
+  EXPECT_EQ("host1", host_list->at(0));
+  EXPECT_EQ("host2", host_list->at(1));
+
+  netconnector1->GetKnownDeviceNames(
+      new_version, callback::Capture(callback::SetWhenCalled(&called),
+                                     &new_version, &host_list));
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(called);
+
+  netconnector2.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+
   ASSERT_GE(1u, host_list->size());
   EXPECT_EQ(1u, host_list->size());
   EXPECT_EQ("host1", host_list->at(0));
