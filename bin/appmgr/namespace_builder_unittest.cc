@@ -46,5 +46,55 @@ TEST(NamespaceBuilder, Control) {
     zx_handle_close(flat->handle[i]);
 }
 
+TEST(NamespaceBuilder, Shell) {
+  SandboxMetadata sandbox;
+  EXPECT_TRUE(sandbox.Parse(R"JSON({
+    "features": [ "shell" ]
+  })JSON"));
+
+  NamespaceBuilder builder;
+  builder.AddSandbox(sandbox, [] { return zx::channel(); });
+
+  fdio_flat_namespace_t* flat = builder.Build();
+  EXPECT_EQ(11u, flat->count);
+
+  std::vector<std::string> paths;
+  for (size_t i = 0; i < flat->count; ++i)
+    paths.push_back(flat->path[i]);
+
+  // /config/ssl is included because "shell" implies "root-ssl-certificates"
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/config/ssl") !=
+              paths.end());
+  // While "shell" implies "root-ssl-certificates", it does NOT include /system/data/boringssl
+  // (see comment in namespace_builder.cc for details).
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system/data/boringssl") ==
+              paths.end());
+
+  // Paths that are only part of "shell", not "root-ssl-certificates"
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/blob") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/boot") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/data") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/dev") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/hub") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/install") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/pkgfs") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/system") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/tmp") !=
+              paths.end());
+  EXPECT_TRUE(std::find(paths.begin(), paths.end(), "/volume") !=
+              paths.end());
+
+  for (size_t i = 0; i < flat->count; ++i)
+    zx_handle_close(flat->handle[i]);
+}
+
 }  // namespace
 }  // namespace component
