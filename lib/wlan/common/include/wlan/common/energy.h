@@ -124,6 +124,7 @@ dBh operator-(const dBh& lhs, const dBh& rhs);
 dBh operator-(const dBh& rhs);
 dBm operator+(const dBm& lhs, const dB& rhs);
 dBm operator-(const dBm& lhs, const dB& rhs);
+dBm operator+(const dBm& lhs, const dBm& rhs);
 dBmh operator+(const dBmh& lhs, const dBh& rhs);
 dBmh operator-(const dBmh& lhs, const dBh& rhs);
 

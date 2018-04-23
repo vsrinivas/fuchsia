@@ -111,6 +111,20 @@ TEST_F(EnergyTest, Arithmetics) {
     EXPECT_EQ(c.val, 35);
     dB d = a - b;
     EXPECT_EQ(d.val, -15);
+
+    dBm e(20);
+    dBm f(20);
+    dBm g = e + f;
+    EXPECT_EQ(g.val, 23);  // 20 dBm + 20 dBm = 23 dBm
+
+    dBm h(10);
+    dBm i = e + h;
+    EXPECT_EQ(i.val, 20);  // 20 dBm + 10 dBm = 20 dBm
+
+    dBm j(-70);
+    dBm k(-71);
+    dBm l = j + k;
+    EXPECT_EQ(l.val, -67);  // -70 dBm + (-71) dBm = -67 dBm
 }
 
 }  // namespace

@@ -60,6 +60,47 @@ dBm operator-(const dBm& lhs, const dB& rhs) {
     return dBm(lhs.val - rhs.val);
 }
 
+static dBm add_dBm(const dBm& lhs, const dBm& rhs) {
+    auto max = std::max(lhs.val, rhs.val);
+    auto min = std::min(lhs.val, rhs.val);
+    auto diff = max - min;
+
+    // Math formula for the answer. Note the answer is a function of diff.
+    // alpha := pow(10.0f, -diff / 10.0f);
+    // beta := 10.0f * log10(1 + alpha);
+    // answer := max + beta;
+
+    // Since dBm is an integral type, it can be quantized to the integer precision.
+
+    int8_t beta = 0;
+    switch (diff) {
+    case 0:
+    case 1:
+        beta = 3;
+        break;
+    case 2:
+    case 3:
+        beta = 2;
+        break;
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+        beta = 1;
+        break;
+    default:
+        beta = 0;
+        break;
+    }
+    return dBm(max + beta);
+}
+
+dBm operator+(const dBm& lhs, const dBm& rhs) {
+    return add_dBm(lhs, rhs);
+}
+
 dBmh::dBmh(int16_t v) : EnergyType<int16_t, dBmh>(v) {}
 
 dBmh operator+(const dBmh& lhs, const dBh& rhs) {
