@@ -10,6 +10,7 @@ set -eo pipefail
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 BUILD_DIR="${DIR}/../build-arm64"
+BOOT_PART=boot
 
 CMDLINE="TERM=uart"
 
@@ -19,17 +20,19 @@ function HELP {
     echo "-c <cmd line>  : Extra command line options"
     echo "-m             : Add mexec option to command line"
     echo "-o <dir>       : Build directory"
+    echo "-P             : Boot partition name"
     echo "-h for help"
     exit 1
 }
 
-while getopts "b:c:d:mo:h" FLAG; do
+while getopts "b:c:d:mo:P:h" FLAG; do
     case $FLAG in
         b) BOARD="${OPTARG}";;
         c) CMDLINE+=" ${OPTARG}";;
         d) RAMDISK="${OPTARG}";;
         m) CMDLINE+=" netsvc.netboot=true";;
         o) BUILD_DIR="${OPTARG}";;
+        P) BOOT_PART="${OPTARG}";;
         h) HELP;;
         \?)
             echo unrecognized option
@@ -52,5 +55,5 @@ OUT_IMAGE="${BUILD_DIR}/${BOARD}-boot.img"
 echo ${CMDLINE} > ${CMDLINE_FILE}
 ${MKBOOTFS} ${BOOTDATA_BIN} -C ${CMDLINE_FILE} -o ${OUT_IMAGE}
 
-fastboot flash boot "${OUT_IMAGE}"
+fastboot flash "${BOOT_PART}" "${OUT_IMAGE}"
 fastboot reboot

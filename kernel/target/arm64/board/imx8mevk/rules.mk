@@ -6,6 +6,5 @@
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
 PLATFORM_BOARD_NAME := imx8mevk
-PLATFORM_USE_SHIM := true
 
 include make/board.mk

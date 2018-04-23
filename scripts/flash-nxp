@@ -7,4 +7,4 @@
 # https://opensource.org/licenses/MIT
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec $DIR/fastboot-flash-android -b imx8mevk -M 0x40000000 -K 0x0480000 -P boot_a -z "$@"
+exec $DIR/fastboot-flash-bootdata -b imx8mevk -P boot_a "$@"
