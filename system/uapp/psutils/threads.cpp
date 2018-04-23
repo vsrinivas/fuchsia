@@ -22,6 +22,7 @@
 #include <fbl/vector.h>
 #include <inspector/inspector.h>
 #include <pretty/hexdump.h>
+#include <task-utils/walker.h>
 
 static int verbosity_level = 0;
 
@@ -278,6 +279,23 @@ void usage(FILE* f) {
     fprintf(f, "  -v[n] = set verbosity level to N\n");
 }
 
+typedef struct {
+    zx_koid_t pid;
+    zx_handle_t proc;
+} callback_ctx;
+
+static zx_status_t walk_tree_callback(void* ctx, int depth,
+                                      zx_handle_t proc, zx_koid_t koid,
+                                      zx_koid_t parent_koid) {
+    callback_ctx *fields = static_cast<callback_ctx *>(ctx);
+    zx_status_t retval = ZX_OK;
+    if (koid == fields->pid) {
+        retval = zx_handle_duplicate(proc, ZX_RIGHT_SAME_RIGHTS, &fields->proc);
+    }
+    return retval;
+}
+
+
 int main(int argc, char** argv) {
     zx_status_t status;
     zx_koid_t pid = ZX_KOID_INVALID;
@@ -353,15 +371,23 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    zx_handle_t process;
-    status = zx_object_get_child(ZX_HANDLE_INVALID, pid, ZX_RIGHT_SAME_RIGHTS, &process);
+    callback_ctx ctx = {
+        .pid = pid,
+        .proc = ZX_HANDLE_INVALID,
+    };
+    status = walk_root_job_tree(NULL, walk_tree_callback, NULL, &ctx);
     if (status < 0) {
         print_zx_error(status, "unable to get a handle to %" PRIu64, pid);
         return 1;
     }
 
+    if (ctx.proc == ZX_HANDLE_INVALID) {
+        print_error("PID %" PRIu64 " does not exist", pid);
+        return 1;
+    }
+
     char process_name[ZX_MAX_NAME_LEN];
-    status = zx_object_get_property(process, ZX_PROP_NAME, process_name, sizeof(process_name));
+    status = zx_object_get_property(ctx.proc, ZX_PROP_NAME, process_name, sizeof(process_name));
     if (status < 0) {
         strlcpy(process_name, "unknown", sizeof(process_name));
     }
@@ -369,8 +395,8 @@ int main(int argc, char** argv) {
     printf("Backtrace of threads of process %" PRIu64 ": %s\n",
            pid, process_name);
 
-    dump_all_threads(pid, process);
-    zx_handle_close(process);
+    dump_all_threads(pid, ctx.proc);
+    zx_handle_close(ctx.proc);
 
     return 0;
 }

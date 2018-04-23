@@ -224,6 +224,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/inspector \
     system/ulib/pretty \
     system/ulib/fbl \
-    system/ulib/zxcpp
+    system/ulib/zxcpp \
+    system/ulib/task-utils \
 
 include make/module.mk
