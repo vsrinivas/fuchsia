@@ -1,3 +1,7 @@
+# FIDL Tutorial
+
+***WARNING: work in progress. Some content is out of date or entirely broken.***
+
 _Audience: Beginning fidl developers._
 
 _Prerequisites: At least intermediate skills in C++ or Dart._
