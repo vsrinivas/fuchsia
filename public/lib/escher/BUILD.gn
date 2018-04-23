@@ -263,6 +263,7 @@ source_set("escher") {
     "util/hasher.h",
     "util/image_utils.cc",
     "util/image_utils.h",
+    "util/intrusive_list.h",
     "util/object_pool.h",
     "util/stopwatch.h",
     "util/trace_macros.h",
