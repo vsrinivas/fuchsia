@@ -217,8 +217,11 @@ static zx_status_t setup_hdmi(vim2_display_t* display)
     display->disp_info.format = ZX_PIXEL_FORMAT_RGB_x888;
     display->disp_info.width  = display->p->timings.hactive;
     display->disp_info.height = display->p->timings.vactive;
-    display->disp_info.stride = display->p->timings.hactive;
     display->disp_info.pixelsize = ZX_PIXEL_FORMAT_BYTES(display->disp_info.format);
+    // The vim2 display controller needs buffers with a stride that is an even
+    // multiple of 32.
+    display->disp_info.stride = ROUNDUP(display->p->timings.hactive,
+                                        32 / display->disp_info.pixelsize);
 
     status = io_buffer_init(&display->fbuffer, display->bti,
                             (display->disp_info.stride * display->disp_info.height *
