@@ -12,7 +12,7 @@ namespace hid {
 // The hid report descriptor parser consists of a single function
 // ParseReportDescriptor() that takes as input a USB report descriptor
 // byte stream and on success returns a heap-allocated DeviceDescriptor
-// structure. When not needed it can be freed by standard C++ delete.
+// structure. When not needed it can be freed via FreeDeviceDescriptor().
 //
 // The DeviceDescriptor data is organized at the first level by the
 // array |report[rep_count]| in which each entry points to the first
@@ -239,5 +239,13 @@ enum ParseResult : uint32_t {
 ParseResult ParseReportDescriptor(
     const uint8_t* rpt_desc, size_t desc_len,
     DeviceDescriptor** dev_desc);
+
+void FreeDeviceDescriptor(DeviceDescriptor* dev_desc);
+
+ReportField* GetFirstInputField(const DeviceDescriptor* dev_desc,
+                                size_t* count);
+
+Collection* GetAppCollection(const ReportField* field);
+
 
 }  // namespace hid

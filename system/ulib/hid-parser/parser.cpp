@@ -99,6 +99,16 @@ bool is_app_collection(uint32_t col) {
 
 class ParseState {
 public:
+    static char* Alloc(size_t size) {
+        fbl::AllocChecker ac;
+        auto mem = new (&ac) char[size];
+        return ac.check() ? mem : nullptr;
+    }
+
+    static void Free(void* mem) {
+        delete reinterpret_cast<char*>(mem);
+    }
+
     ParseState()
         : usage_range_(),
           table_(),
@@ -136,8 +146,8 @@ public:
         size_t collect_sz = coll_.size() * sizeof(Collection);
 
         fbl::AllocChecker ac;
-        auto mem = new (&ac) char[device_sz + fields_sz + collect_sz];
-        if (!ac.check())
+        auto mem = Alloc(device_sz + fields_sz + collect_sz);
+        if (mem == nullptr)
             return kParseNoMemory;
 
         auto dev = new (mem) DeviceDescriptor { report_id_count_, {} };
@@ -571,6 +581,43 @@ ParseResult ParseReportDescriptor(
     }
 
     return state.Finish(device);
+}
+
+void FreeDeviceDescriptor(DeviceDescriptor* dev_desc) {
+    // memory was allocated via ParseState::Alloc()
+    impl::ParseState::Free(dev_desc);
+}
+
+ReportField* GetFirstInputField(const DeviceDescriptor* dev_desc,
+                                size_t* field_count) {
+    if (dev_desc == nullptr)
+        return nullptr;
+
+    auto rep_count = dev_desc->rep_count;
+
+    for (size_t ix = 0; ix != rep_count; ix++) {
+        auto fields = dev_desc->report[ix].first_field;
+        if (fields[0].type == hid::kInput) {
+            *field_count = dev_desc->report[ix].count;
+            return &fields[0];
+        }
+    }
+
+    *field_count = 0u;
+    return nullptr;
+}
+
+Collection* GetAppCollection(const ReportField* field) {
+    if (field == nullptr)
+        return nullptr;
+
+    auto collection = field->col;
+    while (collection != nullptr) {
+        if (collection->type == hid::CollectionType::kApplication)
+            break;
+        collection = collection->parent;
+    }
+    return collection;
 }
 
 }  // namespace hid

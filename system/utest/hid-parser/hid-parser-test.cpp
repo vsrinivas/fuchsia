@@ -143,6 +143,18 @@ static bool parse_boot_mouse() {
 
     // No parent collection.
     EXPECT_TRUE(collection->parent == nullptr);
+
+    // Test the helpers.
+    size_t count_first_input = 0;
+    auto first_input = hid::GetFirstInputField(dev, &count_first_input);
+    EXPECT_EQ(first_input, dev->report[0].first_field);
+    EXPECT_EQ(6u, count_first_input);
+
+    auto app_col = hid::GetAppCollection(first_input);
+    EXPECT_EQ(app_col, collection);
+
+
+    hid::FreeDeviceDescriptor(dev);
     END_TEST;
 }
 
@@ -351,6 +363,7 @@ static bool parse_adaf_trinket() {
     // No parent collection.
     EXPECT_TRUE(collection->parent == nullptr);
 
+    hid::FreeDeviceDescriptor(dev);
     END_TEST;
 }
 
@@ -556,6 +569,13 @@ static bool parse_ps3_controller() {
     EXPECT_EQ(collection->usage.usage, hid::usage::GenericDesktop::kJoystick);
     EXPECT_TRUE(collection->parent == nullptr);
 
+    size_t ff_count = 0u;
+    auto top_col = hid::GetAppCollection(hid::GetFirstInputField(dev, &ff_count));
+    ASSERT_TRUE(top_col != nullptr);
+    EXPECT_EQ(top_col, collection);
+    EXPECT_EQ(ff_count, 172);
+
+    hid::FreeDeviceDescriptor(dev);
     END_TEST;
 }
 
@@ -567,6 +587,8 @@ static bool parse_acer12_touch() {
         acer12_touch_r_desc, sizeof(acer12_touch_r_desc), &dd);
 
     EXPECT_EQ(res, hid::ParseResult::kParseOk);
+
+    hid::FreeDeviceDescriptor(dd);
     END_TEST;
 }
 
