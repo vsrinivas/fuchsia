@@ -19,8 +19,10 @@
 #define LOCAL_TRACE 0
 
 struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
+struct cpuid_leaf _cpuid_hyp[MAX_SUPPORTED_CPUID_HYP - X86_CPUID_HYP_BASE + 1];
 struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
 uint32_t max_cpuid = 0;
+uint32_t max_hyp_cpuid = 0;
 uint32_t max_ext_cpuid = 0;
 
 enum x86_vendor_list x86_vendor;
@@ -75,7 +77,8 @@ void x86_feature_init(void) {
     }
 
     /* test for extended cpuid count */
-    cpuid(X86_CPUID_EXT_BASE, &_cpuid_ext[0].a, &_cpuid_ext[0].b, &_cpuid_ext[0].c, &_cpuid_ext[0].d);
+    cpuid(X86_CPUID_EXT_BASE, &_cpuid_ext[0].a, &_cpuid_ext[0].b, &_cpuid_ext[0].c,
+          &_cpuid_ext[0].d);
 
     max_ext_cpuid = _cpuid_ext[0].a;
     LTRACEF("max extended cpuid 0x%x\n", max_ext_cpuid);
@@ -85,7 +88,20 @@ void x86_feature_init(void) {
     /* read in the extended cpuids */
     for (uint32_t i = X86_CPUID_EXT_BASE + 1; i - 1 < max_ext_cpuid; i++) {
         uint32_t index = i - X86_CPUID_EXT_BASE;
-        cpuid_c(i, 0, &_cpuid_ext[index].a, &_cpuid_ext[index].b, &_cpuid_ext[index].c, &_cpuid_ext[index].d);
+        cpuid_c(i, 0, &_cpuid_ext[index].a, &_cpuid_ext[index].b, &_cpuid_ext[index].c,
+                &_cpuid_ext[index].d);
+    }
+
+    /* read in the hypervisor cpuids. the maximum leaf is reported at X86_CPUID_HYP_BASE. */
+    cpuid(X86_CPUID_HYP_VENDOR, &_cpuid_ext[0].a, &_cpuid_ext[0].b, &_cpuid_ext[0].c,
+          &_cpuid_ext[0].d);
+    max_hyp_cpuid = _cpuid_ext[0].a;
+    if (max_hyp_cpuid > MAX_SUPPORTED_CPUID_HYP)
+      max_hyp_cpuid = MAX_SUPPORTED_CPUID_HYP;
+    for (uint32_t i = X86_CPUID_HYP_BASE; i <= max_hyp_cpuid; i++) {
+        uint32_t index = i - X86_CPUID_HYP_BASE;
+        cpuid(i, &_cpuid_hyp[index].a, &_cpuid_hyp[index].b, &_cpuid_hyp[index].c,
+              &_cpuid_hyp[index].d);
     }
 
     /* populate the model info */

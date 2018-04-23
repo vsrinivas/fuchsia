@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 #define MAX_SUPPORTED_CPUID     (0x17)
+#define MAX_SUPPORTED_CPUID_HYP (0x40000001)
 #define MAX_SUPPORTED_CPUID_EXT (0x8000001e)
 
 struct cpuid_leaf {
@@ -37,6 +38,7 @@ enum x86_cpuid_leaf_num {
     X86_CPUID_PT = 0x14,
     X86_CPUID_TSC = 0x15,
 
+    X86_CPUID_HYP_BASE = 0x40000000,
     X86_CPUID_HYP_VENDOR = 0x40000000,
     X86_CPUID_KVM_FEATURES = 0x40000001,
 
@@ -60,15 +62,22 @@ void x86_feature_init(void);
 static inline const struct cpuid_leaf *x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf)
 {
     extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
+    extern struct cpuid_leaf _cpuid_hyp[MAX_SUPPORTED_CPUID_HYP - X86_CPUID_HYP_BASE + 1];
     extern struct cpuid_leaf _cpuid_ext[MAX_SUPPORTED_CPUID_EXT - X86_CPUID_EXT_BASE + 1];
     extern uint32_t max_cpuid;
     extern uint32_t max_ext_cpuid;
+    extern uint32_t max_hyp_cpuid;
 
-    if (leaf < X86_CPUID_EXT_BASE) {
+    if (leaf < X86_CPUID_HYP_BASE) {
         if (unlikely(leaf > max_cpuid))
             return NULL;
 
         return &_cpuid[leaf];
+    } else if (leaf < X86_CPUID_EXT_BASE) {
+        if (unlikely(leaf > max_hyp_cpuid))
+            return NULL;
+
+        return &_cpuid_hyp[(uint32_t)leaf - (uint32_t)X86_CPUID_HYP_BASE];
     } else {
         if (unlikely(leaf > max_ext_cpuid))
             return NULL;
