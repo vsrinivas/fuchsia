@@ -57,3 +57,7 @@ MAINTAINERS files. These list email addresses of individuals who are
 familiar with and can provide code review for the contents of the
 containing directory. See [maintainers.md](maintainers.md) for more
 discussion.
+
+## How to handle third-party code
+
+See the [guidelines](readme_fuchsia_format.md) on writing README.fuchsia files.

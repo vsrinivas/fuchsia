@@ -23,6 +23,7 @@ and debugging Fuchsia and programs running on Fuchsia.
 
  - [C/C++](languages/c-cpp/README.md)
  - [Dart](languages/dart/README.md)
+ - [FIDL](languages/fidl/README.md)
  - [Go](languages/go/README.md)
  - [Rust](languages/rust/README.md)
  - [Flutter modules][flutter_module] - how to write a graphical module using
