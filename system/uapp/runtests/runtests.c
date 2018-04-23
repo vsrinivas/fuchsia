@@ -12,6 +12,7 @@
 #include <libgen.h>
 #include <limits.h>
 #include <zircon/listnode.h>
+#include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <stdio.h>
@@ -162,47 +163,59 @@ static bool run_test(const char* path, FILE* out) {
     const char* argv[] = {path, verbose_opt};
     int argc = verbosity >= 0 ? 2 : 1;
 
-    launchpad_t* lp;
-    zx_status_t status;
-    status = launchpad_create(0, path, &lp);
+    launchpad_t* lp = NULL;
+    zx_status_t status = ZX_OK;
+    zx_handle_t test_job = ZX_HANDLE_INVALID;
+    status = zx_job_create(zx_job_default(), 0, &test_job);
+    if (status != ZX_OK) {
+      printf("FAILURE: zx_job_create() returned %d\n", status);
+      return false;
+    }
+    status = zx_object_set_property(test_job, ZX_PROP_NAME, "run-test", 8);
+    if (status != ZX_OK) {
+      printf("FAILURE: zx_object_set_property() returned %d\n", status);
+      goto fail;
+    }
+    status = launchpad_create(test_job, path, &lp);
     if (status != ZX_OK) {
       printf("FAILURE: launchpad_create() returned %d\n", status);
-      return false;
+      goto fail;
     }
     status = launchpad_load_from_file(lp, argv[0]);
     if (status != ZX_OK) {
       printf("FAILURE: launchpad_load_from_file() returned %d\n", status);
-      return false;
+      goto fail;
     }
-    status = launchpad_clone(lp, LP_CLONE_ALL);
+    status = launchpad_clone(lp, LP_CLONE_FDIO_ALL | LP_CLONE_ENVIRON);
     if (status != ZX_OK) {
       printf("FAILURE: launchpad_clone() returned %d\n", status);
-      return false;
+      goto fail;
     }
     if (out != NULL) {
         if (pipe(fds)) {
-            printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
-            return false;
+          printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
+          goto fail;
         }
         status = launchpad_clone_fd(lp, fds[1], STDOUT_FILENO);
         if (status != ZX_OK) {
           printf("FAILURE: launchpad_clone_fd() returned %d\n", status);
-          return false;
+          goto fail;
         }
         status = launchpad_transfer_fd(lp, fds[1], STDERR_FILENO);
         if (status != ZX_OK) {
           printf("FAILURE: launchpad_transfer_fd() returned %d\n", status);
-          return false;
+          goto fail;
         }
     }
     launchpad_set_args(lp, argc, argv);
     const char* errmsg;
     zx_handle_t handle;
     status = launchpad_go(lp, &handle, &errmsg);
+    lp = NULL;
     if (status != ZX_OK) {
         printf("FAILURE: Failed to launch %s: %d: %s\n", path, status, errmsg);
         record_test_result(&tests, path, FAILED_TO_LAUNCH, 0);
-        return false;
+        goto fail;
     }
     // Tee output.
     if (out != NULL) {
@@ -218,7 +231,7 @@ static bool run_test(const char* path, FILE* out) {
     if (status != ZX_OK) {
         printf("FAILURE: Failed to wait for process exiting %s: %d\n", path, status);
         record_test_result(&tests, path, FAILED_TO_WAIT, 0);
-        return false;
+        goto fail;
     }
 
     // read the return code
@@ -229,18 +242,27 @@ static bool run_test(const char* path, FILE* out) {
     if (status < 0) {
         printf("FAILURE: Failed to get process return code %s: %d\n", path, status);
         record_test_result(&tests, path, FAILED_TO_RETURN_CODE, 0);
-        return false;
+        goto fail;
     }
 
     if (proc_info.return_code != 0) {
         printf("FAILURE: %s exited with nonzero status: %d\n", path, proc_info.return_code);
         record_test_result(&tests, path, FAILED_NONZERO_RETURN_CODE, proc_info.return_code);
-        return false;
+        goto fail;
     }
 
+    zx_task_kill(test_job);
+    zx_handle_close(test_job);
     printf("PASSED: %s passed\n", path);
     record_test_result(&tests, path, SUCCESS, 0);
     return true;
+fail:
+    if (lp) {
+      launchpad_destroy(lp);
+    }
+    zx_task_kill(test_job);
+    zx_handle_close(test_job);
+    return false;
 }
 
 // Creates an output file name from a path to a test.
