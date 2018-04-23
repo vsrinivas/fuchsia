@@ -724,7 +724,7 @@ int suspended_in_syscall_reg_access_thread_func(void* arg_) {
                                                   &call_args, &actual_bytes, &actual_handles, NULL);
         ASSERT_EQ(call_status, ZX_OK);
         EXPECT_EQ(actual_bytes, sizeof(recv_buf));
-        EXPECT_EQ(memcmp(recv_buf, "TXIDy", sizeof(recv_buf)), 0);
+        EXPECT_EQ(memcmp(recv_buf + sizeof(zx_txid_t), "y", sizeof(recv_buf) - sizeof(zx_txid_t)), 0);
     } else {
         zx_signals_t pending;
         zx_status_t status =
@@ -821,7 +821,7 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
             zx_channel_read(syscall_handle, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
             ZX_OK);
         EXPECT_EQ(actual_bytes, sizeof(buf));
-        EXPECT_EQ(memcmp(buf, "TXIDx", sizeof(buf)), 0);
+        EXPECT_EQ(memcmp(buf + sizeof(zx_txid_t), "x", sizeof(buf) - sizeof(zx_txid_t)), 0);
 
         // write a reply
         buf[sizeof(zx_txid_t)] = 'y';

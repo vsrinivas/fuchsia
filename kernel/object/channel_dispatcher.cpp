@@ -222,7 +222,7 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
     canary_.Assert();
 
     auto waiter = ThreadDispatcher::GetCurrent()->GetMessageWaiter();
-    if (unlikely(waiter->BeginWait(fbl::WrapRefPtr(this), msg->get_txid()) != ZX_OK)) {
+    if (unlikely(waiter->BeginWait(fbl::WrapRefPtr(this)) != ZX_OK)) {
         // If a thread tries BeginWait'ing twice, the VDSO contract around retrying
         // channel calls has been violated.  Shoot the misbehaving process.
         ProcessDispatcher::GetCurrent()->Kill();
@@ -240,6 +240,25 @@ zx_status_t ChannelDispatcher::Call(fbl::unique_ptr<MessagePacket> msg,
             waiter->EndWait(reply);
             return ZX_ERR_PEER_CLOSED;
         }
+
+        // Obtain a txid.  txid 0 is not allowed, and 1..0x7FFFFFFF are reserved
+        // for userspace.  So, bump our counter and OR in the high bit.
+alloc_txid:
+        zx_txid_t txid = (++txid_) | 0x80000000;
+
+        // If there are waiting messages, ensure we have not allocated a txid
+        // that's already in use.  This is unlikely.  It's atypical for multiple
+        // threads to be invoking channel_call() on the same channel at once, so
+        // the waiter list is most commonly empty.
+        for (auto& waiter: waiters_) {
+            if (waiter.get_txid() == txid) {
+                goto alloc_txid;
+            }
+        }
+
+        // Install our txid in the waiter and the outbound message
+        waiter->set_txid(txid);
+        msg->set_txid(txid);
 
         // (0) Before writing the outbound message and waiting, add our
         // waiter to the list.
@@ -334,14 +353,12 @@ ChannelDispatcher::MessageWaiter::~MessageWaiter() {
     DEBUG_ASSERT(!InContainer());
 }
 
-zx_status_t ChannelDispatcher::MessageWaiter::BeginWait(fbl::RefPtr<ChannelDispatcher> channel,
-                                                        zx_txid_t txid) {
+zx_status_t ChannelDispatcher::MessageWaiter::BeginWait(fbl::RefPtr<ChannelDispatcher> channel) {
     if (unlikely(channel_)) {
         return ZX_ERR_BAD_STATE;
     }
     DEBUG_ASSERT(!InContainer());
 
-    txid_ = txid;
     status_ = ZX_ERR_TIMED_OUT;
     channel_ = fbl::move(channel);
     event_.Unsignal();

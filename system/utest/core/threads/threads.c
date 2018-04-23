@@ -532,7 +532,7 @@ static bool test_suspend_channel_call(void) {
     ASSERT_EQ(zx_channel_read(channel, 0, buf, NULL, sizeof(buf), 0, &actual_bytes, NULL),
               ZX_OK, "");
     ASSERT_EQ(actual_bytes, sizeof(buf), "");
-    ASSERT_EQ(memcmp(buf, "abcdefghi", sizeof(buf)), 0, "");
+    ASSERT_EQ(memcmp(buf + sizeof(zx_txid_t), "abcdefghi" + sizeof(zx_txid_t), sizeof(buf) - sizeof(zx_txid_t)), 0, "");
 
     // Write a reply
     buf[8] = 'j';

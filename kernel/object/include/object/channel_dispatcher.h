@@ -76,11 +76,12 @@ public:
 
         ~MessageWaiter();
 
-        zx_status_t BeginWait(fbl::RefPtr<ChannelDispatcher> channel, zx_txid_t txid);
+        zx_status_t BeginWait(fbl::RefPtr<ChannelDispatcher> channel);
         int Deliver(fbl::unique_ptr<MessagePacket> msg);
         int Cancel(zx_status_t status);
         fbl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         zx_txid_t get_txid() const { return txid_; }
+        void set_txid(zx_txid_t txid) { txid_ = txid; };
         zx_status_t Wait(zx_time_t deadline);
         // Returns any delivered message via out and the status.
         zx_status_t EndWait(fbl::unique_ptr<MessagePacket>* out);
@@ -112,5 +113,6 @@ private:
     MessageList messages_ TA_GUARDED(get_lock());
     uint64_t message_count_ TA_GUARDED(get_lock()) = 0;
     uint64_t max_message_count_ TA_GUARDED(get_lock()) = 0;
+    uint32_t txid_ TA_GUARDED(get_lock()) = 0;
     WaiterList waiters_ TA_GUARDED(get_lock());
 };

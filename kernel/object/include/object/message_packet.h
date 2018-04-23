@@ -58,6 +58,12 @@ public:
         }
     }
 
+    void set_txid(zx_txid_t txid) {
+        if (data_size_ >= sizeof(zx_txid_t)) {
+            *(reinterpret_cast<zx_txid_t*>(data())) = txid;
+        }
+    }
+
 private:
     MessagePacket(uint32_t data_size, uint32_t num_handles, Handle** handles);
     ~MessagePacket();

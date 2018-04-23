@@ -363,6 +363,9 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
     uint32_t num_bytes = args.wr_num_bytes;
     uint32_t num_handles = args.wr_num_handles;
 
+    if (num_bytes < sizeof(zx_txid_t))
+        return ZX_ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<ChannelDispatcher> channel;
