@@ -8,6 +8,7 @@ use bytes::Bytes;
 use crypto_utils;
 use futures::Future;
 use integrity;
+use integrity::hmac_sha1::HmacSha1;
 use keywrap;
 use std::fmt;
 use suite_selector;
@@ -112,7 +113,7 @@ impl Akm {
 
         // IEEE 802.11-2016, 12.7.3, Table 12-8
         match self.suite_type {
-            1 | 2 => Some(Box::new(integrity::HmacSha1128)),
+            1 | 2 => Some(Box::new(HmacSha1::new())),
             // TODO(hahnr): Add remaining integrity algorithms.
             3...13 => None,
             _ => None,
