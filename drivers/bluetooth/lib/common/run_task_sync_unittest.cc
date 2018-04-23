@@ -8,15 +8,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-
-#include "lib/fxl/synchronization/sleep.h"
+#include <lib/zx/time.h>
 
 namespace btlib {
 namespace common {
 namespace {
 
 TEST(RunTaskSyncTest, RunTaskSync) {
-  constexpr int64_t kSleepTimeMs = 10;
+  constexpr zx::duration kSleepTime = zx::msec(10);
   constexpr int kLoopCount = 10;
 
   async::Loop loop;
@@ -25,8 +24,8 @@ TEST(RunTaskSyncTest, RunTaskSync) {
 
   for (int i = 0; i < kLoopCount; ++i) {
     bool callback_run = false;
-    auto cb = [&callback_run] {
-      fxl::SleepFor(fxl::TimeDelta::FromMilliseconds(kSleepTimeMs));
+    auto cb = [&callback_run, kSleepTime] {
+      zx::nanosleep(zx::deadline_after(kSleepTime));
       callback_run = true;
     };
 

@@ -43,7 +43,6 @@
 #include "lib/fxl/type_converter.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/synchronization/sleep.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fsl/types/type_converters.h"
 #include "third_party/rapidjson/rapidjson/document.h"

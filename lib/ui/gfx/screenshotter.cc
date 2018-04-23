@@ -4,13 +4,14 @@
 #include <functional>
 #include <utility>
 
+#include <lib/zx/time.h>
+
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/command_buffer_pool.h"
 #include "lib/escher/impl/image_cache.h"
-#include "lib/fxl/synchronization/sleep.h"
 
 namespace scenic {
 namespace gfx {
@@ -102,7 +103,7 @@ void Screenshotter::TakeScreenshot(
   // Force the command buffer to retire so that the submitted commands will run.
   // TODO(SCN-211): Make this a proper wait instead of spinning.
   while (!escher->command_buffer_pool()->Cleanup()) {
-    fxl::SleepFor(fxl::TimeDelta::FromSeconds(1));
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
   }
 }
 

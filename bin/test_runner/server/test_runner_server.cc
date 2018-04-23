@@ -33,19 +33,19 @@
 #include <vector>
 
 #include <arpa/inet.h>
-#include <lib/async/cpp/task.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <fuchsia/cpp/test_runner.h>
+#include <lib/async/cpp/task.h>
+#include <lib/zx/time.h>
 
 #include "lib/app/cpp/application_context.h"
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/synchronization/sleep.h"
 #include "lib/fxl/tasks/one_shot_timer.h"
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner.h"
@@ -183,14 +183,14 @@ class TestRunnerTCPServer {
     // 1. Make a TCP socket.
     // We need to retry because there's a race condition at boot
     // between netstack initializing and us calling socket().
-    const auto duration = fxl::TimeDelta::FromMilliseconds(200u);
+    const auto duration = zx::msec(200);
 
     for (int i = 0; i < 5 * 10; ++i) {
       listener_ = socket(addr.sin6_family, SOCK_STREAM, IPPROTO_TCP);
       if (listener_ != -1) {
         break;
       }
-      fxl::SleepFor(duration);
+      zx::nanosleep(zx::deadline_after(duration));
     }
     FXL_CHECK(listener_ != -1);
 

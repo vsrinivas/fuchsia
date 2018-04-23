@@ -15,7 +15,6 @@
 #include "gtest/gtest.h"
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/sleep.h"
 #include "lib/fxl/test/timeout_tolerance.h"
 #include "lib/fxl/time/stopwatch.h"
 
@@ -25,6 +24,10 @@ namespace {
 constexpr TimeDelta kEpsilonTimeout = TimeDelta::FromMilliseconds(20);
 constexpr TimeDelta kTinyTimeout = TimeDelta::FromMilliseconds(100);
 constexpr TimeDelta kActionTimeout = TimeDelta::FromMilliseconds(10000);
+
+inline void SleepFor(TimeDelta duration) {
+  std::this_thread::sleep_for(std::chrono::nanoseconds(duration.ToNanoseconds()));
+}
 
 // Sleeps for a "very small" amount of time.
 void EpsilonRandomSleep() {
