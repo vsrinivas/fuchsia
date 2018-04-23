@@ -24,7 +24,9 @@ def FxSSH(address, command):
 def HumanToBytes(size_str):
   last = size_str[-1]
   KB = 1024
-  if last == 'k':
+  if last == 'B':
+    multiplier = 1
+  elif last == 'k':
     multiplier = KB
   elif last == 'M':
     multiplier = KB * KB
@@ -32,6 +34,8 @@ def HumanToBytes(size_str):
     multiplier = KB * KB * KB
   elif last == 'T':
     multiplier = KB * KB * KB * KB
+  else:
+    raise Exception('Unknown multiplier ' + last)
   return float(size_str[:-1]) * multiplier
 
 
@@ -42,7 +46,9 @@ def BytesToHuman(num, suffix='B'):
     num /= 1024.0
   return "%.1f%s%s" % (num, 'Yi', suffix)
 
-
+# The output of vmos is:
+# rights  koid parent #chld #map #shr    size   alloc name [app]
+# on each line
 def ParseVmos(vmos, matchers):
   vmo_lines = vmos.strip().split('\n')
   sizes = {}
@@ -78,7 +84,7 @@ def Main():
   args = parser.parse_args()
 
   vmos = FxSSH(args.address, ['vmos', args.pid])
-  sizes = ParseVmos(vmos, ['dart', 'flutter', 'jemalloc'])
+  sizes = ParseVmos(vmos, ['dart', 'flutter', 'jemalloc', 'magma', 'sanitiz'])
   for k, v in sizes.iteritems():
     print k + ", " + BytesToHuman(v)
 
