@@ -102,11 +102,9 @@ const uint32 NetInterfaceFlagUp = 0x1;  // Set if the interface is up.
 
 // Features for Netinterface.features.
 // LINT.IfChange
-enum NetInterfaceFeature {
-  WLAN = 0x01;
-  SYNTH = 0x02;
-  LOOPBACK = 0x04;
-};
+const uint32 interfaceFeatureWlan = 0x01;
+const uint32 interfaceFeatureSynth = 0x02;
+const uint32 interfaceFeatureLoopback = 0x04;
 // LINT.ThenChange(
 //   //zircon/system/public/zircon/device/ethernet.h,
 //   //garnet/go/src/netstack/link/eth/ioctl.go

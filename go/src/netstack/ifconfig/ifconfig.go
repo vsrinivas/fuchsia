@@ -277,7 +277,7 @@ func toNetAddress(addr net.IP) netstack.NetAddress {
 }
 
 func isWLAN(features uint32) bool {
-	return features&uint32(netstack.NetInterfaceFeatureWlan) != 0
+	return features&uint32(netstack.InterfaceFeatureWlan) != 0
 }
 
 // bytesToString returns a human-friendly display of the given byte count.
