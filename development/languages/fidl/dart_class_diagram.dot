@@ -1,0 +1,12 @@
+digraph G {
+  rankdir = TB;
+  node [style=filled,fillcolor=grey,shape=rectangle];
+  {rank=source; Application Echo};
+  EchoImpl [
+      label = "{<f0> EchoImpl | <f1> EchoInterface_echo | <f2> EchoApplication}"
+      shape = record
+  ];
+  EchoApplication->Application;
+  EchoImpl->Echo;
+  EchoStub->Echo;
+}
