@@ -295,14 +295,14 @@ TEST(PassThru, Output_16) {
 
 // Are all valid data values passed correctly to float outputs
 TEST(PassThru, Output_Float) {
-  int32_t accum[] = {-0x8080, -0x8000, -0x4080, -1, 0, 0x4080, 0x7FFF, 0x8000};
+  int32_t accum[] = {-0x8080, -0x8000, -0x4080, -1, 0, 0x4080, 0x7FFF, 0x8080};
   //                    ^^^^     we clamp these vals to float limits     ^^^^
 
   float dest[] = {1.2f, 2.3f, 3.4f, 4.5f, 5.6f, 6.7f, 7.8f, 8.9f, 4.2f};
   // Dest completely overwritten, except for last value: we only mix(8)
 
   float expect[] = {-1.0f, -1.0f,       -0.50390625f, -0.000030517578f,
-                    0.0f,  0.50390625f, 0.99996948f,  0.99996948f,
+                    0.0f,  0.50390625f, 0.99996948f,  1.0f,
                     4.2f};
 
   audio::OutputFormatterPtr output_formatter =

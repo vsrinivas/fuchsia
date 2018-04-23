@@ -9,6 +9,8 @@
 
 #include <fuchsia/cpp/media.h>
 
+#include "garnet/bin/media/audio_server/constants.h"
+
 namespace media {
 namespace audio {
 
@@ -61,22 +63,16 @@ class Gain {
   Gain::AScale GetGainScale(float output_db_gain);
 
   // Helper function which gives the value of the mute threshold for an
-  // amplitude scale value for a sample with a given resolution.
-  //
-  // @param bit_count The number of non-sign bits for the signed integer
-  // representation of the sample to be scaled.  For example, the bit count used
-  // to compute the mute threshold when scaling 16 bit signed integers is 15.
+  // amplitude scale value, for any incoming sample format.
   //
   // @return The value at which the amplitude scaler is guaranteed to drive all
-  // samples to a value of 0 (meaning that you are wasting compute cycles
-  // attempting to scale anything).  Note: this includes any rounding effects on
-  // data & scalars. For example, when scaling 16 bit signed integers, if
-  // amplitude_scale() <= MuteThreshold(15), then all scaled values are going to
-  // end up as 0 (even with rounding), so there is no point in performing the
-  // fixed point multiply. Now that we round data values during scaling, we use
-  // "bit_count - 1", not merely bit_count in this calculation.
-  static constexpr AScale MuteThreshold(unsigned int bit_count) {
-    return (static_cast<AScale>(1u) << (kFractionalScaleBits - bit_count - 1)) -
+  // sample values to a value of 0 (meaning that we waste compute cycles if we
+  // actually scale anything). Note: because we normalize all input formats to
+  // the same full-scale bounds, this value is identical for all input types.
+  // This gain_scale value takes rounding into effect in its calculation.
+  static constexpr AScale MuteThreshold() {
+    return (static_cast<AScale>(1u)
+            << (kFractionalScaleBits - kAudioPipelineWidth)) -
            1;
   }
 

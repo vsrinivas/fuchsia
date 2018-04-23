@@ -4,12 +4,14 @@
 
 #pragma once
 
-#include <fbl/algorithm.h>
-#include <zircon/compiler.h>
 #include <cmath>
 #include <limits>
 #include <type_traits>
 
+#include <fbl/algorithm.h>
+#include <zircon/compiler.h>
+
+#include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/gain.h"
 
 namespace media {
@@ -39,7 +41,7 @@ class SampleNormalizer<
     typename std::enable_if<std::is_same<SType, uint8_t>::value, void>::type> {
  public:
   static inline int32_t Read(const SType* src) {
-    return (static_cast<int32_t>(*src) << 8) - 0x8000;
+    return (static_cast<int32_t>(*src) - 0x80) << (kAudioPipelineWidth - 8);
   }
 };
 
@@ -49,7 +51,7 @@ class SampleNormalizer<
     typename std::enable_if<std::is_same<SType, int16_t>::value, void>::type> {
  public:
   static inline int32_t Read(const SType* src) {
-    return static_cast<int32_t>(*src);
+    return static_cast<int32_t>(*src) << (kAudioPipelineWidth - 16);
   }
 };
 
@@ -69,7 +71,7 @@ class SampleNormalizer<
     // earlier. That said, the "practically clipping" +1.0 value is rare in WAV
     // files; sources should easily be able to reduce their input levels.
     SType val = fbl::clamp<SType>(*src, -1.0f, 1.0f);
-    val *= (-std::numeric_limits<int16_t>::min());
+    val *= (1 << (kAudioPipelineWidth - 1));
     return static_cast<int32_t>(round(val));
   }
 };

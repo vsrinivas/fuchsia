@@ -35,6 +35,10 @@ constexpr uint32_t kPtsRoundingVal = 1 << (kPtsFractionalBits - 1);
 // Used in places where PTS must be an integral number of frames.
 constexpr uint32_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;
 
+// This is the width of our signed fixed-point audio processing pipeline.
+// Currently equivalent to int16, this is easily adjusted with the below const.
+constexpr uint32_t kAudioPipelineWidth = 16;
+
 // A compile time constant which is guaranteed to never be used as a valid
 // generation ID (by any of the various things which use generation IDs to track
 // changes to state).

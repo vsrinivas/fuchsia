@@ -8,6 +8,7 @@
 #include <limits>
 #include <type_traits>
 
+#include "garnet/bin/media/audio_server/constants.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
@@ -24,6 +25,13 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
+    if (kAudioPipelineWidth > 16) {
+      int32_t round_val =
+          (1 << (kAudioPipelineWidth - 17)) - (sample <= 0 ? 1 : 0);
+      sample = (sample + round_val) >> (kAudioPipelineWidth - 16);
+    }
+    sample = fbl::clamp<int32_t>(sample, std::numeric_limits<int16_t>::min(),
+                                 std::numeric_limits<int16_t>::max());
     return static_cast<DType>(sample);
   }
 };
@@ -36,8 +44,13 @@ class DstConverter<
   static inline constexpr DType Convert(int32_t sample) {
     // Before we right-shift, add an effective "0.5" so that values 'round'.
     // But -0.5 must round *away from* zero: add just a bit less, if negative.
-    sample += (sample >= 0 ? 0x8080 : 0x807F);
-    return static_cast<DType>((fbl::clamp(sample, 0, 0xFFFF)) >> 8);
+    int32_t normalize_round_val =
+        (0x8080 << (kAudioPipelineWidth - 16)) - (sample <= 0 ? 1 : 0);
+    sample = fbl::clamp<int32_t>(
+        (sample + normalize_round_val) >> (kAudioPipelineWidth - 8),
+        std::numeric_limits<uint8_t>::min(),
+        std::numeric_limits<uint8_t>::max());
+    return static_cast<DType>(sample);
   }
 };
 
@@ -47,7 +60,9 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
-    return static_cast<DType>(sample) / -std::numeric_limits<int16_t>::min();
+    return fbl::clamp(
+        static_cast<DType>(sample) / (1 << (kAudioPipelineWidth - 1)), -1.0f,
+        1.0f);
   }
 };
 
@@ -91,15 +106,10 @@ class OutputFormatterImpl : public OutputFormatter {
     using DC = DstConverter<DType>;
     DType* dest = static_cast<DType*>(dest_void);
 
+    // Previously we clamped here; because of rounding, this is different for
+    // each output type, so it is now handled in Convert() specializations.
     for (size_t i = 0; i < (static_cast<size_t>(frames) * channels_); ++i) {
-      int32_t val = source[i];
-      if (val >= std::numeric_limits<int16_t>::max()) {
-        dest[i] = DC::Convert(std::numeric_limits<int16_t>::max());
-      } else if (val <= std::numeric_limits<int16_t>::min()) {
-        dest[i] = DC::Convert(std::numeric_limits<int16_t>::min());
-      } else {
-        dest[i] = DC::Convert(val);
-      }
+      dest[i] = DC::Convert(source[i]);
     }
   }
 

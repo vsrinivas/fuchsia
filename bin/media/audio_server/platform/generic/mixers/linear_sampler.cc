@@ -259,7 +259,7 @@ bool LinearSamplerImpl<DChCount, SType, SChCount>::Mix(
                       : Mix<ScalerType::EQ_UNITY, false>(
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale);
-  } else if (amplitude_scale <= Gain::MuteThreshold(15)) {
+  } else if (amplitude_scale <= Gain::MuteThreshold()) {
     return Mix<ScalerType::MUTED, true>(dst, dst_frames, dst_offset, src,
                                         frac_src_frames, frac_src_offset,
                                         frac_step_size, amplitude_scale);
@@ -431,7 +431,7 @@ bool NxNLinearSamplerImpl<SType>::Mix(int32_t* dst,
                             dst, dst_frames, dst_offset, src, frac_src_frames,
                             frac_src_offset, frac_step_size, amplitude_scale,
                             chan_count_);
-  } else if (amplitude_scale <= Gain::MuteThreshold(15)) {
+  } else if (amplitude_scale <= Gain::MuteThreshold()) {
     return Mix<ScalerType::MUTED, true>(
         dst, dst_frames, dst_offset, src, frac_src_frames, frac_src_offset,
         frac_step_size, amplitude_scale, chan_count_);

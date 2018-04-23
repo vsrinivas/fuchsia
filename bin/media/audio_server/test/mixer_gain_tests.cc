@@ -326,14 +326,14 @@ TEST(Gain, Accumulator_Clear) {
                                Resampler::SampleAndHold);
   // Use the gain guaranteed to silence all signals: Gain::MuteThreshold.
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
-        Gain::MuteThreshold(15));
+        Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Try with the other sampler.
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
-        Gain::MuteThreshold(15));
+        Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //
@@ -342,14 +342,14 @@ TEST(Gain, Accumulator_Clear) {
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
-        Gain::MuteThreshold(15));
+        Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // Ensure that both samplers behave identically in this regard.
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::LinearInterpolation);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
-        Gain::MuteThreshold(15));
+        Gain::MuteThreshold());
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
