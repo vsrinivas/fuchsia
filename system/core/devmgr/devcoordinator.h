@@ -57,7 +57,7 @@ struct dc_devhost {
     // listnode for this devhost in its parent devhost's list-of-children
     list_node_t node;
 
-    // list of all cild devhosts of this devhost
+    // list of all child devhosts of this devhost
     list_node_t children;
 };
 
@@ -100,6 +100,9 @@ struct dc_device {
 
     // listnode for this device in the all devices list
     list_node_t anode;
+
+    // listnode for this device's metadata (list of dc_metadata_t)
+    list_node_t metadata;
 
     zx_device_prop_t props[];
 };
@@ -213,6 +216,9 @@ typedef struct {
 #define DC_OP_BIND_DEVICE           0x10000015
 #define DC_OP_GET_TOPO_PATH         0x10000016
 #define DC_OP_LOAD_FIRMWARE         0x10000017
+#define DC_OP_GET_METADATA          0x10000018
+#define DC_OP_ADD_METADATA          0x10000019
+#define DC_OP_PUBLISH_METADATA      0x1000001A
 
 // Host->Coord Ops for DmCtl
 #define DC_OP_DM_COMMAND            0x10000020
@@ -228,7 +234,7 @@ zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
                           const char** name, const char** args);
 zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
-                       dc_status_t* rsp, size_t rsp_len,
+                       dc_status_t* rsp, size_t rsp_len, size_t* resp_actual,
                        zx_handle_t* outhandle);
 
 extern bool dc_asan_drivers;

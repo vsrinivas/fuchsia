@@ -69,6 +69,14 @@ zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
 zx_status_t devhost_get_topo_path(zx_device_t* dev, char* path,
                                   size_t max, size_t* actual);
 
+zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
+                                 size_t* actual);
+
+zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
+
+zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
+                                     const void* data, size_t length);
+
 // shared between devhost.c and rpc-device.c
 typedef struct devhost_iostate {
     zx_device_t* dev;

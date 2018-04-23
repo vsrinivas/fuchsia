@@ -205,3 +205,30 @@ zx_status_t device_close(zx_device_t* dev, uint32_t flags) {
     DM_UNLOCK();
     return r;
 }
+
+__EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
+                                         size_t* actual) {
+    zx_status_t r;
+    DM_LOCK();
+    r = devhost_get_metadata(dev, type, buf, buflen, actual);
+    DM_UNLOCK();
+    return r;
+}
+
+__EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
+                                         size_t length) {
+    zx_status_t r;
+    DM_LOCK();
+    r = devhost_add_metadata(dev, type, data, length);
+    DM_UNLOCK();
+    return r;
+}
+
+__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
+                                             const void* data, size_t length) {
+    zx_status_t r;
+    DM_LOCK();
+    r = devhost_publish_metadata(dev, path, type, data, length);
+    DM_UNLOCK();
+    return r;
+}

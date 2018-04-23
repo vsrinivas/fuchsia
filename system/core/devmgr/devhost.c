@@ -733,7 +733,7 @@ zx_status_t devhost_add(zx_device_t* parent, zx_device_t* child, const char* pro
     }
 
     dc_status_t rsp;
-    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), NULL)) < 0) {
+    if ((r = dc_msg_rpc(parent->rpc, &msg, msglen, &hsend, 1, &rsp, sizeof(rsp), NULL, NULL)) < 0) {
         log(ERROR, "devhost[%s] add '%s': rpc failed: %d\n", path, child->name, r);
     } else {
         ios->dev = child;
@@ -756,25 +756,34 @@ fail:
     return r;
 }
 
-static zx_status_t devhost_rpc(zx_device_t* dev, uint32_t op,
-                               const char* args, const char* opname,
-                               dc_status_t* rsp, size_t rsp_len,
-                               zx_handle_t* outhandle) {
+static zx_status_t devhost_rpc_etc(zx_device_t* dev, uint32_t op,
+                                   const char* args, const char* opname,
+                                   uint32_t value, const void* data, size_t datalen,
+                                   dc_status_t* rsp, size_t rsp_len, size_t* actual,
+                                   zx_handle_t* outhandle) {
     char buffer[512];
     const char* path = mkdevpath(dev, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] %s args='%s'\n", path, opname, args ? args : "");
     dc_msg_t msg;
     uint32_t msglen;
     zx_status_t r;
-    if ((r = dc_msg_pack(&msg, &msglen, NULL, 0, NULL, args)) < 0) {
+    if ((r = dc_msg_pack(&msg, &msglen, data, datalen, NULL, args)) < 0) {
         return r;
     }
     msg.op = op;
+    msg.value = value;
     msg.protocol_id = 0;
-    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0, rsp, rsp_len, outhandle)) < 0) {
+    if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0, rsp, rsp_len, actual, outhandle)) < 0) {
         log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
     }
     return r;
+}
+
+static zx_status_t devhost_rpc(zx_device_t* dev, uint32_t op,
+                               const char* args, const char* opname,
+                               dc_status_t* rsp, size_t rsp_len,
+                               zx_handle_t* outhandle) {
+    return devhost_rpc_etc(dev, op, args, opname, 0, NULL, 0, rsp, rsp_len, NULL, outhandle);
 }
 
 void devhost_make_visible(zx_device_t* dev) {
@@ -886,6 +895,58 @@ zx_status_t devhost_load_firmware(zx_device_t* dev, const char* path,
     return ZX_OK;
 }
 
+zx_status_t devhost_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
+                                 size_t* actual) {
+    if (!buf) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    struct {
+        dc_status_t rsp;
+        uint8_t data[DC_MAX_DATA];
+    } reply;
+    zx_status_t r;
+    size_t resp_actual = 0;
+    if ((r = devhost_rpc_etc(dev, DC_OP_GET_METADATA, NULL, "get-metadata", type, NULL, 0,
+                             &reply.rsp, sizeof(reply), &resp_actual, NULL)) < 0) {
+        return r;
+    }
+    if (resp_actual < sizeof(reply.rsp)) {
+        return ZX_ERR_INTERNAL;
+    }
+    resp_actual -= sizeof(reply.rsp);
+    if (resp_actual > buflen) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    memcpy(buf, reply.data, resp_actual);
+    if (actual) {
+        *actual = resp_actual;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t devhost_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
+                                 size_t length) {
+    dc_status_t rsp;
+
+    if (!data && length) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return devhost_rpc_etc(dev, DC_OP_ADD_METADATA, NULL, "add-metadata", type, data, length,
+                            &rsp, sizeof(rsp), NULL, NULL);
+}
+
+zx_status_t devhost_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
+                                     const void* data, size_t length) {
+    dc_status_t rsp;
+
+    if (!path || (!data && length)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return devhost_rpc_etc(dev, DC_OP_PUBLISH_METADATA, path, "publish-metadata", type, data,
+                           length, &rsp, sizeof(rsp), NULL, NULL);
+}
 
 zx_handle_t root_resource_handle;
 

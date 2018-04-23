@@ -101,7 +101,7 @@ zx_status_t dc_msg_unpack(dc_msg_t* msg, size_t len, const void** data,
 
 zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
                        zx_handle_t* handles, size_t hcount,
-                       dc_status_t* rsp, size_t rsplen,
+                       dc_status_t* rsp, size_t rsplen, size_t* resp_actual,
                        zx_handle_t* outhandle) {
     zx_channel_call_args_t args = {
         .wr_bytes = msg,
@@ -131,6 +131,9 @@ zx_status_t dc_msg_rpc(zx_handle_t h, dc_msg_t* msg, size_t msglen,
     }
     if (args.rd_num_bytes < sizeof(dc_status_t)) {
         return ZX_ERR_INTERNAL;
+    }
+    if (resp_actual) {
+        *resp_actual = args.rd_num_bytes;
     }
 
     return rsp->status;
