@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/audio-util.c \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/midi.c \
     $(LOCAL_DIR)/usb-audio-control-interface.cpp \

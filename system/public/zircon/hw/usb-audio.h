@@ -474,7 +474,6 @@ typedef struct {
     usb_audio_as_samp_freq tSamFreq[]; // list of sampling frequencies (3 bytes each)
 } __PACKED usb_audio_as_format_type_i_desc;
 
-
 typedef struct {
     uint8_t bLength;
     uint8_t bDescriptorType;        // USB_AUDIO_CS_ENDPOINT
@@ -521,11 +520,5 @@ typedef struct {
     uint8_t bNumEmbMIDIJack;
     uint8_t baAssocJackID[];
 } __PACKED usb_midi_ms_endpoint_desc;
-
-// TODO(johngro) : remove these aliases once all user code has been updated.
-typedef usb_audio_desc_header usb_audio_ac_desc_header;
-typedef usb_audio_ac_feature_unit_desc_0 usb_audio_ac_feature_unit_desc;
-typedef usb_audio_as_format_type_i_desc usb_audio_ac_format_type_i_desc;
-typedef usb_audio_as_samp_freq usb_audio_ac_samp_freq;
 
 __END_CDECLS;
