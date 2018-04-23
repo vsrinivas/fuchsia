@@ -34,6 +34,18 @@
 #define A113_GPIO_REG4_O    0x19
 #define A113_GPIO_REG4_I    0x1a
 
+#define A113_GPIO_PULL_UP_REG0 0x3a
+#define A113_GPIO_PULL_UP_REG1 0x3b
+#define A113_GPIO_PULL_UP_REG2 0x3c
+#define A113_GPIO_PULL_UP_REG3 0x3d
+#define A113_GPIO_PULL_UP_REG4 0x3e
+
+#define A113_GPIO_PULL_UP_EN_REG0 0x48
+#define A113_GPIO_PULL_UP_EN_REG1 0x49
+#define A113_GPIO_PULL_UP_EN_REG2 0x4a
+#define A113_GPIO_PULL_UP_EN_REG3 0x4b
+#define A113_GPIO_PULL_UP_EN_REG4 0x4c
+
 #define A113_PERIPHS_PIN_MUX_0 0x20
 #define A113_PERIPHS_PIN_MUX_1 0x21
 #define A113_PERIPHS_PIN_MUX_2 0x22
@@ -54,3 +66,17 @@
 #define A113_AO_RTI_PIN_MUX_REG1 0x06
 #define A113_AO_GPIO_O_EN        0x08
 #define A113_AO_GPIO_I           0x09
+#define A113_GPIO_AO_RTI_PULL_UP 0x0b
+
+#define A113_GPIOA0_PIN_START    0
+#define A113_GPIOZ_PIN_START     14
+#define A113_GPIOBOOT_PIN_START  25
+#define A113_GPIOA_PIN_START     40
+#define A113_GPIOX_PIN_START     61
+#define A113_GPIOY_PIN_START     84
+
+// These are relative to base address 0xc1100000 and in sizeof(uint32_t)
+#define A113_GPIO_INT_EDGE_POLARITY 0x3c20
+#define A113_GPIO_0_3_PIN_SELECT    0x3c21
+#define A113_GPIO_4_7_PIN_SELECT    0x3c22
+#define A113_GPIO_FILTER_SELECT     0x3c23

@@ -26,40 +26,36 @@ static const pbus_mmio_t gpio_mmios[] = {
         .base = S905D2_GPIO_A0_BASE,
         .length = S905D2_GPIO_AO_LENGTH,
     },
+    {
+        .base = S905D2_GPIO_INTERRUPT_BASE,
+        .length = S905D2_GPIO_INTERRUPT_LENGTH,
+    },
 };
 
 static const pbus_irq_t gpio_irqs[] = {
     {
         .irq = S905D2_GPIO_IRQ_0,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_1,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_2,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_3,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_4,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_5,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_6,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     {
         .irq = S905D2_GPIO_IRQ_7,
-        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
     /*
     {
@@ -109,6 +105,10 @@ zx_status_t aml_gpio_init(aml_bus_t* bus) {
             // SYS_LED
             .gpio = S905D2_GPIOAO(11),
         },
+        {
+            // JTAG Adapter Pin
+            .gpio = S905D2_GPIOAO(6),
+        }
     };
 
     const pbus_dev_t gpio_test_dev = {

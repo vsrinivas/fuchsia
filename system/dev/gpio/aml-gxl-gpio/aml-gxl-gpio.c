@@ -63,7 +63,11 @@ typedef struct {
     uint32_t filter_select_offset;
     uint32_t status_offset;
     uint32_t mask_offset;
-}aml_gpio_interrupt_t;
+    uint32_t irq_count;
+    uint16_t *irq_info;
+    mtx_t lock;
+    uint8_t irq_status;
+} aml_gpio_interrupt_t;
 
 typedef struct {
     platform_device_protocol_t pdev;
@@ -76,12 +80,9 @@ typedef struct {
     const aml_pinmux_block_t* pinmux_blocks;
     size_t block_count;
     mtx_t pinmux_lock;
-    uint32_t irq_count;
-    uint8_t irq_status;
-    uint16_t *irq_info;
 } aml_gpio_t;
 
-// MMIO indices (based on vim2_display_mmios)
+// MMIO indices (based on vim-gpio.c gpio_mmios)
 enum {
     MMIO_GPIO               = 0,
     MMIO_GPIO_A0            = 1,
@@ -276,16 +277,16 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
     if (pin > MAX_GPIO_INDEX) {
         return ZX_ERR_INVALID_ARGS;
     }
-    mtx_lock(&gpio->pinmux_lock);
+    mtx_lock(&interrupt->lock);
 
-    uint32_t index = aml_gpio_get_unsed_irq_index(gpio->irq_status);
-    if (index > gpio->irq_count) {
+    uint32_t index = aml_gpio_get_unsed_irq_index(interrupt->irq_status);
+    if (index > interrupt->irq_count) {
         status = ZX_ERR_NO_RESOURCES;
         goto fail;
     }
 
-    for (uint32_t i=0; i<gpio->irq_count; i++) {
-        if(gpio->irq_info[i] == pin) {
+    for (uint32_t i=0; i<interrupt->irq_count; i++) {
+        if(interrupt->irq_info[i] == pin) {
             zxlogf(ERROR, "GPIO Interrupt already configured for this pin %u\n", (int)index);
             status = ZX_ERR_ALREADY_EXISTS;
             goto fail;
@@ -352,22 +353,26 @@ static zx_status_t aml_gpio_get_interrupt(void *ctx, uint32_t pin,
     // Configure Interrupt Select Filter
     regval = READ32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset);
     WRITE32_GPIO_INTERRUPT_REG(interrupt->filter_select_offset, regval | (0x7 << index));
-    gpio->irq_status |= 1 << index;
-    gpio->irq_info[index] = pin;
+    interrupt->irq_status |= 1 << index;
+    interrupt->irq_info[index] = pin;
 fail:
-    mtx_unlock(&gpio->pinmux_lock);
+    mtx_unlock(&interrupt->lock);
     return status;
 }
 
 static zx_status_t aml_gpio_release_interrupt(void *ctx, uint32_t pin) {
     aml_gpio_t* gpio = ctx;
-    for (uint32_t i=0; i<gpio->irq_count; i++) {
-        if(gpio->irq_info[i] == pin) {
-            gpio->irq_status &= ~(1 << i);
-            gpio->irq_info[i] = MAX_GPIO_INDEX+1;
-            return ZX_OK;
+    aml_gpio_interrupt_t* interrupt = gpio->gpio_interrupt;
+    mtx_lock(&interrupt->lock);
+    for (uint32_t i=0; i<interrupt->irq_count; i++) {
+        if(interrupt->irq_info[i] == pin) {
+            interrupt->irq_status &= ~(1 << i);
+            interrupt->irq_info[i] = MAX_GPIO_INDEX+1;
+            goto fail;
         }
     }
+fail:
+    mtx_unlock(&interrupt->lock);
     return ZX_ERR_NOT_FOUND;
 }
 
@@ -380,8 +385,8 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
         return ZX_ERR_INVALID_ARGS;
     }
 
-   for (uint32_t i=0; i<gpio->irq_count; i++) {
-        if(gpio->irq_info[i] == pin) {
+   for (uint32_t i=0; i<interrupt->irq_count; i++) {
+        if(interrupt->irq_info[i] == pin) {
             irq_index = i;
             break;
         }
@@ -390,6 +395,7 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
         return ZX_ERR_NOT_FOUND;
     }
 
+    mtx_lock(&interrupt->lock);
     // Configure GPIO Interrupt EDGE and Polarity
     uint32_t mode_reg_val = READ32_GPIO_INTERRUPT_REG(interrupt->edge_polarity_offset);
     if (polarity == GPIO_POLARITY_HIGH) {
@@ -398,6 +404,7 @@ static zx_status_t aml_gpio_set_polarity(void *ctx, uint32_t pin,
         mode_reg_val |= ((1 << irq_index) << GPIO_INTERRUPT_POLARITY_SHIFT);
     }
     WRITE32_GPIO_INTERRUPT_REG(interrupt->edge_polarity_offset, mode_reg_val);
+    mtx_unlock(&interrupt->lock);
     return ZX_OK;
 }
 
@@ -413,10 +420,10 @@ static gpio_protocol_ops_t gpio_ops = {
 
 static void aml_gpio_release(void* ctx) {
     aml_gpio_t* gpio = ctx;
-    io_buffer_release(&gpio->mmios[0]);
-    io_buffer_release(&gpio->mmios[1]);
+    io_buffer_release(&gpio->mmios[MMIO_GPIO]);
+    io_buffer_release(&gpio->mmios[MMIO_GPIO_A0]);
     io_buffer_release(&gpio->mmio_interrupt);
-    free(gpio->irq_info);
+    free(gpio->gpio_interrupt->irq_info);
     free(gpio);
 }
 
@@ -512,12 +519,13 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    gpio->irq_count = info.irq_count;
-    gpio->irq_status = 0;
+    gpio->gpio_interrupt->irq_count = info.irq_count;
+    gpio->gpio_interrupt->irq_status = 0;
     gpio->gpio.ops = &gpio_ops;
     gpio->gpio.ctx = gpio;
-    gpio->irq_info = calloc(gpio->irq_count, sizeof(uint8_t));
-    if (!gpio->irq_info) {
+    gpio->gpio_interrupt->irq_info = calloc(gpio->gpio_interrupt->irq_count,
+                                     sizeof(uint8_t));
+    if (!gpio->gpio_interrupt->irq_info) {
         zxlogf(ERROR, "aml_gpio_bind: irq_info calloc failed\n");
         goto fail;
     }

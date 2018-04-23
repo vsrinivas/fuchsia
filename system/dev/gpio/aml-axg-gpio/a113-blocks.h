@@ -15,7 +15,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG2_I,
         .output_offset = A113_GPIO_REG2_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG2,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG2,
         .mmio_index = 0,
+        .pin_start = A113_GPIOX_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -27,7 +30,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG2_I,
         .output_offset = A113_GPIO_REG2_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG2,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG2,
         .mmio_index = 0,
+        .pin_start = A113_GPIOX_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -39,7 +45,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG2_I,
         .output_offset = A113_GPIO_REG2_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG2,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG2,
         .mmio_index = 0,
+        .pin_start = A113_GPIOX_PIN_START,
         .lock = MTX_INIT,
     },
 
@@ -53,7 +62,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG0_I,
         .output_offset = A113_GPIO_REG0_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG0,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG0,
         .mmio_index = 0,
+        .pin_start = A113_GPIOA_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -65,7 +77,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG0_I,
         .output_offset = A113_GPIO_REG0_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG0,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG0,
         .mmio_index = 0,
+        .pin_start = A113_GPIOA_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -77,7 +92,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG0_I,
         .output_offset = A113_GPIO_REG0_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG0,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG0,
         .mmio_index = 0,
+        .pin_start = A113_GPIOA_PIN_START,
         .lock = MTX_INIT,
     },
 
@@ -91,7 +109,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG4_I,
         .output_offset = A113_GPIO_REG4_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG4,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG4,
         .mmio_index = 0,
+        .pin_start = A113_GPIOBOOT_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -103,7 +124,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG4_I,
         .output_offset = A113_GPIO_REG4_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG4,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG4,
         .mmio_index = 0,
+        .pin_start = A113_GPIOBOOT_PIN_START,
         .lock = MTX_INIT,
     },
 
@@ -117,7 +141,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG1_I,
         .output_offset = A113_GPIO_REG1_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG1,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG1,
         .mmio_index = 0,
+        .pin_start = A113_GPIOY_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -129,7 +156,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG1_I,
         .output_offset = A113_GPIO_REG1_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG1,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG1,
         .mmio_index = 0,
+        .pin_start = A113_GPIOY_PIN_START,
         .lock = MTX_INIT,
     },
 
@@ -143,7 +173,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG3_I,
         .output_offset = A113_GPIO_REG3_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG3,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG3,
         .mmio_index = 0,
+        .pin_start = A113_GPIOZ_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -155,7 +188,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_GPIO_REG3_I,
         .output_offset = A113_GPIO_REG3_O,
         .output_shift = 0,
+        .pull_offset = A113_GPIO_PULL_UP_REG3,
+        .pull_en_offset = A113_GPIO_PULL_UP_EN_REG3,
         .mmio_index = 0,
+        .pin_start = A113_GPIOZ_PIN_START,
         .lock = MTX_INIT,
     },
 
@@ -171,8 +207,10 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_AO_GPIO_I,
         .output_offset = A113_AO_GPIO_O_EN,
         .output_shift = 16,
-
+        .pull_offset = A113_GPIO_AO_RTI_PULL_UP,
+        .pull_en_offset = A113_GPIO_AO_RTI_PULL_UP,
         .mmio_index = 1,
+        .pin_start = A113_GPIOA0_PIN_START,
         .lock = MTX_INIT,
     },
     {
@@ -184,7 +222,17 @@ static aml_gpio_block_t a113_gpio_blocks[] = {
         .input_offset = A113_AO_GPIO_I,
         .output_offset = A113_AO_GPIO_O_EN,
         .output_shift = 16,
+        .pull_offset = A113_GPIO_AO_RTI_PULL_UP,
+        .pull_en_offset = A113_GPIO_AO_RTI_PULL_UP,
         .mmio_index = 1,
+        .pin_start = A113_GPIOA0_PIN_START,
         .lock = MTX_INIT,
     },
+};
+
+static aml_gpio_interrupt_t a113_interrupt_block = {
+    .pin_0_3_select_offset = A113_GPIO_0_3_PIN_SELECT,
+    .pin_4_7_select_offset = A113_GPIO_4_7_PIN_SELECT,
+    .edge_polarity_offset = A113_GPIO_INT_EDGE_POLARITY,
+    .filter_select_offset = A113_GPIO_FILTER_SELECT,
 };
