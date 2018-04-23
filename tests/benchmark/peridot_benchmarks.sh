@@ -20,8 +20,11 @@ if [ $# -ne 1 ]; then
 fi
 OUT_DIR="$1"
 
-# Run benchmarks.
-runbench_trace "${OUT_DIR}/ledger_get_same_page" /system/data/ledger/benchmark/get_same_page.tspec
+# Run Ledger benchmarks.
+runbench_exec "${OUT_DIR}/ledger.get_same_page" \
+    trace record \
+    --spec-file=/system/data/ledger/benchmark/get_same_page.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.get_same_page"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_exit
