@@ -11,14 +11,22 @@ const uint32 kMetricsEventMask = 1;
 // These are all of the types of events which can be reported by a |Session|.
 // Use |SetEventMaskCommand| to enable event delivery for a resource.
 union Event {
+  // Events which are controlled by a mask.
   MetricsEvent metrics;
+
+  // Events which are always delivered, regardless of mask.
   ImportUnboundEvent import_unbound;
+  SpaceDisconnectedEvent space_disconnected;
+  SpaceAddedToSceneEvent space_added_to_scene;
+  SpaceRemovedFromSceneEvent space_removed_from_scene;
+  SpacePropertiesChangedEvent space_properties_changed;
 };
 
 // Provides rendering target metrics information about the specified node.
 //
 // This event is delivered when the following conditions are true:
 // - The node is a descendant of a |Scene|.
+// - The node has |kMetricsEventMask| set to an enabled state.
 // - The node's metrics have changed since they were last delivered, or since
 //   |kMetricsEventMask| transitioned from a disabled state to an enabled state.
 //
@@ -29,9 +37,47 @@ struct MetricsEvent {
   Metrics metrics;
 };
 
-// Reported when the imported resource with the given ID is no longer bound to
+// Delivered when the imported resource with the given ID is no longer bound to
 // its host resource, or if the imported resource can not be bound because
 // the host resource is not available.
 struct ImportUnboundEvent {
   uint32 resource_id;
+};
+
+// Delivered when the Space corresponding to the given SpaceHolder is
+// disconnected/destroyed, or the other side of the connection is destroyed
+// before it was fully established.
+struct SpaceDisconnectedEvent {
+  uint32 space_holder_id;
+};
+
+// Delivered when the parent SpaceHolder for the given Space becomes a part of
+// a Scene.
+//
+// A SpaceHolder is considered to be part of a Scene if there is an unbroken
+// chain of parent-child relationships between the Scene node and the
+// SpaceHolder node.
+struct SpaceAddedToSceneEvent {
+  uint32 space_id;
+  SpaceProperties properties;
+};
+
+// Delivered when the parent SpaceHolder for the given Space is no longer part
+// of a scene.
+//
+// This can happen if the SpaceHolder is detached directly from the scene, or
+// if one of its parent nodes is.
+//
+// A SpaceHolder is considered to be part of a Scene if there is an unbroken
+// chain of parent-child relationships between the Scene node and the
+// SpaceHolder node.
+struct SpaceRemovedFromSceneEvent {
+  uint32 space_id;
+};
+
+// Delivered when the parent SpaceHolder for the given Space makes a change to
+// the Space's properties.
+struct SpacePropertiesChangedEvent {
+  uint32 space_id;
+  SpaceProperties properties;
 };

@@ -5,7 +5,7 @@
 library gfx;
 
 // Commands that are used to modify the state of a |Session|.
-// TODO(MZ-237): reorder Command definitions to match the order in this union.
+// TODO(SCN-237): reorder Command definitions to match the order in this union.
 union Command {
   CreateResourceCommand create_resource;
   ReleaseResourceCommand release_resource;
@@ -26,13 +26,15 @@ union Command {
   SetSizeCommand set_size;
 
   // Node-specific commands.
-  AddChildCommand add_child; // TODO: Should we require a DetachCommand before re-parenting?
+  AddChildCommand add_child;  // TODO: Should we require a DetachCommand before
+                              // re-parenting?
   AddPartCommand add_part;
   DetachChildrenCommand detach_children;
   SetShapeCommand set_shape;
   SetMaterialCommand set_material;
   SetClipCommand set_clip;
   SetHitTestBehaviorCommand set_hit_test_behavior;
+  SetSpacePropertiesCommand set_space_properties;
 
   // Camera and lighting commands.
   SetCameraCommand set_camera;
@@ -79,8 +81,8 @@ struct CreateResourceCommand {
 };
 
 // Releases the client's reference to the resource; it is then illegal to use
-// the ID in subsequent Commands.  Other references to the resource may exist, so
-// releasing the resource does not result in its immediate destruction; it is
+// the ID in subsequent Commands.  Other references to the resource may exist,
+// so releasing the resource does not result in its immediate destruction; it is
 // only destroyed once the last reference is released.  For example, the
 // resource may be required to render an in-progress frame, or it may be
 // referred to by another resource).  However, the ID will be immediately
@@ -103,18 +105,18 @@ struct ExportResourceCommand {
   handle<eventpair> token;
 };
 
-// Import a resource that was exported via ExportResourceCommand().  |token| is a
-// handle to the eventpair peer that was used to export the resource, and |spec|
-// describes the type of the imported resource, and the commands which can legally be
-// applied to it.  Afterward, |id| can be used to refer to the resource in an
-// Command, similarly (but not identically: see below) to a resource that was created
-// in the session.  For example, you can add children to an imported EntityNode
-// via AddChildCommand.
+// Import a resource that was exported via ExportResourceCommand().  |token| is
+// a handle to the eventpair peer that was used to export the resource, and
+// |spec| describes the type of the imported resource, and the commands which
+// can legally be applied to it.  Afterward, |id| can be used to refer to the
+// resource in an Command, similarly (but not identically: see below) to a
+// resource that was created in the session.  For example, you can add children
+// to an imported EntityNode via AddChildCommand.
 //
 // However, note that the importer does not gain full access to the imported
 // resource, but rather to an attenuated subset of its capabilities.  For
-// example, you cannot use a DetachCommand to detach an imported EntityNode from its
-// parent.
+// example, you cannot use a DetachCommand to detach an imported EntityNode from
+// its parent.
 //
 // Unlike ExportResourceCommand, there is no configurable timeout.  There is an
 // expectation that the exported resource will become available in a short
@@ -166,9 +168,10 @@ struct AddChildCommand {
 // Add a node as a part of another node.  The implications of being a part
 // rather than a child differ based on the type of the part.  However, one
 // implication is constant: removing all of a node's children (e.g. via
-// DetachChildrenCommand) does not affect its parts.  This is similar to the "shadow
-// DOM" in a web browser: the controls of a <video> element are implemented as
-// using the shadow DOM, and do no show up amongst the children of that element.
+// DetachChildrenCommand) does not affect its parts.  This is similar to the
+// "shadow DOM" in a web browser: the controls of a <video> element are
+// implemented as using the shadow DOM, and do no show up amongst the children
+// of that element.
 //
 // Constraints:
 // - |id| refs a Node with the has_parts characteristic.
@@ -190,8 +193,8 @@ struct AddPartCommand {
 // - |id| refs a parentable object
 //
 // Discussion:
-// For nodes, this command will detach a node from its parent, regardless of whether
-// it is a part or a child of its parent.
+// For nodes, this command will detach a node from its parent, regardless of
+// whether it is a part or a child of its parent.
 struct DetachCommand {
   uint32 id;
 };
@@ -260,8 +263,8 @@ struct SetAnchorCommand {
 //
 // Constraints:
 // - |id| refs a resizeable object.
-// - some objects that support this command may have additional constraints (e.g.
-//   in some cases |depth| must be zero).
+// - some objects that support this command may have additional constraints
+//   (e.g. in some cases |depth| must be zero).
 struct SetSizeCommand {
   uint32 id;
   Vector2Value value;
@@ -339,6 +342,15 @@ struct SetClipCommand {
 struct SetHitTestBehaviorCommand {
   uint32 node_id;
   HitTestBehavior hit_test_behavior;
+};
+
+// Sets the properties for a SpaceHolder's attached Space.
+//
+// Constraints:
+// - |space_holder_id| refs a |SpaceHolder|.
+struct SetSpacePropertiesCommand {
+  uint32 space_holder_id;
+  SpaceProperties properties;
 };
 
 // Sets a renderer's camera.
@@ -555,7 +567,7 @@ struct SetColorCommand {
 //   - the 3D position occupies bytes 0-11 (3 dimensions * 4 bytes per float32).
 //   - the UV coords occupy bytes 12-19, since no surface normal is provided.
 enum MeshIndexFormat {
-  // TODO(MZ-275): only kUint32 is currently supported.
+  // TODO(SCN-275): only kUint32 is currently supported.
   kUint16 = 1;
   kUint32 = 2;
 };
@@ -636,7 +648,7 @@ struct SetRendererParamCommand {
 };
 
 // Sets which events a resource should deliver to the session listener.
-// This commanderation replaces any prior event mask for the resource.
+// This command replaces any prior event mask for the resource.
 //
 // The initial event mask for a resource is zero, meaning no events are
 // reported.

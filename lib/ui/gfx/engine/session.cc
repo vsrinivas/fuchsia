@@ -134,6 +134,9 @@ bool Session::ApplyCommand(::gfx::Command command) {
     case ::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCommand(
           std::move(command.set_hit_test_behavior()));
+    case ::gfx::Command::Tag::kSetSpaceProperties:
+      return ApplySetSpacePropertiesCommand(
+          std::move(command.set_space_properties()));
     case ::gfx::Command::Tag::kSetCamera:
       return ApplySetCameraCommand(std::move(command.set_camera()));
     case ::gfx::Command::Tag::kSetCameraTransform:
@@ -245,6 +248,12 @@ bool Session::ApplyCreateResourceCommand(::gfx::CreateResourceCommand command) {
                                    std::move(command.resource.entity_node()));
     case ::gfx::ResourceArgs::Tag::kShapeNode:
       return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
+    case ::gfx::ResourceArgs::Tag::kSpaceNode:
+      FXL_CHECK(false);
+      return false;
+    case ::gfx::ResourceArgs::Tag::kSpaceHolderNode:
+      FXL_CHECK(false);
+      return false;
     case ::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
           id, std::move(command.resource.display_compositor()));
@@ -450,6 +459,12 @@ bool Session::ApplySetHitTestBehaviorCommand(
     return node->SetHitTestBehavior(command.hit_test_behavior);
   }
 
+  return false;
+}
+
+bool Session::ApplySetSpacePropertiesCommand(
+    ::gfx::SetSpacePropertiesCommand command) {
+  error_reporter()->ERROR() << "SetSpacePropertiesCommand not implemented.";
   return false;
 }
 

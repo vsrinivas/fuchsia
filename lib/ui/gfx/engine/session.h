@@ -142,6 +142,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplySetShapeCommand(::gfx::SetShapeCommand command);
   bool ApplySetMaterialCommand(::gfx::SetMaterialCommand command);
   bool ApplySetClipCommand(::gfx::SetClipCommand command);
+  bool ApplySetSpacePropertiesCommand(::gfx::SetSpacePropertiesCommand command);
   bool ApplySetHitTestBehaviorCommand(::gfx::SetHitTestBehaviorCommand command);
   bool ApplySetCameraCommand(::gfx::SetCameraCommand command);
   bool ApplySetCameraTransformCommand(::gfx::SetCameraTransformCommand command);

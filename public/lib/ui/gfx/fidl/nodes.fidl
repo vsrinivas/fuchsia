@@ -6,74 +6,83 @@ library gfx;
 
 // These are the types of nodes that can be created within a Mozart |Session|.
 //
-// Node Characteristics:
+// All nodes have an associated transform, which distinguishes them from mere
+// resources.  Nodes may also have one or more node Characteristics:
+//
 // These are characteristics that each type of |Node| either has or doesn't.
 // These constrain operations that reference nodes; violations will cause the
 // |Session| connection to be closed.  For example, |NodeAddChildOp| must target
 // a node with the "has_children" characteristic.  These characteristics are not
 // explicitly reflected in the Session API; instead, they must be enforced by
 // implementations of the API.
-// - has_transform:
-// - has_children:
-// - has_parent:
-// - has_parts:
-// - has_clip:
-// - is_clip:
-// - has_shape:
-// - has_material:
+// - has_children: The node can contain other nodes as children.
+// - has_parent: The node can be a child of another node.  If this is false,
+//   the node can only be a direct descendant of its containing scene.
+// - has_parts:  The node can contain other nodes as parts.  All parts must be
+//   from the same session as their parent.
+// - has_clip:  The node can contain a clip node as a child.
+// - is_clip:  The node can clip other nodes.
+// - has_shape: The node can contain ShapeNodes as children.
+// - has_material:  The node can have a Material resource applied to it.
 
-// A transform space which can serve as a container for Nodes.  Each Space is
-// linked to a paired SpaceHolder via a shared token.
+// Characteristics:
+// - has_parent
+// - has_shape
+// - has_material
+struct ShapeNodeArgs {
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
+};
+
+// Characteristics:
+// - has_parent
+// - is_clip
+// - has_parts
+struct ClipNodeArgs {
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
+};
+
+// Characteristics:
+// - has_children
+// - has_parent
+// - has_parts
+// - has_clip
+struct EntityNodeArgs {
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 unused = 0;
+};
+
+// TODO(SCN-695): Move these into resources.fidl along with the other Node
+// types when they are no longer Nodes.
+// Represents a transform space which serves as a container for Nodes.  The
+// Nodes will have the Spaces' coordinate transform applied to their own, in
+// addition to being clipped to the Spaces' bounding box.
+// See |SpaceProperties|.
 //
-// Usually the Space and SpaceHolder exist in separate processes, allowing a
-// distributed scene graph.
+// Each Space is linked to a paired SpaceHolder via a shared token.
+//
+// Usually the Space and its associated SpaceHolder exist in separate processes,
+// allowing a distributed scene graph to be constructed.
 //
 // Characteristics
-// - has_transform
 // - has_children
 struct SpaceArgs {
   handle<eventpair> token;
   string? debug_name;
 };
 
-// A container which is created to manage each transform Space.  Each
-// SpaceHolder is linked to a paired Space via a shared token.
+// Represents a proxy for a Space which can be added to a scene graph in order
+// to embed the Space within it.
 //
-// Usually the SpaceHolder and Space exist in separate processes, allowing a
-// distributed scene graph.
+// Each SpaceHolder is linked to a paired Space via a shared token.
+//
+// Usually the SpaceHolder and its associated Space exist in separate processes,
+// allowing a distributed scene graph to be constructed.
 //
 // Characteristics
-// - has_transform
 // - has_parent
 struct SpaceHolderArgs {
   handle<eventpair> token;
   string? debug_name;
-};
-
-// Characteristics:
-// - has_transform
-// - has_parent
-// - is_clip
-// - has_parts
-struct ClipNodeArgs {
-    uint32 unused = 0;
-};
-
-// Characteristics:
-// - has_transform
-// - has_children
-// - has_parent
-// - has_parts
-// - has_clip
-struct EntityNodeArgs {
-    uint32 unused = 0;
-};
-
-// Characteristics:
-// - has_transform
-// - has_parent
-// - has_shape
-// - has_material
-struct ShapeNodeArgs {
-    uint32 unused = 0;
 };

@@ -23,9 +23,11 @@ union ResourceArgs {
   MaterialArgs material;
 
   // Nodes.
+  ShapeNodeArgs shape_node;
   ClipNodeArgs clip_node;
   EntityNodeArgs entity_node;
-  ShapeNodeArgs shape_node;
+  SpaceArgs space_node;
+  SpaceHolderArgs space_holder_node;
 
   // Layers.
   DisplayCompositorArgs display_compositor;
@@ -82,7 +84,8 @@ struct BufferArgs {
 // A DisplayCompositor draws its attached |LayerStack| into an image that is
 // presented on a display.
 struct DisplayCompositorArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // An ImagePipeCompositor draws its attached |LayerStack| into an image that is
@@ -99,7 +102,8 @@ struct ImagePipeCompositorArgs {
 // Supported commands:
 // - AddLayer
 struct LayerStackArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // Supported commands:
@@ -115,9 +119,9 @@ struct LayerStackArgs {
 //
 // A layer is not drawn unless it has a camera, texture, or color.
 struct LayerArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
-
 
 // A Scene is the root of a scene-graph, and defines the rendering environment
 // (lighting, etc.) for the tree of nodes beneath it.  The following commands
@@ -125,7 +129,8 @@ struct LayerArgs {
 //   - Add/RemoveLight
 //   - AddChild
 struct SceneArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // A Camera is used to render a Scene from a particular viewpoint.  This is
@@ -154,16 +159,19 @@ struct StereoCameraArgs {
 //   - SetCamera
 //   - SetRendererParam
 struct RendererArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // An AmbientLight is a Light that is is assumed to be everywhere in the scene,
 // in all directions.
 //
-// The following commands may be applied to an AmbientLight (public/lib/ui/gfx/fidl/commands.fidl):
+// The following commands may be applied to an AmbientLight
+// (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetLightColor
 struct AmbientLightArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // A DirectionalLight is a Light that is emitted from a point at infinity.
@@ -173,21 +181,25 @@ struct AmbientLightArgs {
 // assume the dispersion of the light source is symmetric about the light's
 // primary direction.
 //
-// The following commands may be applied to a DirectionalLight (public/lib/ui/gfx/fidl/commands.fidl):
+// The following commands may be applied to a DirectionalLight
+// (public/lib/ui/gfx/fidl/commands.fidl):
 //   - SetLightColor
 //   - SetDirection
 struct DirectionalLightArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 // Simple texture-mapped material.
 //
 // Commands that can be performed later:
-// SetTextureCommand will set the texture, or it can be left as zero (no texture).
+// SetTextureCommand will set the texture, or it can be left as zero (no
+// texture).
 //   The texture can be an Image or ImagePipe.
 // SetColorCommand will set the color.
 struct MaterialArgs {
-    uint32 dummy = 0;
+  // TODO(SCN-694): Clean up dummy args.
+  uint32 dummy = 0;
 };
 
 struct VariableArgs {
@@ -195,7 +207,9 @@ struct VariableArgs {
   Value initial_value;  // Must match type.  Must not be a variable_id.
 };
 
-// Describes an exported resource that is to be imported by an ImportResourceCommand.
+// Describes an exported resource that is to be imported by an
+// ImportResourceCommand.
+//
 // NOTE: Currently just an enum of importable resource types, but may later be
 // expanded to express concepts like "meshes with a particular vertex format".
 enum ImportSpec {

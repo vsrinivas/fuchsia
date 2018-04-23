@@ -14,7 +14,6 @@ fidl("fidl") {
     "events.fidl",
     "scenic.fidl",
     "session.fidl",
-    "space_provider.fidl",
   ]
 
   public_deps = [
