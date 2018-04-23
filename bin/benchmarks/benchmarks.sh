@@ -20,10 +20,15 @@ if [ $# -ne 1 ]; then
 fi
 OUT_DIR="$1"
 
-# Run benchmarks.
-runbench_trace "${OUT_DIR}/benchmark_example" /system/data/benchmark_example/benchmark_example.tspec
-runbench_exec  "${OUT_DIR}/zircon_benchmarks" /system/test/perf/run_zircon_benchmarks
+# Benchmark example, here for demonstration.
+runbench_exec "${OUT_DIR}/benchmark_example" \
+    trace record \
+    --spec-file=/system/data/benchmark_example/benchmark_example.tspec \
+    --benchmark-results-file="${OUT_DIR}/benchmark_example"
+
+# Zircon benchmarks.
+runbench_exec "${OUT_DIR}/zircon_benchmarks" \
+    /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_exit
-
