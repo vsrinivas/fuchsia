@@ -13,6 +13,8 @@
 
 #include <pretty/hexdump.h>
 
+#include "watchdog.h"
+
 #ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
 #include "crash-handler.h"
 #include "crash-list.h"
@@ -161,54 +163,75 @@ bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg) {
 }
 #endif // UNITTEST_CRASH_HANDLER_SUPPORTED
 
+static void unittest_run_test(const char* name,
+                              bool (*test)(),
+                              struct test_info** current_test_info,
+                              bool* all_success,
+                              bool enable_crash_handler) {
+    unittest_printf_critical("    %-51s [RUNNING]", name);
+    nsecs_t start_time = now();
+    test_info test_info = {.all_ok = true, nullptr};
+    *current_test_info = &test_info;
+    // The crash handler is disabled by default. To enable, the test should
+    // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
+    if (enable_crash_handler) {
+#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+        test_info.crash_list = crash_list_new();
+
+        test_result_t test_result;
+        zx_status_t status =
+            run_test_with_crash_handler(test_info.crash_list, test, &test_result);
+        if (status != ZX_OK || test_result == TEST_FAILED) {
+            test_info.all_ok = false;
+        }
+
+        // Check if there were any processes registered to crash but didn't.
+        bool missing_crash = crash_list_delete(test_info.crash_list);
+        if (missing_crash) {
+            // TODO: display which expected crash did not occur.
+            UNITTEST_FAIL_TRACEF("Expected crash did not occur\n");
+            test_info.all_ok = false;
+        }
+#else  // UNITTEST_CRASH_HANDLER_SUPPORTED
+        UNITTEST_FAIL_TRACEF("Crash tests not supported\n");
+        test_info.all_ok = false;
+#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+    } else if (!test()) {
+        test_info.all_ok = false;
+    }
+
+    // Recheck all_ok in case there was a failure in a C++ destructor
+    // after the "return" statement in END_TEST.
+    if (!test_info.all_ok) {
+        *all_success = false;
+    }
+
+    nsecs_t end_time = now();
+    uint64_t time_taken_ms = (end_time - start_time) / 1000000;
+    unittest_printf_critical(" [%s] (%d ms)\n", test_info.all_ok ? "PASSED" : "FAILED",
+                             static_cast<int>(time_taken_ms));
+
+    *current_test_info = nullptr;
+}
+
+template <typename F>
+void run_with_watchdog(const char* name, F fn) {
+    if (watchdog_is_enabled()) {
+        watchdog_start(name);
+        fn();
+        watchdog_cancel();
+    } else {
+        fn();
+    }
+}
+
 void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_type,
                              struct test_info** current_test_info, bool* all_success,
                              bool enable_crash_handler) {
     if (utest_test_type & test_type) {
-        unittest_printf_critical("    %-51s [RUNNING]", name);
-        nsecs_t start_time = now();
-        test_info test_info = {.all_ok = true, nullptr};
-        *current_test_info = &test_info;
-        // The crash handler is disabled by default. To enable, the test should
-        // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
-        if (enable_crash_handler) {
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-            test_info.crash_list = crash_list_new();
-
-            test_result_t test_result;
-            zx_status_t status =
-                run_test_with_crash_handler(test_info.crash_list, test, &test_result);
-            if (status != ZX_OK || test_result == TEST_FAILED) {
-                test_info.all_ok = false;
-            }
-
-            // Check if there were any processes registered to crash but didn't.
-            bool missing_crash = crash_list_delete(test_info.crash_list);
-            if (missing_crash) {
-                // TODO: display which expected crash did not occur.
-                UNITTEST_FAIL_TRACEF("Expected crash did not occur\n");
-                test_info.all_ok = false;
-            }
-#else  // UNITTEST_CRASH_HANDLER_SUPPORTED
-            UNITTEST_FAIL_TRACEF("Crash tests not supported\n");
-            test_info.all_ok = false;
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
-        } else if (!test()) {
-            test_info.all_ok = false;
-        }
-
-        // Recheck all_ok in case there was a failure in a C++ destructor
-        // after the "return" statement in END_TEST.
-        if (!test_info.all_ok) {
-            *all_success = false;
-        }
-
-        nsecs_t end_time = now();
-        uint64_t time_taken_ms = (end_time - start_time) / 1000000;
-        unittest_printf_critical(" [%s] (%d ms)\n", test_info.all_ok ? "PASSED" : "FAILED",
-                                 static_cast<int>(time_taken_ms));
-
-        *current_test_info = nullptr;
+        run_with_watchdog(name, [&]() {
+            unittest_run_test(name, test, current_test_info, all_success, enable_crash_handler);
+        });
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);
     }

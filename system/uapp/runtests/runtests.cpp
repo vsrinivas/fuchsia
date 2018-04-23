@@ -74,6 +74,9 @@ static list_node_t tests = LIST_INITIAL_VALUE(tests);
 // provided by the user.
 static signed char verbosity = -1;
 
+// The watchdog timeout, in seconds, or -1 if unset (-> use default).
+static int watchdog_timeout_seconds = -1;
+
 static const char* default_test_dirs[] = {
     // zircon builds place everything in ramdisks so tests are located in /boot
     "/boot/test/core", "/boot/test/libc", "/boot/test/ddk", "/boot/test/sys",
@@ -469,8 +472,9 @@ static int resolve_test_globs(const char** globs, const int num_globs, glob_t* r
 
 int usage(char* name) {
     fprintf(stderr,
-            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a]"
-            " [-t test names] [-o directory] [directory globs ...]\n"
+            "usage: %s [-q|-v] [-S|-s] [-M|-m] [-L|-l] [-P|-p] [-a]\n"
+            "    [-w timeout] [-t test names] [-o directory]       \n"
+            "    [directory globs ...]                             \n"
             "\n"
             "The optional [directory globs...] is a list of        \n"
             "globs which match directories containing tests to run,\n"
@@ -503,6 +507,9 @@ int usage(char* name) {
             "   -t: Filter tests by name                           \n"
             "       (accepts a comma-separated list)               \n"
             "   -o: Write test output to a directory               \n"
+            "   -w: Watchdog timeout                               \n"
+            "       (accepts the timeout value in seconds)         \n"
+            "       The default is up to each test.                \n"
             "\n"
             "If -o is enabled, then a JSON summary of the test     \n"
             "results will be written to a file named 'summary.json'\n"
@@ -515,6 +522,9 @@ int usage(char* name) {
             "\n"
             "The test selection options -[sSmMlLpP] only work for  \n"
             "tests that support the RUNTESTS_TEST_CLASS environment\n"
+            "variable.                                             \n"
+            "The watchdog timeout option -w only works for tests   \n"
+            "that support the RUNTESTS_WATCHDOG_TIMEOUT environment\n"
             "variable.                                             \n"
             );
     return -1;
@@ -572,6 +582,20 @@ int main(int argc, char** argv) {
             }
             output_dir = (const char*)argv[i + 1];
             i++;
+        } else if (strcmp(argv[i], "-w") == 0) {
+            if (i + 1 >= argc) {
+                return usage(argv[0]);
+            }
+            char* timeout_str = argv[++i];
+            char* end;
+            long timeout = strtol(timeout_str, &end, 0);
+            if (*timeout_str == '\0' || *end != '\0' ||
+                timeout < 0 || timeout > INT_MAX) {
+                fprintf(stderr, "Error: bad timeout\n");
+                return 1;
+            }
+            watchdog_timeout_seconds = (int) timeout;
+            i++;
         } else if (argv[i][0] != '-') {
             // Treat the rest of the argv array as a list of directory globs.
             num_test_globs = argc - i;
@@ -591,6 +615,21 @@ int main(int argc, char** argv) {
     if (setenv(TEST_ENV_NAME, test_opt, 1) != 0) {
         printf("Error: Could not set %s environment variable\n", TEST_ENV_NAME);
         return -1;
+    }
+
+    // If set, configure the watchdog timeout to use.
+    if (watchdog_timeout_seconds >= 0) {
+        char timeout_str[32];
+        snprintf(timeout_str, sizeof(timeout_str), "%d", watchdog_timeout_seconds);
+        if (setenv(WATCHDOG_ENV_NAME, timeout_str, 1) != 0) {
+            printf("Error: Could not set %s environment variable\n", WATCHDOG_ENV_NAME);
+            return -1;
+        }
+    } else {
+        // Ensure we don't pass on any existing value. This is intentional:
+        // If -w is not specified then that means the watchdog is unspecified,
+        // period.
+        unsetenv(WATCHDOG_ENV_NAME);
     }
 
     // If we got no test globs, just set it to the default test dirs so we can
@@ -669,6 +708,7 @@ int main(int argc, char** argv) {
 
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
+    unsetenv(WATCHDOG_ENV_NAME);
 
     if (output_dir != nullptr) {
         char summary_path[PATH_MAX];

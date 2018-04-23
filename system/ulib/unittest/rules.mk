@@ -14,13 +14,19 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/crash-handler.cpp \
     $(LOCAL_DIR)/crash-list.cpp \
     $(LOCAL_DIR)/unittest.cpp \
+    $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_SO_NAME := unittest
 
 # N.B. fdio, and thus launchpad, cannot appear here. See ./README.md.
 MODULE_LIBS := system/ulib/c system/ulib/zircon
 
-MODULE_STATIC_LIBS := system/ulib/pretty
+MODULE_STATIC_LIBS := \
+	system/ulib/pretty \
+	system/ulib/zx \
+
+MODULE_COMPILEFLAGS := \
+    -Isystem/ulib/fbl/include
 
 MODULE_PACKAGE := src
 
@@ -33,6 +39,7 @@ MODULE_TYPE := hostlib
 MODULE_SRCS += \
     $(LOCAL_DIR)/all-tests.cpp \
     $(LOCAL_DIR)/unittest.cpp \
+    $(LOCAL_DIR)/watchdog.cpp \
 
 MODULE_HOST_LIBS := system/ulib/pretty
 

@@ -243,8 +243,10 @@ static int run_test(void* arg) {
 // before starting the test.
 // If false, this will bind to the test thread's exception port once started
 // and add the thread to the expected crashes list.
-zx_status_t run_with_crash_handler(crash_list_t crash_list, bool (*fn_to_run)(void*), void* arg,
-                                   bool bind_to_job, test_result_t* test_result) {
+static zx_status_t run_with_crash_handler(crash_list_t crash_list,
+                                          bool (*fn_to_run)(void*), void* arg,
+                                          bool bind_to_job,
+                                          test_result_t* test_result) {
     zx_handle_t port;
     zx_status_t status = zx_port_create(0, &port);
     if (status != ZX_OK) {

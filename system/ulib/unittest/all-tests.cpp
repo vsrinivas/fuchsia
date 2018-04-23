@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include <libgen.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <unittest/unittest.h>
+
+#include "watchdog.h"
 
 static test_case_element* test_case_list = nullptr;
 static test_case_element* failed_test_case_list = nullptr;
@@ -116,8 +119,13 @@ static void print_help(const char* prog_name, FILE* f) {
             "        0x02 = medium\n"
             "        0x04 = large\n"
             "        0x08 = performance\n"
-            "      If unspecified then all tests are run.\n",
-            TEST_ENV_NAME);
+            "      If unspecified then all tests are run.\n"
+            "\n"
+            "  %s=<timeout-in-seconds>\n"
+            "      Specifies the watchdog timeout, in seconds.\n"
+            "      A value of zero disables the watchdog.\n"
+            "      If unspecified then the timeout is %d seconds.\n",
+            TEST_ENV_NAME, WATCHDOG_ENV_NAME, WATCHDOG_DEFAULT_TIMEOUT_SECONDS);
 }
 
 /*
@@ -170,6 +178,25 @@ bool unittest_run_all_tests(int argc, char** argv) {
         test_type = static_cast<test_type_t>(atoi(test_type_str));
     }
 
-    return unittest_run_all_tests_etc(argv[0], test_type, case_matcher, test_matcher,
-                                      list_tests_only);
+    // Rely on the WATCHDOG_ENV_NAME environment variable to tell us
+    // the timeout to use.
+    const char* watchdog_timeout_str = getenv(WATCHDOG_ENV_NAME);
+    if (watchdog_timeout_str != nullptr) {
+        char* end;
+        long timeout = strtol(watchdog_timeout_str, &end, 0);
+        if (*watchdog_timeout_str == '\0' || *end != '\0' ||
+            timeout < 0 || timeout > INT_MAX) {
+            fprintf(stderr, "Error: bad watchdog timeout\n");
+            return false;
+        }
+        watchdog_set_timeout((int) timeout);
+    }
+
+    watchdog_initialize();
+
+    auto result = unittest_run_all_tests_etc(argv[0], test_type, case_matcher, test_matcher,
+                                             list_tests_only);
+
+    watchdog_terminate();
+    return result;
 }

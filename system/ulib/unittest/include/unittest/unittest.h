@@ -121,6 +121,11 @@ typedef enum test_type {
 
 extern test_type_t utest_test_type;
 
+// An environment variable may be used to specify the timeout.
+// An env var is used because runtests doesn't make assumptions about what
+// arguments we understand.
+#define WATCHDOG_ENV_NAME "RUNTESTS_WATCHDOG_TIMEOUT"
+
 /*
  * Type for unit test result Output
  */
