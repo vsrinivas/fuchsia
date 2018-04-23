@@ -8,7 +8,7 @@ import json
 import os
 import sys
 
-from sdk_common import Atom, AtomId, detect_collisions, gather_dependencies
+from sdk_common import Atom, AtomId, detect_category_violations, detect_collisions, gather_dependencies
 
 
 def main():
@@ -44,6 +44,9 @@ def main():
                         nargs='*')
     parser.add_argument('--gn-label',
                         help='GN label of the atom',
+                        required=True)
+    parser.add_argument('--category',
+                        help='Publication level',
                         required=True)
     args = parser.parse_args()
 
@@ -109,6 +112,7 @@ def main():
     all_atoms.update([Atom({
         'id': id,
         'gn-label': args.gn_label,
+        'category': args.category,
         'tags': tags,
         'deps': map(lambda i: i.json, sorted(list(deps))),
         'package-deps': map(lambda i: i.json, sorted(list(all_package_deps))),
@@ -116,6 +120,9 @@ def main():
     })])
     if detect_collisions(all_atoms):
         print('Name collisions detected!')
+        return 1
+    if detect_category_violations(args.category, all_atoms):
+        print('Publication level violations detected!')
         return 1
 
     manifest = {

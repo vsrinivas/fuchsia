@@ -22,6 +22,15 @@
 #
 #     NOTE: Exactly one of `name` or `name_file` must be set.
 #
+#   category
+#     Describes the availability of the atom.
+#     Possible values:
+#       - excluded     : the atom may not be included in SDKs;
+#       - experimental : the atom is available with no quality guarantee;
+#       - internal     : the atom is exposed within the Fuchsia tree;
+#       - partner      : the atom may be used by select partners;
+#       - public       : the atom may be included in published SDKs.
+#
 #   files (optional)
 #     List of scopes describing the contents of this element.
 #     See the "File scopes" section for how to describe files.
@@ -83,10 +92,15 @@
 #     Whether this file should be added to Fuchsia packages.
 
 template("sdk_atom") {
-  if (!defined(invoker.domain)) {
-    assert(false, "Must define a domain name")
-  }
+  assert(defined(invoker.domain), "Must define a domain name")
   domain_name = invoker.domain
+
+  # TODO(DX-89): remove default value.
+  if (defined(invoker.category)) {
+    category = invoker.category
+  } else {
+    category = "partner"
+  }
 
   if (defined(invoker.name)) {
     name_args = [
@@ -192,6 +206,8 @@ template("sdk_atom") {
              rebase_path(source_dir),
              "--gn-label",
              full_label,
+             "--category",
+             category,
              "--deps",
            ] + dep_manifests + [ "--package-deps" ] + package_dep_manifests +
            [ "--files" ] + file_mappings + [ "--tags" ] + tags

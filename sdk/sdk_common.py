@@ -49,6 +49,7 @@ class Atom(object):
         self.json = json
         self.id = AtomId(json['id'])
         self.label = json['gn-label']
+        self.category = json['category']
         self.deps = map(lambda i: AtomId(i), json['deps'])
         self.package_deps = map(lambda i: AtomId(i), json['package-deps'])
         self.files = [File(f) for f in json['files']]
@@ -99,3 +100,28 @@ def detect_collisions(atoms):
         for label in labels:
             print(' - %s' % label)
     return has_collisions
+
+
+CATEGORIES = [
+    'excluded',
+    'experimental',
+    'internal',
+    'partner',
+    'public',
+]
+
+
+def index_for_category(category):
+    return CATEGORIES.index(category)
+
+
+def detect_category_violations(category, atoms):
+    '''Detects mismatches in publication categories.'''
+    has_violations = False
+    category_index = index_for_category(category)
+    for atom in atoms:
+        if index_for_category(atom.category) < category_index:
+            has_violations = True
+            print('%s has publication level %s, incompatible with %s' % (
+                    atom, atom.category, category))
+    return has_violations

@@ -65,6 +65,17 @@
           "description": "Label of the GN target which generated the atom",
           "type": "string"
         },
+        "category": {
+          "description": "Publication level of this atom",
+          "type": "string",
+          "enum": [
+            "excluded",
+            "experimental",
+            "internal",
+            "partner",
+            "public"
+          ]
+        },
         "files": {
           "description": "The files making up the atom",
           "type": "array",
@@ -105,6 +116,7 @@
         }
       },
       "required": [
+        "category",
         "deps",
         "files",
         "id",
