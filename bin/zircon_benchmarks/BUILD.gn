@@ -80,18 +80,6 @@ fidl("fidl_interface") {
   ]
 }
 
-# Copy the script that runs :bin with special flags.  This is needed because
-# runcmds cannot yet pass flags to individual binaries.
-copy("run_zircon_benchmarks") {
-  sources = [
-    "tools/run_zircon_benchmarks.sh",
-  ]
-
-  outputs = [
-    "$root_out_dir/run_zircon_benchmarks",
-  ]
-}
-
 package("zircon_benchmarks") {
   testonly = true
   deprecated_system_image = true
@@ -99,7 +87,6 @@ package("zircon_benchmarks") {
   deps = [
     ":bin",
     ":test",
-    ":run_zircon_benchmarks",
   ]
 
   binaries = [ {
@@ -108,8 +95,5 @@ package("zircon_benchmarks") {
 
   tests = [ {
         name = "zircon_benchmarks_test"
-      }, {
-        name = "run_zircon_benchmarks"
-        dest = "perf/run_zircon_benchmarks"
       } ]
 }
