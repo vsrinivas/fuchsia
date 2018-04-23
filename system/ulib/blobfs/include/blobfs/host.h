@@ -55,8 +55,6 @@ public:
         return inode_;
     }
 
-    void SetSize(size_t size);
-
 private:
     size_t bno_;
     blobfs_inode_t* inode_;
@@ -80,7 +78,8 @@ public:
     // Allocate |nblocks| starting at |*blkno_out| in memory
     zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
-    zx_status_t WriteData(blobfs_inode_t* inode, void* merkle_data, void* blob_data);
+    zx_status_t WriteData(blobfs_inode_t* inode, const void* merkle_data,
+                          const void* blob_data);
     zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
     zx_status_t WriteNode(fbl::unique_ptr<InodeBlock> ino_block);
     zx_status_t WriteInfo();

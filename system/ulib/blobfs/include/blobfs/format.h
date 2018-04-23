@@ -23,7 +23,7 @@ namespace blobfs {
 
 constexpr uint64_t kBlobfsMagic0  = (0xac2153479e694d21ULL);
 constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
-constexpr uint32_t kBlobfsVersion = 0x00000005;
+constexpr uint32_t kBlobfsVersion = 0x00000006;
 
 constexpr uint32_t kBlobFlagClean        = 1;
 constexpr uint32_t kBlobFlagDirty        = 2;
@@ -41,6 +41,8 @@ constexpr size_t kFVMDataStart      = 0x30000;
 constexpr uint64_t kBlobfsDefaultInodeCount = 32768;
 
 constexpr size_t kMinimumDataBlocks = 2;
+constexpr size_t kWriteBufferBlocks = 8192;
+constexpr size_t kWriteBufferBytes = kWriteBufferBlocks * kBlobfsBlockSize;
 
 // Notes:
 // - block 0 is always allocated
@@ -115,13 +117,17 @@ constexpr uint64_t TotalBlocks(const blobfs_info_t& info) {
 constexpr uint64_t kStartBlockFree     = 0;
 constexpr uint64_t kStartBlockMinimum  = 1; // Smallest 'data' block possible.
 
+// Identifies that the on-disk storage of the blob is LZ4 compressed.
+constexpr uint32_t kBlobFlagLZ4Compressed = 0x00000001;
+
 using digest::Digest;
 typedef struct {
     uint8_t  merkle_root_hash[Digest::kLength];
     uint64_t start_block;
     uint64_t num_blocks;
     uint64_t blob_size;
-    uint64_t reserved;
+    uint32_t flags;
+    uint32_t reserved;
 } blobfs_inode_t;
 
 static_assert(sizeof(blobfs_inode_t) == kBlobfsInodeSize,

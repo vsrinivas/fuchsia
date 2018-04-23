@@ -46,8 +46,13 @@ struct BlobfsMetrics {
 
     // Total time waiting for reads from disk.
     zx::ticks total_read_from_disk_time_ticks = {};
-    zx::ticks total_read_from_disk_verify_time_ticks = {};
     uint64_t bytes_read_from_disk = 0;
+
+    zx::ticks total_read_compressed_time_ticks = {};
+    zx::ticks total_decompress_time_ticks = {};
+    uint64_t bytes_compressed_read_from_disk = 0;
+    uint64_t bytes_decompressed_from_disk = 0;
+
     // Opened via "LookupBlob".
     uint64_t blobs_opened = 0;
     uint64_t blobs_opened_total_size = 0;

@@ -26,6 +26,7 @@
 #include <blobfs/format.h>
 #include <blobfs/fsck.h>
 #include <blobfs/host.h>
+#include <blobfs/lz4.h>
 
 using digest::Digest;
 using digest::MerkleTree;
@@ -162,6 +163,23 @@ zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
         munmap(blob_data, s.st_size);
     });
 
+    size_t data_blocks = fbl::round_up((size_t) s.st_size, kBlobfsBlockSize) / kBlobfsBlockSize;
+
+    Compressor compressor;
+    size_t max = compressor.BufferMax(s.st_size);
+    auto compressed_data = fbl::unique_ptr<uint8_t[]>(new uint8_t[max]);
+    bool compressed = false;
+    if ((s.st_size >= kCompressionMinBytesSaved) &&
+        (compressor.Initialize(compressed_data.get(), max) == ZX_OK) &&
+        (compressor.Update(blob_data, s.st_size) == ZX_OK) &&
+        (compressor.End() == ZX_OK) &&
+        (s.st_size - kCompressionMinBytesSaved >= compressor.Size())) {
+        compressed = true;
+        data_blocks = fbl::round_up(compressor.Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
+    }
+
+    const void* data = compressed ? compressed_data.get() : blob_data;
+
     zx_status_t status;
     digest::Digest digest;
     fbl::AllocChecker ac;
@@ -184,14 +202,16 @@ zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    inode_block->SetSize(s.st_size);
     blobfs_inode_t* inode = inode_block->GetInode();
+    inode->blob_size = s.st_size;
+    inode->num_blocks = MerkleTreeBlocks(*inode) + data_blocks;
+    inode->flags |= (compressed ? kBlobFlagLZ4Compressed : 0);
 
     if ((status = bs->AllocateBlocks(inode->num_blocks,
                                      reinterpret_cast<size_t*>(&inode->start_block))) != ZX_OK) {
         fprintf(stderr, "error: No blocks available\n");
         return status;
-    } else if ((status = bs->WriteData(inode, merkle_tree.get(), blob_data)) != ZX_OK) {
+    } else if ((status = bs->WriteData(inode, merkle_tree.get(), data)) != ZX_OK) {
         return status;
     } else if ((status = bs->WriteBitmap(inode->num_blocks, inode->start_block)) != ZX_OK) {
         return status;
@@ -214,11 +234,6 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
         return status;
     }
     return ZX_OK;
-}
-
-void InodeBlock::SetSize(size_t size) {
-    inode_->blob_size = size;
-    inode_->num_blocks = MerkleTreeBlocks(*inode_) + BlobDataBlocks(*inode_);
 }
 
 Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
@@ -377,8 +392,10 @@ zx_status_t Blobfs::WriteNode(fbl::unique_ptr<InodeBlock> ino_block) {
     return WriteBlock(cache_.bno, cache_.blk);
 }
 
-zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, void* merkle_data, void* blob_data) {
-    for (size_t n = 0; n < MerkleTreeBlocks(*inode); n++) {
+zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, const void* merkle_data, const void* blob_data) {
+    const size_t merkle_blocks = MerkleTreeBlocks(*inode);
+    const size_t data_blocks = inode->num_blocks - merkle_blocks;
+    for (size_t n = 0; n < merkle_blocks; n++) {
         const void* data = fs::GetBlock<kBlobfsBlockSize>(merkle_data, n);
         uint64_t bno = data_start_block_ + inode->start_block + n;
         zx_status_t status;
@@ -387,7 +404,7 @@ zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, void* merkle_data, void* bl
         }
     }
 
-    for (size_t n = 0; n < BlobDataBlocks(*inode); n++) {
+    for (size_t n = 0; n < data_blocks; n++) {
         const void* data = fs::GetBlock<kBlobfsBlockSize>(blob_data, n);
 
         // If we try to write a block, will it be reaching beyond the end of the
@@ -401,7 +418,7 @@ zx_status_t Blobfs::WriteData(blobfs_inode_t* inode, void* merkle_data, void* bl
             data = last_data;
         }
 
-        uint64_t bno = data_start_block_ + inode->start_block + MerkleTreeBlocks(*inode) + n;
+        uint64_t bno = data_start_block_ + inode->start_block + merkle_blocks + n;
         zx_status_t status;
         if ((status = WriteBlock(bno, data)) != ZX_OK) {
             return status;

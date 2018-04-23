@@ -26,6 +26,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/digest \
     system/ulib/trace-provider \
     system/ulib/trace \
+    third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
     system/ulib/zx \
     system/ulib/zxcpp \

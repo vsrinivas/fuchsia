@@ -17,6 +17,7 @@ MODULE_SRCS := \
     system/ulib/fs/vnode.cpp \
 
 MODULE_HOST_LIBS := \
+    third_party/ulib/lz4.hostlib \
     third_party/ulib/uboringssl.hostlib \
     system/ulib/blobfs.hostlib \
     system/ulib/digest.hostlib \

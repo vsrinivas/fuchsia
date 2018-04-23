@@ -11,6 +11,7 @@ MODULE_TYPE := userlib
 MODULE_NAME := blobfs
 
 COMMON_SRCS := \
+    $(LOCAL_DIR)/lz4.cpp \
     $(LOCAL_DIR)/common.cpp \
     $(LOCAL_DIR)/fsck.cpp \
 
@@ -32,6 +33,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/async-loop \
     system/ulib/block-client \
     system/ulib/digest \
+    third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
     system/ulib/trace \
     system/ulib/zx \
@@ -63,6 +65,7 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Isystem/ulib/digest/include \
+    -Ithird_party/ulib/lz4/include \
     -Ithird_party/ulib/uboringssl/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \

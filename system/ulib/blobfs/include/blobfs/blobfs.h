@@ -39,12 +39,14 @@
 
 #include <blobfs/common.h>
 #include <blobfs/format.h>
+#include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
 #include <blobfs/writeback.h>
 
 namespace blobfs {
 
 class Blobfs;
+class Compressor;
 class VnodeBlob;
 class WritebackWork;
 
@@ -55,9 +57,9 @@ typedef uint32_t BlobFlags;
 
 // clang-format off
 
-// After Open;
+// After Open:
 constexpr BlobFlags kBlobStateEmpty       = 0x00000001; // Not yet allocated
-// After Ioctl configuring size:
+// After Space Allocated:
 constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
 constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
@@ -188,6 +190,13 @@ private:
     // depending on the state.
     zx_status_t WriteInternal(const void* data, size_t len, size_t* actual);
 
+    // For a blob being written, consider stopping the compressor,
+    // the blob to eventually be written uncompressed to disk.
+    //
+    // For blobs which don't compress very well, this provides an escape
+    // hatch to avoid wasting work.
+    void ConsiderCompressionAbort();
+
     // Reads from a blob.
     // Requires: kBlobStateReadable
     zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
@@ -220,11 +229,18 @@ private:
     // the contents of a VMO into memory when it is opened.
     zx_status_t InitVmos();
 
+    // Initialize a compressed blob by reading it from disk and decompressing
+    // it.
+    // Does not verify the blob.
+    zx_status_t InitCompressed();
+
+    // Initialize a deompressed blob by reading it from disk.
+    // Does not verify the blob.
+    zx_status_t InitUncompressed();
+
     // Verify the integrity of the in-memory Blob.
     // InitVmos() must have already been called for this blob.
     zx_status_t Verify() const;
-
-    void WriteShared(WritebackWork* wb, size_t start, size_t len, uint64_t start_block);
 
     // Called by Blob once the last write has completed, updating the
     // on-disk metadata.
@@ -257,12 +273,20 @@ private:
     fbl::RefPtr<VnodeBlob> clone_ref_ = {};
 
     zx::event readable_event_ = {};
-    uint64_t bytes_written_ = {};
     uint8_t digest_[Digest::kLength] = {};
 
     uint32_t fd_count_ = {};
     size_t map_index_ = {};
     blobfs_inode_t inode_ = {};
+
+    // Data used exclusively during writeback.
+    struct WritebackInfo {
+        uint64_t bytes_written = {};
+        Compressor compressor;
+        fbl::unique_ptr<MappedVmo> compressed_blob = {};
+    };
+
+    fbl::unique_ptr<WritebackInfo> write_info_ = {};
 };
 
 // We need to define this structure to allow the Blob to be indexable by a key
@@ -332,7 +356,11 @@ public:
 
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual);
 
+    // Allocate a vmoid registering a VMO with the underlying block device.
     zx_status_t AttachVmo(zx_handle_t vmo, vmoid_t* out);
+    // Release an allocated vmoid.
+    zx_status_t DetachVmo(vmoid_t vmoid);
+
     zx_status_t Txn(block_fifo_request_t* requests, size_t count) {
         TRACE_DURATION("blobfs", "Blobfs::Txn", "count", count);
         return block_fifo_txn(fifo_client_, requests, count);
@@ -395,8 +423,13 @@ public:
 
     // Updates aggregate information about reading blobs from storage
     // since mounting.
-    void UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& read_duration,
-                                     const fs::Duration& verify_duration);
+    void UpdateMerkleDiskReadMetrics(uint64_t size, const fs::Duration& duration);
+
+    // Updates aggregate information about decompressing blobs from storage
+    // since mounting.
+    void UpdateMerkleDecompressMetrics(uint64_t size_compressed, uint64_t size_uncompressed,
+                                       const fs::Duration& read_duration,
+                                       const fs::Duration& decompress_duration);
 
     // Updates aggregate information about general verification info
     // since mounting.
@@ -467,6 +500,9 @@ private:
 
     // Reserves space for a block in memory. Does not update disk.
     zx_status_t ReserveBlocks(size_t nblocks, size_t* blkno_out);
+
+    // Unreserves space for blocks in memory. Does not update disk.
+    void UnreserveBlocks(size_t nblocks, size_t blkno_start);
 
     // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
     void PersistBlocks(WritebackWork* wb, size_t nblocks, size_t blkno);
