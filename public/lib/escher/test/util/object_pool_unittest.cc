@@ -26,12 +26,16 @@ class TestObj {
   size_t two_;
 };
 
+// Test DefaultObjectPoolPolicy (i.e. what you get when you create an
+// ObjectPool without a second template parameter).
 TEST(ObjectPool, DefaultPolicy) {
   size_t leak_count = 0;
   ObjectPool<TestObj> pool;
   std::vector<TestObj*> allocated;
   constexpr size_t kAllocated = 512;
   for (size_t i = 0; i < kAllocated; ++i) {
+    // Allocate a new TestObj, constructed with args |one| == i and |two| ==
+    // kAllocated - i.  These will always sum to kAllocated; we test this below.
     allocated.push_back(pool.Allocate(&leak_count, i, kAllocated - i));
   }
   EXPECT_EQ(leak_count, kAllocated);
@@ -74,6 +78,7 @@ class TestObjPreinitializePolicy {
   size_t* const leak_count_;
 };
 
+// Test an ObjectPool policy that preinitializes blocks of objects.
 TEST(ObjectPool, PreinitializePolicy) {
   size_t leak_count = 0;
   ObjectPool<TestObj, TestObjPreinitializePolicy> pool(&leak_count);
@@ -90,12 +95,12 @@ TEST(ObjectPool, PreinitializePolicy) {
   // this policy pre-initializes all TestObjs when their underlying memory
   // block is created.
   {
-    size_t block_size =
-        ObjectPool<TestObj, TestObjPreinitializePolicy>::InitialBlockSize();
     size_t total_size = 0;
+    size_t block_index = 0;
     while (total_size < kAllocated) {
-      total_size += block_size;
-      block_size *= 2;
+      total_size +=
+          ObjectPool<TestObj, TestObjPreinitializePolicy>::NumObjectsInBlock(
+              block_index++);
     }
     EXPECT_GT(leak_count, kAllocated);
     EXPECT_EQ(leak_count, total_size);

@@ -13,6 +13,13 @@ namespace escher {
 
 // Default policy for constructing and destroying ObjectPool objects.  Each
 // object is constructed and destroyed one-by-one.
+//
+// When replacing this policy with a different one, clients are free to do
+// whatever they want as long as:
+// - all 4 of these methods exist, since ObjectPool calls them.
+// - a constructor is called before an allocated object is returned
+// - a destructor is called before the pool is cleared/destroyed.
+// - there is no double construction/destruction
 template <typename T>
 class DefaultObjectPoolPolicy {
  public:
@@ -76,7 +83,7 @@ class ObjectPool {
   static size_t InitialBlockSize() { return 64U; }
 
   // Return the number of objects that can be held in the "block_index-th"
-  // allocation.  Each block is twice the size of the previous one.
+  // allocation.
   static size_t NumObjectsInBlock(size_t block_index) {
     return InitialBlockSize() << block_index;
   }
@@ -93,7 +100,7 @@ class ObjectPool {
   }
 
   // Release all pool resources.  Illegal to call while there are still unfreed
-  // objects.
+  // objects.  ObjectPool only releases memory when Clear() is called.
   void Clear() {
     FXL_DCHECK(UnfreedObjectCount() == 0);
 
@@ -108,7 +115,8 @@ class ObjectPool {
   }
 
  private:
-  // Allocate a block of memory, twice as big a the previous one.
+  // Allocate a new block of objects, and add them all to |vacants_|.  Called
+  // by Allocate() when |vacants_| is empty.
   void AllocateBlock() {
     const size_t block_index = blocks_.size();
     const size_t num_objects = NumObjectsInBlock(block_index);
