@@ -84,7 +84,7 @@ class FidlVideoRenderer
 
   // Advances reference time to the indicated value. This ensures that
   // |GetSize| and |GetRgbaFrame| refer to the video frame appropriate to
-  // the specified reference time.
+  // the specified reference time and that obsolete packets are discarded.
   void AdvanceReferenceTime(int64_t reference_time);
 
   void GetRgbaFrame(uint8_t* rgba_buffer,
@@ -98,6 +98,9 @@ class FidlVideoRenderer
 
   // Calls Invalidate on all registered views.
   void InvalidateViews();
+
+  // Called when a view's |OnSceneInvalidated| is called.
+  void OnSceneInvalidated(int64_t reference_time);
 
   // Determines whether we need more packets.
   bool need_more_packets() const {

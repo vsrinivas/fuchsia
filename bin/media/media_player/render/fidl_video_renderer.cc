@@ -10,6 +10,7 @@
 
 #include "garnet/bin/media/media_player/fidl/fidl_type_conversions.h"
 #include "lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media_player {
 
@@ -74,27 +75,14 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
 
   // Discard empty packets so they don't confuse the selection logic.
   // Discard packets that fall outside the program range.
-  if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0)) {
+  if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
+      packet_pts_ns > max_pts(0)) {
     return need_more_packets() ? Demand::kPositive : Demand::kNegative;
   }
 
-  if (!prime_callback_) {
-    // We aren't priming, so put the packet on the queue regardless.
-    packet_queue_.push(std::move(packet));
+  packet_queue_.push(std::move(packet));
 
-    // Discard old packets now in case our frame rate is so low that we have to
-    // skip more packets than we demand when GetRgbaFrame is called.
-    DiscardOldPackets();
-  } else {
-    // We're priming. Put the packet on the queue and determine whether we're
-    // done priming.
-    packet_queue_.push(std::move(packet));
-
-    if (!need_more_packets()) {
-      prime_callback_();
-      prime_callback_ = nullptr;
-    }
-  }
+  AdvanceReferenceTime(media::Timeline::local_now());
 
   // If this is the first packet to arrive, invalidate the views so the first
   // frame can be displayed.
@@ -102,7 +90,17 @@ Demand FidlVideoRenderer::SupplyPacket(PacketPtr packet) {
     InvalidateViews();
   }
 
-  return need_more_packets() ? Demand::kPositive : Demand::kNegative;
+  if (need_more_packets()) {
+    return Demand::kPositive;
+  }
+
+  // We have enough packets. If we're priming, complete the operation.
+  if (prime_callback_) {
+    prime_callback_();
+    prime_callback_ = nullptr;
+  }
+
+  return Demand::kNegative;
 }
 
 void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
@@ -152,10 +150,6 @@ void FidlVideoRenderer::AdvanceReferenceTime(int64_t reference_time) {
   pts_ns_ = current_timeline_function()(reference_time);
 
   DiscardOldPackets();
-
-  if (need_more_packets()) {
-    stage()->SetDemand(Demand::kPositive);
-  }
 }
 
 void FidlVideoRenderer::GetRgbaFrame(uint8_t* rgba_buffer,
@@ -216,6 +210,14 @@ void FidlVideoRenderer::InvalidateViews() {
   }
 }
 
+void FidlVideoRenderer::OnSceneInvalidated(int64_t reference_time) {
+  AdvanceReferenceTime(reference_time);
+
+  if (need_more_packets()) {
+    stage()->SetDemand(Demand::kPositive);
+  }
+}
+
 FidlVideoRenderer::View::View(
     views_v1::ViewManagerPtr view_manager,
     fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
@@ -236,7 +238,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
     images::PresentationInfo presentation_info) {
   TRACE_DURATION("motown", "OnSceneInvalidated");
 
-  renderer_->AdvanceReferenceTime(presentation_info.presentation_time);
+  renderer_->OnSceneInvalidated(presentation_info.presentation_time);
 
   geometry::Size video_size = renderer_->video_size();
   if (!has_logical_size() || video_size.width == 0 || video_size.height == 0) {
