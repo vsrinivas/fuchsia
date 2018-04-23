@@ -60,6 +60,8 @@ template("dart_tool") {
     sources += [ rebase_path(invoker.main_dart, source_base) ]
   }
 
+  dart_binary = "$dart_sdk/bin/dart"
+
   snapshot_path = "$target_gen_dir/${target_name}.snapshot"
   depfile_path = "${snapshot_path}.d"
   dart_target_gen_dir =
@@ -98,7 +100,7 @@ template("dart_tool") {
       rebase_path(invoker.main_dart),
     ]
 
-    deps = [
+    deps = dart_sdk_deps + [
       ":$dart_library_target_name",
     ]
   }
@@ -115,6 +117,10 @@ template("dart_tool") {
 
     app_path = "$root_out_dir/dart-tools/$app_name"
 
+    inputs = [
+      dart_binary,
+      snapshot_path,
+    ]
     outputs = [
       app_path,
     ]
@@ -128,7 +134,7 @@ template("dart_tool") {
       rebase_path(snapshot_path),
     ]
 
-    deps = [
+    deps = dart_sdk_deps + [
       ":$snapshot_target_name",
     ]
     if (defined(invoker.non_dart_deps)) {

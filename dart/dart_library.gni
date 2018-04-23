@@ -209,7 +209,7 @@ if (current_toolchain == dart_toolchain) {
                "dart:ui," + rebase_path(dart_ui_path),
              ]
 
-      deps = [
+      deps = gen_snapshot_deps + [
         ":$dot_packages_target_name",
       ]
     }
@@ -222,13 +222,12 @@ if (current_toolchain == dart_toolchain) {
       invocation_target_name = "${target_name}_analysis_runner"
       group_deps += [ ":$invocation_target_name" ]
 
-      dart_bin = "$prebuilt_dart_sdk/bin"
-      dart_analyzer_binary = "$dart_bin/dartanalyzer"
+      dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
 
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
-        deps = [
+        deps = dart_sdk_deps + [
           ":$dot_packages_target_name",
           ":$source_target_name",
         ]
@@ -254,7 +253,7 @@ if (current_toolchain == dart_toolchain) {
           "--dartanalyzer",
           rebase_path(dart_analyzer_binary),
           "--dart-sdk",
-          rebase_path(prebuilt_dart_sdk),
+          rebase_path(dart_sdk),
           "--options",
           rebase_path(options_file),
         ]
@@ -281,7 +280,7 @@ if (current_toolchain == dart_toolchain) {
           runner_out_dir = get_label_info(runner_label, "root_out_dir")
           script = "$runner_out_dir/dart-tools/analyzer"
 
-          server_snapshot = "$dart_bin/snapshots/analysis_server.dart.snapshot"
+          server_snapshot = "$dart_sdk/bin/snapshots/analysis_server.dart.snapshot"
 
           depfile = "$target_gen_dir/$target_name.analysis.d"
 
@@ -324,7 +323,7 @@ if (current_toolchain == dart_toolchain) {
             rebase_path(log_file),
           ]
 
-          deps = [
+          deps = dart_sdk_deps + [
             ":$dot_packages_target_name",
             dart_sdk_label,
             runner_label,
@@ -357,7 +356,7 @@ if (current_toolchain == dart_toolchain) {
             "--dartanalyzer",
             rebase_path(dart_analyzer_binary),
             "--dart-sdk",
-            rebase_path(prebuilt_dart_sdk),
+            rebase_path(dart_sdk),
             "--options",
             rebase_path(options_file),
             "--stamp",
@@ -368,7 +367,7 @@ if (current_toolchain == dart_toolchain) {
             rebase_path(depfile),
           ]
 
-          deps = [
+          deps = dart_sdk_deps + [
             ":$dot_packages_target_name",
             ":$source_target_name",
           ]
