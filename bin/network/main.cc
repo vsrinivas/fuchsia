@@ -13,7 +13,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   network::NetworkServiceDelegate delegate(loop.async());
   loop.Run();
   return 0;
