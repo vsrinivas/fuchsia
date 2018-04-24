@@ -667,7 +667,7 @@ void trace_context_write_context_switch_record(
             .WriteUint64(trace::MakeRecordHeader(trace::RecordType::kContextSwitch, record_size) |
                          trace::ContextSwitchRecordFields::CpuNumber::Make(cpu_number) |
                          trace::ContextSwitchRecordFields::OutgoingThreadState::Make(
-                             outgoing_thread_state) |
+                             ZX_THREAD_STATE_BASIC(outgoing_thread_state)) |
                          trace::ContextSwitchRecordFields::OutgoingThreadRef::Make(
                              outgoing_thread_ref->encoded_value) |
                          trace::ContextSwitchRecordFields::IncomingThreadRef::Make(

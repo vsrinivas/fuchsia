@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <object/futex_node.h>
+#include <object/thread_dispatcher.h>
 
 #include <assert.h>
 #include <err.h>
@@ -150,6 +151,7 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
 // does not reclaim the mutex on return.
 zx_status_t FutexNode::BlockThread(fbl::Mutex* mutex, zx_time_t deadline) TA_NO_THREAD_SAFETY_ANALYSIS {
     AutoThreadLock lock;
+    ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
 
     // We specifically want reschedule=false here, otherwise the
     // combination of releasing the mutex and enqueuing the current thread

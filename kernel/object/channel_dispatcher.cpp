@@ -283,11 +283,15 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
 
     // (2) Wait for notification via waiter's event or for the
     // deadline to hit.
-    zx_status_t status = waiter->Wait(deadline);
-    if (status == ZX_ERR_INTERNAL_INTR_RETRY) {
-        // If we got interrupted, return out to usermode, but
-        // do not clear the waiter.
-        return status;
+    {
+        ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::CHANNEL);
+
+        zx_status_t status = waiter->Wait(deadline);
+        if (status == ZX_ERR_INTERNAL_INTR_RETRY) {
+            // If we got interrupted, return out to usermode, but
+            // do not clear the waiter.
+            return status;
+        }
     }
 
     // (3) see (3A), (3B) above or (3C) below for paths where
@@ -304,11 +308,11 @@ zx_status_t ChannelDispatcher::ResumeInterruptedCall(MessageWaiter* waiter,
         // and EndWait() returns a non-ZX_ERR_TIMED_OUT status.
         // Otherwise, the status is ZX_ERR_TIMED_OUT and it
         // is our job to remove the waiter from the list.
-        if ((status = waiter->EndWait(reply)) == ZX_ERR_TIMED_OUT)
+        zx_status_t status = waiter->EndWait(reply);
+        if (status == ZX_ERR_TIMED_OUT)
             waiters_.erase(*waiter);
+        return status;
     }
-
-    return status;
 }
 
 size_t ChannelDispatcher::TxMessageMax() const {

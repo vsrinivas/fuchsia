@@ -601,9 +601,13 @@ zx_status_t ThreadDispatcher::ExceptionHandlerExchange(
     // exception response is received (requiring a second resume).
     // Exceptions and suspensions are essentially treated orthogonally.
 
-    do {
-        status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
-    } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
+    {
+        AutoBlocked by(Blocked::EXCEPTION);
+
+        do {
+            status = event_wait_with_mask(&exception_event_, THREAD_SIGNAL_SUSPEND);
+        } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
+    }
 
     AutoLock lock(get_lock());
 
@@ -734,15 +738,15 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
 
     *info = {};
 
-    ThreadDispatcher::State state;
-    enum thread_state lk_state;
+    State state;
+    Blocked blocked_reason;
     ExceptionPort::Type excp_port_type;
     // We need to fetch all these values under lock, but once we have them
     // we no longer need the lock.
     {
         AutoLock state_lock(get_lock());
         state = state_;
-        lk_state = thread_.state;
+        blocked_reason = blocked_reason_;
         if (InExceptionLocked() &&
                 // A port type of !NONE here indicates to the caller that the
                 // thread is waiting for an exception response. So don't return
@@ -769,19 +773,37 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
     case ThreadDispatcher::State::RUNNING:
         // The thread may be "running" but be blocked in a syscall or
         // exception handler.
-        switch (lk_state) {
-        case THREAD_BLOCKED:
-            info->state = ZX_THREAD_STATE_BLOCKED;
+        switch (blocked_reason) {
+        case Blocked::NONE:
+            info->state = ZX_THREAD_STATE_RUNNING;
+            break;
+        case Blocked::EXCEPTION:
+            info->state = ZX_THREAD_STATE_BLOCKED_EXCEPTION;
+            break;
+        case Blocked::SLEEPING:
+            info->state = ZX_THREAD_STATE_BLOCKED_SLEEPING;
+            break;
+        case Blocked::FUTEX:
+            info->state = ZX_THREAD_STATE_BLOCKED_FUTEX;
+            break;
+        case Blocked::PORT:
+            info->state = ZX_THREAD_STATE_BLOCKED_PORT;
+            break;
+        case Blocked::CHANNEL:
+            info->state = ZX_THREAD_STATE_BLOCKED_CHANNEL;
+            break;
+        case Blocked::WAIT_ONE:
+            info->state = ZX_THREAD_STATE_BLOCKED_WAIT_ONE;
+            break;
+        case Blocked::WAIT_MANY:
+            info->state = ZX_THREAD_STATE_BLOCKED_WAIT_MANY;
+            break;
+        case Blocked::INTERRUPT:
+            info->state = ZX_THREAD_STATE_BLOCKED_INTERRUPT;
             break;
         default:
-            // If we're in the window where we've released |state_lock_| but
-            // haven't gone to sleep yet (to wait for an exception response)
-            // then we're still "blocked" as far as userspace is concerned.
-            if (excp_port_type != ExceptionPort::Type::NONE) {
-                info->state = ZX_THREAD_STATE_BLOCKED;
-            } else {
-                info->state = ZX_THREAD_STATE_RUNNING;
-            }
+            DEBUG_ASSERT_MSG(false, "unexpected blocked reason: %d",
+                             static_cast<int>(blocked_reason));
             break;
         }
         break;

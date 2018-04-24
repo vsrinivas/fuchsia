@@ -136,7 +136,7 @@ static void resume_thread_from_exception(zx_handle_t process, zx_koid_t tid,
         tu_fatal("zx_object_get_child", status);
 
     zx_info_thread_t info = tu_thread_get_info(thread);
-    EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED, "");
+    EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION, "");
     if (excp_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
         EXPECT_EQ(info.wait_exception_port_type, excp_port_type, "");
     }
@@ -1513,9 +1513,9 @@ static bool unbind_rebind_while_stopped_test(void)
     // Note that there's no worry of this hanging due to our watchdog.
     zx_info_thread_t info;
     do {
-        zx_nanosleep(0);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
         info = tu_thread_get_info(thread);
-    } while (info.state != ZX_THREAD_STATE_BLOCKED);
+    } while (info.state != ZX_THREAD_STATE_BLOCKED_EXCEPTION);
 
     // Unbind the exception port quietly, meaning to leave the thread
     // waiting for an exception response.

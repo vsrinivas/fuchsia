@@ -80,6 +80,30 @@ public:
         RESUME,
     };
 
+    // When in a blocking syscall, or blocked in an exception, the blocking reason.
+    // There is one of these for each syscall marked "blocking".
+    // See syscalls.abigen.
+    enum class Blocked {
+        // Not blocked.
+        NONE,
+        // The thread is blocked in an exception.
+        EXCEPTION,
+        // The thread is sleeping (zx_nanosleep).
+        SLEEPING,
+        // zx_futex_wait
+        FUTEX,
+        // zx_port_wait
+        PORT,
+        // zx_channel_call
+        CHANNEL,
+        // zx_object_wait_one
+        WAIT_ONE,
+        // zx_object_wait_many
+        WAIT_MANY,
+        // zx_interrupt_wait
+        INTERRUPT,
+    };
+
     static zx_status_t Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,
                               fbl::StringPiece name,
                               fbl::RefPtr<Dispatcher>* out_dispatcher,
@@ -170,6 +194,24 @@ public:
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
 
+    // Blocking syscalls, once they commit to a path that will likely block the
+    // thread, use this helper class to properly set/restore |blocked_reason_|.
+    class AutoBlocked final {
+    public:
+        explicit AutoBlocked(Blocked reason)
+            : thread_(ThreadDispatcher::GetCurrent()),
+              prev_reason(thread_->blocked_reason_) {
+            DEBUG_ASSERT(reason != Blocked::NONE);
+            thread_->blocked_reason_ = reason;
+        }
+        ~AutoBlocked() {
+            thread_->blocked_reason_ = prev_reason;
+        }
+    private:
+        ThreadDispatcher* const thread_;
+        const Blocked prev_reason;
+    };
+
 private:
     ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags);
     ThreadDispatcher(const ThreadDispatcher&) = delete;
@@ -207,6 +249,15 @@ private:
     uintptr_t user_arg2_ = 0;
 
     State state_ TA_GUARDED(get_lock()) = State::INITIAL;
+
+    // This is only valid while |state_ == State::RUNNING|.
+    // This is just a volatile, and not something like an atomic, because
+    // the only writer is the thread itself, and readers can just pick up
+    // whatever value is currently here. This value is written when the thread
+    // is likely to be put on a wait queue, and the following context switch
+    // will force this value's visibility to other cpus. If the thread doesn't
+    // get put on a wait queue, the thread was never really blocked.
+    volatile Blocked blocked_reason_ = Blocked::NONE;
 
     // A thread-level exception port for this thread.
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());

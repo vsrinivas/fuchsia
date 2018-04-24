@@ -378,11 +378,24 @@ zx_info_thread_t tu_thread_get_info(zx_handle_t thread)
     return info;
 }
 
+uint32_t tu_thread_get_state(zx_handle_t thread)
+{
+    zx_info_thread_t info = tu_thread_get_info(thread);
+    return info.state;
+}
+
 bool tu_thread_is_dying_or_dead(zx_handle_t thread)
 {
     zx_info_thread_t info = tu_thread_get_info(thread);
     return (info.state == ZX_THREAD_STATE_DYING ||
             info.state == ZX_THREAD_STATE_DEAD);
+}
+
+void tu_task_kill(zx_handle_t task)
+{
+    zx_status_t status = zx_task_kill(task);
+    if (status < 0)
+        tu_fatal("zx_task_kill", status);
 }
 
 int tu_run_program(const char *progname, int argc, const char** argv)

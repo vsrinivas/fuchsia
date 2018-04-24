@@ -17,6 +17,7 @@
 #include <lib/counters.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
+#include <object/thread_dispatcher.h>
 #include <zircon/compiler.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls/port.h>
@@ -312,9 +313,12 @@ zx_status_t PortDispatcher::Dequeue(zx_time_t deadline, zx_port_packet_t* out_pa
             }
         }
 
-        zx_status_t st = sema_.Wait(deadline, nullptr);
-        if (st != ZX_OK)
-            return st;
+        {
+            ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::PORT);
+            zx_status_t st = sema_.Wait(deadline, nullptr);
+            if (st != ZX_OK)
+                return st;
+        }
     }
 }
 

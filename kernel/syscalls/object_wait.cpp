@@ -73,7 +73,10 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
     // even if the deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
-    result = event.Wait(deadline);
+    {
+        ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_ONE);
+        result = event.Wait(deadline);
+    }
 
     // Regardless of wait outcome, we must call End().
     auto signals_state = wait_state_observer.End();
@@ -147,7 +150,10 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT
     // after the deadline passes if the event has not been
     // signaled.
-    result = event.Wait(deadline);
+    {
+        ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_MANY);
+        result = event.Wait(deadline);
+    }
 
     // Regardless of wait outcome, we must call End().
     zx_signals_t combined = 0;

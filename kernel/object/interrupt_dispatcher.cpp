@@ -44,9 +44,12 @@ zx_status_t InterruptDispatcher::WaitForInterrupt(zx_time_t* out_timestamp) {
             state_ = InterruptState::WAITING;
         }
 
-        zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
-        if (status != ZX_OK) {
-            return status;
+        {
+            ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::INTERRUPT);
+            zx_status_t status = event_wait_deadline(&event_, ZX_TIME_INFINITE, true);
+            if (status != ZX_OK) {
+                return status;
+            }
         }
     }
 }

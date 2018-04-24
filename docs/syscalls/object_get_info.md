@@ -161,11 +161,10 @@ typedef struct zx_info_thread {
     // One of ZX_THREAD_STATE_* values.
     uint32_t state;
 
-    // If nonzero, the thread has gotten an exception and is waiting for
-    // the exception to be handled by the specified port.
+    // If |state| is ZX_THREAD_STATE_BLOCKED_EXCEPTION, the thread has gotten
+    // an exception and is waiting for the exception to be handled by the
+    // specified port.
     // The value is one of ZX_EXCEPTION_PORT_TYPE_*.
-    // Note: If the thread is waiting for an exception response then |state|
-    // will have the value ZX_THREAD_STATE_BLOCKED.
     uint32_t wait_exception_port_type;
 } zx_info_thread_t;
 ```
@@ -183,9 +182,23 @@ The **ZX_THREAD_STATE_\*** values are defined by
 *   *ZX_THREAD_STATE_RUNNING*: The thread is running user code normally.
 *   *ZX_THREAD_STATE_SUSPENDED*: Stopped due to [zx_task_suspend](task_suspend.md).
 *   *ZX_THREAD_STATE_BLOCKED*: In a syscall or handling an exception.
+    This value is never returned by itself.
+	See **ZX_THREAD_STATE_BLOCKED_\*** below.
 *   *ZX_THREAD_STATE_DYING*: The thread is in the process of being terminated,
     but it has not been stopped yet.
 *   *ZX_THREAD_STATE_DEAD*: The thread has stopped running.
+
+When a thread is stopped inside a blocking syscall, or stopped in an
+exception, the value returned in **state** is one of the following:
+
+*   *ZX_THREAD_STATE_BLOCKED_EXCEPTION*: The thread is stopped in an exception.
+*   *ZX_THREAD_STATE_BLOCKED_SLEEPING*: The thread is stopped in [zx_nanosleep](nanosleep.md).
+*   *ZX_THREAD_STATE_BLOCKED_FUTEX*: The thread is stopped in [zx_futex_wait](futex_wait.md).
+*   *ZX_THREAD_STATE_BLOCKED_PORT*: The thread is stopped in [zx_port_wait](port_wait.md).
+*   *ZX_THREAD_STATE_BLOCKED_CHANNEL*: The thread is stopped in [zx_channel_call](channel_call.md).
+*   *ZX_THREAD_STATE_BLOCKED_WAIT_ONE*: The thread is stopped in [zx_object_wait_one](object_wait_one.md).
+*   *ZX_THREAD_STATE_BLOCKED_WAIT_MANY*: The thread is stopped in [zx_object_wait_many](object_wait_many.md).
+*   *ZX_THREAD_STATE_BLOCKED_INTERRUPT*: The thread is stopped in [zx_interrupt_wait](interrupt_wait.md).
 
 The **ZX_EXCEPTION_PORT_TYPE_\*** values are defined by
 

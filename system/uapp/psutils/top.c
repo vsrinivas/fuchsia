@@ -57,7 +57,7 @@ static const char* state_string(const zx_info_thread_t* info) {
     if (info->wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
         return "excp";
     } else {
-        switch (info->state) {
+        switch (ZX_THREAD_STATE_BASIC(info->state)) {
         case ZX_THREAD_STATE_NEW:
             return "new";
         case ZX_THREAD_STATE_RUNNING:

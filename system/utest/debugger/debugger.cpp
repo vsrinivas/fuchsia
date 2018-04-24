@@ -783,12 +783,14 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
 
     // Busy-wait until thread is blocked inside the syscall.
     zx_info_thread_t thread_info;
+    uint32_t expected_blocked_reason =
+        do_channel_call ? ZX_THREAD_STATE_BLOCKED_CHANNEL : ZX_THREAD_STATE_BLOCKED_WAIT_ONE;
     do {
         // Don't check too frequently here as it can blow up tracing output
         // when debugging with kernel tracing turned on.
         zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
         thread_info = tu_thread_get_info(thread);
-    } while (thread_info.state != ZX_THREAD_STATE_BLOCKED);
+    } while (thread_info.state != expected_blocked_reason);
     ASSERT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_NONE);
 
     // Extra sanity check for channels.
