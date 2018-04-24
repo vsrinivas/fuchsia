@@ -51,8 +51,10 @@ zx_status_t ProxyController::Send(
     return status;
   }
   status = message.Write(reader_.channel().get(), 0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
+    FIDL_REPORT_CHANNEL_WRITING_ERROR(message, type, status);
     return status;
+  }
   if (response_handler)
     handlers_.emplace(txid, std::move(response_handler));
   return ZX_OK;
