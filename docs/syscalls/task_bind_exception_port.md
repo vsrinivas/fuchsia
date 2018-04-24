@@ -3,7 +3,7 @@
 ## NAME
 
 task_bind_exception_port - Bind to, or unbind from, the exception port
-corresponding to a given job, process, thread, or the system exception port.
+corresponding to a given job, process, or thread.
 
 ## SYNOPSIS
 

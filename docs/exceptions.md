@@ -159,16 +159,10 @@ exception port then the exception is delivered to that port. If it does not
 have a bound exception port, or if the handler returns **ZX_RESUME_TRY_NEXT**,
 then that job's parent job is searched, and so on right up to the root job.
 
-- *System* - This is the last port searched and gives the system a chance to
-process the exception before the kernel kills the process.
-
 If no exception port handles the exception then the kernel finishes
 exception processing by killing the process.
 
 Notes:
-
-- The "system" exception port is going away, to be supplanted by
-the root job.
 
 - The search order is different than that of Mach. In Zircon the
 debugger exception port is tried first, before all other ports.

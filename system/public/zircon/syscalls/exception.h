@@ -128,6 +128,5 @@ typedef struct zx_exception_report {
 #define ZX_EXCEPTION_PORT_TYPE_THREAD   (2u)
 #define ZX_EXCEPTION_PORT_TYPE_PROCESS  (3u)
 #define ZX_EXCEPTION_PORT_TYPE_JOB      (4u)
-#define ZX_EXCEPTION_PORT_TYPE_SYSTEM   (5u)
 
 __END_CDECLS
