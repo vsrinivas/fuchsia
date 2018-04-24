@@ -19,5 +19,3 @@
 #define GUEST_ENTRY     0x2000
 #define X86_CR0_NE      0x00000020 /* enable x87 exception */
 #endif
-
-#define FUNCTION(x)     .global x; .type x,STT_FUNC; x:

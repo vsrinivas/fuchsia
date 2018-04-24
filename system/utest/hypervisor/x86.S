@@ -12,6 +12,15 @@
 
 .text
 
+// Define new function 'name'.
+// Local label '1:' used by other macros to compute offsets.
+.macro FUNCTION name
+    .global \name
+    .type \name, STT_FUNC
+    \name:
+    1:
+.endm
+
 .macro init_interrupt_handling start
     lgdt INTERRUPT_ADDR(\start, gdtr_for_\start)
     lidt INTERRUPT_ADDR(\start, idtr_for_\start)
@@ -53,7 +62,7 @@ end_of_\start:
 .endm
 
 // Test vcpu_resume.
-FUNCTION(vcpu_resume_start)
+FUNCTION vcpu_resume_start
     // Test that we do not exit on load/store of CR3.
     mov %cr3, %rax
     mov %rax, %cr3
@@ -69,30 +78,30 @@ FUNCTION(vcpu_resume_start)
     cpuid
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(vcpu_resume_end)
+FUNCTION vcpu_resume_end
 
 // Test vcpu_interrupt.
-FUNCTION(vcpu_interrupt_start)
+FUNCTION vcpu_interrupt_start
     init_interrupt_handling vcpu_interrupt_start
     sti
     jmp .
-FUNCTION(vcpu_interrupt_end)
+FUNCTION vcpu_interrupt_end
 
 // Test guest HLT instruction handling.
-FUNCTION(vcpu_hlt_start)
+FUNCTION vcpu_hlt_start
     init_interrupt_handling vcpu_hlt_start
     sti
     hlt
-FUNCTION(vcpu_hlt_end)
+FUNCTION vcpu_hlt_end
 
 // Test that pause exiting works correctly.
-FUNCTION(vcpu_pause_start)
+FUNCTION vcpu_pause_start
     pause
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(vcpu_pause_end)
+FUNCTION vcpu_pause_end
 
 // Test that reading and writing cr0 works correctly.
-FUNCTION(vcpu_write_cr0_start)
+FUNCTION vcpu_write_cr0_start
     // Read cr0.
     mov %cr0, %rax
 
@@ -104,10 +113,10 @@ FUNCTION(vcpu_write_cr0_start)
     mov %cr0, %rax
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(vcpu_write_cr0_end)
+FUNCTION vcpu_write_cr0_end
 
 // Test vcpu_read_state and vcpu_write_state.
-FUNCTION(vcpu_read_write_state_start)
+FUNCTION vcpu_read_write_state_start
     add $1, %rax
     add $2, %rcx
     add $3, %rdx
@@ -129,16 +138,16 @@ FUNCTION(vcpu_read_write_state_start)
     stac // Set AC flag (bit 18)
 
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(vcpu_read_write_state_end)
+FUNCTION vcpu_read_write_state_end
 
 // Test guest_set_trap using a memory-based trap.
-FUNCTION(guest_set_trap_start)
+FUNCTION guest_set_trap_start
     movq $0, (TRAP_ADDR)
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(guest_set_trap_end)
+FUNCTION guest_set_trap_end
 
 // Test guest_set_trap using an IO-based trap.
-FUNCTION(guest_set_trap_with_io_start)
+FUNCTION guest_set_trap_with_io_start
     out %al, $TRAP_PORT
     movq $0, (EXIT_TEST_ADDR)
-FUNCTION(guest_set_trap_with_io_end)
+FUNCTION guest_set_trap_with_io_end
