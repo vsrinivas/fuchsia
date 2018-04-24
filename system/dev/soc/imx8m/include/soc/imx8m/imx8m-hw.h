@@ -68,9 +68,10 @@
 #define IMX8M_AIPS_USDHC2_BASE                              0x30B50000
 #define IMX8M_AIPS_QSPI_BASE                                0x30BB0000
 #define IMX8M_AIPS_ENET1_BASE                               0x30BE0000
-
-
-
+#define IMX8M_AIPS_DC_MST0_BASE                             0x32E00000
+#define IMX8M_AIPS_DC_MST1_BASE                             0x32E10000
+#define IMX8M_AIPS_DC_MST2_BASE                             0x32E20000
+#define IMX8M_AIPS_DC_MST3_BASE                             0x32E30000
 
  #define IMX8M_A53_INTR_BOOT                                (32 + 0)
  #define IMX8M_A53_INTR_DAP                                 (32 + 1)

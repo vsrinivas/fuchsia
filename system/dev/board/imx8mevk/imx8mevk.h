@@ -18,6 +18,7 @@ enum
 {
     BTI_BOARD,
     BTI_USB,
+    BTI_DISPLAY,
 };
 
 typedef struct {

@@ -29,6 +29,32 @@
 
 #include "imx8mevk.h"
 
+static pbus_mmio_t imx8mevk_display_mmios[] = {
+    {
+        .base =     IMX8M_AIPS_DC_MST1_BASE,
+        .length =   IMX8M_AIPS_LENGTH,
+    },
+};
+
+static const pbus_bti_t imx8mevk_display_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_DISPLAY,
+    },
+};
+
+static const pbus_dev_t display_dev = {
+    .name = "display",
+    .vid = PDEV_VID_NXP,
+    .pid = PDEV_PID_IMX8MEVK,
+    .did = PDEV_DID_IMX_DISPLAY,
+    .mmios = imx8mevk_display_mmios,
+    .mmio_count = countof(imx8mevk_display_mmios),
+    .btis = imx8mevk_display_btis,
+    .bti_count = countof(imx8mevk_display_btis),
+};
+
+
 static zx_status_t imx8mevk_get_initial_mode(void* ctx, usb_mode_t* out_mode) {
     imx8mevk_bus_t* bus = ctx;
     *out_mode = bus->initial_usb_mode;
@@ -113,6 +139,12 @@ static int imx8mevk_start_thread(void* arg) {
     if (status != ZX_OK) {
         goto fail;
     }
+
+    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "%s could not add display_dev: %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+
 
     return ZX_OK;
 
