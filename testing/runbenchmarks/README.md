@@ -19,4 +19,16 @@ runbench_exec <results_file> <arg0> <arg1> ...
 
 #### Description
 
-Runs the command specified by `<arg0> <arg1> ...` and verifies that `<results_file>` was produced as a result.
+Runs the command specified by `<arg0> <arg1> ...` and verifies that `<results_file>`
+was produced as a result.
+
+### runbench_exit
+
+```sh
+runbench_exit <output_dir>
+```
+
+#### Description
+
+Exits the current process, performing any cleanup work necessary. `<output_dir>` should
+be the same directory that test results were written to.

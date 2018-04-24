@@ -31,4 +31,4 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks" \
     /system/bin/zircon_benchmarks -p --out="${OUT_DIR}/zircon_benchmarks"
 
 # Exit with a code indicating whether any errors occurred.
-runbench_exit
+runbench_finish "${OUT_DIR}"
