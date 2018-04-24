@@ -55,7 +55,7 @@ class PsCfg {
         return dtim_count_ + 1;
     }
 
-    bool IsDtim() { return dtim_count_ == 0; }
+    bool IsDtim() const { return dtim_count_ == 0; }
 
    private:
     TrafficIndicationMap tim_;

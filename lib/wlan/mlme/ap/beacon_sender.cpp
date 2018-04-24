@@ -37,11 +37,7 @@ void BeaconSender::Start(BssInterface* bss, const PsCfg& ps_cfg,
         return;
     }
 
-    // TODO(hahnr): Delete once pre-TBTT is support which allows updating Beacon frames once per
-    // Beacon interval and instead enable hardware beaconing only.
-    UpdateBeacon(ps_cfg);
-
-    debugbss("[bcn-sender] [%s] started sending Beacons\n", bss_->bssid().ToString().c_str());
+    debugbss("[bcn-sender] [%s] enabled Beacon sending\n", bss_->bssid().ToString().c_str());
 }
 
 void BeaconSender::Stop() {
@@ -54,7 +50,7 @@ void BeaconSender::Stop() {
         return;
     }
 
-    debugbss("[bcn-sender] [%s] stopped sending Beacons\n", bss_->bssid().ToString().c_str());
+    debugbss("[bcn-sender] [%s] disabled Beacon sending\n", bss_->bssid().ToString().c_str());
     bss_ = nullptr;
 }
 
@@ -294,7 +290,9 @@ zx_status_t BeaconSender::WriteTim(ElementWriter* w, const PsCfg& ps_cfg) {
 
     BitmapControl bmp_ctrl;
     bmp_ctrl.set_offset(bitmap_offset);
-    // TODO(NET-579): Write group traffic indication to bitmap control.
+    if (ps_cfg.IsDtim()) {
+        bmp_ctrl.set_group_traffic_ind(ps_cfg.GetTim()->HasGroupTraffic());
+    }
     if (!w->write<TimElement>(dtim_count, dtim_period, bmp_ctrl, pvb_, bitmap_len)) {
         errorf("[bcn-sender] [%s] could not write TIM element\n", bss_->bssid().ToString().c_str());
         return ZX_ERR_IO;

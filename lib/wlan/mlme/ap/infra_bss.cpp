@@ -224,8 +224,6 @@ void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_cou
     }
 
     ps_cfg_.GetTim()->SetTrafficIndication(aid, bu_count > 0);
-    // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
-    bcn_sender_->UpdateBeacon(ps_cfg_);
 }
 
 zx_status_t InfraBss::AssignAid(const common::MacAddr& client, aid_t* out_aid) {
@@ -250,8 +248,6 @@ zx_status_t InfraBss::ReleaseAid(const common::MacAddr& client) {
     }
 
     ps_cfg_.GetTim()->SetTrafficIndication(aid, false);
-    // TODO(hahnr): Only update Beacon when Pre-TBTT was reported.
-    bcn_sender_->UpdateBeacon(ps_cfg_);
     return clients_.ReleaseAid(client);
 }
 
@@ -275,8 +271,7 @@ bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {
     // Buffer non-GCR-SP frames when at least one client is dozing.
     // Note: Currently group addressed service transmission is not supported and thus, every group
     // message should get buffered.
-    // TODO(porce): Use MacAddr#IsGroupAddr() once wording got fixed to match IEEE 802.11.
-    return receiver_addr.IsMcast() && ps_cfg_.GetTim()->HasDozingClients();
+    return receiver_addr.IsGroupAddr() && ps_cfg_.GetTim()->HasDozingClients();
 }
 
 zx_status_t InfraBss::BufferFrame(fbl::unique_ptr<Packet> packet) {
@@ -405,7 +400,8 @@ zx_status_t InfraBss::EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame
 }
 
 void InfraBss::OnPreTbtt() {
-    // TODO(hahnr): Implement.
+    bcn_sender_->UpdateBeacon(ps_cfg_);
+    ps_cfg_.NextDtimCount();
 }
 
 void InfraBss::OnBcnTxComplete() {
