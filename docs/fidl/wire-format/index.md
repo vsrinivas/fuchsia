@@ -148,7 +148,7 @@ During **encoding**…
     present or not-present in traversal order
 
 The resulting **encoding message** and **handle vector** can then be sent to
-another process using **ZX_channel_call()** or a similar IPC mechanism.
+another process using **zx_channel_call()** or a similar IPC mechanism.
 
 #### Decoded Messages
 
@@ -195,8 +195,8 @@ From the perspective of the wire format, enums are just fancy names for
 primitive types.
 
 For example, an enum whose underlying type is
-<strong><code>int32</code></strong> is stored in exactly the same way as any
-ordinary <strong><code>int32</code></strong> would be.
+`int32` is stored in exactly the same way as any
+ordinary C `int32_t` would be.
 
 ### Arrays
 
@@ -212,10 +212,8 @@ ordinary <strong><code>int32</code></strong> would be.
 
 Arrays are denoted:
 
-*   <strong><code>T[n]</code></strong> : where <em>T</em> can be any FIDL type
-    (including an array) and <em>n</em> is the number of elements in the array.
-
-<em>T</em> can be any FIDL type.
+*   `T[n]`: where *T* can be any FIDL type
+    (including an array) and *n* is the number of elements in the array.
 
 ![drawing](arrays.png)
 
@@ -223,37 +221,37 @@ Arrays are denoted:
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
 *   Nullable; null strings and empty strings are distinct.
-*   Can specify a maximum size, eg. <strong><code>string:40</code></strong> for
+*   Can specify a maximum size, eg. `string:40` for
     a maximum 40 byte string.
 *   String content does not have a null-terminator.[^1]
 
 *   Stored as a 16 byte record consisting of:
 
-    *   <strong><code>size</code></strong> : 64-bit unsigned number of code
+    *   `size` : 64-bit unsigned number of code
         units (bytes)
-    *   <strong><code>data</code></strong> : 64-bit presence indication or
+    *   `data` : 64-bit presence indication or
         pointer to out-of-line string data
 
-*   When encoded for transfer, <strong><code>data</code></strong> indicates
+*   When encoded for transfer, `data` indicates
     presence of content:
 
-    *   <strong><code>0</code></strong> : string is null
-    *   <strong><code>UINTPTR_MAX</code></strong> : string is non-null, data is
+    *   `0` : string is null
+    *   `UINTPTR_MAX` : string is non-null, data is
         the next out-of-line object
 
-*   When decoded for consumption, <strong><code>data</code></strong> is a
+*   When decoded for consumption, `data` is a
     pointer to content.
 
-    *   <strong><code>0</code></strong> : string is null
-    *   <strong><code><valid pointer></code></strong> : string is non-null, data
+    *   `0` : string is null
+    *   `<valid pointer>` : string is non-null, data
         is at indicated memory address
 
 Strings are denoted as follows:
 
-*   <strong><code>string</code></strong> : non-nullable string (validation error
-    occurs if null <strong><code>data</code></strong> is encountered)
-*   <strong><code>string?</code></strong> : nullable string
-*   <strong><code>string:N, string:N?</code></strong> : string with maximum
+*   `string` : non-nullable string (validation error
+    occurs if null `data` is encountered)
+*   `string?` : nullable string
+*   `string:N, string:N?` : string with maximum
     length of <em>N</em> bytes
 
 ![drawing](strings.png)
@@ -262,33 +260,33 @@ Strings are denoted as follows:
 
 *   Variable-length sequence of homogeneous elements.
 *   Nullable; null vectors and empty vectors are distinct.
-*   Can specify a maximum size, eg. <strong><code>vector<T>:40</code></strong>
+*   Can specify a maximum size, eg. `vector<T>:40`
     for a maximum 40 element vector.
 *   Stored as a 16 byte record consisting of:
-    *   <strong><code>size</code></strong> : 64-bit unsigned number of elements
-    *   <strong><code>data</code></strong> : 64-bit presence indication or
+    *   `size` : 64-bit unsigned number of elements
+    *   `data` : 64-bit presence indication or
         pointer to out-of-line element data
-*   When encoded for transfer, <strong><code>data</code></strong> indicates
+*   When encoded for transfer, `data` indicates
     presence of content:
-    *   <strong><code>0</code></strong> : vector is null
-    *   <strong><code>UINTPTR_MAX</code></strong> : vector is non-null, data is
+    *   `0` : vector is null
+    *   `UINTPTR_MAX` : vector is non-null, data is
         the next out-of-line object
-*   When decoded for consumption, <strong><code>data</code></strong> is a
+*   When decoded for consumption, `data` is a
     pointer to content.
-    *   <strong><code>0</code></strong> : vector is null
-    *   <strong><code><valid pointer></code></strong> : vector is non-null, data
+    *   `0` : vector is null
+    *   `<valid pointer>` : vector is non-null, data
         is at indicated memory address
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
 
 Vectors are denoted as follows:
 
-*   <strong><code>vector<T></code></strong> : non-nullable vector of element
+*   `vector<T>` : non-nullable vector of element
     type <em>T</em> (validation error occurs if null
-    <strong><code>data</code></strong> is encountered)
-*   <strong><code>vector<T>?</code></strong> : nullable vector of element type
+    `data` is encountered)
+*   `vector<T>?` : nullable vector of element type
     <em>T</em>
-*   <strong><code>vector<T>:N, vector<T>:N?</code></strong> : vector with
+*   `vector<T>:N, vector<T>:N?` : vector with
     maximum length of <em>N</em> elements
 
 <em>T</em> can be any FIDL type.
@@ -300,41 +298,41 @@ Vectors are denoted as follows:
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
 *   Nullable by encoding as a zero-valued[^2] handle (equivalent to
-    <strong><code>ZX_HANDLE_INVALID</code></strong>).
+    `ZX_HANDLE_INVALID`).
 
 *   When encoded for transfer, the stored integer indicates presence of handle:
 
-    *   <strong><code>0</code></strong> : handle is null
-    *   <strong><code>UINT32_MAX</code></strong> : handle is non-null, handle
+    *   `0` : handle is null
+    *   `UINT32_MAX` : handle is non-null, handle
         value is the next entry in handle table
 
 *   When decoded for consumption, the stored integer is handle value itself.
 
-    *   <strong><code>0</code></strong> : handle is null
-    *   <strong><code><valid handle></code></strong> : handle is non-null,
+    *   `0` : handle is null
+    *   `<valid handle>` : handle is non-null,
         handle value is provided in-line
 
 Handles are denoted:
 
-*   <strong><code>handle</code></strong> : non-nullable Zircon handle of
+*   `handle` : non-nullable Zircon handle of
     unspecified type
-*   <strong><code>handle?</code></strong> : nullable Zircon handle of
+*   `handle?` : nullable Zircon handle of
     unspecified type
-*   <strong><code>handle<H></code></strong> : non-nullable Zircon handle of type
+*   `handle<H>` : non-nullable Zircon handle of type
     <em>H</em>
-*   <strong><code>handle<H>?</code></strong> : nullable Zircon handle of type
+*   `handle<H>?` : nullable Zircon handle of type
     <em>H</em>
-*   <strong><code>Interface</code></strong> : non-nullable FIDL interface
+*   `Interface` : non-nullable FIDL interface
     (client endpoint of channel)
-*   <strong><code>Interface?</code></strong> : nullable FIDL interface (client
+*   `Interface?` : nullable FIDL interface (client
     endpoint of channel)
-*   <strong><code>request<Interface></code></strong> : non-nullable FIDL interface
+*   `request<Interface>` : non-nullable FIDL interface
     request (server endpoint of channel)
-*   <strong><code>request<Interface>?</code></strong> : nullable FIDL interface request
+*   `request<Interface>?` : nullable FIDL interface request
     (server endpoint of channel)
 
-<em>H</em> can be one of[^3]: <strong><code>channel, event, eventpair, fifo,
-job, process, port, resource, socket, thread, vmo</code></strong>
+<em>H</em> can be one of[^3]: `channel, event, eventpair, fifo,
+job, process, port, resource, socket, thread, vmo`
 
 ### Structs
 
@@ -370,19 +368,19 @@ Storage of a structure depends on whether it is nullable at point of reference.
         reference.
     *   When encoded for transfer, stored reference indicates presence of
         structure:
-        *   <strong><code>0</code></strong> : reference is null
-        *   <strong><code>UINTPTR_MAX</code></strong> : reference is non-null,
+        *   `0` : reference is null
+        *   `UINTPTR_MAX` : reference is non-null,
             structure content is the next out-of-line object
     *   When decoded for consumption, stored reference is a pointer.
-        *   <strong><code>0</code></strong> : reference is null
-        *   <strong><code><valid pointer></code></strong> : reference is
+        *   `0` : reference is null
+        *   `<valid pointer>` : reference is
             non-null, structure content is at indicated memory address
 
 Structs are denoted by their declared name (eg. <strong>Circle</strong>) and
 nullability:
 
-*   <strong><code>Circle</code></strong> : non-nullable Circle
-*   <strong><code>Circle?</code></strong> : nullable Circle
+*   `Circle` : non-nullable Circle
+*   `Circle?` : nullable Circle
 
 The following example shows how structs are laid out according to their fields.
 
@@ -433,19 +431,19 @@ Storage of a union depends on whether it is nullable at point of reference.
     *   Contents are stored out-of-line and accessed through an indirect
         reference.
     *   When encoded for transfer, stored reference indicates presence of union:
-        *   <strong><code>0</code></strong> : reference is null
-        *   <strong><code>UINTPTR_MAX</code></strong> : reference is non-null,
+        *   `0` : reference is null
+        *   `UINTPTR_MAX` : reference is non-null,
             union content is the next out-of-line object
     *   When decoded for consumption, stored reference is a pointer.
-        *   <strong><code>0</code></strong> : reference is null
-        *   <strong><code><valid pointer></code></strong> : reference is
+        *   `0` : reference is null
+        *   `<valid pointer>` : reference is
             non-null, union content is at indicated memory address
 
 Union are denoted by their declared name (eg. <strong>Pattern</strong>) and
 nullability:
 
-*   <strong><code>Pattern</code></strong> : non-nullable Shape
-*   <strong><code>Pattern?</code></strong> : nullable Shape
+*   `Pattern` : non-nullable Shape
+*   `Pattern?` : nullable Shape
 
 The following example shows how unions are laid out according to their options.
 
@@ -556,7 +554,7 @@ The body of the message contains the method results as if they were packed in a
 **struct**.
 
 The message result header consists of `uint32 txn_id, uint32_t reserved, uint32
-flags, ZX_status_t status`, which represents protocol-level status. The `txn_id`
+flags, zx_status_t status`, which represents protocol-level status. The `txn_id`
 must be equal to the `txn_id` of the method call that this is a response to. The
 flags must be zero. A status of `ZX_OK` indicates normal response. A status of
 `ZX_ERR_NOT_SUPPORTED` indicates that the ordinal of the method call is not
@@ -622,7 +620,7 @@ The body of an epitaph is described by the following structure:
 
 ```
 struct Epitaph {
-    // Generic protocol status, represented as an ZX_status_t.
+    // Generic protocol status, represented as an zx_status_t.
     uint32 status;
 
     // Protocol-specific data, interpretation depends on the interface
@@ -645,22 +643,22 @@ connection is being closed.
 
 #### Size and Alignment
 
-<strong><code>sizeof(T)</code></strong> denotes the size in bytes for an object
+`sizeof(T)` denotes the size in bytes for an object
 of type T.
 
-<strong><code>alignof(T)</code></strong> denotes the alignment factor in bytes
+`alignof(T)` denotes the alignment factor in bytes
 to store an object of type T.
 
 FIDL primitive types are stored at offsets in the message which are a multiple
-of their size in bytes. Thus for primitives T_,_ <strong><code>alignof(T) ==
-sizeof(T)</code></strong>. This is called <em>natural alignment</em>. It has the
+of their size in bytes. Thus for primitives T_,_ `alignof(T) ==
+sizeof(T)`. This is called <em>natural alignment</em>. It has the
 nice property of satisfying typical alignment requirements of modern CPU
 architectures.
 
 FIDL complex types, such as structs and arrays, are stored at offsets in the
 message which are a multiple of the maximum alignment factor of any of their
-fields. Thus for complex types T, <strong><code>alignof(T) ==
-max(alignof(F:T))</code></strong> over all fields F in T. It has the nice
+fields. Thus for complex types T, `alignof(T) ==
+max(alignof(F:T))` over all fields F in T. It has the nice
 property of satisfying typical C structure packing requirements (which can be
 enforced using packing attributes in the generated code). The size of a complex
 type is the total number of bytes needed to store its members properly aligned
@@ -923,6 +921,6 @@ safety checks:
     interpretation.
 [^2]: Defining the zero handle to mean "there is no handle" makes it is safe to
     default-initialize wire format structures to all zeroes. Zero is also the
-    value of the <strong><code>ZX_HANDLE_INVALID</code></strong> constant.
+    value of the `ZX_HANDLE_INVALID` constant.
 [^3]: New handle types can easily be added to the language without affecting the
     wire format since all handles are transferred the same way.
