@@ -35,47 +35,6 @@ constexpr char kInitialJson[] =
     "      \"http://schema.org/sender\" : \"RecipeImpl\""
     "}";
 
-constexpr char kJsonSchema[] =
-    "{"
-    "  \"$schema\": \"http://json-schema.org/draft-04/schema#\","
-    "  \"type\": \"object\","
-    "  \"properties\": {"
-    "    \"counters\": {"
-    "      \"type\": \"object\","
-    "      \"properties\": {"
-    "        \"http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5\": {"
-    "          \"type\": \"object\","
-    "          \"properties\": {"
-    "            \"@type\": {"
-    "              \"type\": \"string\""
-    "            },"
-    "            \"http://schema.domokit.org/counter\": {"
-    "              \"type\": \"integer\""
-    "            },"
-    "            \"http://schema.org/sender\": {"
-    "              \"type\": \"string\""
-    "            }"
-    "          },"
-    "          \"additionalProperties\" : false,"
-    "          \"required\": ["
-    "            \"@type\","
-    "            \"http://schema.domokit.org/counter\","
-    "            \"http://schema.org/sender\""
-    "          ]"
-    "        }"
-    "      },"
-    "      \"additionalProperties\" : false,"
-    "      \"required\": ["
-    "        \"http://google.com/id/dc7cade7-7be0-4e23-924d-df67e15adae5\""
-    "      ]"
-    "    }"
-    "  },"
-    "  \"additionalProperties\" : false,"
-    "  \"required\": ["
-    "    \"counters\""
-    "  ]"
-    "}";
-
 // Ledger keys
 constexpr char kLedgerCounterKey[] = "counter_key";
 
@@ -203,8 +162,6 @@ class RecipeApp : public modular::SingleServiceApp<modular::Module> {
     constexpr char kModule2Link[] = "module2";
     module_context_->GetLink(kModule1Link, module1_link_.NewRequest());
     module_context_->GetLink(kModule2Link, module2_link_.NewRequest());
-    module1_link_->SetSchema(kJsonSchema);
-    module2_link_->SetSchema(kJsonSchema);
 
     modular::Intent intent;
     intent.action.handler = "example_module1";

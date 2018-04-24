@@ -23,10 +23,6 @@ class LinkMockBase : protected Link, public testing::MockBase {
 
   ~LinkMockBase() override = default;
 
-  void SetSchema(fidl::StringPtr /*json_schema*/) override {
-    ++counts["SetSchema"];
-  }
-
   void Get(fidl::VectorPtr<fidl::StringPtr> /*path*/,
            GetCallback /*callback*/) override {
     ++counts["Get"];

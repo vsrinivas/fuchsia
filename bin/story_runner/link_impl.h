@@ -115,7 +115,6 @@ class LinkImpl : PageClient {
                ConnectionType connection_type);
 
   // Used by LinkConnection.
-  void SetSchema(fidl::StringPtr json_schema);
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
                     fidl::StringPtr json,
                     uint32_t src);
@@ -254,7 +253,6 @@ class LinkImpl : PageClient {
   class WriteCall;
   class GetCall;
   class SetCall;
-  class SetSchemaCall;
   class UpdateObjectCall;
   class EraseCall;
   class GetEntityCall;
@@ -290,7 +288,6 @@ class LinkConnection : Link {
                  fidl::InterfaceRequest<Link> link_request);
 
   // |Link|
-  void SetSchema(fidl::StringPtr json_schema) override;
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
                     fidl::StringPtr json) override;
   void Set(fidl::VectorPtr<fidl::StringPtr> path,

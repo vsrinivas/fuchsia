@@ -228,40 +228,6 @@ class LinkImpl::WriteCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(WriteCall);
 };
 
-class LinkImpl::SetSchemaCall : Operation<> {
- public:
-  SetSchemaCall(OperationContainer* const container,
-                LinkImpl* const impl,
-                fidl::StringPtr json_schema)
-      : Operation("LinkImpl::SetSchemaCall", container, [] {}),
-        impl_(impl),
-        json_schema_(json_schema) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    rapidjson::Document doc;
-    doc.Parse(json_schema_.get());
-    if (doc.HasParseError()) {
-      FXL_LOG(ERROR) << trace_name() << " " << EncodeLinkPath(impl_->link_path_)
-                     << " JSON parse failed error #" << doc.GetParseError()
-                     << std::endl
-                     << json_schema_;
-      return;
-    }
-
-    impl_->schema_doc_ = std::make_unique<rapidjson::SchemaDocument>(doc);
-  }
-
-  LinkImpl* const impl_;  // not owned
-  const fidl::StringPtr json_schema_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(SetSchemaCall);
-};
-
 class LinkImpl::GetCall : Operation<fidl::StringPtr> {
  public:
   GetCall(OperationContainer* const container,
@@ -583,12 +549,6 @@ void LinkImpl::Connect(fidl::InterfaceRequest<Link> request,
   }
 }
 
-void LinkImpl::SetSchema(fidl::StringPtr json_schema) {
-  // TODO(jimbe, mesch): This method needs a success status,
-  // otherwise clients have no way to know they sent bogus data.
-  new SetSchemaCall(&operation_queue_, this, json_schema);
-}
-
 void LinkImpl::Get(fidl::VectorPtr<fidl::StringPtr> path,
                    const std::function<void(fidl::StringPtr)>& callback) {
   new GetCall(&operation_queue_, this, std::move(path), callback);
@@ -861,10 +821,6 @@ void LinkConnection::WatchAll(fidl::InterfaceHandle<LinkWatcher> watcher) {
 
 void LinkConnection::Sync(SyncCallback callback) {
   impl_->Sync(callback);
-}
-
-void LinkConnection::SetSchema(fidl::StringPtr json_schema) {
-  impl_->SetSchema(json_schema);
 }
 
 void LinkConnection::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
