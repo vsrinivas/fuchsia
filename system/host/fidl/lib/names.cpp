@@ -262,7 +262,7 @@ std::string NameFlatCType(const flat::Type* type) {
 
         case flat::Type::Kind::kIdentifier: {
             auto identifier_type = static_cast<const flat::IdentifierType*>(type);
-            std::string name = identifier_type->name.name().data();
+            std::string name = NameName(identifier_type->name, "_", "_");
             if (identifier_type->nullability == types::Nullability::kNullable) {
                 name.push_back('*');
             }
