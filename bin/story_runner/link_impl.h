@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_private.h>
 #include "lib/async/cpp/operation.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
@@ -151,15 +152,16 @@ class LinkImpl : PageClient {
   // Applies the given |changes| to the current document. The current list of
   // pending operations is merged into the change stream. Implemented in
   // incremental_link.cc.
-  void Replay(fidl::VectorPtr<LinkChange> changes);
+  void Replay(fidl::VectorPtr<modular_private::LinkChange> changes);
 
   // Applies a single LinkChange. Implemented in incremental_link.cc.
-  bool ApplyChange(LinkChange* change);
+  bool ApplyChange(modular_private::LinkChange* change);
 
   // Implemented in incremental_link.cc.
   void MakeReloadCall(std::function<void()> done);
-  void MakeIncrementalWriteCall(LinkChangePtr data, std::function<void()> done);
-  void MakeIncrementalChangeCall(LinkChangePtr data, uint32_t src);
+  void MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
+                                std::function<void()> done);
+  void MakeIncrementalChangeCall(modular_private::LinkChangePtr data, uint32_t src);
 
   bool ApplySetOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
   bool ApplyUpdateOp(const CrtJsonPointer& ptr, fidl::StringPtr json);
@@ -236,7 +238,7 @@ class LinkImpl : PageClient {
   KeyGenerator key_generator_;
 
   // Track changes that have been saved to the Ledger but not confirmed
-  std::vector<LinkChange> pending_ops_;
+  std::vector<modular_private::LinkChange> pending_ops_;
 
   // The latest key that's been applied to this Link. If we receive an earlier
   // key in OnChange, then replay the history.

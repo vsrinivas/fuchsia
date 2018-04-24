@@ -610,9 +610,9 @@ void LinkImpl::Set(fidl::VectorPtr<fidl::StringPtr> path,
   // have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    LinkChangePtr data = LinkChange::New();
+    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
     // Leave data->key null to signify a new entry
-    data->op = LinkChangeOp::SET;
+    data->op = modular_private::LinkChangeOp::SET;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -628,9 +628,9 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
   // otherwise clients have no way to know they sent bogus data.
 
   if (kEnableIncrementalLinks) {
-    LinkChangePtr data = LinkChange::New();
+    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = LinkChangeOp::UPDATE;
+    data->op = modular_private::LinkChangeOp::UPDATE;
     data->pointer = std::move(path);
     data->json = json;
     MakeIncrementalChangeCall(std::move(data), src);
@@ -641,9 +641,9 @@ void LinkImpl::UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
 
 void LinkImpl::Erase(fidl::VectorPtr<fidl::StringPtr> path, const uint32_t src) {
   if (kEnableIncrementalLinks) {
-    LinkChangePtr data = LinkChange::New();
+    modular_private::LinkChangePtr data = modular_private::LinkChange::New();
     // Leave data->key empty to signify a new entry
-    data->op = LinkChangeOp::ERASE;
+    data->op = modular_private::LinkChangeOp::ERASE;
     data->pointer = std::move(path);
     // Leave data->json null for ERASE.
 

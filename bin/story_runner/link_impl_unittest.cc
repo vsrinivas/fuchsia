@@ -25,7 +25,7 @@ const std::string kInitialLinkValue = "{}";
 }  // namespace
 
 // Defined in incremental_link.cc.
-void XdrLinkChange(XdrContext* const xdr, LinkChange* const data);
+void XdrLinkChange(XdrContext* xdr, modular_private::LinkChange* data);
 
 namespace {
 
@@ -70,7 +70,7 @@ class PageClientPeer : modular::PageClient {
   };
 
   std::vector<std::pair<std::string, std::string>> changes;
-  LinkChangePtr last_change;
+  modular_private::LinkChangePtr last_change;
 
  private:
   std::string expected_prefix_;
@@ -124,7 +124,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
 
   int ledger_change_count() const { return page_client_peer_->changes.size(); }
 
-  LinkChangePtr& last_change() { return page_client_peer_->last_change; }
+  modular_private::LinkChangePtr& last_change() { return page_client_peer_->last_change; }
 
   void ExpectOneCall(const std::string& operation_name) {
     EXPECT_EQ(1u, operations_.count(operation_name))
