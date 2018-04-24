@@ -30,7 +30,7 @@ enum class ScalerType {
   EQ_UNITY,  // Unity gain.  Neither scaling nor clipping is needed.
 };
 
-// Template to read samples and normalize them into signed 16 bit integers
+// Template to read samples and normalize them into signed 18-bit integers
 // stored in 32 bit integers.
 template <typename SType, typename Enable = void>
 class SampleNormalizer;
@@ -38,7 +38,7 @@ class SampleNormalizer;
 template <typename SType>
 class SampleNormalizer<
     SType,
-    typename std::enable_if<std::is_same<SType, uint8_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<SType, uint8_t>::value>::type> {
  public:
   static inline int32_t Read(const SType* src) {
     return (static_cast<int32_t>(*src) - 0x80) << (kAudioPipelineWidth - 8);
@@ -48,17 +48,21 @@ class SampleNormalizer<
 template <typename SType>
 class SampleNormalizer<
     SType,
-    typename std::enable_if<std::is_same<SType, int16_t>::value, void>::type> {
+    typename std::enable_if<std::is_same<SType, int16_t>::value>::type> {
  public:
+  // Called frequently; expecting optimizing compiler to take advantage of
+  // constexpr kAudioPipelineWidth to eliminate the conditional.
   static inline int32_t Read(const SType* src) {
-    return static_cast<int32_t>(*src) << (kAudioPipelineWidth - 16);
+    return (kAudioPipelineWidth == 16)
+               ? static_cast<int32_t>(*src)
+               : static_cast<int32_t>(*src) << (kAudioPipelineWidth - 16);
   }
 };
 
 template <typename SType>
 class SampleNormalizer<
     SType,
-    typename std::enable_if<std::is_same<SType, float>::value, void>::type> {
+    typename std::enable_if<std::is_same<SType, float>::value>::type> {
  public:
   static inline int32_t Read(const SType* src) {
     // 1. constrain value to [-1.0, +1.0]; 2. scale to fixed-point nominal range
@@ -66,10 +70,10 @@ class SampleNormalizer<
     //
     // Converting audio between float and int is surprisingly controversial.
     // (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there, others).
-    // Admittedly, our method DOES allow an incoming value of +1.0, translating
-    // it to +32768, which is EVENTUALLY clamped on output if not attenuated
-    // earlier. That said, the "practically clipping" +1.0 value is rare in WAV
-    // files; sources should easily be able to reduce their input levels.
+    // Our method DOES allow an incoming value of +1.0, which for integer-based
+    // outputs will EVENTUALLY be clamped if not attenuated earlier. That said,
+    // the "practically clipping" value of +1.0 is rare in WAV files, and other
+    // sources should easily be able to reduce their input levels.
     SType val = fbl::clamp<SType>(*src, -1.0f, 1.0f);
     val *= (1 << (kAudioPipelineWidth - 1));
     return static_cast<int32_t>(round(val));
@@ -83,7 +87,7 @@ class SampleScaler;
 template <ScalerType ScaleType>
 class SampleScaler<
     ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::MUTED), void>::type> {
+    typename std::enable_if<(ScaleType == ScalerType::MUTED)>::type> {
  public:
   static inline int32_t Scale(int32_t, Gain::AScale) { return 0; }
 };
@@ -91,7 +95,7 @@ class SampleScaler<
 template <ScalerType ScaleType>
 class SampleScaler<
     ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::NE_UNITY), void>::type> {
+    typename std::enable_if<(ScaleType == ScalerType::NE_UNITY)>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale scale) {
     // Called extremely frequently: 1 COMPARE, 1 MUL, 1 ADD, 1 SHIFT
@@ -106,7 +110,7 @@ class SampleScaler<
 template <ScalerType ScaleType>
 class SampleScaler<
     ScaleType,
-    typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY), void>::type> {
+    typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY)>::type> {
  public:
   static inline int32_t Scale(int32_t val, Gain::AScale) { return val; }
 };
@@ -138,7 +142,7 @@ class SrcReader<
     SType,
     SChCount,
     DChCount,
-    typename std::enable_if<(SChCount == 2) && (DChCount == 1), void>::type> {
+    typename std::enable_if<(SChCount == 2) && (DChCount == 1)>::type> {
  public:
   static constexpr size_t DstPerSrc = 1;
   static inline int32_t Read(const SType* src) {
@@ -157,7 +161,7 @@ class DstMixer;
 template <ScalerType ScaleType, bool DoAccumulate>
 class DstMixer<ScaleType,
                DoAccumulate,
-               typename std::enable_if<DoAccumulate == false, void>::type> {
+               typename std::enable_if<DoAccumulate == false>::type> {
  public:
   static inline constexpr int32_t Mix(int32_t,
                                       int32_t sample,
@@ -169,7 +173,7 @@ class DstMixer<ScaleType,
 template <ScalerType ScaleType, bool DoAccumulate>
 class DstMixer<ScaleType,
                DoAccumulate,
-               typename std::enable_if<DoAccumulate == true, void>::type> {
+               typename std::enable_if<DoAccumulate == true>::type> {
  public:
   static inline constexpr int32_t Mix(int32_t dst,
                                       int32_t sample,

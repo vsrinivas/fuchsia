@@ -13,6 +13,8 @@ namespace test {
 // Convenience abbreviation within this source file to shorten names
 using Resampler = media::audio::Mixer::Resampler;
 
+constexpr double kFullScaleFloatInputAmplitude = 1.0f;
+constexpr double kFullScaleAccumAmplitude = 1 << (kAudioPipelineWidth - 1);
 // Ideal dynamic range measurement is exactly equal to the reduction in gain.
 // Ideal accompanying noise is ideal noise floor, minus the reduction in gain.
 void MeasureSummaryDynamicRange(Gain::AScale scale,
@@ -20,16 +22,13 @@ void MeasureSummaryDynamicRange(Gain::AScale scale,
                                 double* sinad_db) {
   MixerPtr mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
-  constexpr double amplitude = 1.0;
-  constexpr double expected_amplitude =
-      amplitude * -std::numeric_limits<int16_t>::min();
 
   std::vector<float> source(kFreqTestBufSize);
   std::vector<int32_t> accum(kFreqTestBufSize);
 
   // Populate source buffer; mix it (pass-thru) to accumulation buffer
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude);
+  OverwriteCosine(source.data(), kFreqTestBufSize,
+                  FrequencySet::kReferenceFreq);
 
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
@@ -45,7 +44,7 @@ void MeasureSummaryDynamicRange(Gain::AScale scale,
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  *level_db = ValToDb(magn_signal / expected_amplitude);
+  *level_db = ValToDb(magn_signal / kFullScaleAccumAmplitude);
   *sinad_db = ValToDb(magn_signal / magn_other);
 }
 
@@ -57,23 +56,23 @@ TEST(DynamicRange, Epsilon) {
 
   MeasureSummaryDynamicRange(Gain::kUnityScale, &unity_level_db,
                              &unity_sinad_db);
-  EXPECT_GE(unity_level_db, 0.0 - AudioResult::kLevelToleranceSourceFloat);
-  EXPECT_LE(unity_level_db, 0.0 + AudioResult::kLevelToleranceSourceFloat);
+  EXPECT_GE(unity_level_db, 0.0 - AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_LE(unity_level_db, 0.0 + AudioResult::kPrevLevelToleranceSourceFloat);
   EXPECT_GE(unity_sinad_db, AudioResult::kPrevFloorSourceFloat);
 
-  // Accumulator has < 28 precision bits, so kScaleEpsilon must < 0x0FFFFFFF.
-  static_assert(AudioResult::kScaleEpsilon < Gain::kUnityScale - 1,
-                "kScaleEpsilon should be less than kUnityScale - 1");
+  // Accumulator has <28 precision bits: kPrevScaleEpsilon must < 0x0FFFFFFF.
+  static_assert(AudioResult::kPrevScaleEpsilon < Gain::kUnityScale - 1,
+                "kPrevScaleEpsilon should be less than kUnityScale - 1");
 
   // Just above the 'first detectable reduction' scale; should be same as unity.
-  MeasureSummaryDynamicRange(AudioResult::kScaleEpsilon + 1, &level_db,
+  MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon + 1, &level_db,
                              &sinad_db);
   EXPECT_EQ(level_db, unity_level_db);
   EXPECT_EQ(sinad_db, unity_sinad_db);
 
-  // kScaleEpsilon:the nearest-unity scale at which we observe effect on inputs.
-  // At this 'detectable reduction' scale, level and noise floor appear reduced.
-  MeasureSummaryDynamicRange(AudioResult::kScaleEpsilon,
+  // kPrevScaleEpsilon: nearest-unity scale at which we see effects on inputs.
+  // At this 'detectable reduction' scale, level and noise floor are reduced.
+  MeasureSummaryDynamicRange(AudioResult::kPrevScaleEpsilon,
                              &AudioResult::LevelEpsilonDown,
                              &AudioResult::SinadEpsilonDown);
   EXPECT_GE(
@@ -82,8 +81,8 @@ TEST(DynamicRange, Epsilon) {
   EXPECT_LE(
       AudioResult::LevelEpsilonDown,
       AudioResult::kPrevLevelEpsilonDown + AudioResult::kPrevDynRangeTolerance);
-  EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
 
+  EXPECT_LT(AudioResult::LevelEpsilonDown, unity_level_db);
   EXPECT_GE(AudioResult::SinadEpsilonDown, AudioResult::kPrevSinadEpsilonDown);
 }
 
@@ -123,13 +122,9 @@ TEST(DynamicRange, MonoToStereo) {
   std::vector<int32_t> accum(kFreqTestBufSize * 2);
   std::vector<int32_t> left(kFreqTestBufSize);
 
-  constexpr double amplitude = 1.0;
-  constexpr double expected_amplitude =
-      amplitude * -std::numeric_limits<int16_t>::min();
-
   // Populate mono source buffer; mix it (no SRC/gain) to stereo accumulator
-  OverwriteCosine(source.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude);
+  OverwriteCosine(source.data(), kFreqTestBufSize,
+                  FrequencySet::kReferenceFreq);
 
   uint32_t dst_offset = 0;
   int32_t frac_src_offset = 0;
@@ -151,11 +146,11 @@ TEST(DynamicRange, MonoToStereo) {
   MeasureAudioFreq(left.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_left_signal, &magn_left_other);
 
-  level_left_db = ValToDb(magn_left_signal / expected_amplitude);
+  level_left_db = ValToDb(magn_left_signal / kFullScaleAccumAmplitude);
   sinad_left_db = ValToDb(magn_left_signal / magn_left_other);
 
-  EXPECT_GE(level_left_db, 0 - AudioResult::kLevelToleranceSourceFloat);
-  EXPECT_LE(level_left_db, 0 + AudioResult::kLevelToleranceSourceFloat);
+  EXPECT_GE(level_left_db, 0 - AudioResult::kPrevLevelToleranceSourceFloat);
+  EXPECT_LE(level_left_db, 0 + AudioResult::kPrevLevelToleranceSourceFloat);
 
   EXPECT_GE(sinad_left_db, AudioResult::kPrevFloorSourceFloat);
 }
@@ -169,20 +164,17 @@ TEST(DynamicRange, StereoToMono) {
   std::vector<float> source(kFreqTestBufSize * 2);
   std::vector<int32_t> accum(kFreqTestBufSize);
 
-  constexpr double amplitude = 1.0;
-  constexpr double expected_amplitude =
-      amplitude * -std::numeric_limits<int16_t>::min();
-
   // Populate a mono source buffer; copy it into left side of stereo buffer.
   OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude);
+                  kFullScaleFloatInputAmplitude);
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
     source[idx * 2] = mono[idx];
   }
 
-  // Populate a mono source buffer; copy it into right side of stereo buffer.
+  // Populate a mono source buffer with same frequency and amplitude, phase-
+  // shifted by PI/2 (1/4 of a cycle); copy it into right side of stereo buffer.
   OverwriteCosine(mono.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
-                  amplitude, M_PI / 2);
+                  kFullScaleFloatInputAmplitude, M_PI / 2);
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
     source[(idx * 2) + 1] = mono[idx];
   }
@@ -201,16 +193,15 @@ TEST(DynamicRange, StereoToMono) {
   MeasureAudioFreq(accum.data(), kFreqTestBufSize, FrequencySet::kReferenceFreq,
                    &magn_signal, &magn_other);
 
-  level_mono_db = ValToDb(magn_signal / expected_amplitude);
-  AudioResult::FloorStereoMono =
-      ValToDb(std::numeric_limits<int16_t>::max() / magn_other);
+  level_mono_db = ValToDb(magn_signal / kFullScaleAccumAmplitude);
+  AudioResult::FloorStereoMono = ValToDb(kFullScaleAccumAmplitude / magn_other);
 
   // We added identical signals, so accuracy should be high. However, noise
   // floor is doubled as well, so we expect 6dB reduction in sinad.
   EXPECT_GE(level_mono_db, AudioResult::kPrevLevelStereoMono -
-                               AudioResult::kPrevStereoMonoTolerance);
+                               AudioResult::kPrevLevelToleranceStereoMono);
   EXPECT_LE(level_mono_db, AudioResult::kPrevLevelStereoMono +
-                               AudioResult::kPrevStereoMonoTolerance);
+                               AudioResult::kPrevLevelToleranceStereoMono);
 
   EXPECT_GE(AudioResult::FloorStereoMono, AudioResult::kPrevFloorStereoMono);
 }
@@ -243,17 +234,17 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
     mixer = SelectMixer(AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int8_t>::max();
-    expected_amplitude = amplitude * (1 << 8);
-  } else if (std::is_same<T, float>::value) {
-    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
-                        Resampler::SampleAndHold);
-    amplitude = 1.0;
-    expected_amplitude = amplitude * -std::numeric_limits<int16_t>::min();
-  } else {
+    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 8));
+  } else if (std::is_same<T, int16_t>::value) {
     mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                         Resampler::SampleAndHold);
     amplitude = std::numeric_limits<int16_t>::max();
-    expected_amplitude = std::numeric_limits<int16_t>::max();
+    expected_amplitude = amplitude * (1 << (kAudioPipelineWidth - 16));
+  } else {
+    mixer = SelectMixer(AudioSampleFormat::FLOAT, 1, 48000, 1, 48000,
+                        Resampler::SampleAndHold);
+    amplitude = kFullScaleFloatInputAmplitude;
+    expected_amplitude = kFullScaleAccumAmplitude;
   }
   std::vector<T> source(kFreqTestBufSize);
   std::vector<int32_t> accum(kFreqTestBufSize);
@@ -285,15 +276,15 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
                    &magn_signal, &magn_other);
 
   *level_mix_db = ValToDb(magn_signal / expected_amplitude);
-  *sinad_mix_db = ValToDb(std::numeric_limits<int16_t>::max() / magn_other);
+  *sinad_mix_db = ValToDb(magn_signal / magn_other);
 }
 
 // Test our mix level and noise floor, when accumulating 8-bit sources.
 TEST(DynamicRange, Mix_8) {
   MeasureMixFloor<uint8_t>(&AudioResult::LevelMix8, &AudioResult::FloorMix8);
 
-  EXPECT_GE(AudioResult::LevelMix8, 0.0 - AudioResult::kLevelToleranceMix8);
-  EXPECT_LE(AudioResult::LevelMix8, 0.0 + AudioResult::kLevelToleranceMix8);
+  EXPECT_GE(AudioResult::LevelMix8, 0.0 - AudioResult::kPrevLevelToleranceMix8);
+  EXPECT_LE(AudioResult::LevelMix8, 0.0 + AudioResult::kPrevLevelToleranceMix8);
 
   // 8-bit noise floor should be approx -48dBFS. Because 8-bit sources are
   // normalized up to 16-bit level, they can take advantage of fractional
@@ -305,8 +296,8 @@ TEST(DynamicRange, Mix_8) {
 TEST(DynamicRange, Mix_16) {
   MeasureMixFloor<int16_t>(&AudioResult::LevelMix16, &AudioResult::FloorMix16);
 
-  EXPECT_GE(AudioResult::LevelMix16, 0.0 - AudioResult::kLevelToleranceMix16);
-  EXPECT_LE(AudioResult::LevelMix16, 0.0 + AudioResult::kLevelToleranceMix16);
+  EXPECT_GE(AudioResult::LevelMix16, -AudioResult::kPrevLevelToleranceMix16);
+  EXPECT_LE(AudioResult::LevelMix16, AudioResult::kPrevLevelToleranceMix16);
 
   // 16-bit noise floor should be approx -96dBFS. Noise is summed along with
   // signal; therefore we expect sinad of ~90 dB.
@@ -319,9 +310,9 @@ TEST(DynamicRange, Mix_Float) {
                          &AudioResult::FloorMixFloat);
 
   EXPECT_GE(AudioResult::LevelMixFloat,
-            0.0 - AudioResult::kLevelToleranceMixFloat);
+            -AudioResult::kPrevLevelToleranceMixFloat);
   EXPECT_LE(AudioResult::LevelMixFloat,
-            0.0 + AudioResult::kLevelToleranceMixFloat);
+            AudioResult::kPrevLevelToleranceMixFloat);
 
   // This should be same as 16-bit (~91dB), per accumulator precision. Once we
   // increase accumulator precision, we expect this to improve, while Mix_16

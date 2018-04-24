@@ -28,14 +28,14 @@ TEST(Gain, GainScaleToDb) {
   EXPECT_EQ(GainScaleToDb(Gain::kUnityScale * 10), 20.0);
 
   EXPECT_GE(GainScaleToDb(Gain::kUnityScale / 100),
-            -40.0 * AudioResult::kGainToleranceMultiplier);
+            -40.0 * AudioResult::kPrevGainToleranceMultiplier);
   EXPECT_LE(GainScaleToDb(Gain::kUnityScale / 100),
-            -40.0 / AudioResult::kGainToleranceMultiplier);
+            -40.0 / AudioResult::kPrevGainToleranceMultiplier);
 
   EXPECT_GE(GainScaleToDb(Gain::kUnityScale >> 1),
-            -6.0206 * AudioResult::kGainToleranceMultiplier);
+            -6.0206 * AudioResult::kPrevGainToleranceMultiplier);
   EXPECT_LE(GainScaleToDb(Gain::kUnityScale >> 1),
-            -6.0206 / AudioResult::kGainToleranceMultiplier);
+            -6.0206 / AudioResult::kPrevGainToleranceMultiplier);
 }
 
 // Do renderer and output gains correctly combine to produce unity scaling?
@@ -168,9 +168,15 @@ TEST(Gain, Precision) {
 // These validate the actual scaling of audio data, including overflow and any
 // truncation or rounding (above just checks the generation of scale values).
 //
+// When doing direct bit-for-bit comparisons in these tests, we must factor in
+// the left-shift biasing that is done while converting input data into the
+// internal format of our accumulator. For this reason, all "expect" values are
+// specified at a higher-than-needed precision of 24-bit, and then normalized
+// down to the actual pipeline width.
+
 // Verify whether per-stream gain interacts linearly with accumulation buffer.
 TEST(Gain, Scaling_Linearity) {
-  int16_t source[] = {3300, 3276, 35, 4, -14, -25, -3276, -3291};
+  int16_t source[] = {0x0CE4, 0x0CCC, 0x23, 4, -0x0E, -0x19, -0x0CCC, -0x0CDB};
   int32_t accum[8];
   Gain gain;
 
@@ -183,7 +189,9 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect[] = {33000, 32760, 350, 40, -140, -250, -32760, -32910};
+  int32_t expect[] = {0x80E800, 0x7FF800, 0x15E00,   0x2800,
+                      -0x8C00,  -0xFA00,  -0x7FF800, -0x808E00};
+  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   //
@@ -197,7 +205,9 @@ TEST(Gain, Scaling_Linearity) {
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         stream_scale);
 
-  int32_t expect2[] = {330, 328, 4, 0, -1, -3, -328, -329};
+  int32_t expect2[] = {0x14A00, 0x14799, 0x380,    0x66,
+                       -0x166,  -0x280,  -0x14799, -0x14919};
+  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
@@ -205,66 +215,63 @@ TEST(Gain, Scaling_Linearity) {
 // process, the system should round fractional data values away from 0.
 // By "round away from zero", we mean: 1.5 --> 2; -1.5 --> -2; -1.1 --> -1.
 TEST(Gain, Scaling_Precision) {
-  int16_t source[] = {32767, -32768, -1, 1};  // max/min values
+  int16_t source[] = {0x7FFF, -0x8000, -1, 1};  // max/min values
   int32_t accum[4];
 
-  //
   // Before, even slightly below unity reduced all positive vals. Now we round.
   // For this reason, at this gain_scale, resulting audio should be unchanged.
-  Gain::AScale gain_scale = AudioResult::kScaleEpsilon + 1;
+  Gain::AScale gain_scale = AudioResult::kPrevScaleEpsilon + 1;
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect[] = {32767, -32768, -1, 1};
+  int32_t expect[] = {0x7FFF00, -0x800000, -0x100, 0x100};
+  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  //
   // This gain is the first (closest-to-unity) to change a full-scale signal.
-  gain_scale = AudioResult::kScaleEpsilon;
+  gain_scale = AudioResult::kPrevScaleEpsilon;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect2[] = {32766, -32767, -1, 1};
-  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
+  expect[0]--;
+  expect[1]++;
+  EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
-  //
   // This is lowest gain_scale that produces non-zero from full-scale.
   // Why "+1"? Differences in negative and positive range; see subsequent check.
-  gain_scale = AudioResult::kMinScaleNonZero + 1;
+  gain_scale = AudioResult::kPrevMinScaleNonZero + 1;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect3[] = {1, -1, 0, 0};
-  EXPECT_TRUE(CompareBuffers(accum, expect3, fbl::count_of(accum)));
+  int32_t expect2[] = {1, -1, 0, 0};
+  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 
-  //
   // This 'special' scale straddles boundaries: 32767 is reduced to _just_ less
   // than .5 (and rounds in) while -32768 becomes -.50000 (rounding out to -1).
-  gain_scale = AudioResult::kMinScaleNonZero;
+  gain_scale = AudioResult::kPrevMinScaleNonZero;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, false, fbl::count_of(accum),
         gain_scale);
 
-  int32_t expect4[] = {0, -1, 0, 0};
-  EXPECT_TRUE(CompareBuffers(accum, expect4, fbl::count_of(accum)));
+  expect2[0] = 0;
+  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 
-  //
   // At this gain, even -32768 is reduced to -.49... thus rounds in to 0.
   // Therefore, nothing should change in the accumulator buffer.
-  gain_scale = AudioResult::kMinScaleNonZero - 1;
+  gain_scale = AudioResult::kPrevMinScaleNonZero - 1;
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum),
         gain_scale);
 
-  EXPECT_TRUE(CompareBuffers(accum, expect4, fbl::count_of(accum)));
+  EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
 //
@@ -274,43 +281,45 @@ TEST(Gain, Scaling_Precision) {
 //
 // Can accumulator result exceed the max range of individual streams?
 TEST(Gain, Accumulator) {
-  int16_t source[] = {32767, -32768};
-  int32_t accum[] = {32767, -32768};
-  // when mixed, these should exceed the int32 range
+  int16_t source[] = {0x7FFF, -0x8000};
+  int32_t accum[] = {0x7FFF00, -0x800000};
+  int32_t expect[] = {0xFFFE00, -0x1000000};
+  int32_t expect2[] = {0x17FFD00, -0x1800000};
 
+  // When mixed, these far exceed any int16 range
+  NormalizeInt24ToPipelineBitwidth(accum, fbl::count_of(accum));
+  NormalizeInt24ToPipelineBitwidth(expect, fbl::count_of(expect));
+  NormalizeInt24ToPipelineBitwidth(expect2, fbl::count_of(expect2));
+
+  // These values exceed the per-stream range of int16
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
-
-  // These values exceed the per-stream range of int16
-  int32_t expect[] = {65534, -65536};
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
+  // these values even exceed uint16
   mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
                       Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, 1);
-
-  // these values even exceed uint16
-  int32_t expect2[] = {98301, -98304};
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
 
 // How does our accumulator behave at its limits? Does it clamp or rollover?
 TEST(Gain, Accumulator_Clamp) {
-  // These vals lead to positive/negative rollover in int32, if not guarded.
-  int16_t source[] = {32767, -32768};
-
-  // If we add these vals, accum SHOULD clamp to int32::max and int32::min.
-  int32_t accum[] = {std::numeric_limits<int32_t>::max() - 32767 + 2,
-                     std::numeric_limits<int32_t>::min() + 32768 - 2};
+  int16_t source[] = {0x7FFF, -0x8000};
+  // This mix will exceed int32 max and min respectively: accum SHOULD clamp.
+  int32_t accum[] = {std::numeric_limits<int32_t>::max() -
+                         (source[0] << (kAudioPipelineWidth - 16)) + 1,
+                     std::numeric_limits<int32_t>::min() -
+                         (source[1] << (kAudioPipelineWidth - 16)) - 1};
 
   MixerPtr mixer = SelectMixer(AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
                                Resampler::SampleAndHold);
   DoMix(std::move(mixer), source, accum, true, fbl::count_of(accum));
 
-  // TODO(mpuryear): when MTWN-83 is fixed, expect max and min respectively.
-  int32_t expect[] = {std::numeric_limits<int32_t>::min() + 1,
-                      std::numeric_limits<int32_t>::max() - 1};
+  // TODO(mpuryear): when MTWN-83 is fixed, expect max and min (not min & max).
+  int32_t expect[] = {std::numeric_limits<int32_t>::min(),
+                      std::numeric_limits<int32_t>::max()};
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 

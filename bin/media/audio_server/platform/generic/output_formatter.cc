@@ -26,6 +26,9 @@ class DstConverter<
  public:
   static inline constexpr DType Convert(int32_t sample) {
     if (kAudioPipelineWidth > 16) {
+      // Before we right-shift, add "0.5" to round instead of truncate.
+      // 1<<(kAudioPipelineWidth-16) is output LSB; 1<<(k..Width-17) is half.
+      // -0.5 rounds *away from* zero; if negative, round_val is slightly less.
       int32_t round_val =
           (1 << (kAudioPipelineWidth - 17)) - (sample <= 0 ? 1 : 0);
       sample = (sample + round_val) >> (kAudioPipelineWidth - 16);
@@ -42,15 +45,15 @@ class DstConverter<
     typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(int32_t sample) {
-    // Before we right-shift, add an effective "0.5" so that values 'round'.
-    // But -0.5 must round *away from* zero: add just a bit less, if negative.
-    int32_t normalize_round_val =
-        (0x8080 << (kAudioPipelineWidth - 16)) - (sample <= 0 ? 1 : 0);
+    // Before we right-shift, add "0.5" to convert truncation into rounding.
+    // 1<<(kAudioPipelineWidth-8) is output LSB; 1<<(k..Width-9) is half this.
+    // -0.5 rounds *away from* zero; if negative, make round_val slightly less.
+    int32_t round_val =
+        (1 << (kAudioPipelineWidth - 9)) - (sample <= 0 ? 1 : 0);
     sample = fbl::clamp<int32_t>(
-        (sample + normalize_round_val) >> (kAudioPipelineWidth - 8),
-        std::numeric_limits<uint8_t>::min(),
-        std::numeric_limits<uint8_t>::max());
-    return static_cast<DType>(sample);
+        (sample + round_val) >> (kAudioPipelineWidth - 8),
+        std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max());
+    return static_cast<DType>(sample + 0x80);
   }
 };
 
@@ -59,6 +62,7 @@ class DstConverter<
     DType,
     typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
+  // This will emit +1.0 values, which are legal per WAV format custom.
   static inline constexpr DType Convert(int32_t sample) {
     return fbl::clamp(
         static_cast<DType>(sample) / (1 << (kAudioPipelineWidth - 1)), -1.0f,

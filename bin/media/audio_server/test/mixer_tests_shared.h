@@ -36,6 +36,21 @@ MixerPtr SelectMixer(AudioSampleFormat src_format,
 OutputFormatterPtr SelectOutputFormatter(AudioSampleFormat dst_format,
                                          uint32_t num_channels);
 
+// When doing direct bit-for-bit comparisons in our tests, we must factor in the
+// left-shift biasing that is done while converting input data into the internal
+// format of our accumulator. For this reason, tests that previously simply
+// input a 16-bit value at unity SRC and gain, expecting that same 16-bit value
+// to be deposited into the accumulator, would now expect that value to be
+// left-shifted by some number of bits. With this in mind, and to remain
+// flexible in the midst of changes in our pipeline width, our tests now specify
+// any expected values at the higher-than-needed precision of 24-bit. (They also
+// specify values in hexadecimal format in almost all cases, to make bit-shifted
+// values slightly more clear.)
+//
+// This shared function, then, is used to normalize them down to the actual
+// pipeline width depending on the width of our processing pipeline.
+void NormalizeInt24ToPipelineBitwidth(int32_t* source, uint32_t source_len);
+
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
 void DoMix(MixerPtr mixer,

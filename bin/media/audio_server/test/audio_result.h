@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cmath>
+#include "garnet/bin/media/audio_server/constants.h"
 #include "garnet/bin/media/audio_server/test/frequency_set.h"
 
 namespace media {
@@ -40,19 +41,21 @@ namespace test {
 class AudioResult {
  public:
   //
+  //
   // Input
   //
   // How close is a measured level to the reference dB level?  Val-being-checked
   // must be within this distance (above OR below) from the reference dB level.
-  static constexpr double kLevelToleranceSource8 = 0.067219077;
-  static constexpr double kLevelToleranceSource16 = 0.00000068542196;
-  static constexpr double kLevelToleranceSourceFloat = 0.00000099668031;
-
+  static constexpr double kPrevLevelToleranceSource8 = 67.219077e-3;
+  static constexpr double kPrevLevelToleranceSource16 = 10.548786e-7;
+  static constexpr double kPrevLevelToleranceSourceFloat = 10.548786e-7;
   // What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
   // Val is root-sum-square of all other freqs besides the 1kHz reference, in
   // dBr units (compared to magnitude of received reference). Using dBr (not
   // dBFS) includes level attenuation, making this metric a good proxy of
   // frequency-independent fidelity in our audio processing pipeline.
+  //
+  // Val-being-checked (in dBr to reference signal) must be >= these values.
   static double FloorSource8;
   static double FloorSource16;
   static double FloorSourceFloat;
@@ -66,23 +69,32 @@ class AudioResult {
   // Until our accumulator is high-precision, float/int16 metrics will be equal.
 
   //
+  //
   // Rechannel
   //
   // Previously-cached thresholds related to stereo-to-mono mixing.
-  static constexpr double kPrevStereoMonoTolerance = 0.00015;
-  static constexpr double kPrevLevelStereoMono = -3.01029927;
+  static constexpr double kPrevLevelStereoMono = -30.1029996e-1;
+  static constexpr double kPrevLevelToleranceStereoMono = 15e-5;
 
   static double FloorStereoMono;
-  static constexpr double kPrevFloorStereoMono = 95.958321;
+  static constexpr double kPrevFloorStereoMono = 93.607405;
 
+  //
   //
   // Interpolate
   //
   // Compared to 1:1 accuracy (kLevelToleranceSourceFloat), LinearSampler boosts
   // low-frequencies during any significant up-sampling (e.g. 1:2). This
   // tolerance represents how far above 0.0 dB is acceptable.
-  static constexpr double kLevelToleranceInterpolation = 0.000060906023;
-  //            Prior to change in resampler tests, was: 0.000038069078
+  //
+  // This threshold changed as a result of adjusting our resampler tests to call
+  // Mixer objects in the same way that their primary callers in audio_server
+  // do. For reference, previous value is (for the time being only) included in
+  // nearby comment. The commented value will be removed soon, in upcoming CL.
+  // low-frequencies slightly during significant up-sampling (e.g. 1:2), shown
+  // in greater tolerance for interpolation (kPrevLevelToleranceInterpolation).
+  static constexpr double kPrevLevelToleranceInterpolation = 62.192595e-6;
+  //                Prior to change in resampler tests, was: 38.069078e-6
 
   // What is our received level (in dBFS), when sending sinusoids through our
   // mixers at certain resampling ratios. PointSampler and LinearSampler are
@@ -116,12 +128,20 @@ class AudioResult {
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp2;
 
-  // The values cached below are less than or equal to 0 dBFS. The value being
-  // checked must be greater than or equal to this value (but can be no greater
-  // than kLevelToleranceInterpolation, as 0 dBFS is the target level).
+  // Val-being-checked (in dBFS) must be greater than or equal to this value.
+  // It also cannot be more than kPrevLevelToleranceInterpolation above 0.0db.
+  // For these 1:1 and N:1 ratios, PointSampler's frequency response is ideal
+  // (flat). It is actually very slightly positive (hence the tolerance check).
   //
-  // With rates other than N:1, interpolating resamplers dampen high frequencies
-  // -- as shown in the previous-result threshold values in audio_result.cc.
+  // Note: with rates other than N:1 or 1:N, interpolating resamplers dampen
+  // high frequencies -- as shown in previously-saved LinearSampler results.
+  //
+  // We save previous results to 8-digit accuracy (>23 bits), exceeding float32
+  // precision. This does not pose a risk of 'flaky test' since the math should
+  // be the same every time. With no real dependencies outside FBL, we expect
+  // any change that affects these results to be directly within the core
+  // objects (Mixer, Gain, OutputFormatter), and the corresponding adjustments
+  // to these thresholds should be included with that CL.
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
       kPrevFreqRespPointUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs>
@@ -191,16 +211,22 @@ class AudioResult {
       kPrevSinadLinearUp2;
 
   //
+  //
   // Scale
   //
   // Purely when calculating gain (in dB) from gain_scale (fixed-point int),
   // derived values must be within this multiplier (above or below) of target.
-  static constexpr double kGainToleranceMultiplier = 1.000001;
+  static constexpr double kPrevGainToleranceMultiplier = 1.000001;
 
   // The nearest-unity scale at which we observe effects on signals.
-  static constexpr uint32_t kScaleEpsilon = 0x0FFFEFFF;
+  static constexpr uint32_t kPrevScaleEpsilon =
+      0x0FFFFFFF - (1 << (28 - kAudioPipelineWidth));
+  // Width 16: 0x0FFFEFFF (1001 down); Width 18: 0x0FFFFBFF (401 down).
+
   // The lowest scale at which full-scale signals are not reduced to zero.
-  static constexpr uint32_t kMinScaleNonZero = 0x00001000;
+  static constexpr uint32_t kPrevMinScaleNonZero =
+      0x10000000 >> kAudioPipelineWidth;
+  //  With 16-bit pipeline, previous value was 0x00001000
 
   //
   // Dynamic Range (gain integrity and system response at low volume levels) is
@@ -217,15 +243,12 @@ class AudioResult {
   // -60 dB is useful not only as a component of the "noise in the presence of
   // signal" calculation, but also as a second avenue toward measuring a
   // system's linearity/accuracy/precision with regard to data scaling and gain.
-
-  // For dynamic range, level-being-checked (in dBFS) should be within
-  // kPrevDynRangeTolerance of the dB gain setting (e.g. -60.0 dB).
-  static constexpr double kPrevDynRangeTolerance = 0.0075380325;
+  static constexpr double kPrevDynRangeTolerance = 75.380325e-4;
 
   // Level and unwanted artifacts -- as well as previously-cached threshold
   // limits for the same -- when applying the smallest-detectable gain change.
   static double LevelEpsilonDown;
-  static constexpr double kPrevLevelEpsilonDown = -0.00016807164;
+  static constexpr double kPrevLevelEpsilonDown = -16.807164e-5;
 
   static double SinadEpsilonDown;
   static constexpr double kPrevSinadEpsilonDown = 93.232593;
@@ -238,13 +261,14 @@ class AudioResult {
   static constexpr double kPrevSinad60Down = 34.196374;
 
   //
+  //
   // Sum
   //
   // How close is a measured level to the reference dB level?  Val-being-checked
   // must be within this distance (above OR below) from the reference dB level.
-  static constexpr double kLevelToleranceMix8 = 0.067219077;
-  static constexpr double kLevelToleranceMix16 = 0.00017031199;
-  static constexpr double kLevelToleranceMixFloat = 0.00017069356;
+  static constexpr double kPrevLevelToleranceMix8 = 67.219077e-3;
+  static constexpr double kPrevLevelToleranceMix16 = 17.031199e-5;
+  static constexpr double kPrevLevelToleranceMixFloat = 17.069356e-5;
 
   static double LevelMix8;
   static double LevelMix16;
@@ -259,13 +283,14 @@ class AudioResult {
   static constexpr double kPrevFloorMixFloat = 91.484408;
 
   //
+  //
   // Output
   //
   // How close is a measured level to the reference dB level?  Val-being-checked
   // must be within this distance (above OR below) from the reference dB level.
-  static constexpr double kLevelToleranceOutput8 = 0.065638245;
-  static constexpr double kLevelToleranceOutput16 = 0.00000068541681;
-  static constexpr double kLevelToleranceOutputFloat = 0.00000068541681;
+  static constexpr double kPrevLevelToleranceOutput8 = 65.638245e-3;
+  static constexpr double kPrevLevelToleranceOutput16 = 84.876728e-6;
+  static constexpr double kPrevLevelToleranceOutputFloat = 68.541681e-8;
 
   // What is our best-case noise floor in absence of rechannel/gain/SRC/mix.
   // Val is root-sum-square of all other freqs besides the 1kHz reference, in
@@ -277,7 +302,7 @@ class AudioResult {
   static double FloorOutputFloat;
 
   static constexpr double kPrevFloorOutput8 = 45.920261;
-  static constexpr double kPrevFloorOutput16 = 98.104753;
+  static constexpr double kPrevFloorOutput16 = 97.944722;
   static constexpr double kPrevFloorOutputFloat = 98.104753;
 
   // class is static only - prevent attempts to instantiate it
@@ -291,6 +316,10 @@ class AudioResult {
 /*
     AudioResult journal - updated upon each CL that affects these measurements
 
+    2018-04-30  Converted internal accumulator pipeline to 18-bit fixed-point
+                rather than 16-bit. This will improve noise-floor and other
+                measurements by up to 12 dB, in cases where quality is not gated
+                by other factors (such as the bit-width of the input or output).
     2018-04-24  Converted fidelity tests to float-based input, instead of 16-bit
                 signed integers -- enabling higher-resolution measurement (and
                 requiring updates to most thresholds).
@@ -303,7 +332,7 @@ class AudioResult {
                 47 frequencies, from DC, 13Hz, 20Hz to 22kHz, 24kHz and beyond.
                 Down-sampling tests show significant aliasing.
     2018-03-28  Initial mix floor tests: 8- and 16-bit for accumulation.
-    2018-03-26  Initial dynamic range tests. kScaleEpsilon = 0FFFFFFF for
+    2018-03-26  Initial dynamic range tests. kPrevScaleEpsilon = 0FFFFFFF for
                 incoming positive values; 0FFFE000 for negative values.
     2018-03-21  Initial frequency response / sinad tests: 1kHz, 40Hz, 12kHz.
     2018-03-20  Initial source/output noise floor tests: 8- & 16-bit, 1kHz.

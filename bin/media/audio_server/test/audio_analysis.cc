@@ -121,11 +121,11 @@ void DisplayVals(const double* buf, uint32_t buf_size) {
 // for overflow/clamp, leaving that responsibility on users of GenerateCosine.
 template <typename T>
 inline T Finalize(double value) {
-  return static_cast<T>(round(value));
+  return round(value);
 }
 template <>
-inline uint8_t Finalize(double val) {
-  return round(val) + 0x80;
+inline uint8_t Finalize(double value) {
+  return round(value) + 0x80;
 }
 template <>
 inline float Finalize(double value) {

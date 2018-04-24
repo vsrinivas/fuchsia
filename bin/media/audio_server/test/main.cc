@@ -9,7 +9,7 @@
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  // --full
+  // --full  Display results for the full frequency spectrum.
   media::audio::test::FrequencySet::UseFullFrequencySet =
       (command_line.HasOption("full"));
 
