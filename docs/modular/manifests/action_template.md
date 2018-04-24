@@ -1,4 +1,4 @@
-Verb Template
+Action Template
 =============
 > Status: DRAFT
 >
@@ -6,43 +6,43 @@ Verb Template
 > rather somewhere within the build tree, since they are strictly only necessary
 > at build time, not at runtime.
 
-A **verb** represents a high-level operation that a `Module` can perform. The
+An **action** represents a high-level operation that a `Module` can perform. The
 operations are described independently of the specific data types they operate
 on or the modules that implement them.
 
-A **verb template** defines the *call signature* and *semantics* for a single
-*verb*. Verbs are labels given to high-level operations in Fuchsia that may be
+An **action template** defines the *call signature* and *semantics* for a single
+*action*. Actions are labels given to high-level operations in Fuchsia that may be
 performed by [`Modules`](../module.md) with a given set of data.
 
-Example verbs could include `Navigate`, `Preview` or `Summarize`.
-> TODO(thatguy): Add more examples, and once we have platform-provided verbs,
+Example actions could include `Navigate`, `Preview` or `Summarize`.
+> TODO(thatguy): Add more examples, and once we have platform-provided actions,
 > include those here.
 
-Modules implement verbs and must adhere to the call signature and behavior
-described in the verb template.
+Modules implement actions and must adhere to the call signature and behavior
+described in the action template.
 
-There is no prescribed ontology of verbs. Anyone may publish a verb template and
-begin to utilize the verb defined within. <s>For this reason, verbs are
+There is no prescribed ontology of actions. Anyone may publish an action template and
+begin to utilize the action defined within. <s>For this reason, actions are
 unambiguously identified by both the package in which they were published as
-well as the verb itself.</s>
+well as the action itself.</s>
 
-> TODO(thatguy): Add information about how verb names are derived & how they
+> TODO(thatguy): Add information about how action names are derived & how they
 > are guaranteed to avoid collisions by using author identity as a component.
 > 
-> TODO(thatguy): Add information about where verbs are published.
+> TODO(thatguy): Add information about where actions are published.
 
 ## File format
 
-Verb templates are defined in a <s>`verb_template` metadata file</s> JSON file.
+Action templates are defined in a <s>`action_template` metadata file</s> JSON file.
 The content of the file is a JSON array
 of dictionaries. The full JSON schema, for reference, can be [found
-here](../src/package_manager/metadata_schemas/verb_template.json).
+here](../src/package_manager/metadata_schemas/action_template.json).
 
 Below is an example, followed by a detailed breakdown of the properties.
 
 ## Example
 
-The following `verb_template` file defines three verbs: `Preview`,
+The following `action_template` file defines three actions: `Preview`,
 `Navigate` and `Pick`.
 
 `Preview` accepts a single required argument (called a "noun"), which
@@ -105,9 +105,9 @@ single "picked" entity.
 
 ## Details
 
-Let's go through the properties that make up a verb template.
+Let's go through the properties that make up an action template.
 
-### verb name
+### action name
 
 ```javascript
 "name": "com.google.fuchsia.preview.v1",
@@ -115,13 +115,13 @@ Let's go through the properties that make up a verb template.
 > TODO(thatguy): This is a machine-readable name, not a human-readable name. Add
 > something for humans that supports localization.
 
-This is the verb's name. It uniquely identifies this verb.
+This is the action's name. It uniquely identifies this action.
 
-> TODO(thatguy): Add information about how verb names are associated with the author
+> TODO(thatguy): Add information about how action names are associated with the author
 > so no collisions are possible.
 
-Verb names allow `Module` [metadata files](module.md) to reference this verb
-template when they declare that they provide an implementation, and allows [`Daisies`](../intent.md) to reference the same verb when a client requests the associated action to take place.
+Action names allow `Module` [metadata files](module.md) to reference this action
+template when they declare that they provide an implementation, and allows [`Daisies`](../intent.md) to reference the same action when a client requests the associated action to take place.
 
 ### nouns
 
@@ -141,7 +141,7 @@ template when they declare that they provide an implementation, and allows [`Dai
 Nouns give names to individual or sets of [`Entity`](../entity.md) references
 passed between `Modules` at runtime.
 
-Each noun declared in a `verb` definition must have the following properties:
+Each noun declared in an `action` definition must have the following properties:
 
 * `name`: limited to the following characters: `[a-zA-Z0-9_]`
 * `direction`: any of `input`, `output` and `input/output`.
@@ -152,7 +152,7 @@ Each noun declared in a `verb` definition must have the following properties:
 * `required`: `true` or `false`. Default: `false`
 
 Note that nouns do not specify `Entity` types here. These are
-defined at the time of declaring an implementation of this `verb`
+defined at the time of declaring an implementation of this `action`
 by a `Module`, which is done in a [`Module` metadata file](module.md).
 
 
@@ -172,4 +172,4 @@ TODO
 `doc` is a path to a Markdown file, relative to the root of the package.
 
 The documentation should identify expected behavior for `Modules` that
-implement this `verb` and what role each `noun` plays in that behavior.
+implement this `action` and what role each `noun` plays in that behavior.

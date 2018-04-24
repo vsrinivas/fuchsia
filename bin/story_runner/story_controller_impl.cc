@@ -182,7 +182,8 @@ void XdrIntent(XdrContext* const xdr, Intent* const data) {
   xdr->Field("parameters", &data->parameters, XdrIntentParameter);
 }
 
-void XdrNounConstraint(XdrContext* const xdr, NounConstraint* const data) {
+void XdrParameterConstraint(XdrContext* const xdr,
+                            ParameterConstraint* const data) {
   xdr->Field("name", &data->name);
   xdr->Field("type", &data->type);
 }
@@ -190,8 +191,9 @@ void XdrNounConstraint(XdrContext* const xdr, NounConstraint* const data) {
 void XdrModuleManifest(XdrContext* const xdr, ModuleManifest* const data) {
   xdr->Field("binary", &data->binary);
   xdr->Field("suggestion_headline", &data->suggestion_headline);
-  xdr->Field("action", &data->verb);
-  xdr->Field("parameters", &data->noun_constraints, XdrNounConstraint);
+  xdr->Field("action", &data->action);
+  xdr->Field("parameters", &data->parameter_constraints,
+             XdrParameterConstraint);
   xdr->Field("composition_pattern", &data->composition_pattern);
 }
 
@@ -1484,14 +1486,14 @@ class StoryControllerImpl::DefocusCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(DefocusCall);
 };
 
-class StoryControllerImpl::ResolveNounCall
-    : Operation<ResolverNounConstraintPtr> {
+class StoryControllerImpl::ResolveParameterCall
+    : Operation<ResolverParameterConstraintPtr> {
  public:
-  ResolveNounCall(OperationContainer* const container,
-                  StoryControllerImpl* const story_controller_impl,
-                  LinkPathPtr link_path,
-                  ResultCall result_call)
-      : Operation("StoryControllerImpl::ResolveNounCall",
+  ResolveParameterCall(OperationContainer* const container,
+                       StoryControllerImpl* const story_controller_impl,
+                       LinkPathPtr link_path,
+                       ResultCall result_call)
+      : Operation("StoryControllerImpl::ResolveParameterCall",
                   container,
                   std::move(result_call)),
         story_controller_impl_(story_controller_impl),
@@ -1518,7 +1520,7 @@ class StoryControllerImpl::ResolveNounCall
                  link_info->path = std::move(*link_path_);
                  link_info->content_snapshot = std::move(content);
 
-                 result_ = ResolverNounConstraint::New();
+                 result_ = ResolverParameterConstraint::New();
                  result_->set_link_info(std::move(*link_info));
                });
   }
@@ -1527,18 +1529,18 @@ class StoryControllerImpl::ResolveNounCall
   StoryControllerImpl* const story_controller_impl_;  // not owned
   LinkPathPtr link_path_;
   LinkPtr link_;
-  ResolverNounConstraintPtr result_;
+  ResolverParameterConstraintPtr result_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveNounCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ResolveParameterCall);
 };
 
 class StoryControllerImpl::ResolveModulesCall
     : Operation<FindModulesResultPtr> {
  public:
   // If |intent| originated from a Module, |requesting_module_path| must be
-  // non-null.  Otherwise, it is an error for the |intent| to have any Nouns of
-  // type 'link_name' (since a Link with a link name without an associated
-  // Module path is impossible to locate).
+  // non-null.  Otherwise, it is an error for the |intent| to have any
+  // Parameters of type 'link_name' (since a Link with a link name without an
+  // associated Module path is impossible to locate).
   ResolveModulesCall(OperationContainer* const container,
                      StoryControllerImpl* const story_controller_impl,
                      IntentPtr intent,
@@ -1558,8 +1560,8 @@ class StoryControllerImpl::ResolveModulesCall
     FlowToken flow{this, &result_};
 
     resolver_query_ = ResolverQuery::New();
-    resolver_query_->verb = intent_->action.name;
-    resolver_query_->url = intent_->action.handler;
+    resolver_query_->action = intent_->action.name;
+    resolver_query_->handler = intent_->action.handler;
 
     for (const auto& entry : *intent_->parameters) {
       const auto& name = entry.name;
@@ -1567,20 +1569,20 @@ class StoryControllerImpl::ResolveModulesCall
 
       if (name.is_null() && intent_->action.handler.is_null()) {
         // It is not allowed to have a null intent name (left in for backwards
-        // compatibility with old code: MI4-739) and rely on verb-based
+        // compatibility with old code: MI4-739) and rely on action-based
         // resolution.
         return;
       }
 
       if (data.is_json()) {
-        auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_json(data.json());
+        auto parameter_constraint = ResolverParameterConstraint::New();
+        parameter_constraint->set_json(data.json());
 
-        auto entry = ResolverNounConstraintEntry::New();
+        auto entry = ResolverParameterConstraintEntry::New();
         entry->key = name;
-        entry->constraint = std::move(*noun_constraint);
+        entry->constraint = std::move(*parameter_constraint);
 
-        resolver_query_->noun_constraints.push_back(std::move(*entry));
+        resolver_query_->parameter_constraints.push_back(std::move(*entry));
 
       } else if (data.is_link_name() || data.is_link_path()) {
         // Find the chain for this Module, or use the one that was provided via
@@ -1602,36 +1604,37 @@ class StoryControllerImpl::ResolveModulesCall
         }
 
         ++outstanding_requests_;
-        new ResolveNounCall(&operation_queue_, story_controller_impl_,
-                            std::move(link_path),
-                            [this, flow, name](ResolverNounConstraintPtr result) {
-                              auto entry = ResolverNounConstraintEntry::New();
-                              entry->key = name;
-                              entry->constraint = std::move(*result);
-                              resolver_query_->noun_constraints.push_back(std::move(*entry));
+        new ResolveParameterCall(
+            &operation_queue_, story_controller_impl_, std::move(link_path),
+            [this, flow, name](ResolverParameterConstraintPtr result) {
+              auto entry = ResolverParameterConstraintEntry::New();
+              entry->key = name;
+              entry->constraint = std::move(*result);
+              resolver_query_->parameter_constraints.push_back(
+                  std::move(*entry));
 
-                              if (--outstanding_requests_ == 0) {
-                                Cont(flow);
-                              }
-                            });
+              if (--outstanding_requests_ == 0) {
+                Cont(flow);
+              }
+            });
 
       } else if (data.is_entity_type()) {
-        auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_entity_type(data.entity_type().Clone());
+        auto parameter_constraint = ResolverParameterConstraint::New();
+        parameter_constraint->set_entity_type(data.entity_type().Clone());
 
-        auto entry = ResolverNounConstraintEntry::New();
+        auto entry = ResolverParameterConstraintEntry::New();
         entry->key = name;
-        entry->constraint = std::move(*noun_constraint);
-        resolver_query_->noun_constraints.push_back(std::move(*entry));
+        entry->constraint = std::move(*parameter_constraint);
+        resolver_query_->parameter_constraints.push_back(std::move(*entry));
 
       } else if (data.is_entity_reference()) {
-        auto noun_constraint = ResolverNounConstraint::New();
-        noun_constraint->set_entity_reference(data.entity_reference());
+        auto parameter_constraint = ResolverParameterConstraint::New();
+        parameter_constraint->set_entity_reference(data.entity_reference());
 
-        auto entry = ResolverNounConstraintEntry::New();
+        auto entry = ResolverParameterConstraintEntry::New();
         entry->key = name;
-        entry->constraint = std::move(*noun_constraint);
-        resolver_query_->noun_constraints.push_back(std::move(*entry));
+        entry->constraint = std::move(*parameter_constraint);
+        resolver_query_->parameter_constraints.push_back(std::move(*entry));
       }
     }
 

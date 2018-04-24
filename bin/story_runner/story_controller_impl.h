@@ -353,7 +353,7 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class FocusCall;
   class DefocusCall;
   class BlockingModuleDataWriteCall;
-  class ResolveNounCall;
+  class ResolveParameterCall;
   class ResolveModulesCall;
   class AddIntentCall;
 

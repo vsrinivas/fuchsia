@@ -13,17 +13,18 @@ struct ModuleManifest {
   // A human-readable string that can be used when suggesting this Module.
   string? suggestion_headline;
 
-  // Identifies which verb this Module implements.
-  string verb;
+  // Identifies which action this Module implements.
+  string action;
 
-  // Includes the name and types of entities for the nouns requires to execute |verb|.
-  vector<NounConstraint>? noun_constraints;
+  // Includes the name and types of entities for the parameters requires to 
+  // execute |action|.
+  vector<ParameterConstraint>? parameter_constraints;
 
   // Identifies the pattern with which to compose this module with others.
   string? composition_pattern;
 };
 
-struct NounConstraint {
+struct ParameterConstraint {
   // The name of the noun.
   string name;
 

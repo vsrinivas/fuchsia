@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/schema#",
-  "title": "Schema for `verb_template` metadata file",
+  "title": "Schema for `action_template` metadata file",
   "definitions": {
     "parameterArray": {
       "type": "array",

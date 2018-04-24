@@ -10,24 +10,24 @@
 
 namespace modular {
 
-class NounTypeInferenceHelper {
+class ParameterTypeInferenceHelper {
  public:
-  NounTypeInferenceHelper(modular::EntityResolverPtr entity_resolver);
-  ~NounTypeInferenceHelper();
+  ParameterTypeInferenceHelper(modular::EntityResolverPtr entity_resolver);
+  ~ParameterTypeInferenceHelper();
 
-  // Returns a list of types represented in |noun_constraint|. Chooses the
-  // correct process for type extraction based on the type of Noun.
-  void GetNounTypes(
-      const modular::ResolverNounConstraint& noun_constraint,
+  // Returns a list of types represented in |parameter_constraint|. Chooses the
+  // correct process for type extraction based on the type of Parameter.
+  void GetParameterTypes(
+      const modular::ResolverParameterConstraint& parameter_constraint,
       const std::function<void(std::vector<std::string>)>& result_callback);
 
  private:
-  class GetNounTypesCall;
+  class GetParameterTypesCall;
 
   modular::EntityResolverPtr entity_resolver_;
   modular::OperationCollection operation_collection_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(NounTypeInferenceHelper);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ParameterTypeInferenceHelper);
 };
 
 }  // namespace modular

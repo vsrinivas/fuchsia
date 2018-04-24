@@ -14,20 +14,20 @@
 
 namespace modular {
 
-NounTypeInferenceHelper::NounTypeInferenceHelper(
+ParameterTypeInferenceHelper::ParameterTypeInferenceHelper(
     modular::EntityResolverPtr entity_resolver)
     : entity_resolver_(std::move(entity_resolver)) {}
 
-NounTypeInferenceHelper::~NounTypeInferenceHelper() = default;
+ParameterTypeInferenceHelper::~ParameterTypeInferenceHelper() = default;
 
-class NounTypeInferenceHelper::GetNounTypesCall
+class ParameterTypeInferenceHelper::GetParameterTypesCall
     : public modular::Operation<std::vector<std::string>> {
  public:
-  GetNounTypesCall(modular::OperationContainer* container,
-                   modular::EntityResolver* entity_resolver,
-                   const fidl::StringPtr& entity_reference,
-                   ResultCall result)
-      : Operation("NounTypeInferenceHelper::GetNounTypesCall",
+  GetParameterTypesCall(modular::OperationContainer* container,
+                        modular::EntityResolver* entity_resolver,
+                        const fidl::StringPtr& entity_reference,
+                        ResultCall result)
+      : Operation("ParameterTypeInferenceHelper::GetParameterTypesCall",
                   container,
                   std::move(result)),
         entity_resolver_(entity_resolver),
@@ -47,36 +47,39 @@ class NounTypeInferenceHelper::GetNounTypesCall
   fidl::StringPtr const entity_reference_;
   modular::EntityPtr entity_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(GetNounTypesCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(GetParameterTypesCall);
 };
 
-void NounTypeInferenceHelper::GetNounTypes(
-    const modular::ResolverNounConstraint& noun_constraint,
+void ParameterTypeInferenceHelper::GetParameterTypes(
+    const modular::ResolverParameterConstraint& parameter_constraint,
     const std::function<void(std::vector<std::string>)>& result_callback) {
-  if (noun_constraint.is_entity_type()) {
+  if (parameter_constraint.is_entity_type()) {
     result_callback(
-        std::vector<std::string>(noun_constraint.entity_type()->begin(),
-                                 noun_constraint.entity_type()->end()));
-  } else if (noun_constraint.is_json()) {
+        std::vector<std::string>(parameter_constraint.entity_type()->begin(),
+                                 parameter_constraint.entity_type()->end()));
+  } else if (parameter_constraint.is_json()) {
     std::vector<std::string> types;
-    if (!modular::ExtractEntityTypesFromJson(noun_constraint.json(), &types)) {
-      FXL_LOG(WARNING) << "Mal-formed JSON in noun: " << noun_constraint.json();
+    if (!modular::ExtractEntityTypesFromJson(parameter_constraint.json(),
+                                             &types)) {
+      FXL_LOG(WARNING) << "Mal-formed JSON in parameter: "
+                       << parameter_constraint.json();
       result_callback({});
     } else {
       result_callback(types);
     }
-  } else if (noun_constraint.is_entity_reference()) {
-    new GetNounTypesCall(&operation_collection_, entity_resolver_.get(),
-                         noun_constraint.entity_reference(), result_callback);
-  } else if (noun_constraint.is_link_info()) {
-    if (noun_constraint.link_info().allowed_types) {
+  } else if (parameter_constraint.is_entity_reference()) {
+    new GetParameterTypesCall(&operation_collection_, entity_resolver_.get(),
+                              parameter_constraint.entity_reference(),
+                              result_callback);
+  } else if (parameter_constraint.is_link_info()) {
+    if (parameter_constraint.link_info().allowed_types) {
       std::vector<std::string> types(
-          noun_constraint.link_info()
+          parameter_constraint.link_info()
               .allowed_types->allowed_entity_types->begin(),
-          noun_constraint.link_info()
+          parameter_constraint.link_info()
               .allowed_types->allowed_entity_types->end());
       result_callback(std::move(types));
-    } else if (noun_constraint.link_info().content_snapshot) {
+    } else if (parameter_constraint.link_info().content_snapshot) {
       // TODO(thatguy): See if there's an Entity reference on the Link. If so,
       // get the types from that.  If resolution results in a Module being
       // started, this Link should have its allowed types constrained, since
@@ -85,10 +88,11 @@ void NounTypeInferenceHelper::GetNounTypes(
       // simplify the Resolver.
       std::string entity_reference;
       if (modular::EntityReferenceFromJson(
-              noun_constraint.link_info().content_snapshot,
+              parameter_constraint.link_info().content_snapshot,
               &entity_reference)) {
-        new GetNounTypesCall(&operation_collection_, entity_resolver_.get(),
-                             entity_reference, result_callback);
+        new GetParameterTypesCall(&operation_collection_,
+                                  entity_resolver_.get(), entity_reference,
+                                  result_callback);
       }
     }
   } else {

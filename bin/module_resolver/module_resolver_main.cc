@@ -110,8 +110,8 @@ class ModuleResolverApp : ContextListener {
       }
       story_id = value.meta.story->id;
 
-      query.noun_constraints.push_back(
-          CreateResolverNounConstraintFromContextValue(value));
+      query.parameter_constraints.push_back(
+          CreateResolverParameterConstraintFromContextValue(value));
     }
 
     resolver_impl_->FindModules(
@@ -236,12 +236,13 @@ class ModuleResolverApp : ContextListener {
     return proposal;
   }
 
-  // Creates a resolver noun constraint from the contents of the context value.
+  // Creates a resolver parameter constraint from the contents of the context
+  // value.
   //
   // |value| must contain |entity| and |link| in its |meta|. This is to ensure
-  // that link_info can be constructed for the noun constraint.
-  modular::ResolverNounConstraintEntry
-  CreateResolverNounConstraintFromContextValue(const ContextValue& value) {
+  // that link_info can be constructed for the parameter constraint.
+  modular::ResolverParameterConstraintEntry
+  CreateResolverParameterConstraintFromContextValue(const ContextValue& value) {
     fidl::VectorPtr<fidl::StringPtr> entity_types =
         value.meta.entity->type.Clone();
     const LinkMetadataPtr& link_metadata = value.meta.link;
@@ -256,13 +257,13 @@ class ModuleResolverApp : ContextListener {
     link_allowed_types.allowed_entity_types = std::move(entity_types);
     link_info.allowed_types = fidl::MakeOptional(std::move(link_allowed_types));
 
-    modular::ResolverNounConstraint noun_constraint;
-    noun_constraint.set_link_info(std::move(link_info));
+    modular::ResolverParameterConstraint parameter_constraint;
+    parameter_constraint.set_link_info(std::move(link_info));
 
-    modular::ResolverNounConstraintEntry noun_constraint_entry;
-    noun_constraint_entry.key = link_metadata->name;
-    noun_constraint_entry.constraint = std::move(noun_constraint);
-    return noun_constraint_entry;
+    modular::ResolverParameterConstraintEntry parameter_constraint_entry;
+    parameter_constraint_entry.key = link_metadata->name;
+    parameter_constraint_entry.constraint = std::move(parameter_constraint);
+    return parameter_constraint_entry;
   }
 
  private:

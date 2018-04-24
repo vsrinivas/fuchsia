@@ -88,14 +88,14 @@ class ModuleResolverImpl::FindModulesCall
 
   // Finds all modules that match |query_|.
   //
-  // When a verb is specified it is used to filter potential modules, and the
-  // associated nouns are required to match in both name and type. If there is
-  // no verb, all modules are considered and only the noun types are used to
-  // filter results.
+  // When an action is specified it is used to filter potential modules, and the
+  // associated parameters are required to match in both name and type. If there
+  // is no action, all modules are considered and only the parameter types are
+  // used to filter results.
   void Run() {
     FlowToken flow{this, &result_};
 
-    if (query_.url) {
+    if (query_.handler) {
       // TODO(MI4-888): revisit this short circuiting and add the module
       // manifest to the result.
       // Client already knows what Module they want to use, so we'll
@@ -104,35 +104,36 @@ class ModuleResolverImpl::FindModulesCall
       return;
     }
 
-    if (query_.verb) {
-      auto verb_it = module_resolver_impl_->verb_to_entries_.find(query_.verb);
-      if (verb_it == module_resolver_impl_->verb_to_entries_.end()) {
+    if (query_.action) {
+      auto action_it =
+          module_resolver_impl_->action_to_entries_.find(query_.action);
+      if (action_it == module_resolver_impl_->action_to_entries_.end()) {
         result_ = CreateEmptyResult();
         return;
       }
 
-      candidates_ = verb_it->second;
+      candidates_ = action_it->second;
     }
 
-    // For each noun in the ResolverQuery, try to find Modules that provide the
-    // types in the noun as constraints.
-    if (query_.noun_constraints.is_null() ||
-        query_.noun_constraints->size() == 0) {
+    // For each parameter in the ResolverQuery, try to find Modules that provide
+    // the types in the parameter as constraints.
+    if (query_.parameter_constraints.is_null() ||
+        query_.parameter_constraints->size() == 0) {
       Finally(flow);
       return;
     }
 
-    num_nouns_countdown_ = query_.noun_constraints->size();
-    for (const auto& noun_entry : *query_.noun_constraints) {
-      const auto& noun_name = noun_entry.key;
-      const auto& noun_constraints = noun_entry.constraint;
+    num_parameters_countdown_ = query_.parameter_constraints->size();
+    for (const auto& parameter_entry : *query_.parameter_constraints) {
+      const auto& parameter_name = parameter_entry.key;
+      const auto& parameter_constraints = parameter_entry.constraint;
 
-      module_resolver_impl_->type_helper_.GetNounTypes(
-          noun_constraints,
-          [noun_name, flow, this](std::vector<std::string> types) {
-            ProcessNounTypes(noun_name, std::move(types),
-                             !query_.verb.is_null());
-            if (--num_nouns_countdown_ == 0) {
+      module_resolver_impl_->type_helper_.GetParameterTypes(
+          parameter_constraints,
+          [parameter_name, flow, this](std::vector<std::string> types) {
+            ProcessParameterTypes(parameter_name, std::move(types),
+                                  !query_.action.is_null());
+            if (--num_parameters_countdown_ == 0) {
               Finally(flow);
             }
           });
@@ -140,69 +141,71 @@ class ModuleResolverImpl::FindModulesCall
   }
 
  private:
-  // |noun_name| and |types| come from the ResolverQuery.
-  // |match_name| is true if the entries are required to match both the noun
-  // name and types. If false, only the types are matched.
-  void ProcessNounTypes(const std::string& noun_name,
-                        std::vector<std::string> types,
-                        const bool query_contains_verb) {
-    noun_types_cache_[noun_name] = types;
+  // |parameter_name| and |types| come from the ResolverQuery.
+  // |match_name| is true if the entries are required to match both the
+  // parameter name and types. If false, only the types are matched.
+  void ProcessParameterTypes(const std::string& parameter_name,
+                             std::vector<std::string> types,
+                             const bool query_contains_action) {
+    parameter_types_cache_[parameter_name] = types;
 
-    std::set<EntryId> noun_type_entries;
+    std::set<EntryId> parameter_type_entries;
     for (const auto& type : types) {
       std::set<EntryId> found_entries =
-          query_contains_verb
-              ? GetEntriesMatchingNounByTypeAndName(type, noun_name)
-              : GetEntriesMatchingNounByType(type);
-      noun_type_entries.insert(found_entries.begin(), found_entries.end());
+          query_contains_action
+              ? GetEntriesMatchingParameterByTypeAndName(type, parameter_name)
+              : GetEntriesMatchingParameterByType(type);
+      parameter_type_entries.insert(found_entries.begin(), found_entries.end());
     }
 
     std::set<EntryId> new_result_entries;
-    if (query_contains_verb) {
-      // If the query contains a verb, the nouns are parameters to that verb and
-      // therefore all nouns in the query must be handled by the candidates. For
-      // each noun that is processed, filter out any existing results that can't
-      // also handle the new noun type.
+    if (query_contains_action) {
+      // If the query contains an action, the parameters are parameters to that
+      // action and therefore all parameters in the query must be handled by the
+      // candidates. For each parameter that is processed, filter out any
+      // existing results that can't also handle the new parameter type.
       std::set_intersection(
-          candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
-          noun_type_entries.end(),
+          candidates_.begin(), candidates_.end(),
+          parameter_type_entries.begin(), parameter_type_entries.end(),
           std::inserter(new_result_entries, new_result_entries.begin()));
     } else {
-      // If the query does not contain a verb, the search is widened to include
-      // modules that are able to handle a proper subset of the query nouns.
+      // If the query does not contain an action, the search is widened to
+      // include modules that are able to handle a proper subset of the query
+      // parameters.
       std::set_union(
-          candidates_.begin(), candidates_.end(), noun_type_entries.begin(),
-          noun_type_entries.end(),
+          candidates_.begin(), candidates_.end(),
+          parameter_type_entries.begin(), parameter_type_entries.end(),
           std::inserter(new_result_entries, new_result_entries.begin()));
     }
     candidates_.swap(new_result_entries);
   }
 
-  // Returns the EntryIds of all entries with a noun that matches the provided
-  // type.
-  std::set<EntryId> GetEntriesMatchingNounByType(const std::string& noun_type) {
+  // Returns the EntryIds of all entries with a parameter that matches the
+  // provided type.
+  std::set<EntryId> GetEntriesMatchingParameterByType(
+      const std::string& parameter_type) {
     std::set<EntryId> found_entries;
     auto found_entries_it =
-        module_resolver_impl_->noun_type_to_entries_.find(noun_type);
+        module_resolver_impl_->parameter_type_to_entries_.find(parameter_type);
     if (found_entries_it !=
-        module_resolver_impl_->noun_type_to_entries_.end()) {
+        module_resolver_impl_->parameter_type_to_entries_.end()) {
       found_entries.insert(found_entries_it->second.begin(),
                            found_entries_it->second.end());
     }
     return found_entries;
   }
 
-  // Returns the EntryIds of all entries with a noun that matches the provided
-  // name and type.
-  std::set<EntryId> GetEntriesMatchingNounByTypeAndName(
-      const std::string& noun_type,
-      const std::string& noun_name) {
+  // Returns the EntryIds of all entries with a parameter that matches the
+  // provided name and type.
+  std::set<EntryId> GetEntriesMatchingParameterByTypeAndName(
+      const std::string& parameter_type,
+      const std::string& parameter_name) {
     std::set<EntryId> found_entries;
     auto found_entries_it =
-        module_resolver_impl_->noun_type_and_name_to_entries_.find(
-            std::make_pair(noun_type, noun_name));
+        module_resolver_impl_->parameter_type_and_name_to_entries_.find(
+            std::make_pair(parameter_type, parameter_name));
     if (found_entries_it !=
-        module_resolver_impl_->noun_type_and_name_to_entries_.end()) {
+        module_resolver_impl_->parameter_type_and_name_to_entries_.end()) {
       found_entries.insert(found_entries_it->second.begin(),
                            found_entries_it->second.end());
     }
@@ -219,22 +222,22 @@ class ModuleResolverImpl::FindModulesCall
     }
 
     // For each of the potential candidates, compute each possible mapping from
-    // query noun to entry noun. If the query specifies a verb or url, there is
-    // only one result per candidate. If there is no verb or url, results will
-    // be constructed for each mapping from entry noun to |query_| noun where
-    // the types are compatible.
+    // query parameter to entry parameter. If the query specifies an action or
+    // explicit handler there is only one result per candidate. If there is no
+    // action or handler, results will be constructed for each mapping from
+    // entry parameter to |query_| parameter where the types are compatible.
     for (auto id : candidates_) {
       auto entry_it = module_resolver_impl_->entries_.find(id);
       FXL_CHECK(entry_it != module_resolver_impl_->entries_.end()) << id;
 
       const auto& entry = entry_it->second;
 
-      if (!query_.verb && !query_.url) {
-        // If there is no verb and no url each entry may be able to be matched
-        // in multiple ways (i.e. values of nouns with the same type are
-        // interchangeable), so the result set may contain multiple entries for
-        // the same candidate.
-        auto new_results = MatchQueryNounsToEntryNounsByType(entry);
+      if (!query_.action && !query_.handler) {
+        // If there is no action and no explicit handler each entry may be able
+        // to be matched in multiple ways (i.e. values of parameters with the
+        // same type are interchangeable), so the result set may contain
+        // multiple entries for the same candidate.
+        auto new_results = MatchQueryParametersToEntryParametersByType(entry);
         for (size_t i = 0; i < new_results->size(); ++i) {
           result_.modules.push_back(std::move(new_results->at(i)));
         }
@@ -244,133 +247,147 @@ class ModuleResolverImpl::FindModulesCall
         result.module_id = entry.binary;
         result.manifest = modular::ModuleManifest::New();
         fidl::Clone(entry, result.manifest.get());
-        CopyNounsToModuleResolverResult(query_, &result);
+        CopyParametersToModuleResolverResult(query_, &result);
 
         result_.modules.push_back(std::move(result));
       }
     }
   }
 
-  // Creates ModuleResolverResultPtrs for each available mapping from nouns in
-  // |query_| to the corresponding nouns in each candidate entry.
+  // Creates ModuleResolverResultPtrs for each available mapping from parameters
+  // in |query_| to the corresponding parameters in each candidate entry.
   //
-  // In order for a query to match an entry, it must contain enough nouns to
-  // populate each of the entry nouns.
+  // In order for a query to match an entry, it must contain enough parameters
+  // to populate each of the entry parameters.
   fidl::VectorPtr<modular::ModuleResolverResult>
-  MatchQueryNounsToEntryNounsByType(const modular::ModuleManifest& entry) {
+  MatchQueryParametersToEntryParametersByType(
+      const modular::ModuleManifest& entry) {
     fidl::VectorPtr<modular::ModuleResolverResult> modules;
     modules.resize(0);
-    // TODO(MI4-866): Handle entries with optional nouns.
-    if (query_.noun_constraints->size() < entry.noun_constraints->size()) {
+    // TODO(MI4-866): Handle entries with optional parameters.
+    if (query_.parameter_constraints->size() <
+        entry.parameter_constraints->size()) {
       return modules;
     }
 
-    // Map each noun in |entry| to the query noun names that could be used to
-    // populate the |entry| noun.
-    std::map<std::string, std::vector<std::string>> entry_nouns_to_query_nouns =
-        MapEntryNounsToCompatibleQueryNouns(entry);
+    // Map each parameter in |entry| to the query parameter names that could be
+    // used to populate the |entry| parameter.
+    std::map<std::string, std::vector<std::string>>
+        entry_parameters_to_query_parameters =
+            MapEntryParametersToCompatibleQueryParameters(entry);
 
-    // Compute each possible map from |query_| noun to the |entry| noun that it
-    // should populate.
-    std::vector<std::map<std::string, std::string>> noun_mappings =
-        ComputeResultsFromEntryNounToQueryNounMapping(
-            entry_nouns_to_query_nouns);
+    // Compute each possible map from |query_| parameter to the |entry|
+    // parameter that it should populate.
+    std::vector<std::map<std::string, std::string>> parameter_mappings =
+        ComputeResultsFromEntryParameterToQueryParameterMapping(
+            entry_parameters_to_query_parameters);
 
     // For each of the possible mappings, create a resolver result.
-    for (const auto& noun_mapping : noun_mappings) {
+    for (const auto& parameter_mapping : parameter_mappings) {
       modular::ModuleResolverResult result;
       result.module_id = entry.binary;
       result.manifest = modular::ModuleManifest::New();
       fidl::Clone(entry, result.manifest.get());
-      CopyNounsToModuleResolverResult(query_, &result, noun_mapping);
+      CopyParametersToModuleResolverResult(query_, &result, parameter_mapping);
       modules.push_back(std::move(result));
     }
 
     return modules;
   }
 
-  // Returns a map where the keys are the |entry|'s nouns, and the values are
-  // all the |query_| nouns that are type-compatible with that |entry| noun.
+  // Returns a map where the keys are the |entry|'s parameters, and the values
+  // are all the |query_| parameters that are type-compatible with that |entry|
+  // parameter.
   std::map<std::string, std::vector<std::string>>
-  MapEntryNounsToCompatibleQueryNouns(const modular::ModuleManifest& entry) {
-    std::map<std::string, std::vector<std::string>> entry_noun_to_query_nouns;
-    for (const auto& entry_noun : *entry.noun_constraints) {
-      std::vector<std::string> matching_query_nouns;
-      for (const auto& query_noun : *query_.noun_constraints) {
-        const auto& this_query_noun_cache = noun_types_cache_[query_noun.key];
-        if (std::find(this_query_noun_cache.begin(),
-                      this_query_noun_cache.end(),
-                      entry_noun.type) != this_query_noun_cache.end()) {
-          matching_query_nouns.push_back(query_noun.key);
+  MapEntryParametersToCompatibleQueryParameters(
+      const modular::ModuleManifest& entry) {
+    std::map<std::string, std::vector<std::string>>
+        entry_parameter_to_query_parameters;
+    for (const auto& entry_parameter : *entry.parameter_constraints) {
+      std::vector<std::string> matching_query_parameters;
+      for (const auto& query_parameter : *query_.parameter_constraints) {
+        const auto& this_query_parameter_cache =
+            parameter_types_cache_[query_parameter.key];
+        if (std::find(this_query_parameter_cache.begin(),
+                      this_query_parameter_cache.end(), entry_parameter.type) !=
+            this_query_parameter_cache.end()) {
+          matching_query_parameters.push_back(query_parameter.key);
         }
       }
-      entry_noun_to_query_nouns[entry_noun.name] = matching_query_nouns;
+      entry_parameter_to_query_parameters[entry_parameter.name] =
+          matching_query_parameters;
     }
-    return entry_noun_to_query_nouns;
+    return entry_parameter_to_query_parameters;
   }
 
-  // Returns a collection of valid mappings where the key is the query noun, and
-  // the value is the entry noun to be populated with the query nouns contents.
+  // Returns a collection of valid mappings where the key is the query
+  // parameter, and the value is the entry parameter to be populated with the
+  // query parameters contents.
   //
-  // |remaining_entry_nouns| are all the entry nouns that are yet to be matched.
-  // |used_query_nouns| are all the query nouns that have already been used in
-  // the current solution.
+  // |remaining_entry_parameters| are all the entry parameters that are yet to
+  // be matched. |used_query_parameters| are all the query parameters that have
+  // already been used in the current solution.
   std::vector<std::map<std::string, std::string>>
-  ComputeResultsFromEntryNounToQueryNounMapping(
+  ComputeResultsFromEntryParameterToQueryParameterMapping(
       const std::map<std::string, std::vector<std::string>>&
-          remaining_entry_nouns,
-      const std::set<std::string>& used_query_nouns = {}) {
+          remaining_entry_parameters,
+      const std::set<std::string>& used_query_parameters = {}) {
     std::vector<std::map<std::string, std::string>> result;
-    if (remaining_entry_nouns.empty()) {
+    if (remaining_entry_parameters.empty()) {
       return result;
     }
 
-    auto first_entry_noun_it = remaining_entry_nouns.begin();
-    const std::string& first_entry_noun_name = first_entry_noun_it->first;
-    const std::vector<std::string> query_nouns_for_first_entry =
-        first_entry_noun_it->second;
+    auto first_entry_parameter_it = remaining_entry_parameters.begin();
+    const std::string& first_entry_parameter_name =
+        first_entry_parameter_it->first;
+    const std::vector<std::string> query_parameters_for_first_entry =
+        first_entry_parameter_it->second;
 
-    // If there is only one remaining entry noun, create one result mapping for
-    // each viable query noun.
-    if (remaining_entry_nouns.size() == 1) {
-      for (const auto& query_noun_name : query_nouns_for_first_entry) {
-        // Don't create solutions where the query noun has already been used.
-        if (used_query_nouns.find(query_noun_name) != used_query_nouns.end()) {
+    // If there is only one remaining entry parameter, create one result mapping
+    // for each viable query parameter.
+    if (remaining_entry_parameters.size() == 1) {
+      for (const auto& query_parameter_name :
+           query_parameters_for_first_entry) {
+        // Don't create solutions where the query parameter has already been
+        // used.
+        if (used_query_parameters.find(query_parameter_name) !=
+            used_query_parameters.end()) {
           continue;
         }
 
         std::map<std::string, std::string> result_map;
-        result_map[query_noun_name] = first_entry_noun_name;
+        result_map[query_parameter_name] = first_entry_parameter_name;
         result.push_back(result_map);
       }
       return result;
     }
 
-    for (const auto& query_noun_name : first_entry_noun_it->second) {
-      // If the query noun has already been used, it cannot be matched again,
-      // and thus the loop continues.
-      if (used_query_nouns.find(query_noun_name) != used_query_nouns.end()) {
+    for (const auto& query_parameter_name : first_entry_parameter_it->second) {
+      // If the query parameter has already been used, it cannot be matched
+      // again, and thus the loop continues.
+      if (used_query_parameters.find(query_parameter_name) !=
+          used_query_parameters.end()) {
         continue;
       }
 
-      // The current query noun that will be used by the first entry noun must
-      // be added to the used set before computing the solution to the smaller
-      // problem.
-      std::set<std::string> new_used_query_nouns = used_query_nouns;
-      new_used_query_nouns.insert(query_noun_name);
+      // The current query parameter that will be used by the first entry
+      // parameter must be added to the used set before computing the solution
+      // to the smaller problem.
+      std::set<std::string> new_used_query_parameters = used_query_parameters;
+      new_used_query_parameters.insert(query_parameter_name);
 
-      // Recurse for the remaining nouns.
+      // Recurse for the remaining parameters.
       std::vector<std::map<std::string, std::string>> solution_for_remainder =
-          ComputeResultsFromEntryNounToQueryNounMapping(
-              {std::next(remaining_entry_nouns.begin()),
-               remaining_entry_nouns.end()},
-              new_used_query_nouns);
+          ComputeResultsFromEntryParameterToQueryParameterMapping(
+              {std::next(remaining_entry_parameters.begin()),
+               remaining_entry_parameters.end()},
+              new_used_query_parameters);
 
       // Expand each solution to the smaller problem by inserting the current
-      // query noun -> entry noun into the solution.
+      // query parameter -> entry parameter into the solution.
       for (const auto& existing_solution : solution_for_remainder) {
         std::map<std::string, std::string> updated_solution = existing_solution;
-        updated_solution[query_noun_name] = first_entry_noun_name;
+        updated_solution[query_parameter_name] = first_entry_parameter_name;
         result.push_back(updated_solution);
       }
     }
@@ -386,28 +403,28 @@ class ModuleResolverImpl::FindModulesCall
     return ret;
   }
 
-  // Copies the nouns from |query| to the provided resolver result.
+  // Copies the parameters from |query| to the provided resolver result.
   //
-  // |noun_mapping| A mapping from the noun names of query to the entry noun
-  // that should be populated. If no such mapping exists, the query noun name
-  // will be used.
-  void CopyNounsToModuleResolverResult(
+  // |parameter_mapping| A mapping from the parameter names of query to the
+  // entry parameter that should be populated. If no such mapping exists, the
+  // query parameter name will be used.
+  void CopyParametersToModuleResolverResult(
       const modular::ResolverQuery& query,
       modular::ModuleResolverResult* result,
-      std::map<std::string, std::string> noun_mapping = {}) {
+      std::map<std::string, std::string> parameter_mapping = {}) {
     auto& create_chain_info = result->create_chain_info;  // For convenience.
-    for (const auto& query_noun : *query.noun_constraints) {
-      const auto& noun = query_noun.constraint;
-      fidl::StringPtr name = query_noun.key;
-      auto it = noun_mapping.find(query_noun.key);
-      if (it != noun_mapping.end()) {
+    for (const auto& query_parameter : *query.parameter_constraints) {
+      const auto& parameter = query_parameter.constraint;
+      fidl::StringPtr name = query_parameter.key;
+      auto it = parameter_mapping.find(query_parameter.key);
+      if (it != parameter_mapping.end()) {
         name = it->second;
       }
 
-      if (noun.is_entity_reference()) {
+      if (parameter.is_entity_reference()) {
         modular::CreateLinkInfo create_link;
         create_link.initial_data =
-            modular::EntityReferenceToJson(noun.entity_reference());
+            modular::EntityReferenceToJson(parameter.entity_reference());
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
         modular::CreateChainPropertyInfo property_info;
@@ -416,18 +433,18 @@ class ModuleResolverImpl::FindModulesCall
         chain_entry.key = name;
         chain_entry.value = std::move(property_info);
         create_chain_info.property_info.push_back(std::move(chain_entry));
-      } else if (noun.is_link_info()) {
+      } else if (parameter.is_link_info()) {
         modular::CreateChainPropertyInfo property_info;
         modular::LinkPath link_path;
-        noun.link_info().path.Clone(&link_path);
+        parameter.link_info().path.Clone(&link_path);
         property_info.set_link_path(std::move(link_path));
         modular::ChainEntry chain_entry;
         chain_entry.key = name;
         chain_entry.value = std::move(property_info);
         create_chain_info.property_info.push_back(std::move(chain_entry));
-      } else if (noun.is_json()) {
+      } else if (parameter.is_json()) {
         modular::CreateLinkInfo create_link;
-        create_link.initial_data = noun.json();
+        create_link.initial_data = parameter.json();
         // TODO(thatguy): set |create_link->allowed_types|.
         // TODO(thatguy): set |create_link->permissions|.
         modular::CreateChainPropertyInfo property_info;
@@ -438,22 +455,22 @@ class ModuleResolverImpl::FindModulesCall
         create_chain_info.property_info.push_back(std::move(chain_entry));
       }
       // There's nothing to copy over from 'entity_types', since it only
-      // specifies noun constraint information, and no actual content.
+      // specifies parameter constraint information, and no actual content.
     }
   }
 
   modular::FindModulesResult HandleUrlQuery(
       const modular::ResolverQuery& query) {
     modular::ModuleResolverResult mod_result;
-    mod_result.module_id = query.url;
+    mod_result.module_id = query.handler;
     for (const auto& iter : module_resolver_impl_->entries_) {
-      if (iter.second.binary == query.url) {
+      if (iter.second.binary == query.handler) {
         mod_result.manifest = modular::ModuleManifest::New();
         fidl::Clone(iter.second, mod_result.manifest.get());
       }
     }
 
-    CopyNounsToModuleResolverResult(query, &mod_result);
+    CopyParametersToModuleResolverResult(query, &mod_result);
 
     modular::FindModulesResult result;
     result.modules.push_back(std::move(mod_result));
@@ -472,11 +489,11 @@ class ModuleResolverImpl::FindModulesCall
   modular::ResolverQuery query_;
   modular::ResolverScoringInfoPtr scoring_info_;
 
-  // A cache of the Entity types for each noun in |query_|.
-  std::map<std::string, std::vector<std::string>> noun_types_cache_;
+  // A cache of the Entity types for each parameter in |query_|.
+  std::map<std::string, std::vector<std::string>> parameter_types_cache_;
 
   std::set<EntryId> candidates_;
-  uint32_t num_nouns_countdown_ = 0;
+  uint32_t num_parameters_countdown_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FindModulesCall);
 };
@@ -517,14 +534,14 @@ void ModuleResolverImpl::OnQuery(UserInput query, OnQueryCallback done) {
 
   for (const auto& id_entry : entries_) {
     const auto& entry = id_entry.second;
-    // Simply prefix match on the last element of the verb.
-    // Verbs have a convention of being namespaced like java classes:
-    // com.google.subdomain.verb
-    std::string verb = entry.verb;
+    // Simply prefix match on the last element of the action.
+    // actions have a convention of being namespaced like java classes:
+    // com.google.subdomain.action
+    std::string action = entry.action;
     auto parts =
-        fxl::SplitString(verb, ".", fxl::kKeepWhitespace, fxl::kSplitWantAll);
+        fxl::SplitString(action, ".", fxl::kKeepWhitespace, fxl::kSplitWantAll);
     const auto& last_part = parts.back();
-    if (StringStartsWith(entry.verb, query.text) ||
+    if (StringStartsWith(entry.action, query.text) ||
         StringStartsWith(last_part.ToString(), query.text)) {
       Proposal proposal;
       proposal.id = entry.binary;
@@ -577,7 +594,7 @@ void ModuleResolverImpl::OnNewManifestEntry(const std::string& source_name,
                                             std::string id_in,
                                             modular::ModuleManifest new_entry) {
   FXL_LOG(INFO) << "New Module manifest " << id_in
-                << ": verb = " << new_entry.verb
+                << ": action = " << new_entry.action
                 << ", binary = " << new_entry.binary;
   // Add this new entry info to our local index.
   if (entries_.count(EntryId(source_name, id_in)) > 0) {
@@ -589,13 +606,13 @@ void ModuleResolverImpl::OnNewManifestEntry(const std::string& source_name,
   FXL_CHECK(ret.second);
   const auto& id = ret.first->first;
   const auto& entry = ret.first->second;
-  verb_to_entries_[entry.verb].insert(id);
+  action_to_entries_[entry.action].insert(id);
 
-  for (const auto& constraint : *entry.noun_constraints) {
-    noun_type_and_name_to_entries_[std::make_pair(constraint.type,
-                                                  constraint.name)]
+  for (const auto& constraint : *entry.parameter_constraints) {
+    parameter_type_and_name_to_entries_[std::make_pair(constraint.type,
+                                                       constraint.name)]
         .insert(id);
-    noun_type_to_entries_[constraint.type].insert(id);
+    parameter_type_to_entries_[constraint.type].insert(id);
   }
 }
 
@@ -609,13 +626,13 @@ void ModuleResolverImpl::OnRemoveManifestEntry(const std::string& source_name,
   }
 
   const auto& entry = it->second;
-  verb_to_entries_[entry.verb].erase(id);
+  action_to_entries_[entry.action].erase(id);
 
-  for (const auto& constraint : *entry.noun_constraints) {
-    noun_type_and_name_to_entries_[std::make_pair(constraint.type,
-                                                  constraint.name)]
+  for (const auto& constraint : *entry.parameter_constraints) {
+    parameter_type_and_name_to_entries_[std::make_pair(constraint.type,
+                                                       constraint.name)]
         .erase(id);
-    noun_type_to_entries_[constraint.type].erase(id);
+    parameter_type_to_entries_[constraint.type].erase(id);
   }
 
   entries_.erase(id);

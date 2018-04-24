@@ -51,7 +51,7 @@ union IntentParameterData {
   // Set this if you want to explicitly define this noun's allowed types. This
   // is also useful in the cases where the noun has a 'direction' of type
   // 'output', and you wish to set the allowable output types from the Module
-  // (see docs/modular/manifests/verb_template.md for a definition of
+  // (see docs/modular/manifests/action_template.md for a definition of
   // 'direction').
   //
   // Only one entry in |entity_type| must match the constraint specified by

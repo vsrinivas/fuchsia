@@ -19,7 +19,7 @@ library modular;
 // (2) An entity reference that can be set or retrieved with SetEntity() and
 //     GetEntity().
 //
-// Each module receives one Link instance for each of the nouns in its verb
+// Each module receives one Link instance for each of the nouns in its action
 // template in its ModuleContext which it receives in Module.Initialize() or in
 // its service namespace. It can access them by calling ModuleContext.GetLink()
 // with the noun as the link name. These instances are shared with the parent

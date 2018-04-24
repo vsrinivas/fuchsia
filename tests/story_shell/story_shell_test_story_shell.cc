@@ -63,8 +63,8 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
       Put("root:one");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
-          module_manifest->verb == "com.google.fuchsia.common.null") {
-       Put("root:one manifest");
+          module_manifest->action == "com.google.fuchsia.common.null") {
+        Put("root:one manifest");
       }
 
       seen_root_one_ = true;
@@ -74,7 +74,7 @@ class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
       Put("root:one:two");
 
       if (module_manifest && module_manifest->composition_pattern == "ticker" &&
-          module_manifest->verb == "com.google.fuchsia.common.null") {
+          module_manifest->action == "com.google.fuchsia.common.null") {
         Put("root:one:two manifest");
       }
 

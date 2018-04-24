@@ -73,13 +73,13 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   // Map of (repo name, module manifest ID) -> entry.
   std::map<EntryId, modular::ModuleManifest> entries_;
 
-  // verb -> key in |entries_|
-  std::map<std::string, std::set<EntryId>> verb_to_entries_;
-  // (type, noun name) -> key in |entries_|
+  // action -> key in |entries_|
+  std::map<std::string, std::set<EntryId>> action_to_entries_;
+  // (type, parameter name) -> key in |entries_|
   std::map<std::pair<std::string, std::string>, std::set<EntryId>>
-      noun_type_and_name_to_entries_;
+      parameter_type_and_name_to_entries_;
   //  (type) -> key in |entries_|.
-  std::map<std::string, std::set<EntryId>> noun_type_to_entries_;
+  std::map<std::string, std::set<EntryId>> parameter_type_to_entries_;
 
   fidl::BindingSet<modular::ModuleResolver> bindings_;
   fidl::Binding<QueryHandler> query_handler_binding_;
@@ -87,7 +87,7 @@ class ModuleResolverImpl : modular::ModuleResolver, QueryHandler {
   std::vector<fidl::InterfaceRequest<ModuleResolver>> pending_bindings_;
 
   bool already_checking_if_sources_are_ready_;
-  NounTypeInferenceHelper type_helper_;
+  ParameterTypeInferenceHelper type_helper_;
 
   modular::OperationCollection operations_;
 
