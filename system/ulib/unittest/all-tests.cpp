@@ -107,6 +107,17 @@ static void print_help(const char* prog_name, FILE* f) {
         fprintf(f, "\nTest-specific options:\n");
         print_test_help(f);
     }
+    fprintf(f, "\n"
+            "Environment variables:\n"
+            "  %s=<types-mask>\n"
+            "      Specifies the types of tests to run.\n"
+            "      Must be the OR of the following values, in base 10:\n"
+            "        0x01 = small\n"
+            "        0x02 = medium\n"
+            "        0x04 = large\n"
+            "        0x08 = performance\n"
+            "      If unspecified then all tests are run.\n",
+            TEST_ENV_NAME);
 }
 
 /*

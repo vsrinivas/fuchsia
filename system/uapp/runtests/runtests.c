@@ -504,7 +504,12 @@ int usage(char* name) {
             "The summary contains a listing of the tests executed  \n"
             "by full path (e.g. /boot/test/core/futex_test) as well\n"
             "as whether the test passed or failed. For details, see\n"
-            "//system/uapp/runtests/summary-schema.json            \n");
+            "//system/uapp/runtests/summary-schema.json            \n"
+            "\n"
+            "The test selection options -[sSmMlLpP] only work for  \n"
+            "tests that support the RUNTESTS_TEST_CLASS environment\n"
+            "variable.                                             \n"
+            );
     return -1;
 }
 
