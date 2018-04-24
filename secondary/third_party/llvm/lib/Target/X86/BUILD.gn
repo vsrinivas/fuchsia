@@ -1,0 +1,172 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../utils/TableGen/tablegen.gni")
+
+template("x86_tablegen") {
+  tablegen(target_name) {
+    source = "X86.td"
+    args = [ "-I=" + rebase_path(".", root_build_dir) ] + invoker.args
+    output = invoker.output
+  }
+}
+
+x86_tablegen("asm_matcher") {
+  output = "$target_gen_dir/X86GenAsmMatcher.inc"
+  args = [ "-gen-asm-matcher" ]
+}
+
+x86_tablegen("asm_writer") {
+  output = "$target_gen_dir/X86GenAsmWriter.inc"
+  args = [ "-gen-asm-writer" ]
+}
+
+x86_tablegen("asm_writer1") {
+  output = "$target_gen_dir/X86GenAsmWriter1.inc"
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+}
+
+x86_tablegen("calling_conv") {
+  output = "$target_gen_dir/X86GenCallingConv.inc"
+  args = [ "-gen-callingconv" ]
+}
+
+x86_tablegen("dag_isel") {
+  output = "$target_gen_dir/X86GenDAGISel.inc"
+  args = [ "-gen-dag-isel" ]
+}
+
+x86_tablegen("disassembler_tables") {
+  output = "$target_gen_dir/X86GenDisassemblerTables.inc"
+  args = [ "-gen-disassembler" ]
+}
+
+x86_tablegen("evex2vex_tables") {
+  output = "$target_gen_dir/X86GenEVEX2VEXTables.inc"
+  args = [ "-gen-x86-EVEX2VEX-tables" ]
+}
+
+x86_tablegen("fast_isel") {
+  output = "$target_gen_dir/X86GenFastISel.inc"
+  args = [ "-gen-fast-isel" ]
+}
+
+x86_tablegen("global_isel") {
+  output = "$target_gen_dir/X86GenGlobalISel.inc"
+  args = [ "-gen-global-isel" ]
+}
+
+x86_tablegen("instr_info") {
+  output = "$target_gen_dir/X86GenInstrInfo.inc"
+  args = [ "-gen-instr-info" ]
+}
+
+x86_tablegen("register_bank") {
+  output = "$target_gen_dir/X86GenRegisterBank.inc"
+  args = [ "-gen-register-bank" ]
+}
+
+x86_tablegen("register_info") {
+  output = "$target_gen_dir/X86GenRegisterInfo.inc"
+  args = [ "-gen-register-info" ]
+}
+
+x86_tablegen("subtarget") {
+  output = "$target_gen_dir/X86GenSubtargetInfo.inc"
+  args = [ "-gen-subtarget" ]
+}
+
+config("includes") {
+  include_dirs = [ target_gen_dir ]
+}
+
+static_library("X86") {
+  sources = [
+    "InstPrinter/X86ATTInstPrinter.cpp",
+    "InstPrinter/X86InstComments.cpp",
+    "InstPrinter/X86IntelInstPrinter.cpp",
+    "MCTargetDesc/X86AsmBackend.cpp",
+    "MCTargetDesc/X86ELFObjectWriter.cpp",
+    "MCTargetDesc/X86MCAsmInfo.cpp",
+    "MCTargetDesc/X86MCCodeEmitter.cpp",
+    "MCTargetDesc/X86MCTargetDesc.cpp",
+    "MCTargetDesc/X86MachObjectWriter.cpp",
+    "MCTargetDesc/X86WinCOFFObjectWriter.cpp",
+    "MCTargetDesc/X86WinCOFFStreamer.cpp",
+    "MCTargetDesc/X86WinCOFFTargetStreamer.cpp",
+    "ShadowCallStack.cpp",
+    "TargetInfo/X86TargetInfo.cpp",
+    "Utils/X86ShuffleDecode.cpp",
+    "X86AsmPrinter.cpp",
+    "X86AvoidStoreForwardingBlocks.cpp",
+    "X86CallFrameOptimization.cpp",
+    "X86CallLowering.cpp",
+    "X86CallingConv.cpp",
+    "X86CmovConversion.cpp",
+    "X86DomainReassignment.cpp",
+    "X86EvexToVex.cpp",
+    "X86ExpandPseudo.cpp",
+    "X86FastISel.cpp",
+    "X86FixupBWInsts.cpp",
+    "X86FixupLEAs.cpp",
+    "X86FixupSetCC.cpp",
+    "X86FlagsCopyLowering.cpp",
+    "X86FloatingPoint.cpp",
+    "X86FrameLowering.cpp",
+    "X86ISelDAGToDAG.cpp",
+    "X86ISelLowering.cpp",
+    "X86IndirectBranchTracking.cpp",
+    "X86InstrFMA3Info.cpp",
+    "X86InstrInfo.cpp",
+    "X86InstructionSelector.cpp",
+    "X86InterleavedAccess.cpp",
+    "X86LegalizerInfo.cpp",
+    "X86MCInstLower.cpp",
+    "X86MachineFunctionInfo.cpp",
+    "X86MacroFusion.cpp",
+    "X86OptimizeLEAs.cpp",
+    "X86PadShortFunction.cpp",
+    "X86RegisterBankInfo.cpp",
+    "X86RegisterInfo.cpp",
+    "X86RetpolineThunks.cpp",
+    "X86SelectionDAGInfo.cpp",
+    "X86ShuffleDecodeConstantPool.cpp",
+    "X86Subtarget.cpp",
+    "X86TargetMachine.cpp",
+    "X86TargetObjectFile.cpp",
+    "X86TargetTransformInfo.cpp",
+    "X86VZeroUpper.cpp",
+    "X86WinAllocaExpander.cpp",
+    "X86WinEHState.cpp",
+  ]
+
+  include_dirs = [ "." ]
+
+  public_configs = [ ":includes" ]
+
+  deps = [
+    ":asm_matcher",
+    ":asm_writer",
+    ":asm_writer1",
+    ":calling_conv",
+    ":dag_isel",
+    ":disassembler_tables",
+    ":evex2vex_tables",
+    ":fast_isel",
+    ":global_isel",
+    ":instr_info",
+    ":register_bank",
+    ":register_info",
+    ":subtarget",
+  ]
+
+  public_deps = [
+    "../../IR",
+    "../../MC",
+    "../../Support",
+  ]
+}
