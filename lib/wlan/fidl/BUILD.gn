@@ -24,15 +24,3 @@ fidl("service") {
     ":fidl",
   ]
 }
-
-fidl("wlantap") {
-  name = "wlantap"
-
-  sources = [
-    "wlantap.fidl"
-  ]
-
-  public_deps = [
-    ":fidl",
-  ]
-}

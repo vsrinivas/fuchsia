@@ -2,8 +2,7 @@
     "imports": [
         "garnet/packages/prod/atheros",
         "garnet/packages/prod/broadcom",
-        "garnet/packages/prod/ralink",
-        "garnet/packages/prod/wlantap"
+        "garnet/packages/prod/ralink"
     ],
     "packages": {
         "wlan": "//garnet/drivers/wlan/wlan"
