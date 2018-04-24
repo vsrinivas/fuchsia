@@ -206,6 +206,16 @@ void AssociatedState::OnEnter() {
     inactive_timeout_ = client_->CreateTimerDeadline(kInactivityTimeoutTu);
     client_->StartTimer(inactive_timeout_);
     debugbss("[client] [%s] started inactivity timer\n", client_->addr().ToString().c_str());
+
+    if (client_->bss()->IsRsn()) {
+        debugbss("[client] [%s] requires RSNA\n", client_->addr().ToString().c_str());
+
+        // TODO(NET-789): Block port only if RSN requires 802.1X authentication. For now, only
+        // 802.1X authentications are supported.
+        eapol_controlled_port_ = eapol::PortState::kBlocked;
+    } else {
+        eapol_controlled_port_ = eapol::PortState::kOpen;
+    }
 }
 
 zx_status_t AssociatedState::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame) {
@@ -356,7 +366,10 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
         return ZX_OK;
     }
 
-    // TODO(NET-463): Disallow data frames if RSNA is required but not established.
+    // Block data frames if 802.1X authentication is required but didn't finish yet.
+    if (eapol_controlled_port_ != eapol::PortState::kOpen) {
+        return ZX_OK;
+    }
 
     const size_t eth_len = frame.body_len + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
@@ -468,6 +481,28 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
 
     service::SendEapolConfirm(client_->device(), wlan_mlme::EapolResultCodes::SUCCESS);
     return status;
+}
+
+zx_status_t AssociatedState::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) {
+    debugfn();
+
+    for (auto& keyDesc : *req.keylist) {
+        if (keyDesc.key.is_null()) { return ZX_ERR_NOT_SUPPORTED; }
+
+        switch (keyDesc.key_type) {
+        case wlan_mlme::KeyType::PAIRWISE:
+            // Once a pairwise key was exchange, RSNA was established.
+            // TODO(NET-790): This is a pretty simplified assumption and an RSNA should only be
+            // established once all required keys by the RSNE were exchanged.
+            eapol_controlled_port_ = eapol::PortState::kOpen;
+        default:
+            break;
+        }
+
+        // TODO(hahnr): Configure Key in hardware.
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t AssociatedState::SendNextBu() {

@@ -68,6 +68,9 @@ void InfraBss::Start(const wlan_mlme::StartRequest& req) {
     debugbss("    DTIM Period: %u\n", req.dtim_period);
     debugbss("    Channel: %u\n", req.channel);
 
+    // Keep track of start request which holds important configuration information.
+    req.Clone(&start_req_);
+
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
     bcn_sender_->Start(this, ps_cfg_, req);
@@ -441,6 +444,10 @@ seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) {
 
 seq_t InfraBss::NextSeq(const DataFrameHeader& hdr) {
     return NextSeqNo(hdr, &seq_);
+}
+
+bool InfraBss::IsRsn() const {
+    return !start_req_.rsne.is_null();
 }
 
 bool InfraBss::IsHTReady() const {

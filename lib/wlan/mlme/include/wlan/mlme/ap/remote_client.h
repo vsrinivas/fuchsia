@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fuchsia/cpp/wlan_mlme.h>
+#include <wlan/mlme/eapol.h>
 #include <wlan/mlme/ap/bss_interface.h>
 #include <wlan/mlme/ap/remote_client_interface.h>
 #include <wlan/mlme/device_interface.h>
@@ -201,6 +202,7 @@ class AssociatedState : public BaseState {
     zx_status_t HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& frame,
                                   const wlan_rx_info_t& rxinfo) override;
     zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
+    zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
 
     inline RemoteClient::StateId id() const override { return RemoteClient::StateId::kAssociated; }
 
@@ -218,6 +220,7 @@ class AssociatedState : public BaseState {
     bool dozing_;
     // `true` if a Deauthentication notification should be sent when leaving the state.
     bool req_deauth_ = true;
+    eapol::PortState eapol_controlled_port_ = eapol::PortState::kBlocked;
 };
 
 }  // namespace wlan

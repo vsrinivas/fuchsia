@@ -36,6 +36,7 @@ source_set("mlme") {
     "include/wlan/mlme/debug.h",
     "include/wlan/mlme/device_interface.h",
     "include/wlan/mlme/dispatcher.h",
+    "include/wlan/mlme/eapol.h",
     "include/wlan/mlme/frame_handler.h",
     "include/wlan/mlme/mac_frame.h",
     "include/wlan/mlme/macaddr_map.h",

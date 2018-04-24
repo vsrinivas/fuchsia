@@ -86,6 +86,7 @@ class BssInterface {
     virtual zx_status_t EthToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                        fbl::unique_ptr<Packet>* out_packet) = 0;
 
+    virtual bool IsRsn() const = 0;
     virtual bool IsHTReady() const = 0;
     virtual bool IsCbw40RxReady() const = 0;
     virtual bool IsCbw40TxReady() const = 0;

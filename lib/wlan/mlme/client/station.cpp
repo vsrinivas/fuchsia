@@ -227,7 +227,7 @@ zx_status_t Station::HandleMlmeDeauthReq(const wlan_mlme::DeauthenticateRequest&
     // TODO(hahnr): Refactor once we have the new state machine.
     state_ = WlanState::kUnauthenticated;
     device_->SetStatus(0);
-    controlled_port_ = PortState::kBlocked;
+    controlled_port_ = eapol::PortState::kBlocked;
     service::SendDeauthConfirm(device_, bssid_);
 
     return ZX_OK;
@@ -465,7 +465,7 @@ zx_status_t Station::HandleDeauthentication(const ImmutableMgmtFrame<Deauthentic
 
     state_ = WlanState::kUnauthenticated;
     device_->SetStatus(0);
-    controlled_port_ = PortState::kBlocked;
+    controlled_port_ = eapol::PortState::kBlocked;
 
     return service::SendDeauthIndication(device_, bssid_, deauth->reason_code);
 }
@@ -508,7 +508,7 @@ zx_status_t Station::HandleAssociationResponse(const ImmutableMgmtFrame<Associat
     // Open port if user connected to an open network.
     if (bss_->rsn.is_null()) {
         debugjoin("802.1X controlled port is now open\n");
-        controlled_port_ = PortState::kOpen;
+        controlled_port_ = eapol::PortState::kOpen;
         device_->SetStatus(ETH_STATUS_ONLINE);
     }
 
@@ -543,7 +543,7 @@ zx_status_t Station::HandleDisassociation(const ImmutableMgmtFrame<Disassociatio
 
     state_ = WlanState::kAuthenticated;
     device_->SetStatus(0);
-    controlled_port_ = PortState::kBlocked;
+    controlled_port_ = eapol::PortState::kBlocked;
 
     signal_report_timeout_ = zx::time();
     timer_->CancelTimer();
@@ -706,7 +706,7 @@ zx_status_t Station::HandleDataFrame(const ImmutableDataFrame<LlcHeader>& frame,
     }
 
     // Drop packets if RSNA was not yet established.
-    if (controlled_port_ == PortState::kBlocked) { return ZX_OK; }
+    if (controlled_port_ == eapol::PortState::kBlocked) { return ZX_OK; }
 
     // PS-POLL if there are more buffered unicast frames.
     if (hdr->fc.more_data() && hdr->addr1.IsUcast()) { SendPsPoll(); }
@@ -773,7 +773,7 @@ zx_status_t Station::HandleEthFrame(const ImmutableBaseFrame<EthernetII>& frame)
     hdr->fc.set_htc_order(has_ht_ctrl ? 1 : 0);
 
     // Ensure all outgoing data frames are protected when RSNA is established.
-    if (!bss_->rsn.is_null() && controlled_port_ == PortState::kOpen) {
+    if (!bss_->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen) {
         hdr->fc.set_protected_frame(1);
         txinfo.tx_flags |= WLAN_TX_INFO_FLAGS_PROTECTED;
     }
@@ -1043,7 +1043,7 @@ zx_status_t Station::HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) 
     // status.
     // TODO(hahnr): This is a very simplified assumption and we might need a little more logic to
     // correctly track the port's state.
-    controlled_port_ = PortState::kOpen;
+    controlled_port_ = eapol::PortState::kOpen;
     device_->SetStatus(ETH_STATUS_ONLINE);
     return ZX_OK;
 }

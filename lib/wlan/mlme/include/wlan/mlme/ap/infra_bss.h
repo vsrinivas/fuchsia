@@ -53,6 +53,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     void OnPreTbtt() override;
     void OnBcnTxComplete() override;
 
+    bool IsRsn() const override;
     bool IsHTReady() const override;
     bool IsCbw40RxReady() const override;
     bool IsCbw40TxReady() const override;
@@ -97,6 +98,8 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
     PacketQueue bu_queue_;
     PsCfg ps_cfg_;
     wlan_channel_t chan_;
+    // MLME-START.request holds all information required to correctly configure and start a BSS.
+    wlan_mlme::StartRequest start_req_;
 };
 
 }  // namespace wlan
