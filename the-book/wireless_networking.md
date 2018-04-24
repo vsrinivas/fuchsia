@@ -73,7 +73,7 @@ frames always, or support 802.2 SNAP frames.
 
 The Fuchsia Wireless Network Service will communicate with each hardware device
 using a channel to the driver, obtained via ioctl. (Eventually this will be
-replaced by FIDL2.) Messages exchanged over this channel will encode the
+replaced by FIDL.) Messages exchanged over this channel will encode the
 request/response for each action, generally following the IEEE 802.11 MLME SAP
 definitions.
 

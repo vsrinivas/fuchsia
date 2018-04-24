@@ -94,7 +94,7 @@ These messages are transmitted on one or more handles, using a wire format that
 the server validates and understands.
 
 In the case of files, directories, and devices, these operations use the
-RemoteIO protocol; in the case of services, these operations use the FIDL2
+RemoteIO protocol; in the case of services, these operations use the FIDL
 protocol, though there are plans to unify all operations into the FIDL protocol.
 
 As an example, to seek within a file, a client would send an `ZXRIO_SEEK`
