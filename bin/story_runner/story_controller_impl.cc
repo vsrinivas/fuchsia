@@ -1788,7 +1788,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
       StoryControllerImpl* const story_controller_impl,
       fidl::VectorPtr<fidl::StringPtr> requesting_module_path,
       const std::string& module_name,
-      Intent intent,
+      IntentPtr intent,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
       SurfaceRelationPtr surface_relation,
@@ -1840,7 +1840,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
             CloneOptional(create_chain_info), std::move(incoming_services_),
             std::move(module_controller_request_), std::move(surface_relation_),
             true /* focus */, module_source_,
-            fidl::MakeOptional(std::move(intent_)), [flow] {});
+            std::move(intent_), [flow] {});
       } else {
         new StartModuleCall(
             &operation_queue_, story_controller_impl_, std::move(module_path),
@@ -1849,7 +1849,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
             std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
             std::move(view_owner_request_),
-            fidl::MakeOptional(std::move(intent_)), [this, flow] {
+            std::move(intent_), [this, flow] {
               // StartModuleInShellCall above already calls ProcessPendingViews().
               story_controller_impl_->ProcessPendingViews();
             });
@@ -1863,7 +1863,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
   StoryControllerImpl* const story_controller_impl_;
   fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
   const std::string module_name_;
-  Intent intent_;
+  IntentPtr intent_;
   fidl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
   SurfaceRelationPtr surface_relation_;
@@ -1924,7 +1924,7 @@ class StoryControllerImpl::StartCall : Operation<> {
               story_controller_impl_,
               std::move(parent_module_path),
               std::move(module_name),
-              std::move(*module_data.intent),
+              std::move(module_data.intent),
               nullptr /* incoming_services */,
               nullptr /* module_controller_request */,
               CloneOptional(module_data.surface_relation),
@@ -1939,7 +1939,7 @@ class StoryControllerImpl::StartCall : Operation<> {
               module_data.module_url,
               module_data.link_path.link_name,
               nullptr /* module_manifest */,
-              nullptr /* chain_data) */,
+              nullptr /* chain_data */,
               nullptr /* incoming_services */,
               nullptr /* module_controller_request */,
               CloneOptional(module_data.surface_relation),
@@ -2162,7 +2162,7 @@ void StoryControllerImpl::EmbedModule(
     std::function<void(StartModuleStatus)> callback) {
   new AddIntentCall(
       &operation_queue_, this, parent_module_path.Clone(), module_name,
-      std::move(*intent), std::move(incoming_services),
+      std::move(intent), std::move(incoming_services),
       std::move(module_controller_request), nullptr /* surface_relation */,
       std::move(view_owner_request), std::move(module_source),
       std::move(callback));
@@ -2179,7 +2179,7 @@ void StoryControllerImpl::StartModule(
     std::function<void(StartModuleStatus)> callback) {
   new AddIntentCall(
       &operation_queue_, this, parent_module_path.Clone(), module_name,
-      std::move(*intent), std::move(incoming_services),
+      std::move(intent), std::move(incoming_services),
       std::move(module_controller_request), std::move(surface_relation),
       nullptr /* view_owner_request */, std::move(module_source),
       std::move(callback));
@@ -2449,7 +2449,7 @@ void StoryControllerImpl::AddModule(
     SurfaceRelationPtr surface_relation) {
   new AddIntentCall(
       &operation_queue_, this, std::move(parent_module_path), module_name,
-      std::move(intent), nullptr /* incoming_services */,
+      CloneOptional(intent), nullptr /* incoming_services */,
       nullptr /* module_controller_request */, std::move(surface_relation),
       nullptr /* view_owner_request */, ModuleSource::EXTERNAL,
       [](StartModuleStatus) {});
