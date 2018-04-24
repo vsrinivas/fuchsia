@@ -14,25 +14,10 @@ u-Boot Source:
 https://source.codeaurora.org/external/imx/uboot-imx/
 https://source.codeaurora.org/external/imx/uboot-imx/log/?h=imx_v2017.03_4.9.51_imx8m_ga
 
-
-## Booting Zircon via USB Flash Drive:
-
-+ Build Zircon
-+ Copy build-arm64/imx8mevk-combo-bootdata.bin into a USB Flash Drive (FAT format)
-+ Insert USB into the board's USB 3 HOST
-+ Reboot board and press space to halt autoboot
-+ From u-boot command line do the following:
-    + usb start
-    + icache off
-    + dcache off
-    + fatload usb 0 0x40480000 imx8mevk-combo-bootdata.bin
-    + go 0x40480000
-
-
-## Flashing Zircon on eMMC: <Internal to Google Only for now>
+## Flashing Zircon on eMMC:
 
 The board will boot out of eMMC by default. In order to boot Zircon, a custom u-boot binary
-is needed. The binary can be found at: <Team Drive>/Zircon/NXP/u-boot/u-boot.imx
+is needed. The binary can be found at: go/imx8m-bootloader
 
 First step involves flashing the board with the custom u-boot binary:
 
