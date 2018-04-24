@@ -11,7 +11,7 @@ import (
 )
 
 /*
-This file contains types which describe FIDL2 interfaces.
+This file contains types which describe FIDL interfaces.
 
 These types are intended to be directly deserialized from the FIDL interface
 JSON representation. The types are then passed directly to language-specific
@@ -254,7 +254,7 @@ type Attribute struct {
 	Value string     `json:"value"`
 }
 
-// Union represents the declaration of a FIDL2 union.
+// Union represents the declaration of a FIDL union.
 type Union struct {
 	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
 	Name       EncodedCompoundIdentifier `json:"name"`
@@ -272,14 +272,14 @@ func (d *Union) GetAttribute(name Identifier) string {
 	return ""
 }
 
-// UnionMember represents the declaration of a field in a FIDL2 union.
+// UnionMember represents the declaration of a field in a FIDL union.
 type UnionMember struct {
 	Type   Type       `json:"type"`
 	Name   Identifier `json:"name"`
 	Offset int        `json:"offset"`
 }
 
-// Struct represents a declaration of a FIDL2 struct.
+// Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
 	Name       EncodedCompoundIdentifier `json:"name"`
@@ -297,7 +297,7 @@ func (d *Struct) GetAttribute(name Identifier) string {
 	return ""
 }
 
-// StructMember represents the declaration of a field in a FIDL2 struct.
+// StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
 	Type              Type       `json:"type"`
 	Name              Identifier `json:"name"`
@@ -305,7 +305,7 @@ type StructMember struct {
 	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
 }
 
-// Interface represents the declaration of a FIDL2 interface.
+// Interface represents the declaration of a FIDL interface.
 type Interface struct {
 	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
 	Name       EncodedCompoundIdentifier `json:"name"`
@@ -321,7 +321,7 @@ func (d *Interface) GetAttribute(name Identifier) string {
 	return ""
 }
 
-// Method represents the declaration of a FIDL2 method.
+// Method represents the declaration of a FIDL method.
 type Method struct {
 	Ordinal      Ordinal     `json:"ordinal"`
 	Name         Identifier  `json:"name"`
@@ -333,14 +333,14 @@ type Method struct {
 	ResponseSize int         `json:"maybe_response_size,omitempty"`
 }
 
-// Parameter represents a parameter to a FIDL2 method.
+// Parameter represents a parameter to a FIDL method.
 type Parameter struct {
 	Type   Type       `json:"type"`
 	Name   Identifier `json:"name"`
 	Offset int        `json:"offset"`
 }
 
-// Enum represents a FIDL2 delcaration of an enum.
+// Enum represents a FIDL delcaration of an enum.
 type Enum struct {
 	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
 	Type       PrimitiveSubtype          `json:"type"`
@@ -357,13 +357,13 @@ func (d *Enum) GetAttribute(name Identifier) string {
 	return ""
 }
 
-// EnumMember represents a single variant in a FIDL2 enum.
+// EnumMember represents a single variant in a FIDL enum.
 type EnumMember struct {
 	Name  Identifier `json:"name"`
 	Value Constant   `json:"value"`
 }
 
-// Const represents a FIDL2 declaration of a named constant.
+// Const represents a FIDL declaration of a named constant.
 type Const struct {
 	Attributes []Attribute               `json:"maybe_attributes,omitempty"`
 	Type       Type                      `json:"type"`
@@ -392,13 +392,13 @@ const (
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
 
-// Library represents a FIDL2 dependency on a separate library.
+// Library represents a FIDL dependency on a separate library.
 type Library struct {
 	Name  EncodedLibraryIdentifier `json:"name,omitempty"`
 	Decls DeclMap                  `json:"declarations,omitempty"`
 }
 
-// Root is the top-level object for a FIDL2 library.
+// Root is the top-level object for a FIDL library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
 	Name       EncodedLibraryIdentifier    `json:"name,omitempty"`
