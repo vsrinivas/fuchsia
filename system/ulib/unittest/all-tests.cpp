@@ -119,13 +119,13 @@ bool unittest_run_all_tests(int argc, char** argv) {
                 list_tests_only = true;
             } else if (strcmp(argv[i], "--case") == 0) {
                 if (i + 1 >= argc) {
-                    print_help();
+                    fprintf(stderr, "Error: missing arg to --case\n");
                     return false;
                 }
                 case_matcher = argv[++i];
             } else if (strcmp(argv[i], "--test") == 0) {
                 if (i + 1 >= argc) {
-                    print_help();
+                    fprintf(stderr, "Error: missing arg to --test\n");
                     return false;
                 }
                 test_matcher = argv[++i];
