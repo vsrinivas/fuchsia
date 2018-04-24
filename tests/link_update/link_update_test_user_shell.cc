@@ -50,7 +50,7 @@ class LinkWatcherImpl : modular::LinkWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(LinkWatcherImpl);
 };
 
-// Tests how data are updated in a Link.
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)

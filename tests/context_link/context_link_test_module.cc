@@ -16,6 +16,7 @@ namespace {
 
 constexpr char kLink[] = "context_link";
 
+// Cf. README.md for what this test does and how.
 class TestApp {
  public:
   TestApp(

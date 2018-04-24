@@ -23,6 +23,7 @@ constexpr int kTimeoutMilliseconds = 10000;
 constexpr char kTestAgent[] =
     "file:///system/test/modular_tests/queue_persistence_test_agent";
 
+// Cf. README.md for what this test does and how.
 class ParentApp {
  public:
   ParentApp(

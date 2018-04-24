@@ -258,10 +258,7 @@ class StoryProviderStateWatcherImpl : modular::StoryProviderWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryProviderStateWatcherImpl);
 };
 
-// Tests the machinery available to a user shell implementation. This is invoked
-// as a user shell from device runner and executes a predefined sequence of
-// steps, rather than to expose a UI to be driven by user interaction, as a user
-// shell normally would.
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   explicit TestApp(component::ApplicationContext* const application_context,

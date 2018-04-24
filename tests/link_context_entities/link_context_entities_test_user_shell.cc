@@ -73,8 +73,7 @@ class ContextListenerImpl : modular::ContextListener {
   FXL_DISALLOW_COPY_AND_ASSIGN(ContextListenerImpl);
 };
 
-// Tests the context links machinery. We start a module that writes a context
-// link and listen for the expected context topic to show up.
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)

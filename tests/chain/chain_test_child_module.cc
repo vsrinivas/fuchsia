@@ -18,6 +18,7 @@ using modular::testing::TestPoint;
 namespace modular {
 namespace {
 
+// Cf. README.md for what this test does and how.
 class TestApp {
  public:
   TestApp(

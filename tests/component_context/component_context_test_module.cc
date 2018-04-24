@@ -71,6 +71,7 @@ class CounterTrigger {
   FXL_DISALLOW_COPY_AND_ASSIGN(CounterTrigger);
 };
 
+// Cf. README.md for what this test does and how.
 class ParentApp {
  public:
   TestPoint initialized_{"Root module initialized"};

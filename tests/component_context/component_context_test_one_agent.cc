@@ -18,6 +18,7 @@ namespace {
 constexpr char kTwoAgentUrl[] =
     "file:///system/test/modular_tests/component_context_test_two_agent";
 
+// Cf. README.md for what this test does and how.
 class TestAgentApp : component_context_test::ComponentContextTestService {
  public:
   TestAgentApp(modular::AgentHost* const agent_host) {

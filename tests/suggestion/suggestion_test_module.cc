@@ -24,6 +24,7 @@ constexpr int kTimeoutMilliseconds = 5000;
 constexpr char kProposalId[] =
     "file:///system/bin/modular_tests/suggestion_proposal_test#proposal";
 
+// Cf. README.md for what this test does and how.
 class SuggestionApp {
  public:
   SuggestionApp(

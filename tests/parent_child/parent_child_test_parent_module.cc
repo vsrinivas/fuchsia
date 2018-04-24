@@ -26,6 +26,7 @@ constexpr char kChildModuleName[] = "child";
 constexpr char kChildModuleUrl[] =
     "file:///system/test/modular_tests/parent_child_test_child_module";
 
+// Cf. README.md for what this test does and how.
 class ParentApp {
  public:
   ParentApp(

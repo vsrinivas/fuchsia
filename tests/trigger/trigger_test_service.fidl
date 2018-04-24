@@ -4,6 +4,7 @@
 
 library modular_test_trigger;
 
+// Cf. README.md for what this test does and how.
 [ServiceName="modular_test_trigger.TriggerTestService"]
 interface TriggerTestService {
   1: GetMessageQueueToken() -> (string message_queue_token);

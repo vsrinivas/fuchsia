@@ -15,6 +15,7 @@
 
 namespace {
 
+// Cf. README.md for what this test does and how.
 class TestApp : modular::StoryWatcher,
                 modular::NextListener,
                 public modular::testing::ComponentBase<modular::UserShell> {

@@ -152,15 +152,7 @@ class StoryStateWatcherImpl : modular::StoryWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryStateWatcherImpl);
 };
 
-// Tests the machinery that allows modules to coordinate through shared link
-// data, and that these link data are persisted across story stop and
-// resume. This is invoked as a user shell from device runner and executes a
-// predefined sequence of steps, rather than to expose a UI to be driven by user
-// interaction, as a user shell normally would.
-//
-// TODO(mesch): The example modules that this test uses should be converted to
-// actual test modules that make assertions on their own, and copied or moved
-// here.
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   explicit TestApp(component::ApplicationContext* const application_context,

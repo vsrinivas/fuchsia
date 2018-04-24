@@ -45,10 +45,13 @@ class StoryProviderWatcherImpl : public modular::StoryProviderWatcherBase {
 
     // Every time we see an increase in last_focus_time, we push the test
     // sequence forward.
+    //
     // We expect two last_focus_time transitions:
     //
-    // 0 -> X on creation of the story.
-    // X -> Y where Y > X on focusing the story.
+    //   0 -> X on creation of the story.
+    //
+    //   X -> Y where Y > X on focusing the story.
+    //
     switch (++change_count_) {
       case 1:
         last_focus_time_created_.Pass();
@@ -131,7 +134,7 @@ class FocusWatcherImpl : modular::FocusWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(FocusWatcherImpl);
 };
 
-// Tests the last_focus_time entry in StoryInfo.
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)
@@ -148,7 +151,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
 
   // |UserShell|
   void Initialize(fidl::InterfaceHandle<modular::UserShellContext>
-                      user_shell_context) override {
+                  user_shell_context) override {
     initialize_.Pass();
 
     user_shell_context_.Bind(std::move(user_shell_context));

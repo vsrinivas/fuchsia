@@ -42,7 +42,7 @@ std::function<void(fidl::StringPtr)> Count(const int limit, std::function<void()
   };
 }
 
-// Cf. README.md
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
  public:
   explicit TestApp(component::ApplicationContext* const application_context)

@@ -21,6 +21,7 @@ namespace {
 constexpr char kChildModuleUrl[] =
     "/system/test/modular_tests/chain_test_child_module";
 
+// Cf. README.md for what this test does and how.
 class TestApp : public ModuleWatcher {
  public:
   TestApp(

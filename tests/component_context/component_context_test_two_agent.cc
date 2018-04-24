@@ -14,6 +14,7 @@ using modular::testing::TestPoint;
 
 namespace {
 
+// Cf. README.md for what this test does and how.
 class TestAgentApp {
  public:
   TestAgentApp(modular::AgentHost* const agent_host) {

@@ -21,6 +21,7 @@
 
 namespace {
 
+// Cf. README.md for what this test does and how.
 class TestApp : public modular::testing::ComponentBase<modular::StoryShell> {
  public:
   TestApp(component::ApplicationContext* const application_context)

@@ -17,7 +17,7 @@ namespace {
 // The url of the clipboard agent under test.
 constexpr char kClipboardAgentUrl[] = "file:///system/bin/agents/clipboard";
 
-// A module that tests the ClipboardAgent.
+// Cf. README.md for what this test does and how.
 class ClipboardTestApp {
  public:
   TestPoint initialized_{"Clipboard module initialized"};

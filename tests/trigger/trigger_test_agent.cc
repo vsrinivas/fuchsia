@@ -14,6 +14,7 @@ using modular::testing::TestPoint;
 
 namespace {
 
+// Cf. README.md for what this test does and how.
 class TestAgentApp : modular_test_trigger::TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};

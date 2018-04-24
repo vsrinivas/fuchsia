@@ -4,8 +4,10 @@
 
 library component_context_test;
 
-// An interface implemented by component_context_test_one_agent.cc) which the
+// An interface implemented by component_context_test_one_agent.cc which the
 // root module uses.
+//
+// Cf. README.md for what this test does and how.
 [ServiceName="modular.ComponentContextTestService"]
 interface ComponentContextTestService {
   // Send |message_to_send| to the message queue backed by

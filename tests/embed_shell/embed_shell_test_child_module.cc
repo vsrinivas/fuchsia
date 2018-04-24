@@ -16,6 +16,7 @@ namespace {
 constexpr char kChildModuleName[] = "child";
 constexpr char kChildModuleUrl[] = "common_null_module";
 
+// Cf. README.md for what this test does and how.
 class ChildApp : modular::ModuleWatcher {
  public:
   ChildApp(

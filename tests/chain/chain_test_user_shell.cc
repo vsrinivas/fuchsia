@@ -26,8 +26,7 @@ namespace {
 constexpr char kModuleUrl[] =
     "file:///system/test/modular_tests/chain_test_module";
 
-// Tests starting Modules with a Intent and the subsequent initialization of the
-// Module's Links based on the values of intent.parameters.
+// Cf. README.md for what this test does and how.
 class TestApp : public testing::ComponentBase<UserShell>,
                 StoryWatcher,
                 ModuleWatcher {
