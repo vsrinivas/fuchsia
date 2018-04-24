@@ -164,8 +164,11 @@ class CobaltEncoderImpl : public CobaltEncoder {
       fidl::VectorPtr<BucketDistributionEntry> distribution,
       AddIntBucketDistributionCallback callback) override;
 
+  // Adds an observation from the timer given if both StartTimer and EndTimer
+  // have been encountered.
   template <class CB>
-  void AddTimerObservationIfReady(const TimerVal& timer_val, CB callback);
+  void AddTimerObservationIfReady(std::unique_ptr<TimerVal> timer_val_ptr,
+                                  CB callback);
 
   void StartTimer(
       uint32_t metric_id,
@@ -368,24 +371,24 @@ void CobaltEncoderImpl::AddIntBucketDistribution(
 }
 
 template <class CB>
-void CobaltEncoderImpl::AddTimerObservationIfReady(const TimerVal& timer_val,
-                                                   CB callback){
-  if (!TimerManager::isReady(timer_val)) {
+void CobaltEncoderImpl::AddTimerObservationIfReady(
+    std::unique_ptr<TimerVal> timer_val_ptr, CB callback) {
+  if (!TimerManager::isReady(timer_val_ptr)) {
     // TimerManager has not received both StartTimer and EndTimer calls. Return
     // OK status and wait for the other call.
     callback(Status::OK);
     return;
   }
 
-  if(TimerManager::isMultipart(timer_val)){
+  if (TimerManager::isMultipart(timer_val_ptr)) {
     // TODO(ninai) Add a Multipart Observation
   } else {
-    AddIntObservation(timer_val.metric_id, timer_val.encoding_id,
-                      timer_val.end_timestamp - timer_val.start_timestamp,
-                      callback);
+    AddIntObservation(
+        timer_val_ptr->metric_id, timer_val_ptr->encoding_id,
+        timer_val_ptr->end_timestamp - timer_val_ptr->start_timestamp,
+        callback);
   }
 }
-
 
 void CobaltEncoderImpl::StartTimer(
     uint32_t metric_id,
@@ -394,20 +397,19 @@ void CobaltEncoderImpl::StartTimer(
     uint64_t timestamp,
     uint32_t timeout_s,
     StartTimerCallback callback) {
-  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s)) {
-    callback(Status::INVALID_ARGUMENTS);
+  std::unique_ptr<TimerVal> timer_val_ptr;
+  auto status = Status::OK;  // placeholder until the interface is implemented.
+
+  // timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
+  //                                      timer_id.get(), timestamp,
+  //                                       timeout_s, &timer_val_ptr);
+
+  if (status != Status::OK) {
+    callback(status);
     return;
   }
 
-  TimerVal timer_val;
-  if(timer_manager_->GetTimerValWithStart(metric_id, encoding_id,
-                     timer_id.get(),timestamp, timeout_s, &timer_val)
-    != Status::OK){
-    callback(Status::FAILED_PRECONDITION);
-    return;
-  }
-
-  AddTimerObservationIfReady(timer_val, callback);
+  AddTimerObservationIfReady(std::move(timer_val_ptr), callback);
 }
 
 void CobaltEncoderImpl::EndTimer(
@@ -415,20 +417,20 @@ void CobaltEncoderImpl::EndTimer(
     uint64_t timestamp,
     uint32_t timeout_s,
     EndTimerCallback callback) {
-  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s)) {
-    callback(Status::INVALID_ARGUMENTS);
+  std::unique_ptr<TimerVal> timer_val_ptr;
+  auto status = Status::OK;  // placeholder until the interface is implemented.
+  // Intentionally passing invalid arguments until the interface is implemented.
+  timer_manager_->GetTimerValWithEnd("", 0, 0, &timer_val_ptr);
+
+  // timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp,
+  //                                    timeout_s, &timer_val_ptr);
+
+  if (status != Status::OK) {
+    callback(status);
     return;
   }
 
-  TimerVal timer_val;
-  if(timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp, timeout_s,
-                                &timer_val)
-     != Status::OK){
-    callback(Status::FAILED_PRECONDITION);
-    return;
-  }
-
-  AddTimerObservationIfReady(timer_val, callback);
+  AddTimerObservationIfReady(std::move(timer_val_ptr), callback);
 }
 
 void CobaltEncoderImpl::EndTimerMultiPart(
@@ -438,21 +440,19 @@ void CobaltEncoderImpl::EndTimerMultiPart(
     fidl::VectorPtr<ObservationValue> observation,
     uint32_t timeout_s,
     EndTimerMultiPartCallback callback) {
-  if (!TimerManager::isValidTimerArguments(timer_id, timeout_s) ||
-      part_name.is_null()) {
-    callback(Status::INVALID_ARGUMENTS);
+  std::unique_ptr<TimerVal> timer_val_ptr;
+  auto status = Status::OK;  // placeholder until the interface is implemented.
+
+  // timer_manager_->GetTimerValWithEnd(
+  //     timer_id.get(), timestamp, timeout_s, part_name.get(),
+  //     std::move(observation), &timer_val_ptr);
+
+  if (status != Status::OK) {
+    callback(status);
     return;
   }
 
-  TimerVal timer_val;
-  if(timer_manager_->GetTimerValWithEnd(timer_id.get(), timestamp, timeout_s,
-                              part_name.get(),  std::move(observation),
-                              &timer_val) != Status::OK){
-    callback(Status::FAILED_PRECONDITION);
-    return;
-  }
-
-  AddTimerObservationIfReady(timer_val, callback);
+  AddTimerObservationIfReady(std::move(timer_val_ptr), callback);
 }
 
 void CobaltEncoderImpl::SendObservations(SendObservationsCallback callback) {
@@ -620,7 +620,6 @@ CobaltApp::CobaltApp(async_t* async,
           &send_retryer_),
       controller_impl_(new CobaltControllerImpl(async, &shipping_manager_)) {
   shipping_manager_.Start();
-  timer_manager_.Start();
 
   // Open the cobalt config file.
   std::ifstream config_file_stream;

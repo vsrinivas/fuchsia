@@ -50,6 +50,7 @@ package("cobalt_tests") {
   deprecated_system_image = true
 
   deps = [
+    ":cobalt_garnet_unittests",
     ":cobalt_testapp",
     ":cobalt_testapp_no_environment",
     ":cobalt_testapp_no_network",
@@ -63,6 +64,10 @@ package("cobalt_tests") {
   ]
 
   tests = [
+    {
+      name = "cobalt_garnet_unittests"
+    },
+
     {
       name = "cobalt_unittests"
     },
@@ -93,6 +98,7 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/lib/wlan/mlme:mlme",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/cobalt/fidl:fidl",
     "//garnet/public/lib/fsl",
@@ -124,6 +130,22 @@ executable("cobalt_unittests") {
 
   deps = [
     "//third_party/cobalt/encoder:unittests",
+  ]
+}
+
+executable("cobalt_garnet_unittests") {
+  testonly = true
+
+  sources = [
+    "timer_manager.h",
+    "timer_manager.cc",
+    "timer_manager_test.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/mlme:mlme",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/cobalt/fidl:fidl",
   ]
 }
 
