@@ -5,6 +5,7 @@
 executable("tones") {
   sources = [
     "main.cc",
+    "midi_keyboard.cc",
     "tone_generator.cc",
     "tone_generator.h",
     "tones.cc",

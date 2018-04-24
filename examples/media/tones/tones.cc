@@ -14,6 +14,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include "garnet/examples/media/tones/midi_keyboard.h"
 #include "lib/fxl/logging.h"
 
 // TODO(dalesat): Remove once the mixer supports floats.
@@ -121,6 +122,7 @@ Tones::Tones(bool interactive, fxl::Closure quit_callback)
 Tones::~Tones() {}
 
 void Tones::Quit() {
+  midi_keyboard_.reset();
   audio_renderer_.Unbind();
   quit_callback_();
 }
@@ -150,6 +152,15 @@ void Tones::HandleKeystroke() {
   }
 
   WaitForKeystroke();
+}
+
+void Tones::HandleMidiNote(int note, int velocity, bool note_on) {
+  if (note_on) {
+    tone_generators_.emplace_back(kFramesPerSecond,
+                                  Note(note),
+                                  kVolume,
+                                  kDecay);
+  }
 }
 
 void Tones::BuildScore() {
@@ -209,6 +220,12 @@ void Tones::Start(int64_t min_lead_time_nsec) {
 
   // Listen for keystrokes.
   WaitForKeystroke();
+
+  // If we are operating in interactive mode, go looking for a midi keyboard to
+  // listen to.
+  if (interactive_) {
+    midi_keyboard_ = MidiKeyboard::Create(this);
+  }
 
   if (interactive_) {
     std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
