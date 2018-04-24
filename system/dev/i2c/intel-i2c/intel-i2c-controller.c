@@ -863,6 +863,12 @@ zx_status_t intel_i2c_bind(void* ctx, zx_device_t* dev) {
         device->fs_scl_lcnt = 0x00ba;
         device->fs_scl_hcnt = 0x005d;
         device->sda_hold = 0x24;
+    } else if (vendor_id == INTEL_VID &&
+               device_id == INTEL_SUNRISE_POINT_SERIALIO_I2C4_DID) {
+        // TODO: These should all be extracted from FMCN in the ACPI tables.
+        device->fs_scl_lcnt = 0x005a;
+        device->fs_scl_hcnt = 0x00a6;
+        device->sda_hold = 0x24;
     }
 
     // Configure the I2C controller. We don't need to hold the lock because
