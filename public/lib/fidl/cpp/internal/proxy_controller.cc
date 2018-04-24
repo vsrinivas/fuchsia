@@ -10,6 +10,11 @@
 
 namespace fidl {
 namespace internal {
+namespace {
+
+constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
+
+}  // namespace
 
 ProxyController::ProxyController() : reader_(this), next_txid_(1) {}
 
@@ -39,9 +44,9 @@ zx_status_t ProxyController::Send(
     std::unique_ptr<MessageHandler> response_handler) {
   zx_txid_t txid = 0;
   if (response_handler) {
-    txid = next_txid_++;
+    txid = next_txid_++ & kUserspaceTxidMask;
     while (!txid || handlers_.find(txid) != handlers_.end())
-      txid = next_txid_++;
+      txid = next_txid_++ & kUserspaceTxidMask;
     message.set_txid(txid);
   }
   const char* error_msg = nullptr;
