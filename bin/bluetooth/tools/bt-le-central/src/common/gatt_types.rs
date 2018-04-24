@@ -35,7 +35,7 @@ impl fmt::Display for Service {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[service: id: {}, primary: {}, uuid: {}]",
+            "[service: id: {}, primary: {}, type: {}]",
             self.info.id,
             self.info.primary,
             self.info.type_
@@ -43,7 +43,7 @@ impl fmt::Display for Service {
         if let Some(ref chrcs) = self.characteristics {
             let mut i: i32 = 0;
             for ref chrc in chrcs {
-                write!(f, "\n   {}: {}", i, chrc)?;
+                write!(f, "\n      {}: {}", i, chrc)?;
                 i += 1;
             }
         }
@@ -57,11 +57,25 @@ impl fmt::Display for Characteristic {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "[chara.: id: {}, uuid: {}, prop.: {}]",
+            "[chara.: id: {}, type: {}, prop.: {}]",
             self.0.id,
             self.0.type_,
             props_to_string(self.0.properties)
-        )
+        )?;
+        if let Some(ref descrs) = self.0.descriptors {
+            let mut i: i32 = 0;
+            for ref descr in descrs {
+                write!(
+                    f,
+                    "\n          {}: [descr.: id: {}, type: {}]",
+                    i,
+                    descr.id,
+                    descr.type_
+                )?;
+                i += 1;
+            }
+        }
+        Ok(())
     }
 }
 

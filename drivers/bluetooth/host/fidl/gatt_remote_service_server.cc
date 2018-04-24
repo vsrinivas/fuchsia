@@ -10,6 +10,7 @@ using bluetooth::Status;
 
 using bluetooth_gatt::Characteristic;
 using bluetooth_gatt::CharacteristicPtr;
+using bluetooth_gatt::Descriptor;
 using btlib::gatt::RemoteCharacteristic;
 
 namespace bthost {
@@ -20,15 +21,22 @@ namespace {
 constexpr uint8_t kPropertyMask = 0x7F;
 
 Characteristic CharacteristicToFidl(const RemoteCharacteristic& chrc) {
-  Characteristic fidl;
-  fidl.id = chrc.id();
-  fidl.type = chrc.info().type.ToString();
-  fidl.properties =
+  Characteristic fidl_char;
+  fidl_char.id = chrc.id();
+  fidl_char.type = chrc.info().type.ToString();
+  fidl_char.properties =
       static_cast<uint16_t>(chrc.info().properties & kPropertyMask);
 
   // TODO(armansito): Add extended properties.
 
-  return fidl;
+  for (const auto& descr : chrc.descriptors()) {
+    Descriptor fidl_descr;
+    fidl_descr.id = descr.id();
+    fidl_descr.type = descr.info().type.ToString();
+    fidl_char.descriptors.push_back(std::move(fidl_descr));
+  }
+
+  return fidl_char;
 }
 
 }  // namespace
