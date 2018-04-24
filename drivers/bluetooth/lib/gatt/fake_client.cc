@@ -45,9 +45,12 @@ void FakeClient::DiscoverCharacteristics(att::Handle range_start,
   last_chrc_discovery_end_handle_ = range_end;
   chrc_discovery_count_++;
 
-  async::PostTask(dispatcher_, [this, chrc_callback, status_callback] {
+  async::PostTask(dispatcher_, [this, range_start, range_end, chrc_callback,
+                                status_callback] {
     for (const auto& chrc : chrcs_) {
-      chrc_callback(chrc);
+      if (chrc.handle >= range_start && chrc.handle <= range_end) {
+        chrc_callback(chrc);
+      }
     }
     status_callback(chrc_discovery_status_);
   });
@@ -57,7 +60,25 @@ void FakeClient::DiscoverDescriptors(att::Handle range_start,
                                      att::Handle range_end,
                                      DescriptorCallback desc_callback,
                                      StatusCallback status_callback) {
-  FXL_NOTIMPLEMENTED();
+  last_desc_discovery_start_handle_ = range_start;
+  last_desc_discovery_end_handle_ = range_end;
+  desc_discovery_count_++;
+
+  att::Status status;
+  if (!desc_discovery_status_target_ ||
+      desc_discovery_count_ == desc_discovery_status_target_) {
+    status = desc_discovery_status_;
+  }
+
+  async::PostTask(dispatcher_, [this, status, range_start, range_end,
+                                desc_callback, status_callback] {
+    for (const auto& desc : descs_) {
+      if (desc.handle >= range_start && desc.handle <= range_end) {
+        desc_callback(desc);
+      }
+    }
+    status_callback(status);
+  });
 }
 
 void FakeClient::ReadRequest(att::Handle handle, ReadCallback callback) {

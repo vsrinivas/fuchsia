@@ -49,7 +49,7 @@ void GattRemoteServiceServer::DiscoverCharacteristics(
                                                  const auto& chrcs) {
     std::vector<Characteristic> fidl_chrcs;
     if (status) {
-      for (auto& chrc : chrcs) {
+      for (const auto& chrc : chrcs) {
         fidl_chrcs.push_back(CharacteristicToFidl(chrc));
       }
     }

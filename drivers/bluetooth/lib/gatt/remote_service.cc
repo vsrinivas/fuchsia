@@ -37,19 +37,29 @@ void ReportStatus(Status status,
 
 }  // namespace
 
+// static
+constexpr size_t RemoteService::kSentinel;
+
 RemoteService::RemoteService(const ServiceData& service_data,
                              fxl::WeakPtr<Client> client,
                              async_t* gatt_dispatcher)
     : service_data_(service_data),
       gatt_dispatcher_(gatt_dispatcher),
       client_(client),
-      characteristics_ready_(false),
+      remaining_descriptor_requests_(kSentinel),
       shut_down_(false) {
   FXL_DCHECK(client_);
   FXL_DCHECK(gatt_dispatcher_);
 }
 
+RemoteService::~RemoteService() {
+  std::lock_guard<std::mutex> lock(mtx_);
+  FXL_DCHECK(!alive());
+}
+
 void RemoteService::ShutDown() {
+  FXL_DCHECK(IsOnGattThread());
+
   std::vector<PendingClosure> rm_handlers;
 
   {
@@ -58,7 +68,12 @@ void RemoteService::ShutDown() {
       return;
     }
 
+    for (auto& chr : characteristics_) {
+      chr.ShutDown();
+    }
+
     shut_down_ = true;
+
     rm_handlers = std::move(rm_handlers_);
   }
 
@@ -88,7 +103,7 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
     }
 
     // Characteristics already discovered. Return success.
-    if (characteristics_ready_) {
+    if (HasCharacteristics()) {
       ReportCharacteristics(Status(), std::move(cb), dispatcher);
       return;
     }
@@ -120,17 +135,20 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
         self->characteristics_.clear();
       }
 
-      self->characteristics_ready_ = status.is_success();
+      if (self->characteristics_.empty()) {
+        if (status) {
+          // This marks that characteristic discovery has completed
+          // successfully.
+          self->remaining_descriptor_requests_ = 0u;
+        }
 
-      FXL_DCHECK(!self->pending_discov_reqs_.empty());
-      auto pending = std::move(self->pending_discov_reqs_);
-
-      // Skip descriptor discovery and end the procedure as no characteristics
-      // were found (or the operation failed).
-      for (auto& req : pending) {
-        self->ReportCharacteristics(status, std::move(req.callback),
-                                    req.dispatcher);
+        // Skip descriptor discovery and end the procedure as no characteristics
+        // were found (or the operation failed).
+        self->CompleteCharacteristicDiscovery(status);
+        return;
       }
+
+      self->StartDescriptorDiscovery();
     };
 
     client_->DiscoverCharacteristics(service_data_.range_start,
@@ -140,8 +158,9 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
 }
 
 bool RemoteService::IsDiscovered() const {
-  FXL_DCHECK(IsOnGattThread());
-  return characteristics_ready_;
+  // TODO(armansito): Return true only if included services have also been
+  // discovered.
+  return HasCharacteristics();
 }
 
 void RemoteService::WriteCharacteristic(IdType id,
@@ -176,6 +195,69 @@ void RemoteService::WriteCharacteristic(IdType id,
   });
 }
 
+void RemoteService::StartDescriptorDiscovery() {
+  FXL_DCHECK(IsOnGattThread());
+  FXL_DCHECK(!pending_discov_reqs_.empty());
+
+  FXL_DCHECK(characteristics_.size());
+  remaining_descriptor_requests_ = characteristics_.size();
+
+  auto self = fbl::WrapRefPtr(this);
+
+  // Callback called for each characteristic. This may be called in any
+  // order since we request the descriptors of all characteristics all at
+  // once.
+  auto desc_done_callback = [self](att::Status status) {
+    // Do nothing if discovery was concluded earlier (which would have cleared
+    // the pending discovery requests).
+    if (self->pending_discov_reqs_.empty())
+      return;
+
+    // Report an error if the service was removed.
+    if (self->shut_down_) {
+      status = att::Status(HostError::kFailed);
+    }
+
+    if (status) {
+      self->remaining_descriptor_requests_ -= 1;
+
+      // Defer handling
+      if (self->remaining_descriptor_requests_ > 0)
+        return;
+
+      // HasCharacteristics() should return true now.
+      FXL_DCHECK(self->HasCharacteristics());
+
+      // Fall through and notify clients below.
+    } else {
+      FXL_DCHECK(!self->HasCharacteristics());
+      FXL_VLOG(1) << "gatt: descriptor discovery failed " << status.ToString();
+      self->characteristics_.clear();
+
+      // Fall through and notify the clients below.
+    }
+
+    self->CompleteCharacteristicDiscovery(status);
+  };
+
+  for (size_t i = 0; i < characteristics_.size(); ++i) {
+    // We determine the range end handle based on the start handle of the next
+    // characteristic. The characteristic ends with the service range if this is
+    // the last characteristic.
+    att::Handle end_handle;
+
+    if (i == characteristics_.size() - 1) {
+      end_handle = service_data_.range_end;
+    } else {
+      end_handle = characteristics_[i + 1].info().handle - 1;
+    }
+
+    FXL_DCHECK(client_);
+    characteristics_[i].DiscoverDescriptors(client_.get(), end_handle,
+                                            desc_done_callback);
+  }
+}
+
 bool RemoteService::IsOnGattThread() const {
   return async_get_default() == gatt_dispatcher_;
 }
@@ -187,7 +269,7 @@ HostError RemoteService::GetCharacteristic(IdType id, RemoteCharacteristic** out
   if (shut_down_)
     return HostError::kFailed;
 
-  if (!characteristics_ready_)
+  if (!HasCharacteristics())
     return HostError::kNotReady;
 
   if (id >= characteristics_.size())
@@ -221,6 +303,16 @@ void RemoteService::ReportCharacteristics(Status status,
         cb(status, self->characteristics_);
       },
       dispatcher);
+}
+
+void RemoteService::CompleteCharacteristicDiscovery(att::Status status) {
+  FXL_DCHECK(!pending_discov_reqs_.empty());
+  FXL_DCHECK(!status || remaining_descriptor_requests_ == 0u);
+
+  auto pending = std::move(pending_discov_reqs_);
+  for (auto& req : pending) {
+    ReportCharacteristics(status, std::move(req.callback), req.dispatcher);
+  }
 }
 
 }  // namespace gatt

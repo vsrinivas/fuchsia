@@ -9,12 +9,12 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include "lib/fxl/macros.h"
+#include "lib/fxl/memory/weak_ptr.h"
+
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/gatt/client.h"
 #include "garnet/drivers/bluetooth/lib/gatt/remote_characteristic.h"
-
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace btlib {
 namespace gatt {
@@ -87,6 +87,8 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   friend class fbl::RefPtr<RemoteService>;
   friend class internal::RemoteServiceManager;
 
+  static constexpr size_t kSentinel = std::numeric_limits<size_t>::max();
+
   template <typename T>
   struct PendingCallback {
     PendingCallback(T callback, async_t* dispatcher)
@@ -105,7 +107,7 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   RemoteService(const ServiceData& service_data,
                 fxl::WeakPtr<Client> client,
                 async_t* gatt_dispatcher);
-  ~RemoteService() = default;
+  ~RemoteService();
 
   bool alive() const __TA_REQUIRES(mtx_) { return !shut_down_; }
 
@@ -118,6 +120,10 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   common::HostError GetCharacteristic(IdType id,
                                       RemoteCharacteristic** out_char);
 
+  // Called immediately after characteristic discovery to initiate descriptor
+  // discovery.
+  void StartDescriptorDiscovery() __TA_EXCLUDES(mtx_);
+
   // Runs |task| on the GATT dispatcher. |mtx_| must not be held when calling
   // this method. This guarantees that this object's will live for the duration
   // of |task|.
@@ -127,6 +133,16 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   void ReportCharacteristics(att::Status status,
                              CharacteristicCallback callback,
                              async_t* dispatcher) __TA_EXCLUDES(mtx_);
+
+  // Completes all pending characteristic discovery requests.
+  void CompleteCharacteristicDiscovery(att::Status status) __TA_EXCLUDES(mtx_);
+
+  // Returns true if characteristic discovery has completed. This must be
+  // accessed only through |gatt_dispatcher_|.
+  inline bool HasCharacteristics() const {
+    FXL_DCHECK(IsOnGattThread());
+    return remaining_descriptor_requests_ == 0u;
+  }
 
   ServiceData service_data_;
 
@@ -140,18 +156,20 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   using PendingDiscoveryList = std::vector<PendingCharacteristicCallback>;
   PendingDiscoveryList pending_discov_reqs_;
 
-  // True if characteristic discovery has completed. This must be accessed only
-  // through |gatt_dispatcher_|.
-  bool characteristics_ready_;
-
-  // The known characteristics of this service. If not |chrcs_ready_|, this may
-  // contain a partial list of characteristics stored during the discovery
-  // process.
+  // The known characteristics of this service. If not |characteristics_ready_|,
+  // this may contain a partial list of characteristics stored during the
+  // discovery process.
+  //
+  // The id of each characteristic corresponds to its index in this vector.
   //
   // NOTE: This collection gets populated on |gatt_dispatcher_| and does not get
   // modified after discovery finishes. It is not publicly exposed until
   // discovery completes.
   RemoteCharacteristicList characteristics_;
+
+  // The number of pending characteristic descriptor discoveries.
+  // Characteristics get marked as ready when this number reaches 0.
+  size_t remaining_descriptor_requests_;
 
   // Guards the members below.
   std::mutex mtx_;

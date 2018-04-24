@@ -14,6 +14,9 @@
 namespace btlib {
 namespace gatt {
 
+// TODO(armansito): Rename this file to "local_types.h" and add the Local*
+// prefix to the types here.
+
 // 0 is reserved as an invalid ID.
 constexpr IdType kInvalidId = 0u;
 

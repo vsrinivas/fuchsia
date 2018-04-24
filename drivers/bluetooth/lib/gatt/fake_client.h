@@ -32,8 +32,20 @@ class FakeClient final : public Client {
     chrcs_ = std::move(chrcs);
   }
 
+  void set_descriptors(std::vector<DescriptorData> descs) {
+    descs_ = std::move(descs);
+  }
+
   void set_characteristic_discovery_status(att::Status status) {
     chrc_discovery_status_ = status;
+  }
+
+  // If |count| is set to a non-zero value, |status| only applies to |count|th
+  // request and all other requests will succeed. Otherwise, |status| applies to
+  // all requests.
+  void set_descriptor_discovery_status(att::Status status, size_t count = 0) {
+    desc_discovery_status_target_ = count;
+    desc_discovery_status_ = status;
   }
 
   att::Handle last_chrc_discovery_start_handle() const {
@@ -44,7 +56,16 @@ class FakeClient final : public Client {
     return last_chrc_discovery_end_handle_;
   }
 
+  att::Handle last_desc_discovery_start_handle() const {
+    return last_desc_discovery_start_handle_;
+  }
+
+  att::Handle last_desc_discovery_end_handle() const {
+    return last_desc_discovery_end_handle_;
+  }
+
   size_t chrc_discovery_count() const { return chrc_discovery_count_; }
+  size_t desc_discovery_count() const { return desc_discovery_count_; }
 
   // Sets a callback which will run when WriteRequest gets called.
   using WriteRequestCallback = std::function<
@@ -87,11 +108,20 @@ class FakeClient final : public Client {
   att::Status service_discovery_status_;
   att::Status chrc_discovery_status_;
 
+  size_t desc_discovery_status_target_ = 0;
+  att::Status desc_discovery_status_;
+
   // Data used for DiscoverCharacteristics().
   std::vector<CharacteristicData> chrcs_;
   att::Handle last_chrc_discovery_start_handle_ = 0;
   att::Handle last_chrc_discovery_end_handle_ = 0;
   size_t chrc_discovery_count_ = 0;
+
+  // Data used for DiscoverDescriptors().
+  std::vector<DescriptorData> descs_;
+  att::Handle last_desc_discovery_start_handle_ = 0;
+  att::Handle last_desc_discovery_end_handle_ = 0;
+  size_t desc_discovery_count_ = 0;
 
   // Called by WriteRequest().
   WriteRequestCallback write_request_callback_;

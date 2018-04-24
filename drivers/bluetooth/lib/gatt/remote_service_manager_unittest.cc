@@ -23,6 +23,12 @@ static bool operator==(const CharacteristicData& chrc1,
          chrc1.value_handle == chrc2.value_handle && chrc1.type == chrc2.type;
 }
 
+// This must be in the correct namespace for it to be visible to EXPECT_EQ.
+static bool operator==(const DescriptorData& desc1,
+                       const DescriptorData& desc2) {
+  return desc1.handle == desc2.handle && desc1.type == desc2.type;
+}
+
 namespace internal {
 namespace {
 
@@ -366,6 +372,222 @@ TEST_F(GATT_RemoteServiceManagerTest, DiscoverCharacteristicsError) {
   EXPECT_EQ(HostError::kNotSupported, status2.error());
 }
 
+// Discover descriptors of a service with one characteristic.
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfOneSuccess) {
+  constexpr att::Handle kStart = 1;
+  constexpr att::Handle kCharDecl = 2;
+  constexpr att::Handle kCharValue = 3;
+  constexpr att::Handle kDesc1 = 4;
+  constexpr att::Handle kDesc2 = 5;
+  constexpr att::Handle kEnd = 6;
+
+  ServiceData data(kStart, kEnd, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData fake_chrc(0, kCharDecl, kCharValue, kTestUuid3);
+  fake_client()->set_characteristics({{fake_chrc}});
+
+  DescriptorData fake_desc1(kDesc1, kTestUuid3);
+  DescriptorData fake_desc2(kDesc2, kTestUuid4);
+  fake_client()->set_descriptors({{fake_desc1, fake_desc2}});
+
+  att::Status status(HostError::kFailed);
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    EXPECT_EQ(1u, chrcs.size());
+
+    EXPECT_EQ(2u, chrcs[0].descriptors().size());
+    EXPECT_EQ(0u, chrcs[0].descriptors()[0].id());
+    EXPECT_EQ(fake_desc1, chrcs[0].descriptors()[0].info());
+    EXPECT_EQ(1u, chrcs[0].descriptors()[1].id());
+    EXPECT_EQ(fake_desc2, chrcs[0].descriptors()[1].info());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+  EXPECT_EQ(1u, fake_client()->desc_discovery_count());
+  EXPECT_TRUE(service->IsDiscovered());
+  EXPECT_TRUE(status);
+  EXPECT_EQ(kDesc1, fake_client()->last_desc_discovery_start_handle());
+  EXPECT_EQ(kEnd, fake_client()->last_desc_discovery_end_handle());
+}
+
+// Discover descriptors of a service with one characteristic.
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfOneError) {
+  constexpr att::Handle kStart = 1;
+  constexpr att::Handle kCharDecl = 2;
+  constexpr att::Handle kCharValue = 3;
+  constexpr att::Handle kDesc1 = 4;
+  constexpr att::Handle kDesc2 = 5;
+  constexpr att::Handle kEnd = 6;
+
+  ServiceData data(kStart, kEnd, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData fake_chrc(0, kCharDecl, kCharValue, kTestUuid3);
+  fake_client()->set_characteristics({{fake_chrc}});
+
+  DescriptorData fake_desc1(kDesc1, kTestUuid3);
+  DescriptorData fake_desc2(kDesc2, kTestUuid4);
+  fake_client()->set_descriptors({{fake_desc1, fake_desc2}});
+  fake_client()->set_descriptor_discovery_status(
+      att::Status(HostError::kNotSupported));
+
+  att::Status status;
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    EXPECT_TRUE(chrcs.empty());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+  EXPECT_EQ(1u, fake_client()->desc_discovery_count());
+  EXPECT_FALSE(service->IsDiscovered());
+  EXPECT_FALSE(status);
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+// Discover descriptors of a service with multiple characteristics
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfMultipleSuccess) {
+  // Has one descriptor
+  CharacteristicData fake_char1(0, 2, 3, kTestUuid3);
+  DescriptorData fake_desc1(4, kTestUuid4);
+
+  // Has no descriptors
+  CharacteristicData fake_char2(0, 5, 6, kTestUuid3);
+
+  // Has two descriptors
+  CharacteristicData fake_char3(0, 7, 8, kTestUuid3);
+  DescriptorData fake_desc2(9, kTestUuid4);
+  DescriptorData fake_desc3(10, kTestUuid4);
+
+  ServiceData data(1, fake_desc3.handle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  fake_client()->set_characteristics({{fake_char1, fake_char2, fake_char3}});
+  fake_client()->set_descriptors({{fake_desc1, fake_desc2, fake_desc3}});
+
+  att::Status status(HostError::kFailed);
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    EXPECT_EQ(3u, chrcs.size());
+
+    // Characteristic #1
+    EXPECT_EQ(1u, chrcs[0].descriptors().size());
+    EXPECT_EQ(0u, chrcs[0].descriptors()[0].id());
+    EXPECT_EQ(fake_desc1, chrcs[0].descriptors()[0].info());
+
+    // Characteristic #2
+    EXPECT_TRUE(chrcs[1].descriptors().empty());
+
+    // Characteristic #3
+    EXPECT_EQ(2u, chrcs[2].descriptors().size());
+    EXPECT_EQ(2u, chrcs[2].id());
+    EXPECT_EQ(0x020000u, chrcs[2].descriptors()[0].id());
+    EXPECT_EQ(fake_desc2, chrcs[2].descriptors()[0].info());
+    EXPECT_EQ(0x020001u, chrcs[2].descriptors()[1].id());
+    EXPECT_EQ(fake_desc3, chrcs[2].descriptors()[1].info());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+
+  // There should have been two descriptor discovery requests as discovery
+  // should have been skipped for characteristic #2 due to its handles.
+  EXPECT_EQ(2u, fake_client()->desc_discovery_count());
+  EXPECT_TRUE(service->IsDiscovered());
+  EXPECT_TRUE(status);
+}
+
+// Discover descriptors of a service with multiple characteristics. The first
+// request results in an error though others succeed.
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfMultipleEarlyFail) {
+  // Has one descriptor
+  CharacteristicData fake_char1(0, 2, 3, kTestUuid3);
+  DescriptorData fake_desc1(4, kTestUuid4);
+
+  // Has no descriptors
+  CharacteristicData fake_char2(0, 5, 6, kTestUuid3);
+
+  // Has two descriptors
+  CharacteristicData fake_char3(0, 7, 8, kTestUuid3);
+  DescriptorData fake_desc2(9, kTestUuid4);
+  DescriptorData fake_desc3(10, kTestUuid4);
+
+  ServiceData data(1, fake_desc3.handle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  fake_client()->set_characteristics({{fake_char1, fake_char2, fake_char3}});
+  fake_client()->set_descriptors({{fake_desc1, fake_desc2, fake_desc3}});
+
+  // The first request will fail
+  fake_client()->set_descriptor_discovery_status(
+      att::Status(HostError::kNotSupported), 1);
+
+  att::Status status(HostError::kFailed);
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    EXPECT_TRUE(chrcs.empty());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+
+  // There should have been two descriptor discovery requests as discovery
+  // should have been skipped for characteristic #2 due to its handles.
+  EXPECT_EQ(2u, fake_client()->desc_discovery_count());
+  EXPECT_FALSE(service->IsDiscovered());
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+// Discover descriptors of a service with multiple characteristics. The last
+// request results in an error while the preceding ones succeed.
+TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfMultipleLateFail) {
+  // Has one descriptor
+  CharacteristicData fake_char1(0, 2, 3, kTestUuid3);
+  DescriptorData fake_desc1(4, kTestUuid4);
+
+  // Has no descriptors
+  CharacteristicData fake_char2(0, 5, 6, kTestUuid3);
+
+  // Has two descriptors
+  CharacteristicData fake_char3(0, 7, 8, kTestUuid3);
+  DescriptorData fake_desc2(9, kTestUuid4);
+  DescriptorData fake_desc3(10, kTestUuid4);
+
+  ServiceData data(1, fake_desc3.handle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  fake_client()->set_characteristics({{fake_char1, fake_char2, fake_char3}});
+  fake_client()->set_descriptors({{fake_desc1, fake_desc2, fake_desc3}});
+
+  // The last request will fail
+  fake_client()->set_descriptor_discovery_status(
+      att::Status(HostError::kNotSupported), 2);
+
+  att::Status status(HostError::kFailed);
+  service->DiscoverCharacteristics([&](auto cb_status, const auto& chrcs) {
+    status = cb_status;
+    EXPECT_TRUE(chrcs.empty());
+  });
+
+  EXPECT_EQ(0u, fake_client()->chrc_discovery_count());
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, fake_client()->chrc_discovery_count());
+
+  // There should have been two descriptor discovery requests as discovery
+  // should have been skipped for characteristic #2 due to its handles.
+  EXPECT_EQ(2u, fake_client()->desc_discovery_count());
+  EXPECT_FALSE(service->IsDiscovered());
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
 TEST_F(GATT_RemoteServiceManagerTest, WriteCharAfterShutDown) {
   ServiceData data(1, 2, kTestServiceUuid1);
   auto service = SetUpFakeService(data);
@@ -409,7 +631,7 @@ TEST_F(GATT_RemoteServiceManagerTest, WriteCharNotFound) {
 }
 
 TEST_F(GATT_RemoteServiceManagerTest, WriteCharNotSupported) {
-  ServiceData data(1, 2, kTestServiceUuid1);
+  ServiceData data(1, 3, kTestServiceUuid1);
   auto service = SetUpFakeService(data);
 
   // No "write" property set.
@@ -426,11 +648,11 @@ TEST_F(GATT_RemoteServiceManagerTest, WriteCharNotSupported) {
 }
 
 TEST_F(GATT_RemoteServiceManagerTest, WriteCharSendsWriteRequest) {
-  constexpr att::Handle kValueHandle = 0x00fe;
+  constexpr att::Handle kValueHandle = 3;
   const std::vector<uint8_t> kValue{{'t', 'e', 's', 't'}};
   constexpr att::Status kStatus(att::ErrorCode::kWriteNotPermitted);
 
-  ServiceData data(1, 2, kTestServiceUuid1);
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
   auto service = SetUpFakeService(data);
 
   CharacteristicData chr(Property::kWrite, 2, kValueHandle, kTestUuid3);
