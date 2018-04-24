@@ -71,8 +71,10 @@ int RunIntegrationTestsMain(int argc, char** argv) {
   fsl::MessageLoop loop;
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
-  if (!settings.GetOptionValue("test_file", &test_file) ||
-      settings.HasOption("help")) {
+  bool has_test_file = settings.GetOptionValue("test_file", &test_file);
+  bool requesting_help = settings.HasOption("help");
+
+  if (!has_test_file || requesting_help) {
     std::cerr << R"USAGE(run_integration_tests [TEST NAME]
   --test_file <file path>    The JSON file defining all the tests (required).
   --help                     This message.
@@ -84,6 +86,10 @@ int RunIntegrationTestsMain(int argc, char** argv) {
     if (!test_file.empty()) {
       TestRunnerConfig config(test_file);
       PrintKnownTests(config);
+    }
+
+    if (!requesting_help && !has_test_file) {
+      return 1;
     }
     return 0;
   }
