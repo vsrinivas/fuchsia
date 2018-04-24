@@ -99,7 +99,7 @@ int main(int argc, const char** argv) {
   }
   bool reuse = command_line.HasOption(kReuseFlag);
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   test::benchmark::GetPageBenchmark app(&loop, requests_count, reuse);
 
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });

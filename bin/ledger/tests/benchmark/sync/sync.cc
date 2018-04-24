@@ -227,7 +227,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   test::benchmark::SyncBenchmark app(&loop, change_count, value_size,
                                      entries_per_change, reference_strategy,
                                      server_id);

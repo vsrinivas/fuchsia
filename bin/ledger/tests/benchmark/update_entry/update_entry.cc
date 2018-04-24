@@ -183,7 +183,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  async::Loop loop;
+  async::Loop loop(&kAsyncLoopConfigMakeDefault);
   test::benchmark::UpdateEntryBenchmark app(&loop, entry_count,
                                             transaction_size);
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
