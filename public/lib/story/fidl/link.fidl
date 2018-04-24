@@ -7,7 +7,7 @@
 
 library modular;
 
-// This interface is implemented by the story runner. The Story service instance
+// This interface is implemented by the story runner. The ModuleContext service
 // acts as a factory for it.
 //
 // An instance of Link holds one of two types of values:
@@ -19,17 +19,18 @@ library modular;
 // (2) An entity reference that can be set or retrieved with SetEntity() and
 //     GetEntity().
 //
-// Each module receives one Link instance for each of the nouns in its action
-// template in its ModuleContext which it receives in Module.Initialize() or in
-// its service namespace. It can access them by calling ModuleContext.GetLink()
-// with the noun as the link name. These instances are shared with the parent
-// Module if there is any, or with the StoryController client if the Module is a
-// top level Module of a Story. A Module can create additional Link instances by
-// calling ModuleContext.GetLink() with any other link name. Why would it do
-// that? To share the new Link instance with Modules it requests to start in
-// turn, or to record its own state in the story record, so that it is
-// transferred to other devices that run the same story, or to persist it for
-// later resumption of the story.
+// Each Module instance receives one Link instance for each parameter of its
+// action template in its ModuleContext. It receives its ModuleContext in
+// Module.Initialize() or in its service namespace. The Module can access its
+// Links by calling ModuleContext.GetLink() with the intent parameter name as
+// the link name. These instances are shared with the parent Module if there is
+// any, or with the StoryController client if the Module is a top level Module
+// of a Story. A Module can create additional Link instances by calling
+// ModuleContext.GetLink() with any other link name. Why would it do that? To
+// share the new Link instance with Modules it requests to start in turn, or to
+// record its own state in the story record, so that it is transferred to other
+// devices that run the same story, or to persist it for later resumption of the
+// story.
 //
 // A client may obtain another handle to the same Link instance by calling
 // GetLink() with the same name again.
@@ -41,8 +42,6 @@ library modular;
 // registers with WatchAll() or Watch(), respectively. If the client registers
 // with Watch(), then it will not be notified of changes made through the same
 // Link connection.
-//
-// TODO(jimbe) Add error reporting for JSON and Pointer errors.
 //
 // No service name: returned from ModuleContext.GetLink().
 interface Link {
