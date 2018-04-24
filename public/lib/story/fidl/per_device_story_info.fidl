@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library modular;
+library modular_private;
 
 // Information about a story running on a particular device.
 struct PerDeviceStoryInfo {
@@ -16,5 +16,5 @@ struct PerDeviceStoryInfo {
   int64 timestamp;
 
   // Which state the story is in on this device.
-  StoryState state;
+  modular.StoryState state;
 };

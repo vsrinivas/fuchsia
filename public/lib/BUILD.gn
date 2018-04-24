@@ -63,7 +63,6 @@ fidl("fidl") {
     "story/fidl/create_link.fidl",
     "story/fidl/link.fidl",
     "story/fidl/link_change.fidl",
-    "story/fidl/per_device_story_info.fidl",
     "story/fidl/story_controller.fidl",
     "story/fidl/story_info.fidl",
     "story/fidl/story_marker.fidl",
@@ -103,6 +102,7 @@ fidl("fidl_private") {
   name = "modular_private"
 
   sources = [
+    "story/fidl/per_device_story_info.fidl",
     "story/fidl/story_data.fidl",
     "user/fidl/user_runner.fidl",
   ]

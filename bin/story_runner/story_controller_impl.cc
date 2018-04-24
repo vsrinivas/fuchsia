@@ -9,6 +9,7 @@
 #include <fuchsia/cpp/component.h>
 #include <fuchsia/cpp/ledger.h>
 #include <fuchsia/cpp/modular.h>
+#include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/views_v1.h>
 
 #include "lib/app/cpp/application_context.h"
@@ -212,7 +213,7 @@ void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
 }
 
 void XdrPerDeviceStoryInfo(XdrContext* const xdr,
-                           PerDeviceStoryInfo* const info) {
+                           modular_private::PerDeviceStoryInfo* const info) {
   xdr->Field("device", &info->device_id);
   xdr->Field("id", &info->story_id);
   xdr->Field("time", &info->timestamp);
@@ -2477,13 +2478,14 @@ void StoryControllerImpl::NotifyStateChange() {
   //
   // TODO(mesch): Maybe we should execute this inside the containing Operation.
 
-  PerDeviceStoryInfoPtr data = PerDeviceStoryInfo::New();
+  modular_private::PerDeviceStoryInfoPtr data = modular_private::PerDeviceStoryInfo::New();
   data->device_id = story_provider_impl_->device_id();
   data->story_id = story_id_;
   data->timestamp = time(nullptr);
   data->state = state_;
 
-  new WriteDataCall<PerDeviceStoryInfo, PerDeviceStoryInfoPtr>(
+  new WriteDataCall<modular_private::PerDeviceStoryInfo,
+                    modular_private::PerDeviceStoryInfoPtr>(
       &operation_queue_, page(), MakePerDeviceKey(data->device_id),
       XdrPerDeviceStoryInfo, std::move(data), [] {});
 }
