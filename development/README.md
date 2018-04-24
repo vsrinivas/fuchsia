@@ -18,6 +18,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Tracing][tracing]
  - [Trace-based Benchmarking][trace_based_benchmarking]
  - [Build system](build/README.md)
+ - [FAQ](/best-practices/faq.md)
 
 ## Languages
 

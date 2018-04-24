@@ -52,7 +52,7 @@ brew install wget pkg-config glib autoconf automake libtool golang
 
 ```
 # Install MacPorts
-# See https://guide.macports.org/chunked/installing.macports.html
+#See https:  // guide.macports.org/chunked/installing.macports.html
 port install autoconf automake libtool libpixman pkgconfig glib2
 ```
 
@@ -249,7 +249,8 @@ fx run-test <test name> [<test args>]
 
 ## Additional helpful documents
 
-* Using Zircon - copying files, network booting, log viewing, and more are [here](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Fuchsia documentation](/README.md) hub
-* More information on the system bootstrap application is
-[here](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).
+* [Fuchsia FAQ](/best-practices/faq.md)
+* Working with Zircon - [copying files, network booting, log viewing, and
+more](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
+* [Information on the system bootstrap application](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).
