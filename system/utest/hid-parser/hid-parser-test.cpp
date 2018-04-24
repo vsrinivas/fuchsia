@@ -18,6 +18,7 @@ extern "C" const uint8_t trinket_r_desc[173];
 extern "C" const uint8_t ps3_ds_r_desc[148];
 extern "C" const uint8_t acer12_touch_r_desc[660];
 extern "C" const uint8_t eve_tablet_r_desc[28];
+extern "C" const uint8_t asus_touch_desc[945];
 
 namespace {
 struct Stats {
@@ -649,6 +650,14 @@ static bool parse_eve_tablet() {
     END_TEST;
 }
 
+static bool parse_asus_touch() {
+   BEGIN_TEST;
+   hid::DeviceDescriptor* dev = nullptr;
+   auto res = hid::ParseReportDescriptor(asus_touch_desc, sizeof(asus_touch_desc), &dev);
+   ASSERT_EQ(res, hid::ParseResult::kParseOk);
+   END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
@@ -657,6 +666,7 @@ RUN_TEST(parse_adaf_trinket)
 RUN_TEST(parse_ps3_controller)
 RUN_TEST(parse_acer12_touch)
 RUN_TEST(parse_eve_tablet)
+RUN_TEST(parse_asus_touch)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {
