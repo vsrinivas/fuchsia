@@ -193,6 +193,9 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
   bool ApplyCreateClipNode(scenic::ResourceId id, ::gfx::ClipNodeArgs args);
   bool ApplyCreateEntityNode(scenic::ResourceId id, ::gfx::EntityNodeArgs args);
   bool ApplyCreateShapeNode(scenic::ResourceId id, ::gfx::ShapeNodeArgs args);
+  bool ApplyCreateSpace(scenic::ResourceId id, ::gfx::SpaceArgs args);
+  bool ApplyCreateSpaceHolder(scenic::ResourceId id,
+                              ::gfx::SpaceHolderArgs args);
   bool ApplyCreateDisplayCompositor(scenic::ResourceId id,
                                     ::gfx::DisplayCompositorArgs args);
   bool ApplyCreateImagePipeCompositor(scenic::ResourceId id,

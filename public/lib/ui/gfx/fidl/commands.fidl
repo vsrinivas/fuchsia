@@ -571,6 +571,7 @@ enum MeshIndexFormat {
   kUint16 = 1;
   kUint32 = 2;
 };
+
 struct MeshVertexFormat {
   // kVector2 or kVector3.
   ValueType position_type;
@@ -579,6 +580,7 @@ struct MeshVertexFormat {
   // kVector2 or kNone.
   ValueType tex_coord_type;
 };
+
 struct BindMeshBuffersCommand {
   uint32 mesh_id;
   uint32 index_buffer_id;

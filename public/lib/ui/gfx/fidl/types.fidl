@@ -207,7 +207,7 @@ struct BoundingBox {
 // |extents| specifies the bounding box for the Space itself.  Content
 // contained within the Space is clipped to this bounding box.
 //
-// |insetsfrom_min| and |insets_from_max| specify the distances between the
+// |insets_from_min| and |insets_from_max| specify the distances between the
 // space's bounding box and that of its parent Space.
 //
 // The parent Space's bounding box extents can be defined as:

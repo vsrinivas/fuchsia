@@ -249,11 +249,10 @@ bool Session::ApplyCreateResourceCommand(::gfx::CreateResourceCommand command) {
     case ::gfx::ResourceArgs::Tag::kShapeNode:
       return ApplyCreateShapeNode(id, std::move(command.resource.shape_node()));
     case ::gfx::ResourceArgs::Tag::kSpaceNode:
-      FXL_CHECK(false);
-      return false;
+      return ApplyCreateSpace(id, std::move(command.resource.space_node()));
     case ::gfx::ResourceArgs::Tag::kSpaceHolderNode:
-      FXL_CHECK(false);
-      return false;
+      return ApplyCreateSpaceHolder(
+          id, std::move(command.resource.space_holder_node()));
     case ::gfx::ResourceArgs::Tag::kDisplayCompositor:
       return ApplyCreateDisplayCompositor(
           id, std::move(command.resource.display_compositor()));
@@ -931,6 +930,19 @@ bool Session::ApplyCreateShapeNode(scenic::ResourceId id,
                                    ::gfx::ShapeNodeArgs args) {
   auto node = CreateShapeNode(id, std::move(args));
   return node ? resources_.AddResource(id, std::move(node)) : false;
+}
+
+bool Session::ApplyCreateSpace(scenic::ResourceId id, ::gfx::SpaceArgs args) {
+  error_reporter()->ERROR()
+      << "scenic::gfx::Session::ApplyCreateSpace(): unimplemented";
+  return false;
+}
+
+bool Session::ApplyCreateSpaceHolder(scenic::ResourceId id,
+                                     ::gfx::SpaceHolderArgs args) {
+  error_reporter()->ERROR()
+      << "scenic::gfx::Session::ApplyCreateSpaceHolder(): unimplemented";
+  return false;
 }
 
 bool Session::ApplyCreateDisplayCompositor(scenic::ResourceId id,
