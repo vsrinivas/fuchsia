@@ -7,8 +7,6 @@
 #include <lib/zx/channel.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fidl/cpp/interface_request.h"
 
 namespace echo2 {
 

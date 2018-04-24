@@ -10,7 +10,6 @@
 #include <zircon/processargs.h>
 
 #include "lib/app/cpp/application_context.h"
-#include "lib/fidl/cpp/binding_set.h"
 #include "lib/svc/cpp/services.h"
 
 namespace echo2 {
