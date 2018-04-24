@@ -8,6 +8,7 @@
 #include <iostream>
 #include <limits>
 
+#include <fbl/auto_call.h>
 #include <fuchsia/cpp/media.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -23,8 +24,8 @@ namespace {
 
 static constexpr uint32_t kChannelCount = 1;
 static constexpr uint32_t kFramesPerSecond = 48000;
-static constexpr uint32_t kFramesPerBuffer = 480;
-static constexpr uint32_t kTargetPayloadsInFlight = 2;
+static constexpr uint32_t kFramesPerBuffer = 240;
+static constexpr int64_t kLeadTimeOverheadNSec = ZX_MSEC(15);
 static constexpr float kEffectivelySilentVolume = 0.001f;
 static constexpr float kNoteZeroFrequency = 110.0f;
 static constexpr float kVolume = 0.2f;
@@ -74,8 +75,6 @@ static constexpr uint32_t kBytesPerFrame = kChannelCount * sizeof(float);
 #endif
 
 static constexpr size_t kBytesPerBuffer = kBytesPerFrame * kFramesPerBuffer;
-static constexpr size_t kTotalMappingSize =
-    kBytesPerBuffer * kTargetPayloadsInFlight;
 
 static const std::map<int, float> notes_by_key_ = {
     {'a', Note(-4)}, {'z', Note(-3)}, {'s', Note(-2)}, {'x', Note(-1)},
@@ -88,18 +87,6 @@ static const std::map<int, float> notes_by_key_ = {
 
 Tones::Tones(bool interactive, fxl::Closure quit_callback)
     : interactive_(interactive), quit_callback_(quit_callback) {
-  // Allocate our shared payload buffer and pass a handle to it over to the
-  // renderer.
-  zx::vmo payload_vmo;
-  zx_status_t status = payload_buffer_.CreateAndMap(
-      kTotalMappingSize, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-
-  if (status != ZX_OK) {
-    std::cerr << "VmoMapper:::CreateAndMap failed - " << status;
-    return;
-  }
-
   // Connect to the audio service and get a renderer.
   auto application_context =
       component::ApplicationContext::CreateFromStartupInfo();
@@ -121,31 +108,9 @@ Tones::Tones(bool interactive, fxl::Closure quit_callback)
   format.frames_per_second = kFramesPerSecond;
   audio_renderer_->SetPcmFormat(std::move(format));
 
-  // Assign our shared payload buffer to the renderer.
-  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
-
-  // Configure the renderer to use input frames of audio as its PTS units.
-  audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
-
-  // Configure the renderer to use input frames for the presentation timestamp
-  // units instead of defaulting to nanoseconds.
-
-  if (interactive_) {
-    std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
-    std::cout << "|A| |S|  |  |F| |G|  |  |J| |K| |L|  |  |'|\n";
-    std::cout << "+-+ +-+  |  +-+ +-+  |  +-+ +-+ +-+  |  +-+\n";
-    std::cout << " |   |   |   |   |   |   |   |   |   |   | \n";
-    std::cout << " | Z | X | C | V | B | N | M | , | . | / | \n";
-    std::cout << "-+---+---+---+---+---+---+---+---+---+---+-\n";
-  } else {
-    std::cout << "Playing a tune. Use '--interactive' to play the keyboard.\n";
-    BuildScore();
-  }
-
-  // Post a task to be called when we need to |Send|.
-  async::PostTask(async_get_default(), [this]() { Start(); });
-
-  WaitForKeystroke();
+  // Fetch the minimum lead time.  When we know what this is, we can allocate
+  // our payload buffer and start the synthesis loop.
+  audio_renderer_->GetMinLeadTime([this](int64_t nsec) { Start(nsec); });
 }
 
 Tones::~Tones() {}
@@ -202,9 +167,59 @@ void Tones::BuildScore() {
   frequencies_by_pts_.emplace(Beat(14.0f), Note(7));
 }
 
-void Tones::Start() {
-  Send(kTargetPayloadsInFlight);
+void Tones::Start(int64_t min_lead_time_nsec) {
+  auto cleanup = fbl::MakeAutoCall([this]() { Quit(); });
+
+  // figure out how many packets we need to keep in flight at all times.
+  if (min_lead_time_nsec < 0) {
+    std::cerr << "Audio renderer reported invalid lead time ("
+              << min_lead_time_nsec << "nSec)";
+    return;
+  }
+
+  min_lead_time_nsec += kLeadTimeOverheadNSec;
+  uint32_t packets_in_flight = static_cast<uint32_t>(
+      ((min_lead_time_nsec * kFramesPerSecond) + (kFramesPerBuffer - 1)) /
+      (ZX_SEC(1) * kFramesPerBuffer));
+  size_t total_mapping_size = static_cast<size_t>(packets_in_flight) *
+                              kFramesPerBuffer * kBytesPerFrame;
+
+  // Allocate our shared payload buffer and pass a handle to it over to the
+  // renderer.
+  zx::vmo payload_vmo;
+  zx_status_t status = payload_buffer_.CreateAndMap(
+      total_mapping_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, nullptr,
+      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+
+  if (status != ZX_OK) {
+    std::cerr << "VmoMapper:::CreateAndMap failed - " << status;
+    return;
+  }
+
+  // Assign our shared payload buffer to the renderer.
+  audio_renderer_->SetPayloadBuffer(std::move(payload_vmo));
+
+  // Configure the renderer to use input frames of audio as its PTS units.
+  audio_renderer_->SetPtsUnits(kFramesPerSecond, 1);
+
+  // Listen for keystrokes.
+  WaitForKeystroke();
+
+  if (interactive_) {
+    std::cout << "| | | |  |  | | | |  |  | | | | | |  |  | |\n";
+    std::cout << "|A| |S|  |  |F| |G|  |  |J| |K| |L|  |  |'|\n";
+    std::cout << "+-+ +-+  |  +-+ +-+  |  +-+ +-+ +-+  |  +-+\n";
+    std::cout << " |   |   |   |   |   |   |   |   |   |   | \n";
+    std::cout << " | Z | X | C | V | B | N | M | , | . | / | \n";
+    std::cout << "-+---+---+---+---+---+---+---+---+---+---+-\n";
+  } else {
+    std::cout << "Playing a tune. Use '--interactive' to play the keyboard.\n";
+    BuildScore();
+  }
+
+  Send(packets_in_flight);
   audio_renderer_->PlayNoReply(media::kNoTimestamp, media::kNoTimestamp);
+  cleanup.cancel();
 }
 
 void Tones::Send(uint32_t amt) {
@@ -231,6 +246,25 @@ void Tones::Send(uint32_t amt) {
 #endif
 
     // Send it.
+    //
+    // TODO(johngro): If we really want to minimize latency through the system,
+    // we should not be using the SendPacket callbacks to drive the system to
+    // mix more.  Doing this means that we need to wait until the oldest packet
+    // in the pipeline is completely rendered, and then wait for the mixer to
+    // release to packet back to us.  It can take a bit of time for the mixer to
+    // wake up and trim the packet, and it will take time for the message that a
+    // packet has been renderered to make it all of the way back to us.
+    //
+    // These delays really do not matter all that much for non-realtime tasks
+    // which can usually buffer 50 mSec or more into the future without any
+    // problem, but if we want to get rid of all of that overhead, we should
+    // really shift to a pure timing based model which allows us to wake up
+    // right before the minimum lead time, then synth and send a new packet just
+    // before the pipeline runs dry.
+    //
+    // If/when we update this code to move to that model, we should really start
+    // to listen for minimum lead time changed events as well (as the lead time
+    // requirements can vary as we get routed to different outputs).
     if (!done()) {
       audio_renderer_->SendPacket(std::move(packet), [this] { Send(1); });
     } else {

@@ -39,7 +39,7 @@ class Tones {
   void BuildScore();
 
   // Start the Tone example.
-  void Start();
+  void Start(int64_t min_lead_time_nsec);
 
   // Sends as much content as is currently demanded. Ends the stream when all
   // content has been sent.
