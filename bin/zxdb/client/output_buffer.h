@@ -14,6 +14,7 @@ class Err;
 
 enum class Syntax {
   kNormal,
+  kComment,
   kHeading
 };
 
@@ -36,7 +37,10 @@ class OutputBuffer {
   void OutputErr(const Err& err);
 
   // Writes the current contents of this OutputBuffer to stdout.
-  void WriteToStdout();
+  void WriteToStdout() const;
+
+  // Concatenates to a single string with no formatting.
+  std::string AsString() const;
 
  private:
   struct Span {

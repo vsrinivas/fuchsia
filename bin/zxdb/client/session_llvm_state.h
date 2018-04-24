@@ -1,0 +1,63 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <memory>
+
+#include "garnet/bin/zxdb/client/err.h"
+#include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/public/lib/fxl/macros.h"
+
+namespace llvm {
+class MCInstrInfo;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class MCAsmInfo;
+class Target;
+class Triple;
+}  // namespace llvm
+
+namespace zxdb {
+
+class SessionLLVMState {
+ public:
+  SessionLLVMState();
+  ~SessionLLVMState();
+
+  Err Init(debug_ipc::Arch arch);
+
+  // In LLVM a configuration name is called a "triple" even though it contains
+  // more than 3 fields.
+  const std::string& triple_name() const { return triple_name_; }
+  const llvm::Triple* triple() const { return triple_.get(); }
+
+  const std::string& processor_name() const { return processor_name_; }
+
+  const llvm::Target* target() const { return target_; }
+  const llvm::MCInstrInfo* instr_info() const { return instr_info_.get(); }
+  const llvm::MCRegisterInfo* register_info() const {
+    return register_info_.get();
+  }
+  const llvm::MCSubtargetInfo* subtarget_info() const {
+    return subtarget_info_.get();
+  }
+  const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
+
+ private:
+  std::string triple_name_;
+  std::string processor_name_;
+
+  std::unique_ptr<llvm::Triple> triple_;
+
+  const llvm::Target* target_ = nullptr;  // Non-owning.
+  std::unique_ptr<llvm::MCInstrInfo> instr_info_;
+  std::unique_ptr<llvm::MCRegisterInfo> register_info_;
+  std::unique_ptr<llvm::MCSubtargetInfo> subtarget_info_;
+  std::unique_ptr<llvm::MCAsmInfo> asm_info_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(SessionLLVMState);
+};
+
+}  // namespace zxdb

@@ -30,6 +30,7 @@ class BufferedFD;
 namespace zxdb {
 
 class ProcessImpl;
+class SessionLLVMState;
 class ThreadImpl;
 
 // The session object manages the connection with the remote debug agent.
@@ -72,6 +73,10 @@ class Session {
   // Architecture of the attached system. Will be "kUnknown" when not
   // connected.
   debug_ipc::Arch arch() const { return arch_; }
+
+  // Returns the LLVM state for this session. This will be null when there is
+  // no connection.
+  SessionLLVMState* llvm_state() const { return llvm_state_.get(); }
 
   // Sends a message with an asynchronous reply.
   //
@@ -134,6 +139,7 @@ class Session {
   SystemImpl system_;
 
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+  std::unique_ptr<SessionLLVMState> llvm_state_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

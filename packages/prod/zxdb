@@ -1,5 +1,0 @@
-{
-    "packages": {
-        "zxdb": "//garnet/bin/zxdb"
-    }
-}

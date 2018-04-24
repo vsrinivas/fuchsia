@@ -6,6 +6,8 @@
 
 #if defined(__Fuchsia__)
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#else
+#include "garnet/lib/debug_ipc/helper/message_loop_poll.h"
 #endif
 
 namespace debug_ipc {
@@ -13,7 +15,7 @@ namespace debug_ipc {
 #if defined(__Fuchsia__)
 using PlatformMessageLoop = MessageLoopZircon;
 #else
-#error Need a host implementation.
+using PlatformMessageLoop = MessageLoopPoll;
 #endif
 
 }  // namespace

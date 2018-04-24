@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/bin/zxdb/client/err.h"
+#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"

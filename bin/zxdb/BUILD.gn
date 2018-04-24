@@ -5,49 +5,21 @@
 import("//build/host.gni")
 import("//build/package.gni")
 
+assert(current_toolchain == host_toolchain,
+       "zxdb can currently only be compiled for the host.")
+
 # Set manually to true to compile the zxdb_test_app.cc file for manual debugger
 # testing of various conditions.
 include_test_app = false
 
-executable("bin") {
-  output_name = "zxdb"
-
-  sources = []
+executable("zxdb") {
+  sources = [
+    "main_host.cc",
+  ]
   deps = [
     "//garnet/bin/zxdb/client",
     "//garnet/bin/zxdb/console",
     "//garnet/lib/debug_ipc:client",
-  ]
-
-  if (current_toolchain == host_toolchain) {
-    sources += [ "main_host.cc" ]
-  } else {
-    sources += [ "main_target.cc" ]
-    deps += [ "//garnet/bin/debug_agent:lib" ]
-  }
-}
-
-package("zxdb") {
-  deprecated_system_image = true
-  deps = [
-    ":bin",
-  ]
-  binaries = [
-    {
-      name = "zxdb"
-    },
-  ]
-}
-
-install_host_tools("host") {
-  testonly = true
-  deps = [
-    ":bin",
-    ":unittests",
-  ]
-  outputs = [
-    "zxdb",
-    "zxdb_tests",
   ]
 }
 
@@ -73,35 +45,8 @@ executable("unittests") {
     "//garnet/bin/zxdb/client:tests",
     "//garnet/bin/zxdb/console:tests",
     "//garnet/lib/debug_ipc:tests",
+    "//garnet/lib/debug_ipc/helper:tests",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(brettw) when host support for the helper (message loops, etc.) is
-  # available, this should be an unconditional dependency.
-  if (current_toolchain != host_toolchain) {
-    deps += [ "//garnet/lib/debug_ipc/helper:tests" ]
-  }
-}
-
-package("zxdb_tests") {
-  testonly = true
-  deprecated_system_image = true
-
-  package_name = "zxdb_tests"
-
-  deps = [
-    ":unittests",
-  ]
-
-  tests = [
-    {
-      name = "zxdb_tests"
-    },
-  ]
-
-  if (include_test_app) {
-    deps += [ ":zxdb_test_app" ]
-    tests += [ { name = "zxdb_test_app"} ]
-  }
 }

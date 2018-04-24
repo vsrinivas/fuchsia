@@ -20,8 +20,6 @@ static_library("console") {
     "memory_format.h",
     "nouns.cc",
     "nouns.h",
-    "output_buffer.cc",
-    "output_buffer.h",
     "verbs.h",
     "verbs_breakpoint.cc",
     "verbs_control.cc",

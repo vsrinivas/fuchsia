@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/session_llvm_state.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
@@ -403,6 +404,9 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
 
   stream_ = nullptr;
   connection_storage_.reset();
+  llvm_state_.reset();
+  arch_ = debug_ipc::Arch::kUnknown;
+
   if (callback) {
     debug_ipc::MessageLoop::Current()->PostTask(
         [callback]() { callback(Err()); });
@@ -497,6 +501,14 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
           "version %" PRIu32 " but this client expects version %" PRIu32 ".",
           reply.version, debug_ipc::HelloReply::kCurrentVersion)));
     }
+  }
+
+  // Initialize LLVM for this architecture.
+  llvm_state_ = std::make_unique<SessionLLVMState>();
+  Err llvm_err = llvm_state_->Init(reply.arch);
+  if (llvm_err.has_error()) {
+    if (callback)
+      callback(llvm_err);
     return;
   }
 

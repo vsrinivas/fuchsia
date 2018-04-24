@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -35,6 +36,14 @@ TEST(MessageLoop, WatchPipeFD) {
   ASSERT_NE(-1, pipefd[0]);
   ASSERT_NE(-1, pipefd[1]);
 
+  int flags = fcntl(pipefd[0], F_GETFD);
+  flags |= O_NONBLOCK;
+  ASSERT_EQ(0, fcntl(pipefd[0], F_SETFD, flags));
+
+  flags = fcntl(pipefd[1], F_GETFD);
+  flags |= O_NONBLOCK;
+  ASSERT_EQ(0, fcntl(pipefd[1], F_SETFD, flags));
+
   class ReadableWatcher : public FDWatcher {
    public:
     explicit ReadableWatcher(MessageLoop* loop) : loop_(loop) {}
@@ -54,11 +63,13 @@ TEST(MessageLoop, WatchPipeFD) {
 
     // Going to write to pipefd[0] -> read from pipefd[1].
     MessageLoop::WatchHandle watch_handle =
-        loop.WatchFD(MessageLoop::WatchMode::kRead, pipefd[1], &watcher);
+        loop.WatchFD(MessageLoop::WatchMode::kRead, pipefd[0], &watcher);
     ASSERT_TRUE(watch_handle.watching());
 
     // Enqueue a task that should cause pipefd[1] to become readable.
-    loop.PostTask([write_fd = pipefd[0]]() { write(write_fd, "Hello", 5); });
+    loop.PostTask([write_fd = pipefd[1]]() {
+      write(write_fd, "Hello", 5);
+    });
 
     // This will quit on success because the OnFDReadable callback called
     // QuitNow, or hang forever on failure.

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/client/output_buffer.h"
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/public/lib/fxl/strings/split_string.h"
@@ -49,7 +49,7 @@ void OutputBuffer::OutputErr(const Err& err) {
   spans_.push_back(Span(Syntax::kNormal, err.msg()));
 }
 
-void OutputBuffer::WriteToStdout() {
+void OutputBuffer::WriteToStdout() const {
   bool ended_in_newline = false;
   for (const Span& span : spans_) {
     if (span.syntax == Syntax::kHeading)
@@ -66,6 +66,13 @@ void OutputBuffer::WriteToStdout() {
 
   if (!ended_in_newline)
     fwrite("\n", 1, 1, stdout);
+}
+
+std::string OutputBuffer::AsString() const {
+  std::string result;
+  for (const Span& span : spans_)
+    result.append(span.text);
+  return result;
 }
 
 }  // namespace zxdb
