@@ -67,6 +67,10 @@ public:
     // Returns the block size of the zxcrypt device.
     size_t block_count() const { return block_count_; }
 
+    // Returns space reserved for metadata
+    size_t reserved_blocks() const { return volume_->reserved_blocks(); }
+    size_t reserved_slices() const { return volume_->reserved_slices(); }
+
     // Returns a reference to the root key generated for this device.
     const crypto::Bytes& key() const { return key_; }
 
@@ -183,6 +187,8 @@ private:
     fbl::unique_fd fvm_part_;
     // File descriptor for the zxcrypt volume.
     fbl::unique_fd zxcrypt_;
+    // The zxcrypt volume
+    fbl::unique_ptr<Volume> volume_;
     // The cached block count.
     size_t block_count_;
     // The cached block size.

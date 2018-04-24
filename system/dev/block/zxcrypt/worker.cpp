@@ -8,8 +8,10 @@
 
 #include <crypto/cipher.h>
 #include <fdio/debug.h>
+#include <lib/zx/port.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
@@ -43,11 +45,6 @@ zx_status_t Worker::Start(Device* device, const Volume& volume, const zx::port& 
         (rc = volume.Bind(crypto::Cipher::kDecrypt, &decrypt_)) != ZX_OK) {
         return rc;
     }
-    block_info_t info;
-    if ((rc = volume.GetBlockInfo(&info)) != ZX_OK) {
-        return rc;
-    }
-
     device_ = device;
     port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_);
 
@@ -63,24 +60,46 @@ zx_status_t Worker::Loop() {
     zx_status_t rc;
     ZX_DEBUG_ASSERT(device_);
     zx_port_packet_t packet;
-    while (port_.wait(zx::time::infinite(), &packet, 1) == ZX_OK && packet.status == ZX_ERR_NEXT) {
+
+    // Use the first request as a signal that the device is ready
+    if ((rc = port_.wait(zx::time::infinite(), &packet, 1)) != ZX_OK ||
+        packet.status != ZX_ERR_NEXT) {
+        xprintf("failed to start worker: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+
+    block_info_t info;
+    size_t op_size;
+    device_->BlockQuery(&info, &op_size);
+
+    do {
         block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[0]);
-        extra_op_t* ex = device_->BlockToExtra(block);
+        extra_op_t* extra = BlockToExtra(block, op_size);
+
+        uint32_t length;
+        uint64_t offset_dev, offset_vmo;
+        if (mul_overflow(extra->length, info.block_size, &length) ||
+            mul_overflow(extra->offset_dev, info.block_size, &offset_dev) ||
+            mul_overflow(extra->offset_vmo, info.block_size, &offset_vmo)) {
+            device_->BlockRelease(block, ZX_ERR_OUT_OF_RANGE);
+            continue;
+        }
+
         switch (block->command & BLOCK_OP_MASK) {
         case BLOCK_OP_WRITE:
-            if ((rc = zx_vmo_read(ex->vmo, ex->buf, ex->off, ex->len)) != ZX_OK ||
-                (rc = encrypt_.Encrypt(ex->buf, ex->num, ex->len, ex->buf) != ZX_OK)) {
+            if ((rc = zx_vmo_read(extra->vmo, extra->data, offset_vmo, length)) != ZX_OK ||
+                (rc = encrypt_.Encrypt(extra->data, offset_dev, length, extra->data) != ZX_OK)) {
                 device_->BlockRelease(block, rc);
-                break;
+                continue;
             }
             device_->BlockForward(block);
             break;
 
         case BLOCK_OP_READ:
-            if ((rc = decrypt_.Decrypt(ex->buf, ex->num, ex->len, ex->buf)) != ZX_OK ||
-                (rc = zx_vmo_write(ex->vmo, ex->buf, ex->off, ex->len)) != ZX_OK) {
+            if ((rc = decrypt_.Decrypt(extra->data, offset_dev, length, extra->data)) != ZX_OK ||
+                (rc = zx_vmo_write(extra->vmo, extra->data, offset_vmo, length)) != ZX_OK) {
                 device_->BlockRelease(block, rc);
-                break;
+                continue;
             }
             device_->BlockRelease(block, ZX_OK);
             break;
@@ -88,8 +107,9 @@ zx_status_t Worker::Loop() {
         default:
             device_->BlockRelease(block, ZX_ERR_NOT_SUPPORTED);
         }
-    }
-    return ZX_OK;
+    } while ((rc = port_.wait(zx::time::infinite(), &packet, 1)) == ZX_OK &&
+             packet.status == ZX_ERR_NEXT);
+    return rc;
 }
 
 zx_status_t Worker::Stop() {

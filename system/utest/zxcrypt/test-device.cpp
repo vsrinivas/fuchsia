@@ -209,6 +209,8 @@ int TestDevice::WakeThread(void* arg) {
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
         if (device->wake_deadline_ < zx::clock::get(ZX_CLOCK_MONOTONIC)) {
+            printf("Received %lu of %lu transactions before timing out.\n", counts.received,
+                   device->wake_after_);
             return ZX_ERR_TIMED_OUT;
         }
         if ((res = ioctl_ramdisk_get_txn_counts(device->ramdisk_.get(), &counts)) < 0) {
@@ -348,6 +350,9 @@ bool TestDevice::Connect() {
     ASSERT_TRUE(BindAndOpen(parent(), "zxcrypt/block", "/boot/driver/zxcrypt.so", &zxcrypt_),
                 Error("failed to bind and open zxcrypt"));
 
+    fbl::unique_fd tmp(dup(parent().get()));
+    ASSERT_OK(Volume::Open(fbl::move(tmp), key_, 0, &volume_));
+
     block_info_t blk;
     ASSERT_OK(ToStatus(ioctl_block_get_info(zxcrypt_.get(), &blk)));
     block_size_ = blk.block_size;
@@ -376,6 +381,7 @@ bool TestDevice::Disconnect() {
         client_ = nullptr;
     }
     zxcrypt_.reset();
+    volume_.reset();
     block_size_ = 0;
     block_count_ = 0;
     vmo_.reset();

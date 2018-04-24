@@ -8,8 +8,8 @@
 #include <threads.h>
 
 #include <crypto/cipher.h>
-#include <zircon/types.h>
 #include <lib/zx/port.h>
+#include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
 #include "extra.h"

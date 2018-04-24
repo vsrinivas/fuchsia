@@ -93,8 +93,8 @@ bool TestOpen(Volume::Version version, bool fvm) {
     EXPECT_ZX(Volume::Open(fbl::move(device.parent()), mod, 0, &volume), ZX_ERR_ACCESS_DENIED);
 
     // Bad slot
-    EXPECT_ZX(Volume::Open(fbl::move(device.parent()), device.key(), Volume::kNumSlots, &volume),
-              ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(Volume::Open(fbl::move(device.parent()), device.key(), kBlockSize, &volume),
+              ZX_ERR_ACCESS_DENIED);
     EXPECT_ZX(Volume::Open(fbl::move(device.parent()), device.key(), 1, &volume),
               ZX_ERR_ACCESS_DENIED);
 
@@ -126,7 +126,7 @@ bool TestEnroll(Volume::Version version, bool fvm) {
     EXPECT_ZX(volume->Enroll(bad_key, 1), ZX_ERR_INVALID_ARGS);
 
     // Bad slot
-    EXPECT_ZX(volume->Enroll(device.key(), Volume::kNumSlots), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(volume->Enroll(device.key(), volume->num_slots()), ZX_ERR_INVALID_ARGS);
 
     // Valid; new slot
     EXPECT_OK(volume->Enroll(device.key(), 1));
@@ -150,10 +150,10 @@ bool TestRevoke(Volume::Version version, bool fvm) {
     ASSERT_OK(Volume::Open(fbl::move(device.parent()), device.key(), 0, &volume));
 
     // Bad slot
-    EXPECT_ZX(volume->Revoke(Volume::kNumSlots), ZX_ERR_INVALID_ARGS);
+    EXPECT_ZX(volume->Revoke(volume->num_slots()), ZX_ERR_INVALID_ARGS);
 
     // Valid, even if slot isn't enrolled
-    EXPECT_OK(volume->Revoke(Volume::kNumSlots - 1));
+    EXPECT_OK(volume->Revoke(volume->num_slots() - 1));
 
     // Valid, even if last slot
     EXPECT_OK(volume->Revoke(0));

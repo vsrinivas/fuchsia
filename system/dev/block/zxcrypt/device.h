@@ -22,6 +22,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
 #include "extra.h"
@@ -71,10 +72,6 @@ public:
     // to the caller of |DdkIotxnQueue|.
     void BlockRelease(block_op_t* block, zx_status_t rc) __TA_EXCLUDES(mtx_);
 
-    // Translates |block_op_t|s to |extra_op_t|s and vice versa.
-    extra_op_t* BlockToExtra(block_op_t* block) const;
-    block_op_t* ExtraToBlock(extra_op_t* extra) const;
-
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Device);
 
@@ -94,29 +91,28 @@ private:
     // automatically once the device finishes its current workload.
     void FinishTaskLocked() __TA_REQUIRES(mtx_);
 
-    // Scans the VMO for |len| blocks not in use, and returns the found VMO offset in |out|. If
-    // |len| blocks cannot be found, it adds the block to an internal queue and returns
-    // ZX_ERR_SHOULD_WAIT.  In this case, the block can be re-queued using |BlockRequeue| when
-    // resources are available.
-    zx_status_t BlockAcquire(block_op_t* block, uint64_t* out_off);
+    // Attempts to reserve space in the working buffer to process |block|.  If space can't be found,
+    // returns ZX_ERR_SHOULD_WAIT. In this case, the block can be re-queued using |BlockRequeue|
+    // when resources are available.
+    zx_status_t BlockAcquire(block_op_t* block);
 
-    // Scans the VMO for |len| blocks not in use, and returns the found VMO offset in |out|. If
-    // |len| blocks cannot be found, it returns ZX_ERR_SHOULD_WAIT.
-    zx_status_t BlockAcquireLocked(uint64_t len, uint64_t* out) __TA_REQUIRES(mtx_);
+    // Attempts to reserve space in the working buffer to process |len| blocks.  If space can't be
+    // found returns ZX_ERR_SHOULD_WAIT, otherwise it fills in |extra| with the details of the
+    // reserved space.
+    zx_status_t BlockAcquireLocked(uint64_t len, extra_op_t* extra) __TA_REQUIRES(mtx_);
 
     // Attempts to acquire resources for a previously deferred request.  Returns:
     //  |ZX_ERR_NEXT| if successful and |ProcessBlock| can be called with |out_block| and |out_off|.
     //  |ZX_ERR_STOP| if there are no outstanding deferred requests
     //  |ZX_ERR_SHOULD_WAIT| if there still aren't enough resources available.
-    zx_status_t BlockRequeue(block_op_t** out_block, uint64_t* out_off);
+    zx_status_t BlockRequeue(block_op_t** out_block);
 
-    // Take a |block|, associate with the memory reserved for it as indicated by the given |offset|,
-    // and send it to a worker.
-    void ProcessBlock(block_op_t* block, uint64_t offset) __TA_EXCLUDES(mtx_);
+    // Take a |block|, prepare it to be transformed, and send it to a worker.
+    void ProcessBlock(block_op_t* block) __TA_EXCLUDES(mtx_);
 
     // Marks the blocks from |off| to |off + len| as available.  Signals waiting callers if
     // |AcquireBlocks| previously returned ZX_ERR_SHOULD_WAIT.
-    void ReleaseBlocks(uint64_t off, uint64_t len) __TA_EXCLUDES(mtx_);
+    void ReleaseBlock(extra_op_t* extra) __TA_EXCLUDES(mtx_);
 
     // Unsynchronized fields
 
@@ -125,18 +121,16 @@ private:
     // without holding the lock.  It is allocated and "constified" in |Init|, and |DdkRelease| must
     // "deconstify" and free it.
     struct DeviceInfo {
-        // The parent block info, as modified by |zxcrypt::Volume::Init|
-        block_info_t blk;
-        // Indicates if the underlying device is an FVM partition.
-        bool has_fvm;
-        // The length of the reserved metadata, in bytes.
-        uint64_t offset_dev;
+        // The parent device's block information
+        uint32_t block_size;
         // The parent device's required block_op_t size.
         size_t op_size;
         // Callbacks to the parent's block protocol methods.
         block_protocol_t proto;
-        // The ratio modified to unmodified parent block sizes.
-        uint32_t scale;
+        // The number of blocks reserved for metadata.
+        uint64_t reserved_blocks;
+        // The number of slices reserved for metadata.
+        uint64_t reserved_slices;
         // A memory region used when encrypting/decrypting I/O transactions.
         zx::vmo vmo;
     };
@@ -155,8 +149,6 @@ private:
 
     // Synchronized fields
 
-    // A cached copy of the parent device's FVM information, if applicable.
-    fvm_info_t fvm_ __TA_GUARDED(mtx_);
     // Indicates whether this object is ready for I/O.
     bool active_ __TA_GUARDED(mtx_);
     // The number of outstanding tasks.  See |AddTask| and |FinishTask|.

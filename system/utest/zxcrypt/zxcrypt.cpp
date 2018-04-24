@@ -68,15 +68,13 @@ bool TestBlockGetInfo(Volume::Version version, bool fvm) {
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
     block_info_t parent_blk, zxcrypt_blk;
-    EXPECT_EQ(ioctl_block_get_info(zxcrypt.get(), nullptr), ZX_ERR_INVALID_ARGS);
+    EXPECT_EQ(ioctl_block_get_info(parent.get(), nullptr),
+              ioctl_block_get_info(zxcrypt.get(), nullptr));
     EXPECT_GE(ioctl_block_get_info(parent.get(), &parent_blk), 0);
     EXPECT_GE(ioctl_block_get_info(zxcrypt.get(), &zxcrypt_blk), 0);
 
-    EXPECT_EQ(parent_blk.block_size, kBlockSize);
-    EXPECT_EQ(zxcrypt_blk.block_size, PAGE_SIZE);
-
-    EXPECT_EQ(parent_blk.block_size * parent_blk.block_count, kDeviceSize);
-    EXPECT_EQ(zxcrypt_blk.block_size * zxcrypt_blk.block_count, device.size());
+    EXPECT_EQ(parent_blk.block_size, zxcrypt_blk.block_size);
+    EXPECT_GE(parent_blk.block_count, zxcrypt_blk.block_count + device.reserved_blocks());
 
     END_TEST;
 }
@@ -87,48 +85,60 @@ bool TestBlockFvmQuery(Volume::Version version, bool fvm) {
 
     TestDevice device;
     ASSERT_TRUE(device.Bind(version, fvm));
+    fbl::unique_fd parent = device.parent();
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
+    fvm_info_t parent_fvm, zxcrypt_fvm;
     if (!fvm) {
         // Send FVM query to non-FVM device
-        EXPECT_EQ(ioctl_block_fvm_query(zxcrypt.get(), nullptr), ZX_ERR_NOT_SUPPORTED);
+        EXPECT_EQ(ioctl_block_fvm_query(zxcrypt.get(), &zxcrypt_fvm), ZX_ERR_NOT_SUPPORTED);
     } else {
         // Get the zxcrypt info
-        fvm_info_t fvm_info;
-        EXPECT_EQ(ioctl_block_fvm_query(zxcrypt.get(), nullptr), ZX_ERR_INVALID_ARGS);
-        EXPECT_GE(ioctl_block_fvm_query(zxcrypt.get(), &fvm_info), 0);
-        EXPECT_EQ(fvm_info.slice_size, FVM_BLOCK_SIZE);
-        EXPECT_EQ(fvm_info.vslice_count, VSLICE_MAX - Volume::kReservedSlices);
+        EXPECT_EQ(ioctl_block_fvm_query(parent.get(), nullptr),
+                  ioctl_block_fvm_query(zxcrypt.get(), nullptr));
+        EXPECT_GE(ioctl_block_fvm_query(parent.get(), &parent_fvm), 0);
+        EXPECT_GE(ioctl_block_fvm_query(zxcrypt.get(), &zxcrypt_fvm), 0);
+        EXPECT_EQ(parent_fvm.slice_size, zxcrypt_fvm.slice_size);
+        EXPECT_EQ(parent_fvm.vslice_count, zxcrypt_fvm.vslice_count + device.reserved_slices());
     }
 
     END_TEST;
 }
 DEFINE_EACH_DEVICE(TestBlockFvmQuery);
 
-bool TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
-    BEGIN_TEST;
+bool QueryLeadingFvmSlice(const TestDevice& device) {
+    BEGIN_HELPER;
 
-    TestDevice device;
-    ASSERT_TRUE(device.Bind(version, fvm));
+    fbl::unique_fd parent = device.parent();
     fbl::unique_fd zxcrypt = device.zxcrypt();
 
     query_request_t req;
     req.count = 1;
     req.vslice_start[0] = 0;
-    query_response_t resp;
+    query_response_t parent_resp, zxcrypt_resp;
 
-    if (!fvm) {
-        // Send FVM ioctl to non-FVM device
-        EXPECT_EQ(ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &resp), ZX_ERR_NOT_SUPPORTED);
-    } else {
+    ssize_t res = ioctl_block_fvm_vslice_query(parent.get(), &req, &parent_resp);
+    EXPECT_EQ(res, ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &zxcrypt_resp));
+    if (res >= 0) {
         // Query zxcrypt about the slices, which should omit those reserved
-        req.vslice_start[0] = 0;
-        EXPECT_GE(ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &resp), 0);
-        EXPECT_EQ(resp.count, 1U);
-        EXPECT_TRUE(resp.vslice_range[0].allocated);
-        EXPECT_EQ(resp.vslice_range[0].count, device.size() / FVM_BLOCK_SIZE);
-    }
+        ASSERT_EQ(parent_resp.count, 1U);
+        EXPECT_TRUE(parent_resp.vslice_range[0].allocated);
 
+        ASSERT_EQ(zxcrypt_resp.count, 1U);
+        EXPECT_TRUE(zxcrypt_resp.vslice_range[0].allocated);
+
+        EXPECT_EQ(parent_resp.vslice_range[0].count,
+                  zxcrypt_resp.vslice_range[0].count + device.reserved_slices());
+    }
+    END_HELPER;
+}
+
+bool TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
+    BEGIN_TEST;
+
+    TestDevice device;
+    ASSERT_TRUE(device.Bind(version, fvm));
+    EXPECT_TRUE(QueryLeadingFvmSlice(device));
     END_TEST;
 }
 DEFINE_EACH_DEVICE(TestBlockFvmVSliceQuery);
@@ -149,29 +159,13 @@ bool TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
         EXPECT_EQ(ioctl_block_fvm_shrink(zxcrypt.get(), &mod), ZX_ERR_NOT_SUPPORTED);
         EXPECT_EQ(ioctl_block_fvm_extend(zxcrypt.get(), &mod), ZX_ERR_NOT_SUPPORTED);
     } else {
-        // Get the current size in slices
-        query_request_t req;
-        req.count = 1;
-        req.vslice_start[0] = 0;
-        query_response_t resp;
-        EXPECT_GE(ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &resp), 0);
-        EXPECT_EQ(resp.count, 1U);
-        EXPECT_TRUE(resp.vslice_range[0].allocated);
-        EXPECT_EQ(resp.vslice_range[0].count, device.size() / FVM_BLOCK_SIZE);
-
         // Shrink the FVM partition and make sure the change in size is reflected
-        ASSERT_GE(ioctl_block_fvm_shrink(zxcrypt.get(), &mod), 0);
-        EXPECT_GE(ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &resp), 0);
-        EXPECT_EQ(resp.count, 1U);
-        EXPECT_TRUE(resp.vslice_range[0].allocated);
-        EXPECT_GE(resp.vslice_range[0].count, 1);
+        EXPECT_GE(ioctl_block_fvm_shrink(zxcrypt.get(), &mod), 0);
+        EXPECT_TRUE(QueryLeadingFvmSlice(device));
 
         // Extend the FVM partition and make sure the change in size is reflected
-        ASSERT_GE(ioctl_block_fvm_extend(zxcrypt.get(), &mod), 0);
-        EXPECT_GE(ioctl_block_fvm_vslice_query(zxcrypt.get(), &req, &resp), 0);
-        EXPECT_EQ(resp.count, 1U);
-        EXPECT_TRUE(resp.vslice_range[0].allocated);
-        EXPECT_EQ(resp.vslice_range[0].count, device.size() / FVM_BLOCK_SIZE);
+        EXPECT_GE(ioctl_block_fvm_extend(zxcrypt.get(), &mod), 0);
+        EXPECT_TRUE(QueryLeadingFvmSlice(device));
     }
     END_TEST;
 }
@@ -475,14 +469,15 @@ bool TestVmoStall(Volume::Version version, bool fvm) {
     // internally.
     block_info_t zxcrypt_blk;
     EXPECT_GE(ioctl_block_get_info(zxcrypt.get(), &zxcrypt_blk), 0);
-    size_t max = Volume::kBufferSize / device.block_size();
+    size_t blks_per_req = 4;
+    size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
     size_t num = max + 1;
     fbl::AllocChecker ac;
     fbl::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
     ASSERT_TRUE(ac.check());
     for (size_t i = 0; i < num; ++i) {
         requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
-        requests[i].length = 1;
+        requests[i].length = blks_per_req;
         requests[i].dev_offset = 0;
         requests[i].vmo_offset = 0;
     }
@@ -494,6 +489,37 @@ bool TestVmoStall(Volume::Version version, bool fvm) {
     END_TEST;
 }
 DEFINE_EACH_DEVICE(TestVmoStall);
+
+bool TestWriteAfterFvmExtend(Volume::Version version) {
+    BEGIN_TEST;
+
+    TestDevice device;
+    ASSERT_TRUE(device.Bind(version, true));
+    fbl::unique_fd zxcrypt = device.zxcrypt();
+
+    size_t n = device.size();
+    ssize_t n_s = static_cast<ssize_t>(n);
+
+    size_t one = device.block_size();
+    ssize_t one_s = static_cast<ssize_t>(one);
+
+    EXPECT_EQ(device.lseek(n), n_s);
+    EXPECT_NE(device.write(n, one), one_s);
+
+    fvm_info_t info;
+    EXPECT_GE(ioctl_block_fvm_query(zxcrypt.get(), &info), 0);
+
+    extend_request_t mod;
+    mod.offset = device.size() / info.slice_size;
+    mod.length = 1;
+
+    EXPECT_GE(ioctl_block_fvm_extend(zxcrypt.get(), &mod), 0);
+    EXPECT_EQ(device.lseek(n), n_s);
+    EXPECT_EQ(device.write(n, one), one_s);
+
+    END_TEST;
+}
+DEFINE_EACH(TestWriteAfterFvmExtend);
 
 // TODO(aarongreen): Currently, we're using XTS, which provides no data integrity.  When possible,
 // we should switch to an AEAD, which would allow us to detect data corruption when doing I/O.
@@ -525,6 +551,7 @@ RUN_EACH_DEVICE(TestVmoOutOfBounds)
 RUN_EACH_DEVICE(TestVmoOneToMany)
 RUN_EACH_DEVICE(TestVmoManyToOne)
 RUN_EACH_DEVICE(TestVmoStall)
+RUN_EACH(TestWriteAfterFvmExtend)
 END_TEST_CASE(ZxcryptTest)
 
 } // namespace

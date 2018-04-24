@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS := \
     $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/device.cpp \
+    $(LOCAL_DIR)/extra.cpp \
     $(LOCAL_DIR)/worker.cpp \
 
 MODULE_LIBS := \
