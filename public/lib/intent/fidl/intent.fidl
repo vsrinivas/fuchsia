@@ -60,7 +60,11 @@ union IntentParameterData {
 
   // Set this to use an existing Link accessible from your Module as the noun's
   // value.
-  string link_name;
+  // TODO(thatguy): This is allowed to be null for backwards compatibility with
+  // Mods that use the 'default link' (= a link with null name). Once no mods
+  // use the default link any more, this can be made required again.
+  // MI4-736
+  string? link_name;
 
   // Set to re-use an existing link within a story.
   LinkPath link_path;
