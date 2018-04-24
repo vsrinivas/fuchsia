@@ -343,6 +343,65 @@ static bool channel_depth_test(void) {
     END_TEST;
 }
 
+#if defined(__x86_64__)
+
+int do_nothing(void* arg) {
+    for (;;) {
+    }
+    return 0;
+}
+
+static bool fs_invalid_test(void) {
+    BEGIN_TEST;
+
+    // The success case of fs is hard to explicitly test, but is
+    // exercised all the time (ie userspace would explode instantly if
+    // it was broken). Since we will be soon adding a corresponding
+    // mechanism for gs, don't worry about testing success.
+
+    uintptr_t fs_storage;
+    uintptr_t fs_location = (uintptr_t)&fs_storage;
+
+    // All the failures:
+
+    // Try a thread other than the current one.
+    thrd_t t;
+    int success = thrd_create(&t, &do_nothing, NULL);
+    ASSERT_EQ(success, thrd_success, "");
+    zx_handle_t other_thread = thrd_get_zx_handle(t);
+    zx_status_t status = zx_object_set_property(other_thread, ZX_PROP_REGISTER_FS,
+                                                &fs_location, sizeof(fs_location));
+    ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED, "");
+
+    // Try a non-thread object type.
+    status = zx_object_set_property(zx_process_self(), ZX_PROP_REGISTER_FS,
+                                    &fs_location, sizeof(fs_location));
+    ASSERT_EQ(status, ZX_ERR_WRONG_TYPE, "");
+
+    // Not enough buffer to hold the property value.
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS,
+                                    &fs_location, sizeof(fs_location) - 1);
+    ASSERT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "");
+
+    // A non-canonical vaddr.
+    uintptr_t noncanonical_fs_location = fs_location | (1ull << 47);
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS,
+                                    &noncanonical_fs_location,
+                                    sizeof(noncanonical_fs_location));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
+
+    // A non-userspace vaddr.
+    uintptr_t nonuserspace_fs_location = 0xffffffff40000000;
+    status = zx_object_set_property(zx_thread_self(), ZX_PROP_REGISTER_FS,
+                                    &nonuserspace_fs_location,
+                                    sizeof(nonuserspace_fs_location));
+    ASSERT_EQ(status, ZX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
+#endif // defined(__x86_64__)
+
 BEGIN_TEST_CASE(property_tests)
 RUN_TEST(process_name_test);
 RUN_TEST(thread_name_test);
@@ -351,6 +410,9 @@ RUN_TEST(importance_smoke_test);
 RUN_TEST(bad_importance_value_fails);
 RUN_TEST(socket_buffer_test);
 RUN_TEST(channel_depth_test);
+#if defined(__x86_64__)
+RUN_TEST(fs_invalid_test)
+#endif
 END_TEST_CASE(property_tests)
 
 int main(int argc, char** argv) {

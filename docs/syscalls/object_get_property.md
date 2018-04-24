@@ -63,7 +63,8 @@ The name of the object, as a NUL-terminated string.
 
 Allowed operations: **set**
 
-The value of the x86 FS segment register.
+The value of the x86 FS segment register. `value` must be a canonical
+address, and must be a userspace address.
 
 Only defined for x86-64.
 

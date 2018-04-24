@@ -11,6 +11,7 @@
 #include <kernel/mp.h>
 #include <kernel/stats.h>
 #include <vm/pmm.h>
+#include <vm/vm.h>
 #include <lib/heap.h>
 #include <platform.h>
 #include <zircon/types.h>
@@ -754,6 +755,8 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             if (status != ZX_OK)
                 return status;
             if (!x86_is_vaddr_canonical(addr))
+                return ZX_ERR_INVALID_ARGS;
+            if (!is_user_address(addr))
                 return ZX_ERR_INVALID_ARGS;
             write_msr(X86_MSR_IA32_FS_BASE, addr);
             return ZX_OK;
