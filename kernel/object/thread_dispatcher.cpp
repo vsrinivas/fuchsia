@@ -83,6 +83,11 @@ ThreadDispatcher::~ThreadDispatcher() {
     case State::INITIAL:
         // this gets a pass, we can destruct a partially constructed thread
         break;
+    case State::INITIALIZED:
+        // as we've been initialized previously, forget the LK thread.
+        // note that thread_forget is not called for self since the thread is not running
+        thread_forget(&thread_);
+        break;
     default:
         DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n", StateToString(state_), this);
     }
@@ -223,9 +228,6 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     }
     DEBUG_ASSERT(lkthread == &thread_);
 
-    // bump the ref on this object that the LK thread state will now own until the lk thread has exited
-    AddRef();
-
     // register an event handler with the LK kernel
     thread_set_user_callback(&thread_, &ThreadUserCallback);
 
@@ -284,6 +286,9 @@ zx_status_t ThreadDispatcher::Start(uintptr_t entry, uintptr_t sp,
     if (ret < 0)
         return ret;
 
+    // bump the ref on this object that the LK thread state will now own until the lk thread has exited
+    AddRef();
+
     // mark ourselves as running and resume the kernel thread
     SetStateLocked(State::RUNNING);
 
@@ -327,19 +332,9 @@ void ThreadDispatcher::Kill() {
 
     switch (state_) {
         case State::INITIAL:
-            // initial state, thread was never initialized, leave in this state
+        case State::INITIALIZED:
+            // thread was never started, leave in this state
             break;
-        case State::INITIALIZED: {
-            // as we've been initialized previously, forget the LK thread.
-            thread_forget(&thread_);
-            // reset our state, so that the destructor will properly shut down.
-            SetStateLocked(State::INITIAL);
-            // drop the ref, as the LK thread will not own this object.
-            auto ret = Release();
-            // if this was the last ref, something is terribly wrong
-            DEBUG_ASSERT(!ret);
-            break;
-        }
         case State::RUNNING:
         case State::SUSPENDED:
             // deliver a kernel kill signal to the thread
