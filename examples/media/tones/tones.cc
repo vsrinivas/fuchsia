@@ -27,14 +27,19 @@ static constexpr uint32_t kFramesPerSecond = 48000;
 static constexpr uint32_t kFramesPerBuffer = 240;
 static constexpr int64_t kLeadTimeOverheadNSec = ZX_MSEC(15);
 static constexpr float kEffectivelySilentVolume = 0.001f;
-static constexpr float kNoteZeroFrequency = 110.0f;
+static constexpr float kA4Frequency = 440.0f;
 static constexpr float kVolume = 0.2f;
 static constexpr float kDecay = 0.95f;
 static constexpr uint32_t kBeatsPerMinute = 90;
 
 // Translates a note number into a frequency.
 float Note(int32_t note) {
-  return kNoteZeroFrequency * pow(2.0f, note / 12.0f);
+  // Map note ordinal zero to middle C (eg. C4) on a standard piano tuning.  Use
+  // A4 (440Hz) as our reference frequency, keeping in mind that A4 is 9 half
+  // steps above C4.
+  constexpr int32_t kA4C4HalfStepDistance = 9;
+  note -= kA4C4HalfStepDistance;
+  return kA4Frequency * pow(2.0f, note / 12.0f);
 }
 
 // Translates a beat number into a time.
