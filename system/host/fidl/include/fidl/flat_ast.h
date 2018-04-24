@@ -31,7 +31,6 @@ class Library;
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, StringView separator);
 
-// TODO(TO-701) Handle multipart names.
 struct Name {
     Name() : name_(SourceLocation()) {}
 
