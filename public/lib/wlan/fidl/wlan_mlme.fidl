@@ -162,6 +162,24 @@ struct AuthenticateConfirm {
     // etc
 };
 
+// MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
+
+struct AuthenticateIndication {
+  array<uint8>:6 peer_sta_address;
+  AuthenticationTypes auth_type;
+
+  // etc
+};
+
+// MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
+
+struct AuthenticateResponse {
+  array<uint8>:6 peer_sta_address;
+  AuthenticateResultCodes result_code;
+
+  // etc
+};
+
 // MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
 
 struct DeauthenticateRequest {
@@ -216,6 +234,30 @@ struct AssociateConfirm {
     uint16 association_id;
 
     // etc
+};
+
+// MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
+
+struct AssociateIndication {
+  array<uint8>:6 peer_sta_address;
+  // CapabilityInformation
+  uint16 listen_interval;
+  vector<uint8>? ssid;
+  // OperationalRateSet
+  // BSSMembershipSelectorSet
+  vector<uint8>? rsn;
+
+  // etc
+};
+
+// MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
+
+struct AssociateResponse {
+  array<uint8>:6 peer_sta_address;
+  AssociateResultCodes result_code;
+  uint16 association_id;
+
+  // etc
 };
 
 // MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
@@ -374,87 +416,103 @@ enum Method {
     // Args: AuthenticateConfirm
     AUTHENTICATE_confirm = 6;
 
+    // MLME-AUTHENTICATE.indication
+    // Args: AuthenticateIndication
+    AUTHENTICATE_indication = 7;
+
+    // MLME-AUTHENTICATE.response
+    // Args: AuthenticateResponse
+    AUTHENTICATE_response = 8;
+
     // MLME-DEAUTHENTICATE.request
     // Args: DeauthenticateRequest
-    DEAUTHENTICATE_request = 7;
+    DEAUTHENTICATE_request = 9;
 
     // MLME-DEAUTHENTICATE.confirm
     // Args: DeauthenticateConfirm
-    DEAUTHENTICATE_confirm = 8;
+    DEAUTHENTICATE_confirm = 10;
 
     // MLME-DEAUTHENTICATE.indication
     // Args: DeauthenticateIndication
-    DEAUTHENTICATE_indication = 9;
+    DEAUTHENTICATE_indication = 11;
 
     // MLME-ASSOCIATE.request
     // Args: AssociateRequest
-    ASSOCIATE_request = 10;
+    ASSOCIATE_request = 12;
 
     // MLME-ASSOCIATE.confirm
     // Args: AssociateConfirm
-    ASSOCIATE_confirm = 11;
+    ASSOCIATE_confirm = 13;
+
+    // MLME-ASSOCIATE.indication
+    // Args: AssociateIndication
+    ASSOCIATE_indication = 14;
+
+    // MLME-ASSOCIATE.response
+    // Args: AssociateResponse
+    ASSOCIATE_response = 15;
 
     // MLME-DISASSOCIATE.request
     // Args: DisassociateRequest
-    DISASSOCIATE_request = 12;
+    DISASSOCIATE_request = 16;
 
     // MLME-DISASSOCIATE.confirm
     // Args: DisassociateConfirm
-    DISASSOCIATE_confirm = 13;
+    DISASSOCIATE_confirm = 17;
 
     // MLME-DISASSOCIATE.indication
     // Args: DisassociateIndication
-    DISASSOCIATE_indication = 14;
+    DISASSOCIATE_indication = 18;
 
     // MLME-RESET.request
     // Args: ResetRequest
-    RESET_request = 15;
+    RESET_request = 19;
 
     // MLME-START.request
     // Args: StartRequest
-    START_request = 16;
+    START_request = 20;
 
     // MLME-START.confirm
     // Args: StartConfirm
-    START_confirm = 17;
+    START_confirm = 21;
 
     // MLME-STOP.request
     // Args: StopRequest
-    STOP_request = 18;
+    STOP_request = 22;
 
     // MLME-STOP.confirm
     // Args: StopConfirm
-    STOP_confirm = 19;
+    STOP_confirm = 23;
 
     // MLME-SETKEYS.request
     // Args: SetKeysRequest
-    SETKEYS_request = 20;
+    SETKEYS_request = 24;
 
     // MLME-DELETEKEYS.request
     // Args: DeleteKeysRequest
-    DELETEKEYS_request = 21;
+    DELETEKEYS_request = 25;
 
     // MLME-EAPOL.request
     // Args: EapolRequest
-    EAPOL_request = 22;
+    EAPOL_request = 26;
 
     // MLME-EAPOL.confirm
     // Args: EapolConfirm
-    EAPOL_confirm = 23;
+    EAPOL_confirm = 27;
 
 
     // Custom primitives extending 802.11 MLME SAP interface.
     // See: wlan_mlme_ext.fidl
 
     // Args: SignalReportIndication
-    SIGNAL_REPORT_indication = 24;
+    SIGNAL_REPORT_indication = 28;
 
     // Args: EapolIndication
-    EAPOL_indication = 25;
+    EAPOL_indication = 29;
 
     // Args: DeviceQueryRequest
-    DEVICE_QUERY_request = 26;
+    DEVICE_QUERY_request = 30;
 
     // Args: DeviceQueryConfirm
-    DEVICE_QUERY_confirm = 27;
+    DEVICE_QUERY_confirm = 31;
 };
