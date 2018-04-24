@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -67,6 +68,13 @@ static const pbus_gpio_t emmc_gpios[] = {
     },
 };
 
+static const pbus_boot_metadata_t emmc_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PARTITION_MAP,
+        .extra = 0,
+    },
+};
+
 static const pbus_dev_t emmc_dev = {
     .name = "aml_emmc",
     .vid = PDEV_VID_AMLOGIC,
@@ -80,6 +88,8 @@ static const pbus_dev_t emmc_dev = {
     .bti_count = countof(emmc_btis),
     .gpios = emmc_gpios,
     .gpio_count = countof(emmc_gpios),
+    .boot_metadata = emmc_metadata,
+    .boot_metadata_count = countof(emmc_metadata),
 };
 
 zx_status_t vim_sd_emmc_init(vim_bus_t* bus) {
