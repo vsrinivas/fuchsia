@@ -284,9 +284,12 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
       release_renderer_packet = (task_type == TaskType::Mix)
                                     ? ProcessMix(renderer, info, pkt_ref)
                                     : ProcessTrim(renderer, info, pkt_ref);
-      // If we produced enough output frames, then we are done with this mix,
-      // regardless of what we should now do with the renderer packet.
-      if (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames) {
+
+      // If we are mixing, and we have produced enough output frames, then we
+      // are done with this mix, regardless of what we should now do with the
+      // renderer packet.
+      if ((task_type == TaskType::Mix) &&
+          (cur_mix_job_.frames_produced == cur_mix_job_.buf_frames)) {
         break;
       }
       // If we still need more output, but could not complete this renderer

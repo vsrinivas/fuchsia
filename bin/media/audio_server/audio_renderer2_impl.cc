@@ -409,10 +409,6 @@ void AudioRenderer2Impl::SendPacket(AudioPacket packet,
   next_frac_frame_pts_ = packet_ref->end_pts();
 
   // Distribute our packet to our links
-  if (throttle_output_link_ != nullptr) {
-    throttle_output_link_->PushToPendingQueue(packet_ref);
-  }
-
   {
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
@@ -442,10 +438,6 @@ void AudioRenderer2Impl::Flush(FlushCallback callback) {
   // processing pending data, then link will take a reference to the flush token
   // and ensure that the callback is queued at the proper time (after all of the
   // pending packet complete callbacks have been queued).
-  if (throttle_output_link_ != nullptr) {
-    throttle_output_link_->FlushPendingQueue(flush_token);
-  }
-
   {
     fbl::AutoLock links_lock(&links_lock_);
     for (const auto& link : dest_links_) {
