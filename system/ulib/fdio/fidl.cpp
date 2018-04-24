@@ -53,12 +53,11 @@ T* to_primary(const fidl::Message* msg) {
     return reinterpret_cast<T*>(msg->bytes().data());
 }
 
-// Semantic sugar for creating a new FIDL request object,
-// setting the TXID, and setting the ordinal.
+// Semantic sugar for creating a new FIDL request object
+// and setting the ordinal.
 template <typename T, uint32_t Ordinal>
 T* new_request(zxrio_t* rio, fidl::Builder* builder) {
     T* request = builder->New<T>();
-    zxrio_new_txid(rio, &request->hdr.txid);
     request->hdr.ordinal = Ordinal;
     return request;
 }

@@ -12,9 +12,6 @@ __BEGIN_CDECLS
 
 typedef struct zxrio zxrio_t;
 
-// Atomically acquire a new txid
-void zxrio_new_txid(zxrio_t* rio, zx_txid_t* txid);
-
 // Acquire a rio object's RPC handle
 zx_handle_t zxrio_handle(zxrio_t* rio);
 

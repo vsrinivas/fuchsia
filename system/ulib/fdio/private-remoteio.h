@@ -16,9 +16,6 @@ struct zxrio {
 
     // event handle for device state signals, or socket handle
     zx_handle_t h2;
-
-    // transaction id used for synchronous remoteio calls
-    _Atomic zx_txid_t txid;
 };
 
 // These are for the benefit of namespace.c

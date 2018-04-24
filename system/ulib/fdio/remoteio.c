@@ -162,8 +162,7 @@ static zx_status_t zxrio_txn(zxrio_t* rio, zxrio_msg_t* msg) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    msg->txid = atomic_fetch_add(&rio->txid, 1);
-    xprintf("txn h=%x txid=%x op=%d len=%u\n", rio->h, msg->txid, msg->op, msg->datalen);
+    xprintf("txn h=%x op=%d len=%u\n", rio->h, msg->op, msg->datalen);
 
     zx_status_t r;
     zx_status_t rs = ZX_ERR_INTERNAL;
@@ -209,10 +208,6 @@ fail_discard_handles:
     discard_handles(msg->handle, msg->hcount);
     msg->hcount = 0;
     return r;
-}
-
-void zxrio_new_txid(zxrio_t* rio, zx_txid_t* txid) {
-    *txid = atomic_fetch_add(&rio->txid, 1);
 }
 
 zx_handle_t zxrio_handle(zxrio_t* rio) {
@@ -1429,6 +1424,5 @@ fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t e) {
     atomic_init(&rio->io.refcount, 1);
     rio->h = h;
     rio->h2 = e;
-    atomic_init(&rio->txid, 1);
     return &rio->io;
 }
