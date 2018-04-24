@@ -932,20 +932,8 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
     const auto view_id = PathString(module_path_);
 
-    // If there is no anchor view id, arbitrarily choose a different module as
-    // the parent.
-    // TODO(MI4-889): Pass along more useful layout signals to the story shell.
-    fidl::StringPtr parent_id = anchor_view_id;
-    if (anchor_view_id->empty()) {
-      const std::string first_module_string =
-          PathString(story_controller_impl_->first_module_path_);
-      if (view_id != first_module_string) {
-        parent_id = first_module_string;
-      }
-    }
-
     story_controller_impl_->story_shell_->ConnectView(
-        std::move(view_owner_), view_id, parent_id,
+        std::move(view_owner_), view_id, anchor_view_id,
         std::move(surface_relation_), std::move(module_manifest_));
 
     story_controller_impl_->connected_views_.emplace(view_id);
@@ -2451,6 +2439,7 @@ void StoryControllerImpl::AddModule(
     fidl::StringPtr module_name,
     Intent intent,
     SurfaceRelationPtr surface_relation) {
+
   new AddIntentCall(
       &operation_queue_, this, std::move(parent_module_path), module_name,
       CloneOptional(intent), nullptr /* incoming_services */,
