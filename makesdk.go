@@ -220,6 +220,36 @@ func init() {
 			path.Join(armBuildBootfsDir, "user.bootfs"),
 			"target/aarch64/bootdata.bin",
 		},
+		{
+			sysroot,
+			path.Join(x64BuildDir, "stripped/libc++.so.2"),
+			"arch/x64/dist/libc++.so.2",
+		},
+		{
+			sysroot,
+			path.Join(armBuildDir, "stripped/libc++.so.2"),
+			"arch/arm64/dist/libc++.so.2",
+		},
+		{
+			sysroot,
+			path.Join(x64BuildDir, "stripped/libc++abi.so.1"),
+			"arch/x64/dist/libc++abi.so.1",
+		},
+		{
+			sysroot,
+			path.Join(armBuildDir, "stripped/libc++abi.so.1"),
+			"arch/arm64/dist/libc++abi.so.1",
+		},
+		{
+			sysroot,
+			path.Join(x64BuildDir, "stripped/libunwind.so.1"),
+			"arch/x64/dist/libunwind.so.1",
+		},
+		{
+			sysroot,
+			path.Join(armBuildDir, "stripped/libunwind.so.1"),
+			"arch/arm64/dist/libunwind.so.1",
+		},
 	}
 
 	components = []component{
