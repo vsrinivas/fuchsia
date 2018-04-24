@@ -13,7 +13,7 @@ namespace storage {
 
 class DirectoryReader {
  public:
-  // Returns the list of directories inside the provided directory.
+  // Returns the list of directories and files inside the provided directory.
   static bool GetDirectoryEntries(
       fxl::StringView directory,
       std::function<bool(fxl::StringView)> callback);
