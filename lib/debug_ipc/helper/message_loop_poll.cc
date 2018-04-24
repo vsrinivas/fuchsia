@@ -15,6 +15,30 @@ namespace debug_ipc {
 
 namespace {
 
+#if !defined(OS_LINUX)
+bool SetCloseOnExec(int fd) {
+  const int flags = fcntl(fd, F_GETFD);
+  if (flags == -1)
+    return false;
+  if (flags & FD_CLOEXEC)
+    return true;
+  if (HANDLE_EINTR(fcntl(fd, F_SETFD, flags | FD_CLOEXEC)) == -1)
+    return false;
+  return true;
+}
+
+bool SetNonBlocking(int fd) {
+  const int flags = fcntl(fd, F_GETFL);
+  if (flags == -1)
+    return false;
+  if (flags & O_NONBLOCK)
+    return true;
+  if (HANDLE_EINTR(fcntl(fd, F_SETFL, flags | O_NONBLOCK)) == -1)
+    return false;
+  return true;
+}
+#endif
+
 // Creates a nonblocking temporary pipe pipe and assigns the two ends of it to
 // the two out parameters. Returns true on success.
 bool CreateLocalNonBlockingPipe(fxl::UniqueFD* out_end, fxl::UniqueFD* in_end) {
