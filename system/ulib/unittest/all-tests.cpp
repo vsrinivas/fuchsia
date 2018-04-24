@@ -114,19 +114,19 @@ bool unittest_run_all_tests(int argc, char** argv) {
             if (strcmp(argv[i], "--help") == 0) {
                 // Specifying --help in any way prints the help and exits.
                 print_help();
-                return 0;
+                return true;
             } else if (strcmp(argv[i], "--list") == 0) {
                 list_tests_only = true;
             } else if (strcmp(argv[i], "--case") == 0) {
                 if (i + 1 >= argc) {
                     print_help();
-                    return 1;
+                    return false;
                 }
                 case_matcher = argv[++i];
             } else if (strcmp(argv[i], "--test") == 0) {
                 if (i + 1 >= argc) {
                     print_help();
-                    return 0;
+                    return false;
                 }
                 test_matcher = argv[++i];
             }
