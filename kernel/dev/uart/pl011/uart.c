@@ -139,7 +139,7 @@ static int pl011_uart_getc(bool wait)
         return c;
     }
 
-    return -1;
+    return ZX_ERR_INTERNAL;
 }
 
 /* panic-time getc/putc */

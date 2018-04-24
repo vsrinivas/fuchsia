@@ -454,7 +454,7 @@ int platform_dgetc(char* c, bool wait) {
     if (platform_serial_enabled()) {
         return static_cast<int>(cbuf_read_char(&console_input_buf, c, wait));
     }
-    return -1;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 // panic time polling IO for the panic shell
@@ -470,7 +470,7 @@ int platform_pgetc(char *c, bool wait) {
     if (platform_serial_enabled()) {
         return debug_uart_getc_poll(c);
     }
-    return -1;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 /*

@@ -430,11 +430,11 @@ void platform_dputs_irq(const char* str, size_t len) {
 
 int platform_dgetc(char* c, bool wait) {
     if (uart_disabled) {
-        return -1;
+        return ZX_ERR_NOT_SUPPORTED;;
     }
     int ret = uart_getc(wait);
-    if (ret == -1)
-        return -1;
+    if (ret < 0)
+        return ret;
     *c = static_cast<char>(ret);
     return 0;
 }
@@ -448,11 +448,11 @@ void platform_pputc(char c) {
 
 int platform_pgetc(char* c, bool wait) {
     if (uart_disabled) {
-        return -1;
+        return ZX_ERR_NOT_SUPPORTED;
     }
     int r = uart_pgetc();
-    if (r == -1) {
-        return -1;
+    if (r < 0) {
+        return r;
     }
 
     *c = static_cast<char>(r);

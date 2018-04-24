@@ -117,11 +117,11 @@ static int imx_uart_pputc(char c)
 static int imx_uart_pgetc(void)
 {
     if (!uart_base) {
-        return -1;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     if ((UARTREG(MX8_UTS) & UTS_RXEMPTY)) {
-        return -1;
+        return ZX_ERR_INTERNAL;
     }
 
    return UARTREG(MX8_URXD);
@@ -130,7 +130,7 @@ static int imx_uart_pgetc(void)
 static int imx_uart_getc(bool wait)
 {
     if (!uart_base) {
-        return -1;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
     if (initialized) {
@@ -138,7 +138,7 @@ static int imx_uart_getc(bool wait)
         if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1) {
             return c;
         }
-        return -1;
+        return ZX_ERR_INTERNAL;
     } else {
         // Interrupts are not enabled yet. Use panic calls for now
         return imx_uart_pgetc();

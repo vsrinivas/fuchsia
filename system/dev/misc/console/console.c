@@ -60,6 +60,9 @@ static int debug_reader(void* arg) {
             }
             fifo_write(ch);
             mtx_unlock(&fifo.lock);
+        } else if (status == ZX_ERR_NOT_SUPPORTED) {
+            // Silently exit
+            return 0;
         } else {
             printf("console: error %d, length %zu from zx_debug_read syscall, exiting.\n",
                     status, length);

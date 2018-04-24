@@ -196,7 +196,7 @@ static int s905_uart_pgetc(void)
     if ((UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_RXEMPTY) == 0) {
         return UARTREG(s905_uart_base, S905_UART_RFIFO);
     } else {
-        return -1;
+        return ZX_ERR_INTERNAL;
     }
 }
 
@@ -210,7 +210,7 @@ static int s905_uart_getc(bool wait)
         char c;
         if (cbuf_read_char(&uart_rx_buf, &c, wait) == 1)
             return c;
-        return -1;
+        return ZX_ERR_INTERNAL;
 
     } else {
         //Interupts not online yet, use the panic calls for now.

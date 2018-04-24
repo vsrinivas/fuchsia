@@ -9,7 +9,7 @@
 #include <pdev/uart.h>
 
 static int default_getc(bool wait) {
-    return -1;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static int default_pputc(char c) {
@@ -17,7 +17,7 @@ static int default_pputc(char c) {
 }
 
 static int default_pgetc(void) {
-    return -1;
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 static void default_start_panic(void) {
