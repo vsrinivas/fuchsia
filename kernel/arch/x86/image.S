@@ -128,7 +128,7 @@ FUNCTION(apply_fixups)
 .elseif \n == 2
     // So this pair is 14 bytes.
     add %rax, FIXUP_LOCATION(\addr)
-    add %rax, FIXUP_LOCATION(\addr + 8)
+    add %rax, FIXUP_LOCATION(\addr + \stride)
 .else
     // This sequence is 21 bytes, so it's smaller for n > 3.
     mov $\n, %ecx
