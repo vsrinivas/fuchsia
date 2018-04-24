@@ -12,9 +12,12 @@ For how to build, see Fuchsia's [Getting Started](/getting_started.md) doc.
 The bootstrap procedure requires that you have Go 1.6 or newer and Git
 installed and on your PATH.
 
-First, select the [layer](layers.md) of the system you wish to build. (If you're
-unsure, select `topaz`, which contains the lower layers). Then, run the
-following command:
+First, select the [layer](layers.md) of the system you wish to build. If you're
+unsure, select `topaz`, which contains the lower layers. If you change your mind
+later, you can use `fx set-layer <layer>` to [pick another
+layer](/development/workflows/multilayer_changes.md#switching-between-layers).
+
+Then, run the following command:
 
 ```
 curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash -s <layer>
@@ -24,10 +27,21 @@ This script will bootstrap a development environment for the given layer
 by first creating directories `fuchsia`, then downloading repositories for
 `<layer>` as well as dependent repositories required in building `<layer>`.
 
-Upon success, the script should print a message
-recommending that you add the `.jiri_root/bin` directory to your PATH. Adding
-**jiri** to your PATH is strongly recommended and is assumed by other parts of the
-Fuchsia toolchain.
+
+### Setting up environment variables
+
+Upon success, the bootstrap script should print a message recommending that you
+add the `.jiri_root/bin` directory to your PATH. This will add `jiri` to your
+PATH, which is strongly recommended and is assumed by other parts of the Fuchsia
+toolchain.
+
+Another tool in `.jiri_root/bin` is `fx`, which helps configuring, building,
+running and debugging Fuchsia. See `fx help` for all available commands.
+
+We also suggest sourcing `scripts/fx-env.sh`. It defines a few environment
+variables that are commonly used in the documentation, such as `$FUCHSIA_DIR`,
+and provides useful shell functions, for instance `fd` to change directories
+effectively. See comments in `scripts/fx-env.sh` for more details.
 
 ### Working without altering your PATH
 

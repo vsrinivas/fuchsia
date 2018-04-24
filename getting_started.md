@@ -181,11 +181,19 @@ For example, to receive deep wisdom, run:
 fortune
 ```
 
+To shutdown or reboot Fuchsia, use the `dm` command:
+
+```
+dm help
+dm shutdown
+```
+
 ### Select a tab
 
-Fuchsia shows multiple tabs after booting. The currently selected tab is
-highlighted in yellow at the top of the screen. You can switch to the next
-tab using Alt-Tab on the keyboard.
+Fuchsia shows multiple tabs after booting [with graphics
+enabled](#enabling-graphics). The currently selected tab is highlighted in
+yellow at the top of the screen. You can switch to the next tab using Alt-Tab on
+the keyboard.
 
 - Tab zero is the console and displays the boot and application log.
 - Tabs 1, 2 and 3 contain shells.
