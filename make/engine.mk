@@ -715,14 +715,11 @@ ifneq ($(HOST_USE_CLANG),)
 # TODO: This can be removed once the Clang toolchain ships with a
 # cross-compiled C++ runtime.
 ifeq ($(HOST_TARGET),)
-HOST_CPPFLAGS += -stdlib=libc++
-HOST_LDFLAGS += -stdlib=libc++
-# We don't need to link libc++abi.a on OS X.
 ifneq ($(HOST_PLATFORM),darwin)
-HOST_LDFLAGS += -Lprebuilt/downloads/clang+llvm-$(HOST_ARCH)-$(HOST_PLATFORM)/lib -Wl,-Bstatic -lc++abi -Wl,-Bdynamic -lpthread
+# The implicitly linked static libc++.a depends on these.
+HOST_LDFLAGS += -ldl -lpthread
 endif
 endif
-HOST_LDFLAGS += -static-libstdc++
 # For host tools without C++, ignore the unused arguments.
 HOST_LDFLAGS += -Wno-unused-command-line-argument
 endif
