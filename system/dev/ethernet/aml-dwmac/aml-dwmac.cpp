@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -380,6 +381,20 @@ zx_status_t AmlDWMacDevice::ShutDown() {
 }
 
 zx_status_t AmlDWMacDevice::GetMAC(uint8_t* addr) {
+    // look for MAC address device metadata
+    // metadata is padded so we need buffer size > 6 bytes
+    uint8_t buffer[16];
+    size_t actual;
+    zx_status_t status = device_get_metadata(zxdev(), DEVICE_METADATA_MAC_ADDRESS, buffer,
+                                             sizeof(buffer), &actual);
+    if (status == ZX_OK && actual >= 6) {
+        zxlogf(INFO, "aml_dwmac: MAC address %02x:%02x:%02x:%02x:%02x:%02x\n",
+               buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
+        memcpy(addr, buffer, 6);
+        return ZX_OK;
+    }
+
+    // else read MAC address from hardware register
     uint32_t hi = dwmac_regs_->macaddr0hi;
     uint32_t lo = dwmac_regs_->macaddr0lo;
 

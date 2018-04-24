@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform-defs.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -53,6 +54,13 @@ static const pbus_bti_t eth_btis[] = {
     },
 };
 
+static const pbus_boot_metadata_t eth_metadata[] = {
+    {
+        .type = DEVICE_METADATA_MAC_ADDRESS,
+        .extra = 0,
+    },
+};
+
 static pbus_dev_t eth_dev = {
     .name = "ethernet",
     .vid = PDEV_VID_KHADAS,
@@ -66,6 +74,8 @@ static pbus_dev_t eth_dev = {
     .bti_count = countof(eth_btis),
     .irqs = eth_irqs,
     .irq_count = countof(eth_irqs),
+    .boot_metadata = eth_metadata,
+    .boot_metadata_count = countof(eth_metadata),
 };
 
 zx_status_t vim_eth_init(vim_bus_t* bus) {
