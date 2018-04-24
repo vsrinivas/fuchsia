@@ -40,7 +40,7 @@ func macStr(macArray [6]uint8) string {
 		macArray[0], macArray[1], macArray[2], macArray[3], macArray[4], macArray[5])
 }
 
-func CollectScanResults(resp *mlme.ScanResponse, ssid string, bssid string) []AP {
+func CollectScanResults(resp *mlme.ScanConfirm, ssid string, bssid string) []AP {
 	aps := []AP{}
 	for _, s := range resp.BssDescriptionSet {
 		if bssid != "" {

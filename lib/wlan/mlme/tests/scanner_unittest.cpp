@@ -107,11 +107,12 @@ class ScannerTest : public ::testing::Test {
     zx_status_t DeserializeResponse() {
         EXPECT_EQ(1u, mock_dev_.svc_queue.size());
         auto packet = mock_dev_.svc_queue.Dequeue();
-        return DeserializeServiceMsg<wlan_mlme::ScanResponse>(*packet, wlan_mlme::Method::SCAN_confirm, &resp_);
+        return DeserializeServiceMsg<wlan_mlme::ScanConfirm>(
+            *packet, wlan_mlme::Method::SCAN_confirm, &resp_);
     }
 
     wlan_mlme::ScanRequestPtr req_;
-    wlan_mlme::ScanResponse resp_;
+    wlan_mlme::ScanConfirm resp_;
     TestClock clock_;
     MockDevice mock_dev_;
     Scanner scanner_;

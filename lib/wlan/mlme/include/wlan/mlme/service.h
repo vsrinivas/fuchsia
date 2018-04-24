@@ -78,20 +78,20 @@ template <typename T> zx_status_t SerializeServiceMsg(Packet* packet, wlan_mlme:
 
 namespace service {
 
-zx_status_t SendJoinResponse(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code);
-zx_status_t SendAuthResponse(DeviceInterface* device, const common::MacAddr& peer_sta,
-                             wlan_mlme::AuthenticateResultCodes code);
-zx_status_t SendDeauthResponse(DeviceInterface* device, const common::MacAddr& peer_sta);
+zx_status_t SendJoinConfirm(DeviceInterface* device, wlan_mlme::JoinResultCodes result_code);
+zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta,
+                            wlan_mlme::AuthenticateResultCodes code);
+zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta);
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                  uint16_t code);
-zx_status_t SendAssocResponse(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
-                              uint16_t aid = 0);
+zx_status_t SendAssocConfirm(DeviceInterface* device, wlan_mlme::AssociateResultCodes code,
+                             uint16_t aid = 0);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        uint16_t code);
 
 zx_status_t SendSignalReportIndication(DeviceInterface* device, uint8_t rssi);
 
-zx_status_t SendEapolResponse(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
+zx_status_t SendEapolConfirm(DeviceInterface* device, wlan_mlme::EapolResultCodes result_code);
 zx_status_t SendEapolIndication(DeviceInterface* device, const EapolFrame& eapol,
                                 const common::MacAddr& src, const common::MacAddr& dst);
 }  // namespace service

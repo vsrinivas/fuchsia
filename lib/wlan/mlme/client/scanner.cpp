@@ -40,15 +40,15 @@ zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     ZX_DEBUG_ASSERT(channel_index_ == 0);
     ZX_DEBUG_ASSERT(channel_start_.get() == 0);
 
-    resp_ = wlan_mlme::ScanResponse::New();
+    resp_ = wlan_mlme::ScanConfirm::New();
     resp_->bss_description_set = fidl::VectorPtr<wlan_mlme::BSSDescription>::New(0);
     resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
 
-    if (req.channel_list->size() == 0) { return SendScanResponse(); }
-    if (req.max_channel_time < req.min_channel_time) { return SendScanResponse(); }
+    if (req.channel_list->size() == 0) { return SendScanConfirm(); }
+    if (req.max_channel_time < req.min_channel_time) { return SendScanConfirm(); }
     // TODO(NET-629): re-enable checking the enum value after fidl2 lands
     //if (!BSSTypes_IsValidValue(req.bss_type) || !ScanTypes_IsValidValue(req.scan_type)) {
-    //    return SendScanResponse();
+    //    return SendScanConfirm();
     //}
 
     // TODO(tkilbourn): define another result code (out of spec) for errors that aren't
@@ -67,7 +67,7 @@ zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     status = device_->SetChannel(ScanChannel());
     if (status != ZX_OK) {
         errorf("could not queue set channel: %d\n", status);
-        SendScanResponse();
+        SendScanConfirm();
         Reset();
         return status;
     }
@@ -76,7 +76,7 @@ zx_status_t Scanner::Start(const wlan_mlme::ScanRequest& req) {
     if (status != ZX_OK) {
         errorf("could not start scan timer: %d\n", status);
         resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
-        SendScanResponse();
+        SendScanConfirm();
         Reset();
         return status;
     }
@@ -204,7 +204,7 @@ zx_status_t Scanner::HandleTimeout() {
     if (now >= channel_start_ + WLAN_TU(req_->max_channel_time)) {
         if (++channel_index_ >= req_->channel_list->size()) {
             timer_->CancelTimer();
-            status = SendScanResponse();
+            status = SendScanConfirm();
             Reset();
             return status;
         } else {
@@ -245,17 +245,17 @@ zx_status_t Scanner::HandleTimeout() {
 
 timer_fail:
     errorf("could not set scan timer: %d\n", status);
-    status = SendScanResponse();
+    status = SendScanConfirm();
     Reset();
     return status;
 }
 
 zx_status_t Scanner::HandleError(zx_status_t error_code) {
     debugfn();
-    resp_ = wlan_mlme::ScanResponse::New();
+    resp_ = wlan_mlme::ScanConfirm::New();
     // TODO(tkilbourn): report the error code somehow
     resp_->result_code = wlan_mlme::ScanResultCodes::NOT_SUPPORTED;
-    return SendScanResponse();
+    return SendScanConfirm();
 }
 
 zx::time Scanner::InitialTimeout() const {
@@ -332,7 +332,7 @@ zx_status_t Scanner::SendProbeRequest() {
 }
 
 // TODO(hahnr): Move to service.cpp.
-zx_status_t Scanner::SendScanResponse() {
+zx_status_t Scanner::SendScanConfirm() {
     debugfn();
 
     nbrs_bss_.ForEach([this](fbl::RefPtr<Bss> bss) {

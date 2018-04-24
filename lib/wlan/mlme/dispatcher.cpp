@@ -432,7 +432,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
     debugfn();
     ZX_DEBUG_ASSERT(method == wlan_mlme::Method::DEVICE_QUERY_request);
 
-    wlan_mlme::DeviceQueryResponse resp;
+    wlan_mlme::DeviceQueryConfirm resp;
     const wlanmac_info_t& info = device_->GetWlanInfo();
 
     memcpy(resp.mac_addr.mutable_data(), info.eth_info.mac, ETH_MAC_SIZE);

@@ -140,7 +140,7 @@ func (s *startBSSState) handleCommand(cmd *commandRequest, c *Client) (state, er
 
 func (s *startBSSState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.StartResponse:
+	case *mlme.StartConfirm:
 		if debug {
 			// TODO(hahnr): Print response.
 		}
@@ -201,11 +201,11 @@ func (s *queryState) handleCommand(cmd *commandRequest, c *Client) (state, error
 
 func (s *queryState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.DeviceQueryResponse:
+	case *mlme.DeviceQueryConfirm:
 		if debug {
-			PrintDeviceQueryResponse(v)
+			PrintDeviceQueryConfirm(v)
 		}
-		c.wlanInfo, _ = msg.(*mlme.DeviceQueryResponse)
+		c.wlanInfo, _ = msg.(*mlme.DeviceQueryConfirm)
 		c.staAddr = c.wlanInfo.MacAddr
 
 		// Enter AP mode if ap config was supplied and is active. Else fall back to client mode.
@@ -430,9 +430,9 @@ func sortAndDedupeAPs(aps []AP) []AP {
 
 func (s *scanState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.ScanResponse:
+	case *mlme.ScanConfirm:
 		if debug {
-			PrintScanResponse(v)
+			PrintScanConfirm(v)
 		}
 		s.running = !s.completed
 
@@ -547,9 +547,9 @@ func (s *joinState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 
 func (s *joinState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.JoinResponse:
+	case *mlme.JoinConfirm:
 		if debug {
-			PrintJoinResponse(v)
+			PrintJoinConfirm(v)
 		}
 
 		if v.ResultCode == mlme.JoinResultCodesSuccess {
@@ -610,9 +610,9 @@ func (s *authState) handleCommand(cmd *commandRequest, c *Client) (state, error)
 
 func (s *authState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.AuthenticateResponse:
+	case *mlme.AuthenticateConfirm:
 		if debug {
-			PrintAuthenticateResponse(v)
+			PrintAuthenticateConfirm(v)
 		}
 
 		if v.ResultCode == mlme.AuthenticateResultCodesSuccess {
@@ -751,9 +751,9 @@ func (s *assocState) handleCommand(cmd *commandRequest, c *Client) (state, error
 
 func (s *assocState) handleMLMEMsg(msg interface{}, c *Client) (state, error) {
 	switch v := msg.(type) {
-	case *mlme.AssociateResponse:
+	case *mlme.AssociateConfirm:
 		if debug {
-			PrintAssociateResponse(v)
+			PrintAssociateConfirm(v)
 		}
 
 		if v.ResultCode == mlme.AssociateResultCodesSuccess {
@@ -844,9 +844,9 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 			PrintDisassociateIndication(v)
 		}
 		return newAssocState(), nil
-	case *mlme.DeauthenticateResponse:
+	case *mlme.DeauthenticateConfirm:
 		if debug {
-			PrintDeauthenticateResponse(v)
+			PrintDeauthenticateConfirm(v)
 		}
 		// This was a user issued deauthentication. Clear config to prevent automatic reconnect, and
 		// enter scan state.
@@ -868,7 +868,7 @@ func (s *associatedState) handleMLMEMsg(msg interface{}, c *Client) (state, erro
 			c.eapolC.HandleEAPOLFrame(v.Data)
 		}
 		return s, nil
-	case *mlme.EapolResponse:
+	case *mlme.EapolConfirm:
 		// TODO(hahnr): Evaluate response code.
 		return s, nil
 	default:

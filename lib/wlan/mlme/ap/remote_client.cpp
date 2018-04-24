@@ -461,12 +461,12 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const wlan_mlme::EapolRequest& r
     if (status != ZX_OK) {
         errorf("[client] [%s] could not send EAPOL request packet: %d\n",
                client_->addr().ToString().c_str(), status);
-        service::SendEapolResponse(client_->device(),
-                                   wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
+        service::SendEapolConfirm(client_->device(),
+                                  wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
         return status;
     }
 
-    service::SendEapolResponse(client_->device(), wlan_mlme::EapolResultCodes::SUCCESS);
+    service::SendEapolConfirm(client_->device(), wlan_mlme::EapolResultCodes::SUCCESS);
     return status;
 }
 

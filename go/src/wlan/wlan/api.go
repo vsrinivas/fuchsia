@@ -55,8 +55,8 @@ func PrintBssDescription(bss *mlme.BssDescription) {
 	}
 }
 
-func PrintScanResponse(resp *mlme.ScanResponse) {
-	log.Print("ScanResponse")
+func PrintScanConfirm(resp *mlme.ScanConfirm) {
+	log.Print("ScanConfirm")
 	var resCode string
 	switch resp.ResultCode {
 	case mlme.ScanResultCodesSuccess:
@@ -71,8 +71,8 @@ func PrintScanResponse(resp *mlme.ScanResponse) {
 	}
 }
 
-func PrintJoinResponse(resp *mlme.JoinResponse) {
-	log.Print("JoinResponse")
+func PrintJoinConfirm(resp *mlme.JoinConfirm) {
+	log.Print("JoinConfirm")
 	var resCode string
 	switch resp.ResultCode {
 	case mlme.JoinResultCodesSuccess:
@@ -83,8 +83,8 @@ func PrintJoinResponse(resp *mlme.JoinResponse) {
 	log.Print("  Result code: ", resCode)
 }
 
-func PrintAuthenticateResponse(resp *mlme.AuthenticateResponse) {
-	log.Print("AuthenticateResponse")
+func PrintAuthenticateConfirm(resp *mlme.AuthenticateConfirm) {
+	log.Print("AuthenticateConfirm")
 	var authType string
 	switch resp.AuthType {
 	case mlme.AuthenticationTypesOpenSystem:
@@ -115,8 +115,8 @@ func PrintAuthenticateResponse(resp *mlme.AuthenticateResponse) {
 	log.Print("  Result code: ", resCode)
 }
 
-func PrintAssociateResponse(resp *mlme.AssociateResponse) {
-	log.Print("AssociateResponse")
+func PrintAssociateConfirm(resp *mlme.AssociateConfirm) {
+	log.Print("AssociateConfirm")
 	var resCode string
 	switch resp.ResultCode {
 	case mlme.AssociateResultCodesSuccess:
@@ -151,8 +151,8 @@ func PrintDisassociateIndication(ind *mlme.DisassociateIndication) {
 	log.Print("  Reason code: ", ind.ReasonCode)
 }
 
-func PrintDeauthenticateResponse(ind *mlme.DeauthenticateResponse) {
-	log.Print("DeauthenticateResponse")
+func PrintDeauthenticateConfirm(ind *mlme.DeauthenticateConfirm) {
+	log.Print("DeauthenticateConfirm")
 	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
 		ind.PeerStaAddress[0], ind.PeerStaAddress[1], ind.PeerStaAddress[2],
 		ind.PeerStaAddress[3], ind.PeerStaAddress[4], ind.PeerStaAddress[5])
@@ -173,8 +173,8 @@ func PrintSignalReportIndication(ind *mlme.SignalReportIndication) {
 	log.Printf("  RSSI: %d", int8(ind.Rssi))
 }
 
-func PrintDeviceQueryResponse(resp *mlme.DeviceQueryResponse) {
-	log.Print("DeviceQueryResponse")
+func PrintDeviceQueryConfirm(resp *mlme.DeviceQueryConfirm) {
+	log.Print("DeviceQueryConfirm")
 	log.Printf("  MAC: %02x:%02x:%02x:%02x:%02x:%02x",
 		resp.MacAddr[0], resp.MacAddr[1], resp.MacAddr[2],
 		resp.MacAddr[3], resp.MacAddr[4], resp.MacAddr[5])

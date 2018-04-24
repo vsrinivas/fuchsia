@@ -44,7 +44,7 @@ struct BandCapabilities {
 
 // TODO(tkilbourn): add more fields for debugging. For now, we just have the information
 // necessary for the SME.
-struct DeviceQueryResponse {
+struct DeviceQueryConfirm {
     array<uint8>:6 mac_addr;
     MacRole role;
     vector<BandCapabilities> bands;
