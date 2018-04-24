@@ -1478,6 +1478,7 @@ static zx_status_t dc_create_proxy(device_t* parent) {
 
     list_initialize(&dev->children);
     list_initialize(&dev->pending);
+    list_initialize(&dev->metadata);
     dev->flags = DEV_CTX_PROXY;
     dev->protocol_id = parent->protocol_id;
     dev->parent = parent;
