@@ -16,6 +16,7 @@
         "garnet/packages/prod/device_settings",
         "garnet/packages/prod/drivers",
         "garnet/packages/prod/far",
+        "garnet/packages/prod/ffmpeg",
         "garnet/packages/prod/fonts",
         "garnet/packages/prod/fortune",
         "garnet/packages/prod/gralloc",
