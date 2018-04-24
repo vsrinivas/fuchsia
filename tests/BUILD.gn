@@ -56,7 +56,6 @@ package("modular_tests") {
     "link_update",
     "parent_child",
     "queue_persistence",
-    "remote",
     "story_shell",
     "story_update",
     "suggestion",
@@ -165,10 +164,6 @@ package("modular_tests") {
     {
       name = "queue_persistence_test_module"
       dest = "modular_tests/queue_persistence_test_module"
-    },
-    {
-      name = "remote_test_module"
-      dest = "modular_tests/remote_test_module"
     },
     {
       name = "story_shell_test_story_shell"

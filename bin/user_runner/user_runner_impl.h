@@ -43,7 +43,6 @@ class FocusHandler;
 class LedgerClient;
 class LinkImpl;
 class MessageQueueManager;
-class RemoteInvokerImpl;
 class StoryProviderImpl;
 class VisibleStoriesHandler;
 
@@ -87,7 +86,6 @@ class UserRunnerImpl : modular_private::UserRunner,
   void InitializeLedgerDashboard();
   void InitializeDeviceMap();
   void InitializeClipboard();
-  void InitializeRemoteInvoker();
   void InitializeMessageQueueManager();
   void InitializeMaxwell(const fidl::StringPtr& user_shell_url,
                          AppConfig story_shell);
@@ -199,7 +197,6 @@ class UserRunnerImpl : modular_private::UserRunner,
   std::unique_ptr<AgentRunnerStorage> agent_runner_storage_;
   AsyncHolder<AgentRunner> agent_runner_;
   std::unique_ptr<DeviceMapImpl> device_map_impl_;
-  std::unique_ptr<RemoteInvokerImpl> remote_invoker_impl_;
   std::string device_name_;
 
   // Services we provide to |context_engine_app_|.

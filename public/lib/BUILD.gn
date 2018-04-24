@@ -58,7 +58,6 @@ fidl("fidl") {
     "module/fidl/module_manifest.fidl",
     "module/fidl/module_state.fidl",
     "module_resolver/fidl/module_resolver.fidl",
-    "remote/fidl/remote_invoker.fidl",
     "story/fidl/create_chain.fidl",
     "story/fidl/create_link.fidl",
     "story/fidl/link.fidl",

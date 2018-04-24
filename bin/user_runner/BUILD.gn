@@ -38,8 +38,6 @@ executable("user_runner_bin") {
   sources = [
     "device_map_impl.cc",
     "device_map_impl.h",
-    "remote_invoker_impl.cc",
-    "remote_invoker_impl.h",
     "user_runner.cc",
     "user_runner_impl.cc",
     "user_runner_impl.h",

@@ -26,7 +26,6 @@
 #include "peridot/bin/story_runner/story_provider_impl.h"
 #include "peridot/bin/user_runner/device_map_impl.h"
 #include "peridot/bin/user_runner/focus.h"
-#include "peridot/bin/user_runner/remote_invoker_impl.h"
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/common/xdr.h"
 #include "peridot/lib/device_info/device_info.h"
@@ -158,7 +157,6 @@ void UserRunnerImpl::Initialize(
   InitializeLedger();
   InitializeLedgerDashboard();
   InitializeDeviceMap();
-  InitializeRemoteInvoker();
   InitializeMessageQueueManager();
   InitializeMaxwell(user_shell.url, std::move(story_shell));
   InitializeClipboard();
@@ -326,21 +324,6 @@ void UserRunnerImpl::InitializeClipboard() {
         services_from_clipboard_agent_->ConnectToService(Clipboard::Name_,
                                                          request.TakeChannel());
       });
-}
-
-void UserRunnerImpl::InitializeRemoteInvoker() {
-  // TODO(planders) Do not create RemoteInvoker until service is actually
-  // requested.
-  remote_invoker_impl_ =
-      std::make_unique<RemoteInvokerImpl>(ledger_client_->ledger());
-  user_scope_->AddService<RemoteInvoker>(
-      [this](fidl::InterfaceRequest<RemoteInvoker> request) {
-        // remote_invoker_impl_ may be reset before user_scope_.
-        if (remote_invoker_impl_) {
-          remote_invoker_impl_->Connect(std::move(request));
-        }
-      });
-  AtEnd(Reset(&remote_invoker_impl_));
 }
 
 void UserRunnerImpl::InitializeMessageQueueManager() {
