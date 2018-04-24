@@ -79,13 +79,13 @@ Token Lexer::Finish(Token::Kind kind) {
 }
 
 Token Lexer::LexEndOfStream() {
-    return Finish(Token::Kind::EndOfFile);
+    return Finish(Token::Kind::kEndOfFile);
 }
 
 Token Lexer::LexNumericLiteral() {
     while (IsNumericLiteralBody(Peek()))
         Consume();
-    return Finish(Token::Kind::NumericLiteral);
+    return Finish(Token::Kind::kNumericLiteral);
 }
 
 Token Lexer::LexIdentifier() {
@@ -111,11 +111,11 @@ Token Lexer::LexStringLiteral() {
         auto next = Consume();
         switch (next) {
         case 0:
-            return Finish(Token::Kind::NotAToken);
+            return Finish(Token::Kind::kNotAToken);
         case '"':
             // This escaping logic is incorrect for the input: "\\"
             if (last != '\\')
-                return Finish(Token::Kind::StringLiteral);
+                return Finish(Token::Kind::kStringLiteral);
         // Fall through.
         default:
             last = next;
@@ -134,7 +134,7 @@ Token Lexer::LexComment() {
         switch (Peek()) {
         case 0:
         case '\n':
-            return Finish(Token::Kind::Comment);
+            return Finish(Token::Kind::kComment);
         default:
             Consume();
             continue;
@@ -160,7 +160,7 @@ void Lexer::SkipWhitespace() {
 Token Lexer::LexNoComments() {
     for (;;) {
         auto token = Lex();
-        if (token.kind() == Token::Kind::Comment)
+        if (token.kind() == Token::Kind::kComment)
             continue;
         return token;
     }
@@ -183,7 +183,7 @@ Token Lexer::Lex() {
         // Maybe the start of an arrow.
         if (Peek() == '>') {
             Consume();
-            return Finish(Token::Kind::Arrow);
+            return Finish(Token::Kind::kArrow);
         }
     // Fallthrough
     case '0':
@@ -265,43 +265,43 @@ Token Lexer::Lex() {
         case '/':
             return LexComment();
         default:
-            return Finish(Token::Kind::NotAToken);
+            return Finish(Token::Kind::kNotAToken);
         }
 
     case '(':
-        return Finish(Token::Kind::LeftParen);
+        return Finish(Token::Kind::kLeftParen);
     case ')':
-        return Finish(Token::Kind::RightParen);
+        return Finish(Token::Kind::kRightParen);
     case '[':
-        return Finish(Token::Kind::LeftSquare);
+        return Finish(Token::Kind::kLeftSquare);
     case ']':
-        return Finish(Token::Kind::RightSquare);
+        return Finish(Token::Kind::kRightSquare);
     case '{':
-        return Finish(Token::Kind::LeftCurly);
+        return Finish(Token::Kind::kLeftCurly);
     case '}':
-        return Finish(Token::Kind::RightCurly);
+        return Finish(Token::Kind::kRightCurly);
     case '<':
-        return Finish(Token::Kind::LeftAngle);
+        return Finish(Token::Kind::kLeftAngle);
     case '>':
-        return Finish(Token::Kind::RightAngle);
+        return Finish(Token::Kind::kRightAngle);
 
     case '.':
-        return Finish(Token::Kind::Dot);
+        return Finish(Token::Kind::kDot);
     case ',':
-        return Finish(Token::Kind::Comma);
+        return Finish(Token::Kind::kComma);
     case ';':
-        return Finish(Token::Kind::Semicolon);
+        return Finish(Token::Kind::kSemicolon);
     case ':':
-        return Finish(Token::Kind::Colon);
+        return Finish(Token::Kind::kColon);
     case '?':
-        return Finish(Token::Kind::Question);
+        return Finish(Token::Kind::kQuestion);
     case '=':
-        return Finish(Token::Kind::Equal);
+        return Finish(Token::Kind::kEqual);
     case '&':
-        return Finish(Token::Kind::Ampersand);
+        return Finish(Token::Kind::kAmpersand);
 
     default:
-        return Finish(Token::Kind::NotAToken);
+        return Finish(Token::Kind::kNotAToken);
     }
 }
 

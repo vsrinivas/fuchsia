@@ -20,18 +20,18 @@ namespace fidl {
 class Token {
 public:
     enum Kind : uint8_t {
-#define TOKEN(Name) Name,
+#define TOKEN(Name) k ## Name,
 #include "fidl/token_definitions.inc"
     };
 
     Token(SourceLocation location, Kind kind) : location_(location), kind_(kind) {}
 
-    Token() : Token(SourceLocation(), Token::Kind::NotAToken) {}
+    Token() : Token(SourceLocation(), Token::Kind::kNotAToken) {}
 
     static const char* Name(Kind kind) {
         switch (kind) {
 #define TOKEN(Name)                                                                                \
-    case fidl::Token::Kind::Name:                                                                  \
+    case fidl::Token::Kind::k ## Name:                                                             \
         return #Name;
 #include "fidl/token_definitions.inc"
         }

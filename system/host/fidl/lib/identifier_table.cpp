@@ -10,14 +10,14 @@ namespace fidl {
 
 IdentifierTable::IdentifierTable() {
     keyword_table_ = {
-#define KEYWORD(Name, Spelling) {Spelling, Token::Name},
+#define KEYWORD(Name, Spelling) {Spelling, Token::k ## Name},
 #include "fidl/token_definitions.inc"
     };
 }
 
 Token IdentifierTable::MakeIdentifier(StringView source_data, const SourceFile& source_file,
                                       bool escaped_identifier) const {
-    auto kind = Token::Kind::Identifier;
+    auto kind = Token::Kind::kIdentifier;
     if (!escaped_identifier) {
         auto lookup = keyword_table_.find(source_data);
         if (lookup != keyword_table_.end())
