@@ -54,6 +54,12 @@ impl HostDevice {
     pub fn stop_discovery(&self) -> impl Future<Item = Status, Error = fidl::Error> {
         self.adapter.stop_discovery()
     }
+
+    pub fn set_discoverable(
+        &mut self, discoverable: bool
+    ) -> impl Future<Item = Status, Error = fidl::Error> {
+        self.adapter.set_discoverable(discoverable)
+    }
 }
 
 pub fn run_host_device(

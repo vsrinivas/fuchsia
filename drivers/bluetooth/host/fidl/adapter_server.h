@@ -18,6 +18,7 @@ namespace btlib {
 namespace gap {
 
 class BrEdrDiscoverySession;
+class BrEdrDiscoverableSession;
 class LowEnergyDiscoverySession;
 class RemoteDevice;
 
@@ -44,16 +45,25 @@ class AdapterServer : public AdapterServerBase<::bluetooth_host::Adapter> {
   void StopDiscovery(StopDiscoveryCallback callback) override;
   void SetConnectable(bool connectable,
                       SetConnectableCallback callback) override;
+  void SetDiscoverable(bool discoverable,
+                       SetDiscoverableCallback callback) override;
 
   // Called by |le_discovery_session_| when devices are discovered.
   void OnDiscoveryResult(const ::btlib::gap::RemoteDevice& remote_device);
 
-  // The currently active LE discovery session. This is initialized when a
-  // client requests to perform discovery.
+  // The currently active discovery sessions.
+  // These are non-null when a client requests to perform discovery.
   bool requesting_discovery_;
   std::unique_ptr<::btlib::gap::LowEnergyDiscoverySession>
       le_discovery_session_;
   std::unique_ptr<::btlib::gap::BrEdrDiscoverySession> bredr_discovery_session_;
+
+  // The currently active discoverable/advertising sessions.
+  // These are non-null when a client requests that the device is discoverable.
+  // TODO(NET-830): Enable connectable LE advertising
+  bool requesting_discoverable_;
+  std::unique_ptr<::btlib::gap::BrEdrDiscoverableSession>
+      bredr_discoverable_session_;
 
   // The delegate that was set via SetDelegate().
   ::bluetooth_host::AdapterDelegatePtr delegate_;

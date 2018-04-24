@@ -45,6 +45,9 @@ interface Adapter {
 
   // Sets whether this host should be connectable.
   7: SetConnectable(bool enabled) -> (bluetooth.Status @status);
+
+  // Sets whether this host should be discoverable.
+  8: SetDiscoverable(bool enabled) -> (bluetooth.Status @status);
 };
 
 // Management interface implemented by bt-host devices.

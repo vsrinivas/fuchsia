@@ -241,7 +241,9 @@ struct ReadScanEnableReturnParams {
   // See enum StatusCode in hci_constants.h.
   StatusCode status;
 
-  ScanEnableType scan_enable;
+  // Bit Mask of enabled scans. See enum class ScanEnableBit in hci_constants.h
+  // for how to interpret this bitfield.
+  hci::ScanEnableType scan_enable;
 } __PACKED;
 
 // =========================================
@@ -249,7 +251,9 @@ struct ReadScanEnableReturnParams {
 constexpr OpCode kWriteScanEnable = ControllerAndBasebandOpCode(0x001A);
 
 struct WriteScanEnableCommandParams {
-  ScanEnableType scan_enable;
+  // Bit Mask of enabled scans. See enum class ScanEnableBit in hci_constants.h
+  // for how to construct this bitfield.
+  hci::ScanEnableType scan_enable;
 } __PACKED;
 
 // ===============================================

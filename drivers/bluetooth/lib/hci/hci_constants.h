@@ -1240,13 +1240,14 @@ constexpr std::array<uint8_t, 3> kGIAC {{ 0x33, 0x8B, 0x9E }};
 // The Limited Dedicated Inquiry Access Code (LIAC)
 constexpr std::array<uint8_t, 3> kLIAC {{ 0x00, 0x8B, 0x9E }};
 
-// Values that represent a Scan_Enable parameter in a HCI_(Read,Write)_Scan_Enable command.
-enum class ScanEnableType : uint8_t {
-  kNone = 0x00,  // No scans enabled,
-  kInquiryOnly = 0x01, // Inquiry scan enabled, Page scan disabled.
-  kPageOnly = 0x02, // Inquiry scan disabled, Page scan enabled.
-  kInquiryAndPage = 0x03, // Inquiry scan enabled, Page scan enabled.
+// Bitmask Values for the Scan_Enable parameter in a
+// HCI_(Read,Write)_Scan_Enable command.
+enum class ScanEnableBit : uint8_t {
+  kInquiry  = (1 << 0), // Inquiry scan enabled
+  kPage     = (1 << 1), // Page scan enabled.
 };
+
+using ScanEnableType = uint8_t;
 
 // The minimum and maximum range values for Page Scan Interval (in time slices)
 // (see Core Spec v5.0, Vol 2, Part E, Section 7.3.19)

@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use util;
 use vfs_watcher;
 use zx;
@@ -37,10 +37,38 @@ type HostAdapterPtr = ServerEnd<AdapterMarker>;
 type AdapterDelegatePtr = ServerEnd<AdapterDelegateMarker>;
 type RemoteDeviceDelegatePtr = Option<ClientEnd<RemoteDeviceDelegateMarker>>;
 
+pub struct DiscoveryRequestToken {
+    adap: Weak<Mutex<HostDevice>>,
+}
+
+impl Drop for DiscoveryRequestToken {
+    fn drop(&mut self) {
+        if let Some(host) = self.adap.upgrade() {
+            let mut host = host.lock();
+            host.stop_discovery();
+        }
+    }
+}
+
+pub struct DiscoverableRequestToken {
+    adap: Weak<Mutex<HostDevice>>,
+}
+
+impl Drop for DiscoverableRequestToken {
+    fn drop(&mut self) {
+        if let Some(host) = self.adap.upgrade() {
+            let mut host = host.lock();
+            host.set_discoverable(false);
+        }
+    }
+}
+
 pub struct HostDispatcher {
     active_id: Option<String>,
     host_devices: HashMap<String, Arc<Mutex<HostDevice>>>,
     name: String,
+    discovery: Option<Weak<DiscoveryRequestToken>>,
+    discoverable: Option<Weak<DiscoverableRequestToken>>,
     pub remote_device_delegate: Option<RemoteDeviceDelegateProxy>,
     pub control_delegate: Option<ControlDelegateProxy>,
     pub pairing_delegate: Option<PairingDelegateProxy>,
@@ -52,26 +80,17 @@ impl HostDispatcher {
             active_id: None,
             host_devices: HashMap::new(),
             name: DEFAULT_NAME.to_string(),
+            discovery: None,
+            discoverable: None,
             remote_device_delegate: None,
             control_delegate: None,
             pairing_delegate: None,
         }
     }
 
-    pub fn stop_discovery(
-        &mut self
+    pub fn set_name(
+        &mut self, name: Option<String>
     ) -> impl Future<Item = fidl_bluetooth::Status, Error = fidl::Error> {
-        match self.active_id {
-            Some(ref id) => {
-                let adap = self.host_devices.get(id).unwrap();
-                let adap = adap.lock();
-                Left(adap.stop_discovery())
-            }
-            None => Right(fok(bt_fidl_status!(BadState))),
-        }
-    }
-
-    pub fn set_name(&mut self, name: Option<String>) -> impl Future<Item = fidl_bluetooth::Status, Error = fidl::Error> {
         match name {
             Some(name) => self.name = name,
             None => self.name = DEFAULT_NAME.to_string(),
@@ -82,7 +101,9 @@ impl HostDispatcher {
                 let mut adap = adap.lock();
                 Left(adap.set_name(self.name.clone()))
             }
-            None => Right(fok(bt_fidl_status!( BluetoothNotAvailable, "No Adapter found"))),
+            None => Right(fok(
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+            )),
         }
     }
 
@@ -99,18 +120,83 @@ impl HostDispatcher {
     }
 
     pub fn start_discovery(
-        &mut self
-    ) -> impl Future<Item = fidl_bluetooth::Status, Error = fidl::Error> {
+        hd: &Arc<RwLock<HostDispatcher>>
+    ) -> impl Future<
+        Item = (fidl_bluetooth::Status, Option<Arc<DiscoveryRequestToken>>),
+        Error = fidl::Error,
+    > {
         println!("Starting discovery");
-        match self.get_active_id() {
+        let strong_current_token = match hd.read().discovery {
+            Some(ref token) => token.upgrade(),
+            None => None,
+        };
+        if let Some(token) = strong_current_token {
+            return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
+        }
+
+        match hd.write().get_active_id() {
             Some(ref id) => {
-                let adap = self.host_devices.get(id).unwrap();
+                let hdr = hd.read();
+                let adap = hdr.host_devices.get(id).unwrap();
+                let weak_adap = Arc::downgrade(&adap);
+                let hdref = Arc::clone(&hd);
                 let mut adap = adap.lock();
-                Left(adap.start_discovery())
+                Right(adap.start_discovery().and_then(
+                    move |mut resp| match resp.error {
+                        Some(_) => fok((resp, None)),
+                        None => {
+                            let token = Arc::new(DiscoveryRequestToken { adap: weak_adap });
+                            hdref.write().discovery = Some(Arc::downgrade(&token));
+                            fok((resp, Some(token)))
+                        }
+                    },
+                ))
             }
-            None => Right( fok(bt_fidl_status!(
-                BluetoothNotAvailable,
-                "No Adapter found"
+            None => Left(fok((
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                None,
+            ))),
+        }
+    }
+
+    pub fn set_discoverable(
+        hd: &Arc<RwLock<HostDispatcher>>
+    ) -> impl Future<
+        Item = (
+            fidl_bluetooth::Status,
+            Option<Arc<DiscoverableRequestToken>>,
+        ),
+        Error = fidl::Error,
+    > {
+        let strong_current_token = match hd.read().discoverable {
+            Some(ref token) => token.upgrade(),
+            None => None,
+        };
+        if let Some(token) = strong_current_token {
+            return Left(fok((bt_fidl_status!(), Some(Arc::clone(&token)))));
+        }
+
+        match hd.write().get_active_id() {
+            Some(ref id) => {
+                let hdr = hd.read();
+                let adap = hdr.host_devices.get(id).unwrap();
+                let weak_adap = Arc::downgrade(&adap);
+                let hdref = Arc::clone(&hd);
+                let mut adap = adap.lock();
+                Right(adap.set_discoverable(true).and_then(
+                    move |mut resp| match resp.error {
+                        Some(_) => fok((resp, None)),
+                        None => {
+                            let token = Arc::new(DiscoverableRequestToken { adap: weak_adap });
+                            hdref.write().discoverable = Some(Arc::downgrade(&token));
+                            fok((resp, Some(token)))
+                        }
+                    },
+                ))
+            }
+            None => Left(fok((
+                bt_fidl_status!(BluetoothNotAvailable, "No Adapter found"),
+                None,
             ))),
         }
     }
@@ -185,22 +271,19 @@ fn add_adapter(
             let (del_local, del_remote) = zx::Channel::create().unwrap();
             let del_local = async::Channel::from_channel(del_local).unwrap();
             let mut adap_delegate = ClientEnd::<AdapterDelegateMarker>::new(del_remote);
-            host_adapter.set_connectable(true)
-                        .map(move |status| {
-                            status.error.and_then::<Box<Error>, _>(|e| {
-                                info!("Can't set connectable: {:?}", e);
-                                None
-                            })
-                        });
+            host_adapter.set_connectable(true).map(move |status| {
+                status.error.and_then::<Box<Error>, _>(|e| {
+                    info!("Can't set connectable: {:?}", e);
+                    None
+                })
+            });
             host_adapter.set_delegate(&mut adap_delegate);
 
             // Add to the adapters
             let id = adapter_info.identifier.clone();
-            let adapter = Arc::new(Mutex::new(HostDevice::new(
-                host,
-                host_adapter,
-                adapter_info,
-            )));
+            let adapter = Arc::new(Mutex::new(
+                HostDevice::new(host, host_adapter, adapter_info),
+            ));
             hd.write().host_devices.insert(id, adapter.clone());
 
             fok((hd.clone(), adapter, del_local))
@@ -221,7 +304,7 @@ fn rm_adapter(
     _: Arc<RwLock<HostDispatcher>>, host_path: PathBuf
 ) -> impl Future<Item = (), Error = Error> {
     info!("Host removed: {:?}", host_path);
-    //TODO:(NET-852)
+    // TODO:(NET-852)
     fok(())
 }
 
@@ -241,9 +324,11 @@ pub fn watch_hosts(hd: Arc<RwLock<HostDispatcher>>) -> impl Future<Item = (), Er
 
                     match msg.event {
                         vfs_watcher::WatchEvent::EXISTING | vfs_watcher::WatchEvent::ADD_FILE => {
-                            Left(Left(add_adapter(hd.clone(), path).map_err(|e| {
-                                io::Error::new(io::ErrorKind::Other, e.to_string())
-                            })))
+                            Left(Left(
+                                add_adapter(hd.clone(), path).map_err(
+                                    |e| io::Error::new(io::ErrorKind::Other, e.to_string()),
+                                ),
+                            ))
                         }
                         vfs_watcher::WatchEvent::REMOVE_FILE => Left(Right(
                             rm_adapter(hd.clone(), path)

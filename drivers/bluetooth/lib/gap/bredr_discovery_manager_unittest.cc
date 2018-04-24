@@ -113,13 +113,46 @@ const auto kInqCancel = common::CreateStaticByteBuffer(
   0x00                                   // parameter_total_size
 );
 
-const auto kInqCancel_rsp = common::CreateStaticByteBuffer(
-  hci::kCommandCompleteEventCode,
-  0x04,  // parameter_total_size (4 byte payload)
-  0xF0,  // num_hci_command_packets (240 can be sent)
-  LowerBits(hci::kInquiryCancel), UpperBits(hci::kInquiryCancel),  // opcode
-  hci::kSuccess
+#define COMMAND_COMPLETE_RSP(opcode)                                         \
+  common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x04, 0xF0, \
+                                 LowerBits((opcode)), UpperBits((opcode)),   \
+                                 hci::kSuccess);
+
+const auto kInqCancelRsp = COMMAND_COMPLETE_RSP(hci::kInquiryCancel);
+
+const auto kReadScanEnable = common::CreateStaticByteBuffer(
+    LowerBits(hci::kReadScanEnable), UpperBits(hci::kReadScanEnable),
+    0x00  // No parameters
 );
+
+#define READ_SCAN_ENABLE_RSP(scan_enable)                                    \
+  common::CreateStaticByteBuffer(hci::kCommandCompleteEventCode, 0x05, 0xF0, \
+                                 LowerBits(hci::kReadScanEnable),            \
+                                 UpperBits(hci::kReadScanEnable),            \
+                                 hci::kSuccess, (scan_enable))
+
+const auto kReadScanEnableRspNone = READ_SCAN_ENABLE_RSP(0x00);
+const auto kReadScanEnableRspInquiry = READ_SCAN_ENABLE_RSP(0x01);
+const auto kReadScanEnableRspPage = READ_SCAN_ENABLE_RSP(0x02);
+const auto kReadScanEnableRspBoth = READ_SCAN_ENABLE_RSP(0x03);
+
+#undef READ_SCAN_ENABLE_RSP
+
+#define WRITE_SCAN_ENABLE_CMD(scan_enable)                               \
+  common::CreateStaticByteBuffer(LowerBits(hci::kWriteScanEnable),       \
+                                 UpperBits(hci::kWriteScanEnable), 0x01, \
+                                 (scan_enable))
+
+const auto kWriteScanEnableNone = WRITE_SCAN_ENABLE_CMD(0x00);
+const auto kWriteScanEnableInq = WRITE_SCAN_ENABLE_CMD(0x01);
+const auto kWriteScanEnablePage = WRITE_SCAN_ENABLE_CMD(0x02);
+const auto kWriteScanEnableBoth = WRITE_SCAN_ENABLE_CMD(0x03);
+
+#undef WRITE_SCAN_ENABLE_CMD
+
+const auto kWriteScanEnableRsp = COMMAND_COMPLETE_RSP(hci::kWriteScanEnable);
+
+#undef COMMAND_COMPLETE_RSP
 // clang-format on
 
 // Test: discovering() answers correctly
@@ -384,6 +417,127 @@ TEST_F(GAP_BrEdrDiscoveryManagerTest, ContinuingDiscoveryError) {
   session = nullptr;
 
   RunUntilIdle();
+}
+
+// Test: requesting discoverable works
+// Test: requesting discoverable while discoverable is pending doesn't send
+// any more HCI commands
+TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableSet) {
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {}));
+
+  std::vector<std::unique_ptr<BrEdrDiscoverableSession>> sessions;
+  auto session_cb = [&sessions](auto status, auto cb_session) {
+    EXPECT_TRUE(status);
+    sessions.emplace_back(std::move(cb_session));
+  };
+
+  discovery_manager()->RequestDiscoverable(session_cb);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(0u, sessions.size());
+  EXPECT_FALSE(discovery_manager()->discoverable());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableInq, {}));
+
+  test_device()->SendCommandChannelPacket(kReadScanEnableRspNone);
+
+  RunUntilIdle();
+
+  // Request another session while the first is pending.
+  discovery_manager()->RequestDiscoverable(session_cb);
+
+  test_device()->SendCommandChannelPacket(kWriteScanEnableRsp);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(2u, sessions.size());
+  EXPECT_TRUE(discovery_manager()->discoverable());
+
+  discovery_manager()->RequestDiscoverable(session_cb);
+
+  EXPECT_EQ(3u, sessions.size());
+  EXPECT_TRUE(discovery_manager()->discoverable());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspInquiry}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableNone, {&kWriteScanEnableRsp}));
+
+  sessions.clear();
+
+  RunUntilIdle();
+
+  EXPECT_FALSE(discovery_manager()->discoverable());
+}
+
+// Test: requesting discoverable while discovery is disabling leaves
+// the discoverable enabled and reports success
+// Test: enable/disable while page scan is enabled works.
+TEST_F(GAP_BrEdrDiscoveryManagerTest, DiscoverableRequestWhileStopping) {
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspPage}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableBoth, {&kWriteScanEnableRsp}));
+
+  std::vector<std::unique_ptr<BrEdrDiscoverableSession>> sessions;
+  auto session_cb = [&sessions](auto status, auto cb_session) {
+    EXPECT_TRUE(status);
+    sessions.emplace_back(std::move(cb_session));
+  };
+
+  discovery_manager()->RequestDiscoverable(session_cb);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, sessions.size());
+  EXPECT_TRUE(discovery_manager()->discoverable());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {}));
+
+  sessions.clear();
+
+  RunUntilIdle();
+
+  // Request a new discovery before the procedure finishes.
+  // This will queue another ReadScanEnable just in case the disable write is
+  // in progress.
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {}));
+  discovery_manager()->RequestDiscoverable(session_cb);
+
+  test_device()->SendCommandChannelPacket(kReadScanEnableRspBoth);
+
+  // This shouldn't send any WriteScanEnable because we're already in the right
+  // mode (TestController will assert if we do as it's not expecting)
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, sessions.size());
+  EXPECT_TRUE(discovery_manager()->discoverable());
+
+  // If somehow the scan got turned off, we will still turn it back on.
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnableBoth, {&kWriteScanEnableRsp}));
+  test_device()->SendCommandChannelPacket(kReadScanEnableRspPage);
+
+  RunUntilIdle();
+
+  EXPECT_EQ(1u, sessions.size());
+  EXPECT_TRUE(discovery_manager()->discoverable());
+
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
+  test_device()->QueueCommandTransaction(
+      CommandTransaction(kWriteScanEnablePage, {&kWriteScanEnableRsp}));
+
+  sessions.clear();
+
+  RunUntilIdle();
+
+  EXPECT_FALSE(discovery_manager()->discoverable());
 }
 
 }  // namespace

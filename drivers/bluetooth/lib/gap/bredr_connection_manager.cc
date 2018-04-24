@@ -29,15 +29,11 @@ void SetPageScanEnabled(bool enabled, fxl::RefPtr<hci::Transport> hci,
       return;
     }
     auto params = event.return_params<hci::ReadScanEnableReturnParams>();
-    hci::ScanEnableType scan_type;
-    if (!enabled) {
-      scan_type = (params->scan_enable == hci::ScanEnableType::kInquiryAndPage
-                       ? hci::ScanEnableType::kInquiryOnly
-                       : hci::ScanEnableType::kNone);
+    uint8_t scan_type = params->scan_enable;
+    if (enabled) {
+      scan_type |= static_cast<uint8_t>(hci::ScanEnableBit::kPage);
     } else {
-      scan_type = (params->scan_enable == hci::ScanEnableType::kInquiryOnly
-                       ? hci::ScanEnableType::kInquiryAndPage
-                       : hci::ScanEnableType::kPageOnly);
+      scan_type &= ~static_cast<uint8_t>(hci::ScanEnableBit::kPage);
     }
     auto write_enable = hci::CommandPacket::New(
         hci::kWriteScanEnable, sizeof(hci::WriteScanEnableCommandParams));

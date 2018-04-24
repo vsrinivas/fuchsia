@@ -277,7 +277,7 @@ class FakeController : public FakeControllerBase,
   common::DeviceAddress le_random_address_;
 
   // Used for BR/EDR Scans
-  hci::ScanEnableType bredr_scan_state_;
+  uint8_t bredr_scan_state_;
   hci::PageScanType page_scan_type_;
   uint16_t page_scan_interval_;
   uint16_t page_scan_window_;
