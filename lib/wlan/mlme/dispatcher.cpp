@@ -401,10 +401,14 @@ zx_status_t Dispatcher::HandleSvcPacket(const Packet* packet) {
         return HandleMlmeMethod<wlan_mlme::JoinRequest>(packet, method);
     case wlan_mlme::Method::AUTHENTICATE_request:
         return HandleMlmeMethod<wlan_mlme::AuthenticateRequest>(packet, method);
+    case wlan_mlme::Method::AUTHENTICATE_response:
+        return HandleMlmeMethod<wlan_mlme::AuthenticateResponse>(packet, method);
     case wlan_mlme::Method::DEAUTHENTICATE_request:
         return HandleMlmeMethod<wlan_mlme::DeauthenticateRequest>(packet, method);
     case wlan_mlme::Method::ASSOCIATE_request:
         return HandleMlmeMethod<wlan_mlme::AssociateRequest>(packet, method);
+    case wlan_mlme::Method::ASSOCIATE_response:
+        return HandleMlmeMethod<wlan_mlme::AssociateResponse>(packet, method);
     case wlan_mlme::Method::EAPOL_request:
         return HandleMlmeMethod<wlan_mlme::EapolRequest>(packet, method);
     case wlan_mlme::Method::SETKEYS_request:
