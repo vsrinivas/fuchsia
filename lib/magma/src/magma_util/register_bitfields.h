@@ -187,7 +187,7 @@ private:
 template <class IntType> class BitfieldRef {
 public:
     BitfieldRef(IntType* value_ptr, uint32_t bit_high_incl, uint32_t bit_low)
-        : value_ptr_(value_ptr), shift_(bit_low), mask_((1 << (bit_high_incl - bit_low + 1)) - 1)
+        : value_ptr_(value_ptr), shift_(bit_low), mask_((1ull << (bit_high_incl - bit_low + 1)) - 1)
     {
     }
 

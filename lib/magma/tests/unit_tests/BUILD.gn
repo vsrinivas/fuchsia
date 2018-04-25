@@ -46,12 +46,14 @@ source_set("magma_util_tests") {
   sources = [
     "test_address_space_allocator.cc",
     "test_macros.cc",
+    "test_register_bitfields.cc",
     "test_semaphore_port.cc",
     "test_status.cc",
   ]
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
     "//third_party/googletest:gtest",
   ]
