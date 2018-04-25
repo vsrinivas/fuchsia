@@ -13,5 +13,5 @@ fidl_echo2 = "0.1"
 fuchsia-app = "0.1"
 fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-futures = "=0.2.0-alpha"
+futures = { version = "0.2.1", features = ["nightly"] }
 structopt = "0.2"

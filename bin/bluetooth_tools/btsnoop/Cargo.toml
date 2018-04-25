@@ -21,4 +21,4 @@ fuchsia-async = "0.1"
 futures-util = "0.2.0-alpha"
 failure = "0.1"
 byteorder = "1.2"
-futures = "=0.2.0-alpha"
+futures = { version = "0.2.1", features = ["nightly"] }

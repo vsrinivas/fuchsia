@@ -15,7 +15,7 @@ fidl_logger = "0.1"
 fuchsia-app = "0.1"
 fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-futures = "=0.2.0-alpha"
+futures = { version = "0.2.1", features = ["nightly"] }
 libc = "0.2"
 parking_lot = "0.4"
 timebomb = "0.1"

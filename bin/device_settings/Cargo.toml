@@ -17,7 +17,7 @@ fuchsia-app = "0.1"
 fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
 fuchsia-syslog = "0.1"
-futures = "=0.2.0-alpha"
+futures = { version = "0.2.1", features = ["nightly"] }
 mxruntime = "0.1"
 mxruntime-sys = "0.1"
 parking_lot = "0.4"

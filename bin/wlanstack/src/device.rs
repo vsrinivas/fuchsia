@@ -100,7 +100,7 @@ impl DeviceManager {
     pub fn query_phy(&self, id: u16) -> impl Future<Item = wlan::PhyInfo, Error = zx::Status> {
         let phy = match self.phys.get(&id) {
             Some(p) => p,
-            None => return future::err(zx::Status::NOT_FOUND).left(),
+            None => return future::err(zx::Status::NOT_FOUND).left_future(),
         };
         let phy_id = phy.id;
         let phy_path = phy.dev.path().to_string_lossy().into_owned();
@@ -115,7 +115,7 @@ impl DeviceManager {
                     info
                 })
             })
-            .right()
+            .right_future()
     }
 
     /// Creates an interface on the phy with the given id.
@@ -126,7 +126,7 @@ impl DeviceManager {
     ) -> impl Future<Item = u16, Error = zx::Status> + Send {
         let phy = match self.phys.get(&phy_id) {
             Some(p) => p,
-            None => return future::err(zx::Status::INVALID_ARGS).left(),
+            None => return future::err(zx::Status::INVALID_ARGS).left_future(),
         };
         let mut req = wlan::CreateIfaceRequest { role };
         phy.proxy
@@ -139,7 +139,7 @@ impl DeviceManager {
                     future::err(zx::Status::from_raw(resp.status))
                 }
             })
-            .right()
+            .right_future()
     }
 
     /// Destroys an interface with the given ids.
@@ -150,14 +150,14 @@ impl DeviceManager {
     ) -> impl Future<Item = (), Error = zx::Status> {
         let phy = match self.phys.get(&phy_id) {
             Some(p) => p,
-            None => return future::err(zx::Status::INVALID_ARGS).left(),
+            None => return future::err(zx::Status::INVALID_ARGS).left_future(),
         };
         let mut req = wlan::DestroyIfaceRequest { id: iface_id };
         phy.proxy
             .destroy_iface(&mut req)
             .map_err(|_| zx::Status::IO)
             .and_then(|resp| zx::Status::ok(resp.status).into_future())
-            .right()
+            .right_future()
     }
 
     /// Adds an `EventListener`. The event methods will be called for each existing object tracked
