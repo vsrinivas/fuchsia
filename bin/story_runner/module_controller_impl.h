@@ -23,7 +23,7 @@ namespace modular {
 class StoryControllerImpl;
 
 // Implements the ModuleController interface, which is given to the
-// client that called ModuleContext.StartModuleDeprecated(). Exactly one
+// client that called ModuleContext.(Start|Embed)Module(). Exactly one
 // ModuleControllerImpl instance is associated with each
 // ModuleContextImpl instance.
 class ModuleControllerImpl : ModuleController {

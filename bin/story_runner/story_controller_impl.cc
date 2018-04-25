@@ -2100,49 +2100,6 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
   return (*i)->GetLinkPathForKey(key);
 }
 
-void StoryControllerImpl::StartModuleDeprecated(
-    const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-    fidl::StringPtr module_name,
-    fidl::StringPtr module_url,
-    fidl::StringPtr link_name,
-    const modular::ModuleManifestPtr manifest,
-    CreateChainInfoPtr create_chain_info,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-    const ModuleSource module_source) {
-  auto module_path = parent_module_path.Clone();
-  module_path.push_back(module_name);
-  new StartModuleCall(
-      &operation_queue_, this, module_path, module_url, link_name,
-      CloneOptional(manifest), std::move(create_chain_info), module_source,
-      nullptr /* surface_relation */, std::move(incoming_services),
-      std::move(module_controller_request), std::move(view_owner_request),
-      nullptr /* intent */, [] {});
-}
-
-void StoryControllerImpl::StartModuleInShellDeprecated(
-    const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-    fidl::StringPtr module_name,
-    fidl::StringPtr module_url,
-    fidl::StringPtr link_name,
-    const modular::ModuleManifestPtr manifest,
-    CreateChainInfoPtr create_chain_info,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller_request,
-    SurfaceRelationPtr surface_relation,
-    const bool focus,
-    ModuleSource module_source) {
-  auto module_path = parent_module_path.Clone();
-  module_path.push_back(module_name);
-  new StartModuleInShellCall(
-      &operation_queue_, this, module_path, module_url, link_name,
-      CloneOptional(manifest), std::move(create_chain_info),
-      std::move(incoming_services), std::move(module_controller_request),
-      std::move(surface_relation), focus, module_source, nullptr /* intent */,
-      [] {});
-}
-
 void StoryControllerImpl::EmbedModule(
     const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
     fidl::StringPtr module_name,

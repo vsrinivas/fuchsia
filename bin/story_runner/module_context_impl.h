@@ -54,14 +54,6 @@ class ModuleContextImpl : ModuleContext {
   void GetLink(fidl::StringPtr name,
                fidl::InterfaceRequest<Link> request) override;
   // |ModuleContext|
-  void StartModuleDeprecated(
-      fidl::StringPtr name,
-      fidl::StringPtr query,
-      fidl::StringPtr link_name,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) override;
-  // |ModuleContext|
   void EmbedModule(
       fidl::StringPtr name,
       Intent intent,
@@ -69,15 +61,6 @@ class ModuleContextImpl : ModuleContext {
       fidl::InterfaceRequest<ModuleController> module_controller,
       fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner,
       EmbedModuleCallback callback) override;
-  // |ModuleContext|
-  void StartModuleInShellDeprecated(
-      fidl::StringPtr name,
-      fidl::StringPtr query,
-      fidl::StringPtr link_name,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller,
-      SurfaceRelationPtr surface_relation,
-      bool focus) override;
   // |ModuleContext|
   void StartModule(
       fidl::StringPtr name,

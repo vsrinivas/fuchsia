@@ -125,37 +125,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       fidl::StringPtr key);
 
   // Called by ModuleContextImpl.
-  // TODO(thatguy): Remove this entirely once all Modules use StartModule.
-  // MI4-739
-  void StartModuleDeprecated(
-      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name,
-      fidl::StringPtr module_url,
-      fidl::StringPtr link_name,
-      const modular::ModuleManifestPtr manifest,
-      CreateChainInfoPtr create_chain_info,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request,
-      ModuleSource module_source);
-
-  // Called by ModuleContextImpl and AddModule.
-  // TODO(thatguy): Remove this entirely once all Modules use StartModule.
-  // MI4-739
-  void StartModuleInShellDeprecated(
-      const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
-      fidl::StringPtr module_name,
-      fidl::StringPtr module_url,
-      fidl::StringPtr link_name,
-      const modular::ModuleManifestPtr manifest,
-      CreateChainInfoPtr create_chain_info,
-      fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-      fidl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation,
-      bool focus,
-      ModuleSource module_source);
-
-  // Called by ModuleContextImpl.
   void EmbedModule(
       const fidl::VectorPtr<fidl::StringPtr>& parent_module_path,
       fidl::StringPtr module_name,

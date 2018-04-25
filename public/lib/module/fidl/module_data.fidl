@@ -52,7 +52,7 @@ struct ModuleData {
 
 enum ModuleSource {
   // Module that was started from within the story by another module via
-  // ModuleContext.StartModuleDeprecated() and ModuleContext.StartModuleInShell().
+  // ModuleContext.StartModule() and ModuleContext.EmbedModule().
   INTERNAL = 0;
 
   // Module that was started from outside the story by Maxwell / UserShell via

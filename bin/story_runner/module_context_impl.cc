@@ -60,20 +60,6 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
                                           std::move(request));
 }
 
-void ModuleContextImpl::StartModuleDeprecated(
-    fidl::StringPtr name,
-    fidl::StringPtr query,
-    fidl::StringPtr link_name,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner) {
-  story_controller_impl_->StartModuleDeprecated(
-      module_data_->module_path, name, query, link_name,
-      nullptr /* module_manifest */, nullptr /* create_chain_info */,
-      std::move(incoming_services), std::move(module_controller),
-      std::move(view_owner), ModuleSource::INTERNAL);
-}
-
 void ModuleContextImpl::EmbedModule(
     fidl::StringPtr name,
     Intent intent,
@@ -85,21 +71,6 @@ void ModuleContextImpl::EmbedModule(
       module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
       std::move(incoming_services), std::move(module_controller),
       std::move(view_owner), ModuleSource::INTERNAL, callback);
-}
-
-void ModuleContextImpl::StartModuleInShellDeprecated(
-    fidl::StringPtr name,
-    fidl::StringPtr query,
-    fidl::StringPtr link_name,
-    fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
-    fidl::InterfaceRequest<ModuleController> module_controller,
-    SurfaceRelationPtr surface_relation,
-    const bool focus) {
-  story_controller_impl_->StartModuleInShellDeprecated(
-      module_data_->module_path, name, query, link_name,
-      nullptr /* module_manifest */, nullptr /* create_chain_info */,
-      std::move(incoming_services), std::move(module_controller),
-      std::move(surface_relation), focus, ModuleSource::INTERNAL);
 }
 
 void ModuleContextImpl::StartModule(
