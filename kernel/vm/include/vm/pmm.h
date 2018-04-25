@@ -50,6 +50,10 @@ size_t pmm_alloc_range(paddr_t address, size_t count, struct list_node* list);
 size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t align_log2, paddr_t* pa,
                             struct list_node* list);
 
+// Convenience routine that allocates a single page and then looks up the
+// virtual address in the physmap.
+void* pmm_alloc_kpage(paddr_t* pa, vm_page_t** p);
+
 // Free a list of physical pages.
 // Returns the number of pages freed.
 size_t pmm_free(struct list_node* list) __NONNULL((1));
@@ -67,16 +71,6 @@ size_t pmm_count_total_bytes(void);
 // increments the corresponding VM_PAGE_STATE_*-indexed entry of
 // |state_count|. Does not zero out the entries first.
 void pmm_count_total_states(size_t state_count[_VM_PAGE_STATE_COUNT]);
-
-// Allocate a run of pages out of the kernel area and return the pointer in kernel space.
-// If the optional list is passed, append the allocate page structures to the tail of the list.
-// If the optional physical address pointer is passed, return the address.
-void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* pa);
-
-// Same as above but a single page at a time
-void* pmm_alloc_kpage(paddr_t* pa, vm_page_t** p);
-
-size_t pmm_free_kpages(void* ptr, size_t count);
 
 // virtual to physical
 paddr_t vaddr_to_paddr(const void* va);

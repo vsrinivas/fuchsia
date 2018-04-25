@@ -7,19 +7,20 @@
 
 #include <lib/heap.h>
 
-#include <trace.h>
-#include <debug.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
-#include <err.h>
-#include <list.h>
 #include <arch/ops.h>
+#include <assert.h>
+#include <debug.h>
+#include <err.h>
 #include <kernel/spinlock.h>
-#include <vm/vm.h>
-#include <vm/pmm.h>
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
+#include <list.h>
+#include <stdlib.h>
+#include <string.h>
+#include <trace.h>
+#include <vm/physmap.h>
+#include <vm/pmm.h>
+#include <vm/vm.h>
 
 #define LOCAL_TRACE 0
 
@@ -38,23 +39,20 @@ static bool heap_trace = false;
 #define heap_trace (false)
 #endif
 
-void heap_init(void)
-{
+void heap_init() {
     cmpct_init();
 }
 
-void heap_trim(void)
-{
+void heap_trim() {
     cmpct_trim();
 }
 
-void *malloc(size_t size)
-{
+void* malloc(size_t size) {
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("size %zu\n", size);
 
-    void *ptr = cmpct_alloc(size);
+    void* ptr = cmpct_alloc(size);
     if (unlikely(heap_trace))
         printf("caller %p malloc %zu -> %p\n", __GET_CALLER(), size, ptr);
 
@@ -65,13 +63,12 @@ void *malloc(size_t size)
     return ptr;
 }
 
-void *memalign(size_t boundary, size_t size)
-{
+void* memalign(size_t boundary, size_t size) {
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("boundary %zu, size %zu\n", boundary, size);
 
-    void *ptr = cmpct_memalign(size, boundary);
+    void* ptr = cmpct_memalign(size, boundary);
     if (unlikely(heap_trace))
         printf("caller %p memalign %zu, %zu -> %p\n", __GET_CALLER(), boundary, size, ptr);
 
@@ -82,15 +79,14 @@ void *memalign(size_t boundary, size_t size)
     return ptr;
 }
 
-void *calloc(size_t count, size_t size)
-{
+void* calloc(size_t count, size_t size) {
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("count %zu, size %zu\n", count, size);
 
     size_t realsize = count * size;
 
-    void *ptr = cmpct_alloc(realsize);
+    void* ptr = cmpct_alloc(realsize);
     if (likely(ptr))
         memset(ptr, 0, realsize);
     if (unlikely(heap_trace))
@@ -98,13 +94,12 @@ void *calloc(size_t count, size_t size)
     return ptr;
 }
 
-void *realloc(void *ptr, size_t size)
-{
+void* realloc(void* ptr, size_t size) {
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("ptr %p, size %zu\n", ptr, size);
 
-    void *ptr2 = cmpct_realloc(ptr, size);
+    void* ptr2 = cmpct_realloc(ptr, size);
     if (unlikely(heap_trace))
         printf("caller %p realloc %p, %zu -> %p\n", __GET_CALLER(), ptr, size, ptr2);
 
@@ -115,8 +110,7 @@ void *realloc(void *ptr, size_t size)
     return ptr2;
 }
 
-void free(void *ptr)
-{
+void free(void* ptr) {
     DEBUG_ASSERT(!arch_in_int_handler());
 
     LTRACEF("ptr %p\n", ptr);
@@ -126,45 +120,66 @@ void free(void *ptr)
     cmpct_free(ptr);
 }
 
-static void heap_dump(bool panic_time)
-{
+static void heap_dump(bool panic_time) {
     cmpct_dump(panic_time);
 }
 
-void heap_get_info(size_t *size_bytes, size_t *free_bytes) {
+void heap_get_info(size_t* size_bytes, size_t* free_bytes) {
     cmpct_get_info(size_bytes, free_bytes);
 }
 
-static void heap_test(void)
-{
+static void heap_test() {
     cmpct_test();
 }
 
-void *heap_page_alloc(size_t pages)
-{
+void* heap_page_alloc(size_t pages) {
     DEBUG_ASSERT(pages > 0);
 
-    struct list_node list = LIST_INITIAL_VALUE(list);
+    list_node list = LIST_INITIAL_VALUE(list);
 
-    void *result = pmm_alloc_kpages(pages, &list, NULL);
-
-    if (likely(result)) {
-        // mark all of the allocated page as HEAP
-        vm_page_t *p;
-        list_for_every_entry(&list, p, vm_page_t, free.node) {
-            p->state = VM_PAGE_STATE_HEAP;
-        }
+    paddr_t pa;
+    size_t allocated = pmm_alloc_contiguous(pages, PMM_ALLOC_FLAG_KMAP, PAGE_SIZE_SHIFT, &pa, &list);
+    if (allocated == 0) {
+        return nullptr;
     }
 
-    return result;
+    // mark all of the allocated page as HEAP
+    vm_page_t *p, *temp;
+    list_for_every_entry_safe (&list, p, temp, vm_page_t, free.node) {
+        list_delete(&p->free.node);
+        p->state = VM_PAGE_STATE_HEAP;
+    }
+
+    LTRACEF("pages %zu: allocated %zu, pa %#lx, va %p\n", pages, allocated, pa, paddr_to_physmap(pa));
+
+    return paddr_to_physmap(pa);
 }
 
-void heap_page_free(void *ptr, size_t pages)
-{
-    DEBUG_ASSERT(IS_PAGE_ALIGNED((uintptr_t)ptr));
+void heap_page_free(void* _ptr, size_t pages) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED((uintptr_t)_ptr));
     DEBUG_ASSERT(pages > 0);
 
-    pmm_free_kpages(ptr, pages);
+    LTRACEF("ptr %p, pages %zu\n", _ptr, pages);
+
+    uint8_t* ptr = (uint8_t*)_ptr;
+
+    list_node list;
+    list_initialize(&list);
+
+    while (pages > 0) {
+        vm_page_t* p = paddr_to_vm_page(vaddr_to_paddr(ptr));
+        if (p) {
+            DEBUG_ASSERT(p->state == VM_PAGE_STATE_HEAP);
+            DEBUG_ASSERT(!list_in_list(&p->free.node));
+
+            list_add_tail(&list, &p->free.node);
+        }
+
+        ptr += PAGE_SIZE;
+        pages--;
+    }
+
+    pmm_free(&list);
 }
 
 #if LK_DEBUGLEVEL > 1
@@ -172,18 +187,17 @@ void heap_page_free(void *ptr, size_t pages)
 
 #include <lib/console.h>
 
-static int cmd_heap(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("heap", "heap debug commands", &cmd_heap, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_END(heap);
 
-static int cmd_heap(int argc, const cmd_args *argv, uint32_t flags)
-{
+static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {
-notenoughargs:
+    notenoughargs:
         printf("not enough arguments\n");
-usage:
+    usage:
         printf("usage:\n");
         printf("\t%s info\n", argv[0].str);
         if (!(flags & CMD_FLAG_PANIC)) {
@@ -207,17 +221,20 @@ usage:
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trim") == 0) {
         heap_trim();
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "alloc") == 0) {
-        if (argc < 3) goto notenoughargs;
+        if (argc < 3)
+            goto notenoughargs;
 
-        void *ptr = memalign((argc >= 4) ? argv[3].u : 0, argv[2].u);
+        void* ptr = memalign((argc >= 4) ? argv[3].u : 0, argv[2].u);
         printf("memalign returns %p\n", ptr);
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "realloc") == 0) {
-        if (argc < 4) goto notenoughargs;
+        if (argc < 4)
+            goto notenoughargs;
 
-        void *ptr = realloc(argv[2].p, argv[3].u);
+        void* ptr = realloc(argv[2].p, argv[3].u);
         printf("realloc returns %p\n", ptr);
     } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "free") == 0) {
-        if (argc < 2) goto notenoughargs;
+        if (argc < 2)
+            goto notenoughargs;
 
         free(argv[2].p);
     } else {

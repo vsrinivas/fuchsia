@@ -243,36 +243,7 @@ size_t pmm_alloc_contiguous(size_t count, uint alloc_flags, uint8_t alignment_lo
     return 0;
 }
 
-/* physically allocate a run from arenas marked as KMAP */
-void* pmm_alloc_kpages(size_t count, struct list_node* list, paddr_t* _pa) {
-    LTRACEF("count %zu\n", count);
-
-    paddr_t pa;
-    /* fast path for single count allocations */
-    if (count == 1) {
-        vm_page_t* p = pmm_alloc_page(PMM_ALLOC_FLAG_KMAP, &pa);
-        if (!p)
-            return nullptr;
-
-        if (list) {
-            list_add_tail(list, &p->free.node);
-        }
-    } else {
-        size_t alloc_count = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP, PAGE_SIZE_SHIFT, &pa, list);
-        if (alloc_count == 0)
-            return nullptr;
-    }
-
-    LTRACEF("pa %#" PRIxPTR "\n", pa);
-    void* ptr = paddr_to_physmap(pa);
-    DEBUG_ASSERT(ptr);
-
-    if (_pa)
-        *_pa = pa;
-    return ptr;
-}
-
-/* allocate a single page from a KMAP arena and return its virtual address */
+/* allocate a single page and return the physmap address */
 void* pmm_alloc_kpage(paddr_t* _pa, vm_page_t** _p) {
     LTRACE_ENTRY;
 
@@ -289,27 +260,6 @@ void* pmm_alloc_kpage(paddr_t* _pa, vm_page_t** _p) {
     if (_p)
         *_p = p;
     return ptr;
-}
-
-size_t pmm_free_kpages(void* _ptr, size_t count) {
-    LTRACEF("ptr %p, count %zu\n", _ptr, count);
-
-    uint8_t* ptr = (uint8_t*)_ptr;
-
-    struct list_node list;
-    list_initialize(&list);
-
-    while (count > 0) {
-        vm_page_t* p = paddr_to_vm_page(vaddr_to_paddr(ptr));
-        if (p) {
-            list_add_tail(&list, &p->free.node);
-        }
-
-        ptr += PAGE_SIZE;
-        count--;
-    }
-
-    return pmm_free(&list);
 }
 
 size_t pmm_free(struct list_node* list) {
@@ -414,7 +364,6 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         if (!is_panic) {
             printf("%s alloc <count>\n", argv[0].str);
             printf("%s alloc_range <address> <count>\n", argv[0].str);
-            printf("%s alloc_kpages <count>\n", argv[0].str);
             printf("%s alloc_contig <count> <alignment>\n", argv[0].str);
             printf("%s dump_alloced\n", argv[0].str);
             printf("%s free_alloced\n", argv[0].str);
@@ -501,13 +450,6 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
         while ((node = list_remove_head(&list))) {
             list_add_tail(&allocated, node);
         }
-    } else if (!strcmp(argv[1].str, "alloc_kpages")) {
-        if (argc < 3)
-            goto notenoughargs;
-
-        paddr_t pa;
-        void* ptr = pmm_alloc_kpages((uint)argv[2].u, nullptr, &pa);
-        printf("pmm_alloc_kpages returns %p pa %#" PRIxPTR "\n", ptr, pa);
     } else if (!strcmp(argv[1].str, "alloc_contig")) {
         if (argc < 4)
             goto notenoughargs;
