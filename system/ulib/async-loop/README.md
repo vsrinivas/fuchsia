@@ -65,6 +65,6 @@ and `libasync-default.so` is linked into the executable, the message loop
 will automatically register itself as the default dispatcher for the thread on
 which it is created.
 
-New threads started with `async_loop_state_thread()` will automatically have
+New threads started with `async_loop_start_thread()` will automatically have
 their default dispatcher set to the message loop regardless of the value of
 `make_default_for_current_thread`.
