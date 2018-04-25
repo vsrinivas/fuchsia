@@ -114,12 +114,6 @@
     "public": true
   },
   {
-    "library_name": "scenic_dummy_system",
-    "fidl_target": "//garnet/public/lib/ui/scenic/fidl/dummy_system:fidl",
-    "library_deps": [],
-    "public": true
-  },
-  {
     "library_name": "views_v1",
     "fidl_target": "//garnet/public/lib/ui/views/fidl:v1",
     "library_deps": [
@@ -133,7 +127,6 @@
     "library_deps": [
       "gfx",
       "images",
-      "scenic_dummy_system",
       "views"
     ],
     "public": true

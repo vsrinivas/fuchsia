@@ -18,10 +18,6 @@
 #include "garnet/lib/ui/views/view_system.h"
 #endif
 
-#ifdef SCENIC_ENABLE_DUMMY_SUBSYSTEM
-#include "garnet/lib/ui/scenic/tests/dummy_system.h"
-#endif
-
 namespace scenic {
 
 App::App(component::ApplicationContext* app_context)
@@ -50,10 +46,6 @@ App::App(component::ApplicationContext* app_context)
 #else
 #error ViewSystem requires gfx::GfxSystem.
 #endif
-#endif
-
-#ifdef SCENIC_ENABLE_DUMMY_SUBSYSTEM
-  scenic_->RegisterSystem<test::DummySystem>();
 #endif
 }
 

@@ -12,7 +12,6 @@ declare_args() {
   enable_gfx_subsystem = true
   enable_views_subsystem = true
   enable_sketchy_subsystem = true
-  enable_dummy_subsystem = true
 }
 
 executable("scenic") {
@@ -40,11 +39,6 @@ executable("scenic") {
   if (enable_views_subsystem) {
     defines += [ "SCENIC_ENABLE_VIEWS_SUBSYSTEM" ]
     deps += [ "//garnet/lib/ui/views" ]
-  }
-
-  if (enable_dummy_subsystem) {
-    defines += [ "SCENIC_ENABLE_DUMMY_SUBSYSTEM" ]
-    deps += [ "//garnet/lib/ui/scenic/tests:dummy_system" ]
   }
 }
 

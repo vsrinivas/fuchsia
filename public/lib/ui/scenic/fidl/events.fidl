@@ -6,5 +6,4 @@ library ui;
 
 union Event {
   gfx.Event gfx;
-  scenic_dummy_system.DummySystemEvent dummy;
 };

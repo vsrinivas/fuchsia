@@ -54,9 +54,6 @@ bool Session::ApplyCommand(const ui::Command& command) {
     case ui::Command::Tag::kViews:
       system_type = System::TypeId::kViews;
       break;
-    case ui::Command::Tag::kDummy:
-      system_type = System::TypeId::kDummySystem;
-      break;
     case ui::Command::Tag::Invalid:
       error_reporter()->ERROR() << "Session: unknown system type.";
       return false;

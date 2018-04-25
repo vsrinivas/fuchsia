@@ -63,7 +63,6 @@ members =  [
   "public/rust/fidl_crates/fidl_netstack",
   "public/rust/fidl_crates/fidl_network",
   "public/rust/fidl_crates/fidl_power_manager",
-  "public/rust/fidl_crates/fidl_scenic_dummy_system",
   "public/rust/fidl_crates/fidl_ui",
   "public/rust/fidl_crates/fidl_views",
   "public/rust/fidl_crates/fidl_views_v1",
@@ -93,7 +92,6 @@ fidl_mem = { path = "public/rust/fidl_crates/fidl_mem" }
 fidl_netstack = { path = "public/rust/fidl_crates/fidl_netstack" }
 fidl_network = { path = "public/rust/fidl_crates/fidl_network" }
 fidl_power_manager = { path = "public/rust/fidl_crates/fidl_power_manager" }
-fidl_scenic_dummy_system = { path = "public/rust/fidl_crates/fidl_scenic_dummy_system" }
 fidl_ui = { path = "public/rust/fidl_crates/fidl_ui" }
 fidl_views = { path = "public/rust/fidl_crates/fidl_views" }
 fidl_views_v1 = { path = "public/rust/fidl_crates/fidl_views_v1" }

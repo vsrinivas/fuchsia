@@ -7,5 +7,4 @@ library ui;
 union Command {
   gfx.Command gfx;
   views.Command views;
-  scenic_dummy_system.DummySystemCommand dummy;
 };

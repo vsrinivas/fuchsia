@@ -23,7 +23,7 @@ DummyCommandDispatcher::DummyCommandDispatcher(CommandDispatcherContext context)
 DummyCommandDispatcher::~DummyCommandDispatcher() = default;
 
 bool DummyCommandDispatcher::ApplyCommand(const ui::Command& command) {
-  return command.Which() == ui::Command::Tag::kDummy;
+  return false;
 }
 
 }  // namespace test
