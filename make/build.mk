@@ -46,7 +46,7 @@ KERNEL_LDFLAGS += --emit-relocs
 OUTLKELF_FIXUPS := $(BUILDDIR)/$(LKNAME)-fixups.inc
 $(OUTLKELF_FIXUPS): scripts/gen-kaslr-fixups.sh $(OUTLKELF)
 	$(call BUILDECHO,extracting relocations into $@)
-	$(NOECHO)$(SHELLEXEC) $^ '$(READELF)' $@
+	$(NOECHO)$(SHELLEXEC) $^ '$(READELF)' '$(OBJDUMP)' $@
 GENERATED += $(OUTLKELF_FIXUPS)
 
 # Canned sequence to convert an ELF file to a raw binary.

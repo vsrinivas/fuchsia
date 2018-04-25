@@ -25,21 +25,22 @@
 # each run of adjustments, and then #include's the output of this script.
 
 usage() {
-  echo >&2 "Usage: $0 KERNEL READELF OUTFILE"
+  echo >&2 "Usage: $0 KERNEL READELF OBJDUMP OUTFILE"
   exit 2
 }
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 4 ]; then
   usage
 fi
 
 AWK=awk
 KERNEL="$1"
 READELF="$2"
-OUTFILE="$3"
+OBJDUMP="$3"
+OUTFILE="$4"
 
 grok_fixups() {
-  "$AWK" -v kernel="$KERNEL" '
+  "$AWK" -v kernel="$KERNEL" -v objdump="$OBJDUMP" '
 BEGIN {
     nrelocs = 0;
     status = 0;
@@ -125,8 +126,10 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         print "cannot handle", bad, "at", $1, "in", secname > "/dev/stderr";
         status = 1;
         objdump_cmd = sprintf("\
-objdump -rdlC --start-address=0xffff%012x --stop-address=0xffff%012x %s",
-                      r_offset - 8, r_offset + 8, kernel);
+\"%s\" -rdlC --start-address=0x%s%.*x --stop-address=0x%s%.*x %s", objdump,
+                      this_prefix, 16 - length(this_prefix), r_offset - 8,
+                      this_prefix, 16 - length(this_prefix), r_offset + 8,
+                      kernel);
         sed_cmd = sprintf("\
 sed '\''1,/^Disassembly/d;/^$/d;s/^/    /;/%s/s/^  /=>/'\''", $1);
         system(objdump_cmd " | " sed_cmd " >&2");
