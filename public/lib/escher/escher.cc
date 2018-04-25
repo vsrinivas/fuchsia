@@ -189,7 +189,7 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
 
 FramePtr Escher::NewFrame(const char* trace_literal, bool enable_gpu_logging) {
   auto frame = fxl::AdoptRef<Frame>(
-      new Frame(this, next_frame_number_++, trace_literal, enable_gpu_logging));
+      new Frame(this, ++next_frame_number_, trace_literal, enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }
