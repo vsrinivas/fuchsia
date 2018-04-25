@@ -9,6 +9,8 @@ source_set("cpp") {
     "connect.h",
     "environment_services.cc",
     "environment_services.h",
+    "outgoing.cc",
+    "outgoing.h",
     "service_provider_impl.cc",
     "service_provider_impl.h",
   ]
