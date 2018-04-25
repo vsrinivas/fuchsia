@@ -27,5 +27,4 @@ runbench_exec "${OUT_DIR}/ledger.get_same_page" \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page"
 
 # Exit with a code indicating whether any errors occurred.
-runbench_exit
-
+runbench_finish "${OUT_DIR}"
