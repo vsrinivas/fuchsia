@@ -15,6 +15,8 @@ to work on Zircon only, read and follow Zircon's
 doc.
 ***
 
+[TOC]
+
 ## Prerequisites
 
 ### Prepare your build environment (Once per build environment)
@@ -52,7 +54,7 @@ brew install wget pkg-config glib autoconf automake libtool golang
 
 ```
 # Install MacPorts
-#See https:  // guide.macports.org/chunked/installing.macports.html
+# See https://guide.macports.org/chunked/installing.macports.html
 port install autoconf automake libtool libpixman pkgconfig glib2
 ```
 
@@ -227,7 +229,7 @@ If you would like to use a text shell inside a terminal emulator from within the
 you can launch the [term](https://fuchsia.googlesource.com/topaz/+/master/app/term) by selecting the
 "Ask Anything" box and typing `moterm`.
 
-### Running tests
+## Running tests
 
 Compiled test binaries are installed in `/system/test/`.
 You can run a test by invoking it in the terminal. E.g.
@@ -243,6 +245,8 @@ Fuchsia with networking enabled in one terminal, then in another terminal, run:
 fx run-test <test name> [<test args>]
 ```
 
+You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
+
 ## Contribute changes
 
 * See [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -250,7 +254,6 @@ fx run-test <test name> [<test args>]
 ## Additional helpful documents
 
 * [Fuchsia documentation](/README.md) hub
-* [Fuchsia FAQ](/best-practices/faq.md)
 * Working with Zircon - [copying files, network booting, log viewing, and
 more](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
 * [Information on the system bootstrap application](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).

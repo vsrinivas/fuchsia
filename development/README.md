@@ -12,13 +12,14 @@ and debugging Fuchsia and programs running on Fuchsia.
    covers getting the source, building and running Fuchsia.
  - [Source code](source_code/README.md)
  - [Multiple device setup](workflows/multi_device.md)
- - [Pushing changes](workflows/package_update.md)
+ - [Pushing a package](workflows/package_update.md)
  - [Changes that span layers](workflows/multilayer_changes.md)
  - [Debugging](workflows/debugging.md)
  - [Tracing][tracing]
  - [Trace-based Benchmarking][trace_based_benchmarking]
  - [Build system](build/README.md)
- - [FAQ](/best-practices/faq.md)
+ - [Workflow FAQ](workflows/workflow_faq.md)
+ - [Testing FAQ](workflows/testing_faq.md)
 
 ## Languages
 
