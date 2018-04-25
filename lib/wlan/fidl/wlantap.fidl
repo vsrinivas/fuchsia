@@ -1,0 +1,72 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library wlantap;
+
+using wlan_device;
+
+struct WlantapPhyConfig {
+  wlan_device.PhyInfo phy_info;
+  string name;
+};
+
+// See wlan_rx_info_t
+struct WlanRxInfo {
+  uint32 rx_flags;
+  uint32 valid_fields;
+  uint16 phy;
+  uint32 data_rate;
+  wlan_device.Channel chan;
+  uint8 mcs;
+  uint8 rssi;
+  uint8 rcpi;
+  uint8 snr;
+};
+
+// See wlan_tx_info_t
+struct WlanTxInfo {
+  uint32 tx_flags;
+  uint32 valid_fields;
+  uint16 phy;
+  uint8 cbw;
+  uint32 data_rate;
+  uint8 mcs;
+};
+
+// See wlan_bss_config_t
+struct WlanBssConfig {
+  array<uint8>:6 bssid;
+  uint8 bss_type;
+  bool remote;
+};
+
+// See wlan_key_config_t
+struct WlanKeyConfig {
+  uint8 protection;
+  array<uint8>:3 cipher_oui;
+  uint8 cipher_type;
+  uint8 key_type;
+  array<uint8>:6 peer_addr;
+  uint8 key_idx;
+  vector<uint8>:32 key;
+};
+
+interface WlantapPhy {
+  // wlanmac_ifc_t callbacks
+  1: Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+  2: Status(uint16 wlanmac_id, uint32 st);
+};
+
+// These really should be events in WlantapPhy, but events are
+// not implemented yet.
+interface WlantapPhyEvents {
+  // wlanmac_protocol_ops_t
+  3: Tx(vector<uint8> data, WlanTxInfo info);
+  4: SetChannel(wlan_device.Channel chan);
+  5: ConfigureBss(WlanBssConfig config);
+  // TODO: ConfigureBeacon
+  7: SetKey(WlanKeyConfig config);
+};
+
+
