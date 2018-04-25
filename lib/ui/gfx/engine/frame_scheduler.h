@@ -68,6 +68,12 @@ class FrameScheduler {
   // they're requested using RequestFrame().
   void SetRenderContinuously(bool render_continuously);
 
+  // Helper method for ScheduleFrame().  Returns the target presentation time
+  // for the requested presentation time, and a wake-up time that is early
+  // enough to start rendering in order to hit the target presentation time.
+  std::pair<zx_time_t, zx_time_t> ComputeTargetPresentationAndWakeupTimes(
+      zx_time_t requested_presentation_time) const;
+
  private:
   // Update the global scene and then draw it... maybe.  There are multiple
   // reasons why this might not happen.  For example, the swapchain might apply
@@ -89,7 +95,7 @@ class FrameScheduler {
   // Helper method for ScheduleFrame().  Returns the target presentation time
   // for the next frame, and a wake-up time that is early enough to start
   // rendering in order to hit the target presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputePresentationAndWakeupTimes() const;
+  std::pair<zx_time_t, zx_time_t> ComputeNextPresentationAndWakeupTimes() const;
 
   // Return the predicted amount of time required to render a frame.
   zx_time_t PredictRequiredFrameRenderTime() const;
@@ -97,7 +103,7 @@ class FrameScheduler {
   // Called by the delegate when the frame drawn by RenderFrame() has been
   // presented to the display.
   friend class FrameTimings;
-  void ReceiveFrameTimings(FrameTimings* timings);
+  void OnFramePresented(FrameTimings* timings);
 
   fxl::TaskRunner* const task_runner_;
   FrameSchedulerDelegate* delegate_;

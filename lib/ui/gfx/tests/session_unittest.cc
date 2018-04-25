@@ -24,7 +24,8 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
       ::fidl::VectorPtr<zx::event>(), callback));
   ExpectLastReportedError(
       "scenic::gfx::Session: Present called with out-of-order presentation "
-      "time. presentation_time=0, last scheduled presentation time=1.");
+      "time. requested presentation time=0, last scheduled presentation "
+      "time=1.");
 }
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {

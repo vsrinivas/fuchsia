@@ -71,7 +71,7 @@ class Session : public fxl::RefCountedThreadSafe<Session> {
 
   // Called by SessionHandler::Present().  Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
-  bool ScheduleUpdate(uint64_t presentation_time,
+  bool ScheduleUpdate(uint64_t requested_presentation_time,
                       std::vector<::gfx::Command> commands,
                       ::fidl::VectorPtr<zx::event> acquire_fences,
                       ::fidl::VectorPtr<zx::event> release_fences,

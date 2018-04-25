@@ -60,7 +60,7 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx_time_t time) {
   }
 }
 
-void FrameTimings::Finalize() { frame_scheduler_->ReceiveFrameTimings(this); }
+void FrameTimings::Finalize() { frame_scheduler_->OnFramePresented(this); }
 
 }  // namespace gfx
 }  // namespace scenic

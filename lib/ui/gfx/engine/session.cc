@@ -1260,7 +1260,7 @@ bool Session::AssertValueIsOfType(const ::gfx::Value& value,
   return false;
 }
 
-bool Session::ScheduleUpdate(uint64_t presentation_time,
+bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
                              std::vector<::gfx::Command> commands,
                              ::fidl::VectorPtr<zx::event> acquire_fences,
                              ::fidl::VectorPtr<zx::event> release_events,
@@ -1274,14 +1274,39 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
                    scheduled_updates_.back().presentation_time);
     }
 
-    if (presentation_time < last_scheduled_presentation_time) {
+    if (requested_presentation_time < last_scheduled_presentation_time) {
       error_reporter_->ERROR()
           << "scenic::gfx::Session: Present called with out-of-order "
              "presentation time. "
-          << "presentation_time=" << presentation_time
+          << "requested presentation time=" << requested_presentation_time
           << ", last scheduled presentation time="
           << last_scheduled_presentation_time << ".";
       return false;
+    }
+
+    // If we're not running headless, warn if the requested presesentation time
+    // is not reasonable.
+    if (engine()->frame_scheduler() &&
+        engine()->display_manager()->default_display()) {
+      std::pair<zx_time_t, zx_time_t> target_times =
+          engine()->frame_scheduler()->ComputeTargetPresentationAndWakeupTimes(
+              requested_presentation_time);
+      uint64_t target_presentation_time = target_times.first;
+
+      zx_time_t vsync_interval =
+          engine()->display_manager()->default_display()->GetVsyncInterval();
+      // TODO(SCN-723): Re-enable warning when requested_presentation_time == 0
+      // after Flutter engine is fixed.
+      if (requested_presentation_time != 0 &&
+          target_presentation_time - vsync_interval >
+              requested_presentation_time) {
+        error_reporter_->WARN()
+            << "scenic::gfx::Session: Present called with too early "
+               "of a presentation time. session_id = "
+            << id()
+            << ", requested presentation time=" << requested_presentation_time
+            << ", target presentation time=" << target_presentation_time << ".";
+      }
     }
     auto acquire_fence_set =
         std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
@@ -1289,16 +1314,16 @@ bool Session::ScheduleUpdate(uint64_t presentation_time,
     // acquire_fence_set is already ready (which is the case if there are
     // zero acquire fences).
 
-    acquire_fence_set->WaitReadyAsync(
-        [weak = weak_factory_.GetWeakPtr(), presentation_time] {
-          if (weak)
-            weak->engine_->session_manager()->ScheduleUpdateForSession(
-                weak->engine_, presentation_time, SessionPtr(weak.get()));
-        });
+    acquire_fence_set->WaitReadyAsync([weak = weak_factory_.GetWeakPtr(),
+                                       requested_presentation_time] {
+      if (weak)
+        weak->engine_->session_manager()->ScheduleUpdateForSession(
+            weak->engine_, requested_presentation_time, SessionPtr(weak.get()));
+    });
 
-    scheduled_updates_.push(Update{presentation_time, std::move(commands),
-                                   std::move(acquire_fence_set),
-                                   std::move(release_events), callback});
+    scheduled_updates_.push(Update{
+        requested_presentation_time, std::move(commands),
+        std::move(acquire_fence_set), std::move(release_events), callback});
   }
   return true;
 }
@@ -1330,8 +1355,15 @@ bool Session::ApplyScheduledUpdates(uint64_t presentation_time,
 
   bool needs_render = false;
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <= presentation_time &&
-         scheduled_updates_.front().acquire_fences->ready()) {
+         scheduled_updates_.front().presentation_time <= presentation_time) {
+    if (!scheduled_updates_.front().acquire_fences->ready()) {
+      TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
+                    "session_id", id(), "target presentation time (usecs)",
+                    presentation_time / 1000,
+                    "session target presentation time (usecs)",
+                    scheduled_updates_.front().presentation_time / 1000);
+      break;
+    }
     if (ApplyUpdate(std::move(scheduled_updates_.front().commands))) {
       needs_render = true;
       auto info = images::PresentationInfo();
