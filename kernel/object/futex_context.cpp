@@ -111,6 +111,8 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
     if (futex_key % sizeof(int))
         return ZX_ERR_INVALID_ARGS;
 
+    AutoReschedDisable resched_disable; // Must come before the AutoLock.
+    resched_disable.Disable();
     AutoLock lock(&lock_);
 
     FutexNode* node = futex_table_.erase(futex_key);
@@ -120,18 +122,12 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const int> value_ptr,
     }
     DEBUG_ASSERT(node->GetKey() == futex_key);
 
-    bool any_woken = false;
     FutexNode* remaining_waiters =
-        FutexNode::WakeThreads(node, count, futex_key, &any_woken);
+        FutexNode::WakeThreads(node, count, futex_key);
 
     if (remaining_waiters) {
         DEBUG_ASSERT(remaining_waiters->GetKey() == futex_key);
         futex_table_.insert(remaining_waiters);
-    }
-
-    if (any_woken) {
-        lock.release();
-        thread_reschedule();
     }
 
     return ZX_OK;
@@ -144,6 +140,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t
     if ((requeue_ptr.get() == nullptr) && requeue_count)
         return ZX_ERR_INVALID_ARGS;
 
+    AutoReschedDisable resched_disable; // Must come before the AutoLock.
     AutoLock lock(&lock_);
 
     int value;
@@ -166,9 +163,12 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t
         return ZX_OK;
     }
 
-    bool any_woken = false;
+    // This must come before WakeThreads() to be useful, but we want to
+    // avoid doing it before copy_from_user() in case that faults.
+    resched_disable.Disable();
+
     if (wake_count > 0) {
-        node = FutexNode::WakeThreads(node, wake_count, wake_key, &any_woken);
+        node = FutexNode::WakeThreads(node, wake_count, wake_key);
     }
 
     // node is now the head of wake_ptr futex after possibly removing some threads to wake
@@ -189,11 +189,6 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const int> wake_ptr, uint32_t
     if (node != nullptr) {
         DEBUG_ASSERT(node->GetKey() == wake_key);
         futex_table_.insert(node);
-    }
-
-    if (any_woken) {
-        lock.release();
-        thread_reschedule();
     }
 
     return ZX_OK;

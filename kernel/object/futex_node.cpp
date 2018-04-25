@@ -78,7 +78,7 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
 // RemoveFromHead() is similar, except that it produces a list of removed
 // threads without waking them.
 FutexNode* FutexNode::WakeThreads(FutexNode* node, uint32_t count,
-                                  uintptr_t old_hash_key, bool* out_any_woken) {
+                                  uintptr_t old_hash_key) {
     ASSERT(node);
     ASSERT(count != 0);
 
@@ -92,8 +92,7 @@ FutexNode* FutexNode::WakeThreads(FutexNode* node, uint32_t count,
         FutexNode* next = node->queue_next_;
         // This call can cause |node| to be freed, so we must not
         // dereference |node| after this.
-        if (node->WakeThread())
-            *out_any_woken = true;
+        node->WakeThread();
 
         if (is_last_node) {
             // We have reached the end of the list, so we are removing all
@@ -166,10 +165,7 @@ zx_status_t FutexNode::BlockThread(fbl::Mutex* mutex, zx_time_t deadline) TA_NO_
     return result;
 }
 
-// This returns whether the thread was woken.  This will usually return
-// true, but can sometimes return false if our wakeup coincides with the
-// thread waking up from a timeout.
-bool FutexNode::WakeThread() {
+void FutexNode::WakeThread() {
     // We must be careful to correctly handle the case where the thread
     // for |this| wakes and exits, deleting |this|.  There are two
     // cases to consider:
@@ -185,15 +181,8 @@ bool FutexNode::WakeThread() {
     // We must do this before we wake the thread, to handle case 2.
     MarkAsNotInQueue();
 
-    // Place the waiting thread in the runnable state, but do not
-    // reschedule yet.  Our caller is currently holding the main
-    // futex_lock, and any threads which get woken by this action are going
-    // to immediately attempt to obtain the main futex_lock.  If we
-    // indicate that the thread was woken during this process, our caller
-    // will release the lock and then arrange for a reschedule operation
-    // (which leads to a smoother transition).
     AutoThreadLock lock;
-    return wait_queue_wake_one(&wait_queue_, /* reschedule */ false, ZX_OK);
+    wait_queue_wake_one(&wait_queue_, /* reschedule */ true, ZX_OK);
 }
 
 // Set |node1| and |node2|'s list pointers so that |node1| is immediately

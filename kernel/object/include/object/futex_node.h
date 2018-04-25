@@ -34,7 +34,7 @@ public:
     static FutexNode* RemoveNodeFromList(FutexNode* list_head, FutexNode* node);
 
     static FutexNode* WakeThreads(FutexNode* node, uint32_t count,
-                                  uintptr_t old_hash_key, bool* out_any_woken);
+                                  uintptr_t old_hash_key);
 
     static FutexNode* RemoveFromHead(FutexNode* list_head,
                                      uint32_t count,
@@ -56,7 +56,7 @@ private:
     static void RelinkAsAdjacent(FutexNode* node1, FutexNode* node2);
     static void SpliceNodes(FutexNode* node1, FutexNode* node2);
 
-    bool WakeThread();
+    void WakeThread();
 
     void MarkAsNotInQueue();
 

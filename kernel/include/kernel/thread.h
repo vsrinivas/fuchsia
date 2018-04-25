@@ -500,4 +500,47 @@ private:
     spin_lock_saved_state_t state_;
 };
 
+// AutoReschedDisable is an RAII helper for disabling rescheduling
+// using thread_resched_disable()/thread_resched_reenable().
+//
+// A typical use case is when we wake another thread while holding a
+// mutex.  If the other thread is likely to claim the same mutex when
+// runs (either immediately or later), then it is useful to defer
+// waking the thread until after we have released the mutex.  We can
+// do that by disabling rescheduling while holding the lock.  This is
+// beneficial when there are no free CPUs for running the woken thread
+// on.
+//
+// Example usage:
+//
+//   AutoReschedDisable resched_disable;
+//   AutoLock al(&lock_);
+//   // Do some initial computation...
+//   resched_disable.Disable();
+//   // Possibly wake another thread...
+//
+// The AutoReschedDisable must be placed before the AutoLock to ensure that
+// rescheduling is re-enabled only after releasing the mutex.
+class AutoReschedDisable {
+public:
+    AutoReschedDisable() {}
+    ~AutoReschedDisable() {
+        if (started_) {
+            thread_resched_reenable();
+        }
+    }
+
+    void Disable() {
+        if (!started_) {
+            thread_resched_disable();
+            started_ = true;
+        }
+    }
+
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoReschedDisable);
+
+private:
+    bool started_ = false;
+};
+
 #endif // __cplusplus
