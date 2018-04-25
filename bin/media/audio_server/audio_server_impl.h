@@ -15,7 +15,7 @@
 #include "garnet/bin/media/audio_server/audio_packet_ref.h"
 #include "garnet/bin/media/audio_server/fwd_decls.h"
 #include "garnet/bin/media/audio_server/pending_flush_token.h"
-#include "lib/app/cpp/application_context.h"
+#include "lib/app/cpp/outgoing.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
@@ -25,8 +25,7 @@ namespace audio {
 
 class AudioServerImpl : public AudioServer {
  public:
-  AudioServerImpl(
-      std::unique_ptr<component::ApplicationContext> application_context);
+  AudioServerImpl();
   ~AudioServerImpl() override;
 
   // AudioServer
@@ -69,7 +68,7 @@ class AudioServerImpl : public AudioServer {
   void Shutdown();
   void DoPacketCleanup();
 
-  std::unique_ptr<component::ApplicationContext> application_context_;
+  component::Outgoing outgoing_;
   fidl::BindingSet<AudioServer> bindings_;
 
   // A reference to our thread's async object.  Allows us to post events to

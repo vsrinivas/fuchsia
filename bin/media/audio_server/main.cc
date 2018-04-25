@@ -9,10 +9,7 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-
-  media::audio::AudioServerImpl impl(
-      component::ApplicationContext::CreateFromStartupInfo());
-
+  media::audio::AudioServerImpl impl;
   loop.Run();
   return 0;
 }

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/media/audio_server/audio_server_impl.h"
 
+#include <fs/service.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -15,16 +16,14 @@
 namespace media {
 namespace audio {
 
-AudioServerImpl::AudioServerImpl(
-    std::unique_ptr<component::ApplicationContext> application_context)
-    : application_context_(std::move(application_context)),
-      device_manager_(this) {
-  FXL_DCHECK(application_context_);
-
-  application_context_->outgoing_services()->AddService<AudioServer>(
-      [this](fidl::InterfaceRequest<AudioServer> request) {
-        bindings_.AddBinding(this, std::move(request));
-      });
+AudioServerImpl::AudioServerImpl() : device_manager_(this) {
+  auto service = fbl::AdoptRef(new fs::Service(
+        [this](zx::channel ch) -> zx_status_t {
+          bindings_.AddBinding(
+              this, fidl::InterfaceRequest<AudioServer>(std::move(ch)));
+          return ZX_OK;
+        }));
+  outgoing_.public_dir()->AddEntry(AudioServer::Name_, std::move(service));
 
   // Stash a pointer to our async object.
   async_ = async_get_default();
@@ -48,6 +47,17 @@ AudioServerImpl::AudioServerImpl(
   MediaResult res = device_manager_.Init();
   // TODO(johngro): Do better at error handling than this weak check.
   FXL_DCHECK(res == MediaResult::OK);
+
+  // Wait for 50 mSec before we export our services and start to process client
+  // requests.  This will give the device manager layer time to discover the
+  // AudioInputs and AudioOutputs which are already connected to the system.
+  //
+  // TODO(johngro): With some more major surgery, we could rework the device
+  // manager so that we wait until we are certain that we have discovered and
+  // probed the capabilities of all of the pre-existing inputs and outputs
+  // before proceeding.  See MTWN-118
+  async::PostDelayedTask(
+      async_, [this]() { outgoing_.ServeFromStartupInfo(); }, zx::msec(50));
 }
 
 AudioServerImpl::~AudioServerImpl() {
