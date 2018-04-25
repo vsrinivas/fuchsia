@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(warnings)]
+#![allow(missing_docs)]
 
 use failure::Error;
 use rand::{self, Rng};
@@ -140,6 +141,8 @@ pub fn get_device_driver_name(device: &File) -> Result<OsString, Error> {
     Ok(ospath)
 }
 
+// Ioctl definitions for the above calls.
+// TODO(bwb): move out to a generic crate
 pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
     let mut handle = zircon::sys::ZX_HANDLE_INVALID;
     unsafe {
@@ -183,8 +186,6 @@ const IOCTL_DEVICE_GET_DRIVER_NAME: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_FAMILY_DEVICE,
     2
 );
-
-// Bluetooth specific Ioctls
 
 const IOCTL_BT_HCI_GET_SNOOP_CHANNEL: raw::c_int = make_ioctl!(
     fdio_sys::IOCTL_KIND_GET_HANDLE,
