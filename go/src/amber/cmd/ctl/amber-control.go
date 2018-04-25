@@ -22,7 +22,10 @@ Commands
     get_up    - get an update for a package
       Options
         -n:      name of the package
-        -v:      version of the package, if not supplied the latest is retrieved
+        -v:      version of the package to retrieve, if none is supplied any
+                 package instance could match
+        -m:      merkle root of the package to retrieve, if none is supplied
+                 any package instance could match
         -nowait: exit once package installation has started, but don't wait for
                  package activation
 
@@ -55,6 +58,7 @@ var (
 	srcKeyHash = fs.String("h", "", "SHA256 of the key. This is required whether the key is provided directly or by URL")
 	blobID     = fs.String("i", "", "Content ID of the blob")
 	noWait     = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
+	merkle     = fs.String("m", "", "Merkle root of the desired update.")
 )
 
 func doTest(pxy *amber.ControlInterface) {
@@ -101,14 +105,14 @@ func main() {
 		// part of the package name
 		*pkgName = fmt.Sprintf("%s/%s", *pkgName, *pkgVersion)
 		if *noWait {
-			blobID, err := proxy.GetUpdate(*pkgName, nil)
+			blobID, err := proxy.GetUpdate(*pkgName, nil, merkle)
 			if err == nil {
 				fmt.Printf("Wrote update to blob %s\n", *blobID)
 			} else {
 				fmt.Printf("Error getting update %s\n", err)
 			}
 		} else {
-			c, err := proxy.GetUpdateComplete(*pkgName, nil)
+			c, err := proxy.GetUpdateComplete(*pkgName, nil, merkle)
 			if err == nil {
 				defer c.Close()
 				b := make([]byte, 1024)

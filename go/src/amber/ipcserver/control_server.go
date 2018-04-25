@@ -72,8 +72,8 @@ func (c *ControlSrvr) ListSrcs() ([]string, error) {
 	return []string{}, nil
 }
 
-func (c *ControlSrvr) getAndWaitForUpdate(name string, version *string, ch *zx.Channel) {
-	res, err := c.downloadPkgMeta(name, version)
+func (c *ControlSrvr) getAndWaitForUpdate(name string, version, merkle *string, ch *zx.Channel) {
+	res, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
 		ch.Close()
 		return
@@ -83,14 +83,14 @@ func (c *ControlSrvr) getAndWaitForUpdate(name string, version *string, ch *zx.C
 	c.compReqs <- &compReq
 }
 
-func (c *ControlSrvr) GetUpdateComplete(name string, version *string) (zx.Channel, error) {
+func (c *ControlSrvr) GetUpdateComplete(name string, version, merkle *string) (zx.Channel, error) {
 	r, w, e := zx.NewChannel(0)
 	if e != nil {
 		lg.Log.Printf("Could not create channel")
 		return 0, e
 	}
 
-	go c.getAndWaitForUpdate(name, version, &w)
+	go c.getAndWaitForUpdate(name, version, merkle, &w)
 	return r, nil
 }
 
@@ -102,11 +102,16 @@ func (c *ControlSrvr) PackagesActivated(merkle []string) error {
 	return nil
 }
 
-func (c *ControlSrvr) downloadPkgMeta(name string, version *string) (*daemon.GetResult, error) {
+func (c *ControlSrvr) downloadPkgMeta(name string, version, merkle *string) (*daemon.GetResult, error) {
 	d := ""
 	if version == nil {
 		version = &d
 	}
+
+	if merkle == nil {
+		merkle = &d
+	}
+
 	if len(name) == 0 {
 		return nil, fmt.Errorf("No name provided")
 	}
@@ -116,7 +121,7 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version *string) (*daemon.Get
 	}
 
 	ps := pkg.NewPackageSet()
-	pkg := pkg.Package{Name: name, Version: *version}
+	pkg := pkg.Package{Name: name, Version: *version, Merkle: *merkle}
 	ps.Add(&pkg)
 
 	c.initDaemon()
@@ -132,8 +137,8 @@ func (c *ControlSrvr) downloadPkgMeta(name string, version *string) (*daemon.Get
 	return res, nil
 }
 
-func (c *ControlSrvr) GetUpdate(name string, version *string) (*string, error) {
-	res, err := c.downloadPkgMeta(name, version)
+func (c *ControlSrvr) GetUpdate(name string, version, merkle *string) (*string, error) {
+	res, err := c.downloadPkgMeta(name, version, merkle)
 	if err != nil {
 		return nil, err
 	}

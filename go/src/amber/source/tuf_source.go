@@ -67,14 +67,15 @@ func (f *TUFSource) AvailableUpdates(pkgs []*pkg.Package) (map[pkg.Package]pkg.P
 		if !ok {
 			continue
 		}
+		hashStr := hash.String()
 
 		m := merkle{}
 		if meta.Custom != nil {
 			json.Unmarshal(*meta.Custom, &m)
 		}
 
-		hashStr := hash.String()
-		if hashStr != p.Version {
+		if (len(p.Version) == 0 || p.Version == hashStr) &&
+			(len(p.Merkle) == 0 || p.Merkle == m.Root) {
 			lg.Log.Printf("tufsource: available update %s version %s\n",
 				p.Name, hashStr[:8])
 			updates[*p] = pkg.Package{
