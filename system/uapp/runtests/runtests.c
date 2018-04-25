@@ -25,8 +25,8 @@
 
 #include <unittest/unittest.h>
 
-// The suffix appended to the filename of each test.
-static const char* kOutputSuffix = ".out";
+// The name of the file containing stdout and stderr of each test.
+static const char kOutputFileName[] = "stdout-and-stderr.txt";
 
 typedef enum {
     SUCCESS,
@@ -274,16 +274,16 @@ fail:
     return false;
 }
 
-// Creates an output file name from a path to a test.
+// Sets *out to "parent/child".
 //
-// |test_path| is the absolute path to the test binary.
-// |out| is the location to write output to.
+// |parent| is the parent path.
+// |child| is the child path.
+// |out| is the destination for the joined path.
 // |out_len| is the amount of space available at that location.
 //
 // Returns non-zero on failure with errno set.
-static int create_output_file_name(const char* test_path, char* out, const size_t out_len) {
-    // Generate output file name.
-    size_t path_len = snprintf(out, out_len, "%s%s", test_path, kOutputSuffix);
+static int join_path(const char* parent, const char* child, char* out, const size_t out_len) {
+    size_t path_len = snprintf(out, out_len, "%s/%s", parent, child);
     if (path_len >= out_len) {
         errno = ENAMETOOLONG;
         return -1;
@@ -291,31 +291,17 @@ static int create_output_file_name(const char* test_path, char* out, const size_
     return 0;
 }
 
-// Creates an output file name and opens the file for writing.
+// Opens "parent/child" for writing.
 //
-// |output_dir| is the location the output file should be written.
-// |test_path| is the absolute path to the test binary.
+// |parent| is the parent path.
+// |child| is the child path.
 //
 // Returns NULL on failure, with errno set.
-static FILE* open_output_file(const char* output_dir, const char* test_path) {
+static FILE* join_and_open(const char* parent, const char* child) {
     char output_path[PATH_MAX];
-
-    // test_path must be an absolute path, and therefore must start with '/'.
-    assert(test_path[0] == '/');
-
-    // Generate the full path to the output file.
-    size_t output_dir_len = strlen(output_dir);
-    if (output_dir_len >= sizeof(output_path)) {
-        errno = ENAMETOOLONG;
+    if (join_path(parent, child, output_path, sizeof(output_path))) {
         return NULL;
     }
-    memcpy(output_path, output_dir, output_dir_len + 1);
-    if (create_output_file_name(test_path, &output_path[output_dir_len],
-                                sizeof(output_path) - output_dir_len)) {
-        return NULL;
-    }
-
-    // Open output file.
     return fopen(output_path, "w");
 }
 
@@ -373,7 +359,18 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
         // to a file whose name is based on the test name.
         FILE* out = NULL;
         if (output_dir != NULL) {
-            out = open_output_file(output_dir, test_path);
+            char test_output_dir[PATH_MAX];
+            if (join_path(output_dir, test_path, test_output_dir, sizeof(test_output_dir))) {
+              printf("Error: Could not construct output dir for test %s: %s\n", test_name,
+                     strerror(errno));
+              return false;
+            }
+            if (mkdir_all(test_output_dir)) {
+                printf("Error: Could not output directory for test %s: %s\n", test_name,
+                       strerror(errno));
+                return false;
+            }
+            out = join_and_open(test_output_dir, kOutputFileName);
             if (out == NULL) {
                 printf("Error: Could not open output file for test %s: %s\n", test_name,
                        strerror(errno));
@@ -427,7 +424,7 @@ static int write_summary_json(const list_node_t* tests, FILE* summary_json) {
         // the test binary on the target, so to make this a relative path, we
         // only have to skip leading '/' characters in the test name.
         char buf[PATH_MAX];
-        if (create_output_file_name(test->name, buf, sizeof(buf))) {
+        if (join_path(test->name, kOutputFileName, buf, sizeof(buf))) {
             return -1;
         }
         char *output_file = buf;
