@@ -35,14 +35,14 @@ ElementWriter::ElementWriter(uint8_t* buf, size_t len) : buf_(buf), len_(len) {}
 
 const size_t SsidElement::kMaxLen;
 
-bool SsidElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid) {
+bool SsidElement::Create(void* buf, size_t len, size_t* actual, const char* ssid) {
     size_t ssidlen = 0;
     if (ssid != nullptr) { ssidlen = strnlen(ssid, kMaxLen + 1); }
     if (ssidlen == kMaxLen + 1) return false;
     size_t elem_size = sizeof(SsidElement) + ssidlen;
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<SsidElement*>(buf);
+    auto elem = static_cast<SsidElement*>(buf);
     elem->hdr.id = element_id::kSsid;
     elem->hdr.len = ssidlen;
     std::memcpy(elem->ssid, ssid, ssidlen);
@@ -52,13 +52,13 @@ bool SsidElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* s
 
 const size_t SupportedRatesElement::kMaxLen;
 
-bool SupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* actual,
+bool SupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
                                    const std::vector<uint8_t>& rates) {
     if (rates.size() > kMaxLen) return false;
     size_t elem_size = sizeof(SupportedRatesElement) + rates.size();
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<SupportedRatesElement*>(buf);
+    auto elem = static_cast<SupportedRatesElement*>(buf);
     elem->hdr.id = element_id::kSuppRates;
     elem->hdr.len = rates.size();
     std::copy(rates.begin(), rates.end(), elem->rates);
@@ -66,11 +66,11 @@ bool SupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* actual,
     return true;
 }
 
-bool DsssParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t chan) {
-    size_t elem_size = sizeof(DsssParamSetElement);
+bool DsssParamSetElement::Create(void* buf, size_t len, size_t* actual, uint8_t chan) {
+    constexpr size_t elem_size = sizeof(DsssParamSetElement);
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<DsssParamSetElement*>(buf);
+    auto elem = static_cast<DsssParamSetElement*>(buf);
     elem->hdr.id = element_id::kDsssParamSet;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     elem->current_chan = chan;
@@ -78,12 +78,12 @@ bool DsssParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8
     return true;
 }
 
-bool CfParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count,
-                               uint8_t period, uint16_t max_duration, uint16_t dur_remaining) {
-    size_t elem_size = sizeof(CfParamSetElement);
+bool CfParamSetElement::Create(void* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
+                               uint16_t max_duration, uint16_t dur_remaining) {
+    constexpr size_t elem_size = sizeof(CfParamSetElement);
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<CfParamSetElement*>(buf);
+    auto elem = static_cast<CfParamSetElement*>(buf);
     elem->hdr.id = element_id::kCfParamSet;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     elem->count = count;
@@ -94,14 +94,14 @@ bool CfParamSetElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t
     return true;
 }
 
-bool TimElement::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
+bool TimElement::Create(void* buf, size_t len, size_t* actual, uint8_t dtim_count,
                         uint8_t dtim_period, BitmapControl bmp_ctrl, const uint8_t* bmp,
                         size_t bmp_len) {
     if (bmp_len > kMaxLenBmp) return false;
     size_t elem_size = sizeof(TimElement) + bmp_len;
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<TimElement*>(buf);
+    auto elem = static_cast<TimElement*>(buf);
     elem->hdr.id = element_id::kTim;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     elem->dtim_count = dtim_count;
@@ -134,11 +134,11 @@ bool TimElement::traffic_buffered(uint16_t aid) const {
     return bmp[octet - n1] & (1 << (aid % 8));
 }
 
-bool CountryElement::Create(uint8_t* buf, size_t len, size_t* actual, const char* country) {
-    size_t elem_size = sizeof(CountryElement);
+bool CountryElement::Create(void* buf, size_t len, size_t* actual, const char* country) {
+    constexpr size_t elem_size = sizeof(CountryElement);
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<CountryElement*>(buf);
+    auto elem = static_cast<CountryElement*>(buf);
     elem->hdr.id = element_id::kCountry;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
     std::strncpy(elem->country, country, sizeof(elem->country));
@@ -148,13 +148,13 @@ bool CountryElement::Create(uint8_t* buf, size_t len, size_t* actual, const char
 
 const size_t ExtendedSupportedRatesElement::kMaxLen;
 
-bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* actual,
+bool ExtendedSupportedRatesElement::Create(void* buf, size_t len, size_t* actual,
                                            const std::vector<uint8_t>& rates) {
     if (rates.size() > kMaxLen) return false;
     size_t elem_size = sizeof(ExtendedSupportedRatesElement) + rates.size();
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<ExtendedSupportedRatesElement*>(buf);
+    auto elem = static_cast<ExtendedSupportedRatesElement*>(buf);
     elem->hdr.id = element_id::kExtSuppRates;
     elem->hdr.len = rates.size();
     std::copy(rates.begin(), rates.end(), elem->rates);
@@ -162,12 +162,11 @@ bool ExtendedSupportedRatesElement::Create(uint8_t* buf, size_t len, size_t* act
     return true;
 }
 
-bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, const uint8_t* raw,
-                        size_t raw_len) {
+bool RsnElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* raw, size_t raw_len) {
     if (raw_len < sizeof(RsnElement)) return false;
     if (raw_len > len) return false;
 
-    auto elem = reinterpret_cast<RsnElement*>(buf);
+    auto elem = static_cast<RsnElement*>(buf);
     memcpy(elem, raw, raw_len);
     elem->hdr.id = element_id::kRsn;
     elem->hdr.len = raw_len - sizeof(ElementHeader);
@@ -188,14 +187,14 @@ bool QosCapabilityElement::Create(void* buf, size_t len, size_t* actual, const Q
     return true;
 }
 
-bool HtCapabilities::Create(uint8_t* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
+bool HtCapabilities::Create(void* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
                             AmpduParams ampdu_params, SupportedMcsSet mcs_set,
                             HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,
                             AselCapability asel_cap) {
-    size_t elem_size = sizeof(HtCapabilities);
+    constexpr size_t elem_size = sizeof(HtCapabilities);
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<HtCapabilities*>(buf);
+    auto elem = static_cast<HtCapabilities*>(buf);
     elem->hdr.id = element_id::kHtCapabilities;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
 
@@ -210,12 +209,12 @@ bool HtCapabilities::Create(uint8_t* buf, size_t len, size_t* actual, HtCapabili
     return true;
 }
 
-bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan,
+bool HtOperation::Create(void* buf, size_t len, size_t* actual, uint8_t primary_chan,
                          HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set) {
-    size_t elem_size = sizeof(HtOperation);
+    constexpr size_t elem_size = sizeof(HtOperation);
     if (elem_size > len) return false;
 
-    auto elem = reinterpret_cast<HtOperation*>(buf);
+    auto elem = static_cast<HtOperation*>(buf);
     elem->hdr.id = element_id::kHtOperation;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
 
@@ -228,11 +227,11 @@ bool HtOperation::Create(uint8_t* buf, size_t len, size_t* actual, uint8_t prima
     return true;
 }
 
-bool GcrGroupAddressElement::Create(uint8_t* buf, size_t len, size_t* actual,
+bool GcrGroupAddressElement::Create(void* buf, size_t len, size_t* actual,
                                     const common::MacAddr& addr) {
-    size_t elem_size = sizeof(GcrGroupAddressElement);
+    constexpr size_t elem_size = sizeof(GcrGroupAddressElement);
     if (elem_size > len) { return false; }
-    auto elem = reinterpret_cast<GcrGroupAddressElement*>(buf);
+    auto elem = static_cast<GcrGroupAddressElement*>(buf);
     elem->hdr.id = element_id::kGcrGroupAddress;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
 

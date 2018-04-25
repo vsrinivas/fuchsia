@@ -133,7 +133,7 @@ class ElementWriter {
 
 // IEEE Std 802.11-2016, 9.4.2.2
 struct SsidElement : public Element<SsidElement, element_id::kSsid> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* ssid);
+    static bool Create(void* buf, size_t len, size_t* actual, const char* ssid);
     static const size_t kMinLen = 0;
     static const size_t kMaxLen = 32;
 
@@ -143,7 +143,7 @@ struct SsidElement : public Element<SsidElement, element_id::kSsid> {
 
 // IEEE Std 802.11-2016, 9.4.2.3
 struct SupportedRatesElement : public Element<SupportedRatesElement, element_id::kSuppRates> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static bool Create(void* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 8;
 
@@ -153,7 +153,7 @@ struct SupportedRatesElement : public Element<SupportedRatesElement, element_id:
 
 // IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDsssParamSet> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t chan);
+    static bool Create(void* buf, size_t len, size_t* actual, uint8_t chan);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 1;
 
@@ -163,7 +163,7 @@ struct DsssParamSetElement : public Element<DsssParamSetElement, element_id::kDs
 
 // IEEE Std 802.11-2016, 9.4.2.5
 struct CfParamSetElement : public Element<CfParamSetElement, element_id::kCfParamSet> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
+    static bool Create(void* buf, size_t len, size_t* actual, uint8_t count, uint8_t period,
                        uint16_t max_duration, uint16_t dur_remaining);
     static const size_t kMinLen = 6;
     static const size_t kMaxLen = 6;
@@ -184,7 +184,7 @@ class BitmapControl : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.6
 struct TimElement : public Element<TimElement, element_id::kTim> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t dtim_count,
+    static bool Create(void* buf, size_t len, size_t* actual, uint8_t dtim_count,
                        uint8_t dtim_period, BitmapControl bmp_ctrl, const uint8_t* bmp,
                        size_t bmp_len);
     static const size_t kMinLenBmp = 1;
@@ -208,7 +208,7 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
 
 // IEEE Std 802.11-2016, 9.4.2.9
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const char* country);
+    static bool Create(void* buf, size_t len, size_t* actual, const char* country);
     static const size_t kCountryLen = 3;
     static const size_t kMinLen = 3;  // TODO(porce): revisit the spec.
     static const size_t kMaxLen = 255;
@@ -221,7 +221,7 @@ struct CountryElement : public Element<CountryElement, element_id::kCountry> {
 // IEEE Std 802.11-2016, 9.4.2.13
 struct ExtendedSupportedRatesElement
     : public Element<ExtendedSupportedRatesElement, element_id::kExtSuppRates> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
+    static bool Create(void* buf, size_t len, size_t* actual, const std::vector<uint8_t>& rates);
     static const size_t kMinLen = 1;
     static const size_t kMaxLen = 255;
 
@@ -235,8 +235,7 @@ const uint16_t kEapolProtocolId = 0x888E;
 // The MLME always forwards the RSNE and never requires to decode the element itself. Hence, support
 // for accessing optional fields is left out and implemented only by the SME.
 struct RsnElement : public Element<RsnElement, element_id::kRsn> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const uint8_t* raw,
-                       size_t raw_len);
+    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* raw, size_t raw_len);
     static const size_t kMinLen = 2;
     static const size_t kMaxLen = 255;
 
@@ -541,7 +540,7 @@ class AselCapability : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.56
 struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabilities> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
+    static bool Create(void* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
                        AmpduParams ampdu_params, SupportedMcsSet mcs_set,
                        HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,
                        AselCapability asel_cap);
@@ -616,7 +615,7 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.57
 struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, uint8_t primary_chan,
+    static bool Create(void* buf, size_t len, size_t* actual, uint8_t primary_chan,
                        HtOpInfoHead head, HtOpInfoTail tail, SupportedMcsSet mcs_set);
     static constexpr size_t kMinLen = 22;
     static constexpr size_t kMaxLen = 22;
@@ -633,7 +632,7 @@ struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
 
 // IEEE Std 802.11-2016, 9.4.2.126
 struct GcrGroupAddressElement {
-    static bool Create(uint8_t* buf, size_t len, size_t* actual, const common::MacAddr& addr);
+    static bool Create(void* buf, size_t len, size_t* actual, const common::MacAddr& addr);
     static const size_t kMinLen = common::kMacAddrLen;
     static const size_t kMaxLen = common::kMacAddrLen;
 
