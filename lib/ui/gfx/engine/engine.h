@@ -79,6 +79,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   SessionManager* session_manager() { return session_manager_.get(); }
 
+  FrameScheduler* frame_scheduler() { return frame_scheduler_.get(); }
+
   // |UpdateScheduler|
   //
   // Tell the FrameScheduler to schedule a frame. This is also used for updates
@@ -154,6 +156,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   bool escher_cleanup_scheduled_ = false;
 
   uint32_t imported_memory_type_index_ = 0;
+
+  bool render_continuously_ = false;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

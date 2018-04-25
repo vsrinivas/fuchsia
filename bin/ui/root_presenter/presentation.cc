@@ -48,7 +48,8 @@ constexpr float kCursorElevation = 800;
 
 Presentation::Presentation(views_v1::ViewManager* view_manager,
                            ui::Scenic* scenic,
-                           scenic_lib::Session* session)
+                           scenic_lib::Session* session,
+                           RendererParams renderer_params)
     : view_manager_(view_manager),
       scenic_(scenic),
       session_(session),
@@ -74,6 +75,7 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
       tree_container_listener_binding_(this),
       view_container_listener_binding_(this),
       view_listener_binding_(this),
+      renderer_params_override_(renderer_params),
       weak_factory_(this) {
   renderer_.SetCamera(camera_);
   layer_.SetRenderer(renderer_);
@@ -92,6 +94,23 @@ Presentation::Presentation(views_v1::ViewManager* view_manager,
   root_view_parent_node_.AddChild(content_view_host_node_);
   content_view_host_node_.ExportAsRequest(&content_view_host_import_token_);
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
+
+  if (renderer_params_override_.clipping_enabled.has_value()) {
+    presentation_clipping_enabled_ =
+        renderer_params_override_.clipping_enabled.value();
+  }
+  if (renderer_params_override_.render_frequency.has_value()) {
+    gfx::RendererParam param;
+    param.set_render_frequency(
+        renderer_params_override_.render_frequency.value());
+    renderer_.SetParam(std::move(param));
+  }
+  if (renderer_params_override_.shadow_technique.has_value()) {
+    gfx::RendererParam param;
+    param.set_shadow_technique(
+        renderer_params_override_.shadow_technique.value());
+    renderer_.SetParam(std::move(param));
+  }
 }
 
 Presentation::~Presentation() {}
@@ -661,6 +680,9 @@ void Presentation::UsePerspectiveView() {
 void Presentation::PresentScene() {
   bool use_clipping =
       presentation_clipping_enabled_ && perspective_demo_mode_.WantsClipping();
+  if (renderer_params_override_.clipping_enabled.has_value()) {
+    use_clipping = renderer_params_override_.clipping_enabled.value();
+  }
   renderer_.SetDisableClipping(!use_clipping);
 
   // TODO(SCN-631): Individual Presentations shouldn't directly manage cursor
@@ -707,6 +729,26 @@ void Presentation::Shutdown() {
 void Presentation::SetRendererParams(
     ::fidl::VectorPtr<gfx::RendererParam> params) {
   for (size_t i = 0; i < params->size(); ++i) {
+    switch (params->at(i).Which()) {
+      case ::gfx::RendererParam::Tag::kShadowTechnique:
+        if (renderer_params_override_.shadow_technique.has_value()) {
+          FXL_LOG(WARNING)
+              << "Presentation::SetRendererParams: Cannot change "
+                 "shadow technique, default was overriden in root_presenter";
+          continue;
+        }
+        break;
+      case gfx::RendererParam::Tag::kRenderFrequency:
+        if (renderer_params_override_.render_frequency.has_value()) {
+          FXL_LOG(WARNING)
+              << "Presentation::SetRendererParams: Cannot change "
+                 "render frequency, default was overriden in root_presenter";
+          continue;
+        }
+        break;
+      case gfx::RendererParam::Tag::Invalid:
+        continue;
+    }
     renderer_.SetParam(std::move(params->at(i)));
   }
   session_->Present(0, [](images::PresentationInfo info) {});

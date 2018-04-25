@@ -1,0 +1,17 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("set_renderer_params") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/root_presenter:renderer_params",
+    "//garnet/public/lib/app/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/gfx/fidl",
+    "//garnet/public/lib/ui/presentation/fidl",
+  ]
+}

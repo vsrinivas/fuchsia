@@ -209,6 +209,16 @@ std::ostream& operator<<(std::ostream& stream,
           break;
       }
       break;
+    case RendererParam::Tag::kRenderFrequency:
+      stream << "render_frequency=";
+      switch (command.param.render_frequency()) {
+        case gfx::RenderFrequency::WHEN_REQUESTED:
+          stream << "WhenRequested";
+          break;
+        case gfx::RenderFrequency::CONTINUOUSLY:
+          stream << "Continuous";
+          break;
+      }
     case RendererParam::Tag::Invalid:
       stream << "Invalid";
       break;

@@ -21,6 +21,7 @@
 #include "garnet/bin/ui/root_presenter/displays/display_model.h"
 #include "garnet/bin/ui/root_presenter/perspective_demo_mode.h"
 #include "garnet/bin/ui/root_presenter/presentation_switcher.h"
+#include "garnet/bin/ui/root_presenter/renderer_params.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -72,7 +73,8 @@ class Presentation : private views_v1::ViewTreeListener,
 
   Presentation(views_v1::ViewManager* view_manager,
                ui::Scenic* scenic,
-               scenic_lib::Session* session);
+               scenic_lib::Session* session,
+               RendererParams renderer_params);
 
   ~Presentation() override;
 
@@ -241,6 +243,9 @@ class Presentation : private views_v1::ViewTreeListener,
 
   // Toggles through different presentations.
   PresentationSwitcher presentation_switcher_;
+
+  // Stores values that, if set, override any renderer params.
+  RendererParams renderer_params_override_;
 
   struct CursorState {
     bool created;

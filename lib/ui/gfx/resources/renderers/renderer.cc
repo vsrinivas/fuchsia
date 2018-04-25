@@ -11,6 +11,7 @@
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/stage.h"
 
+#include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
@@ -59,6 +60,11 @@ void Renderer::SetCamera(CameraPtr camera) {
 bool Renderer::SetShadowTechnique(::gfx::ShadowTechnique technique) {
   shadow_technique_ = technique;
   return true;
+}
+
+void Renderer::SetRenderContinuously(bool render_continuously) {
+  session()->engine()->frame_scheduler()->SetRenderContinuously(
+      render_continuously);
 }
 
 void Renderer::DisableClipping(bool disable_clipping) {

@@ -13,6 +13,7 @@
 #include <presentation/cpp/fidl.h>
 #include <views_v1/cpp/fidl.h>
 #include "garnet/bin/ui/input_reader/input_reader.h"
+#include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/command_line.h"
@@ -48,6 +49,10 @@ class App : public presentation::Presenter,
                fidl::InterfaceRequest<presentation::Presentation>
                    presentation_request) override;
 
+  void HACK_SetRendererParams(
+      bool enable_clipping,
+      ::fidl::VectorPtr<gfx::RendererParam> params) override;
+
   // |InputDeviceRegistry|:
   void RegisterDevice(
       input::DeviceDescriptor descriptor,
@@ -72,6 +77,7 @@ class App : public presentation::Presenter,
   std::unique_ptr<scenic_lib::DisplayCompositor> compositor_;
   std::unique_ptr<scenic_lib::LayerStack> layer_stack_;
 
+  RendererParams renderer_params_;
   std::vector<std::unique_ptr<Presentation>> presentations_;
   // A valid index into presentations_, otherwise size_t::max().
   size_t active_presentation_idx_ = std::numeric_limits<size_t>::max();

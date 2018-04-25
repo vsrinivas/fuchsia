@@ -44,6 +44,8 @@ class Renderer : public Resource {
   // the scene.
   bool SetShadowTechnique(::gfx::ShadowTechnique technique);
 
+  void SetRenderContinuously(bool render_continuously);
+
   // Set whether clipping is disabled; false by default.
   void DisableClipping(bool disable_clipping);
 
@@ -95,6 +97,7 @@ class Renderer : public Resource {
   escher::MaterialPtr default_material_;
   ::gfx::ShadowTechnique shadow_technique_ =
       ::gfx::ShadowTechnique::SCREEN_SPACE;
+  bool render_continuously_ = false;
   bool disable_clipping_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);

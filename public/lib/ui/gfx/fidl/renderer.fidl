@@ -8,6 +8,7 @@ library gfx;
 // |Renderer|.
 union RendererParam {
   ShadowTechnique shadow_technique;
+  RenderFrequency render_frequency;
 };
 
 // Represents the shadow algorithm that the |Renderer| should use when lighting
@@ -21,4 +22,12 @@ enum ShadowTechnique {
   SHADOW_MAP = 2;
   // Moment shadow map (see http://momentsingraphics.de).
   MOMENT_SHADOW_MAP = 3;
+};
+
+enum RenderFrequency {
+  // Render only on when requested (i.e. when something triggers it).
+  // Default behavior.
+  WHEN_REQUESTED = 0;
+  // Render one frame after another regardless of it it's needed.
+  CONTINUOUSLY = 1;
 };

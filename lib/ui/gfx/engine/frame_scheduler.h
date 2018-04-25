@@ -64,6 +64,10 @@ class FrameScheduler {
   // may be in the past.
   void RequestFrame(zx_time_t presentation_time);
 
+  // If |render_continuously|, we keep rendering frames regardless of whether
+  // they're requested using RequestFrame().
+  void SetRenderContinuously(bool render_continuously);
+
  private:
   // Update the global scene and then draw it... maybe.  There are multiple
   // reasons why this might not happen.  For example, the swapchain might apply
@@ -99,14 +103,15 @@ class FrameScheduler {
   FrameSchedulerDelegate* delegate_;
   Display* const display_;
 
-  std::
-      priority_queue<zx_time_t, std::vector<zx_time_t>, std::greater<zx_time_t>>
-          requested_presentation_times_;
+  std::priority_queue<zx_time_t, std::vector<zx_time_t>,
+                      std::greater<zx_time_t>>
+      requested_presentation_times_;
 
   uint64_t frame_number_ = 0;
   constexpr static size_t kMaxOutstandingFrames = 2;
   std::vector<FrameTimingsPtr> outstanding_frames_;
   bool back_pressure_applied_ = false;
+  bool render_continuously_ = false;
 
   fxl::WeakPtrFactory<FrameScheduler> weak_factory_;  // must be last
 

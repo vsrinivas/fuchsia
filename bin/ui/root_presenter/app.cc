@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include <views_v1/cpp/fidl.h>
-#include "garnet/bin/ui/root_presenter/presentation.h"
 #include "lib/app/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -42,7 +41,7 @@ void App::Present(
   InitializeServices();
 
   auto presentation = std::make_unique<Presentation>(
-      view_manager_.get(), scenic_.get(), session_.get());
+      view_manager_.get(), scenic_.get(), session_.get(), renderer_params_);
   Presentation::YieldCallback yield_callback = [this](bool yield_to_next) {
     if (yield_to_next) {
       SwitchToNextPresentation();
@@ -90,6 +89,32 @@ void App::Present(
 
   presentations_.push_back(std::move(presentation));
   SwitchToPresentation(presentations_.size() - 1);
+}
+
+void App::HACK_SetRendererParams(bool enable_clipping,
+                                 ::fidl::VectorPtr<gfx::RendererParam> params) {
+  renderer_params_.clipping_enabled.set_value(enable_clipping);
+  FXL_LOG(INFO)
+      << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
+      << (enable_clipping ? "true" : "false");
+  for (auto& param : *params) {
+    switch (param.Which()) {
+      case ::gfx::RendererParam::Tag::kShadowTechnique:
+        renderer_params_.shadow_technique.set_value(param.shadow_technique());
+        FXL_LOG(INFO)
+            << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
+            << param.shadow_technique();
+        continue;
+      case gfx::RendererParam::Tag::kRenderFrequency:
+        renderer_params_.render_frequency.set_value(param.render_frequency());
+        FXL_LOG(INFO)
+            << "Presenter::HACK_SetRendererParams: Setting render frequency to "
+            << param.render_frequency();
+        continue;
+      case gfx::RendererParam::Tag::Invalid:
+        continue;
+    }
+  }
 }
 
 void App::SwitchToPresentation(const size_t presentation_idx) {

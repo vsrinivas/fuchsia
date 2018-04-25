@@ -57,6 +57,9 @@ class TileView : public mozart::BaseView, public presentation::Presenter {
   void Present(
       fidl::InterfaceHandle<views_v1_token::ViewOwner> view_owner,
       fidl::InterfaceRequest<presentation::Presentation> presentation) override;
+  void HACK_SetRendererParams(
+      bool enable_clipping,
+      ::fidl::VectorPtr<gfx::RendererParam> params) override{};
 
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.

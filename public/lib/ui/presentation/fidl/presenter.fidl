@@ -4,10 +4,17 @@
 
 library presentation;
 
+using gfx;
+
 // The Presenter service provides a way for applications to ask that a
 // specified view be added to a view tree, leaving any window management
 // concerns up to the discretion of the presenter implementation.
 [Discoverable]
 interface Presenter {
   1: Present(views_v1_token.ViewOwner view_owner, request<Presentation>? presentation_request);
+
+  // Sets new default renderer params and forces them on for the duration of the
+  // presenter's lifetime. Only applies to any subsequent calls to Present().
+  // Used for testing.
+  2: HACK_SetRendererParams(bool enable_clipping, vector<gfx.RendererParam> params);
 };

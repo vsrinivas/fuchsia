@@ -34,6 +34,13 @@ void FrameScheduler::RequestFrame(zx_time_t presentation_time) {
   }
 }
 
+void FrameScheduler::SetRenderContinuously(bool render_continuously) {
+  render_continuously_ = render_continuously;
+  if (render_continuously_) {
+    RequestFrame(0);
+  }
+}
+
 zx_time_t FrameScheduler::PredictRequiredFrameRenderTime() const {
   // TODO(MZ-400): more sophisticated prediction.  This might require more info,
   // e.g. about how many compositors will be rendering scenes, at what
@@ -202,6 +209,10 @@ void FrameScheduler::ReceiveFrameTimings(FrameTimings* timings) {
 
   // TODO(MZ-400): This needs to be generalized for multi-display support.
   display_->set_last_vsync_time(timings->actual_presentation_time());
+
+  if (render_continuously_) {
+    RequestFrame(0);
+  }
 
   // Log trace data.
   // TODO(MZ-400): just pass the whole Frame to a listener.

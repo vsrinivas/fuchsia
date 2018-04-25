@@ -588,6 +588,10 @@ bool Session::ApplySetRendererParamCommand(
     switch (command.param.Which()) {
       case ::gfx::RendererParam::Tag::kShadowTechnique:
         return renderer->SetShadowTechnique(command.param.shadow_technique());
+      case ::gfx::RendererParam::Tag::kRenderFrequency:
+        renderer->SetRenderContinuously(command.param.render_frequency() ==
+                                        ::gfx::RenderFrequency::CONTINUOUSLY);
+        return true;
       case ::gfx::RendererParam::Tag::Invalid:
         error_reporter_->ERROR()
             << "scenic::gfx::Session::ApplySetRendererParamCommand(): "
