@@ -175,6 +175,19 @@ bool RsnElement::Create(uint8_t* buf, size_t len, size_t* actual, const uint8_t*
     return true;
 }
 
+bool QosCapabilityElement::Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info) {
+    constexpr size_t elem_size = sizeof(QosCapabilityElement);
+    if (elem_size > len) return false;
+
+    auto elem = static_cast<QosCapabilityElement*>(buf);
+    elem->hdr.id = element_id::kQosCapability;
+    elem->hdr.len = elem_size - sizeof(ElementHeader);
+    elem->qos_info = QosInfo(qos_info.val());
+
+    *actual = elem_size;
+    return true;
+}
+
 bool HtCapabilities::Create(uint8_t* buf, size_t len, size_t* actual, HtCapabilityInfo ht_cap_info,
                             AmpduParams ampdu_params, SupportedMcsSet mcs_set,
                             HtExtCapabilities ht_ext_cap, TxBfCapability txbf_cap,

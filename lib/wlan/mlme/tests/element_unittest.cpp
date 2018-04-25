@@ -282,5 +282,32 @@ TEST_F(Elements, Country) {
     EXPECT_EQ(0, std::memcmp(element->country, kCountry, sizeof(element->country)));
 }
 
+TEST_F(Elements, QosAp) {
+    QosInfo info;
+    info.set_edca_param_set_update_count(9);
+    info.set_txop_request(1);
+    EXPECT_TRUE(QosCapabilityElement::Create(buf_, sizeof(buf_), &actual_, info));
+    EXPECT_EQ(sizeof(QosCapabilityElement), actual_);
+
+    auto element = FromBytes<QosCapabilityElement>(buf_, sizeof(buf_));
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(element->qos_info.val(), info.val());
+}
+
+TEST_F(Elements, QosClient) {
+    QosInfo info;
+    info.set_ac_vo_uapsd_flag(1);
+    info.set_ac_vi_uapsd_flag(1);
+    info.set_ac_be_uapsd_flag(1);
+    info.set_qack(1);
+    info.set_more_data_ack(1);
+    EXPECT_TRUE(QosCapabilityElement::Create(buf_, sizeof(buf_), &actual_, info));
+    EXPECT_EQ(sizeof(QosCapabilityElement), actual_);
+
+    auto element = FromBytes<QosCapabilityElement>(buf_, sizeof(buf_));
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(element->qos_info.val(), info.val());
+}
+
 }  // namespace
 }  // namespace wlan

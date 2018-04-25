@@ -245,6 +245,38 @@ struct RsnElement : public Element<RsnElement, element_id::kRsn> {
     uint8_t fields[];
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.1.17
+class QosInfo : public common::BitField<uint8_t> {
+ public:
+  constexpr explicit QosInfo(uint8_t value) : common::BitField<uint8_t>(value) {}
+  constexpr QosInfo() = default;
+
+  // AP specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-82
+  WLAN_BIT_FIELD(edca_param_set_update_count, 0, 4);
+  WLAN_BIT_FIELD(qack, 4, 1);
+  WLAN_BIT_FIELD(queue_request, 5, 1);
+  WLAN_BIT_FIELD(txop_request, 6, 1);
+  // 8th bit reserved
+
+  // Non-AP STA specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-83
+  WLAN_BIT_FIELD(ac_vo_uapsd_flag, 0, 1);
+  WLAN_BIT_FIELD(ac_vi_uapsd_flag, 1, 1);
+  WLAN_BIT_FIELD(ac_bk_uapsd_flag, 2, 1);
+  WLAN_BIT_FIELD(ac_be_uapsd_flag, 3, 1);
+  // qack already defined in AP specific structure.
+  WLAN_BIT_FIELD(max_sp_len, 5, 1);
+  WLAN_BIT_FIELD(more_data_ack, 6, 1);
+  // 8th bit reserved
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.35
+struct QosCapabilityElement : public Element<QosCapabilityElement, element_id::kQosCapability> {
+  static bool Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info);
+
+  ElementHeader hdr;
+  QosInfo qos_info;
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.56.2
 // Note this is a field of HtCapabilities element.
 class HtCapabilityInfo : public common::BitField<uint16_t> {
