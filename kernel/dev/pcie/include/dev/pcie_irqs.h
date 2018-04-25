@@ -54,6 +54,7 @@ typedef enum pcie_irq_mode {
     PCIE_IRQ_MODE_LEGACY   = 1,
     PCIE_IRQ_MODE_MSI      = 2,
     PCIE_IRQ_MODE_MSI_X    = 3,
+    PCIE_IRQ_MODE_COUNT    = 4,
 } pcie_irq_mode_t;
 
 /**

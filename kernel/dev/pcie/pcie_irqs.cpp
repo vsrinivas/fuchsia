@@ -601,57 +601,50 @@ zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_ir
     DEBUG_ASSERT(plugged_in_);
     DEBUG_ASSERT(dev_lock_.IsHeld());
 
-    /* Are we disabling IRQs? */
-    if (mode == PCIE_IRQ_MODE_DISABLED) {
-        /* If so, and we are already disabled_, cool!  Run some sanity checks and we are done */
-        if (irq_.mode == PCIE_IRQ_MODE_DISABLED) {
-            DEBUG_ASSERT(!irq_.handlers);
-            DEBUG_ASSERT(!irq_.handler_count);
-            return ZX_OK;
-        }
-
-        DEBUG_ASSERT(irq_.handlers);
-        DEBUG_ASSERT(irq_.handler_count);
-
-        switch (irq_.mode) {
-        case PCIE_IRQ_MODE_LEGACY:
-            DEBUG_ASSERT(list_in_list(&irq_.legacy.shared_handler_node));
-            LeaveLegacyIrqMode();
-            return ZX_OK;
-
-        case PCIE_IRQ_MODE_MSI:
-            DEBUG_ASSERT(irq_.msi);
-            DEBUG_ASSERT(irq_.msi->is_valid());
-            DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
-            LeaveMsiIrqMode();
-            return ZX_OK;
-
-        /* Right now, there should be no way to get into MSI-X mode */
-        case PCIE_IRQ_MODE_MSI_X:
-            DEBUG_ASSERT(false);
-            return ZX_ERR_NOT_SUPPORTED;
-
-        default:
-            /* mode is not one of the valid enum values, this should be impossible */
-            DEBUG_ASSERT(false);
-            return ZX_ERR_INTERNAL;
-        }
+    // Ensure the mode selection is valid
+    if (mode >= PCIE_IRQ_MODE_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    /* We are picking an active IRQ mode, sanity check the args */
-    if (requested_irqs < 1)
+    // We need a valid number of IRQs for any mode that isn't strictly
+    // disabling the device's IRQs.
+    if (mode != PCIE_IRQ_MODE_DISABLED && requested_irqs < 1) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
-    /* If we are picking an active IRQ mode, we need to currently be in the
-     * disabled_ state */
-    if (irq_.mode != PCIE_IRQ_MODE_DISABLED)
-        return ZX_ERR_BAD_STATE;
+    // Leave our present IRQ mode
+    switch (irq_.mode) {
+    case PCIE_IRQ_MODE_LEGACY:
+        DEBUG_ASSERT(list_in_list(&irq_.legacy.shared_handler_node));
+        LeaveLegacyIrqMode();
+        break;
 
+    case PCIE_IRQ_MODE_MSI:
+        DEBUG_ASSERT(irq_.msi);
+        DEBUG_ASSERT(irq_.msi->is_valid());
+        DEBUG_ASSERT(irq_.msi->irq_block_.allocated);
+        LeaveMsiIrqMode();
+        break;
+
+        // Right now, there should be no way to get into MSI-X mode
+    case PCIE_IRQ_MODE_MSI_X:
+        return ZX_ERR_NOT_SUPPORTED;
+
+    // If we're disabled we have no work to do besides some sanity checks
+    case PCIE_IRQ_MODE_DISABLED:
+    default:
+        DEBUG_ASSERT(!irq_.handlers);
+        DEBUG_ASSERT(!irq_.handler_count);
+        break;
+    }
+
+    // At this point we should be in the disabled state and can enable
+    // the requested IRQ mode.
     switch (mode) {
+    case PCIE_IRQ_MODE_DISABLED: return ZX_OK;
     case PCIE_IRQ_MODE_LEGACY: return EnterLegacyIrqMode(requested_irqs);
     case PCIE_IRQ_MODE_MSI:    return EnterMsiIrqMode   (requested_irqs);
-    case PCIE_IRQ_MODE_MSI_X:  return ZX_ERR_NOT_SUPPORTED;
-    default:                   return ZX_ERR_INVALID_ARGS;
+    default:                   return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
