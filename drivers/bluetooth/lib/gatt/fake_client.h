@@ -67,6 +67,7 @@ class FakeClient final : public Client {
                            att::Handle range_end,
                            DescriptorCallback desc_callback,
                            att::StatusCallback status_callback) override;
+  void ReadRequest(att::Handle handle, ReadCallback callback) override;
   void WriteRequest(att::Handle handle,
                     const common::ByteBuffer& value,
                     att::StatusCallback callback) override;

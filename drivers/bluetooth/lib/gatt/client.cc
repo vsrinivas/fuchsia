@@ -34,7 +34,7 @@ template <att::UUIDType Format,
 bool ProcessDescriptorDiscoveryResponse(
     att::Handle range_start,
     att::Handle range_end,
-    common::BufferView entries,
+    BufferView entries,
     const Client::DescriptorCallback& desc_callback,
     att::Handle* out_last_handle) {
   FXL_DCHECK(out_last_handle);
@@ -335,8 +335,8 @@ class Impl final : public Client {
             return;
           }
 
-          common::BufferView attr_data_list(rsp_params.attribute_data_list,
-                                            rsp.payload_size() - 1);
+          BufferView attr_data_list(rsp_params.attribute_data_list,
+                                    rsp.payload_size() - 1);
           if (attr_data_list.size() % entry_length) {
             FXL_VLOG(1) << "gatt: Malformed attribute data list!";
             att_->ShutDown();
@@ -347,8 +347,7 @@ class Impl final : public Client {
           att::Handle last_handle = range_end;
           while (attr_data_list.size()) {
             const auto& entry = attr_data_list.As<att::AttributeData>();
-            common::BufferView value(entry.value,
-                                     entry_length - sizeof(att::Handle));
+            BufferView value(entry.value, entry_length - sizeof(att::Handle));
 
             CharacteristicData chrc;
             chrc.handle = le16toh(entry.handle);
@@ -459,8 +458,7 @@ class Impl final : public Client {
 
       const auto& rsp_params =
           rsp.payload<att::FindInformationResponseParams>();
-      common::BufferView entries =
-          rsp.payload_data().view(sizeof(rsp_params.format));
+      BufferView entries = rsp.payload_data().view(sizeof(rsp_params.format));
 
       att::Handle last_handle;
       bool result;
@@ -511,6 +509,34 @@ class Impl final : public Client {
         });
 
     att_->StartTransaction(std::move(pdu), rsp_cb, error_cb);
+  }
+
+  void ReadRequest(att::Handle handle, ReadCallback callback) override {
+    auto pdu = NewPDU(sizeof(att::ReadRequestParams));
+    if (!pdu) {
+      callback(att::Status(HostError::kOutOfMemory), BufferView());
+      return;
+    }
+
+    att::PacketWriter writer(att::kReadRequest, pdu.get());
+    auto params = writer.mutable_payload<att::ReadRequestParams>();
+    params->handle = htole16(handle);
+
+    auto rsp_cb = BindCallback([this, callback](const att::PacketReader& rsp) {
+      FXL_DCHECK(rsp.opcode() == att::kReadResponse);
+      callback(att::Status(), rsp.payload_data());
+    });
+
+    auto error_cb = BindErrorCallback(
+        [this, callback](att::Status status, att::Handle handle) {
+          FXL_VLOG(1) << "gatt: Read request failed: " << status.ToString()
+                      << ", handle: " << handle;
+          callback(status, BufferView());
+        });
+
+    if (!att_->StartTransaction(std::move(pdu), rsp_cb, error_cb)) {
+      callback(att::Status(HostError::kPacketMalformed), BufferView());
+    }
   }
 
   void WriteRequest(att::Handle handle,

@@ -4,6 +4,7 @@
 
 #include "client.h"
 
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_channel_test.h"
 #include "lib/fxl/macros.h"
 
@@ -11,6 +12,7 @@ namespace btlib {
 namespace gatt {
 namespace {
 
+using common::ByteBuffer;
 using common::HostError;
 
 constexpr common::UUID kTestUuid1((uint16_t)0xDEAD);
@@ -1681,6 +1683,108 @@ TEST_F(GATT_ClientTest, WriteRequestSuccess) {
 
   RunUntilIdle();
   EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadRequestEmptyResponse) {
+  constexpr att::Handle kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x01, 0x00  // handle: 0x0001
+  );
+
+  att::Status status(HostError::kFailed);
+  auto cb = [&status](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+
+    // We expect an empty value
+    EXPECT_EQ(0u, value.size());
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(),
+                  [&, this] { client()->ReadRequest(kHandle, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  // ATT Read Response with no payload.
+  fake_chan()->Receive(common::CreateStaticByteBuffer(0x0B));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadRequestSuccess) {
+  constexpr att::Handle kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x01, 0x00  // handle: 0x0001
+  );
+
+  const auto kExpectedResponse = common::CreateStaticByteBuffer(
+      0x0B,               // opcode: read response
+      't', 'e', 's', 't'  // value: "test"
+  );
+
+  att::Status status(HostError::kFailed);
+  auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+    EXPECT_TRUE(common::ContainersEqual(kExpectedResponse.view(1), value));
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(),
+                  [&, this] { client()->ReadRequest(kHandle, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(kExpectedResponse);
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+  EXPECT_FALSE(fake_chan()->link_error());
+}
+
+TEST_F(GATT_ClientTest, ReadRequestError) {
+  constexpr att::Handle kHandle = 0x0001;
+  const auto kExpectedRequest = common::CreateStaticByteBuffer(
+      0x0A,       // opcode: read request
+      0x01, 0x00  // handle: 0x0001
+  );
+
+  const auto kExpectedResponse = common::CreateStaticByteBuffer(
+      0x0B,               // opcode: read response
+      't', 'e', 's', 't'  // value: "test"
+  );
+
+  att::Status status;
+  auto cb = [&](att::Status cb_status, const ByteBuffer& value) {
+    status = cb_status;
+
+    // Value should be empty due to the error.
+    EXPECT_EQ(0u, value.size());
+  };
+
+  // Initiate the request in a loop task, as Expect() below blocks
+  async::PostTask(dispatcher(),
+                  [&, this] { client()->ReadRequest(kHandle, cb); });
+
+  ASSERT_TRUE(Expect(kExpectedRequest));
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+      0x01,        // opcode: error response
+      0x0A,        // request: read request
+      0x01, 0x00,  // handle: 0x0001
+      0x06         // error: Request Not Supported
+  ));
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status.is_protocol_error());
+  EXPECT_EQ(att::ErrorCode::kRequestNotSupported, status.protocol_error());
   EXPECT_FALSE(fake_chan()->link_error());
 }
 

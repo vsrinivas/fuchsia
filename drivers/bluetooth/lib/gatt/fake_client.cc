@@ -60,6 +60,10 @@ void FakeClient::DiscoverDescriptors(att::Handle range_start,
   FXL_NOTIMPLEMENTED();
 }
 
+void FakeClient::ReadRequest(att::Handle handle, ReadCallback callback) {
+  // TODO(armansito): implement
+}
+
 void FakeClient::WriteRequest(att::Handle handle,
                               const common::ByteBuffer& value,
                               StatusCallback callback) {

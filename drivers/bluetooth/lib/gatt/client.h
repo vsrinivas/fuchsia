@@ -81,6 +81,16 @@ class Client {
                                    DescriptorCallback desc_callback,
                                    att::StatusCallback status_callback) = 0;
 
+  // Sends an ATT Read Request with the requested attribute |handle| and returns
+  // the resulting value in |callback|. This can be used to send a (short) read
+  // request to any attribute. (Vol 3, Part F, 3.4.4.3).
+  //
+  // Reports the status of the procedure and the resulting value in |callback|.
+  // Returns an empty buffer if the status is an error.
+  using ReadCallback =
+      std::function<void(att::Status, const common::ByteBuffer&)>;
+  virtual void ReadRequest(att::Handle handle, ReadCallback callback) = 0;
+
   // Sends an ATT Write Request with the requested attribute |handle| and
   // |value|. This can be used to send a write request to any attribute.
   // (Vol 3, Part F, 3.4.5.1).
