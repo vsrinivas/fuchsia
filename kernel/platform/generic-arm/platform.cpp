@@ -22,6 +22,7 @@
 #include <kernel/cmdline.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
+#include <vm/kstack.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
 
@@ -188,28 +189,57 @@ void platform_halt_secondary_cpus(void) {
     thread_sleep_relative(ZX_SEC(1));
 }
 
-static void platform_start_cpu(uint cluster, uint cpu) {
+static zx_status_t platform_start_cpu(uint cluster, uint cpu) {
     uint32_t ret = psci_cpu_on(cluster, cpu, kernel_entry_paddr);
     dprintf(INFO, "Trying to start cpu %u:%u returned: %d\n", cluster, cpu, (int)ret);
-}
-
-static void* allocate_one_stack(void) {
-    uint8_t* stack = static_cast<uint8_t*>(
-        pmm_alloc_kpages(ARCH_DEFAULT_STACK_SIZE / PAGE_SIZE, nullptr, nullptr));
-    return static_cast<void*>(stack + ARCH_DEFAULT_STACK_SIZE);
+    if (ret != 0) {
+        return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
 }
 
 static void platform_cpu_init(void) {
     for (uint cluster = 0; cluster < cpu_cluster_count; cluster++) {
         for (uint cpu = 0; cpu < cpu_cluster_cpus[cluster]; cpu++) {
             if (cluster != 0 || cpu != 0) {
-                void* sp = allocate_one_stack();
+                // allocate a safe and unsafe stack for the cpu's boot stack
+                fbl::RefPtr<VmMapping> kstack_mapping;
+                fbl::RefPtr<VmAddressRegion> kstack_vmar;
+                void* sp;
+                zx_status_t err = vm_allocate_kstack(false, &sp, &kstack_mapping, &kstack_vmar);
+                ASSERT(err == ZX_OK);
+
+
                 void* unsafe_sp = nullptr;
 #if __has_feature(safe_stack)
-                unsafe_sp = allocate_one_stack();
+                fbl::RefPtr<VmMapping> unsafe_kstack_mapping;
+                fbl::RefPtr<VmAddressRegion> unsafe_kstack_vmar;
+                err = vm_allocate_kstack(true, &unsafe_sp, &unsafe_kstack_mapping, &unsafe_kstack_vmar);
+                ASSERT(err == ZX_OK);
 #endif
+
+                // set the stack info in the arch layer
                 arm64_set_secondary_sp(cluster, cpu, sp, unsafe_sp);
-                platform_start_cpu(cluster, cpu);
+
+                // start the cpu
+                err = platform_start_cpu(cluster, cpu);
+
+                if (err != ZX_OK) {
+                    vm_free_kstack(&kstack_mapping, &kstack_vmar);
+#if __has_feature(safe_stack)
+                    vm_free_kstack(&unsafe_kstack_mapping, &unsafe_kstack_vmar);
+#endif
+                    continue;
+                }
+
+                // the cpu booted, leak the references to our vmar and mappings, since there's
+                // no reason to ever free them
+                __UNUSED auto unused = kstack_mapping.leak_ref();
+                __UNUSED auto unused2 = kstack_vmar.leak_ref();
+#if __has_feature(safe_stack)
+                __UNUSED auto unused3 = unsafe_kstack_mapping.leak_ref();
+                __UNUSED auto unused4 = unsafe_kstack_vmar.leak_ref();
+#endif
             }
         }
     }

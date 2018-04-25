@@ -18,6 +18,7 @@ MODULE_DEPS += \
 MODULE_SRCS += \
     $(LOCAL_DIR)/bootalloc.cpp \
     $(LOCAL_DIR)/bootreserve.cpp \
+    $(LOCAL_DIR)/kstack.cpp \
     $(LOCAL_DIR)/page.cpp \
     $(LOCAL_DIR)/pmm.cpp \
     $(LOCAL_DIR)/pmm_arena.cpp \

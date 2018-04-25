@@ -17,6 +17,7 @@
 #include <arch/exception.h>
 
 #include <kernel/thread.h>
+#include <vm/kstack.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_address_region.h>
@@ -93,92 +94,13 @@ ThreadDispatcher::~ThreadDispatcher() {
     }
 
     // free the kernel stack
-    kstack_mapping_.reset();
-    if (kstack_vmar_) {
-        kstack_vmar_->Destroy();
-        kstack_vmar_.reset();
-    }
+    vm_free_kstack(&kstack_mapping_, &kstack_vmar_);
 #if __has_feature(safe_stack)
-    unsafe_kstack_mapping_.reset();
-    if (unsafe_kstack_vmar_) {
-        unsafe_kstack_vmar_->Destroy();
-        unsafe_kstack_vmar_.reset();
-    }
+    vm_free_kstack(&unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
 #endif
 
     event_destroy(&exception_event_);
 }
-
-namespace {
-
-zx_status_t allocate_stack(const fbl::RefPtr<VmAddressRegion>& vmar, bool unsafe,
-                           fbl::RefPtr<VmMapping>* out_kstack_mapping,
-                           fbl::RefPtr<VmAddressRegion>* out_kstack_vmar) {
-    LTRACEF("allocating %s stack\n", unsafe ? "unsafe" : "safe");
-
-    // Create a VMO for our stack
-    fbl::RefPtr<VmObject> stack_vmo;
-    zx_status_t status = VmObjectPaged::Create(0, DEFAULT_STACK_SIZE, &stack_vmo);
-    if (status != ZX_OK) {
-        TRACEF("error allocating %s stack for thread\n",
-               unsafe ? "unsafe" : "safe");
-        return status;
-    }
-    const char* name = unsafe ? "unsafe-stack" : "safe-stack";
-    stack_vmo->set_name(name, strlen(name));
-
-    // create a vmar with enough padding for a page before and after the stack
-    const size_t padding_size = PAGE_SIZE;
-
-    fbl::RefPtr<VmAddressRegion> kstack_vmar;
-    status = vmar->CreateSubVmar(
-        0, 2 * padding_size + DEFAULT_STACK_SIZE, 0,
-        VMAR_FLAG_CAN_MAP_SPECIFIC |
-        VMAR_FLAG_CAN_MAP_READ |
-        VMAR_FLAG_CAN_MAP_WRITE,
-        unsafe ? "unsafe_kstack_vmar" : "kstack_vmar",
-        &kstack_vmar);
-    if (status != ZX_OK)
-        return status;
-
-    // destroy the vmar if we early abort
-    // this will also clean up any mappings that may get placed on the vmar
-    auto vmar_cleanup = fbl::MakeAutoCall([&kstack_vmar]() {
-            kstack_vmar->Destroy();
-        });
-
-    LTRACEF("%s stack vmar at %#" PRIxPTR "\n",
-            unsafe ? "unsafe" : "safe", kstack_vmar->base());
-
-    // create a mapping offset padding_size into the vmar we created
-    fbl::RefPtr<VmMapping> kstack_mapping;
-    status = kstack_vmar->CreateVmMapping(padding_size, DEFAULT_STACK_SIZE, 0,
-                                          VMAR_FLAG_SPECIFIC,
-                                          fbl::move(stack_vmo), 0,
-                                          ARCH_MMU_FLAG_PERM_READ |
-                                          ARCH_MMU_FLAG_PERM_WRITE,
-                                          unsafe ? "unsafe_kstack" : "kstack",
-                                          &kstack_mapping);
-    if (status != ZX_OK)
-        return status;
-
-    LTRACEF("%s stack mapping at %#" PRIxPTR "\n",
-            unsafe ? "unsafe" : "safe", kstack_mapping->base());
-
-    // fault in all the pages so we dont demand fault in the stack
-    status = kstack_mapping->MapRange(0, DEFAULT_STACK_SIZE, true);
-    if (status != ZX_OK)
-        return status;
-
-    // Cancel the cleanup handler on the vmar since we're about to save a
-    // reference to it.
-    vmar_cleanup.cancel();
-    *out_kstack_mapping = fbl::move(kstack_mapping);
-    *out_kstack_vmar = fbl::move(kstack_vmar);
-    return ZX_OK;
-}
-
-} // namespace
 
 // complete initialization of the thread object outside of the constructor
 zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
@@ -198,14 +120,12 @@ zx_status_t ThreadDispatcher::Initialize(const char* name, size_t len) {
     memset(thread_name + len, 0, ZX_MAX_NAME_LEN - len);
 
     // Map the kernel stack somewhere
-    auto vmar = VmAspace::kernel_aspace()->RootVmar()->as_vm_address_region();
-    DEBUG_ASSERT(!!vmar);
-
-    auto status = allocate_stack(vmar, false, &kstack_mapping_, &kstack_vmar_);
+    void *stack_top;
+    auto status = vm_allocate_kstack(false, &stack_top, &kstack_mapping_, &kstack_vmar_);
     if (status != ZX_OK)
         return status;
 #if __has_feature(safe_stack)
-    status = allocate_stack(vmar, true,
+    status = vm_allocate_kstack(true, &stack_top,
                             &unsafe_kstack_mapping_, &unsafe_kstack_vmar_);
     if (status != ZX_OK)
         return status;
