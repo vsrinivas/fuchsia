@@ -72,6 +72,12 @@
     "public": true
   },
   {
+    "library_name": "bluetooth_host",
+    "fidl_target": "//garnet/lib/bluetooth/fidl:fidl",
+    "library_deps": ["bluetooth_gatt", "bluetooth_control", "bluetooth_low_energy", "bluetooth"],
+    "public": false
+  },
+  {
     "library_name": "bluetooth_gatt",
     "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_gatt",
     "library_deps": ["bluetooth"],
@@ -80,7 +86,7 @@
   {
     "library_name": "bluetooth_low_energy",
     "fidl_target": "//garnet/public/lib/bluetooth/fidl:bluetooth_low_energy",
-    "library_deps": ["bluetooth"],
+    "library_deps": ["bluetooth_gatt", "bluetooth"],
     "public": true
   },
   {

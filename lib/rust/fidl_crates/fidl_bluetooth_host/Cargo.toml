@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 [package]
-name = "fidl_bluetooth_low_energy"
+name = "fidl_bluetooth_host"
 version = "0.1.0"
 license = "BSD-3-Clause"
 authors = ["rust-fuchsia@fuchsia.com"]
@@ -14,5 +14,7 @@ fidl = "0.1"
 fuchsia-zircon = "0.3"
 futures = "=0.2.0-alpha"
 fuchsia-async = "0.1"
+fidl_bluetooth_low_energy = "0.1"
+fidl_bluetooth_control = "0.1"
 fidl_bluetooth_gatt = "0.1"
 fidl_bluetooth = "0.1"
