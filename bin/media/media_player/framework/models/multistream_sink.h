@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_MULTISTREAM_SINK_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_MULTISTREAM_SINK_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_MULTISTREAM_SINK_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_MULTISTREAM_SINK_H_
 
 #include "garnet/bin/media/media_player/framework/models/demand.h"
 #include "garnet/bin/media/media_player/framework/models/node.h"
@@ -12,10 +12,10 @@
 
 namespace media_player {
 
-// Stage for |ActiveMultistreamSink|.
-class ActiveMultistreamSinkStage : public Stage {
+// Stage for |MultistreamSink|.
+class MultistreamSinkStage : public Stage {
  public:
-  ~ActiveMultistreamSinkStage() override {}
+  ~MultistreamSinkStage() override {}
 
   // TODO(dalesat): Revisit allocation semantics.
 
@@ -32,9 +32,9 @@ class ActiveMultistreamSinkStage : public Stage {
 };
 
 // Synchronous sink of packets for multiple streams.
-class ActiveMultistreamSink : public Node<ActiveMultistreamSinkStage> {
+class MultistreamSink : public Node<MultistreamSinkStage> {
  public:
-  ~ActiveMultistreamSink() override {}
+  ~MultistreamSink() override {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
   // should hold (and display) the newest frame.
@@ -46,4 +46,4 @@ class ActiveMultistreamSink : public Node<ActiveMultistreamSinkStage> {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_MULTISTREAM_SINK_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_MULTISTREAM_SINK_H_

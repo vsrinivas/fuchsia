@@ -7,7 +7,7 @@
 
 #include <fuchsia/cpp/media.h>
 #include <fuchsia/cpp/media_player.h>
-#include "garnet/bin/media/media_player/framework/models/active_sink.h"
+#include "garnet/bin/media/media_player/framework/models/sink.h"
 #include "garnet/bin/media/media_player/framework/payload_allocator.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/media/transport/media_packet_producer_base.h"
@@ -18,7 +18,7 @@ namespace media_player {
 class FidlPacketProducer
     : public media::MediaPacketProducerBase,
       public media::MediaPacketProducer,
-      public ActiveSink,
+      public Sink,
       public PayloadAllocator,
       public std::enable_shared_from_this<FidlPacketProducer> {
  public:
@@ -41,7 +41,7 @@ class FidlPacketProducer
   // Flushes and tells the connected consumer to flush.
   void FlushConnection(bool hold_frame, FlushConnectionCallback callback);
 
-  // ActiveSink implementation.
+  // Sink implementation.
   std::shared_ptr<PayloadAllocator> allocator() override;
 
   Demand SupplyPacket(PacketPtr packet) override;

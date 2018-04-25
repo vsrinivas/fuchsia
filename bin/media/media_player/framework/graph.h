@@ -9,10 +9,9 @@
 
 #include "garnet/bin/media/media_player/framework/engine.h"
 #include "garnet/bin/media/media_player/framework/refs.h"
-#include "garnet/bin/media/media_player/framework/stages/active_multistream_source_stage.h"
-#include "garnet/bin/media/media_player/framework/stages/active_sink_stage.h"
-#include "garnet/bin/media/media_player/framework/stages/active_source_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/multistream_source_stage.h"
+#include "garnet/bin/media/media_player/framework/stages/sink_stage.h"
+#include "garnet/bin/media/media_player/framework/stages/source_stage.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 #include "garnet/bin/media/media_player/framework/stages/transform_stage.h"
 #include "lib/fxl/functional/closure.h"
@@ -41,11 +40,10 @@ class StageCreator;
     }                                                                        \
   };
 
-DEFINE_STAGE_CREATOR(MultistreamSource, MultistreamSourceStageImpl);
 DEFINE_STAGE_CREATOR(Transform, TransformStageImpl);
-DEFINE_STAGE_CREATOR(ActiveSource, ActiveSourceStageImpl);
-DEFINE_STAGE_CREATOR(ActiveSink, ActiveSinkStageImpl);
-DEFINE_STAGE_CREATOR(ActiveMultistreamSource, ActiveMultistreamSourceStageImpl);
+DEFINE_STAGE_CREATOR(Source, SourceStageImpl);
+DEFINE_STAGE_CREATOR(Sink, SinkStageImpl);
+DEFINE_STAGE_CREATOR(MultistreamSource, MultistreamSourceStageImpl);
 
 #undef DEFINE_STAGE_CREATOR
 

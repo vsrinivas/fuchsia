@@ -40,7 +40,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void Seek(int64_t position, SeekCallback callback) override;
 
-  // ActiveMultistreamSource implementation.
+  // MultistreamSource implementation.
   size_t stream_count() const override;
 
   void RequestPacket() override;
@@ -287,7 +287,7 @@ void FfmpegDemuxImpl::Worker() {
       async::PostTask(
           async_, fxl::MakeCopyable([this, stream_index,
                                      packet = std::move(packet)]() mutable {
-            ActiveMultistreamSourceStage* stage_ptr = stage();
+            MultistreamSourceStage* stage_ptr = stage();
             if (stage_ptr) {
               stage_ptr->SupplyPacket(stream_index, std::move(packet));
             }

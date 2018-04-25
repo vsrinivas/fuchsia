@@ -2,53 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/media_player/framework/stages/active_sink_stage.h"
+#include "garnet/bin/media/media_player/framework/stages/sink_stage.h"
 
 namespace media_player {
 
-ActiveSinkStageImpl::ActiveSinkStageImpl(std::shared_ptr<ActiveSink> sink)
+SinkStageImpl::SinkStageImpl(std::shared_ptr<Sink> sink)
     : input_(this, 0), sink_(sink) {
   FXL_DCHECK(sink_);
 }
 
-ActiveSinkStageImpl::~ActiveSinkStageImpl() {}
+SinkStageImpl::~SinkStageImpl() {}
 
-size_t ActiveSinkStageImpl::input_count() const {
+size_t SinkStageImpl::input_count() const {
   return 1;
 };
 
-Input& ActiveSinkStageImpl::input(size_t index) {
+Input& SinkStageImpl::input(size_t index) {
   FXL_DCHECK(index == 0u);
   return input_;
 }
 
-size_t ActiveSinkStageImpl::output_count() const {
+size_t SinkStageImpl::output_count() const {
   return 0;
 }
 
-Output& ActiveSinkStageImpl::output(size_t index) {
+Output& SinkStageImpl::output(size_t index) {
   FXL_CHECK(false) << "output requested from sink";
   abort();
 }
 
-std::shared_ptr<PayloadAllocator> ActiveSinkStageImpl::PrepareInput(
-    size_t index) {
+std::shared_ptr<PayloadAllocator> SinkStageImpl::PrepareInput(size_t index) {
   FXL_DCHECK(index == 0u);
   return sink_->allocator();
 }
 
-void ActiveSinkStageImpl::PrepareOutput(
-    size_t index,
-    std::shared_ptr<PayloadAllocator> allocator,
-    UpstreamCallback callback) {
+void SinkStageImpl::PrepareOutput(size_t index,
+                                  std::shared_ptr<PayloadAllocator> allocator,
+                                  UpstreamCallback callback) {
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-GenericNode* ActiveSinkStageImpl::GetGenericNode() {
+GenericNode* SinkStageImpl::GetGenericNode() {
   return sink_.get();
 }
 
-void ActiveSinkStageImpl::Update() {
+void SinkStageImpl::Update() {
   FXL_DCHECK(sink_);
 
   Demand demand;
@@ -68,9 +66,9 @@ void ActiveSinkStageImpl::Update() {
   }
 }
 
-void ActiveSinkStageImpl::FlushInput(size_t index,
-                                     bool hold_frame,
-                                     DownstreamCallback callback) {
+void SinkStageImpl::FlushInput(size_t index,
+                               bool hold_frame,
+                               DownstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(sink_);
   input_.Flush();
@@ -79,15 +77,15 @@ void ActiveSinkStageImpl::FlushInput(size_t index,
   sink_demand_ = Demand::kNegative;
 }
 
-void ActiveSinkStageImpl::FlushOutput(size_t index) {
+void SinkStageImpl::FlushOutput(size_t index) {
   FXL_CHECK(false) << "FlushOutput called on sink";
 }
 
-void ActiveSinkStageImpl::PostTask(const fxl::Closure& task) {
+void SinkStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
-void ActiveSinkStageImpl::SetDemand(Demand demand) {
+void SinkStageImpl::SetDemand(Demand demand) {
   bool needs_update = false;
 
   {

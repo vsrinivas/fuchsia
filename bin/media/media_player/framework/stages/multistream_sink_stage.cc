@@ -2,59 +2,59 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/media_player/framework/stages/active_multistream_sink_stage.h"
+#include "garnet/bin/media/media_player/framework/stages/multistream_sink_stage.h"
 
 namespace media_player {
 
-ActiveMultistreamSinkStageImpl::ActiveMultistreamSinkStageImpl(
-    std::shared_ptr<ActiveMultistreamSink> sink)
+MultistreamSinkStageImpl::MultistreamSinkStageImpl(
+    std::shared_ptr<MultistreamSink> sink)
     : sink_(sink) {
   FXL_DCHECK(sink_);
   // Add one unallocated input so this stage isn't misidentified as a source.
   ReleaseInput(AllocateInput());
 }
 
-ActiveMultistreamSinkStageImpl::~ActiveMultistreamSinkStageImpl() {}
+MultistreamSinkStageImpl::~MultistreamSinkStageImpl() {}
 
-size_t ActiveMultistreamSinkStageImpl::input_count() const {
+size_t MultistreamSinkStageImpl::input_count() const {
   // TODO(dalesat): Provide checks to make sure inputs_.size() is stable when
   // it needs to be.
   std::lock_guard<std::mutex> locker(mutex_);
   return inputs_.size();
 };
 
-Input& ActiveMultistreamSinkStageImpl::input(size_t index) {
+Input& MultistreamSinkStageImpl::input(size_t index) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(index < inputs_.size());
   return inputs_[index]->input_;
 }
 
-size_t ActiveMultistreamSinkStageImpl::output_count() const {
+size_t MultistreamSinkStageImpl::output_count() const {
   return 0;
 }
 
-Output& ActiveMultistreamSinkStageImpl::output(size_t index) {
+Output& MultistreamSinkStageImpl::output(size_t index) {
   FXL_CHECK(false) << "output requested from sink";
   abort();
 }
 
-std::shared_ptr<PayloadAllocator> ActiveMultistreamSinkStageImpl::PrepareInput(
+std::shared_ptr<PayloadAllocator> MultistreamSinkStageImpl::PrepareInput(
     size_t index) {
   return nullptr;
 }
 
-void ActiveMultistreamSinkStageImpl::PrepareOutput(
+void MultistreamSinkStageImpl::PrepareOutput(
     size_t index,
     std::shared_ptr<PayloadAllocator> allocator,
     UpstreamCallback callback) {
   FXL_CHECK(false) << "PrepareOutput called on sink";
 }
 
-GenericNode* ActiveMultistreamSinkStageImpl::GetGenericNode() {
+GenericNode* MultistreamSinkStageImpl::GetGenericNode() {
   return sink_.get();
 }
 
-void ActiveMultistreamSinkStageImpl::Update() {
+void MultistreamSinkStageImpl::Update() {
   FXL_DCHECK(sink_);
 
   std::lock_guard<std::mutex> locker(mutex_);
@@ -79,9 +79,9 @@ void ActiveMultistreamSinkStageImpl::Update() {
   }
 }
 
-void ActiveMultistreamSinkStageImpl::FlushInput(size_t index,
-                                                bool hold_frame,
-                                                DownstreamCallback callback) {
+void MultistreamSinkStageImpl::FlushInput(size_t index,
+                                          bool hold_frame,
+                                          DownstreamCallback callback) {
   FXL_DCHECK(sink_);
 
   sink_->Flush(hold_frame);
@@ -92,15 +92,15 @@ void ActiveMultistreamSinkStageImpl::FlushInput(size_t index,
   pending_inputs_.remove(index);
 }
 
-void ActiveMultistreamSinkStageImpl::FlushOutput(size_t index) {
+void MultistreamSinkStageImpl::FlushOutput(size_t index) {
   FXL_CHECK(false) << "FlushOutput called on sink";
 }
 
-void ActiveMultistreamSinkStageImpl::PostTask(const fxl::Closure& task) {
+void MultistreamSinkStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
-size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
+size_t MultistreamSinkStageImpl::AllocateInput() {
   std::lock_guard<std::mutex> locker(mutex_);
 
   StageInput* input;
@@ -120,7 +120,7 @@ size_t ActiveMultistreamSinkStageImpl::AllocateInput() {
   return input->input_.index();
 }
 
-size_t ActiveMultistreamSinkStageImpl::ReleaseInput(size_t index) {
+size_t MultistreamSinkStageImpl::ReleaseInput(size_t index) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(index < inputs_.size());
 
@@ -146,8 +146,7 @@ size_t ActiveMultistreamSinkStageImpl::ReleaseInput(size_t index) {
   return inputs_.size();
 }
 
-void ActiveMultistreamSinkStageImpl::UpdateDemand(size_t input_index,
-                                                  Demand demand) {
+void MultistreamSinkStageImpl::UpdateDemand(size_t input_index, Demand demand) {
   {
     std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(input_index < inputs_.size());

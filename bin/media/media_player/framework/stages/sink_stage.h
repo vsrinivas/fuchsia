@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SINK_STAGE_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SINK_STAGE_H_
 
 #include <deque>
 #include <mutex>
 
-#include "garnet/bin/media/media_player/framework/models/active_source.h"
+#include "garnet/bin/media/media_player/framework/models/sink.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media_player {
 
-// A stage that hosts an ActiveSource.
-class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
+// A stage that hosts an Sink.
+class SinkStageImpl : public StageImpl, public SinkStage {
  public:
-  ActiveSourceStageImpl(std::shared_ptr<ActiveSource> source);
+  SinkStageImpl(std::shared_ptr<Sink> sink);
 
-  ~ActiveSourceStageImpl() override;
+  ~SinkStageImpl() override;
 
   // StageImpl implementation.
   size_t input_count() const override;
@@ -36,8 +36,6 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
                      std::shared_ptr<PayloadAllocator> allocator,
                      UpstreamCallback callback) override;
 
-  void UnprepareOutput(size_t index, UpstreamCallback callback) override;
-
   void FlushInput(size_t index,
                   bool hold_frame,
                   DownstreamCallback callback) override;
@@ -51,19 +49,18 @@ class ActiveSourceStageImpl : public StageImpl, public ActiveSourceStage {
   void Update() override;
 
  private:
-  // ActiveSourceStage implementation.
+  // SinkStage implementation.
   void PostTask(const fxl::Closure& task) override;
 
-  void SupplyPacket(PacketPtr packet) override;
+  void SetDemand(Demand demand) override;
 
-  Output output_;
-  std::shared_ptr<ActiveSource> source_;
-  bool prepared_;
+  Input input_;
+  std::shared_ptr<Sink> sink_;
 
   mutable std::mutex mutex_;
-  std::deque<PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
+  Demand sink_demand_ FXL_GUARDED_BY(mutex_) = Demand::kNegative;
 };
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_SOURCE_STAGE_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SINK_STAGE_H_

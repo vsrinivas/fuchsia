@@ -7,14 +7,14 @@
 
 #include <limits>
 
-#include "garnet/bin/media/media_player/framework/models/active_sink.h"
+#include "garnet/bin/media/media_player/framework/models/sink.h"
 #include "garnet/bin/media/media_player/framework/types/stream_type.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media_player {
 
 // Abstract base class for sinks that render packets.
-class Renderer : public ActiveSink {
+class Renderer : public Sink {
  public:
   Renderer();
 

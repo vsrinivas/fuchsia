@@ -2,29 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SOURCE_STAGE_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SOURCE_STAGE_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SOURCE_STAGE_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SOURCE_STAGE_H_
 
 #include <deque>
-#include <vector>
+#include <mutex>
 
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-
-#include "garnet/bin/media/media_player/framework/models/active_multistream_source.h"
+#include "garnet/bin/media/media_player/framework/models/source.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media_player {
 
-// A stage that hosts an ActiveMultistreamSource.
-class ActiveMultistreamSourceStageImpl : public StageImpl,
-                                         public ActiveMultistreamSourceStage {
+// A stage that hosts an Source.
+class SourceStageImpl : public StageImpl, public SourceStage {
  public:
-  ActiveMultistreamSourceStageImpl(
-      std::shared_ptr<ActiveMultistreamSource> source);
+  SourceStageImpl(std::shared_ptr<Source> source);
 
-  ~ActiveMultistreamSourceStageImpl() override;
+  ~SourceStageImpl() override;
 
   // StageImpl implementation.
   size_t input_count() const override;
@@ -56,20 +51,19 @@ class ActiveMultistreamSourceStageImpl : public StageImpl,
   void Update() override;
 
  private:
-  // ActiveMultistreamSourceStage implementation.
+  // SourceStage implementation.
   void PostTask(const fxl::Closure& task) override;
 
-  void SupplyPacket(size_t output_index, PacketPtr packet) override;
+  void SupplyPacket(PacketPtr packet) override;
 
-  std::vector<Output> outputs_;
-  std::vector<std::deque<PacketPtr>> packets_per_output_;
-  std::shared_ptr<ActiveMultistreamSource> source_;
+  Output output_;
+  std::shared_ptr<Source> source_;
+  bool prepared_;
 
-  mutable fbl::Mutex mutex_;
-  size_t ended_streams_ FXL_GUARDED_BY(mutex_) = 0;
-  bool packet_request_outstanding_ FXL_GUARDED_BY(mutex_) = false;
+  mutable std::mutex mutex_;
+  std::deque<PacketPtr> packets_ FXL_GUARDED_BY(mutex_);
 };
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SOURCE_STAGE_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_SOURCE_STAGE_H_

@@ -10,7 +10,7 @@ namespace media_player {
 
 MultistreamSourceStageImpl::MultistreamSourceStageImpl(
     std::shared_ptr<MultistreamSource> source)
-    : source_(source), ended_streams_(0) {
+    : packets_per_output_(source->stream_count()), source_(source) {
   FXL_DCHECK(source);
 
   for (size_t index = 0; index < source->stream_count(); ++index) {
@@ -69,35 +69,38 @@ GenericNode* MultistreamSourceStageImpl::GetGenericNode() {
 }
 
 void MultistreamSourceStageImpl::Update() {
-  while (true) {
-    if (cached_packet_ && HasPositiveDemand(outputs_)) {
-      FXL_DCHECK(cached_packet_output_index_ < outputs_.size());
-      Output& output = outputs_[cached_packet_output_index_];
+  fbl::AutoLock lock(&mutex_);
 
-      if (output.demand() != Demand::kNegative) {
-        // cached_packet_ is intended for an output which will accept packets.
-        output.SupplyPacket(std::move(cached_packet_));
+  FXL_DCHECK(outputs_.size() == packets_per_output_.size());
+
+  bool need_packet = false;
+
+  for (size_t i = 0; i < outputs_.size(); i++) {
+    Output& output = outputs_[i];
+
+    if (!output.connected()) {
+      continue;
+    }
+
+    std::deque<PacketPtr>& packets = packets_per_output_[i];
+
+    if (packets.empty()) {
+      if (output.demand() == Demand::kPositive) {
+        // The output has positive demand and no packets queued. Request another
+        // packet so we can meet the demand.
+        need_packet = true;
       }
+    } else if (output.demand() != Demand::kNegative) {
+      // The output has non-negative demand and packets queued. Send a packet
+      // downstream now.
+      output.SupplyPacket(std::move(packets.front()));
+      packets.pop_front();
     }
+  }
 
-    if (cached_packet_) {
-      // There's still a cached packet. We're done for now.
-      return;
-    }
-
-    if (ended_streams_ == outputs_.size()) {
-      // We've seen end-of-stream for all streams. All done.
-      return;
-    }
-
-    // Pull a packet from the source.
-    cached_packet_ = source_->PullPacket(&cached_packet_output_index_);
-    FXL_DCHECK(cached_packet_);
-    FXL_DCHECK(cached_packet_output_index_ < outputs_.size());
-
-    if (cached_packet_->end_of_stream()) {
-      ended_streams_++;
-    }
+  if (need_packet && !packet_request_outstanding_) {
+    packet_request_outstanding_ = true;
+    source_->RequestPacket();
   }
 }
 
@@ -108,16 +111,66 @@ void MultistreamSourceStageImpl::FlushInput(size_t index,
 }
 
 void MultistreamSourceStageImpl::FlushOutput(size_t index) {
+  fbl::AutoLock lock(&mutex_);
   FXL_DCHECK(index < outputs_.size());
   FXL_DCHECK(source_);
-  source_->Flush();
-  cached_packet_.reset();
-  cached_packet_output_index_ = 0;
+  packets_per_output_[index].clear();
   ended_streams_ = 0;
+  packet_request_outstanding_ = false;
 }
 
 void MultistreamSourceStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
+}
+
+void MultistreamSourceStageImpl::SupplyPacket(size_t output_index,
+                                              PacketPtr packet) {
+  fbl::AutoLock lock(&mutex_);
+  FXL_DCHECK(output_index < outputs_.size());
+  FXL_DCHECK(outputs_.size() == packets_per_output_.size());
+  FXL_DCHECK(packet);
+
+  if (!packet_request_outstanding_) {
+    // We requested a packet, then changed our minds due to a flush. Discard
+    // the packet.
+    return;
+  }
+
+  packet_request_outstanding_ = false;
+
+  if (packet->end_of_stream()) {
+    ++ended_streams_;
+  }
+
+  if (!outputs_[output_index].connected()) {
+    // The output in question isn't connected. Discard the packet and request
+    // another.
+    source_->RequestPacket();
+    packet_request_outstanding_ = true;
+    return;
+  }
+
+  // We put new packets in per-output (per-stream) queues. That way, when
+  // we get a bunch of undemanded packets for a particular stream, we can
+  // queue them up here until they're demanded.
+  std::deque<PacketPtr>& packets = packets_per_output_[output_index];
+  packets.push_back(std::move(packet));
+
+  if (packets.size() == 1 &&
+      outputs_[output_index].demand() != Demand::kNegative) {
+    // We have a packet for an output with non-negative demand that didn't
+    // have one before. Request an update. Update will request another
+    // packet, if needed.
+    lock.release();
+    NeedsUpdate();
+  } else {
+    // We got a packet, but it doesn't change matters, either because the
+    // output in question already had a packet queued or because that output
+    // has negative demand and wasn't the one we wanted a packet for.
+    // We can request another packet without having to go through an update.
+    source_->RequestPacket();
+    packet_request_outstanding_ = true;
+  }
 }
 
 }  // namespace media_player

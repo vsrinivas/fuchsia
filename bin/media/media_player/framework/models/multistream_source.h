@@ -15,9 +15,12 @@ namespace media_player {
 class MultistreamSourceStage : public Stage {
  public:
   ~MultistreamSourceStage() override {}
+
+  // Supplies a packet for the indicated output.
+  virtual void SupplyPacket(size_t output_index, PacketPtr packet) = 0;
 };
 
-// Synchronous source of packets for multiple streams.
+// Asynchronous source of packets for multiple streams.
 class MultistreamSource : public Node<MultistreamSourceStage> {
  public:
   ~MultistreamSource() override {}
@@ -25,13 +28,14 @@ class MultistreamSource : public Node<MultistreamSourceStage> {
   // Flushes media state.
   virtual void Flush(){};
 
+  // TODO(dalesat): Support dynamic output creation.
+
   // Returns the number of streams the source produces.
   virtual size_t stream_count() const = 0;
 
-  // Gets a packet for the stream indicated via stream_index_out. This call
-  // should always produce a packet until end-of-stream. The caller is
-  // responsible for releasing the packet.
-  virtual PacketPtr PullPacket(size_t* stream_index_out) = 0;
+  // Requests a packet from the source to be supplied asynchronously via
+  // the supply callback.
+  virtual void RequestPacket() = 0;
 };
 
 }  // namespace media_player

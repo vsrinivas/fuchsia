@@ -2,46 +2,43 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/media_player/framework/stages/active_source_stage.h"
+#include "garnet/bin/media/media_player/framework/stages/source_stage.h"
 
 namespace media_player {
 
-ActiveSourceStageImpl::ActiveSourceStageImpl(
-    std::shared_ptr<ActiveSource> source)
+SourceStageImpl::SourceStageImpl(std::shared_ptr<Source> source)
     : output_(this, 0), source_(source), prepared_(false) {
   FXL_DCHECK(source_);
 }
 
-ActiveSourceStageImpl::~ActiveSourceStageImpl() {}
+SourceStageImpl::~SourceStageImpl() {}
 
-size_t ActiveSourceStageImpl::input_count() const {
+size_t SourceStageImpl::input_count() const {
   return 0;
 };
 
-Input& ActiveSourceStageImpl::input(size_t index) {
+Input& SourceStageImpl::input(size_t index) {
   FXL_CHECK(false) << "input requested from source";
   abort();
 }
 
-size_t ActiveSourceStageImpl::output_count() const {
+size_t SourceStageImpl::output_count() const {
   return 1;
 }
 
-Output& ActiveSourceStageImpl::output(size_t index) {
+Output& SourceStageImpl::output(size_t index) {
   FXL_DCHECK(index == 0u);
   return output_;
 }
 
-std::shared_ptr<PayloadAllocator> ActiveSourceStageImpl::PrepareInput(
-    size_t index) {
+std::shared_ptr<PayloadAllocator> SourceStageImpl::PrepareInput(size_t index) {
   FXL_CHECK(false) << "PrepareInput called on source";
   return nullptr;
 }
 
-void ActiveSourceStageImpl::PrepareOutput(
-    size_t index,
-    std::shared_ptr<PayloadAllocator> allocator,
-    UpstreamCallback callback) {
+void SourceStageImpl::PrepareOutput(size_t index,
+                                    std::shared_ptr<PayloadAllocator> allocator,
+                                    UpstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
 
@@ -59,8 +56,7 @@ void ActiveSourceStageImpl::PrepareOutput(
   prepared_ = true;
 }
 
-void ActiveSourceStageImpl::UnprepareOutput(size_t index,
-                                            UpstreamCallback callback) {
+void SourceStageImpl::UnprepareOutput(size_t index, UpstreamCallback callback) {
   FXL_DCHECK(index == 0u);
   FXL_DCHECK(source_);
 
@@ -68,11 +64,11 @@ void ActiveSourceStageImpl::UnprepareOutput(size_t index,
   output_.SetCopyAllocator(nullptr);
 }
 
-GenericNode* ActiveSourceStageImpl::GetGenericNode() {
+GenericNode* SourceStageImpl::GetGenericNode() {
   return source_.get();
 }
 
-void ActiveSourceStageImpl::Update() {
+void SourceStageImpl::Update() {
   Demand demand = output_.demand();
 
   {
@@ -89,24 +85,24 @@ void ActiveSourceStageImpl::Update() {
   }
 }
 
-void ActiveSourceStageImpl::FlushInput(size_t index,
-                                       bool hold_frame,
-                                       DownstreamCallback callback) {
+void SourceStageImpl::FlushInput(size_t index,
+                                 bool hold_frame,
+                                 DownstreamCallback callback) {
   FXL_CHECK(false) << "FlushInput called on source";
 }
 
-void ActiveSourceStageImpl::FlushOutput(size_t index) {
+void SourceStageImpl::FlushOutput(size_t index) {
   FXL_DCHECK(source_);
   source_->Flush();
   std::lock_guard<std::mutex> locker(mutex_);
   packets_.clear();
 }
 
-void ActiveSourceStageImpl::PostTask(const fxl::Closure& task) {
+void SourceStageImpl::PostTask(const fxl::Closure& task) {
   StageImpl::PostTask(task);
 }
 
-void ActiveSourceStageImpl::SupplyPacket(PacketPtr packet) {
+void SourceStageImpl::SupplyPacket(PacketPtr packet) {
   bool needs_update = false;
 
   {

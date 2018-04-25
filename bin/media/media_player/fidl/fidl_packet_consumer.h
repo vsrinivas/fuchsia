@@ -6,14 +6,14 @@
 #define GARNET_BIN_MEDIA_MEDIA_PLAYER_FIDL_FIDL_PACKET_CONSUMER_H_
 
 #include <fuchsia/cpp/media.h>
-#include "garnet/bin/media/media_player/framework/models/active_source.h"
+#include "garnet/bin/media/media_player/framework/models/source.h"
 #include "lib/media/transport/media_packet_consumer_base.h"
 
 namespace media_player {
 
 // Implements MediaPacketConsumer to receive a stream from across fidl.
 class FidlPacketConsumer : public media::MediaPacketConsumerBase,
-                           public ActiveSource {
+                           public Source {
  public:
   using FlushRequestedCallback =
       std::function<void(bool hold_frame, FlushCallback)>;
@@ -43,7 +43,7 @@ class FidlPacketConsumer : public media::MediaPacketConsumerBase,
 
   void OnUnbind() override;
 
-  // ActiveSource implementation.
+  // Source implementation.
   bool can_accept_allocator() const override;
 
   void set_allocator(std::shared_ptr<PayloadAllocator> allocator) override;

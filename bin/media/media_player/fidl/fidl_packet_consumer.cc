@@ -37,7 +37,7 @@ void FidlPacketConsumer::SetFlushRequestedCallback(
 void FidlPacketConsumer::OnPacketSupplied(
     std::unique_ptr<SuppliedPacket> supplied_packet) {
   FXL_DCHECK(supplied_packet);
-  ActiveSourceStage* stage_ptr = stage();
+  SourceStage* stage_ptr = stage();
   if (stage_ptr) {
     stage_ptr->SupplyPacket(PacketImpl::Create(std::move(supplied_packet)));
   }

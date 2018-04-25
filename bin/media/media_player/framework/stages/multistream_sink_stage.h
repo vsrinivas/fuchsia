@@ -2,27 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_MULTISTREAM_SINK_STAGE_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_MULTISTREAM_SINK_STAGE_H_
 
 #include <list>
 #include <mutex>
 #include <set>
 #include <vector>
 
-#include "garnet/bin/media/media_player/framework/models/active_multistream_sink.h"
+#include "garnet/bin/media/media_player/framework/models/multistream_sink.h"
 #include "garnet/bin/media/media_player/framework/stages/stage_impl.h"
 #include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace media_player {
 
-// A stage that hosts an ActiveMultistreamSink.
-class ActiveMultistreamSinkStageImpl : public StageImpl,
-                                       public ActiveMultistreamSinkStage {
+// A stage that hosts an MultistreamSink.
+class MultistreamSinkStageImpl : public StageImpl, public MultistreamSinkStage {
  public:
-  ActiveMultistreamSinkStageImpl(std::shared_ptr<ActiveMultistreamSink> sink);
+  MultistreamSinkStageImpl(std::shared_ptr<MultistreamSink> sink);
 
-  ~ActiveMultistreamSinkStageImpl() override;
+  ~MultistreamSinkStageImpl() override;
 
   // StageImpl implementation.
   size_t input_count() const override;
@@ -52,7 +51,7 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
   void Update() override;
 
  private:
-  // ActiveMultistreamSinkStage implementation.
+  // MultistreamSinkStage implementation.
   void PostTask(const fxl::Closure& task) override;
 
   size_t AllocateInput() override;
@@ -69,7 +68,7 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
     Demand demand_;
   };
 
-  std::shared_ptr<ActiveMultistreamSink> sink_;
+  std::shared_ptr<MultistreamSink> sink_;
 
   mutable std::mutex mutex_;
   std::vector<std::unique_ptr<StageInput>> inputs_ FXL_GUARDED_BY(mutex_);
@@ -79,4 +78,4 @@ class ActiveMultistreamSinkStageImpl : public StageImpl,
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_ACTIVE_MULTISTREAM_SINK_STAGE_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_STAGES_MULTISTREAM_SINK_STAGE_H_

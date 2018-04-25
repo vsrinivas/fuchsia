@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SINK_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SINK_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SINK_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SINK_H_
 
 #include "garnet/bin/media/media_player/framework/models/demand.h"
 #include "garnet/bin/media/media_player/framework/models/node.h"
@@ -13,18 +13,18 @@
 
 namespace media_player {
 
-// Stage for |ActiveSink|.
-class ActiveSinkStage : public Stage {
+// Stage for |Sink|.
+class SinkStage : public Stage {
  public:
-  ~ActiveSinkStage() override {}
+  ~SinkStage() override {}
 
   virtual void SetDemand(Demand demand) = 0;
 };
 
 // Sink that consumes packets asynchronously.
-class ActiveSink : public Node<ActiveSinkStage> {
+class Sink : public Node<SinkStage> {
  public:
-  ~ActiveSink() override {}
+  ~Sink() override {}
 
   // Flushes media state. |hold_frame| indicates whether a video renderer
   // should hold (and display) the newest frame.
@@ -40,4 +40,4 @@ class ActiveSink : public Node<ActiveSinkStage> {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SINK_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SINK_H_

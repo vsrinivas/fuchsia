@@ -58,42 +58,28 @@ minimizes the effort required to wrap a decoder as a node.
 
 Rather than insisting that all
 nodes use a uniform model, the framework supports multiple node models, each
-model addressing a particular type of node. Currently there are six node
-models. Sources, sinks and transforms have distinct models. Some models are
-specific to *passive* nodes that don't involve external events and others are
-for *active* nodes that do. Multi-stream and single-stream source and sinks are
-also given distinct models.
+model addressing a particular type of node. Currently there are five node
+models. Sources, sinks and transforms have distinct models. Multi-stream and
+single-stream sources and sinks are also given distinct models. Transforms
+can be synchronous or asynchronous. Sources and sinks use asynchronous models,
+given that synchronous source/sink operation is rare, and the asynchronous
+models are easily applied to synchronous operation.
 
-The six models currently supported are:
+The five models currently supported are:
 
-- `ActiveSource`: a source that produces a single stream of packets in response
-  to external events. Examples of nodes that might use this model are capture
-  devices and bridges from other frameworks. The FIDL
-  `MediaPacketConsumer` implementation, which bridges between the FIDL streaming
-  framework and the in-process framework, uses the `ActiveSource` model. There
-  is also an `ActiveSource` node that wraps an audio capture device.
-- `ActiveMultistreamSource`: a source that produces multiple streams of packets
-  in response to external events. The ffmpeg demux node uses this model. (It's
-  only 'active' because the ffmpeg demux has to run on its own thread. From
-  the framework's perspective, the thread is a source of 'external' events.)
-- `MultistreamSource`: a source that produces multiple streams of packets on
-  demand. The ffmpeg demux *would* have used this model had it not required a
-  separate thread.
-- `ActiveSink`: a sink that consumes a single stream of packets in response to
-  external events. Examples of nodes that might use this model are renderers
-  and bridges to other frameworks. The FIDL `MediaPacketProducer` implementation,
-  which bridges between the in-process framework and the FIDL streaming framework,
-  uses this model. There is also an `ActiveSink` node that renders video.
-- `ActiveMultistreamSink`: a sink that consumes multiple streams of packets in
-  response to external events. This model is intended for an audio renderer that
-  integrates a mixer. Currently, this model isn't used.
+- `Source`: a source that produces a single stream of packets. Examples of nodes
+  that might use this model are capture devices and bridges from other
+  frameworks.
+- `MultistreamSource`: a source that produces multiple streams of packets.
+  The ffmpeg demux node uses this model.
+- `Sink`: a sink that consumes a single stream of packets. Examples of nodes
+  that might use this model are renderers and bridges to other frameworks.
+- `MultistreamSink`: a sink that consumes multiple streams of packets. Examples
+  of nodes that might use this model are a rendering audio mixer or a
+  multiplexer.
 - `Transform`: a transform that processes input packets and produces output
-  packets on demand. Decoders use this model. Other type conversion nodes and
-  effects are also candidates.
-
-This list will change over time. Two of these models aren't currently used and
-may be phased out. An `ActiveTransform` model will be required in the future
-for GPU-accelerated decoders and encoders.
+  packets on demand. Decoders can use this model. Other type conversion nodes
+  and effects are also candidates.
 
 Every model has its associated abstract base class and a corresponding *Stage*
 class that models the node's host. The stage calls the methods defined in the
@@ -127,8 +113,8 @@ graph.Connect(demux.output(0), decoder.input(0));
 ```
 
 Node models may refer to inputs and output explicitly, but more often, the
-existence of inputs and outputs is implied by the model. The `ActiveSource`
-model, for example, implies a single output, `ActiveSink` a single input and
+existence of inputs and outputs is implied by the model. The `Source`
+model, for example, implies a single output, `Sink` a single input and
 `Transform` one input and one output.
 
 There are a number of *configuration* concerns surrounding connected

@@ -98,7 +98,7 @@ void FidlPacketProducer::Connect(
 }
 
 void FidlPacketProducer::Disconnect() {
-  ActiveSinkStage* stage_ptr = stage();
+  SinkStage* stage_ptr = stage();
   if (stage_ptr) {
     stage_ptr->SetDemand(Demand::kNegative);
   }
@@ -120,7 +120,7 @@ void FidlPacketProducer::ReleasePayloadBuffer(void* buffer) {
 
 void FidlPacketProducer::OnDemandUpdated(uint32_t min_packets_outstanding,
                                          int64_t min_pts) {
-  ActiveSinkStage* stage_ptr = stage();
+  SinkStage* stage_ptr = stage();
   if (stage_ptr) {
     stage_ptr->SetDemand(CurrentDemand());
   }
@@ -139,7 +139,7 @@ void FidlPacketProducer::SendPacket(PacketPtr packet) {
                 packet->pts_rate(), packet->keyframe(), packet->end_of_stream(),
                 fxl::To<media::MediaTypePtr>(packet->revised_stream_type()),
                 fxl::MakeCopyable([this, packet = std::move(packet)]() {
-                  ActiveSinkStage* stage_ptr = stage();
+                  SinkStage* stage_ptr = stage();
                   if (stage_ptr) {
                     stage_ptr->SetDemand(CurrentDemand());
                   }

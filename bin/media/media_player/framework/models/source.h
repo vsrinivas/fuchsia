@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SOURCE_H_
-#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SOURCE_H_
+#ifndef GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SOURCE_H_
+#define GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SOURCE_H_
 
 #include "garnet/bin/media/media_player/framework/models/demand.h"
 #include "garnet/bin/media/media_player/framework/models/node.h"
@@ -13,18 +13,18 @@
 
 namespace media_player {
 
-// Stage for |ActiveSource|.
-class ActiveSourceStage : public Stage {
+// Stage for |Source|.
+class SourceStage : public Stage {
  public:
-  ~ActiveSourceStage() override {}
+  ~SourceStage() override {}
 
   virtual void SupplyPacket(PacketPtr packet) = 0;
 };
 
 // Source that produces packets asynchronously.
-class ActiveSource : public Node<ActiveSourceStage> {
+class Source : public Node<SourceStage> {
  public:
-  ~ActiveSource() override {}
+  ~Source() override {}
 
   // Flushes media state.
   virtual void Flush(){};
@@ -41,4 +41,4 @@ class ActiveSource : public Node<ActiveSourceStage> {
 
 }  // namespace media_player
 
-#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_ACTIVE_SOURCE_H_
+#endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SOURCE_H_
