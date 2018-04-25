@@ -6,6 +6,7 @@
 
 #ifndef __ASSEMBLER__
 #include <zircon/compiler.h>
+#include <stdbool.h>
 #include <stdint.h>
 #endif
 
@@ -26,6 +27,11 @@
 // Bootdata items with the CRC32 flag must have a valid crc32.
 // Otherwise their crc32 field must contain BOOTITEM_NO_CRC32
 #define BOOTDATA_FLAG_CRC32      (0x00020000)
+
+// Bootdata types that have least significant byte set to 'm'
+// are reserved for driver metadata
+#define BOOTDATA_KIND_METADATA   (0x0000006D)
+#define BOOTDATA_KIND_MASK       (0x000000FF)
 
 // Containers are used to wrap a set of bootdata items
 // written to a file or partition.  The "length" is the
@@ -57,13 +63,13 @@
 // Content: bootdata_partition_map_t
 // The bootdata_t.extra field is used as a board specific index
 // to specify which device the partition map applies to.
-#define BOOTDATA_PARTITION_MAP    (0x54524150) // PART
+#define BOOTDATA_PARTITION_MAP    (0x5452506D) // mPRT
 
 // MAC Address for Ethernet, Wifi, Bluetooth, etc.
 // Content: uint8_t[] (variable length based on type of MAC address)
 // The bootdata_t.extra field is used as a board specific index
 // to specify which device the MAC address applies to.
-#define BOOTDATA_MAC_ADDRESS      (0x4142414D) // MACA
+#define BOOTDATA_MAC_ADDRESS      (0x43414D6D) // mMAC
 
 // Flag indicating that the bootfs is compressed.
 #define BOOTDATA_BOOTFS_FLAG_COMPRESSED  (1 << 0)
@@ -305,5 +311,9 @@ typedef struct bootfs_entry {
 #define BOOTFS_ALIGN(nlen) (((nlen) + 3) & (~3))
 #define BOOTFS_RECSIZE(entry) \
     (sizeof(bootfs_entry_t) + BOOTFS_ALIGN(entry->name_len))
+
+static inline bool bootdata_is_metadata(uint32_t type) {
+    return ((type & BOOTDATA_KIND_MASK) == BOOTDATA_KIND_METADATA);
+}
 
 #endif

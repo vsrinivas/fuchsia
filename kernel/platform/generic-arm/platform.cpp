@@ -292,11 +292,13 @@ static void process_mem_range(const bootdata_mem_range_t* mem_range) {
 }
 
 static void process_bootsection(bootdata_t* section) {
+    if (bootdata_is_metadata(section->type)) {
+        save_mexec_bootdata(section);
+        return;
+    }
     switch (section->type) {
     case BOOTDATA_KERNEL_DRIVER:
     case BOOTDATA_PLATFORM_ID:
-    case BOOTDATA_PARTITION_MAP:
-    case BOOTDATA_MAC_ADDRESS:
         // we don't process these here, but we need to save them for mexec
         save_mexec_bootdata(section);
         break;

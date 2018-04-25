@@ -237,22 +237,16 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
     while (len > sizeof(bootdata)) {
         zx_status_t status = zx_vmo_read(vmo, &bootdata, off, sizeof(bootdata));
         if (status < 0) {
-            break;
+            zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
+            return status;
         }
         size_t itemlen = BOOTDATA_ALIGN(sizeof(bootdata_t) + bootdata.length);
         if (itemlen > len) {
             zxlogf(ERROR, "platform_bus: bootdata item too large (%zd > %zd)\n", itemlen, len);
             break;
         }
-        switch (bootdata.type) {
-        case BOOTDATA_PARTITION_MAP:
-        case BOOTDATA_MAC_ADDRESS:
+        if (bootdata_is_metadata(bootdata.type)) {
             metadata_size += itemlen;
-            break;
-            zxlogf(ERROR, "platform_bus: unexpected bootdata container header\n");
-            return ZX_ERR_INTERNAL;
-        default:
-            break;
         }
         off += itemlen;
         len -= itemlen;
@@ -282,8 +276,7 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
             zxlogf(ERROR, "platform_bus: bootdata item too large (%zd > %zd)\n", itemlen, len);
             break;
         }
-        switch (bootdata.type) {
-        case BOOTDATA_PLATFORM_ID:
+        if (bootdata.type == BOOTDATA_PLATFORM_ID) {
             status = zx_vmo_read(vmo, &bus->platform_id, off + sizeof(bootdata_t),
                                  sizeof(bus->platform_id));
             if (status != ZX_OK) {
@@ -291,18 +284,13 @@ static zx_status_t platform_bus_read_bootdata(platform_bus_t* bus, zx_handle_t v
                 return status;
             }
             got_platform_id = true;
-            break;
-        case BOOTDATA_PARTITION_MAP:
-        case BOOTDATA_MAC_ADDRESS:
+        } else if (bootdata_is_metadata(bootdata.type)) {
             status = zx_vmo_read(vmo, metadata + metadata_offset, off, itemlen);
             if (status != ZX_OK) {
                 zxlogf(ERROR, "zx_vmo_read failed: %d\n", status);
                 return status;
             }
             metadata_offset += itemlen;
-            break;
-        default:
-            break;
         }
         off += itemlen;
         len -= itemlen;
