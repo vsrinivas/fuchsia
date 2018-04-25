@@ -59,7 +59,7 @@ static nsecs_t now(void) {
 // |rc| is the return code of the test.
 static void record_test_result(list_node_t* tests, const char* name, test_result_t result, int rc) {
     size_t name_len = strlen(name) + 1;
-    test_t* test = malloc(sizeof(test_t) + name_len);
+    test_t* test = static_cast<test_t*>(malloc(sizeof(test_t) + name_len));
     test->result = result;
     test->rc = rc;
     memcpy(test->name, name, name_len);
@@ -72,7 +72,7 @@ static list_node_t tests = LIST_INITIAL_VALUE(tests);
 // We want the default to be the same, whether the test is run by us
 // or run standalone. Do this by leaving the verbosity unspecified unless
 // provided by the user.
-static int verbosity = -1;
+static signed char verbosity = -1;
 
 static const char* default_test_dirs[] = {
     // zircon builds place everything in ramdisks so tests are located in /boot
@@ -87,14 +87,14 @@ static const char* default_test_dirs[] = {
 static bool parse_test_names(char* input, char*** output, int* output_len) {
     // Count number of names via delimiter ','.
     int num_test_names = 0;
-    for (char* tmp = input; tmp != NULL; tmp = strchr(tmp, ',')) {
+    for (char* tmp = input; tmp != nullptr; tmp = strchr(tmp, ',')) {
         num_test_names++;
         tmp++;
     }
 
     // Allocate space for names.
     char** test_names = (char**) malloc(sizeof(char*) * num_test_names);
-    if (test_names == NULL) {
+    if (test_names == nullptr) {
         return false;
     }
 
@@ -102,8 +102,8 @@ static bool parse_test_names(char* input, char*** output, int* output_len) {
     char *next_token;
     test_names[0] = strtok_r(input, ",", &next_token);
     for (int i = 1; i < num_test_names; i++) {
-        char* tmp = strtok_r(NULL, ",", &next_token);
-        if (tmp == NULL) {
+        char* tmp = strtok_r(nullptr, ",", &next_token);
+        if (tmp == nullptr) {
             free(test_names);
             return false;
         }
@@ -163,16 +163,17 @@ static int mkdir_all(const char* dirn) {
 //
 // |path| specifies the path to the binary.
 // |out| is a file stream to which the test binary's output will be written. May be
-// NULL.
+// nullptr.
 //
 // Returns true if the test binary successfully executes and has a return code of zero.
 static bool run_test(const char* path, FILE* out) {
     int fds[2];
-    char verbose_opt[] = {'v','=', verbosity + '0', 0};
+    // This arithmetic is invalid if verbosity < 0, but in that case by setting argc = 1.
+    char verbose_opt[] = {'v','=', static_cast<char>(verbosity + '0'), 0};
     const char* argv[] = {path, verbose_opt};
     int argc = verbosity >= 0 ? 2 : 1;
 
-    launchpad_t* lp = NULL;
+    launchpad_t* lp = nullptr;
     zx_status_t status = ZX_OK;
     zx_handle_t test_job = ZX_HANDLE_INVALID;
     status = zx_job_create(zx_job_default(), 0, &test_job);
@@ -200,7 +201,7 @@ static bool run_test(const char* path, FILE* out) {
       printf("FAILURE: launchpad_clone() returned %d\n", status);
       goto fail;
     }
-    if (out != NULL) {
+    if (out != nullptr) {
         if (pipe(fds)) {
           printf("FAILURE: Failed to create pipe: %s\n", strerror(errno));
           goto fail;
@@ -220,14 +221,14 @@ static bool run_test(const char* path, FILE* out) {
     const char* errmsg;
     zx_handle_t handle;
     status = launchpad_go(lp, &handle, &errmsg);
-    lp = NULL;
+    lp = nullptr;
     if (status != ZX_OK) {
         printf("FAILURE: Failed to launch %s: %d: %s\n", path, status, errmsg);
         record_test_result(&tests, path, FAILED_TO_LAUNCH, 0);
         goto fail;
     }
     // Tee output.
-    if (out != NULL) {
+    if (out != nullptr) {
         char buf[1024];
         ssize_t bytes_read = 0;
         while ((bytes_read = read(fds[0], buf, 1024)) > 0) {
@@ -236,7 +237,7 @@ static bool run_test(const char* path, FILE* out) {
         }
     }
     status = zx_object_wait_one(handle, ZX_PROCESS_TERMINATED,
-                                ZX_TIME_INFINITE, NULL);
+                                ZX_TIME_INFINITE, nullptr);
     if (status != ZX_OK) {
         printf("FAILURE: Failed to wait for process exiting %s: %d\n", path, status);
         record_test_result(&tests, path, FAILED_TO_WAIT, 0);
@@ -245,7 +246,7 @@ static bool run_test(const char* path, FILE* out) {
 
     // read the return code
     zx_info_process_t proc_info;
-    status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
+    status = zx_object_get_info(handle, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
     zx_handle_close(handle);
 
     if (status < 0) {
@@ -296,11 +297,11 @@ static int join_path(const char* parent, const char* child, char* out, const siz
 // |parent| is the parent path.
 // |child| is the child path.
 //
-// Returns NULL on failure, with errno set.
+// Returns nullptr on failure, with errno set.
 static FILE* join_and_open(const char* parent, const char* child) {
     char output_path[PATH_MAX];
     if (join_path(parent, child, output_path, sizeof(output_path))) {
-        return NULL;
+        return nullptr;
     }
     return fopen(output_path, "w");
 }
@@ -309,7 +310,7 @@ static FILE* join_and_open(const char* parent, const char* child) {
 //
 // |dirn| is the directory to search.
 // |filter_names| is a list of test names to filter on (i.e. tests whose names
-// don't match are skipped). May be NULL.
+// don't match are skipped). May be nullptr.
 // |num_filter_names| is the length of |filter_names|.
 // |output_dir| is the output directory for test output, passed in via -o.
 // |num_tests| is an output parameter which will be set to the number of test
@@ -321,7 +322,7 @@ static FILE* join_and_open(const char* parent, const char* child) {
 static bool run_tests_in_dir(const char* dirn, const char** filter_names, const int num_filter_names,
                              const char* output_dir, int* num_tests, int* num_failed) {
     DIR* dir = opendir(dirn);
-    if (dir == NULL) {
+    if (dir == nullptr) {
         return false;
     }
 
@@ -336,7 +337,7 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
     //
     // TODO(mknyszek): Iterate over these dirents (or just discovered test binaries)
     // in a deterministic order.
-    while ((de = readdir(dir)) != NULL) {
+    while ((de = readdir(dir)) != nullptr) {
         const char* test_name = de->d_name;
         if (!match_test_names(test_name, filter_names, num_filter_names)) {
             continue;
@@ -357,8 +358,8 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
 
         // If output_dir was specified, ask run_test to redirect stdout/stderr
         // to a file whose name is based on the test name.
-        FILE* out = NULL;
-        if (output_dir != NULL) {
+        FILE* out = nullptr;
+        if (output_dir != nullptr) {
             char test_output_dir[PATH_MAX];
             if (join_path(output_dir, test_path, test_output_dir, sizeof(test_output_dir))) {
               printf("Error: Could not construct output dir for test %s: %s\n", test_name,
@@ -371,7 +372,7 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
                 return false;
             }
             out = join_and_open(test_output_dir, kOutputFileName);
-            if (out == NULL) {
+            if (out == nullptr) {
                 printf("Error: Could not open output file for test %s: %s\n", test_name,
                        strerror(errno));
                 return false;
@@ -384,7 +385,7 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
         }
 
         // Clean up the output file.
-        if (out != NULL && fclose(out)) {
+        if (out != nullptr && fclose(out)) {
             printf("FAILURE: Failed to close output file for test %s: %s\n", de->d_name,
                    strerror(errno));
             continue;
@@ -407,8 +408,8 @@ static bool run_tests_in_dir(const char* dirn, const char** filter_names, const 
 // Returns non-zero on failure, with errno set.
 static int write_summary_json(const list_node_t* tests, FILE* summary_json) {
     int test_count = 0;
-    test_t* test = NULL;
-    test_t* temp = NULL;
+    test_t* test = nullptr;
+    test_t* temp = nullptr;
     fprintf(summary_json, "{\"tests\":[\n");
     list_for_every_entry_safe (tests, test, temp, test_t, node) {
         if (test_count != 0) {
@@ -456,7 +457,7 @@ static int resolve_test_globs(const char** globs, const int num_globs, glob_t* r
     // and GLOB_NOMATCH, it may not happen, and we don't return GLOB_NOMATCH.
     resolved->gl_pathc = 0;
     for (int i = 0; i < num_globs; i++) {
-        int err = glob(globs[i], i>0 ? GLOB_APPEND : 0, NULL, resolved);
+        int err = glob(globs[i], i>0 ? GLOB_APPEND : 0, nullptr, resolved);
 
         // Ignore a lack of matches.
         if (err && err != GLOB_NOMATCH) {
@@ -520,12 +521,12 @@ int usage(char* name) {
 }
 
 int main(int argc, char** argv) {
-    test_type_t test_type = TEST_DEFAULT;
+    unsigned int test_types = TEST_DEFAULT;
     int num_filter_names = 0;
-    const char** filter_names = NULL;
+    const char** filter_names = nullptr;
     int num_test_globs = 0;
-    const char** test_globs = NULL;
-    const char* output_dir = NULL;
+    const char** test_globs = nullptr;
+    const char* output_dir = nullptr;
 
     nsecs_t start_time = now();
 
@@ -537,23 +538,23 @@ int main(int argc, char** argv) {
             printf("verbose output. enjoy.\n");
             verbosity = 1;
         } else if (strcmp(argv[i], "-s") == 0) {
-            test_type &= ~TEST_SMALL;
+            test_types &= ~TEST_SMALL;
         } else if (strcmp(argv[i], "-m") == 0) {
-            test_type &= ~TEST_MEDIUM;
+            test_types &= ~TEST_MEDIUM;
         } else if (strcmp(argv[i], "-l") == 0) {
-            test_type &= ~TEST_LARGE;
+            test_types &= ~TEST_LARGE;
         } else if (strcmp(argv[i], "-p") == 0) {
-            test_type &= ~TEST_PERFORMANCE;
+            test_types &= ~TEST_PERFORMANCE;
         } else if (strcmp(argv[i], "-S") == 0) {
-            test_type |= TEST_SMALL;
+            test_types |= TEST_SMALL;
         } else if (strcmp(argv[i], "-M") == 0) {
-            test_type |= TEST_MEDIUM;
+            test_types |= TEST_MEDIUM;
         } else if (strcmp(argv[i], "-L") == 0) {
-            test_type |= TEST_LARGE;
+            test_types |= TEST_LARGE;
         } else if (strcmp(argv[i], "-P") == 0) {
-            test_type |= TEST_PERFORMANCE;
+            test_types |= TEST_PERFORMANCE;
         } else if (strcmp(argv[i], "-a") == 0) {
-            test_type |= TEST_ALL;
+            test_types |= TEST_ALL;
         } else if (strcmp(argv[i], "-h") == 0) {
             return usage(argv[0]);
         } else if (strcmp(argv[i], "-t") == 0) {
@@ -582,11 +583,11 @@ int main(int argc, char** argv) {
         i++;
     }
 
-    // Configure the 'class' of tests which are meant to be executed by putting
+    // Configure the types of tests which are meant to be executed by putting
     // it in an environment variable. Test executables can consume this environment
     // variable and process it as they would like.
     char test_opt[32];
-    snprintf(test_opt, sizeof(test_opt), "%u", test_type);
+    snprintf(test_opt, sizeof(test_opt), "%u", test_types);
     if (setenv(TEST_ENV_NAME, test_opt, 1) != 0) {
         printf("Error: Could not set %s environment variable\n", TEST_ENV_NAME);
         return -1;
@@ -594,14 +595,14 @@ int main(int argc, char** argv) {
 
     // If we got no test globs, just set it to the default test dirs so we can
     // use glob patterns there too.
-    if (test_globs == NULL) {
+    if (test_globs == nullptr) {
         num_test_globs = DEFAULT_NUM_TEST_DIRS;
         test_globs = default_test_dirs;
     }
 
     // Takes test_globs and resolves them, putting the result in test_dirs, which
     // is used by the rest of the code. Note that by this point test_globs will
-    // not be NULL.
+    // not be nullptr.
     glob_t resolved_globs;
     if (resolve_test_globs(test_globs, num_test_globs, &resolved_globs)) {
         printf("Error: Failed to resolve globs\n");
@@ -609,18 +610,18 @@ int main(int argc, char** argv) {
     }
     // TODO(mknyszek): Sort test_dirs in order to make running tests more
     // deterministic.
-    int num_test_dirs = resolved_globs.gl_pathc;
+    size_t num_test_dirs = resolved_globs.gl_pathc;
     const char** test_dirs = (const char**)resolved_globs.gl_pathv;
 
     struct stat st;
-    if (output_dir != NULL && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
+    if (output_dir != nullptr && stat(output_dir, &st) < 0 && (st.st_mode & S_IFMT) == S_IFDIR) {
         printf("Error: Could not open %s\n", output_dir);
         return -1;
     }
 
     int failed_count = 0;
     int total_count = 0;
-    for (i = 0; i < num_test_dirs; i++) {
+    for (size_t i = 0; i < num_test_dirs; i++) {
         // In the event of failures around a directory not existing or being an empty node
         // we will continue to the next entries rather than aborting. This allows us to handle
         // different sets of default test directories.
@@ -637,13 +638,13 @@ int main(int argc, char** argv) {
         // Resolve an absolute path to the test directory to ensure output
         // directory names will never collide.
         char abs_test_dir[PATH_MAX];
-        if (realpath(test_dirs[i], abs_test_dir) == NULL) {
+        if (realpath(test_dirs[i], abs_test_dir) == nullptr) {
             printf("Error: Could not resolve path %s: %s\n", test_dirs[i], strerror(errno));
             continue;
         }
 
         // Ensure the output directory for this test binary's output exists.
-        if (output_dir != NULL) {
+        if (output_dir != nullptr) {
             char buf[PATH_MAX];
             size_t path_len = snprintf(buf, sizeof(buf), "%s/%s", output_dir, abs_test_dir);
             if (path_len >= sizeof(buf)) {
@@ -669,11 +670,11 @@ int main(int argc, char** argv) {
     // It's not catastrophic if we can't unset it; we're just trying to clean up
     unsetenv(TEST_ENV_NAME);
 
-    if (output_dir != NULL) {
+    if (output_dir != nullptr) {
         char summary_path[PATH_MAX];
         snprintf(summary_path, sizeof(summary_path), "%s/summary.json", output_dir);
         FILE* summary_json = fopen(summary_path, "w");
-        if (summary_json == NULL) {
+        if (summary_json == nullptr) {
             printf("Error: Could not open JSON summary file.\n");
             return -1;
         }
@@ -701,8 +702,8 @@ int main(int argc, char** argv) {
     if (failed_count) {
         printf("\nThe following tests failed:\n");
     }
-    test_t* test = NULL;
-    test_t* temp = NULL;
+    test_t* test = nullptr;
+    test_t* temp = nullptr;
     list_for_every_entry_safe (&tests, test, temp, test_t, node) {
         switch (test->result) {
         case SUCCESS:
@@ -727,7 +728,7 @@ int main(int argc, char** argv) {
     }
 
     // Free the glob structure.
-    if (test_globs != NULL) {
+    if (test_globs != nullptr) {
         globfree(&resolved_globs);
     }
 

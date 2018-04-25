@@ -10,11 +10,15 @@ MODULE_TYPE := userapp
 MODULE_GROUP := test
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/runtests.c \
+    $(LOCAL_DIR)/runtests.cpp \
 
 MODULE_NAME := runtests
 
 MODULE_LIBS := \
-    system/ulib/fdio system/ulib/launchpad system/ulib/zircon system/ulib/c system/ulib/unittest
+    system/ulib/fdio \
+    system/ulib/launchpad \
+    system/ulib/zircon \
+    system/ulib/c \
+    system/ulib/unittest \
 
 include make/module.mk
