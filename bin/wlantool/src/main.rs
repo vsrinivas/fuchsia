@@ -37,8 +37,8 @@ fn main() -> Result<(), Error> {
         connect_to_service::<DeviceServiceMarker>().context("failed to connect to device service")?;
 
     let fut = match opt {
-        Opt::Phy(cmd) => do_phy(cmd, wlan_svc).left(),
-        Opt::Iface(cmd) => do_iface(cmd, wlan_svc).right(),
+        Opt::Phy(cmd) => do_phy(cmd, wlan_svc).left_future(),
+        Opt::Iface(cmd) => do_iface(cmd, wlan_svc).right_future(),
     };
 
     exec.run_singlethreaded(fut)
@@ -54,7 +54,7 @@ fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error 
                 .and_then(|response| {
                     println!("response: {:?}", response);
                     Ok(())
-                }).left()
+                }).left_future()
         },
         opts::PhyCmd::Query { phy_id } => {
             let mut req = wlan_service::QueryPhyRequest { phy_id };
@@ -64,7 +64,7 @@ fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Error 
                 .and_then(|response| {
                     println!("response: {:?}", response);
                     Ok(())
-                }).right()
+                }).right_future()
         }
     }
 }
@@ -84,7 +84,7 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
                     println!("response: {:?}", response);
                     Ok(())
                 })
-                .left()
+                .left_future()
         }
         opts::IfaceCmd::Delete { phy_id, iface_id } => {
             let mut req = wlan_service::DestroyIfaceRequest {
@@ -100,7 +100,7 @@ fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> impl Future<Item = (), Er
                 })
                 .map_err(|e| e.context("error destroying iface").into())
                 .into_future()
-                .right()
+                .right_future()
         }
     }
 }

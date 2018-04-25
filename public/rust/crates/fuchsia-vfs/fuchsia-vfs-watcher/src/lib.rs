@@ -204,7 +204,7 @@ mod tests {
     fn one_step<S: Stream>(exec: &mut async::Executor, s: S) -> (S::Item, S)
         where S::Error: Debug
     {
-        let f = s.into_future();
+        let f = s.next();
         let f = f.on_timeout(
             500.millis().after_now(),
             || panic!("timeout waiting for watcher")

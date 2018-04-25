@@ -10,7 +10,7 @@ repository = "https://fuchsia.googlesource.com/garnet/"
 fdio = "0.2"
 fuchsia-async = "0.1"
 fuchsia-zircon = "0.3"
-futures = "=0.2.0-alpha"
+futures = { version = "0.2.1", features = ["nightly"] }
 bytes = "0.4"
 libc = "0.2"
 

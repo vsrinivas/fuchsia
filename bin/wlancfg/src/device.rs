@@ -35,14 +35,14 @@ where
             let (status, query_resp) = resp;
             if let Err(e) = zx::Status::ok(status) {
                 println!("failed to query phy {}: {:?}", id, e);
-                return future::ok(()).left();
+                return future::ok(()).left_future();
             }
 
             let info = match query_resp {
                 Some(r) => r.info,
                 None => {
                     println!("query_phy failed to return a a PhyInfo in the QueryPhyResponse");
-                    return future::ok(()).left();
+                    return future::ok(()).left_future();
                 }
             };
             let path = info.dev_path.unwrap_or("*".into());
@@ -50,7 +50,7 @@ where
                 Some(roles) => roles,
                 None => {
                     println!("no matches for wlan phy {}", id);
-                    return future::ok(()).left();
+                    return future::ok(()).left_future();
                 }
             };
 
@@ -69,9 +69,9 @@ where
                         .recover(|e| eprintln!("error creating iface: {:?}", e))
                 })
                 .collect::<stream::FuturesUnordered<_>>()
-                .collect()
+                .for_each(|()| Ok(()))
                 .map(|_| ())
-                .right()
+                .right_future()
         })
         .recover(|e| println!("failure in on_phy_added: {:?}", e))
 }

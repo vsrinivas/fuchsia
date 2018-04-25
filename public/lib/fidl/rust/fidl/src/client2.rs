@@ -161,16 +161,16 @@ impl Client {
         let id = self.inner.register_msg_interest();
         let (out_buf, handles) = match msg_from_id(Txid::from_interest_id(id)) {
             Ok(x) => x,
-            Err(e) => return future::err(e).left(),
+            Err(e) => return future::err(e).left_future(),
         };
         if let Err(e) = self.inner.channel.write(out_buf, handles) {
-            return future::err(Error::ClientWrite(e)).left();
+            return future::err(Error::ClientWrite(e)).left_future();
         }
 
         MessageResponse {
             id: Txid::from_interest_id(id),
             client: Some(self.inner.clone()),
-        }.right()
+        }.right_future()
     }
 }
 
@@ -616,12 +616,12 @@ mod tests {
         drop(server);
 
         let recv = client.take_event_receiver()
-            .into_future()
+            .next()
             .and_then(|(x, stream)| {
                 let x = x.expect("should contain one element");
                 let x: i32 = decode_transaction_body(x).expect("failed to decode event");
                 assert_eq!(x, 55);
-                stream.into_future()
+                stream.next()
             })
             .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"))
             .map_err(|e| {
