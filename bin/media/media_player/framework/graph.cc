@@ -243,7 +243,7 @@ void Graph::PostTask(const fxl::Closure& task,
   });
 }
 
-NodeRef Graph::Add(std::shared_ptr<StageImpl> stage) {
+NodeRef Graph::AddStage(std::shared_ptr<StageImpl> stage) {
   FXL_DCHECK(stage);
   FXL_DCHECK(async_);
 

@@ -57,6 +57,23 @@ class Node : public GenericNode {
   TStage* stage() { return reinterpret_cast<TStage*>(generic_stage()); }
 };
 
+// Provides a means of determining the stage implementation type for a given
+// node type. This template should be specialized for each node model defined.
+// For example, if we've defined a node model Foo that uses the stage
+// implementation FooStageImpl, we'd do this:
+//
+//   template <typename TNode>
+//   struct NodeTraits<
+//       TNode,
+//       typename std::enable_if<std::is_base_of<Foo, TNode>::value>::type> {
+//     using stage_impl_type = FooStageImpl;
+//   };
+//
+template <typename TNode, typename Enable = void>
+struct NodeTraits {
+  using stage_impl_type = void;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_NODE_H_

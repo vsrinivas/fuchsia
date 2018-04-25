@@ -38,6 +38,15 @@ class Sink : public Node<SinkStage> {
   virtual Demand SupplyPacket(PacketPtr packet) = 0;
 };
 
+class SinkStageImpl;
+
+template <typename TNode>
+struct NodeTraits<
+    TNode,
+    typename std::enable_if<std::is_base_of<Sink, TNode>::value>::type> {
+  using stage_impl_type = SinkStageImpl;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SINK_H_

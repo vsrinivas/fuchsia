@@ -38,6 +38,15 @@ class MultistreamSource : public Node<MultistreamSourceStage> {
   virtual void RequestPacket() = 0;
 };
 
+class MultistreamSourceStageImpl;
+
+template <typename TNode>
+struct NodeTraits<TNode,
+                  typename std::enable_if<
+                      std::is_base_of<MultistreamSource, TNode>::value>::type> {
+  using stage_impl_type = MultistreamSourceStageImpl;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_MULTISTREAM_SOURCE_H_

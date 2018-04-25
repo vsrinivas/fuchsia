@@ -35,6 +35,15 @@ class Transform : public Node<TransformStage> {
       PacketPtr* output) = 0;
 };
 
+class TransformStageImpl;
+
+template <typename TNode>
+struct NodeTraits<
+    TNode,
+    typename std::enable_if<std::is_base_of<Transform, TNode>::value>::type> {
+  using stage_impl_type = TransformStageImpl;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_TRANSFORM_H_

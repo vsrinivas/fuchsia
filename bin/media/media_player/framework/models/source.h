@@ -39,6 +39,15 @@ class Source : public Node<SourceStage> {
   virtual void SetDownstreamDemand(Demand demand) = 0;
 };
 
+class SourceStageImpl;
+
+template <typename TNode>
+struct NodeTraits<
+    TNode,
+    typename std::enable_if<std::is_base_of<Source, TNode>::value>::type> {
+  using stage_impl_type = SourceStageImpl;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_SOURCE_H_

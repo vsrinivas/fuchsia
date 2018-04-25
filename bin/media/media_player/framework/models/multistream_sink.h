@@ -44,6 +44,15 @@ class MultistreamSink : public Node<MultistreamSinkStage> {
   virtual Demand SupplyPacket(size_t input_index, PacketPtr packet) = 0;
 };
 
+class MultistreamSinkStageImpl;
+
+template <typename TNode>
+struct NodeTraits<TNode,
+                  typename std::enable_if<
+                      std::is_base_of<MultistreamSink, TNode>::value>::type> {
+  using stage_impl_type = MultistreamSinkStageImpl;
+};
+
 }  // namespace media_player
 
 #endif  // GARNET_BIN_MEDIA_MEDIA_PLAYER_FRAMEWORK_MODELS_MULTISTREAM_SINK_H_

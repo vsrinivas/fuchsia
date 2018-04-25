@@ -18,37 +18,6 @@
 
 namespace media_player {
 
-namespace internal {
-
-// StageCreator::Create creates a stage for a node. DEFINE_STAGE_CREATOR defines
-// a specialization for a particular model/stage type pair. Every new
-// model/stage type pair that's defined will need an entry here.
-template <typename T, typename Enable = void>
-class StageCreator;
-
-#define DEFINE_STAGE_CREATOR(TModel, TStage)                                 \
-  template <typename T>                                                      \
-  class StageCreator<                                                        \
-      T, typename std::enable_if<std::is_base_of<TModel, T>::value>::type> { \
-   public:                                                                   \
-    static inline std::shared_ptr<StageImpl> Create(                         \
-        std::shared_ptr<T> t_ptr) {                                          \
-      std::shared_ptr<TStage> stage =                                        \
-          std::make_shared<TStage>(std::shared_ptr<TModel>(t_ptr));          \
-      t_ptr->SetStage(stage.get());                                          \
-      return stage;                                                          \
-    }                                                                        \
-  };
-
-DEFINE_STAGE_CREATOR(Transform, TransformStageImpl);
-DEFINE_STAGE_CREATOR(Source, SourceStageImpl);
-DEFINE_STAGE_CREATOR(Sink, SinkStageImpl);
-DEFINE_STAGE_CREATOR(MultistreamSource, MultistreamSourceStageImpl);
-
-#undef DEFINE_STAGE_CREATOR
-
-}  // namespace internal
-
 //
 // USAGE
 //
@@ -115,10 +84,13 @@ class Graph {
   ~Graph();
 
   // Adds a node to the graph.
-  template <typename T>
-  NodeRef Add(std::shared_ptr<T> t_ptr) {
-    FXL_DCHECK(t_ptr);
-    return Add(internal::StageCreator<T>::Create(t_ptr));
+  template <typename TNode,
+            typename TStageImpl = typename NodeTraits<TNode>::stage_impl_type>
+  NodeRef Add(std::shared_ptr<TNode> node_ptr) {
+    FXL_DCHECK(node_ptr);
+    auto stage = std::make_shared<TStageImpl>(node_ptr);
+    node_ptr->SetStage(stage.get());
+    return AddStage(stage);
   }
 
   // Removes a node from the graph after disconnecting it from other nodes.
@@ -157,20 +129,6 @@ class Graph {
   // Disconnects and removes everything connected to input.
   void RemoveNodesConnectedToInput(const InputRef& input);
 
-  // Adds all the nodes in t (which must all have one input and one output) and
-  // connects them in sequence to the output connector. Returns the output
-  // connector of the last node or the output parameter if it is empty.
-  template <typename T>
-  OutputRef AddAndConnectAll(OutputRef output, const T& t) {
-    for (const auto& element : t) {
-      NodeRef node = Add(internal::StageCreator<T>::Create(element));
-      Connect(output, node.input());
-      output = node.output();
-    }
-
-    return output;
-  }
-
   // Removes all nodes from the graph.
   void Reset();
 
@@ -204,7 +162,7 @@ class Graph {
 
  private:
   // Adds a stage to the graph.
-  NodeRef Add(std::shared_ptr<StageImpl> stage);
+  NodeRef AddStage(std::shared_ptr<StageImpl> stage);
 
   async_t* async_;
 
