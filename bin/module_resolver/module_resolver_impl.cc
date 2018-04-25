@@ -96,8 +96,6 @@ class ModuleResolverImpl::FindModulesCall
     FlowToken flow{this, &result_};
 
     if (query_.handler) {
-      // TODO(MI4-888): revisit this short circuiting and add the module
-      // manifest to the result.
       // Client already knows what Module they want to use, so we'll
       // short-circuit resolution.
       result_ = HandleUrlQuery(query_);

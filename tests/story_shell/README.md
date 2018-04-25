@@ -14,6 +14,12 @@ story shell just responds.
 * We verify that the story shell receives the same notification about the
   started module as before, including the manifest.
 
+We also verify that the story receives the manifest regardless of how the intent
+we use to add the module is resolved, i.e. regardless of whether it specifies
+the action or the package of the module. For that, we run the whole sequence
+above again, but use intents that specify handlers rather than actions to add
+the modules.
+
 For each event we would like to verify, the story shell writes to TestStore
 using Put(). The user shell uses Get() to register handlers for the keys it
 expects the story shell to Put(), and continues when it has seen all the keys.
