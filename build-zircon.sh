@@ -22,6 +22,7 @@ usage() {
   echo "  -V: Level 2 verbosity"
   echo "  -A: Build with ASan"
   echo "  -H: Build host tools with ASan"
+  echo "  -j N: Passed along to make (number of parallel jobs)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
   echo "  -o <outdir>: Directory in which to put the build-zircon directory."
   echo ""
@@ -36,12 +37,13 @@ declare OUTDIR="${ROOT_DIR}/out"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 
-while getopts "AcHht:p:o:vV" opt; do
+while getopts "AcHhj:t:p:o:vV" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
     H) HOST_ASAN="true" ;;
     h) usage ; exit 0 ;;
+    j) JOBS="${OPTARG}" ;;
     o) OUTDIR="${OPTARG}" ;;
     t) ARCHLIST=("${OPTARG}") ;;
     v) VERBOSE="1" ;;
