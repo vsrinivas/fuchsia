@@ -114,6 +114,7 @@ package("scenic_tools") {
     "input",
     "print_input",
     "screencap",
+    "set_renderer_params_HACK:set_renderer_params",
     "set_root_view",
   ]
 
@@ -123,6 +124,9 @@ package("scenic_tools") {
     },
     {
       name = "set_root_view"
+    },
+    {
+      name = "set_renderer_params"
     },
     {
       name = "print_input"

@@ -27,6 +27,7 @@ executable("root_presenter") {
   ]
 
   deps = [
+    ":renderer_params",
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
     "//garnet/public/lib/app/cpp",
@@ -48,4 +49,16 @@ executable("root_presenter") {
   include_dirs = [ "//third_party/glm" ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+source_set("renderer_params") {
+  sources = [
+    "renderer_params.cc",
+    "renderer_params.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/gfx/fidl",
+  ]
 }
