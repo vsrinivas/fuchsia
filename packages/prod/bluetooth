@@ -1,6 +1,6 @@
 {
     "packages": {
-        "bluetooth": "//garnet/bin/bluetooth",
+        "bt-gap": "//garnet/bin/bt-gap",
         "bluetooth_tools": "//garnet/bin/bluetooth_tools",
         "bthci_fake": "//garnet/drivers/bluetooth/hci/fake:bthci_fake",
         "bthci_passthrough": "//garnet/drivers/bluetooth/hci/passthrough:bthci_passthrough",

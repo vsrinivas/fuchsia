@@ -1,0 +1,55 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rust_binary.gni")
+import("//build/package.gni")
+
+rust_binary("bin") {
+  name = "bt-gap"
+  with_unit_tests = true
+}
+
+package("bt-gap") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "bt-gap"
+
+  meta = [{
+    path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+    dest = "legacy_flat_exported_dir"
+  },
+  {
+    path = rebase_path("meta/sandbox")
+    dest = "sandbox"
+  }]
+}
+
+# TODO move into top level bluetooth dir
+executable("bluetooth_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+package("bluetooth_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "bluetooth_tests"
+
+  deps = [
+    ":bluetooth_unittests",
+    "//garnet/bin/bluetooth_tests/integration:bluetooth",
+  ]
+
+  tests = [
+    { name = "bluetooth_unittests" },
+  ]
+}

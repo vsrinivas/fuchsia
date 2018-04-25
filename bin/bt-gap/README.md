@@ -92,7 +92,7 @@ TODO(armansito): Describe integration tests
 
 ### Log Verbosity
 
-#### bin/bluetooth
+#### bin/bt-gap
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
 The mapping between environment service names and their handlers is defined in
