@@ -10,14 +10,9 @@
 #include <unistd.h>
 
 #include "xdc.h"
-#include "xdc-hw.h"
 #include "xhci-hw.h"
-#include "xhci-trb.h"
 #include "xhci-util.h"
 
-// The type and length fields for a string descriptor are one byte each.
-#define STR_DESC_METADATA_LEN  2
-#define MAX_STR_LEN            64
 // String descriptors use UNICODE UTF-16LE encodings.
 #define XDC_MANUFACTURER       u"Google Inc."
 #define XDC_PRODUCT            u"Fuchsia XDC Target"
@@ -34,67 +29,11 @@
 // See XHCI Spec, 7.6.3.2
 #define EP_CTX_MAX_PACKET_SIZE 1024
 
-// There are only two endpoints, one for bulk OUT and one for bulk IN.
-#define OUT_EP_IDX             0
-#define IN_EP_IDX              1
-#define NUM_EPS                2
-
 // The maximum duration to transition from connected to configured state.
 #define TRANSITION_CONFIGURED_THRESHOLD ZX_SEC(5)
 
 // TODO(jocelyndang): tweak this.
 #define POLL_INTERVAL ZX_MSEC(100)
-
-typedef struct {
-    xhci_transfer_ring_t transfer_ring;
-} xdc_endpoint_t;
-
-typedef struct {
-    uint8_t len;
-    uint8_t type;
-    uint8_t string[MAX_STR_LEN];
-} xdc_str_desc_t;
-
-typedef struct {
-    xdc_str_desc_t str_0_desc;
-    xdc_str_desc_t manufacturer_desc;
-    xdc_str_desc_t product_desc;
-    xdc_str_desc_t serial_num_desc;
-} xdc_str_descs_t;
-
-typedef struct {
-    zx_device_t* zxdev;
-
-    // Shared from XHCI.
-    zx_handle_t bti_handle;
-    void* mmio;
-
-    xdc_debug_cap_regs_t* debug_cap_regs;
-
-    // Underlying buffer for the event ring segment table
-    io_buffer_t erst_buffer;
-    erst_entry_t* erst_array;
-
-    xhci_event_ring_t event_ring;
-
-    // Underlying buffer for the context data and string descriptors.
-    io_buffer_t context_str_descs_buffer;
-    xdc_context_data_t* context_data;
-    xdc_str_descs_t* str_descs;
-
-    xdc_endpoint_t eps[NUM_EPS];
-
-    thrd_t start_thread;
-
-    // Whether a Root Hub Port is connected to a Debug Host and assigned to the Debug Capability.
-    bool connected;
-    // The last connection time in nanoseconds, with respect to the monotonic clock.
-    zx_time_t last_conn;
-    // Whether the Debug Device is in the Configured state.
-    bool configured;
-    // Whether to suspend all activity.
-    atomic_bool suspended;
-} xdc_t;
 
 static void xdc_wait_bits(volatile uint32_t* ptr, uint32_t bits, uint32_t expected) {
     uint32_t value = XHCI_READ32(ptr);

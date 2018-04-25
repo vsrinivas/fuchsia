@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <assert.h>
+
 #include "xhci-hw.h"
 
 // clang-format off
