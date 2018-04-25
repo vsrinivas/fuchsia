@@ -321,37 +321,18 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
 }
 
 zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
-    size_t size = 1UL << page_size_shift;
-
-    DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
-
     LTRACEF("page_size_shift %u\n", page_size_shift);
 
-    if (size > PAGE_SIZE) {
-        size_t count = size / PAGE_SIZE;
-        size_t ret = pmm_alloc_contiguous(count, PMM_ALLOC_FLAG_KMAP,
-                                          static_cast<uint8_t>(page_size_shift), paddrp, NULL);
-        if (ret != count)
-            return ZX_ERR_NO_MEMORY;
+    // currently we only support allocating a single page
+    DEBUG_ASSERT(page_size_shift == PAGE_SIZE_SHIFT);
 
-        pt_pages_ += count;
-    } else if (size == PAGE_SIZE) {
-        void* vaddr = pmm_alloc_kpage(paddrp, NULL);
-        if (!vaddr)
-            return ZX_ERR_NO_MEMORY;
-
-        pt_pages_++;
-    } else {
-        void* vaddr = memalign(size, size);
-        if (!vaddr)
-            return ZX_ERR_NO_MEMORY;
-        *paddrp = vaddr_to_paddr(vaddr);
-        if (*paddrp == 0) {
-            free(vaddr);
-            return ZX_ERR_NO_MEMORY;
-        }
-        pt_pages_++;
+    vm_page_t* page = pmm_alloc_page(PMM_ALLOC_FLAG_KMAP, paddrp);
+    if (!page) {
+        return ZX_ERR_NO_MEMORY;
     }
+
+    page->state = VM_PAGE_STATE_MMU;
+    pt_pages_++;
 
     LOCAL_KTRACE0("page table alloc");
 
@@ -360,25 +341,21 @@ zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shif
 }
 
 void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_shift) {
-    DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
-
     LTRACEF("vaddr %p paddr 0x%lx page_size_shift %u\n", vaddr, paddr, page_size_shift);
 
-    size_t size = 1U << page_size_shift;
+    // currently we only support freeing a single page
+    DEBUG_ASSERT(page_size_shift == PAGE_SIZE_SHIFT);
+
     vm_page_t* page;
 
     LOCAL_KTRACE0("page table free");
 
-    if (size == PAGE_SIZE) {
-        page = paddr_to_vm_page(paddr);
-        if (!page)
-            panic("bad page table paddr 0x%lx\n", paddr);
-        pmm_free_page(page);
-    } else if (size < PAGE_SIZE) {
-        free(vaddr);
-    } else {
-        PANIC_UNIMPLEMENTED;
+    page = paddr_to_vm_page(paddr);
+    if (!page) {
+        panic("bad page table paddr 0x%lx\n", paddr);
     }
+    pmm_free_page(page);
+
     pt_pages_--;
 }
 
@@ -1023,9 +1000,13 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags) {
         size_ = size;
 
         paddr_t pa;
-        volatile pte_t* va = static_cast<volatile pte_t*>(pmm_alloc_kpage(&pa, NULL));
-        if (!va)
+        vm_page_t* page = pmm_alloc_page(PMM_ALLOC_FLAG_KMAP, &pa);
+        if (!page) {
             return ZX_ERR_NO_MEMORY;
+        }
+        page->state = VM_PAGE_STATE_MMU;
+
+        volatile pte_t* va = static_cast<volatile pte_t*>(paddr_to_physmap(pa));
 
         tt_virt_ = va;
         tt_phys_ = pa;

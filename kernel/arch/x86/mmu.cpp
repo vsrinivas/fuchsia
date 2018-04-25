@@ -18,6 +18,7 @@
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <vm/arch_vm_aspace.h>
+#include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
 #include <zircon/types.h>
@@ -468,12 +469,12 @@ X86PageTableBase::~X86PageTableBase() {
 zx_status_t X86PageTableBase::Init(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
     /* allocate a top level page table for the new address space */
     paddr_t pa;
-    vm_page_t* p;
-    virt_ = (pt_entry_t*)pmm_alloc_kpage(&pa, &p);
-    if (!virt_) {
+    vm_page_t* p = pmm_alloc_page(PMM_ALLOC_FLAG_KMAP, &pa);
+    if (!p) {
         TRACEF("error allocating top level page directory\n");
         return ZX_ERR_NO_MEMORY;
     }
+    virt_ = reinterpret_cast<pt_entry_t*>(paddr_to_physmap(pa));
     phys_ = pa;
     p->state = VM_PAGE_STATE_MMU;
 

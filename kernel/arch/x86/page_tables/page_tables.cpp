@@ -295,14 +295,17 @@ void X86PageTableBase::UnmapEntry(ConsistencyManager* cm, PageTableLevel level, 
  * @brief Allocating a new page table
  */
 static volatile pt_entry_t* _map_alloc_page(void) {
-    vm_page_t* p;
-
-    pt_entry_t* page_ptr = static_cast<pt_entry_t*>(pmm_alloc_kpage(nullptr, &p));
-    if (!page_ptr)
+    paddr_t pa;
+    vm_page_t* p = pmm_alloc_page(PMM_ALLOC_FLAG_KMAP, &pa);
+    if (!p) {
         return nullptr;
+    }
+    p->state = VM_PAGE_STATE_MMU;
+
+    pt_entry_t* page_ptr = static_cast<pt_entry_t*>(paddr_to_physmap(pa));
+    DEBUG_ASSERT(page_ptr);
 
     arch_zero_page(page_ptr);
-    p->state = VM_PAGE_STATE_MMU;
 
     return page_ptr;
 }
