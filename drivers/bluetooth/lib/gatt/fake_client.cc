@@ -82,7 +82,9 @@ void FakeClient::DiscoverDescriptors(att::Handle range_start,
 }
 
 void FakeClient::ReadRequest(att::Handle handle, ReadCallback callback) {
-  // TODO(armansito): implement
+  if (read_request_callback_) {
+    read_request_callback_(handle, std::move(callback));
+  }
 }
 
 void FakeClient::WriteRequest(att::Handle handle,

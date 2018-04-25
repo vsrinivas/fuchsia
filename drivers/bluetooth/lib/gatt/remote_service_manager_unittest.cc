@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 
+#include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
 #include "garnet/drivers/bluetooth/lib/testing/test_base.h"
 #include "lib/fxl/macros.h"
 
@@ -586,6 +587,124 @@ TEST_F(GATT_RemoteServiceManagerTest, DiscoverDescriptorsOfMultipleLateFail) {
   EXPECT_EQ(2u, fake_client()->desc_discovery_count());
   EXPECT_FALSE(service->IsDiscovered());
   EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharAfterShutDown) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  service->ShutDown();
+
+  att::Status status;
+  service->ReadCharacteristic(
+      0, [&](auto cb_status, const auto&) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kFailed, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharWhileNotReady) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  att::Status status;
+  service->ReadCharacteristic(
+      0, [&](auto cb_status, const auto&) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotReady, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharNotFound) {
+  ServiceData data(1, 2, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+  SetupCharacteristics(service, std::vector<CharacteristicData>());
+
+  att::Status status;
+  service->ReadCharacteristic(
+      0, [&](auto cb_status, const auto&) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotFound, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharNotSupported) {
+  ServiceData data(1, 3, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // No "read" property set.
+  CharacteristicData chr(0, 2, 3, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  att::Status status;
+  service->ReadCharacteristic(
+      0, [&](auto cb_status, const auto&) { status = cb_status; });
+
+  RunUntilIdle();
+
+  EXPECT_EQ(HostError::kNotSupported, status.error());
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharSendsReadRequest) {
+  constexpr att::Handle kValueHandle = 3;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  const auto kValue = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  fake_client()->set_read_request_callback(
+      [&](att::Handle handle, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        callback(att::Status(), kValue);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadCharacteristic(0, [&](auto cb_status, const auto& value) {
+    status = cb_status;
+    EXPECT_TRUE(common::ContainersEqual(kValue, value));
+  });
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, ReadCharSendsReadRequestWithDispatcher) {
+  constexpr att::Handle kValueHandle = 3;
+
+  ServiceData data(1, kValueHandle, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  CharacteristicData chr(Property::kRead, 2, kValueHandle, kTestUuid3);
+  SetupCharacteristics(service, {{chr}});
+
+  const auto kValue = common::CreateStaticByteBuffer('t', 'e', 's', 't');
+
+  fake_client()->set_read_request_callback(
+      [&](att::Handle handle, auto callback) {
+        EXPECT_EQ(kValueHandle, handle);
+        callback(att::Status(), kValue);
+      });
+
+  att::Status status(HostError::kFailed);
+  service->ReadCharacteristic(
+      0,
+      [&](auto cb_status, const auto& value) {
+        status = cb_status;
+        EXPECT_TRUE(common::ContainersEqual(kValue, value));
+      },
+      dispatcher());
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(status);
 }
 
 TEST_F(GATT_RemoteServiceManagerTest, WriteCharAfterShutDown) {

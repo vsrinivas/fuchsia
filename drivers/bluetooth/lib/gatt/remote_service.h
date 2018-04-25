@@ -60,6 +60,12 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // posted on |dispatcher|.
   bool AddRemovedHandler(fxl::Closure handler, async_t* dispatcher = nullptr);
 
+  // Returns true if all contents of this service have been discovered. This can
+  // only be called on the GATT thread and is primarily intended for unit tests.
+  // Clients should not rely on this and use DiscoverCharacteristics() to
+  // guarantee discovery.
+  bool IsDiscovered() const;
+
   // Performs characteristic discovery and reports the result asynchronously in
   // |callback|. Returns the cached results if characteristics were already
   // discovered.
@@ -68,14 +74,18 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   void DiscoverCharacteristics(CharacteristicCallback callback,
                                async_t* dispatcher = nullptr);
 
-  // Returns true if all contents of this service have been discovered. This can
-  // only be called on the GATT thread and is primarily intended for unit tests.
-  // Clients should not rely on this and use DiscoverCharacteristics() to
-  // guarantee discovery.
-  bool IsDiscovered() const;
+  // Sends a read request to the characteristic with the given identifier. Fails
+  // if characteristics have not been discovered.
+  //
+  // NOTE: Providing a |dispatcher| results in a copy of the resulting value.
+  using ReadValueCallback =
+      std::function<void(att::Status, const common::ByteBuffer&)>;
+  void ReadCharacteristic(IdType id,
+                          ReadValueCallback callback,
+                          async_t* dispatcher = nullptr);
 
   // Sends a write request to the characteristic with the given identifier.
-  // This operation fails if characteristics have not been discovered.
+  // Fails if characteristics have not been discovered.
   //
   // TODO(armansito): Add a ByteBuffer version.
   void WriteCharacteristic(IdType id,

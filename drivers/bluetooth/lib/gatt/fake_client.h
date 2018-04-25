@@ -67,6 +67,12 @@ class FakeClient final : public Client {
   size_t chrc_discovery_count() const { return chrc_discovery_count_; }
   size_t desc_discovery_count() const { return desc_discovery_count_; }
 
+  // Sets a callback which will run when ReadRequest gets called.
+  using ReadRequestCallback = std::function<void(att::Handle, ReadCallback)>;
+  void set_read_request_callback(ReadRequestCallback callback) {
+    read_request_callback_ = std::move(callback);
+  }
+
   // Sets a callback which will run when WriteRequest gets called.
   using WriteRequestCallback = std::function<
       void(att::Handle, const common::ByteBuffer&, att::StatusCallback)>;
@@ -123,7 +129,7 @@ class FakeClient final : public Client {
   att::Handle last_desc_discovery_end_handle_ = 0;
   size_t desc_discovery_count_ = 0;
 
-  // Called by WriteRequest().
+  ReadRequestCallback read_request_callback_;
   WriteRequestCallback write_request_callback_;
 
   fxl::WeakPtrFactory<FakeClient> weak_ptr_factory_;

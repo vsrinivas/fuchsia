@@ -13,6 +13,7 @@ namespace gatt {
 
 using att::Status;
 using att::StatusCallback;
+using common::BufferView;
 using common::HostError;
 
 namespace {
@@ -33,6 +34,26 @@ void ReportStatus(Status status,
                   StatusCallback callback,
                   async_t* dispatcher) {
   RunOrPost([status, cb = std::move(callback)] { cb(status); }, dispatcher);
+}
+
+void ReportValue(att::Status status,
+                 const common::ByteBuffer& value,
+                 RemoteService::ReadValueCallback callback,
+                 async_t* dispatcher) {
+  if (!dispatcher) {
+    callback(status, value);
+    return;
+  }
+
+  // TODO(armansito): Consider making att::Bearer return the ATT PDU buffer
+  // directly which would remove the need for a copy.
+
+  auto buffer = common::NewSlabBuffer(value.size());
+  value.Copy(buffer.get());
+
+  async::PostTask(dispatcher,
+                  [status, callback = std::move(callback),
+                   val = std::move(buffer)] { callback(status, *val); });
 }
 
 }  // namespace
@@ -161,6 +182,35 @@ bool RemoteService::IsDiscovered() const {
   // TODO(armansito): Return true only if included services have also been
   // discovered.
   return HasCharacteristics();
+}
+
+void RemoteService::ReadCharacteristic(IdType id,
+                                       ReadValueCallback cb,
+                                       async_t* dispatcher) {
+  RunGattTask([this, id, cb = std::move(cb), dispatcher]() mutable {
+    RemoteCharacteristic* chrc;
+    att::Status status = att::Status(GetCharacteristic(id, &chrc));
+    if (!status) {
+      ReportValue(status, BufferView(), std::move(cb), dispatcher);
+      return;
+    }
+
+    // TODO(armansito): Use the "long read" procedure when supported.
+    if (!(chrc->info().properties & Property::kRead)) {
+      FXL_VLOG(1) << "gatt: Characteristic does not support \"read\"";
+      ReportValue(att::Status(HostError::kNotSupported), BufferView(), std::move(cb), dispatcher);
+      return;
+    }
+
+    FXL_DCHECK(chrc);
+
+    auto res_cb = [cb = std::move(cb), dispatcher](att::Status status,
+                                                   const auto& value) mutable {
+      ReportValue(status, value, std::move(cb), dispatcher);
+    };
+
+    client_->ReadRequest(chrc->info().value_handle, std::move(res_cb));
+  });
 }
 
 void RemoteService::WriteCharacteristic(IdType id,
