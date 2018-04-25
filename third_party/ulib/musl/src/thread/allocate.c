@@ -115,14 +115,15 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar,
 // Everything else is zero-initialized.
 
 __NO_SAFESTACK thrd_t __allocate_thread(
-    const pthread_attr_t* attr,
+    size_t requested_guard_size,
+    size_t requested_stack_size,
     const char* thread_name,
     char vmo_name[ZX_MAX_NAME_LEN]) {
     thread_allocation_acquire();
 
     const size_t guard_size =
-        attr->_a_guardsize == 0 ? 0 : round_up_to_page(attr->_a_guardsize);
-    const size_t stack_size = round_up_to_page(attr->_a_stacksize);
+        requested_guard_size == 0 ? 0 : round_up_to_page(requested_guard_size);
+    const size_t stack_size = round_up_to_page(requested_stack_size);
 
     const size_t tls_size = libc.tls_size;
     const size_t tcb_size = round_up_to_page(tls_size);

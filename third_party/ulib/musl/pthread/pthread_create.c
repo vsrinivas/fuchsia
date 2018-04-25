@@ -47,7 +47,8 @@ int __pthread_create(pthread_t* restrict res, const pthread_attr_t* restrict att
         return ENOTSUP;
 
     char thread_name[ZX_MAX_NAME_LEN];
-    thrd_t new = __allocate_thread(&attr,
+    thrd_t new = __allocate_thread(attr._a_guardsize,
+                                   attr._a_stacksize,
                                    attr.__name != NULL ? attr.__name :
                                    attr.__c11 ? "thrd_t" : "pthread_t",
                                    thread_name);
