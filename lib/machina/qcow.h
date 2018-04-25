@@ -13,6 +13,7 @@
 #include <string>
 
 #include "garnet/lib/machina/block_dispatcher.h"
+#include "garnet/lib/machina/qcow_refcount.h"
 #include "lib/fxl/macros.h"
 
 namespace machina {
@@ -29,11 +30,13 @@ static constexpr uint64_t kTableOffsetMask =
     ~(kTableEntryCopiedBit | kTableEntryCompressedBit);
 
 struct BigToHostEndianTraits {
+  static uint16_t Convert(uint16_t val) { return be16toh(val); }
   static uint32_t Convert(uint32_t val) { return be32toh(val); }
   static uint64_t Convert(uint64_t val) { return be64toh(val); }
 };
 
 struct HostToBigEndianTraits {
+  static uint16_t Convert(uint16_t val) { return htobe16(val); }
   static uint32_t Convert(uint32_t val) { return htobe32(val); }
   static uint64_t Convert(uint64_t val) { return htobe64(val); }
 };
@@ -59,6 +62,8 @@ struct QcowHeader {
   uint64_t autoclear_features;
   uint32_t refcount_order;
   uint32_t header_length;
+
+  uint32_t cluster_size() const { return 1u << cluster_bits; }
 
   // Return a new header that has been converted from host-endian to big-endian.
   QcowHeader HostToBigEndian() const {
@@ -129,6 +134,8 @@ class QcowFile {
   // cluster will be left unmodified.
   zx_status_t Read(uint64_t linear_offset, void* buf, size_t size);
 
+  QcowRefcount* refcount_table() { return &refcount_table_; }
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(QcowFile);
 
@@ -137,6 +144,7 @@ class QcowFile {
 
   class LookupTable;
   fbl::unique_ptr<LookupTable> lookup_table_;
+  QcowRefcount refcount_table_;
 };
 
 class QcowDispatcher : public BlockDispatcher {

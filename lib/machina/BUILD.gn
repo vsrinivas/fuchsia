@@ -33,6 +33,8 @@ shared_library("machina") {
     "phys_mem.h",
     "qcow.cc",
     "qcow.h",
+    "qcow_refcount.cc",
+    "qcow_refcount.h",
     "vcpu.cc",
     "vcpu.h",
     "virtio_balloon.cc",
