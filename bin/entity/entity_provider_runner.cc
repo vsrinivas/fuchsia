@@ -21,7 +21,6 @@ namespace {
 
 constexpr char kEntityReferencePrefix[] = "EntityRef";
 constexpr char kEntityDataReferencePrefix[] = "EntityData";
-constexpr size_t kDataEntityMaxByteSize = 1024 * 16;
 
 // Given an agent_url and a cookie, encodes it into an entity reference.
 std::string EncodeEntityReference(const std::string& agent_url,
@@ -45,18 +44,6 @@ bool DecodeEntityReference(const std::string& entity_reference,
   *agent_url = StringUnescape(parts[1].ToString());
   *cookie = StringUnescape(parts[2].ToString());
   return true;
-}
-
-std::string EncodeEntityDataReference(
-    std::map<std::string, std::string> type_to_data) {
-  std::string encoded;
-  XdrWrite(&encoded, &type_to_data,
-           XdrFilter<std::map<std::string, std::string>>);
-
-  std::vector<std::string> parts(2);
-  parts[0] = kEntityDataReferencePrefix;
-  parts[1] = StringEscape(encoded, "/");
-  return fxl::JoinStrings(parts, "/");
 }
 
 bool DecodeEntityDataReference(const std::string& entity_reference,
@@ -181,17 +168,21 @@ void EntityProviderRunner::OnEntityProviderFinished(
 
 std::string EntityProviderRunner::CreateReferenceFromData(
     std::map<std::string, std::string> type_to_data) {
-  size_t total_bytes = 0;
-  for (const auto& it : type_to_data) {
-    total_bytes += it.first.size() + it.second.size();
+  // TODO(rosswang): Several of these heap allocations are unnecessary but this
+  // code is only temporary.
+  std::string encoded;
+  XdrWrite(&encoded, &type_to_data,
+           XdrFilter<std::map<std::string, std::string>>);
+
+  std::vector<std::string> parts(2);
+  parts[0] = kEntityDataReferencePrefix;
+  parts[1] = StringEscape(encoded, "/");
+  std::string joined = fxl::JoinStrings(parts, "/");
+  if (joined.length() > ZX_CHANNEL_MAX_MSG_BYTES) {
+    FXL_LOG(ERROR) << "data entity reference size exceeds FIDL channel message "
+                      "size limits";
   }
-  if (total_bytes > kDataEntityMaxByteSize) {
-    FXL_LOG(ERROR)
-        << "Could not create entity data reference: size was to big ("
-        << total_bytes << " bytes)";
-    return nullptr;
-  }
-  return EncodeEntityDataReference(std::move(type_to_data));
+  return joined;
 }
 
 void EntityProviderRunner::CreateReference(
