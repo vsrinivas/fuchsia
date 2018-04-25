@@ -18,13 +18,14 @@ class Hasher {
  public:
   explicit Hasher(uint64_t initial_hash = kHashFnv1OffsetBasis64)
       : value_(initial_hash) {}
+  explicit Hasher(const Hash& hash) : value_(hash.val) {}
 
   // Return the current Hash value.
   Hash value() const {
     // Elsewhere in the code, it will be useful to use a hash-val of zero to
     // mean "lazily compute and return a hash value".
     FXL_DCHECK(value_ != 0);
-    return value_;
+    return {value_};
   }
 
   template <typename T>

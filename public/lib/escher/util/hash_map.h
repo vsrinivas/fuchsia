@@ -6,6 +6,7 @@
 
 #include <unordered_map>
 
+#include "lib/escher/util/hash.h"
 #include "lib/escher/util/hash_fnv_1a.h"
 
 namespace escher {
@@ -32,6 +33,12 @@ struct HashMapHasher<T,
     typename T::HashMapHasher h;
     return h(hashee);
   }
+};
+
+// If the key is already a Hash, don't hash it again.
+template <>
+struct HashMapHasher<Hash, void> {
+  inline size_t operator()(const Hash& hash) const { return hash.val; }
 };
 
 template <typename KeyT, typename ValueT>

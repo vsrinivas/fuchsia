@@ -88,16 +88,19 @@ class ObjectPool {
     return InitialBlockSize() << block_index;
   }
 
-  // Return the number of objects that have been allocated but not freed.
-  size_t UnfreedObjectCount() const {
-    // Get the total count of all objects.
+  // Total number of objects that can be allocated from the pool without
+  // changing the amount of underlying memory.
+  size_t GetCapacity() const {
     size_t num_objects = 0;
     const size_t num_blocks = blocks_.size();
     for (size_t i = 0; i < num_blocks; ++i) {
       num_objects += NumObjectsInBlock(i);
     }
-    return num_objects - vacants_.size();
+    return num_objects;
   }
+
+  // Return the number of objects that have been allocated but not freed.
+  size_t UnfreedObjectCount() const { return GetCapacity() - vacants_.size(); }
 
   // Release all pool resources.  Illegal to call while there are still unfreed
   // objects.  ObjectPool only releases memory when Clear() is called.
@@ -113,6 +116,9 @@ class ObjectPool {
     vacants_.clear();
     blocks_.clear();
   }
+
+  using PolicyType = PolicyT;
+  const PolicyType& policy() const { return policy_; }
 
  private:
   // Allocate a new block of objects, and add them all to |vacants_|.  Called

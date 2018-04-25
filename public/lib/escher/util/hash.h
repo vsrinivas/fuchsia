@@ -8,6 +8,14 @@
 
 namespace escher {
 
-using Hash = uint64_t;
+// Hash value is represented as a struct so that the type system can distinguish
+// it from integer types.
+struct Hash {
+  uint64_t val;
+
+  bool IsValid() const { return val != 0; }
+  bool operator==(const Hash& other) const { return val == other.val; }
+  bool operator!=(const Hash& other) const { return val != other.val; }
+};
 
 }  // namespace escher

@@ -18,6 +18,7 @@ executable("escher_unittests") {
     "scene/directional_light_unittest.cc",
     "shape/rounded_rect_unittest.cc",
     "transform_unittest.cc",
+    "util/hash_cache_unittest.cc",
     "util/hash_unittest.cc",
     "util/hashable_unittest.cc",
     "util/hashmap_unittest.cc",

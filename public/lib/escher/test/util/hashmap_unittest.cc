@@ -30,7 +30,7 @@ struct HashMapCollisionKey {
       Hasher h;
       h.i32(key.hashed_int);
       h.f32(key.hashed_float);
-      return h.value();
+      return h.value().val;
     }
 
     mutable size_t hash_count = 0;
