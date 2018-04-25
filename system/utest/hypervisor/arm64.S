@@ -18,6 +18,8 @@
 .set FIQ_EXC_OFFSET,         0x100
 .set SERROR_EXC_OFFSET,      0x180
 
+.set SPSR_M_BIT_ARCH32,      0x010
+
 // Define new function 'name'.
 // Local label '1:' used by other macros to compute offsets.
 .macro FUNCTION name
@@ -33,17 +35,49 @@
     .skip (\base + \offset) - (2b - 1b)
 .endm
 
-// Signal completion to test case.
-.macro test_complete
-    mov x0,  EXIT_TEST_ADDR
-    str xzr, [x0]
+// test_complete Signals test completion by writing value (0-255) to
+// EXIT_TEST_ADDR. EXIT_TEST_ADDR is monitored by the test routine for
+// access - indicating test completion.
+.macro test_complete value=0 arch=aarch64
+    .if \value > 255 || \value < 0
+        .err
+    .endif
+
+    .ifeqs "\arch", "aarch64"
+        mov x0, EXIT_TEST_ADDR
+        .if \value == 0
+            str xzr, [x0]
+        .else
+            mov x1, \value
+            str x1, [x0]
+        .endif
+    .else
+        .ifeqs "\arch", "aarch32"
+            .word 0xE3A01000 + \value  // aarch32: movw r1, \value
+            .word 0xE30F0000           // aarch32: movw r0, [lower]EXIT_TEST_ADDR
+            .word 0xE34000FF           // aarch32: movw r0, [upper]EXIT_TEST_ADDR
+            .word 0xE5801000           // aarch32: str  r0, [r1]
+        .else
+            .error "Unsupported architecture"
+        .endif
+    .endif
 .endm
 
-// Drop exception level from EL1 to EL0
-.macro drop_to_el0
-    ldr w0, 2f
-    msr elr_el1, x0
-    eret
+// Drop exception level from EL1 to EL0 and, if requested, switch execution
+// state.
+.macro drop_to_el0 arch=aarch64
+    .ifeqs "\arch", "aarch32"
+        mov x0, SPSR_M_BIT_ARCH32  // for aarch32, set PSTATE to AARCH32
+        msr spsr_el1, x0           // and clear everything else upon eret.
+    .else
+        .ifnes "\arch", "aarch64"  // accept default architecture, do nothing.
+            .error "Unsupported architecture"
+        .endif
+    .endif
+
+    ldr w0, 2f               // resume execution at label '2' ahead
+    msr elr_el1, x0          // store exception link register
+    eret                     // resume at el0 using specified arch.
     2:
     .word 2b - 1b + 4
 .endm
@@ -70,6 +104,18 @@ FUNCTION vcpu_wfi_start
     test_complete
 FUNCTION vcpu_wfi_end
 
+// Test wfi instruction handling.
+// Execution of WFI at EL0 on AARCH32 is propagated to EL1 / AARCH64.
+FUNCTION vcpu_aarch32_wfi_start
+    drop_to_el0 aarch32
+    .word 0xE320F003         // aarch32: wfi
+    test_complete 1 aarch32  // Fail, if instruction was executed
+                             // without raising exception.
+
+    exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
+    test_complete
+FUNCTION vcpu_aarch32_wfi_end
+
 // Test floating-point instruction handling with trapping between levels.
 FUNCTION vcpu_fp_start
     drop_to_el0
@@ -87,6 +133,21 @@ FUNCTION vcpu_fp_start
     msr cpacr_el1, x0
     eret
 FUNCTION vcpu_fp_end
+
+// Test wfi instruction handling.
+FUNCTION vcpu_aarch32_fp_start
+    drop_to_el0 aarch32
+    // Load double precision register d0 from address 0.
+    // This should trigger floating point exception.
+    .word 0xE3A00000         // aarch32: mov r0, 0
+    .word 0xED900B00         // aarch32: vldr d0, [r0]
+    test_complete 0 aarch32
+
+    exception_vector LOWER_EL_ARCH32_BASE, SYNC_EXC_OFFSET
+    mov x0, CPACR_EL1_FPEN_NO_TRAP
+    msr cpacr_el1, x0
+    eret
+FUNCTION vcpu_aarch32_fp_end
 
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION vcpu_read_write_state_start

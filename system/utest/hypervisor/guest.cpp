@@ -34,8 +34,12 @@ extern const char vcpu_write_cr0_start[];
 extern const char vcpu_write_cr0_end[];
 extern const char vcpu_wfi_start[];
 extern const char vcpu_wfi_end[];
+extern const char vcpu_aarch32_wfi_start[];
+extern const char vcpu_aarch32_wfi_end[];
 extern const char vcpu_fp_start[];
 extern const char vcpu_fp_end[];
+extern const char vcpu_aarch32_fp_start[];
+extern const char vcpu_aarch32_fp_end[];
 extern const char vcpu_read_write_state_start[];
 extern const char vcpu_read_write_state_end[];
 extern const char guest_set_trap_start[];
@@ -269,6 +273,30 @@ static bool vcpu_wfi() {
     END_TEST;
 }
 
+static bool vcpu_wfi_aarch32() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_aarch32_wfi_start, vcpu_aarch32_wfi_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+#if __aarch64__
+    EXPECT_EQ(packet.guest_mem.read, false);
+    EXPECT_EQ(packet.guest_mem.data, 0);
+#endif  // __aarch64__
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
 static bool vcpu_fp() {
     BEGIN_TEST;
 
@@ -283,6 +311,30 @@ static bool vcpu_fp() {
     ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
     EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_fp_aarch32() {
+    BEGIN_TEST;
+
+    test_t test;
+    ASSERT_TRUE(setup(&test, vcpu_aarch32_fp_start, vcpu_aarch32_fp_end));
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(zx_vcpu_resume(test.vcpu, &packet), ZX_OK);
+    EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
+    EXPECT_EQ(packet.guest_mem.addr, EXIT_TEST_ADDR);
+#if __aarch64__
+    EXPECT_EQ(packet.guest_mem.read, false);
+    EXPECT_EQ(packet.guest_mem.data, 0);
+#endif  // __aarch64__
 
     ASSERT_TRUE(teardown(&test));
 
@@ -501,7 +553,9 @@ RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 #if __aarch64__
 RUN_TEST(vcpu_wfi)
+RUN_TEST(vcpu_wfi_aarch32)
 RUN_TEST(vcpu_fp)
+RUN_TEST(vcpu_fp_aarch32)
 #elif __x86_64__
 RUN_TEST(guest_set_trap_with_io)
 RUN_TEST(vcpu_hlt)
