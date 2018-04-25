@@ -19,7 +19,7 @@ struct start_params {
     zx_handle_t* handles;
     uint32_t* handle_info;
     int (*main)(int, char**, char**);
-    pthread_t td;
+    thrd_t td;
 };
 
 // This gets called via inline assembly below, after switching onto
