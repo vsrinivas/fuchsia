@@ -9,6 +9,7 @@
 #include <soc/imx8m/imx8m-hw.h>
 #include <soc/imx8m/imx8m-iomux.h>
 #include <soc/imx8m/imx8m-gpio.h>
+#include <soc/imx8m/imx8m-sip.h>
 #include <limits.h>
 #include <hw/reg.h>
 #include "imx8mevk.h"
@@ -84,12 +85,14 @@ zx_status_t imx_usb_init(imx8mevk_bus_t* bus) {
 
     uint64_t smc_return = 0;
     // turn on usb via smc calls
-    status = zx_smc_call(get_root_resource(), 0xC2000000, 0x03 ,2 ,1, &smc_return);
+    status = zx_smc_call(get_root_resource(), IMX8M_SIP_GPC, IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
+        IMX8M_PD_USB_OTG1, 1, &smc_return);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
         return status;
     }
-    status = zx_smc_call(get_root_resource(), 0xC2000000, 0x03 ,3 ,1, &smc_return);
+    status = zx_smc_call(get_root_resource(), IMX8M_SIP_GPC, IMX8M_SIP_CONFIG_GPC_PM_DOMAIN,
+        IMX8M_PD_USB_OTG2, 1, &smc_return);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: SMC call to turn USB on failed %d\n", __FUNCTION__, status);
         return status;
