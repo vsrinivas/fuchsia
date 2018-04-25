@@ -71,7 +71,7 @@ static int magma_start(sysdrv_device_t* dev);
 sysdrv_device_t* get_device(void* context) { return static_cast<sysdrv_device_t*>(context); }
 
 // implement core device protocol
-static zx_status_t read_pci_config_16(void* ctx, uint64_t addr, uint16_t* value_out)
+static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_out)
 {
     if (!get_device(ctx)->core_device->platform_device()->ReadPciConfig16(addr, value_out))
         return DRET_MSG(ZX_ERR_INTERNAL, "ReadPciConfig16 failed");
