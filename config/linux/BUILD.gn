@@ -5,23 +5,17 @@
 import("//build/config/sysroot.gni")
 
 config("compiler") {
-  # On linux, we want to statically link against our libc++.a and
-  # libc++abi.a which are shipped as part of the toolchain
   ldflags = [
-    "-stdlib=libc++",
     "-static-libstdc++",
-
-    # libc++ and libc++abi are separate in our current toolchain,
-    # so we have to explicitly statically link it
-    "-Wl,-Bstatic",
-    "-lc++abi",
-    "-Wl,-Bdynamic",
-
     # Set rpath to find dynamically linked libraries placed next to executables in the host
     # build directory.
     "-Wl,-rpath=\$ORIGIN/",
   ]
-  libs = [ "pthread" ]  # libc++ depends on pthreads
+  # TODO(TC-74) The implicitly linked static libc++.a depends on these.
+  libs = [
+    "dl",
+    "pthread",
+  ]
   lib_dirs = [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
   configs = [ ":sysroot" ]
 }
