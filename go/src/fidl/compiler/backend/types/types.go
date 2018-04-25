@@ -312,11 +312,36 @@ type Interface struct {
 	Methods    []Method                  `json:"methods"`
 }
 
+func (d *Interface) HasAttribute(name Identifier) bool {
+	for _, a := range d.Attributes {
+		if a.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *Interface) GetAttribute(name Identifier) string {
 	for _, a := range d.Attributes {
 		if a.Name == name {
 			return a.Value
 		}
+	}
+	return ""
+}
+
+func (d *Interface) GetServiceName() string {
+	if name := d.GetAttribute("ServiceName"); len(name) != 0 {
+		return name
+	}
+	if d.HasAttribute("Discoverable") {
+		ci := ParseCompoundIdentifier(d.Name)
+		var parts []string
+		for _, i := range ci.Library {
+			parts = append(parts, string(i))
+		}
+		parts = append(parts, string(ci.Name))
+		return "\"" + strings.Join(parts, ".") + "\""
 	}
 	return ""
 }

@@ -69,7 +69,7 @@ struct ServiceList {
 // An interface for creating application instances.
 //
 // Typically obtained via |ApplicationEnvironment.GetApplicationLauncher|.
-[ServiceName="component.ApplicationLauncher"]
+[Discoverable]
 interface ApplicationLauncher {
   // Creates a new instance of the application described by |launch_info|.
   //

@@ -652,7 +652,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		EventProxyName:      c.compileCompoundIdentifier(val.Name, EventProxySuffix),
 		ServerName:          c.compileCompoundIdentifier(val.Name, ServiceSuffix),
 		ServiceNameConstant: c.compileCompoundIdentifier(val.Name, ServiceNameSuffix),
-		ServiceNameString:   val.GetAttribute("ServiceName"),
+		ServiceNameString:   val.GetServiceName(),
 	}
 	for _, v := range val.Methods {
 		r.Methods = append(r.Methods, c.compileMethod(val.Name, v))

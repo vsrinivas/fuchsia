@@ -517,7 +517,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		c.namespace,
 		c.compileCompoundIdentifier(val.Name, ""),
-		val.GetAttribute("ServiceName"),
+		val.GetServiceName(),
 		c.compileCompoundIdentifier(val.Name, "_Proxy"),
 		c.compileCompoundIdentifier(val.Name, "_Stub"),
 		c.compileCompoundIdentifier(val.Name, "_EventSender"),

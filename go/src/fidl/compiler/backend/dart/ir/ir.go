@@ -550,7 +550,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	ci := types.ParseCompoundIdentifier(val.Name)
 	r := Interface{
 		c.compileUpperCamelCompoundIdentifier(ci, ""),
-		val.GetAttribute("ServiceName"),
+		val.GetServiceName(),
 		c.compileUpperCamelCompoundIdentifier(ci, "Proxy"),
 		c.compileUpperCamelCompoundIdentifier(ci, "Binding"),
 		c.compileUpperCamelCompoundIdentifier(ci, "Events"),
