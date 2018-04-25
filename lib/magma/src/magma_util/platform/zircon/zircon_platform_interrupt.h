@@ -13,6 +13,8 @@
 #include <ddk/protocol/pci.h>
 #include <lib/zx/handle.h>
 
+#define ENABLE_NEW_IRQ_API 1
+
 namespace magma {
 
 class ZirconPlatformInterrupt : public PlatformInterrupt {
