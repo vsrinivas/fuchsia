@@ -774,7 +774,9 @@ static zx_status_t devhost_rpc_etc(zx_device_t* dev, uint32_t op,
     msg.value = value;
     msg.protocol_id = 0;
     if ((r = dc_msg_rpc(dev->rpc, &msg, msglen, NULL, 0, rsp, rsp_len, actual, outhandle)) < 0) {
-        log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
+        if (!(op == DC_OP_GET_METADATA && r == ZX_ERR_NOT_FOUND)) {
+            log(ERROR, "devhost: rpc:%s failed: %d\n", opname, r);
+        }
     }
     return r;
 }
