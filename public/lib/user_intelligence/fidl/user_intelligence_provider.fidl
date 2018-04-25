@@ -37,8 +37,6 @@ interface UserIntelligenceProvider {
 
   3: GetSpeechToText(request<speech.SpeechToText> speech_to_text);
 
-  4: GetResolver(request<resolver.Resolver> resolver);
-
   // The |ComponentContext| is used to create agents and use message queues.
   5: StartAgents(ComponentContext user_intelligence_context);
 

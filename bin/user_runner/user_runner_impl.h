@@ -16,7 +16,6 @@
 #include <fuchsia/cpp/modular_auth.h>
 #include <fuchsia/cpp/modular_private.h>
 #include <fuchsia/cpp/presentation.h>
-#include <fuchsia/cpp/resolver.h>
 #include <fuchsia/cpp/speech.h>
 #include <fuchsia/cpp/ui.h>
 #include <fuchsia/cpp/views_v1_token.h>

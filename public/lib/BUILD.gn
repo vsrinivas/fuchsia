@@ -88,7 +88,6 @@ fidl("fidl") {
   deps = [
     "auth/fidl",
     "ledger/fidl",
-    "resolver/fidl",
     "speech/fidl",
     "//garnet/public/lib/images/fidl",
     "//garnet/public/lib/media/fidl",

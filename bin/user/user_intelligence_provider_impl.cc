@@ -124,12 +124,6 @@ void UserIntelligenceProviderImpl::GetSpeechToText(
   }
 }
 
-void UserIntelligenceProviderImpl::GetResolver(
-    fidl::InterfaceRequest<resolver::Resolver> request) {
-  // TODO(thatguy): Remove this once the last instances of this are gone from
-  // topaz.
-}
-
 void UserIntelligenceProviderImpl::StartAgents(
     fidl::InterfaceHandle<modular::ComponentContext> component_context_handle) {
   component_context_.Bind(std::move(component_context_handle));
@@ -268,10 +262,6 @@ UserIntelligenceProviderImpl::AddStandardServices(
       [this](fidl::InterfaceRequest<modular::VisibleStoriesProvider> request) {
         visible_stories_provider_->Duplicate(std::move(request));
       });
-
-  service_names.push_back(resolver::Resolver::Name_);
-  agent_host->AddService<resolver::Resolver>(std::bind(
-      &UserIntelligenceProviderImpl::GetResolver, this, std::placeholders::_1));
 
   if (url == kMIDashboardUrl || url == kUsageLogUrl) {
     service_names.push_back(modular::ContextDebug::Name_);

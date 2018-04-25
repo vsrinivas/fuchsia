@@ -12,7 +12,6 @@
 #include <fuchsia/cpp/ledger_internal.h>
 #include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/network.h>
-#include <fuchsia/cpp/resolver.h>
 #include <fuchsia/cpp/views_v1.h>
 #include "lib/app/cpp/connect.h"
 #include "lib/fxl/files/directory.h"
@@ -451,13 +450,6 @@ void UserRunnerImpl::InitializeMaxwell(const fidl::StringPtr& user_shell_url,
                                                  kMaxwellUrl, kMaxwellUrl));
   user_intelligence_provider_->StartAgents(
       std::move(maxwell_app_component_context));
-
-  user_scope_->AddService<resolver::Resolver>(
-      [this](fidl::InterfaceRequest<resolver::Resolver> request) {
-        if (user_intelligence_provider_) {
-          user_intelligence_provider_->GetResolver(std::move(request));
-        }
-      });
 
   // Setup for kModuleResolverUrl
   {

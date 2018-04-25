@@ -39,8 +39,6 @@ class UserIntelligenceProviderImpl : public modular::UserIntelligenceProvider {
   void GetSpeechToText(
       fidl::InterfaceRequest<speech::SpeechToText> request) override;
 
-  void GetResolver(fidl::InterfaceRequest<resolver::Resolver> request) override;
-
   void StartAgents(fidl::InterfaceHandle<modular::ComponentContext>
                        component_context) override;
 
