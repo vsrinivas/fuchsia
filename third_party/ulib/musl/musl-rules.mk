@@ -44,7 +44,6 @@ endif
 LOCAL_CFLAGS += -ffreestanding
 
 LOCAL_SRCS := \
-    $(LOCAL_DIR)/pthread/allocate.c \
     $(LOCAL_DIR)/pthread/pthread_atfork.c \
     $(LOCAL_DIR)/pthread/pthread_attr_destroy.c \
     $(LOCAL_DIR)/pthread/pthread_attr_get.c \
@@ -793,6 +792,7 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/src/thread/__timedwait.c \
     $(LOCAL_DIR)/src/thread/__tls_get_addr.c \
     $(LOCAL_DIR)/src/thread/__wait.c \
+    $(LOCAL_DIR)/src/thread/allocate.c \
     $(LOCAL_DIR)/src/thread/call_once.c \
     $(LOCAL_DIR)/src/thread/cnd_broadcast.c \
     $(LOCAL_DIR)/src/thread/cnd_destroy.c \
