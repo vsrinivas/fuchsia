@@ -221,6 +221,12 @@ void MessageLoopPoll::OnHandleSignaled(int fd, short events, int watch_id) {
                found->second.mode == WatchMode::kReadWrite);
     found->second.watcher->OnFDReadable(fd);
   }
+
+  found = watches_.find(watch_id);
+  if (found == watches_.end()) {
+    // Could have been closed in response to "readable" call.
+    return;
+  }
   if (events & POLLOUT) {
     FXL_DCHECK(found->second.mode == WatchMode::kWrite ||
                found->second.mode == WatchMode::kReadWrite);

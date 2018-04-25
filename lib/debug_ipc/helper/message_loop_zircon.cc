@@ -113,13 +113,13 @@ void MessageLoopZircon::Run() {
     // the StopWatching impl).
     switch (watch_info->type) {
       case WatchType::kFdio:
-        OnFdioSignal(*watch_info, packet);
+        OnFdioSignal(packet.key, *watch_info, packet);
         break;
       case WatchType::kProcessExceptions:
         OnProcessException(*watch_info, packet);
         break;
       case WatchType::kSocket:
-        OnSocketSignal(*watch_info, packet);
+        OnSocketSignal(packet.key, *watch_info, packet);
         break;
       default:
         FXL_NOTREACHED();
@@ -127,8 +127,9 @@ void MessageLoopZircon::Run() {
   }
 }
 
-MessageLoop::WatchHandle MessageLoopZircon::WatchFD(
-    WatchMode mode, int fd, FDWatcher* watcher) {
+MessageLoop::WatchHandle MessageLoopZircon::WatchFD(WatchMode mode,
+                                                    int fd,
+                                                    FDWatcher* watcher) {
   WatchInfo info;
   info.type = WatchType::kFdio;
   info.fd_watcher = watcher;
@@ -172,7 +173,9 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchFD(
 }
 
 MessageLoop::WatchHandle MessageLoopZircon::WatchSocket(
-    WatchMode mode, zx_handle_t socket_handle, SocketWatcher* watcher) {
+    WatchMode mode,
+    zx_handle_t socket_handle,
+    SocketWatcher* watcher) {
   WatchInfo info;
   info.type = WatchType::kSocket;
   info.socket_watcher = watcher;
@@ -186,17 +189,17 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchSocket(
     next_watch_id_++;
 
     if (mode == WatchMode::kRead || mode == WatchMode::kReadWrite) {
-      zx_status_t status = zx_object_wait_async(
-          socket_handle, port_.get(), watch_id, ZX_SOCKET_READABLE,
-          ZX_WAIT_ASYNC_REPEATING);
+      zx_status_t status =
+          zx_object_wait_async(socket_handle, port_.get(), watch_id,
+                               ZX_SOCKET_READABLE, ZX_WAIT_ASYNC_REPEATING);
       if (status != ZX_OK)
         return WatchHandle();
     }
 
     if (mode == WatchMode::kWrite || mode == WatchMode::kReadWrite) {
-      zx_status_t status = zx_object_wait_async(
-          socket_handle, port_.get(), watch_id, ZX_SOCKET_WRITABLE,
-          ZX_WAIT_ASYNC_REPEATING);
+      zx_status_t status =
+          zx_object_wait_async(socket_handle, port_.get(), watch_id,
+                               ZX_SOCKET_WRITABLE, ZX_WAIT_ASYNC_REPEATING);
       if (status != ZX_OK)
         return WatchHandle();
     }
@@ -230,9 +233,9 @@ MessageLoop::WatchHandle MessageLoopZircon::WatchProcessExceptions(
       return WatchHandle();
 
     // Also watch for process termination.
-    status = zx_object_wait_async(process_handle, port_.get(), watch_id,
-                                  ZX_PROCESS_TERMINATED,
-                                  ZX_WAIT_ASYNC_REPEATING);
+    status =
+        zx_object_wait_async(process_handle, port_.get(), watch_id,
+                             ZX_PROCESS_TERMINATED, ZX_WAIT_ASYNC_REPEATING);
     if (status != ZX_OK)
       return WatchHandle();
 
@@ -261,8 +264,8 @@ void MessageLoopZircon::StopWatching(int id) {
       break;
     case WatchType::kProcessExceptions:
       // Binding an invalid port will detach from the exception port.
-      zx_task_bind_exception_port(info.process_handle, ZX_HANDLE_INVALID,
-                                  0, ZX_EXCEPTION_PORT_DEBUGGER);
+      zx_task_bind_exception_port(info.process_handle, ZX_HANDLE_INVALID, 0,
+                                  ZX_EXCEPTION_PORT_DEBUGGER);
       // Stop watching for process termination.
       port_.cancel(info.process_handle, id);
       break;
@@ -280,12 +283,22 @@ void MessageLoopZircon::SetHasTasks() {
   task_event_.signal(0, kTaskSignal);
 }
 
-void MessageLoopZircon::OnFdioSignal(const WatchInfo& info,
+void MessageLoopZircon::OnFdioSignal(int watch_id,
+                                     const WatchInfo& info,
                                      const zx_port_packet_t& packet) {
   uint32_t events = 0;
   __fdio_wait_end(info.fdio, packet.signal.observed, &events);
   if (events & POLLIN)
     info.fd_watcher->OnFDReadable(info.fd);
+
+  // When signaling both readable and writable, make sure the readable handler
+  // didn't remove the watch.
+  if ((events & POLLIN) && (events & POLLOUT)) {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (watches_.find(packet.key) == watches_.end())
+      return;
+  }
+
   if (events & POLLOUT)
     info.fd_watcher->OnFDWritable(info.fd);
 }
@@ -296,12 +309,12 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
     // All debug exceptions.
     switch (packet.type) {
       case ZX_EXCP_THREAD_STARTING:
-        info.exception_watcher->OnThreadStarting(
-            info.process_koid, packet.exception.tid);
+        info.exception_watcher->OnThreadStarting(info.process_koid,
+                                                 packet.exception.tid);
         break;
       case ZX_EXCP_THREAD_EXITING:
-        info.exception_watcher->OnThreadExiting(
-            info.process_koid, packet.exception.tid);
+        info.exception_watcher->OnThreadExiting(info.process_koid,
+                                                packet.exception.tid);
         break;
       case ZX_EXCP_GENERAL:
       case ZX_EXCP_FATAL_PAGE_FAULT:
@@ -310,8 +323,8 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
       case ZX_EXCP_HW_BREAKPOINT:
       case ZX_EXCP_UNALIGNED_ACCESS:
       case ZX_EXCP_POLICY_ERROR:
-        info.exception_watcher->OnException(
-            info.process_koid, packet.exception.tid, packet.type);
+        info.exception_watcher->OnException(info.process_koid,
+                                            packet.exception.tid, packet.type);
         break;
       default:
         FXL_NOTREACHED();
@@ -325,15 +338,28 @@ void MessageLoopZircon::OnProcessException(const WatchInfo& info,
   }
 }
 
-void MessageLoopZircon::OnSocketSignal(
-    const WatchInfo& info, const zx_port_packet_t& packet) {
-  if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
-      packet.signal.observed & ZX_SOCKET_READABLE) {
+void MessageLoopZircon::OnSocketSignal(int watch_id,
+                                       const WatchInfo& info,
+                                       const zx_port_packet_t& packet) {
+  if (!ZX_PKT_IS_SIGNAL_REP(packet.type))
+    return;
+
+  // Dispatch readable signal.
+  if (packet.signal.observed & ZX_SOCKET_READABLE)
     info.socket_watcher->OnSocketReadable(info.socket_handle);
-  } else if (ZX_PKT_IS_SIGNAL_REP(packet.type) &&
-      packet.signal.observed & ZX_SOCKET_WRITABLE) {
-    info.socket_watcher->OnSocketWritable(info.socket_handle);
+
+  // When signaling both readable and writable, make sure the readable handler
+  // didn't remove the watch.
+  if ((packet.signal.observed & ZX_SOCKET_READABLE) &&
+      (packet.signal.observed & ZX_SOCKET_WRITABLE)) {
+    std::lock_guard<std::mutex> guard(mutex_);
+    if (watches_.find(packet.key) == watches_.end())
+      return;
   }
+
+  // Dispatch writable signal.
+  if (packet.signal.observed & ZX_SOCKET_WRITABLE)
+    info.socket_watcher->OnSocketWritable(info.socket_handle);
 }
 
 }  // namespace debug_ipc

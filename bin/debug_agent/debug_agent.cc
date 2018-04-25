@@ -8,6 +8,7 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
+#include "garnet/bin/debug_agent/arch.h"
 #include "garnet/bin/debug_agent/debugged_thread.h"
 #include "garnet/bin/debug_agent/launcher.h"
 #include "garnet/bin/debug_agent/object_util.h"
@@ -36,7 +37,8 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
 
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
                          debug_ipc::HelloReply* reply) {
-  reply->version = 1;
+  // Version and signature are default-initialized to their current values.
+  reply->arch = arch::GetArch();
 }
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request,

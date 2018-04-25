@@ -73,11 +73,6 @@ class MessageLoop {
   //
   // You can only watch a handle once. Note that stdin/stdout/stderr can be
   // the same underlying OS handle, so the caller can only watch one of them.
-  //
-  // The FDWatcher must not unregister from a callback. The handle might
-  // become both readable and writable at the same time which will necessitate
-  // calling both callbacks. The code does not expect the FDWatcher to
-  // disappear in between these callbacks.
   virtual WatchHandle WatchFD(WatchMode mode, int fd,
                               FDWatcher* watcher) = 0;
 

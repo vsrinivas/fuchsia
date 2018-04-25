@@ -14,6 +14,9 @@ enum class ErrType {
   // Unspecified error type.
   kGeneral,
 
+  // The operation was explicitly canceled.
+  kCanceled,
+
   // There is no connection to the debug agent and this operation can't be
   // completed.
   kNoConnection,

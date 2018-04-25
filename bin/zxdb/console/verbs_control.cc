@@ -183,11 +183,15 @@ Err DoConnect(ConsoleContext* context, const Command& cmd) {
   }
 
   context->session()->Connect(host, port, [](const Err& err) {
-      if (err.has_error())
-        Console::get()->Output(err);
-      else
+      if (err.has_error()) {
+        // Don't display error message if they canceled the connection.
+        if (err.type() != ErrType::kCanceled)
+          Console::get()->Output(err);
+      } else {
         Console::get()->Output("Connected successfully.");
+      }
     });
+  Console::get()->Output("Connecting (use \"disconnect\" to cancel)...\n");
 
   return Err();
 }

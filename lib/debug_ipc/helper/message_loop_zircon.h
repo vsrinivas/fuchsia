@@ -58,9 +58,11 @@ class MessageLoopZircon : public MessageLoop {
   void SetHasTasks() override;
 
   // Handle an event of the given type.
-  void OnFdioSignal(const WatchInfo& info, const zx_port_packet_t& packet);
+  void OnFdioSignal(int watch_id, const WatchInfo& info,
+                    const zx_port_packet_t& packet);
   void OnProcessException(const WatchInfo& info, const zx_port_packet_t& packet);
-  void OnSocketSignal(const WatchInfo& info, const zx_port_packet_t& packet);
+  void OnSocketSignal(int watch_id,
+                      const WatchInfo& info, const zx_port_packet_t& packet);
 
   using WatchMap = std::map<int, WatchInfo>;
   WatchMap watches_;

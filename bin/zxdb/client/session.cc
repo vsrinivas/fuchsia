@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <thread>
 #include <unistd.h>
 
 #include "garnet/bin/zxdb/client/process_impl.h"
@@ -17,6 +18,7 @@
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "garnet/public/lib/fxl/logging.h"
+#include "garnet/public/lib/fxl/memory/ref_counted.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -42,8 +44,8 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
   struct addrinfo* addrs = nullptr;
   int addr_err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (addr_err != 0) {
-    return Err(fxl::StringPrintf(
-        "Failed to resolve \"%s\": %s", host.c_str(), gai_strerror(addr_err)));
+    return Err(fxl::StringPrintf("Failed to resolve \"%s\": %s", host.c_str(),
+                                 gai_strerror(addr_err)));
   }
 
   *addr = *addrs;
@@ -53,15 +55,224 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
 
 }  // namespace
 
-// Storage for connection information when connecting dynamically.
-struct Session::ConnectionStorage {
-  debug_ipc::BufferedFD buffer;
+// PendingConnection -----------------------------------------------------------
+
+// Storage for connection information when connecting dynamically. Making a
+// connection has three asynchronous steps:
+//
+//  1. Resolving the host and connecting the socket. Since this is blocking,
+//     it happens on a background thread.
+//  2. Sending the hello message. Happens on the main thread.
+//  3. Waiting for the reply and deserializing, then notifying the Session.
+//
+// Various things can happen in the middle.
+//
+//  - Any step can fail.
+//  - The Session object can be destroyed (weak pointer checks).
+//  - The connection could be canceled by the user (the session callback
+//    checks for this).
+class Session::PendingConnection
+    : public fxl::RefCountedThreadSafe<PendingConnection> {
+ public:
+  void Initiate(fxl::WeakPtr<Session> session,
+                std::function<void(const Err&)> callback);
+
+  // There are no other functions since this will be running on a background
+  // thread and the class state can't be safely retrieved. It reports all of
+  // the output state via ConnectionResolved.
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(PendingConnection);
+  FRIEND_MAKE_REF_COUNTED(PendingConnection);
+
+  PendingConnection(const std::string& host, uint16_t port)
+      : host_(host), port_(port) {}
+  ~PendingConnection() {}
+
+  // These are the steps of connection, in order. They each take a RefPtr
+  // to |this| to ensure the class is in scope for the full flow.
+  void ConnectBackgroundThread(fxl::RefPtr<PendingConnection> owner);
+  void ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
+                                 const Err& err);
+  void DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner);
+  void HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
+                               const Err& err,
+                               const debug_ipc::HelloReply& reply);
+
+  // Creates the connection (called on the background thread). On success
+  // the socket_ is populated.
+  Err DoConnectBackgroundThread();
+
+  std::string host_;
+  uint16_t port_;
+
+  // Only non-null when in the process of connecting.
+  std::unique_ptr<std::thread> thread_;
+
+  debug_ipc::MessageLoop* main_loop_ = nullptr;
+
+  // Access only on the main thread.
+  fxl::WeakPtr<Session> session_;
+
+  // The constructed socket and buffer.
+  //
+  // The socket is created by ConnectBackgroundThread and read by
+  // HelloCompleteMainThread to create the buffer so needs no synchronization.
+  // It would be cleaner to pass this in the lambdas to avoid threading
+  // confusion, but move-only types can't be bound.
+  fxl::UniqueFD socket_;
+  std::unique_ptr<debug_ipc::BufferedFD> buffer_;
+
+  // Callback when the conncetion is complete (or fails). Access only on the
+  // main thread.
+  std::function<void(const Err&)> callback_;
 };
 
-Session::Session() : system_(this) {}
+void Session::PendingConnection::Initiate(
+    fxl::WeakPtr<Session> session,
+    std::function<void(const Err&)> callback) {
+  FXL_DCHECK(!thread_.get());  // Duplicate Initiate() call.
+
+  main_loop_ = debug_ipc::MessageLoop::Current();
+  session_ = std::move(session);
+  callback_ = std::move(callback);
+
+  // Create the background thread, and run the background function. The
+  // context will keep a ref to this class.
+  thread_ =
+      std::make_unique<std::thread>([owner = fxl::RefPtr<PendingConnection>(
+                                         this)]() {
+        owner->ConnectBackgroundThread(owner);
+      });
+}
+
+void Session::PendingConnection::ConnectBackgroundThread(
+    fxl::RefPtr<PendingConnection> owner) {
+  Err err = DoConnectBackgroundThread();
+  main_loop_->PostTask([ owner = std::move(owner), err ]() {
+    owner->ConnectCompleteMainThread(owner, err);
+  });
+}
+
+void Session::PendingConnection::ConnectCompleteMainThread(
+    fxl::RefPtr<PendingConnection> owner,
+    const Err& err) {
+  // The background thread function has now completed so the thread can be
+  // destroyed. We do want to join with the thread here to ensure there are no
+  // references to the PendingConnection on the background thread, which might
+  // in turn cause the PendingConnection to be destroyed on the background
+  // thread.
+  thread_->join();
+  thread_.reset();
+
+  if (!session_ || err.has_error()) {
+    // Error or session destroyed, skip sending hello and forward the error.
+    HelloCompleteMainThread(std::move(owner), err, debug_ipc::HelloReply());
+    return;
+  }
+
+  FXL_DCHECK(socket_.is_valid());
+  buffer_ = std::make_unique<debug_ipc::BufferedFD>();
+  buffer_->Init(std::move(socket_));
+
+  // Send "Hello" message. We can't use the Session::Send infrastructure
+  // since the connection hasn't technically been established yet.
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteRequest(debug_ipc::HelloRequest(), 1, &writer);
+  std::vector<char> serialized = writer.MessageComplete();
+  buffer_->stream().Write(std::move(serialized));
+
+  buffer_->set_data_available_callback([owner = std::move(owner)]() {
+    owner->DataAvailableMainThread(owner);
+  });
+}
+
+void Session::PendingConnection::DataAvailableMainThread(
+    fxl::RefPtr<PendingConnection> owner) {
+  // This function needs to manually deserialize the hello message since
+  // the Session stuff isn't connected yet.
+  constexpr size_t kHelloMessageSize =
+      debug_ipc::MsgHeader::kSerializedHeaderSize +
+      sizeof(debug_ipc::HelloReply);
+
+  if (!buffer_->stream().IsAvailable(kHelloMessageSize))
+    return;  // Wait for more data.
+
+  std::vector<char> serialized;
+  serialized.resize(kHelloMessageSize);
+  buffer_->stream().Read(&serialized[0], kHelloMessageSize);
+
+  debug_ipc::HelloReply reply;
+  uint32_t transaction_id = 0;
+  debug_ipc::MessageReader reader(std::move(serialized));
+
+  Err err;
+  if (!debug_ipc::ReadReply(&reader, &reply, &transaction_id) ||
+      reply.signature != debug_ipc::HelloReply::kStreamSignature) {
+    // Corrupt.
+    err = Err("Corrupted reply, service is probably not the debug agent.");
+    reply = debug_ipc::HelloReply();
+  }
+
+  // Prevent future notifications to this function.
+  buffer_->set_data_available_callback(std::function<void()>());
+
+  HelloCompleteMainThread(owner, err, reply);
+}
+
+void Session::PendingConnection::HelloCompleteMainThread(
+    fxl::RefPtr<PendingConnection> owner,
+    const Err& err,
+    const debug_ipc::HelloReply& reply) {
+  if (session_) {
+    // The buffer must be created here on the main thread since it will
+    // register with the message loop to watch the FD.
+
+    // If the session exists, always tell it about the completion, whether
+    // the connection was successful or not. It will issue the callback.
+    session_->ConnectionResolved(std::move(owner), err, reply,
+                                 std::move(buffer_), std::move(callback_));
+  } else if (callback_) {
+    // Session was destroyed. Issue the callback with an error (not clobbering
+    // an existing one if there was one).
+    if (err.has_error())
+      callback_(err);
+    else
+      callback_(Err("Session was destroyed."));
+  }
+}
+
+Err Session::PendingConnection::DoConnectBackgroundThread() {
+  addrinfo addr;
+  Err err = ResolveAddress(host_, port_, &addr);
+  if (err.has_error())
+    return err;
+
+  socket_.reset(socket(AF_INET, SOCK_STREAM, 0));
+  if (!socket_.is_valid())
+    return Err(ErrType::kGeneral, "Could not create socket.");
+
+  if (connect(socket_.get(), addr.ai_addr, addr.ai_addrlen)) {
+    socket_.reset();
+    return Err(
+        fxl::StringPrintf("Failed to connect socket: %s", strerror(errno)));
+  }
+
+  // By default sockets are blocking which we don't want.
+  if (fcntl(socket_.get(), F_SETFL, O_NONBLOCK) < 0) {
+    socket_.reset();
+    return Err(ErrType::kGeneral, "Could not make nonblocking socket.");
+  }
+
+  return Err();
+}
+
+// Session ---------------------------------------------------------------------
+
+Session::Session() : system_(this), weak_factory_(this) {}
 
 Session::Session(debug_ipc::StreamBuffer* stream)
-    : stream_(stream), system_(this) {}
+    : stream_(stream), system_(this), weak_factory_(this) {}
 
 Session::~Session() = default;
 
@@ -140,37 +351,41 @@ bool Session::IsConnected() const {
 void Session::Connect(const std::string& host,
                       uint16_t port,
                       std::function<void(const Err&)> callback) {
-  Err err = MakeConnection(host, port);
+  Err err;
+  if (IsConnected()) {
+    err = Err("Already connected.");
+  } else if (pending_connection_.get()) {
+    err = Err("A connection is already pending.");
+  }
+
   if (err.has_error()) {
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask([callback, err]() {
-        callback(err);
-      });
+      debug_ipc::MessageLoop::Current()->PostTask(
+          [callback, err]() { callback(err); });
     }
     return;
   }
 
-  stream_ = &connection_storage_->buffer.stream();
-  connection_storage_->buffer.set_data_available_callback(
-      [this](){ OnStreamReadable(); });
-
-  // TODO(brettw) testing.
-  Send<debug_ipc::HelloRequest, debug_ipc::HelloReply>(
-      debug_ipc::HelloRequest(),
-      [callback](const Err& err, debug_ipc::HelloReply reply) {
-        if (callback)
-          callback(err);
-      });
+  pending_connection_ = fxl::MakeRefCounted<PendingConnection>(host, port);
+  pending_connection_->Initiate(weak_factory_.GetWeakPtr(),
+                                std::move(callback));
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {
   if (!IsConnected()) {
-    // No connection to disconnect.
+    Err err;
+    if (pending_connection_.get()) {
+      // Cancel pending connection.
+      pending_connection_ = nullptr;
+    } else {
+      err = Err("Not connected.");
+    }
+
     if (callback) {
       debug_ipc::MessageLoop::Current()->PostTask(
-          [callback]() { callback(Err(ErrType::kGeneral, "Not connected.")); });
-      return;
+          [callback, err]() { callback(err); });
     }
+    return;
   }
 
   if (!connection_storage_) {
@@ -252,35 +467,49 @@ ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid,
   return process->GetThreadImplFromKoid(thread_koid);
 }
 
-Err Session::MakeConnection(const std::string& host, uint16_t port) {
-  if (IsConnected())
-    return Err(ErrType::kGeneral, "Already connected.");
+void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
+                                 const Err& err,
+                                 const debug_ipc::HelloReply& reply,
+                                 std::unique_ptr<debug_ipc::BufferedFD> buffer,
+                                 std::function<void(const Err&)> callback) {
+  if (pending.get() != pending_connection_.get()) {
+    // When the connection doesn't match the pending one, that means the
+    // pending connection was cancelled and we should drop the one we just
+    // got.
+    if (callback)
+      callback(Err(ErrType::kCanceled, "Connect operation cancelled."));
+    return;
+  }
+  pending_connection_ = nullptr;
 
-  addrinfo addr;
-  Err err = ResolveAddress(host, port, &addr);
-  if (err.has_error())
-    return err;
-
-  auto storage = std::make_unique<ConnectionStorage>();
-
-  // Create socket.
-  fxl::UniqueFD sock(socket(AF_INET, SOCK_STREAM, 0));
-  if (!sock.is_valid())
-    return Err(ErrType::kGeneral, "Could not create socket.");
-
-  // Connect.
-  if (connect(sock.get(), addr.ai_addr, addr.ai_addrlen)) {
-    return Err(fxl::StringPrintf("Failed to connect socket: %s",
-                                 strerror(errno)));
+  if (err.has_error()) {
+    // Other error connecting.
+    if (callback)
+      callback(err);
+    return;
   }
 
-  if (fcntl(sock.get(), F_SETFL, O_NONBLOCK) < 0)
-    return Err(ErrType::kGeneral, "Could not make nonblocking socket.");
+  // Version check.
+  if (reply.version != debug_ipc::HelloReply::kCurrentVersion) {
+    if (callback) {
+      callback(Err(fxl::StringPrintf(
+          "Protocol version mismatch. The target system debug agent reports "
+          "version %" PRIu32 " but this client expects version %" PRIu32 ".",
+          reply.version, debug_ipc::HelloReply::kCurrentVersion)));
+    }
+    return;
+  }
 
-  storage->buffer.Init(std::move(sock));
+  // Success, connect up the stream buffers.
+  connection_storage_ = std::move(buffer);
 
-  connection_storage_ = std::move(storage);
-  return Err();
+  arch_ = reply.arch;
+  stream_ = &connection_storage_->stream();
+  connection_storage_->set_data_available_callback(
+      [this]() { OnStreamReadable(); });
+
+  if (callback)
+    callback(Err());
 }
 
 }  // namespace zxdb

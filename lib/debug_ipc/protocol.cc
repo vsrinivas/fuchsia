@@ -8,4 +8,7 @@ namespace debug_ipc {
 
 constexpr uint32_t MsgHeader::kSerializedHeaderSize;
 
+constexpr uint64_t HelloReply::kStreamSignature;
+constexpr uint32_t HelloReply::kCurrentVersion;
+
 }  // namespace debug_ipc

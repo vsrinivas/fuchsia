@@ -19,6 +19,8 @@
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/files/unique_fd.h"
+#include "garnet/public/lib/fxl/memory/ref_ptr.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {
@@ -57,10 +59,19 @@ class Session {
 
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
+  //
+  // This can also be called when a connection is pending (Connect() has been
+  // called but the callback has not been issued yet) which will cancel the
+  // pending connection. The Connect() callback will still be issued but
+  // will indicate failure.
   void Disconnect(std::function<void(const Err&)> callback);
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
+
+  // Architecture of the attached system. Will be "kUnknown" when not
+  // connected.
+  debug_ipc::Arch arch() const { return arch_; }
 
   // Sends a message with an asynchronous reply.
   //
@@ -75,7 +86,8 @@ class Session {
             std::function<void(const Err&, RecvMsgType)> callback);
 
  private:
-  struct ConnectionStorage;
+  class PendingConnection;
+  friend PendingConnection;
 
   // Nonspecific callback type. Implemented by SessionDispatchCallback (with
   // the type-specific parameter pre-bound). The uint32_t is the transaction
@@ -90,9 +102,12 @@ class Session {
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);
 
-  // Fills connection_storage_ with a valid connection, returns Err() on
-  // success, or a populated Err on failure.
-  Err MakeConnection(const std::string& host, uint16_t port);
+  // Callback when a connection has been successful or failed.
+  void ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
+                          const Err& err,
+                          const debug_ipc::HelloReply& reply,
+                          std::unique_ptr<debug_ipc::BufferedFD> buffer,
+                          std::function<void(const Err&)> callback);
 
   // Non-owning pointer to the connected stream. If this is non-null and
   // connection_storage_ is null, the connection is persistent (made via the
@@ -107,12 +122,20 @@ class Session {
   // to back stream_.
   //
   // Code should use stream_ for sending and receiving.
-  std::unique_ptr<ConnectionStorage> connection_storage_;
+  std::unique_ptr<debug_ipc::BufferedFD> connection_storage_;
+
+  // When a connection has been requested but is being connected on the
+  // background thread, this will hold the pointer.
+  fxl::RefPtr<PendingConnection> pending_connection_;
 
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
 
   SystemImpl system_;
+
+  debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
+
+  fxl::WeakPtrFactory<Session> weak_factory_;
 };
 
 template <typename SendMsgType, typename RecvMsgType>

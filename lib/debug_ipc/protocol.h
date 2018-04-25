@@ -10,14 +10,18 @@ namespace debug_ipc {
 
 constexpr uint32_t kProtocolVersion = 1;
 
+enum class Arch {
+  kUnknown = 0,
+  kX64,
+  kArm64
+};
+
 #pragma pack(push, 8)
 
 // A message consists of a MsgHeader followed by a serialized version of
-// whatever struct is
-// associated with that message type. Use the MessageWriter class to build this
-// up, which will
-// reserve room for the header and allows the structs to be appended, possibly
-// dynamically.
+// whatever struct is associated with that message type. Use the MessageWriter
+// class to build this up, which will reserve room for the header and allows
+// the structs to be appended, possibly dynamically.
 struct MsgHeader {
   enum class Type : uint32_t {
     kNone = 0,
@@ -62,7 +66,15 @@ struct MsgHeader {
 
 struct HelloRequest {};
 struct HelloReply {
-  uint32_t version = 0;
+  // Stream signature to make sure we're talking to the right service.
+  // This number is ASCII for "zxdbIPC>".
+  static constexpr uint64_t kStreamSignature = 0x7a7864624950433e;
+
+  static constexpr uint32_t kCurrentVersion = 1;
+
+  uint64_t signature = kStreamSignature;
+  uint32_t version = kCurrentVersion;
+  Arch arch = Arch::kUnknown;
 };
 
 struct LaunchRequest {
