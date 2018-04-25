@@ -78,6 +78,7 @@ source_set("escher") {
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
     "//third_party/shaderc/third_party/spirv-tools:spirv-tools-opt",
+    "//third_party/spirv-cross",
   ]
 
   public_deps = [
@@ -272,6 +273,8 @@ source_set("escher") {
     "vk/buffer.h",
     "vk/buffer_factory.cc",
     "vk/buffer_factory.h",
+    "vk/descriptor_set.cc",
+    "vk/descriptor_set.h",
     "vk/framebuffer.cc",
     "vk/framebuffer.h",
     "vk/gpu_allocator.cc",

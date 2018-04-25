@@ -4,9 +4,13 @@
 
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
+#include "lib/escher/util/debug_print.h"
+
 namespace escher {
 
-enum class ShaderStage {
+enum class ShaderStage : uint8_t {
   kVertex = 0,
   kTessellationControl = 1,
   kTessellationEvaluation = 2,
@@ -15,5 +19,25 @@ enum class ShaderStage {
   kCompute = 5,
   kEnumCount
 };
+ESCHER_DEBUG_PRINTABLE(ShaderStage);
+
+inline vk::ShaderStageFlags ShaderStageToFlags(ShaderStage stage) {
+  switch (stage) {
+    case ShaderStage::kVertex:
+      return vk::ShaderStageFlagBits::eVertex;
+    case ShaderStage::kTessellationControl:
+      return vk::ShaderStageFlagBits::eTessellationControl;
+    case ShaderStage::kTessellationEvaluation:
+      return vk::ShaderStageFlagBits::eTessellationEvaluation;
+    case ShaderStage::kGeometry:
+      return vk::ShaderStageFlagBits::eGeometry;
+    case ShaderStage::kFragment:
+      return vk::ShaderStageFlagBits::eFragment;
+    case ShaderStage::kCompute:
+      return vk::ShaderStageFlagBits::eCompute;
+    case ShaderStage::kEnumCount:
+      return vk::ShaderStageFlags();
+  }
+}
 
 }  // namespace escher

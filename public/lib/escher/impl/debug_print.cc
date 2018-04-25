@@ -4,12 +4,16 @@
 
 #include "lib/escher/util/debug_print.h"
 
+#include <ios>
+
 #include "lib/escher/geometry/bounding_box.h"
 #include "lib/escher/geometry/transform.h"
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
+#include "lib/escher/vk/descriptor_set.h"
 #include "lib/escher/vk/image.h"
+#include "lib/escher/vk/shader_module.h"
 
 namespace escher {
 
@@ -188,5 +192,48 @@ std::ostream& operator<<(std::ostream& str, const Camera& camera) {
              << "\nprojection: " << camera.projection() << "]";
 }
 
-}  // namespace escher
+std::ostream& operator<<(std::ostream& str, const DescriptorSetLayout& layout) {
+  return str << "DescriptorSetLayout[\n\tsampled_image_mask: " << std::hex
+             << layout.sampled_image_mask
+             << "\n\tstorage_image_mask: " << layout.storage_image_mask
+             << "\n\tuniform_buffer_mask: " << layout.uniform_buffer_mask
+             << "\n\tstorage_buffer_mask: " << layout.storage_buffer_mask
+             << "\n\tsampled_buffer_mask: " << layout.sampled_buffer_mask
+             << "\n\tinput_attachment_mask: " << layout.input_attachment_mask
+             << "\n\tfp_mask: " << layout.fp_mask << "\n\t" << std::dec
+             << vk::to_string(layout.stages) << "]";
+}
 
+std::ostream& operator<<(std::ostream& str,
+                         const ShaderModuleResourceLayout& layout) {
+  str << "ShaderModuleResourceLayout[\n\tattribute_mask: " << std::hex
+      << layout.attribute_mask
+      << "\n\trender_target_mask: " << layout.render_target_mask
+      << "\n\tpush_constant_offset: " << layout.push_constant_offset
+      << "\n\tpush_constant_range: " << layout.push_constant_range << std::dec;
+  for (size_t i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
+    str << "\n\t" << i << ": " << layout.sets[i];
+  }
+  return str << "]";
+}
+
+std::ostream& operator<<(std::ostream& str, const ShaderStage& stage) {
+  switch (stage) {
+    case ShaderStage::kVertex:
+      return str << "ShaderStage::kVertex";
+    case ShaderStage::kTessellationControl:
+      return str << "ShaderStage::kTessellationControl";
+    case ShaderStage::kTessellationEvaluation:
+      return str << "ShaderStage::kTessellationEvaluation";
+    case ShaderStage::kGeometry:
+      return str << "ShaderStage::kGeometry";
+    case ShaderStage::kFragment:
+      return str << "ShaderStage::kFragment";
+    case ShaderStage::kCompute:
+      return str << "ShaderStage::kCompute";
+    case ShaderStage::kEnumCount:
+      return str << "ShaderStage::kEnumCount (INVALID)";
+  }
+}
+
+}  // namespace escher

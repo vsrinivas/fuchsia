@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace escher {
 
 // Return the number of elements in an enum, which must properly define
