@@ -316,7 +316,7 @@ class HtCapabilityInfo : public common::BitField<uint16_t> {
         OCTETS_3839 = 0,
         OCTETS_7935 = 1,
     };
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.3
 class AmpduParams : public common::BitField<uint8_t> {
@@ -340,7 +340,7 @@ class AmpduParams : public common::BitField<uint8_t> {
         EIGHT_USEC = 6,
         SIXTEEN_USEC = 7,
     };
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
@@ -351,7 +351,7 @@ class SupportedMcsRxMcsHead : public common::BitField<uint64_t> {
     // HT-MCS table in IEEE Std 802.11-2016, Annex B.4.17.2
     // VHT-MCS tables in IEEE Std 802.11-2016, 21.5
     WLAN_BIT_FIELD(bitmask, 0, 64);
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
@@ -363,7 +363,7 @@ class SupportedMcsRxMcsTail : public common::BitField<uint32_t> {
     WLAN_BIT_FIELD(reserved1, 13, 3);
     WLAN_BIT_FIELD(highest_rate, 16, 10);  // Mbps. Rx Highest Supported Rate.
     WLAN_BIT_FIELD(reserved2, 26, 6);
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 class SupportedMcsTxMcs : public common::BitField<uint32_t> {
@@ -385,7 +385,7 @@ class SupportedMcsTxMcs : public common::BitField<uint32_t> {
         if (num > kUpperbound) num = kUpperbound;
         set_max_ss(num - 1);
     }
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.4
 struct SupportedMcsSet {
@@ -424,7 +424,7 @@ class HtExtCapabilities : public common::BitField<uint16_t> {
         MCS_UNSOLICIED = 2,
         MCS_BOTH = 3,
     };
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.6
 class TxBfCapability : public common::BitField<uint32_t> {
@@ -521,7 +521,7 @@ class TxBfCapability : public common::BitField<uint32_t> {
         if (num > kUpperbound) num = kUpperbound;
         set_chan_estimation(num - 1);
     }
-};
+} __PACKED;
 
 class AselCapability : public common::BitField<uint8_t> {
    public:
@@ -536,7 +536,7 @@ class AselCapability : public common::BitField<uint8_t> {
     WLAN_BIT_FIELD(rx_asel, 5, 1);
     WLAN_BIT_FIELD(tx_sounding_ppdu, 6, 1);
     WLAN_BIT_FIELD(reserved, 7, 1);
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56
 struct HtCapabilities : public Element<HtCapabilities, element_id::kHtCapabilities> {
@@ -599,7 +599,7 @@ class HtOpInfoHead : public common::BitField<uint32_t> {
         TWENTY_MHZ = 2,
         NON_HT_MIXED = 3,
     };
-};
+} __PACKED;
 
 class HtOpInfoTail : public common::BitField<uint8_t> {
    public:
@@ -611,7 +611,7 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
     WLAN_BIT_FIELD(pco_active, 2, 1);
     WLAN_BIT_FIELD(pco_phase, 3, 1);
     WLAN_BIT_FIELD(reserved5, 4, 4);
-};
+} __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.57
 struct HtOperation : public Element<HtOperation, element_id::kHtOperation> {
