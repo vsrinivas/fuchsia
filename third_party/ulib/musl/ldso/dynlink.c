@@ -1601,7 +1601,7 @@ __NO_SAFESTACK struct pthread* __init_main_thread(zx_handle_t thread_self) {
     if (_zx_object_get_property(thread_self, ZX_PROP_NAME, thread_self_name,
                                 sizeof(thread_self_name)) != ZX_OK)
         strcpy(thread_self_name, "(initial-thread)");
-    pthread_t td = __allocate_thread(&attr, thread_self_name, NULL);
+    thrd_t td = __allocate_thread(&attr, thread_self_name, NULL);
     if (td == NULL) {
         debugmsg("No memory for %zu bytes thread-local storage.\n",
                  libc.tls_size);

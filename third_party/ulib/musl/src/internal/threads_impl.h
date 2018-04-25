@@ -179,9 +179,9 @@ void __thread_tsd_run_dtors(void) ATTR_LIBC_VISIBILITY;
         ._a_guardsize = PAGE_SIZE,                                            \
     })
 
-pthread_t __allocate_thread(const pthread_attr_t* attr,
-                            const char* thread_name,
-                            char default_name[ZX_MAX_NAME_LEN])
+thrd_t __allocate_thread(const pthread_attr_t* attr,
+                         const char* thread_name,
+                         char default_name[ZX_MAX_NAME_LEN])
     __attribute__((nonnull(1,2))) ATTR_LIBC_VISIBILITY;
 
 pthread_t __init_main_thread(zx_handle_t thread_self) ATTR_LIBC_VISIBILITY;

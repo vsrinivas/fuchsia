@@ -36,8 +36,8 @@ static ptrdiff_t offset_for_module(const struct tls_module* module) {
 #endif
 }
 
-__NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem, size_t alloc) {
-    pthread_t td;
+__NO_SAFESTACK static thrd_t copy_tls(unsigned char* mem, size_t alloc) {
+    thrd_t td;
     struct tls_module* p;
     size_t i;
     void** dtv;
@@ -46,14 +46,14 @@ __NO_SAFESTACK static pthread_t copy_tls(unsigned char* mem, size_t alloc) {
     dtv = (void**)(mem + libc.tls_size) - (libc.tls_cnt + 1);
 
     mem += -((uintptr_t)mem + sizeof(struct pthread)) & (libc.tls_align - 1);
-    td = (pthread_t)mem;
+    td = (thrd_t)mem;
     mem += sizeof(struct pthread);
 #else
     dtv = (void**)mem;
 
     mem += alloc - sizeof(struct pthread);
     mem -= (uintptr_t)mem & (libc.tls_align - 1);
-    td = (pthread_t)mem;
+    td = (thrd_t)mem;
 #endif
 
     for (i = 1, p = libc.tls_head; p; i++, p = p->next) {
@@ -114,7 +114,7 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar,
 // It initializes the basic thread descriptor fields.
 // Everything else is zero-initialized.
 
-__NO_SAFESTACK pthread_t __allocate_thread(
+__NO_SAFESTACK thrd_t __allocate_thread(
     const pthread_attr_t* attr,
     const char* thread_name,
     char vmo_name[ZX_MAX_NAME_LEN]) {
@@ -142,7 +142,7 @@ __NO_SAFESTACK pthread_t __allocate_thread(
         return NULL;
     }
 
-    pthread_t td = copy_tls(tcb.iov_base, tcb.iov_len);
+    thrd_t td = copy_tls(tcb.iov_base, tcb.iov_len);
 
     // At this point all our access to global TLS state is done, so we
     // can allow dlopen again.
@@ -152,7 +152,7 @@ __NO_SAFESTACK pthread_t __allocate_thread(
     // it's not __NO_SAFESTACK.
     if (vmo_name != NULL) {
         // For other threads, try to give the VMO a name that includes
-        // the pthread_t value (and the TLS size if that fits too), but
+        // the thrd_t value (and the TLS size if that fits too), but
         // don't use a truncated value since that would be confusing to
         // interpret.
         if (snprintf(vmo_name, ZX_MAX_NAME_LEN, "%s:%p/TLS=%#zx",
