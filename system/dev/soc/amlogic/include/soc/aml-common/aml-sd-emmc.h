@@ -82,7 +82,12 @@ typedef struct {
     volatile uint32_t sd_emmc_calout_v2[3];     // 0x14~0x1c
     volatile uint32_t resvd_test[6];            // 0x20~0x34
     volatile uint32_t sd_emmc_intf3[2];         // 0x38, 0x39
+
     volatile uint32_t sd_emmc_start;            // 0x40
+#define AML_SD_EMMC_START_DESC_INT              0x00000001
+#define AML_SD_EMMC_START_DESC_BUSY             0x00000002
+#define AML_SD_EMMC_START_DESC_ADDR_LOC         2
+#define AML_SD_EMMC_START_DESC_ADDR_MASK        0xfffffffc
 
     volatile uint32_t sd_emmc_cfg;              // 0x44
 #define AML_SD_EMMC_CFG_BUS_WIDTH_LOC           0
