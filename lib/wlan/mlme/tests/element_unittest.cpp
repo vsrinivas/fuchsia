@@ -146,6 +146,13 @@ TEST(ElementWriter, Insert) {
 
 class Elements : public ::testing::Test {
    protected:
+    Elements() { buf_offset_ = buf_; }
+
+    template <typename T> void add_to_buf(const T& value) {
+        memcpy(buf_offset_, &value, sizeof(value));
+        buf_offset_ += sizeof(value);
+    }
+    uint8_t* buf_offset_;
     uint8_t buf_[1024] = {};
     size_t actual_ = 0;
 };
@@ -325,6 +332,93 @@ TEST_F(Elements, QosClient) {
     auto element = FromBytes<QosCapabilityElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
     EXPECT_EQ(element->qos_info.val(), info.val());
+}
+
+TEST_F(Elements, Tspec) {
+    // Values are chosen randomly.
+    constexpr uint8_t ts_info[3] = {97, 54, 13};
+    constexpr uint16_t nominal_msdu_size = 1068;
+    constexpr uint16_t max_msdu_size = 17223;
+    constexpr uint32_t min_svc_interval = 3463625064;
+    constexpr uint32_t max_svc_interval = 1348743544;
+    constexpr uint32_t inactivity_interval = 3254177988;
+    constexpr uint32_t suspension_interval = 3114872601;
+    constexpr uint32_t svc_start_time = 1977490251;
+    constexpr uint32_t min_data_rate = 2288957164;
+    constexpr uint32_t mean_data_rate = 3691476893;
+    constexpr uint32_t peak_data_rate = 3115603983;
+    constexpr uint32_t burst_size = 2196032537;
+    constexpr uint32_t delay_bound = 4120916503;
+    constexpr uint32_t min_phy_rate = 4071757759;
+    constexpr uint32_t surplus_bw_allowance = 12936;
+    constexpr uint32_t medium_time = 2196;
+
+    add_to_buf(static_cast<uint8_t>(146));
+    add_to_buf(static_cast<uint8_t>(55));
+    add_to_buf(ts_info);
+    add_to_buf<uint16_t>(nominal_msdu_size);
+    add_to_buf<uint16_t>(max_msdu_size);
+    add_to_buf<uint32_t>(min_svc_interval);
+    add_to_buf<uint32_t>(max_svc_interval);
+    add_to_buf<uint32_t>(inactivity_interval);
+    add_to_buf<uint32_t>(suspension_interval);
+    add_to_buf<uint32_t>(svc_start_time);
+    add_to_buf<uint32_t>(min_data_rate);
+    add_to_buf<uint32_t>(mean_data_rate);
+    add_to_buf<uint32_t>(peak_data_rate);
+    add_to_buf<uint32_t>(burst_size);
+    add_to_buf<uint32_t>(delay_bound);
+    add_to_buf<uint32_t>(min_phy_rate);
+    add_to_buf<uint16_t>(surplus_bw_allowance);
+    add_to_buf<uint16_t>(medium_time);
+
+    auto element = FromBytes<TspecElement>(buf_, sizeof(buf_));
+    ASSERT_NE(nullptr, element);
+    EXPECT_EQ(element->nominal_msdu_size.size(), nominal_msdu_size);
+    EXPECT_EQ(element->nominal_msdu_size.fixed(), 0);
+    EXPECT_EQ(element->max_msdu_size, max_msdu_size);
+    EXPECT_EQ(element->min_service_interval, min_svc_interval);
+    EXPECT_EQ(element->max_service_interval, max_svc_interval);
+    EXPECT_EQ(element->inactivity_interval, inactivity_interval);
+    EXPECT_EQ(element->suspension_interval, suspension_interval);
+    EXPECT_EQ(element->service_start_time, svc_start_time);
+    EXPECT_EQ(element->min_data_rate, min_data_rate);
+    EXPECT_EQ(element->mean_data_rate, mean_data_rate);
+    EXPECT_EQ(element->peak_data_rate, peak_data_rate);
+    EXPECT_EQ(element->burst_size, burst_size);
+    EXPECT_EQ(element->delay_bound, delay_bound);
+    EXPECT_EQ(element->min_phy_rate, min_phy_rate);
+    EXPECT_EQ(element->surplus_bw_allowance, surplus_bw_allowance);
+    EXPECT_EQ(element->medium_time, medium_time);
+}
+
+TEST_F(Elements, TsInfoAggregation) {
+    TsInfo ts_info;
+    ts_info.p1.set_access_policy(TsAccessPolicy::kHccaSpca);
+    EXPECT_TRUE(ts_info.IsValidAggregation());
+    EXPECT_TRUE(ts_info.IsScheduleReserved());
+
+    ts_info.p1.set_access_policy(TsAccessPolicy::kEdca);
+    EXPECT_FALSE(ts_info.IsValidAggregation());
+    EXPECT_FALSE(ts_info.IsScheduleReserved());
+
+    ts_info.p2.set_schedule(1);
+    EXPECT_TRUE(ts_info.IsValidAggregation());
+}
+
+TEST_F(Elements, TsInfoScheduleSetting) {
+    TsInfo ts_info;
+    EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kNoSchedule);
+
+    ts_info.p1.set_apsd(1);
+    EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kUnschedledApsd);
+
+    ts_info.p1.set_apsd(0);
+    ts_info.p2.set_schedule(1);
+    EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledPsmp_GcrSp);
+
+    ts_info.p1.set_apsd(1);
+    EXPECT_EQ(ts_info.GetScheduleSetting(), TsScheduleSetting::kScheduledApsd);
 }
 
 }  // namespace

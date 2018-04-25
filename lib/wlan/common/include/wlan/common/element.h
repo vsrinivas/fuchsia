@@ -293,6 +293,114 @@ class QosInfo : public common::BitField<uint8_t> {
     // 8th bit reserved
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.30, Table 9-139
+enum TsDirection : uint8_t {
+    kUplink = 0,
+    kDownlink = 1,
+    kDirectLink = 2,
+    kBidirectionalLink = 3,
+};
+
+// IEEE Std 802.11-2016, 9.4.2.30, Table 9-140
+enum TsAccessPolicy : uint8_t {
+    // 0 reserved
+    kEdca = 1,
+    kHccaSpca = 2,
+    kMixedMode = 3,
+};
+
+// IEEE Std 802.11-2016, 9.4.2.30, Table 9-141
+namespace ts_ack_policy {
+enum TsAckPolicy : uint8_t {
+    kNormalAck = 0,
+    kNoAck = 1,
+    // 2 reserved
+    kBlockAck = 3,
+};
+}  // namespace ts_ack_policy
+
+// IEEE Std 802.11-2016, 9.4.2.30, Table 9-142
+// Only used if TsInfo's access policy uses EDCA.
+// Schedule Setting depends on TsInfo's ASPD and schedule fields.
+enum TsScheduleSetting : uint8_t {
+    kNoSchedule = 0,
+    kUnschedledApsd = 1,
+    kScheduledPsmp_GcrSp = 2,
+    kScheduledApsd = 3,
+};
+
+// IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
+class TsInfoPart1 : public common::BitField<uint16_t> {
+   public:
+    WLAN_BIT_FIELD(traffic_type, 0, 1);
+    WLAN_BIT_FIELD(tsid, 1, 4);
+    WLAN_BIT_FIELD(direction, 5, 2);
+    WLAN_BIT_FIELD(access_policy, 7, 2);
+    WLAN_BIT_FIELD(aggregation, 9, 1);
+    WLAN_BIT_FIELD(apsd, 10, 1);
+    WLAN_BIT_FIELD(user_priority, 11, 3);
+    WLAN_BIT_FIELD(ack_policy, 14, 2);
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
+class TsInfoPart2 : public common::BitField<uint8_t> {
+   public:
+    WLAN_BIT_FIELD(schedule, 0, 1);
+    // Bit 17-23 reserved.
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.30, Figure 9-266
+// Note: In order to use a 3 byte packed struct, the TsInfo was split into two parts.
+struct TsInfo {
+    TsInfoPart1 p1;
+    TsInfoPart2 p2;
+
+    bool IsValidAggregation() const {
+        if (p1.access_policy() == TsAccessPolicy::kHccaSpca) { return true; }
+        return p1.access_policy() == TsAccessPolicy::kEdca && p2.schedule();
+    }
+
+    bool IsScheduleReserved() const { return p1.access_policy() != TsAccessPolicy::kEdca; }
+
+    TsScheduleSetting GetScheduleSetting() const {
+        return static_cast<TsScheduleSetting>(p1.apsd() | (p2.schedule() << 1));
+    }
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.30, Figure 9-267
+struct NominalMsduSize : public common::BitField<uint16_t> {
+    WLAN_BIT_FIELD(size, 0, 15);
+    WLAN_BIT_FIELD(fixed, 15, 1);
+} __PACKED;
+
+// IEEE Std 802.11-2016, 9.4.2.30
+struct TspecElement : public Element<TspecElement, element_id::kTspec> {
+    // TODO(hahnr): The element will for now only be read by the AP when received from an associated
+    // client and there is no need for providing a custom constructor yet.
+
+    ElementHeader hdr;
+    TsInfo ts_info;
+    NominalMsduSize nominal_msdu_size;
+    uint16_t max_msdu_size;
+    uint32_t min_service_interval;
+    uint32_t max_service_interval;
+    uint32_t inactivity_interval;
+    uint32_t suspension_interval;
+    uint32_t service_start_time;
+    uint32_t min_data_rate;
+    uint32_t mean_data_rate;
+    uint32_t peak_data_rate;
+    uint32_t burst_size;
+    uint32_t delay_bound;
+    uint32_t min_phy_rate;
+    uint16_t surplus_bw_allowance;
+    uint16_t medium_time;
+
+    // TODO(hahnr): Add min/mean/peak data rate support based on the provided fields.
+    // TODO(hahnr): Add min PHY rate support based on the provided field.
+    // TODO(hahnr): Add DMG support.
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.35
 struct QosCapabilityElement : public Element<QosCapabilityElement, element_id::kQosCapability> {
     static bool Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info);
