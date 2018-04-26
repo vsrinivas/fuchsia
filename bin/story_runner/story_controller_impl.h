@@ -109,7 +109,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
 
   // Called by ModuleContextImpl.
   void ConnectLinkPath(LinkPathPtr link_path,
-                       LinkImpl::ConnectionType connection_type,
                        fidl::InterfaceRequest<Link> request);
 
   // Called by ModuleContextImpl.

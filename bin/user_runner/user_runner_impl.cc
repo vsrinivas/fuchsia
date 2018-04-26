@@ -687,8 +687,7 @@ void UserRunnerImpl::GetIntelligenceServices(
 
 void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   if (user_shell_link_) {
-    user_shell_link_->Connect(std::move(request),
-                              LinkImpl::ConnectionType::Primary);
+    user_shell_link_->Connect(std::move(request));
     return;
   }
 
@@ -697,8 +696,7 @@ void UserRunnerImpl::GetLink(fidl::InterfaceRequest<Link> request) {
   link_path.link_name = kUserShellLinkName;
   user_shell_link_ = std::make_unique<LinkImpl>(
       ledger_client_.get(), ledger::PageId(), std::move(link_path), nullptr);
-  user_shell_link_->Connect(std::move(request),
-                            LinkImpl::ConnectionType::Secondary);
+  user_shell_link_->Connect(std::move(request));
 }
 
 void UserRunnerImpl::GetPresentation(

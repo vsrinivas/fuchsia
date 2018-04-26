@@ -529,7 +529,6 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
   ConnectLinkCall(OperationContainer* const container,
                   StoryControllerImpl* const story_controller_impl,
                   LinkPathPtr link_path,
-                  LinkImpl::ConnectionType connection_type,
                   CreateLinkInfoPtr create_link_info,
                   bool notify_watchers,
                   fidl::InterfaceRequest<Link> request,
@@ -539,7 +538,6 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                   std::move(done)),
         story_controller_impl_(story_controller_impl),
         link_path_(std::move(link_path)),
-        connection_type_(connection_type),
         create_link_info_(std::move(create_link_info)),
         notify_watchers_(notify_watchers),
         request_(std::move(request)) {
@@ -555,7 +553,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                             return l->link_path() == *link_path_;
                           });
     if (i != story_controller_impl_->links_.end()) {
-      (*i)->Connect(std::move(request_), connection_type_);
+      (*i)->Connect(std::move(request_));
       return;
     }
 
@@ -565,7 +563,7 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
                      *link_path_, std::move(create_link_info_)));
     LinkImpl* const link_ptr = link_impl_.get();
     if (request_) {
-      link_impl_->Connect(std::move(request_), connection_type_);
+      link_impl_->Connect(std::move(request_));
       // Transfer ownership of |link_impl_| over to |story_controller_impl_|.
       story_controller_impl_->links_.emplace_back(link_impl_.release());
 
@@ -594,7 +592,6 @@ class StoryControllerImpl::ConnectLinkCall : Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   const LinkPathPtr link_path_;
-  LinkImpl::ConnectionType connection_type_;
   CreateLinkInfoPtr create_link_info_;
   const bool notify_watchers_;
   fidl::InterfaceRequest<Link> request_;
@@ -671,7 +668,6 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
         mapping->link_path.Clone(link_path.get());
         new ConnectLinkCall(
             &operation_queue_, story_controller_impl_, std::move(link_path),
-            LinkImpl::ConnectionType::Secondary,
             CloneOptional(info.create_link()), false /* notify_watchers */,
             nullptr /* interface request */, [flow] {});
       }
@@ -1427,7 +1423,7 @@ class StoryControllerImpl::ResolveParameterCall
     FlowToken flow{this, &result_};
     new ConnectLinkCall(
         &operation_queue_, story_controller_impl_, fidl::Clone(link_path_),
-        LinkImpl::ConnectionType::Secondary, nullptr /* create_link_info */,
+        nullptr /* create_link_info */,
         false /* notify_watchers */, link_.NewRequest(),
         [this, flow] {
           Cont(flow);
@@ -1999,10 +1995,9 @@ void StoryControllerImpl::RequestStoryFocus() {
 
 void StoryControllerImpl::ConnectLinkPath(
     LinkPathPtr link_path,
-    LinkImpl::ConnectionType connection_type,
     fidl::InterfaceRequest<Link> request) {
   new ConnectLinkCall(&operation_queue_, this, std::move(link_path),
-                      connection_type, nullptr /* create_link_info */,
+                      nullptr /* create_link_info */,
                       true /* notify_watchers */, std::move(request), [] {});
 }
 
@@ -2288,8 +2283,7 @@ void StoryControllerImpl::GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
   LinkPathPtr link_path = LinkPath::New();
   link_path->module_path = std::move(module_path);
   link_path->link_name = name;
-  ConnectLinkPath(std::move(link_path), LinkImpl::ConnectionType::Secondary,
-                  std::move(request));
+  ConnectLinkPath(std::move(link_path), std::move(request));
 }
 
 void StoryControllerImpl::AddModule(

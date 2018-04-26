@@ -98,7 +98,7 @@ class LinkImplTestBase : public testing::TestWithLedger, modular::LinkWatcher {
         std::make_unique<LinkImpl>(ledger_client(), CloneStruct(page_id),
                                    link_path, std::move(create_link_info));
 
-    link_impl_->Connect(link_.NewRequest(), LinkImpl::ConnectionType::Primary);
+    link_impl_->Connect(link_.NewRequest());
 
     ledger_client_peer_ = ledger_client()->GetLedgerClientPeer();
     page_client_peer_ = std::make_unique<PageClientPeer>(
@@ -183,7 +183,6 @@ class LinkImplTest : public LinkImplTestBase {
 
   CreateLinkInfoPtr GetCreateLinkInfo() override {
     auto create_link_info = CreateLinkInfo::New();
-    create_link_info->permissions = LinkPermissions::READ_WRITE;
     create_link_info->initial_data = kInitialLinkValue;
     // |create_link_info->allowed_types| is already null.
     return create_link_info;
@@ -348,68 +347,6 @@ TEST_F(LinkImplTest, SetEntity) {
   EXPECT_TRUE(RunLoopUntilWithTimeout([&done] { return done; }));
 }
 
-class LinkImplReadOnlyTest : public LinkImplTestBase {
- public:
-  LinkImplReadOnlyTest() = default;
-  ~LinkImplReadOnlyTest() = default;
-
-  CreateLinkInfoPtr GetCreateLinkInfo() override {
-    auto create_link_info = CreateLinkInfo::New();
-    create_link_info->permissions = LinkPermissions::READ_ONLY_FOR_OTHERS;
-    // create_link_info->initial_data| is left null.
-    // |create_link_info->allowed_types| is already null.
-    return create_link_info;
-  }
-
-  LinkPtr link2_;
-};
-
-// In contrast to the Constructor test for LinkImplTest,
-// |create_link_info->initial_data| was set to null for this test, so nothing
-// was written to the link by default.
-TEST_F(LinkImplReadOnlyTest, Constructor) {
-  continue_ = [this] { EXPECT_LE(step_, 1); };
-
-  link_->WatchAll(watcher_binding_.NewBinding());
-
-  bool synced{};
-  link_->Sync([&synced] { synced = true; });
-
-  EXPECT_TRUE(RunLoopUntilWithTimeout([&synced] { return synced; }));
-
-  EXPECT_EQ(0, ledger_change_count());
-
-  EXPECT_EQ("null", last_json_notify_);
-  ExpectOneCall("LinkImpl::ReloadCall");
-  ExpectOneCall("ReadAllDataCall");
-  // All numbers for |IncrementalChangeCall| are "at least" because PageClient
-  // will make a callback once per write, effectively doubling the number of
-  // calls. However, |LinkImpl::OnPageChange| puts those requests on an
-  // OperationQueue, so each request may or may not have run by the time Sync()
-  // returns.
-  ExpectOneCall("LinkImpl::WatchCall");
-  ExpectOneCall("SyncCall");
-  ExpectNoOtherCalls();
-}
-
-TEST_F(LinkImplReadOnlyTest, Set) {
-  continue_ = [this] { EXPECT_LE(step_, 2); };
-
-  link_->WatchAll(watcher_binding_.NewBinding());
-
-  link_impl_->Connect(link2_.NewRequest(), LinkImpl::ConnectionType::Secondary);
-
-  // This should be a no-op because |link2_| is read-only.
-  link2_->Set(nullptr, "\"from_link2\"");
-  // Writing from_link2 silently fails, so we need to write another value
-  // so we have a condition against which we can detect the end of the test.
-  link_->Set(nullptr, "\"from_link\"");
-
-  EXPECT_TRUE(RunLoopUntilWithTimeout([this] {
-    return "\"from_link\"" == last_json_notify_ && ledger_change_count() == 1;
-  }));
-}
-
 class LinkImplNullInitTest : public LinkImplTestBase {
  public:
   LinkImplNullInitTest() = default;
@@ -433,9 +370,6 @@ TEST_F(LinkImplNullInitTest, Set) {
 }
 
 // TODO(jimbe) Still many tests to be written, including:
-//
-// * testing that setting a schema prevents WriteLinkData from being called if
-//   the json is bad,
 //
 // * Specific behavior of LinkWatcher notification (Watch() not called for own
 //   changes, Watch() and WatchAll() only called for changes that really occur,

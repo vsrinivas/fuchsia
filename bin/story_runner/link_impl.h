@@ -23,7 +23,6 @@
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "third_party/rapidjson/rapidjson/schema.h"
 
 namespace modular {
 
@@ -37,36 +36,22 @@ using CrtJsonPointer = rapidjson::GenericPointer<CrtJsonValue>;
 class LinkConnection;
 class LinkWatcherConnection;
 
-// A Link is a mutable and observable value shared between modules.
+// A Link is a mutable and observable value that is persistent across story
+// restarts, synchronized across devices, and can be shared between modules.
 //
 // When a module requests to run more modules using
 // ModuleContext::StartModule(), one or more Link instances are associated with
-// each such request (as specified in the Module's Intent). Link instances
-// can be shared between multiple modules. The same Link instance can be used
-// in multiple StartModule() requests, so it can be shared between more than
-// two modules. Link instances have names that are local to each Module, and
-// can be retrieved by calling ModuleContext.GetLink(name).
+// each such request (as specified in the Intent). Link instances can be shared
+// between multiple modules. The same Link instance can be used in multiple
+// StartModule() requests, so it can be shared between more than two modules.
+// Link instances have names that are local to each Module, and can be accessed
+// by calling ModuleContext.GetLink(name).
 //
 // If a watcher is registered through one handle using the Watch() method, it
 // only receives notifications for changes by requests through other handles. To
 // make this possible, each Link connection is bound to a separate
 // LinkConnection instance rather than to LinkImpl directly. LinkImpl owns all
 // its LinkConnection instances.
-//
-// The value in a link may be validated against a schema. The current
-// implementation is preliminary and experimental, however, in multiple ways:
-//
-// * The schema is not persisted. It's just imposed by some module at runtime.
-//
-// * It's unclear which module, or what else, should impose the schema in the
-//   first place.
-//
-// * Schema validation is applied but failing validation is not communicated to
-//   Link clients.
-//
-// * Because changes across devices can interact, it's possible that a set of
-//   changes yields a result that is not valid according to the current schema.
-//   Therefore, for now, the schema is not validated after reconciliation.
 //
 // This implementation of LinkImpl works by storing the history of change
 // operations made by the callers. Each change operation is stored as a separate
@@ -99,20 +84,10 @@ class LinkImpl : PageClient {
 
   ~LinkImpl() override;
 
-  // Primary connections are from the module that owns the link.
-  // Secondary connections are from modules that receive the link with their
-  // nouns, and from the story controller. This is used to decide whether links
-  // that are marked as READ_ONLY_TO_OTHERS are writable.
-  enum class ConnectionType {
-    Primary = 0,
-    Secondary = 1,
-  };
-
   // Creates a new LinkConnection for the given request. LinkConnection
   // instances are deleted when their connections close, and they are all
   // deleted and close their connections when LinkImpl is destroyed.
-  void Connect(fidl::InterfaceRequest<Link> request,
-               ConnectionType connection_type);
+  void Connect(fidl::InterfaceRequest<Link> request);
 
   // Used by LinkConnection.
   void UpdateObject(fidl::VectorPtr<fidl::StringPtr> path,
@@ -134,9 +109,6 @@ class LinkImpl : PageClient {
 
   // Used by LinkWatcherConnection.
   void RemoveConnection(LinkWatcherConnection* connection);
-
-  // Returns true if the given connection is not allowed to write this Link.
-  bool IsClientReadOnly(uint32_t src);
 
   // Used by StoryControllerImpl.
   const LinkPath& link_path() const { return link_path_; }
@@ -171,9 +143,6 @@ class LinkImpl : PageClient {
                           CrtJsonValue::AllocatorType& allocator);
 
   void NotifyWatchers(uint32_t src);
-  void ValidateSchema(const char* entry_point,
-                      const CrtJsonPointer& debug_pointer,
-                      const std::string& debug_json);
 
   // Counter for LinkConnection IDs used for sequentially assigning IDs to
   // connections. ID 0 is never used so it can be used as pseudo connection ID
@@ -183,21 +152,10 @@ class LinkImpl : PageClient {
   static constexpr uint32_t kWatchAllConnectionId{0};
   static constexpr uint32_t kOnChangeConnectionId{1};
 
-  // Ids of connections that will always have write access to this link.
-  // Empty by default because it's possible that none of the connected mods
-  // have write access. The write access for secondary connection is determined
-  // by |CreateLinkInfo|.
-  std::set<uint32_t> primary_connection_ids_;
-
   // We can only accept connection requests once the instance is fully
   // initialized. So we queue connections on |requests_| until |ready_| is true.
   bool ready_{};
   std::vector<fidl::InterfaceRequest<Link>> requests_;
-
-  // Indices within |requests_| of primary connections. There is no default
-  // primary connection. These values are translated to connection IDs by the
-  // LinkImpl constructor as the connection IDs are generated.
-  std::vector<size_t> requests_primary_indices_;
 
   // The value of this Link instance.
   CrtJsonDoc doc_;
@@ -229,9 +187,6 @@ class LinkImpl : PageClient {
   // LinkWatcher connections do not retain the Link instance, but instead can
   // watch it being deleted (through their connection error handler).
   std::function<void()> orphaned_handler_;
-
-  // A JSON schema to be applied to the Link value.
-  std::unique_ptr<rapidjson::SchemaDocument> schema_doc_;
 
   // Ordered key generator for incremental Link values
   KeyGenerator key_generator_;

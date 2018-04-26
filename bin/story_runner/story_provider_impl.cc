@@ -526,8 +526,7 @@ class StoryProviderImpl::GetLinkPeerCall : Operation<> {
         link_peer->ledger.get(), CloneStruct(*story_data_->story_page_id),
         std::move(*link_path), nullptr);
 
-    link_peer->link->Connect(std::move(request_),
-                             LinkImpl::ConnectionType::Primary);
+    link_peer->link->Connect(std::move(request_));
 
     impl_->link_peers_.emplace_back(std::move(link_peer));
 

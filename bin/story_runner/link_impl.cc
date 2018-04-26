@@ -277,15 +277,9 @@ class LinkImpl::SetCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    if (impl_->IsClientReadOnly(src_)) {
-      FXL_LOG(WARNING) << "LinkImpl::SetCall failed, no write access";
-      return;
-    }
-
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplySetOp(ptr, json_);
     if (success) {
-      impl_->ValidateSchema("LinkImpl::SetCall", ptr, json_);
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
@@ -323,15 +317,9 @@ class LinkImpl::UpdateObjectCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    if (impl_->IsClientReadOnly(src_)) {
-      FXL_LOG(WARNING) << "LinkImpl::UpdateObjectCall failed, no write access";
-      return;
-    }
-
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplyUpdateOp(ptr, json_);
     if (success) {
-      impl_->ValidateSchema("LinkImpl::UpdateObject", ptr, json_);
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
@@ -367,15 +355,9 @@ class LinkImpl::EraseCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    if (impl_->IsClientReadOnly(src_)) {
-      FXL_LOG(WARNING) << "LinkImpl::EraseCall failed, no write access";
-      return;
-    }
-
     CrtJsonPointer ptr = CreatePointer(impl_->doc_, *path_);
     const bool success = impl_->ApplyEraseOp(ptr);
     if (success) {
-      impl_->ValidateSchema("LinkImpl::EraseCall", ptr, std::string());
       new WriteCall(&operation_queue_, impl_, src_, [flow] {});
       impl_->NotifyWatchers(src_);
     } else {
@@ -518,33 +500,20 @@ LinkImpl::LinkImpl(LedgerClient* const ledger_client,
       create_link_info_(std::move(create_link_info)) {
   link_path.Clone(&link_path_);
   MakeReloadCall([this] {
-    // Convert the indices of the pending primary handles into connection IDs
-    // and store the connection IDs in a set<> that's quickly searchable.
-    for (auto index : requests_primary_indices_) {
-      primary_connection_ids_.insert(index + next_connection_id_);
-    }
     for (auto& request : requests_) {
       LinkConnection::New(this, next_connection_id_++, std::move(request));
     }
     requests_.clear();
-    requests_primary_indices_.clear();
     ready_ = true;
   });
 }
 
 LinkImpl::~LinkImpl() = default;
 
-void LinkImpl::Connect(fidl::InterfaceRequest<Link> request,
-                       ConnectionType connection_type) {
+void LinkImpl::Connect(fidl::InterfaceRequest<Link> request) {
   if (ready_) {
-    if (connection_type == ConnectionType::Primary) {
-      primary_connection_ids_.insert(next_connection_id_);
-    }
     LinkConnection::New(this, next_connection_id_++, std::move(request));
   } else {
-    if (connection_type == ConnectionType::Primary) {
-      requests_primary_indices_.push_back(requests_.size());
-    }
     requests_.emplace_back(std::move(request));
   }
 }
@@ -696,42 +665,6 @@ bool LinkImpl::MergeObject(CrtJsonValue& target,
     }
   }
   return diff;
-}
-
-void LinkImpl::ValidateSchema(const char* const entry_point,
-                              const CrtJsonPointer& debug_pointer,
-                              const std::string& debug_json) {
-  if (!schema_doc_) {
-    return;
-  }
-
-  rapidjson::GenericSchemaValidator<rapidjson::SchemaDocument> validator(
-      *schema_doc_);
-  if (!doc_.Accept(validator)) {
-    if (!validator.IsValid()) {
-      rapidjson::StringBuffer sbpath;
-      validator.GetInvalidSchemaPointer().StringifyUriFragment(sbpath);
-      rapidjson::StringBuffer sbdoc;
-      validator.GetInvalidDocumentPointer().StringifyUriFragment(sbdoc);
-      rapidjson::StringBuffer sbapipath;
-      debug_pointer.StringifyUriFragment(sbapipath);
-      FXL_LOG(ERROR) << "Schema constraint violation in "
-                     << EncodeLinkPath(link_path_) << ":" << std::endl
-                     << "  Constraint " << sbpath.GetString() << "/"
-                     << validator.GetInvalidSchemaKeyword() << std::endl
-                     << "  Doc location: " << sbdoc.GetString() << std::endl
-                     << "  API " << entry_point << std::endl
-                     << "  API path " << sbapipath.GetString() << std::endl
-                     << "  API json " << debug_json << std::endl;
-    }
-  }
-}
-
-bool LinkImpl::IsClientReadOnly(uint32_t src) {
-  return create_link_info_ &&
-         create_link_info_->permissions ==
-             LinkPermissions::READ_ONLY_FOR_OTHERS &&
-         primary_connection_ids_.count(src) == 0;
 }
 
 // To be called after:

@@ -11,21 +11,9 @@ struct CreateLinkInfo {
   // module.
   string initial_data;
 
-  LinkPermissions permissions;
-
   // If |allowed_types| is null, the Link contains JSON. No schema validation
   // is performed.
   LinkAllowedTypes? allowed_types;
-};
-
-// Permissions assigned to a Link in a Chain when the Link is created.
-enum LinkPermissions {
-  // A mutable Link whose contents can be set by anyone that has a handle to the
-  // Link.
-  READ_WRITE = 0;
-  // A Link that is only mutable by the creator of the Link, and is read-only to
-  // everyone else.
-  READ_ONLY_FOR_OTHERS = 1;
 };
 
 struct LinkAllowedTypes {

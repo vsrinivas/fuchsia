@@ -150,11 +150,7 @@ class LinkImpl::IncrementalChangeCall : Operation<> {
       new ReloadCall(&operation_queue_, impl_,
                      [this, flow] { Cont1(flow, kOnChangeConnectionId); });
     } else {
-      if (impl_->ApplyChange(data_.get())) {
-        CrtJsonPointer ptr = CreatePointer(impl_->doc_, *data_->pointer);
-        impl_->ValidateSchema("LinkImpl::IncrementalChangeCall::Run", ptr,
-                              data_->json);
-      } else {
+      if (!impl_->ApplyChange(data_.get())) {
         FXL_LOG(WARNING) << trace_name() << " "
                          << "ApplyChange() failed ";
       }
@@ -291,9 +287,6 @@ void LinkImpl::MakeIncrementalWriteCall(modular_private::LinkChangePtr data,
 
 void LinkImpl::MakeIncrementalChangeCall(modular_private::LinkChangePtr data,
                                          uint32_t src) {
-  if (IsClientReadOnly(src)) {
-    return;
-  }
   new IncrementalChangeCall(&operation_queue_, this, std::move(data), src,
                             [] {});
 }
