@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bt_intel_tool") {
+executable("bt-intel-tool") {
   output_name = "bt-intel-tool"
 
   sources = [
@@ -16,7 +16,7 @@ executable("bt_intel_tool") {
   ]
 
   deps = [
-    "//garnet/bin/bluetooth_tools/lib",
+    "//garnet/bin/bluetooth/tools/lib",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
   ]

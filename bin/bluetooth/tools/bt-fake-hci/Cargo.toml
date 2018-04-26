@@ -1,5 +1,5 @@
 [package]
-name = "bthci-fake-util"
+name = "bt-fake-hci"
 version = "0.1.0"
 authors = ["Benjamin Brittain <bwb@google.com>"]
 

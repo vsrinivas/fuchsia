@@ -4,32 +4,32 @@
 
 import("//build/package.gni")
 
-package("bluetooth_tools") {
+package("bt-tools") {
   deprecated_system_image = true
 
   deps = [
-    "bluetoothcli",
-    "bt_intel_tool",
-    "btsnoop",
-    "hcitool",
-    "bthci_fake_util"
+    "bt-cli",
+    "bt-intel-tool",
+    "bt-snoop",
+    "bt-hci-tool",
+    "bt-fake-hci"
   ]
 
   binaries = [
     {
-      name = "bluetoothcli"
+      name = "bt-cli"
     },
     {
-      name = "btsnoop"
+      name = "bt-snoop"
     },
     {
-      name = "hcitool"
+      name = "bt-hci-tool"
     },
     {
       name = "bt-intel-tool"
     },
     {
-      name = "bthci-fake-util"
+      name = "bt-fake-hci"
     }
   ]
 }

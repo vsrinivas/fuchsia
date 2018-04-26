@@ -2,12 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rust_library.gni")
+import("//build/rust/rust_binary.gni")
 
-rust_library("bluetooth") {
-  integration_tests = [
-    "lifecycle",
-  ]
+rust_binary("bt-fake-hci") {
+  name = "bt-fake-hci"
+  output_name = "bt-fake-hci"
 }
-

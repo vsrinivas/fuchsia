@@ -37,11 +37,11 @@ clients are performed using the [control.fidl](../../public/lib/bluetooth/fidl/c
 API. This API is intended for managing local adapters, device discovery & discoverability,
 pairing/bonding, and other settings.
 
-[`bluetoothcli`](../bluetooth_tools/bluetoothcli) is a command-line front-end
+[`bt-cli`](tools/bt-cli) is a command-line front-end
 for this API:
 
 ```
-$ bluetoothcli
+$ bt-cli
 bluetooth> list-adapters
   Adapter 0
     id: bf004a8b-d691-4298-8c79-130b83e047a1
@@ -55,7 +55,7 @@ that acts as a Bluetooth system menu based on this API at
 
 ### Tools
 
-See the [bluetooth_tools](../bluetooth_tools) package for more information on
+See the [bluetooth/tools](tools/) package for more information on
 available command line tools for testing/debugging.
 
 ### Testing

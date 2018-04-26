@@ -6,7 +6,7 @@
 
 #include <lib/async/dispatcher.h>
 
-#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
+#include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "lib/fxl/memory/ref_ptr.h"
 

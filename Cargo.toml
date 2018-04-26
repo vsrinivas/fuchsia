@@ -2,12 +2,12 @@
 # Any crate in the Garnet tree must be listed as a member of this
 # workspace.
 members =  [
-  "bin/bt-gap",
-  "bin/bluetooth_tools/bthci_fake_util",
-  "bin/bluetooth_tools/btsnoop",
+  "bin/bluetooth/bt-gap",
+  "bin/bluetooth/tests/integration",
+  "bin/bluetooth/tools/bt-fake-hci",
+  "bin/bluetooth/tools/bt-snoop",
   "bin/wlantool",
   "bin/xi_core",
-  "bin/bluetooth_tests/integration",
   "examples/bluetooth/ble_battery_service",
   "examples/media/audio_player_rust",
   "examples/rust/testing",

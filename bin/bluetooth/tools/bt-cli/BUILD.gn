@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bluetoothcli") {
-  output_name = "bluetoothcli"
+executable("bt-cli") {
+  output_name = "bt-cli"
 
   sources = [
     "app.cc",
@@ -18,7 +18,7 @@ executable("bluetoothcli") {
   ]
 
   deps = [
-    "//garnet/bin/bluetooth_tools/lib",
+    "//garnet/bin/bluetooth/tools/lib",
     "//garnet/public/lib/app/cpp",
     "//garnet/public/lib/bluetooth/fidl",
     "//garnet/public/lib/fxl",

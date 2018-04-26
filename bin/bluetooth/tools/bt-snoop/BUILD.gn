@@ -2,12 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rust_binary.gni")
 import("//build/package.gni")
-import("//build/rust/rust_library.gni")
 
-rust_library("bluetooth") {
-  integration_tests = [
-    "lifecycle",
-  ]
+rust_binary("bt-snoop") {
+  name = "bt-snoop"
 }
-

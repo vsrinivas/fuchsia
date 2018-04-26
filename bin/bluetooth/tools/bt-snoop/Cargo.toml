@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 [package]
-name = "btsnoop"
+name = "bt-snoop"
 version = "0.1.0"
 license = "BSD-3-Clause"
 authors = ["Benjamin Brittain <bwb@google.com>"]

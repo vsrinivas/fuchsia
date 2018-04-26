@@ -3,6 +3,6 @@
         "garnet/packages/prod/bluetooth"
     ],
     "packages": {
-        "bluetooth_tests": "//garnet/bin/bt-gap:bluetooth_tests"
+        "bluetooth_tests": "//garnet/bin/bluetooth/tests:bluetooth_tests"
     }
 }

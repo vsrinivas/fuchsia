@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("hcitool") {
-  output_name = "hcitool"
+executable("bt-hci-tool") {
+  output_name = "bt-hci-tool"
 
   sources = [
     "commands.cc",
@@ -12,7 +12,7 @@ executable("hcitool") {
   ]
 
   deps = [
-    "//garnet/bin/bluetooth_tools/lib",
+    "//garnet/bin/bluetooth/tools/lib",
     "//garnet/drivers/bluetooth/lib/gap",
     "//garnet/drivers/bluetooth/lib/hci",
   ]

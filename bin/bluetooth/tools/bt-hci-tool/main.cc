@@ -10,7 +10,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
+#include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/device_wrapper.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"

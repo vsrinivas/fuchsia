@@ -9,7 +9,7 @@
 
 #include <fuchsia/cpp/bluetooth_control.h>
 #include <lib/async-loop/cpp/loop.h>
-#include "garnet/bin/bluetooth_tools/lib/command_dispatcher.h"
+#include "garnet/bin/bluetooth/tools/lib/command_dispatcher.h"
 #include "lib/app/cpp/application_context.h"
 #include "lib/fxl/macros.h"
 
