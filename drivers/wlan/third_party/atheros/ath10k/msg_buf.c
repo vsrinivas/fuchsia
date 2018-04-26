@@ -153,6 +153,11 @@ void* ath10k_msg_buf_get_payload(struct ath10k_msg_buf* msg_buf) {
                    + ath10k_msg_types_info[type].hdr_size);
 }
 
+size_t ath10k_msg_buf_get_payload_len(struct ath10k_msg_buf* msg_buf,
+                                      enum ath10k_msg_type msg_type) {
+    return msg_buf->used - ath10k_msg_buf_get_payload_offset(msg_type);
+}
+
 size_t ath10k_msg_buf_get_offset(enum ath10k_msg_type type) {
     return ath10k_msg_types_info[type].offset;
 }

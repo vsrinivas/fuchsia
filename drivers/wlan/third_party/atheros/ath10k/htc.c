@@ -43,7 +43,7 @@ static void ath10k_htc_prepare_tx_buf(struct ath10k_htc_ep* ep,
                                       struct ath10k_msg_buf* msg_buf) {
     struct ath10k_htc_hdr* hdr = ath10k_msg_buf_get_header(msg_buf, ATH10K_MSG_TYPE_HTC);
     hdr->eid = ep->eid;
-    hdr->len = msg_buf->used - ath10k_msg_buf_size(ATH10K_MSG_TYPE_HTC);
+    hdr->len = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC);
     hdr->flags = ATH10K_HTC_FLAG_NEED_CREDIT_UPDATE;
 
     mtx_lock(&ep->htc->tx_lock);
@@ -361,7 +361,7 @@ void ath10k_htc_rx_completion_handler(struct ath10k* ar, struct ath10k_msg_buf* 
         goto out;
     }
 
-    size_t actual_payload_sz = msg_buf->used - ath10k_msg_buf_size(ATH10K_MSG_TYPE_HTC);
+    size_t actual_payload_sz = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC);
     if (actual_payload_sz < payload_len) {
         ath10k_err("HTC Rx: insufficient length, got %zu, expected %d\n",
                    actual_payload_sz, payload_len);
@@ -434,7 +434,7 @@ static void ath10k_htc_control_rx_complete(struct ath10k* ar, struct ath10k_msg_
             goto out;
         }
 
-        size_t msg_len = msg_buf->used - ath10k_msg_buf_get_offset(ATH10K_MSG_TYPE_HTC_MSG);
+        size_t msg_len = ath10k_msg_buf_get_payload_len(msg_buf, ATH10K_MSG_TYPE_HTC_MSG);
         htc->control_resp_len =
             min_t(int, msg_len, ATH10K_HTC_MAX_CTRL_MSG_LEN);
 
