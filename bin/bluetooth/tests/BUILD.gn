@@ -5,7 +5,7 @@
 import("//build/package.gni")
 import("//build/rust/rust_library.gni")
 
-executable("bt_host_unittests") {
+executable("bt-host-unittests") {
   testonly = true
 
   deps = [
@@ -21,13 +21,14 @@ package("bluetooth_tests") {
 
   package_name = "bluetooth_tests"
 
+
   deps = [
-    "integration:bt",
-    ":bt_host_unittests",
+    ":bt-host-unittests",
+    "//garnet/bin/bluetooth/tests/integration:bt",
   ]
 
   tests = [
-    { name = "bt_host_unittests" },
+    { name = "bt-host-unittests" },
     { name = "bt-lifecycle-lib-integration-test" },
   ]
 }

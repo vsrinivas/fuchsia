@@ -1,13 +1,17 @@
-#[macro_use]
 extern crate fdio;
-#[macro_use]
 extern crate failure;
 extern crate rand;
 pub extern crate fuchsia_bluetooth as bluetooth;
+extern crate fuchsia_async as async;
+extern crate fidl_bluetooth_host;
+extern crate futures;
 
+
+use fidl_bluetooth_host::HostProxy;
 use std::path::PathBuf;
 use std::{thread, time};
 use bluetooth::hci;
+use bluetooth::host;
 
 mod common;
 
@@ -53,6 +57,16 @@ fn bt_host_lifecycle() {
     // Confirm device topology, host is under bt-hci
     let device_topo = fdio::device_get_topo_path(&found_device).unwrap();
     assert!(device_topo.contains("bt-hci"));
+
+    // Open a host channel using an ioctl and check the device is responsive
+    let mut executor = async::Executor::new().unwrap();
+    let handle = host::open_host_channel(&found_device).unwrap();
+    let host = HostProxy::new(async::Channel::from_channel(handle.into()).unwrap());
+    let info = executor.run_singlethreaded(host.get_info());
+    assert!(info.is_ok());
+    if let Ok(info) = info {
+        assert_eq!("00:00:00:00:00:00", info.address);
+    }
 
     // Remove the bt-hci device
     hci::destroy_device(&hci_device);

@@ -134,8 +134,11 @@ version = "0.1.0"
 dependencies = [
  "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "fdio 0.2.0",
+ "fidl_bluetooth_host 0.1.0",
+ "fuchsia-async 0.1.0",
  "fuchsia-bluetooth 0.1.0",
  "fuchsia-zircon 0.3.4",
+ "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
