@@ -32,7 +32,6 @@ class TestBase : public ::testing::Test {
 
   // Runs the message loop until it would wait.
   void RunUntilIdle() {
-    loop_.ResetQuit();
     loop_.RunUntilIdle();
   }
 
