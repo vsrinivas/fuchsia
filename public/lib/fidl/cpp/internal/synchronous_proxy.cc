@@ -11,14 +11,9 @@
 
 namespace fidl {
 namespace internal {
-namespace {
-
-constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
-
-}  // namespace
 
 SynchronousProxy::SynchronousProxy(zx::channel channel)
-    : channel_(std::move(channel)), next_txid_(1) {}
+    : channel_(std::move(channel)) {}
 
 SynchronousProxy::~SynchronousProxy() = default;
 
@@ -40,7 +35,6 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
                                    const fidl_type_t* response_type,
                                    Message request,
                                    Message* response) {
-  request.set_txid(GetNextTxid());
   const char* error_msg = nullptr;
   zx_status_t status = request.Validate(request_type, &error_msg);
   if (status != ZX_OK) {
@@ -56,15 +50,6 @@ zx_status_t SynchronousProxy::Call(const fidl_type_t* request_type,
     return status;
   }
   return ZX_OK;
-}
-
-zx_txid_t SynchronousProxy::GetNextTxid() {
-  zx_txid_t txid = 0;
-  while (!txid) {
-    txid = next_txid_.fetch_add(1, std::memory_order_relaxed);
-    txid &= kUserspaceTxidMask;
-  }
-  return txid;
 }
 
 }  // namespace internal

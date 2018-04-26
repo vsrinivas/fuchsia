@@ -9,8 +9,6 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
-#include <atomic>
-
 namespace fidl {
 namespace internal {
 
@@ -55,13 +53,7 @@ class SynchronousProxy {
                    Message* response);
 
  private:
-  // Returns the next txid to use for messages.
-  //
-  // Always returns a non-zero value.
-  zx_txid_t GetNextTxid();
-
   zx::channel channel_;
-  std::atomic<zx_txid_t> next_txid_;
 };
 
 }  // namespace internal
