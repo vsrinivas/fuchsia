@@ -72,6 +72,12 @@ int gpt_device_finalize(gpt_device_t* dev);
 int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_t* guid,
                       uint64_t offset, uint64_t blocks, uint64_t flags);
 
+// Writes zeroed blocks at an arbitrary offset (in blocks) within the device.
+//
+// Can be used alongside gpt_partition_add to ensure a newly created partition
+// will not read stale superblock data.
+int gpt_partition_clear(gpt_device_t* dev, uint64_t offset, uint64_t blocks);
+
 // removes a partition
 int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid);
 

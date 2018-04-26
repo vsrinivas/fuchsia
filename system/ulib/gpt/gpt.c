@@ -523,6 +523,41 @@ int gpt_partition_add(gpt_device_t* dev, const char* name, uint8_t* type, uint8_
     return 0;
 }
 
+int gpt_partition_clear(gpt_device_t* dev, uint64_t offset, uint64_t blocks) {
+    gpt_priv_t* priv = get_priv(dev);
+
+    if (!dev->valid) {
+        G_PRINTF("partition header invalid, sync to generate a default header\n");
+        return -1;
+    }
+
+    if (blocks == 0) {
+        G_PRINTF("must clear at least 1 block\n");
+        return -1;
+    }
+    uint64_t first = offset;
+    uint64_t last = offset + blocks - 1;
+
+    if (last < first || first < priv->header.first || last > priv->header.last) {
+        G_PRINTF("must clear in the range of usable blocks[%" PRIu64", %" PRIu64"]\n",
+                 priv->header.first, priv->header.last);
+        return -1;
+    }
+
+    char zero[priv->blocksize];
+    memset(zero, 0, sizeof(zero));
+
+    for (size_t i = first; i <= last; i++) {
+        if (pwrite(priv->fd, zero, sizeof(zero), priv->blocksize * i) !=
+            (ssize_t) sizeof(zero)) {
+            G_PRINTF("Failed to write to block %zu; errno: %d\n", i, errno);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 int gpt_partition_remove(gpt_device_t* dev, const uint8_t* guid) {
     // look for the entry in the partition list
     int i;
