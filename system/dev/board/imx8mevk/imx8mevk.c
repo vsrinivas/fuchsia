@@ -97,7 +97,7 @@ iomux_cfg_struct imx8mevk_pinmux[] = {
                             0x000ULL),
 
     // PWR_LED (used for GPIO Driver)
-    MAKE_PIN_CFG_DEFAULT(0,  SW_MUX_CTL_PAD_GPIO1_IO13),
+    MAKE_PIN_CFG_DEFAULT(0, SW_MUX_CTL_PAD_GPIO1_IO13),
 };
 
 static void imx8mevk_bus_release(void* ctx) {

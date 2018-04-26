@@ -282,6 +282,7 @@ typedef uint64_t zx_off_t;
 #define ZX_INTERRUPT_MODE_EDGE_HIGH  (2u << 1)
 #define ZX_INTERRUPT_MODE_LEVEL_LOW  (3u << 1)
 #define ZX_INTERRUPT_MODE_LEVEL_HIGH (4u << 1)
+#define ZX_INTERRUPT_MODE_EDGE_BOTH  (5u << 1)
 #define ZX_INTERRUPT_MODE_MASK       0xe
 #define ZX_INTERRUPT_VIRTUAL         0x10
 

@@ -13,6 +13,7 @@
 #include <ddk/protocol/platform-bus.h>
 #include <ddk/protocol/platform-defs.h>
 #include <ddk/protocol/platform-device.h>
+#include <zircon/syscalls/port.h>
 
 #include <soc/imx8m/imx8m.h>
 #include <soc/imx8m/imx8m-hw.h>
@@ -30,8 +31,18 @@ typedef struct {
     io_buffer_t                 mmios[IMX_GPIO_BLOCKS];
     io_buffer_t                 mmio_iomux;
     mtx_t                       lock[IMX_GPIO_BLOCKS];
+    zx_handle_t                 inth[IMX_GPIO_INTERRUPTS];
+    zx_handle_t                 vinth[IMX_GPIO_MAX];
+    zx_handle_t                 porth;
+    thrd_t                      irq_handler;
+    mtx_t                       gpio_lock;
 } imx8_gpio_t;
 
+
+#define READ32_GPIO_REG(block_index, offset)         \
+                                  readl(io_buffer_virt(&gpio->mmios[block_index]) + offset)
+#define WRITE32_GPIO_REG(block_index, offset, value) writel(value, \
+                                  io_buffer_virt(&gpio->mmios[block_index]) + offset)
 
 static zx_status_t imx8_gpio_config(void* ctx, uint32_t pin, uint32_t flags) {
     uint32_t gpio_block;
@@ -49,15 +60,16 @@ static zx_status_t imx8_gpio_config(void* ctx, uint32_t pin, uint32_t flags) {
     }
 
     mtx_lock(&gpio->lock[gpio_block]);
-    volatile uint8_t* reg = (volatile uint8_t*)io_buffer_virt(&gpio->mmios[gpio_block]);
-    regVal = readl(reg + IMX_GPIO_GDIR);
+    regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_GDIR);
     regVal &= ~(1 << gpio_pin);
-    if (flags & GPIO_DIR_OUT) {
+    uint32_t direction = flags & GPIO_DIR_MASK;
+
+    if (direction & GPIO_DIR_OUT) {
         regVal |= (GPIO_OUTPUT << gpio_pin);
     } else {
         regVal |= (GPIO_INPUT << gpio_pin);
     }
-    writel(regVal, reg + IMX_GPIO_GDIR);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_GDIR, regVal);
     mtx_unlock(&gpio->lock[gpio_block]);
     return ZX_OK;
 }
@@ -79,8 +91,7 @@ static zx_status_t imx8_gpio_read(void* ctx, uint32_t pin, uint8_t* out_value) {
     }
 
     mtx_lock(&gpio->lock[gpio_block]);
-    volatile uint8_t* reg = (volatile uint8_t*)io_buffer_virt(&gpio->mmios[gpio_block]);
-    regVal = readl(reg + IMX_GPIO_DR);
+    regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_DR);
     regVal >>= (gpio_pin);
     regVal &= 1;
     *out_value = regVal;
@@ -104,11 +115,10 @@ static zx_status_t imx8_gpio_write(void* ctx, uint32_t pin, uint8_t value) {
     }
 
     mtx_lock(&gpio->lock[gpio_block]);
-    volatile uint8_t* reg = (volatile uint8_t*)io_buffer_virt(&gpio->mmios[gpio_block]);
-    regVal = readl(reg + IMX_GPIO_DR);
+    regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_DR);
     regVal &= ~(1 << gpio_pin);
     regVal |= (value << gpio_pin);
-    writel(regVal, reg + IMX_GPIO_DR);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_DR, regVal);
     mtx_unlock(&gpio->lock[gpio_block]);
 
 
@@ -165,24 +175,208 @@ static zx_status_t imx8_gpio_set_alt_function(void* ctx, const uint32_t pin, con
     return ZX_OK;
 }
 
+static void imx8_gpio_mask_irq(imx8_gpio_t *gpio, uint32_t gpio_block, uint32_t gpio_pin) {
+    uint32_t regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_IMR);
+    regVal &= ~(1 << gpio_pin);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_IMR, regVal);
+}
+
+static void imx8_gpio_unmask_irq(imx8_gpio_t *gpio, uint32_t gpio_block, uint32_t gpio_pin) {
+    uint32_t regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_IMR);
+    regVal |= (1 << gpio_pin);
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_IMR, regVal);
+}
+
+static int imx8_gpio_irq_handler(void *arg) {
+    imx8_gpio_t* gpio = arg;
+    zx_port_packet_t packet;
+    zx_status_t status = ZX_OK;
+    uint32_t gpio_block;
+    uint32_t isr;
+    uint32_t imr;
+    uint32_t pin;
+
+    while(1) {
+        status = zx_port_wait(gpio->porth, ZX_TIME_INFINITE, &packet, 1);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: zx_port_wait failed %d \n", __FUNCTION__, status);
+            goto fail;
+        }
+        zxlogf(INFO, "GPIO Interrupt %x triggered\n", (unsigned int)packet.key);
+        status = zx_interrupt_ack(gpio->inth[packet.key]);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: zx_interrupt_ack failed %d \n", __FUNCTION__, status);
+            goto fail;
+        }
+
+        gpio_block = IMX_INT_NUM_TO_BLOCK(packet.key);
+        isr = READ32_GPIO_REG(gpio_block, IMX_GPIO_ISR);
+
+        imr = READ32_GPIO_REG(gpio_block, IMX_GPIO_IMR);
+
+        // Get the status of the enabled interrupts
+        // Get the last valid interrupt pin
+        uint32_t valid_irqs = (isr & imr);
+        if (valid_irqs) {
+            pin = __builtin_ctz(valid_irqs);
+            WRITE32_GPIO_REG(gpio_block, IMX_GPIO_ISR, 1 << pin);
+            pin = gpio_block*IMX_GPIO_PER_BLOCK + pin;
+
+            // Trigger the corresponding virtual interrupt
+            status = zx_interrupt_trigger(gpio->vinth[pin], 0, zx_clock_get(ZX_CLOCK_MONOTONIC));
+            if (status != ZX_OK) {
+                zxlogf(ERROR, "%s: zx_interrupt_trigger failed %d \n", __FUNCTION__, status);
+                goto fail;
+            }
+        }
+    }
+
+fail:
+    for (int i=0; i<IMX_GPIO_INTERRUPTS; i++) {
+        zx_interrupt_destroy(gpio->inth[i]);
+        zx_handle_close(gpio->inth[i]);
+    }
+    return status;
+}
+
+static zx_status_t imx8_gpio_get_interrupt(void *ctx, uint32_t pin,
+                                          uint32_t flags,
+                                          zx_handle_t *out_handle) {
+    uint32_t gpio_block;
+    uint32_t gpio_pin;
+    imx8_gpio_t* gpio = ctx;
+    uint32_t regVal;
+    uint32_t interrupt_type;
+    zx_status_t status = ZX_OK;
+    uint32_t icr_offset;
+
+    gpio_block = IMX_NUM_TO_BLOCK(pin);
+    gpio_pin = IMX_NUM_TO_BIT(pin);
+    if (gpio_block >= IMX_GPIO_BLOCKS || gpio_pin >= IMX_GPIO_PER_BLOCK) {
+        zxlogf(ERROR, "%s: Invalid GPIO pin (pin = %d Block = %d, Offset = %d)\n",
+            __FUNCTION__, pin, gpio_block, gpio_pin);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Create Virtual Interrupt
+    status = zx_interrupt_create(0, 0, ZX_INTERRUPT_VIRTUAL, &gpio->vinth[pin]);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_irq_create failed %d \n", __FUNCTION__, status);
+        return status;
+    }
+
+    // Store the Virtual Interrupt
+    status = zx_handle_duplicate(gpio->vinth[pin], ZX_RIGHT_SAME_RIGHTS, out_handle);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_handle_duplicate failed %d \n", __FUNCTION__, status);
+        return status;
+    }
+
+    mtx_lock(&gpio->lock[gpio_block]);
+    // Select EGDE or LEVEL and polarity
+    switch (flags & ZX_INTERRUPT_MODE_MASK) {
+        case ZX_INTERRUPT_MODE_EDGE_LOW:
+            interrupt_type = IMX_GPIO_FALLING_EDGE_INTERRUPT;
+            break;
+        case ZX_INTERRUPT_MODE_EDGE_HIGH:
+            interrupt_type = IMX_GPIO_RISING_EDGE_INTERRUPT;
+            break;
+        case ZX_INTERRUPT_MODE_LEVEL_LOW:
+            interrupt_type = IMX_GPIO_LOW_LEVEL_INTERRUPT;
+            break;
+        case ZX_INTERRUPT_MODE_LEVEL_HIGH:
+            interrupt_type = IMX_GPIO_HIGH_LEVEL_INTERRUPT;
+            break;
+        case ZX_INTERRUPT_MODE_EDGE_BOTH:
+            interrupt_type = IMX_GPIO_BOTH_EDGE_INTERRUPT;
+            break;
+        default:
+            status = ZX_ERR_INVALID_ARGS;
+            goto fail;
+    }
+
+    if (interrupt_type == IMX_GPIO_BOTH_EDGE_INTERRUPT) {
+        regVal = READ32_GPIO_REG(gpio_block, IMX_GPIO_EDGE_SEL);
+        regVal |= (1 << gpio_pin);
+        WRITE32_GPIO_REG(gpio_block, IMX_GPIO_EDGE_SEL, regVal);
+    } else {
+    // Select which ICR register to program
+        if (gpio_pin >= IMX_GPIO_MAX_ICR_PIN) {
+            icr_offset = IMX_GPIO_ICR2;
+        } else {
+            icr_offset = IMX_GPIO_ICR1;
+        }
+        regVal = READ32_GPIO_REG(gpio_block, icr_offset);
+        regVal &= ~(IMX_GPIO_ICR_MASK << IMX_GPIO_ICR_SHIFT(gpio_pin));
+        regVal |= (interrupt_type << IMX_GPIO_ICR_SHIFT(gpio_pin));
+        WRITE32_GPIO_REG(gpio_block, icr_offset, regVal);
+    }
+
+    // Mask the Interrupt
+    imx8_gpio_mask_irq(gpio, gpio_block, gpio_pin);
+
+    // Clear the Interrupt Status
+    WRITE32_GPIO_REG(gpio_block, IMX_GPIO_ISR, 1 << gpio_pin);
+
+    // Unmask the Interrupt
+    imx8_gpio_unmask_irq(gpio, gpio_block, gpio_pin);
+
+fail:
+    mtx_unlock(&gpio->lock[gpio_block]);
+    return status;
+}
+
+static zx_status_t imx8_gpio_release_interrupt(void *ctx, uint32_t pin) {
+    imx8_gpio_t* gpio = ctx;
+    zx_status_t status = ZX_OK;
+    uint32_t gpio_pin = IMX_NUM_TO_BIT(pin);
+    uint32_t gpio_block = IMX_NUM_TO_BLOCK(pin);
+    if (gpio_block >= IMX_GPIO_BLOCKS || gpio_pin >= IMX_GPIO_PER_BLOCK) {
+        zxlogf(ERROR, "%s: Invalid GPIO pin (pin = %d Block = %d, Offset = %d)\n",
+            __FUNCTION__, pin, gpio_block, gpio_pin);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    mtx_lock(&gpio->gpio_lock);
+    // Mask the interrupt
+    imx8_gpio_mask_irq(gpio, gpio_block, gpio_pin);
+
+    status = zx_handle_close(gpio->vinth[pin]);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: zx_handle_close failed %d \n", __FUNCTION__, status);
+        goto fail;
+    }
+
+    gpio->vinth[pin] = 0;
+
+fail:
+    mtx_unlock(&gpio->gpio_lock);
+    return status;
+}
 static gpio_protocol_ops_t gpio_ops = {
     .config = imx8_gpio_config,
     .set_alt_function = imx8_gpio_set_alt_function,
     .read = imx8_gpio_read,
     .write = imx8_gpio_write,
+    .get_interrupt = imx8_gpio_get_interrupt,
+    .release_interrupt = imx8_gpio_release_interrupt,
 };
 
 static void imx8_gpio_release(void* ctx)
 {
     unsigned i;
     imx8_gpio_t* gpio = ctx;
-
+    mtx_lock(&gpio->gpio_lock);
     for (i = 0; i < IMX_GPIO_BLOCKS; i++) {
         io_buffer_release(&gpio->mmios[i]);
     }
     io_buffer_release(&gpio->mmio_iomux);
 
+    for (int i=0; i<IMX_GPIO_INTERRUPTS; i++) {
+        zx_interrupt_destroy(gpio->inth[i]);
+        zx_handle_close(gpio->inth[i]);
+    }
     free(gpio);
+    mtx_unlock(&gpio->gpio_lock);
 }
 
 static zx_protocol_device_t gpio_device_proto = {
@@ -229,6 +423,37 @@ static zx_status_t imx8_gpio_bind(void* ctx, zx_device_t* parent)
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer iomux failed %d\n", __FUNCTION__, status);
         goto fail;
     }
+
+    pdev_device_info_t info;
+    status = pdev_get_device_info(&gpio->pdev, &info);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_get_device_info failed %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+
+    status = zx_port_create(1/*PORT_BIND_TO_INTERRUPT*/, &gpio->porth);
+    if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: zx_port_create failed %d\n", __FUNCTION__, status);
+            goto fail;
+    }
+
+    for (i=0; i<info.irq_count; i++) {
+        // Create Interrupt Object
+        status = pdev_map_interrupt(&gpio->pdev, i,
+                                    &gpio->inth[i]);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: pdev_map_interrupt failed %d\n", __FUNCTION__, status);
+            goto fail;
+        }
+        // The KEY is the Interrupt Number for our usecase
+        status = zx_interrupt_bind(gpio->inth[i], gpio->porth, i, 0/*optons*/);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: zx_interrupt_bind failed %d\n", __FUNCTION__, status);
+            goto fail;
+        }
+    }
+
+    thrd_create_with_name(&gpio->irq_handler, imx8_gpio_irq_handler, gpio, "imx8_gpio_irq_handler");
 
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,

@@ -124,6 +124,10 @@ zx_status_t imx8m_gpio_init(imx8mevk_bus_t* bus) {
             // PWR_LED
             .gpio = IMX_GPIO_PIN(1, 13), // GPIO blocks nums are 1-based
         },
+        {
+            // I2C SDA Pin
+            .gpio = IMX_GPIO_PIN(5,17),
+        },
     };
 
     const pbus_dev_t gpio_test_dev = {
