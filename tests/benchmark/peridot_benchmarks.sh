@@ -20,11 +20,33 @@ if [ $# -ne 1 ]; then
 fi
 OUT_DIR="$1"
 
-# Run Ledger benchmarks.
+# Run "local" Ledger benchmarks.  These don't need external services to function
+# properly.
+
+runbench_exec "${OUT_DIR}/ledger.add_new_page" \
+    trace record \
+    --spec-file=/system/data/ledger/benchmark/add_new_page.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.add_new_page"
+
 runbench_exec "${OUT_DIR}/ledger.get_same_page" \
     trace record \
     --spec-file=/system/data/ledger/benchmark/get_same_page.tspec \
     --benchmark-results-file="${OUT_DIR}/ledger.get_same_page"
+
+runbench_exec "${OUT_DIR}/ledger.put" \
+    trace record \
+    --spec-file=/system/data/ledger/benchmark/put.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.put"
+
+runbench_exec "${OUT_DIR}/ledger.put_as_reference" \
+    trace record \
+    --spec-file=/system/data/ledger/benchmark/put_as_reference.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.put_as_reference"
+
+runbench_exec "${OUT_DIR}/ledger.transaction" \
+    trace record \
+    --spec-file=/system/data/ledger/benchmark/transaction.tspec \
+    --benchmark-results-file="${OUT_DIR}/ledger.transaction"
 
 # Exit with a code indicating whether any errors occurred.
 runbench_finish "${OUT_DIR}"
