@@ -8,13 +8,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 )
 
 type remuxer struct {
 	seq    chan (<-chan OutputLine)
 	out    chan<- OutputLine
-	wgroup sync.WaitGroup
 }
 
 func newRemuxer() *remuxer {
@@ -22,7 +20,6 @@ func newRemuxer() *remuxer {
 }
 
 func (r *remuxer) sequence(in <-chan OutputLine) {
-	r.wgroup.Add(1)
 	r.seq <- in
 }
 
@@ -43,7 +40,6 @@ func (r *remuxer) start(ctx context.Context) (<-chan OutputLine, error) {
 					return
 				}
 				r.out <- (<-in)
-				r.wgroup.Done()
 			}
 		}
 	}()
@@ -51,11 +47,10 @@ func (r *remuxer) start(ctx context.Context) (<-chan OutputLine, error) {
 }
 
 func (r *remuxer) stop() error {
-	r.wgroup.Wait()
-	if r.out == nil {
+	close(r.seq)
+	if r.seq == nil {
 		return fmt.Errorf("Attempt to stop a remuxer that hasn't been started")
 	}
-	close(r.out)
 	return nil
 }
 

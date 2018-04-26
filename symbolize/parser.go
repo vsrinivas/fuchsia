@@ -140,26 +140,22 @@ func ParseReset(b *ParserState) interface{} {
 	return nil
 }
 
-func ParseContextualElement(b *ParserState) interface{} {
-	return b.choice(ParseModule, ParseMapping, ParseReset)
-}
-
 func ParsePresentationGroup(b *ParserState) interface{} {
 	var p PresentationGroup
 	b.many(&p.children, func(b *ParserState) interface{} {
-		return b.choice(ParseColor, ParsePc, ParseBt, ParseText)
+		return b.choice(ParseColor, ParseModule, ParseMapping, ParseBt, ParseReset, ParsePc, ParseText)
 	})
 	return &p
 }
 
-func ParseLine(line string) Line {
+func ParseLine(line string) Node {
 	buf := ParserState(line)
 	b := &buf
-	out := b.choice(ParseContextualElement, ParsePresentationGroup)
+	out := ParsePresentationGroup(b)
 	if len(buf) != 0 || out == nil {
 		return nil
 	}
-	return out.(Line)
+	return out.(Node)
 	// TODO: add node type for malformed text and emit warning
 }
 

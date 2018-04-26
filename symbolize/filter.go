@@ -38,7 +38,7 @@ type Module struct {
 
 type OutputLine struct {
 	LogLine
-	line Line
+	line Node
 }
 
 // Filter represents the state needed to process a log.
@@ -103,9 +103,8 @@ func (f *Filter) Start(ctx context.Context, input <-chan InputLine) <-chan Outpu
 				}
 				var res OutputLine
 				if res.line = ParseLine(elem.msg); res.line == nil {
+					res.line = &Text{text: elem.msg}
 					log.Printf("warning malformed input %s", elem.msg)
-					// TODO: do something to print out the msg anyway?
-					continue
 				}
 				// Update AST with source locations.
 				res.line.Accept(&FilterVisitor{f})

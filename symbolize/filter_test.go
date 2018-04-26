@@ -190,7 +190,7 @@ func TestReset(t *testing.T) {
 		t.Error("json did not parse correctly", err)
 	}
 
-	expectedJson := []byte("{\"type\":\"reset\"}")
+	expectedJson := []byte(`{"type":"group", "children":[{"type":"reset"}]}`)
 	if !EqualJson(json, expectedJson) {
 		t.Error("unexpected json output", "got", string(json), "expected", string(expectedJson))
 	}

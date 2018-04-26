@@ -13,7 +13,7 @@ type JsonVisitor struct {
 	stack []json.RawMessage
 }
 
-func GetLineJson(line Line) ([]byte, error) {
+func GetLineJson(line Node) ([]byte, error) {
 	var j JsonVisitor
 	line.Accept(&j)
 	return j.getJson()
@@ -35,8 +35,8 @@ func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
 	var locs []loc
 	for _, srcloc := range elem.locs {
 		locs = append(locs, loc{
-			File: srcloc.file,
-			Line: srcloc.line,
+			File:     srcloc.file,
+			Line:     srcloc.line,
 			Function: srcloc.function,
 		})
 	}
