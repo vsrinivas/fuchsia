@@ -26,7 +26,7 @@ This tutorial depends on Fuchsia. There is no prebuilt binary in the git repo.
 
 # Getting and Building the fidl Source Code
 
-See the instructions on the web site for getting and building Fuchsia: 
+See the instructions on the web site for getting and building Fuchsia:
 [https://fuchsia.googlesource.com/fuchsia/](https://fuchsia.googlesource.com/fuchsia/)
 
 The fidl source code is located inside of Garnet at: [https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/)
@@ -67,7 +67,7 @@ The example file `echo2.fidl`, with line numbers added, looks like this:
 ```
 1. library echo2;
 
-2. [ServiceName="echo2.Echo"]
+2. [Discoverable]
 3. interface Echo {
 4.   1: EchoString(string? value) -> (string? response);
 5. };
@@ -77,7 +77,7 @@ Let's go through it line by line.
 
 **Line 1:** The library definition is used to define the namespace or package. Fidl interfaces in different modules can have the same name. The Java class path is defined separately.
 
-**Line 2:** The ServiceName provides the C++ namespace as well as the name that can be explicitly used to access the service.
+**Line 2:** The Discoverable attribute provides a name that can be used to discover the service.
 
 **Line 3:** The name of the interface.
 
@@ -115,7 +115,7 @@ To understand how the code works, here's a summary of what happens in the server
 1. `EchoDelegate()` tells the `ApplicationContext` what services/interfaces are supported by calling `context->outgoing_services()->AddService<Echo2>()`. It passes a lambda function that is called when a connection request arrives.
 1. Now `main` starts the run loop, expressed as an `fsl::MessageLoop`.
 1. The run loop receives a request to connect from another application, so calls the lambda created in `Echo2Delegte()`.
-1. That function constructs a new `EchoImpl`, which binds itself to the pipe in its constructor. 
+1. That function constructs a new `EchoImpl`, which binds itself to the pipe in its constructor.
 1. The run loop receives a call to `EchoString()` from the message pipe and dispatches it to the object created in the last step.
 1. `EchoString()` issues an async call back to the client using `callback(value)`, then returns to the run loop.
 
@@ -358,7 +358,7 @@ Before going further, a quick review from the [fidl Architecture](#fidl-architec
 
 Here's what it looks like:
 
-``` 
+```
 void acceptConnection(String requestorUrl, String resolvedUrl,
         ApplicationConnection connection) {
     connection.provideService(Echo.serviceName, _createService);
