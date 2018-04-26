@@ -29,7 +29,6 @@ const (
 	ErrVectorTooLong
 	ErrStringTooLong
 	ErrUnexpectedOrdinal
-	ErrUnexpectedTxid
 	ErrUnexpectedNullHandle
 	ErrUnexpectedNullRef
 	ErrInvalidBoolValue
@@ -56,8 +55,6 @@ func (e ErrorCode) Error() string {
 		return "string exceeds maximum size"
 	case ErrUnexpectedOrdinal:
 		return "unexpected ordinal"
-	case ErrUnexpectedTxid:
-		return "unexpected txid"
 	case ErrUnexpectedNullHandle:
 		return "unexpected null handle"
 	case ErrUnexpectedNullRef:

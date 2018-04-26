@@ -5,7 +5,6 @@
 package bindings
 
 import (
-	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 )
@@ -42,10 +41,6 @@ func NewInterfaceRequest() (InterfaceRequest, *Proxy, error) {
 type Proxy struct {
 	// Channel is the underlying channel endpoint for this interface.
 	zx.Channel
-
-	// Txid is a monotonically and atomically increasing transaction ID
-	// used for FIDL messages.
-	Txid uint32
 }
 
 // IsValid returns true if the underlying channel is a valid handle.
@@ -119,16 +114,8 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 	var respb [zx.ChannelMaxMessageBytes]byte
 	var resph [zx.ChannelMaxMessageHandles]zx.Handle
 
-	// Make sure the Txid is non-zero, since that's reserved for messages without
-	// a response.
-	txid := atomic.AddUint32(&p.Txid, 1)
-	for txid == 0 {
-		txid = atomic.AddUint32(&p.Txid, 1)
-	}
-
 	// Marshal the message into the buffer
 	header := MessageHeader{
-		Txid:    txid,
 		Ordinal: ordinal,
 	}
 	nb, nh, err := MarshalMessage(&header, req, respb[:], resph[:])
