@@ -20,15 +20,25 @@ if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
 fi
 
 function fx-config-read-if-present {
+  # If there's a file written by `gn gen` (//build/gn/BUILD.gn),
+  # then it can supplement with extra settings and exports.
+  local -r gn_config="${FUCHSIA_BUILD_DIR}/fx.config"
+
   if [[ "${FUCHSIA_CONFIG}" = "-" && -n "${FUCHSIA_BUILD_DIR}" ]]; then
-    FUCHSIA_ARCH="$(
-      fx-config-glean-arch "${FUCHSIA_BUILD_DIR}/args.gn")" || return
+    if [[ -f "$gn_config" ]]; then
+      source "$gn_config"
+    else
+      FUCHSIA_ARCH="$(
+        fx-config-glean-arch "${FUCHSIA_BUILD_DIR}/args.gn")" || return
+    fi
   elif [[ -f "${FUCHSIA_CONFIG}" ]]; then
     source "${FUCHSIA_CONFIG}"
+    if [[ -f "$gn_config" ]]; then
+      source "$gn_config"
+    fi
   else
     return 1
   fi
-
 
   # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
   if [[ "${FUCHSIA_BUILD_DIR:0:1}" != "/" ]]; then
