@@ -402,6 +402,8 @@ void ChromiumExporter::ExportContextSwitch(
   writer_.Uint64(context_switch.outgoing_thread.thread_koid());
   writer_.Key("state");
   writer_.Uint(static_cast<uint32_t>(context_switch.outgoing_thread_state));
+  writer_.Key("prio");
+  writer_.Uint(static_cast<uint32_t>(context_switch.outgoing_thread_priority));
   writer_.EndObject();
   writer_.Key("in");
   writer_.StartObject();
@@ -409,6 +411,8 @@ void ChromiumExporter::ExportContextSwitch(
   writer_.Uint64(context_switch.incoming_thread.process_koid());
   writer_.Key("tid");
   writer_.Uint64(context_switch.incoming_thread.thread_koid());
+  writer_.Key("prio");
+  writer_.Uint(static_cast<uint32_t>(context_switch.incoming_thread_priority));
   writer_.EndObject();
   writer_.EndObject();
 }

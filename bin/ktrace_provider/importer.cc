@@ -174,10 +174,19 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record,
     case KTRACE_EVENT(TAG_PAGE_FAULT):
       return HandlePageFault(record->ts, record->d,
                              ToUInt64(record->a, record->b), record->c);
-    case KTRACE_EVENT(TAG_CONTEXT_SWITCH):
-      return HandleContextSwitch(record->ts, record->b & 0xffff,
-                                 ToTraceThreadState(record->b >> 16),
+    case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
+      trace_cpu_number_t cpu = record->b & 0xff;
+      trace_thread_state_t outgoing_thread_state =
+        ToTraceThreadState((record->b >> 8) & 0xff);
+      trace_thread_priority_t outgoing_thread_priority =
+        (record->b >> 16) & 0xff;
+      trace_thread_priority_t incoming_thread_priority =
+        record->b >> 24;
+      return HandleContextSwitch(record->ts, cpu, outgoing_thread_state,
+                                 outgoing_thread_priority,
+                                 incoming_thread_priority,
                                  record->tid, record->c, record->a, record->d);
+    }
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
     case KTRACE_EVENT(TAG_THREAD_CREATE):
@@ -413,6 +422,8 @@ bool Importer::HandlePageFault(trace_ticks_t event_time,
 bool Importer::HandleContextSwitch(trace_ticks_t event_time,
                                    trace_cpu_number_t cpu_number,
                                    trace_thread_state_t outgoing_thread_state,
+                                   trace_thread_priority_t outgoing_thread_priority,
+                                   trace_thread_priority_t incoming_thread_priority,
                                    zx_koid_t outgoing_thread,
                                    KernelThread outgoing_kernel_thread,
                                    zx_koid_t incoming_thread,
@@ -426,7 +437,8 @@ bool Importer::HandleContextSwitch(trace_ticks_t event_time,
       !trace_is_unknown_thread_ref(&incoming_thread_ref)) {
     trace_context_write_context_switch_record(
         context_, event_time, cpu_number, outgoing_thread_state,
-        &outgoing_thread_ref, &incoming_thread_ref);
+        &outgoing_thread_ref, &incoming_thread_ref,
+        outgoing_thread_priority, incoming_thread_priority);
   }
   return true;
 }

@@ -74,6 +74,8 @@ class Importer {
   bool HandleContextSwitch(trace_ticks_t event_time,
                            trace_cpu_number_t cpu_number,
                            trace_thread_state_t outgoing_thread_state,
+                           trace_thread_priority_t outgoing_thread_priority,
+                           trace_thread_priority_t incoming_thread_priority,
                            zx_koid_t outgoing_thread,
                            KernelThread outgoing_kernel_thread,
                            zx_koid_t incoming_thread,
