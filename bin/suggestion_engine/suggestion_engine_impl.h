@@ -25,8 +25,8 @@
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
 
-#include <fuchsia/cpp/modular.h>
 #include <fuchsia/cpp/media.h>
+#include <fuchsia/cpp/modular.h>
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -175,10 +175,6 @@ class SuggestionEngineImpl : public ContextListener,
   void PerformCreateStoryAction(const Action& action, uint32_t story_color);
 
   void PerformFocusStoryAction(const Action& action);
-
-  // This call is deprecated, as the AddModuleToStory proposal action is
-  // replaced by the AddModule action.
-  void PerformAddModuleToStoryAction(const Action& action);
 
   void PerformAddModuleAction(const Action& action);
 

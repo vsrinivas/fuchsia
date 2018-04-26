@@ -279,10 +279,6 @@ void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
         PerformFocusStoryAction(action);
         break;
       }
-      case Action::Tag::kAddModuleToStory: {
-        PerformAddModuleToStoryAction(action);
-        break;
-      }
       case Action::Tag::kAddModule: {
         PerformAddModuleAction(action);
         break;
@@ -315,9 +311,9 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
     // If a intent was provided, create an empty story and add a module to it
     // with the provided intent.
     story_provider_->CreateStory(
-        nullptr,
-        fxl::MakeCopyable([this, intent = std::move(*create_story.intent),
-                           activity](const fidl::StringPtr& story_id) mutable {
+        nullptr, fxl::MakeCopyable([
+          this, intent = std::move(*create_story.intent), activity
+        ](const fidl::StringPtr& story_id) mutable {
           modular::StoryControllerPtr story_controller;
           story_provider_->GetController(story_id,
                                          story_controller.NewRequest());
@@ -341,7 +337,8 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
       create_story.module_id, std::move(extra_info), std::move(initial_data),
       [this, activity](fidl::StringPtr story_id) {
         story_provider_->GetStoryInfo(
-            story_id, [this, activity, story_id](modular::StoryInfoPtr story_info) {
+            story_id,
+            [this, activity, story_id](modular::StoryInfoPtr story_info) {
               if (!story_info) {
                 // If there is no StoryInfo, we are talking to a StoryProvider
                 // that may be configured in a test environment. Log and abort.
@@ -359,35 +356,6 @@ void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
   const auto& focus_story = action.focus_story();
   FXL_LOG(INFO) << "Requesting focus for story_id " << focus_story.story_id;
   focus_provider_ptr_->Request(focus_story.story_id);
-}
-
-void SuggestionEngineImpl::PerformAddModuleToStoryAction(const Action& action) {
-  if (story_provider_) {
-    const auto& add_module_to_story = action.add_module_to_story();
-    const auto& story_id = add_module_to_story.story_id;
-    const auto& module_name = add_module_to_story.module_name;
-    const auto& module_url = add_module_to_story.module_url;
-    const auto& link_name = add_module_to_story.link_name;
-    const auto& module_path = add_module_to_story.module_path;
-    const auto& surface_relation = add_module_to_story.surface_relation;
-
-    FXL_LOG(INFO) << "Adding module " << module_url << " to story " << story_id;
-
-    modular::StoryControllerPtr story_controller;
-    story_provider_->GetController(story_id, story_controller.NewRequest());
-    if (!add_module_to_story.initial_data.is_null()) {
-      modular::LinkPtr link;
-      story_controller->GetLink(module_path.Clone(), link_name,
-                                link.NewRequest());
-      link->Set(nullptr /* json_path */, add_module_to_story.initial_data);
-    }
-
-    story_controller->AddModuleDeprecated(module_path.Clone(), module_name,
-                                          module_url, link_name,
-                                          fidl::MakeOptional(surface_relation));
-  } else {
-    FXL_LOG(WARNING) << "Unable to add module; no story provider";
-  }
 }
 
 void SuggestionEngineImpl::PerformAddModuleAction(const Action& action) {
@@ -412,18 +380,19 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                uint32_t story_color) {
   auto activity = debug_->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable(
-      [this, activity, custom_action = std::move(custom_action), source_url,
-       story_color](fidl::VectorPtr<ActionPtr> actions) {
-        if (actions) {
-          fidl::VectorPtr<Action> non_null_actions;
-          for (auto& action : *actions) {
-            if (action)
-              non_null_actions.push_back(std::move(*action));
-          }
-          PerformActions(std::move(non_null_actions), source_url, story_color);
-        }
-      }));
+  custom_action->Execute(fxl::MakeCopyable([
+    this, activity, custom_action = std::move(custom_action), source_url,
+    story_color
+  ](fidl::VectorPtr<ActionPtr> actions) {
+    if (actions) {
+      fidl::VectorPtr<Action> non_null_actions;
+      for (auto& action : *actions) {
+        if (action)
+          non_null_actions.push_back(std::move(*action));
+      }
+      PerformActions(std::move(non_null_actions), source_url, story_color);
+    }
+  }));
 }
 
 void SuggestionEngineImpl::PerformQueryAction(const Action& action) {

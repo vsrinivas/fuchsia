@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
+
 #include "lib/context/cpp/context_helper.h"
 #include "lib/fxl/logging.h"
-#include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "third_party/rapidjson/rapidjson/document.h"
 #include "third_party/rapidjson/rapidjson/schema.h"
 
@@ -13,8 +14,7 @@ namespace modular {
 namespace {
 // Sample map using data collected between Feb 6-20, 2018
 constexpr char kDataFilePath[] = "/pkg/data/ranking_data/mod_pairs.json";
-}
-
+}  // namespace
 
 ModPairRankingFeature::ModPairRankingFeature(const bool init_data) {
   if (init_data) {
@@ -25,8 +25,7 @@ ModPairRankingFeature::ModPairRankingFeature(const bool init_data) {
 ModPairRankingFeature::~ModPairRankingFeature() = default;
 
 void ModPairRankingFeature::LoadDataFromFile(const std::string& filepath) {
-  std::pair<bool, rapidjson::Document> result =
-      FetchJsonObject(filepath);
+  std::pair<bool, rapidjson::Document> result = FetchJsonObject(filepath);
   if (!result.first) {
     FXL_LOG(WARNING) << "Failed to fetch mod pairs ranking feature data.";
     return;
@@ -44,7 +43,6 @@ void ModPairRankingFeature::LoadDataFromFile(const std::string& filepath) {
   }
 }
 
-
 double ModPairRankingFeature::ComputeFeatureInternal(
     const UserInput& query,
     const RankedSuggestion& suggestion) {
@@ -55,10 +53,6 @@ double ModPairRankingFeature::ComputeFeatureInternal(
     switch (action.Which()) {
       case Action::Tag::kCreateStory: {
         module_url = action.create_story().module_id;
-        break;
-      }
-      case Action::Tag::kAddModuleToStory: {
-        module_url = action.add_module_to_story().module_url;
         break;
       }
       case Action::Tag::kAddModule: {

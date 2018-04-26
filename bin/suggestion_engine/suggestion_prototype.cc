@@ -22,16 +22,13 @@ Suggestion CreateSuggestion(const SuggestionPrototype& prototype) {
   suggestion.uuid = prototype.suggestion_id;
   fidl::Clone(prototype.proposal.display, &suggestion.display);
   if (!prototype.proposal.on_selected->empty()) {
-    // TODO(thatguy): Proposal.on_select should be single Action, not an array
-    // https://fuchsia.atlassian.net/browse/MW-118
     const auto& selected_action = prototype.proposal.on_selected->at(0);
     switch (selected_action.Which()) {
       case Action::Tag::kFocusStory:
         suggestion.story_id = selected_action.focus_story().story_id;
         break;
-      case Action::Tag::kAddModuleToStory:
-        suggestion.story_id =
-            selected_action.add_module_to_story().story_id;
+      case Action::Tag::kAddModule:
+        suggestion.story_id = selected_action.add_module().story_id;
         break;
       default:
         break;

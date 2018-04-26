@@ -46,19 +46,15 @@ struct Proposal {
 union Action {
   CreateStory create_story;
   FocusStory focus_story;
-  // This action is deprectaed, please use the Intent based AddModule action
-  // instead.
-  AddModuleToStory add_module_to_story;
   AddModule add_module;
   CustomAction custom_action;
   QueryAction query_action;
-
-  // TODO(thatguy): Add other actions.
 };
 
 // Creates a new story with the specified module
 struct CreateStory {
-  // TODO(alhaad, thatguy): This should be renamed to module_url.
+  // TODO(thatguy): Remove all users of |module_id| and |initial_data| fields,
+  // and remove them here.
   string? module_id;
 
   // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
@@ -80,36 +76,6 @@ struct FocusStory {
 
   // TODO(alhaad): Add some Link data that could be used to provide information
   // to the story as to why it was brought into focus.
-};
-
-// Adds a module to an existing story
-struct AddModuleToStory {
-  // Story to which the module is to be added.
-  string story_id;
-
-  // Name of the module which is to be added.
-  string module_name;
-
-  // URL of the module which is to be added.
-  string module_url;
-
-  // Name of the link for the added module.
-  string link_name;
-
-  // If not null the JSON value of the link of the added module is set to this
-  // value. If the action is used to connect to an existing link from an
-  // existing module (indicated by module_path), then setting this likely
-  // defeats the purpose of the action, because it overwrites the existing value
-  // of the link.
-  string? initial_data;
-
-  // Module instance which is already in the story and to which the added module
-  // is to be associated. |link_name| then refers to a link emanating from that
-  // module. If empty, the module is added as a root module to the story.
-  vector<string> module_path;
-
-  // Advise the framework on how to layout the newly added module.
-  SurfaceRelation surface_relation;
 };
 
 // Adds a module from a Intent to an existing story.
