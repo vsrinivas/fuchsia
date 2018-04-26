@@ -654,7 +654,9 @@ void trace_context_write_context_switch_record(
     trace_cpu_number_t cpu_number,
     trace_thread_state_t outgoing_thread_state,
     const trace_thread_ref_t* outgoing_thread_ref,
-    const trace_thread_ref_t* incoming_thread_ref) {
+    const trace_thread_ref_t* incoming_thread_ref,
+    trace_thread_priority_t outgoing_thread_priority,
+    trace_thread_priority_t incoming_thread_priority) {
     const size_t record_size = sizeof(trace::RecordHeader) +
                                trace::WordsToBytes(1) +
                                trace::SizeOfEncodedThreadRef(outgoing_thread_ref) +
@@ -669,7 +671,11 @@ void trace_context_write_context_switch_record(
                          trace::ContextSwitchRecordFields::OutgoingThreadRef::Make(
                              outgoing_thread_ref->encoded_value) |
                          trace::ContextSwitchRecordFields::IncomingThreadRef::Make(
-                             incoming_thread_ref->encoded_value))
+                             incoming_thread_ref->encoded_value) |
+                         trace::ContextSwitchRecordFields::OutgoingThreadPriority::Make(
+                             outgoing_thread_priority) |
+                         trace::ContextSwitchRecordFields::IncomingThreadPriority::Make(
+                             incoming_thread_priority))
             .WriteUint64(event_time)
             .WriteThreadRef(outgoing_thread_ref)
             .WriteThreadRef(incoming_thread_ref);

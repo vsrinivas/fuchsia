@@ -655,7 +655,9 @@ _header word_
 - `[24 .. 27]`: outgoing thread state (any of the values below except “running”)
 - `[28 .. 35]`: outgoing thread (thread ref)
 - `[36 .. 43]`: incoming thread (thread ref)
-- `[44 .. 63]`: reserved
+- `[44 .. 51]`: outgoing thread priority
+- `[52 .. 59]`: incoming thread priority
+- `[60 .. 63]`: reserved
 
 _timestamp word_
 - `[0 .. 63]`: number of ticks

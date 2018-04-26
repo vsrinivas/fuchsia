@@ -827,7 +827,9 @@ void sched_resched_internal(void) {
     LOCAL_KTRACE2("CS timeslice old", (uint32_t)oldthread->user_tid, oldthread->remaining_time_slice);
     LOCAL_KTRACE2("CS timeslice new", (uint32_t)newthread->user_tid, newthread->remaining_time_slice);
 
-    ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid, cpu | (oldthread->state << 16),
+    ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid,
+           (cpu | (oldthread->state << 8) |
+            (oldthread->effec_priority << 16) | (newthread->effec_priority << 24)),
            (uint32_t)(uintptr_t)oldthread, (uint32_t)(uintptr_t)newthread);
 
     if (thread_is_real_time_or_idle(newthread)) {

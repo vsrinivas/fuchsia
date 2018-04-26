@@ -27,7 +27,8 @@ KTRACE_DEF(0x033,16B,SYSCALL_EXIT,IRQ) // (n << 8) | cpu
 KTRACE_DEF(0x034,32B,PAGE_FAULT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
 KTRACE_DEF(0x035,32B,PAGE_FAULT_EXIT,IRQ) // virtual_address_hi, virtual_address_lo, flags, cpu
 
-KTRACE_DEF(0x040,32B,CONTEXT_SWITCH,SCHEDULER) // to-tid, (state<<16|cpu), from-kt, to-kt
+// to-tid, (new_thread_prioriy<<24) | (old_thread_priority<<16) | (old_thread_state<<8) | cpu), from-kt, to-kt
+KTRACE_DEF(0x040,32B,CONTEXT_SWITCH,SCHEDULER)
 
 // events from 0x100 on all share the tag/tid/ts common header
 

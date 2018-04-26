@@ -267,7 +267,9 @@ void trace_context_write_context_switch_record(
     trace_cpu_number_t cpu_number,
     trace_thread_state_t outgoing_thread_state,
     const trace_thread_ref_t* outgoing_thread_ref,
-    const trace_thread_ref_t* incoming_thread_ref);
+    const trace_thread_ref_t* incoming_thread_ref,
+    trace_thread_priority_t outgoing_thread_priority,
+    trace_thread_priority_t incoming_thread_priority);
 
 // Writes a log record into the trace buffer.
 // Discards the record if it cannot be written.

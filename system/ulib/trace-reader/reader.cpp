@@ -366,6 +366,10 @@ bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
         ContextSwitchRecordFields::CpuNumber::Get<trace_cpu_number_t>(header);
     auto outgoing_thread_state =
         ContextSwitchRecordFields::OutgoingThreadState::Get<ThreadState>(header);
+    auto outgoing_thread_priority =
+        ContextSwitchRecordFields::OutgoingThreadPriority::Get<trace_thread_priority_t>(header);
+    auto incoming_thread_priority =
+        ContextSwitchRecordFields::IncomingThreadPriority::Get<trace_thread_priority_t>(header);
     auto outgoing_thread_ref =
         ContextSwitchRecordFields::OutgoingThreadRef::Get<trace_encoded_thread_ref_t>(
             header);
@@ -384,7 +388,8 @@ bool TraceReader::ReadContextSwitchRecord(Chunk& record, RecordHeader header) {
 
     record_consumer_(
         Record(Record::ContextSwitch{timestamp, cpu_number, outgoing_thread_state,
-                                     outgoing_thread, incoming_thread}));
+                                     outgoing_thread, incoming_thread,
+                                     outgoing_thread_priority, incoming_thread_priority}));
     return true;
 }
 

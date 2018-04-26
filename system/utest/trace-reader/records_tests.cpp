@@ -755,7 +755,8 @@ bool record_test() {
     {
         trace::Record r(trace::Record::ContextSwitch{
             123, 4, trace::ThreadState::kSuspended,
-            trace::ProcessThread(5, 6), trace::ProcessThread(7, 8)});
+            trace::ProcessThread(5, 6), trace::ProcessThread(7, 8),
+            9, 10});
         EXPECT_EQ(trace::RecordType::kContextSwitch, r.type());
         EXPECT_EQ(123, r.GetContextSwitch().timestamp);
         EXPECT_EQ(4, r.GetContextSwitch().cpu_number);
@@ -764,6 +765,8 @@ bool record_test() {
         EXPECT_EQ(6, r.GetContextSwitch().outgoing_thread.thread_koid());
         EXPECT_EQ(7, r.GetContextSwitch().incoming_thread.process_koid());
         EXPECT_EQ(8, r.GetContextSwitch().incoming_thread.thread_koid());
+        EXPECT_EQ(9, r.GetContextSwitch().outgoing_thread_priority);
+        EXPECT_EQ(10, r.GetContextSwitch().incoming_thread_priority);
 
         trace::Record m(fbl::move(r));
         EXPECT_EQ(trace::RecordType::kContextSwitch, m.type());
@@ -774,6 +777,8 @@ bool record_test() {
         EXPECT_EQ(6, m.GetContextSwitch().outgoing_thread.thread_koid());
         EXPECT_EQ(7, m.GetContextSwitch().incoming_thread.process_koid());
         EXPECT_EQ(8, m.GetContextSwitch().incoming_thread.thread_koid());
+        EXPECT_EQ(9, m.GetContextSwitch().outgoing_thread_priority);
+        EXPECT_EQ(10, m.GetContextSwitch().incoming_thread_priority);
 
         r = fbl::move(m);
         EXPECT_EQ(trace::RecordType::kContextSwitch, r.type());
@@ -784,8 +789,10 @@ bool record_test() {
         EXPECT_EQ(6, r.GetContextSwitch().outgoing_thread.thread_koid());
         EXPECT_EQ(7, r.GetContextSwitch().incoming_thread.process_koid());
         EXPECT_EQ(8, r.GetContextSwitch().incoming_thread.thread_koid());
+        EXPECT_EQ(9, r.GetContextSwitch().outgoing_thread_priority);
+        EXPECT_EQ(10, r.GetContextSwitch().incoming_thread_priority);
 
-        EXPECT_STR_EQ("ContextSwitch(ts: 123, cpu: 4, os: suspended, opt: 5/6, ipt: 7/8", r.ToString().c_str());
+        EXPECT_STR_EQ("ContextSwitch(ts: 123, cpu: 4, os: suspended, opt: 5/6, ipt: 7/8, oprio: 9, iprio: 10)", r.ToString().c_str());
     }
 
     // log

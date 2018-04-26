@@ -44,6 +44,9 @@ typedef uint32_t trace_thread_state_t;
 // Identifies a particular CPU in a context switch trace record.
 typedef uint32_t trace_cpu_number_t;
 
+// Contains a thread's priority in a context switch trace record.
+typedef uint32_t trace_thread_priority_t;
+
 // Represents an index into the string table.
 typedef uint32_t trace_string_index_t;
 

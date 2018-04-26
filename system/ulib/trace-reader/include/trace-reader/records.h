@@ -531,6 +531,8 @@ public:
         ThreadState outgoing_thread_state;
         ProcessThread outgoing_thread;
         ProcessThread incoming_thread;
+        trace_thread_priority_t outgoing_thread_priority;
+        trace_thread_priority_t incoming_thread_priority;
     };
 
     // Log record data.

@@ -138,6 +138,8 @@ struct ContextSwitchRecordFields : RecordFields {
     using OutgoingThreadState = Field<24, 27>;
     using OutgoingThreadRef = Field<28, 35>;
     using IncomingThreadRef = Field<36, 43>;
+    using OutgoingThreadPriority = Field<44, 51>;
+    using IncomingThreadPriority = Field<52, 59>;
 };
 
 struct LogRecordFields : RecordFields {
