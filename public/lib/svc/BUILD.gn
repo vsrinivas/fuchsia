@@ -17,6 +17,7 @@ prebuilt_shared_library("svc") {
   ]
 
   deps = [
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
@@ -26,6 +27,7 @@ prebuilt_shared_library("svc") {
   public_configs = [ "//garnet/public:config" ]
 
   runtime_deps = [
+    "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/lib/trace-engine:trace-engine_sdk",
   ]
 }
