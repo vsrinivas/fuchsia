@@ -9,12 +9,16 @@ library cobalt;
 
 // To use Cobalt, you must have a project id, metric id and encoding id
 // registered with the Cobalt system. In the current verison of Cobalt
-// registration consists of entries in the files "registered_encodings.txt"
-// and "registered_metrics.txt" in //third_party/cobalt/config/production. Since
-// the Cobalt servers also read these files, for now it is necessary to
-// contact cobalt-hackers@google.com in order to register additional projects,
-// metrics and encodings. We plan to build a self-registration system in the
-// future.
+// registration consists of entries in the YAML files in this repo:
+// https://cobalt-analytics.googlesource.com/config/.
+// In a Garnet checkout that is mapped to //third_party/cobalt_config.
+
+// While Cobalt's code and registration files are open source, the running
+// system being managed by the Cobalt team is currently intended to be used by
+// software engineers at Google in order to collect metrics in a way that
+// preserves our users' privacy. If you are a Google software engineer
+// please see our internal [user guide](go/fuchsia-cobalt-userguide) or
+// ask for assistance from the Cobalt [team](go/fuchsia-cobalt#comms).
 
 // Usage: First use CobaltEncoderFactory to get a CobaltEncoder for your
 // project. Then you add Observations using the Add*Observation() methods.
