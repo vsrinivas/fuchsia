@@ -25,6 +25,12 @@ On the front row of the header:
 - 3rd from right: RX (Orange wire)
 - 4th from right: Ground (Black wire)
 
+For FTDI serial cables with black, white red and green wires, use this:
+
+- 2nd from right: TX (White wire)
+- 3rd from right: RX (Green wire)
+- 4th from right: Ground (Black wire)
+
 In [this diagram](http://docs.khadas.com/basics/VimGPIOPinout/) of the 40 pin header,
 these correspond to pins 17 through 19.
 
@@ -38,7 +44,16 @@ be used for entering flashing mode.  If SW3 is held down while the
 board is reset or power cycled, the bootloader will enter flashing mode
 instead of booting the kernel normally.
 
-## Preparing the Bootloader
+## VIM2 Bootloader
+
+Booting Zircon on the VIM2 requires a custom bootloader.
+Within Google, this can be found at [go/vim2-bootloader](http://go/vim2-bootloader).
+If you are not at Google, hang on until we make this publicly available.
+
+To find out what version of the bootloader you have, grep for "fuchsia-bootloader"
+in the kernel boot log. You should see something like: "cmdline: fuchsia-bootloader=0.04"
+
+## VIM Bootloader *Skip this if you have a VIM2*
 
 The VIM boards come preinstalled with a u-boot bootloader.
 By default the bootloader is configured to use a proprietary Amlogic protocol
