@@ -16,12 +16,6 @@
 
 #include "kpci-private.h"
 
-// pci_op_* methods are called by the proxy devhost. For each PCI
-// protocol method there is generally a pci_op_* method for the proxy
-// devhost and a corresponding kpci_* method in the top devhost that the
-// protocol request is handled by.
-_Atomic zx_txid_t pci_global_txid = 0;
-
 zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle,
                             pci_msg_t* req, pci_msg_t* resp) {
     if (dev->pciroot_rpcch == ZX_HANDLE_INVALID) {
@@ -36,7 +30,6 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
         handle_cnt = 1;
     }
 
-    req->txid = pci_next_txid();
     req->ordinal = op;
     zx_channel_call_args_t cc_args = {
         .wr_bytes = req,
@@ -61,6 +54,11 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
 
     return resp->ordinal;
 }
+
+// pci_op_* methods are called by the proxy devhost. For each PCI
+// protocol method there is generally a pci_op_* method for the proxy
+// devhost and a corresponding kpci_* method in the top devhost that the
+// protocol request is handled by.
 
 // Enables or disables bus mastering for a particular device.
 static zx_status_t pci_op_enable_bus_master(void* ctx, bool enable) {
