@@ -205,7 +205,11 @@ else
 ifeq ($(MODULE_TYPE),efilib)
 include make/ecompile.mk
 else
+ifeq ($(MODULE_TYPE),fidl)
+include make/fcompile.mk
+else
 include make/ucompile.mk
+endif
 endif
 endif
 endif
