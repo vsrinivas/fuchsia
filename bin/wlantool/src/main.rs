@@ -28,13 +28,7 @@ use opts::*;
 
 type WlanSvc = DeviceServiceProxy;
 
-fn main() {
-    if let Err(e) = main_res() {
-        println!("Error: {:?}", e);
-    }
-}
-
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     println!("{:?}", opt);
 

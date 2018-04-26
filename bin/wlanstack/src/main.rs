@@ -41,14 +41,7 @@ const MAX_LOG_LEVEL: log::LogLevelFilter = log::LogLevelFilter::Info;
 const PHY_PATH: &str = "/dev/class/wlanphy";
 const IFACE_PATH: &str = "/dev/class/wlanif";
 
-fn main() {
-    if let Err(e) = main_res() {
-        error!("Error: {:?}", e);
-    }
-    info!("Exiting");
-}
-
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     log::set_logger(|max_level| {
         max_level.set(MAX_LOG_LEVEL);
         Box::new(logger::Logger)

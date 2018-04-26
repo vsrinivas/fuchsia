@@ -25,14 +25,7 @@ use failure::{Error, Fail, ResultExt};
 use futures::prelude::*;
 use wlan_service::{DeviceListener, DeviceListenerMarker, DeviceServiceMarker};
 
-fn main() {
-    if let Err(e) = main_res() {
-        println!("Error: {:?}", e);
-    }
-    println!("wlancfg: Exiting");
-}
-
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let cfg = Config::load_from_file()?;
 
     let mut executor = async::Executor::new().context("error creating event loop")?;

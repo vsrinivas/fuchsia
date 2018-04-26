@@ -103,13 +103,7 @@ fn destroy_wlanintf(id: u16) -> Result<(), Error> {
     executor.run_singlethreaded(fut).map_err(Into::into)
 }
 
-fn main() {
-    if let Err(e) = main_res() {
-        eprintln!("Error: {}", e);
-    }
-}
-
-fn main_res() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
     let args: Vec<_> = std::env::args().collect();
     let appname = &args[0];
     if args.len() < 2 {
