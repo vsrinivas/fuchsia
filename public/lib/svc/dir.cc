@@ -56,6 +56,18 @@ zx_status_t svc_dir_add_service(svc_dir_t* dir,
     })));
 }
 
+zx_status_t svc_dir_remove_service(svc_dir_t* dir,
+                                   const char* type,
+                                   const char* service_name) {
+  fbl::RefPtr<fs::Vnode> child;
+  zx_status_t status = dir->root->Lookup(&child, type);
+  if (status != ZX_OK)
+    return status;
+
+  fs::PseudoDir* child_dir = static_cast<fs::PseudoDir*>(child.get());
+  return child_dir->RemoveEntry(service_name);
+}
+
 zx_status_t svc_dir_destroy(svc_dir_t* dir) {
   delete dir;
   return ZX_OK;

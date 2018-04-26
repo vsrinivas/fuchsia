@@ -26,6 +26,10 @@ __EXPORT zx_status_t svc_dir_add_service(svc_dir_t* dir,
                                          void* context, // passed to |handler|.
                                          svc_connector_t handler);
 
+__EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir,
+                                            const char* type,
+                                            const char* service_name);
+
 __EXPORT zx_status_t svc_dir_destroy(svc_dir_t* dir);
 
 __END_CDECLS
