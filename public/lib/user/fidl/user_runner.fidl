@@ -7,7 +7,7 @@ library modular_private;
 // The device_runner application (there is no |DeviceRunner| service) requests
 // an instance of this service in order to launch and display a |UserRunner| per
 // user.
-[ServiceName="modular.UserRunner"]  // Created by user_runner application.
+[Discoverable]  // Created by user_runner application.
 interface UserRunner {
   // Launches a user runner instance for a user identified by |user_id|.
   // TODO(alhaad): Fold paramters into |UserContext|.
@@ -35,7 +35,7 @@ interface UserContext {
 // via the outgoing directory. The reason that we can't do that now is because
 // VFS doesn't currently support asynchronous operations and getting debug data
 // within user runner synchronously is hard.
-[ServiceName="modular.UserRunnerDebug"]  // Created by user_runner application.
+[Discoverable]  // Created by user_runner application.
 interface UserRunnerDebug {
   // TODO(alhaad): We might be limited by FIDL message size. Consider using vmo.
   1: DumpState() -> (string debug_state);

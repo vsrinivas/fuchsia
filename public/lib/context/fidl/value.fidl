@@ -4,9 +4,6 @@
 
 library modular;
 
-// import "metadata.fidl";
-// import "value_type.fidl";
-
 struct ContextValue {
   // The type of value this describes.
   ContextValueType type;

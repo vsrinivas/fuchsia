@@ -5,7 +5,7 @@
 library queue_persistence_test_service;
 
 // Cf. README.md for what this test does and how.
-[ServiceName="modular.QueuePersistenceTestService"]
+[Discoverable]
 interface QueuePersistenceTestService {
   1: GetMessageQueueToken() -> (string message_queue_token);
 };

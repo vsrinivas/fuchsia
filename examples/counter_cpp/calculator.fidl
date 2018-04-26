@@ -6,12 +6,12 @@
 
 library modular_calculator_example;
 
-[ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Adder"]
+[Discoverable]
 interface Adder {
   1: Add(int32 a, int32 b) -> (int32 c);
 };
 
-[ServiceName="https://fuchsia.googlesource.com/modular/+/master/examples/counter_cpp/calculator.fidl#Multiplier"]
+[Discoverable]
 interface Multiplier {
   1: Multiply(int32 a, int32 b) -> (int32 c);
 };

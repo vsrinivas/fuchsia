@@ -10,7 +10,7 @@ library modular;
 // interface for an entity. This interface is requested by the framework in the
 // agent's *application* outgoing services, and is closed by the framework when
 // there are no more |Entity|s that need to be provided.
-[ServiceName="modular.EntityProvider"]
+[Discoverable]
 interface EntityProvider {
   // Returns Entity types for the supplied |cookie|. |cookie| will be
   // an identical one previously passed to

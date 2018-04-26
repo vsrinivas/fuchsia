@@ -6,7 +6,7 @@
 
 library modular_test;
 
-[ServiceName="https://fuchsia.googlesource.com/modular/+/master/lib/fidl/app_client_unittest.fidl#TerminateService"]
+[Discoverable]
 interface TerminateService {
   1: Terminate();
 };

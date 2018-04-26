@@ -4,11 +4,9 @@
 
 library modular;
 
-// import "lib/suggestion/fidl/proposal.fidl";
-
 // A service enabling Agents and Modules to contribute Proposals proactively to
 // the Suggestion engine.
-[ServiceName="maxwell.ProposalPublisher"]
+[Discoverable]
 interface ProposalPublisher {
   // Includes the given |proposal| in the Next/Interruption channel from this
   // publisher. Proposals are identified by |proposal.id|, and are namespaced by

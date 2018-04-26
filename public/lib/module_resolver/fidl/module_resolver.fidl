@@ -4,13 +4,7 @@
 
 library modular;
 
-// import "lib/intent/fidl/intent.fidl";
-// import "lib/story/fidl/create_chain.fidl";
-// import "lib/story/fidl/create_link.fidl";
-// import "lib/module/fidl/link_path.fidl";
-// import "lib/module/fidl/module_manifest.fidl";
-
-[ServiceName="modular.ModuleResolver"]
+[Discoverable]
 interface ModuleResolver {
   // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
   // specified in |query|. Results are returned in order according to scoring

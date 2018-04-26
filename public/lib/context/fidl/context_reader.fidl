@@ -4,16 +4,12 @@
 
 library modular;
 
-// import "metadata.fidl";
-// import "value.fidl";
-// import "value_type.fidl";
-
 // Exposes access to Context values, each of which are explicitly named by a
 // 'topic'. Each topic has a known/pre-defined value representation.
 //
 // This interface is meant to be used in the scope of a single Fuchsia
 // component.
-[ServiceName="maxwell.ContextReader"]
+[Discoverable]
 interface ContextReader {
   // When any conditions that would cause the resulting set of context values
   // selected by |query| to change, a ContextUpdate is sent to |listener|.

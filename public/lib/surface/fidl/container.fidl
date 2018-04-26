@@ -6,9 +6,6 @@
 
 library modular;
 
-// import "lib/intent/fidl/intent.fidl";
-// import "lib/surface/fidl/surface.fidl";
-
 // Specification of the layout of multiple surfaces in a module container. The
 // surfaces are referenced by name in ContainerRelationEntry.
 struct ContainerLayout {

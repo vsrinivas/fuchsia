@@ -4,10 +4,7 @@
 
 library modular;
 
-// import "user.fidl";
-// import "lib/suggestion/fidl/proposal_publisher.fidl";
-
-[ServiceName="maxwell.action_log.UserActionLogFactory"]
+[Discoverable]
 interface UserActionLogFactory {
   1: GetUserActionLog(
       ProposalPublisher proposal_publisher,

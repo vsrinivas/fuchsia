@@ -4,12 +4,9 @@
 
 library modular;
 
-// import "proposal.fidl";
-// import "user_input.fidl";
-
 // Debug service provider interface that provides the ability to listen to
 // the internal state of the suggestion service.
-[ServiceName="maxwell.SuggestionDebug"]
+[Discoverable]
 interface SuggestionDebug {
   1: WatchAskProposals(AskProposalListener listener);
   2: WatchInterruptionProposals(InterruptionProposalListener listener);

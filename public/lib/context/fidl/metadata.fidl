@@ -4,8 +4,6 @@
 
 library modular;
 
-// import "lib/module/fidl/link_path.fidl";
-
 // This struct serves two purposes. It is:
 //
 // 1) Used to expose metadata along with each context node when interfacing

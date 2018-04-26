@@ -6,7 +6,7 @@ library modular;
 
 // An interface that provides clients with the ability to store and
 // retrieve text.
-[ServiceName="modular.Clipboard"]
+[Discoverable]
 interface Clipboard {
     // Pushes |text| onto the clipboard.
     1: Push(string text);

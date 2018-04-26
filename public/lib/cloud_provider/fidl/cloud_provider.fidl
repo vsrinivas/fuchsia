@@ -25,7 +25,7 @@ enum Status : int32 {
 //
 // Closing the client connection to CloudProvider shuts down all controllers
 // (DeviceSets, PageClouds) that were produced by it.
-[ServiceName="cloud_provider::CloudProvider"]
+[Discoverable]
 interface CloudProvider {
   // Retrieves the controller for the user device set.
   1: GetDeviceSet(request<DeviceSet> device_set) -> (Status @status);

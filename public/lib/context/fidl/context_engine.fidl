@@ -4,14 +4,9 @@
 
 library modular;
 
-// import "context_reader.fidl";
-// import "context_writer.fidl";
-// import "debug.fidl";
-// import "lib/user_intelligence/fidl/scope.fidl";
-
 // Top-level service provider interface that vends services to read and write
 // context data.
-[ServiceName="maxwell.ContextEngine"]
+[Discoverable]
 interface ContextEngine {
   1: GetReader(ComponentScope client_info, request<ContextReader> @request);
 

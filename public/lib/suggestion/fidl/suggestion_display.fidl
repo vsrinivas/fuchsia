@@ -4,8 +4,6 @@
 
 library modular;
 
-// import "lib/images/fidl/encoded_image.fidl";
-
 enum SuggestionImageType {
   PERSON = 0;
   OTHER = 1;

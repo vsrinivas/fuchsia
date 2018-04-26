@@ -4,9 +4,6 @@
 
 library modular;
 
-// import "lib/app/fidl/service_provider.fidl";
-// import "lib/network/fidl/network_error.fidl";
-
 struct StringPair {
   string first;
   string second;
@@ -52,7 +49,7 @@ interface ComponentResources {
 };
 
 // Exposed by the component_manager.
-[ServiceName="component::ComponentIndex"]
+[Discoverable]
 interface ComponentIndex {
   // Gets a component's manifest and resources by |component_id|.
   //

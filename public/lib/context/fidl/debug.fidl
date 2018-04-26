@@ -4,11 +4,7 @@
 
 library modular;
 
-// import "context_reader.fidl";
-// import "metadata.fidl";
-// import "lib/user_intelligence/fidl/scope.fidl";
-
-[ServiceName="maxwell.ContextDebug"]
+[Discoverable]
 interface ContextDebug {
   // The watch will stay active until the |listener| handle is closed.
   1: Watch(ContextDebugListener listener);

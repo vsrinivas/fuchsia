@@ -6,7 +6,7 @@ library modular_auth;
 
 // This interface provides tokens to Agents for their current user. This service
 // can be obtained by agents via AgentContext.GetTokenProvider().
-[ServiceName="modular.auth.TokenProvider"]
+[Discoverable]
 interface TokenProvider {
   // Gets the access token (with pre-defined scopes) for this user. Access token
   // is returned from cache if not expired, otherwise refreshed from the server.

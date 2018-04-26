@@ -4,7 +4,7 @@
 
 library hello_world_module;
 
-[ServiceName="examples.Hello"]
+[Discoverable]
 interface Hello {
   1: Say(string @request) -> (string response);
 };

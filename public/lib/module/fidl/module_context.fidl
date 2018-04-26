@@ -8,7 +8,7 @@ library modular;
 // create Link instances and run more Module instances.
 //
 // Next ordinal: 13
-[ServiceName="modular.ModuleContext"]
+[Discoverable]
 interface ModuleContext {
   // Gets a Link instance with the given name.
   //

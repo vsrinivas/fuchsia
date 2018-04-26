@@ -84,7 +84,7 @@ interface VisibleStoriesController {
 // Implemented by user runner. Given to Maxwell in
 // maxwell.Launcher.Initialize(). Visible stories are NOT stored on
 // the ledger.
-[ServiceName="modular.VisibleStoriesProvider"]  // Maxwell apps request this from environment.
+[Discoverable]  // Maxwell apps request this from environment.
 interface VisibleStoriesProvider {
   // Returns the |story_ids| that are currently visible.
   1: Query() -> (vector<string> story_id);

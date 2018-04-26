@@ -10,7 +10,7 @@
 
 library resolver;
 
-[ServiceName="resolver"]
+[Discoverable]
 interface Resolver {
   // Find components whose module facets match the specified |contract| and can
   // accept the optionally-specified |data|. The |results| are ordered from

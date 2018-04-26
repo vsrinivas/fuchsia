@@ -4,15 +4,10 @@
 
 library modular;
 
-// import "lib/auth/fidl/token_provider.fidl";
-// import "lib/component/fidl/component_context.fidl";
-// import "lib/entity/fidl/entity_reference_factory.fidl";
-// import "lib/user_intelligence/fidl/intelligence_services.fidl";
-
 // This interface is exposed to all agents. It allows to schedule tasks to occur
 // in response to triggers which are conditions like a message arriving on a
 // MessageQueue.
-[ServiceName="modular.AgentContext"]
+[Discoverable]
 interface AgentContext {
   // |context| is the ComponentContext which this AgentContext is a part of.
   1: GetComponentContext(request<ComponentContext> @request);

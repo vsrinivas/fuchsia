@@ -4,13 +4,10 @@
 
 library maxwell;
 
-// import "lib/story/fidl/story_provider.fidl";
-// import "lib/user/fidl/focus.fidl";
-
 // This service is provided by the StoryInfoAcquirer through the
 // modular.Agent's Connect() call. Implemented by the StoryInfoAcquirer to get
 // its runtime dependencies from its parent process.
-[ServiceName="maxwell.StoryInfoInitializer"]
+[Discoverable]
 interface StoryInfoInitializer {
   1: Initialize(
       modular.StoryProvider story_provider,

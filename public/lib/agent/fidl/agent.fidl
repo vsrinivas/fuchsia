@@ -4,9 +4,6 @@
 
 library modular;
 
-// import "lib/app/fidl/service_provider.fidl";
-// import "lib/agent/fidl/agent_context.fidl";
-
 // This service is implemented by an application that is meant to be run as an
 // Agent.
 //
@@ -19,7 +16,7 @@ library modular;
 // (3) The system wants to optimize for resources.
 // Once the framework delivers a |Lifecycle.Terminate()|, the agent application
 // may exit itself, or is killed by framework after a timeout.
-[ServiceName="modular.Agent"]  // Created by each agent.
+[Discoverable]  // Created by each agent.
 interface Agent {
   // Called when some component tries to connect to this agent.
   // |requestor_url| is the identifier for the component which called

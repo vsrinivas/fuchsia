@@ -4,16 +4,8 @@
 
 library modular;
 
-// import "lib/suggestion/fidl/proposal_publisher.fidl";
-// import "lib/suggestion/fidl/query_handler.fidl";
-// import "lib/context/fidl/context_reader.fidl";
-// import "lib/context/fidl/context_writer.fidl";
-// import "lib/suggestion/fidl/suggestion_provider.fidl"; // convenience import
-// import "lib/story/fidl/story_provider.fidl";
-// import "lib/user/fidl/focus.fidl";
-
 // Administrative interface for Suggestion Engine.
-[ServiceName="maxwell.SuggestionEngine"]
+[Discoverable]
 interface SuggestionEngine {
   // Initializes the SuggestionEngine and provides dependencies.
   1: Initialize(StoryProvider story_provider, FocusProvider focus_provider,

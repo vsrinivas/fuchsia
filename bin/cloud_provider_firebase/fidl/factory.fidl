@@ -13,7 +13,7 @@ struct Config {
   string api_key;
 };
 
-[ServiceName="cloud_provider_firebase::Factory"]
+[Discoverable]
 interface Factory {
   // Creates a cloud provider instance using the given |config|.
   //

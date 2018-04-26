@@ -4,17 +4,6 @@
 
 library modular;
 
-// import "lib/agent/fidl/agent_provider.fidl";
-// import "lib/auth/fidl/account/account.fidl";
-// import "lib/component/fidl/component_context.fidl";
-// import "lib/speech/fidl/speech_to_text.fidl";
-// import "lib/story/fidl/link.fidl";
-// import "lib/story/fidl/story_provider.fidl";
-// import "lib/suggestion/fidl/suggestion_provider.fidl";
-// import "lib/ui/presentation/fidl/presentation.fidl";
-// import "lib/user/fidl/focus.fidl";
-// import "lib/user_intelligence/fidl/intelligence_services.fidl";
-
 // This interface is implemented by a user shell. Dependencies are passed to it
 // in Initialize() on startup. The user shell is also expected to implement
 // Lifecycle in order to receive a Terminate() call on teardown.
@@ -26,7 +15,7 @@ library modular;
 // Teardown may be initiated by the user shell calling
 // UserShellContext.Logout(), by the user runner being terminated, or by the
 // system shutting down.
-[ServiceName="modular.UserShell"]  // Created by user shell applications.
+[Discoverable]  // Created by user shell applications.
 interface UserShell {
   1: Initialize(UserShellContext user_shell_context);
 };

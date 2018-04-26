@@ -4,10 +4,8 @@
 
 library modular;
 
-// import "entity.fidl";
-
 // This interface is given to all components in their |ComponentContext|. Any
-// component can resolve an entity reference into an |Entity|. 
+// component can resolve an entity reference into an |Entity|.
 interface EntityResolver {
   // Finds and binds |entity_request| to an Entity handle for the Entity
   // referenced by |entity_reference|. If an error occurs, |entity_request|

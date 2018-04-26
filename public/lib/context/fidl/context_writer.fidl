@@ -4,11 +4,7 @@
 
 library modular;
 
-// import "metadata.fidl";
-// import "value.fidl";
-// import "value_type.fidl";
-
-[ServiceName="maxwell.ContextWriter"]
+[Discoverable]
 interface ContextWriter {
   // Creates and returns a ContextValueWriter for a future value of |type|,
   // allowing the client to set and update the contents at a later time.  The

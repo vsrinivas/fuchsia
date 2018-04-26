@@ -4,19 +4,7 @@
 
 library modular;
 
-// import "lib/app/fidl/application_launcher.fidl";
-// import "lib/resolver/fidl/resolver.fidl";
-// import "lib/speech/fidl/speech_to_text.fidl";
-// import "lib/suggestion/fidl/suggestion_provider.fidl";
-// import "lib/component/fidl/component_context.fidl";
-// import "lib/context/fidl/context_engine.fidl";
-// import "lib/story/fidl/story_provider.fidl";
-// import "lib/user/fidl/focus.fidl";
-
-// import "intelligence_services.fidl";
-// import "scope.fidl";
-
-[ServiceName="maxwell.UserIntelligenceProviderFactory"]
+[Discoverable]
 interface UserIntelligenceProviderFactory {
   // Creates and returns a |UserIntelligenceProvider|.
   //

@@ -4,9 +4,7 @@
 
 library speech;
 
-// import "lib/media/fidl/media_capturer.fidl";
-
-[ServiceName="speech.SpeechToText"]
+[Discoverable]
 interface SpeechToText {
   // Starts capturing speech from the microphone.
   1: BeginCapture(TranscriptionListener transcription_listener);

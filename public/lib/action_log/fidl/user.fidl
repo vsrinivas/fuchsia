@@ -4,11 +4,7 @@
 
 library modular;
 
-// import "component.fidl";
-// import "listener.fidl";
-// import "lib/user_intelligence/fidl/scope.fidl";
-
-[ServiceName="maxwell.action_log.UserActionLog"]
+[Discoverable]
 interface UserActionLog {
   1: GetComponentActionLog(ComponentScope scope,
       request<ComponentActionLog> component_action_log);

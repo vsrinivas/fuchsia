@@ -10,7 +10,7 @@ library modular_auth;
 // agents.
 //
 // This is only meant to be used by the Framework.
-[ServiceName="modular.auth.AccountProvider"]
+[Discoverable]
 interface AccountProvider {
   // Called by the Framework once, right after starting up a token manager
   // application.
