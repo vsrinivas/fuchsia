@@ -87,10 +87,10 @@ void ConvergenceBenchmark::Run() {
         &device_context.app_controller, std::move(cloud_provider),
         "convergence", synced_dir_path, &device_context.ledger);
     QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
-    device_context.ledger->GetPage(fidl::MakeOptional(page_id_),
-                                   device_context.page_connection.NewRequest(),
-                                   benchmark::QuitOnErrorCallback(
-                                     [this] { loop_->Quit(); }, "GetPage"));
+    device_context.ledger->GetPage(
+        fidl::MakeOptional(page_id_),
+        device_context.page_connection.NewRequest(),
+        benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetPage"));
     ledger::PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
     device_context.page_connection->GetSnapshot(
@@ -98,7 +98,8 @@ void ConvergenceBenchmark::Run() {
         device_context.page_watcher->NewBinding(), waiter->NewCallback());
   }
   waiter->Finalize([this](ledger::Status status) {
-    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "GetSnapshot")) {
+    if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                               "GetSnapshot")) {
       return;
     }
     Start(0);

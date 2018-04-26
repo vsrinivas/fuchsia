@@ -95,15 +95,14 @@ void BacklogBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_writer.NewRequest());
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(),
-      &writer_controller_, std::move(cloud_provider_writer), "backlog",
-      writer_path, &writer_);
+  ledger::Status status =
+      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
+                      &writer_controller_, std::move(cloud_provider_writer),
+                      "backlog", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
-  status = test::GetPageEnsureInitialized(
-      [this] { loop_->Quit(); }, &writer_, nullptr, &writer_page_,
-      &page_id_);
+  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &writer_,
+                                          nullptr, &writer_page_, &page_id_);
   QuitOnError([this] { loop_->Quit(); }, status, "Writer page initialization");
 
   WaitForWriterUpload();
@@ -124,7 +123,8 @@ void BacklogBenchmark::Populate() {
       reference_strategy_, ledger::Priority::EAGER,
       [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
-          benchmark::QuitOnError([this] { loop_->Quit(); }, status, "PageGenerator::Populate");
+          benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                 "PageGenerator::Populate");
           return;
         }
         done_writing_ = true;
@@ -146,7 +146,8 @@ void BacklogBenchmark::WaitForWriterUpload() {
   };
   writer_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Page::SetSyncStateWatcher"));
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+                                     "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::ConnectReader() {
@@ -156,17 +157,18 @@ void BacklogBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "backlog", cloud_provider_reader.NewRequest());
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(),
-      &reader_controller_, std::move(cloud_provider_reader), "backlog",
-      reader_path, &reader_);
+  ledger::Status status =
+      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
+                      &reader_controller_, std::move(cloud_provider_reader),
+                      "backlog", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);
   TRACE_ASYNC_BEGIN("benchmark", "get page", 0);
   reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest(),
                    [this](ledger::Status status) {
-                     if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "GetPage")) {
+                     if (benchmark::QuitOnError([this] { loop_->Quit(); },
+                                                status, "GetPage")) {
                        return;
                      }
                      TRACE_ASYNC_END("benchmark", "get page", 0);
@@ -191,12 +193,14 @@ void BacklogBenchmark::WaitForReaderDownload() {
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Page::SetSyncStateWatcher"));
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+                                     "Page::SetSyncStateWatcher"));
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
-  reader_page_->GetSnapshot(reader_snapshot_.NewRequest(), nullptr, nullptr,
-                            benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetSnapshot"));
+  reader_page_->GetSnapshot(
+      reader_snapshot_.NewRequest(), nullptr, nullptr,
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetSnapshot"));
   TRACE_ASYNC_BEGIN("benchmark", "get all entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }

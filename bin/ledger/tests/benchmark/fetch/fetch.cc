@@ -85,16 +85,14 @@ void FetchBenchmark::Run() {
   cloud_provider::CloudProviderPtr cloud_provider_writer;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_writer.NewRequest());
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); },
-      application_context_.get(), &writer_controller_,
-      std::move(cloud_provider_writer), "fetch",
-      writer_path, &writer_);
+  ledger::Status status =
+      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
+                      &writer_controller_, std::move(cloud_provider_writer),
+                      "fetch", writer_path, &writer_);
   QuitOnError([this] { loop_->Quit(); }, status, "Get writer ledger");
 
-  status = test::GetPageEnsureInitialized(
-      [this] { loop_->Quit(); }, &writer_, nullptr,
-      &writer_page_, &page_id_);
+  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &writer_,
+                                          nullptr, &writer_page_, &page_id_);
   QuitOnError([this] { loop_->Quit(); }, status, "Writer page initialization");
 
   Populate();
@@ -146,10 +144,10 @@ void FetchBenchmark::ConnectReader() {
   cloud_provider::CloudProviderPtr cloud_provider_reader;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_reader.NewRequest());
-  ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit();}, application_context_.get(), &reader_controller_,
-      std::move(cloud_provider_reader), "fetch",
-      reader_path, &reader_);
+  ledger::Status status =
+      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
+                      &reader_controller_, std::move(cloud_provider_reader),
+                      "fetch", reader_path, &reader_);
   QuitOnError([this] { loop_->Quit(); }, status, "ConnectReader");
 
   reader_->GetPage(fidl::MakeOptional(std::move(page_id_)),
@@ -170,10 +168,9 @@ void FetchBenchmark::WaitForReaderDownload() {
         previous_state_ != ledger::SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       ledger::PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(
-          snapshot.NewRequest(), nullptr, nullptr,
-          benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
-                                         "GetSnapshot"));
+      reader_page_->GetSnapshot(snapshot.NewRequest(), nullptr, nullptr,
+                                benchmark::QuitOnErrorCallback(
+                                    [this] { loop_->Quit(); }, "GetSnapshot"));
       FetchValues(std::move(snapshot), 0);
       return;
     }
@@ -183,7 +180,8 @@ void FetchBenchmark::WaitForReaderDownload() {
   };
   reader_page_->SetSyncStateWatcher(
       sync_watcher_binding_.NewBinding(),
-      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "Page::SetSyncStateWatcher"));
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
+                                     "Page::SetSyncStateWatcher"));
 }
 
 void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
@@ -205,7 +203,8 @@ void FetchBenchmark::FetchValues(ledger::PageSnapshotPtr snapshot, size_t i) {
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i](
               ledger::Status status, mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::Fetch")) {
+            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                       "PageSnapshot::Fetch")) {
               return;
             }
             TRACE_ASYNC_END("benchmark", "Fetch", i);
@@ -229,7 +228,8 @@ void FetchBenchmark::FetchPart(ledger::PageSnapshotPtr snapshot,
       fxl::MakeCopyable(
           [this, snapshot = std::move(snapshot), i, part, trace_event_id](
               ledger::Status status, mem::BufferPtr value) mutable {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "PageSnapshot::FetchPartial")) {
+            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                       "PageSnapshot::FetchPartial")) {
               return;
             }
             TRACE_ASYNC_END("benchmark", "FetchPartial", trace_event_id);

@@ -6,8 +6,8 @@
 
 #include <iostream>
 
-#include <trace/event.h>
 #include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
@@ -33,7 +33,8 @@ void PrintUsage(const char* executable_name) {
 namespace test {
 namespace benchmark {
 
-GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
+GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
+                                   size_t requests_count,
                                    bool reuse)
     : loop_(loop),
       tmp_dir_(kStoragePath),
@@ -48,8 +49,7 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop, size_t requests_count,
 void GetPageBenchmark::Run() {
   ledger::Status status = test::GetLedger(
       [this] { loop_->Quit(); }, application_context_.get(),
-      &application_controller_, nullptr, "get_page", tmp_dir_.path(),
-      &ledger_);
+      &application_controller_, nullptr, "get_page", tmp_dir_.path(), &ledger_);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
   page_id_ = fidl::MakeOptional(generator_.MakePageId());
   RunSingle(requests_count_);
@@ -66,7 +66,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, page.NewRequest(),
                    [this, request_number](ledger::Status status) {
                      if (benchmark::QuitOnError([this] { loop_->Quit(); },
-                         status, "Ledger::GetPage")) {
+                                                status, "Ledger::GetPage")) {
                        return;
                      }
                      TRACE_ASYNC_END("benchmark", "get page",

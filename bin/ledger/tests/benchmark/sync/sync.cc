@@ -91,42 +91,38 @@ void SyncBenchmark::Run() {
       server_id_, "", cloud_provider_alpha.NewRequest());
   ledger::LedgerPtr alpha;
   ledger::Status status = test::GetLedger(
-      [this] { loop_->Quit(); }, application_context_.get(),
-      &alpha_controller_, std::move(cloud_provider_alpha), "sync", alpha_path,
-      &alpha);
+      [this] { loop_->Quit(); }, application_context_.get(), &alpha_controller_,
+      std::move(cloud_provider_alpha), "sync", alpha_path, &alpha);
   QuitOnError([this] { loop_->Quit(); }, status, "alpha ledger");
 
   cloud_provider::CloudProviderPtr cloud_provider_beta;
   cloud_provider_firebase_factory_.MakeCloudProvider(
       server_id_, "", cloud_provider_beta.NewRequest());
   ledger::LedgerPtr beta;
-  status = test::GetLedger([this] { loop_->Quit(); },
-                           application_context_.get(), &beta_controller_,
-                           std::move(cloud_provider_beta), "sync", beta_path,
-                           &beta);
+  status = test::GetLedger(
+      [this] { loop_->Quit(); }, application_context_.get(), &beta_controller_,
+      std::move(cloud_provider_beta), "sync", beta_path, &beta);
   QuitOnError([this] { loop_->Quit(); }, status, "beta ledger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized(
-      [this] { loop_->Quit(); }, &alpha, nullptr, &alpha_page_,
-      &id);
+  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &alpha,
+                                          nullptr, &alpha_page_, &id);
   QuitOnError([this] { loop_->Quit(); }, status, "alpha page initialization");
   page_id_ = id;
-  beta->GetPage(fidl::MakeOptional(std::move(id)), beta_page_.NewRequest(),
-                benchmark::QuitOnErrorCallback([this] { loop_->Quit(); },
-                                               "GetPage"));
+  beta->GetPage(
+      fidl::MakeOptional(std::move(id)), beta_page_.NewRequest(),
+      benchmark::QuitOnErrorCallback([this] { loop_->Quit(); }, "GetPage"));
 
   ledger::PageSnapshotPtr snapshot;
-  beta_page_->GetSnapshot(snapshot.NewRequest(), nullptr,
-                          page_watcher_binding_.NewBinding(),
-                          [this](ledger::Status status) {
-                            if (benchmark::QuitOnError(
-                                [this] { loop_->Quit(); }, status,
-                                "GetSnapshot")) {
-                              return;
-                            }
-                            RunSingleChange(0);
-                          });
+  beta_page_->GetSnapshot(
+      snapshot.NewRequest(), nullptr, page_watcher_binding_.NewBinding(),
+      [this](ledger::Status status) {
+        if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                   "GetSnapshot")) {
+          return;
+        }
+        RunSingleChange(0);
+      });
 }
 
 void SyncBenchmark::OnChange(ledger::PageChange page_change,
@@ -166,10 +162,10 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
       &alpha_page_, std::move(keys), value_size_, entries_per_change_,
       reference_strategy_, ledger::Priority::EAGER,
       [this](ledger::Status status) {
-          if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
-                                     "PageDataGenerator::Populate")) {
-              return;
-          }
+        if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                   "PageDataGenerator::Populate")) {
+          return;
+        }
       });
 }
 

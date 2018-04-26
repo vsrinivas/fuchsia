@@ -63,16 +63,15 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
 
 void DeleteEntryBenchmark::Run() {
   ledger::LedgerPtr ledger;
-  ledger::Status status = test::GetLedger(
-                      [this] { loop_->Quit(); },
-                      application_context_.get(), &application_controller_,
-                      nullptr, "delete_entry", tmp_dir_.path(), &ledger);
+  ledger::Status status =
+      test::GetLedger([this] { loop_->Quit(); }, application_context_.get(),
+                      &application_controller_, nullptr, "delete_entry",
+                      tmp_dir_.path(), &ledger);
   QuitOnError([this] { loop_->Quit(); }, status, "GetLedger");
 
   ledger::PageId id;
-  status = test::GetPageEnsureInitialized(
-      [this] { loop_->Quit(); }, &ledger, nullptr, &page_,
-      &id);
+  status = test::GetPageEnsureInitialized([this] { loop_->Quit(); }, &ledger,
+                                          nullptr, &page_, &id);
   QuitOnError([this] { loop_->Quit(); }, status, "Page initialization");
 
   Populate();
@@ -95,7 +94,8 @@ void DeleteEntryBenchmark::Populate() {
         }
         if (transaction_size_ > 0) {
           page_->StartTransaction([this](ledger::Status status) {
-            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status, "Page::StartTransaction")) {
+            if (benchmark::QuitOnError([this] { loop_->Quit(); }, status,
+                                       "Page::StartTransaction")) {
               return;
             }
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
@@ -193,9 +193,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
-  test::benchmark::DeleteEntryBenchmark app(&loop, entry_count,
-                                            transaction_size, key_size,
-                                            value_size);
+  test::benchmark::DeleteEntryBenchmark app(
+      &loop, entry_count, transaction_size, key_size, value_size);
 
   return test::benchmark::RunWithTracing(&loop, [&app] { app.Run(); });
 }

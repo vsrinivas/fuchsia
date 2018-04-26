@@ -28,7 +28,8 @@ namespace benchmark {
 //     individually (implicit transaction).
 class UpdateEntryBenchmark {
  public:
-  UpdateEntryBenchmark(async::Loop* loop, int entry_count,
+  UpdateEntryBenchmark(async::Loop* loop,
+                       int entry_count,
                        int transaction_size);
 
   void Run();
