@@ -13,6 +13,7 @@
 static uint64_t shutdown_args[3] = { 0, 0, 0 };
 static uint64_t reboot_args[3] = { 0, 0, 0 };
 static uint64_t reboot_bootloader_args[3] = { 0, 0, 0 };
+static uint64_t reboot_recovery_args[3] = { 0, 0, 0 };
 
 // in psci.S
 extern uint64_t psci_smc_call(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3);
@@ -31,20 +32,34 @@ void psci_system_off(void) {
 void psci_system_reset(enum reboot_flags flags) {
     uint64_t* args = reboot_args;
 
-    if (flags == REBOOT_BOOTLOADER)
+    if (flags == REBOOT_BOOTLOADER) {
         args = reboot_bootloader_args;
+    } else if (flags == REBOOT_RECOVERY) {
+        args = reboot_recovery_args;
+    }
 
     do_psci_call(PSCI64_SYSTEM_RESET, args[0], args[1], args[2]);
 }
 
 static void arm_psci_init(const void* driver_data, uint32_t length) {
+#if 0
+    // TODO: restore this after everyone is updated to new bootloaders
     ASSERT(length >= sizeof(dcfg_arm_psci_driver_t));
+#else
+    ASSERT(length >= sizeof(dcfg_arm_psci_driver_t) - sizeof(reboot_recovery_args));
+#endif
+
     const dcfg_arm_psci_driver_t* driver = driver_data;
 
     do_psci_call = driver->use_hvc ? psci_hvc_call : psci_smc_call;
     memcpy(shutdown_args, driver->shutdown_args, sizeof(shutdown_args));
     memcpy(reboot_args, driver->reboot_args, sizeof(reboot_args));
     memcpy(reboot_bootloader_args, driver->reboot_bootloader_args, sizeof(reboot_bootloader_args));
+
+    // TODO: remove this check after everyone is updated to new bootloaders
+    if (length >= sizeof(dcfg_arm_psci_driver_t)) {
+        memcpy(reboot_recovery_args, driver->reboot_recovery_args, sizeof(reboot_recovery_args));
+    }
 }
 
 LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);

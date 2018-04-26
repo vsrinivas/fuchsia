@@ -179,6 +179,11 @@ static zx_status_t handle_dmctl_write(size_t len, const char* cmd) {
         dc_suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
         return ZX_OK;
     }
+    if ((len == 15) && !memcmp(cmd, "reboot-recovery", 15)) {
+        devmgr_vfs_exit();
+        dc_suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
+        return ZX_OK;
+    }
     if ((len == 7) && !memcmp(cmd, "suspend", 7)) {
         dc_suspend(DEVICE_SUSPEND_FLAG_SUSPEND_RAM);
         return ZX_OK;
@@ -1671,6 +1676,8 @@ static void dc_suspend_fallback(uint32_t flags) {
         zx_debug_send_command(get_root_resource(), "reboot", sizeof("reboot"));
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
         zx_debug_send_command(get_root_resource(), "reboot-bootloader", sizeof("reboot-bootloader"));
+    } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
+        zx_debug_send_command(get_root_resource(), "reboot-recovery", sizeof("reboot-recovery"));
     } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
         zx_debug_send_command(get_root_resource(), "poweroff", sizeof("poweroff"));
     }

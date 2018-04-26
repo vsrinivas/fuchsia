@@ -31,6 +31,7 @@ typedef struct {
     uint64_t shutdown_args[3];
     uint64_t reboot_args[3];
     uint64_t reboot_bootloader_args[3];
+    uint64_t reboot_recovery_args[3];
 } dcfg_arm_psci_driver_t;
 
 // for KDRV_ARM_GIC_V2

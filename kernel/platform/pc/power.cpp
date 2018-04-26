@@ -104,7 +104,6 @@ void platform_halt(
         printf("Power off failed, halting\n");
         break;
     case HALT_ACTION_REBOOT:
-    case HALT_ACTION_REBOOT_BOOTLOADER:
         printf("Rebooting...\n");
         reboot();
         printf("Reboot failed, halting\n");
@@ -112,6 +111,10 @@ void platform_halt(
     case HALT_ACTION_HALT:
         printf("Halting...\n");
         halt_other_cpus();
+        break;
+    case HALT_ACTION_REBOOT_BOOTLOADER:
+    case HALT_ACTION_REBOOT_RECOVERY:
+        printf("platform_halt: Unsupported halt reason %d\n", suggested_action);
         break;
     }
 

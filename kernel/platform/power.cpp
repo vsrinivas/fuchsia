@@ -58,6 +58,11 @@ static int cmd_reboot_bootloader(int argc, const cmd_args* argv, uint32_t flags)
     return 0;
 }
 
+static int cmd_reboot_recovery(int argc, const cmd_args* argv, uint32_t flags) {
+    platform_halt(HALT_ACTION_REBOOT_RECOVERY, HALT_REASON_SW_RESET);
+    return 0;
+}
+
 static int cmd_poweroff(int argc, const cmd_args* argv, uint32_t flags) {
     platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
     return 0;
@@ -67,6 +72,7 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
 STATIC_COMMAND_MASKED("reboot", "soft reset", &cmd_reboot, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("reboot-bootloader", "reboot into bootloader", &cmd_reboot_bootloader, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_MASKED("reboot-recovery", "reboot into recovery mode", &cmd_reboot_recovery, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("poweroff", "powerdown", &cmd_poweroff, CMD_AVAIL_ALWAYS)
 #endif
 STATIC_COMMAND_END(platform_power);

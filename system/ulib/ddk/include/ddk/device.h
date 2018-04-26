@@ -33,6 +33,7 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 
 // reboot modifiers
 #define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER   (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
+#define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY     (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
 
 //@doc(docs/ddk/device-ops.md)
 
