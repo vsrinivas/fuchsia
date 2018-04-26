@@ -55,8 +55,8 @@ esac
 readonly PLATFORM
 
 update_stamp() {
-  local -r package="$1" version="$2"
-  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  local -r package="$1" version="$2" download_file="$3"
+  local -r stamp="${DOWNLOAD_DIR}/${download_file%.*}.stamp"
   echo "$version" > "$stamp"
 }
 
@@ -66,8 +66,8 @@ verify_stamp() {
     verbose=true
     shift
   fi
-  local -r package="$1" version="$2"
-  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  local -r package="$1" version="$2" download_file="$3"
+  local -r stamp="${DOWNLOAD_DIR}/${download_file%.*}.stamp"
   local stamp_version
   if [[ -r "$stamp" ]]; then
     stamp_version="$(< "$stamp")"
@@ -84,8 +84,8 @@ verify_stamp() {
 }
 
 list_package() {
-  local -r package="$1" version="$2"
-  local -r stamp="${DOWNLOAD_DIR}/${package}.stamp"
+  local -r package="$1" version="$2" download_file="$3"
+  local -r stamp="${DOWNLOAD_DIR}/${download_file%.*}.stamp"
   local stamp_version
   if [[ -r "$stamp" ]]; then
     stamp_version="$(< "$stamp")"
@@ -108,45 +108,60 @@ EOF
 }
 
 download_package() {
-  local -r package="$1" version="$2"
-  local -r dir="${DOWNLOAD_DIR}/${package}"
-  local -r zip="${dir}.zip"
+  local -r package="$1" version="$2" download_file="$3"
   local -r url="${URL_PREFIX}/${package}/${PLATFORM}/${version}"
 
   # If the stamp file says it's already in place, do nothing more.
-  verify_stamp "$package" "$version" && return
+  verify_stamp "$package" "$version" "$download_file" && return
 
-  rm -f -- "$zip"
+  rm -f -- "$download_file"
   echo "Downloading $url"
   curl --progress-bar -continue-at=- --location \
-       --create-dirs --output "$zip" "$url" || return
+       --create-dirs --output "$download_file" "$url" || return
 
-  verify_file "$zip" "$version" || {
+  verify_file "$download_file" "$version" || {
     echo >&2 "*** VERIFICATION ERROR ***"
-    echo >&2 "*** VERIFICATION ERROR *** $zip from $url"
+    echo >&2 "*** VERIFICATION ERROR *** $download_file from $url"
     echo >&2 "*** VERIFICATION ERROR *** Not using the file!"
     return 1
   }
 
-  rm -rf -- "$dir"
-  echo "Unpacking $zip"
-  unzip -q -d "$dir" "$zip" || return
+  if [[ "$download_file" == *.zip ]]; then
+    local -r dir="${download_file%.zip}"
+    rm -rf -- "$dir"
+    echo "Unpacking $zip"
+    unzip -q -d "$dir" "$zip" || return
+  else
+    mv -f "${download_file%.new}" "$download_file"
+  fi
 
-  update_stamp "$package" "$version"
+  update_stamp "$package" "$version" "$download_file"
 }
 
 for_each_package() {
-  local package version status=0
+  local package version download_file status=0
   while read package version; do
     case "$package" in
     ''|\#*)
       continue
       ;;
+    tools/*/${PLATFORM})
+      # These are standalone executables, not subdirectories.
+      package="${package%/*}"
+      download_file="${package#tools/}.new"
+      "$@" "$package" "$version" "$download_file" || status=$?
+      ;;
     */${PLATFORM})
       package="${package%/*}"
-      "$@" "$package" "$version" || status=$?
+      # Subdirectories are packed in .zip files.
+      download_file="${package}.zip"
+      ;;
+    *)
+      # Skip lines for other platforms.
+      continue
       ;;
     esac
+    "$@" "$package" "$version" "$download_file" || status=$?
   done
   return $status
 }

@@ -34,3 +34,7 @@ fuchsia/gcc/${platform} git_revision:b824b5a2484202f6eabbe118b1cf7682ce77b76e,b5
 # sysroot
 @Subdir sysroot
 fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+
+# Symbolizer tool.  This is a standalone executable, not a subdirectory.
+@Subdir
+fuchsia/tools/symbolize/${platform} git_revision:2acfed63bcc9cdaa5ec1a79263c6723b24beef8b
