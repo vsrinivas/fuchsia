@@ -331,9 +331,6 @@ func (d *Interface) GetAttribute(name Identifier) string {
 }
 
 func (d *Interface) GetServiceName() string {
-	if name := d.GetAttribute("ServiceName"); len(name) != 0 {
-		return name
-	}
 	if d.HasAttribute("Discoverable") {
 		ci := ParseCompoundIdentifier(d.Name)
 		var parts []string
