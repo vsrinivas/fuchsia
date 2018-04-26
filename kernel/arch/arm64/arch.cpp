@@ -140,6 +140,10 @@ static void arm64_cpu_early_init() {
     // Enable user space access to cycle counter.
     ARM64_WRITE_SYSREG(pmuserenr_el0, PMUSERENR_EL0_ENABLE);
 
+    // Enable Debug Exceptions by Disabling the OS Lock. The OSLAR_EL1 is a WO
+    // register with only the low bit defined as OSLK. Write 0 to disable.
+    ARM64_WRITE_SYSREG(oslar_el1, 0x0);
+
     // Enable user space access to virtual counter (CNTVCT_EL0).
     ARM64_WRITE_SYSREG(cntkctl_el1, CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER);
 

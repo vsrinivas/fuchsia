@@ -18,7 +18,10 @@
 static uint32_t kUserVisibleFlags = 0xf0000000;
 
 // SS (="Single Step") is bit 0 in MDSCR_EL1.
-static constexpr uint64_t kSSMask = 1;
+static constexpr uint64_t kMdscrSSMask = 1;
+
+// Single Step for PSTATE, see ARMv8 Manual C5.2.18, enable Single step for Process
+static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 
 zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general_regs_t* out) {
     // Punt if registers aren't available. E.g.,
@@ -64,7 +67,11 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
     struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
-    *single_step = !!(regs->mdscr & kSSMask);
+
+    const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
+    const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
+
+    *single_step = mdscr_ss_enable && spsr_ss_enable;
     return ZX_OK;
 }
 
@@ -75,9 +82,11 @@ zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
         return ZX_ERR_NOT_SUPPORTED;
     struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
     if (single_step) {
-        regs->mdscr |= kSSMask;
+        regs->mdscr |= kMdscrSSMask;
+        regs->spsr |= kSSMaskSPSR;
     } else {
-        regs->mdscr &= ~kSSMask;
+        regs->mdscr &= ~kMdscrSSMask;
+        regs->spsr &= ~kSSMaskSPSR;
     }
     return ZX_OK;
 }
