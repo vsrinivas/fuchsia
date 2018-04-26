@@ -78,6 +78,7 @@ struct LocalApicState {
 // structure keeps track of the state required to update system time in guest.
 struct pvclock_system_time;
 struct PvClockState {
+    bool is_stable = false;
     uint32_t version = 0;
     pvclock_system_time* system_time = nullptr;
     hypervisor::GuestPtr guest_ptr;

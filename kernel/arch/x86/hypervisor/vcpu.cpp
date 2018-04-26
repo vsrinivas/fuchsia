@@ -8,6 +8,7 @@
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/pvclock.h>
 #include <fbl/auto_call.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
@@ -654,6 +655,9 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     status = vcpu->local_apic_state_.interrupt_tracker.Init();
     if (status != ZX_OK)
         return status;
+
+    vcpu->pvclock_state_.is_stable =
+        pvclock_is_present() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
 
     VmxInfo vmx_info;
     status = vcpu->host_msr_page_.Alloc(vmx_info, 0);

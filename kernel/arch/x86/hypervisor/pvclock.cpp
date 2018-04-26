@@ -6,7 +6,6 @@
 
 #include "pvclock_priv.h"
 #include <arch/hypervisor.h>
-#include <arch/x86/feature.h>
 #include <arch/x86/pvclock.h>
 #include <bits.h>
 #include <hypervisor/guest_physical_address_space.h>
@@ -118,9 +117,6 @@ void pvclock_update_system_time(PvClockState* pvclock,
     int8_t tsc_shift;
     calculate_scale_factor(ticks_per_second(), &tsc_mul, &tsc_shift);
 
-    bool is_stable =
-        pvclock_is_present() ? pvclock_is_stable() : x86_feature_test(X86_FEATURE_INVAR_TSC);
-
     // See the comment for pvclock_boot_time structure above
     pvclock_system_time* system_time = pvclock->system_time;
     atomic_store_relaxed_u32(&system_time->version, pvclock->version + 1);
@@ -129,7 +125,7 @@ void pvclock_update_system_time(PvClockState* pvclock,
     system_time->tsc_shift = tsc_shift;
     system_time->system_time = current_time();
     system_time->tsc_timestamp = rdtsc();
-    system_time->flags = is_stable ? kKvmSystemTimeStable : 0;
+    system_time->flags = pvclock->is_stable ? kKvmSystemTimeStable : 0;
     atomic_fence();
     atomic_store_relaxed_u32(&system_time->version, pvclock->version + 2);
     pvclock->version += 2;
