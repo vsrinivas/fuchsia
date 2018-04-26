@@ -125,7 +125,8 @@ The set of currently known features are as follows:
   `shell` feature, the package loads shared libraries from `/system/lib` instead
   of from its own package. This behavior will probably change over time, but we
   do this currently so that programs that are run from the shell can find their
-  shared libraries.
+  shared libraries. The `shell` feature also implies the `root-ssl-certificates`
+  feature.
 
 - `system-temp`, which requests access to the system temp directory, located at
   `/tmp` in the package's namespace. (Future work will likely remove access to
