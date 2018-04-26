@@ -68,6 +68,12 @@ static const char* guid_to_type(char* guid) {
         return "fuchsia-blob";
     } else if (!strcmp(GUID_FVM_STRING, guid)) {
         return "fuchsia-fvm";
+    } else if (!strcmp(GUID_ZIRCON_A_STRING, guid)) {
+        return "fuchsia-zircon-a";
+    } else if (!strcmp(GUID_ZIRCON_B_STRING, guid)) {
+        return "fuchsia-zircon-b";
+    } else if (!strcmp(GUID_ZIRCON_R_STRING, guid)) {
+        return "fuchsia-zircon-r";
     } else {
         return "unknown";
     }
@@ -91,7 +97,7 @@ static int cmd_list_blk(void) {
     blkinfo_t info;
     const char* type;
     int fd;
-    printf("%-3s %-4s %-14s %-20s %-6s %s\n",
+    printf("%-3s %-4s %-16s %-20s %-6s %s\n",
            "ID", "SIZE", "TYPE", "LABEL", "FLAGS", "DEVICE");
     while ((de = readdir(dir)) != NULL) {
         if (!strcmp(de->d_name, ".") || !strcmp(de->d_name, "..")) {
@@ -134,7 +140,7 @@ static int cmd_list_blk(void) {
         }
 devdone:
         close(fd);
-        printf("%-3s %4s %-14s %-20s %-6s %s\n",
+        printf("%-3s %4s %-16s %-20s %-6s %s\n",
                de->d_name, info.sizestr, type ? type : "",
                info.label, flags, info.topo);
     }
