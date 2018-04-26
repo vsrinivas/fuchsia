@@ -19,7 +19,7 @@ enum ValueType: uint8 {
 
 
 // Manager interface used to manage settings
-[ServiceName="device_settings::DeviceSettings"]
+[Discoverable]
 interface DeviceSettingsManager {
   1: GetInteger(string key) -> (int64 val, Status s);
 

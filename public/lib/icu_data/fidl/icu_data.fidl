@@ -10,7 +10,7 @@ struct ICUData {
   mem.Buffer vmo;
 };
 
-[ServiceName="icu_data::ICUDataProvider"]
+[Discoverable]
 interface ICUDataProvider {
   1: ICUDataWithSha1(string sha1hash) -> (ICUData? response);
 };

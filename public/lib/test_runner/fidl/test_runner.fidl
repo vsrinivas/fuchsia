@@ -16,7 +16,7 @@ struct TestResult {
 // this service to log failures, signal crashes, and signal completion.
 // The empty return acknowledges that the connection to TestRunner was
 // successful.
-[ServiceName="test_runner.TestRunner"]
+[Discoverable]
 interface TestRunner {
   // Tells the test runner how to identify this test program.
   1: Identify(string program_name) -> ();
@@ -75,7 +75,7 @@ interface TestRunner {
 // An test agent can Put() a "connected" key when it receives a connection, and
 // a test module that requested the agent can Get() that "connected" key to
 // assert that it was able to connect to the right agent.
-[ServiceName="test_runner.TestRunnerStore"]
+[Discoverable]
 interface TestRunnerStore {
   // This will store |key| with value |value| and respond back. Subsequent
   // Put()s to |key| are queued up until they are read by a |Get()|.

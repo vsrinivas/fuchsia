@@ -48,7 +48,7 @@ interface DeviceListener {
     4: OnIfaceRemoved(uint16 phy_id, uint16 iface_id);
 };
 
-[ServiceName="wlan::DeviceService"]
+[Discoverable]
 interface DeviceService {
   // Phy methods
   1: ListPhys() -> (ListPhysResponse resp);

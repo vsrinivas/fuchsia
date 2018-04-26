@@ -4,7 +4,7 @@
 
 library amber;
 
-[ServiceName="update::Control"]
+[Discoverable]
 interface Control {
   // simple no-op that can be used to test the connection
   1: DoTest(int32 input) -> (string output);

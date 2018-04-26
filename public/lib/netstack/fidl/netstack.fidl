@@ -123,7 +123,7 @@ interface NotificationListener {
   1: OnInterfacesChanged(vector<NetInterface> interfaces);
 };
 
-[ServiceName="netstack::Netstack"]
+[Discoverable]
 interface Netstack {
   // Registers the given NotificationListener to be notified of changes. Only one
   // NotificationListener may be active for each client's Netstack instance.

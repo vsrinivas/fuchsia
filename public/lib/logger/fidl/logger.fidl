@@ -52,14 +52,14 @@ struct LogMessage {
 };
 
 // Interface for LogListener to listen to.
-[ServiceName="logger::Log"]
+[Discoverable]
 interface Log {
   // Listener listens for logs
   1: Listen(LogListener log_listener, LogFilterOptions? options);
 };
 
 // Interface to get and listen to socket from syslogger
-[ServiceName="logger::LogSink"]
+[Discoverable]
 interface LogSink {
   // Client connects to send logs over socket
   1: Connect(handle<socket> socket);

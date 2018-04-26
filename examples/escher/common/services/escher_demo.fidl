@@ -4,7 +4,7 @@
 
 library escher_demo;
 
-[ServiceName="escher_demo::EscherDemo"]
+[Discoverable]
 interface EscherDemo {
   // GetCurrentFrameNumber() -> (uint64 frame_number);
   1: HandleKeyPress(uint8 key);

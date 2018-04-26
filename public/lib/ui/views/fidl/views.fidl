@@ -59,7 +59,7 @@ interface View {
   // the ability to show an IME
   //
   // |service_names| should contain a list of service names as defined with the
-  // FIDL syntax [ServiceName="service_name"]
+  // FIDL syntax [Discoverable]
   //
   // The list of services will be used by the compositor to filter service
   // providers when looking for a particular service.

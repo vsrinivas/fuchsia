@@ -47,7 +47,7 @@ struct AuthProviderConfig {
 
 // TokenManagerFactory creates an OAuth Token Manager for a particular user and
 // the specified auth providers as defined by |auth_provider.fidl|.
-[ServiceName="auth::TokenManagerFactory"]
+[Discoverable]
 interface TokenManagerFactory {
   // Creates a Token Manager scoped for the specified Fuchsia user |user_id| and
   // is initialized with a list of supported |auth_providers| to mint tokens.

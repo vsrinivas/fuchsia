@@ -88,7 +88,7 @@ union Value {
   vector<BucketDistributionEntry> int_bucket_distribution;
 };
 
-[ServiceName="cobalt::CobaltEncoderFactory"]
+[Discoverable]
 // CobaltEncoderFactory creates a CobaltEncoder for a particular project.
 interface CobaltEncoderFactory {
   // Creates a CobaltEncoder for the specified project.
@@ -269,15 +269,15 @@ interface CobaltEncoder {
   //              between the end timestamp and the start timestamp as the
   //              value of the Observation's unique part. It is ok if this
   //              time delta is negative.
-  //           Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout 
+  //           Returns INVALID_ARGUMENTS if |timer_id| is empty or the timeout
   //              is not positive and less than 5 minutes.
   //           Returns FAILED_PRECONDITION if Cobalt currently has a timer
   //              with the given timer_ID and it already has a start
   //              timestamp. In this case Cobalt will delete the timer with
   //              the given |timer_id| and this invocation of StartTimer()
   //              will be forgotten.
-  //           Returns a different error if Cobalt tries to create an 
-  //              Observation with the given arguments and fails. See 
+  //           Returns a different error if Cobalt tries to create an
+  //              Observation with the given arguments and fails. See
   //              Cobalt::Status for more information.
   9: StartTimer(uint32 metric_id, uint32 encoding_id, string timer_id,
                 uint64 timestamp, uint32 timeout_s) -> (Status @status);
@@ -328,8 +328,8 @@ interface CobaltEncoder {
   //              In this case Cobalt will delete the timer with the given
   //              |timer_id| and this invocation of EndTimer() will be
   //              forgotten.
-  //           Returns a different error if Cobalt tries to create an 
-  //              Observation with the given arguments and fails. See 
+  //           Returns a different error if Cobalt tries to create an
+  //              Observation with the given arguments and fails. See
   //              Cobalt::Status for more information.
   10: EndTimer(string timer_id,  uint64 timestamp, uint32 timeout_s)
       -> (Status @status);
@@ -386,8 +386,8 @@ interface CobaltEncoder {
   //              In this case Cobalt will delete the timer with the given
   //              |timer_id| and this invocation of EndTimer() will be
   //              forgotten.
-  //           Returns a different error if Cobalt tries to create an 
-  //              Observation with the given arguments and fails. See 
+  //           Returns a different error if Cobalt tries to create an
+  //              Observation with the given arguments and fails. See
   //              Cobalt::Status for more information.
   11: EndTimerMultiPart(string timer_id,  uint64 timestamp, string part_name,
                         vector<ObservationValue> observation, uint32 timeout_s)

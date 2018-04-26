@@ -10,7 +10,7 @@ library time_zone;
 //
 // For more information on the ICU timezone ID format, see:
 // http://userguide.icu-project.org/datetime
-[ServiceName="time_zone::Timezone"]
+[Discoverable]
 interface Timezone {
   // Returns local timezone offset (in minutes from UTC. Can be negative) for
   // the supplied number of milliseconds since the Unix epoch. Returns a

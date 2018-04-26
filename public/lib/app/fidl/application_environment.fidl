@@ -11,7 +11,7 @@ const uint32 kLabelMaxLength = 32;
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
-[ServiceName="component.ApplicationEnvironment"]
+[Discoverable]
 interface ApplicationEnvironment {
   // Creates a new environment nested inside this environment.
   //

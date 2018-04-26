@@ -104,7 +104,7 @@ interface AuthenticationUIContext {
 // OAuth identity service that provisions new users and provides authorization
 // tokens for the currently enrolled users. Some common Auth Providers are
 // Google, Facebook, Spotify and Twitter.
-[ServiceName="auth::AuthProvider"]
+[Discoverable]
 interface AuthProvider {
   // Authenticates and authorizes an user against auth provider backend system
   // using OAuth protocol and returns the persistent credential such as

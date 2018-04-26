@@ -13,7 +13,7 @@ library input;
 //
 // TODO(jeffbrown): Elaborate this.  Particularly need to think about
 // how to handle focus and gestures.
-[ServiceName="input::InputConnection"]
+[Discoverable]
 interface InputConnection {
   // Sets the listener for receiving input events.
   //

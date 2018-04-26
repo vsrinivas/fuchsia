@@ -46,7 +46,7 @@ struct ApplicationPackage {
 // Typically exposed by applications that provide execution environments for
 // particular classes of programs. For example, the Dart virtual machine exposes
 // this interface to run Dart programs.
-[ServiceName="component.ApplicationRunner"]
+[Discoverable]
 interface ApplicationRunner {
   // Execute the given application.
   //

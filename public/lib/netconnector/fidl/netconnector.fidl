@@ -11,7 +11,7 @@ using component;
 const uint64 kInitialKnownDeviceNames = 0;
 
 // Primary netconnector service definition.
-[ServiceName="netconnector::NetConnector"]
+[Discoverable]
 interface NetConnector {
   // Registers a running responding service. |service_name| identifies the
   // service and is the same name used in |ConnectToService|. |service_provider|

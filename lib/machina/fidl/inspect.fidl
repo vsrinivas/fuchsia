@@ -4,7 +4,7 @@
 
 library machina;
 
-[ServiceName="machina.InspectService"]
+[Discoverable]
 interface InspectService {
   // Fetch a read-only VMO that represents the physical memory of the guest.
   1: FetchGuestMemory() -> (handle<vmo> vmo);

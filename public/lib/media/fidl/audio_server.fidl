@@ -4,7 +4,7 @@
 
 library media;
 
-[ServiceName="media::AudioServer"]
+[Discoverable]
 interface AudioServer {
   1: CreateRenderer(request<AudioRenderer> audio_renderer, request<MediaRenderer> media_renderer);
   5: CreateRendererV2(request<AudioRenderer2> audio_renderer);

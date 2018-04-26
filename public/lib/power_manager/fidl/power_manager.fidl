@@ -40,7 +40,7 @@ struct BatteryStatus {
 };
 
 // Manager Interface used to manage power
-[ServiceName="power::PowerManager"]
+[Discoverable]
 interface PowerManager {
   // Gets battery status
   1: GetBatteryStatus() -> (BatteryStatus @status);

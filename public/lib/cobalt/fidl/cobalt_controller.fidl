@@ -7,7 +7,7 @@ library cobalt;
 // This is not the service that should be used by Cobalt clients. This
 // service is primarily useful for tests of Cobalt.
 
-[ServiceName="cobalt::CobaltController"]
+[Discoverable]
 interface CobaltController {
   // Requests that the collection of Observations that are currently cached
   // locally be sent to the Cobalt server soon. Cobalt will send the

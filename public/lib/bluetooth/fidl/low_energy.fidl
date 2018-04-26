@@ -106,7 +106,7 @@ interface CentralDelegate {
   3: OnPeripheralDisconnected(string identifier);
 };
 
-[ServiceName="bluetooth::low_energy::Central"]
+[Discoverable]
 interface Central {
   // Sets the delegate that shoud be notified for LE Scanner and Central role events.
   1: SetDelegate(CentralDelegate delegate);
@@ -165,7 +165,7 @@ interface PeripheralDelegate {
   2: OnCentralDisconnected(string device_id);
 };
 
-[ServiceName="bluetooth::low_energy::Peripheral"]
+[Discoverable]
 interface Peripheral {
   // Starts sending advertisements based on the given parameters.
   //   - |advertising_data|: The advertising data that should be included in the payload.

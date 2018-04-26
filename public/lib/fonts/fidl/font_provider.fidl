@@ -34,7 +34,7 @@ struct FontResponse {
   FontData data;
 };
 
-[ServiceName="fonts::FontProvider"]
+[Discoverable]
 interface FontProvider {
   1: GetFont(FontRequest @request) -> (FontResponse? response);
 };

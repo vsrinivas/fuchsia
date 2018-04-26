@@ -4,7 +4,7 @@
 
 library tts;
 
-[ServiceName="tts::TtsService"]
+[Discoverable]
 interface TtsService {
   // Speak the string of words provided.  Return the provided token to the
   // caller when the speaking has finished.

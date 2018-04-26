@@ -4,7 +4,7 @@
 
 library ui;
 
-[ServiceName="ui::Scenic"]
+[Discoverable]
 interface Scenic {
   // Create a new Session, which is the primary way to interact with Mozart.
   1: CreateSession(request<Session> session, SessionListener? listener);

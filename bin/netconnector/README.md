@@ -94,7 +94,7 @@ file looks like this:
 
     {
       "services": {
-        "netconnector::Example": "netconnector_example"
+        "netconnector.Example": "netconnector_example"
       },
       "devices": {
         "acer": "192.168.4.118",
@@ -111,7 +111,7 @@ As mentioned previously, the `listen` option should generally only be used in
     {
       "services": {
         ...
-        "netconnector::NetConnector": [
+        "netconnector.NetConnector": [
             "netconnector", "--listen"
         ],
         ...

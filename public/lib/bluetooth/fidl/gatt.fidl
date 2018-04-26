@@ -178,7 +178,7 @@ interface LocalService {
   2: NotifyValue(uint64 characteristic_id, string peer_id, vector<uint8> value, bool confirm);
 };
 
-[ServiceName="bluetooth::gatt::Server"]
+[Discoverable]
 interface Server {
   // Publishes the given service so that it is available to all remote peers.
   // A LocalServiceDelegate must be provided over which to receive service requests.

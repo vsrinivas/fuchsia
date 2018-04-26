@@ -202,7 +202,7 @@ interface RemoteDeviceDelegate {
 };
 
 // Primary Bluetooth control service to access bluetooth
-[ServiceName="bluetooth::control::Control"]
+[Discoverable]
 interface Control {
   // Returns whether or not Bluetooth is currently available on the system.
   1: IsBluetoothAvailable() -> (bool available);

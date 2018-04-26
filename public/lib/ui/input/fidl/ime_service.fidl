@@ -5,7 +5,7 @@
 library input;
 
 // The service provided by an IME
-[ServiceName="mozart::ImeService"]
+[Discoverable]
 interface ImeService {
   1: GetInputMethodEditor(KeyboardType keyboard_type,
                          InputMethodAction action,
@@ -18,7 +18,7 @@ interface ImeService {
 // software keyboard.
 //
 // View can use the |OfferServiceProvider| API to expose that service.
-[ServiceName="mozart::SoftKeyboardContainer"]
+[Discoverable]
 interface SoftKeyboardContainer {
   1: Show() -> (bool shown);
   2: Hide();

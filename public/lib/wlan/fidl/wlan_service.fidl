@@ -67,7 +67,7 @@ struct BssConfig {
 
 // Stub interface; eventually to be replaced by something based on the 802.11
 // SME / MSGCF.
-[ServiceName="wlan::WlanService"]
+[Discoverable]
 interface Wlan {
   1: Scan(ScanRequest req) -> (ScanResult result);
   2: Connect(ConnectConfig req) -> (Error error);

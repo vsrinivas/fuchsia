@@ -4,7 +4,7 @@
 
 library network;
 
-[ServiceName="network::NetworkService"]
+[Discoverable]
 interface NetworkService {
   1: CreateURLLoader(request<URLLoader> loader);
 

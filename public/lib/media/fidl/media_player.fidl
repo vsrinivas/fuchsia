@@ -8,7 +8,7 @@ using media;
 using views_v1_token;
 
 // Plays media.
-[ServiceName="media_player::MediaPlayer"]
+[Discoverable]
 interface MediaPlayer {
   // Sets an HTTP URL to read from.
   1: SetHttpSource(string http_url);
