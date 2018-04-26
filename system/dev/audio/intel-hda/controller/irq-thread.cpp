@@ -19,6 +19,7 @@ namespace intel_hda {
 
 void IntelHDAController::WakeupIRQThread() {
     ZX_DEBUG_ASSERT(irq_.is_valid());
+    __UNUSED zx_status_t res;
 
 #if ENABLE_NEW_IRQ_API
     // TODO(johngro@): Adopt the new interrupt syscalls
@@ -26,11 +27,13 @@ void IntelHDAController::WakeupIRQThread() {
     // would not be supporting signalling a physical interrupt
     // Currently there is a WA added to allow this
     LOG(SPEW, "Waking up IRQ thread\n");
-    irq_.trigger(0, zx::time(0));
+    res = irq_.trigger(0, zx::time(0));
 #else
     LOG(SPEW, "Waking up IRQ thread\n");
-    irq_.signal(ZX_INTERRUPT_SLOT_USER, zx::time(0));
+    res = irq_.signal(ZX_INTERRUPT_SLOT_USER, zx::time(0));
 #endif
+
+    ZX_DEBUG_ASSERT(res == ZX_OK);
 }
 
 fbl::RefPtr<IntelHDACodec> IntelHDAController::GetCodec(uint id) {
