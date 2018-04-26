@@ -103,8 +103,13 @@ impl Channel {
         }
     }
 
-    /// Send a message consisting of the given bytes and handles to a channel and await a reply. The
-    /// bytes should start with a four byte 'txid' which is used to identify the matching reply.
+    /// Send a message consisting of the given bytes and handles to a channel and await a reply.
+    ///
+    /// The first four bytes of the written and read back messages are treated as a transaction ID
+    /// of type `zx_txid_t`. The kernel generates a txid for the written message, replacing that
+    /// part of the message as read from userspace. In other words, the first four bytes of
+    /// `bytes` will be ignored, and the first four bytes of the response will contain a
+    /// kernel-generated txid.
     ///
     /// Wraps the
     /// [zx_channel_call](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md)
@@ -207,8 +212,7 @@ impl AsRef<Channel> for Channel {
 ///
 /// Note that for sending messages to a channel, the caller manages the buffers,
 /// using a plain byte slice and `Vec<Handle>`.
-#[derive(Default)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MessageBuf {
     bytes: Vec<u8>,
     handles: Vec<Handle>,
@@ -375,7 +379,7 @@ mod tests {
         let duplicate_vmo_handle = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap().into();
         let mut handles_to_send: Vec<Handle> = vec![duplicate_vmo_handle];
         let mut buf = MessageBuf::new();
-        assert_eq!(p1.call(ten_ms.after_now(), b"call", &mut handles_to_send, &mut buf),
+        assert_eq!(p1.call(ten_ms.after_now(), b"0000call", &mut handles_to_send, &mut buf),
             Err((Status::TIMED_OUT, Status::OK)));
         // Handle should be removed from vector even though we didn't get a response, as it was
         // still sent over the channel.
@@ -384,7 +388,7 @@ mod tests {
         // Should be able to read call even though it timed out waiting for a response.
         let mut buf = MessageBuf::new();
         assert!(p2.read(&mut buf).is_ok());
-        assert_eq!(buf.bytes(), b"call");
+        assert_eq!(&buf.bytes()[4..], b"call");
         assert_eq!(buf.n_handles(), 1);
     }
 
@@ -403,8 +407,15 @@ mod tests {
             // resulting in tx being dropped, which will be noticed by the rx.
             p2.wait_handle(Signals::CHANNEL_READABLE, 1.seconds().after_now()).expect("callee wait error");
             p2.read(&mut buf).expect("callee read error");
-            p2.write(b"txidresponse", &mut vec![]).expect("callee write error");
-            tx.send(buf).expect("callee mpsc send error");
+
+            let (bytes, handles) = buf.split_mut();
+            tx.send(bytes.clone()).expect("callee mpsc send error");
+            assert_eq!(handles.len(), 0);
+
+            bytes.truncate(4); // Drop the received message, leaving only the txid
+            bytes.extend_from_slice(b"response");
+
+            p2.write(bytes, handles).expect("callee write error");
         });
 
         // Make the call.
@@ -418,11 +429,10 @@ mod tests {
         // crate. Tests of Zircon behavior or virtualization behavior should be
         // covered elsewhere. See ZX-1324.
         p1.call(30.seconds().after_now(), b"txidcall", &mut vec![], &mut buf).expect("channel call error");
-        assert_eq!(buf.bytes(), b"txidresponse");
+        assert_eq!(&buf.bytes()[4..], b"response");
         assert_eq!(buf.n_handles(), 0);
 
         let sbuf = rx.recv().expect("mpsc channel recv error");
-        assert_eq!(sbuf.bytes(), b"txidcall");
-        assert_eq!(sbuf.n_handles(), 0);
+        assert_eq!(&sbuf[4..], b"call");
     }
 }
