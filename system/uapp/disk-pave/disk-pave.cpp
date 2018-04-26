@@ -235,6 +235,31 @@ zx_status_t stream_partition(MappedVmo* mvmo, fifo_client_t* client,
     }
 }
 
+// Attempt to bind an FVM driver to a GPT partition fd.
+fbl::unique_fd try_to_bind_fvm_driver(const fbl::unique_fd& partition_fd,
+                                      zx::duration timeout) {
+    char path[PATH_MAX];
+    ssize_t r = ioctl_device_get_topo_path(partition_fd.get(), path, sizeof(path));
+    if (r < 0) {
+        ERROR("Failed to get topological path\n");
+        return fbl::unique_fd();
+    }
+
+    r = ioctl_device_bind(partition_fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
+    if (r < 0) {
+        ERROR("Could not bind fvm driver\n");
+        return fbl::unique_fd();
+    }
+
+    char fvm_path[PATH_MAX];
+    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
+    if (wait_for_device(fvm_path, timeout.get()) != ZX_OK) {
+        ERROR("Error waiting for fvm driver to bind\n");
+        return fbl::unique_fd();
+    }
+    return fbl::unique_fd(open(fvm_path, O_RDWR));
+}
+
 // Finds a partition with "FVM type GUID" within a GPT,
 // and formats the FVM within the GPT if it is not already
 // formatted.
@@ -249,34 +274,27 @@ fbl::unique_fd fvm_find_or_format(size_t slice_size) {
         return fbl::unique_fd();
     }
 
+    // Although the format (based on the magic in the FVM superblock)
+    // indicates this is (or at least was) an FVM image, it may be invalid.
+    //
+    // Attempt to bind the FVM driver to this partition, but fall-back to
+    // reinitializing the FVM image so the rest of the paving
+    // process can continue successfully.
     disk_format_t df = detect_disk_format(fd.get());
-    if (df != DISK_FORMAT_FVM) {
-        ERROR("Initializing partition as FVM\n");
-        if (fvm_init(fd.get(), slice_size)) {
-            ERROR("Failed to initialize fvm\n");
-            return fbl::unique_fd();
+    if (df == DISK_FORMAT_FVM) {
+        fbl::unique_fd fvm_fd(try_to_bind_fvm_driver(fd, zx::sec(3)));
+        if (fvm_fd) {
+            return fvm_fd;
+        } else {
+            ERROR("Saw DISK_FORMAT_FVM, but could not bind driver\n");
         }
     }
-    char path[PATH_MAX];
-    ssize_t r = ioctl_device_get_topo_path(fd.get(), path, sizeof(path));
-    if (r < 0) {
-        ERROR("Failed to get topological path\n");
+    ERROR("Initializing partition as FVM\n");
+    if (fvm_init(fd.get(), slice_size)) {
+        ERROR("Failed to initialize fvm\n");
         return fbl::unique_fd();
     }
-
-    r = ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB));
-    if (r < 0) {
-        ERROR("Could not bind fvm driver\n");
-        return fbl::unique_fd();
-    }
-
-    char fvm_path[PATH_MAX];
-    snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", path);
-    if (wait_for_device(fvm_path, ZX_SEC(3)) != ZX_OK) {
-        ERROR("Error waiting for fvm driver to bind\n");
-        return fbl::unique_fd();
-    }
-    return fbl::unique_fd(open(fvm_path, O_RDWR));
+    return try_to_bind_fvm_driver(fd, zx::sec(3));
 }
 
 // Returns |ZX_OK| if |part_fd| is a child of |fvm_fd|.
@@ -747,6 +765,31 @@ zx_status_t partition_find(const block_info_t* info, gpt_device_t* gpt,
     return ZX_ERR_NOT_FOUND;
 }
 
+zx_status_t create_gpt_partition(gpt_device_t* gpt, const fbl::unique_fd& gpt_fd,
+                                 const char* name, uint8_t* type, uint64_t offset,
+                                 uint64_t blocks, uint8_t* out_guid) {
+    size_t sz;
+    zx_status_t r;
+    if ((r = zx_cprng_draw(out_guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
+        ERROR("Failed to get random GUID\n");
+        return r;
+    } else if ((r = gpt_partition_add(gpt, name, type, out_guid, offset, blocks, 0))) {
+        ERROR("Failed to add partition\n");
+        return ZX_ERR_IO;
+    } else if ((r = gpt_device_sync(gpt))) {
+        ERROR("Failed to sync GPT\n");
+        return ZX_ERR_IO;
+    } else if ((r = gpt_partition_clear(gpt, offset, 1))) {
+        ERROR("Failed to clear first block of new partition\n");
+        return ZX_ERR_IO;
+    } else if ((r = (int)ioctl_block_rr_part(gpt_fd.get())) < 0) {
+        ERROR("Failed to rebind GPT\n");
+        return r;
+    }
+
+    return ZX_OK;
+}
+
 // Returns a file descriptor to a partition which can be paved,
 // creating it.
 // Assumes that the partition does not already exist.
@@ -775,19 +818,9 @@ zx_status_t partition_add(gpt_device_t* gpt, fbl::unique_fd gpt_fd, fbl::unique_
     }
 
     length = (minimumSizeBytes + info.block_size - 1) / info.block_size;
-    size_t sz;
+
     uint8_t guid[GPT_GUID_LEN];
-    if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
-        ERROR("Failed to get random GUID\n");
-        return r;
-    } else if ((r = gpt_partition_add(gpt, name, type, guid, start, length, 0))) {
-        ERROR("Failed to add partition\n");
-        return r;
-    } else if ((r = gpt_device_sync(gpt))) {
-        ERROR("Failed to sync GPT\n");
-        return r;
-    } else if ((r = (int)ioctl_block_rr_part(gpt_fd.get())) < 0) {
-        ERROR("Failed to rebind GPT\n");
+    if ((r = create_gpt_partition(gpt, gpt_fd, name, type, start, length, guid)) != ZX_OK) {
         return r;
     }
     out_fd->reset(open_partition(guid, type, ZX_SEC(5), nullptr));
@@ -804,6 +837,7 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     gpt_device_t* gpt;
     zx_status_t status;
     if ((status = initialize_gpt(gpt_path, &gpt_fd, &gpt)) != ZX_OK) {
+        ERROR("Cannot initialize GPT\n");
         return status;
     }
 
@@ -822,7 +856,6 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     size_t length = 0;
     uint8_t type[GPT_GUID_LEN] = GUID_FVM_VALUE;
     uint8_t guid[GPT_GUID_LEN];
-    size_t sz;
     fbl::unique_fd partition_fd;
     for (size_t i = 0; i < PARTITIONS_COUNT; i++) {
         gpt_partition_t* p = gpt->partitions[i];
@@ -854,17 +887,8 @@ zx_status_t fvm_add_to_gpt(const char* gpt_path) {
     }
     LOG("Final space in GPT - OK %zu @ %zu\n", length, start);
 
-    if ((r = zx_cprng_draw(guid, GPT_GUID_LEN, &sz)) != ZX_OK) {
-        ERROR("Failed to get random GUID\n");
-        goto done;
-    } else if ((r = gpt_partition_add(gpt, "fvm", type, guid, start, length, 0))) {
-        ERROR("Failed to add FVM partition\n");
-        goto done;
-    } else if ((r = gpt_device_sync(gpt))) {
-        ERROR("Failed to sync GPT\n");
-        goto done;
-    } else if ((r = (int)ioctl_block_rr_part(gpt_fd.get())) < 0) {
-        ERROR("Failed to rebind GPT\n");
+    if ((r = create_gpt_partition(gpt, gpt_fd, "fvm", type, start, length, guid)) != ZX_OK) {
+        ERROR("Failed to create GPT partition\n");
         goto done;
     }
 
