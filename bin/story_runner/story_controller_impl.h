@@ -170,11 +170,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       fidl::InterfaceRequest<views_v1_token::ViewOwner> request) override;
   void Stop(StopCallback done) override;
   void Watch(fidl::InterfaceHandle<StoryWatcher> watcher) override;
-  void AddModuleDeprecated(fidl::VectorPtr<fidl::StringPtr> module_path,
-                           fidl::StringPtr module_name,
-                           fidl::StringPtr module_url,
-                           fidl::StringPtr link_name,
-                           SurfaceRelationPtr surface_relation) override;
   void GetActiveModules(fidl::InterfaceHandle<StoryModulesWatcher> watcher,
                         GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;

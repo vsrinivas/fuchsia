@@ -2273,25 +2273,6 @@ void StoryControllerImpl::Watch(fidl::InterfaceHandle<StoryWatcher> watcher) {
 }
 
 // |StoryController|
-void StoryControllerImpl::AddModuleDeprecated(
-    fidl::VectorPtr<fidl::StringPtr> module_path,
-    fidl::StringPtr module_name,
-    fidl::StringPtr module_url,
-    fidl::StringPtr link_name,
-    SurfaceRelationPtr surface_relation) {
-  // In the API, a null module path is allowed to represent the empty module
-  // path.
-  if (module_path.is_null()) {
-    module_path.resize(0);
-  }
-
-  module_path.push_back(module_name);
-
-  new AddModuleCall(&operation_queue_, this, std::move(module_path), module_url,
-                    link_name, std::move(surface_relation), [] {});
-}
-
-// |StoryController|
 void StoryControllerImpl::GetActiveModules(
     fidl::InterfaceHandle<StoryModulesWatcher> watcher,
     GetActiveModulesCallback callback) {

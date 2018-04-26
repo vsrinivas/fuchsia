@@ -49,31 +49,6 @@ interface StoryController {
   12: AddModule(vector<string>? parent_module_path, string module_name,
                Intent intent, SurfaceRelation? surface_relation);
 
-  // Adds and starts a module in the story.
-  //
-  // The view of this module is sent to the story shell. Providing a
-  // |surface_relation| advises the StoryShell how to layout surfaces that the
-  // new module creates.
-  //
-  // The module path (the concatenation of the |parent_module_path| and
-  // |module_name|) is used to persistently associate this module instance with
-  // component message queues and links throughout subsequent runs of the story.
-  //
-  // |parent_module_path| specifies the module instance to make this module a
-  // child of. If empty or null the module is added as a root module.
-  //
-  // The link to be used for the module is identified by the
-  // |parent_module_path| and |link_name| as used in calls to GetLink(). Using
-  // that method, the link can be configured with data before running the
-  // module.
-  //
-  // A ModuleController for the newly added module can be obtained through
-  // GetModuleController().
-  // TODO(thatguy): Add a Intent variant of this call, deprecate this one.
-  6: AddModuleDeprecated(vector<string>? parent_module_path, string module_name,
-                        string module_url, string link_name,
-                        SurfaceRelation? surface_relation);
-
   // Lists the active modules in the story. Active modules are those with a
   // controller.
   //
