@@ -23,38 +23,27 @@ pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
 
 // Returns the name of the fake device and a File representing the device on success.
 pub fn create_and_bind_device() -> Result<(File, String), Error> {
-    println!("at: {}, {}", file!(), line!());
     let mut rng = rand::thread_rng();
-    println!("at: {}, {}", file!(), line!());
     let id = format!("bt-hci-{}", rng.gen::<u8>());
-    println!("at: {}, {}", file!(), line!());
     let devpath = create_fake_device(DEV_TEST, id.as_str())?;
-    println!("at: {}, {}, {:?}", file!(), line!(), devpath);
 
     let mut retry = 0;
     let mut dev = None;
-    println!("at: {}, {}", file!(), line!());
     {
         while retry < 100 {
-            println!("at: {}, {}", file!(), line!());
             retry += 1;
             if let Ok(d) = open_rdwr(&devpath) {
                 dev = Some(d);
                 break;
             }
         }
-    println!("at: {}, {}", file!(), line!());
     }
-    println!("at: {}, {}", file!(), line!());
     let dev = dev.ok_or_else(|| format_err!("could not open {:?}", devpath))?;
-    println!("at: {}, {}", file!(), line!());
     bind_fake_device(&dev)?;
-    println!("at: {}, {}", file!(), line!());
     Ok((dev, id))
 }
 
 pub fn list_host_devices() -> Vec<PathBuf> {
-    println!("at: {}, {}", file!(), line!());
     let paths = read_dir("/dev/class/bt-host/").unwrap();
     paths.filter_map(|entry| {
         entry.ok().and_then(|e| Some(e.path()))
@@ -62,16 +51,13 @@ pub fn list_host_devices() -> Vec<PathBuf> {
 }
 
 pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<OsString, Error> {
-    println!("at: {}, {}", file!(), line!());
     let test_dev = open_rdwr(test_path)?;
-    println!("at: {}, {}", file!(), line!());
 
     let devname = CString::new(dev_name)?;
 
     let mut devpath = [0; 1024];
     // This is safe because the length of the output buffer is computed from the vector, and the
     // callee does not retain the pointers.
-    println!("at: {}, {}", file!(), line!());
     let pathlen = unsafe {
         ioctl(&test_dev,
               IOCTL_TEST_CREATE_DEVICE,
@@ -80,21 +66,17 @@ pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<OsString, E
               devpath.as_mut_ptr() as *mut raw::c_void,
               devpath.len())?
     };
-    println!("at: {}, {}", file!(), line!());
     // Need to return an OsString with length equal to the return value of the ioctl, rather than
     // the full length of the buffer.
     let mut ospath = OsString::new();
     ospath.push(OsStr::from_bytes(&devpath[0..(pathlen - 1) as usize]));
-    println!("at: {}, {}, {:?}", file!(), line!(), ospath);
     Ok(ospath)
 }
 
 pub fn bind_fake_device(device: &File) -> Result<(), Error> {
-    println!("at: {}, {}", file!(), line!());
     let devname = CString::new(BTHCI_DRIVER_NAME)?;
     // This is safe because no memory ownership is transferred by this function and the length of
     // the input buffer is computed from the CString.
-    println!("at: {}, {}", file!(), line!());
     unsafe {
         ioctl(device,
               IOCTL_DEVICE_BIND,
