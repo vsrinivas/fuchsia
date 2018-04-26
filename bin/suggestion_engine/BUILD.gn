@@ -26,6 +26,8 @@ executable("bin") {
   sources = [
     "auto_select_first_query_listener.cc",
     "auto_select_first_query_listener.h",
+    "media_player.cc",
+    "media_player.h",
     "next_processor.cc",
     "next_processor.h",
     "proposal_publisher_impl.cc",
@@ -33,6 +35,8 @@ executable("bin") {
     "query_handler_record.h",
     "query_processor.cc",
     "query_processor.h",
+    "query_runner.cc",
+    "query_runner.h",
     "suggestion_engine_helper.cc",
     "suggestion_engine_helper.h",
     "suggestion_engine_impl.cc",

@@ -5,11 +5,15 @@
 #ifndef PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 #define PERIDOT_BIN_SUGGESTION_ENGINE_SUGGESTION_ENGINE_IMPL_H_
 
+#include <fuchsia/cpp/modular.h>
 #include <map>
 #include <string>
 #include <vector>
 
+
 #include "lib/app/cpp/application_context.h"
+#include "lib/fidl/cpp/interface_ptr_set.h"
+#include "lib/fxl/memory/weak_ptr.h"
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/filter.h"
@@ -20,37 +24,26 @@
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
 #include "peridot/bin/suggestion_engine/query_processor.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
-#include "peridot/bin/suggestion_engine/suggestion_prototype.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_filter.h"
 #include "peridot/bin/suggestion_engine/timeline_stories_watcher.h"
 #include "peridot/lib/bound_set/bound_set.h"
-
-#include <fuchsia/cpp/media.h>
-#include <fuchsia/cpp/modular.h>
-
-#include "lib/fidl/cpp/interface_ptr_set.h"
-#include "lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 
 class ProposalPublisherImpl;
 
-constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
-
 // This class is currently responsible for 3 things:
 //
 // 1) Maintaining repositories of ranked Suggestions (stored inside
 //    the RankedSuggestionsList class) for both Query and Next proposals.
-//  a) Each query is handled by a separate instance of the QueryProcessor.
-//
-//     The set of Query proposals for the latest query are currently
-//     buffered in the ask_suggestions_ member, though this process should
-//     be made entirely stateless.
+//  a) Queries are handled by the QueryProcessor. QueryProcessor executes the
+//     queries and stores their results. QueryProcessor only executes one query
+//     at a time and stores results for only the last query.
 //
 //  b) Next suggestions are issued by ProposalPublishers through the
-//     Propose method, and can be issued at any time. These proposals
-//     are stored in the next_suggestions_ member. The NextProcessor
-//     handles all processing and notification of these proposals.
+//     Propose method, and can be issued at any time. The NextProcessor
+//     handles all processing and notification of these proposals and stores
+//     them.
 //
 //  c) New next proposals are also considered for interruption. The
 //     InterruptionProcessor examines proposals, decides whether they
@@ -71,7 +64,7 @@ class SuggestionEngineImpl : public ContextListener,
                              public SuggestionEngine,
                              public SuggestionProvider {
  public:
-  SuggestionEngineImpl(component::ApplicationContext* app_context);
+  SuggestionEngineImpl(component::ApplicationContext* const app_context);
   ~SuggestionEngineImpl();
 
   fxl::WeakPtr<SuggestionDebugImpl> debug();
@@ -148,21 +141,8 @@ class SuggestionEngineImpl : public ContextListener,
   void Terminate(std::function<void()> done) { done(); }
 
  private:
-  friend class InterruptionsProcessor;
   friend class NextProcessor;
   friend class QueryProcessor;
-
-  // (proposer ID, proposal ID) => suggestion prototype
-  using SuggestionPrototypeMap = std::map<std::pair<std::string, std::string>,
-                                          std::unique_ptr<SuggestionPrototype>>;
-
-  // Cleans up all resources associated with a query, including clearing
-  // the previous ask suggestions, closing any still open SuggestionListeners,
-  // etc.
-  void CleanUpPreviousQuery();
-
-  // Searches for a SuggestionPrototype in the Next and Ask lists.
-  SuggestionPrototype* FindSuggestion(std::string suggestion_id);
 
   // TODO(andrewosh): Performing actions should be handled by a separate
   // interface that's passed to the SuggestionEngineImpl.
@@ -185,10 +165,6 @@ class SuggestionEngineImpl : public ContextListener,
                            uint32_t story_color);
 
   void RegisterRankingFeatures();
-
-  void PlayMediaResponse(MediaResponsePtr media_response);
-  void HandleMediaUpdates(uint64_t version,
-                          media::MediaTimelineControlPointStatusPtr status);
 
   // |ContextListener|
   void OnContextUpdate(ContextUpdate update) override;
@@ -219,15 +195,11 @@ class SuggestionEngineImpl : public ContextListener,
   // would remove Suggestions that are now filtered or add
   // new ones that are no longer filtered.
 
-  SuggestionPrototypeMap query_prototypes_;
-  RankedSuggestionsList query_suggestions_;
-
   // next and interruptions share the same backing
   NextProcessor next_processor_;
 
-  // The set of all QueryHandlers that have been registered mapped to their
-  // URLs (stored as strings).
-  std::vector<QueryHandlerRecord> query_handlers_;
+  // query execution and processing
+  QueryProcessor query_processor_;
 
   std::map<std::string, std::shared_ptr<RankingFeature>> ranking_features;
 
@@ -235,34 +207,14 @@ class SuggestionEngineImpl : public ContextListener,
   std::map<std::string, std::unique_ptr<ProposalPublisherImpl>>
       proposal_publishers_;
 
-  // TODO(andrewosh): Why is this necessary at this level?
-  ProposalFilter filter_;
-
-  // The ContextWriter that publishes the current user query to the
-  // ContextEngine.
-  ContextWriterPtr context_writer_;
-
   // The context reader that is used to rank suggestions using the current
   // context.
   ContextReaderPtr context_reader_;
   fidl::Binding<ContextListener> context_listener_binding_;
 
-  // Latest context update received.
-  ContextUpdatePtr latest_context_update_;
-
-  std::unique_ptr<QueryProcessor> active_query_;
-
   // Used to jackpot a suggestion when a QueryAction is executed.
   AutoSelectFirstQueryListener auto_select_first_query_listener_;
   fidl::Binding<QueryListener> auto_select_first_query_listener_binding_;
-
-  media::AudioServerPtr audio_server_;
-  media::MediaRendererPtr media_renderer_;
-  media::MediaPacketProducerPtr media_packet_producer_;
-  media::MediaTimelineControlPointPtr time_lord_;
-  media::TimelineConsumerPtr media_timeline_consumer_;
-
-  fidl::InterfacePtrSet<FeedbackListener> speech_listeners_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SuggestionEngineImpl);
 };

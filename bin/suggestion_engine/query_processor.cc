@@ -9,85 +9,120 @@
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "peridot/bin/suggestion_engine/suggestion_engine_helper.h"
-#include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
+#include "peridot/lib/fidl/json_xdr.h"
 
 namespace modular {
 
 namespace {
 
-// Force queries to complete after some delay for better UX until/unless we can
-// bring back staggered results in a way that isn't jarring and doesn't overly
-// complicate the API.
-constexpr zx::duration kQueryTimeout = zx::sec(9);
+constexpr char kQueryContextKey[] = "/suggestion_engine/current_query";
 
 }  // namespace
 
-QueryProcessor::QueryProcessor(SuggestionEngineImpl* engine,
-                               fidl::InterfaceHandle<QueryListener> listener,
-                               UserInput input,
-                               size_t max_results)
-    : engine_(engine),
-      listener_(listener.Bind()),
-      input_(std::move(input)),
-      max_results_(max_results),
-      dirty_(false),
-      has_media_response_(false),
-      request_ended_(false),
-      activity_(engine->debug()->GetIdleWaiter()->RegisterOngoingActivity()),
-      weak_ptr_factory_(this) {
-  if (engine_->query_handlers_.empty()) {
-    EndRequest();
-  } else {
-    for (const auto& handler_record : engine_->query_handlers_) {
-      DispatchQuery(handler_record);
-    }
-
-    async::PostDelayedTask(
-        async_get_default(),
-        [w = weak_ptr_factory_.GetWeakPtr()] {
-          if (w) {
-            w->TimeOut();
-          }
-        },
-        kQueryTimeout);
-  }
+QueryProcessor::QueryProcessor(media::AudioServerPtr audio_server,
+                               std::shared_ptr<SuggestionDebugImpl> debug)
+    : debug_(debug), media_player_(std::move(audio_server), debug),
+      has_media_response_(false) {
+  media_player_.SetSpeechStatusCallback([this](SpeechStatus status) {
+    NotifySpeechListeners(status);
+  });
 }
 
-// TODO(rosswang): Consider moving some of the cleanup logic into here, but
-// beware that this may not happen until after the next QueryProcessor has been
-// constructed (active_query_ = std::make_unique...).
-QueryProcessor::~QueryProcessor() {
-  if (!request_ended_) {
-    EndRequest();
+QueryProcessor::~QueryProcessor() = default;
+
+void QueryProcessor::Initialize(
+    fidl::InterfaceHandle<ContextWriter> context_writer) {
+  context_writer_.Bind(std::move(context_writer));
+}
+
+void QueryProcessor::ExecuteQuery(
+    UserInput input, int count, fidl::InterfaceHandle<QueryListener> listener) {
+  // TODO(jwnichols): I'm not sure this is correct or should be here
+  NotifySpeechListeners(SpeechStatus::PROCESSING);
+
+  // Process:
+  //   1. Close out and clean up any existing query process
+  //   2. Update the context engine with the new query
+  //   3. Set up the ask variables in suggestion engine
+  //   4. Get suggestions from each of the QueryHandlers
+  //   5. Rank the suggestions as received
+  //   6. Send "done" to SuggestionListener
+
+  // Step 1
+  CleanUpPreviousQuery();
+
+  // Step 2
+  std::string query = input.text;
+  if (!query.empty() && context_writer_.is_bound()) {
+    // Update context engine
+    std::string formattedQuery;
+    modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
+    context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
+
+    // Update suggestion engine debug interface
+    debug_->OnAskStart(query, &suggestions_);
   }
+
+  // Steps 3 - 6
+  activity_ = debug_->GetIdleWaiter()->RegisterOngoingActivity();
+  active_query_ = std::make_unique<QueryRunner>(
+      std::move(listener), std::move(input), count);
+  active_query_->SetResponseCallback([this, input](
+      const std::string& handler_url, QueryResponse response) {
+    OnQueryResponse(input, handler_url, std::move(response));
+  });
+  active_query_->SetEndRequestCallback([this, input] {
+    OnQueryEndRequest(input);
+  });
+  active_query_->Run(query_handlers_);
+}
+
+void QueryProcessor::RegisterFeedbackListener(
+    fidl::InterfaceHandle<FeedbackListener> speech_listener) {
+  speech_listeners_.AddInterfacePtr(speech_listener.Bind());
+}
+
+void QueryProcessor::RegisterQueryHandler(
+    fidl::StringPtr url,
+    fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
+  auto query_handler = query_handler_handle.Bind();
+  query_handlers_.emplace_back(std::move(query_handler), url);
+}
+
+void QueryProcessor::AddRankingFeature(
+    double weight,
+    std::shared_ptr<RankingFeature> ranking_feature) {
+  suggestions_.AddRankingFeature(weight, ranking_feature);
+}
+
+RankedSuggestion* QueryProcessor::GetSuggestion(
+    const std::string& suggestion_uuid) const {
+  return suggestions_.GetSuggestion(suggestion_uuid);
+}
+
+void QueryProcessor::CleanUpPreviousQuery() {
+  has_media_response_ = false;
+  active_query_.reset();
+  suggestions_.RemoveAllSuggestions();
 }
 
 void QueryProcessor::AddProposal(const std::string& source_url,
                                  Proposal proposal) {
-  if (engine_->query_suggestions_.RemoveProposal(source_url, proposal.id)) {
-    dirty_ = true;
-  }
+  suggestions_.RemoveProposal(source_url, proposal.id);
 
   auto suggestion = CreateSuggestionPrototype(
-      &engine_->query_prototypes_, source_url, std::move(proposal));
-  engine_->query_suggestions_.AddSuggestion(std::move(suggestion));
-  dirty_ = true;
+      &query_prototypes_, source_url, std::move(proposal));
+  suggestions_.AddSuggestion(std::move(suggestion));
 }
 
-void QueryProcessor::DispatchQuery(const QueryHandlerRecord& handler_record) {
-  outstanding_handlers_.insert(handler_record.url);
-  handler_record.handler->OnQuery(
-      input_,
-      [w = weak_ptr_factory_.GetWeakPtr(),
-       handler_url = handler_record.url](QueryResponse response) {
-        if (w) {
-          w->HandlerCallback(handler_url, std::move(response));
-        }
-      });
+void QueryProcessor::NotifySpeechListeners(SpeechStatus status) {
+  for (auto& speech_listener : speech_listeners_.ptrs()) {
+    (*speech_listener)->OnStatusChanged(SpeechStatus::PROCESSING);
+  }
 }
 
-void QueryProcessor::HandlerCallback(const std::string& handler_url,
-                                     QueryResponse response) {
+void QueryProcessor::OnQueryResponse(
+    UserInput input, const std::string& handler_url, QueryResponse response) {
   // TODO(rosswang): defer selection of "I don't know" responses
   if (!has_media_response_ && response.media_response) {
     has_media_response_ = true;
@@ -100,77 +135,49 @@ void QueryProcessor::HandlerCallback(const std::string& handler_url,
     // without a spoken response
     fidl::StringPtr text_response =
         std::move(response.natural_language_response);
-    if (!text_response)
+    if (!text_response) {
       text_response = "";
-    for (auto& listener : engine_->speech_listeners_.ptrs()) {
+    }
+    for (auto& listener : speech_listeners_.ptrs()) {
       (*listener)->OnTextResponse(text_response);
     }
 
-    engine_->PlayMediaResponse(std::move(response.media_response));
+    media_player_.PlayMediaResponse(std::move(response.media_response));
   }
 
   // Ranking currently happens as each set of proposals are added.
   for (size_t i = 0; i < response.proposals->size(); ++i) {
     AddProposal(handler_url, std::move(response.proposals->at(i)));
   }
-  engine_->query_suggestions_.Rank(input_);
-  // Rank includes an invalidate dispatch
-  dirty_ = false;
+  suggestions_.Rank(input);
 
   // Update the QueryListener with new results
   NotifyOfResults();
 
   // Update the suggestion engine debug interface
-  engine_->debug_->OnAskStart(input_.text, &engine_->query_suggestions_);
-
-  FXL_VLOG(1) << "Handler " << handler_url << " complete";
-
-  outstanding_handlers_.erase(outstanding_handlers_.find(handler_url));
-  FXL_VLOG(1) << outstanding_handlers_.size() << " remaining";
-  if (outstanding_handlers_.empty()) {
-    EndRequest();
-  }
+  debug_->OnAskStart(input.text, &suggestions_);
 }
 
-void QueryProcessor::EndRequest() {
-  FXL_DCHECK(!request_ended_);
-
-  engine_->debug_->OnAskStart(input_.text, &engine_->query_suggestions_);
-  listener_->OnQueryComplete();
-
+void QueryProcessor::OnQueryEndRequest(UserInput input) {
+  debug_->OnAskStart(input.text, &suggestions_);
   if (!has_media_response_) {
     // there was no media response for this query, so idle immediately
-    for (auto& listener : engine_->speech_listeners_.ptrs()) {
-      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
-    }
+    NotifySpeechListeners(SpeechStatus::IDLE);
   }
-
-  weak_ptr_factory_.InvalidateWeakPtrs();
-  request_ended_ = true;
   activity_ = nullptr;
 }
 
-void QueryProcessor::TimeOut() {
-  if (!outstanding_handlers_.empty()) {
-    FXL_LOG(INFO) << "Query timeout. Still awaiting results from:";
-    for (const std::string& handler_url : outstanding_handlers_) {
-      FXL_LOG(INFO) << "    " << handler_url;
-    }
-
-    EndRequest();
-  }
-}
-
 void QueryProcessor::NotifyOfResults() {
-  const auto& suggestion_vector = engine_->query_suggestions_.Get();
+  const auto& suggestion_vector = suggestions_.Get();
 
   fidl::VectorPtr<Suggestion> window;
-  for (size_t i = 0; i < max_results_ && i < suggestion_vector.size(); i++) {
+  for (size_t i = 0;
+       i < active_query_->max_results() && i < suggestion_vector.size(); i++) {
     window.push_back(CreateSuggestion(*suggestion_vector[i]));
   }
 
   if (window) {
-    listener_->OnQueryResults(std::move(window));
+    active_query_->listener()->OnQueryResults(std::move(window));
   }
 }
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include "peridot/bin/suggestion_engine/suggestion_engine_impl.h"
 
 #include <fuchsia/cpp/modular.h>
+#include <string>
+
 #include "lib/app/cpp/application_context.h"
 #include "lib/app_driver/cpp/app_driver.h"
 #include "lib/context/cpp/context_helper.h"
@@ -15,8 +15,6 @@
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/time/time_delta.h"
 #include "lib/fxl/time/time_point.h"
-#include "lib/media/timeline/timeline.h"
-#include "lib/media/timeline/timeline_rate.h"
 
 #include "peridot/bin/suggestion_engine/auto_select_first_query_listener.h"
 #include "peridot/bin/suggestion_engine/ranking_feature.h"
@@ -35,9 +33,12 @@ constexpr int kQueryActionMaxResults = 1;
 }  // namespace
 
 SuggestionEngineImpl::SuggestionEngineImpl(
-    component::ApplicationContext* app_context)
+    component::ApplicationContext* const app_context)
     : debug_(std::make_shared<SuggestionDebugImpl>()),
       next_processor_(debug_),
+      query_processor_(
+          app_context->ConnectToEnvironmentService<media::AudioServer>(),
+          debug_),
       context_listener_binding_(this),
       auto_select_first_query_listener_(this),
       auto_select_first_query_listener_binding_(
@@ -54,14 +55,6 @@ SuggestionEngineImpl::SuggestionEngineImpl(
       [this](fidl::InterfaceRequest<SuggestionDebug> request) {
         debug_bindings_.AddBinding(debug_.get(), std::move(request));
       });
-
-  audio_server_ =
-      app_context->ConnectToEnvironmentService<media::AudioServer>();
-  audio_server_.set_error_handler([this] {
-    FXL_LOG(INFO) << "Audio server connection error";
-    audio_server_ = nullptr;
-    media_packet_producer_ = nullptr;
-  });
 }
 
 SuggestionEngineImpl::~SuggestionEngineImpl() = default;
@@ -84,37 +77,7 @@ void SuggestionEngineImpl::RemoveNextProposal(const std::string& component_url,
 void SuggestionEngineImpl::Query(fidl::InterfaceHandle<QueryListener> listener,
                                  UserInput input,
                                  int count) {
-  // TODO(jwnichols): I'm not sure this is correct or should be here
-  for (auto& speech_listener : speech_listeners_.ptrs()) {
-    (*speech_listener)->OnStatusChanged(SpeechStatus::PROCESSING);
-  }
-
-  // Process:
-  //   1. Close out and clean up any existing query process
-  //   2. Update the context engine with the new query
-  //   3. Set up the ask variables in suggestion engine
-  //   4. Get suggestions from each of the QueryHandlers
-  //   5. Rank the suggestions as received
-  //   6. Send "done" to SuggestionListener
-
-  // Step 1
-  CleanUpPreviousQuery();
-
-  // Step 2
-  std::string query = input.text;
-  if (!query.empty()) {
-    // Update context engine
-    std::string formattedQuery;
-    modular::XdrWrite(&formattedQuery, &query, modular::XdrFilter<std::string>);
-    context_writer_->WriteEntityTopic(kQueryContextKey, formattedQuery);
-
-    // Update suggestion engine debug interface
-    debug_->OnAskStart(query, &query_suggestions_);
-  }
-
-  // Steps 3 - 6
-  active_query_ = std::make_unique<QueryProcessor>(this, std::move(listener),
-                                                   std::move(input), count);
+  query_processor_.ExecuteQuery(std::move(input), count, std::move(listener));
 }
 
 void SuggestionEngineImpl::UpdateRanking() {
@@ -137,7 +100,7 @@ void SuggestionEngineImpl::SubscribeToNext(
 // |SuggestionProvider|
 void SuggestionEngineImpl::RegisterFeedbackListener(
     fidl::InterfaceHandle<FeedbackListener> speech_listener) {
-  speech_listeners_.AddInterfacePtr(speech_listener.Bind());
+  query_processor_.RegisterFeedbackListener(std::move(speech_listener));
 }
 
 // |SuggestionProvider|
@@ -147,7 +110,7 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
   bool suggestion_in_ask = false;
   RankedSuggestion* suggestion = next_processor_.GetSuggestion(suggestion_uuid);
   if (!suggestion) {
-    suggestion = query_suggestions_.GetSuggestion(suggestion_uuid);
+    suggestion = query_processor_.GetSuggestion(suggestion_uuid);
     suggestion_in_ask = true;
   }
 
@@ -172,7 +135,7 @@ void SuggestionEngineImpl::NotifyInteraction(fidl::StringPtr suggestion_uuid,
     }
 
     if (suggestion_in_ask) {
-      CleanUpPreviousQuery();
+      query_processor_.CleanUpPreviousQuery();
       UpdateRanking();
     } else {
       RemoveNextProposal(suggestion->prototype->source_url, proposal.id);
@@ -201,8 +164,7 @@ void SuggestionEngineImpl::RegisterProposalPublisher(
 void SuggestionEngineImpl::RegisterQueryHandler(
     fidl::StringPtr url,
     fidl::InterfaceHandle<QueryHandler> query_handler_handle) {
-  auto query_handler = query_handler_handle.Bind();
-  query_handlers_.emplace_back(std::move(query_handler), url);
+  query_processor_.RegisterQueryHandler(url, std::move(query_handler_handle));
 }
 
 // |SuggestionEngine|
@@ -213,8 +175,8 @@ void SuggestionEngineImpl::Initialize(
     fidl::InterfaceHandle<ContextReader> context_reader) {
   story_provider_.Bind(std::move(story_provider));
   focus_provider_ptr_.Bind(std::move(focus_provider));
-  context_writer_.Bind(std::move(context_writer));
   context_reader_.Bind(std::move(context_reader));
+  query_processor_.Initialize(std::move(context_writer));
   RegisterRankingFeatures();
   timeline_stories_watcher_.reset(new TimelineStoriesWatcher(&story_provider_));
 }
@@ -251,17 +213,10 @@ void SuggestionEngineImpl::RegisterRankingFeatures() {
   next_processor_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
 
   // Set up the query ranking features
-  query_suggestions_.AddRankingFeature(1.0,
-                                       ranking_features["proposal_hint_rf"]);
-  query_suggestions_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
-  query_suggestions_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
-  query_suggestions_.AddRankingFeature(0, ranking_features["query_match_rf"]);
-}
-
-void SuggestionEngineImpl::CleanUpPreviousQuery() {
-  active_query_.reset();
-  query_prototypes_.clear();
-  query_suggestions_.RemoveAllSuggestions();
+  query_processor_.AddRankingFeature(1.0, ranking_features["proposal_hint_rf"]);
+  query_processor_.AddRankingFeature(-0.1, ranking_features["kronk_rf"]);
+  query_processor_.AddRankingFeature(0, ranking_features["mod_pairs_rf"]);
+  query_processor_.AddRankingFeature(0, ranking_features["query_match_rf"]);
 }
 
 void SuggestionEngineImpl::PerformActions(fidl::VectorPtr<Action> actions,
@@ -390,76 +345,6 @@ void SuggestionEngineImpl::PerformQueryAction(const Action& action) {
   const auto& query_action = action.query_action();
   Query(auto_select_first_query_listener_binding_.NewBinding(),
         query_action.input, kQueryActionMaxResults);
-}
-
-void SuggestionEngineImpl::PlayMediaResponse(MediaResponsePtr media_response) {
-  if (!audio_server_)
-    return;
-
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-
-  media_renderer_.Unbind();
-
-  media::AudioRendererPtr audio_renderer;
-  audio_server_->CreateRenderer(audio_renderer.NewRequest(),
-                                media_renderer_.NewRequest());
-
-  media_packet_producer_ = media_response->media_packet_producer.Bind();
-  media_renderer_->SetMediaType(std::move(media_response->media_type));
-  media::MediaPacketConsumerPtr consumer;
-  media_renderer_->GetPacketConsumer(consumer.NewRequest());
-
-  media_packet_producer_->Connect(std::move(consumer), [this, activity] {
-    time_lord_.Unbind();
-    media_timeline_consumer_.Unbind();
-
-    for (auto& listener : speech_listeners_.ptrs()) {
-      (*listener)->OnStatusChanged(SpeechStatus::RESPONDING);
-    }
-
-    media_renderer_->GetTimelineControlPoint(time_lord_.NewRequest());
-    time_lord_->GetTimelineConsumer(media_timeline_consumer_.NewRequest());
-    time_lord_->Prime([this, activity] {
-      media::TimelineTransform tt;
-      tt.reference_time =
-          media::Timeline::local_now() + media::Timeline::ns_from_ms(30);
-      tt.subject_time = media::kUnspecifiedTime;
-      tt.reference_delta = tt.subject_delta = 1;
-
-      HandleMediaUpdates(media::kInitialStatus, nullptr);
-
-      media_timeline_consumer_->SetTimelineTransform(
-          std::move(tt), [activity](bool completed) {});
-    });
-  });
-
-  media_packet_producer_.set_error_handler([this] {
-    for (auto& listener : speech_listeners_.ptrs()) {
-      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
-    }
-  });
-}
-
-void SuggestionEngineImpl::HandleMediaUpdates(
-    uint64_t version,
-    media::MediaTimelineControlPointStatusPtr status) {
-  auto activity = debug_->GetIdleWaiter()->RegisterOngoingActivity();
-
-  if (status && status->end_of_stream) {
-    for (auto& listener : speech_listeners_.ptrs()) {
-      (*listener)->OnStatusChanged(SpeechStatus::IDLE);
-    }
-    media_packet_producer_ = nullptr;
-    media_renderer_ = nullptr;
-  } else {
-    time_lord_->GetStatus(
-        version,
-        [this, activity](uint64_t next_version,
-                         media::MediaTimelineControlPointStatus next_status) {
-          HandleMediaUpdates(next_version,
-                             fidl::MakeOptional(std::move(next_status)));
-        });
-  }
 }
 
 void SuggestionEngineImpl::OnContextUpdate(ContextUpdate update) {
