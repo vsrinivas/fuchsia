@@ -17,7 +17,7 @@ library modular;
 //
 // We use :: in the service name because it's more usual in
 // sysmgr/services.conf.
-[ServiceName="modular::DeviceRunnerMonitor"]
+[Discoverable]
 interface DeviceRunnerMonitor {
   // Returns the number of connection requests the service has
   // received, including this one.
