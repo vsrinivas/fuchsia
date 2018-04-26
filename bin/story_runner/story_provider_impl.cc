@@ -172,10 +172,10 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
         ledger_(ledger),
         root_page_(root_page),
         story_provider_impl_(story_provider_impl),
-        url_(url),
         extra_info_(std::move(extra_info)),
         root_json_(root_json),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
+    intent_.action.handler = url;
     Ready();
   }
 
@@ -205,7 +205,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
 
             story_data_ = modular_private::StoryData::New();
             story_data_->story_page_id = CloneOptional(story_page_id_);
-            story_data_->story_info.url = url_;
             story_data_->story_info.id = story_id_;
             story_data_->story_info.last_focus_time =
                 zx_clock_get(ZX_CLOCK_UTC);
@@ -225,12 +224,9 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
     auto create_link_info = CreateLinkInfo::New();
     create_link_info->initial_data = std::move(root_json_);
 
-    controller_->AddForCreate(kRootModuleName, url_, kRootLink,
-                              std::move(create_link_info),
-                              [this, flow] { Cont2(flow); });
-  }
+    controller_->AddModule({} /* parent_module_path */, kRootModuleName, std::move(intent_),
+                           nullptr /* surface_relation */);
 
-  void Cont2(FlowToken flow) {
     // We ensure that everything has been written to the story page before this
     // operation is done.
     controller_->Sync([flow] {});
@@ -242,7 +238,7 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
   const fidl::StringPtr module_name_;
-  const fidl::StringPtr url_;
+  Intent intent_;
   fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
   fidl::StringPtr root_json_;
   const zx_time_t start_time_;

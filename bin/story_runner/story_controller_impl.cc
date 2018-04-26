@@ -1043,73 +1043,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
 };
 
-class StoryControllerImpl::AddForCreateCall : Operation<> {
- public:
-  AddForCreateCall(OperationContainer* const container,
-                   StoryControllerImpl* const story_controller_impl,
-                   fidl::StringPtr module_name,
-                   fidl::StringPtr module_url,
-                   fidl::StringPtr link_name,
-                   CreateLinkInfoPtr create_link_info,
-                   const ResultCall& done)
-      : Operation("StoryControllerImpl::AddForCreateCall",
-                  container,
-                  done,
-                  module_url),
-        story_controller_impl_(story_controller_impl),
-        module_name_(module_name),
-        module_url_(module_url),
-        link_name_(link_name),
-        create_link_info_(std::move(create_link_info)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    // This flow branches and then joins on all the branches completing, which
-    // is just fine to track with a flow token. A callback like used below:
-    //
-    //  [flow] {}
-    //
-    // just calls Done() when the last copy of it completes.
-
-    if (create_link_info_) {
-      // There is no module path; this link exists outside the scope of a
-      // module.
-      LinkPathPtr link_path = LinkPath::New();
-      link_path->module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
-      link_path->link_name = link_name_;
-      new ConnectLinkCall(
-          &operation_queue_, story_controller_impl_, std::move(link_path),
-          LinkImpl::ConnectionType::Primary, std::move(create_link_info_),
-          true /* notify_watchers */, link_.NewRequest(), [flow] {});
-    }
-
-    auto module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
-    module_path.push_back(module_name_);
-
-    // This is a top level module, which therefore is not embedded. So the
-    // SurfaceRelation is indeed default and not null.
-    new AddModuleCall(&operation_queue_, story_controller_impl_,
-                      std::move(module_path), module_url_, link_name_,
-                      SurfaceRelation::New(), [flow] {});
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  const fidl::StringPtr module_name_;
-  const fidl::StringPtr module_url_;
-  const fidl::StringPtr link_name_;
-  CreateLinkInfoPtr create_link_info_;
-
-  LinkPtr link_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AddForCreateCall);
-};
-
 class StoryControllerImpl::StopCall : Operation<> {
  public:
   StopCall(OperationContainer* const container,
@@ -2019,19 +1952,6 @@ void StoryControllerImpl::StopForTeardown(const StopCallback& done) {
   new StopCall(&operation_queue_, this, false /* notify */, done);
 }
 
-void StoryControllerImpl::AddForCreate(fidl::StringPtr module_name,
-                                       fidl::StringPtr module_url,
-                                       fidl::StringPtr link_name,
-                                       CreateLinkInfoPtr create_link_info,
-                                       const std::function<void()>& done) {
-  if (!module_url) {
-    done();
-  }
-
-  new AddForCreateCall(&operation_queue_, this, module_name, module_url,
-                       link_name, std::move(create_link_info), done);
-}
-
 StoryState StoryControllerImpl::GetStoryState() const {
   return state_;
 }
@@ -2377,7 +2297,13 @@ void StoryControllerImpl::AddModule(
     fidl::StringPtr module_name,
     Intent intent,
     SurfaceRelationPtr surface_relation) {
-
+  // AddModule() only adds modules to the story shell. Internally, we use a
+  // null SurfaceRelation to mean that the module is embedded, and a default
+  // SurfaceRelation to indicate that the module is composed by the story shell.
+  // If it is null, we need to default initialize it.
+  if (!surface_relation) {
+    surface_relation = SurfaceRelation::New();
+  }
   new AddIntentCall(
       &operation_queue_, this, std::move(parent_module_path), module_name,
       CloneOptional(intent), nullptr /* incoming_services */,

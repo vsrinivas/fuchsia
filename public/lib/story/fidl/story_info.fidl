@@ -8,6 +8,7 @@ library modular;
 struct StoryInfo {
   // URL of the first module run in this story. This module is free to
   // run more modules in the story. Used for display purposes only.
+  // TODO(thatguy): Remove this. It is not being set any more.
   string? url;
 
   // The ID of the Story, used to reference it in method arguments.

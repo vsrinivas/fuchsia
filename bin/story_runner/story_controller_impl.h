@@ -79,13 +79,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void StopForTeardown(const std::function<void()>& done);
 
   // Called by StoryProviderImpl.
-  void AddForCreate(fidl::StringPtr module_name,
-                    fidl::StringPtr module_url,
-                    fidl::StringPtr link_name,
-                    CreateLinkInfoPtr create_link_info,
-                    const std::function<void()>& done);
-
-  // Called by StoryProviderImpl.
   StoryState GetStoryState() const;
   void Sync(const std::function<void()>& done);
 
@@ -155,6 +148,12 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
       fidl::VectorPtr<ContainerRelationEntry> relationships,
       fidl::VectorPtr<ContainerNodePtr> nodes);
 
+  // |StoryController| - public so that StoryProvider can call it
+  void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
+                 fidl::StringPtr module_name,
+                 Intent intent,
+                 SurfaceRelationPtr surface_relation) override;
+
  private:
   class ModuleWatcherImpl;
 
@@ -181,10 +180,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   void GetLink(fidl::VectorPtr<fidl::StringPtr> module_path,
                fidl::StringPtr name,
                fidl::InterfaceRequest<Link> request) override;
-  void AddModule(fidl::VectorPtr<fidl::StringPtr> module_path,
-                 fidl::StringPtr module_name,
-                 Intent intent,
-                 SurfaceRelationPtr surface_relation) override;
 
   // Phases of Start() broken out into separate methods.
   void StartStoryShell(
@@ -306,7 +301,6 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   class StartModuleInShellCall;
   class StartContainerInShellCall;
   class AddModuleCall;
-  class AddForCreateCall;
   class StopCall;
   class StopModuleCall;
   class DeleteCall;
