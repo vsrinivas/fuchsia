@@ -149,9 +149,6 @@ func (p *Proxy) Call(ordinal uint32, req Payload, resp Payload) error {
 	if header.Ordinal != ordinal {
 		return newExpectError(ErrUnexpectedOrdinal, ordinal, header.Ordinal)
 	}
-	if header.Txid != txid {
-		return newExpectError(ErrUnexpectedTxid, txid, header.Txid)
-	}
 	return nil
 }
 
