@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-
 #include "intel-i915.h"
 #include "macros.h"
 #include "power.h"
@@ -78,17 +76,17 @@ void Power::SetPowerWell1Enable(bool enable) {
     if (enable) {
         if (!WAIT_ON_US(registers::PowerWellControl2
                 ::Get().ReadFrom(controller_->mmio_space()).power_well_1_state(), 10)) {
-            zxlogf(ERROR, "Power Well 1 failed to enable\n");
+            LOG_ERROR("Power Well 1 failed to enable\n");
             return;
         }
         if (!WAIT_ON_US(registers::PowerWellControl2
                 ::Get().ReadFrom(controller_->mmio_space()).misc_io_power_state(), 10)) {
-            zxlogf(ERROR, "Misc IO power failed to enable\n");
+            LOG_ERROR("Misc IO power failed to enable\n");
             return;
         }
         if (!WAIT_ON_US(registers::FuseStatus
                 ::Get().ReadFrom(controller_->mmio_space()).pg1_dist_status(), 5)) {
-            zxlogf(ERROR, "Power Well 1 distribution failed\n");
+            LOG_ERROR("Power Well 1 distribution failed\n");
             return;
         }
     } else {
@@ -106,12 +104,12 @@ void Power::SetPowerWell2Enable(bool enable) {
         power_well.ReadFrom(controller_->mmio_space());
         if (!WAIT_ON_US(registers::PowerWellControl2
                 ::Get().ReadFrom(controller_->mmio_space()).power_well_2_state(), 20)) {
-            zxlogf(ERROR, "i915: failed to enable Power Well 2\n");
+            LOG_ERROR("Failed to enable Power Well 2\n");
             return;
         }
         if (!WAIT_ON_US(registers::FuseStatus
                 ::Get().ReadFrom(controller_->mmio_space()).pg2_dist_status(), 1)) {
-            zxlogf(ERROR, "i915: Power Well 2 distribution failed\n");
+            LOG_ERROR("Power Well 2 distribution failed\n");
             return;
         }
     }

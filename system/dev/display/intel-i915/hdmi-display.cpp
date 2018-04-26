@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <lib/edid/edid.h>
 
@@ -220,20 +219,20 @@ bool HdmiDisplay::DdcRead(uint8_t segment, uint8_t offset, uint8_t* buf, uint8_t
             }
             if (success) {
                 if (!WAIT_ON_MS(registers::GMBus2::Get().ReadFrom(mmio_space()).wait(), 10)) {
-                    zxlogf(ERROR, "Transition to wait phase timed out\n");
+                    LOG_TRACE("Transition to wait phase timed out\n");
                     success = false;
                 }
             }
         }
         if (!success) {
             if (retries++ > 1) {
-                zxlogf(ERROR, "Too many block read failures\n");
+                LOG_TRACE("Too many block read failures\n");
                 return false;
             }
-            zxlogf(TRACE, "Block read failed at step %d\n", i);
+            LOG_SPEW("Block read failed at step %d\n", i);
             i = 0;
             if (!I2cClearNack()) {
-                zxlogf(ERROR, "Failed to clear nack\n");
+                LOG_TRACE("Failed to clear nack\n");
                 return false;
             }
         } else {
@@ -303,7 +302,7 @@ bool HdmiDisplay::I2cFinish() {
     gmbus0.WriteTo(mmio_space());
 
     if (!idle) {
-        zxlogf(ERROR, "hdmi: GMBus i2c failed to go idle\n");
+        LOG_TRACE("hdmi: GMBus i2c failed to go idle\n");
     }
     return idle;
 }
@@ -311,11 +310,11 @@ bool HdmiDisplay::I2cFinish() {
 bool HdmiDisplay::I2cWaitForHwReady() {
     auto gmbus2 = registers::GMBus2::Get().FromValue(0);
     if (!WAIT_ON_MS({ gmbus2.ReadFrom(mmio_space()); gmbus2.nack() || gmbus2.hw_ready(); }, 50)) {
-        zxlogf(ERROR, "hdmi: GMBus i2c wait for hwready timeout\n");
+        LOG_TRACE("hdmi: GMBus i2c wait for hwready timeout\n");
         return false;
     }
     if (gmbus2.nack()) {
-        zxlogf(ERROR, "hdmi: GMBus i2c got nack\n");
+        LOG_TRACE("hdmi: GMBus i2c got nack\n");
         return false;
     }
     return true;
@@ -325,7 +324,7 @@ bool HdmiDisplay::I2cClearNack() {
     I2cFinish();
 
     if (!WAIT_ON_MS(!registers::GMBus2::Get().ReadFrom(mmio_space()).active(), 10)) {
-        zxlogf(ERROR, "hdmi: GMBus i2c failed to clear active nack\n");
+        LOG_TRACE("hdmi: GMBus i2c failed to clear active nack\n");
         return false;
     }
 
@@ -464,13 +463,13 @@ bool HdmiDisplay::QueryDevice(edid::Edid* edid) {
 
     const char* edid_err;
     if (!edid->Init(this, &edid_err)) {
-        zxlogf(TRACE, "i915: hdmi edid init failed \"%s\"\n", edid_err);
+        LOG_TRACE("hdmi edid init failed \"%s\"\n", edid_err);
         return false;
     } else if (!edid->CheckForHdmi(&is_hdmi_display_)) {
-        zxlogf(TRACE, "i915: Failed to find valid timing and hdmi\n");
+        LOG_TRACE("Failed to find valid timing and hdmi\n");
         return false;
     }
-    zxlogf(TRACE, "Found a %s monitor\n", is_hdmi_display_ ? "hdmi" : "dvi");
+    LOG_TRACE("Found a %s monitor\n", is_hdmi_display_ ? "hdmi" : "dvi");
 
     return true;
 }
@@ -498,7 +497,7 @@ bool HdmiDisplay::DoModeset() {
         uint64_t dco_freq_khz;
         if (!calculate_params(mode().pixel_clock_10khz * 10,
                               &dco_freq_khz, &dco_central_freq_khz, &p0, &p1, &p2)) {
-            zxlogf(ERROR, "hdmi: failed to calculate clock params\n");
+            LOG_ERROR("hdmi: failed to calculate clock params\n");
             return false;
         }
 
@@ -550,7 +549,7 @@ bool HdmiDisplay::DoModeset() {
         dpll_enable.WriteTo(mmio_space());
         if (!WAIT_ON_MS(registers::DpllStatus
                 ::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(), 5)) {
-            zxlogf(ERROR, "hdmi: DPLL failed to lock\n");
+            LOG_ERROR("hdmi: DPLL failed to lock\n");
             return false;
         }
     }
@@ -568,7 +567,7 @@ bool HdmiDisplay::DoModeset() {
     pwc2.WriteTo(mmio_space());
     if (!WAIT_ON_US(registers::PowerWellControl2
             ::Get().ReadFrom(mmio_space()).ddi_io_power_state(ddi()).get(), 20)) {
-        zxlogf(ERROR, "hdmi: failed to enable IO power for ddi\n");
+        LOG_ERROR("hdmi: failed to enable IO power for ddi\n");
         return false;
     }
 

@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ddk/binding.h>
-#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intel-gpu-core.h>
@@ -152,7 +151,7 @@ void Controller::EnableBacklight(bool enable) {
 }
 
 void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
-    zxlogf(TRACE, "i915: hotplug detected %d %d\n", ddi, long_pulse);
+    LOG_TRACE("Hotplug detected on ddi %d (long_pulse=%d)\n", ddi, long_pulse);
     fbl::unique_ptr<DisplayDevice> device = nullptr;
     uint64_t display_added = INVALID_DISPLAY_ID;
     uint64_t display_removed = INVALID_DISPLAY_ID;
@@ -164,7 +163,7 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
         for (size_t i = 0; i < display_devices_.size(); i++) {
             if (display_devices_[i]->ddi() == ddi) {
                 if (display_devices_[i]->HandleHotplug(long_pulse)) {
-                    zxlogf(SPEW, "i915: hotplug handled by device\n");
+                    LOG_SPEW("hotplug handled by device\n");
                     release_dc_cb_lock();
                     return;
                 }
@@ -173,19 +172,16 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
             }
         }
         if (device) { // Existing device was unplugged
-            zxlogf(SPEW, "Display unplugged\n");
+            LOG_INFO("Display %ld unplugged\n", device->id());
             display_removed = device->id();
         } else { // New device was plugged in
             fbl::unique_ptr<DisplayDevice> device = InitDisplay(ddi);
             if (!device) {
-                zxlogf(INFO, "i915: failed to init hotplug display\n");
+                LOG_INFO("failed to init hotplug display\n");
             } else {
                 uint64_t id = device->id();
                 if (AddDisplay(fbl::move(device)) == ZX_OK) {
-                    zxlogf(SPEW, "Display connected\n");
                     display_added = id;
-                } else {
-                    zxlogf(INFO, "Failed to add display %d\n", ddi);
                 }
             }
         }
@@ -245,7 +241,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
     // Wait for Power Well 0 distribution
     if (!WAIT_ON_US(registers::FuseStatus::Get().ReadFrom(mmio_space_.get()).pg0_dist_status(), 5)) {
-        zxlogf(ERROR, "Power Well 0 distribution failed\n");
+        LOG_ERROR("Power Well 0 distribution failed\n");
         return false;
     }
 
@@ -277,7 +273,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
         dpll_enable.set_enable_dpll(1);
         dpll_enable.WriteTo(mmio_space_.get());
         if (!WAIT_ON_MS(registers::Lcpll1Control::Get().ReadFrom(mmio_space_.get()).pll_lock(), 5)) {
-            zxlogf(ERROR, "Failed to configure dpll0\n");
+            LOG_ERROR("Failed to configure dpll0\n");
             return false;
         }
 
@@ -296,14 +292,14 @@ bool Controller::BringUpDisplayEngine(bool resume) {
                                     ->Read<uint32_t>(kGtDriverMailboxInterface) &
                                 0x80000000,
                             150)) {
-                zxlogf(ERROR, "GT Driver Mailbox driver busy\n");
+                LOG_ERROR("GT Driver Mailbox driver busy\n");
                 return false;
             }
             if (mmio_space_.get()->Read<uint32_t>(kGtDriverMailboxData0) & 0x1) {
                 break;
             }
             if (count++ == 3) {
-                zxlogf(ERROR, "Failed to set cd_clk\n");
+                LOG_ERROR("Failed to set cd_clk\n");
                 return false;
             }
             zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
@@ -322,7 +318,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     dbuf_ctl.WriteTo(mmio_space_.get());
 
     if (!WAIT_ON_US(registers::DbufCtl::Get().ReadFrom(mmio_space_.get()).power_state(), 10)) {
-        zxlogf(ERROR, "Failed to enable DBUF\n");
+        LOG_ERROR("Failed to enable DBUF\n");
         return false;
     }
 
@@ -333,7 +329,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     constexpr uint8_t kClockingModeScreenOff = (1 << 5);
     zx_status_t status = zx_mmap_device_io(get_root_resource(), kSequencerIdx, 2);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to map vga ports\n");
+        LOG_ERROR("Failed to map vga ports\n");
         return false;
     }
     outp(kSequencerIdx, kClockingModeIdx);
@@ -392,7 +388,7 @@ bool Controller::ResetTrans(registers::Trans trans) {
     trans_conf.set_transcoder_enable(0);
     trans_conf.WriteTo(mmio_space());
     if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space()).transcoder_state(), 60)) {
-        zxlogf(ERROR, "Failed to reset transcoder\n");
+        LOG_ERROR("Failed to reset transcoder\n");
         return false;
     }
 
@@ -426,7 +422,7 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
     ddi_dp_tp_ctl.WriteTo(mmio_space());
 
     if (was_enabled && !WAIT_ON_MS(ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status(), 8)) {
-        zxlogf(ERROR, "Port failed to go idle\n");
+        LOG_ERROR("Port failed to go idle\n");
         return false;
     }
 
@@ -477,9 +473,9 @@ registers::Dpll Controller::SelectDpll(bool is_edp, bool is_hdmi, uint32_t rate)
         dplls_[res].is_hdmi = is_hdmi;
         dplls_[res].rate = rate;
         dplls_[res].use_count++;
-        zxlogf(SPEW, "Selected DPLL %d\n", res);
+        LOG_SPEW("Selected DPLL %d\n", res);
     } else {
-        zxlogf(INFO, "Failed to allocate DPLL\n");
+        LOG_WARN("Failed to allocate DPLL\n");
     }
 
     return res;
@@ -533,20 +529,20 @@ fbl::unique_ptr<DisplayDevice> Controller::InitDisplay(registers::Ddi ddi) {
     } else if (!pipe_in_use(display_devices_, registers::PIPE_C)) {
         pipe = registers::PIPE_C;
     } else {
-        zxlogf(INFO, "i915: Could not allocate pipe for ddi %d\n", ddi);
+        LOG_WARN("Could not allocate pipe for ddi %d\n", ddi);
         return nullptr;
     }
 
     fbl::AllocChecker ac;
     if (igd_opregion_.SupportsDp(ddi)) {
-        zxlogf(SPEW, "Checking for displayport monitor\n");
+        LOG_SPEW("Checking for displayport monitor\n");
         auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, pipe);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Init()) {
             return dp_disp;
         }
     }
     if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
-        zxlogf(SPEW, "Checking for hdmi monitor\n");
+        LOG_SPEW("Checking for hdmi monitor\n");
         auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi, pipe);
         if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Init()) {
             return hdmi_disp;
@@ -563,10 +559,12 @@ void Controller::InitDisplays() {
     for (uint32_t i = 0; i < registers::kDdiCount; i++) {
         auto disp_device = InitDisplay(registers::kDdis[i]);
         if (disp_device) {
-            if (AddDisplay(fbl::move(disp_device)) != ZX_OK) {
-                zxlogf(INFO, "Failed to add display %d\n", i);
-            }
+            AddDisplay(fbl::move(disp_device));
         }
+    }
+
+    if (display_devices_.size() == 0) {
+        LOG_INFO("No displays detected\n");
     }
 }
 
@@ -577,8 +575,12 @@ zx_status_t Controller::AddDisplay(fbl::unique_ptr<DisplayDevice>&& display) {
     if (ac.check()) {
         display_devices_.push_back(fbl::move(display), &ac);
         assert(ac.check());
+
+        fbl::unique_ptr<DisplayDevice>& new_device = display_devices_[display_devices_.size() - 1];
+        LOG_INFO("Display %ld connected (%d x %d, fmt=%08x)\n", new_device->id(),
+                 new_device->width(), new_device->height(), new_device->format());
     } else {
-        zxlogf(ERROR, "i915: failed to add display device\n");
+        LOG_WARN("Failed to add display device\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -862,7 +864,7 @@ zx_status_t Controller::DdkSuspend(uint32_t hint) {
         zx_status_t status =
                 pci_config_read32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
         if (status != ZX_OK) {
-            zxlogf(TRACE, "i915: failed to read dsm base\n");
+            LOG_TRACE("Failed to read dsm base\n");
             return ZX_OK;
         }
 
@@ -923,7 +925,7 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
     fbl::AutoLock lock(&display_lock_);
     for (auto& disp : display_devices_) {
         if (!disp->Resume()) {
-            zxlogf(ERROR, "Failed to resume display\n");
+            LOG_ERROR("Failed to resume display\n");
         }
     }
 
@@ -935,7 +937,7 @@ zx_status_t Controller::DdkResume(uint32_t hint) {
 // TODO(stevensd): Move this back into ::Bind once long-running binds don't
 // break devmgr's suspend/mexec.
 void Controller::FinishInit() {
-    zxlogf(TRACE, "i915: initializing displays\n");
+    LOG_TRACE("i915: initializing displays\n");
     InitDisplays();
 
     acquire_dc_cb_lock();
@@ -961,18 +963,18 @@ void Controller::FinishInit() {
     // TODO remove when the gfxconsole moves to user space
     EnableBacklight(true);
 
-    zxlogf(TRACE, "i915: initialization done\n");
+    LOG_TRACE("i915: initialization done\n");
 }
 
 zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) {
-    zxlogf(TRACE, "i915: binding to display controller\n");
+    LOG_TRACE("Binding to display controller\n");
 
     if (device_get_protocol(parent_, ZX_PROTOCOL_PCI, &pci_)) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
     pci_config_read16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
-    zxlogf(TRACE, "i915: device id %x\n", device_id_);
+    LOG_TRACE("Device id %x\n", device_id_);
     if (device_id_ == INTEL_I915_BROADWELL_DID) {
         // TODO: this should be based on the specific target
         flags_ |= FLAGS_BACKLIGHT;
@@ -980,17 +982,17 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
 
     zx_status_t status = igd_opregion_.Init(&pci_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to init VBT (%d)\n", status);
+        LOG_ERROR("Failed to init VBT (%d)\n", status);
         return status;
     }
 
-    zxlogf(TRACE, "i915: mapping registers\n");
+    LOG_TRACE("Mapping registers\n");
     // map register window
     void* regs;
     uint64_t size;
     status = MapPciMmio(0u, &regs, &size);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to map bar 0: %d\n", status);
+        LOG_ERROR("Failed to map bar 0: %d\n", status);
         return status;
     }
 
@@ -998,7 +1000,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     fbl::unique_ptr<hwreg::RegisterIo> mmio_space(
             new (&ac) hwreg::RegisterIo(reinterpret_cast<volatile void*>(regs)));
     if (!ac.check()) {
-        zxlogf(ERROR, "i915: failed to alloc RegisterIo\n");
+        LOG_ERROR("Failed to alloc RegisterIo\n");
         return ZX_ERR_NO_MEMORY;
     }
     mmio_space_ = fbl::move(mmio_space);
@@ -1014,18 +1016,18 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     ddi_a_lane_capability_control_ = registers::DdiRegs(registers::DDI_A).DdiBufControl()
             .ReadFrom(mmio_space_.get()).ddi_a_lane_capability_control();
 
-    zxlogf(TRACE, "i915: initialzing hotplug\n");
+    LOG_TRACE("Initialzing hotplug\n");
     status = interrupts_.Init(this);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to init hotplugging\n");
+        LOG_ERROR("Failed to init hotplugging\n");
         return status;
     }
 
-    zxlogf(TRACE, "i915: mapping gtt\n");
+    LOG_TRACE("Mapping gtt\n");
     {
         fbl::AutoLock lock(&gtt_lock_);
         if ((status = gtt_.Init(this)) != ZX_OK) {
-            zxlogf(ERROR, "i915: failed to init gtt %d\n", status);
+            LOG_ERROR("Failed to init gtt (%d)\n", status);
             return status;
         }
     }
@@ -1033,14 +1035,14 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     thrd_t init_thread;
     status = thrd_create_with_name(&init_thread, finish_init, this, "i915-init-thread");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to create init thread\n");
+        LOG_ERROR("Failed to create init thread\n");
         return status;
     }
     init_thrd_started_ = true;
 
     status = DdkAdd("intel_i915");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to add controller device\n");
+        LOG_ERROR("Failed to add controller device\n");
         return status;
     }
     // DevMgr now owns this pointer, release it to avoid destroying the object
@@ -1061,12 +1063,12 @@ zx_status_t Controller::Bind(fbl::unique_ptr<i915::Controller>* controller_ptr) 
     args.proto_ops = &i915_gpu_core_protocol_ops;
     status = device_add(zxdev(), &args, &zx_gpu_dev_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to publish gpu core device %d\n", status);
+        LOG_ERROR("Failed to publish gpu core device (%d)\n", status);
         device_remove(zxdev());
         return status;
     }
 
-    zxlogf(TRACE, "i915: bind done\n");
+    LOG_TRACE("bind done\n");
 
     return ZX_OK;
 }
@@ -1094,7 +1096,7 @@ Controller::~Controller() {
     fbl::AutoLock lock(&bar_lock_);
     for (unsigned i = 0; i < PCI_MAX_BAR_COUNT; i++) {
         if (mapped_bars_[i].count) {
-            zxlogf(INFO, "Leaked bar %d\n", i);
+            LOG_INFO("Leaked bar %d\n", i);
             mapped_bars_[i].count = 1;
             UnmapPciMmio(i);
         }

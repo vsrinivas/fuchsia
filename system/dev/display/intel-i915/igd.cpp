@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <limits.h>
-#include <ddk/debug.h>
 #include <hwreg/bitfields.h>
 #include <lib/zx/object.h>
 #include <lib/zx/vmar.h>
 
 #include "igd.h"
 #include "intel-i915.h"
+#include "macros.h"
 
 namespace {
 
@@ -98,7 +98,7 @@ static uint8_t iboost_idx_to_level(uint8_t iboost_idx) {
         case 1: return 3;
         case 2: return 7;
         default:
-            zxlogf(TRACE, "Invalid iboost override\n");
+            LOG_INFO("Invalid iboost override\n");
             return 0;
     }
 }
@@ -144,11 +144,11 @@ bool IgdOpRegion::ProcessDdiConfigs() {
     uint16_t size;
     general_definitions_t* defs = GetSection<general_definitions_t>(&size);
     if (defs == nullptr) {
-        zxlogf(ERROR, "i915: Couldn't find vbt general definitions\n");
+        LOG_ERROR("Couldn't find vbt general definitions\n");
         return false;
     }
     if (size < sizeof(general_definitions_t)) {
-        zxlogf(ERROR, "i915: Bad size in vbt general definitions\n");
+        LOG_ERROR("Bad size in vbt general definitions\n");
         return false;
     }
     uint16_t num_configs = static_cast<uint16_t>(
@@ -164,7 +164,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
         if (cfg->port_type < 4 || cfg->port_type == 12) {
             // Types 0, 1, 2, 3, and 12 are HDMI ports A, B, C, D, and E
             if (!ddi_flags.tmds()) {
-                zxlogf(INFO, "i915: Malformed hdmi config\n");
+                LOG_WARN("Malformed hdmi config\n");
                 continue;
             }
 
@@ -173,7 +173,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
         } else if (7 <= cfg->port_type && cfg->port_type <= 11) {
             // Types 7, 8, 9, 10, 11 are DP ports B, C, D, A, E
             if (!ddi_flags.dp()) {
-                zxlogf(INFO, "i915: Malformed dp config\n");
+                LOG_WARN("Malformed dp config\n");
                 continue;
             }
 
@@ -190,7 +190,7 @@ bool IgdOpRegion::ProcessDdiConfigs() {
         }
 
         if (ddi_supports_dvi_[idx] || ddi_supports_dp_[idx]) {
-            zxlogf(INFO, "i915: Duplicate ddi config\n");
+            LOG_WARN("Duplicate ddi config\n");
             continue;
         }
         ddi_supports_dvi_[idx] = ddi_flags.tmds();
@@ -216,11 +216,12 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci,
                         uint16_t* exit_param, uint32_t* additional_res) {
     uint16_t val;
     if (pci_config_read16(pci, kIgdSwSciReg, &val) != ZX_OK) {
+        LOG_WARN("Failed to read SWSCI register\n");
         return false;
     }
     auto gmch_swsci_reg = GmchSwsciRegister::Get().FromValue(val);
     if (!gmch_swsci_reg.sci_event_select() || gmch_swsci_reg.gmch_sw_sci_trigger()) {
-        zxlogf(TRACE, "Bad GMCH SWSCI register value (%04x)\n", val);
+        LOG_WARN("Bad GMCH SWSCI register value (%04x)\n", val);
         return false;
     }
 
@@ -235,6 +236,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci,
 
     if (pci_config_write16(pci, kIgdSwSciReg,
                            gmch_swsci_reg.set_gmch_sw_sci_trigger(1).reg_value()) != ZX_OK) {
+        LOG_WARN("Failed to write SWSCI register\n");
         return false;
     }
 
@@ -249,13 +251,13 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci,
                 *additional_res = sci_interface->additional_params;
                 return true;
             } else {
-                zxlogf(TRACE, "i915: swsci failed (%x)\n", sci_exit_param.exit_result());
+                LOG_WARN("SWSCI failed (%x)\n", sci_exit_param.exit_result());
                 return false;
             }
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
-    zxlogf(TRACE, "i915: swsci timeout\n");
+    LOG_WARN("SWSCI timeout\n");
     return false;
 }
 
@@ -275,7 +277,7 @@ bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
                 if (details.panel_type_plus1()
                         && details.panel_type_plus1() < (kNumPanelTypes + 1)) {
                     *type = static_cast<uint8_t>(details.panel_type_plus1() - 1);
-                    zxlogf(SPEW, "i915: swsci panel type %d\n", *type);
+                    LOG_SPEW("SWSCI panel type %d\n", *type);
                     return true;
                 }
             }
@@ -299,25 +301,25 @@ bool IgdOpRegion::CheckForLowVoltageEdp(pci_protocol_t* pci) {
         has_edp |= ddi_is_edp_[i];
     }
     if (!has_edp) {
-        zxlogf(SPEW, "i915: no edp\n");
+        LOG_SPEW("No edp found\n");
         return true;
     }
 
     uint16_t size;
     edp_config_t* edp = GetSection<edp_config_t>(&size);
     if (edp == nullptr) {
-        zxlogf(ERROR, "i915: Couldn't find vbt general definitions\n");
+        LOG_WARN("Couldn't find edp general definitions\n");
         return false;
     }
 
     if (!GetPanelType(pci, &panel_type_)) {
-        zxlogf(TRACE, "i915: no panel type\n");
+        LOG_TRACE("No panel type\n");
         return false;
     }
     edp_is_low_voltage_ =
             !((edp->vswing_preemphasis[panel_type_ / 2] >> (4 * panel_type_ % 2)) & 0xf);
 
-    zxlogf(TRACE, "i915: low voltage edp? %d\n", edp_is_low_voltage_);
+    LOG_TRACE("Is low voltage edp? %d\n", edp_is_low_voltage_);
 
     return true;
 }
@@ -336,7 +338,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     uint32_t igd_addr;
     zx_status_t status = pci_config_read32(pci, kIgdOpRegionAddrReg, &igd_addr);
     if (status != ZX_OK || !igd_addr) {
-        zxlogf(ERROR, "i915: Failed to locate IGD OpRegion (%d)\n", status);
+        LOG_ERROR("Failed to locate IGD OpRegion (%d)\n", status);
         return status;
     }
 
@@ -349,7 +351,7 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
                                     igd_addr & ~(PAGE_SIZE - 1),
                                     igd_opregion_pages_len_, &vmo);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to access IGD OpRegion (%d)\n", status);
+        LOG_ERROR("Failed to access IGD OpRegion (%d)\n", status);
         return status;
     }
     igd_opregion_pages_ = zx::vmo(vmo);
@@ -358,20 +360,20 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
                                        ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
                                        &igd_opregion_pages_base_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to map IGD OpRegion (%d)\n", status);
+        LOG_ERROR("Failed to map IGD OpRegion (%d)\n", status);
         return status;
     }
 
     igd_opregion_ = reinterpret_cast<igd_opregion_t*>(
             igd_opregion_pages_base_ + (igd_addr % PAGE_SIZE));
     if (!igd_opregion_->validate()) {
-        zxlogf(ERROR, "i915: Failed to validate IGD OpRegion\n");
+        LOG_ERROR("Failed to validate IGD OpRegion\n");
         return ZX_ERR_INTERNAL;
     }
 
     vbt_header_t* vbt_header = reinterpret_cast<vbt_header_t*>(&igd_opregion_->mailbox4);
     if (!vbt_header->validate()) {
-        zxlogf(ERROR, "i915: Failed to validate vbt header\n");
+        LOG_ERROR("Failed to validate vbt header\n");
         return ZX_ERR_INTERNAL;
     }
 
@@ -381,14 +383,14 @@ zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
     if (!bdb_->validate()
             || bdb_->bios_data_blocks_size > vbt_size
             || vbt_header->bios_data_blocks_offset + bdb_->bios_data_blocks_size > vbt_size) {
-        zxlogf(ERROR, "i915: Failed to validate bdb header\n");
+        LOG_ERROR("Failed to validate bdb header\n");
         return ZX_ERR_INTERNAL;
     }
 
     // TODO(stevensd): 196 seems old enough that all gen9 processors will have it. If we want to
     // support older hardware, we'll need to handle missing data.
     if (bdb_->version < 196) {
-        zxlogf(ERROR, "i915: Out of date vbt (%d)\n", bdb_->version);
+        LOG_ERROR("Out of date vbt (%d)\n", bdb_->version);
         return ZX_ERR_INTERNAL;
     }
 

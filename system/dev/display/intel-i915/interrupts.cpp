@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
 #include <zircon/syscalls.h>
 
 #include "intel-i915.h"
 #include "interrupts.h"
+#include "macros.h"
 #include "registers.h"
 
 namespace {
@@ -35,7 +35,7 @@ void Interrupts::Destroy() {
 int Interrupts::IrqLoop() {
     for (;;) {
         if (zx_interrupt_wait(irq_.get(), nullptr) != ZX_OK) {
-            zxlogf(TRACE, "i915: interrupt wait failed\n");
+            LOG_INFO("interrupt wait failed\n");
             break;
         }
         auto interrupt_ctrl =
@@ -160,24 +160,24 @@ zx_status_t Interrupts::Init(Controller* controller) {
     uint32_t irq_cnt = 0;
     zx_status_t status = pci_query_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, &irq_cnt);
     if (status != ZX_OK || !irq_cnt) {
-        zxlogf(ERROR, "i915: Failed to find interrupts %d %d\n", status, irq_cnt);
+        LOG_ERROR("Failed to find interrupts (%d %d)\n", status, irq_cnt);
         return ZX_ERR_INTERNAL;
     }
 
     if ((status = pci_set_irq_mode(controller_->pci(), ZX_PCIE_IRQ_MODE_LEGACY, 1)) != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to set irq mode %d\n", status);
+        LOG_ERROR("Failed to set irq mode (%d)\n", status);
         return status;
     }
 
     if ((status = pci_map_interrupt(controller_->pci(), 0, irq_.reset_and_get_address())
             != ZX_OK)) {
-        zxlogf(ERROR, "i915: Failed to map interrupt %d\n", status);
+        LOG_ERROR("Failed to map interrupt (%d)\n", status);
         return status;
     }
 
     status = thrd_create_with_name(&irq_thread_, irq_handler, this, "i915-irq-thread");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: Failed to create irq thread\n");
+        LOG_ERROR("Failed to create irq thread\n");
         return status;
     }
 

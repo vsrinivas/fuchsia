@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
 #include <ddk/protocol/pci.h>
 
 #include <fbl/algorithm.h>
@@ -12,6 +11,7 @@
 
 #include "intel-i915.h"
 #include "gtt.h"
+#include "macros.h"
 #include "registers.h"
 
 #define PAGE_PRESENT (1 << 0)
@@ -48,14 +48,14 @@ zx_status_t Gtt::Init(Controller* controller) {
 
     zx_status_t status = pci_get_bti(controller->pci(), 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to get bti: %d\n", status);
+        LOG_ERROR("Failed to get bti (%d)\n", status);
         return status;
     }
 
     zx_info_bti_t info;
     status = bti_.get_info(ZX_INFO_BTI, &info, sizeof(zx_info_bti_t), nullptr, nullptr);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to fetch bti info %d\n", status);
+        LOG_ERROR("Failed to fetch bti info (%d)\n", status);
         return status;
     }
     min_contiguity_ = info.minimum_contiguity;
@@ -65,22 +65,22 @@ zx_status_t Gtt::Init(Controller* controller) {
     status = pci_config_read16(controller_->pci(), gmch_gfx_ctrl.kAddr,
                                gmch_gfx_ctrl.reg_value_ptr());
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to read GfxControl\n");
+        LOG_ERROR("Failed to read GfxControl\n");
         return status;
     }
     uint32_t gtt_size = gmch_gfx_ctrl.gtt_mappable_mem_size();
-    zxlogf(SPEW, "i915: Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
+    LOG_TRACE("Gtt::Init gtt_size (for page tables) 0x%x\n", gtt_size);
 
     status = zx::vmo::create(PAGE_SIZE, 0, &scratch_buffer_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to alloc scratch buffer %d\n", status);
+        LOG_ERROR("Failed to alloc scratch buffer (%d)\n", status);
         return status;
     }
 
     status = bti_.pin(ZX_BTI_PERM_READ, scratch_buffer_, 0, PAGE_SIZE, &scratch_buffer_paddr_, 1,
                       &scratch_buffer_pmt_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "i915: failed to look up scratch buffer %d\n", status);
+        LOG_ERROR("Failed to look up scratch buffer (%d)\n", status);
         return status;
     }
 
@@ -168,7 +168,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset,
         status = gtt_->bti_.pin(flags, zx::unowned_vmo::wrap(vmo_),
                                 vmo_offset, cur_len, paddrs, actual_entries, &pmt);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "i915: Failed to get paddrs (%d)\n", status);
+            LOG_ERROR("Failed to get paddrs (%d)\n", status);
             return status;
         }
         vmo_offset += cur_len;
@@ -207,7 +207,7 @@ void GttRegion::ClearRegion(bool close_vmo) {
 
     for (zx::pmt& pmt : pmts_) {
         if (pmt.unpin() != ZX_OK) {
-             zxlogf(INFO, "Error unpinning gtt region\n");
+             LOG_INFO("Error unpinning gtt region\n");
         }
     }
     pmts_.reset();
