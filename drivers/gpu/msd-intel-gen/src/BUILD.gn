@@ -6,7 +6,6 @@ import("//garnet/lib/magma/gnbuild/magma.gni")
 
 declare_args() {
   msd_intel_enable_mapping_cache = !is_debug
-  msd_intel_enable_modesetting = false
   msd_intel_wait_for_flip = true
   msd_intel_print_fps = false
   msd_intel_reported_width = 0
@@ -94,10 +93,6 @@ source_set("src") {
     "gtt_shim.cc",
     "interrupt_manager.h",
     "interrupt_manager_shim.cc",
-    "modeset/displayport.cc",
-    "modeset/displayport.h",
-    "modeset/edid.cc",
-    "modeset/edid.h",
     "msd_intel_buffer.cc",
     "msd_intel_buffer.h",
     "msd_intel_connection.cc",
@@ -145,10 +140,5 @@ source_set("src") {
   defines = []
   if (msd_intel_enable_mapping_cache) {
     defines += [ "MSD_INTEL_ENABLE_MAPPING_CACHE" ]
-  }
-  if (msd_intel_enable_modesetting) {
-    defines += [ "MSD_INTEL_ENABLE_MODESETTING=1" ]
-  } else {
-    defines += [ "MSD_INTEL_ENABLE_MODESETTING=0" ]
   }
 }

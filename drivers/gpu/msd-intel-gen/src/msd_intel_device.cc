@@ -9,7 +9,6 @@
 #include "global_context.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "modeset/displayport.h"
 #include "msd_intel_semaphore.h"
 #include "platform_trace.h"
 #include "registers.h"
@@ -245,12 +244,6 @@ bool MsdIntelDevice::BaseInit(void* device_handle)
         return DRETF(false, "global context init failed");
 
     device_request_semaphore_ = magma::PlatformSemaphore::Create();
-
-#if MSD_INTEL_ENABLE_MODESETTING
-    // The modesetting code is only tested on gen 9 (Skylake).
-    if (DeviceId::is_gen9(device_id_))
-        DisplayPort::PartiallyBringUpDisplays(register_io_.get());
-#endif
 
     return true;
 }
