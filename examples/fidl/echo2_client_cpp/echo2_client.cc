@@ -57,7 +57,6 @@ int main(int argc, const char** argv) {
     }
   }
 
-  // The FIDL support lib requires async_get_default() to return non-null.
   async::Loop loop(&kAsyncLoopConfigMakeDefault);
 
   echo2::EchoClientApp app;
