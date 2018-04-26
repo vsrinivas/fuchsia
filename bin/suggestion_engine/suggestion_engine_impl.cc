@@ -40,7 +40,8 @@ SuggestionEngineImpl::SuggestionEngineImpl(
       next_processor_(debug_),
       context_listener_binding_(this),
       auto_select_first_query_listener_(this),
-      auto_select_first_query_listener_binding_(&auto_select_first_query_listener_) {
+      auto_select_first_query_listener_binding_(
+          &auto_select_first_query_listener_) {
   app_context->outgoing_services()->AddService<SuggestionEngine>(
       [this](fidl::InterfaceRequest<SuggestionEngine> request) {
         bindings_.AddBinding(this, std::move(request));
@@ -307,49 +308,35 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
     return;
   }
 
+  Intent intent;
   if (create_story.intent) {
-    // If a intent was provided, create an empty story and add a module to it
-    // with the provided intent.
-    story_provider_->CreateStory(
-        nullptr, fxl::MakeCopyable([
-          this, intent = std::move(*create_story.intent), activity
-        ](const fidl::StringPtr& story_id) mutable {
-          modular::StoryControllerPtr story_controller;
-          story_provider_->GetController(story_id,
-                                         story_controller.NewRequest());
-          story_controller->AddModule(nullptr, "", std::move(intent), nullptr);
-          focus_provider_ptr_->Request(story_id);
-        }));
-    return;
+    intent = std::move(*create_story.intent);
+  } else {
+    intent.action.handler = create_story.module_id;
+    if (create_story.initial_data) {
+      IntentParameter root_parameter;
+      root_parameter.name = nullptr;
+      root_parameter.data.set_json(create_story.initial_data);
+      intent.parameters.push_back(std::move(root_parameter));
+    }
   }
 
-  // TODO(afergan): Make this more robust later. For now, we
-  // always assume that there's extra info and that it's a color.
-  auto extra_info = fidl::VectorPtr<modular::StoryInfoExtraEntry>::New(1);
-  char hex_color[11];
-  snprintf(hex_color, sizeof(hex_color), "0x%x", story_color);
-  extra_info->at(0).key = "color";
-  extra_info->at(0).value = hex_color;
-  auto& initial_data = create_story.initial_data;
-  auto& module_id = create_story.module_id;
-  FXL_LOG(INFO) << "Creating story with module " << module_id;
-  story_provider_->CreateStoryWithInfo(
-      create_story.module_id, std::move(extra_info), std::move(initial_data),
-      [this, activity](fidl::StringPtr story_id) {
-        story_provider_->GetStoryInfo(
-            story_id,
-            [this, activity, story_id](modular::StoryInfoPtr story_info) {
-              if (!story_info) {
-                // If there is no StoryInfo, we are talking to a StoryProvider
-                // that may be configured in a test environment. Log and abort.
-                FXL_LOG(WARNING) << "No StoryInfo for " << story_id;
-                return;
-              }
-              FXL_LOG(INFO)
-                  << "Requesting focus for story_id " << story_info->id;
-              focus_provider_ptr_->Request(story_info->id);
-            });
-      });
+  if (intent.action.handler) {
+    FXL_LOG(INFO) << "Creating story with module " << intent.action.handler;
+  } else {  // intent.action.name
+    FXL_LOG(INFO) << "Creating story with action " << intent.action.name;
+  }
+
+  story_provider_->CreateStory(
+      nullptr, fxl::MakeCopyable([this, intent = std::move(intent), activity](
+                                     const fidl::StringPtr& story_id) mutable {
+        modular::StoryControllerPtr story_controller;
+        story_provider_->GetController(story_id, story_controller.NewRequest());
+        story_controller->AddModule(nullptr /* parent module path */,
+                                    "" /* module name */, std::move(intent),
+                                    nullptr /* surface relation */);
+        focus_provider_ptr_->Request(story_id);
+      }));
 }
 
 void SuggestionEngineImpl::PerformFocusStoryAction(const Action& action) {
@@ -380,19 +367,18 @@ void SuggestionEngineImpl::PerformCustomAction(Action* action,
                                                uint32_t story_color) {
   auto activity = debug_->RegisterOngoingActivity();
   auto custom_action = action->custom_action().Bind();
-  custom_action->Execute(fxl::MakeCopyable([
-    this, activity, custom_action = std::move(custom_action), source_url,
-    story_color
-  ](fidl::VectorPtr<ActionPtr> actions) {
-    if (actions) {
-      fidl::VectorPtr<Action> non_null_actions;
-      for (auto& action : *actions) {
-        if (action)
-          non_null_actions.push_back(std::move(*action));
-      }
-      PerformActions(std::move(non_null_actions), source_url, story_color);
-    }
-  }));
+  custom_action->Execute(fxl::MakeCopyable(
+      [this, activity, custom_action = std::move(custom_action), source_url,
+       story_color](fidl::VectorPtr<ActionPtr> actions) {
+        if (actions) {
+          fidl::VectorPtr<Action> non_null_actions;
+          for (auto& action : *actions) {
+            if (action)
+              non_null_actions.push_back(std::move(*action));
+          }
+          PerformActions(std::move(non_null_actions), source_url, story_color);
+        }
+      }));
 }
 
 void SuggestionEngineImpl::PerformQueryAction(const Action& action) {

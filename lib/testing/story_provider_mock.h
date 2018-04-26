@@ -31,22 +31,19 @@ class StoryProviderMock : public StoryProvider {
   const modular::StoryControllerMock& story_controller() const {
     return controller_mock_;
   }
-  std::string last_created_story() const { return last_created_story_; }
 
  private:
   // |StoryProvider|
-  void CreateStory(fidl::StringPtr url,
-                   CreateStoryCallback callback) override {
+  void CreateStory(fidl::StringPtr url, CreateStoryCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }
 
   // |StoryProvider|
-  void CreateStoryWithInfo(
-      fidl::StringPtr url,
-      fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
-      fidl::StringPtr json,
-      CreateStoryWithInfoCallback callback) override {
+  void CreateStoryWithInfo(fidl::StringPtr url,
+                           fidl::VectorPtr<StoryInfoExtraEntry> extra_info,
+                           fidl::StringPtr json,
+                           CreateStoryWithInfoCallback callback) override {
     last_created_story_ = url;
     callback("foo");
   }

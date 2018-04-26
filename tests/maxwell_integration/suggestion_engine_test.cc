@@ -681,7 +681,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
+  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
@@ -728,7 +728,7 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
+  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
@@ -797,7 +797,7 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   p.Commit();
 
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->last_created_story());
+  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(AskTest, DefaultAsk) {
