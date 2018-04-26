@@ -134,14 +134,26 @@ bool TimElement::traffic_buffered(uint16_t aid) const {
     return bmp[octet - n1] & (1 << (aid % 8));
 }
 
-bool CountryElement::Create(void* buf, size_t len, size_t* actual, const char* country) {
-    constexpr size_t elem_size = sizeof(CountryElement);
-    if (elem_size > len) return false;
+bool CountryElement::Create(void* buf, size_t len, size_t* actual, const uint8_t* country,
+                            const std::vector<SubbandTriplet>& subbands) {
+    size_t elem_size = sizeof(CountryElement);
+    size_t subbands_bytes = sizeof(SubbandTriplet) * subbands.size();
+    elem_size += subbands_bytes;
+    size_t len_padding = elem_size % 2;
+    elem_size += len_padding;
+
+    if (elem_size > len) { return false; };
 
     auto elem = static_cast<CountryElement*>(buf);
     elem->hdr.id = element_id::kCountry;
     elem->hdr.len = elem_size - sizeof(ElementHeader);
-    std::strncpy(elem->country, country, sizeof(elem->country));
+
+    memcpy(elem->country, country, kCountryLen);
+
+    uint8_t* triplets = elem->triplets;
+    memcpy(triplets, subbands.data(), subbands_bytes);
+    if (len_padding > 0) { triplets[subbands_bytes] = 0; }
+
     *actual = elem_size;
     return true;
 }

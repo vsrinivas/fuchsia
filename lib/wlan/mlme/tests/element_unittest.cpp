@@ -273,13 +273,31 @@ TEST_F(Elements, TimPartialBitmapBufferedTraffic) {
 }
 
 TEST_F(Elements, Country) {
-    const char kCountry[3] = "US";
-    EXPECT_TRUE(CountryElement::Create(buf_, sizeof(buf_), &actual_, kCountry));
-    EXPECT_EQ(sizeof(CountryElement), actual_);
+    // TODO(porce): Read from dot11CountryString. The AP mode should start with its country
+    const uint8_t kCountry[3] = {'U', 'S', ' '};
+
+    std::vector<SubbandTriplet> subbands;
+    // TODO(porce): Read from the AP's regulatory domain
+    subbands.push_back({36, 1, 17});
+    subbands.push_back({100, 1, 17});
+
+    SubbandTriplet s3 = {149, 1, 23};
+    subbands.push_back(s3);
+
+    EXPECT_TRUE(CountryElement::Create(buf_, sizeof(buf_), &actual_, kCountry, subbands));
+    size_t len_expected = sizeof(CountryElement) + subbands.size() * sizeof(SubbandTriplet);
+    if (len_expected % 2 == 1) {
+        len_expected += 1;  // padding
+    }
+
+    EXPECT_EQ(len_expected, actual_);
 
     auto element = FromBytes<CountryElement>(buf_, sizeof(buf_));
     ASSERT_NE(nullptr, element);
     EXPECT_EQ(0, std::memcmp(element->country, kCountry, sizeof(element->country)));
+    EXPECT_EQ(0, std::memcmp(element->triplets, subbands.data(), sizeof(SubbandTriplet)));
+    EXPECT_EQ(0, std::memcmp(element->triplets + 2 * sizeof(SubbandTriplet), &s3,
+                             sizeof(SubbandTriplet)));
 }
 
 TEST_F(Elements, QosAp) {

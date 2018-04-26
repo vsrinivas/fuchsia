@@ -206,16 +206,41 @@ struct TimElement : public Element<TimElement, element_id::kTim> {
     bool traffic_buffered(uint16_t aid) const;
 } __PACKED;
 
+// IEEE Std 802.11-2016, 9.4.2.9. Figure 9-131, 9-132.
+struct SubbandTriplet {
+    uint8_t first_channel_number;
+    uint8_t number_of_channels;
+    uint8_t max_tx_power;  // dBm
+} __PACKED;
+
 // IEEE Std 802.11-2016, 9.4.2.9
 struct CountryElement : public Element<CountryElement, element_id::kCountry> {
-    static bool Create(void* buf, size_t len, size_t* actual, const char* country);
+    static bool Create(void* buf, size_t len, size_t* actual, const uint8_t* country,
+                       const std::vector<SubbandTriplet>& subbands);
     static const size_t kCountryLen = 3;
     static const size_t kMinLen = 3;  // TODO(porce): revisit the spec.
     static const size_t kMaxLen = 255;
 
     ElementHeader hdr;
-    char country[kCountryLen];
-    uint8_t triplets[];  // TODO(tkilbourn): define these
+
+    // TODO(NET-799): Validate dot11CountryString
+    // Note, country octets is not a null-terminated string.
+    // IEEE802.11-MIB Object Identifier 1.2.840.10036.1.1.1.23: dot11CountryString
+    // First two octets is the two character country code defined in ISO/IEC 3166-1
+    // The third octets
+    // - ASCII space character: all environments
+    // - ASCII 'O' : Outdoor environment only
+    // - ASCII 'I' : Indoor environment only
+    // - ASCII 'X' : Noncountry entity
+    // - Binary value of the Operating Class table number. Annex E Table E-1 becomes 0x01.
+    uint8_t country[kCountryLen];
+    static_assert(sizeof(SubbandTriplet) == 3,
+                  "Wireformat for SubbandTriplet is of length 3 octets.");
+
+    // One or more SubbandTriplet, if dot11OperatingClassesRequired is false.
+    // TODO(porce): Revisit for VHT, and if dot11OperatingClassesRequired is true.
+    uint8_t triplets[];
+    // Zero-padding, zero or one octect. Make the length of the CountryElement be even.
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.13
@@ -246,34 +271,34 @@ struct RsnElement : public Element<RsnElement, element_id::kRsn> {
 
 // IEEE Std 802.11-2016, 9.4.1.17
 class QosInfo : public common::BitField<uint8_t> {
- public:
-  constexpr explicit QosInfo(uint8_t value) : common::BitField<uint8_t>(value) {}
-  constexpr QosInfo() = default;
+   public:
+    constexpr explicit QosInfo(uint8_t value) : common::BitField<uint8_t>(value) {}
+    constexpr QosInfo() = default;
 
-  // AP specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-82
-  WLAN_BIT_FIELD(edca_param_set_update_count, 0, 4);
-  WLAN_BIT_FIELD(qack, 4, 1);
-  WLAN_BIT_FIELD(queue_request, 5, 1);
-  WLAN_BIT_FIELD(txop_request, 6, 1);
-  // 8th bit reserved
+    // AP specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-82
+    WLAN_BIT_FIELD(edca_param_set_update_count, 0, 4);
+    WLAN_BIT_FIELD(qack, 4, 1);
+    WLAN_BIT_FIELD(queue_request, 5, 1);
+    WLAN_BIT_FIELD(txop_request, 6, 1);
+    // 8th bit reserved
 
-  // Non-AP STA specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-83
-  WLAN_BIT_FIELD(ac_vo_uapsd_flag, 0, 1);
-  WLAN_BIT_FIELD(ac_vi_uapsd_flag, 1, 1);
-  WLAN_BIT_FIELD(ac_bk_uapsd_flag, 2, 1);
-  WLAN_BIT_FIELD(ac_be_uapsd_flag, 3, 1);
-  // qack already defined in AP specific structure.
-  WLAN_BIT_FIELD(max_sp_len, 5, 1);
-  WLAN_BIT_FIELD(more_data_ack, 6, 1);
-  // 8th bit reserved
+    // Non-AP STA specific QoS Info structure: IEEE Std 802.11-2016, 9.4.1.17, Figure 9-83
+    WLAN_BIT_FIELD(ac_vo_uapsd_flag, 0, 1);
+    WLAN_BIT_FIELD(ac_vi_uapsd_flag, 1, 1);
+    WLAN_BIT_FIELD(ac_bk_uapsd_flag, 2, 1);
+    WLAN_BIT_FIELD(ac_be_uapsd_flag, 3, 1);
+    // qack already defined in AP specific structure.
+    WLAN_BIT_FIELD(max_sp_len, 5, 1);
+    WLAN_BIT_FIELD(more_data_ack, 6, 1);
+    // 8th bit reserved
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.35
 struct QosCapabilityElement : public Element<QosCapabilityElement, element_id::kQosCapability> {
-  static bool Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info);
+    static bool Create(void* buf, size_t len, size_t* actual, const QosInfo& qos_info);
 
-  ElementHeader hdr;
-  QosInfo qos_info;
+    ElementHeader hdr;
+    QosInfo qos_info;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.4.2.56.2
