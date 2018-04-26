@@ -446,7 +446,6 @@ TestCase<T> subtraction_test_case = {
 
 fbl::memory_order orders[] = {
     fbl::memory_order_relaxed,
-    fbl::memory_order_consume,
     fbl::memory_order_acquire,
     fbl::memory_order_release,
     fbl::memory_order_acq_rel,

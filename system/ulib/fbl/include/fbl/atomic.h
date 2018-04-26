@@ -13,6 +13,7 @@
 // types and enums. It does not support:
 // - pointer types, though they could be easily added
 // - wide characters
+// - memory_order_consume
 
 // The interface closely matches the underlying builtins and the
 // standard C and C++ interfaces. Member function and nonmember
@@ -52,7 +53,6 @@ namespace fbl {
 // int, so let's be explicit here.
 enum memory_order : int {
     memory_order_relaxed = __ATOMIC_RELAXED,
-    memory_order_consume = __ATOMIC_CONSUME,
     memory_order_acquire = __ATOMIC_ACQUIRE,
     memory_order_release = __ATOMIC_RELEASE,
     memory_order_acq_rel = __ATOMIC_ACQ_REL,
