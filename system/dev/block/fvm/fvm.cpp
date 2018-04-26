@@ -123,8 +123,11 @@ static void IoCallback(block_op_t* op, zx_status_t status) {
 zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off,
                                           size_t len, uint32_t command) {
     size_t block_size = info_.block_size;
-    const size_t max_transfer = info_.max_transfer_size / block_size;
+    size_t max_transfer = info_.max_transfer_size / block_size;
     size_t len_remaining = len / block_size;
+    if (max_transfer == 0) {
+        max_transfer = len_remaining;
+    }
     size_t vmo_offset = 0;
     size_t dev_offset = off / block_size;
     size_t num_txns = fbl::round_up(len_remaining, max_transfer) / max_transfer;
