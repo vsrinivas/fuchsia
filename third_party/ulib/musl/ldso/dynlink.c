@@ -53,17 +53,20 @@ static void loader_svc_config(const char* config);
 #define VMO_NAME_PREFIX_DATA "data:"
 
 struct dso {
+    // Must be first.
     struct link_map l_map;
 
-    union {
-        const struct gnu_note* build_id_note; // Written by map_library.
-        struct iovec build_id_log;      // Written by format_build_id_log.
-    };
+    const struct gnu_note* build_id_note;
+    // TODO(mcgrathr): Remove build_id_log when everything uses markup.
+    struct iovec build_id_log;
     atomic_flag logged;
+
+    // ID of this module for symbolizer markup.
+    unsigned int module_id;
 
     const char* soname;
     Phdr* phdr;
-    int phnum;
+    unsigned int phnum;
     size_t phentsize;
     int refcnt;
     zx_handle_t vmar; // Closed after relocation.
@@ -568,6 +571,12 @@ __NO_SAFESTACK static void unmap_library(struct dso* dso) {
     }
 }
 
+// app.module_id is always zero, so assignments start with 1.
+__NO_SAFESTACK NO_ASAN static void assign_module_id(struct dso* dso) {
+    static unsigned int last_module_id;
+    dso->module_id = ++last_module_id;
+}
+
 // Locate the build ID note just after mapping the segments in.
 // This is called from dls2, so it cannot use any non-static functions.
 __NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso,
@@ -587,6 +596,8 @@ __NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso,
     }
     return false;
 }
+
+// TODO(mcgrathr): Remove this all when everything uses markup.
 
 // We pre-format the log line for each DSO early so that we can log it
 // without running any nontrivial code.  We use hand-rolled formatting
@@ -650,6 +661,144 @@ __NO_SAFESTACK static void allocate_and_format_build_id_log(struct dso* dso) {
     format_build_id_log(dso, buffer, name, namelen);
 }
 
+// TODO(mcgrathr): Remove above when everything uses markup.
+
+// Format the markup elements by hand to avoid using large and complex code
+// like the printf engine.
+
+__NO_SAFESTACK static char* format_string(char* p,
+                                          const char* string, size_t len) {
+    return memcpy(p, string, len) + len;
+}
+
+#define FORMAT_HEX_VALUE_SIZE (2 + (sizeof(uint64_t) * 2))
+#define HEXDIGITS "0123456789abcdef"
+
+__NO_SAFESTACK static char* format_hex_value(
+    char buffer[FORMAT_HEX_VALUE_SIZE], uint64_t value) {
+    char* p = buffer;
+    if (value == 0) {
+        // No "0x" prefix on zero.
+        *p++ = '0';
+    } else {
+        *p++ = '0';
+        *p++ = 'x';
+        // Skip the high nybbles that are zero.
+        int shift = 60;
+        while ((value >> shift) == 0) {
+            shift -= 4;
+        }
+        do {
+            *p++ = HEXDIGITS[(value >> shift) & 0xf];
+            shift -= 4;
+        } while (shift >= 0);
+    }
+    return p;
+}
+
+__NO_SAFESTACK static char* format_hex_string(char* p, const uint8_t* string,
+                                             size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        uint8_t byte = string[i];
+        *p++ = HEXDIGITS[byte >> 4];
+        *p++ = HEXDIGITS[byte & 0xf];
+    }
+    return p;
+}
+
+// The format theoretically does not constrain the size of build ID notes,
+// but there is a reasonable upper bound.
+#define MAX_BUILD_ID_SIZE 64
+
+// Likewise, there's no real limit on the length of module names.
+// But they're only included in the markup output to be informative,
+// so truncating them is OK.
+#define MODULE_NAME_SIZE 64
+
+#define MODULE_ELEMENT_BEGIN "{{{module:"
+#define MODULE_ELEMENT_BUILD_ID_BEGIN ":elf:"
+#define MODULE_ELEMENT_END "}}}\n"
+#define MODULE_ELEMENT_SIZE                                             \
+    (sizeof(MODULE_ELEMENT_BEGIN) - 1 + FORMAT_HEX_VALUE_SIZE +     \
+     1 + MODULE_NAME_SIZE + sizeof(MODULE_ELEMENT_BUILD_ID_BEGIN) - 1 + \
+     (MAX_BUILD_ID_SIZE * 2) + 1 + sizeof(MODULE_ELEMENT_END))
+
+__NO_SAFESTACK static void log_module_element(struct dso* dso) {
+    char buffer[MODULE_ELEMENT_SIZE];
+    char* p = format_string(buffer, MODULE_ELEMENT_BEGIN,
+                            sizeof(MODULE_ELEMENT_BEGIN) - 1);
+    p = format_hex_value(p, dso->module_id);
+    *p++ = ':';
+    const char* name = dso->l_map.l_name;
+    if (name[0] == '\0') {
+        name = dso->soname == NULL ? "<application>" : dso->soname;
+    }
+    size_t namelen = strlen(name);
+    if (namelen > MODULE_NAME_SIZE) {
+        namelen = MODULE_NAME_SIZE;
+    }
+    p = format_string(p, name, namelen);
+    p = format_string(p, MODULE_ELEMENT_BUILD_ID_BEGIN,
+                      sizeof(MODULE_ELEMENT_BUILD_ID_BEGIN) - 1);
+    if (dso->build_id_note) {
+        p = format_hex_string(p, dso->build_id_note->desc,
+                              dso->build_id_note->nhdr.n_descsz);
+    }
+    p = format_string(p, MODULE_ELEMENT_END, sizeof(MODULE_ELEMENT_END) - 1);
+    log_write(buffer, p - buffer);
+}
+
+#define MMAP_ELEMENT_BEGIN "{{{mmap:"
+#define MMAP_ELEMENT_LOAD_BEGIN ":load:"
+#define MMAP_ELEMENT_END "}}}\n"
+#define MMAP_ELEMENT_SIZE                                               \
+    (sizeof(MMAP_ELEMENT_BEGIN) - 1 +                                   \
+     FORMAT_HEX_VALUE_SIZE + 1 +                                        \
+     FORMAT_HEX_VALUE_SIZE + 1 +                                        \
+     sizeof(MMAP_ELEMENT_LOAD_BEGIN) - 1 + FORMAT_HEX_VALUE_SIZE + 1 +  \
+     3 + 1 + FORMAT_HEX_VALUE_SIZE)
+
+__NO_SAFESTACK static void log_mmap_element(struct dso* dso, const Phdr* ph) {
+    size_t start = ph->p_vaddr & -PAGE_SIZE;
+    size_t end = (ph->p_vaddr + ph->p_memsz + PAGE_SIZE - 1) & -PAGE_SIZE;
+    char buffer[MMAP_ELEMENT_SIZE];
+    char* p = format_string(buffer, MMAP_ELEMENT_BEGIN,
+                            sizeof(MMAP_ELEMENT_BEGIN) - 1);
+    p = format_hex_value(p, saddr(dso, start));
+    *p++ = ':';
+    p = format_hex_value(p, end - start);
+    p = format_string(p, MMAP_ELEMENT_LOAD_BEGIN,
+                      sizeof(MMAP_ELEMENT_LOAD_BEGIN) - 1);
+    p = format_hex_value(p, dso->module_id);
+    *p++ = ':';
+    if (ph->p_flags & PF_R) {
+        *p++ = 'r';
+    }
+    if (ph->p_flags & PF_W) {
+        *p++ = 'w';
+    }
+    if (ph->p_flags & PF_X) {
+        *p++ = 'x';
+    }
+    *p++ = ':';
+    p = format_hex_value(p, start);
+    p = format_string(p, MMAP_ELEMENT_END, sizeof(MMAP_ELEMENT_END) - 1);
+    log_write(buffer, p - buffer);
+}
+
+__NO_SAFESTACK static void log_dso(struct dso* dso) {
+    log_module_element(dso);
+    if (dso->phdr) {
+        for (unsigned int i = 0; i < dso->phnum; ++i) {
+            if (dso->phdr[i].p_type == PT_LOAD) {
+                log_mmap_element(dso, &dso->phdr[i]);
+            }
+        }
+    }
+    // TODO(mcgrathr): Remove this when everything uses markup.
+    log_write(dso->build_id_log.iov_base, dso->build_id_log.iov_len);
+}
+
 __NO_SAFESTACK void _dl_log_unlogged(void) {
     // The first thread to successfully swap in 0 and get an old value
     // for unlogged_tail is responsible for logging all the unlogged
@@ -668,10 +817,12 @@ __NO_SAFESTACK void _dl_log_unlogged(void) {
                                                     memory_order_relaxed));
     for (struct dso* p = head; true; p = dso_next(p)) {
         if (!atomic_flag_test_and_set_explicit(
-                &p->logged, memory_order_relaxed))
-            log_write(p->build_id_log.iov_base, p->build_id_log.iov_len);
-        if ((struct dso*)last_unlogged == p)
+                &p->logged, memory_order_relaxed)) {
+            log_dso(p);
+        }
+        if ((struct dso*)last_unlogged == p) {
             break;
+        }
     }
 }
 
@@ -1215,6 +1366,7 @@ __NO_SAFESTACK static zx_status_t load_library_vmo(zx_handle_t vmo,
     p->l_map.l_name = (void*)&p->buf[ndeps];
     memcpy(p->l_map.l_name, name, namelen);
     p->l_map.l_name[namelen] = '\0';
+    assign_module_id(p);
     format_build_id_log(p, p->l_map.l_name + namelen + 1, p->l_map.l_name, namelen);
     if (runtime)
         do_tls_layout(p, p->l_map.l_name + namelen + 1 + build_id_log_len, n_th);
@@ -1343,6 +1495,7 @@ __NO_SAFESTACK NO_ASAN static void kernel_mapped_dso(struct dso* p) {
     max_addr = (max_addr + PAGE_SIZE - 1) & -PAGE_SIZE;
     p->map = laddr(p, min_addr);
     p->map_len = max_addr - min_addr;
+    assign_module_id(p);
 }
 
 void __libc_exit_fini(void) {
