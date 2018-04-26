@@ -6,7 +6,7 @@ authors = ["Craig Tiller <ctiller@google.com>"]
 [dependencies]
 mesh-protocol = "*"
 flatten-future-sink = "*"
-futures = { version = "0.2.1", features = ["nightly"] }
+futures = "=0.2.0-alpha"
 failure = "*"
 timebomb = "*"
 bytes = "*"

@@ -13,6 +13,7 @@ extern crate flatten_future_sink;
 extern crate slab;
 
 mod async_map;
+mod union_sink;
 
 use async_map::AsyncMap;
 use bytes::Bytes;
@@ -326,8 +327,10 @@ where
                             Ok(s)
                         })
                     })
-                    .left_future(),
-                mesh_protocol::SequenceNum::Fork(src, arg) => {
+                    .left(),
+                // TODO(cramertj): Right() here is needed because future::Either defines left,
+                // right... defeating .left().right() pattern
+                mesh_protocol::SequenceNum::Fork(src, arg) => future::Either::Right({
                     // TODO(ctiller): eliminate copy of arg
                     let arg_clone = arg.clone();
                     let handler_clone = self.handler.clone();
@@ -350,9 +353,9 @@ where
                             );
                             result
                         });
-                    self.add_new_stream(incoming_fut).left_future().right_future()
-                },
-                mesh_protocol::SequenceNum::AcceptIntro(arg) => {
+                    self.add_new_stream(incoming_fut).left()
+                }),
+                mesh_protocol::SequenceNum::AcceptIntro(arg) => future::Either::Right({
                     let incoming_fut = self.handler.borrow_mut()
                         // TODO(ctiller): eliminate copy
                         .intro(StreamData {
@@ -361,20 +364,24 @@ where
                             outgoing_tip: 1.into(),
                             outgoing: VecDeque::new(),
                         }, arg.clone());
-                    self.add_new_stream(incoming_fut).right_future().right_future()
-                },
+                    self.add_new_stream(incoming_fut).right()
+                }),
+                // TODO(cramertj): add an Either impl to Sink and remove UnionSink
             };
             let handler_clone = self.handler.clone();
             fut.map(move |s| {
-                handler_clone
-                    .borrow_mut()
-                    .stream_begin_msg(s, rh.seq.index(), rh.private_len)
-                    .left_sink()
+                let result = union_sink::UnionSink::from_a(
+                    handler_clone
+                        .borrow_mut()
+                        .stream_begin_msg(s, rh.seq.index(), rh.private_len),
+                );
+                result
             }).left()
         } else {
             self.outgoing
                 .lookup(rh.dst)
-                .map(|out| out.borrow_mut().begin_msg(rh).right_sink())
+                // TODO(cramertj): add an Either impl to Sink and remove UnionSink
+                .map(|out| union_sink::UnionSink::from_b(out.borrow_mut().begin_msg(rh)))
                 .right()
         };
         flatten_future_sink::new(fut)

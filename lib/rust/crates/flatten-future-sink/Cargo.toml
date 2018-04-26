@@ -4,4 +4,4 @@ version = "0.1.0"
 authors = ["Craig Tiller <ctiller@google.com>"]
 
 [dependencies]
-futures = { version = "0.2.1", features = ["nightly"] }
+futures = "=0.2.0-alpha"
