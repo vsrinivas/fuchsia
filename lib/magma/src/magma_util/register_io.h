@@ -9,6 +9,8 @@
 #include "platform_mmio.h"
 #include <memory>
 
+namespace magma {
+
 // RegisterIo wraps mmio access.
 class RegisterIo {
 public:
@@ -59,5 +61,7 @@ private:
     std::unique_ptr<magma::PlatformMmio> mmio_;
     std::unique_ptr<Hook> hook_;
 };
+
+} // namespace magma
 
 #endif // REGISTER_IO_H

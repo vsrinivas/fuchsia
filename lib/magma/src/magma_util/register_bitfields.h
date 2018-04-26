@@ -64,7 +64,7 @@
 //   DEF_FIELD(23, 0, data_m_value)
 // To match up, we put the upper bit first and use an inclusive bit range.
 
-namespace registers {
+namespace magma {
 
 // An instance of RegisterBase represents a staging copy of a register,
 // which can be written to the register itself.  It knows the register's
@@ -209,26 +209,26 @@ private:
 #define DEF_FIELD(BIT_HIGH, BIT_LOW, NAME)                                                         \
     static_assert((BIT_HIGH) > (BIT_LOW), "Upper bit goes before lower bit");                      \
     static_assert((BIT_HIGH) < 32, "Upper bit is out of range");                                   \
-    registers::BitfieldRef<uint32_t> NAME()                                                        \
+    magma::BitfieldRef<uint32_t> NAME()                                                            \
     {                                                                                              \
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));           \
+        return magma::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW));               \
     }
 
 #define DEF_BIT(BIT, NAME)                                                                         \
     static_assert((BIT) < 32, "Bit is out of range");                                              \
-    registers::BitfieldRef<uint32_t> NAME()                                                        \
+    magma::BitfieldRef<uint32_t> NAME()                                                            \
     {                                                                                              \
-        return registers::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT), (BIT));                    \
+        return magma::BitfieldRef<uint32_t>(reg_value_ptr(), (BIT), (BIT));                        \
     }
 
 // This defines an accessor (named SUBFIELD_NAME) for a bit range of a
 // field (named COMBINED_FIELD) in a struct.
 #define DEF_SUBFIELD(COMBINED_FIELD, BIT_HIGH, BIT_LOW, SUBFIELD_NAME)                             \
-    registers::BitfieldRef<uint8_t> SUBFIELD_NAME()                                                \
+    magma::BitfieldRef<uint8_t> SUBFIELD_NAME()                                                    \
     {                                                                                              \
-        return registers::BitfieldRef<uint8_t>(&COMBINED_FIELD, (BIT_HIGH), (BIT_LOW));            \
+        return magma::BitfieldRef<uint8_t>(&COMBINED_FIELD, (BIT_HIGH), (BIT_LOW));                \
     }
 
-} // namespace registers
+} // namespace magma
 
 #endif

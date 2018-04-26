@@ -12,12 +12,12 @@
 
 class ForceWake {
 public:
-    static void reset(RegisterIo* reg_io, registers::ForceWake::Domain domain)
+    static void reset(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain)
     {
         registers::ForceWake::reset(reg_io, domain);
     }
 
-    static void request(RegisterIo* reg_io, registers::ForceWake::Domain domain)
+    static void request(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain)
     {
         if (registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift))
             return;
@@ -26,7 +26,7 @@ public:
         wait(reg_io, domain, true);
     }
 
-    static void release(RegisterIo* reg_io, registers::ForceWake::Domain domain)
+    static void release(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain)
     {
         if ((registers::ForceWake::read_status(reg_io, domain) & (1 << kThreadShift)) == 0)
             return;
@@ -36,7 +36,7 @@ public:
     }
 
 private:
-    static void wait(RegisterIo* reg_io, registers::ForceWake::Domain domain, bool set)
+    static void wait(magma::RegisterIo* reg_io, registers::ForceWake::Domain domain, bool set)
     {
         uint32_t status;
         for (unsigned int ms = 0; ms < kRetryMaxMs; ms++) {

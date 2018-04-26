@@ -15,12 +15,12 @@ namespace {
 
 class FakeOwner : public AddressManager::Owner {
 public:
-    FakeOwner(RegisterIo* regs) : register_io_(regs) {}
+    FakeOwner(magma::RegisterIo* regs) : register_io_(regs) {}
 
-    RegisterIo* register_io() override { return register_io_; }
+    magma::RegisterIo* register_io() override { return register_io_; }
 
 private:
-    RegisterIo* register_io_;
+    magma::RegisterIo* register_io_;
 };
 
 class TestConnectionOwner : public MsdArmConnection::Owner {
@@ -41,7 +41,7 @@ static constexpr uint64_t kMemoryAttributes = 0x8848u;
 
 TEST(AddressManager, MultipleAtoms)
 {
-    std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     FakeOwner owner(reg_io.get());
     AddressManager address_manager(&owner, 8);
     TestConnectionOwner connection_owner(&address_manager);
@@ -89,7 +89,7 @@ TEST(AddressManager, MultipleAtoms)
 
 TEST(AddressManager, PreferUnused)
 {
-    std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     FakeOwner owner(reg_io.get());
     AddressManager address_manager(&owner, 8);
     TestConnectionOwner connection_owner(&address_manager);
@@ -111,7 +111,7 @@ TEST(AddressManager, PreferUnused)
 
 TEST(AddressManager, ReuseSlot)
 {
-    std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     FakeOwner owner(reg_io.get());
 
     const uint32_t kNumberAddressSpaces = 8;
@@ -158,7 +158,7 @@ TEST(AddressManager, ReuseSlot)
 
 TEST(AddressManager, FlushAddressRange)
 {
-    std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     FakeOwner owner(reg_io.get());
     auto mapper = std::unique_ptr<MockBusMapper>();
 

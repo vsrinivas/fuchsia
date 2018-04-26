@@ -24,7 +24,7 @@ class AddressManager final : public AddressSpaceObserver {
 public:
     class Owner {
     public:
-        virtual RegisterIo* register_io() = 0;
+        virtual magma::RegisterIo* register_io() = 0;
     };
 
     AddressManager(Owner* owner, uint32_t address_slot_count);
@@ -61,12 +61,12 @@ private:
     struct HardwareSlot {
         HardwareSlot(uint32_t slot) : registers(slot) {}
 
-        void FlushMmuRange(RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
+        void FlushMmuRange(magma::RegisterIo* io, uint64_t start, uint64_t length, bool synchronous)
             FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
         // Wait for the MMU to finish processing any existing commands.
-        void WaitForMmuIdle(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
-        void InvalidateSlot(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
-        void UnlockMmu(RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+        void WaitForMmuIdle(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+        void InvalidateSlot(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
+        void UnlockMmu(magma::RegisterIo* io) FXL_EXCLUSIVE_LOCKS_REQUIRED(lock);
 
         std::mutex lock;
         FXL_GUARDED_BY(lock) registers::AsRegisters registers;

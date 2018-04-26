@@ -22,7 +22,7 @@ class EngineCommandStreamer {
 public:
     class Owner {
     public:
-        virtual RegisterIo* register_io() = 0;
+        virtual magma::RegisterIo* register_io() = 0;
         virtual Sequencer* sequencer() = 0;
         virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
         // Keep the device informed when we have scheduled command sequences
@@ -62,7 +62,7 @@ protected:
     // from intel-gfx-prm-osrc-bdw-vol03-gpu_overview_3.pdf p.7
     static constexpr uint32_t kRenderEngineMmioBase = 0x2000;
 
-    RegisterIo* register_io() { return owner_->register_io(); }
+    magma::RegisterIo* register_io() { return owner_->register_io(); }
 
     uint32_t mmio_base() const { return mmio_base_; }
 

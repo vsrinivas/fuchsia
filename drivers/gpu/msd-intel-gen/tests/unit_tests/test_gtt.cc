@@ -113,7 +113,7 @@ public:
 
         platform_device_ =
             std::unique_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(reg_size + gtt_size));
-        auto reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(reg_size)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(reg_size));
 
         auto gtt = Gtt::CreateCore(this);
 
@@ -132,7 +132,7 @@ public:
 
         platform_device_ =
             std::shared_ptr<MockPlatformPciDevice>(new MockPlatformPciDevice(bar0_size));
-        auto reg_io = std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(bar0_size)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(bar0_size));
         auto gtt = Gtt::CreateCore(this);
 
         EXPECT_TRUE(gtt->Init(gtt_size));

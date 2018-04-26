@@ -76,8 +76,8 @@ private:
 
     void ReadDisplaySize();
 
-    RegisterIo* register_io_for_interrupt() override { return register_io_.get(); }
-    RegisterIo* register_io() { return register_io_.get(); }
+    magma::RegisterIo* register_io_for_interrupt() override { return register_io_.get(); }
+    magma::RegisterIo* register_io() { return register_io_.get(); }
 
     magma::Status
     ProcessFlip(std::shared_ptr<MsdIntelBuffer> buffer,
@@ -102,7 +102,7 @@ private:
 
     std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<magma::PlatformPciDevice> platform_device_;
-    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<magma::RegisterIo> register_io_;
     std::unique_ptr<InterruptManager> interrupt_manager_;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
 

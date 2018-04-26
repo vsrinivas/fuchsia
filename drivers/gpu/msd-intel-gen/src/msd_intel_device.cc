@@ -200,7 +200,7 @@ bool MsdIntelDevice::BaseInit(void* device_handle)
     if (!mmio)
         return DRETF(false, "failed to map pci bar 0");
 
-    register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+    register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
     if (DeviceId::is_gen9(device_id_)) {
         ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
@@ -311,7 +311,7 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
     DASSERT(data);
     auto device = reinterpret_cast<MsdIntelDevice*>(data);
 
-    RegisterIo* register_io = device->register_io_for_interrupt();
+    magma::RegisterIo* register_io = device->register_io_for_interrupt();
     uint64_t now = get_current_time_ns();
     uint32_t render_interrupt_status = 0;
 

@@ -11,61 +11,61 @@
 
 namespace registers {
 
-class GpuId : public RegisterBase {
+class GpuId : public magma::RegisterBase {
 public:
     DEF_FIELD(3, 0, version_status);
     DEF_FIELD(11, 4, minor_revision);
     DEF_FIELD(15, 12, major_revision);
     DEF_FIELD(31, 16, product_id);
 
-    static auto Get() { return RegisterAddr<GpuId>(0); }
+    static auto Get() { return magma::RegisterAddr<GpuId>(0); }
 };
 
-class L2Features : public RegisterBase {
+class L2Features : public magma::RegisterBase {
 public:
     DEF_FIELD(7, 0, log2_line_size);
     DEF_FIELD(15, 8, associativity);
     DEF_FIELD(23, 16, log2_cache_size);
     DEF_FIELD(31, 24, external_bus_width);
 
-    static auto Get() { return RegisterAddr<L2Features>(0x4); }
+    static auto Get() { return magma::RegisterAddr<L2Features>(0x4); }
 };
 
-class TilerFeatures : public RegisterBase {
+class TilerFeatures : public magma::RegisterBase {
 public:
     DEF_FIELD(5, 0, log2_bin_size_bytes);
     DEF_FIELD(11, 8, max_active_levels);
 
-    static auto Get() { return RegisterAddr<TilerFeatures>(0xc); }
+    static auto Get() { return magma::RegisterAddr<TilerFeatures>(0xc); }
 };
 
-class MemoryFeatures : public RegisterBase {
+class MemoryFeatures : public magma::RegisterBase {
 public:
     DEF_FIELD(1, 0, groups_l2_coherent);
     DEF_FIELD(11, 8, num_l2_slices_minus1);
 
-    static auto Get() { return RegisterAddr<MemoryFeatures>(0x10); }
+    static auto Get() { return magma::RegisterAddr<MemoryFeatures>(0x10); }
 };
 
-class MmuFeatures : public RegisterBase {
+class MmuFeatures : public magma::RegisterBase {
 public:
     DEF_FIELD(7, 0, va_bits);
     DEF_FIELD(15, 8, pa_bits);
 
-    static auto Get() { return RegisterAddr<MmuFeatures>(0x14); }
+    static auto Get() { return magma::RegisterAddr<MmuFeatures>(0x14); }
 };
 
-class ThreadFeatures : public RegisterBase {
+class ThreadFeatures : public magma::RegisterBase {
 public:
     DEF_FIELD(15, 0, max_registers);
     DEF_FIELD(23, 16, max_task_queue);
     DEF_FIELD(29, 24, max_thread_group_split);
     DEF_FIELD(31, 30, impl_tech);
 
-    static auto Get() { return RegisterAddr<ThreadFeatures>(0xac); }
+    static auto Get() { return magma::RegisterAddr<ThreadFeatures>(0xac); }
 };
 
-class CoherencyFeatures : public RegisterBase {
+class CoherencyFeatures : public magma::RegisterBase {
 public:
     // ACE-lite lets the GPU snoop on changes made by the CPU
     DEF_BIT(0, ace_lite);
@@ -75,8 +75,8 @@ public:
 
     DEF_BIT(31, none);
 
-    static auto GetPresent() { return RegisterAddr<CoherencyFeatures>(0x300); }
-    static auto GetEnable() { return RegisterAddr<CoherencyFeatures>(0x304); }
+    static auto GetPresent() { return magma::RegisterAddr<CoherencyFeatures>(0x300); }
+    static auto GetEnable() { return magma::RegisterAddr<CoherencyFeatures>(0x304); }
 };
 
 class GpuCommand {
@@ -95,7 +95,7 @@ public:
     static constexpr uint32_t kCmdSetProtectedMode = 0x9;
 };
 
-class GpuIrqFlags : public RegisterBase {
+class GpuIrqFlags : public magma::RegisterBase {
 public:
     DEF_BIT(0, gpu_fault);
     DEF_BIT(7, multiple_gpu_faults);
@@ -105,32 +105,32 @@ public:
     DEF_BIT(16, performance_counter_sample_completed);
     DEF_BIT(17, clean_caches_completed);
 
-    static auto GetRawStat() { return RegisterAddr<GpuIrqFlags>(0x20); }
-    static auto GetIrqClear() { return RegisterAddr<GpuIrqFlags>(0x24); }
-    static auto GetIrqMask() { return RegisterAddr<GpuIrqFlags>(0x28); }
-    static auto GetStatus() { return RegisterAddr<GpuIrqFlags>(0x2c); }
+    static auto GetRawStat() { return magma::RegisterAddr<GpuIrqFlags>(0x20); }
+    static auto GetIrqClear() { return magma::RegisterAddr<GpuIrqFlags>(0x24); }
+    static auto GetIrqMask() { return magma::RegisterAddr<GpuIrqFlags>(0x28); }
+    static auto GetStatus() { return magma::RegisterAddr<GpuIrqFlags>(0x2c); }
 };
 
-class MmuIrqFlags : public RegisterBase {
+class MmuIrqFlags : public magma::RegisterBase {
 public:
     DEF_FIELD(15, 0, pf_flags);
     DEF_FIELD(31, 16, bf_flags);
 
-    static auto GetRawStat() { return RegisterAddr<MmuIrqFlags>(0x2000); }
-    static auto GetIrqClear() { return RegisterAddr<MmuIrqFlags>(0x2004); }
-    static auto GetIrqMask() { return RegisterAddr<MmuIrqFlags>(0x2008); }
-    static auto GetStatus() { return RegisterAddr<MmuIrqFlags>(0x200c); }
+    static auto GetRawStat() { return magma::RegisterAddr<MmuIrqFlags>(0x2000); }
+    static auto GetIrqClear() { return magma::RegisterAddr<MmuIrqFlags>(0x2004); }
+    static auto GetIrqMask() { return magma::RegisterAddr<MmuIrqFlags>(0x2008); }
+    static auto GetStatus() { return magma::RegisterAddr<MmuIrqFlags>(0x200c); }
 };
 
-class JobIrqFlags : public RegisterBase {
+class JobIrqFlags : public magma::RegisterBase {
 public:
     DEF_FIELD(15, 0, finished_slots);
     DEF_FIELD(31, 16, failed_slots);
 
-    static auto GetRawStat() { return RegisterAddr<JobIrqFlags>(0x1000); }
-    static auto GetIrqClear() { return RegisterAddr<JobIrqFlags>(0x1004); }
-    static auto GetIrqMask() { return RegisterAddr<JobIrqFlags>(0x1008); }
-    static auto GetStatus() { return RegisterAddr<JobIrqFlags>(0x100c); }
+    static auto GetRawStat() { return magma::RegisterAddr<JobIrqFlags>(0x1000); }
+    static auto GetIrqClear() { return magma::RegisterAddr<JobIrqFlags>(0x1004); }
+    static auto GetIrqMask() { return magma::RegisterAddr<JobIrqFlags>(0x1008); }
+    static auto GetStatus() { return magma::RegisterAddr<JobIrqFlags>(0x100c); }
 };
 
 class CoreReadyState {
@@ -167,7 +167,8 @@ public:
     };
 
     // Returns a bitmask of the cores in a specified state.
-    static uint64_t ReadBitmask(RegisterIo* register_io, CoreType core_type, StatusType action_type)
+    static uint64_t ReadBitmask(magma::RegisterIo* register_io, CoreType core_type,
+                                StatusType action_type)
     {
         DASSERT(core_type != CoreType::kCoreStack);
 
@@ -176,7 +177,7 @@ public:
                (static_cast<uint64_t>(register_io->Read32(offset + 4)) << 32);
     }
 
-    static void WriteState(RegisterIo* register_io, enum CoreType core_type,
+    static void WriteState(magma::RegisterIo* register_io, enum CoreType core_type,
                            enum ActionType action_type, uint64_t value)
     {
         uint32_t offset = static_cast<uint32_t>(core_type) + static_cast<uint32_t>(action_type);
@@ -189,32 +190,32 @@ public:
     }
 };
 
-class GpuFaultStatus : public RegisterBase {
+class GpuFaultStatus : public magma::RegisterBase {
 public:
-    static auto Get() { return RegisterAddr<GpuFaultStatus>(0x3c); }
+    static auto Get() { return magma::RegisterAddr<GpuFaultStatus>(0x3c); }
 };
 
-class GpuFaultAddress : public RegisterPairBase {
+class GpuFaultAddress : public magma::RegisterPairBase {
 public:
-    static auto Get() { return RegisterAddr<GpuFaultAddress>(0x40); }
+    static auto Get() { return magma::RegisterAddr<GpuFaultAddress>(0x40); }
 };
 
-class AsTranslationTable : public RegisterPairBase {
+class AsTranslationTable : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x0;
 };
 
-class AsMemoryAttributes : public RegisterPairBase {
+class AsMemoryAttributes : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x8;
 };
 
-class AsLockAddress : public RegisterPairBase {
+class AsLockAddress : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x10;
 };
 
-class AsCommand : public RegisterBase {
+class AsCommand : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x18;
 
@@ -229,27 +230,27 @@ public:
     };
 };
 
-class AsFaultStatus : public RegisterBase {
+class AsFaultStatus : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x1c;
 };
 
-class AsFaultAddress : public RegisterPairBase {
+class AsFaultAddress : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x20;
 };
 
-class AsStatus : public RegisterBase {
+class AsStatus : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x28;
 };
 
-class AsTransConfig : public RegisterPairBase {
+class AsTransConfig : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x30;
 };
 
-class AsFaultExtra : public RegisterPairBase {
+class AsFaultExtra : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x30;
 };
@@ -280,15 +281,16 @@ public:
     auto FaultExtra() { return GetReg<registers::AsFaultExtra>(); }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetReg()
+    template <class RegType> magma::RegisterAddr<RegType> GetReg()
     {
-        return RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr + kAsStride * address_space_);
+        return magma::RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr +
+                                            kAsStride * address_space_);
     }
 
     uint32_t address_space_;
 };
 
-class JobSlotConfig : public RegisterBase {
+class JobSlotConfig : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x18;
     static constexpr uint32_t kBaseAddrNext = 0x58;
@@ -305,25 +307,25 @@ public:
     DEF_FIELD(23, 16, thread_priority);
 };
 
-class JobSlotHead : public RegisterPairBase {
+class JobSlotHead : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x00;
     static constexpr uint32_t kBaseAddrNext = 0x40;
 };
 
-class JobSlotAffinity : public RegisterPairBase {
+class JobSlotAffinity : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x10;
     static constexpr uint32_t kBaseAddrNext = 0x50;
 };
 
-class JobSlotXAffinity : public RegisterBase {
+class JobSlotXAffinity : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x1c;
     static constexpr uint32_t kBaseAddrNext = 0x5c;
 };
 
-class JobSlotCommand : public RegisterBase {
+class JobSlotCommand : public magma::RegisterBase {
 public:
     static constexpr uint32_t kCommandNop = 0x0;
     static constexpr uint32_t kCommandStart = 0x1;
@@ -338,17 +340,17 @@ public:
     static constexpr uint32_t kBaseAddrNext = 0x60;
 };
 
-class JobSlotStatus : public RegisterBase {
+class JobSlotStatus : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x24;
 };
 
-class JobSlotTail : public RegisterPairBase {
+class JobSlotTail : public magma::RegisterPairBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x08;
 };
 
-class JobSlotFlushId : public RegisterBase {
+class JobSlotFlushId : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddrNext = 0x70;
 };
@@ -384,15 +386,16 @@ public:
     auto CommandNext() { return GetRegNext<registers::JobSlotCommand>(); }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetRegNext()
+    template <class RegType> magma::RegisterAddr<RegType> GetRegNext()
     {
-        return RegisterAddr<RegType>(RegType::kBaseAddrNext + kBaseAddr +
-                                     kJobSlotStride * job_slot_);
+        return magma::RegisterAddr<RegType>(RegType::kBaseAddrNext + kBaseAddr +
+                                            kJobSlotStride * job_slot_);
     }
 
-    template <class RegType> RegisterAddr<RegType> GetReg()
+    template <class RegType> magma::RegisterAddr<RegType> GetReg()
     {
-        return RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr + kJobSlotStride * job_slot_);
+        return magma::RegisterAddr<RegType>(RegType::kBaseAddr + kBaseAddr +
+                                            kJobSlotStride * job_slot_);
     }
 
     uint32_t job_slot_;

@@ -91,7 +91,7 @@ private:
     DASSERT(!magma::ThreadIdCheck::IsCurrent(*x))
 
     // EngineCommandStreamer::Owner
-    RegisterIo* register_io() override
+    magma::RegisterIo* register_io() override
     {
         CHECK_THREAD_IS_CURRENT(device_thread_id_);
         DASSERT(register_io_);
@@ -99,7 +99,7 @@ private:
     }
 
     // InterruptManager::Owner
-    RegisterIo* register_io_for_interrupt() override
+    magma::RegisterIo* register_io_for_interrupt() override
     {
         DASSERT(register_io_);
         return register_io_.get();
@@ -161,7 +161,7 @@ private:
     void RequestMaxFreq();
 
     static void DumpFault(DumpState* dump_out, uint32_t fault);
-    static void DumpFaultAddress(DumpState* dump_out, RegisterIo* register_io);
+    static void DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
 
     int DeviceThreadLoop();
@@ -194,7 +194,7 @@ private:
     std::unique_ptr<GpuProgress> progress_;
 
     std::unique_ptr<MsdIntelPciDevice> platform_device_;
-    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<magma::RegisterIo> register_io_;
     std::shared_ptr<Gtt> gtt_;
     std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
     std::shared_ptr<GlobalContext> global_context_;

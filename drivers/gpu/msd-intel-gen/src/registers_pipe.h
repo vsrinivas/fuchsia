@@ -14,7 +14,7 @@ namespace registers {
 
 // PIPE_SRCSZ: Source image size for pipe.
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
-class PipeSourceSize : public RegisterBase {
+class PipeSourceSize : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x6001C;
 
@@ -22,7 +22,7 @@ public:
     DEF_FIELD(11, 0, vertical_source_size);
 };
 
-class PipeScalerControl : public RegisterBase {
+class PipeScalerControl : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x68180;
 
@@ -36,7 +36,7 @@ public:
     DEF_FIELD(24, 23, filter_select);
 };
 
-class PipeScalerWindowSize : public RegisterBase {
+class PipeScalerWindowSize : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x68174;
 
@@ -45,7 +45,7 @@ public:
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.601
-class PlaneSurfaceAddress : public RegisterBase {
+class PlaneSurfaceAddress : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x7019C;
 
@@ -58,14 +58,14 @@ public:
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.598
-class PlaneSurfaceStride : public RegisterBase {
+class PlaneSurfaceStride : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70188;
 
     DEF_FIELD(9, 0, stride);
 };
 
-class PlaneSurfaceSize : public RegisterBase {
+class PlaneSurfaceSize : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70190;
 
@@ -74,7 +74,7 @@ public:
 };
 
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf p.559-566
-class PlaneControl : public RegisterBase {
+class PlaneControl : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x70180;
 
@@ -108,7 +108,7 @@ public:
 
 // PLANE_BUF_CFG: Range of buffer used temporarily during scanout.
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
-class PlaneBufCfg : public RegisterBase {
+class PlaneBufCfg : public magma::RegisterBase {
 public:
     static constexpr uint32_t kBaseAddr = 0x7027C;
 
@@ -126,7 +126,7 @@ public:
     static constexpr uint32_t kEnableOffsetPipeA = 0x4440C;
     static constexpr uint32_t kPlane1FlipDoneBit = 1 << 3;
 
-    static void write_mask(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
+    static void write_mask(magma::RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
     {
         uint32_t offset, val;
         switch (pipe) {
@@ -140,7 +140,7 @@ public:
         reg_io->Write32(offset, val);
     }
 
-    static void write_enable(RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
+    static void write_enable(magma::RegisterIo* reg_io, Pipe pipe, uint32_t bits, bool enable)
     {
         uint32_t offset, val;
         switch (pipe) {
@@ -154,7 +154,7 @@ public:
         reg_io->Write32(offset, val);
     }
 
-    static void process_identity_bits(RegisterIo* reg_io, Pipe pipe, uint32_t bits,
+    static void process_identity_bits(magma::RegisterIo* reg_io, Pipe pipe, uint32_t bits,
                                       bool* bits_present_out)
     {
         uint32_t offset, val;
@@ -193,9 +193,9 @@ public:
     auto PlaneBufCfg() { return GetReg<registers::PlaneBufCfg>(); }
 
 private:
-    template <class RegType> RegisterAddr<RegType> GetReg()
+    template <class RegType> magma::RegisterAddr<RegType> GetReg()
     {
-        return RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_number_);
+        return magma::RegisterAddr<RegType>(RegType::kBaseAddr + 0x1000 * pipe_number_);
     }
 
     uint32_t pipe_number_;

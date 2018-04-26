@@ -105,7 +105,7 @@ bool MsdIntelDeviceCore::Init(void* device_handle)
     if (!mmio)
         return DRETF(false, "failed to map pci bar 0");
 
-    register_io_ = std::unique_ptr<RegisterIo>(new RegisterIo(std::move(mmio)));
+    register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
     bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
     if (!bus_mapper_)

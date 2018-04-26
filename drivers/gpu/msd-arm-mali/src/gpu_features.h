@@ -63,7 +63,7 @@ struct GpuFeatures {
     uint32_t job_slot_count;
     uint32_t address_space_count;
 
-    void ReadFrom(RegisterIo* io)
+    void ReadFrom(magma::RegisterIo* io)
     {
         gpu_id = registers::GpuId::Get().ReadFrom(io);
         l2_features = registers::L2Features::Get().ReadFrom(io);
@@ -97,7 +97,7 @@ struct GpuFeatures {
     }
 
 private:
-    uint64_t ReadPair(RegisterIo* io, uint32_t low_offset)
+    uint64_t ReadPair(magma::RegisterIo* io, uint32_t low_offset)
     {
         uint64_t low_word = io->Read32(low_offset);
         uint64_t high_word = io->Read32(low_offset + 4);

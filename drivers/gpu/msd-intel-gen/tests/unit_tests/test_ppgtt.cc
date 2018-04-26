@@ -181,8 +181,7 @@ public:
 
     static void PrivatePat()
     {
-        auto reg_io =
-            std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(8ULL * 1024 * 1024)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(8ULL * 1024 * 1024));
 
         PerProcessGtt::InitPrivatePat(reg_io.get());
 

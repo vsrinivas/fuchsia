@@ -54,7 +54,7 @@ public:
 
     void MockDump()
     {
-        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
 
         uint32_t offset = static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
                           static_cast<uint32_t>(registers::CoreReadyState::StatusType::kReady);
@@ -131,7 +131,7 @@ public:
 
     void MockExecuteAtom()
     {
-        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(1024 * 1024)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
 
         std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), false);
         EXPECT_NE(device, nullptr);

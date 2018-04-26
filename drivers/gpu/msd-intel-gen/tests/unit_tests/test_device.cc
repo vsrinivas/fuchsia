@@ -119,7 +119,7 @@ public:
 
     void MockDump()
     {
-        std::unique_ptr<RegisterIo> reg_io(new RegisterIo(MockMmio::Create(2 * 1024 * 1024)));
+        auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(2 * 1024 * 1024));
 
         reg_io->Write32(registers::FaultTlbReadData::kOffset0, 0xabcd1234);
         reg_io->Write32(registers::FaultTlbReadData::kOffset1, 0x1f);

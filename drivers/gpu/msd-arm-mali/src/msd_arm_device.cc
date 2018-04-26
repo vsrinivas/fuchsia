@@ -162,7 +162,7 @@ bool MsdArmDevice::Init(void* device_handle)
     if (!mmio)
         return DRETF(false, "failed to map registers");
 
-    register_io_ = std::make_unique<RegisterIo>(std::move(mmio));
+    register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
     gpu_features_.ReadFrom(register_io_.get());
     magma::log(magma::LOG_INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
@@ -585,7 +585,8 @@ magma::PlatformPort* MsdArmDevice::GetPlatformPort() { return device_port_.get()
 
 void MsdArmDevice::UpdateGpuActive(bool active) { power_manager_->UpdateGpuActive(active); }
 
-void MsdArmDevice::DumpRegisters(const GpuFeatures& features, RegisterIo* io, DumpState* dump_state)
+void MsdArmDevice::DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
+                                 DumpState* dump_state)
 {
     static struct {
         const char* name;
@@ -709,7 +710,7 @@ magma::Status MsdArmDevice::ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> c
     return MAGMA_STATUS_OK;
 }
 
-void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* register_io)
+void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* register_io)
 {
     TRACE_DURATION("magma", "ExecuteAtomOnDevice", "address", atom->gpu_address(), "slot",
                    atom->slot());

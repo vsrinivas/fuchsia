@@ -6,14 +6,14 @@
 
 #include "registers.h"
 
-PowerManager::PowerManager(RegisterIo* io)
+PowerManager::PowerManager(magma::RegisterIo* io)
 {
     // Initialize current set of running cores.
     ReceivedPowerInterrupt(io);
     last_check_time_ = std::chrono::steady_clock::now();
 }
 
-void PowerManager::EnableCores(RegisterIo* io, uint64_t shader_bitmask)
+void PowerManager::EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask)
 {
     registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kShader,
                                           registers::CoreReadyState::ActionType::kActionPowerOn,
@@ -24,7 +24,7 @@ void PowerManager::EnableCores(RegisterIo* io, uint64_t shader_bitmask)
                                           registers::CoreReadyState::ActionType::kActionPowerOn, 1);
 }
 
-void PowerManager::ReceivedPowerInterrupt(RegisterIo* io)
+void PowerManager::ReceivedPowerInterrupt(magma::RegisterIo* io)
 {
     tiler_ready_status_ =
         registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kTiler,

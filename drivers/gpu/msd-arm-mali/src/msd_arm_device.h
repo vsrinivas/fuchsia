@@ -79,7 +79,8 @@ public:
         };
         std::vector<AddressSpaceStatus> address_space_status;
     };
-    static void DumpRegisters(const GpuFeatures& features, RegisterIo* io, DumpState* dump_state);
+    static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
+                              DumpState* dump_state);
     void Dump(DumpState* dump_state);
     void DumpToString(std::string& dump_string);
     void FormatDump(DumpState& dump_state, std::string& dump_string);
@@ -115,7 +116,7 @@ private:
     class ScheduleAtomRequest;
     class CancelAtomsRequest;
 
-    RegisterIo* register_io() override
+    magma::RegisterIo* register_io() override
     {
         DASSERT(register_io_);
         return register_io_.get();
@@ -139,7 +140,7 @@ private:
     magma::Status ProcessScheduleAtoms();
     magma::Status ProcessCancelAtoms(std::weak_ptr<MsdArmConnection> connection);
 
-    void ExecuteAtomOnDevice(MsdArmAtom* atom, RegisterIo* registers);
+    void ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* registers);
 
     // JobScheduler::Owner implementation.
     void RunAtom(MsdArmAtom* atom) override;
@@ -169,7 +170,7 @@ private:
     FXL_GUARDED_BY(schedule_mutex_) std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule_;
 
     std::unique_ptr<magma::PlatformDevice> platform_device_;
-    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<magma::RegisterIo> register_io_;
     std::unique_ptr<magma::PlatformInterrupt> gpu_interrupt_;
     std::unique_ptr<magma::PlatformInterrupt> job_interrupt_;
     std::unique_ptr<magma::PlatformInterrupt> mmu_interrupt_;

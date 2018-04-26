@@ -358,7 +358,7 @@ gen_pte_t PerProcessGtt::get_pte(gpu_addr_t gpu_addr)
 
 // Initialize the private page attribute registers, used to define the meaning
 // of the pat bits in the page table entries.
-void PerProcessGtt::InitPrivatePat(RegisterIo* reg_io)
+void PerProcessGtt::InitPrivatePat(magma::RegisterIo* reg_io)
 {
     DASSERT(gen_ppat_index(CACHING_WRITE_THROUGH) == 2);
     DASSERT(gen_ppat_index(CACHING_NONE) == 3);

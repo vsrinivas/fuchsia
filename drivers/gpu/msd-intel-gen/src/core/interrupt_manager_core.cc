@@ -24,7 +24,7 @@ public:
 private:
     void ThreadLoop();
 
-    RegisterIo* register_io() { return owner_->register_io_for_interrupt(); }
+    magma::RegisterIo* register_io() { return owner_->register_io_for_interrupt(); }
 
     magma::PlatformInterrupt* platform_interrupt() { return interrupt_.get(); }
 

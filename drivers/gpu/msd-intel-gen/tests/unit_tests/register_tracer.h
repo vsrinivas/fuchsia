@@ -8,7 +8,7 @@
 #ifndef REGISTER_TRACER_H
 #define REGISTER_TRACER_H
 
-class RegisterTracer : public RegisterIo::Hook {
+class RegisterTracer : public magma::RegisterIo::Hook {
 public:
     struct Operation {
         enum Type { WRITE32, READ32, READ64 };

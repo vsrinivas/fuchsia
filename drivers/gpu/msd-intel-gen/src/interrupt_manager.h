@@ -14,7 +14,7 @@ class InterruptManager {
 public:
     class Owner {
     public:
-        virtual RegisterIo* register_io_for_interrupt() = 0;
+        virtual magma::RegisterIo* register_io_for_interrupt() = 0;
         virtual magma::PlatformPciDevice* platform_device() = 0;
     };
 

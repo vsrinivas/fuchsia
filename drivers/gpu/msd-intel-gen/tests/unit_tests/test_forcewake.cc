@@ -22,8 +22,7 @@ public:
                 break;
         }
 
-        register_io_ =
-            std::unique_ptr<RegisterIo>(new RegisterIo(MockMmio::Create(2 * 1024 * 1024)));
+        register_io_ = std::make_unique<magma::RegisterIo>(MockMmio::Create(2 * 1024 * 1024));
     }
 
     void Reset()
@@ -62,7 +61,7 @@ public:
     }
 
 private:
-    std::unique_ptr<RegisterIo> register_io_;
+    std::unique_ptr<magma::RegisterIo> register_io_;
     registers::ForceWake::Domain domain_;
     uint32_t offset_;
     uint32_t status_offset_;

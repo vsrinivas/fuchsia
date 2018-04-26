@@ -39,7 +39,7 @@ public:
 
     uint64_t Size() const override { return kSize; }
 
-    static void InitPrivatePat(RegisterIo* reg_io);
+    static void InitPrivatePat(magma::RegisterIo* reg_io);
 
     // AddressSpace overrides
     bool Alloc(size_t size, uint8_t align_pow2, uint64_t* addr_out) override;
