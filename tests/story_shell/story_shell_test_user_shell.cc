@@ -30,16 +30,24 @@ namespace {
 constexpr char kNullModule[] = "common_null_module";
 constexpr char kNullAction[] = "com.google.fuchsia.common.null";
 
-std::function<void(fidl::StringPtr)> Count(const int limit, std::function<void()> done) {
-  return [limit, count = std::make_shared<int>(0), done](fidl::StringPtr value) {
+// Creates function that invokes the |proceed| callback after being called |limit| times.
+std::function<void(fidl::StringPtr)> NewBarrierClosure(const int limit,
+                                                       std::function<void()> proceed) {
+  return [limit, count = std::make_shared<int>(0),
+          proceed = std::move(proceed)](fidl::StringPtr value) {
     // Cf. function Put() in story_shell_test_story_shell.cc: The value is the
     // same as the key we wait to Get().
     FXL_LOG(INFO) << "Got: " << value;
     ++*count;
     if (*count == limit) {
-      done();
+      proceed();
     }
   };
+}
+
+// Defined for convenience only.
+void Get(const fidl::StringPtr& message, std::function<void(fidl::StringPtr)> callback) {
+  modular::testing::GetStore()->Get(message, std::move(callback));
 }
 
 // Cf. README.md for what this test does and how.
@@ -91,16 +99,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_run1_{"Story1 Run1"};
 
   void Story1_Run1(fidl::StringPtr story_id) {
-    auto check = Count(5, [this] {
+    auto proceed_after_5 = NewBarrierClosure(5, [this] {
         story1_run1_.Pass();
         Story1_Stop1();
       });
 
-    modular::testing::GetStore()->Get("root:one", check);
-    modular::testing::GetStore()->Get("root:one manifest", check);
-    modular::testing::GetStore()->Get("root:one:two", check);
-    modular::testing::GetStore()->Get("root:one:two manifest", check);
-    modular::testing::GetStore()->Get("root:one:two ordering", check);
+    Get("root:one", proceed_after_5);
+    Get("root:one manifest", proceed_after_5);
+    Get("root:one:two", proceed_after_5);
+    Get("root:one:two manifest", proceed_after_5);
+    Get("root:one:two ordering", proceed_after_5);
 
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
@@ -144,16 +152,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story1_run2_{"Story1 Run2"};
 
   void Story1_Run2() {
-    auto check = Count(5, [this] {
+    auto proceed_after_5 = NewBarrierClosure(5, [this] {
         story1_run2_.Pass();
         Story1_Stop2();
       });
 
-    modular::testing::GetStore()->Get("root:one", check);
-    modular::testing::GetStore()->Get("root:one manifest", check);
-    modular::testing::GetStore()->Get("root:one:two", check);
-    modular::testing::GetStore()->Get("root:one:two manifest", check);
-    modular::testing::GetStore()->Get("root:one:two ordering", check);
+    Get("root:one", proceed_after_5);
+    Get("root:one manifest", proceed_after_5);
+    Get("root:one:two", proceed_after_5);
+    Get("root:one:two manifest", proceed_after_5);
+    Get("root:one:two ordering", proceed_after_5);
 
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
@@ -181,16 +189,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_run1_{"Story2 Run1"};
 
   void Story2_Run1(fidl::StringPtr story_id) {
-    auto check = Count(5, [this] {
+    auto proceed_after_5 = NewBarrierClosure(5, [this] {
         story2_run1_.Pass();
         Story2_Stop1();
       });
 
-    modular::testing::GetStore()->Get("root:one", check);
-    modular::testing::GetStore()->Get("root:one manifest", check);
-    modular::testing::GetStore()->Get("root:one:two", check);
-    modular::testing::GetStore()->Get("root:one:two manifest", check);
-    modular::testing::GetStore()->Get("root:one:two ordering", check);
+    Get("root:one", proceed_after_5);
+    Get("root:one manifest", proceed_after_5);
+    Get("root:one:two", proceed_after_5);
+    Get("root:one:two manifest", proceed_after_5);
+    Get("root:one:two ordering", proceed_after_5);
 
     story_provider_->GetController(story_id, story_controller_.NewRequest());
 
@@ -225,16 +233,16 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
   TestPoint story2_run2_{"Story2 Run2"};
 
   void Story2_Run2() {
-    auto check = Count(5, [this] {
+    auto proceed_after_5 = NewBarrierClosure(5, [this] {
         story2_run2_.Pass();
         Story2_Stop2();
       });
 
-    modular::testing::GetStore()->Get("root:one", check);
-    modular::testing::GetStore()->Get("root:one manifest", check);
-    modular::testing::GetStore()->Get("root:one:two", check);
-    modular::testing::GetStore()->Get("root:one:two manifest", check);
-    modular::testing::GetStore()->Get("root:one:two ordering", check);
+    Get("root:one", proceed_after_5);
+    Get("root:one manifest", proceed_after_5);
+    Get("root:one:two", proceed_after_5);
+    Get("root:one:two manifest", proceed_after_5);
+    Get("root:one:two ordering", proceed_after_5);
 
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
