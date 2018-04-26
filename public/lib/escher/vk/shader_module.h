@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/util/debug_print.h"
-#include "lib/escher/vk/descriptor_set.h"
+#include "lib/escher/vk/descriptor_set_layout.h"
 #include "lib/escher/vk/shader_stage.h"
 #include "lib/escher/vk/vulkan_limits.h"
 #include "lib/fxl/memory/ref_counted.h"
@@ -17,8 +17,8 @@ namespace escher {
 class ShaderModule;
 using ShaderModulePtr = fxl::RefPtr<ShaderModule>;
 
-// Listen for changes in a ShaderModule, which result when new SPIR-V is
-// provided to it.
+// Listen for changes in a ShaderModule that occur when new SPIR-V is provided
+// to it.
 class ShaderModuleListener {
  public:
   virtual void OnShaderModuleUpdated(ShaderModule* shader_module) = 0;

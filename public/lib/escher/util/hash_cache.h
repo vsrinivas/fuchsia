@@ -133,9 +133,11 @@ class HashCache {
     }
   }
 
+  size_t cache_hits() const { return cache_hits_; }
+  size_t cache_misses() const { return cache_misses_; }
+
   using ObjectPoolPolicyType = HashCacheObjectPoolPolicy<T, ObjectPoolPolicyT>;
   using ObjectPoolType = ObjectPool<T, ObjectPoolPolicyType>;
-
   const ObjectPoolType& object_pool() const { return object_pool_; }
 
  private:

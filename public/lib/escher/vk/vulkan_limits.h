@@ -8,6 +8,9 @@
 
 namespace escher {
 
+// These are limits imposed by Escher, and are constexpr so that they can be
+// used to statically declare array sizes.  The actual Vulkan limits vary from
+// device to device, and must be queried dynamically.
 struct VulkanLimits {
   static constexpr uint64_t kNumAttachments = 8;
   static constexpr uint64_t kNumBindings = 16;

@@ -13,6 +13,8 @@ namespace escher {
 
 class Buffer;
 class Camera;
+class DescriptorSetAllocator;
+struct DescriptorSetLayout;
 class Escher;
 class Frame;
 class Framebuffer;

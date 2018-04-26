@@ -11,7 +11,7 @@
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/scene/viewing_volume.h"
-#include "lib/escher/vk/descriptor_set.h"
+#include "lib/escher/vk/descriptor_set_layout.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/shader_module.h"
 
