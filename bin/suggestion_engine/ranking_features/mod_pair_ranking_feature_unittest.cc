@@ -5,8 +5,8 @@
 #include "peridot/bin/suggestion_engine/ranking_features/mod_pair_ranking_feature.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/files/path.h"
+#include "lib/fxl/files/scoped_temp_dir.h"
 #include "lib/fxl/logging.h"
 
 namespace modular {
@@ -25,7 +25,6 @@ constexpr char kTestData[] = R"({
     "mod4": 0.8
   }
 })";
-
 
 class ModPairRankingFeatureTest : public ::testing::Test {
  public:
@@ -52,15 +51,15 @@ class ModPairRankingFeatureTest : public ::testing::Test {
 
 // Creates the values from a context query to mock the modules in a focused
 // story based on which this ranking feature computes its value.
-void AddValueToContextUpdate(
-    fidl::VectorPtr<ContextValue>& context_update, const std::string& mod) {
+void AddValueToContextUpdate(fidl::VectorPtr<ContextValue>& context_update,
+                             const std::string& mod) {
   ContextValue value;
   value.meta.mod = ModuleMetadata::New();
   value.meta.mod->url = mod;
   context_update.push_back(std::move(value));
 }
 
-TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction)  {
+TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction) {
   CreateStory create_story;
   create_story.module_id = "mod3";
   Action action;
@@ -70,7 +69,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction)  {
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
-  suggestion.prototype =  &prototype;
+  suggestion.prototype = &prototype;
 
   fidl::VectorPtr<ContextValue> context_update;
   AddValueToContextUpdate(context_update, "mod1");
@@ -81,26 +80,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureCreateStoryAction)  {
   EXPECT_EQ(value, 1.0);
 }
 
-TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleToStoryAction)  {
-  AddModuleToStory add_module_to_story;
-  add_module_to_story.module_url = "mod3";
-  Action action;
-  action.set_add_module_to_story(std::move(add_module_to_story));
-  Proposal proposal;
-  proposal.on_selected.push_back(std::move(action));
-  SuggestionPrototype prototype;
-  prototype.proposal = std::move(proposal);
-  RankedSuggestion suggestion;
-  suggestion.prototype =  &prototype;
-
-  fidl::VectorPtr<ContextValue> context_update;
-  AddValueToContextUpdate(context_update, "mod1");
-  mod_pair_feature.UpdateContext(std::move(context_update));
-  double value = mod_pair_feature.ComputeFeature(query, suggestion);
-  EXPECT_EQ(value, 0.5);
-}
-
-TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction)  {
+TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction) {
   Intent intent;
   intent.action.handler = "mod4";
   AddModule add_module;
@@ -112,7 +92,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureAddModuleAction)  {
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
-  suggestion.prototype =  &prototype;
+  suggestion.prototype = &prototype;
 
   fidl::VectorPtr<ContextValue> context_update;
   AddValueToContextUpdate(context_update, "mod3");
@@ -133,7 +113,7 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
-  suggestion.prototype =  &prototype;
+  suggestion.prototype = &prototype;
 
   fidl::VectorPtr<ContextValue> context_update;
   AddValueToContextUpdate(context_update, "mod1");
@@ -143,10 +123,8 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureNoModule) {
 }
 
 TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
-  Intent intent;
-  intent.action.handler = "mod-fiction";
   AddModule add_module;
-  add_module.intent = std::move(intent);
+  add_module.intent.action.handler = "mod-fiction";
   Action action;
   action.set_add_module(std::move(add_module));
   Proposal proposal;
@@ -154,12 +132,12 @@ TEST_F(ModPairRankingFeatureTest, ComputeFeatureMultipleActions) {
   SuggestionPrototype prototype;
   prototype.proposal = std::move(proposal);
   RankedSuggestion suggestion;
-  suggestion.prototype =  &prototype;
+  suggestion.prototype = &prototype;
 
-  AddModuleToStory add_module_to_story;
-  add_module_to_story.module_url = "mod3";
+  add_module = AddModule();
+  add_module.intent.action.handler = "mod3";
   Action action2;
-  action2.set_add_module_to_story(std::move(add_module_to_story));
+  action2.set_add_module(std::move(add_module));
   suggestion.prototype->proposal.on_selected.push_back(std::move(action2));
 
   fidl::VectorPtr<ContextValue> context_update;
@@ -174,8 +152,7 @@ TEST_F(ModPairRankingFeatureTest, CreateContextSelector) {
   auto selector = mod_pair_feature.CreateContextSelector();
   EXPECT_NE(selector, nullptr);
   EXPECT_EQ(selector->type, ContextValueType::MODULE);
-  EXPECT_EQ(selector->meta->story->focused->state,
-            FocusedStateState::FOCUSED);
+  EXPECT_EQ(selector->meta->story->focused->state, FocusedStateState::FOCUSED);
 }
 
 }  // namespace

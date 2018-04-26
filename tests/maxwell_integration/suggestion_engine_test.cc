@@ -737,16 +737,15 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
 
   auto module_id = "foo://bar1";
 
-  modular::AddModuleToStory add_module_to_story;
-  add_module_to_story.story_id = "foo://bar";
-  add_module_to_story.module_name = module_id;
-  add_module_to_story.module_url = module_id;
-  add_module_to_story.module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
-  add_module_to_story.link_name = "";
-  add_module_to_story.surface_relation = modular::SurfaceRelation();
+  modular::AddModule add_module;
+  add_module.story_id = "foo://bar";
+  add_module.module_name = module_id;
+  add_module.intent.action.handler = module_id;
+  add_module.surface_parent_module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  add_module.surface_relation = modular::SurfaceRelation();
 
   modular::Action action;
-  action.set_add_module_to_story(std::move(add_module_to_story));
+  action.set_add_module(std::move(add_module));
   fidl::VectorPtr<modular::Action> actions;
   actions.push_back(std::move(action));
   p.Propose("1", std::move(actions));
