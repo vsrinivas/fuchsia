@@ -25,6 +25,7 @@
 #               "driver" for Zircon driver, "" for standard LK module
 # MODULE_LIBS : shared libraries for a userapp or userlib to depend on
 # MODULE_STATIC_LIBS : static libraries for a userapp or userlib to depend on
+# MODULE_FIDL_LIBS : fidl libraries for a userapp or userlib to depend on the C bindings of
 # MODULE_SO_NAME : linkage name for the shared library
 # MODULE_HOST_LIBS: static libraries for a hostapp or hostlib to depend on
 # MODULE_HOST_SYSLIBS: system libraries for a hostapp or hostlib to depend on
@@ -72,7 +73,7 @@ endif
 
 # all library deps go on the deps list
 _MODULE_DEPS := $(MODULE_DEPS) $(MODULE_LIBS) $(MODULE_STATIC_LIBS) \
-                $(MODULE_HOST_LIBS)
+                $(MODULE_HOST_LIBS) $(MODULE_FIDL_LIBS)
 
 # Catch the depends on nonexistant module error case
 # here where we can tell you what module has the bad deps.

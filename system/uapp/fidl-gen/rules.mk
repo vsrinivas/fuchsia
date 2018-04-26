@@ -11,7 +11,9 @@ MODULE_GROUP := misc
 
 MODULE_SRCS := $(LOCAL_DIR)/main.c
 
-MODULE_STATIC_LIBS := system/ulib/runtime system/ulib/fidl $(LOCAL_DIR)/interfaces
+MODULE_FIDL_LIBS := $(LOCAL_DIR)/interfaces
+
+MODULE_STATIC_LIBS := system/ulib/runtime system/ulib/fidl
 
 MODULE_LIBS := system/ulib/fdio system/ulib/zircon system/ulib/c
 

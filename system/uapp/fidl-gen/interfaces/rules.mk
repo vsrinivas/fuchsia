@@ -6,10 +6,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := userlib
+MODULE_TYPE := fidl
 
 MODULE_SRCS += $(LOCAL_DIR)/test.fidl
-
-MODULE_STATIC_LIBS += system/ulib/fidl
 
 include make/module.mk
