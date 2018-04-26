@@ -20,7 +20,7 @@ enum Enum23 : int32 {
     enum_4 = -23;
 };
 
-[ServiceName="my.Thing"]
+[Discoverable]
 interface Thing {
     1: one_function(string s, bool b) -> ();
     0x2: two_function(string s, bool b);

@@ -50,7 +50,7 @@ interface Provider {
 
 // The service which trace providers use to register themselves with
 // the tracing system.
-[ServiceName="trace_link.Registry"]
+[Discoverable]
 interface Registry {
     // Registers the trace provider.
     // To unregister, simply close the TraceProvider pipe.
