@@ -239,6 +239,32 @@ func TestFallback(t *testing.T) {
 	}
 }
 
+func TestFallbackWhenSocketCloses(t *testing.T) {
+	sin, log := setup(t, "gtag1", "gtag2")
+	sin.Close()
+	old := os.Stderr
+	f, err := ioutil.TempFile("", "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = f
+	defer func() {
+		os.Stderr = old
+		os.Remove(f.Name())
+	}()
+	format := "integer: %d"
+	log.InfoTf("local_tag", format, 10)
+	expectedMsg := fmt.Sprintf("[0][gtag1, gtag2, local_tag] INFO: %s\n", fmt.Sprintf(format, 10))
+	content, err := ioutil.ReadFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(content)
+	if !strings.HasSuffix(got, expectedMsg) {
+		t.Fatalf("%q should have ended in %q", got, expectedMsg)
+	}
+}
+
 func TestMessageLenLimit(t *testing.T) {
 	sin, log := setup(t)
 	msgLen := logger.SOCKET_BUFFER_LEN - 32 - 1 - 1 // 1 for starting and ending null bytes

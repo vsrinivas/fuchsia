@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall/zx"
 
@@ -95,6 +96,7 @@ type Logger struct {
 	tagString   string
 	pid         uint64
 	droppedLogs uint32
+	fallbackMux sync.Mutex
 }
 
 func (l *Logger) setTags(tags []string) error {
@@ -114,6 +116,11 @@ func (l *Logger) setTags(tags []string) error {
 }
 
 func (l *Logger) ActivateFallbackMode() {
+	l.fallbackMux.Lock()
+	defer l.fallbackMux.Unlock()
+	if l.writer.Load() != nil {
+		return //already active
+	}
 	if l.tagString == "" {
 		l.tagString = strings.Join(l.tags, ", ")
 	}
@@ -145,8 +152,6 @@ func NewLogger(options LogInitOptions) (*Logger, error) {
 		if options.Connector == nil {
 			return nil, fmt.Errorf("Init Error: Writer, LogServiceChannel or Connector needs to be provided")
 		}
-		// TODO: Add err handler for when logger service crashes.
-		// Waiting for golang fidl changes to land
 		if sock, err := connectToLogger(options.Connector); err != nil {
 			fmt.Fprintf(os.Stderr, "not able to conenct to log sink, will write logs to stderr: %s", err)
 			l.writer.Store(os.Stderr)
@@ -264,8 +269,20 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 	if w != nil {
 		return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
 	} else {
-		return l.logToSocket(time, logLevel, tag, msg)
+		if err := l.logToSocket(time, logLevel, tag, msg); err != nil {
+			if status, ok := err.(zx.Error); ok {
+				if status.Status == zx.ErrPeerClosed || status.Status == zx.ErrBadState {
+					l.ActivateFallbackMode()
+					w = l.writer.Load()
+					if w != nil {
+						return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
+					}
+				}
+			}
+			return err
+		}
 	}
+	return nil
 }
 
 func (l *Logger) SetSeverity(logLevel LogLevel) {
