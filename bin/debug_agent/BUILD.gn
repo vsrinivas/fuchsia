@@ -4,6 +4,10 @@
 
 import("//build/package.gni")
 
+# Set manually to true to compile the zxdb_test_app.cc file for manual debugger
+# testing of various conditions.
+include_test_app = false
+
 static_library("lib") {
   sources = [
     "arch.h",
@@ -52,6 +56,17 @@ static_library("lib") {
     "//zircon/public/lib/launchpad",
     "//zircon/public/lib/ngunwind",
   ]
+}
+
+if (include_test_app) {
+  executable("zxdb_test_app") {
+    sources = [
+      "zxdb_test_app.cc",
+    ]
+    deps = [
+      "//zircon/public/lib/zx",
+    ]
+  }
 }
 
 executable("bin") {
@@ -109,4 +124,9 @@ package("debug_agent_tests") {
       name = "debug_agent_tests"
     },
   ]
+
+  if (include_test_app) {
+    deps += [ ":zxdb_test_app" ]
+    tests += [ { name = "zxdb_test_app" } ]
+  }
 }

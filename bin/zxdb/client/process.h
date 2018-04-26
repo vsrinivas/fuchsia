@@ -12,6 +12,7 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 #include "garnet/public/lib/fxl/observer_list.h"
 
 namespace debug_ipc {
@@ -33,6 +34,8 @@ class Process : public ClientObject {
 
   void AddObserver(ProcessObserver* observer);
   void RemoveObserver(ProcessObserver* observer);
+
+  fxl::WeakPtr<Process> GetWeakPtr();
 
   // Returns the target associated with this process. Guaranteed non-null.
   virtual Target* GetTarget() const = 0;
@@ -85,6 +88,7 @@ class Process : public ClientObject {
 
  private:
   fxl::ObserverList<ProcessObserver> observers_;
+  fxl::WeakPtrFactory<Process> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

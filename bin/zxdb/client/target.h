@@ -96,7 +96,6 @@ class Target : public ClientObject {
 
  private:
   fxl::ObserverList<TargetObserver> observers_;
-
   fxl::WeakPtrFactory<Target> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Target);

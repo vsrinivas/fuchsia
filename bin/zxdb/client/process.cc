@@ -6,7 +6,8 @@
 
 namespace zxdb {
 
-Process::Process(Session* session) : ClientObject(session) {}
+Process::Process(Session* session)
+    : ClientObject(session), weak_factory_(this) {}
 Process::~Process() = default;
 
 void Process::AddObserver(ProcessObserver* observer) {
@@ -15,6 +16,10 @@ void Process::AddObserver(ProcessObserver* observer) {
 
 void Process::RemoveObserver(ProcessObserver* observer) {
   observers_.RemoveObserver(observer);
+}
+
+fxl::WeakPtr<Process> Process::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 }  // namespace zxdb

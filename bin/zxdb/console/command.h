@@ -49,6 +49,7 @@ enum class Verb {
   kConnect,
   kContinue,
   kDetach,
+  kDisassemble,
   kDisconnect,
   kEdit,
   kHelp,

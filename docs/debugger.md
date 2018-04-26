@@ -8,13 +8,9 @@ hooked up and breakpoints don't work on ARM.
 These instructions are currently applicable to people actually working on the
 debugger.
 
-## Running on the target
-
-The debugger runs on the target device and should be compiled in any build with
-Garnet. Just type "zxdb" on the shell. Symbols will not work in the target
-build.
-
 ## Running remotely
+
+The debugger does not run on the target system.
 
 #### 1. Compile the client
 
@@ -23,11 +19,11 @@ will need. But you will need to compile the client side for your host system
 manually:
 
 ```sh
-ninja -C out/x64 host_x64/zxdb
+ninja -C out/x64 host_tools
 ```
 
-Substitute `out/x64` for your build directory as necessary. The client has only
-been tested on Linux.
+Substitute `out/x64` for your build directory as necessary. It should work
+on Linux and Mac, but is mostly tested on Linux.
 
 #### 2. Boot with networking
 
@@ -86,3 +82,12 @@ Attach to a program:
 
 Type "help" for more commands, there is an extensive built-in help system.
 
+## Running the tests
+
+There are tests for the debugger that run on the host. These are relavant
+if you're working on the debugger client.
+
+```sh
+ninja -C out/x64 host_tests
+out/x64/host_x64/zxdb_tests
+```

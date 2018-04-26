@@ -11,8 +11,9 @@ namespace zxdb {
 
 namespace {
 
-const char kNormalEscapeCode[] = "\x1b[0m";
-const char kBoldEscapeCode[] = "\x1b[1m";
+const char kNormalEscapeCode[] = "\x1b[0m";   // "[0m" = Normal.
+const char kBoldEscapeCode[] = "\x1b[1m";     // "[1m" = Bold.
+const char kCommentEscapeCode[] = "\x1b[2m";  // "[2m" = Faint.
 
 }  // namespace
 
@@ -54,6 +55,8 @@ void OutputBuffer::WriteToStdout() const {
   for (const Span& span : spans_) {
     if (span.syntax == Syntax::kHeading)
       fwrite(kBoldEscapeCode, 1, strlen(kBoldEscapeCode), stdout);
+    else if (span.syntax == Syntax::kComment)
+      fwrite(kCommentEscapeCode, 1, strlen(kCommentEscapeCode), stdout);
 
     fwrite(span.text.data(), 1, span.text.size(), stdout);
 

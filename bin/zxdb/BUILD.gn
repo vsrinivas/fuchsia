@@ -8,10 +8,6 @@ import("//build/package.gni")
 assert(current_toolchain == host_toolchain,
        "zxdb can currently only be compiled for the host.")
 
-# Set manually to true to compile the zxdb_test_app.cc file for manual debugger
-# testing of various conditions.
-include_test_app = false
-
 executable("zxdb") {
   sources = [
     "main_host.cc",
@@ -21,17 +17,6 @@ executable("zxdb") {
     "//garnet/bin/zxdb/console",
     "//garnet/lib/debug_ipc:client",
   ]
-}
-
-if (include_test_app) {
-  executable("zxdb_test_app") {
-    sources = [
-      "zxdb_test_app.cc",
-    ]
-    deps = [
-      "//zircon/public/lib/zx",
-    ]
-  }
 }
 
 executable("unittests") {
