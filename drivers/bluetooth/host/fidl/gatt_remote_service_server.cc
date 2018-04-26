@@ -11,6 +11,8 @@ using bluetooth::Status;
 using bluetooth_gatt::Characteristic;
 using bluetooth_gatt::CharacteristicPtr;
 using bluetooth_gatt::Descriptor;
+
+using btlib::common::MutableBufferView;
 using btlib::gatt::RemoteCharacteristic;
 
 namespace bthost {
@@ -69,18 +71,44 @@ void GattRemoteServiceServer::DiscoverCharacteristics(
   service_->DiscoverCharacteristics(std::move(res_cb));
 }
 
+void GattRemoteServiceServer::ReadCharacteristic(
+    uint64_t id,
+    uint16_t offset,
+    ReadCharacteristicCallback callback) {
+  auto cb = [callback = std::move(callback)](
+                btlib::att::Status status,
+                const btlib::common::ByteBuffer& value) {
+    // We always reply with a non-null value.
+    std::vector<uint8_t> vec;
+
+    if (status && value.size()) {
+      vec.resize(value.size());
+
+      MutableBufferView vec_view(vec.data(), vec.size());
+      value.Copy(&vec_view);
+    }
+
+    callback(fidl_helpers::StatusToFidl(status),
+             fidl::VectorPtr<uint8_t>(std::move(vec)));
+  };
+
+  // TODO(armansito): Use |offset| when gatt::RemoteService supports the long
+  // read procedure.
+  service_->ReadCharacteristic(id, std::move(cb));
+}
+
 void GattRemoteServiceServer::WriteCharacteristic(
     uint64_t id,
     uint16_t offset,
     ::fidl::VectorPtr<uint8_t> value,
     WriteCharacteristicCallback callback) {
-  auto res_cb = [callback](btlib::att::Status status) {
+  auto cb = [callback = std::move(callback)](btlib::att::Status status) {
     callback(fidl_helpers::StatusToFidl(status, ""));
   };
 
   // TODO(armansito): Use |offset| when gatt::RemoteService supports the long
   // write procedure.
-  service_->WriteCharacteristic(id, value.take(), std::move(res_cb));
+  service_->WriteCharacteristic(id, value.take(), std::move(cb));
 }
 
 }  // namespace bthost

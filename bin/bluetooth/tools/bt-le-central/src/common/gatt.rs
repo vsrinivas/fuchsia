@@ -23,6 +23,10 @@ use std::sync::Arc;
 use std::thread;
 use zx;
 
+macro_rules! left_ok {
+    () => (Left(future::ok(())))
+}
+
 type GattClientPtr = Arc<RwLock<GattClient>>;
 
 struct GattClient {
@@ -73,7 +77,7 @@ impl GattClient {
     fn display_services(&self) {
         let mut i: i32 = 0;
         for svc in &self.services {
-            println!("  {}: {}", i, &svc);
+            println!("  {}: {}\n", i, &svc);
             i += 1;
         }
     }
@@ -157,6 +161,33 @@ fn discover_characteristics(client: GattClientPtr) -> impl Future<Item = (), Err
         })
 }
 
+// Read from a characteristic
+fn read_characteristic(client: GattClientPtr, id: u64) -> impl Future<Item = (), Error = Error> {
+    client
+        .read()
+        .active_proxy
+        .as_ref()
+        .unwrap()
+        .read_characteristic(id, 0)
+        .map_err(|_| {
+            println!("Failed to send message");
+            BluetoothError::new().into()
+        })
+        .and_then(move |(status, value)| match status.error {
+            Some(e) => {
+                println!(
+                    "Failed to read characteristic: {}",
+                    BluetoothFidlError::new(*e)
+                );
+                Ok(())
+            }
+            None => {
+                println!("(id = {}) value: {:X?}", id, value);
+                Ok(())
+            }
+        })
+}
+
 // Write to a characteristic.
 fn write_characteristic(client: GattClientPtr, id: u64, value: Vec<u8>)
     -> impl Future<Item = (), Error = Error> {
@@ -173,13 +204,13 @@ fn write_characteristic(client: GattClientPtr, id: u64, value: Vec<u8>)
         .and_then(move |status| match status.error {
             Some(e) => {
                 println!(
-                    "Failed to read characteristics: {}",
+                    "Failed to write to characteristic: {}",
                     BluetoothFidlError::new(*e)
                 );
                 Ok(())
             }
             None => {
-                println!("done");
+                println!("(id = {}]) done", id);
                 Ok(())
             }
         })
@@ -192,6 +223,7 @@ fn do_help() -> FutureResult<(), Error> {
     println!("    help                       Print this help message");
     println!("    list                       List discovered services");
     println!("    connect <index>            Connect to a service");
+    println!("    read-chr <id>              Read a characteristic");
     println!("    write-chr <id> <value>     Write to a characteristic");
     println!("    exit                       Quit and disconnect the peripheral");
 
@@ -231,13 +263,13 @@ pub fn create_client_pair() -> Result<(ClientProxy, ServerEnd<ClientMarker>), Er
 fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
     if args.len() != 1 {
         println!("usage: connect <index>");
-        return Left(future::ok(()));
+        return left_ok!();
     }
 
     let index: usize = match args[0].parse() {
         Err(_) => {
             println!("invalid index: {}", args[0]);
-            return Left(future::ok(()));
+            return left_ok!();
         }
         Ok(i) => i,
     };
@@ -245,7 +277,7 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
     let svc_id = match client.read().services.get(index) {
         None => {
             println!("index out of bounds! ({})", index);
-            return Left(future::ok(()));
+            return left_ok!();
         }
         Some(s) => s.info.id,
     };
@@ -269,21 +301,43 @@ fn do_connect(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), 
 
 }
 
-fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
-    if args.len() < 1 {
-        println!("usage: write-chr <id> <value>");
-        return Left(future::ok(()));
+fn do_read_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
+    if args.len() != 1 {
+        println!("usage: read-chr <id>");
+        return left_ok!();
     }
 
     if client.read().active_proxy.is_none() {
         println!("no service connected");
-        return Left(future::ok(()));
+        return left_ok!();
     }
 
     let id: u64 = match args[0].parse() {
         Err(_) => {
             println!("invalid id: {}", args[0]);
-            return Left(future::ok(()));
+            return left_ok!();
+        }
+        Ok(i) => i,
+    };
+
+    Right(read_characteristic(client, id))
+}
+
+fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = (), Error = Error> {
+    if args.len() < 1 {
+        println!("usage: write-chr <id> <value>");
+        return left_ok!();
+    }
+
+    if client.read().active_proxy.is_none() {
+        println!("no service connected");
+        return left_ok!();
+    }
+
+    let id: u64 = match args[0].parse() {
+        Err(_) => {
+            println!("invalid id: {}", args[0]);
+            return left_ok!();
         }
         Ok(i) => i,
     };
@@ -293,7 +347,7 @@ fn do_write_chr(args: Vec<&str>, client: GattClientPtr) -> impl Future<Item = ()
     match value {
         Err(_) => {
             println!("invalid value");
-            Left(future::ok(()))
+            left_ok!()
         }
         Ok(v) => Right(write_characteristic(client, id, v)),
     }
@@ -319,12 +373,13 @@ fn handle_cmd(line: String, client: GattClientPtr) -> impl Future<Item = (), Err
         Some("help") => Left(do_help()),
         Some("list") => Left(do_list(args, client)),
         Some("connect") => right_cmd!(do_connect(args, client)),
+        Some("read-chr") => right_cmd!(do_read_chr(args, client)),
         Some("write-chr") => right_cmd!(do_write_chr(args, client)),
         Some(cmd) => {
             eprintln!("Unknown command: {}", cmd);
-            Left(future::ok(()))
+            left_ok!()
         }
-        None => Left(future::ok(())),
+        None => left_ok!(),
     }
 }
 
