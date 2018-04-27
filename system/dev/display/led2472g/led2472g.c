@@ -90,7 +90,11 @@ static int led2472g_thread(void* arg) {
             cix += 1;
             cix %= countof(colors);
         }
-        i2c_transact(&led2472g->i2c, 0, buf, sizeof(buf), 0, i2c_complete, NULL);
+        zx_status_t status = i2c_transact(&led2472g->i2c, 0, buf, sizeof(buf), 0, i2c_complete, NULL);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "led2472g i2c_transact error: %d\n  Exiting led2472g_thread\n", status);
+            return status;
+        }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
         st += 1;
         st %= countof(colors);

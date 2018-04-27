@@ -17,6 +17,5 @@ MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
 MODULE_LIBS := system/ulib/driver system/ulib/c system/ulib/zircon
 
-# disabled for now
-# include make/module.mk
+include make/module.mk
 
