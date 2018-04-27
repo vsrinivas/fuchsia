@@ -93,8 +93,6 @@ func init() {
 	zxBuildDir := "out/build-zircon"
 	x64ZxBuildDir := path.Join(zxBuildDir, "build-x64")
 	armZxBuildDir := path.Join(zxBuildDir, "build-arm64")
-	x64BuildBootfsDir := "out/release-x64-bootfs/"
-	armBuildBootfsDir := "out/release-arm64-bootfs/"
 	qemuDir := fmt.Sprintf("buildtools/%s-%s/qemu/", hostOs, hostCpu)
 
 	dirs := []dir{
@@ -207,18 +205,6 @@ func init() {
 			kernelImg,
 			path.Join(x64BuildDir, "images/fvm.sparse.blk"),
 			"target/x86_64/fvm.sparse.blk",
-		},
-
-		// TODO(marshallk): Remove this when bootfs is deprecated.
-		{
-			bootdata,
-			path.Join(x64BuildBootfsDir, "user.bootfs"),
-			"target/x86_64/bootdata.bin",
-		},
-		{
-			bootdata,
-			path.Join(armBuildBootfsDir, "user.bootfs"),
-			"target/aarch64/bootdata.bin",
 		},
 		{
 			sysroot,
