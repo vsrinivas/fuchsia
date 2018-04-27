@@ -26,7 +26,7 @@ class TokenManagerApp {
  public:
   TokenManagerApp(std::unique_ptr<component::ApplicationContext> context)
       : app_context_(std::move(context)), factory_impl_(app_context_.get()) {
-    app_context_->outgoing_services()->AddService<auth::TokenManagerFactory>(
+    app_context_->outgoing().AddPublicService<auth::TokenManagerFactory>(
         [this](fidl::InterfaceRequest<auth::TokenManagerFactory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));
         });

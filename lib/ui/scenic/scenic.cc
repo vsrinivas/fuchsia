@@ -17,7 +17,7 @@ Scenic::Scenic(component::ApplicationContext* app_context,
   FXL_DCHECK(task_runner_);
   FXL_DCHECK(clock_);
 
-  app_context->outgoing_services()->AddService<ui::Scenic>(
+  app_context->outgoing().AddPublicService<ui::Scenic>(
       [this](fidl::InterfaceRequest<ui::Scenic> request) {
         FXL_VLOG(1) << "Accepting connection to Scenic";
         scenic_bindings_.AddBinding(this, std::move(request));

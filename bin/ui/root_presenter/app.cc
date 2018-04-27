@@ -23,13 +23,13 @@ App::App(const fxl::CommandLine& command_line)
 
   input_reader_.Start();
 
-  application_context_->outgoing_services()->AddService<presentation::Presenter>(
+  application_context_->outgoing().AddPublicService<presentation::Presenter>(
       [this](fidl::InterfaceRequest<presentation::Presenter> request) {
         presenter_bindings_.AddBinding(this, std::move(request));
       });
 
-  application_context_->outgoing_services()
-      ->AddService<input::InputDeviceRegistry>(
+  application_context_->outgoing()
+      .AddPublicService<input::InputDeviceRegistry>(
           [this](fidl::InterfaceRequest<input::InputDeviceRegistry> request) {
             input_receiver_bindings_.AddBinding(this, std::move(request));
           });

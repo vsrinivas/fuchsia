@@ -14,12 +14,10 @@ class EchoServerApp : public Echo {
  public:
   EchoServerApp()
       : context_(component::ApplicationContext::CreateFromStartupInfo()) {
-    context_->outgoing_services()->AddServiceForName(
-        [this](zx::channel request) {
-          bindings_.AddBinding(
-              this, fidl::InterfaceRequest<Echo>(std::move(request)));
-        },
-        Echo::Name_);
+    context_->outgoing().AddPublicService<Echo>(
+        [this](fidl::InterfaceRequest<Echo> request) {
+          bindings_.AddBinding(this, std::move(request));
+        });
   }
 
   ~EchoServerApp() {}

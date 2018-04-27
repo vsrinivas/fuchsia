@@ -25,17 +25,17 @@ App::App(std::unique_ptr<component::ApplicationContext> application_context)
   manager_.set_device_updated_callback(
       fbl::BindMember(this, &App::OnDeviceUpdated));
 
-  application_context_->outgoing_services()
-      ->AddService<::bluetooth_control::Control>(
+  application_context_->outgoing()
+      .AddPublicService<::bluetooth_control::Control>(
           fbl::BindMember(this, &App::OnControlRequest));
-  application_context_->outgoing_services()
-      ->AddService<::bluetooth_low_energy::Central>(
+  application_context_->outgoing()
+      .AddPublicService<::bluetooth_low_energy::Central>(
           fbl::BindMember(this, &App::OnLowEnergyCentralRequest));
-  application_context_->outgoing_services()
-      ->AddService<::bluetooth_low_energy::Peripheral>(
+  application_context_->outgoing()
+      .AddPublicService<::bluetooth_low_energy::Peripheral>(
           fbl::BindMember(this, &App::OnLowEnergyPeripheralRequest));
-  application_context_->outgoing_services()
-      ->AddService<::bluetooth_gatt::Server>(
+  application_context_->outgoing()
+      .AddPublicService<::bluetooth_gatt::Server>(
           fbl::BindMember(this, &App::OnGattServerRequest));
 }
 

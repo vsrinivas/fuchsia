@@ -18,7 +18,7 @@ App::App(const fxl::CommandLine& command_line)
     : application_context_(
           component::ApplicationContext::CreateFromStartupInfo()) {
   FXL_DCHECK(application_context_);
-  application_context_->outgoing_services()->AddService<input::ImeService>(
+  application_context_->outgoing().AddPublicService<input::ImeService>(
       [this](fidl::InterfaceRequest<input::ImeService> request) {
         ime_bindings_.AddBinding(this, std::move(request));
       });

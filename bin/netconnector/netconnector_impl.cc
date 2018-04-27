@@ -71,7 +71,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
   }
 
   // Running as listener.
-  application_context_->outgoing_services()->AddService<NetConnector>(
+  application_context_->outgoing().AddPublicService<NetConnector>(
       [this](fidl::InterfaceRequest<NetConnector> request) {
         bindings_.AddBinding(this, std::move(request));
       });

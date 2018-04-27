@@ -15,7 +15,7 @@ TtsServiceImpl::TtsServiceImpl(
     : application_context_(std::move(application_context)) {
   FXL_DCHECK(application_context_);
 
-  application_context_->outgoing_services()->AddService<TtsService>(
+  application_context_->outgoing().AddPublicService<TtsService>(
       [this](fidl::InterfaceRequest<TtsService> request) {
         clients_.insert(new Client(this, std::move(request)));
       });

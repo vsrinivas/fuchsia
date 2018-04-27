@@ -29,7 +29,7 @@ ScenicScanout::ScenicScanout(component::ApplicationContext* application_context,
   // mozart service.
   SetReady(false);
 
-  application_context_->outgoing_services()->AddService<views_v1::ViewProvider>(
+  application_context_->outgoing().AddPublicService<views_v1::ViewProvider>(
       [this](fidl::InterfaceRequest<views_v1::ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       });

@@ -34,7 +34,7 @@ int main(int argc, const char** argv) {
 
   fidl::BindingSet<gralloc::Gralloc> bindings;
 
-  app_context->outgoing_services()->AddService<gralloc::Gralloc>(
+  app_context->outgoing().AddPublicService<gralloc::Gralloc>(
       [&grallocator,
        &bindings](fidl::InterfaceRequest<gralloc::Gralloc> request) {
         bindings.AddBinding(&grallocator, std::move(request));

@@ -12,7 +12,7 @@ App::App(escher::Escher* escher)
       scenic_(context_->ConnectToEnvironmentService<ui::Scenic>()),
       session_(std::make_unique<scenic_lib::Session>(scenic_.get())),
       canvas_(std::make_unique<CanvasImpl>(session_.get(), escher)) {
-  context_->outgoing_services()->AddService<sketchy::Canvas>(
+  context_->outgoing().AddPublicService<sketchy::Canvas>(
       [this](fidl::InterfaceRequest<sketchy::Canvas> request) {
         FXL_LOG(INFO) << "Sketchy service: accepting connection to Canvas.";
         // TODO(MZ-270): Support multiple simultaneous Canvas clients.

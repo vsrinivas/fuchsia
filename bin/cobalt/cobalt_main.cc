@@ -645,12 +645,12 @@ CobaltApp::CobaltApp(async_t* async,
       client_config_, getClientSecret(), &shipping_manager_, &system_data_,
       &timer_manager_));
 
-  context_->outgoing_services()->AddService<CobaltEncoderFactory>(
+  context_->outgoing().AddPublicService<CobaltEncoderFactory>(
       [this](fidl::InterfaceRequest<CobaltEncoderFactory> request) {
         factory_bindings_.AddBinding(factory_impl_.get(), std::move(request));
       });
 
-  context_->outgoing_services()->AddService<CobaltController>(
+  context_->outgoing().AddPublicService<CobaltController>(
       [this](fidl::InterfaceRequest<CobaltController> request) {
         controller_bindings_.AddBinding(controller_impl_.get(),
                                         std::move(request));

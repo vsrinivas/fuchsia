@@ -17,14 +17,14 @@ ViewProviderService::ViewProviderService(
     : application_context_(application_context), view_factory_(view_factory) {
   FXL_DCHECK(application_context_);
 
-  application_context_->outgoing_services()->AddService<ViewProvider>(
+  application_context_->outgoing().AddPublicService<ViewProvider>(
       [this](fidl::InterfaceRequest<ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       });
 }
 
 ViewProviderService::~ViewProviderService() {
-  application_context_->outgoing_services()->RemoveService<ViewProvider>();
+  application_context_->outgoing().RemovePublicService<ViewProvider>();
 }
 
 void ViewProviderService::CreateView(

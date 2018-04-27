@@ -13,7 +13,7 @@ class MainService {
  public:
   MainService()
       : app_context_(component::ApplicationContext::CreateFromStartupInfo()) {
-    app_context_->outgoing_services()->AddService<Timezone>(
+    app_context_->outgoing().AddPublicService<Timezone>(
         [this](fidl::InterfaceRequest<Timezone> request) {
           timezone_.AddBinding(std::move(request));
         });

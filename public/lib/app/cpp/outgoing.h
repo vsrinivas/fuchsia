@@ -6,6 +6,7 @@
 #define LIB_APP_CPP_OUTGOING_H_
 
 #include <fs/pseudo-dir.h>
+#include <fs/service.h>
 
 #include <memory>
 
@@ -25,7 +26,7 @@ class Outgoing {
   // Gets a service provider implementation by which the application can
   // provide outgoing services back to its creator.
   //
-  // Please use public_dir() instead.
+  // Please use AddPublicService or public_dir() instead.
   ServiceNamespace* deprecated_services() const {
     return &deprecated_outgoing_services_;
   }
@@ -59,6 +60,47 @@ class Outgoing {
   // Start serving the root directory on the channel provided to this process at
   // startup as PA_DIRECTORY_REQUEST.
   zx_status_t ServeFromStartupInfo();
+
+  // A |InterfaceRequestHandler<Interface>| is simply a function that
+  // handles an interface request for |Interface|. If it determines that the
+  // request should be "accepted", then it should "connect" ("take ownership
+  // of") request. Otherwise, it can simply drop |interface_request| (as implied
+  // by the interface).
+  template <typename Interface>
+  using InterfaceRequestHandler =
+      std::function<void(fidl::InterfaceRequest<Interface> interface_request)>;
+
+  // Adds the specified interface to the set of public interfaces.
+  //
+  // Adds a supported service with the given |service_name|, using the given
+  // |interface_request_handler| (see above for information about
+  // |InterfaceRequestHandler<Interface>|). |interface_request_handler| should
+  // remain valid for the lifetime of this object.
+  //
+  // A typical usage may be:
+  //
+  //   AddPublicService<Foobar>(
+  //       [](InterfaceRequest<FooBar> foobar_request) {
+  //         foobar_binding_.AddBinding(this, std::move(foobar_request));
+  //       });
+  template <typename Interface>
+  zx_status_t AddPublicService(
+      InterfaceRequestHandler<Interface> handler,
+      const std::string& service_name = Interface::Name_) const {
+    return public_dir()->AddEntry(
+        service_name.c_str(),
+        fbl::AdoptRef(new fs::Service([handler](zx::channel channel) {
+          handler(fidl::InterfaceRequest<Interface>(std::move(channel)));
+          return ZX_OK;
+        })));
+  }
+
+  // Removes the specified interface from the set of public interfaces.
+  template <typename Interface>
+  zx_status_t RemovePublicService(
+      const std::string& name = Interface::Name_) const {
+    return public_dir()->RemoveEntry(name.c_str());
+  }
 
  private:
   fs::ManagedVfs vfs_;

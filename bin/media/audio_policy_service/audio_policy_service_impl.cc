@@ -30,7 +30,7 @@ AudioPolicyServiceImpl::AudioPolicyServiceImpl(
     std::unique_ptr<component::ApplicationContext> application_context)
     : application_context_(std::move(application_context)),
       initialize_attempts_remaining_(kInitializeAttempts) {
-  application_context_->outgoing_services()->AddService<AudioPolicy>(
+  application_context_->outgoing().AddPublicService<AudioPolicy>(
       [this](fidl::InterfaceRequest<AudioPolicy> request) {
         bindings_.AddBinding(this, std::move(request));
       });

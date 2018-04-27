@@ -14,7 +14,7 @@ namespace guest_runner {
 GuestRunner::GuestRunner()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {
   context_->environment()->GetApplicationLauncher(launcher_.NewRequest());
-  context_->outgoing_services()->AddService<component::ApplicationRunner>(
+  context_->outgoing().AddPublicService<component::ApplicationRunner>(
       [this](fidl::InterfaceRequest<component::ApplicationRunner> request) {
         bindings_.AddBinding(this, std::move(request));
       });

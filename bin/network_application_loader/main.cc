@@ -126,7 +126,7 @@ class NetworkApplicationLoader : public component::ApplicationLoader {
  public:
   NetworkApplicationLoader()
       : context_(component::ApplicationContext::CreateFromStartupInfo()) {
-    context_->outgoing_services()->AddService<component::ApplicationLoader>(
+    context_->outgoing().AddPublicService<component::ApplicationLoader>(
         [this](fidl::InterfaceRequest<component::ApplicationLoader> request) {
           bindings_.AddBinding(this, std::move(request));
         });

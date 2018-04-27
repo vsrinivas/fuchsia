@@ -53,8 +53,8 @@ int main(int argc, const char** argv) {
 
   if (transient) {
     std::unique_ptr<media_player::MediaPlayerImpl> player;
-    application_context->outgoing_services()
-        ->AddService<media_player::MediaPlayer>(
+    application_context->outgoing()
+        .AddPublicService<media_player::MediaPlayer>(
             [application_context = application_context.get(), &player,
              &loop](fidl::InterfaceRequest<media_player::MediaPlayer> request) {
               player = media_player::MediaPlayerImpl::Create(
@@ -68,8 +68,8 @@ int main(int argc, const char** argv) {
     application_context->environment()->GetApplicationLauncher(
         launcher.NewRequest());
 
-    application_context->outgoing_services()
-        ->AddService<media_player::MediaPlayer>(
+    application_context->outgoing()
+        .AddPublicService<media_player::MediaPlayer>(
             [&launcher](
                 fidl::InterfaceRequest<media_player::MediaPlayer> request) {
               ConnectToIsolate<media_player::MediaPlayer>(std::move(request),

@@ -16,7 +16,7 @@ ViewManagerApp::ViewManagerApp()
 
   registry_.reset(new ViewRegistry(application_context_.get()));
 
-  application_context_->outgoing_services()->AddService<views_v1::ViewManager>(
+  application_context_->outgoing().AddPublicService<views_v1::ViewManager>(
       [this](fidl::InterfaceRequest<views_v1::ViewManager> request) {
         view_manager_bindings_.AddBinding(
             std::make_unique<ViewManagerImpl>(registry_.get()),

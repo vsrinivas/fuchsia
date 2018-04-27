@@ -26,7 +26,7 @@ InspectServiceImpl::InspectServiceImpl(
   zx_status_t status = zx::socket::create(0, &server_socket_, &client_socket_);
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 
-  application_context->outgoing_services()->AddService<InspectService>(
+  application_context->outgoing().AddPublicService<InspectService>(
       [this](fidl::InterfaceRequest<InspectService> request) {
         bindings_.AddBinding(this, std::move(request));
       });

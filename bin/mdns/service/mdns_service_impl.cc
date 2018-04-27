@@ -21,7 +21,7 @@ namespace mdns {
 MdnsServiceImpl::MdnsServiceImpl(
     component::ApplicationContext* application_context)
     : application_context_(application_context) {
-  application_context_->outgoing_services()->AddService<MdnsService>(
+  application_context_->outgoing().AddPublicService<MdnsService>(
       [this](fidl::InterfaceRequest<MdnsService> request) {
         bindings_.AddBinding(this, std::move(request));
       });
