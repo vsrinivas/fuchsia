@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/lib/callback/capture.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/macros.h"
@@ -64,11 +64,10 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   async_t* const async_;
 };
 
-class BatchDownloadTest : public gtest::TestWithMessageLoop {
+class BatchDownloadTest : public gtest::TestWithLoop {
  public:
   BatchDownloadTest()
-      : storage_(message_loop_.async()),
-                 encryption_service_(message_loop_.async()) {}
+      : storage_(dispatcher()), encryption_service_(dispatcher()) {}
   ~BatchDownloadTest() override {}
 
  protected:
