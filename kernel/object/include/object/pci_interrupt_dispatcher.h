@@ -24,8 +24,6 @@ public:
 
     ~PciInterruptDispatcher() final;
 
-    zx_status_t Bind(uint32_t slot, uint32_t vector, uint32_t options) final;
-
 protected:
     void MaskInterrupt(uint32_t vector) final;
     void UnmaskInterrupt(uint32_t vector) final;

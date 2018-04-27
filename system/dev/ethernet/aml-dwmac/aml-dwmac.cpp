@@ -39,13 +39,7 @@ int AmlDWMacDevice::Thread() {
 
     zx_status_t status;
     while (true) {
-
-#if ENABLE_NEW_IRQ_API
         status = dma_irq_.wait(nullptr);
-#else
-        uint64_t slots;
-        status = dma_irq_.wait(&slots);
-#endif
         if (!running_.load()) {
             status = ZX_OK;
             break;
@@ -365,11 +359,7 @@ void AmlDWMacDevice::DdkUnbind() {
 
 zx_status_t AmlDWMacDevice::ShutDown() {
     running_.store(false);
-#if ENABLE_NEW_IRQ_API
     dma_irq_.destroy();
-#else
-    dma_irq_.signal(ZX_INTERRUPT_SLOT_USER, zx::time(0));
-#endif
     thrd_join(thread_, NULL);
     fbl::AutoLock lock(&lock_);
     online_ = false;

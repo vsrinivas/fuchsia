@@ -25,11 +25,7 @@ Interrupts::~Interrupts() {
 
 void Interrupts::Destroy() {
     if (irq_ != ZX_HANDLE_INVALID) {
-#if ENABLE_NEW_IRQ_API
         zx_irq_destroy(irq_.get());
-#else
-        zx_interrupt_signal(irq_.get(), ZX_INTERRUPT_SLOT_USER, 0);
-#endif
         thrd_join(irq_thread_, nullptr);
 
         irq_.reset();
@@ -38,18 +34,10 @@ void Interrupts::Destroy() {
 
 int Interrupts::IrqLoop() {
     for (;;) {
-#if ENABLE_NEW_IRQ_API
         if (zx_irq_wait(irq_.get(), nullptr) != ZX_OK) {
             zxlogf(TRACE, "i915: interrupt wait failed\n");
             break;
         }
-#else
-        uint64_t slots;
-        if (zx_interrupt_wait(irq_.get(), &slots) != ZX_OK) {
-            zxlogf(TRACE, "i915: interrupt wait failed\n");
-            break;
-        }
-#endif
         auto interrupt_ctrl =
                 registers::MasterInterruptControl::Get().ReadFrom(controller_->mmio_space());
         interrupt_ctrl.set_enable_mask(0);

@@ -71,24 +71,11 @@ static zx_status_t platform_dev_map_interrupt(void* ctx, uint32_t index,
     } else {
         flags_ = irq->mode;
     }
-#if ENABLE_NEW_IRQ_API
     zx_status_t status = zx_irq_create(dev->bus->resource, irq->irq, flags_, out_handle);
     if (status != ZX_OK) {
         zxlogf(ERROR, "platform_dev_map_interrupt: zx_irq_create failed %d\n", status);
         return status;
     }
-#else
-    zx_status_t status = zx_interrupt_create(dev->bus->resource, 0, out_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_create failed %d\n", status);
-        return status;
-    }
-    status = zx_interrupt_bind(*out_handle, 0, dev->bus->resource, irq->irq, flags_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "platform_dev_map_interrupt: zx_interrupt_bind failed %d\n", status);
-        zx_handle_close(*out_handle);
-    }
-#endif
     return status;
 }
 

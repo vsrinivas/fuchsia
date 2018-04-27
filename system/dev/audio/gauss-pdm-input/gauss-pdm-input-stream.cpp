@@ -108,11 +108,7 @@ void GaussPdmInputStream::DdkRelease() {
     zxlogf(DEBUG1, "%s\n", __func__);
 
     // Shutdown irq thread.
-#if ENABLE_NEW_IRQ_API
     zx_irq_destroy(audio_device_.pdm_irq);
-#else
-    zx_interrupt_signal(audio_device_.pdm_irq, ZX_INTERRUPT_SLOT_USER, 0);
-#endif
     thrd_join(irqthrd_, nullptr);
 
     zx_handle_close(audio_device_.pdm_irq);
@@ -433,12 +429,7 @@ int GaussPdmInputStream::IrqThread() {
     uint32_t last_notification_offset = 0;
 
     for (;;) {
-#if ENABLE_NEW_IRQ_API
         status = zx_irq_wait(audio_device_.pdm_irq, nullptr);
-#else
-        uint64_t slots;
-        status = zx_interrupt_wait(audio_device_.pdm_irq, &slots);
-#endif
         if (status != ZX_OK) {
             zxlogf(DEBUG1, "audio_pdm_input: interrupt error: %d.\n", status);
             break;

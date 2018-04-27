@@ -507,12 +507,7 @@ static int i8042_irq_thread(void* arg) {
         return 0;
 
     for (;;) {
-#if ENABLE_NEW_IRQ_API
         status = zx_irq_wait(device->irq, NULL);
-#else
-         uint64_t slots;
-       status = zx_interrupt_wait(device->irq, &slots);
-#endif
         if (status == ZX_OK) {
             // keep handling status on the controller until no bits are set we care about
             bool retry;
@@ -739,23 +734,12 @@ static zx_status_t i8042_dev_init(i8042_device_t* dev, const char* name, zx_devi
 
     uint32_t interrupt = dev->type == INPUT_PROTO_KBD ?
         ISA_IRQ_KEYBOARD : ISA_IRQ_MOUSE;
-#if ENABLE_NEW_IRQ_API
+
     zx_status_t status = zx_irq_create(get_root_resource(), interrupt,
                         ZX_INTERRUPT_REMAP_IRQ, &(dev->irq));
     if (status != ZX_OK) {
         return status;
     }
-#else
-    zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &(dev->irq));
-    if (status != ZX_OK) {
-        return status;
-    }
-    status = zx_interrupt_bind(dev->irq, 0, get_root_resource(), interrupt, ZX_INTERRUPT_REMAP_IRQ);
-    if (status != ZX_OK) {
-        zx_handle_close(dev->irq);
-        return status;
-    }
-#endif
 
         // create irq thread
     const char* tname = dev->type == INPUT_PROTO_KBD ?

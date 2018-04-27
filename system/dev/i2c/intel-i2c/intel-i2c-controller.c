@@ -331,23 +331,11 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
     intel_serialio_i2c_device_t* dev = (intel_serialio_i2c_device_t*)arg;
     zx_status_t status;
     for (;;) {
-#if ENABLE_NEW_IRQ_API
         status = zx_irq_wait(dev->irq_handle, NULL);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
             continue;
         }
-#else
-        uint64_t slots;
-        status = zx_interrupt_wait(dev->irq_handle, &slots);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
-            continue;
-        }
-        if (slots & (1ul << ZX_INTERRUPT_SLOT_USER)) {
-            break;
-        }
-#endif
         uint32_t intr_stat = *REG32(&dev->regs->intr_stat);
         zxlogf(SPEW, "Received i2c interrupt: %x %x\n", intr_stat, *REG32(&dev->regs->raw_intr_stat));
         if (intr_stat & (1u << INTR_RX_UNDER)) {
@@ -576,7 +564,7 @@ static void intel_serialio_i2c_unbind(void* ctx) {
         zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p\n", dev->irq_handle,
                 dev->irq_thread);
         if ((dev->irq_handle != ZX_HANDLE_INVALID) && dev->irq_thread) {
-            zx_interrupt_signal(dev->irq_handle, ZX_INTERRUPT_SLOT_USER, 0);
+            zx_irq_destroy(dev->irq_handle);
             thrd_join(dev->irq_thread, NULL);
         }
         if (dev->zxdev) {

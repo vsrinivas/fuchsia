@@ -84,20 +84,11 @@ static int aml_i2c_irq_thread(void *arg) {
     zx_status_t status;
 
     while (1) {
-#if ENABLE_NEW_IRQ_API
         status = zx_irq_wait(dev->irq, NULL);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c: interrupt error\n");
             continue;
         }
-#else
-        uint64_t slots;
-        status = zx_interrupt_wait(dev->irq, &slots);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "i2c: interrupt error\n");
-            continue;
-        }
-#endif
         uint32_t reg =  dev->virt_regs->control;
         if (reg & AML_I2C_CONTROL_REG_ERR) {
             zx_object_signal(dev->event, 0, I2C_ERROR_SIGNAL);

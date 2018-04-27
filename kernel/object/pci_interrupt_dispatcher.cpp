@@ -19,7 +19,6 @@ PciInterruptDispatcher::~PciInterruptDispatcher() {
     device_ = nullptr;
 }
 
-#if ENABLE_NEW_IRQ_API
 pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
                                                            uint irq_id,
                                                            void* ctx) {
@@ -29,26 +28,6 @@ pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev
     thiz->InterruptHandler(true);
     return PCIE_IRQRET_MASK;
 }
-#else
-pcie_irq_handler_retval_t PciInterruptDispatcher::IrqThunk(const PcieDevice& dev,
-                                                           uint irq_id,
-                                                           void* ctx) {
-    DEBUG_ASSERT(ctx);
-
-    Interrupt* interrupt = reinterpret_cast<Interrupt*>(ctx);
-
-    // only record timestamp if this is the first IRQ since we started waiting
-    zx_time_t zero_timestamp = 0;
-    atomic_cmpxchg_u64(&interrupt->timestamp, &zero_timestamp, current_time());
-
-    PciInterruptDispatcher* thiz
-            = reinterpret_cast<PciInterruptDispatcher *>(interrupt->dispatcher);
-
-    // Mask the IRQ at the PCIe hardware level if we can.
-    thiz->Signal(SIGNAL_MASK(interrupt->slot), true);
-    return PCIE_IRQRET_MASK;
-}
-#endif
 
 zx_status_t PciInterruptDispatcher::Create(
         const fbl::RefPtr<PcieDevice>& device,
@@ -73,25 +52,11 @@ zx_status_t PciInterruptDispatcher::Create(
 
     fbl::AutoLock lock(interrupt_dispatcher->get_lock());
 
-#if ENABLE_NEW_IRQ_API
     // Register the interrupt
     zx_status_t status = interrupt_dispatcher->RegisterInterruptHandler_HelperLocked(irq_id,
                                                                    INTERRUPT_UNMASK_PREWAIT);
     if (status != ZX_OK)
         return status;
-#else
-    // bind our PCI interrupt
-    zx_status_t result = interrupt_dispatcher->AddSlotLocked(ZX_PCI_INTERRUPT_SLOT, irq_id,
-                                                             INTERRUPT_UNMASK_PREWAIT);
-    if (result != ZX_OK)
-        return result;
-
-    // prebind ZX_INTERRUPT_SLOT_USER
-    result = interrupt_dispatcher->AddSlotLocked(ZX_INTERRUPT_SLOT_USER, 0, INTERRUPT_VIRTUAL);
-    if (result != ZX_OK)
-        return result;
-
-#endif
 
     // Everything seems to have gone well.  Make sure the interrupt is unmasked
     // (if it is maskable) then transfer our dispatcher refererence to the
@@ -102,21 +67,6 @@ zx_status_t PciInterruptDispatcher::Create(
     *out_interrupt = fbl::move(dispatcher);
     *out_rights    = ZX_DEFAULT_PCI_INTERRUPT_RIGHTS;
     return ZX_OK;
-}
-
-zx_status_t PciInterruptDispatcher::Bind(uint32_t slot, uint32_t vector, uint32_t options) {
-    canary_.Assert();
-
-    if (slot > ZX_INTERRUPT_MAX_SLOTS)
-        return ZX_ERR_INVALID_ARGS;
-
-    // For PCI interrupt handles we only support binding virtual interrupts
-    if (options != ZX_INTERRUPT_VIRTUAL)
-        return ZX_ERR_INVALID_ARGS;
-
-    fbl::AutoLock lock(get_lock());
-
-    return AddSlotLocked(slot, vector, INTERRUPT_VIRTUAL);
 }
 
 void PciInterruptDispatcher::MaskInterrupt(uint32_t vector) {

@@ -396,93 +396,42 @@ static zx_status_t intel_serialio_i2c_slave_irq_ioctl(
     // route more appropriately.
     if (slave->chip_address == 0xa) {
         zx_handle_t irq;
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_create(get_root_resource(), 0x1f,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
             return status;
         }
-#else
-        zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &irq);
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = zx_interrupt_bind(irq, 0, get_root_resource(), 0x1f, ZX_INTERRUPT_MODE_LEVEL_LOW);
-        if (status != ZX_OK) {
-            zx_handle_close(irq);
-            return status;
-        }
-#endif
         memcpy(out_buf, &irq, sizeof(irq));
         *out_actual = sizeof(irq);
         return ZX_OK;
     } else if (slave->chip_address == 0x49) {
         zx_handle_t irq;
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_create(get_root_resource(), 0x33,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
             return status;
         }
-#else
-        zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &irq);
-
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = zx_interrupt_bind(irq, 0, get_root_resource(), 0x33, ZX_INTERRUPT_MODE_LEVEL_LOW);
-        if (status != ZX_OK) {
-            zx_handle_close(irq);
-            return status;
-        }
-#endif
        memcpy(out_buf, &irq, sizeof(irq));
         *out_actual = sizeof(irq);
         return ZX_OK;
     } else if (slave->chip_address == 0x10) {
         // Acer12
         zx_handle_t irq;
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_create(get_root_resource(), 0x1f,
                             ZX_INTERRUPT_MODE_LEVEL_LOW, &irq);
         if (status != ZX_OK) {
             return status;
         }
-#else
-        zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &irq);
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = zx_interrupt_bind(irq, 0, get_root_resource(), 0x1f,
-                            ZX_INTERRUPT_MODE_LEVEL_LOW);
-        if (status != ZX_OK) {
-            zx_handle_close(irq);
-            return status;
-        }
-#endif
         memcpy(out_buf, &irq, sizeof(irq));
         *out_actual = sizeof(irq);
         return ZX_OK;
     } else if (slave->chip_address == 0x50) {
         zx_handle_t irq;
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_create(get_root_resource(), 0x18,
                             ZX_INTERRUPT_MODE_EDGE_LOW, &irq);
         if (status != ZX_OK) {
             return status;
         }
-#else
-        zx_status_t status = zx_interrupt_create(get_root_resource(), 0, &irq);
-
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = zx_interrupt_bind(irq, 0, get_root_resource(), 0x18, ZX_INTERRUPT_MODE_EDGE_LOW);
-        if (status != ZX_OK) {
-            zx_handle_close(irq);
-            return status;
-        }
-#endif
         memcpy(out_buf, &irq, sizeof(irq));
         *out_actual = sizeof(irq);
         return ZX_OK;

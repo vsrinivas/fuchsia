@@ -347,13 +347,7 @@ static int i2c_hid_irq_thread(void* arg) {
     const zx_duration_t kMinTimeBetweenWarnings = ZX_SEC(10);
 
     while (true) {
-
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_wait(dev->irq, NULL);
-#else
-        uint64_t slots;
-        zx_status_t status = zx_interrupt_wait(dev->irq, &slots);
-#endif
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c-hid: interrupt wait failed %d\n", status);
             break;
