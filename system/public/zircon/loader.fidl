@@ -33,15 +33,6 @@ interface Loader {
     // Obtain a new loader service connection.
     5: Clone(request<Loader> loader) -> (status rv);
 
-    // This is a simple ad hoc logging facility intended for debugging
-    // the dynamic linker and early program startup issues.  It's
-    // convenient because the early startup code is using the loader
-    // service but doesn't have access to many other handles or
-    // complex facilities yet.  This will be replaced in the future
-    // with some simple-to-use logging facility that does not go
-    // through the loader service.
-    6: DebugPrint(string message) -> (status rv);
-
     // The program runtime sends a string naming a |data_sink| and
     // transfers the sole handle to a VMO containing the |data| it
     // wants published there.  The |data_sink| string identifies a

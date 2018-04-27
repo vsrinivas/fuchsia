@@ -15,6 +15,7 @@
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/log.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <stdalign.h>
@@ -37,10 +38,10 @@
 #include <runtime/processargs.h>
 #include <runtime/thread.h>
 
+
 static void early_init(void);
 static void error(const char*, ...);
 static void debugmsg(const char*, ...);
-static void log_write(const void* buf, size_t len);
 static zx_status_t get_library_vmo(const char* name, zx_handle_t* vmo);
 static void loader_svc_config(const char* config);
 
@@ -745,7 +746,7 @@ __NO_SAFESTACK static void log_module_element(struct dso* dso) {
                               dso->build_id_note->nhdr.n_descsz);
     }
     p = format_string(p, MODULE_ELEMENT_END, sizeof(MODULE_ELEMENT_END) - 1);
-    log_write(buffer, p - buffer);
+    _dl_log_write(buffer, p - buffer);
 }
 
 #define MMAP_ELEMENT_BEGIN "{{{mmap:"
@@ -783,7 +784,7 @@ __NO_SAFESTACK static void log_mmap_element(struct dso* dso, const Phdr* ph) {
     *p++ = ':';
     p = format_hex_value(p, start);
     p = format_string(p, MMAP_ELEMENT_END, sizeof(MMAP_ELEMENT_END) - 1);
-    log_write(buffer, p - buffer);
+    _dl_log_write(buffer, p - buffer);
 }
 
 __NO_SAFESTACK static void log_dso(struct dso* dso) {
@@ -796,7 +797,7 @@ __NO_SAFESTACK static void log_dso(struct dso* dso) {
         }
     }
     // TODO(mcgrathr): Remove this when everything uses markup.
-    log_write(dso->build_id_log.iov_base, dso->build_id_log.iov_len);
+    _dl_log_write(dso->build_id_log.iov_base, dso->build_id_log.iov_len);
 }
 
 __NO_SAFESTACK void _dl_log_unlogged(void) {
@@ -1957,6 +1958,12 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
         }
     }
 
+    // TODO(mcgrathr): For now, always use a kernel log channel.
+    // This needs to be replaced by a proper unprivileged logging scheme ASAP.
+    if (logger == ZX_HANDLE_INVALID) {
+        _zx_log_create(0, &logger);
+    }
+
     if (__zircon_process_self == ZX_HANDLE_INVALID)
         error("bootstrap message bad no proc self");
     if (__zircon_vmar_root_self == ZX_HANDLE_INVALID)
@@ -2305,9 +2312,6 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 #define LOADER_SVC_MSG_MAX 1024
 
-// This detects recursion via the error function.
-static bool loader_svc_rpc_in_progress;
-
 __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
                                                  const void* data, size_t len,
                                                  zx_handle_t request_handle,
@@ -2316,8 +2320,6 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
     // the stack size too much.  Calls to this function are always
     // serialized anyway, so there is no danger of collision.
     ldmsg_req_t req;
-
-    loader_svc_rpc_in_progress = true;
 
     memset(&req.header, 0, sizeof(req.header));
     req.header.ordinal = ordinal;
@@ -2328,7 +2330,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
         _zx_handle_close(request_handle);
         error("message of %zu bytes too large for loader service protocol",
               len);
-        goto out;
+        return status;
     }
 
     if (result != NULL) {
@@ -2366,7 +2368,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
             _zx_handle_close(request_handle);
         else if (read_status != ZX_OK)
             status = read_status;
-        goto out;
+        return status;
     }
 
     size_t expected_reply_size = ldmsg_rsp_get_size(&rsp);
@@ -2393,15 +2395,13 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
         }
         status = rsp.rv;
     }
-    goto out;
+    return status;
 
 err:
     if (handle_count > 0) {
         _zx_handle_close(*result);
         *result = ZX_HANDLE_INVALID;
     }
-out:
-    loader_svc_rpc_in_progress = false;
     return status;
 }
 
@@ -2483,33 +2483,37 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
     return status;
 }
 
-__NO_SAFESTACK static void log_write(const void* buf, size_t len) {
-    // The loader service prints "header: %s\n" when we send %s,
-    // so strip a trailing newline.
-    if (((const char*)buf)[len - 1] == '\n')
-        --len;
-
-    zx_status_t status;
-    if (logger != ZX_HANDLE_INVALID)
-        status = _zx_log_write(logger, len, buf, 0);
-    else if (!loader_svc_rpc_in_progress && loader_svc != ZX_HANDLE_INVALID)
-        status = loader_svc_rpc(LDMSG_OP_DEBUG_PRINT, buf, len,
-                                ZX_HANDLE_INVALID, NULL);
-    else {
-        int n = _zx_debug_write(buf, len);
-        status = n < 0 ? n : ZX_OK;
+__NO_SAFESTACK __attribute__((__visibility__("hidden"))) void _dl_log_write(
+    const char* buffer, size_t len) {
+    if (logger != ZX_HANDLE_INVALID) {
+        const size_t kLogWriteMax =
+            (ZX_LOG_RECORD_MAX - offsetof(zx_log_record_t, data));
+        while (len > 0) {
+            size_t chunk = len < kLogWriteMax ? len : kLogWriteMax;
+            zx_status_t status = _zx_log_write(logger, chunk, buffer, 0);
+            if (status != ZX_OK) {
+                __builtin_trap();
+            }
+            buffer += chunk;
+            len -= chunk;
+        }
+    } else {
+        zx_status_t status = _zx_debug_write(buffer, len);
+        if (status != ZX_OK) {
+            __builtin_trap();
+        }
     }
-    if (status != ZX_OK)
-        __builtin_trap();
 }
 
 __NO_SAFESTACK static size_t errormsg_write(FILE* f, const unsigned char* buf,
                                             size_t len) {
-    if (f != NULL && f->wpos > f->wbase)
-        log_write(f->wbase, f->wpos - f->wbase);
+    if (f != NULL && f->wpos > f->wbase) {
+        _dl_log_write((const char*)f->wbase, f->wpos - f->wbase);
+    }
 
-    if (len > 0)
-        log_write(buf, len);
+    if (len > 0) {
+        _dl_log_write((const char*)buf, len);
+    }
 
     if (f != NULL) {
         f->wend = f->buf + f->buf_size;

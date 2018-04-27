@@ -28,7 +28,6 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out,
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_DEBUG_PRINT:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
         offset = sizeof(fidl_string_t);
         break;
@@ -72,7 +71,6 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len,
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_DEBUG_PRINT:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
         if ((uintptr_t)req->common.string.data != FIDL_ALLOC_PRESENT)
             return ZX_ERR_INVALID_ARGS;
@@ -111,7 +109,6 @@ size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp) {
         return sizeof(ldmsg_rsp_t);
     case LDMSG_OP_CONFIG:
     case LDMSG_OP_CLONE:
-    case LDMSG_OP_DEBUG_PRINT:
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
         return sizeof(ldmsg_rsp_t) - sizeof(zx_handle_t);
     case LDMSG_OP_DONE:

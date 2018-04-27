@@ -100,10 +100,6 @@ static bool handle_loader_rpc(struct loader_state* state,
         printl(state->log, "loader-service received DONE request");
         return false;
 
-    case LDMSG_OP_DEBUG_PRINT:
-        printl(state->log, "loader-service: debug: %.*s", (int) string_len, string);
-        break;
-
     case LDMSG_OP_CONFIG:
         loader_config(state, string, string_len);
         break;

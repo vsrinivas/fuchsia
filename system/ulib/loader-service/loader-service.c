@@ -294,10 +294,6 @@ static zx_status_t loader_service_rpc(zx_handle_t h, loader_service_session_t* s
         status = loader_service_attach(svc, req_handle);
         req_handle = ZX_HANDLE_INVALID;
         break;
-    case LDMSG_OP_DEBUG_PRINT:
-        fprintf(stderr, "dlsvc: debug: %s\n", data);
-        status = ZX_OK;
-        break;
     case LDMSG_OP_DONE:
         zx_handle_close(req_handle);
         return ZX_ERR_PEER_CLOSED;
