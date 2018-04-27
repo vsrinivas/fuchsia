@@ -43,4 +43,17 @@ call them `on_<event>`.
 
 **Don't**: ~~`std::function<void(int)> done_callback`~~
 
+### Usage of fxl::StringView vs std::string
+
+When unsure about which kind of string to use (i.e. when none of the foreign
+APIs used in your functionality expect null-terminated strings or std::strings),
+follow the following guidelines:
+
+Use a `fxl::StringView` (const, non-ref) if the functionality just reads the
+string: `fxl::StringView` can handle any stream of byte without copies.
+
+Use a `std::string` (non-const, non-ref) if the functionality needs to take
+ownership of the string: it allows users of the functionality to `std::move`
+the string if they don't reuse it afterward.
+
 [Google C++ Style Guide]: https://github.com/google/googletes://github.com/google/googletest
