@@ -62,6 +62,7 @@ constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 #define debugbcn(args...)  wlogf(wlan::kLogDataBeaconTrace, "[V:bcn ] ", args)
 #define debugbss(args...)  wlogf(wlan::kLogBss, "[V:bss ] ", args)
 #define debugps(args...)  wlogf(wlan::kLogPs, "[V:PS  ] ", args)
+#define debugclt(args...)  wlogf(wlan::kLogBss, "[V:clt ] ", args)
 #define debugfhandler(args...)  wlogf(wlan::kLogFrameHandlerTrace, "[V:fhdl] ", args)
 // clang-format on
 
