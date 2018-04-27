@@ -13,8 +13,8 @@
 #include <thread>
 #include <unistd.h>
 
+#include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
-#include "garnet/bin/zxdb/client/session_llvm_state.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/lib/debug_ipc/helper/buffered_fd.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
@@ -404,7 +404,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
 
   stream_ = nullptr;
   connection_storage_.reset();
-  llvm_state_.reset();
+  arch_info_.reset();
   arch_ = debug_ipc::Arch::kUnknown;
 
   if (callback) {
@@ -503,12 +503,12 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
     }
   }
 
-  // Initialize LLVM for this architecture.
-  llvm_state_ = std::make_unique<SessionLLVMState>();
-  Err llvm_err = llvm_state_->Init(reply.arch);
-  if (llvm_err.has_error()) {
+  // Initialize arch-specific stuff.
+  arch_info_ = std::make_unique<ArchInfo>();
+  Err arch_err = arch_info_->Init(reply.arch);
+  if (arch_err.has_error()) {
     if (callback)
-      callback(llvm_err);
+      callback(arch_err);
     return;
   }
 

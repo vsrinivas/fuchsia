@@ -4,22 +4,22 @@
 
 #include <string>
 
+#include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/disassembler.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/output_buffer.h"
-#include "garnet/bin/zxdb/client/session_llvm_state.h"
 #include "garnet/public/lib/fxl/arraysize.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
 
 TEST(Disassembler, X64Individual) {
-  SessionLLVMState llvm;
-  Err err = llvm.Init(debug_ipc::Arch::kX64);
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
-  err = d.Init(&llvm);
+  err = d.Init(&arch);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
@@ -42,12 +42,12 @@ TEST(Disassembler, X64Individual) {
 }
 
 TEST(Disassembler, X64Undecodable) {
-  SessionLLVMState llvm;
-  Err err = llvm.Init(debug_ipc::Arch::kX64);
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
-  err = d.Init(&llvm);
+  err = d.Init(&arch);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
@@ -72,13 +72,13 @@ TEST(Disassembler, X64Undecodable) {
   EXPECT_EQ("\t.byte\t0xbf\t# Invalid instruction.\n", out.AsString());
 }
 
-TEST(Disassembler, Many) {
-  SessionLLVMState llvm;
-  Err err = llvm.Init(debug_ipc::Arch::kX64);
+TEST(Disassembler, X64Many) {
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
-  err = d.Init(&llvm);
+  err = d.Init(&arch);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
@@ -143,12 +143,12 @@ TEST(Disassembler, Many) {
 }
 
 TEST(Disassembler, Dump) {
-  SessionLLVMState llvm;
-  Err err = llvm.Init(debug_ipc::Arch::kX64);
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kX64);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler d;
-  err = d.Init(&llvm);
+  err = d.Init(&arch);
   ASSERT_FALSE(err.has_error()) << err.msg();
 
   Disassembler::Options opts;
@@ -233,5 +233,51 @@ TEST(Disassembler, Dump) {
       "\t0x00000001234567a5\tlea\trdi, [rsp + 0xc]\n",
       out.AsString());
 }
+
+TEST(Disassembler, Arm64Many) {
+  ArchInfo arch;
+  Err err = arch.Init(debug_ipc::Arch::kArm64);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  Disassembler d;
+  err = d.Init(&arch);
+  ASSERT_FALSE(err.has_error()) << err.msg();
+
+  OutputBuffer out;
+
+  const uint8_t data[] = {
+    0xf3, 0x0f, 0x1e, 0xf8,  // str x19, [sp, #-0x20]!
+    0xfd, 0x7b, 0x01, 0xa9,  // stp x29, x30, [sp, #0x10]
+    0xfd, 0x43, 0x00, 0x91   // add x29, sp, #16
+  };
+
+  Disassembler::Options opts;
+  opts.emit_addresses = true;
+  opts.emit_bytes = true;
+  out = OutputBuffer();
+  size_t count = 0;
+  size_t consumed = d.DisassembleMany(data, arraysize(data), 0x123456780, opts, 0,
+                               &out, &count);
+  EXPECT_EQ(arraysize(data), consumed);
+  EXPECT_EQ(3u, count);
+  EXPECT_EQ(
+      "\t0x0000000123456780\tf3 0f 1e f8\tstr\tx19, [sp, #-0x20]!\n"
+      "\t0x0000000123456784\tfd 7b 01 a9\tstp\tx29, x30, [sp, #0x10]\n"
+      "\t0x0000000123456788\tfd 43 00 91\tadd\tx29, sp, #0x10\t// =0x10\n",
+      out.AsString());
+
+  // Test an instruction off the end.
+  out = OutputBuffer();
+  consumed = d.DisassembleMany(data, arraysize(data) - 1, 0x123456780, opts, 0,
+                               &out, &count);
+  EXPECT_EQ(arraysize(data) - 1, consumed);
+  EXPECT_EQ(3u, count);
+  EXPECT_EQ(
+      "\t0x0000000123456780\tf3 0f 1e f8\tstr\tx19, [sp, #-0x20]!\n"
+      "\t0x0000000123456784\tfd 7b 01 a9\tstp\tx29, x30, [sp, #0x10]\n"
+      "\t0x0000000123456788\tfd 43 00\t.byte\t0xfd 0x43 0x00\t// Invalid instruction.\n",
+      out.AsString());
+}
+
 
 }  // namespace zxdb

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/session_llvm_state.h"
+#include "garnet/bin/zxdb/client/arch_info.h"
 
 #include "garnet/public/lib/fxl/logging.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -16,6 +16,9 @@
 // automatically (e.g. when the corresponding library is loaded). Since we
 // don't have that, the static registration functions need to be called
 // manually.
+extern "C" void LLVMInitializeAArch64TargetInfo();
+extern "C" void LLVMInitializeAArch64TargetMC();
+extern "C" void LLVMInitializeAArch64Disassembler();
 extern "C" void LLVMInitializeX86TargetInfo();
 extern "C" void LLVMInitializeX86TargetMC();
 extern "C" void LLVMInitializeX86Disassembler();
@@ -37,24 +40,37 @@ void InitializeX64() {
 }
 
 void InitializeARM64() {
-  // TODO(brettw) write this.
+  static bool initialized = false;
+  if (initialized)
+    return;
+
+  LLVMInitializeAArch64TargetInfo();
+  LLVMInitializeAArch64TargetMC();
+  LLVMInitializeAArch64Disassembler();
+
+  initialized = true;
 }
 
 }  // namespace
 
-SessionLLVMState::SessionLLVMState() = default;
-SessionLLVMState::~SessionLLVMState() = default;
+ArchInfo::ArchInfo() = default;
+ArchInfo::~ArchInfo() = default;
 
-Err SessionLLVMState::Init(debug_ipc::Arch arch) {
+Err ArchInfo::Init(debug_ipc::Arch arch) {
   switch (arch) {
     case debug_ipc::Arch::kX64:
       InitializeX64();
+      max_instr_len_ = 15;
+      instr_align_ = 1;
       triple_name_ = "x86_64";
       processor_name_ = "x86-64";
       break;
     case debug_ipc::Arch::kArm64:
       InitializeARM64();
-      // TODO(brettw) write this.
+      max_instr_len_ = 4;
+      instr_align_ = 4;
+      triple_name_ = "aarch64";
+      processor_name_ = "generic";
       break;
     default:
       FXL_NOTREACHED();

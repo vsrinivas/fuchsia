@@ -21,12 +21,20 @@ class Triple;
 
 namespace zxdb {
 
-class SessionLLVMState {
+class ArchInfo {
  public:
-  SessionLLVMState();
-  ~SessionLLVMState();
+  ArchInfo();
+  ~ArchInfo();
 
   Err Init(debug_ipc::Arch arch);
+
+  // Minimum instruction alignment. Prefer instead of
+  // llvm::AsmInfo::MinInstAlignment which isn't correct for ARM (reports 1).
+  size_t instr_align() const { return instr_align_; }
+
+  // Longest possible instruction in bytes. Prefer instead of
+  // llvm::AsmInfo::MaxInstLength which isn't correct for x86 (reports 1).
+  size_t max_instr_len() const { return max_instr_len_; }
 
   // In LLVM a configuration name is called a "triple" even though it contains
   // more than 3 fields.
@@ -46,6 +54,9 @@ class SessionLLVMState {
   const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
 
  private:
+  size_t instr_align_ = 1;
+  size_t max_instr_len_ = 1;
+
   std::string triple_name_;
   std::string processor_name_;
 
@@ -57,7 +68,7 @@ class SessionLLVMState {
   std::unique_ptr<llvm::MCSubtargetInfo> subtarget_info_;
   std::unique_ptr<llvm::MCAsmInfo> asm_info_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SessionLLVMState);
+  FXL_DISALLOW_COPY_AND_ASSIGN(ArchInfo);
 };
 
 }  // namespace zxdb

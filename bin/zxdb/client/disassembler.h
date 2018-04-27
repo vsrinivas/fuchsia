@@ -19,9 +19,9 @@ class MCInstPrinter;
 
 namespace zxdb {
 
+class ArchInfo;
 class MemoryDump;
 class OutputBuffer;
-class SessionLLVMState;
 
 // Disassembles a block of data.
 class Disassembler {
@@ -46,11 +46,10 @@ class Disassembler {
   Disassembler();
   ~Disassembler();
 
-  // The SessionLLVMState pointer must outlive this class. Since typically
-  // this will come from the Session object which can destroy the LLVM context
-  // when the agent is disconnected, you will not want to store Disassembler
-  // objects.
-  Err Init(SessionLLVMState* llvm);
+  // The ArchInfo pointer must outlive this class. Since typically this will
+  // come from the Session object which can destroy the LLVM context when the
+  // agent is disconnected, you will not want to store Disassembler objects.
+  Err Init(const ArchInfo* arch);
 
   // Disassembles one machine instruction, appending the string (with a
   // newline) to the output buffer. The number of bytes consumed will be
@@ -91,7 +90,7 @@ class Disassembler {
                          size_t* instruction_count) const;
 
  private:
-  SessionLLVMState* llvm_ = nullptr;
+  const ArchInfo* arch_ = nullptr;
 
   std::unique_ptr<llvm::MCContext> context_;
   std::unique_ptr<llvm::MCDisassembler> disasm_;

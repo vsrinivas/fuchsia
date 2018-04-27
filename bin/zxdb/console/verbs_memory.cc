@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <sstream>
 
+#include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/disassembler.h"
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
@@ -14,7 +15,6 @@
 #include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/session_llvm_state.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
@@ -122,7 +122,7 @@ void CompleteDisassemble(const Err& err,
   // Make the disassembler.
   Disassembler disassembler;
   Session* session = console->context().session();
-  Err my_err = disassembler.Init(session->llvm_state());
+  Err my_err = disassembler.Init(session->arch_info());
   if (my_err.has_error()) {
     console->Output(err);
     return;
@@ -219,13 +219,8 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
 
   // Compute the max bytes requires to get the requested instructions.
   // It doesn't matter if we request more memory than necessary so use a
-  // high bound. llvm::MCAsmInfo::getMaxInstLength() sounds like it would
-  // be what we want, but it's currently 4 on x64 which is not nearly enough.
-  //
-  // TODO(brettw) find a better place to hold the real max instruction length
-  // for the current processor. Currently just use the x86 max of 15 bytes.
-  constexpr size_t kMaxInstrLength = 15;
-  size_t size = num_instr * kMaxInstrLength;
+  // high bound.
+  size_t size = num_instr * context->session()->arch_info()->max_instr_len();
 
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();

@@ -6,6 +6,7 @@ static_library("client") {
   friend = [ ":tests" ]
 
   public = [
+    "arch_info.h",
     "breakpoint.h",
     "breakpoint_observer.h",
     "client_object.h",
@@ -17,7 +18,6 @@ static_library("client") {
     "process.h",
     "process_observer.h",
     "session.h",
-    "session_llvm_state.h",
     "system.h",
     "system_observer.h",
     "target.h",
@@ -27,6 +27,7 @@ static_library("client") {
   ]
 
   sources = [
+    "arch_info.cc",
     "breakpoint.cc",
     "breakpoint_impl.cc",
     "breakpoint_impl.h",
@@ -42,7 +43,6 @@ static_library("client") {
     "process_impl.cc",
     "process_impl.h",
     "session.cc",
-    "session_llvm_state.cc",
     "system.cc",
     "system_impl.cc",
     "system_impl.h",
@@ -58,6 +58,7 @@ static_library("client") {
     "//garnet/lib/debug_ipc:client",
     "//garnet/lib/debug_ipc/helper",
     "//garnet/public/lib/fxl",
+    "//third_party/llvm/lib/Target/AArch64/Disassembler",
     "//third_party/llvm/lib/Target/X86/Disassembler",
   ]
 }

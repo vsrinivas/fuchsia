@@ -7,9 +7,9 @@
 #include <inttypes.h>
 #include <limits>
 
+#include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/client/output_buffer.h"
-#include "garnet/bin/zxdb/client/session_llvm_state.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "garnet/public/lib/fxl/strings/trim.h"
@@ -50,20 +50,20 @@ std::string GetInvalidInstructionStr(const uint8_t* data, size_t len) {
 Disassembler::Disassembler() = default;
 Disassembler::~Disassembler() = default;
 
-Err Disassembler::Init(SessionLLVMState* llvm) {
-  llvm_ = llvm;
+Err Disassembler::Init(const ArchInfo* arch) {
+  arch_ = arch;
 
-  context_ = std::make_unique<llvm::MCContext>(llvm->asm_info(),
-                                               llvm_->register_info(), nullptr);
-  disasm_.reset(llvm_->target()->createMCDisassembler(*llvm_->subtarget_info(),
+  context_ = std::make_unique<llvm::MCContext>(arch_->asm_info(),
+                                               arch_->register_info(), nullptr);
+  disasm_.reset(arch_->target()->createMCDisassembler(*arch_->subtarget_info(),
                                                       *context_));
   if (!disasm_)
     return Err("Couldn't create LLVM disassembler.");
 
   constexpr int kAssemblyFlavor = 1;  // 1 means "Intel" (not AT&T).
-  printer_.reset(llvm_->target()->createMCInstPrinter(
-      *llvm_->triple(), kAssemblyFlavor, *llvm_->asm_info(),
-      *llvm_->instr_info(), *llvm->register_info()));
+  printer_.reset(arch_->target()->createMCInstPrinter(
+      *arch_->triple(), kAssemblyFlavor, *arch_->asm_info(),
+      *arch_->instr_info(), *arch_->register_info()));
   printer_->setPrintHexStyle(llvm::HexStyle::C);  // ::C = 0xff-style.
   printer_->setPrintImmHex(true);
   printer_->setUseMarkup(true);
@@ -91,7 +91,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data,
 
     printer_->setCommentStream(comment_stream);
     printer_->printInst(&inst, inst_stream, llvm::StringRef(),
-                        *llvm_->subtarget_info());
+                        *arch_->subtarget_info());
     printer_->setCommentStream(llvm::nulls());
 
     inst_stream.flush();
@@ -100,10 +100,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data,
     // Failure decoding.
     if (!options.emit_undecodable)
       return 0;
-
-    consumed =
-        std::min(data_len,
-                 static_cast<size_t>(llvm_->asm_info()->getMinInstAlignment()));
+    consumed = std::min(data_len, arch_->instr_align());
     inst_string = GetInvalidInstructionStr(data, consumed);
     comment_string = "Invalid instruction.";
   }
@@ -136,7 +133,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data,
     ReplaceAllInstancesOf("\r\n", ' ', &comment_string);
 
     out->Append(Syntax::kComment,
-                "\t" + llvm_->asm_info()->getCommentString().str() + " " +
+                "\t" + arch_->asm_info()->getCommentString().str() + " " +
                     comment_string);
   }
 
@@ -207,7 +204,7 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump,
       out->Append(Syntax::kNormal, "\t??\t");
       out->Append(
           Syntax::kComment,
-          llvm_->asm_info()->getCommentString().str() + " Invalid memory.\n");
+          arch_->asm_info()->getCommentString().str() + " Invalid memory.\n");
       (*instruction_count)++;  // Count invalid region as one instruction.
       continue;
     }

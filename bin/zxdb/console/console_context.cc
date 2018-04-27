@@ -30,7 +30,19 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 }
 
 ConsoleContext::~ConsoleContext() {
+  // Unregister for all observers.
   session_->system().RemoveObserver(this);
+
+  for (auto& target_pair : id_to_target_) {
+    target_pair.second.target->RemoveObserver(this);
+
+    Process* process = target_pair.second.target->GetProcess();
+    if (process)
+      process->RemoveObserver(this);
+
+    for (auto& thread_pair : target_pair.second.id_to_thread)
+      thread_pair.second.thread->RemoveObserver(this);
+  }
 }
 
 int ConsoleContext::IdForTarget(const Target* target) const {
