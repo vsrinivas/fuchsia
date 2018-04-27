@@ -1,25 +1,13 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.c
+// found in the LICENSE file.
 
 library modular;
-
-// NOTE: Some future-thinking features are represented here and commented out
-// to give a sense for the likely future direction of this service, and are left
-// here for informational purposes at this time.
 
 struct Proposal {
   // Identifies a proposal, namespaced internally to the proposing component and
   // proposal channel (Query or Next/Interruption).
   string id;
-
-  // The Proposal is only considered valid if all of |preconditions| are
-  // evaluated to true.
-  // vector<Precondition> preconditions;
-
-  // The Proposal is considered expired if *any* of the |expiry_conditions|
-  // are true.
-  // vector<ExpiryCondition> expiry_conditions;
 
   // The list of actions to take when the user selects the associated
   // Suggestion.
@@ -34,15 +22,6 @@ struct Proposal {
   SuggestionDisplay display;
 };
 
-// union Precondition {
-//   DateTime after_time;
-//   GeoArea geo_fence;
-// }
-
-// union ExpiryCondition {
-//   DateTime expiry_time;
-// }
-
 union Action {
   CreateStory create_story;
   FocusStory focus_story;
@@ -53,13 +32,10 @@ union Action {
 
 // Creates a new story with the specified module
 struct CreateStory {
-  // TODO(thatguy): Remove all users of |module_id| and |initial_data| fields,
-  // and remove them here.
+  // Deprecated. These are left in for backwards compatibility. Internally,
+  // an appropriate Intent is constructed with equivalent semantics.
+  // TODO(thatguy): Remove all clients.
   string? module_id;
-
-  // Passed as root_json argument to StoryProvider.CreateStoryWithInfo()
-  // Link.Set() to set the value in the root link of the new Story's primary
-  // module.
   string? initial_data;
 
   // The intent used to add the first module to the created story.
@@ -68,30 +44,26 @@ struct CreateStory {
 };
 
 // Brings an existing story into focus.
-//
-// TODO(alhaad): It is not entirely clear to me whether it is the user shell
-// which checks if the story is running when brought into focus. Re-visit this.
 struct FocusStory {
   string story_id;
-
-  // TODO(alhaad): Add some Link data that could be used to provide information
-  // to the story as to why it was brought into focus.
 };
 
-// Adds a module from a Intent to an existing story.
+// Adds a module from an Intent to an existing story.
 struct AddModule {
   // The identifier of the story that the Intent is to be added to.
   string story_id;
 
-  // The name of the module that will be added as a result of this proposal.
-  // A proposal for the same |story_id| and |module_name| from the same Agent
-  // will result in replacing the module at |module_name|, not adding a new one.
+  // The name of the module that will be added as a result of this proposal.  A
+  // proposal for the same |story_id|, |module_name| and
+  // |surface_parent_module_path| from the same Agent will result in replacing
+  // the module at |module_name|, not adding a new one.
   string module_name;
 
   // The Intent that is to be added to the story.
   Intent intent;
 
-  // The relation to use when adding a module as a result of resolving the Intent.
+  // The relation, relative to |surface_parent_module_path| to use. This
+  // information is passed to the story shell for visual module composition.
   SurfaceRelation surface_relation;
 
   // The module path of an existing module to assign as the surface-relationship
@@ -110,8 +82,7 @@ interface CustomAction {
 
 // Performs a query with the given text. Once the proposals from the query are
 // received, the first top-ranked proposal (not necessarily first proposal
-// received) is jackpotted (automatically selected).
+// received) is automatically executed.
 struct QueryAction {
-  // The input for the query.
   UserInput input;
 };
