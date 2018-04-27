@@ -173,9 +173,16 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
         root_page_(root_page),
         story_provider_impl_(story_provider_impl),
         extra_info_(std::move(extra_info)),
-        root_json_(root_json),
         start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
-    intent_.action.handler = url;
+    intent_.action.handler = std::move(url);
+
+    if (!root_json.is_null()) {
+      modular::IntentParameter param;
+      param.name = nullptr;
+      param.data.set_json(std::move(root_json));
+      intent_.parameters.push_back(std::move(param));
+    }
+
     Ready();
   }
 
@@ -221,9 +228,6 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
     controller_ = std::make_unique<StoryControllerImpl>(
         story_id_, story_provider_impl_->ledger_client_, story_page_id_,
         story_provider_impl_);
-    auto create_link_info = CreateLinkInfo::New();
-    create_link_info->initial_data = std::move(root_json_);
-
     controller_->AddModule({} /* parent_module_path */, kRootModuleName, std::move(intent_),
                            nullptr /* surface_relation */);
 
@@ -237,10 +241,8 @@ class StoryProviderImpl::CreateStoryCall : Operation<fidl::StringPtr> {
   ledger::Ledger* const ledger_;                  // not owned
   ledger::Page* const root_page_;                 // not owned
   StoryProviderImpl* const story_provider_impl_;  // not owned
-  const fidl::StringPtr module_name_;
   Intent intent_;
   fidl::VectorPtr<StoryInfoExtraEntry> extra_info_;
-  fidl::StringPtr root_json_;
   const zx_time_t start_time_;
 
   ledger::PagePtr story_page_;
@@ -553,7 +555,7 @@ class StoryProviderImpl::DumpStateCall : Operation<std::string> {
   DumpStateCall(OperationContainer* const container,
                 StoryProviderImpl* const story_provider_impl,
                 ResultCall result_call)
-      : Operation("StoryProviderImpl::CreateStoryCall",
+      : Operation("StoryProviderImpl::DumpStateCall",
                   container,
                   std::move(result_call)),
         story_provider_impl_(story_provider_impl) {
@@ -767,7 +769,7 @@ void StoryProviderImpl::CreateStory(fidl::StringPtr module_url,
                                     CreateStoryCallback callback) {
   FXL_LOG(INFO) << "CreateStory() " << module_url;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
-                      module_url, nullptr, fidl::StringPtr(), callback);
+                      module_url, nullptr, nullptr, callback);
 }
 
 // |StoryProvider|
@@ -778,7 +780,7 @@ void StoryProviderImpl::CreateStoryWithInfo(
     CreateStoryWithInfoCallback callback) {
   FXL_LOG(INFO) << "CreateStoryWithInfo() " << module_url << " " << root_json;
   new CreateStoryCall(&operation_queue_, ledger_client_->ledger(), page(), this,
-                      module_url, std::move(extra_info), root_json, callback);
+                      module_url, std::move(extra_info), std::move(root_json), callback);
 }
 
 // |StoryProvider|

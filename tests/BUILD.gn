@@ -53,6 +53,7 @@ package("modular_tests") {
     "last_focus_time",
     "link_context_entities",
     "link_data",
+    "link_passing",
     "link_update",
     "parent_child",
     "queue_persistence",
@@ -140,6 +141,18 @@ package("modular_tests") {
     {
       name = "link_data_test_user_shell"
       dest = "modular_tests/link_data_test_user_shell"
+    },
+    {
+      name = "link_passing_test_module1"
+      dest = "modular_tests/link_passing_test_module1"
+    },
+    {
+      name = "link_passing_test_module2"
+      dest = "modular_tests/link_passing_test_module2"
+    },
+    {
+      name = "link_passing_test_module3"
+      dest = "modular_tests/link_passing_test_module3"
     },
     {
       name = "link_update_test_user_shell"

@@ -572,6 +572,15 @@ void XdrWrite(std::string* const json,
   *json = JsonValueToString(doc);
 }
 
+// A wrapper function to return data as a JSON string. This never fails.
+template <typename D, typename V>
+std::string XdrWrite(D* const data,
+                     XdrFilterType<V> const filter) {
+  std::string json;
+  XdrWrite(&json, data, filter);
+  return json;
+}
+
 }  // namespace modular
 
 #endif  // PERIDOT_LIB_FIDL_JSON_XDR_H_

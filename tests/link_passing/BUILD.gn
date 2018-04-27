@@ -1,0 +1,58 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("link_passing") {
+  testonly = true
+
+  public_deps = [
+    ":link_passing_test_module1",
+    ":link_passing_test_module2",
+    ":link_passing_test_module3",
+  ]
+}
+
+executable("link_passing_test_module1") {
+  testonly = true
+
+  sources = [
+    "link_passing_test_module1.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+executable("link_passing_test_module2") {
+  testonly = true
+
+  sources = [
+    "link_passing_test_module2.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}
+
+executable("link_passing_test_module3") {
+  testonly = true
+
+  sources = [
+    "link_passing_test_module3.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/views/fidl:v1",
+    "//peridot/lib/testing",
+    "//peridot/public/lib:fidl",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+  ]
+}

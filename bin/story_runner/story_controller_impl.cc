@@ -100,11 +100,11 @@ void XdrIntentParameterData(XdrContext* const xdr,
       xdr->Field(kTag, &tag);
 
       if (tag == kEntityReference) {
-        std::string value;
+        fidl::StringPtr value;
         xdr->Field(kEntityReference, &value);
         data->set_entity_reference(std::move(value));
       } else if (tag == kJson) {
-        std::string value;
+        fidl::StringPtr value;
         xdr->Field(kJson, &value);
         data->set_json(std::move(value));
       } else if (tag == kEntityType) {
@@ -112,7 +112,7 @@ void XdrIntentParameterData(XdrContext* const xdr,
         xdr->Field(kEntityType, &value);
         data->set_entity_type(std::move(value));
       } else if (tag == kLinkName) {
-        std::string value;
+        fidl::StringPtr value;
         xdr->Field(kLinkName, &value);
         data->set_link_name(std::move(value));
       } else if (tag == kLinkPath) {
@@ -139,22 +139,30 @@ void XdrIntentParameterData(XdrContext* const xdr,
       // for all types.
 
       switch (data->Which()) {
-        case IntentParameterData::Tag::kEntityReference:
+        case IntentParameterData::Tag::kEntityReference: {
           tag = kEntityReference;
-          xdr->Field(kEntityReference, data->entity_reference().operator->());
+          fidl::StringPtr value = data->entity_reference();
+          xdr->Field(kEntityReference, &value);
           break;
-        case IntentParameterData::Tag::kJson:
+        }
+        case IntentParameterData::Tag::kJson: {
           tag = kJson;
-          xdr->Field(kJson, data->json().operator->());
+          fidl::StringPtr value = data->json();
+          xdr->Field(kJson, &value);
           break;
-        case IntentParameterData::Tag::kEntityType:
+        }
+        case IntentParameterData::Tag::kEntityType: {
           tag = kEntityType;
-          xdr->Field(kEntityType, data->entity_type().operator->());
+          fidl::VectorPtr<fidl::StringPtr> value = Clone(data->entity_type());
+          xdr->Field(kEntityType, &value);
           break;
-        case IntentParameterData::Tag::kLinkName:
+        }
+        case IntentParameterData::Tag::kLinkName: {
           tag = kLinkName;
-          xdr->Field(kLinkName, data->link_name().operator->());
+          fidl::StringPtr value = data->link_name();
+          xdr->Field(kLinkName, &value);
           break;
+        }
         case IntentParameterData::Tag::kLinkPath: {
           tag = kLinkPath;
           xdr->Field(kLinkPath, &data->link_path(), XdrLinkPath);
@@ -2067,6 +2075,11 @@ void StoryControllerImpl::OnPageChange(const std::string& key,
     FXL_LOG(ERROR) << "Unable to parse ModuleData " << key << " " << value;
     return;
   }
+
+  // TODO(mesch,thatguy): We should not have to wait for anything to be written
+  // to the ledger. Instead, story graph mutations should be idempotent, and any
+  // ledger notification should just trigger the operation it represents, doing
+  // nothing if it was done alrady.
 
   // Check if we already have a blocked operation for this update.
   auto i = std::find_if(blocked_operations_.begin(), blocked_operations_.end(),
