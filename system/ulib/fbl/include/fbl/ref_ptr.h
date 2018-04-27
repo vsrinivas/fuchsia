@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <fbl/alloc_checker.h>
 #include <fbl/recycler.h>
 #include <fbl/type_support.h>
 
@@ -344,6 +345,35 @@ inline RefPtr<T> MakeRefPtrUpgradeFromRaw(T* ptr, const Mutex& lock) {
     return RefPtr<T>(ptr, lock);
 }
 
+// This is a wrapper class that can be friended for a particular |T|, if you
+// want to make |T|'s constructor private, but still use |MakeRefCounted()|
+// (below). (You can't friend partial specializations.)
+template <typename T>
+class MakeRefCountedHelper final {
+ public:
+  template <typename... Args>
+  static RefPtr<T> MakeRefCounted(Args&&... args) {
+    return AdoptRef<T>(new T(forward<Args>(args)...));
+  }
+
+  template <typename... Args>
+  static RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
+    return AdoptRef<T>(new (ac) T(forward<Args>(args)...));
+  }
+};
+
 } // namespace internal
+
+template <typename T, typename... Args>
+RefPtr<T> MakeRefCounted(Args&&... args) {
+  return internal::MakeRefCountedHelper<T>::MakeRefCounted(
+      forward<Args>(args)...);
+}
+
+template <typename T, typename... Args>
+RefPtr<T> MakeRefCountedChecked(AllocChecker* ac, Args&&... args) {
+  return internal::MakeRefCountedHelper<T>::MakeRefCountedChecked(
+      ac, forward<Args>(args)...);
+}
 
 } // namespace fbl

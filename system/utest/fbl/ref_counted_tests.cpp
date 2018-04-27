@@ -71,6 +71,22 @@ static bool ref_counted_test() {
     END_TEST;
 }
 
+static bool make_ref_counted_test() {
+    BEGIN_TEST;
+
+    bool destroyed = false;
+    {
+        auto ptr = fbl::MakeRefCounted<DestructionTracker>(&destroyed);
+        EXPECT_FALSE(destroyed, "should not be destroyed");
+
+        fbl::AllocChecker ac;
+        auto ptr2 = fbl::MakeRefCountedChecked<DestructionTracker>(&ac, &destroyed);
+        EXPECT_TRUE(ac.check());
+    }
+    EXPECT_TRUE(destroyed, "should be when RefPtr falls out of scope");
+    END_TEST;
+}
+
 static bool wrap_dead_pointer_asserts() {
     BEGIN_TEST;
     if (!RUN_DEATH_TESTS) {
@@ -288,6 +304,7 @@ static bool upgrade_success_test() {
 
 BEGIN_TEST_CASE(ref_counted_tests)
 RUN_NAMED_TEST("Ref Counted", ref_counted_test)
+RUN_NAMED_TEST("Make Ref Counted", make_ref_counted_test)
 RUN_NAMED_TEST("Wrapping dead pointer should assert", wrap_dead_pointer_asserts)
 RUN_NAMED_TEST("Extra release should assert", extra_release_asserts)
 RUN_NAMED_TEST("Wrapping zero-count pointer should assert",
