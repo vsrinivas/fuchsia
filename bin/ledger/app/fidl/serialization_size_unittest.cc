@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/clone.h"
@@ -51,7 +51,7 @@ std::string GetValue(size_t index, size_t min_value_size = 0u) {
   return ::testing::AssertionSuccess();
 }
 
-using SerializationSizeTest = gtest::TestWithMessageLoop;
+using SerializationSizeTest = gtest::TestWithLoop;
 
 class FakeSnapshotImpl : public PageSnapshot {
  public:
