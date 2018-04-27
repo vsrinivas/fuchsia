@@ -8,4 +8,3 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
 fi
 
 gcloud compute instances delete $FUCHSIA_GCE_INSTANCE
-gcloud compute disks delete $FUCHSIA_GCE_DISK

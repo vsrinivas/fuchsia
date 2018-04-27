@@ -7,8 +7,6 @@ if [[ -z $FUCHSIA_GCE_PROJECT ]]; then
   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/env.sh
 fi
 
-gcloud -q compute disks create "$FUCHSIA_GCE_DISK" --image "$FUCHSIA_GCE_IMAGE" || exit
-gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --image "$FUCHSIA_GCE_GRUB" || exit
-gcloud -q compute instances attach-disk "$FUCHSIA_GCE_INSTANCE" --disk "$FUCHSIA_GCE_DISK" || exit
-gcloud -q compute instances add-metadata "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 || exit
-gcloud -q compute instances reset "$FUCHSIA_GCE_INSTANCE"
+# gcloud -q compute disks create "$FUCHSIA_GCE_DISK" --guest-os-features=UEFI_COMPATIBLE --image "$FUCHSIA_GCE_IMAGE" || exit
+# gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 --disk=auto-delete=yes,boot=yes,mode=rw,name="${FUCHSIA_GCE_DISK}" || exit
+gcloud -q compute instances create "$FUCHSIA_GCE_INSTANCE" --metadata=serial-port-enable=1 --image "${FUCHSIA_GCE_IMAGE}" || exit $?
