@@ -13,8 +13,6 @@
 #include <ddk/protocol/pci.h>
 #include <lib/zx/handle.h>
 
-#define ENABLE_NEW_IRQ_API 1
-
 namespace magma {
 
 class ZirconPlatformInterrupt : public PlatformInterrupt {
@@ -25,23 +23,14 @@ public:
     }
 
     void Signal() override {
-#if ENABLE_NEW_IRQ_API
         zx_irq_destroy(handle_.get());
-#else
-        zx_interrupt_signal(handle_.get(), ZX_INTERRUPT_SLOT_USER, 0);
-#endif
     }
 
     bool Wait() override
     {
-#if ENABLE_NEW_IRQ_API
         zx_status_t status = zx_irq_wait(handle_.get(), nullptr);
-#else
-        uint64_t slots;
-        zx_status_t status = zx_interrupt_wait(handle_.get(), &slots);
-#endif
         if (status != ZX_OK)
-            return DRETF(false, "zx_interrupt_wait failed (%d)", status);
+            return DRETF(false, "zx_irq_wait failed (%d)", status);
         return true;
     }
 
