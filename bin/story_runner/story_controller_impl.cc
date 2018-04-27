@@ -2291,10 +2291,10 @@ void StoryControllerImpl::AddModule(
     fidl::StringPtr module_name,
     Intent intent,
     SurfaceRelationPtr surface_relation) {
-  // AddModule() only adds modules to the story shell. Internally, we use a
-  // null SurfaceRelation to mean that the module is embedded, and a default
+  // AddModule() only adds modules to the story shell. Internally, we use a null
+  // SurfaceRelation to mean that the module is embedded, and a non-null
   // SurfaceRelation to indicate that the module is composed by the story shell.
-  // If it is null, we need to default initialize it.
+  // If it is null, we set it to the default SurfaceRelation.
   if (!surface_relation) {
     surface_relation = SurfaceRelation::New();
   }

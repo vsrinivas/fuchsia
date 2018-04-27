@@ -115,11 +115,6 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    // TODO(mesch): AddModule() with a null surface relation indicates an
-    // embedded module. But AddModule() allows a null surface relationship, even
-    // though the module is not embedded. Makes no sense.
-    modular::SurfaceRelation surface_relation;
-
     // TODO(mesch): StoryController.AddModule() with a null parent module loses
     // information about the order in which modules are added. When the story is
     // resumed, external modules without parent modules are started in
@@ -131,7 +126,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     intent_one.action.name = kNullAction;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
-                                 modular::CloneOptional(surface_relation));
+                                 nullptr /* surface_relation */);
 
     fidl::VectorPtr<fidl::StringPtr> parent_two;
     parent_two.push_back("root");
@@ -140,7 +135,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     intent_two.action.name = kNullAction;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
-                                 modular::CloneOptional(surface_relation));
+                                 nullptr /* surface_relation */);
   }
 
   void Story1_Stop1() {
@@ -205,14 +200,13 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     fidl::InterfaceHandle<views_v1_token::ViewOwner> story_view;
     story_controller_->Start(story_view.NewRequest());
 
-    modular::SurfaceRelation surface_relation;
     fidl::VectorPtr<fidl::StringPtr> parent_one;
     parent_one.push_back("root");
     modular::Intent intent_one;
     intent_one.action.handler = kNullModule;
     story_controller_->AddModule(std::move(parent_one), "one",
                                  std::move(intent_one),
-                                 modular::CloneOptional(surface_relation));
+                                 nullptr /*surface_relation) */);
 
     fidl::VectorPtr<fidl::StringPtr> parent_two;
     parent_two.push_back("root");
@@ -221,7 +215,7 @@ class TestApp : public modular::testing::ComponentBase<modular::UserShell> {
     intent_two.action.handler = kNullModule;
     story_controller_->AddModule(std::move(parent_two), "two",
                                  std::move(intent_two),
-                                 modular::CloneOptional(surface_relation));
+                                 nullptr /* surface_relation */);
   }
 
   void Story2_Stop1() {
