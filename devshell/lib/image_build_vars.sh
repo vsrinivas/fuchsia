@@ -25,6 +25,7 @@ fx-machine-types() {
   echo "same behavior and target specific differences occur client side."
 }
 
+# TODO Remove ${board} variable after build system builds common images
 case "${FUCHSIA_ARCH}" in
 x64)
   board="pc"
