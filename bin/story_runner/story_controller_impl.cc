@@ -2291,6 +2291,12 @@ void StoryControllerImpl::AddModule(
     fidl::StringPtr module_name,
     Intent intent,
     SurfaceRelationPtr surface_relation) {
+  if (!module_name || module_name->empty()) {
+    // TODO(thatguy): When we report errors, make this an error reported back
+    // to the client.
+    FXL_LOG(FATAL) << "StoryController::AddModule(): module_name must not be empty.";
+  }
+
   // AddModule() only adds modules to the story shell. Internally, we use a null
   // SurfaceRelation to mean that the module is embedded, and a non-null
   // SurfaceRelation to indicate that the module is composed by the story shell.
@@ -2298,6 +2304,7 @@ void StoryControllerImpl::AddModule(
   if (!surface_relation) {
     surface_relation = SurfaceRelation::New();
   }
+
   new AddIntentCall(
       &operation_queue_, this, std::move(parent_module_path), module_name,
       CloneOptional(intent), nullptr /* incoming_services */,

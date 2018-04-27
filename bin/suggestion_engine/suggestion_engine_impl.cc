@@ -332,8 +332,11 @@ void SuggestionEngineImpl::PerformCreateStoryAction(const Action& action,
                                      const fidl::StringPtr& story_id) mutable {
         modular::StoryControllerPtr story_controller;
         story_provider_->GetController(story_id, story_controller.NewRequest());
+        // TODO(thatguy): We give the first module the name "root". We'd like to
+        // move away from module names being assigned by the framework or other
+        // components, and rather have clients always provide a module name.
         story_controller->AddModule(nullptr /* parent module path */,
-                                    "" /* module name */, std::move(intent),
+                                    "root" /* module name */, std::move(intent),
                                     nullptr /* surface relation */);
         focus_provider_ptr_->Request(story_id);
       }));
