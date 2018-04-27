@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
 #define ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_
 
+#include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -95,6 +96,8 @@ private:
 
     // string representation to print in fallback mode
     fbl::String tagstr_;
+
+    fbl::Mutex fallback_mutex_;
 };
 
 #endif // ZIRCON_SYSTEM_ULIB_SYSLOG_FX_LOGGER_H_

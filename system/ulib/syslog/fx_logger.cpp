@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <fbl/string_buffer.h>
 #include <zircon/assert.h>
 
@@ -28,6 +29,10 @@ zx_koid_t GetCurrentThreadKoid() {
 } // namespace
 
 void fx_logger::ActivateFallback(int fallback_fd) {
+    fbl::AutoLock lock(&fallback_mutex_);
+    if (logger_fd_.load(fbl::memory_order_relaxed) != -1) {
+        return;
+    }
     ZX_DEBUG_ASSERT(fallback_fd >= -1);
     if (tagstr_.empty()) {
         for (size_t i = 0; i < tags_.size(); i++) {
@@ -84,6 +89,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
     // Write msg
     int n = static_cast<int>(kDataSize - pos);
     int count = 0;
+    size_t msg_pos = pos;
     if (!perform_format) {
         size_t write_len =
             fbl::min(strlen(msg), static_cast<size_t>(n - 1));
@@ -105,6 +111,11 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity,
                kEllipsisSize);
     }
     auto status = socket_.write(0, &packet, sizeof(packet), nullptr);
+    if (status == ZX_ERR_BAD_STATE || status == ZX_ERR_PEER_CLOSED) {
+        ActivateFallback(-1);
+        return VLogWriteToFd(logger_fd_.load(fbl::memory_order_relaxed),
+                             severity, tag, packet.data + msg_pos, args, false);
+    }
     if (status != ZX_OK) {
         dropped_logs_.fetch_add(1);
     }
