@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[macro_use] extern crate bitfield;
 extern crate byteorder;
 extern crate failure;
 extern crate fuchsia_async as async;
@@ -12,6 +13,8 @@ extern crate futures;
 
 use std::sync::{Arc, Mutex};
 use wlantap_client::{Wlantap, WlantapListener};
+
+mod mac_frames;
 
 fn create_2_4_ghz_band_info() -> fidl_wlan_device::BandInfo {
     fidl_wlan_device::BandInfo{

@@ -9,6 +9,7 @@ version = "0.1.0"
 license = "BSD-3-Clause"
 
 [dependencies]
+bitfield = "0.12"
 byteorder = "1.2"
 failure = "0.1"
 fidl_wlan_device = "0.1"
