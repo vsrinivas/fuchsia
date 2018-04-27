@@ -2307,7 +2307,6 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 // This detects recursion via the error function.
 static bool loader_svc_rpc_in_progress;
-static atomic_uint_fast32_t loader_svc_txid;
 
 __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
                                                  const void* data, size_t len,
@@ -2332,7 +2331,6 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
         goto out;
     }
 
-    req.header.txid = atomic_fetch_add(&loader_svc_txid, 1);
     if (result != NULL) {
       // Don't return an uninitialized value if the channel call
       // succeeds but doesn't provide any handles.
@@ -2440,7 +2438,6 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
         ldmsg_clone_t clone;
     } req = {
         .header = {
-            .txid = atomic_fetch_add(&loader_svc_txid, 1),
             .ordinal = LDMSG_OP_CLONE,
         },
         .clone = {
