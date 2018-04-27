@@ -135,7 +135,8 @@ typedef struct thread {
     uint64_t user_tid;
     uint64_t user_pid;
 
-    // callback for user thread state changes
+    // callback for user thread state changes; do not invoke directly, use invoke_user_callback
+    // helper function instead
     thread_user_callback_t user_callback;
 
     // non-NULL if stopped in an exception

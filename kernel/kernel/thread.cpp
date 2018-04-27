@@ -88,6 +88,17 @@ static void initial_thread_func(void) {
     thread_exit(ret);
 }
 
+// Invoke |t|'s user_callback with |new_state|.
+//
+// Since user_callback may call into the scheduler it's crucial that the scheduler lock
+// (thread_lock) is not held when calling this function.  Otherwise, we risk recursive deadlock.
+static void invoke_user_callback(thread_t* t, enum thread_user_state_change new_state)
+    TA_EXCL(thread_lock) {
+    DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
+    if (t->user_callback) {
+        t->user_callback(new_state, t->user_thread);
+    }
+}
 
 /**
  * @brief  Create a new thread
@@ -550,10 +561,7 @@ void thread_exit(int retcode) {
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(!thread_is_idle(current_thread));
 
-    // if the thread has a callback set, call it here
-    if (current_thread->user_callback) {
-        current_thread->user_callback(THREAD_USER_STATE_EXIT, current_thread->user_thread);
-    }
+    invoke_user_callback(current_thread, THREAD_USER_STATE_EXIT);
 
     THREAD_LOCK(state);
 
@@ -673,14 +681,12 @@ static void check_kill_signal(thread_t* current_thread,
 // finish suspending the current thread
 static void thread_do_suspend(void) {
     thread_t* current_thread = get_current_thread();
-    if (current_thread->user_callback) {
-        // Note: After calling this callback, we must not return without
-        // calling the callback with THREAD_USER_STATE_RESUME.  That is
-        // because those callbacks act as barriers which control when it is
-        // safe for the zx_thread_read_state()/zx_thread_write_state()
-        // syscalls to access the userland register state kept by thread_t.
-        current_thread->user_callback(THREAD_USER_STATE_SUSPEND, current_thread->user_thread);
-    }
+    // Note: After calling this callback, we must not return without
+    // calling the callback with THREAD_USER_STATE_RESUME.  That is
+    // because those callbacks act as barriers which control when it is
+    // safe for the zx_thread_read_state()/zx_thread_write_state()
+    // syscalls to access the userland register state kept by thread_t.
+    invoke_user_callback(current_thread, THREAD_USER_STATE_SUSPEND);
 
     THREAD_LOCK(state);
 
@@ -705,9 +711,7 @@ static void thread_do_suspend(void) {
 
     THREAD_UNLOCK(state);
 
-    if (current_thread->user_callback) {
-        current_thread->user_callback(THREAD_USER_STATE_RESUME, current_thread->user_thread);
-    }
+    invoke_user_callback(current_thread, THREAD_USER_STATE_RESUME);
 }
 
 // check for any pending signals and handle them
