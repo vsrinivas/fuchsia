@@ -117,7 +117,6 @@ zx_status_t AuthenticatedState::HandleDeauthentication(
 
 zx_status_t AuthenticatedState::HandleAssociationRequest(
     const ImmutableMgmtFrame<AssociationRequest>& frame, const wlan_rx_info_t& rxinfo) {
-
     // Received request which we've been waiting for. Timer can get canceled.
     client_->CancelTimer();
     auth_timeout_ = zx::time();
@@ -269,9 +268,7 @@ zx_status_t AssociatedState::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFr
                                                const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] client requested BU\n", client_->addr().ToString().c_str());
 
-    if (client_->HasBufferedFrames()) {
-        return SendNextBu();
-    }
+    if (client_->HasBufferedFrames()) { return SendNextBu(); }
 
     debugbss("[client] [%s] no more BU available\n", client_->addr().ToString().c_str());
     // There are no frames buffered for the client.
@@ -367,9 +364,7 @@ zx_status_t AssociatedState::HandleDataFrame(const ImmutableDataFrame<LlcHeader>
     }
 
     // Block data frames if 802.1X authentication is required but didn't finish yet.
-    if (eapol_controlled_port_ != eapol::PortState::kOpen) {
-        return ZX_OK;
-    }
+    if (eapol_controlled_port_ != eapol::PortState::kOpen) { return ZX_OK; }
 
     const size_t eth_len = frame.body_len + sizeof(EthernetII);
     auto buffer = GetBuffer(eth_len);
@@ -581,9 +576,7 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
 
     // When the client's owner gets destroyed due to a state change, it will also destroy the state
     // which we were about to transition into. In that case, terminate.
-    if (state_ != nullptr) {
-        state_->OnEnter();
-    }
+    if (state_ != nullptr) { state_->OnEnter(); }
 }
 
 void RemoteClient::HandleTimeout() {
@@ -693,18 +686,10 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, status_code::Status
     // Write elements.
     ElementWriter w(assoc->elements, body_payload_len);
 
-    // Rates (in Mbps): 1 (basic), 2 (basic), 5.5 (basic), 6, 9, 11 (basic), 12, 18
-    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
+    // Rates (in Mbps): 6(B), 9, 12(B), 18, 24(B), 36, 48, 54
+    std::vector<uint8_t> rates = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c};
     if (!w.write<SupportedRatesElement>(std::move(rates))) {
         errorf("[client] [%s] could not write supported rates\n", addr_.ToString().c_str());
-        return ZX_ERR_IO;
-    }
-
-    // Rates (in Mbps): 24, 36, 48, 54
-    std::vector<uint8_t> ext_rates = {0x30, 0x48, 0x60, 0x6c};
-    if (!w.write<ExtendedSupportedRatesElement>(std::move(ext_rates))) {
-        errorf("[client] [%s] could not write extended supported rates\n",
-               addr_.ToString().c_str());
         return ZX_ERR_IO;
     }
 

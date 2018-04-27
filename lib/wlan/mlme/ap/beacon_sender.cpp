@@ -137,9 +137,6 @@ zx_status_t BeaconSender::UpdateBeacon(const PsCfg& ps_cfg) {
     status = WriteCountry(&w);
     if (status != ZX_OK) { return status; }
 
-    status = WriteExtendedSupportedRates(&w);
-    if (status != ZX_OK) { return status; }
-
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
@@ -212,9 +209,6 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     status = WriteCountry(&w);
     if (status != ZX_OK) { return status; }
 
-    status = WriteExtendedSupportedRates(&w);
-    if (status != ZX_OK) { return status; }
-
     if (bss_->IsHTReady()) {
         status = WriteHtCapabilities(&w);
         if (status != ZX_OK) { return status; }
@@ -258,8 +252,8 @@ zx_status_t BeaconSender::WriteSsid(ElementWriter* w) {
 }
 
 zx_status_t BeaconSender::WriteSupportedRates(ElementWriter* w) {
-    // Rates (in Mbps): 1 (basic), 2 (basic), 5.5 (basic), 6, 9, 11 (basic), 12, 18
-    std::vector<uint8_t> rates = {0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24};
+    // Rates (in Mbps): 6(B), 9, 12(B), 18, 24(B), 36, 48, 54
+    std::vector<uint8_t> rates = {0x8c, 0x12, 0x98, 0x24, 0xb0, 0x48, 0x60, 0x6c};
     if (!w->write<SupportedRatesElement>(std::move(rates))) {
         errorf("[bcn-sender] [%s] could not write supported rates\n",
                bss_->bssid().ToString().c_str());
