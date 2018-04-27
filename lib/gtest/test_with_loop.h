@@ -7,7 +7,6 @@
 
 #include <functional>
 
-#include <fbl/function.h>
 #include <lib/async-testutils/test_loop.h>
 
 #include "gtest/gtest.h"
@@ -70,9 +69,6 @@ protected:
   // then next call to run will immediately exit. Further calls to run will
   // continue to dispatch.
   void QuitLoop() { loop_.Quit(); }
-
-  // Creates a closure that quits the message loop when executed.
-  fbl::Closure QuitLoopCallback() { return [this] { loop_.Quit(); }; }
 
   private:
    // The test message loop for the test fixture.
