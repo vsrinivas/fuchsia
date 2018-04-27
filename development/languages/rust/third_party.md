@@ -47,6 +47,18 @@ the following steps.
 
 1. Reference the crates you need in your manifest file;
 1. Run the commands listed above.
+1. Merge the change into [third_party/rust-crates][3p-crates].
+1. In your garnet change, update the git revision of third_party/rust-crates in
+   [garnet/manifest/third_party][3p-manifest]:
+
+```
+<project name="rust-crates"
+         path="third_party/rust-crates"
+         remote="https://fuchsia.googlesource.com/third_party/rust-crates"
+         revision="<YOUR_NEW_REVISION_HERE>"
+         gerrithost="https://fuchsia-review.googlesource.com"/>
+```
+
 
 Linking to a native library is not currently supported.
 
@@ -59,5 +71,6 @@ Linking to a native library is not currently supported.
 
 
 [3p-crates]: https://fuchsia.googlesource.com/third_party/rust-crates/+/master/vendor "Third-party crates"
+[3p-manifest]: https://fuchsia.googlesource.com/garnet/+/master/manifest/third_party "Third-party manifest for Garnet"
 [source-replacement]: http://doc.crates.io/source-replacement.html "Source replacement"
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
