@@ -20,8 +20,11 @@ static constexpr uint16_t kVirtioConsoleMaxNumPorts = 1;
 static_assert(kVirtioConsoleMaxNumPorts > 0,
               "virtio-console must have at least 1 port");
 
+// Each port has a pair of input and output virtqueues. The port 0 RX and TX
+// queues always exist: other queues (including an additional per-device pair
+// of control IO virtqueues) only exist if VIRTIO_CONSOLE_F_MULTIPORT is set.
 static constexpr uint16_t kVirtioConsoleNumQueues =
-    (kVirtioConsoleMaxNumPorts + 1) * 2;
+    kVirtioConsoleMaxNumPorts == 1 ? 2 : (kVirtioConsoleMaxNumPorts + 1) * 2;
 static_assert(kVirtioConsoleNumQueues % 2 == 0,
               "There must be a queue for both RX and TX");
 
