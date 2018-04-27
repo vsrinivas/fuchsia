@@ -5,9 +5,12 @@
 #ifndef GARNET_LIB_MACHINA_VIRTIO_NET_H_
 #define GARNET_LIB_MACHINA_VIRTIO_NET_H_
 
+#include <atomic>
+
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
+#include <trace-engine/types.h>
 #include <virtio/net.h>
 #include <virtio/virtio_ids.h>
 
@@ -19,6 +22,11 @@ namespace machina {
 static constexpr uint16_t kVirtioNetNumQueues = 2;
 static_assert(kVirtioNetNumQueues % 2 == 0,
               "There must be a queue for both RX and TX");
+
+static constexpr uint16_t kVirtioNetRxQueueIndex = 0;
+static constexpr uint16_t kVirtioNetTxQueueIndex = 1;
+static_assert(kVirtioNetRxQueueIndex != kVirtioNetTxQueueIndex,
+              "RX and TX queues must be distinct");
 
 // Implements a Virtio Ethernet device.
 class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
@@ -33,8 +41,8 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
 
   zx_status_t WaitOnFifos(const eth_fifos_t& fifos);
 
-  VirtioQueue* rx_queue() { return queue(0); }
-  VirtioQueue* tx_queue() { return queue(1); }
+  VirtioQueue* rx_queue() { return queue(kVirtioNetRxQueueIndex); }
+  VirtioQueue* tx_queue() { return queue(kVirtioNetTxQueueIndex); }
 
  private:
   // Ethernet control plane.
@@ -42,10 +50,18 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
   // Connection to the Ethernet device.
   fbl::unique_fd net_fd_;
 
+  std::atomic<trace_async_id_t>* rx_trace_flow_id() {
+    return trace_flow_id(kVirtioNetRxQueueIndex);
+  }
+  std::atomic<trace_async_id_t>* tx_trace_flow_id() {
+    return trace_flow_id(kVirtioNetTxQueueIndex);
+  }
+
   // A single data stream (either RX or TX).
   class Stream {
    public:
-    Stream(VirtioNet* device, async_t* async, VirtioQueue* queue);
+    Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
+           std::atomic<trace_async_id_t>* trace_flow_id);
     zx_status_t Start(zx_handle_t fifo, size_t fifo_num_entries, bool rx);
 
    private:
@@ -68,6 +84,7 @@ class VirtioNet : public VirtioDeviceBase<VIRTIO_ID_NET,
     VirtioNet* device_;
     async_t* async_;
     VirtioQueue* queue_;
+    std::atomic<trace_async_id_t>* trace_flow_id_;
     zx_handle_t fifo_ = ZX_HANDLE_INVALID;
     bool rx_ = false;
 

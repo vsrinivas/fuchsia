@@ -4,20 +4,25 @@
 
 #include "garnet/lib/machina/virtio_net.h"
 
-#include <zircon/device/ethernet.h>
-#include <zx/fifo.h>
-
+#include <atomic>
 #include <fcntl.h>
 #include <string.h>
+
+#include <trace/event.h>
+#include <trace-engine/types.h>
+#include <zircon/device/ethernet.h>
+#include <zx/fifo.h>
 
 #include "lib/fxl/logging.h"
 
 namespace machina {
 
-VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue)
+VirtioNet::Stream::Stream(VirtioNet* device, async_t* async, VirtioQueue* queue,
+                          std::atomic<trace_async_id_t>* trace_flow_id)
     : device_(device),
       async_(async),
       queue_(queue),
+      trace_flow_id_(trace_flow_id),
       queue_wait_(async,
                   queue,
                   fbl::BindMember(this, &VirtioNet::Stream::OnQueueReady)) {
@@ -54,6 +59,15 @@ zx_status_t VirtioNet::Stream::WaitOnQueue() {
 void VirtioNet::Stream::OnQueueReady(zx_status_t status, uint16_t index) {
   if (status != ZX_OK) {
     return;
+  }
+
+  // Attempt to correlate the processing of descriptors with a previous kick.
+  // As noted in virtio_device.cc this should be considered best-effort only.
+  const trace_async_id_t flow_id = trace_flow_id_->load();
+  TRACE_DURATION("machina", "virtio_net_packet_read_from_queue", "direction",
+                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+  if (flow_id != 0) {
+    TRACE_FLOW_STEP("machina", "io_queue_signal", flow_id);
   }
 
   FXL_DCHECK(fifo_num_entries_ == 0);
@@ -130,6 +144,14 @@ void VirtioNet::Stream::OnFifoWritable(
     return;
   }
 
+  // Attempt to correlate the processing of packets with an existing flow.
+  const trace_async_id_t flow_id = trace_flow_id_->load();
+  TRACE_DURATION("machina", "virtio_net_packet_pipe_to_fifo", "direction",
+                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+  if (flow_id != 0) {
+    TRACE_FLOW_STEP("machina", "io_queue_signal", flow_id);
+  }
+
   uint32_t num_entries_written = 0;
   status = zx_fifo_write_old(
       fifo_,
@@ -167,6 +189,14 @@ void VirtioNet::Stream::OnFifoReadable(
     return;
   }
 
+  // Attempt to correlate the processing of packets with an existing flow.
+  const trace_async_id_t flow_id = trace_flow_id_->exchange(0);
+  TRACE_DURATION("machina", "virtio_net_packet_return_to_queue", "direction",
+                 TA_STRING_LITERAL(rx_ ? "RX" : "TX"), "flow_id", flow_id);
+  if (flow_id != 0) {
+    TRACE_FLOW_END("machina", "io_queue_signal", flow_id);
+  }
+
   // Dequeue entries for the Ethernet device.
   uint32_t num_entries_read;
   eth_fifo_entry_t entries[fifo_entries_.size()];
@@ -202,8 +232,8 @@ void VirtioNet::Stream::OnFifoReadable(
 
 VirtioNet::VirtioNet(const PhysMem& phys_mem, async_t* async)
     : VirtioDeviceBase(phys_mem),
-      rx_stream_(this, async, rx_queue()),
-      tx_stream_(this, async, tx_queue()) {
+      rx_stream_(this, async, rx_queue(), rx_trace_flow_id()),
+      tx_stream_(this, async, tx_queue(), tx_trace_flow_id()) {
   config_.status = VIRTIO_NET_S_LINK_UP;
   config_.max_virtqueue_pairs = 1;
   // TODO(abdulla): Support VIRTIO_NET_F_STATUS via IOCTL_ETHERNET_GET_STATUS.
