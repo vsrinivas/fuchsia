@@ -2,16 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("MCDisassembler") {
+static_library("Disassembler") {
   sources = [
-    "Disassembler.cpp",
-    "MCDisassembler.cpp",
-    "MCExternalSymbolizer.cpp",
-    "MCRelocationInfo.cpp",
-    "MCSymbolizer.cpp",
+    "AArch64Disassembler.cpp",
+    "AArch64ExternalSymbolizer.cpp",
   ]
+
+  include_dirs = [ ".." ]
 
   public_deps = [
     "..",
+    "../../../MC/MCDisassembler",
   ]
 }

@@ -1,0 +1,178 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../utils/TableGen/tablegen.gni")
+
+template("aarch64_tablegen") {
+  tablegen(target_name) {
+    source = "AArch64.td"
+    args = [ "-I=" + rebase_path(".", root_build_dir) ] + invoker.args
+    output = invoker.output
+  }
+}
+
+aarch64_tablegen("asm_matcher") {
+  output = "$target_gen_dir/AArch64GenAsmMatcher.inc"
+  args = [ "-gen-asm-matcher" ]
+}
+
+aarch64_tablegen("asm_writer") {
+  output = "$target_gen_dir/AArch64GenAsmWriter.inc"
+  args = [ "-gen-asm-writer" ]
+}
+
+aarch64_tablegen("asm_writer1") {
+  output = "$target_gen_dir/AArch64GenAsmWriter1.inc"
+  args = [
+    "-gen-asm-writer",
+    "-asmwriternum=1",
+  ]
+}
+
+aarch64_tablegen("calling_conv") {
+  output = "$target_gen_dir/AArch64GenCallingConv.inc"
+  args = [ "-gen-callingconv" ]
+}
+
+aarch64_tablegen("dag_isel") {
+  output = "$target_gen_dir/AArch64GenDAGISel.inc"
+  args = [ "-gen-dag-isel" ]
+}
+
+aarch64_tablegen("disassembler_tables") {
+  output = "$target_gen_dir/AArch64GenDisassemblerTables.inc"
+  args = [ "-gen-disassembler" ]
+}
+
+aarch64_tablegen("fast_isel") {
+  output = "$target_gen_dir/AArch64GenFastISel.inc"
+  args = [ "-gen-fast-isel" ]
+}
+
+aarch64_tablegen("global_isel") {
+  output = "$target_gen_dir/AArch64GenGlobalISel.inc"
+  args = [ "-gen-global-isel" ]
+}
+
+aarch64_tablegen("instr_info") {
+  output = "$target_gen_dir/AArch64GenInstrInfo.inc"
+  args = [ "-gen-instr-info" ]
+}
+
+aarch64_tablegen("mc_code_emitter") {
+  output = "$target_gen_dir/AArch64GenMCCodeEmitter.inc"
+  args = [ "-gen-emitter" ]
+}
+
+aarch64_tablegen("mc_pseudo_lowering") {
+  output = "$target_gen_dir/AArch64GenMCPseudoLowering.inc"
+  args = [ "-gen-pseudo-lowering" ]
+}
+
+aarch64_tablegen("register_bank") {
+  output = "$target_gen_dir/AArch64GenRegisterBank.inc"
+  args = [ "-gen-register-bank" ]
+}
+
+aarch64_tablegen("register_info") {
+  output = "$target_gen_dir/AArch64GenRegisterInfo.inc"
+  args = [ "-gen-register-info" ]
+}
+
+aarch64_tablegen("subtarget") {
+  output = "$target_gen_dir/AArch64GenSubtargetInfo.inc"
+  args = [ "-gen-subtarget" ]
+}
+
+aarch64_tablegen("system_operands") {
+  output = "$target_gen_dir/AArch64GenSystemOperands.inc"
+  args = [ "-gen-searchable-tables" ]
+}
+
+config("includes") {
+  include_dirs = [ target_gen_dir ]
+}
+
+static_library("AArch64") {
+  sources = [
+    "AArch64A53Fix835769.cpp",
+    "AArch64A57FPLoadBalancing.cpp",
+    "AArch64AdvSIMDScalarPass.cpp",
+    "AArch64AsmPrinter.cpp",
+    "AArch64CallLowering.cpp",
+    "AArch64CleanupLocalDynamicTLSPass.cpp",
+    "AArch64CollectLOH.cpp",
+    "AArch64CondBrTuning.cpp",
+    "AArch64ConditionalCompares.cpp",
+    "AArch64ConditionOptimizer.cpp",
+    "AArch64DeadRegisterDefinitionsPass.cpp",
+    "AArch64ExpandPseudoInsts.cpp",
+    "AArch64FalkorHWPFFix.cpp",
+    "AArch64FastISel.cpp",
+    "AArch64FrameLowering.cpp",
+    "AArch64InstrInfo.cpp",
+    "AArch64InstructionSelector.cpp",
+    "AArch64ISelDAGToDAG.cpp",
+    "AArch64ISelLowering.cpp",
+    "AArch64LegalizerInfo.cpp",
+    "AArch64LoadStoreOptimizer.cpp",
+    "AArch64MacroFusion.cpp",
+    "AArch64MCInstLower.cpp",
+    "AArch64PBQPRegAlloc.cpp",
+    "AArch64PromoteConstant.cpp",
+    "AArch64RedundantCopyElimination.cpp",
+    "AArch64RegisterBankInfo.cpp",
+    "AArch64RegisterInfo.cpp",
+    "AArch64SelectionDAGInfo.cpp",
+    "AArch64SIMDInstrOpt.cpp",
+    "AArch64StorePairSuppress.cpp",
+    "AArch64Subtarget.cpp",
+    "AArch64TargetMachine.cpp",
+    "AArch64TargetObjectFile.cpp",
+    "AArch64TargetTransformInfo.cpp",
+    "AsmParser/AArch64AsmParser.cpp",
+    "InstPrinter/AArch64InstPrinter.cpp",
+    "MCTargetDesc/AArch64AsmBackend.cpp",
+    "MCTargetDesc/AArch64ELFObjectWriter.cpp",
+    "MCTargetDesc/AArch64ELFStreamer.cpp",
+    "MCTargetDesc/AArch64MachObjectWriter.cpp",
+    "MCTargetDesc/AArch64MCAsmInfo.cpp",
+    "MCTargetDesc/AArch64MCCodeEmitter.cpp",
+    "MCTargetDesc/AArch64MCExpr.cpp",
+    "MCTargetDesc/AArch64MCTargetDesc.cpp",
+    "MCTargetDesc/AArch64TargetStreamer.cpp",
+    "MCTargetDesc/AArch64WinCOFFObjectWriter.cpp",
+    "MCTargetDesc/AArch64WinCOFFStreamer.cpp",
+    "TargetInfo/AArch64TargetInfo.cpp",
+    "Utils/AArch64BaseInfo.cpp",
+  ]
+
+  include_dirs = [ "." ]
+
+  public_configs = [ ":includes" ]
+
+  deps = [
+    ":asm_matcher",
+    ":asm_writer",
+    ":asm_writer1",
+    ":calling_conv",
+    ":dag_isel",
+    ":disassembler_tables",
+    ":fast_isel",
+    ":global_isel",
+    ":instr_info",
+    ":mc_code_emitter",
+    ":mc_pseudo_lowering",
+    ":register_bank",
+    ":register_info",
+    ":subtarget",
+    ":system_operands",
+  ]
+
+  public_deps = [
+    "../../IR",
+    "../../MC",
+    "../../Support",
+  ]
+}
