@@ -9,4 +9,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"/lib/vars.sh
 fx-config-read
 
 echo "Building zircon..."
-"${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${FUCHSIA_ARCH}" "$@"
+"${FUCHSIA_DIR}/scripts/build-zircon.sh" \
+  -t "${FUCHSIA_ARCH}" \
+  -j "$(fx-choose-build-concurrency)" \
+  "$@"
