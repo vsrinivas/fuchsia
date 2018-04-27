@@ -9,6 +9,7 @@
 #include <numeric>
 
 #include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
@@ -138,12 +139,15 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::AddObject(
     std::string value, std::unique_ptr<const Object>* object) {
+  bool called;
   Status status;
   ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
       DataSource::Create(value),
-      callback::Capture(MakeQuitTask(), &status, &object_identifier));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &object_identifier));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "AddObjectFromLocal failed with status " << status
@@ -152,8 +156,10 @@ StorageTest::~StorageTest(){};
 
   std::unique_ptr<const Object> result;
   GetStorage()->GetObject(object_identifier, PageStorage::Location::LOCAL,
-                          callback::Capture(MakeQuitTask(), &status, &result));
-  RunLoop();
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &result));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "GetObject failed with status " << status << ". value: " << value
@@ -212,11 +218,14 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::GetEmptyNodeIdentifier(
     ObjectIdentifier* empty_node_identifier) {
+  bool called;
   Status status;
   btree::TreeNode::Empty(
       GetStorage(),
-      callback::Capture(MakeQuitTask(), &status, empty_node_identifier));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        empty_node_identifier));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::Empty failed with status " << status;
@@ -226,12 +235,14 @@ StorageTest::~StorageTest(){};
 
 ::testing::AssertionResult StorageTest::CreateNodeFromIdentifier(
     ObjectIdentifier identifier, std::unique_ptr<const btree::TreeNode>* node) {
+  bool called;
   Status status;
   std::unique_ptr<const btree::TreeNode> result;
   btree::TreeNode::FromIdentifier(
       GetStorage(), identifier,
-      callback::Capture(MakeQuitTask(), &status, &result));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromDigest failed with status " << status;
@@ -244,13 +255,16 @@ StorageTest::~StorageTest(){};
     const std::vector<Entry>& entries,
     const std::map<size_t, ObjectIdentifier>& children,
     std::unique_ptr<const btree::TreeNode>* node) {
+  bool called;
   Status status;
   ObjectIdentifier identifier;
   btree::TreeNode::FromEntries(
       GetStorage(), 0u, entries, children,
-      callback::Capture(MakeQuitTask(), &status, &identifier));
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &identifier));
 
-  RunLoop();
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "TreeNode::FromEntries failed with status " << status;
@@ -262,15 +276,18 @@ StorageTest::~StorageTest(){};
     const ObjectIdentifier& base_node_identifier,
     const std::vector<EntryChange>& entries,
     ObjectIdentifier* new_root_identifier) {
+  bool called;
   Status status;
   std::set<ObjectIdentifier> new_nodes;
   btree::ApplyChanges(&coroutine_service_, GetStorage(), base_node_identifier,
                       std::make_unique<btree::EntryChangeIterator>(
                           entries.begin(), entries.end()),
-                      callback::Capture(MakeQuitTask(), &status,
-                                        new_root_identifier, &new_nodes),
+                      callback::Capture(callback::SetWhenCalled(&called),
+                                        &status, new_root_identifier,
+                                        &new_nodes),
                       &kTestNodeLevelCalculator);
-  RunLoop();
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   if (status != Status::OK) {
     return ::testing::AssertionFailure()
            << "btree::ApplyChanges failed with status " << status;

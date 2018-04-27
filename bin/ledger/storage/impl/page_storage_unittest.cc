@@ -169,7 +169,7 @@ class FakePageDbImpl : public PageDbEmptyImpl {
 
 class PageStorageTest : public ::test::TestWithCoroutines {
  public:
-  PageStorageTest() : encryption_service_(message_loop_.async()) {}
+  PageStorageTest() : encryption_service_(dispatcher()) {}
 
   ~PageStorageTest() override {}
 
@@ -184,7 +184,7 @@ class PageStorageTest : public ::test::TestWithCoroutines {
     tmpfs_ = std::make_unique<ledger::ScopedTmpFS>();
     PageId id = RandomString(10);
     storage_ = std::make_unique<PageStorageImpl>(
-        message_loop_.async(), &coroutine_service_, &encryption_service_,
+        dispatcher(), &coroutine_service_, &encryption_service_,
         ledger::DetachedPath(tmpfs_->root_fd()), id);
 
     bool called;
@@ -955,7 +955,7 @@ TEST_F(PageStorageTest, JournalCommitFailsAfterFailedOperation) {
   // with journal entry update, to fail with a NOT_IMPLEMENTED error.
   std::unique_ptr<PageStorageImpl> test_storage =
       PageStorageImplAccessorForTest::CreateStorage(
-          message_loop_.async(), &coroutine_service_, &encryption_service_,
+          dispatcher(), &coroutine_service_, &encryption_service_,
           std::make_unique<FakePageDbImpl>(), RandomString(10));
 
   bool called;
@@ -1109,7 +1109,7 @@ TEST_F(PageStorageTest, InterruptAddObjectFromLocal) {
 
 TEST_F(PageStorageTest, AddObjectFromLocalError) {
   auto data_source =
-      std::make_unique<FakeErrorDataSource>(message_loop_.async());
+      std::make_unique<FakeErrorDataSource>(dispatcher());
   bool called;
   Status status;
   ObjectIdentifier object_identifier;

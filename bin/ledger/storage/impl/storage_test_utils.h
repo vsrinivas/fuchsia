@@ -16,6 +16,10 @@
 
 namespace storage {
 
+// A sufficiently large delay, such that if a storagemethod posts a delayed
+// task, the task will be due after associated amount of time.
+constexpr zx::duration kSufficientDelay = zx::hour(1);
+
 // Enum describing the expected behavior for identifier, allowing or preventing
 // to be inlined values.
 enum class InlineBehavior {
@@ -67,8 +71,7 @@ EntryChange NewEntryChange(std::string key, std::string object_digest,
 // Creates and returns a new EntryChange removing the entry with the given key.
 EntryChange NewRemoveEntryChange(std::string key);
 
-// A TestWithMessageLoop providing some additional utility functions on
-// PageStorage.
+// A TestWithLoop providing some additional utility functions on PageStorage.
 //
 // All utility functions in this class return an |AssertionResult| meaning that
 // they can be used in an EXPECT/ASSERT_TRUE: E.g.

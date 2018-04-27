@@ -45,11 +45,11 @@ void ExpectChangesEqual(const EntryChange& expected, const EntryChange& found) {
 class PageDbTest : public ::test::TestWithCoroutines {
  public:
   PageDbTest()
-      : encryption_service_(message_loop_.async()),
-        page_storage_(message_loop_.async(), &coroutine_service_,
+      : encryption_service_(dispatcher()),
+        page_storage_(dispatcher(), &coroutine_service_,
                       &encryption_service_,
                       ledger::DetachedPath(tmpfs_.root_fd()), "page_id"),
-        page_db_(message_loop_.async(),
+        page_db_(dispatcher(),
                  ledger::DetachedPath(tmpfs_.root_fd())) {}
 
   ~PageDbTest() override {}
@@ -463,8 +463,8 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
 
   // Posting a task at this level ensures that the right interleaving between
   // reading and writing object status happens.
-  async::PostTask(message_loop_.async(), [&] {
-    handler1->Continue(coroutine::ContinuationStatus::OK);
+  async::PostTask(dispatcher(), [&] {
+      handler1->Continue(coroutine::ContinuationStatus::OK);
   });
   handler2->Continue(coroutine::ContinuationStatus::OK);
 

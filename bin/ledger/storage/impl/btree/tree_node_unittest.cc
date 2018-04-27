@@ -63,19 +63,24 @@ class TreeNodeTest : public StorageTest {
 TEST_F(TreeNodeTest, CreateGetTreeNode) {
   std::unique_ptr<const TreeNode> node = CreateEmptyNode();
 
+  bool called;
   Status status;
   std::unique_ptr<const TreeNode> found_node;
   TreeNode::FromIdentifier(
       &fake_storage_, node->GetIdentifier(),
-      callback::Capture(MakeQuitTask(), &status, &found_node));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &found_node));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
   TreeNode::FromIdentifier(
       &fake_storage_, RandomObjectIdentifier(),
-      callback::Capture(MakeQuitTask(), &status, &found_node));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status,
+                        &found_node));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::NOT_FOUND, status);
 }
 
@@ -96,7 +101,7 @@ TEST_F(TreeNodeTest, GetEntryChild) {
     std::unique_ptr<const TreeNode> child;
     node->GetChild(i, callback::Capture(callback::SetWhenCalled(&called),
                                         &status, &child));
-    RunLoopUntilIdle();
+    RunLoopFor(kSufficientDelay);
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::NO_SUCH_CHILD, status);
     EXPECT_EQ(node->children_identifiers().find(i),
@@ -142,11 +147,14 @@ TEST_F(TreeNodeTest, Serialization) {
   std::unique_ptr<const TreeNode> node;
   ASSERT_TRUE(CreateNodeFromEntries(entries, children, &node));
 
+  bool called;
   Status status;
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::LOCAL,
-                          callback::Capture(MakeQuitTask(), &status, &object));
-  RunLoop();
+                          callback::Capture(callback::SetWhenCalled(&called),
+                                            &status, &object));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   std::unique_ptr<const TreeNode> retrieved_node;
   EXPECT_EQ(node->GetIdentifier(), object->GetIdentifier());

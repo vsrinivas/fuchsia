@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
+#include "lib/callback/set_when_called.h"
 #include "lib/fxl/macros.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/storage/fake/fake_page_storage.h"
@@ -85,6 +86,7 @@ TEST_F(DiffTest, ForEachDiff) {
                                     &other_root_identifier));
 
   // ForEachDiff should return all changes just applied.
+  bool called;
   Status status;
   size_t current_change = 0;
   ForEachDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
@@ -100,8 +102,9 @@ TEST_F(DiffTest, ForEachDiff) {
                 ++current_change;
                 return true;
               },
-              callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+              callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(other_changes.size(), current_change);
 }
@@ -125,6 +128,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
   std::vector<EntryChange> changes;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({51, 75}), &changes));
 
+  bool called;
   Status status;
   ObjectIdentifier base_root_identifier = CreateTree(base_entries);
   ObjectIdentifier other_root_identifier;
@@ -140,8 +144,9 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
                 EXPECT_EQ(changes[current_change++].entry, e.entry);
                 return true;
               },
-              callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+              callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(changes.size(), current_change);
 
@@ -152,8 +157,9 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
                 EXPECT_EQ(changes[1].entry, e.entry);
                 return true;
               },
-              callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+              callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -174,6 +180,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
   std::vector<EntryChange> changes;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({50}), &changes));
 
+  bool called;
   Status status;
   ObjectIdentifier base_root_identifier = CreateTree(base_entries);
   ObjectIdentifier other_root_identifier;
@@ -186,8 +193,9 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
                 EXPECT_EQ(changes[0].entry, e.entry);
                 return true;
               },
-              callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+              callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -203,6 +211,7 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
       Entry{base_entry.key, base_entry.object_identifier, KeyPriority::LAZY},
       false});
 
+  bool called;
   Status status;
   ObjectIdentifier other_root_identifier;
   ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, other_changes,
@@ -218,8 +227,9 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
                 ++change_count;
                 return true;
               },
-              callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+              callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(1u, change_count);
   EXPECT_FALSE(actual_change.deleted);
@@ -301,6 +311,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
       CreateEntryPtr(),
       CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER)});
 
+  bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
@@ -315,8 +326,9 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
         current_change++;
         return true;
       },
-      callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }
@@ -381,6 +393,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
       CreateEntryPtr(),
       CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER)});
 
+  bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
@@ -395,8 +408,9 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
         current_change++;
         return true;
       },
-      callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }
@@ -452,6 +466,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes,
                                     &right_root_identifier));
 
+  bool called;
   Status status;
   // No change is expected.
   ForEachThreeWayDiff(&coroutine_service_, &fake_storage_, base_root_identifier,
@@ -460,8 +475,9 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
                         ADD_FAILURE();
                         return true;
                       },
-                      callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+                      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
 }
 
@@ -518,6 +534,7 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
       CreateEntryPtr(), CreateEntryPtr(),
       CreateEntryPtr("key04", object4_identifier, KeyPriority::EAGER)});
 
+  bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
@@ -532,8 +549,9 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
         current_change++;
         return true;
       },
-      callback::Capture(MakeQuitTask(), &status));
-  RunLoop();
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
   EXPECT_EQ(current_change, expected_three_way_changes.size());
 }
