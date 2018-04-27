@@ -72,36 +72,6 @@ class ApplicationContext {
     return outgoing().deprecated_services();
   }
 
-  // Gets the directory which is the root of the tree of file-system objects
-  // exported by this application to the rest of the system.
-  //
-  // Clients should organize exported objects into sub-directories by role
-  // using conventions such as the following:
-  // - svc: public services exported by the application
-  // - debug: debugging information exported by the application
-  // - fs: the mounted file-system (for applications which are file-systems)
-  const fbl::RefPtr<fs::PseudoDir>& export_dir() const {
-    return outgoing().root_dir();
-  }
-
-  // Gets an export sub-directory called "public" for publishing services for
-  // clients.
-  const fbl::RefPtr<fs::PseudoDir>& public_export_dir() const {
-    return outgoing().public_dir();
-  }
-
-  // Gets an export sub-directory called "debug" for publishing debugging
-  // information.
-  const fbl::RefPtr<fs::PseudoDir>& debug_export_dir() const {
-    return outgoing().debug_dir();
-  }
-
-  // Gets an export sub-directory called "ctrl" for publishing services for
-  // appmgr.
-  const fbl::RefPtr<fs::PseudoDir>& ctrl_export_dir() const {
-    return outgoing().ctrl_dir();
-  }
-
   // Connects to a service provided by the application's environment,
   // returning an interface pointer.
   template <typename Interface>

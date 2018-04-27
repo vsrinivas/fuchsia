@@ -96,7 +96,7 @@ void GfxSystem::Initialize() {
   engine_ = InitializeEngine();
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
-  context()->app_context()->debug_export_dir()->AddEntry(
+  context()->app_context()->outgoing().debug_dir()->AddEntry(
       "dump-scenes",
       fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         *out = engine_->DumpScenes();
