@@ -209,6 +209,9 @@ zx_status_t BeaconSender::SendProbeResponse(const ImmutableMgmtFrame<ProbeReques
     status = WriteDsssParamSet(&w);
     if (status != ZX_OK) { return status; }
 
+    status = WriteCountry(&w);
+    if (status != ZX_OK) { return status; }
+
     status = WriteExtendedSupportedRates(&w);
     if (status != ZX_OK) { return status; }
 
@@ -313,8 +316,8 @@ zx_status_t BeaconSender::WriteCountry(ElementWriter* w) {
         subbands.push_back({1, 11, 36});
     } else {
         subbands.push_back({36, 4, 36});
-        subbands.push_back({52, 4, 36});
-        subbands.push_back({100, 12, 36});
+        subbands.push_back({52, 4, 30});
+        subbands.push_back({100, 12, 30});
         subbands.push_back({149, 5, 36});
     }
 
