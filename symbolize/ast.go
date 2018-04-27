@@ -4,6 +4,11 @@
 
 package symbolize
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // PresentationVisistor is a visitor for presentables
 type NodeVisitor interface {
 	VisitBt(elem *BacktraceElement)
@@ -28,17 +33,53 @@ func (p *PresentationGroup) Accept(visitor NodeVisitor) {
 	visitor.VisitGroup(p)
 }
 
+// OptionalString implements possibelly missing strings from llvm-symbolizer
+type OptStr struct {
+	val *string
+}
+
+func EmptyOptStr() OptStr {
+	return OptStr{}
+}
+
+func NewOptStr(s string) OptStr {
+	return OptStr{&s}
+}
+
+func (o *OptStr) Unwrap(def string) string {
+	if o.val != nil {
+		return *o.val
+	}
+	return def
+}
+
+func (o OptStr) IsEmpty() bool {
+	return o.val == nil
+}
+
+func (o OptStr) String() string {
+	return o.Unwrap("??")
+}
+
+func (o OptStr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(o.String())
+}
+
+func (o OptStr) Format(f fmt.State, c rune) {
+	f.Write([]byte(o.String()))
+}
+
 // SourceLocation represents a location in a source file
 type SourceLocation struct {
-	file     string
+	file     OptStr
 	line     int
-	function string
+	function OptStr
 }
 
 type BacktraceElement struct {
 	vaddr uint64
 	num   uint64
-	locs  []SourceLocation
+	info  AddressInfo
 }
 
 func (b *BacktraceElement) Accept(visitor NodeVisitor) {
@@ -48,7 +89,7 @@ func (b *BacktraceElement) Accept(visitor NodeVisitor) {
 // PcElement is an AST node representing a pc element in the markup
 type PCElement struct {
 	vaddr uint64
-	loc   SourceLocation
+	info  AddressInfo
 }
 
 func (p *PCElement) Accept(visitor NodeVisitor) {

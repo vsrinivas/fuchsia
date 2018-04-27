@@ -46,6 +46,13 @@ func NewLLVMSymbolizer(llvmSymboPath string) *LLVMSymbolizer {
 	return &out
 }
 
+func unknownStr(str string) OptStr {
+	if str == "??" || str == "" {
+		return EmptyOptStr()
+	}
+	return NewOptStr(str)
+}
+
 func (s *LLVMSymbolizer) handle(ctx context.Context) {
 	for {
 		select {
@@ -54,6 +61,10 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 		case args, ok := <-s.input:
 			if !ok {
 				return
+			}
+			if len(strings.TrimSpace(args.file)) == 0 {
+				args.output <- LLVMSymbolizeResult{nil, fmt.Errorf("Attempt to request code location of unnamed file")}
+				continue
 			}
 			fmt.Fprintf(s.stdin, "%s 0x%x\n", args.file, args.modRelAddr)
 			out := []SourceLocation{}
@@ -73,7 +84,7 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 					panic(fmt.Sprintf("%s output unrecgonized format", s.path))
 				}
 				line, _ := strconv.Atoi(parts[1])
-				out = append(out, SourceLocation{parts[0], line, function})
+				out = append(out, SourceLocation{unknownStr(parts[0]), line, unknownStr(function)})
 			}
 			args.output <- LLVMSymbolizeResult{out, nil}
 		}

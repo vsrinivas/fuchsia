@@ -43,17 +43,36 @@ func (b *BasicPresenter) Start(input <-chan OutputLine) {
 	}
 }
 
+func printSrcLoc(out io.Writer, loc SourceLocation, info AddressInfo) {
+	modRelAddr := info.addr - info.seg.vaddr + info.seg.modRelAddr
+	if !loc.function.IsEmpty() {
+		fmt.Fprintf(out, "%s at ", loc.function)
+	}
+	if !loc.file.IsEmpty() {
+		fmt.Fprintf(out, "%s:%d", loc.file, loc.line)
+	} else {
+		fmt.Fprintf(out, "<%s>+0x%x", info.mod.name, modRelAddr)
+	}
+}
+
 func (b *BasicPresenter) VisitBt(node *BacktraceElement) {
-	for i, loc := range node.locs {
-		fmt.Fprintf(b.output, "%s at %s:%d", loc.function, loc.file, loc.line)
-		if i != len(node.locs)-1 {
+	if len(node.info.locs) == 0 {
+		printSrcLoc(b.output, SourceLocation{}, node.info)
+	}
+	for i, loc := range node.info.locs {
+		printSrcLoc(b.output, loc, node.info)
+		if i != len(node.info.locs)-1 {
 			fmt.Fprint(b.output, " inlined from ")
 		}
 	}
 }
 
 func (b *BasicPresenter) VisitPc(node *PCElement) {
-	fmt.Fprintf(b.output, "%s:%d", node.loc.file, node.loc.line)
+	if len(node.info.locs) > 0 {
+		printSrcLoc(b.output, node.info.locs[0], node.info)
+	} else {
+		printSrcLoc(b.output, SourceLocation{}, node.info)
+	}
 }
 
 func (b *BasicPresenter) VisitColor(node *ColorGroup) {

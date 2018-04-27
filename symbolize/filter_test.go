@@ -51,14 +51,14 @@ func ExampleBasic() {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"out/libc.so", map[uint64][]SourceLocation{
-			0x429c0: {{"atan2.c", 49, "atan2"}, {"math.h", 51, "__DOUBLE_FLOAT"}},
-			0x43680: {{"pow.c", 23, "pow"}},
-			0x44987: {{"memcpy.c", 76, "memcpy"}},
+			0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
+			0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
+			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 		{"out/libcrypto.so", map[uint64][]SourceLocation{
-			0x81000: {{"rsa.c", 101, "mod_exp"}},
-			0x82000: {{"aes.c", 17, "gf256_mul"}},
-			0x83000: {{"aes.c", 560, "gf256_div"}},
+			0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
+			0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
+			0x83000: {{NewOptStr("aes.c"), 560, NewOptStr("gf256_div")}},
 		}},
 	})
 	// mock ids.txt
@@ -144,7 +144,7 @@ func TestBacktrace(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"out/libc.so", map[uint64][]SourceLocation{
-			0x44987: {{"duff.h", 64, "duffcopy"}, {"memcpy.c", 76, "memcpy"}},
+			0x44987: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
 	// mock ids.txt
@@ -198,7 +198,7 @@ func TestReset(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{"out/libc.so", map[uint64][]SourceLocation{
-			0x44987: {{"memcpy.c", 76, "memcpy"}},
+			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
 	// mock ids.txt
@@ -211,19 +211,38 @@ func TestReset(t *testing.T) {
 	filter := NewFilter(repo, symbo)
 
 	// add some context
-	filter.AddModule(Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1})
-	filter.AddSegment(Segment{1, 0x12345000, 849596, "rx", 0x0})
+	mod := Module{"libc.so", "be4c4336e20b734db97a58e0f083d0644461317c", 1}
+	filter.AddModule(mod)
+	seg := Segment{1, 0x12345000, 849596, "rx", 0x0}
+	filter.AddSegment(seg)
 
 	addr := uint64(0x12389987)
 
-	if _, err := filter.FindSrcLocForAddress(addr); err != nil {
+	if info, err := filter.FindInfoForAddress(addr); err != nil {
 		t.Error("expected", nil, "got", err)
+		if len(info.locs) != 1 {
+			t.Error("expected", 1, "source location but got", len(info.locs))
+		} else {
+			loc := SourceLocation{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}
+			if info.locs[0] != loc {
+				t.Error("expected", loc, "got", info.locs[0])
+			}
+		}
+		if info.mod != mod {
+			t.Error("expected", mod, "got", info.mod)
+		}
+		if info.seg != seg {
+			t.Error("expected", seg, "got", info.seg)
+		}
+		if info.addr != addr {
+			t.Error("expected", addr, "got", info.addr)
+		}
 	}
 
 	// now forget the context
 	line.Accept(&FilterVisitor{filter})
 
-	if _, err := filter.FindSrcLocForAddress(addr); err == nil {
+	if _, err := filter.FindInfoForAddress(addr); err == nil {
 		t.Error("expected non-nil error but got", err)
 	}
 }

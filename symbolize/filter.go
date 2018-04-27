@@ -30,6 +30,13 @@ type Segment struct {
 	modRelAddr uint64
 }
 
+type AddressInfo struct {
+	locs []SourceLocation
+	mod  Module
+	seg  Segment
+	addr uint64
+}
+
 type Module struct {
 	name  string
 	build string
@@ -52,16 +59,27 @@ type Filter struct {
 	repo *SymbolizerRepo
 }
 
-// FindSrcLocForAddress takes a process an in memory address and converts it to a source location.
-func (s *Filter) FindSrcLocForAddress(vaddr uint64) ([]SourceLocation, error) {
+// FindInfoForAddress takes a process an in memory address and converts it to a source location.
+func (s *Filter) FindInfoForAddress(vaddr uint64) (AddressInfo, error) {
+	info := AddressInfo{addr: vaddr}
 	seg := s.symContext.Find(vaddr)
 	if seg == nil {
-		return nil, fmt.Errorf("could not find segment that covers 0x%x", vaddr)
+		return info, fmt.Errorf("could not find segment that covers 0x%x", vaddr)
+	}
+	info.seg = *seg
+	if mod, ok := s.modules[info.seg.mod]; ok {
+		info.mod = mod
+	} else {
+		return info, fmt.Errorf("could not find module for 0x%x", vaddr)
 	}
 	modRelAddr := vaddr - seg.vaddr + seg.modRelAddr
 	modPath := s.repo.GetBuildObject(s.modules[seg.mod].build)
 	result := <-s.symbolizer.FindSrcLoc(modPath, modRelAddr)
-	return result.Locs, result.Err
+	if result.Err != nil {
+		return info, result.Err
+	}
+	info.locs = result.Locs
+	return info, nil
 }
 
 // NewFilter creates a new filter
@@ -123,20 +141,19 @@ type FilterVisitor struct {
 }
 
 func (f *FilterVisitor) VisitBt(elem *BacktraceElement) {
-	locs, err := f.filter.FindSrcLocForAddress(elem.vaddr)
+	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
 		log.Printf("warning: %v", err)
 	}
-	elem.locs = locs
+	elem.info = info
 }
 
 func (f *FilterVisitor) VisitPc(elem *PCElement) {
-	locs, err := f.filter.FindSrcLocForAddress(elem.vaddr)
+	info, err := f.filter.FindInfoForAddress(elem.vaddr)
 	if err != nil {
 		log.Printf("warning: %v", err)
-		return
 	}
-	elem.loc = locs[0]
+	elem.info = info
 }
 
 func (f *FilterVisitor) VisitColor(group *ColorGroup) {

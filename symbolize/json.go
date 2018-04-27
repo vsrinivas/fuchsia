@@ -28,12 +28,12 @@ func (j *JsonVisitor) getJson() ([]byte, error) {
 
 func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
 	type loc struct {
-		File     string `json:"file"`
+		File     OptStr `json:"file"`
 		Line     int    `json:"line"`
-		Function string `json:"function"`
+		Function OptStr `json:"function"`
 	}
 	var locs []loc
-	for _, srcloc := range elem.locs {
+	for _, srcloc := range elem.info.locs {
 		locs = append(locs, loc{
 			File:     srcloc.file,
 			Line:     srcloc.line,
@@ -55,18 +55,19 @@ func (j *JsonVisitor) VisitBt(elem *BacktraceElement) {
 }
 
 func (j *JsonVisitor) VisitPc(elem *PCElement) {
+	loc := elem.info.locs[0]
 	msg, _ := json.Marshal(struct {
 		Tipe     string `json:"type"`
 		Vaddr    uint64 `json:"vaddr"`
-		File     string `json:"file"`
+		File     OptStr `json:"file"`
 		Line     int    `json:"line"`
-		Function string `json:"function"`
+		Function OptStr `json:"function"`
 	}{
 		Tipe:     "pc",
 		Vaddr:    elem.vaddr,
-		File:     elem.loc.file,
-		Line:     elem.loc.line,
-		Function: elem.loc.function,
+		File:     loc.file,
+		Line:     loc.line,
+		Function: loc.function,
 	})
 	j.stack = append(j.stack, msg)
 }

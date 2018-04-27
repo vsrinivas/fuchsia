@@ -66,7 +66,7 @@ func ParsePc(b *ParserState) interface{} {
 		if err != nil {
 			return nil
 		}
-		return &PCElement{addr, SourceLocation{}}
+		return &PCElement{vaddr: addr}
 	})
 }
 
