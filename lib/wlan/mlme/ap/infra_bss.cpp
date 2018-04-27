@@ -191,29 +191,24 @@ zx_status_t InfraBss::HandlePsPollFrame(const ImmutableCtrlFrame<PsPollFrame>& f
     return ZX_OK;
 }
 
-void InfraBss::HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
-                                       RemoteClient::StateId to) {
+zx_status_t InfraBss::HandleClientDeauth(const common::MacAddr& client) {
     debugfn();
-    // Ignore when transitioning from `uninitialized` state.
-    if (from == RemoteClient::StateId::kUninitialized) { return; }
-
     ZX_DEBUG_ASSERT(clients_.Has(client));
     if (!clients_.Has(client)) {
-        errorf("[infra-bss] [%s] state change %hhu -> %hhu reported for unknown client: %s\n",
-               bssid_.ToString().c_str(), from, to, client.ToString().c_str());
-        return;
+        errorf("[infra-bss] [%s] unknown client deauthenticated: %s\n", bssid_.ToString().c_str(),
+               client.ToString().c_str());
+        return ZX_ERR_BAD_STATE;
     }
 
-    // If client enters deauthenticated state after being authenticated, remove client.
-    if (to == RemoteClient::StateId::kDeauthenticated) {
-        debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
-                 client.ToString().c_str());
-        auto status = clients_.Remove(client);
-        if (status != ZX_OK) {
-            errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),
-                   client.ToString().c_str(), status);
-        }
+    debugbss("[infra-bss] [%s] removing client %s\n", bssid_.ToString().c_str(),
+             client.ToString().c_str());
+    auto status = clients_.Remove(client);
+    if (status != ZX_OK) {
+        errorf("[infra-bss] [%s] couldn't remove client %s: %d\n", bssid_.ToString().c_str(),
+               client.ToString().c_str(), status);
+        return status;
     }
+    return ZX_ERR_STOP;
 }
 
 void InfraBss::HandleClientBuChange(const common::MacAddr& client, size_t bu_count) {

@@ -21,18 +21,8 @@ class BaseState;
 
 class RemoteClient : public RemoteClientInterface {
    public:
-    enum class StateId : uint8_t {
-        kUninitialized,
-        kDeauthenticated,
-        kAuthenticating,
-        kAuthenticated,
-        kAssociating,
-        kAssociated,
-    };
-
     struct Listener {
-        virtual void HandleClientStateChange(const common::MacAddr& client, StateId from,
-                                             StateId to) = 0;
+        virtual zx_status_t HandleClientDeauth(const common::MacAddr& client) = 0;
         virtual void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) = 0;
     };
 
@@ -60,6 +50,7 @@ class RemoteClient : public RemoteClientInterface {
     zx_status_t ConvertEthernetToDataFrame(const ImmutableBaseFrame<EthernetII>& frame,
                                            fbl::unique_ptr<Packet>* out_frame);
     void ReportBuChange(size_t bu_count);
+    zx_status_t ReportDeauthentication();
 
     void MoveToState(fbl::unique_ptr<BaseState> state);
 
@@ -101,12 +92,24 @@ class BaseState : public FrameHandler {
     virtual void OnExit() {}
     virtual void HandleTimeout() {}
 
-    virtual RemoteClient::StateId id() const = 0;
-
-    template <typename S, typename... Args> void MoveToState(Args&&... args);
+    virtual const char* name() const = 0;
 
    protected:
+    template <typename S, typename... Args> void MoveToState(Args&&... args);
+
     RemoteClient* const client_;
+};
+
+class DeauthenticatingState : public BaseState {
+   public:
+    DeauthenticatingState(RemoteClient* client);
+
+    void OnEnter() override;
+
+    inline const char* name() const override { return kName; }
+
+   private:
+    static constexpr const char* kName = "Deauthenticating";
 };
 
 class DeauthenticatedState : public BaseState {
@@ -115,9 +118,11 @@ class DeauthenticatedState : public BaseState {
 
     zx_status_t HandleAuthentication(const ImmutableMgmtFrame<Authentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
-    inline RemoteClient::StateId id() const override {
-        return RemoteClient::StateId::kDeauthenticated;
-    }
+
+    inline const char* name() const override { return kName; }
+
+   private:
+    static constexpr const char* kName = "Deauthenticated";
 };
 
 class AuthenticatingState : public BaseState {
@@ -126,11 +131,11 @@ class AuthenticatingState : public BaseState {
 
     void OnEnter() override;
 
-    inline RemoteClient::StateId id() const override {
-        return RemoteClient::StateId::kAuthenticating;
-    }
+    inline const char* name() const override { return kName; }
 
    private:
+    static constexpr const char* kName = "Authenticating";
+
     status_code::StatusCode status_code_;
 };
 
@@ -150,11 +155,11 @@ class AuthenticatedState : public BaseState {
   zx_status_t HandleDeauthentication(const ImmutableMgmtFrame<Deauthentication>& frame,
                                      const wlan_rx_info_t& rxinfo) override;
 
-  inline RemoteClient::StateId id() const override {
-      return RemoteClient::StateId::kAuthenticated;
-  }
+  inline const char* name() const override { return kName; }
 
  private:
+  static constexpr const char* kName = "Authenticated";
+
   // TODO(hahnr): Use WLAN_MIN_TU once defined.
   static constexpr zx_duration_t kAuthenticationTimeoutTu = ZX_MIN(30);
 
@@ -167,11 +172,11 @@ class AssociatingState : public BaseState {
 
   void OnEnter() override;
 
-  inline RemoteClient::StateId id() const override {
-      return RemoteClient::StateId::kAssociating;
-  }
+  inline const char* name() const override { return kName; }
 
  private:
+  static constexpr const char* kName = "Associating";
+
   status_code::StatusCode status_code_;
   uint16_t aid_;
 };
@@ -204,9 +209,11 @@ class AssociatedState : public BaseState {
     zx_status_t HandleMlmeEapolReq(const wlan_mlme::EapolRequest& req) override;
     zx_status_t HandleMlmeSetKeysReq(const wlan_mlme::SetKeysRequest& req) override;
 
-    inline RemoteClient::StateId id() const override { return RemoteClient::StateId::kAssociated; }
+    inline const char* name() const override { return kName; }
 
    private:
+    static constexpr const char* kName = "Associated";
+
     // TODO(hahnr): Use WLAN_MIN_TU once defined.
     static constexpr zx_duration_t kInactivityTimeoutTu = ZX_MIN(5);
     zx_status_t SendNextBu();

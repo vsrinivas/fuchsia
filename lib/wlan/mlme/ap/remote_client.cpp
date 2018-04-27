@@ -10,14 +10,23 @@
 
 namespace wlan {
 
-#define LOG_STATE_TRANSITION(addr, from, to) \
-    debugbss("[client] [%s] %s -> %s\n", addr.ToString().c_str(), from, to);
-
 // BaseState implementation.
 
 template <typename S, typename... Args> void BaseState::MoveToState(Args&&... args) {
     static_assert(fbl::is_base_of<BaseState, S>::value, "State class must implement BaseState");
     client_->MoveToState(fbl::make_unique<S>(client_, std::forward<Args>(args)...));
+}
+
+// Deauthenticating implementation.
+
+DeauthenticatingState::DeauthenticatingState(RemoteClient* client) : BaseState(client) {}
+
+void DeauthenticatingState::OnEnter() {
+    debugfn();
+    // TODO(hahnr): This is somewhat gross. Revisit once new frame processing landed and the sate
+    // machine can make use of the new benefits.
+    auto status = client_->ReportDeauthentication();
+    if (status == ZX_OK) { MoveToState<DeauthenticatedState>(); }
 }
 
 // DeauthenticatedState implementation.
@@ -30,7 +39,6 @@ zx_status_t DeauthenticatedState::HandleAuthentication(
     ZX_DEBUG_ASSERT(frame.hdr->addr2 == client_->addr());
 
     // Move into Authenticating state which responds to incoming Authentication request.
-    LOG_STATE_TRANSITION(client_->addr(), "Deauthenticated", "Authenticating");
     MoveToState<AuthenticatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -67,11 +75,9 @@ void AuthenticatingState::OnEnter() {
     bool auth_success = status_code_ == status_code::kSuccess;
     auto status = client_->SendAuthentication(status_code_);
     if (auth_success && status == ZX_OK) {
-        LOG_STATE_TRANSITION(client_->addr(), "Authenticating", "Authenticated");
         MoveToState<AuthenticatedState>();
     } else {
-        LOG_STATE_TRANSITION(client_->addr(), "Authenticating", "Deauthenticated");
-        MoveToState<DeauthenticatedState>();
+        MoveToState<DeauthenticatingState>();
     }
 }
 
@@ -92,8 +98,7 @@ void AuthenticatedState::OnExit() {
 
 void AuthenticatedState::HandleTimeout() {
     if (client_->IsDeadlineExceeded(auth_timeout_)) {
-        MoveToState<DeauthenticatedState>();
-        LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
+        MoveToState<DeauthenticatingState>();
     }
 }
 
@@ -101,7 +106,6 @@ zx_status_t AuthenticatedState::HandleAuthentication(
     const ImmutableMgmtFrame<Authentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Authentication request while being authenticated\n",
              client_->addr().ToString().c_str());
-    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Authenticating");
     MoveToState<AuthenticatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -110,8 +114,7 @@ zx_status_t AuthenticatedState::HandleDeauthentication(
     const ImmutableMgmtFrame<Deauthentication>& frame, const wlan_rx_info_t& rxinfo) {
     debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
              frame.body->reason_code);
-    MoveToState<DeauthenticatedState>();
-    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Deauthenticated");
+    MoveToState<DeauthenticatingState>();
     return ZX_ERR_STOP;
 }
 
@@ -122,7 +125,6 @@ zx_status_t AuthenticatedState::HandleAssociationRequest(
     auth_timeout_ = zx::time();
 
     // Move into Associating state state which responds to incoming Association requests.
-    LOG_STATE_TRANSITION(client_->addr(), "Authenticated", "Associating");
     MoveToState<AssociatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -158,11 +160,9 @@ void AssociatingState::OnEnter() {
     bool assoc_success = (status_code_ == status_code::kSuccess);
     auto status = client_->SendAssociationResponse(aid_, status_code_);
     if (assoc_success && status == ZX_OK) {
-        LOG_STATE_TRANSITION(client_->addr(), "AssociatingState", "Associated");
         MoveToState<AssociatedState>(aid_);
     } else {
-        LOG_STATE_TRANSITION(client_->addr(), "AssociatingState", "Deauthenticated");
-        MoveToState<DeauthenticatedState>();
+        MoveToState<DeauthenticatingState>();
     }
 }
 
@@ -179,7 +179,6 @@ zx_status_t AssociatedState::HandleAuthentication(const ImmutableMgmtFrame<Authe
     // Deauthentication.
     req_deauth_ = false;
 
-    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Authenticating");
     MoveToState<AuthenticatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -194,7 +193,6 @@ zx_status_t AssociatedState::HandleAssociationRequest(
     // Deauthentication.
     req_deauth_ = false;
 
-    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Associating");
     MoveToState<AssociatingState>(frame);
     return ZX_ERR_STOP;
 }
@@ -245,8 +243,7 @@ zx_status_t AssociatedState::HandleDeauthentication(
     debugbss("[client] [%s] received Deauthentication: %u\n", client_->addr().ToString().c_str(),
              frame.body->reason_code);
     req_deauth_ = false;
-    MoveToState<DeauthenticatedState>();
-    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
+    MoveToState<DeauthenticatingState>();
     return ZX_ERR_STOP;
 }
 
@@ -255,7 +252,6 @@ zx_status_t AssociatedState::HandleDisassociation(const ImmutableMgmtFrame<Disas
     debugbss("[client] [%s] received Disassociation request: %u\n",
              client_->addr().ToString().c_str(), frame.body->reason_code);
     MoveToState<AuthenticatedState>();
-    LOG_STATE_TRANSITION(client_->addr(), "Associated", "Authenticated");
     return ZX_ERR_STOP;
 }
 
@@ -416,7 +412,6 @@ void AssociatedState::HandleTimeout() {
         debugbss("[client] [%s] client inactive for %lu seconds; deauthenticating client\n",
                  client_->addr().ToString().c_str(), kInactivityTimeoutTu / 1000);
         MoveToState<DeauthenticatedState>();
-        LOG_STATE_TRANSITION(client_->addr(), "Associated", "Deauthenticated");
     }
 }
 
@@ -548,7 +543,6 @@ RemoteClient::RemoteClient(DeviceInterface* device, fbl::unique_ptr<Timer> timer
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
 
     MoveToState(fbl::make_unique<DeauthenticatedState>(this));
-    LOG_STATE_TRANSITION(addr_, "(init)", "Deauthenticated");
 }
 
 RemoteClient::~RemoteClient() {
@@ -561,22 +555,18 @@ RemoteClient::~RemoteClient() {
 
 void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     ZX_DEBUG_ASSERT(to != nullptr);
-    auto from_id = state_ == nullptr ? StateId::kUninitialized : state_->id();
+    auto from_name = state_ == nullptr ? "()" : state_->name();
     if (to == nullptr) {
-        errorf("attempt to transition to a nullptr from state: %hhu\n", from_id);
+        errorf("attempt to transition to a nullptr from state: %s\n", from_name);
         return;
     }
 
     if (state_ != nullptr) { state_->OnExit(); }
-    auto to_id = to->id();
+
+    debugbss("[client] [%s] %s -> %s\n", addr().ToString().c_str(), from_name, to->name());
     state_ = fbl::move(to);
 
-    // Report state change to listener.
-    if (listener_ != nullptr) { listener_->HandleClientStateChange(addr_, from_id, to_id); }
-
-    // When the client's owner gets destroyed due to a state change, it will also destroy the state
-    // which we were about to transition into. In that case, terminate.
-    if (state_ != nullptr) { state_->OnEnter(); }
+    state_->OnEnter();
 }
 
 void RemoteClient::HandleTimeout() {
@@ -790,6 +780,11 @@ void RemoteClient::ReportBuChange(size_t bu_count) {
     if (listener_ != nullptr) { listener_->HandleClientBuChange(addr_, bu_count); }
 }
 
+zx_status_t RemoteClient::ReportDeauthentication() {
+    if (listener_ != nullptr) { return listener_->HandleClientDeauth(addr_); }
+    return ZX_OK;
+}
+
 zx_status_t RemoteClient::WriteHtCapabilities(ElementWriter* w) {
     HtCapabilities htc = bss_->BuildHtCapabilities();
     if (!w->write<HtCapabilities>(htc.ht_cap_info, htc.ampdu_params, htc.mcs_set, htc.ht_ext_cap,
@@ -810,7 +805,5 @@ zx_status_t RemoteClient::WriteHtOperation(ElementWriter* w) {
     }
     return ZX_OK;
 }
-
-#undef LOG_STATE_TRANSITION
 
 }  // namespace wlan

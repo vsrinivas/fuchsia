@@ -77,8 +77,7 @@ class InfraBss : public BssInterface, public FrameHandler, public RemoteClient::
                                   const wlan_rx_info_t& rxinfo) override;
 
     // RemoteClient::Listener implementation
-    void HandleClientStateChange(const common::MacAddr& client, RemoteClient::StateId from,
-                                 RemoteClient::StateId to) override;
+    zx_status_t HandleClientDeauth(const common::MacAddr& client) override;
     void HandleClientBuChange(const common::MacAddr& client, size_t bu_count) override;
 
     zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
