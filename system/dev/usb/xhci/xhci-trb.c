@@ -78,6 +78,18 @@ void xhci_clear_trb(xhci_trb_t* trb) {
     XHCI_WRITE32(&trb->control, 0);
 }
 
+void xhci_set_transfer_noop_trb(xhci_trb_t* trb) {
+    uint32_t control = XHCI_READ32(&trb->control);
+    if ((control & TRB_TYPE_MASK) == (TRB_LINK << TRB_TYPE_START)) {
+        // Don't do anything if it's the LINK TRB.
+        return;
+    }
+    XHCI_WRITE64(&trb->ptr, 0);
+    XHCI_WRITE32(&trb->status, 0);
+    // Preserve the cycle bit of the TRB.
+    trb_set_control(trb, TRB_TRANSFER_NOOP, control & TRB_C);
+}
+
 void* xhci_read_trb_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     // convert physical address to virtual
     uint8_t* ptr = trb_get_ptr(trb);
@@ -126,4 +138,16 @@ void xhci_increment_ring(xhci_transfer_ring_t* ring) {
 void xhci_set_dequeue_ptr(xhci_transfer_ring_t* ring, xhci_trb_t* new_ptr) {
     ring->dequeue_ptr = new_ptr;
     ring->full = false;
+}
+
+xhci_trb_t* xhci_transfer_ring_phys_to_trb(xhci_transfer_ring_t* ring, zx_paddr_t phys) {
+    zx_paddr_t first_trb_phys = xhci_transfer_ring_start_phys(ring);
+    // Get the physical address of the start of the last trb,
+    // ring->size does not include the LINK TRB at the end of the ring.
+    zx_paddr_t last_trb_phys = first_trb_phys + (ring->size * sizeof(xhci_trb_t));
+
+    if (phys < first_trb_phys || phys > last_trb_phys) {
+        return NULL;
+    }
+   return ring->start + ((phys - first_trb_phys) / sizeof(xhci_trb_t));
 }
