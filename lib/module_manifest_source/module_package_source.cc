@@ -31,7 +31,7 @@ constexpr char kInitialModulePackagesIndexDir[] =
 ModulePackageSource::ModulePackageSource(
     component::ApplicationContext* const context)
     : weak_factory_(this) {
-  context->debug_export_dir()->AddEntry(
+  context->outgoing().debug_dir()->AddEntry(
       ModulePackageIndexer::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
         indexer_bindings_.AddBinding(
