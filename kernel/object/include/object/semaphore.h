@@ -19,9 +19,7 @@ public:
     Semaphore(const Semaphore&) = delete;
     Semaphore& operator=(const Semaphore&) = delete;
 
-    // Returns the number of ready threads. If it is bigger than 0
-    // the caller must call thread_reschedule().
-    __WARN_UNUSED_RESULT int Post();
+    void Post();
 
     // Returns whether we blocked via |was_blocked|.
     zx_status_t Wait(zx_time_t deadline, bool* was_blocked);

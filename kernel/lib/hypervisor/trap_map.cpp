@@ -38,8 +38,7 @@ PortPacket* BlockingPortAllocator::Alloc() {
 
 void BlockingPortAllocator::Free(PortPacket* port_packet) {
     arena_.Delete(port_packet);
-    if (semaphore_.Post() > 0)
-        thread_reschedule();
+    semaphore_.Post();
 }
 
 Trap::Trap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,

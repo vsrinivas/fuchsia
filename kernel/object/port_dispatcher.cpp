@@ -228,28 +228,26 @@ zx_status_t PortDispatcher::QueueUser(const zx_port_packet_t& packet) {
 zx_status_t PortDispatcher::Queue(PortPacket* port_packet, zx_signals_t observed, uint64_t count) {
     canary_.Assert();
 
-    int wake_count = 0;
-    {
-        AutoLock al(get_lock());
-        if (zero_handles_)
-            return ZX_ERR_BAD_STATE;
+    AutoReschedDisable resched_disable; // Must come before the AutoLock.
+    AutoLock al(get_lock());
+    if (zero_handles_)
+        return ZX_ERR_BAD_STATE;
 
-        if (observed) {
-            if (port_packet->InContainer()) {
-                port_packet->packet.signal.observed |= observed;
-                // |count| is deliberately left as is.
-                return ZX_OK;
-            }
-            port_packet->packet.signal.observed = observed;
-            port_packet->packet.signal.count = count;
+    if (observed) {
+        if (port_packet->InContainer()) {
+            port_packet->packet.signal.observed |= observed;
+            // |count| is deliberately left as is.
+            return ZX_OK;
         }
-
-        packets_.push_back(port_packet);
-        wake_count = sema_.Post();
+        port_packet->packet.signal.observed = observed;
+        port_packet->packet.signal.count = count;
     }
 
-    if (wake_count)
-        thread_reschedule();
+    packets_.push_back(port_packet);
+    // This Disable() call must come before Post() to be useful, but doing
+    // it earlier would also be OK.
+    resched_disable.Disable();
+    sema_.Post();
 
     return ZX_OK;
 }

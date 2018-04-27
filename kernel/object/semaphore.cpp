@@ -18,13 +18,12 @@ Semaphore::~Semaphore() {
     wait_queue_destroy(&waitq_);
 }
 
-int Semaphore::Post() {
+void Semaphore::Post() {
     // If the count is or was negative then a thread is waiting for a resource,
     // otherwise it's safe to just increase the count available with no downsides.
     AutoThreadLock lock;
     if (unlikely(++count_ <= 0))
-        return wait_queue_wake_one(&waitq_, false, ZX_OK);
-    return 0;
+        wait_queue_wake_one(&waitq_, true, ZX_OK);
 }
 
 zx_status_t Semaphore::Wait(zx_time_t deadline, bool* was_blocked) {
