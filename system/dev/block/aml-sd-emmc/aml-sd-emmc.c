@@ -221,9 +221,32 @@ static zx_status_t aml_sd_emmc_set_bus_freq(void* ctx, uint32_t freq) {
     return ZX_OK;
 }
 
+static void aml_sd_emmc_init_regs(aml_sd_emmc_t* dev) {
+    aml_sd_emmc_regs_t* regs = dev->regs;
+    uint32_t config = 0;
+    uint32_t clk_val = 0;
+    update_bits(&config, AML_SD_EMMC_CFG_BL_LEN_MASK, AML_SD_EMMC_CFG_BL_LEN_LOC,
+                AML_SD_EMMC_DEFAULT_BL_LEN);
+    update_bits(&config, AML_SD_EMMC_CFG_RESP_TIMEOUT_MASK, AML_SD_EMMC_CFG_RESP_TIMEOUT_LOC,
+                AML_SD_EMMC_DEFAULT_RESP_TIMEOUT);
+    update_bits(&config, AML_SD_EMMC_CFG_RC_CC_MASK, AML_SD_EMMC_CFG_RC_CC_LOC,
+                AML_SD_EMMC_DEFAULT_RC_CC);
+    update_bits(&config, AML_SD_EMMC_CFG_BUS_WIDTH_MASK, AML_SD_EMMC_CFG_BUS_WIDTH_LOC,
+                 AML_SD_EMMC_CFG_BUS_WIDTH_1BIT);
+    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_CO_PHASE_MASK,
+                AML_SD_EMMC_CLOCK_CFG_CO_PHASE_LOC, AML_SD_EMMC_DEFAULT_CLK_CORE_PHASE);
+    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_SRC_MASK, AML_SD_EMMC_CLOCK_CFG_SRC_LOC,
+                AML_SD_EMMC_DEFAULT_CLK_SRC);
+    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_DIV_MASK, AML_SD_EMMC_CLOCK_CFG_DIV_LOC,
+                AML_SD_EMMC_DEFAULT_CLK_DIV);
+    clk_val |= AML_SD_EMMC_CLOCK_CFG_ALWAYS_ON;
+
+    regs->sd_emmc_clock = clk_val;
+    regs->sd_emmc_cfg = config;
+}
+
 static void aml_sd_emmc_hw_reset(void* ctx) {
     aml_sd_emmc_t *dev = (aml_sd_emmc_t *)ctx;
-    aml_sd_emmc_regs_t* regs = dev->regs;
     if (dev->gpio_count == 1) {
         //Currently we only have 1 gpio
         gpio_config(&dev->gpio, 0, GPIO_DIR_OUT);
@@ -231,26 +254,7 @@ static void aml_sd_emmc_hw_reset(void* ctx) {
         usleep(10 * 1000);
         gpio_write(&dev->gpio, 0, 1);
     }
-    uint32_t config = regs->sd_emmc_cfg;
-    uint32_t clk_val = regs->sd_emmc_clock;
-
-    update_bits(&config, AML_SD_EMMC_CFG_BL_LEN_MASK, AML_SD_EMMC_CFG_BL_LEN_LOC, 9);
-    update_bits(&config, AML_SD_EMMC_CFG_RESP_TIMEOUT_MASK, AML_SD_EMMC_CFG_RESP_TIMEOUT_LOC, 8);
-    update_bits(&config, AML_SD_EMMC_CFG_RC_CC_MASK, AML_SD_EMMC_CFG_RC_CC_LOC, 4);
-
-    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_CO_PHASE_MASK,
-                AML_SD_EMMC_CLOCK_CFG_CO_PHASE_LOC, 2);
-    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_RX_PHASE_MASK,
-                AML_SD_EMMC_CLOCK_CFG_RX_PHASE_LOC, 0);
-    update_bits(&clk_val, AML_SD_EMMC_CLOCK_CFG_RX_DELAY_MASK, AML_SD_EMMC_CLOCK_CFG_RX_DELAY_LOC,
-                0);
-    clk_val |= AML_SD_EMMC_CLOCK_CFG_ALWAYS_ON;
-
-    regs->sd_emmc_clock = clk_val;
-    regs->sd_emmc_cfg = config;
-
-    aml_sd_emmc_set_bus_width(ctx, SDMMC_BUS_WIDTH_1);
-    aml_sd_emmc_set_bus_freq(ctx, AML_SD_EMMC_MIN_FREQ - 1);
+    aml_sd_emmc_init_regs(dev);
 }
 
 static zx_status_t aml_sd_emmc_set_bus_timing(void* ctx, sdmmc_timing_t timing) {

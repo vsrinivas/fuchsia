@@ -20,7 +20,7 @@ static inline bool get_bit(uint32_t x, uint32_t mask) {
     return (x & mask) ? 1 : 0;
 }
 
-//From EMMC Design Logic documentation provided by AMLOGIC
+//From EMMC Design documentation provided by AMLOGIC
 #define AML_SD_EMMC_IRQ_ALL_CLEAR            0x3fff
 #define AML_SD_EMMC_MIN_FREQ                 400000     //400KHz
 #define AML_SD_EMMC_MAX_FREQ                 40000000
@@ -30,6 +30,14 @@ static inline bool get_bit(uint32_t x, uint32_t mask) {
 #define AML_SD_EMMC_FCLK_DIV2_SRC            1
 //~Min freq attainable with DIV2 Src
 #define AML_SD_EMMC_FCLK_DIV2_MIN_FREQ       20000000   //20MHz
+
+//Default values after reset.EMMC Design Docs by AMLOGIC: PG 56
+#define AML_SD_EMMC_DEFAULT_BL_LEN           9          //512 bytes
+#define AML_SD_EMMC_DEFAULT_RESP_TIMEOUT     8          //256 core clock cycles
+#define AML_SD_EMMC_DEFAULT_RC_CC            4          //16 core clock cycles
+#define AML_SD_EMMC_DEFAULT_CLK_SRC          0          //24MHz
+#define AML_SD_EMMC_DEFAULT_CLK_DIV          60         //Defaults to 400KHz
+#define AML_SD_EMMC_DEFAULT_CLK_CORE_PHASE   2
 
 typedef struct {
     volatile uint32_t sd_emmc_clock;            // 0x00
