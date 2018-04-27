@@ -113,6 +113,7 @@ template("rustc_artifact") {
     extension = ".so"
   }
 
+  third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
   third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
   first_party_crate_root = "${root_out_dir}/rust_crates"
   output_file = "${first_party_crate_root}/${prefix}${name}${extension}"
@@ -146,6 +147,7 @@ template("rustc_artifact") {
     if (!defined(deps)) {
       deps = []
     }
+    deps += [ third_party_build ]
     inputs = [
       "./src",
     ]
@@ -200,6 +202,7 @@ template("rustc_artifact") {
     if (!defined(deps)) {
       deps = []
     }
+    deps += [ third_party_build ]
     args = [
       "--out-dir", rebase_path(cargo_toml_dir),
       "--crate-name", name,
