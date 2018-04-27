@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_TRACE_SPEC_H_
 #define GARNET_BIN_TRACE_SPEC_H_
 
+#include "garnet/lib/measure/argument_value.h"
 #include "garnet/lib/measure/duration.h"
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"

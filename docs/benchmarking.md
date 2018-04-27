@@ -75,6 +75,7 @@ The `trace` tool supports the following types of measurements:
 
  - `duration`
  - `time_between`
+ - `argument_value`
 
 A `duration` measurement targets a single trace event and computes the
 duration of its occurences. The target trace event can be recorded as a
@@ -115,14 +116,31 @@ In the example above the `time_between` measurement captures the time between
 the two instant events and measures the time between the end of one task and
 the beginning of another.
 
+
+An `argument_value` measurement is used to record a value of an argument passed
+to the trace event. Takes as arguments a name and category of the event, name of
+the argument to be recorded and unit in which it is measured. The type of trace
+event doesn't matter, but the recorded argument must have `uint64` type.
+
+**Example**:
+
+```{json}
+    {
+      "type": "argument_value",
+      "event_name": "example",
+      "event_category": "benchmark",
+      "argument_name": "disk_space_used",
+      "argument_unit": "Mb"
+    }
+```
+
 ### Samples
 
-Both `duration` and `time_between` measurements can optionally group the
-recorded samples into consecutive ranges, splitting the samples at the given
-instances of the recorded events and reporting the results of each group
-separately. In order to achieve that, pass a strictly increasing list of
-zero-based numbers denoting the occurrences at which samples must be split as
-`split_samples_at`.
+All types of measurements can optionally group the recorded samples into
+consecutive ranges, splitting the samples at the given instances of the
+recorded events and reporting the results of each group separately.
+In order to achieve that, pass a strictly increasing list of zero-based numbers
+denoting the occurrences at which samples must be split as `split_samples_at`.
 
 For example, if a measurement specifies `"split_samples_at": [1, 50],`, the
 results will be reported in three groups: sample 0, samples 1 - 49, and samples

@@ -30,7 +30,8 @@ trace::Record::Event FlowEnd(uint64_t id, fbl::String name,
                              fbl::String category, uint64_t timestamp);
 
 trace::Record::Event Instant(fbl::String name, fbl::String category,
-                             uint64_t timestamp);
+                             uint64_t timestamp,
+                             fbl::Vector<trace::Argument> args = {});
 }  // namespace test
 
 }  // namespace measure

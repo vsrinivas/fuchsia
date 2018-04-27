@@ -267,6 +267,11 @@ void Record::Start(const fxl::CommandLine& command_line) {
     measure_time_between_.reset(
         new measure::MeasureTimeBetween(options_.measurements.time_between));
   }
+  if (!options_.measurements.argument_value.empty()) {
+    aggregate_events_ = true;
+    measure_argument_value_.reset(new measure::MeasureArgumentValue(
+        options_.measurements.argument_value));
+  }
 
   tracing_ = true;
 
@@ -318,6 +323,9 @@ void Record::ProcessMeasurements() {
     if (measure_time_between_) {
       measure_time_between_->Process(event.GetEvent());
     }
+    if (measure_argument_value_) {
+      measure_argument_value_->Process(event.GetEvent());
+    }
   }
 
   std::unordered_map<uint64_t, std::vector<trace_ticks_t>> ticks;
@@ -328,6 +336,10 @@ void Record::ProcessMeasurements() {
   if (measure_time_between_) {
     ticks.insert(measure_time_between_->results().begin(),
                  measure_time_between_->results().end());
+  }
+  if (measure_argument_value_) {
+    ticks.insert(measure_argument_value_->results().begin(),
+                 measure_argument_value_->results().end());
   }
 
   uint64_t ticks_per_second = zx_ticks_per_second();
@@ -359,8 +371,8 @@ void Record::ProcessMeasurements() {
       Done(1);
       return;
     }
-    out() << "Benchmark results written to "
-          << options_.benchmark_results_file << std::endl;
+    out() << "Benchmark results written to " << options_.benchmark_results_file
+          << std::endl;
   }
 
   Done(return_code_);

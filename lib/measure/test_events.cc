@@ -51,10 +51,12 @@ trace::Record::Event FlowEnd(uint64_t id, fbl::String name,
 }
 
 trace::Record::Event Instant(fbl::String name, fbl::String category,
-                             uint64_t timestamp) {
+                             uint64_t timestamp,
+                             fbl::Vector<trace::Argument> args) {
   return trace::Record::Event{
-      timestamp, {}, category,
-      name,      {}, trace::EventData(trace::EventData::Instant{})};
+      timestamp,       {},
+      category,        name,
+      fbl::move(args), trace::EventData(trace::EventData::Instant{})};
 }
 }  // namespace test
 

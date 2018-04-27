@@ -19,6 +19,11 @@ bool operator==(const measure::DurationSpec& lhs,
   return lhs.id == rhs.id && lhs.event == rhs.event;
 }
 
+bool operator==(const measure::ArgumentValueSpec& lhs,
+                const measure::ArgumentValueSpec& rhs) {
+  return lhs.id == rhs.id && lhs.event == rhs.event;
+}
+
 bool operator==(const measure::TimeBetweenSpec& lhs,
                 const measure::TimeBetweenSpec& rhs) {
   return lhs.id == rhs.id && lhs.first_event == rhs.first_event &&
@@ -143,6 +148,36 @@ TEST(Spec, DecodeMeasureDuration) {
             result.measurements.duration[0]);
   EXPECT_EQ(measure::DurationSpec({1u, {"startup", "foo"}}),
             result.measurements.duration[1]);
+}
+
+TEST(Spec, DecodeMeasureArgumentValue) {
+  std::string json = R"({
+    "measure":[
+      {
+        "type": "argument_value",
+        "event_name": "startup",
+        "event_category": "foo",
+        "argument_name": "disk_space",
+        "argument_unit": "Mb"
+      },
+      {
+        "type": "argument_value",
+        "event_name": "shutdown",
+        "event_category": "benchmark",
+        "argument_name": "n_handles",
+        "argument_unit": "handles"
+      }
+    ]
+  })";
+
+  Spec result;
+  ASSERT_TRUE(DecodeSpec(json, &result));
+  EXPECT_EQ(2u, result.measurements.argument_value.size());
+  EXPECT_EQ(measure::ArgumentValueSpec({0u, {"startup", "foo"}, "bytes", "b"}),
+            result.measurements.argument_value[0]);
+  EXPECT_EQ(measure::ArgumentValueSpec(
+                {1u, {"shutdown", "benchmark"}, "n_handles", "handles"}),
+            result.measurements.argument_value[1]);
 }
 
 TEST(Spec, DecodeMeasureTimeBetween) {

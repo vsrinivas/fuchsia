@@ -13,6 +13,7 @@
 #include "garnet/bin/trace/command.h"
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tracer.h"
+#include "garnet/lib/measure/argument_value.h"
 #include "garnet/lib/measure/duration.h"
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
@@ -67,6 +68,7 @@ class Record : public CommandWithTraceController {
   std::vector<trace::Record> events_;
   std::unique_ptr<measure::MeasureDuration> measure_duration_;
   std::unique_ptr<measure::MeasureTimeBetween> measure_time_between_;
+  std::unique_ptr<measure::MeasureArgumentValue> measure_argument_value_;
   bool tracing_ = false;
   int32_t return_code_ = 0;
   Options options_;

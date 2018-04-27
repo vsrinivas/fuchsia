@@ -73,6 +73,7 @@ const char kTypeKey[] = "type";
 const char kSplitSamplesAtKey[] = "split_samples_at";
 const char kTestSuiteNameKey[] = "test_suite_name";
 const char kMeasureDurationType[] = "duration";
+const char kMeasureArgumentValueType[] = "argument_value";
 const char kMeasureTimeBetweenType[] = "time_between";
 
 // Schema for "duration" measurements.
@@ -128,6 +129,28 @@ const char kSecondEventAnchorKey[] = "second_event_anchor";
 const char kAnchorBegin[] = "begin";
 const char kAnchorEnd[] = "end";
 
+// Schema for "argument value" measurements.
+const char kArgumentValueSchema[] = R"({
+  "type": "object",
+  "properties": {
+    "event_category": {
+      "type": "string"
+    },
+    "event_name": {
+      "type": "string"
+    },
+    "argument_name": {
+      "type": "string"
+    },
+    "argument_unit": {
+      "type": "string"
+    }
+  },
+  "required": ["event_category", "event_name", "argument_name", "argument_unit"]
+})";
+const char kArgumentNameKey[] = "argument_name";
+const char kArgumentUnitKey[] = "argument_unit";
+
 bool DecodeMeasureDuration(const rapidjson::Value& value,
                            measure::DurationSpec* result) {
   result->event.name = value[kEventNameKey].GetString();
@@ -135,8 +158,16 @@ bool DecodeMeasureDuration(const rapidjson::Value& value,
   return true;
 }
 
-bool DecodeAnchor(std::string anchor_str,
-                  const char* key,
+bool DecodeMeasureArgumentValue(const rapidjson::Value& value,
+                                measure::ArgumentValueSpec* result) {
+  result->event.name = value[kEventNameKey].GetString();
+  result->event.category = value[kEventCategoryKey].GetString();
+  result->argument_name = value[kArgumentNameKey].GetString();
+  result->argument_unit = value[kArgumentUnitKey].GetString();
+  return true;
+}
+
+bool DecodeAnchor(std::string anchor_str, const char* key,
                   measure::Anchor* result) {
   if (anchor_str == kAnchorBegin) {
     *result = measure::Anchor::Begin;
@@ -201,7 +232,9 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   auto root_schema = InitSchema(kRootSchema);
   auto duration_schema = InitSchema(kDurationSchema);
   auto time_between_schema = InitSchema(kTimeBetweenSchema);
-  if (!root_schema || !duration_schema || !time_between_schema) {
+  auto argument_value_schema = InitSchema(kArgumentValueSchema);
+  if (!root_schema || !duration_schema || !time_between_schema ||
+      !argument_value_schema) {
     return false;
   }
 
@@ -211,8 +244,8 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
   if (document.HasParseError()) {
     auto offset = document.GetErrorOffset();
     auto code = document.GetParseError();
-    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset "
-                   << offset << ", " << GetParseError_En(code);
+    FXL_LOG(ERROR) << "Couldn't parse the tracing spec file: offset " << offset
+                   << ", " << GetParseError_En(code);
     return false;
   }
   if (!ValidateSchema(document, *root_schema)) {
@@ -270,6 +303,14 @@ bool DecodeSpec(const std::string& json, Spec* spec) {
         return false;
       }
       result.measurements.time_between.push_back(std::move(spec));
+    } else if (type == kMeasureArgumentValueType) {
+      measure::ArgumentValueSpec spec;
+      spec.id = counter;
+      if (!ValidateSchema(measurement, *argument_value_schema) ||
+          !DecodeMeasureArgumentValue(measurement, &spec)) {
+        return false;
+      }
+      result.measurements.argument_value.push_back(std::move(spec));
     } else {
       FXL_LOG(ERROR) << "Unrecognized measurement type: " << type;
       return false;

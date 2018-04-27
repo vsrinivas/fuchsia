@@ -17,6 +17,13 @@ std::string GetLabel(const measure::DurationSpec& spec) {
   return os.str();
 }
 
+std::string GetLabel(const measure::ArgumentValueSpec& spec) {
+  std::ostringstream os;
+  os << spec.event.name.c_str() << " (" << spec.event.category.c_str() << "), ";
+  os << spec.argument_name.c_str();
+  return os.str();
+}
+
 std::string GetLabel(const measure::TimeBetweenSpec& spec) {
   std::ostringstream os;
   os << spec.first_event.name.c_str() << " ("
@@ -93,6 +100,13 @@ std::vector<Result> ComputeResults(
         get_or_default(measurements.split_samples_at, measure_spec.id,
                        no_split),
         ticks_per_second));
+  }
+  for (auto& measure_spec : measurements.argument_value) {
+    results.push_back(ComputeSingle(
+        measure_spec, get_or_default(ticks, measure_spec.id, no_ticks),
+        get_or_default(measurements.split_samples_at, measure_spec.id,
+                       no_split),
+        1'000.0));
   }
   for (auto& measure_spec : measurements.time_between) {
     results.push_back(ComputeSingle(

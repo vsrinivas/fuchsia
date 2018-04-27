@@ -4,6 +4,8 @@
 
 source_set("measure") {
   sources = [
+    "argument_value.cc",
+    "argument_value.h",
     "duration.cc",
     "duration.h",
     "event_spec.cc",
@@ -25,6 +27,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "argument_value_unittest.cc",
     "duration_unittest.cc",
     "results_unittest.cc",
     "test_events.cc",
