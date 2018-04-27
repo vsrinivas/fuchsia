@@ -545,7 +545,7 @@ tools:: $(ALLHOST_APPS) $(ALLHOST_LIBS)
 .PHONY: kernel
 kernel: $(OUTLKBIN) $(EXTRA_KERNELDEPS)
 ifeq ($(ENABLE_BUILD_LISTFILES),true)
-kernel: $(OUTLKELF).lst $(OUTLKELF).debug.lst  $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
+kernel: $(OUTLKELF).lst $(OUTLKELF).sym $(OUTLKELF).sym.sorted $(OUTLKELF).size
 endif
 
 ifeq ($(call TOBOOL,$(ENABLE_ULIB_ONLY)),false)
