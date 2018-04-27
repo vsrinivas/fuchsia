@@ -45,15 +45,6 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
   // See if there's a chain mapping for this module, link.
   link_path = story_controller_impl_->GetLinkPathForChainKey(
       module_data_->module_path, name);
-  if (!link_path) {
-    if (name) {
-      link_path = LinkPath::New();
-      link_path->module_path = module_data_->module_path.Clone();
-      link_path->link_name = name;
-    } else {
-      link_path = CloneOptional(module_data_->link_path);
-    }
-  }
   story_controller_impl_->ConnectLinkPath(std::move(link_path),
                                           std::move(request));
 }

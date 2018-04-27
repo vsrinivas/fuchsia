@@ -23,8 +23,9 @@ LinkPathPtr ChainImpl::GetLinkPathForKey(const fidl::StringPtr& key) {
       chain_data_.key_to_link_map->begin(), chain_data_.key_to_link_map->end(),
       [&key](const ChainKeyToLinkData& data) { return data.key == key; });
 
-  if (it == chain_data_.key_to_link_map->end())
+  if (it == chain_data_.key_to_link_map->end()) {
     return nullptr;
+  }
   return CloneOptional(it->link_path);
 }
 

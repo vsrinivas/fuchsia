@@ -94,7 +94,7 @@ class TestApp : public ModuleWatcher {
     intent_.parameters->at(2).data = std::move(parameter_data);
 
     // This noun doesn't have a name, and will appear as the root or default
-    // link for the child mod. This is for backwards compatibility. MI4-739
+    // link for the child mod. This is for backwards compatibility.
     parameter_data = IntentParameterData();
     parameter_data.set_json("1337");
     intent_.parameters->at(3) = IntentParameter();

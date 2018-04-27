@@ -18,10 +18,6 @@ struct ModuleData {
   // from Links under other Module instances.
   ChainData chain_data;
 
-  // The name of the link the Module instance was started with. OBSOLETE.
-  // Superseded by chain_data.
-  LinkPath link_path;
-
   // The way in which this Module instance was first started in the story,
   // either by request from another Module instance, by request from outside the
   // story (i.e. by suggestion from an agent).
@@ -71,7 +67,8 @@ struct ChainData {
 
 struct ChainKeyToLinkData {
   // A null key is allowed for backwards compatibility with default links.
-  // MI4-739
+  // TODO(thatguy); When no modules use null link names any more, make this
+  // required.
   string? key;
   LinkPath link_path;
 };

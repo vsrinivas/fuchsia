@@ -83,25 +83,15 @@ interface StoryController {
   // StoryLinksWatcher.OnNewLink(), if a watcher is supplied in the call.
   10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
-  // Gets a connection to the named Link in the story.
+  // Gets a connection to the specified link in the story. Links are identified
+  // by a combination of |module_path| and a |link_name|.
   //
   // Any link, if it doesn't exist yet, is implicitly created when it's first
   // accessed.
   //
-  // The name of the link to the root module (i.e. the module whose URL is
-  // passed to StoryProvider.CreateStory*()) is "root", and it's implicitly
-  // created when the story is created by StoryProvider.CreateStory(), and also
-  // populated with data if the story is created with
-  // StoryProvider.CreateStoryWithInfo().
-  //
-  // The |module_path| identifies the module to which the Link is accessible
-  // through ModuleContext.GetLink(). Normally that is the module that created
-  // the Link, but the Link might have been created and populated here before
-  // it's first accessed by a module.
-  //
-  // For the links leading to top level modules (specifically for the "root"
-  // link to the root module), the |module_path| is empty or null.
-  11: GetLink(vector<string>? module_path, string link_name, request<Link> link);
+  // TODO(thatguy): |module_path| should not be allowed to be null any more,
+  // since all modules now have a non-zero-length module path.
+  11: GetLink(vector<string>? module_path, string? link_name, request<Link> link);
 };
 
 // Implemented by the client calling StoryController.Watch().

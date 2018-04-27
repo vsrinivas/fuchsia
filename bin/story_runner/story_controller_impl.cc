@@ -42,6 +42,7 @@
 namespace modular {
 
 constexpr char kStoryScopeLabelPrefix[] = "story-";
+constexpr char kNullLinkName[] = "<unnamed_link>";
 
 namespace {
 
@@ -200,8 +201,6 @@ void XdrModuleManifest(XdrContext* const xdr, ModuleManifest* const data) {
 void XdrModuleData(XdrContext* const xdr, ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
-  // TODO(mesch): Rename the XDR field eventually.
-  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
   xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
   xdr->Field("module_stopped", &data->module_stopped);
@@ -338,12 +337,9 @@ class StoryControllerImpl::LaunchModuleCall : Operation<> {
     // different link, or if a service exchange is requested, or if transitive
     // embedding is requested, we tear it down then launch a new module.
     //
-    // TODO(mesch): If only the link is different, we should just hook the
-    // existing module instance on a new link and notify it about the changed
-    // link value.
-    if (i->module_data->module_url != module_data_->module_url ||
-        i->module_data->link_path != module_data_->link_path ||
-        !ChainDataEqual(i->module_data->chain_data, module_data_->chain_data) ||
+    // TODO(thatguy): Remove service exchange between modules: the mechanics of
+    // it are awkward given how module lifecycle is meant to be transient.
+    if (i->module_data->intent != module_data_->intent ||
         incoming_services_.is_valid()) {
       i->module_controller_impl->Teardown([this, flow] {
         // NOTE(mesch): i is invalid at this point.
@@ -650,15 +646,10 @@ class StoryControllerImpl::InitializeChainCall : Operation<ChainDataPtr> {
         for (const auto& i : *module_path_) {
           mapping->link_path.module_path.push_back(i);
         }
-        // If |key| is null it is specifying the default link path, and we
-        // allow it for now for backwards compatibility: MI4-739. We create a
-        // verbosely-named local Link (rather than relying on LinkPath's
-        // two-element struct) so that it'll be easier to change LinkPaths to
-        // be string-arrays.
-        if (key.is_null()) {
-          mapping->link_path.link_name = "<deprecated_default_link>";
-        } else {
+        if (key) {
           mapping->link_path.link_name = key;
+        } else {
+          mapping->link_path.link_name = kNullLinkName;
         }
 
         // We create N ConnectLinkCall operations. We rely on the fact that
@@ -694,7 +685,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
       StoryControllerImpl* const story_controller_impl,
       const fidl::VectorPtr<fidl::StringPtr>& module_path,
       fidl::StringPtr module_url,
-      fidl::StringPtr link_name,
       modular::ModuleManifestPtr module_manifest,
       CreateChainInfoPtr create_chain_info,
       const ModuleSource module_source,
@@ -712,7 +702,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
         module_path_(fidl::Clone(module_path)),
         key_{MakeModuleKey(module_path_)},
         module_url_(std::move(module_url)),
-        link_name_(std::move(link_name)),
         module_manifest_(std::move(module_manifest)),
         create_chain_info_(std::move(create_chain_info)),
         module_source_(module_source),
@@ -733,40 +722,9 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
     // flutter only allows one ViewOwner per flutter application,
     // and we need one ViewOwner instance per Module instance.
 
-    // If this is a root Module and we don't have a link name, give it a root
-    // link of the same name.
-    if (!link_name_ && ParentModulePath(module_path_)->empty()) {
-      link_name_ = module_path_->at(0);
-    }
-
-    // TODO(thatguy): Remove any root link initialization. MI4-739
-    if (link_name_) {
-      link_path_ = LinkPath::New();
-      link_path_->module_path = ParentModulePath(module_path_);
-      link_path_->link_name = link_name_;
-      InitializeModuleData(flow);
-    } else {
-      // If the link name is null, this module receives the default link of
-      // its parent module. We need to retrieve which one it is from story
-      // storage.
-      new ReadDataCall<ModuleData>(
-          &operation_queue_, story_controller_impl_->page(),
-          MakeModuleKey(ParentModulePath(module_path_)),
-          false /* not_found_is_ok */, XdrModuleData,
-          [this, flow](ModuleDataPtr module_data) {
-            FXL_DCHECK(module_data);
-            link_path_ = LinkPath::New();
-            module_data->link_path.Clone(link_path_.get());
-            InitializeModuleData(flow);
-          });
-    }
-  }
-
-  void InitializeModuleData(FlowToken flow) {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
-    link_path_->Clone(&module_data_->link_path);
     module_data_->module_source = module_source_;
     fidl::Clone(surface_relation_, &module_data_->surface_relation);
     module_data_->module_stopped = false;
@@ -827,7 +785,6 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   IntentPtr intent_;
 
-  LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
 
   OperationQueue operation_queue_;
@@ -842,7 +799,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       StoryControllerImpl* const story_controller_impl,
       const fidl::VectorPtr<fidl::StringPtr>& module_path,
       fidl::StringPtr module_url,
-      fidl::StringPtr link_name,
       modular::ModuleManifestPtr module_manifest,
       CreateChainInfoPtr create_chain_info,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
@@ -859,7 +815,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
         story_controller_impl_(story_controller_impl),
         module_path_(module_path.Clone()),
         module_url_(module_url),
-        link_name_(link_name),
         module_manifest_(std::move(module_manifest)),
         create_chain_info_(std::move(create_chain_info)),
         incoming_services_(std::move(incoming_services)),
@@ -882,7 +837,7 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // shell.
     new StartModuleCall(
         &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        link_name_, fidl::Clone(module_manifest_),
+        fidl::Clone(module_manifest_),
         fidl::Clone(create_chain_info_), module_source_,
         fidl::Clone(surface_relation_), std::move(incoming_services_),
         std::move(module_controller_request_), view_owner_.NewRequest(),
@@ -943,7 +898,6 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   StoryControllerImpl* const story_controller_impl_;
   const fidl::VectorPtr<fidl::StringPtr> module_path_;
   const fidl::StringPtr module_url_;
-  const fidl::StringPtr link_name_;
   ModuleManifestPtr module_manifest_;
   CreateChainInfoPtr create_chain_info_;
   fidl::InterfaceRequest<component::ServiceProvider> incoming_services_;
@@ -967,7 +921,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
                 StoryControllerImpl* const story_controller_impl,
                 fidl::VectorPtr<fidl::StringPtr> module_path,
                 fidl::StringPtr module_url,
-                fidl::StringPtr link_name,
                 SurfaceRelationPtr surface_relation,
                 const ResultCall& done)
       : Operation("StoryControllerImpl::AddModuleCall",
@@ -977,7 +930,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
         story_controller_impl_(story_controller_impl),
         module_path_(std::move(module_path)),
         module_url_(module_url),
-        link_name_(link_name),
         surface_relation_(std::move(surface_relation)) {
     Ready();
   }
@@ -985,9 +937,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    link_path_ = LinkPath::New();
-    link_path_->module_path = ParentModulePath(module_path_);
-    link_path_->link_name = link_name_;
 
     WriteModuleData(flow);
   }
@@ -996,7 +945,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
     module_data_ = ModuleData::New();
     module_data_->module_url = module_url_;
     module_data_->module_path = module_path_.Clone();
-    link_path_->Clone(&module_data_->link_path);
     module_data_->module_source = ModuleSource::EXTERNAL;
     module_data_->surface_relation = CloneOptional(surface_relation_);
     module_data_->module_stopped = false;
@@ -1017,7 +965,7 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
       // TODO(jphsiao): Figure out what to do for manifest here.
       new StartModuleInShellCall(
           &operation_queue_, story_controller_impl_, module_path_, module_url_,
-          link_name_, nullptr /* module_manifest */, nullptr /* chain_data */,
+          nullptr /* module_manifest */, nullptr /* chain_data */,
           nullptr /* incoming_services */,
           nullptr /* module_controller_request*/, std::move(surface_relation_),
           true, ModuleSource::EXTERNAL, std::move(module_data_->intent),
@@ -1031,7 +979,6 @@ class StoryControllerImpl::AddModuleCall : Operation<> {
   const fidl::StringPtr link_name_;
   SurfaceRelationPtr surface_relation_;
 
-  LinkPathPtr link_path_;
   ModuleDataPtr module_data_;
 
   OperationQueue operation_queue_;
@@ -1315,7 +1262,7 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     // We reach this point only if we want to start an external module.
     new StartModuleInShellCall(
         &operation_queue_, story_controller_impl_, module_data_->module_path,
-        module_data_->module_url, module_data_->link_path.link_name,
+        module_data_->module_url,
         nullptr /* module_manifest */, nullptr /* chain_data */,
         nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
@@ -1486,8 +1433,11 @@ class StoryControllerImpl::ResolveModulesCall
 
       if (name.is_null() && intent_->action.handler.is_null()) {
         // It is not allowed to have a null intent name (left in for backwards
-        // compatibility with old code: MI4-739) and rely on action-based
+        // compatibility with old code: MI4-736) and rely on action-based
         // resolution.
+        // TODO(thatguy): Return an error string.
+        FXL_LOG(WARNING) << "A null-named module parameter is not allowed "
+          << "when using Intent.action.name.";
         return;
       }
 
@@ -1510,14 +1460,6 @@ class StoryControllerImpl::ResolveModulesCall
         } else {
           link_path = story_controller_impl_->GetLinkPathForChainKey(
               requesting_module_path_, data.link_name());
-        }
-
-        if (!link_path) {
-          // The chain doesn't contain a value for this Link, so assume it's
-          // one the Module created itself.
-          link_path = LinkPath::New();
-          link_path->module_path = requesting_module_path_.Clone();
-          link_path->link_name = data.link_name();
         }
 
         ++outstanding_requests_;
@@ -1644,7 +1586,7 @@ class StoryControllerImpl::StartContainerInShellCall : Operation<> {
       module_path.push_back(nodes_->at(i)->node_name);
       new StartModuleCall(
           &operation_queue_, story_controller_impl_, std::move(module_path),
-          module_result.module_id, nullptr /* link_name */,
+          module_result.module_id,
           nullptr /* module_manifest */,
           CloneOptional(module_result.create_chain_info),
           ModuleSource::INTERNAL,
@@ -1757,7 +1699,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
       if (!view_owner_request_) {
         new StartModuleInShellCall(
             &operation_queue_, story_controller_impl_, std::move(module_path),
-            module_url, nullptr /* link_name */, CloneOptional(manifest),
+            module_url, CloneOptional(manifest),
             CloneOptional(create_chain_info), std::move(incoming_services_),
             std::move(module_controller_request_), std::move(surface_relation_),
             true /* focus */, module_source_,
@@ -1765,7 +1707,7 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
       } else {
         new StartModuleCall(
             &operation_queue_, story_controller_impl_, std::move(module_path),
-            module_url, nullptr /* link_name */, CloneOptional(manifest),
+            module_url, CloneOptional(manifest),
             CloneOptional(create_chain_info), module_source_,
             std::move(surface_relation_), std::move(incoming_services_),
             std::move(module_controller_request_),
@@ -1858,7 +1800,6 @@ class StoryControllerImpl::StartCall : Operation<> {
               story_controller_impl_,
               module_data.module_path,
               module_data.module_url,
-              module_data.link_path.link_name,
               nullptr /* module_manifest */,
               nullptr /* chain_data */,
               nullptr /* incoming_services */,
@@ -2012,7 +1953,17 @@ LinkPathPtr StoryControllerImpl::GetLinkPathForChainKey(
   // initialization.
   FXL_CHECK(i != chains_.end()) << PathString(module_path);
 
-  return (*i)->GetLinkPathForKey(key);
+  auto link_path = (*i)->GetLinkPathForKey(key);
+  if (!link_path) {
+    link_path = LinkPath::New();
+    link_path->module_path = module_path.Clone();
+    if (!key) {
+      key = kNullLinkName;
+    }
+    link_path->link_name = key;
+  }
+
+  return link_path;
 }
 
 void StoryControllerImpl::EmbedModule(

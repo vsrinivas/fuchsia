@@ -89,7 +89,7 @@ class TestApp {
 
   TestPoint default_link_correct_{"Default Link value is correct."};
   void VerifyDefaultLink() {
-    // Check that we did get a default link as specified by the Daisy. MI4-739
+    // Check that we did get a default link as specified by the Intent.
     module_context_->GetLink(nullptr, default_link_.NewRequest());
     default_link_->Get(nullptr, [this](fidl::StringPtr content) {
       if (content == "1337") {

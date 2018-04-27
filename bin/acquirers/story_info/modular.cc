@@ -32,7 +32,8 @@ std::string StoryStateToString(modular::StoryState state) {
 }
 
 // TODO(thatguy): This is currently duplicated from
-// apps/modular/src/story_runner/story_storage_impl.cc.
+// apps/modular/src/story_runner/story_controller_impl.cc.
+// Don't duplicate this.
 void XdrLinkPath(modular::XdrContext* const xdr,
                  modular::LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
@@ -43,7 +44,6 @@ void XdrModuleData(modular::XdrContext* const xdr,
                    modular::ModuleData* const data) {
   xdr->Field("url", &data->module_url);
   xdr->Field("module_path", &data->module_path);
-  xdr->Field("default_link_path", &data->link_path, XdrLinkPath);
   xdr->Field("module_source", &data->module_source);
 }
 

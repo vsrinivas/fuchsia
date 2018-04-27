@@ -114,7 +114,7 @@ bool IntentEqual(const IntentPtr& a, const IntentPtr& b) {
 bool ModuleDataEqual(const ModuleData& a, const ModuleData& b) {
   return a.module_url == b.module_url && a.module_path == b.module_path &&
          ChainDataEqual(a.chain_data, b.chain_data) &&
-         a.link_path == b.link_path && a.module_source == b.module_source &&
+         a.module_source == b.module_source &&
          SurfaceRelationEqual(a.surface_relation, b.surface_relation) &&
          a.module_stopped == b.module_stopped &&
          IntentEqual(a.intent, b.intent);

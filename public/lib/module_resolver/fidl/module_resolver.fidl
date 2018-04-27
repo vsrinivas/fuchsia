@@ -42,7 +42,9 @@ struct ResolverQuery {
 
 struct ResolverParameterConstraintEntry {
   // A null key is allowed for backwards compatibility reasons, and is only
-  // allowed if |ResolverQuery.handler| is given. MI4-739
+  // allowed if |ResolverQuery.handler| is given.
+  // TODO(thatguy); When no modules use null link names any more, make this
+  // required.
   string? key;
   ResolverParameterConstraint constraint;
 };

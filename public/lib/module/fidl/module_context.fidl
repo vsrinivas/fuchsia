@@ -16,8 +16,9 @@ interface ModuleContext {
   // resumed. The name is unique in the scope of the Module instance. If the
   // method is called again with the same argument by the same Module instance,
   // a new connection to the same Link instance is obtained. It's up to the
-  // Module instance to ensure the name is unique within the scope of itself. A
-  // null |name| is allowed for backwards compatibility reasons. MI4-739
+  // Module instance to ensure the name is unique within the scope of itself.
+  // TODO(thatguy): When no modules use null link names any more, make name
+  // required.
   1: GetLink(string? name, request<Link> link);
 
   // Starts a new Module instance. The Module to execute is identified by the
