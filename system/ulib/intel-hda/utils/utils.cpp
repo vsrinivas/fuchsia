@@ -9,6 +9,42 @@
 namespace audio {
 namespace intel_hda {
 
+zx_status_t WaitCondition(zx_time_t timeout,
+                          zx_time_t poll_interval,
+                          WaitConditionFn cond,
+                          void* cond_ctx) {
+    ZX_DEBUG_ASSERT(poll_interval != ZX_TIME_INFINITE);
+    ZX_DEBUG_ASSERT(cond != nullptr);
+
+    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    timeout += now;
+
+    while (!cond(cond_ctx)) {
+        now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        if (now >= timeout)
+            return ZX_ERR_TIMED_OUT;
+
+        zx_time_t sleep_time = timeout - now;
+        if (poll_interval < sleep_time)
+            sleep_time = poll_interval;
+
+        zx_nanosleep(zx_deadline_after(sleep_time));
+    }
+
+    return ZX_OK;
+}
+
+fbl::RefPtr<RefCountedBti> RefCountedBti::Create(zx::bti initiator) {
+    fbl::AllocChecker ac;
+
+    auto ret = fbl::AdoptRef(new (&ac) RefCountedBti(fbl::move(initiator)));
+    if (!ac.check()) {
+        return nullptr;
+    }
+
+    return ret;
+}
+
 static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
     static_cast<audio_sample_format_t>(AUDIO_SAMPLE_FORMAT_8BIT |
                                        AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED);

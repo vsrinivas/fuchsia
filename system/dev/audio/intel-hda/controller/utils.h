@@ -11,7 +11,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <fbl/macros.h>
-#include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vmar_manager.h>
 
@@ -36,12 +35,6 @@ template <typename T> _SIC_ T  OR(T x, T y) { return static_cast<T>(x | y); }
 template <typename T> _SIC_ T AND(T x, T y) { return static_cast<T>(x & y); }
 #undef _SIC_
 
-using WaitConditionFn = bool (*)(void*);
-zx_status_t WaitCondition(zx_time_t timeout,
-                          zx_time_t poll_interval,
-                          WaitConditionFn cond,
-                          void* cond_ctx);
-
 // Static container for the driver wide VMARs that we stash all of our register
 // mappings in, in order to make efficient use of kernel PTEs
 class DriverVmars {
@@ -51,18 +44,6 @@ class DriverVmars {
     static const fbl::RefPtr<fbl::VmarManager>& registers() { return registers_; }
   private:
     static fbl::RefPtr<fbl::VmarManager> registers_;
-};
-
-// Utility class which manages a Bus Transaction Initiator using RefPtrs
-// (allowing the BTI to be shared by multiple objects)
-class RefCountedBti : public fbl::RefCounted<RefCountedBti> {
-  public:
-    static fbl::RefPtr<RefCountedBti> Create(zx::bti initiator);
-    const zx::bti& initiator() const { return initiator_; }
-
-  private:
-    explicit RefCountedBti(zx::bti initiator) : initiator_(fbl::move(initiator)) { }
-    zx::bti initiator_;
 };
 
 struct StreamFormat {

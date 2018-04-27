@@ -6,6 +6,7 @@
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

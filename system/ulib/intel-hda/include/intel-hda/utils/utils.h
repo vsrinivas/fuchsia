@@ -6,9 +6,12 @@
 
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/type_support.h>
 #include <fbl/vector.h>
 
@@ -17,7 +20,25 @@
 namespace audio {
 namespace intel_hda {
 
+using WaitConditionFn = bool (*)(void*);
+zx_status_t WaitCondition(zx_time_t timeout,
+                          zx_time_t poll_interval,
+                          WaitConditionFn cond,
+                          void* cond_ctx);
+
 zx_obj_type_t GetHandleType(const zx::handle& handle);
+
+// Utility class which manages a Bus Transaction Initiator using RefPtrs
+// (allowing the BTI to be shared by multiple objects)
+class RefCountedBti : public fbl::RefCounted<RefCountedBti> {
+  public:
+    static fbl::RefPtr<RefCountedBti> Create(zx::bti initiator);
+    const zx::bti& initiator() const { return initiator_; }
+
+  private:
+    explicit RefCountedBti(zx::bti initiator) : initiator_(fbl::move(initiator)) { }
+    zx::bti initiator_;
+};
 
 template <typename T>
 zx_status_t ConvertHandle(zx::handle* abstract_handle, T* concrete_handle) {

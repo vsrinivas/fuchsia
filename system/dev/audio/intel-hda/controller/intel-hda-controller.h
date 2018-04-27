@@ -20,11 +20,11 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
+#include <intel-hda/utils/pinned-vmo.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
-#include "pinned-vmo.h"
 #include "thread-annotations.h"
 #include "utils.h"
 

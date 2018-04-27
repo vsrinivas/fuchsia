@@ -5,7 +5,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/limits.h>
 
-#include "pinned-vmo.h"
+#include <intel-hda/utils/pinned-vmo.h>
 
 namespace audio {
 namespace intel_hda {
