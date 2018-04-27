@@ -34,7 +34,7 @@ source_set("core") {
   ]
 
   deps = [
-    "$magma_build_root:libmsd",
+    "//garnet/lib/magma/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util:semaphore_port",
@@ -122,7 +122,6 @@ source_set("src") {
   ]
 
   deps = [
-    "$magma_build_root:libmsd",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util:command_buffer",
     "$magma_build_root/src/magma_util:registers",

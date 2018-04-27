@@ -253,16 +253,6 @@ if (build_intel_gen) {
   }
 }
 
-# internal only
-source_set("libmsd") {
-  deps = [
-    "src/sys_driver",
-  ]
-  public_deps = [
-    "include:msd_abi",
-  ]
-}
-
 group("tools") {
   public_deps = [
     "src/tools",

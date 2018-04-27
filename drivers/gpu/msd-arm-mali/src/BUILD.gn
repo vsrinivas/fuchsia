@@ -65,7 +65,6 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:port",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
     "//garnet/lib/magma/src/magma_util/platform:trace",
-    "//garnet/lib/magma/src/sys_driver",
     "//garnet/public/lib/fxl",
   ]
 }
