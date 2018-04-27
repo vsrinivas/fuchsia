@@ -102,9 +102,11 @@ class AgentRunner : AgentProvider, AgentRunnerStorage::NotificationDelegate {
   void ForwardConnectionsToAgent(const std::string& agent_url);
 
   // For triggers based on message queues.
-  void ScheduleMessageQueueTask(const std::string& agent_url,
-                                const std::string& task_id,
-                                const std::string& queue_name);
+  void ScheduleMessageQueueTask(
+      const std::string& agent_url,
+      const std::string& task_id,
+      const std::string& queue_identifier,
+      AgentRunnerStorage::TriggerInfo::TaskType task_type);
   void DeleteMessageQueueTask(const std::string& agent_url,
                               const std::string& task_id);
 

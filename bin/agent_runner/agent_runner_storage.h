@@ -30,12 +30,24 @@ class AgentRunnerStorage {
     // the union tag enum value directly.
     enum TaskType {
       TYPE_ALARM = 0,
-      TYPE_QUEUE = 1,
+      TYPE_QUEUE_MESSAGE = 1,
+      TYPE_QUEUE_DELETION = 2,
     };
 
     TaskType task_type{};
 
+    // If this is a TYPE_QUEUE_MESSAGE task, this is the message queue name. If
+    // TYPE_QUEUE_DELETION, this is not set. Only the component that obtained
+    // the message queue originally can observe new messages, so the name is
+    // sufficient.
     std::string queue_name;
+
+    // If this is a TYPE_QUEUE_DELETION task, this is the message queue token.
+    // If TYPE_QUEUE_MESSAGE, this is not set. Both readers and writers can
+    // observe message queue deletion, and thus the token must be used as
+    // opposed to just the name.
+    std::string queue_token;
+
     uint32_t alarm_in_seconds{};
   };
 

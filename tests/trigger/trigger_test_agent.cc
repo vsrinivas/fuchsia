@@ -19,10 +19,10 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
  public:
   TestPoint initialized_{"Trigger test agent initialized"};
 
-  TestAgentApp(modular::AgentHost* const agent_host) {
+  TestAgentApp(modular::AgentHost* const agent_host)
+      : agent_context_(agent_host->agent_context()) {
     modular::testing::Init(agent_host->application_context(), __FILE__);
-    agent_host->agent_context()->GetComponentContext(
-        component_context_.NewRequest());
+    agent_context_->GetComponentContext(component_context_.NewRequest());
 
     // Create a message queue and schedule a task to be run on receiving a
     // message on it.
@@ -30,7 +30,7 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
                                            msg_queue_.NewRequest());
     modular::TaskInfo task_info;
     task_info.task_id = "task_id";
-    task_info.trigger_condition.set_queue_name("Trigger Queue");
+    task_info.trigger_condition.set_message_on_queue("Trigger Queue");
     task_info.persistent = true;
     agent_host->agent_context()->ScheduleTask(std::move(task_info));
 
@@ -51,10 +51,8 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
   }
 
   // Called by AgentDriver.
-  void RunTask(fidl::StringPtr /*task_id*/,
-               const std::function<void()>& callback) {
-    modular::testing::GetStore()->Put("trigger_test_agent_run_task", "",
-                                      callback);
+  void RunTask(fidl::StringPtr task_id, const std::function<void()>& callback) {
+    modular::testing::GetStore()->Put(task_id, "", callback);
   }
 
   // Called by AgentDriver.
@@ -70,9 +68,21 @@ class TestAgentApp : modular_test_trigger::TriggerTestService {
         [callback](fidl::StringPtr token) { callback(token); });
   }
 
+  // |TriggerTestService|
+  void ObserveMessageQueueDeletion(fidl::StringPtr queue_token) override {
+    modular::TaskInfo task_info;
+    task_info.task_id = "message_queue_deletion";
+    task_info.trigger_condition.set_queue_deleted(queue_token);
+    task_info.persistent = true;
+    agent_context_->ScheduleTask(std::move(task_info));
+    modular::testing::GetStore()->Put("trigger_test_agent_token_received", "",
+                                      [] {});
+  }
+
   component::ServiceNamespace agent_services_;
 
   modular::ComponentContextPtr component_context_;
+  modular::AgentContext* const agent_context_;
   modular::MessageQueuePtr msg_queue_;
 
   fidl::BindingSet<modular_test_trigger::TriggerTestService> service_bindings_;

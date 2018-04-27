@@ -222,9 +222,12 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
   data.agent_url = agent_url;
   data.task_id = task_info.task_id.get();
 
-  if (task_info.trigger_condition.is_queue_name()) {
-    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE;
-    data.queue_name = task_info.trigger_condition.queue_name().get();
+  if (task_info.trigger_condition.is_message_on_queue()) {
+    data.queue_name = task_info.trigger_condition.message_on_queue();
+    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE;
+  } else if (task_info.trigger_condition.is_queue_deleted()) {
+    data.queue_token = task_info.trigger_condition.queue_deleted();
+    data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_DELETION;
   } else if (task_info.trigger_condition.is_alarm_in_seconds()) {
     data.task_type = AgentRunnerStorage::TriggerInfo::TYPE_ALARM;
     data.alarm_in_seconds = task_info.trigger_condition.alarm_in_seconds();
@@ -246,8 +249,13 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
 void AgentRunner::AddedTask(const std::string& key,
                             AgentRunnerStorage::TriggerInfo data) {
   switch (data.task_type) {
-    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE:
-      ScheduleMessageQueueTask(data.agent_url, data.task_id, data.queue_name);
+    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_DELETION:
+      ScheduleMessageQueueTask(data.agent_url, data.task_id, data.queue_token,
+                               data.task_type);
+      break;
+    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE_MESSAGE:
+      ScheduleMessageQueueTask(data.agent_url, data.task_id, data.queue_name,
+                               data.task_type);
       break;
     case AgentRunnerStorage::TriggerInfo::TYPE_ALARM:
       ScheduleAlarmTask(data.agent_url, data.task_id, data.alarm_in_seconds,
@@ -286,8 +294,15 @@ void AgentRunner::DeleteMessageQueueTask(const std::string& agent_url,
     return;
   }
 
-  message_queue_manager_->DropWatcher(kAgentComponentNamespace, agent_url,
-                                      task_id_it->second);
+  // The specific type of message queue task identified by |task_id| is not
+  // available, so explicitly clean up both types.
+  message_queue_manager_->DropWatcher(
+      kAgentComponentNamespace, agent_url, task_id_it->second, "",
+      MessageQueueManager::WatcherEventType::NEW_MESSAGE);
+  message_queue_manager_->DropWatcher(
+      kAgentComponentNamespace, agent_url, "", task_id_it->second,
+      MessageQueueManager::WatcherEventType::QUEUE_DELETED);
+
   watched_queues_[agent_url].erase(task_id);
   if (watched_queues_[agent_url].empty()) {
     watched_queues_.erase(agent_url);
@@ -313,21 +328,32 @@ void AgentRunner::DeleteAlarmTask(const std::string& agent_url,
   }
 }
 
-void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
-                                           const std::string& task_id,
-                                           const std::string& queue_name) {
+void AgentRunner::ScheduleMessageQueueTask(
+    const std::string& agent_url,
+    const std::string& task_id,
+    const std::string& queue_identifier,
+    AgentRunnerStorage::TriggerInfo::TaskType task_type) {
+  MessageQueueManager::WatcherEventType event_type =
+      task_type == AgentRunnerStorage::TriggerInfo::TaskType::TYPE_QUEUE_MESSAGE
+          ? MessageQueueManager::WatcherEventType::NEW_MESSAGE
+          : MessageQueueManager::WatcherEventType::QUEUE_DELETED;
+
   auto found_it = watched_queues_.find(agent_url);
   if (found_it != watched_queues_.end()) {
     if (found_it->second.count(task_id) != 0) {
-      if (found_it->second[task_id] == queue_name) {
+      if (found_it->second[task_id] == queue_identifier) {
         // This means that we are already watching the message queue.
         // Do nothing.
         return;
       }
 
       // We were watching some other queue for this task_id. Stop watching.
-      message_queue_manager_->DropWatcher(kAgentComponentNamespace, agent_url,
-                                          found_it->second[task_id]);
+      message_queue_manager_->DropWatcher(
+          kAgentComponentNamespace, agent_url, found_it->second[task_id], "",
+          MessageQueueManager::WatcherEventType::NEW_MESSAGE);
+      message_queue_manager_->DropWatcher(
+          kAgentComponentNamespace, agent_url, "", found_it->second[task_id],
+          MessageQueueManager::WatcherEventType::QUEUE_DELETED);
     }
 
   } else {
@@ -337,10 +363,10 @@ void AgentRunner::ScheduleMessageQueueTask(const std::string& agent_url,
     FXL_DCHECK(inserted);
   }
 
-  found_it->second[task_id] = queue_name;
+  found_it->second[task_id] = queue_identifier;
   auto terminating = terminating_;
   message_queue_manager_->RegisterWatcher(
-      kAgentComponentNamespace, agent_url, queue_name,
+      kAgentComponentNamespace, agent_url, queue_identifier, event_type,
       [this, agent_url, task_id, terminating] {
         // If agent runner is terminating or has already terminated, do not run
         // any new tasks.

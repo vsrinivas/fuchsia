@@ -19,6 +19,14 @@ using modular::testing::TestPoint;
 
 namespace {
 
+// Waits for |condition| to be available in the TestRunnerStore before calling
+// |cont| with the result.
+void Await(fidl::StringPtr condition,
+           std::function<void(fidl::StringPtr)> cont) {
+  modular::testing::GetStore()->Get(condition,
+                                    [cont](fidl::StringPtr str) { cont(str); });
+}
+
 // This is how long we wait for the test to finish before we timeout and tear
 // down our test.
 constexpr int kTimeoutMilliseconds = 10000;
@@ -29,10 +37,6 @@ constexpr char kTestAgent[] =
 class ParentApp {
  public:
   TestPoint initialized_{"Root module initialized"};
-  TestPoint received_trigger_token_{"Received trigger token"};
-  TestPoint agent_connected_{"Agent accepted connection"};
-  TestPoint agent_stopped_{"Agent1 stopped"};
-  TestPoint task_triggered_{"Agent task triggered"};
 
   ParentApp(
       modular::ModuleHost* const module_host,
@@ -51,38 +55,12 @@ class ParentApp {
                                        agent_controller_.NewRequest());
     ConnectToService(agent_services.get(), agent_service_.NewRequest());
 
-    modular::testing::GetStore()->Get(
-        "trigger_test_agent_connected", [this](fidl::StringPtr) {
-          agent_connected_.Pass();
-          agent_service_->GetMessageQueueToken([this](fidl::StringPtr token) {
-            received_trigger_token_.Pass();
-
-            // Stop the agent.
-            agent_controller_.Unbind();
-            modular::testing::GetStore()->Get(
-                "trigger_test_agent_stopped", [this, token](fidl::StringPtr) {
-                  agent_stopped_.Pass();
-
-                  // Send a message to the stopped agent which should
-                  // trigger it.
-                  modular::MessageSenderPtr message_sender;
-                  component_context_->GetMessageSender(
-                      token, message_sender.NewRequest());
-                  message_sender->Send("Time to wake up...");
-
-                  modular::testing::GetStore()->Get(
-                      "trigger_test_agent_run_task", [this](fidl::StringPtr) {
-                        task_triggered_.Pass();
-
-                        modular::testing::GetStore()->Get(
-                            "trigger_test_agent_stopped",
-                            [this](fidl::StringPtr) {
-                              module_host_->module_context()->Done();
-                            });
-                      });
-                });
-          });
-        });
+    // The message queue that is used to verify deletion triggers.
+    component_context_->ObtainMessageQueue("test", msg_queue_.NewRequest());
+    msg_queue_->GetToken([this](fidl::StringPtr token) {
+      agent_service_->ObserveMessageQueueDeletion(token);
+      TestMessageQueueMessageTrigger();
+    });
 
     // Start a timer to quit in case another test component misbehaves and we
     // time out.
@@ -92,6 +70,64 @@ class ParentApp {
             weak_ptr_factory_.GetWeakPtr(),
             [this] { module_host_->module_context()->Done(); }),
         zx::msec(kTimeoutMilliseconds));
+  }
+
+  TestPoint received_trigger_token_{"Received trigger token"};
+  TestPoint agent_connected_{"Agent accepted connection"};
+  TestPoint agent_stopped_{"Agent1 stopped"};
+  TestPoint task_triggered_{"Agent task triggered"};
+  void TestMessageQueueMessageTrigger() {
+    Await("trigger_test_agent_connected", [this](fidl::StringPtr) {
+      agent_connected_.Pass();
+      agent_service_->GetMessageQueueToken([this](fidl::StringPtr token) {
+        received_trigger_token_.Pass();
+
+        // Stop the agent.
+        agent_controller_.Unbind();
+
+        Await("trigger_test_agent_stopped", [this, token](fidl::StringPtr) {
+          agent_stopped_.Pass();
+
+          // Send a message to the stopped agent which should
+          // trigger it.
+          modular::MessageSenderPtr message_sender;
+          component_context_->GetMessageSender(token,
+                                               message_sender.NewRequest());
+          message_sender->Send("Time to wake up...");
+
+          Await("task_id", [this](fidl::StringPtr) {
+            task_triggered_.Pass();
+            Await("trigger_test_agent_stopped", [this](fidl::StringPtr) {
+              TestMessageQueueDeletionTrigger();
+            });
+          });
+        });
+      });
+    });
+  }
+
+  TestPoint queue_deleted_{"Message queue deletion task triggered."};
+  void TestMessageQueueDeletionTrigger() {
+    component::ServiceProviderPtr agent_services;
+    component_context_->ConnectToAgent(kTestAgent, agent_services.NewRequest(),
+                                       agent_controller_.NewRequest());
+    ConnectToService(agent_services.get(), agent_service_.NewRequest());
+
+    // First wait for the agent to connect, and then kill it.
+    Await("trigger_test_agent_connected", [this](fidl::StringPtr) {
+      Await("trigger_test_agent_token_received", [this](fidl::StringPtr) {
+        agent_controller_.Unbind();
+        Await("trigger_test_agent_stopped", [this](fidl::StringPtr) {
+          // When the agent has stopped, delete the message queue and verify
+          // that the agent is woken up and notified.
+          component_context_->DeleteMessageQueue("test");
+          Await("message_queue_deletion", [this](fidl::StringPtr) {
+            queue_deleted_.Pass();
+            module_host_->module_context()->Done();
+          });
+        });
+      });
+    });
   }
 
   TestPoint stopped_{"Root module stopped"};

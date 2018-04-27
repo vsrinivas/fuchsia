@@ -25,6 +25,8 @@ interface AgentContext {
 
   // Schedules a task described in |task_info|. When this task is scheduled to
   // run, Agent.RunTask() is called.
+  //
+  // TODO(MI4-962): Add a callback to task scheduling.
   5: ScheduleTask(TaskInfo task_info);
 
   // No new runs of this task will be scheduled.
@@ -47,13 +49,23 @@ struct TaskInfo {
 // Describes the condition that needs to be met for a task to become scheduled.
 // This is not yet complete and will be extended or changed.
 union TriggerCondition {
-  // Receiving any message on the queue |queue_name| will satisfy this trigger
-  // condition. Note that |queue_name| is scoped to the Agent that created this
-  // queue in the first place.
-  string queue_name;
+  // Triggers when there is a new message on a message queue.
+  //
+  // |message_on_queue| is the name of the message queue to be watched. This
+  // means that only the component that originally obtained the message queue
+  // will be able to observe new message events.
+  string message_on_queue;
+
+  // Triggers when a message queue is deleted.
+  // 
+  // |queue_deleted| is the token for the message queue that is to be watched.
+  // This allows both message queue readers and writers to watch for queue
+  // deletions.
+  string queue_deleted;
 
   // Fires an inexact repeating alarm every |alarm_in_seconds| seconds that'll
   // satisfy this trigger condition. The first alarm fires in
   // |alarm_in_seconds| seconds.
   uint32 alarm_in_seconds;
 };
+

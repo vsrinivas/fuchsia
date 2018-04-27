@@ -185,6 +185,12 @@ struct MessageQueueManager::MessageQueueInfo {
   bool is_complete() const {
     return !component_instance_id.empty() && !queue_name.empty();
   }
+
+  bool operator==(const MessageQueueManager::MessageQueueInfo& a) const {
+    return component_namespace == a.component_namespace &&
+           component_instance_id == a.component_instance_id &&
+           queue_name == a.queue_name && queue_token == a.queue_token;
+  }
 };
 
 class MessageQueueManager::GetQueueTokenCall : Operation<fidl::StringPtr> {
@@ -731,6 +737,14 @@ void MessageQueueManager::ClearMessageQueueStorage(
   // pending_watcher_callbacks_.
   EraseQueueName(pending_watcher_callbacks_, info);
   EraseQueueName(message_queue_tokens_, info);
+
+  const auto& it = deletion_watchers_.find(info.queue_token);
+  if (it != deletion_watchers_.end()) {
+    for (const auto& watchers : it->second) {
+      watchers.second();
+    }
+    deletion_watchers_.erase(info.queue_token);
+  }
 }
 
 void MessageQueueManager::DeleteMessageQueue(
@@ -767,28 +781,51 @@ void MessageQueueManager::RegisterWatcher(
     const std::string& component_namespace,
     const std::string& component_instance_id,
     const std::string& queue_name,
+    WatcherEventType event_type,
     const std::function<void()>& watcher) {
-  const std::string* const token =
-      FindQueueName(message_queue_tokens_,
-                    MessageQueueInfo{component_namespace, component_instance_id,
-                                     queue_name, ""});
-  if (!token) {
-    pending_watcher_callbacks_[component_namespace][component_instance_id]
-                              [queue_name] = watcher;
-    return;
-  }
+  if (event_type == WatcherEventType::NEW_MESSAGE) {
+    const std::string* const token =
+        FindQueueName(message_queue_tokens_,
+                      MessageQueueInfo{component_namespace,
+                                       component_instance_id, queue_name, ""});
+    if (!token) {
+      pending_watcher_callbacks_[component_namespace][component_instance_id]
+                                [queue_name] = watcher;
+      return;
+    }
 
-  auto msq_it = message_queues_.find(*token);
-  FXL_DCHECK(msq_it != message_queues_.end());
-  msq_it->second->RegisterWatcher(watcher);
+    auto msq_it = message_queues_.find(*token);
+    FXL_DCHECK(msq_it != message_queues_.end());
+    msq_it->second->RegisterWatcher(watcher);
+  } else if (event_type == WatcherEventType::QUEUE_DELETED) {
+    deletion_watchers_[queue_name].push_back(
+        {MessageQueueInfo{component_namespace, component_instance_id, "",
+                          queue_name},
+         watcher});
+  }
 }
 
 void MessageQueueManager::DropWatcher(const std::string& component_namespace,
                                       const std::string& component_instance_id,
-                                      const std::string& queue_name) {
-  auto queue_info = MessageQueueInfo{component_namespace, component_instance_id,
-                                     queue_name, ""};
+                                      const std::string& queue_name,
+                                      const std::string& queue_token,
+                                      WatcherEventType event_type) {
+  switch (event_type) {
+    case WatcherEventType::NEW_MESSAGE:
+      DropMessageWatcher(
+          {component_namespace, component_instance_id, queue_name, queue_token},
+          queue_name);
+      break;
+    case WatcherEventType::QUEUE_DELETED:
+      DropDeletionWatcher(
+          {component_namespace, component_instance_id, queue_name, queue_token},
+          queue_token);
+      break;
+  }
+}
 
+void MessageQueueManager::DropMessageWatcher(const MessageQueueInfo& queue_info,
+                                             const std::string& queue_name) {
   const std::string* const token =
       FindQueueName(message_queue_tokens_, queue_info);
   if (token) {
@@ -801,8 +838,25 @@ void MessageQueueManager::DropWatcher(const std::string& component_namespace,
   if (msq_it == message_queues_.end()) {
     FXL_LOG(WARNING) << "Asked to DropWatcher for a queue that doesn't exist";
     return;
-  };
+  }
   msq_it->second->DropWatcher();
+}
+
+void MessageQueueManager::DropDeletionWatcher(const MessageQueueInfo& queue_info,
+                                              const std::string& queue_token) {
+  const auto& it = deletion_watchers_.find(queue_token);
+  if (it == deletion_watchers_.end()) {
+    return;
+  }
+
+  std::vector<DeletionWatcher> new_watchers;
+  std::copy_if(
+      it->second.begin(), it->second.end(), std::back_inserter(new_watchers),
+      [queue_info](const std::pair<MessageQueueInfo, std::function<void()>>&
+                       watcher_pair) {
+        return watcher_pair.first == queue_info;
+      });
+  deletion_watchers_[queue_token] = new_watchers;
 }
 
 void MessageQueueManager::XdrMessageQueueInfo(XdrContext* const xdr,

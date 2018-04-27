@@ -22,15 +22,9 @@ void XdrTriggerInfo(XdrContext* const xdr,
   xdr->Field("agent_url", &data->agent_url);
   xdr->Field("task_id", &data->task_id);
   xdr->Field("task_type", &data->task_type);
-
-  switch (data->task_type) {
-    case AgentRunnerStorage::TriggerInfo::TYPE_ALARM:
-      xdr->Field("alarm_in_seconds", &data->alarm_in_seconds);
-      break;
-    case AgentRunnerStorage::TriggerInfo::TYPE_QUEUE:
-      xdr->Field("queue_name", &data->queue_name);
-      break;
-  }
+  xdr->Field("alarm_in_seconds", &data->alarm_in_seconds);
+  xdr->Field("queue_name", &data->queue_name);
+  xdr->Field("queue_token", &data->queue_token);
 }
 
 }  // namespace

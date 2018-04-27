@@ -8,4 +8,5 @@ library modular_test_trigger;
 [Discoverable]
 interface TriggerTestService {
   1: GetMessageQueueToken() -> (string message_queue_token);
+  2: ObserveMessageQueueDeletion(string token);
 };
