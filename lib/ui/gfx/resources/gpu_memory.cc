@@ -6,6 +6,8 @@
 
 #include <fuchsia/cpp/images.h>
 
+#include "garnet/lib/ui/gfx/engine/session.h"
+
 namespace scenic {
 namespace gfx {
 
@@ -58,7 +60,8 @@ GpuMemoryPtr GpuMemory::New(Session* session,
   vk::ImportMemoryFuchsiaHandleInfoKHR memory_import_info(
       vk::ExternalMemoryHandleTypeFlagBitsKHR::eFuchsiaVmo, vmo.release());
 
-  vk::MemoryAllocateInfo memory_allocate_info(vmo_size);
+  vk::MemoryAllocateInfo memory_allocate_info(
+      vmo_size, session->engine()->imported_memory_type_index());
   memory_allocate_info.setPNext(&memory_import_info);
 
   vk::Result err =

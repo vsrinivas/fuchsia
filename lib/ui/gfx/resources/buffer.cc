@@ -21,9 +21,12 @@ Buffer::Buffer(Session* session,
       escher_buffer_(
           escher::Buffer::New(session->escher()->resource_recycler(),
                               memory_->escher_gpu_mem(),
-                              vk::BufferUsageFlagBits::eVertexBuffer |
+                              vk::BufferUsageFlagBits::eTransferSrc |
+                                  vk::BufferUsageFlagBits::eTransferDst |
+                                  vk::BufferUsageFlagBits::eStorageTexelBuffer |
                                   vk::BufferUsageFlagBits::eStorageBuffer |
-                                  vk::BufferUsageFlagBits::eTransferDst,
+                                  vk::BufferUsageFlagBits::eIndexBuffer |
+                                  vk::BufferUsageFlagBits::eVertexBuffer,
                               size,
                               offset)) {}
 

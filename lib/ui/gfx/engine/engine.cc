@@ -21,12 +21,39 @@
 #include "garnet/lib/ui/gfx/swapchain/display_swapchain.h"
 #include "garnet/lib/ui/gfx/swapchain/vulkan_display_swapchain.h"
 #include "garnet/lib/ui/scenic/session.h"
+#include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
 #include "lib/fxl/functional/make_copyable.h"
 
 namespace scenic {
 namespace gfx {
+
+// Determine a plausible memory type index for importing memory from VMOs.
+static uint32_t GetImportedMemoryTypeIndex(vk::PhysicalDevice physical_device,
+                                           vk::Device device) {
+  // Is there a better way to get the memory type bits than creating and
+  // immediately destroying a buffer?
+  constexpr vk::DeviceSize kUnimportantBufferSize = 30000;
+  vk::BufferCreateInfo buffer_create_info;
+  buffer_create_info.size = kUnimportantBufferSize;
+  buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferSrc |
+                             vk::BufferUsageFlagBits::eTransferDst |
+                             vk::BufferUsageFlagBits::eStorageTexelBuffer |
+                             vk::BufferUsageFlagBits::eStorageBuffer |
+                             vk::BufferUsageFlagBits::eIndexBuffer |
+                             vk::BufferUsageFlagBits::eVertexBuffer;
+  buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
+  auto vk_buffer =
+      escher::ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
+
+  vk::MemoryRequirements reqs = device.getBufferMemoryRequirements(vk_buffer);
+  device.destroyBuffer(vk_buffer);
+
+  return escher::impl::GetMemoryTypeIndex(
+      physical_device, reqs.memoryTypeBits,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
+}
 
 Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
     : display_manager_(display_manager),
@@ -44,6 +71,9 @@ Engine::Engine(DisplayManager* display_manager, escher::Escher* escher)
       release_fence_signaller_(std::make_unique<escher::ReleaseFenceSignaller>(
           escher->command_buffer_sequencer())),
       session_manager_(std::make_unique<SessionManager>()),
+      imported_memory_type_index_(
+          GetImportedMemoryTypeIndex(escher->vk_physical_device(),
+                                     escher->vk_device())),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
   FXL_DCHECK(escher_);
@@ -61,6 +91,10 @@ Engine::Engine(
       escher_(escher),
       release_fence_signaller_(std::move(release_fence_signaller)),
       session_manager_(std::move(session_manager)),
+      imported_memory_type_index_(
+          escher ? GetImportedMemoryTypeIndex(escher->vk_physical_device(),
+                                              escher->vk_device())
+                 : 0),
       weak_factory_(this) {
   FXL_DCHECK(display_manager_);
 
@@ -222,15 +256,15 @@ void Engine::CleanupEscher() {
     const zx::duration kCleanupDelay = zx::msec(1);
     escher_cleanup_scheduled_ = true;
     async::PostDelayedTask(async_get_default(),
-                          [weak = weak_factory_.GetWeakPtr()] {
-                            if (weak) {
-                              // Recursively reschedule if cleanup is
-                              // incomplete.
-                              weak->escher_cleanup_scheduled_ = false;
-                              weak->CleanupEscher();
-                            }
-                          },
-                          kCleanupDelay);
+                           [weak = weak_factory_.GetWeakPtr()] {
+                             if (weak) {
+                               // Recursively reschedule if cleanup is
+                               // incomplete.
+                               weak->escher_cleanup_scheduled_ = false;
+                               weak->CleanupEscher();
+                             }
+                           },
+                           kCleanupDelay);
   }
 }
 

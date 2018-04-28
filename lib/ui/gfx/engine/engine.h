@@ -43,9 +43,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
 
   ~Engine() override;
 
-  escher::PaperRenderer* paper_renderer() {
-    return paper_renderer_.get();
-  }
+  escher::PaperRenderer* paper_renderer() { return paper_renderer_.get(); }
   escher::ShadowMapRenderer* shadow_renderer() {
     return shadow_renderer_.get();
   }
@@ -99,6 +97,11 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   // Dumps the contents of all scene graphs.
   std::string DumpScenes() const;
 
+  // Used by GpuMemory to import VMOs from clients.
+  uint32_t imported_memory_type_index() const {
+    return imported_memory_type_index_;
+  }
+
  protected:
   // Only used by subclasses used in testing.
   Engine(DisplayManager* display_manager,
@@ -149,6 +152,8 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   std::set<Compositor*> compositors_;
 
   bool escher_cleanup_scheduled_ = false;
+
+  uint32_t imported_memory_type_index_ = 0;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 
