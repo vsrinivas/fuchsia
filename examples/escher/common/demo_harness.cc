@@ -118,7 +118,8 @@ void DemoHarness::CreateSwapchain() {
     swapchain_extent.height = window_params_.height;
   }
 
-  if(swapchain_extent.width != window_params_.width || swapchain_extent.height != window_params_.height){
+  if (swapchain_extent.width != window_params_.width ||
+      swapchain_extent.height != window_params_.height) {
     window_params_.width = swapchain_extent.width;
     window_params_.height = swapchain_extent.height;
   }
@@ -281,8 +282,6 @@ VkBool32 DemoHarness::HandleDebugReport(
     int32_t message_code,
     const char* pLayerPrefix,
     const char* pMessage) {
-  constexpr bool kSuppressVerboseLogging = true;
-
   vk::DebugReportFlagsEXT flags(
       static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
   vk::DebugReportObjectTypeEXT object_type(
@@ -296,29 +295,8 @@ VkBool32 DemoHarness::HandleDebugReport(
 
     std::cerr << "## Vulkan Information: ";
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
-    if (object_type == vk::DebugReportObjectTypeEXT::eCommandBuffer &&
-        message_code == 93) {
-      // This warning started to occur on Linux/NVIDIA after moving from the
-      // 1.0.39 to 1.0.42 SDK.  It seems that the validation layer doesn't think
-      // that the swapchain image is VK_IMAGE_TYPE_2D (because I'm pretty sure
-      // that the images that we create are 2D).
-      if (kSuppressVerboseLogging) {
-        return false;
-      }
-    }
     std::cerr << "## Vulkan Warning: ";
   } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
-    if (object_type == vk::DebugReportObjectTypeEXT::eDescriptorSet) {
-      // At the time of writing this comment, these performance warnings are
-      // erroneous.  We are rendering a completely different pass.
-      // TODO: It is possible for later code changes to trigger this same
-      // warning for legitimate reasons.  Rather than unconditionally disabling
-      // it here, it would be better to provide a hook for Escher to disable
-      // reporting of known false-positives.
-      if (kSuppressVerboseLogging) {
-        return false;
-      }
-    }
     std::cerr << "## Vulkan Performance Warning: ";
   } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
     // Treat all errors as fatal.
