@@ -66,7 +66,10 @@ void AdapterServer::SetDelegate(
 
 void AdapterServer::SetLocalName(::fidl::StringPtr local_name,
                                  SetLocalNameCallback callback) {
-  FXL_NOTIMPLEMENTED();
+  adapter()->SetLocalName(local_name, [self = weak_ptr_factory_.GetWeakPtr(),
+                                       callback](auto status) {
+    callback(fidl_helpers::StatusToFidl(status, "Can't Set Local Name"));
+  });
 }
 
 void AdapterServer::StartDiscovery(StartDiscoveryCallback callback) {

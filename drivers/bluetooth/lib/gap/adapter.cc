@@ -157,7 +157,38 @@ void Adapter::ShutDown() {
 }
 
 bool Adapter::IsDiscovering() const {
-  return le_discovery_manager_ && le_discovery_manager_->discovering();
+  return (le_discovery_manager_ && le_discovery_manager_->discovering()) ||
+         (bredr_discovery_manager_ && bredr_discovery_manager_->discovering());
+}
+
+void Adapter::SetLocalName(std::string name, hci::StatusCallback callback) {
+  // TODO(jamuraa): set the public LE advertisement name from |name|
+  bool null_term = true;
+  if (name.size() >= hci::kMaxLocalNameLength) {
+    name.resize(hci::kMaxLocalNameLength);
+    null_term = false;
+  }
+  auto write_name = hci::CommandPacket::New(
+      hci::kWriteLocalName, sizeof(hci::WriteLocalNameCommandParams));
+  auto name_buf = common::MutableBufferView(
+      write_name->mutable_view()
+          ->mutable_payload<hci::WriteLocalNameCommandParams>()
+          ->local_name,
+      hci::kMaxLocalNameLength);
+  name_buf.Write(reinterpret_cast<const uint8_t*>(name.data()), name.size());
+  if (null_term) {
+    name_buf[name.size()] = 0;
+  }
+  hci_->command_channel()->SendCommand(
+      std::move(write_name), dispatcher_,
+      [cb = std::move(callback)](auto, const hci::EventPacket& event) mutable {
+        auto status = event.ToStatus();
+        if (!status) {
+          FXL_LOG(WARNING) << "gap: Adapter: set local name failure: "
+                           << status.ToString();
+        }
+        cb(status);
+      });
 }
 
 void Adapter::InitializeStep2(const InitializeCallback& callback) {

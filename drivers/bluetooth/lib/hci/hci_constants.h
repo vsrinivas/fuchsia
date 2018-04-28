@@ -263,7 +263,7 @@ enum class SupportedCommand : uint8_t {
 
   // Octet 7
   kWriteLocalName                = (1 << 0),
-  kReadLocalname                 = (1 << 1),
+  kReadLocalName                 = (1 << 1),
   kReadConnectionAttemptTimeout  = (1 << 2),
   kWriteConnectionAttemptTimeout = (1 << 3),
   kReadPageTimeout               = (1 << 4),

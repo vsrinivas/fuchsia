@@ -39,6 +39,10 @@ impl HostDevice {
         &self.info
     }
 
+    pub fn set_name(&self, mut name: String) -> impl Future<Item = Status, Error = fidl::Error> {
+        self.adapter.set_local_name(&mut name)
+    }
+
     pub fn start_discovery(&mut self) -> impl Future<Item = Status, Error = fidl::Error> {
         self.adapter.start_discovery()
     }

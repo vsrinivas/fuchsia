@@ -187,6 +187,72 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   EXPECT_TRUE(transport_closed_called());
 }
 
+TEST_F(GAP_AdapterTest, SetNameError) {
+  std::string kNewName = "something";
+  bool success;
+  hci::Status result;
+  int init_cb_count = 0;
+  auto init_cb = [&, this](bool cb_success) {
+    success = cb_success;
+    init_cb_count++;
+  };
+
+  // Make all settings valid but make WriteLocalName command fail.
+  FakeController::Settings settings;
+  settings.ApplyDualModeDefaults();
+  test_device()->set_settings(settings);
+  test_device()->SetDefaultResponseStatus(hci::kWriteLocalName,
+                                          hci::StatusCode::kHardwareFailure);
+
+  InitializeAdapter(init_cb);
+  RunUntilIdle();
+
+  EXPECT_TRUE(success);
+  EXPECT_EQ(1, init_cb_count);
+
+  auto name_cb = [&result](const auto& status) { result = status; };
+
+  adapter()->SetLocalName(kNewName, name_cb);
+
+  RunUntilIdle();
+
+  EXPECT_FALSE(result);
+  EXPECT_EQ(hci::StatusCode::kHardwareFailure, result.protocol_error());
+}
+
+TEST_F(GAP_AdapterTest, SetNameSuccess) {
+  const std::string kNewName = "Fuchsia BT 💖✨";
+  bool success;
+  hci::Status result;
+  int init_cb_count = 0;
+  auto init_cb = [&, this](bool cb_success) {
+    success = cb_success;
+    init_cb_count++;
+  };
+
+  FakeController::Settings settings;
+  settings.ApplyDualModeDefaults();
+  test_device()->set_settings(settings);
+
+  InitializeAdapter(init_cb);
+  RunUntilIdle();
+
+  EXPECT_TRUE(success);
+  EXPECT_EQ(1, init_cb_count);
+
+  auto name_cb = [&result](const auto& status) { result = status; };
+
+  adapter()->SetLocalName(kNewName, name_cb);
+
+  RunUntilIdle();
+
+  EXPECT_TRUE(result);
+  // Local name is only valid up to the first zero
+  for (size_t i = 0; i < kNewName.size(); i++) {
+    EXPECT_EQ(kNewName[i], test_device()->local_name()[i]);
+  }
+}
+
 }  // namespace
 }  // namespace gap
 }  // namespace btlib

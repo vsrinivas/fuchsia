@@ -133,6 +133,10 @@ class Adapter final {
   // adapter.
   bool IsDiscovering() const;
 
+  // Sets the Local Name of this adapter, for both BR/EDR discoverability and
+  // public LE services.
+  void SetLocalName(std::string name, hci::StatusCallback callback);
+
  private:
   // Second step of the initialization sequence. Called by Initialize() when the
   // first batch of HCI commands have been sent.

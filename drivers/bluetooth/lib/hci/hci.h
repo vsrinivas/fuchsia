@@ -209,18 +209,12 @@ constexpr OpCode kReset = ControllerAndBasebandOpCode(0x0003);
 constexpr OpCode kWriteLocalName = ControllerAndBasebandOpCode(0x0013);
 
 struct WriteLocalNameCommandParams {
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(WriteLocalNameCommandParams);
-
-  // A UTF-8 encoded User Friendly Descriptive Name for the device. This can
-  // contain up to 248 octets. If the name contained in the parameter is shorter
-  // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
-  // and the following octets (to fill up 248 octets, which is the length of the
-  // parameter) do not have valid values.
-  //
-  // NOTE: Contains at least 1 octet because an empty struct would be illegal in
-  // C++ (i.e. depending on compiler version). This struct mostly serves as
-  // documentation and its utility is questionable.
-  uint8_t local_name[1];
+  // A UTF-8 encoded User Friendly Descriptive Name for the device.
+  // If the name contained in the parameter is shorter than 248 octets, the end
+  // of the name is indicated by a NULL octet (0x00), and the following octets
+  // (to fill up 248 octets, which is the length of the parameter) do not have
+  // valid values.
+  uint8_t local_name[kMaxLocalNameLength];
 } __PACKED;
 
 // =======================================
@@ -228,17 +222,15 @@ struct WriteLocalNameCommandParams {
 constexpr OpCode kReadLocalName = ControllerAndBasebandOpCode(0x0014);
 
 struct ReadLocalNameReturnParams {
-  FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(ReadLocalNameReturnParams);
-
   // See enum StatusCode in hci_constants.h.
   StatusCode status;
 
-  // A UTF-8 encoded User Friendly Descriptive Name for the device. This can
-  // contain up to 248 octets. If the name contained in the parameter is shorter
-  // than 248 octets, the end of the name is indicated by a NULL octet (0x00),
-  // and the following octets (to fill up 248 octets, which is the length of the
-  // parameter) do not have valid values.
-  uint8_t local_name[];
+  // A UTF-8 encoded User Friendly Descriptive Name for the device.
+  // If the name contained in the parameter is shorter than 248 octets, the end
+  // of the name is indicated by a NULL octet (0x00), and the following octets
+  // (to fill up 248 octets, which is the length of the parameter) do not have
+  // valid values.
+  uint8_t local_name[kMaxLocalNameLength];
 } __PACKED;
 
 // ========================================

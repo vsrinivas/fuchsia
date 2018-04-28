@@ -43,9 +43,8 @@ pub fn make_control_service(
         },
         set_name: |hd, name, res| {
             let mut hd = hd.write();
-            hd.set_name(name);
-            res.send(&mut bt_fidl_status!())
-                .into_future()
+            hd.set_name(name)
+                .and_then(move |mut resp| res.send(&mut resp))
                 .recover(|e| eprintln!("error sending response: {:?}", e))
         },
         get_active_adapter_info: |hd, res| {

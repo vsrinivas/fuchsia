@@ -71,10 +71,18 @@ impl HostDispatcher {
         }
     }
 
-    pub fn set_name(&mut self, name: Option<String>) {
+    pub fn set_name(&mut self, name: Option<String>) -> impl Future<Item = fidl_bluetooth::Status, Error = fidl::Error> {
         match name {
             Some(name) => self.name = name,
             None => self.name = DEFAULT_NAME.to_string(),
+        };
+        match self.get_active_id() {
+            Some(ref id) => {
+                let adap = self.host_devices.get(id).unwrap();
+                let mut adap = adap.lock();
+                Left(adap.set_name(self.name.clone()))
+            }
+            None => Right(fok(bt_fidl_status!( BluetoothNotAvailable, "No Adapter found"))),
         }
     }
 
@@ -100,7 +108,7 @@ impl HostDispatcher {
                 let mut adap = adap.lock();
                 Left(adap.start_discovery())
             }
-            None => Right(fok(bt_fidl_status!(
+            None => Right( fok(bt_fidl_status!(
                 BluetoothNotAvailable,
                 "No Adapter found"
             ))),
