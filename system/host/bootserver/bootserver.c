@@ -398,7 +398,7 @@ int main(int argc, char** argv) {
         argc--;
         argv++;
     }
-    if (kernel_fn == NULL) {
+    if (!kernel_fn && !efi_image && !kernc_image && !fvm_images[0]) {
         usage();
     }
     if (!nodename) {
@@ -551,8 +551,7 @@ int main(int argc, char** argv) {
             status = xfer(&ra, kernc_image, use_filename_prefix ? NB_KERNC_FILENAME
                           : NB_KERNC_HOST_FILENAME);
         }
-
-        if (status == 0) {
+        if (status == 0 && kernel_fn) {
             status = xfer(&ra, kernel_fn, use_filename_prefix ? NB_KERNEL_FILENAME : "kernel.bin");
             if (status == 0) {
                 send_boot_command(&ra);
