@@ -1,0 +1,5 @@
+{
+    "labels": [
+        "//garnet/public/sdk:zircon_sysroot_for_toolchain_export"
+    ]
+}
