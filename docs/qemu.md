@@ -1,20 +1,23 @@
 # QEMU
 
-Zircon can [run under emulation](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU) using QEMU. QEMU can either be installed via
-prebuilt binaries, or built locally. (Note that a full [Fuchsia checkout](https://fuchsia.googlesource.com/docs/+/master/getting_source.md#Creating-a-new-checkout) already
-includes prebuilts.)
+Zircon can [run under
+emulation](https://fuchsia.googlesource.com/docs/+/master/getting_started.md#Boot-from-QEMU)
+using QEMU. QEMU can either be installed via prebuilt binaries, or built
+locally.
 
 ## Install Prebuilt QEMU
 
+QEMU is download by the script that is used to download all Zircon
+prebuilts, including toolchains:
+
 ```
-git clone https://fuchsia.googlesource.com/buildtools
-cd buildtools
-./update.sh
+./scripts/download-prebuilt
 ```
 
-This will download QEMU to the buildtools/qemu directory. You can either add
-buildtools/qemu/bin to your PATH, or specify buildtools/qemu/bin using the
--q flag to the run-zircon scripts (see below).
+This will download QEMU to the `prebuilt/downloads/qemu` directory. You
+can either add `prebuilt/downloads/qemu/bin` to your PATH, or specify
+`prebuilt/downloads/qemu/bin` using the -q flag to the run-zircon scripts
+(see below).
 
 ## Build QEMU
 
