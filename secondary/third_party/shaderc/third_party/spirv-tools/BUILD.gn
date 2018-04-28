@@ -23,7 +23,6 @@ config("spirv_warnings") {
   visibility = [ ":*" ]
   cflags_cc = [
     "-Wno-delete-non-virtual-dtor",
-    "-Wno-return-std-move",
   ]
 }
 group("generate_include_files") {
