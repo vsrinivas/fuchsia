@@ -43,7 +43,7 @@ An application is called through its **Interface(s)**. Interfaces are reusable a
 
 An application almost always implements the **ServiceProvider** interface, which returns interfaces based on the name of the service. The FIDL client library provides default implementations of ServiceProvider for all supported languages.
 
-A **Service** is your implementation of an interface. Therefore, within a particular FIDL application, there is one service per interface. In the FIDL client library, you will see calls like `AddServiceByName()` or `ConnectToService()`.
+A **Service** is your implementation of an interface. Therefore, within a particular FIDL application, there is one service per interface. In the FIDL client library, you will see calls like `AddPublicService()` or `ConnectToService()`.
 
 ![FIDL Architecture](fidl_architecture.png)
 
@@ -108,7 +108,7 @@ To understand how the code works, here's a summary of what happens in the server
 
 1. Fuchsia loads the server executable, and your `main()` function starts.
 1. `main` creates an `EchoServerApp` object which will bind to the service interface when it is constructed.
-1. `EchoServerApp()` registers itself with the `ApplicationContext` by calling `context->outgoing_services()->AddServiceForName()`. It passes a lambda function that is called when a connection request arrives.
+1. `EchoServerApp()` registers itself with the `ApplicationContext` by calling `context->outgoing().AddPublicService<Echo>()`. It passes a lambda function that is called when a connection request arrives.
 1. Now `main` starts the run loop, expressed as an `async::Loop`.
 1. The run loop receives a request to connect from another application, so calls the lambda created in `EchoServerApp()`.
 1. That lambda binds the `EchoServerApp` instance to the request channel.
@@ -153,20 +153,17 @@ Here's what the `EchoServerApp` constructor looks like:
 ```cpp
 EchoServerApp()
     : context_(component::ApplicationContext::CreateFromStartupInfo()) {
-  context_->outgoing_services()->AddServiceForName(
-      [this](zx::channel request) {
-        bindings_.AddBinding(
-            this, fidl::InterfaceRequest<Echo>(std::move(request)));
-      },
-      Echo::Name_);
-}
+  context_->outgoing().AddPublicService<Echo>(
+      [this](fidl::InterfaceRequest<Echo> request) {
+        bindings_.AddBinding(this, std::move(request));
+      });
 ```
 
-The function calls `AddServiceForName` once for each service it makes available to the other application (remember that each service exposes a single interface). The information is cached by `ApplicationContext` and used to decide which `InterfaceFactory<>` to use for additional incoming channels. A new channel is created every time someone calls `ConnectToService()` on the other end.
+The function calls `AddPublicService` once for each service it makes available to the other application (remember that each service exposes a single interface). The information is cached by `ApplicationContext` and used to decide which `InterfaceFactory<>` to use for additional incoming channels. A new channel is created every time someone calls `ConnectToService()` on the other end.
 
-If you read the code carefully, you'll see that the parameter to `AddServiceForName` is actually a lambda function that captures `this`. This means that the lambda function won't be executed until a channel tries to bind to the interface, at which point the object is bound to the channel and will receive calls from other applications. Note that these calls have thread-affinity, so calls will only be made from the same thread.
+If you read the code carefully, you'll see that the parameter to `AddPublicService` is actually a lambda function that captures `this`. This means that the lambda function won't be executed until a channel tries to bind to the interface, at which point the object is bound to the channel and will receive calls from other applications. Note that these calls have thread-affinity, so calls will only be made from the same thread.
 
-The function passed to `AddServiceForName` can be implemented in different ways. The default implementation `EchoServerApp` uses the same object for all channels. That's a good choice for the Echo interface because the implementation is stateless. Other, more complex interfaces could create a different object for each channel or perhaps re-use the objects in some sort of a caching scheme.
+The function passed to `AddPublicService` can be implemented in different ways. The default implementation `EchoServerApp` uses the same object for all channels. That's a good choice for the Echo interface because the implementation is stateless. Other, more complex interfaces could create a different object for each channel or perhaps re-use the objects in some sort of a caching scheme.
 
 Connections are always point to point. There are no multicast connections.
 
