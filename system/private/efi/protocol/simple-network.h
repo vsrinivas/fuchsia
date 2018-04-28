@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <efi/types.h>
 
 #define EFI_SIMPLE_NETWORK_PROTOCOL_GUID \

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
 #define EFIAPI __attribute__((ms_abi))

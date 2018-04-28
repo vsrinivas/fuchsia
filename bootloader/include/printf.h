@@ -9,7 +9,9 @@
 #define __LIB_PRINTF_H
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <uchar.h>
 
 #include <zircon/compiler.h>
 

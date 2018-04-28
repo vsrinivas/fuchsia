@@ -4,9 +4,7 @@
 
 #pragma once
 
-#ifndef NULL
-#define NULL ((void*)0)
-#endif
+#include <stddef.h>
 
 int atoi(const char* nptr);
 long atol(const char* nptr);

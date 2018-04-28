@@ -8,7 +8,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 EFI_LIBDIRS := system/ulib/tftp
 
-EFI_CFLAGS += -nostdinc -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
+EFI_CFLAGS += -I$(LOCAL_DIR)/include -I$(LOCAL_DIR)/src
 EFI_CFLAGS += -Isystem/public -Isystem/private
 EFI_CFLAGS += $(foreach LIBDIR,$(EFI_LIBDIRS),-I$(LIBDIR)/include)
 

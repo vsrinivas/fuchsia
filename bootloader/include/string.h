@@ -4,11 +4,7 @@
 
 #pragma once
 
-#include <stdint.h>
-
-#ifndef NULL
-#define NULL ((void*)0)
-#endif
+#include <stddef.h>
 
 void* memset(void* dst, int c, size_t n);
 void* memcpy(void* dst, const void* src, size_t n);

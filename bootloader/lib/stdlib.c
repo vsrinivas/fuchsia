@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #define ATOx(T, fn)             \
@@ -30,6 +31,6 @@ T fn(const char* nptr) {            \
 }
 
 
-ATOx(int, atoi) 
+ATOx(int, atoi)
 ATOx(long, atol)
 ATOx(long long, atoll)

@@ -5,9 +5,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <limits.h>
 #include <printf.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sys/types.h>
 
 int sprintf(char *str, const char *fmt, ...)
 {
@@ -49,7 +51,7 @@ int snprintf(char *str, size_t len, const char *fmt, ...)
 #define LEADZEROFLAG   0x00001000
 #define BLANKPOSFLAG   0x00002000
 
-__NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, size_t len, uint flag, char *signchar)
+__NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, size_t len, unsigned int flag, char *signchar)
 {
     size_t pos = len;
     int negative = 0;
@@ -86,7 +88,7 @@ __NO_INLINE static char *longlong_to_string(char *buf, unsigned long long n, siz
 static const char hextable[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 static const char hextable_caps[] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-__NO_INLINE static char *longlong_to_hexstring(char *buf, unsigned long long u, size_t len, uint flag)
+__NO_INLINE static char *longlong_to_hexstring(char *buf, unsigned long long u, size_t len, unsigned int flag)
 {
     size_t pos = len;
     const char *table = (flag & CAPSFLAG) ? hextable_caps : hextable;
@@ -324,7 +326,7 @@ _output_string:
         if (flags & LEFTFORMATFLAG) {
             /* left justify the text */
             OUTPUT_STRING(s, string_len);
-            uint written = err;
+            unsigned int written = err;
 
             /* pad to the right (if necessary) */
             for (; format_num > written; format_num--)

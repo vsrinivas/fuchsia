@@ -46,10 +46,7 @@ extern "C" {
 #define __NEED_useconds_t
 
 #if defined(_GNU_SOURCE) || defined(_BSD_SOURCE)
-#define __NEED_int8_t
-#define __NEED_int16_t
-#define __NEED_int32_t
-#define __NEED_int64_t
+#include <stdint.h>
 #define __NEED_u_int64_t
 #define __NEED_register_t
 #endif

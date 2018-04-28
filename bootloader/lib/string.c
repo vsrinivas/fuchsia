@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <stdint.h>
+
 void* memset(void* _dst, int c, size_t n) {
     uint8_t* dst = _dst;
     while (n-- > 0) {
@@ -86,4 +88,3 @@ int strncmp(const char* s1, const char* s2, size_t len) {
     }
     return 0;
 }
-

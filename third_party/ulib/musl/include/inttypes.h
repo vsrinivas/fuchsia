@@ -20,6 +20,125 @@ uintmax_t strtoumax(const char* __restrict, char** __restrict, int);
 intmax_t wcstoimax(const wchar_t* __restrict, wchar_t** __restrict, int);
 uintmax_t wcstoumax(const wchar_t* __restrict, wchar_t** __restrict, int);
 
+// Clang predefines macros __<type>_FMT<letter>__ for each type,
+// with <letter> being i and for signed types, and o, u, x, and X
+// for unsigned types.  That lets <inttypes.h> do its work without
+// any special knowledge of what the underlying types are.
+// Unfortunately, GCC does not define these macros.
+#ifndef __INTMAX_FMTd__
+
+#define __INT8_FMT_MODIFIER__ "hh"
+#define __INT16_FMT_MODIFIER__ "h"
+#define __INT32_FMT_MODIFIER__ ""
+
+#define __INT_LEAST8_FMT_MODIFIER__ __INT8_FMT_MODIFIER__
+#define __INT_LEAST16_FMT_MODIFIER__ __INT16_FMT_MODIFIER__
+#define __INT_LEAST32_FMT_MODIFIER__ __INT32_FMT_MODIFIER__
+#define __INT_LEAST64_FMT_MODIFIER__ __INT64_FMT_MODIFIER__
+
+// The *-elf and arm-eabi GCC targets use 'int' for the fast{8,16,32}
+// types. On LP64 systems, 'long' is used for the fast64 type.
+#define __INT_FAST8_FMT_MODIFIER__ ""
+#define __INT_FAST16_FMT_MODIFIER__ ""
+#define __INT_FAST32_FMT_MODIFIER__ ""
+#define __INT_FAST64_FMT_MODIFIER__ "l"
+
+// On machines where 'long' types are 64 bits, the compiler defines
+// __INT64_TYPE__ et al using 'long', not 'long long', though both are
+// 64-bit types.
+#define __INT64_FMT_MODIFIER__ "l"
+#define __INTPTR_FMT_MODIFIER__ "l"
+
+#define __INTMAX_FMT_MODIFIER__ __INT64_FMT_MODIFIER__
+
+#define __INTMAX_FMTd__ __INTMAX_FMT_MODIFIER__ "d"
+#define __INTMAX_FMTi__ __INTMAX_FMT_MODIFIER__ "i"
+#define __UINTMAX_FMTo__ __INTMAX_FMT_MODIFIER__ "o"
+#define __UINTMAX_FMTu__ __INTMAX_FMT_MODIFIER__ "u"
+#define __UINTMAX_FMTx__ __INTMAX_FMT_MODIFIER__ "x"
+#define __UINTMAX_FMTX__ __INTMAX_FMT_MODIFIER__ "X"
+#define __INTPTR_FMTd__ __INTPTR_FMT_MODIFIER__ "d"
+#define __INTPTR_FMTi__ __INTPTR_FMT_MODIFIER__ "i"
+#define __UINTPTR_FMTo__ __INTPTR_FMT_MODIFIER__ "o"
+#define __UINTPTR_FMTu__ __INTPTR_FMT_MODIFIER__ "u"
+#define __UINTPTR_FMTx__ __INTPTR_FMT_MODIFIER__ "x"
+#define __UINTPTR_FMTX__ __INTPTR_FMT_MODIFIER__ "X"
+#define __INT8_FMTd__ __INT8_FMT_MODIFIER__ "d"
+#define __INT8_FMTi__ __INT8_FMT_MODIFIER__ "i"
+#define __INT16_FMTd__ __INT16_FMT_MODIFIER__ "d"
+#define __INT16_FMTi__ __INT16_FMT_MODIFIER__ "i"
+#define __INT32_FMTd__ __INT32_FMT_MODIFIER__ "d"
+#define __INT32_FMTi__ __INT32_FMT_MODIFIER__ "i"
+#define __INT64_FMTd__ __INT64_FMT_MODIFIER__ "d"
+#define __INT64_FMTi__ __INT64_FMT_MODIFIER__ "i"
+#define __UINT8_FMTo__ __INT8_FMT_MODIFIER__ "o"
+#define __UINT8_FMTu__ __INT8_FMT_MODIFIER__ "u"
+#define __UINT8_FMTx__ __INT8_FMT_MODIFIER__ "x"
+#define __UINT8_FMTX__ __INT8_FMT_MODIFIER__ "X"
+#define __UINT16_FMTo__ __INT16_FMT_MODIFIER__ "o"
+#define __UINT16_FMTu__ __INT16_FMT_MODIFIER__ "u"
+#define __UINT16_FMTx__ __INT16_FMT_MODIFIER__ "x"
+#define __UINT16_FMTX__ __INT16_FMT_MODIFIER__ "X"
+#define __UINT32_FMTo__ __INT32_FMT_MODIFIER__ "o"
+#define __UINT32_FMTu__ __INT32_FMT_MODIFIER__ "u"
+#define __UINT32_FMTx__ __INT32_FMT_MODIFIER__ "x"
+#define __UINT32_FMTX__ __INT32_FMT_MODIFIER__ "X"
+#define __UINT64_FMTo__ __INT64_FMT_MODIFIER__ "o"
+#define __UINT64_FMTu__ __INT64_FMT_MODIFIER__ "u"
+#define __UINT64_FMTx__ __INT64_FMT_MODIFIER__ "x"
+#define __UINT64_FMTX__ __INT64_FMT_MODIFIER__ "X"
+#define __INT_LEAST8_FMTd__ __INT_LEAST8_FMT_MODIFIER__ "d"
+#define __INT_LEAST8_FMTi__ __INT_LEAST8_FMT_MODIFIER__ "i"
+#define __UINT_LEAST8_FMTo__ __INT_LEAST8_FMT_MODIFIER__ "o"
+#define __UINT_LEAST8_FMTu__ __INT_LEAST8_FMT_MODIFIER__ "u"
+#define __UINT_LEAST8_FMTx__ __INT_LEAST8_FMT_MODIFIER__ "x"
+#define __UINT_LEAST8_FMTX__ __INT_LEAST8_FMT_MODIFIER__ "X"
+#define __INT_LEAST16_FMTd__ __INT_LEAST16_FMT_MODIFIER__ "d"
+#define __INT_LEAST16_FMTi__ __INT_LEAST16_FMT_MODIFIER__ "i"
+#define __UINT_LEAST16_FMTo__ __INT_LEAST16_FMT_MODIFIER__ "o"
+#define __UINT_LEAST16_FMTu__ __INT_LEAST16_FMT_MODIFIER__ "u"
+#define __UINT_LEAST16_FMTx__ __INT_LEAST16_FMT_MODIFIER__ "x"
+#define __UINT_LEAST16_FMTX__ __INT_LEAST16_FMT_MODIFIER__ "X"
+#define __INT_LEAST32_FMTd__ __INT_LEAST32_FMT_MODIFIER__ "d"
+#define __INT_LEAST32_FMTi__ __INT_LEAST32_FMT_MODIFIER__ "i"
+#define __UINT_LEAST32_FMTo__ __INT_LEAST32_FMT_MODIFIER__ "o"
+#define __UINT_LEAST32_FMTu__ __INT_LEAST32_FMT_MODIFIER__ "u"
+#define __UINT_LEAST32_FMTx__ __INT_LEAST32_FMT_MODIFIER__ "x"
+#define __UINT_LEAST32_FMTX__ __INT_LEAST32_FMT_MODIFIER__ "X"
+#define __INT_LEAST64_FMTd__ __INT_LEAST64_FMT_MODIFIER__ "d"
+#define __INT_LEAST64_FMTi__ __INT_LEAST64_FMT_MODIFIER__ "i"
+#define __UINT_LEAST64_FMTo__ __INT_LEAST64_FMT_MODIFIER__ "o"
+#define __UINT_LEAST64_FMTu__ __INT_LEAST64_FMT_MODIFIER__ "u"
+#define __UINT_LEAST64_FMTx__ __INT_LEAST64_FMT_MODIFIER__ "x"
+#define __UINT_LEAST64_FMTX__ __INT_LEAST64_FMT_MODIFIER__ "X"
+#define __INT_FAST8_FMTd__ __INT_FAST8_FMT_MODIFIER__ "d"
+#define __INT_FAST8_FMTi__ __INT_FAST8_FMT_MODIFIER__ "i"
+#define __UINT_FAST8_FMTo__ __INT_FAST8_FMT_MODIFIER__ "o"
+#define __UINT_FAST8_FMTu__ __INT_FAST8_FMT_MODIFIER__ "u"
+#define __UINT_FAST8_FMTx__ __INT_FAST8_FMT_MODIFIER__ "x"
+#define __UINT_FAST8_FMTX__ __INT_FAST8_FMT_MODIFIER__ "X"
+#define __INT_FAST16_FMTd__ __INT_FAST16_FMT_MODIFIER__ "d"
+#define __INT_FAST16_FMTi__ __INT_FAST16_FMT_MODIFIER__ "i"
+#define __UINT_FAST16_FMTo__ __INT_FAST16_FMT_MODIFIER__ "o"
+#define __UINT_FAST16_FMTu__ __INT_FAST16_FMT_MODIFIER__ "u"
+#define __UINT_FAST16_FMTx__ __INT_FAST16_FMT_MODIFIER__ "x"
+#define __UINT_FAST16_FMTX__ __INT_FAST16_FMT_MODIFIER__ "X"
+#define __INT_FAST32_FMTd__ __INT_FAST32_FMT_MODIFIER__ "d"
+#define __INT_FAST32_FMTi__ __INT_FAST32_FMT_MODIFIER__ "i"
+#define __UINT_FAST32_FMTo__ __INT_FAST32_FMT_MODIFIER__ "o"
+#define __UINT_FAST32_FMTu__ __INT_FAST32_FMT_MODIFIER__ "u"
+#define __UINT_FAST32_FMTx__ __INT_FAST32_FMT_MODIFIER__ "x"
+#define __UINT_FAST32_FMTX__ __INT_FAST32_FMT_MODIFIER__ "X"
+#define __INT_FAST64_FMTd__ __INT_FAST64_FMT_MODIFIER__ "d"
+#define __INT_FAST64_FMTi__ __INT_FAST64_FMT_MODIFIER__ "i"
+#define __UINT_FAST64_FMTo__ __INT_FAST64_FMT_MODIFIER__ "o"
+#define __UINT_FAST64_FMTu__ __INT_FAST64_FMT_MODIFIER__ "u"
+#define __UINT_FAST64_FMTx__ __INT_FAST64_FMT_MODIFIER__ "x"
+#define __UINT_FAST64_FMTX__ __INT_FAST64_FMT_MODIFIER__ "X"
+
+#endif
+
+
 #define PRId8 __INT8_FMTd__
 #define PRId16 __INT16_FMTd__
 #define PRId32 __INT32_FMTd__

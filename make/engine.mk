@@ -675,7 +675,6 @@ endif
 
 EFI_OPTFLAGS := -O2
 EFI_COMPILEFLAGS += -fno-stack-protector
-EFI_COMPILEFLAGS += -nostdinc
 EFI_COMPILEFLAGS += -Wall
 EFI_CFLAGS := -fshort-wchar -std=c99 -ffreestanding
 ifeq ($(EFI_ARCH),x86_64)
