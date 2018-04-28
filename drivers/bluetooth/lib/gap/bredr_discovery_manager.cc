@@ -101,6 +101,7 @@ void BrEdrDiscoveryManager::MaybeStartInquiry() {
       inquiry->mutable_view()->mutable_payload<hci::InquiryCommandParams>();
   params->lap = hci::kGIAC;
   params->inquiry_length = hci::kInquiryLengthMax;
+  params->num_responses = 0;
   hci_->command_channel()->SendCommand(
       std::move(inquiry), dispatcher_,
       [self = weak_ptr_factory_.GetWeakPtr()](auto, const auto& event) {
