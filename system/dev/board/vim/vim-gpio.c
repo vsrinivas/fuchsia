@@ -68,10 +68,10 @@ static const pbus_irq_t gpio_irqs[] = {
     },
 };
 
-static pbus_dev_t gpio_dev = {
+static const pbus_dev_t gpio_dev = {
     .name = "gpio",
     .vid = PDEV_VID_AMLOGIC,
-//    .pid = filled in later,
+    .pid = PDEV_PID_AMLOGIC_S912,
     .did = PDEV_DID_AMLOGIC_GPIO,
     .mmios = gpio_mmios,
     .mmio_count = countof(gpio_mmios),
@@ -81,7 +81,6 @@ static pbus_dev_t gpio_dev = {
 
 
 zx_status_t vim_gpio_init(vim_bus_t* bus) {
-    gpio_dev.pid = bus->soc_pid;
 
     zx_status_t status = pbus_device_add(&bus->pbus, &gpio_dev, PDEV_ADD_PBUS_DEVHOST);
     if (status != ZX_OK) {
@@ -105,7 +104,7 @@ zx_status_t vim_gpio_init(vim_bus_t* bus) {
     const pbus_gpio_t gpio_test_gpios[] = {
         {
             // SYS_LED
-            .gpio = (bus->soc_pid == PDEV_PID_AMLOGIC_S912 ? S912_GPIOAO(9) : S905X_GPIOAO(9)),
+            .gpio = S912_GPIOAO(9),
         },
         {
             // GPIO PIN

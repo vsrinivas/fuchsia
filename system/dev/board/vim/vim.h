@@ -28,7 +28,6 @@ typedef struct {
     serial_impl_protocol_t serial;
     zx_device_t* parent;
     iommu_protocol_t iommu;
-    uint32_t soc_pid;
 } vim_bus_t;
 
 // vim-gpio.c

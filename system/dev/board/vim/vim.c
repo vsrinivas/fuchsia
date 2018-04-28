@@ -135,33 +135,27 @@ static int vim_start_thread(void* arg) {
         goto fail;
     }
 
-    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
-        if ((status = vim_mali_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
-            goto fail;
-        }
+    if ((status = vim_mali_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
+        goto fail;
     }
 
-    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
-        // set VIM2 fan to level 3 (fastest speed)
-        // TODO(voydanoff) replace this with a thermal driver
-        gpio_config(&bus->gpio, VIM2_FAN_CTL0, GPIO_DIR_OUT);
-        gpio_config(&bus->gpio, VIM2_FAN_CTL1, GPIO_DIR_OUT);
-        gpio_write(&bus->gpio, VIM2_FAN_CTL0, 1);
-        gpio_write(&bus->gpio, VIM2_FAN_CTL1, 1);
-    }
+    // set fan to level 3 (fastest speed)
+    // TODO(voydanoff) replace this with a thermal driver
+    gpio_config(&bus->gpio, VIM2_FAN_CTL0, GPIO_DIR_OUT);
+    gpio_config(&bus->gpio, VIM2_FAN_CTL1, GPIO_DIR_OUT);
+    gpio_write(&bus->gpio, VIM2_FAN_CTL0, 1);
+    gpio_write(&bus->gpio, VIM2_FAN_CTL1, 1);
 
     if ((status = vim_sd_emmc_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_sd_emmc_init failed: %d\n", status);
         goto fail;
     }
 
-    // Display driver currently supports only the S912
-    if (bus->soc_pid == PDEV_PID_AMLOGIC_S912) {
-        if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
-            zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
-            goto fail;
-        }
+
+    if ((status = pbus_device_add(&bus->pbus, &display_dev, 0)) != ZX_OK) {
+        zxlogf(ERROR, "vim_start_thread could not add display_dev: %d\n", status);
+        goto fail;
     }
 
     if ((status = pbus_device_add(&bus->pbus, &led2472g_dev, 0)) != ZX_OK) {
@@ -200,17 +194,6 @@ static zx_status_t vim_bus_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    const char* board_name = pbus_get_board_name(&bus->pbus);
-    if (!strcmp(board_name, "vim")) {
-        bus->soc_pid = PDEV_PID_AMLOGIC_S905X;
-    } else if (!strcmp(board_name, "vim2")) {
-        bus->soc_pid = PDEV_PID_AMLOGIC_S912;
-    } else {
-        zxlogf(ERROR, "unsupported board %s\n", board_name);
-        status = ZX_ERR_NOT_SUPPORTED;
-        goto fail;
-    }
-
     device_add_args_t args = {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "vim-bus",
@@ -244,9 +227,8 @@ static zx_driver_ops_t vim_bus_driver_ops = {
     .bind = vim_bus_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(vim_bus, vim_bus_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(vim_bus, vim_bus_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PLATFORM_BUS),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_KHADAS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VIM2),
 ZIRCON_DRIVER_END(vim_bus)
