@@ -62,10 +62,10 @@ source_set("unittests") {
   ]
 }
 
-source_set("wait_until_idle") {
+source_set("idle_waiter") {
   sources = [
-    "wait_until_idle.cc",
-    "wait_until_idle.h",
+    "idle_waiter.cc",
+    "idle_waiter.h",
   ]
 
   public_deps = [

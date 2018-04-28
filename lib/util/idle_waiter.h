@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_UTIL_WAIT_UNTIL_IDLE_H_
-#define PERIDOT_LIB_UTIL_WAIT_UNTIL_IDLE_H_
+#ifndef PERIDOT_LIB_UTIL_IDLE_WAITER_H_
+#define PERIDOT_LIB_UTIL_IDLE_WAITER_H_
 
 #include "lib/fsl/tasks/message_loop.h"
 #include "lib/fxl/functional/closure.h"
@@ -84,24 +84,6 @@ class IdleWaiter final {
   fxl::WeakPtrFactory<IdleWaiter> weak_ptr_factory_;
 };
 
-// Convenience invocation of a debug FIDL interface's |WaitUntilIdle() => ()|
-// function. This wrapper includes the necessary logic to run the message loop
-// while waiting and drain any coincident messages afterwards.
-// Convenience invocation of a debug FIDL interface's |WaitUntilIdle() => ()|
-// function. This wrapper includes the necessary logic to run the message loop
-// while waiting and drain any coincident messages afterwards.
-template <class Interface>
-void WaitUntilIdle(Interface* debug_interface,
-                   fsl::MessageLoop* message_loop) {
-  // We can't just use a synchronous ptr because those don't run the message
-  // loop while they wait.
-  debug_interface->WaitUntilIdle(
-      [message_loop] { message_loop->PostQuitTask(); });
-  message_loop->Run();
-  // Finish processing any remaining messages.
-  message_loop->RunUntilIdle();
-}
-
 }  // namespace util
 
-#endif  // PERIDOT_LIB_UTIL_WAIT_UNTIL_IDLE_H_
+#endif  // PERIDOT_LIB_UTIL_IDLE_WAITER_H_

@@ -184,3 +184,16 @@ source_set("mock_base") {
     "//third_party/googletest:gtest",
   ]
 }
+
+source_set("wait_until_idle") {
+  testonly = true
+
+  sources = [
+    "wait_until_idle.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//third_party/googletest:gtest",
+  ]
+}

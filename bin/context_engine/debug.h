@@ -9,7 +9,7 @@
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "peridot/bin/context_engine/index.h"
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/util/idle_waiter.h"
 
 namespace modular {
 
@@ -52,7 +52,7 @@ class ContextDebugImpl : public ContextDebug {
   const ContextRepository* const repository_;
   fidl::InterfacePtrSet<ContextDebugListener> listeners_;
 
-  util::IdleWaiter wait_until_idle_;
+  util::IdleWaiter idle_waiter_;
 
   fxl::WeakPtrFactory<ContextDebugImpl> weak_ptr_factory_;
 };

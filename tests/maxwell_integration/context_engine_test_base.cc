@@ -4,7 +4,7 @@
 
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/testing/wait_until_idle.h"
 
 namespace maxwell {
 
@@ -36,7 +36,7 @@ void ContextEngineTestBase::StartContextAgent(const std::string& url) {
 }
 
 void ContextEngineTestBase::WaitUntilIdle() {
-  util::WaitUntilIdle(debug_.get(), &message_loop_);
+  util::WaitUntilIdle(&debug_, &message_loop_);
 }
 
 }  // namespace maxwell

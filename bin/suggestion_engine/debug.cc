@@ -74,7 +74,7 @@ void SuggestionDebugImpl::OnNextUpdate(
 }
 
 util::IdleWaiter* SuggestionDebugImpl::GetIdleWaiter() {
-  return &wait_until_idle_;
+  return &idle_waiter_;
 }
 
 void SuggestionDebugImpl::WatchAskProposals(
@@ -99,7 +99,7 @@ void SuggestionDebugImpl::WatchNextProposals(
 }
 
 void SuggestionDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
-  wait_until_idle_.WaitUntilIdle(callback);
+  idle_waiter_.WaitUntilIdle(callback);
 }
 
 }  // namespace modular

@@ -54,7 +54,7 @@ executable("suggestion_engine_test") {
     "//peridot/bin/agents:ideas",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:story_provider_mock",
-    "//peridot/lib/util:wait_until_idle",
+    "//peridot/lib/testing:wait_until_idle",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/context/cpp:context_helper",
   ]
@@ -72,7 +72,7 @@ source_set("context_common") {
 
   deps = [
     ":common",
-    "//peridot/lib/util:wait_until_idle",
+    "//peridot/lib/testing:wait_until_idle",
   ]
 
   public_deps = [
@@ -90,7 +90,6 @@ source_set("common") {
   ]
 
   deps = [
-    "//garnet/lib/gtest",
     "//garnet/public/lib/fsl",
     "//peridot/bin/user:agent_launcher",
     "//peridot/lib/environment_host",
@@ -99,6 +98,7 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//garnet/lib/gtest",
     "//garnet/public/lib/app/cpp",
     "//third_party/googletest:gtest",
   ]

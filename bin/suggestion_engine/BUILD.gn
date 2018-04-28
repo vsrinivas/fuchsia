@@ -55,7 +55,6 @@ executable("bin") {
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util:rate_limited_retry",
-    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib:fidl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/context/cpp:context_helper",
@@ -189,8 +188,11 @@ source_set("debug") {
     ":models",
     ":state",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/util:wait_until_idle",
     "//peridot/public/lib:fidl",
+  ]
+
+  public_deps = [
+    "//peridot/lib/util:idle_waiter",
   ]
 }
 

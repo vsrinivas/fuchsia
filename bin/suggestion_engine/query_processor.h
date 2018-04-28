@@ -10,7 +10,7 @@
 #include <fuchsia/cpp/modular.h>
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/query_handler_record.h"
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/util/idle_waiter.h"
 
 namespace modular {
 

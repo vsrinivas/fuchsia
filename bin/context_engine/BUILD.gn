@@ -88,8 +88,9 @@ source_set("context_repository") {
   ]
 
   public_deps = [
-    "//peridot/lib/util:wait_until_idle",
+    "//peridot/lib/util:idle_waiter",
   ]
+
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",

@@ -62,7 +62,7 @@ void ContextDebugImpl::OnSubscriptionRemoved(const Id& id) {
 }
 
 util::IdleWaiter* ContextDebugImpl::GetIdleWaiter() {
-  return &wait_until_idle_;
+  return &idle_waiter_;
 }
 
 void ContextDebugImpl::Watch(
@@ -90,7 +90,7 @@ void ContextDebugImpl::Watch(
 }
 
 void ContextDebugImpl::WaitUntilIdle(WaitUntilIdleCallback callback) {
-  wait_until_idle_.WaitUntilIdle(callback);
+  idle_waiter_.WaitUntilIdle(callback);
 }
 
 void ContextDebugImpl::DispatchOneValue(ContextDebugValue value) {

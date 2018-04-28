@@ -13,7 +13,7 @@
 #include "lib/fxl/memory/weak_ptr.h"
 #include "peridot/bin/suggestion_engine/ranked_suggestions_list.h"
 #include "peridot/bin/suggestion_engine/suggestion_prototype.h"
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/util/idle_waiter.h"
 
 namespace modular {
 
@@ -53,7 +53,7 @@ class SuggestionDebugImpl : public SuggestionDebug {
   // The cached set of next proposals.
   fidl::VectorPtr<ProposalSummary> cached_next_proposals_;
 
-  util::IdleWaiter wait_until_idle_;
+  util::IdleWaiter idle_waiter_;
   fxl::WeakPtrFactory<SuggestionDebugImpl> weak_ptr_factory_;
 };
 

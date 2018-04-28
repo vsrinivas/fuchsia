@@ -14,7 +14,7 @@
 #include "peridot/bin/agents/ideas.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/story_provider_mock.h"
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/testing/wait_until_idle.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 #include "peridot/tests/maxwell_integration/test_suggestion_listener.h"
 #include "third_party/rapidjson/rapidjson/document.h"
@@ -43,9 +43,9 @@ class NWriter {
 };
 
 modular::Proposal CreateProposal(const std::string& id,
-                        const std::string& headline,
-                        fidl::VectorPtr<modular::Action> actions,
-                        modular::AnnoyanceType annoyance) {
+                                 const std::string& headline,
+                                 fidl::VectorPtr<modular::Action> actions,
+                                 modular::AnnoyanceType annoyance) {
   modular::Proposal p;
   p.id = id;
   p.on_selected = std::move(actions);
@@ -69,17 +69,17 @@ class Proposinator {
 
   virtual ~Proposinator() = default;
 
-  void Propose(
-      const std::string& id,
-      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
+  void Propose(const std::string& id,
+               fidl::VectorPtr<modular::Action> actions =
+                   fidl::VectorPtr<modular::Action>::New(0)) {
     Propose(id, id, modular::AnnoyanceType::NONE, std::move(actions));
   }
 
-  void Propose(
-      const std::string& id,
-      const std::string& headline,
-      modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
-      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
+  void Propose(const std::string& id,
+               const std::string& headline,
+               modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
+               fidl::VectorPtr<modular::Action> actions =
+                   fidl::VectorPtr<modular::Action>::New(0)) {
     out_->Propose(CreateProposal(id, headline, std::move(actions), annoyance));
   }
 
@@ -101,8 +101,7 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
     suggestion_engine->RegisterQueryHandler(url, std::move(query_handle));
   }
 
-  void OnQuery(modular::UserInput query,
-               OnQueryCallback callback) override {
+  void OnQuery(modular::UserInput query, OnQueryCallback callback) override {
     query_ = fidl::MakeOptional(query);
     query_callback_ = callback;
     query_proposals_.resize(0);
@@ -135,7 +134,8 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
       const std::string& id,
       const std::string& headline,
       modular::AnnoyanceType annoyance = modular::AnnoyanceType::NONE,
-      fidl::VectorPtr<modular::Action> actions = fidl::VectorPtr<modular::Action>::New(0)) {
+      fidl::VectorPtr<modular::Action> actions =
+          fidl::VectorPtr<modular::Action>::New(0)) {
     query_proposals_.push_back(
         CreateProposal(id, headline, std::move(actions), annoyance));
   }
@@ -151,7 +151,8 @@ class AskProposinator : public Proposinator, public modular::QueryHandler {
 // maintains the number of proposals specified by the context field "n"
 class NProposals : public Proposinator, public modular::ContextListener {
  public:
-  NProposals(modular::ContextEngine* context_engine, modular::SuggestionEngine* suggestion_engine)
+  NProposals(modular::ContextEngine* context_engine,
+             modular::SuggestionEngine* suggestion_engine)
       : Proposinator(suggestion_engine, "NProposals"), listener_binding_(this) {
     modular::ComponentScope scope;
     scope.set_global_scope(modular::GlobalScope());
@@ -202,7 +203,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
         suggestion_services.ConnectToService<modular::SuggestionEngine>();
     suggestion_provider_ =
         suggestion_services.ConnectToService<modular::SuggestionProvider>();
-    suggestion_debug_ = suggestion_services.ConnectToService<modular::SuggestionDebug>();
+    suggestion_debug_ =
+        suggestion_services.ConnectToService<modular::SuggestionDebug>();
 
     // Initialize the SuggestionEngine.
     fidl::InterfaceHandle<modular::StoryProvider> story_provider_handle;
@@ -229,13 +231,17 @@ class SuggestionEngineTest : public ContextEngineTestBase {
   }
 
  protected:
-  modular::SuggestionEngine* suggestion_engine() { return suggestion_engine_.get(); }
+  modular::SuggestionEngine* suggestion_engine() {
+    return suggestion_engine_.get();
+  }
 
   modular::SuggestionProvider* suggestion_provider() {
     return suggestion_provider_.get();
   }
 
-  modular::SuggestionDebug* suggestion_debug() { return suggestion_debug_.get(); }
+  modular::SuggestionDebug* suggestion_debug() {
+    return suggestion_debug_.get();
+  }
 
   StoryProviderMock* story_provider() { return &story_provider_; }
 
@@ -251,7 +257,8 @@ class SuggestionEngineTest : public ContextEngineTestBase {
           context_engine()->GetReader(std::move(scope), std::move(request));
         });
     agent_bridge->AddService<modular::ProposalPublisher>(
-        [this, url](fidl::InterfaceRequest<modular::ProposalPublisher> request) {
+        [this,
+         url](fidl::InterfaceRequest<modular::ProposalPublisher> request) {
           suggestion_engine_->RegisterProposalPublisher(url,
                                                         std::move(request));
         });
@@ -268,7 +275,7 @@ class SuggestionEngineTest : public ContextEngineTestBase {
 
   void WaitUntilIdle() {
     ContextEngineTestBase::WaitUntilIdle();
-    util::WaitUntilIdle(suggestion_debug_.get(), &message_loop_);
+    util::WaitUntilIdle(&suggestion_debug_, &message_loop_);
   }
 
  private:
@@ -359,7 +366,9 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     WaitUntilIdle();
   }
 
-  modular::TestDebugInterruptionListener* debugListener() { return &debug_listener_; }
+  modular::TestDebugInterruptionListener* debugListener() {
+    return &debug_listener_;
+  }
   modular::TestSuggestionListener* listener() { return &listener_; }
 
  protected:
@@ -370,8 +379,7 @@ class InterruptionTest : public virtual SuggestionEngineTest {
     auto lastInterruption = debug_listener_.get_interrupt_proposal();
     ASSERT_GE(subscriberNexts.size(), 1u);
     auto& suggestion = subscriberNexts[0];
-    EXPECT_EQ(suggestion->display.headline,
-              lastInterruption.display.headline);
+    EXPECT_EQ(suggestion->display.headline, lastInterruption.display.headline);
     EXPECT_EQ(suggestion->display.subheadline,
               lastInterruption.display.subheadline);
     EXPECT_EQ(suggestion->display.details, lastInterruption.display.details);
@@ -432,8 +440,7 @@ class NextTest : public virtual SuggestionEngineTest {
       auto& suggestion = subscriberNexts[i];
       auto& proposal = debugNexts[i];
       EXPECT_EQ(suggestion->display.headline, proposal.display.headline);
-      EXPECT_EQ(suggestion->display.subheadline,
-                proposal.display.subheadline);
+      EXPECT_EQ(suggestion->display.subheadline, proposal.display.subheadline);
       EXPECT_EQ(suggestion->display.details, proposal.display.details);
     }
   }
@@ -681,7 +688,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion) {
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
+  EXPECT_EQ("foo://bar",
+            story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_CreateStoryIntent) {
@@ -728,7 +736,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_WithInitialData) {
   auto suggestion_id = GetOnlySuggestion()->uuid;
   AcceptSuggestion(suggestion_id);
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
+  EXPECT_EQ("foo://bar",
+            story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
@@ -741,7 +750,8 @@ TEST_F(SuggestionInteractionTest, AcceptSuggestion_AddModule) {
   add_module.story_id = "foo://bar";
   add_module.module_name = module_id;
   add_module.intent.action.handler = module_id;
-  add_module.surface_parent_module_path = fidl::VectorPtr<fidl::StringPtr>::New(0);
+  add_module.surface_parent_module_path =
+      fidl::VectorPtr<fidl::StringPtr>::New(0);
   add_module.surface_relation = modular::SurfaceRelation();
 
   modular::Action action;
@@ -797,7 +807,8 @@ TEST_F(SuggestionInteractionTest, AcceptSugestion_QueryAction) {
   p.Commit();
 
   WaitUntilIdle();
-  EXPECT_EQ("foo://bar", story_provider()->story_controller().last_added_module());
+  EXPECT_EQ("foo://bar",
+            story_provider()->story_controller().last_added_module());
 }
 
 TEST_F(AskTest, DefaultAsk) {

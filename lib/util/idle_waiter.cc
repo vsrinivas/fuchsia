@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/lib/util/wait_until_idle.h"
+#include "peridot/lib/util/idle_waiter.h"
 
 namespace util {
 
@@ -22,7 +22,7 @@ IdleWaiter::IdleWaiter() : weak_ptr_factory_(this) {}
 
 IdleWaiter::~IdleWaiter() = default;
 
-void IdleWaiter::SetMessageLoop(fsl::MessageLoop *message_loop) {
+void IdleWaiter::SetMessageLoop(fsl::MessageLoop* message_loop) {
   FXL_DCHECK(!message_loop_);
   message_loop_ = message_loop;
 }
