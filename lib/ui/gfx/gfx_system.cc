@@ -13,6 +13,7 @@
 #include "lib/app/cpp/application_context.h"
 #include "lib/escher/escher_process_init.h"
 #include "lib/fxl/functional/make_copyable.h"
+#include "public/lib/syslog/cpp/logger.h"
 
 namespace scenic {
 namespace gfx {
@@ -37,6 +38,8 @@ GfxSystem::~GfxSystem() {
     // escher::GlslangInitializeProcess() was never called).
     escher::GlslangFinalizeProcess();
   }
+  vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(
+      vulkan_instance_->vk_instance(), debug_report_callback_, nullptr);
 }
 
 std::unique_ptr<CommandDispatcher> GfxSystem::CreateCommandDispatcher(
@@ -58,6 +61,8 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
         VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
         VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
        true});
+
+  instance_params.extension_names.insert("VK_EXT_debug_report");
   // Only enable Vulkan validation layers when in debug mode.
 #if !defined(NDEBUG)
   instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
@@ -70,6 +75,24 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
                           VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                           VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME},
                          surface_});
+
+  {
+    VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
+    dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    dbgCreateInfo.pNext = NULL;
+    dbgCreateInfo.pfnCallback = RedirectDebugReport;
+    dbgCreateInfo.pUserData = this;
+    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
+                          VK_DEBUG_REPORT_WARNING_BIT_EXT |
+                          VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+
+    // We use the C API here due to dynamically loading the extension function.
+    VkResult result =
+        vulkan_instance_->proc_addrs().CreateDebugReportCallbackEXT(
+            vulkan_instance_->vk_instance(), &dbgCreateInfo, nullptr,
+            &debug_report_callback_);
+    FXL_CHECK(result == VK_SUCCESS);
+  }
 
   // Initialize Escher.
   escher::GlslangInitializeProcess();
@@ -157,6 +180,64 @@ void GfxSystem::GetOwnershipEvent(
     run_after_initialized_.push_back(
         [this, callback]() { GetOwnershipEventImmediately(callback); });
   }
+}
+
+VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
+                                      VkDebugReportObjectTypeEXT object_type_in,
+                                      uint64_t object,
+                                      size_t location,
+                                      int32_t message_code,
+                                      const char* pLayerPrefix,
+                                      const char* pMessage) {
+  vk::DebugReportFlagsEXT flags(
+      static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
+  vk::DebugReportObjectTypeEXT object_type(
+      static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
+
+  // TODO(SCN-704) remove this block
+  if (object_type == vk::DebugReportObjectTypeEXT::eDeviceMemory &&
+      message_code == 385878038) {
+    FX_LOGS(WARNING) << "Ignoring Vulkan Memory Type Error, see SCN-704";
+  }
+
+  bool fatal = false;
+
+  auto severity = FX_LOG_ERROR;
+
+  if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
+    FX_LOGS(INFO) << "## Vulkan Information: ";
+    severity = FX_LOG_INFO;
+  } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
+    FX_LOGS(WARNING) << "## Vulkan Warning: ";
+    severity = FX_LOG_WARNING;
+  } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
+    FX_LOGS(WARNING) << "## Vulkan Performance Warning: ";
+    severity = FX_LOG_WARNING;
+  } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
+    // Treat all errors as fatal.
+    fatal = true;
+    FX_LOGS(ERROR) << "## Vulkan Error: ";
+    severity = FX_LOG_ERROR;
+  } else if (flags == vk::DebugReportFlagBitsEXT::eDebug) {
+    FX_LOGS(INFO) << "## Vulkan Debug: ";
+    severity = FX_LOG_INFO;
+  } else {
+    // This should never happen, unless a new value has been added to
+    // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
+    fatal = true;
+    FX_LOGS(ERROR) << "## Vulkan Unknown Message Type (flags: "
+                   << vk::to_string(flags) << "): ";
+  }
+
+  FX_LOGST_WITH_SEVERITY(severity, nullptr)
+      << pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code
+      << "  object-type: " << vk::to_string(object_type)
+      << "  object: " << object << ")" << std::endl;
+
+  // Crash immediately on fatal errors.
+  FX_CHECK(!fatal);
+
+  return false;
 }
 
 }  // namespace gfx

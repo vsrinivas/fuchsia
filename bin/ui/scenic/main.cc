@@ -11,12 +11,15 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
+#include "lib/fsl/syslogger/init.h"
 
 #include "garnet/bin/ui/scenic/app.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
+    return 1;
+  if (fsl::InitLoggerFromCommandLine(command_line, {"scenic"}) != ZX_OK)
     return 1;
 
   fsl::MessageLoop loop;
