@@ -424,8 +424,11 @@ TEST(RefCountedTest, SelfAssignment) {
     MyClass* created = nullptr;
     was_destroyed = false;
     RefPtr<MyClass> r(MakeRefCounted<MyClass>(&created, &was_destroyed));
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-assign-overloaded"
     // Copy.
     r = r;
+#pragma GCC diagnostic pop
     EXPECT_EQ(created, r.get());
     EXPECT_FALSE(was_destroyed);
   }
