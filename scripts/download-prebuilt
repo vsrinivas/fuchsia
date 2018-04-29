@@ -139,7 +139,7 @@ download_package() {
     echo "Unpacking $download_file"
     unzip -q -d "$dir" "$download_file_with_dir" || return
   else
-    mv -f "${download_file_with_dir%.new}" "$download_file_with_dir"
+    mv -f "${download_file_with_dir}" "$download_file_with_dir%.new" || return
   fi
 
   update_stamp "$package" "$version" "$download_file"

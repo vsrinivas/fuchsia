@@ -7,5 +7,5 @@ gcc/linux-amd64 555bbf1e0490b14d6811fddc8e17853f2578dc56
 gcc/mac-amd64 9c658c30cba0d8179f4fc579ea856d134a4672e5
 sysroot/linux-amd64 ae0677829357edb199c21e76b1ea31eb8ef62817
 sysroot/linux-arm64 f116a841ddf6d1755bde918b8f07763bdee5e06d
-tools/symbolize/linux-amd64 6789a80f981709ca54917977df3c37317d5414a5
-tools/symbolize/mac-amd64 37d674b2500a90c646610f2564be417366209efb
+tools/symbolize/linux-amd64 6fd7dd6919005a12875dc639cfc569c75b368760
+tools/symbolize/mac-amd64 3001d84e872c225bba133a6b6b27a7b248839dde
