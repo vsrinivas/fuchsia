@@ -1185,6 +1185,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const blobfs_info_t* info,
         return status;
     }
     if ((status = fs->InitializeVnodes() != ZX_OK)) {
+        fprintf(stderr, "blobfs: Failed to initialize Vnodes\n");
         return status;
     }
 
@@ -1198,8 +1199,8 @@ zx_status_t Blobfs::InitializeVnodes() {
         const blobfs_inode_t* inode = GetNode(i);
         if (inode->start_block >= kStartBlockMinimum) {
             fbl::AllocChecker ac;
-            fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac)
-                VnodeBlob(this, Digest(inode->merkle_root_hash)));
+            Digest digest(inode->merkle_root_hash);
+            fbl::RefPtr<VnodeBlob> vn = fbl::AdoptRef(new (&ac) VnodeBlob(this, digest));
             if (!ac.check()) {
                 return ZX_ERR_NO_MEMORY;
             }
@@ -1208,7 +1209,14 @@ zx_status_t Blobfs::InitializeVnodes() {
 
             // Delay reading any data from disk until read.
             size_t size = vn->SizeData();
-            VnodeInsertClosedLocked(fbl::move(vn));
+            zx_status_t status = VnodeInsertClosedLocked(fbl::move(vn));
+            if (status != ZX_OK) {
+                char name[digest::Digest::kLength * 2 + 1];
+                digest.ToString(name, sizeof(name));
+                fprintf(stderr, "blobfs: CORRUPTED FILESYSTEM: Duplicate node: "
+                        "%s @ index %zu\n", name, i);
+                return status;
+            }
             UpdateLookupMetrics(size);
         }
     }
@@ -1225,14 +1233,19 @@ void Blobfs::VnodeReleaseSoft(VnodeBlob* raw_vn) {
     raw_vn->ResurrectRef();
     fbl::RefPtr<VnodeBlob> vn = fbl::internal::MakeRefPtrNoAdopt(raw_vn);
     ZX_ASSERT((raw_vn = open_hash_.erase(raw_vn->GetKey())) != nullptr);
-    VnodeInsertClosedLocked(fbl::move(vn));
+    ZX_ASSERT(VnodeInsertClosedLocked(fbl::move(vn)) == ZX_OK);
 }
 
-void Blobfs::VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) {
+zx_status_t Blobfs::VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) {
     // To exist in the closed_hash_, this RefPtr must be leaked.
-    closed_hash_.insert(vn.get());
+    if (!closed_hash_.insert_or_find(vn.get())) {
+        // Set blob state to "Purged" so we do not try to add it to the cached map on recycle.
+        vn->SetState(kBlobStatePurged);
+        return ZX_ERR_ALREADY_EXISTS;
+    }
     vn->TearDown();
     __UNUSED auto leak = vn.leak_ref();
+    return ZX_OK;
 }
 
 fbl::RefPtr<VnodeBlob> Blobfs::VnodeUpgradeLocked(const uint8_t* key) {

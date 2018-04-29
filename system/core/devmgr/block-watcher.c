@@ -13,6 +13,7 @@
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <fdio/util.h>
 
@@ -172,7 +173,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 
             zx_status_t st = mount(fd, "/fs" PATH_SYSTEM, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_SYSTEM, st);
+                printf("devmgr: failed to mount %s: %s.\n", PATH_SYSTEM, zx_status_get_string(st));
             } else {
                 fuchsia_start();
             }
@@ -187,7 +188,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 
             zx_status_t st = mount(fd, "/fs" PATH_DATA, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_DATA, st);
+                printf("devmgr: failed to mount %s: %s.\n", PATH_DATA, zx_status_get_string(st));
             }
 
             return st;
@@ -201,7 +202,7 @@ static zx_status_t mount_minfs(int fd, mount_options_t* options) {
 
             zx_status_t st = mount(fd, "/fs" PATH_INSTALL, DISK_FORMAT_MINFS, options, launch_minfs);
             if (st != ZX_OK) {
-                printf("devmgr: failed to mount %s, retcode = %d. Run fixfs to restore partition.\n", PATH_INSTALL, st);
+                printf("devmgr: failed to mount %s: %s.\n", PATH_INSTALL, zx_status_get_string(st));
             }
 
             return st;
@@ -297,7 +298,8 @@ static zx_status_t block_device_added(int dirfd, int event, const char* name, vo
             zx_status_t status = mount(fd, "/fs" PATH_BLOB, DISK_FORMAT_BLOBFS,
                                        &options, launch_blobfs);
             if (status != ZX_OK) {
-                printf("devmgr: Failed to mount blobfs partition %s at %s: %d. Please run fixfs to reformat.\n", device_path, PATH_BLOB, status);
+                printf("devmgr: Failed to mount blobfs partition %s at %s: %s.\n",
+                       device_path, PATH_BLOB, zx_status_get_string(status));
             } else {
                 blob_mounted = true;
                 launch_blob_init();

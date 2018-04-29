@@ -63,7 +63,7 @@ constexpr BlobFlags kBlobStateDataWrite   = 0x00000002; // Data is being written
 // After Writing:
 constexpr BlobFlags kBlobStateReadable    = 0x00000004; // Readable
 // After Unlink:
-constexpr BlobFlags kBlobStatePurged      = 0x00000008; // Blob has been purged
+constexpr BlobFlags kBlobStatePurged      = 0x00000008; // Blob should be released during recycle
 // Unrecoverable error state:
 constexpr BlobFlags kBlobStateError       = 0x00000010; // Unrecoverable error state
 constexpr BlobFlags kBlobStateMask        = 0x000000FF;
@@ -428,12 +428,15 @@ private:
     fbl::unique_ptr<WritebackBuffer> writeback_;
 
     // Inserts a Vnode into the |closed_hash_|, tears down
-    // cache Vnode state, and leaks a reference to the Vnode.
+    // cache Vnode state, and leaks a reference to the Vnode
+    // if it was added to the cache successfully.
     //
     // This prevents the vnode from ever being torn down, unless
     // it is re-acquired from |closed_hash_| and released manually
     // (with an identifier to not relocate the Vnode into the cache).
-    void VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) __TA_REQUIRES(hash_lock_);
+    //
+    // Returns an error if the Vnode already exists in the cache.
+    zx_status_t VnodeInsertClosedLocked(fbl::RefPtr<VnodeBlob> vn) __TA_REQUIRES(hash_lock_);
 
     // Upgrades a Vnode which exists in the |closed_hash_| into |open_hash_|,
     // and acquire the strong reference the Vnode which was leaked by
