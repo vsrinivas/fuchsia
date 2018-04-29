@@ -21,6 +21,7 @@ readonly URL_PREFIX="https://storage.googleapis.com/fuchsia"
 # write $DOWNLOAD_DIR/$PACKAGE.stamp files with the versions from
 # VERSIONS_FILE on faith that that's what we just unpacked.
 
+cipd_ok=true
 case "$#:$1" in
 0:)
   mode=update
@@ -31,11 +32,16 @@ case "$#:$1" in
 1:--list)
   mode=list
   ;;
+1:--no-cipd)
+  mode=update
+  cipd_ok=false
+  ;;
 *)
-  echo >&2 "Usage: $0 [--verify|--list]"
+  echo >&2 "Usage: $0 [--verify|--list|--no-cipd]"
   exit 1
   ;;
 esac
+readonly cipd_ok
 
 case "$(uname)-$(uname -m)" in
 Darwin-x86_64)
@@ -224,12 +230,12 @@ CLANG_TOOLCHAIN_PREFIX = $(LKMAKEROOT)/prebuilt/downloads/clang/bin/
 
 update() {
   local CIPD
-  if CIPD="$(find_cipd)"; then
+  if $cipd_ok && CIPD="$(find_cipd)"; then
     # We have CIPD, so use it.
-    update_via_cipd "$CIPD"
+    update_via_cipd "$CIPD" || return
   else
     # We don't have CIPD, so don't use it.
-    for_each_package download_package < "$VERSIONS_FILE"
+    for_each_package download_package < "$VERSIONS_FILE" || return
   fi
   write_config_mk
 }
