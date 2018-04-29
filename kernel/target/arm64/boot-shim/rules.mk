@@ -47,7 +47,7 @@ $(BOOT_SHIM_BUILDDIR)/%.c.o: $(BOOT_SHIM_DIR)/%.c
 
 $(BOOT_SHIM_ELF): $(BOOT_SHIM_OBJ) $(BOOT_SHIM_LD)
 	$(call BUILDECHO,linking $@)
-	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) --build-id=none $(BOOT_SHIM_OBJ) -T $(BOOT_SHIM_LD) -o $@
+	$(NOECHO)$(LD) $(GLOBAL_LDFLAGS) $(KERNEL_LDFLAGS) --build-id=none $(BOOT_SHIM_OBJ) -defsym KERNEL_ALIGN=$(KERNEL_ALIGN) -T $(BOOT_SHIM_LD) -o $@
 
 $(BOOT_SHIM_BIN): $(BOOT_SHIM_ELF)
 	$(call BUILDECHO,generating $@)

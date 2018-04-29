@@ -141,8 +141,10 @@ static void append_bootdata(bootdata_t* container, uint32_t type, uint32_t extra
     container->length += length;
 }
 
-uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
+boot_shim_return_t boot_shim(void* device_tree) {
     uart_puts("boot_shim: hi there!\n");
+
+    zircon_kernel_t* const kernel = &kernel_bootdata;
 
     // sanity check the bootdata headers
     // it must start with a container record followed by a kernel record
@@ -235,9 +237,9 @@ uint64_t boot_shim(void* device_tree, zircon_kernel_t* kernel) {
         kernel_base = (uintptr_t)kernel;
     }
 
-    // return pointer to bootdata in bootdata_return
-    bootdata_return = bootdata;
-
-    // return kernel entry point address
-    return kernel_base + kernel->data_kernel.entry64;
+    boot_shim_return_t result = {
+        .bootdata = bootdata,
+        .entry = kernel_base + kernel->data_kernel.entry64,
+    };
+    return result;
 }
