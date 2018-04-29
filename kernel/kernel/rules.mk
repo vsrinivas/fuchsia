@@ -19,17 +19,17 @@ MODULE_DEPS := \
 	kernel/vm
 
 MODULE_SRCS := \
-	$(LOCAL_DIR)/cmdline.c \
-	$(LOCAL_DIR)/debug.c \
-	$(LOCAL_DIR)/dpc.c \
-	$(LOCAL_DIR)/event.c \
-	$(LOCAL_DIR)/init.c \
-	$(LOCAL_DIR)/mp.c \
-	$(LOCAL_DIR)/mutex.c \
-	$(LOCAL_DIR)/percpu.c \
-	$(LOCAL_DIR)/sched.c \
-	$(LOCAL_DIR)/thread.c \
-	$(LOCAL_DIR)/timer.c \
-	$(LOCAL_DIR)/wait.c
+	$(LOCAL_DIR)/cmdline.cpp \
+	$(LOCAL_DIR)/debug.cpp \
+	$(LOCAL_DIR)/dpc.cpp \
+	$(LOCAL_DIR)/event.cpp \
+	$(LOCAL_DIR)/init.cpp \
+	$(LOCAL_DIR)/mp.cpp \
+	$(LOCAL_DIR)/mutex.cpp \
+	$(LOCAL_DIR)/percpu.cpp \
+	$(LOCAL_DIR)/sched.cpp \
+	$(LOCAL_DIR)/thread.cpp \
+	$(LOCAL_DIR)/timer.cpp \
+	$(LOCAL_DIR)/wait.cpp
 
 include make/module.mk

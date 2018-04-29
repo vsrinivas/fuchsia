@@ -522,7 +522,7 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
 
     // allocate a buffer to dump the timer queue into to avoid reentrancy issues with the
     // timer spinlock
-    char* buf = malloc(timer_buffer_size);
+    char* buf = static_cast<char*>(malloc(timer_buffer_size));
     if (!buf)
         return ZX_ERR_NO_MEMORY;
 

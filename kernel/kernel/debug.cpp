@@ -34,7 +34,6 @@
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags);
-static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 1
@@ -42,7 +41,6 @@ STATIC_COMMAND_MASKED("thread", "manipulate kernel threads", &cmd_thread, CMD_AV
 #endif
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
-STATIC_COMMAND("kill", "kill a thread", &cmd_kill)
 STATIC_COMMAND_END(kernel);
 
 #if LK_DEBUGLEVEL > 1
@@ -159,7 +157,7 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
 
         zx_duration_t delta_time = idle_time - last_idle_time[i];
         zx_duration_t busy_time = ZX_SEC(1) - (delta_time > ZX_SEC(1) ? ZX_SEC(1) : delta_time);
-        uint busypercent = (busy_time * 10000) / ZX_SEC(1);
+        zx_duration_t busypercent = (busy_time * 10000) / ZX_SEC(1);
 
         printf("%3u"
                " %3u.%02u%%"
@@ -169,7 +167,7 @@ static void threadload(timer_t* t, zx_time_t now, void* arg) {
                " %8lu %4lu"
                "\n",
                i,
-               busypercent / 100, busypercent % 100,
+               static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
                percpu[i].stats.context_switches - old_stats[i].context_switches,
                percpu[i].stats.yields - old_stats[i].yields,
                percpu[i].stats.preempts - old_stats[i].preempts,
@@ -205,17 +203,6 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
         timer_cancel(&tltimer);
         showthreadload = false;
     }
-
-    return 0;
-}
-
-static int cmd_kill(int argc, const cmd_args* argv, uint32_t flags) {
-    if (argc < 2) {
-        printf("not enough arguments\n");
-        return -1;
-    }
-
-    thread_kill(argv[1].p);
 
     return 0;
 }

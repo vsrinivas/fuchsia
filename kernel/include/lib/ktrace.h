@@ -32,6 +32,10 @@ static inline void ktrace(uint32_t tag, uint32_t a, uint32_t b, uint32_t c, uint
     }
 }
 
+static inline void ktrace_ptr(uint32_t tag, const void* ptr, uint32_t c, uint32_t d) {
+    ktrace(tag, (uint32_t)((uintptr_t)ptr >> 32), (uint32_t)((uintptr_t)ptr), c, d);
+}
+
 #define _ktrace_probe_prologue(_name) \
     static ktrace_probe_info_t info = { NULL, _name, 0 };       \
     __USED __SECTION(".data.rel.ro.ktrace_probe")               \

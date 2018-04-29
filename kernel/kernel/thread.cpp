@@ -128,7 +128,7 @@ thread_t* thread_create_etc(
     unsigned int flags = 0;
 
     if (!t) {
-        t = malloc(sizeof(thread_t));
+        t = static_cast<thread_t*>(malloc(sizeof(thread_t)));
         if (!t)
             return NULL;
         flags |= THREAD_FLAG_FREE_STRUCT;
@@ -577,13 +577,14 @@ void thread_kill(thread_t* t) {
     t->signals |= THREAD_SIGNAL_KILL;
     smp_mb();
 
+    bool local_resched = false;
+
     /* we are killing ourself */
     if (t == get_current_thread())
         goto done;
 
     /* general logic is to wake up the thread so it notices it had a signal delivered to it */
 
-    bool local_resched = false;
     switch (t->state) {
     case THREAD_INITIAL:
         /* thread hasn't been started yet.
@@ -922,8 +923,8 @@ zx_status_t thread_sleep_etc(zx_time_t deadline, bool interruptable) {
     }
 
     /* set a one shot timer to wake us up and reschedule */
-    uint64_t slack = sleep_slack(deadline, now);
-    timer_set(&timer, deadline, TIMER_SLACK_LATE, slack, thread_sleep_handler, current_thread);
+    timer_set(&timer, deadline,
+        TIMER_SLACK_LATE, sleep_slack(deadline, now), thread_sleep_handler, current_thread);
 
     current_thread->state = THREAD_SLEEPING;
     current_thread->blocked_status = ZX_OK;
@@ -1300,9 +1301,11 @@ void ktrace_report_live_threads(void) {
     list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
         DEBUG_ASSERT(t->magic == THREAD_MAGIC);
         if (t->user_tid) {
-            ktrace_name(TAG_THREAD_NAME, t->user_tid, t->user_pid, t->name);
+            ktrace_name(TAG_THREAD_NAME,
+                static_cast<uint32_t>(t->user_tid), static_cast<uint32_t>(t->user_pid), t->name);
         } else {
-            ktrace_name(TAG_KTHREAD_NAME, (uint32_t)(uintptr_t)t, 0, t->name);
+            ktrace_name(TAG_KTHREAD_NAME,
+                static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t)), 0, t->name);
         }
     }
     THREAD_UNLOCK(state);
@@ -1317,7 +1320,7 @@ typedef struct thread_backtrace {
 static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) {
     if (!is_kernel_address((uintptr_t)ptr) ||
         (ptr < t->stack) ||
-        (ptr > (t->stack + t->stack_size - sizeof(void*)))) {
+        (ptr > (static_cast<char*>(t->stack) + t->stack_size - sizeof(void*)))) {
         return ZX_ERR_NOT_FOUND;
     }
     memcpy(out, ptr, sz);
@@ -1336,7 +1339,7 @@ static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb
     }
     size_t n = 0;
     for (; n < THREAD_BACKTRACE_DEPTH; n++) {
-        if (thread_read_stack(t, fp + 8, &pc, sizeof(void*))) {
+        if (thread_read_stack(t, static_cast<char*>(fp) + 8, &pc, sizeof(void*))) {
             break;
         }
         tb->pc[n] = pc;

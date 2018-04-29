@@ -186,7 +186,7 @@ static inline void mutex_release_internal(mutex_t* m, bool reschedule, bool thre
         panic("bad state in mutex release %p, current thread %p\n", m, ct);
     }
 
-    ktrace(TAG_KWAIT_WAKE, (uintptr_t)&m->wait >> 32, (uintptr_t)&m->wait, 1, 0);
+    ktrace_ptr(TAG_KWAIT_WAKE, &m->wait, 1, 0);
 
     // boost the priority of the new thread we're waking
     // if the wait queue is empty, it'll return -1 and we'll deboost the thread if

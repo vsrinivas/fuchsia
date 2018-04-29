@@ -79,7 +79,7 @@ void cmdline_append(const char* data) {
                 ++__kernel_cmdline_count;
             }
         }
-        __kernel_cmdline[i++] = c;
+        __kernel_cmdline[i++] = static_cast<char>(c);
     }
 
     // ensure a double-\0 terminator
@@ -129,7 +129,8 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default) {
     }
 
     char* end;
-    long int value = strtol(value_str, &end, 0);
+    auto res = strtol(value_str, &end, 0);
+    uint32_t value =  (res < 0) ? _default : static_cast<uint32_t>(res);
     if (*end != '\0') {
         return _default;
     }

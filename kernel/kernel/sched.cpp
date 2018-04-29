@@ -759,7 +759,7 @@ void sched_resched_internal(void) {
 
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-    DEBUG_ASSERT_MSG(current_thread->state != THREAD_RUNNING, "state %u\n", current_thread->state);
+    DEBUG_ASSERT_MSG(current_thread->state != THREAD_RUNNING, "state %d\n", current_thread->state);
     DEBUG_ASSERT(!arch_in_int_handler());
 
     CPU_STATS_INC(reschedules);

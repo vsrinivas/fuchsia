@@ -31,16 +31,14 @@
 #define LOCAL_TRACE 0
 
 /* a global state structure, aligned on cpu cache line to minimize aliasing */
-struct mp_state mp __CPU_ALIGN = {
-    .hotplug_lock = MUTEX_INITIAL_VALUE(mp.hotplug_lock),
-    .ipi_task_lock = SPIN_LOCK_INITIAL_VALUE,
-};
+struct mp_state mp __CPU_ALIGN;
 
 /* Helpers used for implementing mp_sync */
 struct mp_sync_context;
 static void mp_sync_task(void* context);
 
 void mp_init(void) {
+    mutex_init(&mp.hotplug_lock);
     mp.ipi_task_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < countof(mp.ipi_task_list); ++i) {
         list_initialize(&mp.ipi_task_list[i]);
@@ -88,7 +86,7 @@ struct mp_sync_context {
 };
 
 static void mp_sync_task(void* raw_context) {
-    struct mp_sync_context* context = raw_context;
+    auto context = reinterpret_cast<mp_sync_context*>(raw_context);
     context->task(context->task_context);
     /* use seq-cst atomic to ensure this update is not seen before the
      * side-effects of context->task */
@@ -223,7 +221,7 @@ static void mp_unplug_trampoline(void) {
      * here. */
 
     thread_t* ct = get_current_thread();
-    event_t* unplug_done = ct->arg;
+    auto unplug_done = reinterpret_cast<event_t*>(ct->arg);
 
     cpu_num_t cpu_num = arch_curr_cpu_num();
     sched_transition_off_cpu(cpu_num);
