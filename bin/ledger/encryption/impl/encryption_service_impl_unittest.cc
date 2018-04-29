@@ -6,17 +6,17 @@
 
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/ledger/storage/fake/fake_object.h"
 
 namespace encryption {
 namespace {
 
-class EncryptionServiceTest : public gtest::TestWithMessageLoop {
+class EncryptionServiceTest : public gtest::TestWithLoop {
  public:
   EncryptionServiceTest()
-      : encryption_service_(message_loop_.async(), "namespace_id") {}
+      : encryption_service_(dispatcher(), "namespace_id") {}
 
  protected:
   void EncryptCommit(std::string commit_storage,

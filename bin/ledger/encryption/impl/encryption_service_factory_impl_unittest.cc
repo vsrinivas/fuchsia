@@ -4,16 +4,16 @@
 
 #include "peridot/bin/ledger/encryption/impl/encryption_service_factory_impl.h"
 
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 
 namespace encryption {
 namespace {
 
-using EncryptionServiceFactoryTest = gtest::TestWithMessageLoop;
+using EncryptionServiceFactoryTest = gtest::TestWithLoop;
 
 TEST_F(EncryptionServiceFactoryTest, MakeEncryptionService) {
-  EncryptionServiceFactoryImpl factory(message_loop_.async());
+  EncryptionServiceFactoryImpl factory(dispatcher());
   EXPECT_TRUE(factory.MakeEncryptionService("namespace_id"));
 }
 
