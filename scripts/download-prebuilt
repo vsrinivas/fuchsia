@@ -110,16 +110,17 @@ EOF
 download_package() {
   local -r package="$1" version="$2" download_file="$3"
   local -r url="${URL_PREFIX}/${package}/${PLATFORM}/${version}"
+  local -r download_file_with_dir="${DOWNLOAD_DIR}/${download_file}"
 
   # If the stamp file says it's already in place, do nothing more.
   verify_stamp "$package" "$version" "$download_file" && return
 
-  rm -f -- "$download_file"
+  rm -f -- "$download_file_with_dir"
   echo "Downloading $url"
   curl --progress-bar -continue-at=- --location \
-       --create-dirs --output "$download_file" "$url" || return
+       --create-dirs --output "$download_file_with_dir" "$url" || return
 
-  verify_file "$download_file" "$version" || {
+  verify_file "$download_file_with_dir" "$version" || {
     echo >&2 "*** VERIFICATION ERROR ***"
     echo >&2 "*** VERIFICATION ERROR *** $download_file from $url"
     echo >&2 "*** VERIFICATION ERROR *** Not using the file!"
@@ -127,12 +128,12 @@ download_package() {
   }
 
   if [[ "$download_file" == *.zip ]]; then
-    local -r dir="${download_file%.zip}"
+    local -r dir="${download_file_with_dir%.zip}"
     rm -rf -- "$dir"
-    echo "Unpacking $zip"
-    unzip -q -d "$dir" "$zip" || return
+    echo "Unpacking $download_file"
+    unzip -q -d "$dir" "$download_file_with_dir" || return
   else
-    mv -f "${download_file%.new}" "$download_file"
+    mv -f "${download_file_with_dir%.new}" "$download_file_with_dir"
   fi
 
   update_stamp "$package" "$version" "$download_file"
@@ -149,7 +150,6 @@ for_each_package() {
       # These are standalone executables, not subdirectories.
       package="${package%/*}"
       download_file="${package#tools/}.new"
-      "$@" "$package" "$version" "$download_file" || status=$?
       ;;
     */${PLATFORM})
       package="${package%/*}"
