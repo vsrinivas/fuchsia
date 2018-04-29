@@ -67,12 +67,12 @@ static zx_status_t gicv3_get_gicv(paddr_t* gicv_paddr) {
     return ZX_ERR_NOT_FOUND;
 }
 
-static uint64_t gicv3_set_vector(uint32_t vector) {
+static uint64_t gicv3_get_lr_from_vector(uint32_t vector) {
     return (vector & ICH_LR_VIRTUAL_ID_MASK) | ICH_LR_GROUP1 | ICH_LR_PENDING;
 }
 
-static uint32_t gicv3_get_vector(uint32_t i) {
-    return gicv3_read_gich_lr(i) & ICH_LR_VIRTUAL_ID_MASK;
+static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
+    return lr & ICH_LR_VIRTUAL_ID_MASK;
 }
 
 static uint32_t gicv3_get_num_lrs() {
@@ -91,8 +91,8 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .read_gich_lr = gicv3_read_gich_lr,
     .write_gich_lr = gicv3_write_gich_lr,
     .get_gicv = gicv3_get_gicv,
-    .set_vector = gicv3_set_vector,
-    .get_vector = gicv3_get_vector,
+    .get_lr_from_vector = gicv3_get_lr_from_vector,
+    .get_vector_from_lr = gicv3_get_vector_from_lr,
     .get_num_lrs = gicv3_get_num_lrs,
 };
 

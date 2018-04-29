@@ -35,7 +35,7 @@ static uint64_t vmpidr_of(uint8_t vpid, uint64_t mpidr) {
 }
 
 static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
-    uint64_t elrs = gic_read_gich_elrs();
+    uint64_t elrs = gich_state->elrs;
     if (elrs == 0) {
         // All list registers are in use, therefore return and indicate that we
         // should raise an IRQ.
@@ -62,7 +62,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
             continue;
         }
         uint32_t lr_index = __builtin_ctzl(elrs);
-        uint64_t lr = gic_set_vector(vector);
+        uint64_t lr = gic_get_lr_from_vector(vector);
         gic_write_gich_lr(lr_index, lr);
         elrs &= ~(1u << lr_index);
     }
@@ -70,12 +70,12 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
     return pending > 0;
 }
 
-static bool gich_active_interrupts(InterruptBitmap* active_interrupts) {
-    active_interrupts->ClearAll();
-    const uint32_t lr_limit = __builtin_ctzl(gic_read_gich_elrs());
+static bool gich_active_interrupts(GichState* gich_state) {
+    gich_state->active_interrupts.ClearAll();
+    const uint32_t lr_limit = __builtin_ctzl(gich_state->elrs);
     for (uint32_t i = 0; i < lr_limit; i++) {
-        uint32_t vector = gic_get_vector(i);
-        active_interrupts->SetOne(vector);
+        uint32_t vector = gic_get_vector_from_lr(gich_state->lr[i]);
+        gich_state->active_interrupts.SetOne(vector);
     }
     return lr_limit > 0;
 }
@@ -152,15 +152,15 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
     gic_write_gich_hcr(GICH_HCR_EN);
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
-    vcpu->gich_state_.elrs = (1u << vcpu->gich_state_.num_lrs) - 1;
+    vcpu->gich_state_.vmcr = 0;
+    vcpu->gich_state_.elrs = gic_read_gich_elrs();
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
     uint64_t mpidr = ARM64_READ_SYSREG(mpidr_el1);
     vcpu->el2_state_->guest_state.system_state.vmpidr_el2 = vmpidr_of(vpid, mpidr);
     vcpu->el2_state_->host_state.system_state.vmpidr_el2 = mpidr;
-    vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_FMO | HCR_EL2_IMO | HCR_EL2_AMO | HCR_EL2_FB |
-                 HCR_EL2_BSU_IS | HCR_EL2_DC | HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC |
-                 HCR_EL2_TVM | HCR_EL2_RW;
+    vcpu->hcr_ = HCR_EL2_VM | HCR_EL2_PTW | HCR_EL2_IMO | HCR_EL2_FB | HCR_EL2_BSU_IS | HCR_EL2_DC |
+                 HCR_EL2_TWI | HCR_EL2_TWE | HCR_EL2_TSC | HCR_EL2_TVM | HCR_EL2_RW;
 
     *out = fbl::move(vcpu);
     return ZX_OK;
@@ -199,7 +199,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
             status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), curr_hcr);
             running_.store(false);
 
-            has_active_interrupt = gich_active_interrupts(&gich_state_.active_interrupts);
+            has_active_interrupt = gich_active_interrupts(&gich_state_);
         }
         if (status == ZX_ERR_NEXT) {
             // We received a physical interrupt. If it was due to the thread

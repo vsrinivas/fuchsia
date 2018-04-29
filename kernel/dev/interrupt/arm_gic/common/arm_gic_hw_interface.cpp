@@ -78,12 +78,12 @@ zx_status_t gic_get_gicv(paddr_t* gicv_paddr) {
     return gic_ops->get_gicv(gicv_paddr);
 }
 
-uint64_t gic_set_vector(uint32_t vector) {
-    return gic_ops->set_vector(vector);
+uint64_t gic_get_lr_from_vector(uint32_t vector) {
+    return gic_ops->get_lr_from_vector(vector);
 }
 
-uint32_t gic_get_vector(uint32_t i) {
-    return gic_ops->get_vector(i);
+uint32_t gic_get_vector_from_lr(uint64_t lr) {
+    return gic_ops->get_vector_from_lr(lr);
 }
 
 uint32_t gic_get_num_lrs() {

@@ -9,9 +9,9 @@
 #include <zircon/types.h>
 
 #define ICH_LR_VIRTUAL_ID_MASK     UINT32_MAX
-#define ICH_LR_PENDING             (1UL << 62)
+#define ICH_LR_GROUP1              (1ul << 60)
+#define ICH_LR_PENDING             (1ul << 62)
 #define ICH_VTR_LIST_REGS_MASK     0x1f
-#define ICH_LR_GROUP1              (1UL << 60)
 
 __BEGIN_CDECLS;
 

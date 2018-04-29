@@ -64,7 +64,7 @@
 .endm
 
 .macro write_sysreg literal
-    msr \literal, x2
+    msr \literal, x0
     isb
     switch_to_host
     exception_return ZX_OK
