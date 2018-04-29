@@ -13,7 +13,7 @@
 #include "garnet/lib/callback/capture.h"
 #include "garnet/lib/callback/set_when_called.h"
 #include "garnet/lib/callback/waiter.h"
-#include "garnet/lib/gtest/test_with_message_loop.h"
+#include "garnet/lib/gtest/test_with_loop.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fxl/macros.h"
@@ -106,24 +106,23 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerSync);
 };
 
-class LedgerManagerTest : public gtest::TestWithMessageLoop {
+class LedgerManagerTest : public gtest::TestWithLoop {
  public:
   LedgerManagerTest()
       : environment_(
-            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
+            EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
 
   // gtest::TestWithMessageLoop:
   void SetUp() override {
-    gtest::TestWithMessageLoop::SetUp();
+    gtest::TestWithLoop::SetUp();
     std::unique_ptr<FakeLedgerStorage> storage =
-        std::make_unique<FakeLedgerStorage>(message_loop_.async());
+        std::make_unique<FakeLedgerStorage>(dispatcher());
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_,
-        std::make_unique<encryption::FakeEncryptionService>(
-            message_loop_.async()),
+        std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
         std::move(storage), std::move(sync));
     ledger_manager_->BindLedger(ledger_.NewRequest());
     ledger_manager_->BindLedgerDebug(ledger_debug_.NewRequest());
@@ -148,8 +147,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   PagePtr page;
   storage_ptr->should_get_page_fail = true;
   ledger_->GetPage(nullptr, page.NewRequest(),
-                   [this](Status) { message_loop_.PostQuitTask(); });
-  message_loop_.Run();
+                   [this](Status) { QuitLoop(); });
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
@@ -158,8 +157,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   storage_ptr->should_get_page_fail = true;
   ledger_->GetRootPage(page.NewRequest(),
-                       [this](Status) { message_loop_.PostQuitTask(); });
-  message_loop_.Run();
+                       [this](Status) { QuitLoop(); });
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->delete_page_calls.size());
@@ -168,8 +167,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
 
   ledger::PageId id = RandomId();
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest(),
-                   [this](Status) { message_loop_.PostQuitTask(); });
-  message_loop_.Run();
+                   [this](Status) { QuitLoop(); });
+  RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_ptr->create_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->get_page_calls.size());
   EXPECT_EQ(convert::ToString(id.id), storage_ptr->get_page_calls[0]);
@@ -177,8 +176,8 @@ TEST_F(LedgerManagerTest, LedgerImpl) {
   page.Unbind();
   storage_ptr->ClearCalls();
 
-  ledger_->DeletePage(id, [this](Status) { message_loop_.PostQuitTask(); });
-  message_loop_.Run();
+  ledger_->DeletePage(id, [this](Status) { QuitLoop(); });
+  RunLoopUntilIdle();
   EXPECT_EQ(0u, storage_ptr->create_page_calls.size());
   EXPECT_EQ(0u, storage_ptr->get_page_calls.size());
   ASSERT_EQ(1u, storage_ptr->delete_page_calls.size());
@@ -192,11 +191,11 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
   bool ledger_closed = false;
   ledger_.set_error_handler([this, &ledger_closed] {
     ledger_closed = true;
-    message_loop_.PostQuitTask();
+    QuitLoop();
   });
 
   ledger_manager_.reset();
-  message_loop_.Run();
+  RunLoopUntilIdle();
   EXPECT_TRUE(ledger_closed);
 }
 
