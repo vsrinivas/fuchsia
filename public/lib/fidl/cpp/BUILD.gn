@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/package.gni")
-import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+import("//build/fidl/fidl.gni")
 
 sdk_source_set("cpp") {
   sources = [

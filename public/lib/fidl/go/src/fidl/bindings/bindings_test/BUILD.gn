@@ -4,7 +4,7 @@
 
 import("//build/go/go_test.gni")
 import("//build/package.gni")
-import("//garnet/public/lib/fidl/build/fidl/fidl.gni")
+import("//build/fidl/fidl.gni")
 
 fidl("test_fidl") {
   name = "go_fidl_bindings_test"
