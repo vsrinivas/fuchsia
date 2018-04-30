@@ -27,10 +27,10 @@ esac
 
 
 find_cipd() {
-  # If cipd is in the PATH, just take it.  Otherwise, if the Zircon
-  # checkout is part of a jiri checkout that includes //buildtools,
-  # then find cipd there.
-  type -p cipd || type -p "${ZIRCON_ROOT}/../buildtools/cipd"
+  # If the Zircon checkout is part of a jiri checkout that includes
+  # //buildtools, then find cipd there.  Otherwise, if cipd is in
+  # the PATH, take it from there.
+  type -p "${ZIRCON_ROOT}/../buildtools/cipd" || type -p cipd
 }
 
 readonly CIPD="$(find_cipd)" || {
