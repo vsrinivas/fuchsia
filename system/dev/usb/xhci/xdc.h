@@ -23,6 +23,15 @@
 // See XHCI Spec, 7.6.3.2
 #define EP_CTX_MAX_PACKET_SIZE 1024
 
+#define MAX_EP_DEBUG_NAME_LEN  4
+
+typedef enum {
+    XDC_EP_STATE_DEAD = 0,  // device does not exist or has been removed
+    XDC_EP_STATE_RUNNING,   // EP is accepting TRBs on the transfer ring
+    XDC_EP_STATE_HALTED,    // EP halted due to stall
+    XDC_EP_STATE_STOPPED    // EP halt has been cleared, but not yet accepting TRBs
+} xdc_ep_state_t;
+
 typedef struct {
     xhci_transfer_ring_t transfer_ring;
     list_node_t queued_reqs;     // requests waiting to be processed
@@ -31,6 +40,10 @@ typedef struct {
     xhci_transfer_state_t transfer_state;  // transfer state for current_req
     mtx_t lock;
     uint8_t direction;  // USB_DIR_OUT or USB_DIR_IN
+
+    xdc_ep_state_t state;
+
+    char name[MAX_EP_DEBUG_NAME_LEN];  // For debug printing.
 } xdc_endpoint_t;
 
 typedef struct {
@@ -85,3 +98,6 @@ typedef struct {
 
 // TODO(jocelyndang): we should get our own handles rather than borrowing them from XHCI.
 zx_status_t xdc_bind(zx_device_t* parent, zx_handle_t bti_handle, void* mmio);
+
+void xdc_update_configuration_state_locked(xdc_t* xdc) __TA_REQUIRES(xdc->configured_mutex);
+void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) __TA_REQUIRES(ep->lock);

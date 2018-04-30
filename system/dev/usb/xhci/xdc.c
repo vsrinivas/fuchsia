@@ -94,6 +94,8 @@ static zx_status_t xdc_endpoint_ctx_init(xdc_t* xdc, uint32_t ep_idx) {
     list_initialize(&ep->pending_reqs);
     mtx_init(&ep->lock, mtx_plain);
     ep->direction = ep_idx == IN_EP_IDX ? USB_DIR_IN : USB_DIR_OUT;
+    snprintf(ep->name, MAX_EP_DEBUG_NAME_LEN, ep_idx == IN_EP_IDX ? "IN" : "OUT");
+    ep->state = XDC_EP_STATE_RUNNING;
 
     zx_status_t status = xhci_transfer_ring_init(&ep->transfer_ring, xdc->bti_handle,
                                                  TRANSFER_RING_SIZE);
@@ -235,6 +237,8 @@ static void xdc_shutdown(xdc_t* xdc) {
         xdc_endpoint_t* ep = &xdc->eps[i];
 
         mtx_lock(&ep->lock);
+        ep->state = XDC_EP_STATE_DEAD;
+
         usb_request_t* req;
         while ((req = list_remove_tail_type(&ep->pending_reqs, usb_request_t, node)) != NULL) {
             usb_request_complete(req, ZX_ERR_IO_NOT_PRESENT, 0);
@@ -342,10 +346,8 @@ static void xdc_handle_events(xdc_t* xdc) {
     xdc_update_erdp(xdc);
 }
 
-static void xdc_check_configuration_state(xdc_t* xdc) {
+void xdc_update_configuration_state_locked(xdc_t* xdc) {
     uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
-
-    mtx_lock(&xdc->configured_mutex);
 
     if (dcctrl & DCCTRL_DRC) {
         zxlogf(TRACE, "xdc configured exit\n");
@@ -382,8 +384,61 @@ static void xdc_check_configuration_state(xdc_t* xdc) {
             xdc->connected = false;
         }
     }
+}
 
-    mtx_unlock(&xdc->configured_mutex);
+static void xdc_endpoint_set_halt_locked(xdc_t* xdc,
+                                         xdc_endpoint_t* ep) __TA_REQUIRES(ep->lock) {
+    switch (ep->state) {
+    case XDC_EP_STATE_DEAD:
+        return;
+    case XDC_EP_STATE_RUNNING:
+        zxlogf(TRACE, "%s ep transitioned from running to halted\n", ep->name);
+        ep->state = XDC_EP_STATE_HALTED;
+        return;
+    case XDC_EP_STATE_STOPPED:
+        // This shouldn't happen as we don't schedule new TRBs when stopped.
+        zxlogf(ERROR, "%s ep transitioned from stopped to halted\n", ep->name);
+        ep->state = XDC_EP_STATE_HALTED;
+        return;
+    case XDC_EP_STATE_HALTED:
+        return;  // No change in state.
+    default:
+        zxlogf(ERROR, "unknown ep state: %d\n", ep->state);
+        return;
+    }
+}
+
+static void xdc_endpoint_clear_halt_locked(xdc_t* xdc,
+                                           xdc_endpoint_t* ep) __TA_REQUIRES(ep->lock) {
+    switch (ep->state) {
+    case XDC_EP_STATE_DEAD:
+    case XDC_EP_STATE_RUNNING:
+        return;  // No change in state.
+    case XDC_EP_STATE_STOPPED:
+        break;  // Already cleared the halt.
+    case XDC_EP_STATE_HALTED:
+        // The DbC has received the ClearFeature(ENDPOINT_HALT) request from the host.
+        zxlogf(TRACE, "%s ep transitioned from halted to stopped\n", ep->name);
+        ep->state = XDC_EP_STATE_STOPPED;
+        break;
+    default:
+        zxlogf(ERROR, "unknown ep state: %d\n", ep->state);
+        return;
+    }
+
+    // If we get here, we are now in the STOPPED state.
+    // TODO(jocelyndang): transition from STOPPED to RUNNING if we have processed the
+    // error events on the event ring.
+}
+
+void xdc_update_endpoint_state_locked(xdc_t* xdc, xdc_endpoint_t* ep) {
+    uint32_t dcctrl = XHCI_READ32(&xdc->debug_cap_regs->dcctrl);
+    uint32_t bit = ep->direction == USB_DIR_OUT ? DCCTRL_HOT : DCCTRL_HIT;
+    if (dcctrl & bit) {
+        xdc_endpoint_set_halt_locked(xdc, ep);
+    } else {
+        xdc_endpoint_clear_halt_locked(xdc, ep);
+    }
 }
 
 zx_status_t xdc_poll(xdc_t* xdc) {
@@ -399,7 +454,17 @@ zx_status_t xdc_poll(xdc_t* xdc) {
             xdc_handle_events(xdc);
         }
 
-        xdc_check_configuration_state(xdc);
+        mtx_lock(&xdc->configured_mutex);
+        xdc_update_configuration_state_locked(xdc);
+        mtx_unlock(&xdc->configured_mutex);
+
+        // Check if an endpoint has halted or recovered.
+        for (int i = 0; i < NUM_EPS; i++) {
+            xdc_endpoint_t* ep = &xdc->eps[i];
+            mtx_lock(&ep->lock);
+            xdc_update_endpoint_state_locked(xdc, ep);
+            mtx_unlock(&ep->lock);
+        }
 
         zx_nanosleep(zx_deadline_after(POLL_INTERVAL));
     }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xdc.h"
 #include "xdc-transfer.h"
 
 // Returns ZX_OK if the request was scheduled successfully, or ZX_ERR_SHOULD_WAIT
@@ -82,16 +83,27 @@ zx_status_t xdc_queue_transfer(xdc_t* xdc, usb_request_t* req, bool in) {
     mtx_lock(&ep->lock);
 
     mtx_lock(&xdc->configured_mutex);
-    if (!xdc->configured) {
+
+    // Make sure we're recently checked the device state registers.
+    xdc_update_configuration_state_locked(xdc);
+    xdc_update_endpoint_state_locked(xdc, ep);
+
+    if (!xdc->configured || ep->state == XDC_EP_STATE_DEAD) {
         mtx_unlock(&xdc->configured_mutex);
         mtx_unlock(&ep->lock);
         return ZX_ERR_IO_NOT_PRESENT;
     }
     mtx_unlock(&xdc->configured_mutex);
 
-    // TODO(jocelyndang): handle when the endpoint is halted.
-
     list_add_tail(&ep->queued_reqs, &req->node);
+
+    // We can still queue requests for later while the endpoint is halted,
+    // but before scheduling the TRBs we should wait until the halt is
+    // cleared by DbC and we've cleaned up the transfer ring.
+    if (ep->state != XDC_EP_STATE_RUNNING) {
+        mtx_unlock(&ep->lock);
+        return ZX_OK;
+    }
 
     list_node_t invalid_reqs = LIST_INITIAL_VALUE(invalid_reqs);
     xdc_process_transactions_locked(xdc, ep, &invalid_reqs);
