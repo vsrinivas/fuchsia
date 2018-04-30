@@ -679,13 +679,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flatten-future-sink"
-version = "0.1.0"
-dependencies = [
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "fuchsia-app"
 version = "0.1.0"
 dependencies = [
@@ -1058,38 +1051,6 @@ version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.2.40 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "mesh-endpoint"
-version = "0.1.0"
-dependencies = [
- "bytes 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "flatten-future-sink 0.1.0",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "mesh-protocol 0.1.0",
- "mesh-router 0.1.0",
-]
-
-[[package]]
-name = "mesh-protocol"
-version = "0.1.0"
-dependencies = [
- "bytes 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "mesh-router"
-version = "0.1.0"
-dependencies = [
- "bytes 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "failure 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "flatten-future-sink 0.1.0",
- "futures 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "mesh-protocol 0.1.0",
- "slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "timebomb 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
