@@ -69,11 +69,17 @@ static const char* guid_to_type(char* guid) {
     } else if (!strcmp(GUID_FVM_STRING, guid)) {
         return "fuchsia-fvm";
     } else if (!strcmp(GUID_ZIRCON_A_STRING, guid)) {
-        return "fuchsia-zircon-a";
+        return "zircon-a";
     } else if (!strcmp(GUID_ZIRCON_B_STRING, guid)) {
-        return "fuchsia-zircon-b";
+        return "zircon-b";
     } else if (!strcmp(GUID_ZIRCON_R_STRING, guid)) {
-        return "fuchsia-zircon-r";
+        return "zircon-r";
+    } else if (!strcmp(GUID_SYS_CONFIG_STRING, guid)) {
+        return "sys-config";
+    } else if (!strcmp(GUID_FACTORY_CONFIG_STRING, guid)) {
+        return "factory";
+    } else if (!strcmp(GUID_BOOTLOADER_STRING, guid)) {
+        return "bootloader";
     } else {
         return "unknown";
     }
