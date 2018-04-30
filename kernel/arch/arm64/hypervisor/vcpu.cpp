@@ -7,7 +7,6 @@
 #include <platform.h>
 
 #include <arch/hypervisor.h>
-#include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/ops.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/auto_call.h>
@@ -26,6 +25,7 @@
 #include "el2_cpu_state_priv.h"
 #include "vmexit_priv.h"
 
+static constexpr uint32_t kGichHcrEn = 1u << 0;
 static constexpr uint32_t kSpsrDaif = 0b1111 << 6;
 static constexpr uint32_t kSpsrEl1h = 0b0101;
 static constexpr uint32_t kSpsrNzcv = 0b1111 << 28;
@@ -44,7 +44,7 @@ static bool gich_maybe_interrupt(GuestState* guest_state, GichState* gich_state)
     zx_status_t status;
     uint32_t pending = 0;
     uint32_t vector = kTimerVector;
-    if (gich_state->interrupt_tracker.TryPop(kTimerVector)) {
+    if (gich_state->interrupt_tracker.TryPop(vector)) {
         // We give timer interrupts precedence over all others. If we find a
         // timer interrupt is pending, process it first.
         goto has_timer;
@@ -149,10 +149,10 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, fbl::unique_ptr<Vcpu>* 
         return status;
     }
 
-    gic_write_gich_hcr(GICH_HCR_EN);
+    gic_write_gich_hcr(kGichHcrEn);
     vcpu->gich_state_.active_interrupts.Reset(kNumInterrupts);
     vcpu->gich_state_.num_lrs = gic_get_num_lrs();
-    vcpu->gich_state_.vmcr = 0;
+    vcpu->gich_state_.vmcr = gic_default_gich_vmcr();
     vcpu->gich_state_.elrs = gic_read_gich_elrs();
     vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
     vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;

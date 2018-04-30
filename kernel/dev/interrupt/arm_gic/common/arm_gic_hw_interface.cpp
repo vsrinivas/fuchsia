@@ -19,61 +19,54 @@ void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops) {
     gic_ops = ops;
 }
 
-bool arm_gic_is_registered(void) {
+bool arm_gic_is_registered() {
     return gic_ops == nullptr ? false : true;
 }
 
-/* Returns the GICH_HCR value */
-uint32_t gic_read_gich_hcr(void) {
+uint32_t gic_read_gich_hcr() {
     return gic_ops->read_gich_hcr();
 }
 
-/* Writes to the GICH_HCR register */
 void gic_write_gich_hcr(uint32_t val) {
     return gic_ops->write_gich_hcr(val);
 }
 
-/* Returns the GICH_VTR value */
-uint32_t gic_read_gich_vtr(void) {
+uint32_t gic_read_gich_vtr() {
     return gic_ops->read_gich_vtr();
 }
 
-/* Writes to the GICH_VTR register */
 void gic_write_gich_vtr(uint32_t val) {
     return gic_ops->write_gich_vtr(val);
 }
 
-/* Returns the GICH_VMCR value */
-uint32_t gic_read_gich_vmcr(void) {
+uint32_t gic_default_gich_vmcr() {
+    return gic_ops->default_gich_vmcr();
+}
+
+uint32_t gic_read_gich_vmcr() {
     return gic_ops->read_gich_vmcr();
 }
 
-/* Writes to the GICH_VMCR register */
 void gic_write_gich_vmcr(uint32_t val) {
     return gic_ops->write_gich_vmcr(val);
 }
 
-/* Returns the GICH_ELRS value */
-uint64_t gic_read_gich_elrs(void) {
+uint64_t gic_read_gich_elrs() {
     return gic_ops->read_gich_elrs();
 }
 
-/* Writes to the GICH_ELRS register */
 void gic_write_gich_elrs(uint64_t val) {
     return gic_ops->write_gich_elrs(val);
 }
 
-/* Returns the GICH_LRn value */
 uint64_t gic_read_gich_lr(uint32_t idx) {
     return gic_ops->read_gich_lr(idx);
 }
 
-/* Writes to the GICH_LR register */
 void gic_write_gich_lr(uint32_t idx, uint64_t val) {
     return gic_ops->write_gich_lr(idx, val);
 }
 
-/* Get the GICV physical address */
 zx_status_t gic_get_gicv(paddr_t* gicv_paddr) {
     return gic_ops->get_gicv(gicv_paddr);
 }

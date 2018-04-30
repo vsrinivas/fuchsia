@@ -9,51 +9,45 @@
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 
-/* Returns the GICH_HCR value */
-static uint32_t gicv3_read_gich_hcr(void) {
+static uint32_t gicv3_read_gich_hcr() {
     return arm64_el2_gicv3_read_gich_hcr();
 }
 
-/* Writes to the GICH_HCR register */
 static void gicv3_write_gich_hcr(uint32_t val) {
     arm64_el2_gicv3_write_gich_hcr(val);
 }
 
-/* Returns the GICH_VTR value */
-static uint32_t gicv3_read_gich_vtr(void) {
+static uint32_t gicv3_read_gich_vtr() {
     return arm64_el2_gicv3_read_gich_vtr();
 }
 
-/* Writes to the GICH_VTR register */
 static void gicv3_write_gich_vtr(uint32_t val) {
     arm64_el2_gicv3_write_gich_vtr(val);
 }
 
-/* Returns the GICH_VMCR value */
-static uint32_t gicv3_read_gich_vmcr(void) {
+static uint32_t gicv3_default_gich_vmcr() {
+    return ICH_VMCR_VPMR_MASK | ICH_VMCR_VENG1;
+}
+
+static uint32_t gicv3_read_gich_vmcr() {
     return arm64_el2_gicv3_read_gich_vmcr();
 }
 
-/* Writes to the GICH_VMCR register */
 static void gicv3_write_gich_vmcr(uint32_t val) {
     arm64_el2_gicv3_write_gich_vmcr(val);
 }
 
-/* Returns the GICH_ELRS value */
-static uint64_t gicv3_read_gich_elrs(void) {
+static uint64_t gicv3_read_gich_elrs() {
     return arm64_el2_gicv3_read_gich_elrs();
 }
 
-/* Writes to the GICH_ELRS register */
 static void gicv3_write_gich_elrs(uint64_t val) {
 }
 
-/* Returns the GICH_LRn value */
 static uint64_t gicv3_read_gich_lr(uint32_t idx) {
     return arm64_el2_gicv3_read_gich_lr(idx);
 }
 
-/* Writes to the GICH_LR register */
 static void gicv3_write_gich_lr(uint32_t idx, uint64_t val) {
     arm64_el2_gicv3_write_gich_lr(val, idx);
 }
@@ -84,6 +78,7 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .write_gich_hcr = gicv3_write_gich_hcr,
     .read_gich_vtr = gicv3_read_gich_vtr,
     .write_gich_vtr = gicv3_write_gich_vtr,
+    .default_gich_vmcr = gicv3_default_gich_vmcr,
     .read_gich_vmcr = gicv3_read_gich_vmcr,
     .write_gich_vmcr = gicv3_write_gich_vmcr,
     .read_gich_elrs = gicv3_read_gich_elrs,
@@ -96,10 +91,10 @@ static const struct arm_gic_hw_interface_ops gic_hw_register_ops = {
     .get_num_lrs = gicv3_get_num_lrs,
 };
 
-void gicv3_hw_interface_register(void) {
+void gicv3_hw_interface_register() {
     arm_gic_hw_interface_register(&gic_hw_register_ops);
 }
 
-bool gicv3_is_gic_registered(void) {
+bool gicv3_is_gic_registered() {
     return arm_gic_is_registered();
 }
