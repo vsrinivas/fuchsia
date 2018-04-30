@@ -399,6 +399,7 @@ TOOLS := $(BUILDDIR)/tools
 FIDL := $(TOOLS)/fidlc
 MKBOOTFS := $(TOOLS)/mkbootfs
 ABIGEN := $(TOOLS)/abigen
+ZBI := $(TOOLS)/zbi
 
 # set V=1 in the environment if you want to see the full command line of every command
 ifeq ($(V),1)

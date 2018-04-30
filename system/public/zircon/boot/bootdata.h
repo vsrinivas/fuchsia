@@ -286,6 +286,10 @@ __END_CDECLS;
 //lsw of sha256("bootfs")
 #define BOOTFS_MAGIC (0xa56d3ff9)
 
+#define BOOTFS_PAGE_SIZE (4096)
+#define BOOTFS_PAGE_ALIGN(size) \
+    (((size) + BOOTFS_PAGE_SIZE - 1) & -BOOTFS_PAGE_SIZE)
+
 #define BOOTFS_MAX_NAME_LEN 256
 
 typedef struct bootfs_header {

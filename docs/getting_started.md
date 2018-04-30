@@ -162,17 +162,17 @@ for the system to boot (the device manager, some device drivers, etc).  The kern
 is capable of including a second bootfs image which is provided by QEMU or the
 bootloader as a ramdisk image.
 
-To create such a bootfs image, use the mkbootfs tool that's generated as part of
+To create such a bootfs image, use the zbi tool that's generated as part of
 the build.  It can assemble a bootfs image for either source directories (in which
 case every file in the specified directory and its subdirectories are included) or
 via a manifest file which specifies on a file-by-file basis which files to include.
 
 ```
-$BUILDDIR/tools/mkbootfs -o extra.bootfs @/path/to/directory
+$BUILDDIR/tools/zbi -o extra.bootfs @/path/to/directory
 
 echo "issue.txt=/etc/issue" > manifest
 echo "etc/hosts=/etc/hosts" >> manifest
-$BUILDDIR/tools/mkbootfs -o extra.bootfs manifest
+$BUILDDIR/tools/zbi -o extra.bootfs manifest
 ```
 
 On the booted Zircon system, the files in the bootfs will appear under /boot, so

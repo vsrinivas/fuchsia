@@ -151,7 +151,7 @@ $(BUILDDIR)/%.id: $(BUILDDIR)/%
 # EXTRA_USER_MANIFEST_LINES is a space-separated list of
 # </boot-relative-path>=<local-host-path> entries to add to USER_MANIFEST.
 # This lets users add files to the bootfs via make without needing to edit the
-# manifest or call mkbootfs directly.
+# manifest or call zbi directly.
 ifneq ($(EXTRA_USER_MANIFEST_LINES),)
 USER_MANIFEST_LINES += $(EXTRA_USER_MANIFEST_LINES)
 $(info EXTRA_USER_MANIFEST_LINES = $(EXTRA_USER_MANIFEST_LINES))
@@ -189,12 +189,12 @@ user-only: sysroot
 endif
 
 .PHONY: kernel-only
-kernel-only: kernel 
+kernel-only: kernel
 
-$(USER_BOOTDATA): $(MKBOOTFS) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
+$(USER_BOOTDATA): $(ZBI) $(USER_MANIFEST) $(USER_MANIFEST_DEPS) $(ADDITIONAL_BOOTDATA_ITEMS)
 	$(call BUILDECHO,generating $@)
 	@$(MKDIR)
-	$(NOECHO)$(MKBOOTFS) --target=boot -c -o $(USER_BOOTDATA) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
+	$(NOECHO)$(ZBI) --target=boot -c -o $(USER_BOOTDATA) $(USER_MANIFEST) $(ADDITIONAL_BOOTDATA_ITEMS)
 
 GENERATED += $(USER_BOOTDATA)
 
