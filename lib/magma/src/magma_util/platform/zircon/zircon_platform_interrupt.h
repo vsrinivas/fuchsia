@@ -23,12 +23,12 @@ public:
     }
 
     void Signal() override {
-        zx_irq_destroy(handle_.get());
+        zx_interrupt_destroy(handle_.get());
     }
 
     bool Wait() override
     {
-        zx_status_t status = zx_irq_wait(handle_.get(), nullptr);
+        zx_status_t status = zx_interrupt_wait(handle_.get(), nullptr);
         if (status != ZX_OK)
             return DRETF(false, "zx_irq_wait failed (%d)", status);
         return true;
