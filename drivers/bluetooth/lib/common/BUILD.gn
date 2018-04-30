@@ -16,6 +16,8 @@ source_set("common") {
     "manufacturer_names.h",
     "optional.h",
     "packet_view.h",
+    "run_or_post.cc",
+    "run_or_post.h",
     "run_task_sync.cc",
     "run_task_sync.h",
     "slab_allocator.cc",
@@ -51,6 +53,7 @@ source_set("tests") {
     "manufacturer_names_unittest.cc",
     "optional_unittest.cc",
     "packet_view_unittest.cc",
+    "run_or_post_unittest.cc",
     "run_task_sync_unittest.cc",
     "slab_allocator_traits_unittest.cc",
     "slab_allocator_unittest.cc",
@@ -63,5 +66,6 @@ source_set("tests") {
     ":common",
     "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
   ]
 }
