@@ -110,16 +110,16 @@ zx_status_t GicDistributor::Init(Guest* guest, GicVersion version) {
 
     // Map the redistributor RD Base
     status =
-        guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3ReDistributorPhysBase,
-                             kGicv3ReDistributorSize, 0, this);
+        guest->CreateMapping(TrapType::MMIO_SYNC, kGicv3RedistributorPhysBase,
+                             kGicv3RedistributorSize, 0, this);
     if (status != ZX_OK) {
       return status;
     }
 
     // Also map the redistributor SGI Base
     status = guest->CreateMapping(TrapType::MMIO_SYNC,
-                                  kGicv3ReDistributor_SGIPhysBase,
-                                  kGicv3ReDistributor_SGISize, 0, this);
+                                  kGicv3RedistributorSgiPhysBase,
+                                  kGicv3RedistributorSgiSize, 0, this);
   }
   return status;
 }

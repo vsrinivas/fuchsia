@@ -30,15 +30,15 @@ static constexpr uint64_t kGicv2DistributorSize             = PAGE_SIZE;
 static constexpr uint64_t kGicv3DistributorPhysBase         = 0xe82b0000;
 static constexpr uint64_t kGicv3DistributorSize             = 0x10000;
 
-// For GICv3, currently assuming we are running only 1 CPU, in future when we have multiple
-// core support we need to add the other Redistributor regions as well
-// GIC v3 Redistributor memory range.
-static constexpr uint64_t kGicv3ReDistributorPhysBase       = 0xe8350000; // GICR_RD_BASE
-static constexpr uint64_t kGicv3ReDistributorSize           = 0x10000;
+// GIC v3 assumes we have only 1 VCPU.
+//
+// TODO(PD-135): Add redistributor regions for each additional VCPU.
+static constexpr uint64_t kGicv3RedistributorPhysBase       = 0xe8350000; // GICR_RD_BASE
+static constexpr uint64_t kGicv3RedistributorSize           = 0x10000;
 
 // GIC v3 Redistributor memory range.
-static constexpr uint64_t kGicv3ReDistributor_SGIPhysBase   = 0xe8360000; // GICR_SGI_BASE
-static constexpr uint64_t kGicv3ReDistributor_SGISize       = 0x10000;
+static constexpr uint64_t kGicv3RedistributorSgiPhysBase    = 0xe8360000; // GICR_SGI_BASE
+static constexpr uint64_t kGicv3RedistributorSgiSize        = 0x10000;
 
 // IO APIC memory range.
 static constexpr uint64_t kIoApicPhysBase                   = 0xfec00000;
