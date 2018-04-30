@@ -5,19 +5,26 @@
 #[macro_use] extern crate bitfield;
 extern crate byteorder;
 extern crate failure;
+extern crate fuchsia_app as app;
 extern crate fuchsia_async as async;
 extern crate fuchsia_zircon as zx;
 extern crate wlantap_client;
 extern crate fidl_wlan_device;
+extern crate fidl_wlan_service;
 extern crate fidl_wlantap;
 extern crate futures;
 
-use std::sync::{Arc, Mutex};
+use async::TimeoutExt;
 use futures::prelude::*;
+use futures::future::{self, Either};
+use std::sync::{Arc, Mutex};
 use wlantap_client::Wlantap;
 use zx::prelude::*;
 
 mod mac_frames;
+
+#[cfg(test)]
+mod test_utils;
 
 fn create_2_4_ghz_band_info() -> fidl_wlan_device::BandInfo {
     fidl_wlan_device::BandInfo{
@@ -81,11 +88,8 @@ impl State {
     }
 }
 
-const CHANNEL: u8 = 6;
-const BSS_ID: [u8; 6] = [ 0x62, 0x73, 0x73, 0x62, 0x73, 0x73 ];
-
-fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel,
-               proxy: &fidl_wlantap::WlantapPhyProxy)
+fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel, bss_id: &[u8; 6],
+               ssid: &str, proxy: &fidl_wlantap::WlantapPhyProxy)
     -> Result<(), failure::Error>
 {
     frame_buf.clear();
@@ -95,8 +99,8 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel,
                 frame_control: mac_frames::FrameControl(0), // will be filled automatically
                 duration: 0,
                 addr1: mac_frames::BROADCAST_ADDR.clone(),
-                addr2: BSS_ID.clone(),
-                addr3: BSS_ID.clone(),
+                addr2: bss_id.clone(),
+                addr3: bss_id.clone(),
                 seq_control: mac_frames::SeqControl {
                     frag_num: 0,
                     seq_num: 123
@@ -108,9 +112,9 @@ fn send_beacon(frame_buf: &mut Vec<u8>, channel: &fidl_wlan_device::Channel,
                 beacon_interval: 100,
                 capability_info: 0,
             })?
-        .ssid("fakenet".as_bytes())?
+        .ssid(ssid.as_bytes())?
         .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
-        .dsss_parameter_set(CHANNEL)?;
+        .dsss_parameter_set(channel.primary)?;
 
     let rx_info = &mut fidl_wlantap::WlanRxInfo {
         rx_flags: 0,
@@ -158,9 +162,10 @@ fn main() -> Result<(), failure::Error> {
                 eprintln!("beacon timer callback: Failed to lock mutex: {:?}", e);
                 zx::Status::INTERNAL
             })?;
-            if state.current_channel.primary == CHANNEL {
+            if state.current_channel.primary == 6 {
                 eprintln!("sending beacon!");
-                send_beacon(&mut state.frame_buf, &state.current_channel, &proxy);
+                send_beacon(&mut state.frame_buf, &state.current_channel,
+                            &[0x62, 0x73, 0x73, 0x62, 0x73, 0x73], "fakenet", &proxy).unwrap();
             }
             Ok(())
         })
@@ -168,4 +173,76 @@ fn main() -> Result<(), failure::Error> {
         .recover::<Never, _>(|e| eprintln!("error running beacon timer: {:?}", e));
     exec.run_singlethreaded(event_listener.join(beacon_timer));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
+    const SSID_FOO: &str = "foo";
+    const BSS_BAR: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x72];
+    const SSID_BAR: &str = "bar";
+    const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
+    const SSID_BAZ: &str = "baz";
+
+    #[test]
+    fn simulate_scan() {
+        let mut exec = async::Executor::new().expect("Failed to create an executor");
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+
+        let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
+            .expect("Failed to connect to wlan service");
+
+        let proxy = helper.proxy();
+        let scan_result = scan(&mut exec, &wlan_service, &proxy, &mut helper);
+
+        assert_eq!(fidl_wlan_service::ErrCode::Ok, scan_result.error.code,
+                   "The error message was: {}", scan_result.error.description);
+        let mut aps:Vec<_> = scan_result.aps.expect("Got empty scan results")
+            .into_iter().map(|ap| (ap.ssid, ap.bssid)).collect();
+        aps.sort();
+        let mut expected_aps = [
+            ( SSID_FOO.to_string(), BSS_FOO.to_vec() ),
+            ( SSID_BAR.to_string(), BSS_BAR.to_vec() ),
+            ( SSID_BAZ.to_string(), BSS_BAZ.to_vec() ),
+        ];
+        expected_aps.sort();
+        assert_eq!(&expected_aps, &aps[..]);
+    }
+
+    fn scan(exec: &mut async::Executor,
+            wlan_service: &fidl_wlan_service::WlanProxy,
+            phy: &fidl_wlantap::WlantapPhyProxy,
+            helper: &mut test_utils::TestHelper) -> fidl_wlan_service::ScanResult {
+        let mut wlanstack_retry = test_utils::RetryWithBackoff::new(1.seconds());
+        loop {
+            let scan_result = helper.run(exec, 10.seconds(), "receive a scan response",
+               |event| {
+                   match event {
+                       fidl_wlantap::WlantapPhyEvent::SetChannel { args } => {
+                           println!("set channel to {:?}", args.chan);
+                           if args.chan.primary == 1 {
+                               send_beacon(&mut vec![], &args.chan, &BSS_FOO, SSID_FOO, &phy)
+                                   .unwrap();
+                           } else if args.chan.primary == 6 {
+                               send_beacon(&mut vec![], &args.chan, &BSS_BAR, SSID_BAR, &phy)
+                                   .unwrap();
+                           } else if args.chan.primary == 11 {
+                               send_beacon(&mut vec![], &args.chan, &BSS_BAZ, SSID_BAZ, &phy)
+                                   .unwrap();
+                           }
+                       },
+                       _ => {}
+                   }
+               },
+               wlan_service.scan(&mut fidl_wlan_service::ScanRequest { timeout: 5 })).unwrap();
+            if scan_result.error.code == fidl_wlan_service::ErrCode::NotFound {
+                let slept = wlanstack_retry.sleep_unless_timed_out();
+                assert!(slept, "Wlanstack did not recognize the interface in time");
+            } else {
+                return scan_result;
+            }
+        }
+    }
 }

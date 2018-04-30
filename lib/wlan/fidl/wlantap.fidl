@@ -67,6 +67,7 @@ interface WlantapPhy {
   5: -> ConfigureBss(ConfigureBssArgs args);
   // TODO: ConfigureBeacon
   7: -> SetKey(SetKeyArgs args);
+  8: -> WlanmacStart(WlanmacStartArgs args);
 };
 
 struct TxArgs {
@@ -87,4 +88,8 @@ struct ConfigureBssArgs {
 struct SetKeyArgs {
   uint16 wlanmac_id;
   WlanKeyConfig config;
+};
+
+struct WlanmacStartArgs {
+  uint16 wlanmac_id;
 };

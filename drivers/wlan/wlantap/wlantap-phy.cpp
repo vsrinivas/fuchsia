@@ -116,13 +116,19 @@ struct EventSender {
         Send(EventOrdinal::SetKey, &set_key_args_);
     }
 
+    void SendWlanmacStartEvent(uint16_t wlanmac_id) {
+        ::wlantap::WlanmacStartArgs args = { .wlanmac_id = wlanmac_id };
+        Send(EventOrdinal::WlanmacStart, &args);
+    }
+
 private:
     enum class EventOrdinal : uint32_t {
         Tx = wlantap_WlantapPhyTxOrdinal,
         SetChannel = wlantap_WlantapPhySetChannelOrdinal,
         ConfigureBss = wlantap_WlantapPhyConfigureBssOrdinal,
         // TODO: ConfigureBeacon
-        SetKey = wlantap_WlantapPhySetKeyOrdinal
+        SetKey = wlantap_WlantapPhySetKeyOrdinal,
+        WlanmacStart = wlantap_WlantapPhyWlanmacStartOrdinal
     };
 
     template<typename T>
@@ -326,6 +332,8 @@ struct WlantapPhy : wlan_device::Phy, ::wlantap::WlantapPhy, WlantapMac::Listene
 
     virtual void WlantapMacStart(uint16_t wlanmac_id) override {
         printf("WlantapMacStart id=%u\n", wlanmac_id);
+        std::lock_guard<std::mutex> guard(event_sender_lock_);
+        event_sender_.SendWlanmacStartEvent(wlanmac_id);
     }
 
     virtual void WlantapMacStop(uint16_t wlanmac_id) override {
