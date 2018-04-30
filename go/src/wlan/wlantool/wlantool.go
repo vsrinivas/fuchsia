@@ -214,8 +214,8 @@ func main() {
 			return
 		}
 		if connectFlagSet.NArg() != 1 {
-				Usage()
-				return
+			Usage()
+			return
 		}
 		ssid := connectFlagSet.Arg(0)
 		a.Connect(ssid, *connectBSSID, *connectPassPhrase, uint8(*connectScanTimeout))
@@ -239,7 +239,7 @@ func main() {
 		startBSSFlagSet := flag.NewFlagSet(cmdStartBSS, flag.ExitOnError)
 		startBSSBeaconPeriod := startBSSFlagSet.Int("b", 100, "Beacon period")
 		startBSSDTIMPeriod := startBSSFlagSet.Int("d", 1, "DTIM period")
-		startBSSChannel := startBSSFlagSet.Int("c", 6, "Channel")
+		startBSSChannel := startBSSFlagSet.Int("c", 48, "Channel")
 		startBSSFlagSet.Parse(os.Args[2:])
 		if startBSSFlagSet.NArg() != 1 {
 			Usage()
@@ -294,7 +294,7 @@ func IsValidBSSID(bssid string) bool {
 				if c != ':' {
 					fmt.Println("BSSID must be hexadecimal")
 					return false
-				} else if i % 3 != 2 {
+				} else if i%3 != 2 {
 					fmt.Println("BSSID must be of the form xx:xx:xx:xx:xx:xx")
 					return false
 				}
