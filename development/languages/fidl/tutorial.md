@@ -260,7 +260,7 @@ Since the client has nothing to do until the server response arrives, and is don
 You can run the Hello World example like this:
 
 ```
-$ system/bin/echo_client_cpp
+$ /pkgfs/packages/echo2_client_cpp/0/bin/echo2_client_cpp
 ```
 
 You do not need to specifically run the server because the call to `CreateApplication()` in the client will automatically demand-load the server.
