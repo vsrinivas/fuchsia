@@ -56,6 +56,9 @@ struct LogMessage {
 interface Log {
   // Listener listens for logs
   1: Listen(LogListener log_listener, LogFilterOptions? options);
+
+  // Dump all cached logs and then call |Done| function of |LogListener|.
+  2: DumpLogs(LogListener log_listener, LogFilterOptions? options);
 };
 
 // Interface to get and listen to socket from syslogger
@@ -65,7 +68,16 @@ interface LogSink {
   1: Connect(handle<socket> socket);
 };
 
+const uint64 kMaxLogManySize = 16384;
 
 interface LogListener {
+  // Called for single messages.
   1: Log(LogMessage log);
+
+  // Called when |Log| service is serving cached logs.
+  // Max logs size per call is |kMaxLogManySize| bytes.
+  2: LogMany(vector<LogMessage> Log);
+
+  // Would be only called if |DumpLogs| function of |Log| service is called.
+  3: Done();
 };

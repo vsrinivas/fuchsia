@@ -214,8 +214,18 @@ where
 {
     LogListenerImpl {
         state: listener,
+        done: |_, _| {
+            //ignore, only called when dump_logs is called.
+            fok(())
+        },
         log: |listener, message, _| {
             listener.log(&message);
+            fok(())
+        },
+        log_many: |listener, messages, _| {
+            for msg in messages {
+                listener.log(&msg);
+            }
             fok(())
         },
     }
@@ -299,8 +309,8 @@ mod tests {
             l.log(&message);
         }
         let mut expected = "".to_string();
-        for level in vec![
-            "INFO", "WARNING", "ERROR", "FATAL", "INVALID", "INVALID", "VLOG(1)", "VLOG(3)"
+        for level in &[
+            "INFO", "WARNING", "ERROR", "FATAL", "INVALID", "INVALID", "VLOG(1)", "VLOG(3)",
         ] {
             expected.push_str(&format!("[00076.352234][123][321][] {}: hello\n", level));
         }
