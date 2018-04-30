@@ -104,6 +104,7 @@ executable("unittests") {
 
   deps = [
     ":lib",
+    "//garnet/lib/debug_ipc:tests",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

@@ -304,6 +304,25 @@ void WriteReply(const BacktraceReply& reply,
   Serialize(reply.frames, writer);
 }
 
+// Modules ---------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader,
+                 ModulesRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(ModulesRequest), request);
+}
+
+void WriteReply(const ModulesReply& reply,
+                uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
+  Serialize(reply.modules, writer);
+}
+
 // Notifications ---------------------------------------------------------------
 
 void WriteNotifyProcess(const NotifyProcess& notify, MessageWriter* writer) {

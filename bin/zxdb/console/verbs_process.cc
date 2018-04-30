@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
+#include <algorithm>
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/err.h"
@@ -39,8 +40,10 @@ Err AssertRunnableTarget(Target* target) {
 
 // Callback for "run", "attach", "detach" and "stop". The verb affects the
 // message printed to the screen.
-void ProcessCommandCallback(const char* verb, fxl::WeakPtr<Target> target,
-                            bool display_message_on_success, const Err& err) {
+void ProcessCommandCallback(const char* verb,
+                            fxl::WeakPtr<Target> target,
+                            bool display_message_on_success,
+                            const Err& err) {
   if (!display_message_on_success && !err.has_error())
     return;
 
@@ -269,6 +272,9 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  if (!cmd.args().empty())
+    return Err(ErrType::kInput, "\"detach\" takes no parameters.");
+
   // Only print something when there was an error detaching. The console
   // context will watch for Process destruction and print messages for each one
   // in the success case.
@@ -277,6 +283,64 @@ Err DoDetach(ConsoleContext* context, const Command& cmd) {
     // display messages when successfully detaching.
     ProcessCommandCallback("detach", target, false, err);
   });
+  return Err();
+}
+
+// libs ------------------------------------------------------------------------
+
+const char kLibsShortHelp[] = "libs: Show loaded libraries for a process.";
+const char kLibsHelp[] =
+    R"(libs
+
+  Shows the loaded library information for the given process.
+
+Examples
+
+  libs
+  process 2 libs
+)";
+
+// Completion callback for DoLibs().
+void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
+  Console* console = Console::get();
+  if (err.has_error()) {
+    console->Output(err);
+    return;
+  }
+
+  // Sort by load address.
+  std::sort(modules.begin(), modules.end(),
+            [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
+              return a.base < b.base;
+            });
+
+  std::vector<std::vector<std::string>> rows;
+  for (const auto& module : modules) {
+    rows.push_back(std::vector<std::string>{
+        fxl::StringPrintf("0x%" PRIx64, module.base), module.name});
+  }
+
+  OutputBuffer out;
+  FormatColumns({ColSpec(Align::kRight, 0, "Load address", 2),
+                 ColSpec(Align::kLeft, 0, "Name", 1)},
+                rows, &out);
+  console->Output(std::move(out));
+}
+
+Err DoLibs(ConsoleContext* context, const Command& cmd) {
+  // Only a process can be specified.
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.args().empty())
+    return Err(ErrType::kInput, "\"libs\" takes no parameters.");
+
+  err = AssertRunningTarget(context, "libs", cmd.target());
+  if (err.has_error())
+    return err;
+
+  cmd.target()->GetProcess()->GetModules(&OnLibsComplete);
   return Err();
 }
 
@@ -292,6 +356,8 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
       VerbRecord(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp);
   (*verbs)[Verb::kDetach] =
       VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp, kDetachHelp);
+  (*verbs)[Verb::kLibs] =
+      VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp, kLibsHelp);
 }
 
 }  // namespace zxdb

@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/client_object.h"
-#include "garnet/bin/zxdb/client/weak_thunk.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "garnet/public/lib/fxl/memory/weak_ptr.h"

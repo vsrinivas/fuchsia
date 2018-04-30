@@ -9,8 +9,8 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/client/weak_thunk.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -28,6 +28,9 @@ class ProcessImpl : public Process {
   Target* GetTarget() const override;
   uint64_t GetKoid() const override;
   const std::string& GetName() const override;
+  void GetModules(
+      std::function<void(const Err&, std::vector<debug_ipc::Module>)>)
+      const override;
   std::vector<Thread*> GetThreads() const override;
   Thread* GetThreadFromKoid(uint64_t koid) override;
   void SyncThreads(std::function<void()> callback) override;
@@ -53,8 +56,7 @@ class ProcessImpl : public Process {
   // Threads indexed by their thread koid.
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
 
-  std::shared_ptr<WeakThunk<ProcessImpl>> weak_thunk_;
-  // ^ Keep at the bottom to make sure it's destructed last.
+  fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessImpl);
 };

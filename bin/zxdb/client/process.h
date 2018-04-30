@@ -17,6 +17,7 @@
 
 namespace debug_ipc {
 struct MemoryBlock;
+struct Module;
 struct ThreadRecord;
 }
 
@@ -46,6 +47,12 @@ class Process : public ClientObject {
   // Returns the "name" of the process. This is the process object name which
   // is normally based on the file name, but isn't the same as the file name.
   virtual const std::string& GetName() const = 0;
+
+  // Queries the process for the currently-loaded modules (this always
+  // recomputes the list).
+  virtual void GetModules(
+      std::function<void(const Err&, std::vector<debug_ipc::Module>)>)
+      const = 0;
 
   // Returns all threads in the process. This is as of the last update from
   // the system. If the program is currently running, the actual threads may be

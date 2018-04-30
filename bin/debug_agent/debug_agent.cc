@@ -149,6 +149,13 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request,
   }
 }
 
+void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
+                           debug_ipc::ModulesReply* reply) {
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    GetModulesForProcess(proc->process(), &reply->modules);
+}
+
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
   GetProcessTree(&reply->root);

@@ -21,7 +21,7 @@ ProcessImpl::ProcessImpl(TargetImpl* target,
       target_(target),
       koid_(koid),
       name_(name),
-      weak_thunk_(std::make_shared<WeakThunk<ProcessImpl>>(this)) {}
+      weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
   // Send notifications for all destroyed threads.
@@ -50,6 +50,18 @@ const std::string& ProcessImpl::GetName() const {
   return name_;
 }
 
+void ProcessImpl::GetModules(
+    std::function<void(const Err&, std::vector<debug_ipc::Module>)> callback)
+    const {
+  debug_ipc::ModulesRequest request;
+  request.process_koid = koid_;
+  session()->Send<debug_ipc::ModulesRequest, debug_ipc::ModulesReply>(
+      request, [callback](const Err& err, debug_ipc::ModulesReply reply) {
+        if (callback)
+          callback(err, std::move(reply.modules));
+      });
+}
+
 std::vector<Thread*> ProcessImpl::GetThreads() const {
   std::vector<Thread*> result;
   result.reserve(threads_.size());
@@ -65,16 +77,15 @@ Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) {
 void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
-  session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(request, [
-    callback,
-    thunk = std::weak_ptr<WeakThunk<ProcessImpl>>(weak_thunk_)
-  ](const Err& err, debug_ipc::ThreadsReply reply) {
-    if (auto ptr = thunk.lock()) {
-      ptr->thunk->UpdateThreads(reply.threads);
-      if (callback)
-        callback();
-    }
-  });
+  session()->Send<debug_ipc::ThreadsRequest, debug_ipc::ThreadsReply>(
+      request, [ callback, process = weak_factory_.GetWeakPtr() ](
+                   const Err& err, debug_ipc::ThreadsReply reply) {
+        if (process) {
+          process->UpdateThreads(reply.threads);
+          if (callback)
+            callback();
+        }
+      });
 }
 
 void ProcessImpl::Pause() {

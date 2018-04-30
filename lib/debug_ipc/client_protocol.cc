@@ -341,6 +341,27 @@ bool ReadReply(MessageReader* reader,
   return true;
 }
 
+// Modules ---------------------------------------------------------------------
+
+void WriteRequest(const ModulesRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
+  writer->WriteBytes(&request, sizeof(ModulesRequest));
+}
+
+bool ReadReply(MessageReader* reader,
+               ModulesReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  Deserialize(reader, &reply->modules);
+  return true;
+}
+
 // Notifications ---------------------------------------------------------------
 
 bool ReadNotifyProcess(MessageReader* reader, NotifyProcess* process) {

@@ -115,6 +115,14 @@ bool ReadReply(MessageReader* reader,
                BacktraceReply* reply,
                uint32_t* transaction_id);
 
+// Modules.
+void WriteRequest(const ModulesRequest& request,
+                  uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader,
+               ModulesReply* reply,
+               uint32_t* transaction_id);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

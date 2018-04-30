@@ -30,6 +30,7 @@ struct MsgHeader {
     kKill,
     kAttach,
     kDetach,
+    kModules,
     kPause,
     kResume,
     kProcessTree,
@@ -189,6 +190,13 @@ struct BacktraceRequest {
 struct BacktraceReply {
   // Will be empty if the thread doesn't exist or isn't stopped.
   std::vector<StackFrame> frames;
+};
+
+struct ModulesRequest {
+  uint64_t process_koid = 0;
+};
+struct ModulesReply {
+  std::vector<Module> modules;
 };
 
 // Notifications ---------------------------------------------------------------

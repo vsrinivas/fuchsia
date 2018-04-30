@@ -10,14 +10,39 @@
 
 #include "garnet/bin/zxdb/client/err.h"
 #include "garnet/bin/zxdb/client/frame.h"
+#include "garnet/bin/zxdb/client/output_buffer.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+
+namespace {
+
+// Appends the given string to the output, padding with spaces to the width
+// as necessary.
+void AppendPadded(const std::string& str, int width, Align align,
+                  bool is_last_col, std::string* out) {
+  int pad = std::max(0, width - static_cast<int>(str.size()));
+  if (align == Align::kRight)
+    out->append(pad, ' ');
+
+  out->append(str);
+
+  // Padding on the right. Don't add for the last col.
+  if (!is_last_col && align == Align::kLeft)
+    out->append(pad, ' ');
+
+  // Separator after columns for all but the last.
+  if (!is_last_col)
+    out->push_back(' ');
+}
+
+}  // namespace
 
 Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
                         Target* target) {
@@ -299,6 +324,57 @@ std::string DescribeBreakpoint(const ConsoleContext* context,
                            context->IdForBreakpoint(breakpoint),
                            scope.c_str(), enabled, stop.c_str(),
                            breakpoint->GetHitCount(), location.c_str());
+}
+
+void FormatColumns(std::initializer_list<ColSpec> spec,
+                   const std::vector<std::vector<std::string>>& rows,
+                   OutputBuffer* out) {
+  std::vector<int> max;  // Max width of each column.
+
+  // Max widths of headings.
+  bool has_head = false;
+  for (const auto& col : spec) {
+    max.push_back(col.head.size());
+    has_head |= !col.head.empty();
+  }
+
+  // Max widths of contents.
+  for (const auto& row : rows) {
+    FXL_DCHECK(row.size() == max.size()) << "Column spec size doesn't match.";
+    for (size_t i = 0; i < row.size(); i++)
+      max[i] = std::max(max[i], static_cast<int>(row[i].size()));
+  }
+
+  // Apply the max widths.
+  for (size_t i = 0; i < spec.size(); i++) {
+    int max_width = spec.begin()[i].max_width;
+    if (max_width > 0 && max_width < max[i])
+      max[i] = max_width;
+  }
+
+  // Print heading.
+  if (has_head) {
+    std::string head;
+    for (size_t i = 0; i < max.size(); i++) {
+      const ColSpec& col = spec.begin()[i];
+      head.append(col.pad_left, ' ');
+      AppendPadded(col.head, max[i], col.align, i == max.size() - 1, &head);
+    }
+    head.push_back('\n');
+    out->Append(Syntax::kHeading, std::move(head));
+  }
+
+  // Print rows.
+  for (const auto& row : rows) {
+    std::string text;
+    for (size_t i = 0; i < row.size(); i++) {
+      const ColSpec& col = spec.begin()[i];
+      text.append(col.pad_left, ' ');
+      AppendPadded(row[i], max[i], col.align, i == max.size() - 1, &text);
+    }
+    text.push_back('\n');
+    out->Append(Syntax::kNormal, std::move(text));
+  }
 }
 
 }  // namespace zxdb

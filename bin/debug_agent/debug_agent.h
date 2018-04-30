@@ -44,6 +44,8 @@ class DebugAgent : public RemoteAPI {
                debug_ipc::PauseReply* reply) override;
   void OnResume(const debug_ipc::ResumeRequest& request,
                 debug_ipc::ResumeReply* reply) override;
+  void OnModules(const debug_ipc::ModulesRequest& request,
+                 debug_ipc::ModulesReply* reply) override;
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                      debug_ipc::ProcessTreeReply* reply) override;
   void OnThreads(const debug_ipc::ThreadsRequest& request,

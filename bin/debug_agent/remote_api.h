@@ -32,6 +32,9 @@ class RemoteAPI {
   virtual void OnDetach(const debug_ipc::DetachRequest& request,
                         debug_ipc::DetachReply* reply) = 0;
 
+  virtual void OnModules(const debug_ipc::ModulesRequest& request,
+                         debug_ipc::ModulesReply* reply) = 0;
+
   virtual void OnPause(const debug_ipc::PauseRequest& request,
                        debug_ipc::PauseReply* reply) = 0;
 

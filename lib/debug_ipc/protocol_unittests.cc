@@ -383,6 +383,36 @@ TEST(Protocol, BacktraceReply) {
   EXPECT_EQ(initial.frames[1].sp, second.frames[1].sp);
 }
 
+// Modules ---------------------------------------------------------------------
+
+TEST(Protocol, ModulesRequest) {
+  ModulesRequest initial;
+  initial.process_koid = 1234;
+
+  ModulesRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+}
+
+TEST(Protocol, ModulesReply) {
+  ModulesReply initial;
+  initial.modules.resize(2);
+  initial.modules[0].name = "winnt.dll";
+  initial.modules[0].base = 0x1234567890;
+  initial.modules[1].name = "libncurses.so.1.0.0";
+  initial.modules[1].base = 0x1000;
+
+  ModulesReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(2u, second.modules.size());
+  EXPECT_EQ(initial.modules[0].name, second.modules[0].name);
+  EXPECT_EQ(initial.modules[0].base, second.modules[0].base);
+  EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
+  EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
+}
+
 // Notifications ---------------------------------------------------------------
 
 TEST(Protocol, NotifyThread) {
