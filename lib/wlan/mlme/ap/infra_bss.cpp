@@ -447,7 +447,7 @@ bool InfraBss::IsRsn() const {
 
 bool InfraBss::IsHTReady() const {
     // TODO(NET-567): Reflect hardware capabilities and association negotiation
-    return false;
+    return true;
 }
 
 bool InfraBss::IsCbw40RxReady() const {
