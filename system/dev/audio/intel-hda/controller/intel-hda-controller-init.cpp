@@ -9,6 +9,7 @@
 #include "binding.h"
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
+#include "intel-hda-dsp.h"
 #include "intel-hda-stream.h"
 #include "utils.h"
 
@@ -489,9 +490,8 @@ void IntelHDAController::ProbeAudioDSP() {
         return;
     }
 
-    ZX_DEBUG_ASSERT(pp_regs_ == nullptr);
-
     hda_pp_registers_t* pp_regs = nullptr;
+    hda_pp_registers_t* found_regs = nullptr;
     uint8_t* regs_ptr = nullptr;
     unsigned int count = 0;
     uint32_t cap;
@@ -500,41 +500,19 @@ void IntelHDAController::ProbeAudioDSP() {
         pp_regs = reinterpret_cast<hda_pp_registers_t*>(regs_ptr);
         cap = REG_RD(&pp_regs->ppch);
         if ((cap & HDA_CAP_ID_MASK) == HDA_CAP_PP_ID) {
-            pp_regs_ = pp_regs;
+            found_regs = pp_regs;
             break;
         }
         offset = cap & HDA_CAP_PTR_MASK;
         count += 1;
     } while ((count < MAX_CAPS) && (offset != 0));
 
-    if (pp_regs_ == nullptr) {
+    if (found_regs == nullptr) {
         LOG(TRACE, "Pipe processing capability structure not found\n");
         return;
     }
 
-    // Add the Audio DSP device.
-    char dev_name[ZX_DEVICE_NAME_MAX] = { 0 };
-    snprintf(dev_name, sizeof(dev_name), "intel-sst-dsp-%03u", id());
-
-    zx_device_prop_t dsp_props[3];
-    dsp_props[0].id = BIND_PROTOCOL;
-    dsp_props[0].value = ZX_PROTOCOL_IHDA_DSP;
-    dsp_props[1].id = BIND_PCI_VID;
-    dsp_props[1].value = pci_dev_info_.vendor_id;
-    dsp_props[2].id = BIND_PCI_DID;
-    dsp_props[2].value = pci_dev_info_.device_id;
-
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = dev_name;
-    args.ctx = this;
-    args.ops = &DSP_DEVICE_THUNKS;
-    args.proto_id = ZX_PROTOCOL_IHDA_DSP;
-    args.proto_ops = &DSP_PROTO_THUNKS;
-    args.props = dsp_props;
-    args.prop_count = countof(dsp_props);
-
-    device_add(dev_node_, &args, NULL);
+    dsp_ = IntelHDADSP::Create(*this, pp_regs, pci_bti_);
 }
 
 zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {

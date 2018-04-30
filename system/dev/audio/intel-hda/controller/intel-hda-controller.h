@@ -27,12 +27,11 @@
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
+#include "intel-hda-dsp.h"
 #include "utils.h"
 
 namespace audio {
 namespace intel_hda {
-
-class IntelAudioDSP;
 
 class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 public:
@@ -76,9 +75,6 @@ private:
     // Accessor for our mapped registers
     hda_registers_t* regs() const {
         return &reinterpret_cast<hda_all_registers_t*>(mapped_regs_.start())->regs;
-    }
-    hda_pp_registers_t* pp_regs() const {
-        return pp_regs_;
     }
 
     int  IRQThread();
@@ -130,21 +126,11 @@ private:
 
     void ProcessStreamIRQ(uint32_t intsts);
     void ProcessControllerIRQ();
-    void ProcessDspIRQ();
 
     // Thunk for interacting with client channels
     zx_status_t ProcessClientRequest(dispatcher::Channel* channel);
     zx_status_t SnapshotRegs(dispatcher::Channel* channel,
                              const ihda_controller_snapshot_regs_req_t& req);
-
-    // ZX_PROTOCOL_IHDA_DSP protocol thunks
-    void DspGetDevInfo(zx_pcie_device_info_t* out_info);
-    zx_status_t DspGetMmio(zx_handle_t* out_vmo, size_t* out_size);
-    zx_status_t DspGetBti(zx_handle_t* out_handle);
-    void DspEnable();
-    void DspDisable();
-    zx_status_t DspIrqEnable(ihda_dsp_irq_callback_t* callback, void* cookie);
-    void DspIrqDisable();
 
     // Dispatcher framework state
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
@@ -170,7 +156,6 @@ private:
     // PCI Registers and IRQ
     zx::interrupt       irq_;
     fbl::VmoMapper      mapped_regs_;
-    hda_pp_registers_t* pp_regs_ = nullptr;
 
     // A handle to the Bus Transaction Initiator for this PCI device.  Used to
     // grant access to specific regions of physical mememory to the controller
@@ -217,14 +202,10 @@ private:
     fbl::Mutex codec_lock_;
     fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
-    fbl::Mutex dsp_lock_;
-    ihda_dsp_irq_callback_t* dsp_irq_callback_ TA_GUARDED(dsp_lock_) = nullptr;
-    void* dsp_irq_cookie_ TA_GUARDED(dsp_lock_) = nullptr;
+    fbl::RefPtr<IntelHDADSP> dsp_;
 
     static fbl::atomic_uint32_t device_id_gen_;
     static zx_protocol_device_t  CONTROLLER_DEVICE_THUNKS;
-    static zx_protocol_device_t DSP_DEVICE_THUNKS;
-    static ihda_dsp_protocol_ops_t DSP_PROTO_THUNKS;
 };
 
 }  // namespace intel_hda
