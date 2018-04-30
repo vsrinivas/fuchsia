@@ -10,6 +10,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/zx/time.h>
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fxl/functional/make_copyable.h"
@@ -22,6 +23,9 @@
 
 namespace storage {
 namespace fake {
+
+static constexpr zx::duration kTaskDelay = zx::msec(5);
+
 namespace {
 
 storage::ObjectDigest ComputeDigest(fxl::StringView value) {
@@ -72,7 +76,7 @@ void FakePageStorage::GetCommit(
         callback(Status::OK,
                  std::make_unique<FakeCommit>(journals_[commit_id].get()));
       },
-      zx::msec(5));
+      kTaskDelay);
 }
 
 void FakePageStorage::StartCommit(
@@ -200,7 +204,7 @@ void FakePageStorage::GetPiece(
                  std::make_unique<FakeObject>(object_identifier, it->second));
       });
   async::PostDelayedTask(async_, [this] { SendNextObject(); },
-                         zx::msec(5));
+                         kTaskDelay);
 }
 
 void FakePageStorage::GetCommitContents(const Commit& commit,

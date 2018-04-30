@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "lib/backoff/backoff.h"
 #include "lib/fxl/files/scoped_temp_dir.h"
-#include "lib/gtest/test_with_message_loop.h"
+#include "lib/gtest/test_with_loop.h"
 #include "peridot/bin/ledger/coroutine/coroutine_impl.h"
 #include "peridot/bin/ledger/encryption/fake/fake_encryption_service.h"
 #include "peridot/bin/ledger/storage/public/journal.h"
@@ -34,7 +34,7 @@ class TestBackoff : public backoff::Backoff {
   int* get_next_count_;
 };
 
-class TestWithPageStorage : public gtest::TestWithMessageLoop {
+class TestWithPageStorage : public gtest::TestWithLoop {
  public:
   TestWithPageStorage();
   ~TestWithPageStorage() override;
@@ -59,6 +59,8 @@ class TestWithPageStorage : public gtest::TestWithMessageLoop {
 
   ::testing::AssertionResult CreatePageStorage(
       std::unique_ptr<storage::PageStorage>* page_storage);
+
+  fxl::Closure MakeQuitTaskOnce();
 
  private:
   files::ScopedTempDir tmp_dir_;

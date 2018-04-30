@@ -68,7 +68,7 @@ class MergeResolverTest : public test::TestWithPageStorage {
  public:
   MergeResolverTest()
       : environment_(
-            EnvironmentBuilder().SetAsync(message_loop_.async()).Build()) {}
+            EnvironmentBuilder().SetAsync(dispatcher()).Build()) {}
   ~MergeResolverTest() override {}
 
  protected:
@@ -178,7 +178,7 @@ TEST_F(MergeResolverTest, Empty) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(MakeQuitTask());
+  resolver.set_on_empty([this] { QuitLoop(); });
 
   bool called;
   storage::Status status;
@@ -191,8 +191,7 @@ TEST_F(MergeResolverTest, Empty) {
   EXPECT_EQ(2u, ids.size());
 
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
 
   ids.clear();
   page_storage_->GetHeadCommitIds(
@@ -277,15 +276,15 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_NE(ids.end(), std::find(ids.begin(), ids.end(), commit_5));
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
-      std::make_unique<VerifyingMergeStrategy>(message_loop_.async(), commit_5,
-                                               commit_3, commit_2);
+      std::make_unique<VerifyingMergeStrategy>(dispatcher(),
+                                               commit_5, commit_3, commit_2);
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty([this] { message_loop_.QuitNow(); });
+  resolver.set_on_empty([this] { QuitLoop(); });
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
 }
 
 TEST_F(MergeResolverTest, LastOneWins) {
@@ -388,9 +387,9 @@ TEST_F(MergeResolverTest, None) {
 
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
-  resolver.set_on_empty(MakeQuitTask());
-
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  resolver.set_on_empty([this] { QuitLoop(); });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
@@ -427,14 +426,14 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.set_on_empty(callback::SetWhenCalled(&called));
   resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
-  async::PostTask(message_loop_.async(), [&resolver] {
+  async::PostTask(dispatcher(), [&resolver] {
     resolver.SetMergeStrategy(std::make_unique<LastOneWinsMergeStrategy>());
   });
 
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
@@ -451,7 +450,7 @@ TEST_F(MergeResolverTest, UpdateMidResolution) {
 // implies using a fake PageStorage, we don't test the resolution itself, only
 // that backoff is triggered correctly.
 TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
-  storage::fake::FakePageStorage page_storage(message_loop_.async(), "page_id");
+  storage::fake::FakePageStorage page_storage(dispatcher(), "page_id");
 
   int get_next_count = 0;
   bool on_empty_called;
@@ -459,7 +458,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
                          std::make_unique<test::TestBackoff>(&get_next_count));
   resolver.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   auto strategy = std::make_unique<RecordingTestStrategy>();
-  strategy->SetOnMerge(MakeQuitTask());
+  strategy->SetOnMerge([this] { QuitLoop(); });
   resolver.SetMergeStrategy(std::move(strategy));
 
   RunLoopUntilIdle();
@@ -506,8 +505,8 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   watcher->OnNewCommits({}, storage::ChangeSource::SYNC);
 
   // Note we can't use "RunLoopUntilIdle()" because the FakePageStorage delays
-  // inserting tasks into the message loop.
-  RunLoop();
+  // before inserting tasks into the message loop.
+  RunLoopFor(zx::sec(5));
 
   EXPECT_GT(get_next_count, 0);
 }
@@ -541,7 +540,7 @@ TEST_F(MergeResolverTest, AutomaticallyMergeIdenticalCommits) {
 
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  EXPECT_TRUE(resolver.IsEmpty());
   ids.clear();
   page_storage_->GetHeadCommitIds(
       callback::Capture(callback::SetWhenCalled(&called), &status, &ids));
@@ -585,7 +584,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
       callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that the callback was called 2 times.
-  EXPECT_TRUE(RunLoopUntil([&] { return callback_calls >= 2; }));
+  RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
   EXPECT_EQ(2u, callback_calls);
   EXPECT_EQ(ConflictResolutionWaitStatus::CONFLICTS_RESOLVED, wait_status);
@@ -601,12 +600,13 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   callback_calls = 0;
   CreateCommit(ids[0], AddKeyValueToJournal("foo", "baw"));
   CreateCommit(ids[0], AddKeyValueToJournal("foo", "bat"));
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(resolver.IsEmpty());
 
   // Check that callback wasn't called (callback queue cleared after all the
   // callbacks in it were called).
-  EXPECT_FALSE(RunLoopUntilWithTimeout([&] { return callback_calls > 0; },
-                                       fxl::TimeDelta::FromMilliseconds(50)));
+  RunLoopFor(zx::sec(10));
+  EXPECT_EQ(0u, callback_calls);
 }
 
 TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
@@ -628,7 +628,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
       callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that the callback was called 1 times.
-  EXPECT_TRUE(RunLoopUntil([&] { return callback_calls >= 1; }));
+  RunLoopUntilIdle();
   EXPECT_TRUE(resolver.IsEmpty());
   EXPECT_EQ(1u, callback_calls);
   EXPECT_EQ(ConflictResolutionWaitStatus::NO_CONFLICTS, wait_status);
@@ -638,8 +638,8 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<test::TestBackoff>(nullptr));
   resolver.SetMergeStrategy(nullptr);
-  resolver.set_on_empty(MakeQuitTask());
-  EXPECT_TRUE(RunLoopUntil([&] { return !resolver.HasUnfinishedMerges(); }));
+  resolver.set_on_empty([this] { QuitLoop(); });
+  RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 
   // Set up conflict.
@@ -660,14 +660,12 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
 
   std::unique_ptr<VerifyingMergeStrategy> strategy =
       std::make_unique<VerifyingMergeStrategy>(
-          message_loop_.async(), commit_1, commit_2,
+          dispatcher(), commit_1, commit_2,
           storage::kFirstPageCommitId.ToString());
   resolver.SetMergeStrategy(std::move(strategy));
-  resolver.set_on_empty(MakeQuitTask());
+  resolver.set_on_empty([this] { QuitLoop(); });
 
   RunLoopUntilIdle();
-  EXPECT_TRUE(RunLoopUntil([&] { return resolver.IsEmpty(); }));
-
   // VerifyingResolver tells MergeResolver that the conflict is finished, but
   // doesn't touch storage. Thus, there is still two head commits at this point:
   // MergeResolver should be empty (no merge in progress), but a merge should be
@@ -678,9 +676,14 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   std::unique_ptr<LastOneWinsMergeStrategy> new_strategy =
       std::make_unique<LastOneWinsMergeStrategy>();
   resolver.SetMergeStrategy(std::move(new_strategy));
+  // TODO(LE-465): Simplify this so it's less brittle and easier to understand.
+  // The resolver will find the conflict in the first run, then enqueue
+  // async tasks to actually finish the merge, then the "on_empty" callback
+  // will quit the loop, so RunLoopUntilIdle will stop.
   RunLoopUntilIdle();
-  EXPECT_TRUE(RunLoopUntil([&] { return !resolver.HasUnfinishedMerges(); }));
   EXPECT_TRUE(resolver.IsEmpty());
+  // This second runs the tasks enqueued by the first.
+  RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 }
 
