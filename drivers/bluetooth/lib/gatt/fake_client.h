@@ -98,6 +98,7 @@ class FakeClient final : public Client {
   void WriteRequest(att::Handle handle,
                     const common::ByteBuffer& value,
                     att::StatusCallback callback) override;
+  void SetNotificationHandler(NotificationCallback callback) override;
 
   // All callbacks will be posted on this dispatcher to emulate asynchronous
   // behavior.

@@ -1788,6 +1788,72 @@ TEST_F(GATT_ClientTest, ReadRequestError) {
   EXPECT_FALSE(fake_chan()->link_error());
 }
 
+TEST_F(GATT_ClientTest, EmptyNotification) {
+  constexpr att::Handle kHandle = 1;
+
+  bool called = false;
+  client()->SetNotificationHandler(
+      [&](bool ind, auto handle, const auto& value) {
+        called = true;
+        EXPECT_FALSE(ind);
+        EXPECT_EQ(kHandle, handle);
+        EXPECT_EQ(0u, value.size());
+      });
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+    0x1B,       // opcode: notification
+    0x01, 0x00  // handle: 1
+  ));
+
+  RunUntilIdle();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(GATT_ClientTest, Notification) {
+  constexpr att::Handle kHandle = 1;
+
+  bool called = false;
+  client()->SetNotificationHandler(
+      [&](bool ind, auto handle, const auto& value) {
+        called = true;
+        EXPECT_FALSE(ind);
+        EXPECT_EQ(kHandle, handle);
+        EXPECT_EQ("test", value.AsString());
+      });
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+    0x1B,               // opcode: notification
+    0x01, 0x00,         // handle: 1
+    't', 'e', 's', 't'  // value: "test"
+  ));
+
+  RunUntilIdle();
+  EXPECT_TRUE(called);
+}
+
+TEST_F(GATT_ClientTest, Indication) {
+  constexpr att::Handle kHandle = 1;
+
+  bool called = false;
+  client()->SetNotificationHandler(
+      [&](bool ind, auto handle, const auto& value) {
+        called = true;
+        EXPECT_TRUE(ind);
+        EXPECT_EQ(kHandle, handle);
+        EXPECT_EQ("test", value.AsString());
+      });
+
+  fake_chan()->Receive(common::CreateStaticByteBuffer(
+    0x1D,               // opcode: indication
+    0x01, 0x00,         // handle: 1
+    't', 'e', 's', 't'  // value: "test"
+  ));
+
+  // Wait until a confirmation gets sent.
+  EXPECT_TRUE(Expect(common::CreateStaticByteBuffer(0x1E)));
+  EXPECT_TRUE(called);
+}
+
 }  // namespace
 }  // namespace gatt
 }  // namespace btlib

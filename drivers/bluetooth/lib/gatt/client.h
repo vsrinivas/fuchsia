@@ -101,6 +101,14 @@ class Client {
   virtual void WriteRequest(att::Handle handle,
                             const common::ByteBuffer& value,
                             att::StatusCallback callback) = 0;
+
+  // Assigns a callback that will be called when a notification or indication
+  // PDU is received.
+  using NotificationCallback =
+      std::function<void(bool indication,
+                         att::Handle handle,
+                         const common::ByteBuffer& value)>;
+  virtual void SetNotificationHandler(NotificationCallback handler) = 0;
 };
 
 }  // namespace gatt

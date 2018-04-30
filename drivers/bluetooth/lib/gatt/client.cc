@@ -87,9 +87,52 @@ class Impl final : public Client {
   explicit Impl(fxl::RefPtr<att::Bearer> bearer)
       : att_(bearer), weak_ptr_factory_(this) {
     FXL_DCHECK(att_);
+
+    auto handler = [this](auto txn_id, const att::PacketReader& pdu) {
+      FXL_DCHECK(pdu.opcode() == att::kNotification ||
+                 pdu.opcode() == att::kIndication);
+
+      if (pdu.payload_size() < sizeof(att::NotificationParams)) {
+        // Received a malformed notification. Disconnect the link.
+        FXL_VLOG(1) << "gatt: malformed notification/indication PDU";
+        att_->ShutDown();
+        return;
+      }
+
+      bool is_ind = pdu.opcode() == att::kIndication;
+      const auto& params = pdu.payload<att::NotificationParams>();
+      att::Handle handle = le16toh(params.handle);
+
+      // Auto-confirm indications.
+      if (is_ind) {
+        auto pdu = NewPDU(0u);
+        if (pdu) {
+          att::PacketWriter(att::kConfirmation, pdu.get());
+          att_->Reply(txn_id, std::move(pdu));
+        } else {
+          att_->ReplyWithError(txn_id, handle,
+                               att::ErrorCode::kInsufficientResources);
+        }
+      }
+
+      // Run the handler
+      if (notification_handler_) {
+        notification_handler_(
+            is_ind, handle,
+            BufferView(params.value, pdu.payload_size() - sizeof(att::Handle)));
+      } else {
+        FXL_VLOG(2) << "gatt: notification/indication dropped without handler";
+      }
+    };
+
+    not_handler_id_ = att_->RegisterHandler(att::kNotification, handler);
+    ind_handler_id_ = att_->RegisterHandler(att::kIndication, handler);
   }
 
-  ~Impl() override = default;
+  ~Impl() override {
+    att_->UnregisterHandler(not_handler_id_);
+    att_->UnregisterHandler(ind_handler_id_);
+  }
 
  private:
   fxl::WeakPtr<Client> AsWeakPtr() override {
@@ -587,6 +630,10 @@ class Impl final : public Client {
     }
   }
 
+  void SetNotificationHandler(NotificationCallback handler) override {
+    notification_handler_ = std::move(handler);
+  }
+
   // Wraps |callback| in a TransactionCallback that only runs if this Client is
   // still alive.
   att::Bearer::TransactionCallback BindCallback(
@@ -609,8 +656,11 @@ class Impl final : public Client {
       }
     };
   }
-  fxl::RefPtr<att::Bearer> att_;
 
+  fxl::RefPtr<att::Bearer> att_;
+  att::Bearer::HandlerId not_handler_id_;
+  att::Bearer::HandlerId ind_handler_id_;
+  NotificationCallback notification_handler_;
   fxl::WeakPtrFactory<Client> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Impl);

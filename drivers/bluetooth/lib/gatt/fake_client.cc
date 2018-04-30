@@ -95,6 +95,10 @@ void FakeClient::WriteRequest(att::Handle handle,
   }
 }
 
+void FakeClient::SetNotificationHandler(NotificationCallback callback) {
+  // TODO(armansito): implement
+}
+
 }  // namespace testing
 }  // namespace gatt
 }  // namespace btlib

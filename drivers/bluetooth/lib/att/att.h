@@ -326,7 +326,7 @@ using NotificationParams = AttributeData;
 // Handle Value Indication
 constexpr OpCode kIndication = 0x1D;
 constexpr OpCode kConfirmation = 0x1E;
-using IndicationParams = AttributeData;
+using IndicationParams = NotificationParams;
 
 }  // namespace att
 }  // namespace btlib
