@@ -96,7 +96,11 @@ bool VulkanTest::InitVulkan()
     if (found_count != instance_extensions.size())
         return DRETF(false, "failed to find instance extensions");
 
-    std::vector<const char*> layers{"VK_LAYER_LUNARG_standard_validation"};
+    std::vector<const char*> layers;
+#if !defined(MAGMA_USE_SHIM)
+    // Vulkan loader is needed for loading layers.
+    layers.push_back("VK_LAYER_LUNARG_standard_validation");
+#endif
     VkInstanceCreateInfo create_info{
         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // VkStructureType             sType;
         nullptr,                                // const void*                 pNext;
