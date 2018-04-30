@@ -720,6 +720,7 @@ ifneq ($(HOST_PLATFORM),darwin)
 HOST_LDFLAGS += -ldl -lpthread
 endif
 endif
+HOST_LDFLAGS += -static-libstdc++
 # For host tools without C++, ignore the unused arguments.
 HOST_LDFLAGS += -Wno-unused-command-line-argument
 endif
