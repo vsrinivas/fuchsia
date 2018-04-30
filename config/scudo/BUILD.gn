@@ -2,24 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/scudo/scudo.gni")
 import("//build/toolchain/variant.gni")
-
-declare_args() {
-  # Enable the [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
-  # memory allocator for Fuchsia.
-  use_scudo = false
-
-  # Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html)
-  # options (before the `SCUDO_OPTIONS` environment variable is read at
-  # runtime).  *NOTE:* This affects only components using the `scudo`
-  # variant (see GN build argument `select_variant`), and does not affect
-  # anything when the `use_scudo` build flag is set instead.
-  scudo_default_options = [
-    "abort_on_error=1",  # get stacktrace on error
-    "QuarantineSizeKb=0",  # disables quarantine
-    "ThreadLocalQuarantineSizeKb=0",  # disables quarantine
-  ]
-}
 
 # This group is added unconditionally by BUILDCONFIG.gn to pick up the
 # global `use_scudo` build argument.  For fine-grained control, leave
