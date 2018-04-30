@@ -29,7 +29,9 @@ static_library("Object") {
   ]
 
   public_deps = [
+    "../Bitcode",
     "../IR",
+    "../MC/MCParser",
     "../Support",
   ]
 }
