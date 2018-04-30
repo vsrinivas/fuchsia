@@ -72,6 +72,8 @@ void Stroke::Begin(glm::vec2 pt) const {
 }
 
 void Stroke::Extend(std::vector<glm::vec2> pts) const {
+  FXL_DCHECK(!pts.empty());
+
   sketchy::ExtendStrokeCommand extend_stroke;
   extend_stroke.stroke_id = id();
   fidl::VectorPtr<sketchy::Touch> touches;
@@ -82,6 +84,8 @@ void Stroke::Extend(std::vector<glm::vec2> pts) const {
     touches.push_back(touch);
   }
   extend_stroke.touches = std::move(touches);
+  extend_stroke.predicted_touches.resize(0);
+
   // TODO(MZ-269): Populate predicted touches.
   sketchy::Command command;
   command.set_extend_stroke(std::move(extend_stroke));

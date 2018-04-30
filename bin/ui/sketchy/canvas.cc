@@ -200,7 +200,7 @@ bool CanvasImpl::ApplyExtendStrokeCommand(
   for (const auto& touch : *command.touches) {
     pts.push_back({touch.position.x, touch.position.y});
   }
-  return stroke_manager_.ExtendStroke(stroke, pts);
+  return stroke_manager_.ExtendStroke(stroke, std::move(pts));
 }
 
 bool CanvasImpl::ApplyFinishStrokeCommand(

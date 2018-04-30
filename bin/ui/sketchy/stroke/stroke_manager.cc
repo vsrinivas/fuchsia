@@ -68,7 +68,7 @@ bool StrokeManager::ExtendStroke(StrokePtr stroke,
     group->SetNeedsReTessellation();
     dirty_stroke_groups_.insert(group);
   }
-  return stroke->Extend(sampled_pts);
+  return stroke->Extend(std::move(sampled_pts));
 }
 
 bool StrokeManager::FinishStroke(StrokePtr stroke) {

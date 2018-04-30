@@ -26,7 +26,13 @@ ResourceId Canvas::AllocateResourceId() {
 void Canvas::Present(uint64_t time,
                      scenic_lib::Session::PresentCallback callback) {
   if (!commands_->empty()) {
+    FXL_DCHECK(static_cast<bool>(commands_));
     canvas_->Enqueue(std::move(commands_));
+
+    // After being moved, |commands_| is in a "valid but unspecified state";
+    // see http://en.cppreference.com/w/cpp/utility/move.  Calling reset() makes
+    // it safe to continue using.
+    commands_.reset();
   }
   canvas_->Present(time, std::move(callback));
 }
