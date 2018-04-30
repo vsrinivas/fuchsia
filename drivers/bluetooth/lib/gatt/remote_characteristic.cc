@@ -5,6 +5,7 @@
 #include "remote_characteristic.h"
 
 #include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
+#include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
 #include "client.h"
 
@@ -21,6 +22,24 @@ void ReportNotifyStatus(att::Status status, IdType id,
                         async_t* dispatcher) {
   RunOrPost([status, id, cb = std::move(callback)] { cb(status, id); },
             dispatcher);
+}
+
+void NotifyValue(const common::ByteBuffer& value,
+                 const RemoteCharacteristic::ValueCallback& callback,
+                 async_t* dispatcher) {
+  if (!dispatcher) {
+    callback(value);
+    return;
+  }
+
+  auto buffer = common::NewSlabBuffer(value.size());
+  if (buffer) {
+    value.Copy(buffer.get());
+    async::PostTask(dispatcher,
+                    [callback, val = std::move(buffer)] { callback(*val); });
+  } else {
+    FXL_VLOG(1) << "gatt: out of memory!";
+  }
 }
 
 }  // namespace
@@ -268,6 +287,17 @@ void RemoteCharacteristic::ResolvePendingNotifyRequests(att::Status status) {
 
     ReportNotifyStatus(status, id, std::move(req.status_callback),
                        req.dispatcher);
+  }
+}
+
+void RemoteCharacteristic::HandleNotification(const common::ByteBuffer& value) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(client_);
+  FXL_DCHECK(!shut_down_);
+
+  for (const auto& iter : notify_handlers_) {
+    const auto& handler = iter.second;
+    NotifyValue(value, handler.callback, handler.dispatcher);
   }
 }
 

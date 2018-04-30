@@ -88,6 +88,10 @@ class RemoteServiceManager final {
   // Shuts down and cleans up all services.
   void ClearServices();
 
+  // Called by |client_| when a notification or indication is received.
+  void OnNotification(bool ind, att::Handle value_handle,
+                      const common::ByteBuffer& value);
+
   async_t* gatt_dispatcher_;
   std::unique_ptr<Client> client_;
 

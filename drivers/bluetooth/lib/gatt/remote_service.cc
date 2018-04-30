@@ -84,7 +84,6 @@ void RemoteService::ShutDown() {
     }
 
     shut_down_ = true;
-
     rm_handlers = std::move(rm_handlers_);
   }
 
@@ -384,6 +383,25 @@ void RemoteService::CompleteCharacteristicDiscovery(att::Status status) {
   auto pending = std::move(pending_discov_reqs_);
   for (auto& req : pending) {
     ReportCharacteristics(status, std::move(req.callback), req.dispatcher);
+  }
+}
+
+void RemoteService::HandleNotification(att::Handle value_handle,
+                                       const common::ByteBuffer& value) {
+  FXL_DCHECK(IsOnGattThread());
+
+  if (shut_down_)
+    return;
+
+  // Find the characteristic with the given value handle.
+  auto iter = std::lower_bound(characteristics_.begin(), characteristics_.end(),
+                               value_handle,
+                               [](const auto& chr, att::Handle value_handle) {
+                                 return chr.info().value_handle < value_handle;
+                               });
+  if (iter != characteristics_.end() &&
+      iter->info().value_handle == value_handle) {
+    iter->HandleNotification(value);
   }
 }
 

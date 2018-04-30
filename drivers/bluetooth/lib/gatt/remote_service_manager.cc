@@ -54,10 +54,15 @@ RemoteServiceManager::RemoteServiceManager(std::unique_ptr<Client> client,
       weak_ptr_factory_(this) {
   FXL_DCHECK(gatt_dispatcher_);
   FXL_DCHECK(client_);
+
+  client_->SetNotificationHandler(
+      fbl::BindMember(this, &RemoteServiceManager::OnNotification));
 }
 
 RemoteServiceManager::~RemoteServiceManager() {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
+  client_->SetNotificationHandler({});
   ClearServices();
 
   // Resolve all pending requests with an error.
@@ -167,6 +172,23 @@ void RemoteServiceManager::ClearServices() {
   auto services = std::move(services_);
   for (auto& iter : services) {
     iter.second->ShutDown();
+  }
+}
+
+void RemoteServiceManager::OnNotification(bool, att::Handle value_handle,
+                                          const common::ByteBuffer& value) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+
+  // Find the service that |value_handle| belongs to.
+  auto iter = services_.upper_bound(value_handle);
+  if (iter != services_.begin()) --iter;
+
+  // If |value_handle| is within the previous service then we found it.
+  auto& svc = iter->second;
+  FXL_DCHECK(value_handle >= svc->handle());
+
+  if (svc->info().range_end >= value_handle) {
+    svc->HandleNotification(value_handle, value);
   }
 }
 

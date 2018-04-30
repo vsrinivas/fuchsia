@@ -48,6 +48,8 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
   // disconnection or because it was removed by the peer).
   void ShutDown();
 
+  const ServiceData& info() const { return service_data_; }
+
   // Returns the service range start handle. This is used to uniquely identify
   // this service.
   att::Handle handle() const { return service_data_.range_start; }
@@ -181,6 +183,11 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
     FXL_DCHECK(IsOnGattThread());
     return remaining_descriptor_requests_ == 0u;
   }
+
+  // Called by RemoteServiceManager when a notification is received for one of
+  // this service's characteristics.
+  void HandleNotification(att::Handle value_handle,
+                          const common::ByteBuffer& value);
 
   ServiceData service_data_;
 

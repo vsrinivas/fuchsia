@@ -80,6 +80,10 @@ class FakeClient final : public Client {
     write_request_callback_ = std::move(callback);
   }
 
+  // Emulates the receipt of a notification or indication PDU.
+  void SendNotification(bool indicate, att::Handle handle,
+                        const common::ByteBuffer& value);
+
  private:
   // Client overrides:
   fxl::WeakPtr<Client> AsWeakPtr() override;
@@ -132,6 +136,7 @@ class FakeClient final : public Client {
 
   ReadRequestCallback read_request_callback_;
   WriteRequestCallback write_request_callback_;
+  NotificationCallback notification_callback_;
 
   fxl::WeakPtrFactory<FakeClient> weak_ptr_factory_;
 

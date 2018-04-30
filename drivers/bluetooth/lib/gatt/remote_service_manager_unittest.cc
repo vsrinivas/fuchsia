@@ -125,16 +125,17 @@ class GATT_RemoteServiceManagerTest : public ::btlib::testing::TestBase {
     return service;
   }
 
-  void EnableNotifications(fbl::RefPtr<RemoteService> service, IdType chr_id,
-                           att::Status* out_status, IdType* out_id) {
+  void EnableNotifications(
+      fbl::RefPtr<RemoteService> service, IdType chr_id,
+      att::Status* out_status, IdType* out_id,
+      RemoteService::ValueCallback callback = NopValueCallback) {
     FXL_DCHECK(out_status);
     FXL_DCHECK(out_id);
-    service->EnableNotifications(chr_id, NopValueCallback,
+    service->EnableNotifications(chr_id, std::move(callback),
                                  [&](att::Status cb_status, IdType cb_id) {
                                    *out_status = cb_status;
                                    *out_id = cb_id;
                                  });
-
     RunUntilIdle();
   }
 
@@ -1181,6 +1182,85 @@ TEST_F(GATT_RemoteServiceManagerTest, EnableNotificationsRequestManyError) {
   EXPECT_EQ(2, ccc_write_count);
   EXPECT_EQ(4, cb_count);
   EXPECT_TRUE(status);
+}
+
+TEST_F(GATT_RemoteServiceManagerTest, NotificationCallback) {
+  constexpr IdType kId1 = 0;
+  constexpr IdType kId2 = 1;
+
+  ServiceData data(1, 7, kTestServiceUuid1);
+  auto service = SetUpFakeService(data);
+
+  // Set up two characteristics
+  CharacteristicData chr1(Property::kNotify, 2, 3, kTestUuid3);
+  DescriptorData desc1(4, types::kClientCharacteristicConfig);
+
+  CharacteristicData chr2(Property::kIndicate, 5, 6, kTestUuid3);
+  DescriptorData desc2(7, types::kClientCharacteristicConfig);
+
+  SetupCharacteristics(service, {{chr1, chr2}}, {{desc1, desc2}});
+
+  fake_client()->set_write_request_callback(
+      [&](att::Handle, const auto&, auto status_callback) {
+        status_callback(att::Status());
+      });
+
+  IdType handler_id = kInvalidId;
+  att::Status status(HostError::kFailed);
+
+  int chr1_count = 0;
+  auto chr1_cb = [&](const ByteBuffer& value) {
+    chr1_count++;
+    EXPECT_EQ("notify", value.AsString());
+  };
+
+  int chr2_count = 0;
+  auto chr2_cb = [&](const ByteBuffer& value) {
+    chr2_count++;
+    EXPECT_EQ("indicate", value.AsString());
+  };
+
+  // Notify both characteristics which should get dropped.
+  fake_client()->SendNotification(
+      false, 3, common::CreateStaticByteBuffer('n', 'o', 't', 'i', 'f', 'y'));
+  fake_client()->SendNotification(
+      true, 6,
+      common::CreateStaticByteBuffer('i', 'n', 'd', 'i', 'c', 'a', 't', 'e'));
+
+  EnableNotifications(service, kId1, &status, &handler_id, std::move(chr1_cb));
+  ASSERT_TRUE(status);
+  EnableNotifications(service, kId2, &status, &handler_id, std::move(chr2_cb));
+  ASSERT_TRUE(status);
+
+  // Notify characteristic 1.
+  fake_client()->SendNotification(
+      false, 3, common::CreateStaticByteBuffer('n', 'o', 't', 'i', 'f', 'y'));
+  EXPECT_EQ(1, chr1_count);
+  EXPECT_EQ(0, chr2_count);
+
+  // Notify characteristic 2.
+  fake_client()->SendNotification(
+      true, 6,
+      common::CreateStaticByteBuffer('i', 'n', 'd', 'i', 'c', 'a', 't', 'e'));
+  EXPECT_EQ(1, chr1_count);
+  EXPECT_EQ(1, chr2_count);
+
+  // Disable notifications from characteristic 1.
+  status = att::Status(HostError::kFailed);
+  service->DisableNotifications(
+      kId1, handler_id, [&](att::Status cb_status) { status = cb_status; });
+
+  RunUntilIdle();
+  EXPECT_TRUE(status);
+
+  // Notifications for characteristic 1 should get dropped.
+  fake_client()->SendNotification(
+      false, 3, common::CreateStaticByteBuffer('n', 'o', 't', 'i', 'f', 'y'));
+  fake_client()->SendNotification(
+      true, 6,
+      common::CreateStaticByteBuffer('i', 'n', 'd', 'i', 'c', 'a', 't', 'e'));
+  EXPECT_EQ(1, chr1_count);
+  EXPECT_EQ(2, chr2_count);
 }
 
 TEST_F(GATT_RemoteServiceManagerTest, DisableNotificationsAfterShutDown) {

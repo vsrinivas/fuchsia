@@ -127,8 +127,10 @@ class RemoteCharacteristic final {
   // EnableNotifications().
   void ResolvePendingNotifyRequests(att::Status status);
 
-  fxl::ThreadChecker thread_checker_;
+  // Called when a notification is received for this characteristic.
+  void HandleNotification(const common::ByteBuffer& value);
 
+  fxl::ThreadChecker thread_checker_;
   IdType id_;
   CharacteristicData info_;
   DescriptorList descriptors_;

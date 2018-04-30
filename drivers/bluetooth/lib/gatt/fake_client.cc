@@ -95,8 +95,15 @@ void FakeClient::WriteRequest(att::Handle handle,
   }
 }
 
+void FakeClient::SendNotification(bool indicate, att::Handle handle,
+                                  const common::ByteBuffer& value) {
+  if (notification_callback_) {
+    notification_callback_(indicate, handle, value);
+  }
+}
+
 void FakeClient::SetNotificationHandler(NotificationCallback callback) {
-  // TODO(armansito): implement
+  notification_callback_ = std::move(callback);
 }
 
 }  // namespace testing
