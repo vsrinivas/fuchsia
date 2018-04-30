@@ -310,7 +310,7 @@ static zx_status_t nvme_admin_txn(nvme_device_t* nvme, nvme_cmd_t* cmd, nvme_cpl
     if ((r = nvme_admin_sq_put(nvme, cmd)) != ZX_OK) {
         goto done;
     }
-    if ((r = completion_wait(&nvme->admin_signal, zx_deadline_after(ZX_SEC(1)))) != ZX_OK) {
+    if ((r = completion_wait(&nvme->admin_signal, ZX_SEC(1))) != ZX_OK) {
         zxlogf(ERROR, "nvme: admin txn: timed out\n");
         goto done;
     }

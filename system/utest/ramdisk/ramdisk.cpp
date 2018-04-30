@@ -1333,7 +1333,7 @@ static int fifo_wake_thread(void* arg) {
     auto cleanup = fbl::MakeAutoCall([&] { ioctl_ramdisk_wake_up(wake->fd); });
 
     // Wait for the start-up signal
-    zx_status_t rc = completion_wait(&wake->start, wake->deadline);
+    zx_status_t rc = completion_wait_deadline(&wake->start, wake->deadline);
     completion_reset(&wake->start);
     if (rc != ZX_OK) {
         return rc;
