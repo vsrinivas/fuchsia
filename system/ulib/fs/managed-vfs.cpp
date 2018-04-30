@@ -16,7 +16,11 @@ ManagedVfs::ManagedVfs() : is_shutting_down_(false) {}
 ManagedVfs::ManagedVfs(async_t* async) : Vfs(async), is_shutting_down_(false) {}
 
 ManagedVfs::~ManagedVfs() {
-    ZX_DEBUG_ASSERT(connections_.is_empty());
+    if (!connections_.is_empty()) {
+        printf("WARNING: ManagedVfs destroyed with live connections.\n"
+               "         Call ManagedVfs::Shutdown before terminating.\n");
+    }
+    // TODO(US-480): Assert that connections is empty.
 }
 
 // Asynchronously drop all connections.

@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
@@ -144,14 +145,10 @@ bool test_memfs_close_during_access() {
     thrd_t worker;
     ASSERT_EQ(thrd_create(&worker, [](void* arg) {
         DIR* d = (DIR*) arg;
-        while (true) {
-            int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
-            if (fd < 0) {
-                break;
-            }
-            close(fd);
-            unlinkat(dirfd(d), "foo", 0);
-        }
+        int fd = openat(dirfd(d), "foo", O_CREAT | O_RDWR);
+        struct stat st;
+        while (fstat(fd, &st) == 0) {}
+        close(fd);
         return 0;
     }, d), thrd_success);
 
