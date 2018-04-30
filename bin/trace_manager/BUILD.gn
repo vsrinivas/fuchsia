@@ -34,10 +34,11 @@ executable("bin") {
   ]
 }
 
+# This eventually should be replaced by the real target under //zircon/public.
 fidl("trace_link_fidl") {
   name = "trace_link"
   sources = [
-    "//zircon/system/ulib/trace-provider/fidl/trace_link.fidl",
+    "//zircon/system/fidl/tracing/trace_link.fidl",
   ]
 }
 
