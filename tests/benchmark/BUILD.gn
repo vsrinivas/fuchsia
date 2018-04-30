@@ -59,7 +59,6 @@ copy("copy_peridot_benchmarks") {
 
 package("peridot_benchmarks") {
   testonly = true
-  fuchsia_package = true
 
   deps = [":copy_peridot_benchmarks"]
 
