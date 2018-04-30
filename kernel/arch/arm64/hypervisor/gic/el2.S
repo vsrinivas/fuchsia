@@ -47,64 +47,22 @@
 .section .text.el2,"ax",@progbits
 .align 12
 
-.macro switch_to_host
-    msr vttbr_el2, xzr
-    isb
-.endm
-
-.macro exception_return literal
-    mov x0, \literal
-    eret
-.endm
-
 .macro read_sysreg literal
     mrs x0, \literal
-    switch_to_host
-    exception_return x0
+    b el2_gicv3_done
 .endm
 
 .macro write_sysreg literal
     msr \literal, x0
-    isb
-    switch_to_host
-    exception_return ZX_OK
+    b el2_gicv3_done
 .endm
 
-// This macro jumps to the address in the jump table based on
-// x3 - Index to calculate the jump address and an offset
-// We have two diffrent jump tables with different no. of
-// instructions to jump, so the second parameter is to get
-// the right offset i.e. no. of bits to left shift.
-// base_address_of_table + (x3*16 + x3*4) would be the
-// correct address
-.macro sysreg_jump table lshift
+// Branch to an address within a jump table, calculated as follows:
+//   address = table + (reg << 3)
+.macro gic_jump table reg
     adr x9, \table
-    lsl x10, x3, 4
-    lsl x2, x3, \lshift
-    add x10, x10, x2
-    add x9, x9, x10
+    add x9, x9, \reg, lsl 3
     br x9
-.endm
-
-// Each Read or Write to LR register is 2 instructions
-// This macro calculates the correct jump address based on the
-// x1 - LR index
-// base_address_of_table + (x1*8) would be the correct jump address
-.macro lr_jump table
-    adr x9, \table
-    lsl x10, x1, 3
-    add x9, x9, x10
-    br x9
-.endm
-
-.macro read_lr_register reg
-    mrs x0, \reg
-    b .Llr_done
-.endm
-
-.macro write_lr_register reg
-    msr \reg, x0
-    b .Llr_done
 .endm
 
 // x0 - Value to write
@@ -114,34 +72,24 @@
 FUNCTION_LABEL(el2_hvc_sysreg)
     cbnz x2, .write_sys
 
-    // .Lread_sys is a jump table but it uses macros
-    // Each read is at an offset of 5 instructions
-    // The correct jump address for register enum idx is (idx*16 + idx*4)
-    // 2nd parameter to the macro is the no. of bits to left shift to calculate
-    // the latter part of the math
-    sysreg_jump .Lread_sys 2
+    gic_jump .Lread_sys x3
 
 .Lread_sys:
     read_sysreg ICH_HCR_EL2
     read_sysreg ICH_VTR_EL2
     read_sysreg ICH_VMCR_EL2
     read_sysreg ICH_ELRS_EL2
-    b gicv3_read_lr_helper
+    b el2_gicv3_read_lr
 
 .write_sys:
-    // Similar to the read jump table above
-    // Here each write is at an offset of 6 instructions
-    // The correct jump address for register enum idx is (idx*16 + idx*8)
-    // 2nd parameter to the macro is the no. of bits to left shift to calculate
-    // the latter part of the math
-    sysreg_jump .Lwrite_sys 3
+    gic_jump .Lwrite_sys x3
 
 .Lwrite_sys:
     write_sysreg ICH_HCR_EL2
     write_sysreg ICH_VTR_EL2
     write_sysreg ICH_VMCR_EL2
     write_sysreg ICH_ELRS_EL2
-    b gicv3_write_lr_helper
+    b el2_gicv3_write_lr
 
 // uint32_t arm64_el2_gicv3_read_gich_hcr();
 FUNCTION(arm64_el2_gicv3_read_gich_hcr)
@@ -217,50 +165,51 @@ FUNCTION(arm64_el2_gicv3_write_gich_lr)
 END_FUNCTION(arm64_el2_gicv3_write_gich_lr)
 
 // x1 - Index for LR register
-FUNCTION_LABEL(gicv3_read_lr_helper)
-    lr_jump .Llr_read_table
+FUNCTION_LABEL(el2_gicv3_read_lr)
+    gic_jump .Llr_read_table x1
 
 .Llr_read_table:
-    read_lr_register ICH_LR(0)
-    read_lr_register ICH_LR(1)
-    read_lr_register ICH_LR(2)
-    read_lr_register ICH_LR(3)
-    read_lr_register ICH_LR(4)
-    read_lr_register ICH_LR(5)
-    read_lr_register ICH_LR(6)
-    read_lr_register ICH_LR(7)
-    read_lr_register ICH_LR(8)
-    read_lr_register ICH_LR(9)
-    read_lr_register ICH_LR(10)
-    read_lr_register ICH_LR(11)
-    read_lr_register ICH_LR(12)
-    read_lr_register ICH_LR(13)
-    read_lr_register ICH_LR(14)
-    read_lr_register ICH_LR(15)
+    read_sysreg ICH_LR(0)
+    read_sysreg ICH_LR(1)
+    read_sysreg ICH_LR(2)
+    read_sysreg ICH_LR(3)
+    read_sysreg ICH_LR(4)
+    read_sysreg ICH_LR(5)
+    read_sysreg ICH_LR(6)
+    read_sysreg ICH_LR(7)
+    read_sysreg ICH_LR(8)
+    read_sysreg ICH_LR(9)
+    read_sysreg ICH_LR(10)
+    read_sysreg ICH_LR(11)
+    read_sysreg ICH_LR(12)
+    read_sysreg ICH_LR(13)
+    read_sysreg ICH_LR(14)
+    read_sysreg ICH_LR(15)
 
 // x0 - Value to write
 // x1 - Index for LR register
-FUNCTION_LABEL(gicv3_write_lr_helper)
-    lr_jump .Llr_write_table
+FUNCTION_LABEL(el2_gicv3_write_lr)
+    gic_jump .Llr_write_table x1
 
 .Llr_write_table:
-    write_lr_register ICH_LR(0)
-    write_lr_register ICH_LR(1)
-    write_lr_register ICH_LR(2)
-    write_lr_register ICH_LR(3)
-    write_lr_register ICH_LR(4)
-    write_lr_register ICH_LR(5)
-    write_lr_register ICH_LR(6)
-    write_lr_register ICH_LR(7)
-    write_lr_register ICH_LR(8)
-    write_lr_register ICH_LR(9)
-    write_lr_register ICH_LR(10)
-    write_lr_register ICH_LR(11)
-    write_lr_register ICH_LR(12)
-    write_lr_register ICH_LR(13)
-    write_lr_register ICH_LR(14)
-    write_lr_register ICH_LR(15)
+    write_sysreg ICH_LR(0)
+    write_sysreg ICH_LR(1)
+    write_sysreg ICH_LR(2)
+    write_sysreg ICH_LR(3)
+    write_sysreg ICH_LR(4)
+    write_sysreg ICH_LR(5)
+    write_sysreg ICH_LR(6)
+    write_sysreg ICH_LR(7)
+    write_sysreg ICH_LR(8)
+    write_sysreg ICH_LR(9)
+    write_sysreg ICH_LR(10)
+    write_sysreg ICH_LR(11)
+    write_sysreg ICH_LR(12)
+    write_sysreg ICH_LR(13)
+    write_sysreg ICH_LR(14)
+    write_sysreg ICH_LR(15)
 
-.Llr_done:
-    switch_to_host
-    exception_return x0
+FUNCTION_LABEL(el2_gicv3_done)
+    msr vttbr_el2, xzr
+    isb
+    eret
