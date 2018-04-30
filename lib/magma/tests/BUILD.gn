@@ -18,7 +18,7 @@ package("magma-test-build-only") {
         "$mesa_build_root:tests",
         "$msd_intel_gen_build_root:msd_intel_test",
         "$msd_intel_gen_build_root:tests",
-        "integration",
+        "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
       ]
     }
   }
@@ -137,7 +137,7 @@ package("magma-test") {
       deps += [
         ":autorun",
         "$mesa_build_root:tests",
-        "integration",
+        "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
       ]
 
       tests += [
@@ -146,7 +146,7 @@ package("magma-test") {
         },
 
         {
-          name = "magma_integration_tests"
+          name = "msd_intel_gen_integration_tests"
         },
       ]
 

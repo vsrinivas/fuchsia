@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <thread>
 
-#include "helper/platform_device_helper.h"
 #include "zircon/zircon_platform_ioctl.h"
 #include "magma.h"
 #include "magma_util/macros.h"
@@ -18,14 +17,6 @@ public:
     TestBase() { fd_ = open("/dev/class/gpu/000", O_RDONLY); }
 
     int fd() { return fd_; }
-
-    bool is_intel_gen()
-    {
-        uint64_t device_id;
-        if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
-            device_id = 0;
-        return TestPlatformPciDevice::is_intel_gen(device_id);
-    }
 
     ~TestBase() { close(fd_); }
 
@@ -80,9 +71,6 @@ public:
 
     bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size)
     {
-        if (!is_intel_gen())
-            return DRETF(false, "not an intel gen9 device");
-
         void* vaddr;
         if (magma_map(connection_, buffer, &vaddr) != 0)
             return DRETF(false, "couldn't map batch buffer");
@@ -152,7 +140,6 @@ static void test_shutdown(uint32_t iters)
         complete_count = 0;
 
         TestBase test_base;
-        ASSERT_TRUE(test_base.is_intel_gen());
 
         std::thread looper(looper_thread_entry);
         std::thread looper2(looper_thread_entry);

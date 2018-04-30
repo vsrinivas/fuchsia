@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <thread>
 
-#include "helper/platform_device_helper.h"
 #include "magma.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -45,14 +44,6 @@ public:
 
         if (connection_)
             magma_release_connection(connection_);
-    }
-
-    bool is_intel_gen()
-    {
-        uint64_t device_id;
-        if (magma_query(fd(), MAGMA_QUERY_DEVICE_ID, &device_id) != MAGMA_STATUS_OK)
-            device_id = 0;
-        return TestPlatformPciDevice::is_intel_gen(device_id);
     }
 
     enum How { NORMAL, FAULT, HANG };
@@ -102,9 +93,6 @@ public:
 
     bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)
     {
-        if (!is_intel_gen())
-            return DRETF(false, "not an intel gen9 device");
-
         memset(vaddr, 0, size);
 
         // store dword

@@ -8,11 +8,11 @@ group("integration") {
   testonly = true
 
   public_deps = [
-    ":magma_integration_tests",
+    ":msd_intel_gen_integration_tests",
   ]
 }
 
-executable("magma_integration_tests") {
+executable("msd_intel_gen_integration_tests") {
   testonly = true
 
   sources = [
@@ -25,8 +25,6 @@ executable("magma_integration_tests") {
     "$magma_build_root:libmagma",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:buffer",  # this is weird
-    "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
   ]
 }
