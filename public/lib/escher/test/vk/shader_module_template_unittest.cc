@@ -120,7 +120,7 @@ vec4 ComputeVertexPosition() {
 
 void ShaderModuleTemplateTest::SetUp() {
   // Initialize filesystem.
-  filesystem_ = fxl::MakeRefCounted<HackFilesystem>();
+  filesystem_ = HackFilesystem::New();
   filesystem_->WriteFile(HackFilePath(kMainPath), kMain);
   filesystem_->WriteFile(HackFilePath(kPerVertexOutPath), kPerVertexOut);
   filesystem_->WriteFile(HackFilePath(kDescriptorSetsPath), kDescriptorSets);

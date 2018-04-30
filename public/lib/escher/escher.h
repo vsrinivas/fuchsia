@@ -29,6 +29,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // up to the application to eventually destroy them, and also to ensure that
   // they outlive the Escher instance.
   explicit Escher(VulkanDeviceQueuesPtr device);
+  Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem);
   ~Escher();
 
   EscherWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

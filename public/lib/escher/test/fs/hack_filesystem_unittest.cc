@@ -10,7 +10,7 @@ namespace {
 using namespace escher;
 
 TEST(HackFilesystem, Init) {
-  auto fs = fxl::MakeRefCounted<HackFilesystem>();
+  auto fs = HackFilesystem::New();
   bool success =
       fs->InitializeWithRealFiles({"shaders/model_renderer/main.vert"});
 

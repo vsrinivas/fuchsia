@@ -133,7 +133,7 @@ std::unique_ptr<DemoHarness> DemoHarness::New(
 }
 
 DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params)
-    : DemoHarness(window_params) {}
+    : DemoHarness(window_params), filesystem_(escher::HackFilesystem::New()) {}
 
 void DemoHarnessLinux::InitWindowSystem() {
   FXL_CHECK(!g_harness);

@@ -7,9 +7,27 @@
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
 
+#ifdef __Fuchsia__
+#include "lib/escher/fs/fuchsia_data_source.h"
 namespace escher {
+HackFilesystemPtr HackFilesystem::New(
+    const fbl::RefPtr<fs::PseudoDir>& root_dir) {
+  return fxl::MakeRefCounted<FuchsiaDataSource>(root_dir);
+}
+HackFilesystemPtr HackFilesystem::New() {
+  return fxl::MakeRefCounted<FuchsiaDataSource>();
+}
+}  // namespace escher
+#else
+#include "lib/escher/fs/linux_data_source.h"
+namespace escher {
+HackFilesystemPtr HackFilesystem::New() {
+  return fxl::MakeRefCounted<LinuxDataSource>();
+}
+}  // namespace escher
+#endif
 
-HackFilesystem::HackFilesystem() = default;
+namespace escher {
 
 HackFilesystem::~HackFilesystem() { FXL_DCHECK(watchers_.size() == 0); }
 
@@ -49,8 +67,8 @@ HackFilesystemWatcher::~HackFilesystemWatcher() {
   FXL_DCHECK(erased == 1);
 }
 
-static bool LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
-                     const HackFilePath& path) {
+bool HackFilesystem::LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
+                              const HackFilePath& path) {
   std::string contents;
   if (files::ReadFileToString(prefix + path, &contents)) {
     fs->WriteFile(path, contents);
@@ -58,26 +76,6 @@ static bool LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
   }
   FXL_LOG(WARNING) << "Failed to read file: " << prefix + path;
   return false;
-}
-
-bool HackFilesystem::InitializeWithRealFiles(std::vector<HackFilePath> paths,
-                                             const char* linux_prefix) {
-#ifdef __Fuchsia__
-  const std::string kPrefix("/pkg/data/");
-#else
-  const std::string kPrefix(linux_prefix);
-  if (!files::IsDirectory(kPrefix)) {
-    FXL_LOG(ERROR) << "Cannot find " << linux_prefix
-                   << ".  Are you running from $FUCHSIA_DIR?";
-    return false;
-  }
-#endif
-
-  bool success = true;
-  for (auto& path : paths) {
-    success &= LoadFile(this, kPrefix, path);
-  }
-  return success;
 }
 
 }  // namespace escher

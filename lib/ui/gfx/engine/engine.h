@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_H_
 
+#include <fbl/ref_ptr.h>
 #include <set>
 #include <vector>
 
@@ -130,6 +131,7 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                    uint64_t presentation_interval, bool force_render) override;
 
   void InitializeFrameScheduler();
+  void InitializeShaderFs();
 
   // Update and deliver metrics for all nodes which subscribe to metrics events.
   void UpdateAndDeliverMetrics(uint64_t presentation_time);

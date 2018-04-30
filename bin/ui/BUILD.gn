@@ -96,6 +96,13 @@ package("scenic") {
       dest = "scenic.cmx"
     },
   ]
+
+  resources = [
+    {
+      path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
+      dest = "shaders/model_renderer/main.vert"
+    },
+  ]
 }
 
 package("screencap") {

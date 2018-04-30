@@ -9,7 +9,7 @@
 Demo::Demo(DemoHarness* harness)
     : harness_(harness),
       vulkan_context_(harness->GetVulkanContext()),
-      escher_(harness->device_queues()) {}
+      escher_(harness->device_queues(), harness->filesystem()) {}
 
 Demo::~Demo() {}
 

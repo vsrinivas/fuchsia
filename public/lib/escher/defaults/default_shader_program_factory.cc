@@ -9,9 +9,9 @@
 
 namespace escher {
 
-DefaultShaderProgramFactory::DefaultShaderProgramFactory(EscherWeakPtr escher)
-    : escher_(std::move(escher)),
-      filesystem_(fxl::MakeRefCounted<HackFilesystem>()) {}
+DefaultShaderProgramFactory::DefaultShaderProgramFactory(
+    EscherWeakPtr escher, HackFilesystemPtr filesystem)
+    : escher_(std::move(escher)), filesystem_(std::move(filesystem)) {}
 
 DefaultShaderProgramFactory::~DefaultShaderProgramFactory() = default;
 

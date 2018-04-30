@@ -69,6 +69,9 @@ std::unique_ptr<impl::MeshManager> NewMeshManager(
 }  // anonymous namespace
 
 Escher::Escher(VulkanDeviceQueuesPtr device)
+    : Escher(std::move(device), HackFilesystem::New()) {}
+
+Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
     : renderer_count_(0),
       device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
@@ -107,8 +110,8 @@ Escher::Escher(VulkanDeviceQueuesPtr device)
       std::make_unique<impl::RenderPassCache>(resource_recycler()),
   framebuffer_allocator_ = std::make_unique<impl::FramebufferAllocator>(
       resource_recycler(), render_pass_cache_.get());
-  shader_program_factory_ =
-      std::make_unique<DefaultShaderProgramFactory>(GetWeakPtr());
+  shader_program_factory_ = std::make_unique<DefaultShaderProgramFactory>(
+      GetWeakPtr(), std::move(filesystem));
 
   // Query relevant Vulkan properties.
   auto device_properties = vk_physical_device().getProperties();

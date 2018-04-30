@@ -9,6 +9,7 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "lib/escher/fs/hack_filesystem.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
@@ -42,6 +43,7 @@ class DemoHarness {
   const escher::VulkanDeviceQueuesPtr& device_queues() const {
     return device_queues_;
   }
+  const escher::HackFilesystemPtr& filesystem() const { return filesystem_; }
 
   // Notify the demo that it should stop looping and quit.
   void SetShouldQuit() { should_quit_ = true; }
@@ -60,6 +62,10 @@ class DemoHarness {
   // Subclasses are responsible for setting this when they start running a Demo,
   // and setting it back to nullptr when they finish running the Demo.
   Demo* demo_ = nullptr;
+
+  // Subclasses are responsible for setting this, as the filesystem on Fuchsia
+  // can take a debug_dir to support hot reload.
+  escher::HackFilesystemPtr filesystem_;
 
   vk::Device device() const { return device_queues_->vk_device(); }
   vk::PhysicalDevice physical_device() const {

@@ -12,6 +12,7 @@
 #include "garnet/public/lib/escher/util/check_vulkan_support.h"
 #include "lib/app/cpp/startup_context.h"
 #include "lib/escher/escher_process_init.h"
+#include "lib/escher/fs/hack_filesystem.h"
 #include "public/lib/syslog/cpp/logger.h"
 
 namespace scenic {
@@ -58,7 +59,8 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   escher::VulkanInstance::Params instance_params(
       {{},
        {
-           VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_SURFACE_EXTENSION_NAME,
+           VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+           VK_KHR_SURFACE_EXTENSION_NAME,
            VK_KHR_MAGMA_SURFACE_EXTENSION_NAME,
            VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
@@ -105,9 +107,17 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
     FXL_CHECK(result == VK_SUCCESS);
   }
 
+  // Provide a PseudoDir where the gfx system can register debugging services.
+  fbl::RefPtr<fs::PseudoDir> debug_dir(fbl::AdoptRef(new fs::PseudoDir()));
+  context()->app_context()->outgoing().debug_dir()->AddEntry("gfx", debug_dir);
+  auto shader_fs = escher::HackFilesystem::New(debug_dir);
+  FXL_DCHECK(shader_fs->InitializeWithRealFiles(
+      std::vector<escher::HackFilePath>{"shaders/model_renderer/main.vert"}));
+
   // Initialize Escher.
   escher::GlslangInitializeProcess();
-  return std::make_unique<escher::Escher>(vulkan_device_queues_);
+  return std::make_unique<escher::Escher>(vulkan_device_queues_,
+                                          std::move(shader_fs));
 }
 
 void GfxSystem::Initialize() {
@@ -158,9 +168,10 @@ void GfxSystem::GetDisplayInfo(
   if (initialized_) {
     GetDisplayInfoImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back([
-      this, callback = std::move(callback)
-    ]() mutable { GetDisplayInfoImmediately(std::move(callback)); });
+    run_after_initialized_.push_back(
+        [this, callback = std::move(callback)]() mutable {
+          GetDisplayInfoImmediately(std::move(callback));
+        });
   }
 };
 
@@ -192,9 +203,10 @@ void GfxSystem::GetDisplayOwnershipEvent(
   if (initialized_) {
     GetDisplayOwnershipEventImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back([
-      this, callback = std::move(callback)
-    ]() mutable { GetDisplayOwnershipEventImmediately(std::move(callback)); });
+    run_after_initialized_.push_back(
+        [this, callback = std::move(callback)]() mutable {
+          GetDisplayOwnershipEventImmediately(std::move(callback));
+        });
   }
 }
 

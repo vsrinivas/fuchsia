@@ -45,7 +45,6 @@ class DemoHarnessFuchsia : public DemoHarness {
   std::unique_ptr<async::Loop> owned_loop_;
 
   std::unique_ptr<fuchsia::sys::StartupContext> startup_context_;
-  std::unique_ptr<fuchsia::sys::ServiceProviderImpl> outgoing_services_;
 };
 
 #endif  // GARNET_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_

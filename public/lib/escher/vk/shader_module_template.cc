@@ -101,7 +101,7 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
     : device_(device),
       compiler_(compiler),
       shader_stage_(shader_stage),
-      path_(path),
+      path_(std::move(path)),
       filesystem_(std::move(filesystem)) {}
 
 ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }

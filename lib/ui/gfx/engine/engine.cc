@@ -4,6 +4,8 @@
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
 
+#include <fbl/string.h>
+#include <fs/pseudo-dir.h>
 #include <set>
 
 #include <lib/async/cpp/task.h>
@@ -76,6 +78,7 @@ Engine::Engine(DisplayManager* display_manager,
   FXL_DCHECK(escher_);
 
   InitializeFrameScheduler();
+
   paper_renderer_->set_sort_by_pipeline(false);
 }
 

@@ -12,6 +12,13 @@
 
 #include "lib/fxl/memory/ref_counted.h"
 
+#ifdef __Fuchsia__
+#include <fbl/ref_ptr.h>
+namespace fs {
+class PseudoDir;
+}  // namespace fs
+#endif
+
 namespace escher {
 
 class HackFilesystem;
@@ -22,13 +29,15 @@ using HackFilePathSet = std::unordered_set<HackFilePath>;
 class HackFilesystemWatcher;
 using HackFilesystemWatcherFunc = std::function<void(HackFilePath)>;
 
-// TODO(SCN-664): Placeholder class to allow development of subsystems that will
-// eventually rely upon filesystem functionality, in particular watching and
-// notifying listeners of changed files.
+// An in-memory file system that could be watched for content change.
 class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
  public:
-  HackFilesystem();
-  ~HackFilesystem();
+  // Create a platform-appropriate HackFileSystem (e.g. for Fuchsia or Linux).
+  static HackFilesystemPtr New();
+#ifdef __Fuchsia__
+  static HackFilesystemPtr New(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+#endif
+  virtual ~HackFilesystem();
 
   // Return the contents of the file, which can be empty if the path doesn't
   // exist (HackFilesystem doesn't distinguish between empty and non-existent
@@ -43,14 +52,23 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
   std::unique_ptr<HackFilesystemWatcher> RegisterWatcher(
       HackFilesystemWatcherFunc func);
 
-  // Load the specified files from the real filesystem.  When running on Fuchsia
-  // these files are read from the package filesystem; a prefix of "/pkg/data/"
-  // is prepended to each path.  On Linux, the files are assumed to be in a
-  // subdirectory of $FUCHSIA_DIR/garnet/public/lib/escher/, and we furthermore
-  // assume that $PWD == $FUCHSIA_DIR.
-  bool InitializeWithRealFiles(
-      std::vector<HackFilePath> paths,
-      const char* linux_prefix = "garnet/public/lib/escher/");
+  // Load the specified files from the real filesystem.  A prefix will be
+  // prepended to each path. On Fuchsia the default prefix is "/pkg/data/". On
+  // Linux, the default prefix is "garnet/public/lib/escher/", assuming $PWD is
+  // $FUCHSIA_DIR.
+  virtual bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
+                                       const char* prefix =
+#ifdef __Fuchsia__
+                                           "/pkg/data/"
+#else
+                                           "garnet/public/lib/escher/"
+#endif
+                                       ) = 0;
+
+ protected:
+  HackFilesystem() = default;
+  static bool LoadFile(HackFilesystem* fs, const HackFilePath& prefix,
+                       const HackFilePath& path);
 
  private:
   friend class HackFilesystemWatcher;
