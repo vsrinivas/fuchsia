@@ -56,7 +56,7 @@ identifier would be kNamedLikeThis.
     provide stronger namespacing mechanisms. So fidl style avoids the
     duplication.
 
-## Library names
+### Library names
 Libraries are period-separated lists of identifiers. Portions of the
 library name other than the last are also referred to as namespaces.
 
