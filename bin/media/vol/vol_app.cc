@@ -100,6 +100,10 @@ class VolApp {
     audio_policy_service_ =
         application_context_
             ->ConnectToEnvironmentService<audio_policy::AudioPolicy>();
+    audio_policy_service_.set_error_handler([this]() {
+      std::cout << "System error: audio policy service failure";
+      quit_callback_();
+    });
 
     if (mute_) {
       audio_policy_service_->SetSystemAudioMute(true);
