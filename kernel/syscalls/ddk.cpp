@@ -46,29 +46,6 @@
 
 #define LOCAL_TRACE 0
 
-zx_status_t sys_interrupt_create(zx_handle_t hrsrc, uint32_t options,
-                                 user_out_handle* out_handle) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_interrupt_bind(zx_handle_t handle, uint32_t slot, zx_handle_t hrsrc,
-                               uint32_t vector, uint32_t options) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<uint64_t> out_slots) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_interrupt_get_timestamp(zx_handle_t handle, uint32_t slot,
-                                        user_out_ptr<zx_time_t> out_timestamp) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t sys_interrupt_signal(zx_handle_t handle, uint32_t slot, zx_time_t timestamp) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t alignment_log2,
                                       user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
@@ -445,7 +422,7 @@ zx_status_t sys_pmt_unpin(zx_handle_t pmt) {
     return ZX_OK;
 }
 
-zx_status_t sys_irq_create(zx_handle_t src_obj, uint32_t src_num,
+zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
                            uint32_t options, user_out_handle* out_handle) {
     LTRACEF("options 0x%x\n", options);
 
@@ -467,16 +444,16 @@ zx_status_t sys_irq_create(zx_handle_t src_obj, uint32_t src_num,
     return out_handle->make(fbl::move(dispatcher), rights);
 }
 
-zx_status_t sys_irq_bind(zx_handle_t inth, zx_handle_t porth,
+zx_status_t sys_interrupt_bind(zx_handle_t inth, zx_handle_t porth,
                          uint64_t key, uint32_t options) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_irq_ack(zx_handle_t handle) {
+zx_status_t sys_interrupt_ack(zx_handle_t handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t sys_irq_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
+zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timestamp) {
     LTRACEF("handle %x\n", handle);
 
     zx_status_t status;
@@ -496,7 +473,7 @@ zx_status_t sys_irq_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_timesta
     return status;
 }
 
-zx_status_t sys_irq_destroy(zx_handle_t handle) {
+zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
     LTRACEF("handle %x\n", handle);
 
     zx_status_t status;
@@ -508,7 +485,7 @@ zx_status_t sys_irq_destroy(zx_handle_t handle) {
     return interrupt->Destroy();
 }
 
-zx_status_t sys_irq_trigger(zx_handle_t handle,
+zx_status_t sys_interrupt_trigger(zx_handle_t handle,
                             uint32_t options,
                             zx_time_t timestamp) {
     LTRACEF("handle %x\n", handle);

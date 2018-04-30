@@ -287,7 +287,7 @@ static int irq_thread(void* arg) {
     nvme_device_t* nvme = arg;
     for (;;) {
         zx_status_t r;
-        if ((r = zx_irq_wait(nvme->irqh, NULL)) != ZX_OK) {
+        if ((r = zx_interrupt_wait(nvme->irqh, NULL)) != ZX_OK) {
             zxlogf(ERROR, "nvme: irq wait failed: %d\n", r);
             break;
         }

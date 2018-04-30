@@ -88,9 +88,9 @@ static int aml_uart_irq_thread(void *arg) {
 
     while (1) {
         zx_status_t status;
-        status = zx_irq_wait(uart->irq_handle, NULL);
+        status = zx_interrupt_wait(uart->irq_handle, NULL);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "aml_uart_irq_thread: zx_irq_wait got %d\n", status);
+            zxlogf(ERROR, "aml_uart_irq_thread: zx_interrupt_wait got %d\n", status);
             break;
         }
         // this will call the notify_cb if the serial state has changed
@@ -257,7 +257,7 @@ static zx_status_t aml_serial_enable(void* ctx, bool enable) {
             return thrd_status_to_zx_status(rc);
         }
     } else if (!enable && uart->enabled) {
-        zx_irq_destroy(uart->irq_handle);
+        zx_interrupt_destroy(uart->irq_handle);
         thrd_join(uart->irq_thread, NULL);
         aml_serial_enable_locked(uart, false);
         zx_handle_close(uart->irq_handle);

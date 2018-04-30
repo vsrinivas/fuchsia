@@ -32,15 +32,15 @@ public:
                         uint32_t options, interrupt* result);
 
     zx_status_t wait(zx::time* timestamp) {
-        return zx_irq_wait(get(), timestamp->get_address());
+        return zx_interrupt_wait(get(), timestamp->get_address());
     }
 
     zx_status_t destroy() {
-        return zx_irq_destroy(get());
+        return zx_interrupt_destroy(get());
     }
 
     zx_status_t trigger(uint32_t options, zx::time timestamp) {
-        return zx_irq_trigger(get(), options, timestamp.get());
+        return zx_interrupt_trigger(get(), options, timestamp.get());
     }
 };
 

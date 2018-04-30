@@ -673,7 +673,7 @@ static int ahci_irq_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     zx_status_t status;
     for (;;) {
-        status = zx_irq_wait(dev->irq_handle, NULL);
+        status = zx_interrupt_wait(dev->irq_handle, NULL);
         if (status) {
             zxlogf(ERROR, "ahci: error %d waiting for interrupt\n", status);
             continue;

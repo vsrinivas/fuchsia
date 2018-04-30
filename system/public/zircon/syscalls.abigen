@@ -566,46 +566,26 @@ syscall debug_send_command
 # DDK Syscalls: Interrupts
 
 syscall interrupt_create
-    (hrsrc: zx_handle_t, options: uint32_t)
-    returns (zx_status_t, out_handle: zx_handle_t handle_acquire);
+    (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
+    returns (zx_status_t, out_handle: zx_handle_t);
 
 syscall interrupt_bind
-    (handle: zx_handle_t, slot: uint32_t, hrsrc: zx_handle_t, vector: uint32_t, options: uint32_t)
+    (inth: zx_handle_t, porth: zx_handle_t, key: uint64_t, options: uint32_t)
     returns (zx_status_t);
 
 syscall interrupt_wait blocking
     (handle: zx_handle_t)
-    returns (zx_status_t, slots: uint64_t);
-
-syscall interrupt_get_timestamp
-    (handle: zx_handle_t, slot: uint32_t)
-    returns (zx_status_t, timestamp: zx_time_t);
-
-syscall interrupt_signal
-    (handle: zx_handle_t, slot: uint32_t, timestamp: zx_time_t)
-    returns (zx_status_t);
-
-syscall irq_create
-    (src_obj: zx_handle_t, src_num: uint32_t, options: uint32_t)
-    returns (zx_status_t, out_handle: zx_handle_t);
-
-syscall irq_bind
-    (inth: zx_handle_t, porth: zx_handle_t, key: uint64_t, options: uint32_t)
-    returns (zx_status_t);
-
-syscall irq_wait blocking
-    (handle: zx_handle_t)
     returns (zx_status_t, out_timestamp: zx_time_t optional);
 
-syscall irq_destroy
+syscall interrupt_destroy
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-syscall irq_ack
+syscall interrupt_ack
     (handle: zx_handle_t)
     returns (zx_status_t);
 
-syscall irq_trigger
+syscall interrupt_trigger
     (handle: zx_handle_t, options: uint32_t, timestamp: zx_time_t)
     returns (zx_status_t);
 

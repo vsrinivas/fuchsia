@@ -331,7 +331,7 @@ static int intel_serialio_i2c_irq_thread(void* arg) {
     intel_serialio_i2c_device_t* dev = (intel_serialio_i2c_device_t*)arg;
     zx_status_t status;
     for (;;) {
-        status = zx_irq_wait(dev->irq_handle, NULL);
+        status = zx_interrupt_wait(dev->irq_handle, NULL);
         if (status != ZX_OK) {
             zxlogf(ERROR, "i2c: error waiting for interrupt: %d\n", status);
             continue;
@@ -564,7 +564,7 @@ static void intel_serialio_i2c_unbind(void* ctx) {
         zxlogf(INFO, "intel-i2c: unbind irq_handle %d irq_thread %p\n", dev->irq_handle,
                 dev->irq_thread);
         if ((dev->irq_handle != ZX_HANDLE_INVALID) && dev->irq_thread) {
-            zx_irq_destroy(dev->irq_handle);
+            zx_interrupt_destroy(dev->irq_handle);
             thrd_join(dev->irq_thread, NULL);
         }
         if (dev->zxdev) {

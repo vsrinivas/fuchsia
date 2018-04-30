@@ -22,7 +22,7 @@ void IntelHDAController::WakeupIRQThread() {
     __UNUSED zx_status_t res;
 
     // TODO(johngro@): Adopt the new interrupt syscalls
-    // to bind an interrupt to a port. zx_irq_trigger()
+    // to bind an interrupt to a port. zx_interrupt_trigger()
     // would not be supporting signalling a physical interrupt
     // Currently there is a WA added to allow this
     LOG(SPEW, "Waking up IRQ thread\n");

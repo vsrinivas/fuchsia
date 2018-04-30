@@ -274,7 +274,7 @@ static int hdmi_irq_handler(void *arg) {
     vim2_display_t* display = arg;
     zx_status_t status;
     while(1) {
-        status = zx_irq_wait(display->inth, NULL);
+        status = zx_interrupt_wait(display->inth, NULL);
         if (status != ZX_OK) {
             DISP_ERROR("Waiting in Interrupt failed %d\n", status);
             return -1;

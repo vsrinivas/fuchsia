@@ -83,7 +83,7 @@ static int gpio_waiting_thread(void *arg) {
     gpio_test_t* gpio_test = arg;
     gpio_protocol_t* gpio = &gpio_test->gpio;
     while(1) {
-        zx_status_t status = zx_irq_wait(gpio_test->inth, NULL);
+        zx_status_t status = zx_interrupt_wait(gpio_test->inth, NULL);
         if (status != ZX_OK) {
             zxlogf(ERROR, "gpio_waiting_thread: zx_interrupt_wait failed %d\n", status);
             return -1;

@@ -10,7 +10,7 @@ namespace zx {
 zx_status_t interrupt::create(const resource& resource, uint32_t vector,
                               uint32_t options, interrupt* result) {
     zx_handle_t h;
-    zx_status_t status = zx_irq_create(resource.get(), vector, options, &h);
+    zx_status_t status = zx_interrupt_create(resource.get(), vector, options, &h);
     if (status < 0) {
         result->reset(ZX_HANDLE_INVALID);
     } else {

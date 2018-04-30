@@ -359,7 +359,7 @@ static int sdhci_irq_thread(void *arg) {
     zx_handle_t irq_handle = dev->irq_handle;
 
     while (true) {
-        wait_res = zx_irq_wait(irq_handle, NULL);
+        wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
             printf("sdhci: interrupt wait failed with retcode = %d\n", wait_res);
             break;

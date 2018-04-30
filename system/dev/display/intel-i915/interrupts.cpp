@@ -25,7 +25,7 @@ Interrupts::~Interrupts() {
 
 void Interrupts::Destroy() {
     if (irq_ != ZX_HANDLE_INVALID) {
-        zx_irq_destroy(irq_.get());
+        zx_interrupt_destroy(irq_.get());
         thrd_join(irq_thread_, nullptr);
 
         irq_.reset();
@@ -34,7 +34,7 @@ void Interrupts::Destroy() {
 
 int Interrupts::IrqLoop() {
     for (;;) {
-        if (zx_irq_wait(irq_.get(), nullptr) != ZX_OK) {
+        if (zx_interrupt_wait(irq_.get(), nullptr) != ZX_OK) {
             zxlogf(TRACE, "i915: interrupt wait failed\n");
             break;
         }

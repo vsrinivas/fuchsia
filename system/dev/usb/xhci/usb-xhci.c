@@ -174,7 +174,7 @@ static void xhci_shutdown(xhci_t* xhci) {
     atomic_store(&xhci->suspended, true);
     // stop our interrupt threads
     for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        zx_irq_destroy(xhci->irq_handles[i]);
+        zx_interrupt_destroy(xhci->irq_handles[i]);
         thrd_join(xhci->completer_threads[i], NULL);
         zx_handle_close(xhci->irq_handles[i]);
     }
@@ -234,7 +234,7 @@ static int completer_thread(void *arg) {
 
     while (1) {
         zx_status_t wait_res;
-        wait_res = zx_irq_wait(irq_handle, NULL);
+        wait_res = zx_interrupt_wait(irq_handle, NULL);
         if (wait_res != ZX_OK) {
             zxlogf(ERROR, "unexpected pci_wait_irq failure (%d)\n", wait_res);
             break;

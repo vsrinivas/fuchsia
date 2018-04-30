@@ -50,7 +50,7 @@ static int irq_thread(void* arg) {
     ethernet_device_t* edev = arg;
     for (;;) {
         zx_status_t r;
-        r = zx_irq_wait(edev->irqh, NULL);
+        r = zx_interrupt_wait(edev->irqh, NULL);
         if (r != ZX_OK) {
             printf("eth: irq wait failed? %d\n", r);
             break;

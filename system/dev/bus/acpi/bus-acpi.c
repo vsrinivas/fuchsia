@@ -517,7 +517,7 @@ static zx_status_t acpi_op_map_interrupt(void* ctx, int which_irq, zx_handle_t* 
 
     acpi_device_irq_t* irq = dev->irqs + which_irq;
     zx_handle_t handle;
-    st = zx_irq_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ, &handle);
+    st = zx_interrupt_create(get_root_resource(), irq->pin, ZX_INTERRUPT_REMAP_IRQ, &handle);
     if (st != ZX_OK) {
         goto unlock;
     }
