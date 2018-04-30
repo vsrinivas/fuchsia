@@ -94,6 +94,7 @@ package("magma-test") {
   if (build_msd_arm_mali || build_intel_gen) {
     deps += [
       ":magma_tests",
+      "integration",
       "unit_tests:magma_sys_display_unit_tests",
     ]
 
@@ -202,7 +203,6 @@ if (build_msd_arm_mali || build_intel_gen) {
     public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
     public_deps = [
-      "unit_tests:magma_abi_conformance_tests",
       "unit_tests:magma_sys_unit_tests",
     ]
   }
