@@ -38,7 +38,7 @@ template <unsigned int N, typename T> T align(T t) {
 }  // namespace
 
 Dispatcher::Dispatcher(DeviceInterface* device, fbl::unique_ptr<Mlme> mlme)
-  : device_(device), mlme_(std::move(mlme)) {
+    : device_(device), mlme_(std::move(mlme)) {
     debugfn();
     ZX_ASSERT(mlme_ != nullptr);
 }
@@ -172,7 +172,9 @@ zx_status_t Dispatcher::HandleDataPacket(const Packet* packet) {
     ZX_DEBUG_ASSERT(rxinfo);
 
     switch (hdr->fc.subtype()) {
-    case DataSubtype::kNull: {
+    case DataSubtype::kNull:
+        // Fall-through
+    case DataSubtype::kQosnull: {
         auto frame = ImmutableDataFrame<NilHeader>(hdr, nullptr, 0);
         return mlme_->HandleFrame(frame, *rxinfo);
     }
@@ -449,7 +451,7 @@ zx_status_t Dispatcher::HandleMlmeMethod(const Packet* packet, wlan_mlme::Method
 
 template <>
 zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Packet* unused_packet,
-                                                             wlan_mlme::Method method) {
+                                                                        wlan_mlme::Method method) {
     debugfn();
     ZX_DEBUG_ASSERT(method == wlan_mlme::Method::DEVICE_QUERY_request);
 
@@ -494,7 +496,7 @@ zx_status_t Dispatcher::HandleMlmeMethod<wlan_mlme::DeviceQueryRequest>(const Pa
     // fidl2 doesn't have a way to get the serialized size yet. 4096 bytes should be enough for
     // everyone.
     size_t buf_len = 4096;
-    //size_t buf_len = sizeof(fidl_message_header_t) + resp->GetSerializedSize();
+    // size_t buf_len = sizeof(fidl_message_header_t) + resp->GetSerializedSize();
     fbl::unique_ptr<Buffer> buffer = GetBuffer(buf_len);
     if (buffer == nullptr) { return ZX_ERR_NO_RESOURCES; }
 
