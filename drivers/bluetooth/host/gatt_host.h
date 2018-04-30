@@ -39,6 +39,10 @@ class GattServerServer;
 class GattHost final : public fbl::RefCounted<GattHost>,
                        public btlib::common::TaskDomain<GattHost> {
  public:
+  // Type that can be used as a token in some of the functions below. Pointers
+  // are allowed to be used as tokens.
+  using Token = uintptr_t;
+
   static fbl::RefPtr<GattHost> Create(std::string thread_name);
 
   void Initialize();
@@ -53,12 +57,17 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   // Binds the given GATT server request to a FIDL server.
   void BindGattServer(fidl::InterfaceRequest<bluetooth_gatt::Server> request);
 
-  // Binds the given GATT client request to a FIDL server.
-  void BindGattClient(std::string peer_id,
+  // Binds the given GATT client request to a FIDL server. The binding will be
+  // associated with the given |token|. The same token can be
+  // be passed to UnbindGattClient to disconnect a client.
+  //
+  // The handle associated with |request| will be closed if |token| is already
+  // bound to another handle.
+  void BindGattClient(Token token, std::string peer_id,
                       fidl::InterfaceRequest<bluetooth_gatt::Client> request);
 
-  // Unbinds a previously bound GATT client server associated with |peer_id|.
-  void UnbindGattClient(std::string peer_id);
+  // Unbinds a previously bound GATT client server associated with |token|.
+  void UnbindGattClient(Token token);
 
   // Returns the GATT profile implementation.
   fbl::RefPtr<btlib::gatt::GATT> profile() const { return gatt_; }
@@ -97,10 +106,8 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   std::unordered_map<GattServerServer*, std::unique_ptr<GattServerServer>>
       server_servers_;
 
-  // Mapping from peer identifiers to GattClient pointers. These are tracked by
-  // the peer IDs for easy removal on disconnection.
-  std::unordered_map<std::string, std::unique_ptr<GattClientServer>>
-      client_servers_;
+  // Mapping from tokens GattClient pointers. The ID is provided by the caller.
+  std::unordered_map<Token, std::unique_ptr<GattClientServer>> client_servers_;
 
   fxl::WeakPtrFactory<GattHost> weak_ptr_factory_;
 

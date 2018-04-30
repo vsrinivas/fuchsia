@@ -31,6 +31,10 @@ LowEnergyCentralServer::LowEnergyCentralServer(
   FXL_DCHECK(gatt_host_);
 }
 
+LowEnergyCentralServer::~LowEnergyCentralServer() {
+  gatt_host_->UnbindGattClient(reinterpret_cast<GattHost::Token>(this));
+}
+
 void LowEnergyCentralServer::SetDelegate(
     ::fidl::InterfaceHandle<CentralDelegate> delegate) {
   if (!delegate) {
@@ -154,13 +158,13 @@ void LowEnergyCentralServer::ConnectPeripheral(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb = [self, callback, id = identifier.get(),
+  auto conn_cb = [self, callback, peer_id = identifier.get(),
                   request = std::move(client_request)](auto status,
                                                        auto conn_ref) mutable {
     if (!self)
       return;
 
-    auto iter = self->connections_.find(id);
+    auto iter = self->connections_.find(peer_id);
     if (iter == self->connections_.end()) {
       FXL_VLOG(1) << "Connect request canceled";
       auto error = fidl_helpers::NewFidlError(ErrorCode::FAILED,
@@ -171,8 +175,8 @@ void LowEnergyCentralServer::ConnectPeripheral(
 
     if (!status) {
       FXL_DCHECK(!conn_ref);
-      auto msg =
-          fxl::StringPrintf("Failed to connect to device (id: %s)", id.c_str());
+      auto msg = fxl::StringPrintf("Failed to connect to device (id: %s)",
+                                   peer_id.c_str());
       FXL_VLOG(1) << msg;
 
       callback(fidl_helpers::StatusToFidl(status, std::move(msg)));
@@ -180,7 +184,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     }
 
     FXL_DCHECK(conn_ref);
-    FXL_DCHECK(id == conn_ref->device_identifier());
+    FXL_DCHECK(peer_id == conn_ref->device_identifier());
 
     if (iter->second) {
       // This can happen if a connect is requested after a previous request was
@@ -192,12 +196,13 @@ void LowEnergyCentralServer::ConnectPeripheral(
                      "connection attempt";
     }
 
-    self->gatt_host_->BindGattClient(id, std::move(request));
+    uintptr_t token = reinterpret_cast<GattHost::Token>(self.get());
+    self->gatt_host_->BindGattClient(token, peer_id, std::move(request));
 
-    conn_ref->set_closed_callback([self, id] {
-      if (self && self->connections_.erase(id) != 0) {
-        self->gatt_host_->UnbindGattClient(id);
-        self->NotifyPeripheralDisconnected(id);
+    conn_ref->set_closed_callback([self, token, peer_id] {
+      if (self && self->connections_.erase(peer_id) != 0) {
+        self->gatt_host_->UnbindGattClient(token);
+        self->NotifyPeripheralDisconnected(peer_id);
       }
     });
 
@@ -237,7 +242,7 @@ void LowEnergyCentralServer::DisconnectPeripheral(
     FXL_VLOG(1) << "Canceling ConnectPeripheral";
   } else {
     const std::string& peer_id = identifier.get();
-    gatt_host_->UnbindGattClient(peer_id);
+    gatt_host_->UnbindGattClient(reinterpret_cast<uintptr_t>(this));
     NotifyPeripheralDisconnected(peer_id);
   }
 

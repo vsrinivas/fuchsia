@@ -78,26 +78,32 @@ void GattHost::BindGattServer(
 }
 
 void GattHost::BindGattClient(
-    std::string peer_id,
+    Token token, std::string peer_id,
     fidl::InterfaceRequest<bluetooth_gatt::Client> request) {
-  PostMessage([this, peer_id = std::move(peer_id),
+  PostMessage([this, token, peer_id = std::move(peer_id),
                request = std::move(request)]() mutable {
+    if (client_servers_.find(token) != client_servers_.end()) {
+      FXL_LOG(WARNING) << "gatt: duplicate Client FIDL server tokens!";
+
+      // The handle owned by |request| will be closed.
+      return;
+    }
+
     auto self = weak_ptr_factory_.GetWeakPtr();
     auto server = std::make_unique<GattClientServer>(std::move(peer_id), gatt_,
                                                      std::move(request));
-    server->set_error_handler([self, peer_id] {
+    server->set_error_handler([self, token] {
       if (self) {
         FXL_VLOG(1) << "bt-host: GATT client disconnected";
-        self->client_servers_.erase(peer_id);
+        self->client_servers_.erase(token);
       }
     });
-    client_servers_[peer_id] = std::move(server);
+    client_servers_[token] = std::move(server);
   });
 }
 
-void GattHost::UnbindGattClient(std::string peer_id) {
-  PostMessage(
-      [this, peer_id = std::move(peer_id)] { client_servers_.erase(peer_id); });
+void GattHost::UnbindGattClient(Token token) {
+  PostMessage([this, token] { client_servers_.erase(token); });
 }
 
 void GattHost::SetRemoteServiceWatcher(

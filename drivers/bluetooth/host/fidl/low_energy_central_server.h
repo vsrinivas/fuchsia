@@ -26,7 +26,7 @@ class LowEnergyCentralServer
       fxl::WeakPtr<::btlib::gap::Adapter> adapter,
       ::fidl::InterfaceRequest<::bluetooth_low_energy::Central> request,
       fbl::RefPtr<GattHost> gatt_host);
-  ~LowEnergyCentralServer() override = default;
+  ~LowEnergyCentralServer() override;
 
  private:
   // ::bluetooth_low_energy::Central overrides:
