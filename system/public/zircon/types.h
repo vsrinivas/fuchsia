@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
+#include <zircon/limits.h>
+
 #ifndef __cplusplus
 #ifndef _KERNEL
 // We don't want to include <stdatomic.h> from the kernel code because the
