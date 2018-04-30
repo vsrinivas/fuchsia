@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include <fuchsia/cpp/bluetooth_gatt.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -23,12 +25,10 @@ class GattRemoteServiceServer
       fbl::RefPtr<btlib::gatt::RemoteService> service,
       fbl::RefPtr<btlib::gatt::GATT> gatt,
       fidl::InterfaceRequest<bluetooth_gatt::RemoteService> request);
-  ~GattRemoteServiceServer() override = default;
+  ~GattRemoteServiceServer() override;
 
  private:
   // bluetooth_gatt::RemoteService overrides:
-  void SetDelegate(fidl::InterfaceHandle<bluetooth_gatt::RemoteServiceDelegate>
-                       delegate) override {}
   void DiscoverCharacteristics(
       DiscoverCharacteristicsCallback callback) override;
   void ReadCharacteristic(uint64_t id,
@@ -38,9 +38,15 @@ class GattRemoteServiceServer
                            uint16_t offset,
                            ::fidl::VectorPtr<uint8_t> value,
                            WriteCharacteristicCallback callback) override;
+  void NotifyCharacteristic(uint64_t id,
+                            bool enable,
+                            NotifyCharacteristicCallback callback) override;
 
   // The remote GATT service that backs this service.
   fbl::RefPtr<btlib::gatt::RemoteService> service_;
+
+  // Maps characteristic IDs to notification handler IDs.
+  std::unordered_map<btlib::gatt::IdType, btlib::gatt::IdType> notify_handlers_;
 
   fxl::WeakPtrFactory<GattRemoteServiceServer> weak_ptr_factory_;
 

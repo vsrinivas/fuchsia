@@ -6,13 +6,16 @@
 
 #include "helpers.h"
 
+using bluetooth::ErrorCode;
 using bluetooth::Status;
 
 using bluetooth_gatt::Characteristic;
 using bluetooth_gatt::CharacteristicPtr;
 using bluetooth_gatt::Descriptor;
 
+using btlib::common::ByteBuffer;
 using btlib::common::MutableBufferView;
+using btlib::gatt::IdType;
 using btlib::gatt::RemoteCharacteristic;
 
 namespace bthost {
@@ -41,6 +44,8 @@ Characteristic CharacteristicToFidl(const RemoteCharacteristic& chrc) {
   return fidl_char;
 }
 
+void NopStatusCallback(btlib::att::Status) {}
+
 }  // namespace
 
 GattRemoteServiceServer::GattRemoteServiceServer(
@@ -51,6 +56,12 @@ GattRemoteServiceServer::GattRemoteServiceServer(
       service_(std::move(service)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(service_);
+}
+
+GattRemoteServiceServer::~GattRemoteServiceServer() {
+  for (const auto& iter : notify_handlers_) {
+    service_->DisableNotifications(iter.first, iter.second, NopStatusCallback);
+  }
 }
 
 void GattRemoteServiceServer::DiscoverCharacteristics(
@@ -109,6 +120,68 @@ void GattRemoteServiceServer::WriteCharacteristic(
   // TODO(armansito): Use |offset| when gatt::RemoteService supports the long
   // write procedure.
   service_->WriteCharacteristic(id, value.take(), std::move(cb));
+}
+
+void GattRemoteServiceServer::NotifyCharacteristic(
+    uint64_t id,
+    bool enable,
+    NotifyCharacteristicCallback callback) {
+  if (!enable) {
+    auto iter = notify_handlers_.find(id);
+    if (iter == notify_handlers_.end()) {
+      callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND,
+                                          "characteristic not notifying"));
+      return;
+    }
+
+    service_->DisableNotifications(
+        id, iter->second,
+        [callback = std::move(callback)](btlib::att::Status status) {
+          callback(fidl_helpers::StatusToFidl(status, ""));
+        });
+    notify_handlers_.erase(iter);
+
+    return;
+  }
+
+  if (notify_handlers_.count(id) != 0) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::ALREADY,
+                                        "characteristic already notifying"));
+    return;
+  }
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto value_cb = [self, id](const ByteBuffer& value) {
+    if (!self) return;
+
+    std::vector<uint8_t> vec(value.size());
+    MutableBufferView vec_view(vec.data(), vec.size());
+    value.Copy(&vec_view);
+    self->binding()->events().OnCharacteristicValueUpdated(
+        id, fidl::VectorPtr<uint8_t>(std::move(vec)));
+  };
+
+  auto status_cb = [self, svc = service_, id, callback = std::move(callback)](
+                       btlib::att::Status status, IdType handler_id) {
+    if (!self) {
+      if (status) {
+        // Disable this handler so it doesn't leak.
+        svc->DisableNotifications(id, handler_id, NopStatusCallback);
+      }
+
+      callback(fidl_helpers::NewFidlError(ErrorCode::FAILED, "canceled"));
+      return;
+    }
+
+    if (status) {
+      FXL_DCHECK(self->notify_handlers_.count(id) == 0u);
+      self->notify_handlers_[id] = handler_id;
+    }
+
+    callback(fidl_helpers::StatusToFidl(status, ""));
+  };
+
+  service_->EnableNotifications(id, std::move(value_cb), std::move(status_cb));
 }
 
 }  // namespace bthost

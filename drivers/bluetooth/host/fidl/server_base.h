@@ -56,6 +56,9 @@ class ServerBase : public Server, public Interface {
     binding_.set_error_handler(std::move(handler));
   }
 
+ protected:
+  ::fidl::Binding<Interface>* binding() { return &binding_; }
+
  private:
   // Holds the channel from the FIDL client.
   ::fidl::Binding<Interface> binding_;
