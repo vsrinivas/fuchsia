@@ -294,25 +294,24 @@ class StoryControllerImpl : PageClient, StoryController, StoryContext {
   OperationQueue operation_queue_;
 
   // Operations implemented here.
-  class LaunchModuleCall;
+  class AddIntentCall;
+  class BlockingModuleDataWriteCall;
+  class ConnectLinkCall;
+  class DefocusCall;
+  class DeleteCall;
+  class FocusCall;
+  class InitializeChainCall;
   class KillModuleCall;
-  class StartModuleCall;
-  class StartModuleInShellCall;
+  class LaunchModuleCall;
+  class LaunchModuleInShellCall;
+  class LedgerNotificationCall;
+  class ResolveModulesCall;
+  class ResolveParameterCall;
+  class StartCall;
   class StartContainerInShellCall;
-  class AddModuleCall;
+  class StartModuleCall; // TODO(thatguy): Get rid of this call.
   class StopCall;
   class StopModuleCall;
-  class DeleteCall;
-  class ConnectLinkCall;
-  class InitializeChainCall;
-  class StartCall;
-  class LedgerNotificationCall;
-  class FocusCall;
-  class DefocusCall;
-  class BlockingModuleDataWriteCall;
-  class ResolveParameterCall;
-  class ResolveModulesCall;
-  class AddIntentCall;
 
   // A blocking module data write call blocks while waiting for some
   // notifications, which are received by the StoryControllerImpl instance.

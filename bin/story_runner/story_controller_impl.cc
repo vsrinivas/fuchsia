@@ -277,6 +277,22 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
+    // If the data in the ledger is already the same as |module_data_|, we
+    // don't try to write again, as the ledger will not notify us of a change.
+    // We rely on the ledger notifying us in
+    // StoryControllerImpl::OnPageChange() so that it calls the method we push
+    // onto StoryControllerImpl::blocked_operations_.
+    new ReadDataCall<ModuleData>(
+        &operation_queue_, story_controller_impl_->page(),
+        key_, true /* not_found_is_ok */, XdrModuleData,
+        [this, flow](ModuleDataPtr data) {
+          if (!ModuleDataEqual(data, module_data_)) {
+            WriteModuleData(flow);
+          }
+        });
+  }
+
+  void WriteModuleData(FlowToken flow) {
     new WriteDataCall<ModuleData>(
         &operation_queue_, story_controller_impl_->page(), key_, XdrModuleData,
         std::move(module_data_), [this, flow] {
@@ -305,6 +321,11 @@ class StoryControllerImpl::BlockingModuleDataWriteCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(BlockingModuleDataWriteCall);
 };
 
+// Launches (brings up a running instance) of a module.
+//
+// If the module is to be composed into the story shell, notifies the story shell
+// of the new module. If the module is composed internally, connects the view
+// owner request appropriately.
 class StoryControllerImpl::LaunchModuleCall : Operation<> {
  public:
   LaunchModuleCall(
@@ -800,37 +821,25 @@ class StoryControllerImpl::StartModuleCall : Operation<> {
   FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleCall);
 };
 
-class StoryControllerImpl::StartModuleInShellCall : Operation<> {
+// Calls LaunchModuleCall to get a running instance, and delegates visual
+// composition to the story shell.
+class StoryControllerImpl::LaunchModuleInShellCall : Operation<> {
  public:
-  StartModuleInShellCall(
+  LaunchModuleInShellCall(
       OperationContainer* const container,
       StoryControllerImpl* const story_controller_impl,
-      const fidl::VectorPtr<fidl::StringPtr>& module_path,
-      fidl::StringPtr module_url,
-      modular::ModuleManifestPtr module_manifest,
-      CreateChainInfoPtr create_chain_info,
+      ModuleDataPtr module_data,
       fidl::InterfaceRequest<component::ServiceProvider> incoming_services,
       fidl::InterfaceRequest<ModuleController> module_controller_request,
-      SurfaceRelationPtr surface_relation,
-      const bool focus,
-      ModuleSource module_source,
-      IntentPtr intent,
       ResultCall result_call)
-      : Operation("StoryControllerImpl::StartModuleInShellCall",
+      : Operation("StoryControllerImpl::LaunchModuleInShellCall",
                   container,
                   std::move(result_call),
-                  module_url),
+                  module_data->module_url),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path.Clone()),
-        module_url_(module_url),
-        module_manifest_(std::move(module_manifest)),
-        create_chain_info_(std::move(create_chain_info)),
+        module_data_(std::move(module_data)),
         incoming_services_(std::move(incoming_services)),
-        module_controller_request_(std::move(module_controller_request)),
-        surface_relation_(std::move(surface_relation)),
-        focus_(focus),
-        module_source_(module_source),
-        intent_(std::move(intent)) {
+        module_controller_request_(std::move(module_controller_request)) {
     Ready();
   }
 
@@ -838,18 +847,16 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
   void Run() override {
     FlowToken flow{this};
 
-    // TODO(mesch): The StartModuleCall may result in just a new
+    // TODO(mesch): The LaunchModuleCall may result in just a new
     // ModuleController connection to an existing
     // ModuleControllerImpl. In that case, the view owner request is
     // closed, and the view owner should not be sent to the story
     // shell.
-    new StartModuleCall(
-        &operation_queue_, story_controller_impl_, module_path_, module_url_,
-        fidl::Clone(module_manifest_),
-        fidl::Clone(create_chain_info_), module_source_,
-        fidl::Clone(surface_relation_), std::move(incoming_services_),
+    new LaunchModuleCall(
+        &operation_queue_, story_controller_impl_, fidl::Clone(module_data_),
+        std::move(incoming_services_),
         std::move(module_controller_request_), view_owner_.NewRequest(),
-        std::move(intent_), [this, flow] { Cont(flow); });
+        [this, flow] { Cont(flow); });
   }
 
   void Cont(FlowToken flow) {
@@ -862,13 +869,13 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
     // We only add a module to story shell if its either a root module or its
     // anchor is already known to story shell.
 
-    if (module_path_->size() == 1) {
+    if (module_data_->module_path->size() == 1) {
       ConnectView(flow, "");
       return;
     }
 
     auto* const connection =
-        story_controller_impl_->FindConnection(module_path_);
+        story_controller_impl_->FindConnection(module_data_->module_path);
     FXL_CHECK(connection);  // Was just created.
 
     auto* const anchor = story_controller_impl_->FindAnchor(connection);
@@ -880,118 +887,45 @@ class StoryControllerImpl::StartModuleInShellCall : Operation<> {
       }
     }
 
+    auto manifest_clone = ModuleManifest::New();
+    module_data_->module_manifest->Clone(manifest_clone.get());
+    auto surface_relation_clone = SurfaceRelation::New();
+    module_data_->surface_relation->Clone(surface_relation_clone.get());
     story_controller_impl_->pending_views_.emplace(std::make_pair(
-        PathString(module_path_),
-        PendingView{module_path_.Clone(),
-              std::move(module_manifest_),
-              std::move(surface_relation_),
-              std::move(view_owner_)}));
+        PathString(module_data_->module_path),
+        PendingView{module_data_->module_path.Clone(),
+          std::move(manifest_clone),
+          std::move(surface_relation_clone),
+          std::move(view_owner_)}));
   }
 
   void ConnectView(FlowToken flow, fidl::StringPtr anchor_view_id) {
-    const auto view_id = PathString(module_path_);
+    const auto view_id = PathString(module_data_->module_path);
 
     story_controller_impl_->story_shell_->ConnectView(
         std::move(view_owner_), view_id, anchor_view_id,
-        std::move(surface_relation_), std::move(module_manifest_));
+        std::move(module_data_->surface_relation), std::move(module_data_->module_manifest));
 
     story_controller_impl_->connected_views_.emplace(view_id);
     story_controller_impl_->ProcessPendingViews();
 
-    if (focus_) {
+    // TODO(thatguy): Pass focus all the way through to here?
+    if (true) {
       story_controller_impl_->story_shell_->FocusView(view_id, anchor_view_id);
     }
   }
 
   StoryControllerImpl* const story_controller_impl_;
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  const fidl::StringPtr module_url_;
-  ModuleManifestPtr module_manifest_;
-  CreateChainInfoPtr create_chain_info_;
+  ModuleDataPtr module_data_;
   fidl::InterfaceRequest<component::ServiceProvider> incoming_services_;
   fidl::InterfaceRequest<ModuleController> module_controller_request_;
-  SurfaceRelationPtr surface_relation_;
-  const bool focus_;
-  const ModuleSource module_source_;
-  IntentPtr intent_;
 
   ModuleControllerPtr module_controller_;
   views_v1_token::ViewOwnerPtr view_owner_;
 
   OperationQueue operation_queue_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartModuleInShellCall);
-};
-
-class StoryControllerImpl::AddModuleCall : Operation<> {
- public:
-  AddModuleCall(OperationContainer* const container,
-                StoryControllerImpl* const story_controller_impl,
-                fidl::VectorPtr<fidl::StringPtr> module_path,
-                fidl::StringPtr module_url,
-                SurfaceRelationPtr surface_relation,
-                const ResultCall& done)
-      : Operation("StoryControllerImpl::AddModuleCall",
-                  container,
-                  done,
-                  module_url),
-        story_controller_impl_(story_controller_impl),
-        module_path_(std::move(module_path)),
-        module_url_(module_url),
-        surface_relation_(std::move(surface_relation)) {
-    Ready();
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-
-    WriteModuleData(flow);
-  }
-
-  void WriteModuleData(FlowToken flow) {
-    module_data_ = ModuleData::New();
-    module_data_->module_url = module_url_;
-    module_data_->module_path = module_path_.Clone();
-    module_data_->module_source = ModuleSource::EXTERNAL;
-    module_data_->surface_relation = CloneOptional(surface_relation_);
-    module_data_->module_stopped = false;
-
-    // TODO: Initialize |module_data_->chain_data|. This call is only used
-    // for operations on StoryController, which don't yet accept
-    // CreateChainInfo.
-    module_data_->chain_data.key_to_link_map.resize(0);
-
-    std::string key{MakeModuleKey(module_path_)};
-    new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
-                                    std::move(key), CloneOptional(module_data_),
-                                    [this, flow] { Cont(flow); });
-  }
-
-  void Cont(FlowToken flow) {
-    if (story_controller_impl_->IsRunning()) {
-      // TODO(jphsiao): Figure out what to do for manifest here.
-      new StartModuleInShellCall(
-          &operation_queue_, story_controller_impl_, module_path_, module_url_,
-          nullptr /* module_manifest */, nullptr /* chain_data */,
-          nullptr /* incoming_services */,
-          nullptr /* module_controller_request*/, std::move(surface_relation_),
-          true, ModuleSource::EXTERNAL, std::move(module_data_->intent),
-          [flow] {});
-    }
-  }
-
-  StoryControllerImpl* const story_controller_impl_;
-  const fidl::VectorPtr<fidl::StringPtr> module_path_;
-  const fidl::StringPtr module_url_;
-  const fidl::StringPtr link_name_;
-  SurfaceRelationPtr surface_relation_;
-
-  ModuleDataPtr module_data_;
-
-  OperationQueue operation_queue_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AddModuleCall);
+  FXL_DISALLOW_COPY_AND_ASSIGN(LaunchModuleInShellCall);
 };
 
 class StoryControllerImpl::StopCall : Operation<> {
@@ -1268,14 +1202,10 @@ class StoryControllerImpl::LedgerNotificationCall : Operation<> {
     }
 
     // We reach this point only if we want to start an external module.
-    new StartModuleInShellCall(
-        &operation_queue_, story_controller_impl_, module_data_->module_path,
-        module_data_->module_url,
-        nullptr /* module_manifest */, nullptr /* chain_data */,
+    new LaunchModuleInShellCall(
+        &operation_queue_, story_controller_impl_, std::move(module_data_),
         nullptr /* incoming_services */,
         nullptr /* module_controller_request */,
-        std::move(module_data_->surface_relation), true,
-        module_data_->module_source, std::move(module_data_->intent),
         [flow] {});
   }
 
@@ -1689,49 +1619,74 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
                            CloneOptional(intent_),
                            requesting_module_path_.Clone(),
                            [this, flow](FindModulesResultPtr result) {
-                             StartModuleFromResult(flow, std::move(result));
+                             AddModuleFromResult(flow, std::move(result));
                            });
   }
 
-  void StartModuleFromResult(FlowToken flow, FindModulesResultPtr result) {
+  void AddModuleFromResult(FlowToken flow, FindModulesResultPtr result) {
     if (!result->modules->empty()) {
-      // Runs the first module in story shell.
+      // Add the resulting module to story state.
       const auto& module_result = result->modules->at(0);
-      const auto& manifest = module_result.manifest;
-      const auto& module_url = module_result.module_id;
-      const auto& create_chain_info = module_result.create_chain_info;
+      create_chain_info_ = CreateChainInfo::New();
+      fidl::Clone(module_result.create_chain_info, create_chain_info_.get());
 
-      auto module_path = requesting_module_path_.Clone();
-      module_path.push_back(module_name_);
+      module_data_ = ModuleData::New();
+      module_data_->module_url = module_result.module_id;
+      module_data_->module_path = requesting_module_path_.Clone();
+      module_data_->module_path.push_back(module_name_);
+      module_data_->module_source = module_source_;
+      fidl::Clone(surface_relation_, &module_data_->surface_relation);
+      module_data_->module_stopped = false;
+      module_data_->intent = std::move(intent_);
+      fidl::Clone(module_result.manifest, &module_data_->module_manifest);
 
+      // Initialize the chain, which we need to do to get ChainData, which belongs
+      // in |module_data_|.
+      new InitializeChainCall(&operation_queue_, story_controller_impl_, fidl::Clone(module_data_->module_path), std::move(create_chain_info_),
+          [this, flow] (ChainDataPtr chain_data) { WriteModuleData(flow, std::move(chain_data)); });
+      return;
+    }
+
+    result_ = StartModuleStatus::NO_MODULES_FOUND;
+  }
+
+  void WriteModuleData(FlowToken flow, ChainDataPtr chain_data) {
+    fidl::Clone(*chain_data, &module_data_->chain_data);
+    // Write the module's data.
+    new BlockingModuleDataWriteCall(&operation_queue_, story_controller_impl_,
+                                    MakeModuleKey(module_data_->module_path), fidl::Clone(module_data_),
+                                    [this, flow] { MaybeLaunchModule(flow); });
+  }
+
+  void MaybeLaunchModule(FlowToken flow) {
+    if (story_controller_impl_->IsRunning()) {
+      // TODO(thatguy): Should we be checking surface_relation also?
       if (!view_owner_request_) {
-        new StartModuleInShellCall(
-            &operation_queue_, story_controller_impl_, std::move(module_path),
-            module_url, CloneOptional(manifest),
-            CloneOptional(create_chain_info), std::move(incoming_services_),
-            std::move(module_controller_request_), std::move(surface_relation_),
-            true /* focus */, module_source_,
-            std::move(intent_), [flow] {});
+        new LaunchModuleInShellCall(
+            &operation_queue_, story_controller_impl_, std::move(module_data_),
+            std::move(incoming_services_), std::move(module_controller_request_),
+            [flow] {});
       } else {
-        new StartModuleCall(
-            &operation_queue_, story_controller_impl_, std::move(module_path),
-            module_url, CloneOptional(manifest),
-            CloneOptional(create_chain_info), module_source_,
-            std::move(surface_relation_), std::move(incoming_services_),
+        new LaunchModuleCall(
+            &operation_queue_, story_controller_impl_, std::move(module_data_),
+            std::move(incoming_services_),
             std::move(module_controller_request_),
             std::move(view_owner_request_),
-            std::move(intent_), [this, flow] {
-              // StartModuleInShellCall above already calls ProcessPendingViews().
+            [this, flow] {
+              // LaunchModuleInShellCall above already calls ProcessPendingViews().
               story_controller_impl_->ProcessPendingViews();
             });
       }
-
-      result_ = StartModuleStatus::SUCCESS;
     }
+
+    result_ = StartModuleStatus::SUCCESS;
   }
 
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;
+
+  // Arguments passed in from the constructor. Some are used to initialize
+  // module_data_ in AddModuleFromResult().
   fidl::VectorPtr<fidl::StringPtr> requesting_module_path_;
   const std::string module_name_;
   IntentPtr intent_;
@@ -1740,6 +1695,13 @@ class StoryControllerImpl::AddIntentCall : Operation<StartModuleStatus> {
   SurfaceRelationPtr surface_relation_;
   fidl::InterfaceRequest<views_v1_token::ViewOwner> view_owner_request_;
   const ModuleSource module_source_;
+
+  // Returned to us from the resolver, and cached here so that InitializeChain()
+  // has access to it.
+  CreateChainInfoPtr create_chain_info_;
+
+  // Created by AddModuleFromResult, and ultimately written to story state.
+  ModuleDataPtr module_data_;
 
   StartModuleStatus result_{StartModuleStatus::NO_MODULES_FOUND};
 
@@ -1784,40 +1746,16 @@ class StoryControllerImpl::StartCall : Operation<> {
     for (auto& module_data : *data) {
       if (module_data.module_source == ModuleSource::EXTERNAL &&
           !module_data.module_stopped) {
-        if (module_data.intent) {
-          fidl::VectorPtr<fidl::StringPtr> parent_module_path =
-              fidl::Clone(module_data.module_path);
-          parent_module_path->pop_back();
-          fidl::StringPtr module_name = module_data.module_path->at(
-              module_data.module_path->size() - 1);
-          new AddIntentCall(
-              &operation_queue_,
-              story_controller_impl_,
-              std::move(parent_module_path),
-              std::move(module_name),
-              std::move(module_data.intent),
-              nullptr /* incoming_services */,
-              nullptr /* module_controller_request */,
-              CloneOptional(module_data.surface_relation),
-              nullptr /* view_owner_request */,
-              std::move(module_data.module_source),
-              [flow](StartModuleStatus) {});
-        } else {
-          new StartModuleInShellCall(
-              &operation_queue_,
-              story_controller_impl_,
-              module_data.module_path,
-              module_data.module_url,
-              nullptr /* module_manifest */,
-              nullptr /* chain_data */,
-              nullptr /* incoming_services */,
-              nullptr /* module_controller_request */,
-              CloneOptional(module_data.surface_relation),
-              true /* focus */,
-              std::move(module_data.module_source),
-              nullptr /* intent */,
-              [flow] {});
-        }
+        FXL_CHECK(module_data.intent);
+        auto module_data_clone = ModuleData::New();
+        fidl::Clone(module_data, module_data_clone.get());
+        new LaunchModuleInShellCall(
+            &operation_queue_,
+            story_controller_impl_,
+            std::move(module_data_clone),
+            nullptr /* incoming_services */,
+            nullptr /* module_controller_request */,
+            [flow] {});
       }
     }
 
