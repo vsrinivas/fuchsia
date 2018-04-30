@@ -11,6 +11,9 @@
 # Enable stricter error handling:
 # - e  Fast fail on errors.
 # - u  Fail when attempting to use undefined variables.
+#
+# This is a Dash script, and does not use the same syntax as Bash. See
+# https://wiki.ubuntu.com/DashAsBinSh for more info.
 set -ue
 
 # Whether any errors occurred while running benchmarks.
@@ -44,21 +47,29 @@ runbench_exec() {
     local results_file="$1"
     shift
 
+    # Ensure the results file doesn't already exist.
+    rm -f "${results_file}"
+
     # Run the benchmark.
     _runbench_log "running $@"
-    if "$@"; then
-        # Record a successful run.
-        _write_summary_entry "${results_file}" "PASS"
-    else
+    if ! "$@"; then
         # Record that an error occurred, globally.
         _got_errors=1
-
         # Record that an error occurred for this particular benchmark.
         _write_summary_entry "${results_file}" "FAIL"
+        return
     fi
 
-    # TODO(kjharland): Don't report test success unless this file exists.
-    _verify_file_exists "${results_file}"
+    # Ensure the output file was actually generated.
+    if [ ! -f "${results_file}" ]; then
+        _runbench_log "error: missing file ${results_file}"
+        _got_errors=1
+        _write_summary_entry "${results_file}" "FAIL"
+        return
+    fi
+
+    # Record a successful run.
+    _write_summary_entry "${results_file}" "PASS"
 }
 
 # Exits the current process with a code indicating whether any errors occurred.
@@ -75,21 +86,6 @@ runbench_finish() {
     _write_summary_file "${out_dir}"
 
     exit $_got_errors
-}
-
-# Verifies that a regular file exists.
-#
-# If the file is missing, an error message is logged.
-#
-# @param {string} Path to the file.
-#
-# Example: _verify_file_exists "my_file.txt"
-_verify_file_exists() {
-    local expected_file="$1"
-    if [ ! -f "${expected_file}" ]; then
-        _got_errors=1
-        _runbench_log "missing file ${expected_file}"
-    fi
 }
 
 # Logs a message to stderr.
