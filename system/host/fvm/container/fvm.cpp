@@ -100,13 +100,17 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
             exit(-1);
         }
 
-        size_t new_slice_size = SuperBlock()->slice_size;
-        if (new_slice_size > 0 && new_slice_size != slice_size_) {
-            // Recalculate metadata size.
-            slice_size_ = new_slice_size;
-            metadata_size_ = fvm::MetadataSize(disk_size_, slice_size_);
-            metadata_.reset(new uint8_t[metadata_size_ * 2]);
+        // If the image is obviously not an FVM header, bail out early.
+        // Otherwise, we go through the effort of ensuring the header is
+        // valid before using it.
+        if (SuperBlock()->magic != FVM_MAGIC) {
+            return;
         }
+
+        // Recalculate metadata size.
+        size_t old_slice_size = SuperBlock()->slice_size;
+        size_t old_metadata_size = fvm::MetadataSize(disk_size_, old_slice_size);
+        auto old_metadata = fbl::unique_ptr<uint8_t[]>(new uint8_t[old_metadata_size * 2]);
 
         if (lseek(fd_.get(), disk_offset_, SEEK_SET) < 0) {
             fprintf(stderr, "Seek reset failed\n");
@@ -114,22 +118,26 @@ FvmContainer::FvmContainer(const char* path, size_t slice_size, off_t offset, of
         }
 
         // Read remainder of metadata.
-        rd = read(fd_.get(), metadata_.get(), metadata_size_ * 2);
-        if (rd != static_cast<ssize_t>(metadata_size_ * 2)) {
-            fprintf(stderr, "Metadata read failed: expected %ld, actual %ld\n", metadata_size_, rd);
+        rd = read(fd_.get(), old_metadata.get(), old_metadata_size * 2);
+        if (rd != static_cast<ssize_t>(old_metadata_size * 2)) {
+            fprintf(stderr, "Metadata read failed: expected %ld, actual %ld\n",
+                    old_metadata_size * 2, rd);
             exit(-1);
         }
 
-        const void* backup = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(metadata_.get()) +
-                                                     metadata_size_);
-
-        // For now we always assume that primary metadata is primary.
-        if (fvm_validate_header(metadata_.get(), backup, metadata_size_, nullptr) == ZX_OK) {
-            valid_ = true;
-
-            if (memcmp(metadata_.get(), backup, metadata_size_)) {
-                fprintf(stderr, "Warning: primary and backup metadata do not match\n");
+        const void* backup = reinterpret_cast<void*>(
+                reinterpret_cast<uintptr_t>(old_metadata.get()) + old_metadata_size);
+        const void* primary = nullptr;
+        if (fvm_validate_header(old_metadata.get(), backup, old_metadata_size, &primary) == ZX_OK) {
+            if (primary != old_metadata.get()) {
+                fprintf(stderr, "Can only update FVM with valid primary as first copy\n");
+                exit(-1);
             }
+
+            valid_ = true;
+            slice_size_ = old_slice_size;
+            metadata_size_ = old_metadata_size;
+            metadata_.reset(old_metadata.release());
         }
     }
 }
