@@ -105,6 +105,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->slice_count = 1;
         vslice_info->block_offset = 0;
         vslice_info->block_count = 1;
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 1: {
@@ -112,6 +113,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->slice_count = fvm_info_.ibm_slices;
         vslice_info->block_offset = info_.ibm_block;
         vslice_info->block_count = info_.abm_block - info_.ibm_block;
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 2: {
@@ -119,6 +121,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->slice_count = fvm_info_.abm_slices;
         vslice_info->block_offset = info_.abm_block;
         vslice_info->block_count = info_.ino_block - info_.abm_block;
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 3: {
@@ -126,6 +129,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->slice_count = fvm_info_.ino_slices;
         vslice_info->block_offset = info_.ino_block;
         vslice_info->block_count = info_.dat_block - info_.ino_block;
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 4: {
@@ -133,6 +137,7 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
         vslice_info->slice_count = fvm_info_.dat_slices;
         vslice_info->block_offset = info_.dat_block;
         vslice_info->block_count = info_.block_count;
+        vslice_info->zero_fill = false;
         return ZX_OK;
     }
     }

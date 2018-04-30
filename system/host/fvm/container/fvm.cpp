@@ -704,7 +704,7 @@ zx_status_t FvmContainer::WritePartition(unsigned part_index) {
 }
 
 zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uint32_t* pslice) {
-    vslice_info_t vslice_info;
+    vslice_info_t vslice_info{};
     zx_status_t status;
     if ((status = format->GetVsliceRange(extent_index, &vslice_info)) != ZX_OK) {
         return status;
@@ -720,7 +720,6 @@ zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uin
                 if (!vslice_info.zero_fill) {
                     break;
                 }
-
                 format->EmptyBlock();
             } else {
                 if ((status = format->FillBlock(vslice_info.block_offset + current_block)) != ZX_OK) {

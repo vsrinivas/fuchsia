@@ -86,6 +86,7 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         vslice_info->slice_count = 1;
         vslice_info->block_offset = 0;
         vslice_info->block_count = 1;
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 1: {
@@ -93,6 +94,7 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         vslice_info->slice_count = fvm_info_.abm_slices;
         vslice_info->block_offset = BlockMapStartBlock(info_);
         vslice_info->block_count = BlockMapBlocks(info_);
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 2: {
@@ -100,6 +102,7 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         vslice_info->slice_count = fvm_info_.ino_slices;
         vslice_info->block_offset = NodeMapStartBlock(info_);
         vslice_info->block_count = NodeMapBlocks(info_);
+        vslice_info->zero_fill = true;
         return ZX_OK;
     }
     case 3: {
@@ -107,6 +110,7 @@ zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* v
         vslice_info->slice_count = fvm_info_.dat_slices;
         vslice_info->block_offset = DataStartBlock(info_);
         vslice_info->block_count = DataBlocks(info_);
+        vslice_info->zero_fill = false;
         return ZX_OK;
     }
     }
