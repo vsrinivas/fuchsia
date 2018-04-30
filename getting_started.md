@@ -148,6 +148,11 @@ There are various flags for `fx run` to control QEMU's configuration:
 
 Use `fx run -h` to see all available options.
 
+#### QEMU tips
+
+* `ctrl+a x` will exit QEMU in text mode.
+* `ctrl+a ?` or `ctrl+a h` prints all supported commands.
+
 #### Enabling Graphics
 
 Note: Graphics under QEMU are extremely limited due to a lack of Vulkan
