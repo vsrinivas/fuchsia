@@ -97,6 +97,7 @@ static SyscallNumbersGenerator syscall_num_generator("#define ZX_SYS_");
 static RustBindingGenerator rust_binding_generator;
 static TraceInfoGenerator trace_generator;
 static CategoryGenerator category_generator;
+static JsonGenerator json_generator;
 
 const map<string, Generator&> type_to_generator = {
     // The user header, pure C.
@@ -134,6 +135,9 @@ const map<string, Generator&> type_to_generator = {
 
     // Category list.
     {"category", category_generator},
+
+    // JSON list of syscalls.
+    {"json", json_generator},
 };
 
 const map<string, string> type_to_default_suffix = {
@@ -149,6 +153,7 @@ const map<string, string> type_to_default_suffix = {
     {"rust", ".rs"},
     {"vdso-wrappers", ".vdso-wrappers.inc"},
     {"category", ".category.inc"},
+    {"json", ".json"},
 };
 
 const map<string, string>& get_type_to_default_suffix() {

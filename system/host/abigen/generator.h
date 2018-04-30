@@ -113,6 +113,17 @@ public:
     bool syscall(std::ofstream& os, const Syscall& sc) override;
 };
 
+/* Generates a JSON representation of the syscall list. */
+class JsonGenerator : public Generator {
+public:
+    bool header(std::ofstream& os) override;
+    bool footer(std::ofstream& os) override;
+    bool syscall(std::ofstream& os, const Syscall& sc) override;
+
+private:
+    bool first_syscall_ = true;
+};
+
 // Writes the signature of a syscall, up to the end of the args list.
 //
 // Can wrap pointers with user_ptr.
