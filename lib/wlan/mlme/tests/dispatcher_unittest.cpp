@@ -4,6 +4,8 @@
 
 #include <wlan/mlme/dispatcher.h>
 
+#include "mock_device.h"
+
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
@@ -21,55 +23,6 @@ namespace {
 
 template <typename Frame> using FrameCallback = std::function<void(const Frame&)>;
 using EthFrameCallback = FrameCallback<ImmutableBaseFrame<EthernetII>>;
-
-// TODO(hahnr): Factor out and provide a mocked one for all sorts of tests.
-struct MockDevice : public DeviceInterface {
-   public:
-    MockDevice() {}
-
-    zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
-        eth_queue.Enqueue(std::move(packet));
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
-        wlan_queue.Enqueue(std::move(packet));
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final { return ZX_OK; }
-
-    zx_status_t SetChannel(wlan_channel_t chan) override final { return ZX_ERR_NOT_SUPPORTED; }
-
-    zx_status_t SetStatus(uint32_t status) override final { return ZX_ERR_NOT_SUPPORTED; }
-
-    zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final { return ZX_ERR_NOT_SUPPORTED; }
-
-    zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) override final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t EnableBeaconing(bool enable) override final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t SetKey(wlan_key_config_t* key_config) override final {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    fbl::RefPtr<DeviceState> GetState() override final { return fbl::RefPtr<DeviceState>(); }
-
-    const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
-
-    wlanmac_info_t wlanmac_info;
-    PacketQueue eth_queue;
-    PacketQueue wlan_queue;
-    PacketQueue svc_queue;
-};
 
 struct MockMlme : public Mlme {
     MockMlme() {}

@@ -18,6 +18,7 @@ source_set("test_main") {
   testonly = true
 
   sources = [
+    "mock_device.h",
     "test_main.cpp",
   ]
 

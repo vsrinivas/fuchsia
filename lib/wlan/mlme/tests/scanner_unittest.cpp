@@ -4,6 +4,8 @@
 
 #include <wlan/mlme/client/scanner.h>
 
+#include "mock_device.h"
+
 #include <wlan/mlme/clock.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -28,64 +30,9 @@ const uint8_t kBeacon[] = {
     0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
 
-struct MockDevice : public DeviceInterface {
-   public:
-    MockDevice() { state = fbl::AdoptRef(new DeviceState); }
-
-    zx_status_t GetTimer(uint64_t id, fbl::unique_ptr<Timer>* timer) override final {
-        // Should not be used by Scanner at this time.
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    zx_status_t SendEthernet(fbl::unique_ptr<Packet> packet) override final {
-        eth_queue.Enqueue(std::move(packet));
-        return ZX_OK;
-    }
-
-    zx_status_t SendWlan(fbl::unique_ptr<Packet> packet) override final {
-        wlan_queue.Enqueue(std::move(packet));
-        return ZX_OK;
-    }
-
-    zx_status_t SendService(fbl::unique_ptr<Packet> packet) override final {
-        svc_queue.Enqueue(std::move(packet));
-        return ZX_OK;
-    }
-
-    zx_status_t SetChannel(wlan_channel_t chan) override final {
-        state->set_channel(chan);
-        return ZX_OK;
-    }
-
-    zx_status_t SetStatus(uint32_t status) override final {
-        state->set_online(status == 1);
-        return ZX_OK;
-    }
-
-    zx_status_t ConfigureBss(wlan_bss_config_t* cfg) override final { return ZX_OK; }
-
-    zx_status_t EnableBeaconing(bool enabled) override final { return ZX_OK; }
-
-    zx_status_t ConfigureBeacon(fbl::unique_ptr<Packet> packet) override final { return ZX_OK; }
-
-    zx_status_t SetKey(wlan_key_config_t* key_config) override final { return ZX_OK; }
-
-    fbl::RefPtr<DeviceState> GetState() override final { return state; }
-
-    const wlanmac_info_t& GetWlanInfo() const override final { return wlanmac_info; }
-
-    fbl::RefPtr<DeviceState> state;
-    wlanmac_info_t wlanmac_info;
-    PacketQueue eth_queue;
-    PacketQueue wlan_queue;
-    PacketQueue svc_queue;
-};
-
 class ScannerTest : public ::testing::Test {
    public:
-    ScannerTest() : scanner_(&mock_dev_, fbl::unique_ptr<Timer>(new TestTimer(1u, &clock_))) {
-        SetupMessages();
-    }
+    ScannerTest() : scanner_(&mock_dev_, mock_dev_.CreateTimer(1u)) { SetupMessages(); }
 
    protected:
     void SetupMessages() {
@@ -102,43 +49,37 @@ class ScannerTest : public ::testing::Test {
         return scanner_.Start(*req_);
     }
 
-    uint16_t CurrentChannel() { return mock_dev_.GetState()->channel().primary; }
-
-    zx_status_t DeserializeResponse() {
-        EXPECT_EQ(1u, mock_dev_.svc_queue.size());
-        auto packet = mock_dev_.svc_queue.Dequeue();
-        return DeserializeServiceMsg<wlan_mlme::ScanConfirm>(
-            *packet, wlan_mlme::Method::SCAN_confirm, &resp_);
+    zx_status_t DeserializeScanResponse() {
+        return mock_dev_.GetQueuedServiceMsg(wlan_mlme::Method::SCAN_confirm, &resp_);
     }
 
     wlan_mlme::ScanRequestPtr req_;
     wlan_mlme::ScanConfirm resp_;
-    TestClock clock_;
     MockDevice mock_dev_;
     Scanner scanner_;
 };
 
 TEST_F(ScannerTest, Start) {
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
     EXPECT_FALSE(scanner_.IsRunning());
 
     EXPECT_EQ(ZX_OK, Start());
     EXPECT_TRUE(scanner_.IsRunning());
 
-    EXPECT_EQ(1u, CurrentChannel());
+    EXPECT_EQ(1u, mock_dev_.GetChannelNumber());
 }
 
 TEST_F(ScannerTest, Start_InvalidChannelTimes) {
     req_->min_channel_time = 2;
     req_->max_channel_time = 1;
 
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, Start());
     EXPECT_FALSE(scanner_.IsRunning());
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
-    EXPECT_EQ(ZX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
     EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
 }
@@ -147,13 +88,13 @@ TEST_F(ScannerTest, Start_NoChannels) {
     SetupMessages();
     req_->channel_list.resize(0);
 
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
     EXPECT_EQ(ZX_OK, Start());
     EXPECT_FALSE(scanner_.IsRunning());
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
-    EXPECT_EQ(ZX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
     EXPECT_EQ(wlan_mlme::ScanResultCodes::NOT_SUPPORTED, resp_.result_code);
 }
@@ -195,7 +136,7 @@ TEST_F(ScannerTest, Timeout_MinChannelTime) {
     ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->min_channel_time).get(), scanner_.timer().deadline().get());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->min_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(zx::time() + WLAN_TU(req_->max_channel_time), scanner_.timer().deadline());
 }
@@ -207,13 +148,13 @@ TEST_F(ScannerTest, Timeout_MaxChannelTime) {
 
     ASSERT_EQ(ZX_OK, Start());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->min_channel_time));
     ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->max_channel_time));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->max_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    EXPECT_EQ(ZX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     EXPECT_EQ(0u, resp_.bss_description_set->size());
     EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_.result_code);
 }
@@ -224,22 +165,22 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     req_->max_channel_time = 10;
     req_->channel_list.push_back(2);
 
-    EXPECT_EQ(0u, CurrentChannel());
+    EXPECT_EQ(0u, mock_dev_.GetChannelNumber());
 
     ASSERT_EQ(ZX_OK, Start());
     ASSERT_EQ(1u, scanner_.ScanChannel().primary);
 
-    EXPECT_EQ(1u, CurrentChannel());
+    EXPECT_EQ(1u, mock_dev_.GetChannelNumber());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->min_channel_time));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->min_channel_time));
     ASSERT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->max_channel_time));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->max_channel_time));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(2u, scanner_.ScanChannel().primary);
-    EXPECT_EQ(clock_.Now() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
+    EXPECT_EQ(mock_dev_.GetTime() + WLAN_TU(req_->min_channel_time), scanner_.timer().deadline());
 
-    EXPECT_EQ(2u, CurrentChannel());
+    EXPECT_EQ(2u, mock_dev_.GetChannelNumber());
 }
 
 TEST_F(ScannerTest, DISABLED_Timeout_ProbeDelay) {
@@ -251,7 +192,7 @@ TEST_F(ScannerTest, DISABLED_Timeout_ProbeDelay) {
     ASSERT_EQ(ZX_OK, Start());
     EXPECT_EQ(WLAN_TU(req_->probe_delay).get(), scanner_.timer().deadline().get());
 
-    clock_.Set(zx::time() + WLAN_TU(req_->probe_delay));
+    mock_dev_.AdvanceTime(WLAN_TU(req_->probe_delay));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
     EXPECT_EQ(WLAN_TU(req_->min_channel_time).get(), scanner_.timer().deadline().get());
 }
@@ -274,10 +215,10 @@ TEST_F(ScannerTest, ScanResponse) {
     auto beacon = ImmutableMgmtFrame<Beacon>(hdr, bcn, sizeof(kBeacon) - hdr->len());
 
     EXPECT_EQ(ZX_OK, scanner_.HandleBeacon(beacon, info));
-    clock_.Set(zx::time(1));
+    mock_dev_.SetTime(zx::time(1));
     EXPECT_EQ(ZX_OK, scanner_.HandleTimeout());
 
-    EXPECT_EQ(ZX_OK, DeserializeResponse());
+    EXPECT_EQ(ZX_OK, DeserializeScanResponse());
     ASSERT_EQ(1u, resp_.bss_description_set->size());
     EXPECT_EQ(wlan_mlme::ScanResultCodes::SUCCESS, resp_.result_code);
 
