@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_
-#define GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_
+#ifndef GARNET_BIN_MEDIA_AUDIO_POLICY_AUDIO_POLICY_SERVICE_IMPL_H_
+#define GARNET_BIN_MEDIA_AUDIO_POLICY_AUDIO_POLICY_SERVICE_IMPL_H_
 
 #include <string>
 
@@ -74,4 +74,4 @@ class AudioPolicyServiceImpl : public AudioPolicy {
 
 }  // namespace audio_policy
 
-#endif  // GARNET_BIN_MEDIA_AUDIO_POLICY_SERVICE_AUDIO_POLICY_SERVICE_IMPL_H_
+#endif  // GARNET_BIN_MEDIA_AUDIO_POLICY_AUDIO_POLICY_SERVICE_IMPL_H_

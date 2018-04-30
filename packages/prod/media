@@ -1,6 +1,6 @@
 {
     "packages": {
-        "audio_policy_service": "//garnet/bin/media/audio_policy_service",
+        "audio_policy": "//garnet/bin/media/audio_policy",
         "media_player": "//garnet/bin/media/media_player",
         "net_media_service": "//garnet/bin/media/net_media_service",
         "tts_service": "//garnet/bin/tts:tts_service",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/media/audio_policy_service/audio_policy_service_impl.h"
+#include "garnet/bin/media/audio_policy/audio_policy_service_impl.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -20,9 +20,8 @@ static constexpr float kMaxSystemAudioGain = 0.0f;
 static constexpr uint32_t kInitializeAttempts = 30;
 static constexpr zx::duration kInitializeAttemptInterval = zx::msec(100);
 static const std::string kStatusFilePath =
-    "/data/app_local/audio_policy_service/status";
-static const std::string kStatusFileDir =
-    "/data/app_local/audio_policy_service";
+    "/data/app_local/audio_policy/status";
+static const std::string kStatusFileDir = "/data/app_local/audio_policy";
 
 }  // namespace
 

@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-package("audio_policy_service") {
+package("audio_policy") {
   deprecated_system_image = true
 
   deps = [
@@ -13,13 +13,13 @@ package("audio_policy_service") {
 
   binaries = [
     {
-      name = "audio_policy_service"
+      name = "audio_policy"
     },
   ]
 }
 
 executable("bin") {
-  output_name = "audio_policy_service"
+  output_name = "audio_policy"
 
   sources = [
     "audio_policy_service_impl.cc",
