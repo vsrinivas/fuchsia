@@ -1,7 +1,4 @@
 {
-    "imports": [
-        "garnet/packages/prod/boringssl_libssl"
-    ],
     "packages": {
         "boringssl_tool": "//third_party/boringssl:boringssl_tool"
     }

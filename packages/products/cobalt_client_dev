@@ -1,7 +1,6 @@
 {
     "imports": [
         "garnet/packages/config/network",
-        "garnet/packages/prod/boringssl_libssl",
         "garnet/packages/prod/cobalt_client",
         "garnet/packages/prod/mdns_service",
         "garnet/packages/prod/netconnector",
