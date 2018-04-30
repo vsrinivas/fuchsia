@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_GTEST_TEST_WITH_MESSAGE_LOOP_H_
-#define GARNET_LIB_GTEST_TEST_WITH_MESSAGE_LOOP_H_
+#ifndef GARNET_LIB_GTEST_TEST_WITH_LOOP_H_
+#define GARNET_LIB_GTEST_TEST_WITH_LOOP_H_
 
 #include <functional>
 
@@ -79,4 +79,4 @@ protected:
 
 }  // namespace gtest
 
-#endif  // GARNET_LIB_GTEST_TEST_WITH_MESSAGE_LOOP_H_
+#endif  // GARNET_LIB_GTEST_TEST_WITH_LOOP_H_
