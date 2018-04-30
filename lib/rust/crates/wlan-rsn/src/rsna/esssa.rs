@@ -92,7 +92,7 @@ impl EssSa {
     }
 
     fn process_event(
-        &mut self, event: Async<Option<Either<eapol::Frame, exchange::Key>>>
+        &mut self, event: Async<Option<Either<eapol::Frame, exchange::Key>>>,
     ) -> Poll<Option<eapol::Frame>, failure::Error> {
         match event {
             Async::Ready(Some(item)) => match item {

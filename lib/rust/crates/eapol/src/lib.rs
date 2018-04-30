@@ -16,6 +16,7 @@ extern crate test;
 use byteorder::BigEndian;
 use bytes::{BufMut, Bytes, BytesMut};
 use nom::{be_u16, be_u64, be_u8};
+use std::convert::AsMut;
 
 pub trait FrameReceiver {
     fn on_eapol_frame(&self, frame: &Frame) -> Result<(), failure::Error>;
@@ -31,12 +32,28 @@ pub enum Frame {
 }
 
 // IEEE Std 802.1X-2010, 11.9, Table 11-5
+#[derive(Debug)]
 pub enum KeyDescriptor {
     Rc4 = 1,
     Ieee802dot11 = 2,
 }
 
+impl KeyDescriptor {
+    pub fn from_u8(n: u8) -> Option<KeyDescriptor> {
+        match n {
+            1 => Some(KeyDescriptor::Rc4),
+            2 => Some(KeyDescriptor::Ieee802dot11),
+            _ => None,
+        }
+    }
+}
+
+// IEEE Std 802.11-2016, 12.7.2 b.2)
+pub const KEY_TYPE_GROUP_SMK: u16 = 0;
+pub const KEY_TYPE_PAIRWISE: u16 = 1;
+
 // IEEE Std 802.1X-2010, 11.3.1
+#[derive(Debug)]
 pub enum ProtocolVersion {
     Ieee802dot1x2010 = 3,
 }
@@ -90,8 +107,8 @@ pub struct KeyFrame {
     pub key_info: KeyInformation,
     pub key_len: u16,
     pub key_replay_counter: u64,
-    pub key_nonce: Bytes, /* 32 octets */
-    pub key_iv: Bytes, /* 16 octets */
+    pub key_nonce: [u8; 32],
+    pub key_iv: [u8; 16],
     pub key_rsc: u64,
     // 8 octests reserved.
     pub key_mic: Bytes, /* AKM dependent size */
@@ -130,6 +147,13 @@ impl KeyFrame {
     }
 }
 
+fn to_array<A>(slice: &[u8]) -> A where A: Sized + Default + AsMut<[u8]>
+{
+    let mut array = Default::default();
+    <A as AsMut<[u8]>>::as_mut(&mut array).clone_from_slice(slice);
+    array
+}
+
 named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
        do_parse!(
            version: be_u8 >>
@@ -158,8 +182,8 @@ named_args!(pub key_frame_from_bytes(mic_size: u16) <KeyFrame>,
                key_replay_counter: key_replay_counter,
                key_mic: Bytes::from(key_mic),
                key_rsc: key_rsc,
-               key_iv: Bytes::from(key_iv),
-               key_nonce: Bytes::from(key_nonce),
+               key_iv: to_array(key_iv),
+               key_nonce: to_array(key_nonce),
                key_data_len: key_data_len,
                key_data: Bytes::from(key_data),
            })

@@ -6,17 +6,23 @@ use eapol;
 use failure;
 
 pub struct Supplicant {
-    // TODO(hahnr): Implement
+    pub key_replay_counter: u64,
+    pub a_nonce: [u8; 32],
 }
 
 impl Supplicant {
     pub fn new() -> Result<Supplicant, failure::Error> {
-        Ok(Supplicant {})
+        Ok(Supplicant {
+            key_replay_counter: 0,
+            a_nonce: [0u8; 32],
+        })
     }
 }
 
-impl eapol::KeyFrameReceiver for Supplicant {
-    fn on_eapol_key_frame(&self, _frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
+impl Supplicant {
+    pub fn on_eapol_key_frame(
+        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8],
+    ) -> Result<(), failure::Error> {
         // TODO(hahnr): Implement.
         Ok(())
     }

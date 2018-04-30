@@ -41,7 +41,7 @@ pub struct Cipher {
 impl Cipher {
     /// Reserved and vendor specific cipher suites have no known usage and require special
     /// treatments.
-    fn has_known_usage(&self) -> bool {
+    pub fn has_known_usage(&self) -> bool {
         !self.is_reserved() && !self.is_vendor_specific()
     }
 
@@ -53,6 +53,20 @@ impl Cipher {
     pub fn is_reserved(&self) -> bool {
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-131
         (self.suite_type == 3 || self.suite_type >= 14) && !self.is_vendor_specific()
+    }
+
+    pub fn is_enhanced(&self) -> bool {
+        // IEEE Std 802.11-2016, 4.3.8
+        if !self.has_known_usage() {
+            false
+        } else {
+            match self.suite_type {
+                GROUP_CIPHER_SUITE | WEP_40 | WEP_104 | GROUP_ADDRESSED_TRAFFIC_NOT_ALLOWED => {
+                    false
+                }
+                _ => true,
+            }
+        }
     }
 
     pub fn supports_gtk(&self) -> Option<bool> {

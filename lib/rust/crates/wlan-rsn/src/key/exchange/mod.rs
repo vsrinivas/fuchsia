@@ -5,13 +5,13 @@
 pub mod handshake;
 
 use self::handshake::fourway::{self, Fourway};
-use Error;
 use eapol;
 use failure;
 use futures::future::Either;
 use futures::{task, Async, Poll, Stream};
 use rsna::Role;
 use rsne::Rsne;
+use Error;
 
 pub enum Key {
     Pmk(Vec<u8>),

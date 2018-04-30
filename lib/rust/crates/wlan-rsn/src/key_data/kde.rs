@@ -4,7 +4,7 @@
 
 use super::Element;
 use nom::IResult::{Done, Incomplete};
-use nom::{IResult, Needed, le_u8};
+use nom::{le_u8, IResult, Needed};
 
 pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;

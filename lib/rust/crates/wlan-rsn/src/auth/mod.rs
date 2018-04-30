@@ -5,12 +5,12 @@
 pub mod psk;
 
 use self::psk::Psk;
-use Error;
 use eapol;
 use failure;
 use futures::future::Either;
 use futures::{task, Async, Poll, Stream};
 use key::exchange::Key;
+use Error;
 
 pub enum Method {
     Psk(psk::Psk),

@@ -5,11 +5,17 @@
 use eapol;
 use failure;
 
-pub struct Authenticator {}
+pub struct Authenticator {
+    pub key_replay_counter: u64,
+    pub s_nonce: [u8; 32],
+}
 
 impl Authenticator {
     pub fn new() -> Result<Authenticator, failure::Error> {
-        Ok(Authenticator {})
+        Ok(Authenticator {
+            key_replay_counter: 0,
+            s_nonce: [0u8; 32],
+        })
     }
 
     pub fn initiate(&self) -> Result<(), failure::Error> {
@@ -18,8 +24,10 @@ impl Authenticator {
     }
 }
 
-impl eapol::KeyFrameReceiver for Authenticator {
-    fn on_eapol_key_frame(&self, _frame: &eapol::KeyFrame) -> Result<(), failure::Error> {
+impl Authenticator {
+    pub fn on_eapol_key_frame(
+        &self, _frame: &eapol::KeyFrame, _plain_data: &[u8],
+    ) -> Result<(), failure::Error> {
         // TODO(hahnr): Implement.
         Ok(())
     }
