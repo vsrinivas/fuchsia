@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include <queue>
+#include <unordered_map>
 #include <vector>
 
 #include <fbl/function.h>
+#include <lib/async/dispatcher.h>
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -50,6 +53,10 @@ class Client;
 // MUST call ShutDown() on the GATT thread to ensure safe clean up.
 class RemoteCharacteristic final {
  public:
+  using ValueCallback = std::function<void(const common::ByteBuffer&)>;
+  using NotifyStatusCallback =
+      std::function<void(att::Status, IdType handler_id)>;
+
   // Represents a "Characteristic Descriptor" (Vol 3, Part G, 3.3.3).
   class Descriptor final {
    public:
@@ -65,7 +72,8 @@ class RemoteCharacteristic final {
 
   using DescriptorList = std::vector<Descriptor>;
 
-  RemoteCharacteristic(IdType id, const CharacteristicData& info);
+  RemoteCharacteristic(fxl::WeakPtr<Client> client, IdType id,
+                       const CharacteristicData& info);
   ~RemoteCharacteristic() = default;
 
   // The move constructor allows this move-only type to be stored in a vector
@@ -92,9 +100,6 @@ class RemoteCharacteristic final {
  private:
   friend class RemoteService;
 
-  // TODO(armansito): Add methods for caching notification subscribers and
-  // notifying them.
-
   // The following private methods can only be called by a RemoteService. All
   // except the destructor will be called on the GATT thread.
 
@@ -106,9 +111,21 @@ class RemoteCharacteristic final {
   //
   // NOTE: The owning RemoteService is responsible for ensuring that this object
   // outlives the discovery procedure.
-  using StatusCallback = std::function<void(att::Status)>;
-  void DiscoverDescriptors(Client* client, att::Handle range_end,
-                           StatusCallback callback);
+  void DiscoverDescriptors(att::Handle range_end, att::StatusCallback callback);
+
+  // (See RemoteService::NotifyCharacteristic in remote_service.h).
+  void EnableNotifications(ValueCallback value_callback,
+                           NotifyStatusCallback status_callback,
+                           async_t* dispatcher = nullptr);
+  bool DisableNotifications(IdType handler_id);
+
+  // Sends a request to disable notifications and indications. Called by
+  // DisableNotifications and ShutDown.
+  void DisableNotificationsInternal();
+
+  // Resolves all pending notification subscription requests. Called by
+  // EnableNotifications().
+  void ResolvePendingNotifyRequests(att::Status status);
 
   fxl::ThreadChecker thread_checker_;
 
@@ -121,6 +138,39 @@ class RemoteCharacteristic final {
 
   // Handle of the Client Characteristic Configuration descriptor, or 0 if none.
   att::Handle ccc_handle_;
+
+  // Represents a pending request to subscribe to notifications or indications.
+  struct PendingNotifyRequest {
+    PendingNotifyRequest(async_t* dispatcher, ValueCallback value_callback,
+                         NotifyStatusCallback status_callback);
+
+    PendingNotifyRequest() = default;
+    PendingNotifyRequest(PendingNotifyRequest&&) = default;
+
+    async_t* dispatcher;
+    ValueCallback value_callback;
+    NotifyStatusCallback status_callback;
+  };
+  std::queue<PendingNotifyRequest> pending_notify_reqs_;
+
+  // Active notification handlers.
+  struct NotifyHandler {
+    NotifyHandler(async_t* dispatcher, ValueCallback callback);
+
+    NotifyHandler() = default;
+    NotifyHandler(NotifyHandler&&) = default;
+    NotifyHandler& operator=(NotifyHandler&&) = default;
+
+    async_t* dispatcher;
+    ValueCallback callback;
+  };
+  std::unordered_map<IdType, NotifyHandler> notify_handlers_;
+
+  // The next available notification handler ID.
+  size_t next_notify_handler_id_;
+
+  // The GATT client bearer used for ATT requests.
+  fxl::WeakPtr<Client> client_;
 
   fxl::WeakPtrFactory<RemoteCharacteristic> weak_ptr_factory_;
 

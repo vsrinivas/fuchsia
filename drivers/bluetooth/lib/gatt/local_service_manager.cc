@@ -14,9 +14,6 @@ namespace btlib {
 namespace gatt {
 namespace {
 
-constexpr uint16_t kCCCNotificationBit = 0x0001;
-constexpr uint16_t kCCCIndicationBit = 0x0002;
-
 // Adds characteristic definition attributes to |grouping| for |chrc|. Returns
 // the characteristic value handle.
 att::Handle InsertCharacteristicAttributes(

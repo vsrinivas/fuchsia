@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 
+#include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 
 namespace btlib {
@@ -15,20 +16,9 @@ using att::Status;
 using att::StatusCallback;
 using common::BufferView;
 using common::HostError;
+using common::RunOrPost;
 
 namespace {
-
-// Executes |task|. Posts it on |dispatcher| if dispatcher is not null.
-void RunOrPost(fbl::Function<void()> task, async_t* dispatcher) {
-  FXL_DCHECK(task);
-
-  if (!dispatcher) {
-    task();
-    return;
-  }
-
-  async::PostTask(dispatcher, std::move(task));
-}
 
 void ReportStatus(Status status,
                   StatusCallback callback,
@@ -140,7 +130,7 @@ void RemoteService::DiscoverCharacteristics(CharacteristicCallback callback,
     auto chrc_cb = [self](const CharacteristicData& chrc) {
       if (!self->shut_down_) {
         IdType id = self->characteristics_.size();
-        self->characteristics_.emplace_back(id, chrc);
+        self->characteristics_.emplace_back(self->client_, id, chrc);
       }
     };
 
@@ -245,6 +235,39 @@ void RemoteService::WriteCharacteristic(IdType id,
   });
 }
 
+void RemoteService::EnableNotifications(IdType id, ValueCallback callback,
+                                        NotifyStatusCallback status_callback,
+                                        async_t* dispatcher) {
+  RunGattTask([this, id, cb = std::move(callback),
+               status_cb = std::move(status_callback), dispatcher]() mutable {
+    RemoteCharacteristic* chrc;
+    att::Status status = att::Status(GetCharacteristic(id, &chrc));
+    if (!status) {
+      RunOrPost([status, cb = std::move(status_cb)] { cb(status, kInvalidId); },
+                dispatcher);
+      return;
+    }
+
+    FXL_DCHECK(chrc);
+
+    chrc->EnableNotifications(std::move(cb), std::move(status_cb), dispatcher);
+  });
+}
+
+void RemoteService::DisableNotifications(IdType id, IdType handler_id,
+                                         StatusCallback status_callback,
+                                         async_t* dispatcher) {
+  RunGattTask([this, id, handler_id, cb = std::move(status_callback),
+               dispatcher]() mutable {
+    RemoteCharacteristic* chrc;
+    att::Status status = att::Status(GetCharacteristic(id, &chrc));
+    if (status && !chrc->DisableNotifications(handler_id)) {
+      status = att::Status(HostError::kNotFound);
+    }
+    ReportStatus(status, std::move(cb), dispatcher);
+  });
+}
+
 void RemoteService::StartDescriptorDiscovery() {
   FXL_DCHECK(IsOnGattThread());
   FXL_DCHECK(!pending_discov_reqs_.empty());
@@ -303,8 +326,7 @@ void RemoteService::StartDescriptorDiscovery() {
     }
 
     FXL_DCHECK(client_);
-    characteristics_[i].DiscoverDescriptors(client_.get(), end_handle,
-                                            desc_done_callback);
+    characteristics_[i].DiscoverDescriptors(end_handle, desc_done_callback);
   }
 }
 

@@ -93,6 +93,34 @@ class RemoteService : public fbl::RefCounted<RemoteService> {
                            att::StatusCallback callback,
                            async_t* dispatcher = nullptr);
 
+  // Subscribe to characteristic handle/value notifications or indications
+  // from the characteristic with the given identifier. Either notifications or
+  // indications will be enabled depending on the characteristic properties.
+  //
+  // This method can be called more than once to register multiple subscribers.
+  // The remote Client Characteristic Configuration descriptor will be written
+  // only if this is called for the first subscriber.
+  //
+  // |status_callback| will be called with the status of the operation. On
+  // success, a |handler_id| will be returned that can be used to unregister the
+  // handler.
+  //
+  // On success, notifications will be delivered to |callback|.
+  //
+  // NOTE: Providing a |dispatcher| results in a copy of the notified value.
+  using ValueCallback = RemoteCharacteristic::ValueCallback;
+  using NotifyStatusCallback = RemoteCharacteristic::NotifyStatusCallback;
+  void EnableNotifications(IdType id, ValueCallback callback,
+                           NotifyStatusCallback status_callback,
+                           async_t* dispatcher = nullptr);
+
+  // Disables characteristic notifications for the given |handler_id| previously
+  // obtained via EnableNotifications. The value of the Client Characteristic
+  // Configuration descriptor will be cleared if no subscribers remain.
+  void DisableNotifications(IdType characteristic_id, IdType handler_id,
+                            att::StatusCallback status_callback,
+                            async_t* dispatcher = nullptr);
+
  private:
   friend class fbl::RefPtr<RemoteService>;
   friend class internal::RemoteServiceManager;

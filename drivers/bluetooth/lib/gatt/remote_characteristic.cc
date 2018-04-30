@@ -4,27 +4,59 @@
 
 #include "remote_characteristic.h"
 
+#include "garnet/drivers/bluetooth/lib/common/run_or_post.h"
+
 #include "client.h"
 
 namespace btlib {
 namespace gatt {
 
 using common::HostError;
+using common::RunOrPost;
+
+namespace {
+
+void ReportNotifyStatus(att::Status status, IdType id,
+                        RemoteCharacteristic::NotifyStatusCallback callback,
+                        async_t* dispatcher) {
+  RunOrPost([status, id, cb = std::move(callback)] { cb(status, id); },
+            dispatcher);
+}
+
+}  // namespace
+
+RemoteCharacteristic::PendingNotifyRequest::PendingNotifyRequest(
+    async_t* d, ValueCallback value_cb, NotifyStatusCallback status_cb)
+    : dispatcher(d),
+      value_callback(std::move(value_cb)),
+      status_callback(std::move(status_cb)) {
+  FXL_DCHECK(value_callback);
+  FXL_DCHECK(status_callback);
+}
+
+RemoteCharacteristic::NotifyHandler::NotifyHandler(async_t* d, ValueCallback cb)
+    : dispatcher(d), callback(std::move(cb)) {
+  FXL_DCHECK(callback);
+}
 
 RemoteCharacteristic::Descriptor::Descriptor(IdType id,
                                              const DescriptorData& info)
     : id_(id), info_(info) {}
 
-RemoteCharacteristic::RemoteCharacteristic(IdType id,
+RemoteCharacteristic::RemoteCharacteristic(fxl::WeakPtr<Client> client,
+                                           IdType id,
                                            const CharacteristicData& info)
     : id_(id),
       info_(info),
       discovery_error_(false),
       shut_down_(false),
       ccc_handle_(att::kInvalidHandle),
+      next_notify_handler_id_(1u),
+      client_(client),
       weak_ptr_factory_(this) {
   // See comments about "ID scheme" in remote_characteristics.h
   FXL_DCHECK(id_ <= std::numeric_limits<uint16_t>::max());
+  FXL_DCHECK(client_);
 }
 
 RemoteCharacteristic::RemoteCharacteristic(RemoteCharacteristic&& other)
@@ -33,6 +65,8 @@ RemoteCharacteristic::RemoteCharacteristic(RemoteCharacteristic&& other)
       discovery_error_(other.discovery_error_),
       shut_down_(other.shut_down_.load()),
       ccc_handle_(other.ccc_handle_),
+      next_notify_handler_id_(other.next_notify_handler_id_),
+      client_(other.client_),
       weak_ptr_factory_(this) {
   other.weak_ptr_factory_.InvalidateWeakPtrs();
 }
@@ -43,13 +77,24 @@ void RemoteCharacteristic::ShutDown() {
   // Make sure that all weak pointers are invalidated on the GATT thread.
   weak_ptr_factory_.InvalidateWeakPtrs();
   shut_down_ = true;
+
+  if (ccc_handle_ != att::kInvalidHandle) {
+    ResolvePendingNotifyRequests(att::Status(HostError::kFailed));
+
+    // Clear the CCC if we have enabled notifications.
+    // TODO(armansito): Don't write to the descriptor if ShutDown() was called
+    // as a result of a "Service Changed" indication.
+    if (!notify_handlers_.empty()) {
+      notify_handlers_.clear();
+      DisableNotificationsInternal();
+    }
+  }
 }
 
-void RemoteCharacteristic::DiscoverDescriptors(Client* client,
-                                               att::Handle range_end,
-                                               StatusCallback callback) {
+void RemoteCharacteristic::DiscoverDescriptors(att::Handle range_end,
+                                               att::StatusCallback callback) {
   FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
-  FXL_DCHECK(client);
+  FXL_DCHECK(client_);
   FXL_DCHECK(callback);
   FXL_DCHECK(!shut_down_);
   FXL_DCHECK(range_end >= info().value_handle);
@@ -105,8 +150,125 @@ void RemoteCharacteristic::DiscoverDescriptors(Client* client,
     cb(status);
   };
 
-  client->DiscoverDescriptors(info().value_handle + 1, range_end,
-                              std::move(desc_cb), std::move(status_cb));
+  client_->DiscoverDescriptors(info().value_handle + 1, range_end,
+                               std::move(desc_cb), std::move(status_cb));
+}
+
+void RemoteCharacteristic::EnableNotifications(
+    ValueCallback value_callback, NotifyStatusCallback status_callback,
+    async_t* dispatcher) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(client_);
+  FXL_DCHECK(value_callback);
+  FXL_DCHECK(status_callback);
+  FXL_DCHECK(!shut_down_);
+
+  if (!(info().properties & (Property::kNotify | Property::kIndicate)) ||
+      ccc_handle_ == att::kInvalidHandle) {
+    FXL_VLOG(2) << "gatt: characteristic does not support notifications";
+    ReportNotifyStatus(att::Status(HostError::kNotSupported), kInvalidId,
+                       std::move(status_callback), dispatcher);
+    return;
+  }
+
+  // If notifications are already enabled then succeed right away.
+  if (!notify_handlers_.empty()) {
+    FXL_DCHECK(pending_notify_reqs_.empty());
+
+    IdType id = next_notify_handler_id_++;
+    notify_handlers_[id] = NotifyHandler(dispatcher, std::move(value_callback));
+    ReportNotifyStatus(att::Status(), id, std::move(status_callback),
+                       dispatcher);
+    return;
+  }
+
+  pending_notify_reqs_.emplace(dispatcher, std::move(value_callback),
+                               std::move(status_callback));
+
+  // If there are other pending requests to enable notifications then we'll wait
+  // until the descriptor write completes.
+  if (pending_notify_reqs_.size() > 1u)
+    return;
+
+  common::StaticByteBuffer<2> ccc_value;
+  ccc_value.SetToZeros();
+
+  // Enable indications if supported. Otherwise enable notifications.
+  if (info().properties & Property::kIndicate) {
+    ccc_value[0] = static_cast<uint8_t>(kCCCIndicationBit);
+  } else {
+    ccc_value[0] = static_cast<uint8_t>(kCCCNotificationBit);
+  }
+
+  auto self = weak_ptr_factory_.GetWeakPtr();
+  auto ccc_write_cb = [self](att::Status status) {
+    FXL_VLOG(1) << "gatt: CCC write status (enable): " << status.ToString();
+    if (self) {
+      self->ResolvePendingNotifyRequests(status);
+    }
+  };
+
+  client_->WriteRequest(ccc_handle_, ccc_value, std::move(ccc_write_cb));
+}
+
+bool RemoteCharacteristic::DisableNotifications(IdType handler_id) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(client_);
+  FXL_DCHECK(!shut_down_);
+
+  if (!notify_handlers_.erase(handler_id)) {
+    FXL_VLOG(2) << "gatt: notify handler not found (id: " << handler_id << ")";
+    return false;
+  }
+
+  if (!notify_handlers_.empty())
+    return true;
+
+  DisableNotificationsInternal();
+  return true;
+}
+
+void RemoteCharacteristic::DisableNotificationsInternal() {
+  FXL_DCHECK(ccc_handle_ != att::kInvalidHandle);
+
+  if (!client_) {
+    FXL_VLOG(2) << "gatt: Client bearer invalid!";
+    return;
+  }
+
+  // Disable notifications.
+  common::StaticByteBuffer<2> ccc_value;
+  ccc_value.SetToZeros();
+
+  auto ccc_write_cb = [](att::Status status) {
+    FXL_VLOG(1) << "gatt: CCC write status (disable): " << status.ToString();
+  };
+
+  // We send the request without handling the status as there is no good way to
+  // recover from failing to disable notifications. If the peer continues to
+  // send notifications, they will be dropped as no handlers are registered.
+  client_->WriteRequest(ccc_handle_, ccc_value, std::move(ccc_write_cb));
+}
+
+void RemoteCharacteristic::ResolvePendingNotifyRequests(att::Status status) {
+  // Move the contents of the queue so that a handler can remove itself (this
+  // matters when no dispatcher is provided).
+  auto pending = std::move(pending_notify_reqs_);
+  while (!pending.empty()) {
+    auto req = std::move(pending.front());
+    pending.pop();
+
+    IdType id = kInvalidId;
+
+    if (status) {
+      id = next_notify_handler_id_++;
+      notify_handlers_[id] =
+          NotifyHandler(req.dispatcher, std::move(req.value_callback));
+    }
+
+    ReportNotifyStatus(status, id, std::move(req.status_callback),
+                       req.dispatcher);
+  }
 }
 
 }  // namespace gatt

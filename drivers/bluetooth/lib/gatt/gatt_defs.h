@@ -72,8 +72,15 @@ enum ExtendedProperty : uint16_t {
 };
 using ExtendedProperties = uint16_t;
 
+// Values for the "Client Characteristic Configuration" descriptor.
+constexpr uint16_t kCCCNotificationBit = 0x0001;
+constexpr uint16_t kCCCIndicationBit = 0x0002;
+
 // An identifier uniquely identifies a service, characteristic, or descriptor.
 using IdType = uint64_t;
+
+// 0 is reserved as an invalid ID.
+constexpr IdType kInvalidId = 0u;
 
 // Types representing GATT discovery results.
 
