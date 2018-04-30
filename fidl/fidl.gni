@@ -1,0 +1,69 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/toolchain.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/go/toolchain.gni")
+import("//build/rust/toolchain.gni")
+
+# Declares a FIDL library.
+#
+# Depending on the toolchain in which this targets is expanded, it will yield
+# different results:
+#   - in the FIDL toolchain, it will compile its source files into an
+#     intermediate representation consumable by language bindings generators;
+#   - in the target or shared toolchain, this will produce a source_set
+#     containing C++ bindings.
+#
+# Parameters
+#
+#   sources (required)
+#     List of paths to library source files.
+#
+#   name (optional)
+#     Name of the library.
+#     Defaults to the target's name.
+#
+#   sdk_candidate (optional)
+#     Whether this library may be included in an SDK.
+#     Defaults to false.
+
+template("fidl") {
+  if (current_toolchain == fidl_toolchain) {
+    import("//build/fidl/fidl_library.gni")
+
+    fidl_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (current_toolchain == dart_toolchain) {
+    import("//build/dart/fidl_dart.gni")
+
+    fidl_dart(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (current_toolchain == rust_toolchain) {
+    import("//build/rust/fidl_rust.gni")
+
+    fidl_rust(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (current_toolchain == go_toolchain) {
+    import("//build/go/fidl_go.gni")
+
+    fidl_go(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+
+    # This case needs to be last
+  } else if (is_fuchsia) {
+    import("//build/cpp/fidl_cpp.gni")
+
+    fidl_cpp(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    assert(false,
+           "Unable to process FIDL target in toolchain $current_toolchain.")
+  }
+}

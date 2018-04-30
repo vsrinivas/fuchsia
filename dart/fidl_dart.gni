@@ -1,0 +1,129 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/toolchain.gni")
+import("//build/fidl/toolchain.gni")
+
+# Generates some Dart bindings for a FIDL library.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name;
+#   - sdk_candidate.
+
+template("fidl_dart") {
+  assert(current_toolchain == dart_toolchain,
+      "This template can only be used in the $dart_toolchain toolchain.")
+
+  not_needed(invoker, [
+    "sources",
+  ])
+
+  main_target_name = target_name
+  generation_target_name = "${target_name}_dart_generate"
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+  root_dir = "$target_gen_dir/${library_name}_package"
+  file_stem = "$root_dir/lib/$library_name"
+  bindings_file = "$file_stem.dart"
+
+  fidl_target_gen_dir = get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
+  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
+  compiled_action(generation_target_name) {
+    visibility = [
+      ":*",
+    ]
+
+    tool = "//garnet/go/src/fidl:fidlgen"
+
+    inputs = [
+      json_representation,
+    ]
+
+    outputs = [
+      bindings_file,
+    ]
+
+    args = [
+      "--json",
+      rebase_path(json_representation, root_build_dir),
+      "--output-base",
+      rebase_path(file_stem, root_build_dir),
+      "--include-base",
+      rebase_path(root_gen_dir, root_build_dir),
+      "--generators",
+      "dart",
+    ]
+
+    deps = [
+      ":$main_target_name($fidl_toolchain)",
+    ]
+  }
+
+  copy_pubspec_target_name = "${target_name}_dart_pubspec"
+  copy_options_target_name = "${target_name}_dart_options"
+
+  copy(copy_pubspec_target_name) {
+    sources = [
+      "//build/dart/empty_pubspec.yaml",
+    ]
+
+    outputs = [
+      "$root_dir/pubspec.yaml",
+    ]
+  }
+
+  copy(copy_options_target_name) {
+    sources = [
+      "//topaz/tools/analysis_options.yaml",
+    ]
+
+    outputs = [
+      "$root_dir/analysis_options.yaml",
+    ]
+  }
+
+  dart_library(main_target_name) {
+    forward_variables_from(invoker, [
+      "testonly",
+      "visibility",
+    ])
+
+    if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+      sdk_candidate = true
+    }
+
+    package_root = root_dir
+
+    package_name = "fuchsia.fidl.$library_name"
+
+    sources = [
+      bindings_file,
+    ]
+
+    deps = [
+      "//topaz/public/dart/fidl",
+      "//topaz/public/dart/zircon",
+    ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.public_deps)) {
+      deps += invoker.public_deps
+    }
+
+    non_dart_deps = [
+      ":$copy_options_target_name",
+      ":$copy_pubspec_target_name",
+      ":$generation_target_name",
+    ]
+  }
+}

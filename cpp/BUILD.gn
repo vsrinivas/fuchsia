@@ -1,0 +1,13 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+
+# See fidl_cpp.gni:fidl_cpp.  Its generated `source_set`s should be the
+# only users of this config (in their public_configs).
+config("fidl_gen_config") {
+  fidl_root_gen_dir = get_label_info("//bogus($fidl_toolchain)",
+                                     "root_gen_dir")
+  include_dirs = [ fidl_root_gen_dir ]
+}

@@ -1,0 +1,207 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/sdk/sdk_atom.gni")
+
+# Generates some representation of a FIDL library that's consumable by Language
+# bindings generators.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name;
+#   - sdk_candidate;
+#   - sources.
+
+template("fidl_library") {
+  assert(current_toolchain == fidl_toolchain,
+      "This template can only be used in the FIDL toolchain $fidl_toolchain.")
+
+  if (!defined(invoker.sources)) {
+    assert(false, "A FIDL library requires some sources.")
+  }
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  response_file = "$target_gen_dir/$target_name.args"
+  fidl_stem = "$target_gen_dir/$target_name.fidl"
+  json_representation = "$fidl_stem.json"
+  c_header = "$root_gen_dir/fuchsia/c/$library_name.h"
+  coding_tables = "$fidl_stem.tables.cc"
+
+  main_target_name = target_name
+  response_file_target_name = "${target_name}_response_file"
+  compilation_target_name = "${target_name}_compile"
+  verification_target_name = "${target_name}_verify"
+
+  action(response_file_target_name) {
+    visibility = [
+      ":*",
+    ]
+
+    script = "//build/fidl/gen_response_file.py"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                           ])
+
+    libraries = "$target_gen_dir/$main_target_name.libraries"
+
+    outputs = [
+      response_file,
+      libraries,
+    ]
+
+    args = [
+      "--out-response-file",
+      rebase_path(response_file, root_build_dir),
+      "--out-libraries",
+      rebase_path(libraries, root_build_dir),
+      "--json",
+      rebase_path(json_representation, root_build_dir),
+      "--c-header",
+      rebase_path(c_header, root_build_dir),
+      "--tables",
+      rebase_path(coding_tables, root_build_dir),
+      "--name",
+      library_name,
+      "--sources",
+    ] + rebase_path(sources, root_build_dir)
+
+    if (defined(invoker.deps) || defined(invoker.public_deps)) {
+      dep_libraries = []
+
+      merged_deps = []
+
+      if (defined(invoker.deps)) {
+        merged_deps += invoker.deps
+      }
+
+      if (defined(invoker.public_deps)) {
+        merged_deps += invoker.public_deps
+      }
+
+      foreach(dep, merged_deps) {
+        gen_dir = get_label_info(dep, "target_gen_dir")
+        name = get_label_info(dep, "name")
+        dep_libraries += [ "$gen_dir/$name.libraries" ]
+      }
+
+      inputs = dep_libraries
+
+      args += [
+        "--dep-libraries",
+      ] + rebase_path(dep_libraries, root_build_dir)
+    }
+  }
+
+  compiled_action(compilation_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                           ])
+
+    visibility = [
+      ":*",
+    ]
+
+    tool = "//zircon/public/tool/fidlc"
+
+    inputs = [
+      response_file,
+    ]
+
+    outputs = [
+      coding_tables,
+      json_representation,
+      c_header,
+    ]
+
+    rebased_response_file = rebase_path(response_file, root_build_dir)
+
+    args = [
+      "@$rebased_response_file",
+    ]
+
+    deps = [
+      ":$response_file_target_name",
+    ]
+  }
+
+  compiled_action(verification_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                           ])
+
+    visibility = [
+      ":*",
+    ]
+
+    tool = "//build/tools/json_validator"
+
+    inputs = [
+      "//zircon/system/host/fidl/schema.json",
+      json_representation,
+    ]
+
+    outputs = [
+      "${json_representation}.stamp",
+    ]
+
+    args = rebase_path(inputs, root_build_dir) +
+        rebase_path(outputs, root_build_dir)
+
+    deps = [
+      ":$compilation_target_name",
+    ]
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [
+      ":$compilation_target_name",
+      ":$response_file_target_name",
+    ]
+
+    deps = [
+      ":$verification_target_name",
+    ]
+  }
+
+  if (defined(invoker.sdk_candidate) && invoker.sdk_candidate) {
+    library_name = target_name
+    if (defined(invoker.name)) {
+      library_name = invoker.name
+    }
+
+    sdk_atom("${target_name}_sdk") {
+      domain = "fidl"
+      name = library_name
+
+      files = []
+      foreach(source, invoker.sources) {
+        # TODO(pylaligand): remove this temporary workaround.
+        destination = get_path_info(source, "file")
+        files += [{
+          source = rebase_path(source)
+          dest = destination
+        }]
+      }
+    }
+  }
+}

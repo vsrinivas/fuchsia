@@ -1,0 +1,124 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+
+# Generates some C++ bindings for a FIDL library.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name;
+#   - sources.
+
+template("fidl_cpp") {
+  assert(is_fuchsia, "This template can only be used in $target_toolchain.")
+
+  not_needed(invoker,
+             [
+               "sdk_candidate",
+               "sources",
+             ])
+
+  main_target_name = target_name
+  generation_target_name = "${target_name}_cpp_generate"
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  # Generate the source code just once in the base toolchain, even if it
+  # gets compiled separately in multiple variants of the target toolchains.
+  # The generation happens in the base (C++) toolchain, but put its output
+  # into fidl_toolchain's gen/ directory instead so that a single
+  # `-Ifidling/gen` lets `#include <fuchsia/cpp/library.h>` find the
+  # files without adding `-Igen` when gen/ is for a different actual C++
+  # toolchain.  Since `fidling/gen` contains nothing but FIDL-generated
+  # code, it's not so scary to have that included in code built by multiple
+  # other toolchains.
+  fidl_target_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+  fidl_root_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
+
+  file_stem = "$fidl_root_gen_dir/fuchsia/cpp/$library_name"
+  coding_tables = "$fidl_target_gen_dir/$target_name.fidl.tables.cc"
+
+  # Only do the generation in the base toolchain, since it would
+  # be identical in all variants.
+  if (current_toolchain == toolchain_variant.base) {
+    fidl_root_gen_dir =
+        get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
+    json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
+    compiled_action(generation_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      visibility = [ ":$main_target_name" ]
+
+      tool = "//garnet/go/src/fidl:fidlgen"
+
+      inputs = [
+        json_representation,
+      ]
+
+      outputs = [
+        "$file_stem.h",
+        "$file_stem.cc",
+      ]
+
+      args = [
+        "--json",
+        rebase_path(json_representation, root_build_dir),
+        "--output-base",
+        rebase_path(file_stem, root_build_dir),
+        "--include-base",
+        rebase_path(fidl_root_gen_dir, root_build_dir),
+        "--generators",
+        "cpp",
+      ]
+
+      deps = [
+        ":$main_target_name($fidl_toolchain)",
+      ]
+    }
+  } else {
+    not_needed(invoker, "*")
+  }
+
+  source_set(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    sources = [
+      "$file_stem.cc",
+      "$file_stem.h",
+      coding_tables,
+    ]
+
+    # Let dependencies use `#include "$file_stem.h"`.
+    public_configs = [ "//build/cpp:fidl_gen_config" ]
+
+    deps = [
+      ":$generation_target_name(${toolchain_variant.base})",
+      ":$main_target_name($fidl_toolchain)",
+    ]
+
+    public_deps = [
+      "//garnet/public/lib/fidl/cpp",
+    ]
+
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    if (defined(invoker.public_deps)) {
+      public_deps += invoker.public_deps
+    }
+  }
+}

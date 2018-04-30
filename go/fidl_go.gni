@@ -1,0 +1,85 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+
+# Generates some Go bindings for a FIDL library.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name.
+
+template("fidl_go") {
+  assert(current_toolchain == go_toolchain,
+      "This template can only be used in $go_toolchain.")
+
+  not_needed(invoker, [
+    "sdk_candidate",
+    "sources"
+  ])
+
+  main_target_name = target_name
+  generation_target_name = "${target_name}_go_generate"
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  fidl_target_gen_dir = get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+  file_stem = "$fidl_target_gen_dir/$library_name.fidl"
+  json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
+
+  compiled_action(generation_target_name) {
+    visibility = [
+      ":*",
+    ]
+
+    tool = "//garnet/go/src/fidl:fidlgen"
+
+    inputs = [
+      json_representation,
+    ]
+
+    outputs = [
+      "$file_stem/impl.go",
+    ]
+
+    args = [
+      "--json",
+      rebase_path(json_representation, root_build_dir),
+      "--output-base",
+      rebase_path(file_stem, root_build_dir),
+      "--include-base",
+      rebase_path(root_gen_dir, root_build_dir),
+      "--generators",
+      "go",
+    ]
+
+    deps = [
+      ":$main_target_name($fidl_toolchain)",
+    ]
+  }
+
+  go_library(main_target_name) {
+    name = "fuchsia/go/$library_name"
+
+    source_dir = file_stem
+
+    non_go_deps = [
+      ":$generation_target_name",
+    ]
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    if (defined(invoker.public_deps)) {
+      deps += invoker.public_deps
+    }
+  }
+}
